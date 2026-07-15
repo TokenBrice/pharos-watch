@@ -5,7 +5,7 @@ import { buildSafetyScoreV9MechanismReview } from "../safety-score-v9-extension-
 
 type MechanismMeta = Pick<StablecoinMeta, "id" | "reserves" | "reserveReview" | "custodyProfile" | "proofOfReserves">;
 
-describe.skip("VERITAS-II finding: mechanism overlays do not expire after twelve months", () => {
+describe("VERITAS-II finding: mechanism overlays do not expire after twelve months", () => {
   it("re-bounds USDC components after its 2026-07-15 review expires", () => {
     const fixedInput = {
       clockSec: Date.UTC(2027, 6, 16) / 1_000,

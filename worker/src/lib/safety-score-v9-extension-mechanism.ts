@@ -393,6 +393,18 @@ const MECHANISM_REVIEW_OVERLAYS: ReadonlyMap<string, MechanismReviewOverlay> = n
   ]),
 );
 
+// The approved D1 fiat/tbill overlay standard re-bounds curated claims after
+// twelve months. An overlay whose review has aged past that window (or whose
+// date is unparseable) is treated as absent so the mechanism review falls back
+// to the conservative bounded-unknown evidence path (VER2-004).
+const MECHANISM_OVERLAY_MAX_AGE_SEC = 31_536_000;
+
+function isMechanismOverlayCurrent(overlay: MechanismReviewOverlay, clockSec: number): boolean {
+  const reviewedAtSec = Date.parse(`${overlay.reviewedAt}T00:00:00.000Z`) / 1_000;
+  if (!Number.isFinite(reviewedAtSec)) return false;
+  return reviewedAtSec + MECHANISM_OVERLAY_MAX_AGE_SEC > clockSec;
+}
+
 /**
  * Builds the conservative mechanism risk review the exact evidence supports.
  * A curated overlay (schema-validated, source-cited) takes precedence for the
@@ -409,7 +421,7 @@ export function buildSafetyScoreV9MechanismReview(
   archetype: string,
 ): V9MechanismRiskReview | null {
   const overlay = MECHANISM_REVIEW_OVERLAYS.get(meta.id);
-  if (overlay && overlay.archetype === archetype) {
+  if (overlay && overlay.archetype === archetype && isMechanismOverlayCurrent(overlay, fixedInput.clockSec)) {
     const fallbackReview =
       archetype === "fiat-cash"
         ? buildFiatCashReview(fixedInput, meta)
