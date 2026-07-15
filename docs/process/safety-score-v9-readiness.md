@@ -46,7 +46,7 @@ The V9 implementation establishes candidate infrastructure without changing prod
   candidate deterministically. The current policy semantic digest is
   `9913d3dc3f4d4f00842c99be47a8ee5ac608b589867329ef18f7ad9c63e94ded`;
   the current evaluation-build digest is
-  `5217a5797a77071a6c01564b27198316b2a2093352e67290301741553d026247`.
+  `049c288cc02a887f18dc2785bcdb712b64195a6d1cc331443e2c17ac75634e60`.
 - The 2026-07-15 Batch 3 calibration revision (owner rulings 2026-07-15)
   applies the two ruled cap changes and nothing else. (1) The mint posture gains
   a distinct `unbounded-reconciled` rung (`mintPostureQuality` = 55) for an
@@ -67,7 +67,13 @@ The V9 implementation establishes candidate infrastructure without changing prod
   (`ethereum`) while supply facts key by DefiLlama display name (`Ethereum`,
   `OP Mainnet`), and both now tier identically; an unresolvable name stays
   fail-closed at `high`. Dials, bands, and every other cap are untouched;
-  full-distribution confirmation follows the post-DEX-fix measurement.
+  full-distribution confirmation follows the post-DEX-fix measurement. The
+  data-side authoring contract for the mint rung lives on the strict
+  `MintAuthorityProfile`: optional reviewed `economicCapSemantics` (supersedes the
+  encoding-derived cap), `reconciliation` (supersedes the proof-of-reserves
+  inference), and `supervision` (graduates the reconciled rung). Absent fields
+  reproduce today's behavior exactly; the reference shape and precedence are
+  pinned by `worker/src/lib/__tests__/safety-score-v9-mint-authoring-contract.test.ts`.
 - The 2026-07-15 candidate-v2 queue-binding revision adds explicit
   `local-component` paths to seven reason allowlists already emitted as
   aggregate facts. The revision changes evidence-work-queue metadata only;
