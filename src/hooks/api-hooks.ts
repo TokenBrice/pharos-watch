@@ -12,6 +12,7 @@ import {
   type DigestSnapshotResponse,
   type HealthResponse,
   type PegSummaryResponse,
+  type ReportCardsV9Response,
   type ReportCardsResponse,
   type RedemptionBackstopsResponse,
   type SafetyScoreHistoryResponse,
@@ -47,6 +48,7 @@ export type { StabilityContributor };
 export type { NonUsdSharePoint } from "@/lib/api-query-descriptors";
 
 export type QueryControlOverrides = PollingQueryControlOptions;
+export type V9QueryControlOverrides = Omit<QueryControlOverrides, "keepPreviousData">;
 
 type QueryWithMetaEnvelope<T> = { data: T; meta: ApiMeta | null };
 
@@ -183,6 +185,15 @@ export function useReportCards(overrides?: QueryControlOverrides) {
     // grade filter doesn't blank the table. Callers can still override.
     { keepPreviousData: true, ...overrides },
   );
+}
+
+/** Shadow-only V9 query. Its model-specific key and disabled previous-data
+ * retention prevent a V8 or earlier-policy payload from surviving a refetch. */
+export function useReportCardsV9(overrides?: V9QueryControlOverrides) {
+  return useRegisteredApiQuery<ReportCardsV9Response>(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9, {
+    ...overrides,
+    keepPreviousData: false,
+  });
 }
 
 export function useDepegResolver(overrides?: QueryControlOverrides) {

@@ -21,6 +21,7 @@ import type {
 import type { MintBurnEventsResponse, MintBurnFlowsResponse, MintBurnPerCoinResponse } from "@shared/types/mint-burn";
 import type { RedemptionBackstopsResponse } from "@shared/types/redemption";
 import type { ReportCardsResponse, SafetyScoreHistoryResponse } from "@shared/types/report-cards";
+import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
 import type { HealthResponse } from "@shared/types/status/public-health";
 import type { TelegramPulse } from "@shared/types/status/telegram";
 import type { UsdsStatusResponse } from "@shared/types/stability";
@@ -269,6 +270,18 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     "meta",
     createLazySchema<ReportCardsResponse>(
       async () => (await import("@shared/types/report-cards")).ReportCardsResponseSchema,
+    ),
+  ),
+  reportCardsV9: defineApiQuery(
+    {
+      queryKey: ["report-cards", "v9"] as const,
+      path: API_PATHS.reportCardsV9(),
+      producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.reportCards,
+      metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.reportCards.endpointMaxAgeSec,
+    },
+    "meta",
+    createLazySchema<ReportCardsV9Response>(
+      async () => (await import("@shared/types/report-cards-v9")).ReportCardsV9ResponseSchema,
     ),
   ),
   depegResolver: defineApiQuery(

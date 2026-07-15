@@ -1,6 +1,7 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { SITE_DATA_PROXY_SECRET_HEADER } from "@shared/lib/site-data-lane";
 import { buildSelectorRows } from "@shared/lib/selector/data-adapter";
+import { buildV9SelectorSnapshot } from "@shared/lib/selector/v9-data-adapter";
 import { runSelector } from "@shared/lib/selector/engine";
 import { createVerifiedSelectorSnapshot } from "@shared/lib/selector/snapshot";
 import type { SelectorInput, SelectorOutput } from "@shared/lib/selector/types";
@@ -18,6 +19,9 @@ import {
 } from "@shared/types/market";
 import { RedemptionBackstopsResponseSchema, type RedemptionBackstopsResponse } from "@shared/types/redemption";
 import { ReportCardsResponseSchema, type ReportCardsResponse } from "@shared/types/report-cards";
+import { ReportCardsV9ResponseSchema, type ReportCardsV9Response } from "@shared/types/report-cards-v9";
+import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
+import type { V9SelectorSnapshot } from "@shared/types/selector-v9";
 import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";
 import { resolveSiteApiOrigin, type SiteDataProxyEnv } from "./site-api-env";
 import { fetchUpstreamProxy } from "./upstream-proxy";
@@ -122,4 +126,23 @@ export async function recomputeVerifiedSelectorSnapshot(
       },
     ),
   );
+}
+
+/**
+ * Dark V9 canonical lane. It persists the full source identity and intentionally
+ * returns no recommendation until the V9 selector floors are reviewed.
+ */
+export async function recomputeDeferredV9SelectorSnapshot(
+  request: Request,
+  env: SelectorCanonicalSnapshotEnv,
+  expectedIdentity: SafetyScoreV9PublicationIdentity,
+  now = Date.now(),
+): Promise<V9SelectorSnapshot> {
+  const reportData = await fetchCanonicalSource<ReportCardsV9Response>(
+    request,
+    env,
+    API_PATHS.reportCardsV9(),
+    ReportCardsV9ResponseSchema,
+  );
+  return buildV9SelectorSnapshot(reportData, expectedIdentity, now);
 }
