@@ -1,15 +1,7 @@
-import {
-  filterDependencyGraphEdgesToLive,
-  type DependencyGraphEdge,
-} from "@shared/lib/dependency-graph";
+import { filterDependencyGraphEdgesToLive, type DependencyGraphEdge } from "@shared/lib/dependency-graph";
 import type { DependencyWeight, ReportCard, ReportCardsResponse, StablecoinMeta } from "@shared/types";
 
-export type DependencyCoverageKind =
-  | "both"
-  | "dependent"
-  | "upstream"
-  | "resolved-none"
-  | "unmapped-gap";
+export type DependencyCoverageKind = "both" | "dependent" | "upstream" | "resolved-none" | "unmapped-gap";
 
 export interface DependencyCoverageFact {
   kind: DependencyCoverageKind;
@@ -20,12 +12,15 @@ export interface DependencyCoverageFact {
   missingReportCard?: boolean;
 }
 
-type DependencyCoverageCoin = Pick<StablecoinMeta, "id" | "dependencies" | "reserves" | "variantOf">;
+type DependencyCoverageCoin = Pick<StablecoinMeta, "id" | "reserves" | "variantOf"> &
+  Partial<Pick<StablecoinMeta, "dependencies">>;
 
 function hasCuratedDependencyEvidence(coin: DependencyCoverageCoin): boolean {
-  return !!coin.variantOf
-    || (coin.dependencies?.length ?? 0) > 0
-    || (coin.reserves?.some((reserve) => !!reserve.coinId) ?? false);
+  return (
+    !!coin.variantOf ||
+    (coin.dependencies?.length ?? 0) > 0 ||
+    (coin.reserves?.some((reserve) => !!reserve.coinId) ?? false)
+  );
 }
 
 function sumIncomingWeight(edges: readonly DependencyGraphEdge[], id: string): number {

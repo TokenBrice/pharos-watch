@@ -5,7 +5,7 @@ import {
   StressSignalsAllResponseSchema,
   StressSignalDetailResponseSchema,
 } from "@shared/types/market";
-import { PRE_LAUNCH_STABLECOINS, READABLE_IDS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 
 const nowSec = Math.floor(Date.now() / 1000);
 const completedDewsAt = nowSec - 60;
@@ -534,8 +534,47 @@ describe("handleStressSignals contract tests", () => {
     expect(body.signals).not.toHaveProperty("999999999");
   });
 
-  it("marks aggregate coverage ok when every readable stablecoin has a current row", async () => {
-    const rows = [...READABLE_IDS].map((stablecoinId) => ({
+  it("excludes quarantined and delisted retained rows from bulk coverage", async () => {
+    const db = makeStrictAggregateDb([
+      {
+        stablecoin_id: "usdt-tether",
+        score: 12,
+        band: "CALM",
+        signals_json: signalsJson,
+        computed_at: nowSec,
+      },
+      {
+        stablecoin_id: "busd0-usual",
+        score: 25,
+        band: "WATCH",
+        signals_json: signalsJson,
+        computed_at: nowSec,
+      },
+      {
+        stablecoin_id: "bfusd-binance",
+        score: 65,
+        band: "ALERT",
+        signals_json: signalsJson,
+        computed_at: nowSec,
+      },
+    ]);
+
+    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      signals: Record<string, unknown>;
+      eligibleCount: number;
+      computedCount: number;
+    };
+    expect(body.signals).toHaveProperty("usdt-tether");
+    expect(body.signals).not.toHaveProperty("busd0-usual");
+    expect(body.signals).not.toHaveProperty("bfusd-binance");
+    expect(body.eligibleCount).toBe(ACTIVE_IDS.size);
+    expect(body.computedCount).toBe(1);
+  });
+
+  it("marks aggregate coverage ok when every active stablecoin has a current row", async () => {
+    const rows = [...ACTIVE_IDS].map((stablecoinId) => ({
       stablecoin_id: stablecoinId,
       score: 12,
       band: "CALM",
@@ -553,7 +592,7 @@ describe("handleStressSignals contract tests", () => {
       coverageStatus: string;
       coverageReasons: string[];
     };
-    expect(body.computedCount).toBe(READABLE_IDS.size);
+    expect(body.computedCount).toBe(ACTIVE_IDS.size);
     expect(body.missingCount).toBe(0);
     expect(body.coverageStatus).toBe("ok");
     expect(body.coverageReasons).toEqual([]);

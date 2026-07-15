@@ -180,8 +180,10 @@ describe("buildStablecoinDetailMetadata", () => {
     expect(metadata.description).toContain("on 2 chains");
   });
 
-  it("gives pre-launch coins the static og card; live and frozen keep the worker card", () => {
+  it("uses static OG cards for pre-launch and policy-withheld records", () => {
     const { active, preLaunch, frozen } = fixtures;
+    const quarantined = { ...active, status: "quarantined" };
+    const delisted = { ...active, status: "delisted" };
     const ogUrl = (coin: unknown) => {
       const metadata = buildStablecoinDetailMetadata(coin as Parameters<typeof buildStablecoinDetailMetadata>[0]);
       const images = metadata.openGraph?.images as Array<{ url: string }>;
@@ -191,6 +193,8 @@ describe("buildStablecoinDetailMetadata", () => {
     // Pre-launch ids are outside the worker's READABLE_IDS set, so the
     // dynamic card 404s — the metadata must not reference it.
     expect(ogUrl(preLaunch)).toBe("/og-upcoming.png");
+    expect(ogUrl(quarantined)).toBe("/og-stablecoins.png");
+    expect(ogUrl(delisted)).toBe("/og-stablecoins.png");
     expect(ogUrl(active)).toBe(`https://api.pharos.watch/api/og/stablecoin/${active.id}`);
     expect(ogUrl(frozen)).toBe(`https://api.pharos.watch/api/og/stablecoin/${frozen.id}`);
   });

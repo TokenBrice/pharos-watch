@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { FROZEN_IDS, READABLE_IDS } from "@shared/lib/stablecoins/registry";
+import {
+  ACTIVE_IDS,
+  DELISTED_IDS,
+  FROZEN_IDS,
+  QUARANTINED_IDS,
+} from "@shared/lib/stablecoins/registry";
 import { COMPARE_COIN_OPTIONS, COMPARISON_PRESETS, resolveCompareSelectedIds } from "../compare-config";
 
 describe("resolveCompareSelectedIds", () => {
@@ -18,10 +23,12 @@ describe("resolveCompareSelectedIds", () => {
 });
 
 describe("COMPARE_COIN_OPTIONS", () => {
-  it("sources from READABLE_STABLECOINS (active + frozen)", () => {
+  it("allows active and frozen history while excluding withheld records", () => {
     for (const option of COMPARE_COIN_OPTIONS) {
-      expect(READABLE_IDS.has(option.id)).toBe(true);
+      expect(ACTIVE_IDS.has(option.id) || FROZEN_IDS.has(option.id)).toBe(true);
     }
+    expect(COMPARE_COIN_OPTIONS.some((option) => QUARANTINED_IDS.has(option.id))).toBe(false);
+    expect(COMPARE_COIN_OPTIONS.some((option) => DELISTED_IDS.has(option.id))).toBe(false);
   });
 
   it("flags frozen entries with frozen=true", () => {
@@ -33,10 +40,10 @@ describe("COMPARE_COIN_OPTIONS", () => {
 });
 
 describe("COMPARISON_PRESETS", () => {
-  it("references only ids present in the readable registry", () => {
+  it("references only active or frozen comparable ids", () => {
     for (const preset of COMPARISON_PRESETS) {
       for (const id of preset.coins) {
-        expect(READABLE_IDS.has(id)).toBe(true);
+        expect(ACTIVE_IDS.has(id) || FROZEN_IDS.has(id)).toBe(true);
       }
     }
   });

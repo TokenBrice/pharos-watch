@@ -309,5 +309,11 @@
       "maxOracleAgeSec": 345600
     }
   },
-  "launchDate": "2023-03-24"
+  "launchDate": "2023-03-24",
+  "status": "quarantined",
+  "listingStatusReview": {
+    "changedAt": "2026-07-15",
+    "reviewBy": "2026-08-15",
+    "reason": "Temporarily withheld because permitted runtime sources do not provide a positive circulating supply or market cap."
+  }
 }

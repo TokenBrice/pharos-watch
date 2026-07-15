@@ -25,8 +25,14 @@ function makeCoin(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
 }
 
 describe("STABLECOIN_STATUS_VALUES", () => {
-  it("includes the three lifecycle phases", () => {
-    expect(STABLECOIN_STATUS_VALUES).toEqual(["pre-launch", "active", "frozen"]);
+  it("includes every listing lifecycle phase", () => {
+    expect(STABLECOIN_STATUS_VALUES).toEqual([
+      "pre-launch",
+      "active",
+      "quarantined",
+      "delisted",
+      "frozen",
+    ]);
   });
 });
 

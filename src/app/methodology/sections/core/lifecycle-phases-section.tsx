@@ -14,10 +14,10 @@ export function LifecyclePhasesMethodologySection() {
       versionNote="Lifecycle phase is a data-collection policy. No per-domain methodology version is bumped when a coin transitions between phases."
     >
       <p>
-        Every tracked stablecoin is in one of three lifecycle phases. The phase determines which
+        Every tracked stablecoin is in one of five lifecycle phases. The phase determines which
         surfaces ingest, score, and read back the coin&apos;s data. Scoring methodologies always
-        operate over the active subset; pre-launch and frozen coins are excluded from new
-        computations and live aggregates.
+        operate over the active subset; every non-active phase is excluded from new computations
+        and live aggregates.
       </p>
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">Active</h3>
@@ -40,6 +40,23 @@ export function LifecyclePhasesMethodologySection() {
         </p>
       </div>
       <div className="space-y-2">
+        <h3 className="text-foreground font-medium">Quarantined</h3>
+        <p>
+          Temporarily withheld after a reviewed inability to establish positive circulating supply
+          or market cap. The static profile, reason, and review date remain public, but providers are
+          not refreshed and the record is excluded from live surfaces. Missing price coverage or a
+          genuine depeg alone does not trigger quarantine; those remain active monitoring failures.
+        </p>
+      </div>
+      <div className="space-y-2">
+        <h3 className="text-foreground font-medium">Delisted</h3>
+        <p>
+          Reviewed as outside the listing scope. The canonical static profile and sourced decision
+          remain readable, while provider IDs and contracts are blocked from rediscovery. Delisted
+          records never enter live aggregates, alerts, or score recomputation.
+        </p>
+      </div>
+      <div className="space-y-2">
         <h3 className="text-foreground font-medium">Frozen</h3>
         <p>
           The coin is effectively defunct (issuer abandonment, supply trending to zero,
@@ -58,7 +75,7 @@ export function LifecyclePhasesMethodologySection() {
         facts={[
           {
             label: "TRACKED",
-            value: "Every tracked coin (active + pre-launch + frozen). Used for canonical-ID lookups, registry validation, and static stablecoin detail routes.",
+            value: "The complete catalog across all five phases. Used for canonical identity, validation, and static detail routes.",
           },
           {
             label: "ACTIVE",
@@ -66,7 +83,7 @@ export function LifecyclePhasesMethodologySection() {
           },
           {
             label: "READABLE",
-            value: "Active + frozen. Used by readback/archive surfaces that should preserve frozen assets while excluding pre-launch assets.",
+            value: "Every post-launch record: active, quarantined, delisted, and frozen. Historical/read-only use only.",
           },
           {
             label: "FROZEN",
@@ -82,6 +99,10 @@ export function LifecyclePhasesMethodologySection() {
         {" · "}
         <Link href="/upcoming/" className={METHODOLOGY_LINK_CLASS}>
           Upcoming launches
+        </Link>
+        {" · "}
+        <Link href="/docs/listing-policy/" className={METHODOLOGY_LINK_CLASS}>
+          Listing policy
         </Link>
         {" · "}
         <span className="text-foreground/70">Operator runbook: <code className="text-xs">docs/freezing-stablecoins.md</code></span>

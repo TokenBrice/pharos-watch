@@ -194,6 +194,14 @@ function buildStablecoinStatusTitle(coin: StablecoinMeta): string {
     ]);
   }
 
+  if (coin.status === "quarantined" || coin.status === "delisted") {
+    return buildStablecoinTitle([
+      ...(hasRedundantName(coin) ? [] : [`${coin.symbol} (${coin.name}) Inactive Listing Record`]),
+      `${coin.symbol} Inactive Listing Record`,
+      `${coin.symbol} Catalog Record`,
+    ]);
+  }
+
   if (hasRedundantName(coin)) {
     return buildStablecoinTitle([
       `${coin.symbol} Stablecoin Safety Score & Risk Profile`,
@@ -233,6 +241,13 @@ export function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
       .join(" ");
 
     return trimTextAtWordBoundary(description, 160);
+  }
+
+  if (coin.status === "quarantined" || coin.status === "delisted") {
+    return trimTextAtWordBoundary(
+      `${coin.name} (${coin.symbol}) is outside Pharos's active universe. ${coin.listingStatusReview?.reason ?? "The static catalog record remains available for historical reference."}`,
+      160,
+    );
   }
 
   const structure =
@@ -280,6 +295,17 @@ export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
       // Pre-launch ids never enter the worker's READABLE_IDS set, so use a
       // static launch-tracker card until launch promotes the coin.
       ogImage: "/og-upcoming.png",
+    });
+  }
+
+  if (coin.status === "quarantined" || coin.status === "delisted") {
+    return buildPageMetadata({
+      title: buildStablecoinStatusTitle(coin),
+      description: buildStablecoinDetailDescription(coin),
+      canonical: buildStablecoinUrl(coin.id),
+      // Policy-withheld IDs are absent from the live stablecoins cache used by
+      // the Worker OG renderer, so use a static catalog card.
+      ogImage: "/og-stablecoins.png",
     });
   }
 

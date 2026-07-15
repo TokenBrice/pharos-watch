@@ -47,12 +47,12 @@ export const CLIENT_TRACKED_META_BY_ID: ReadonlyMap<string, StablecoinClientMeta
   CLIENT_TRACKED_STABLECOINS.map((entry) => [entry.id, entry] as const),
 );
 
-/** Set of all tracked stablecoin IDs, including pre-launch and frozen assets. */
+/** Set of all tracked stablecoin IDs, across every lifecycle state. */
 export const CLIENT_TRACKED_IDS: ReadonlySet<string> = new Set(
   CLIENT_TRACKED_STABLECOINS.map((entry) => entry.id),
 );
 
-/** Active stablecoins (excludes pre-launch and frozen). */
+/** Active stablecoins (excludes every non-active lifecycle state). */
 export const CLIENT_ACTIVE_STABLECOINS: readonly StablecoinClientMeta[] =
   CLIENT_TRACKED_STABLECOINS.filter(isActiveStablecoinMeta);
 
@@ -66,7 +66,7 @@ export const CLIENT_ACTIVE_META_BY_ID: ReadonlyMap<string, StablecoinClientMeta>
   CLIENT_ACTIVE_STABLECOINS.map((entry) => [entry.id, entry] as const),
 );
 
-/** Public readback stablecoins (active + frozen; excludes pre-launch). */
+/** Public readback stablecoins (all post-launch lifecycle states). */
 export const CLIENT_READABLE_STABLECOINS: readonly StablecoinClientMeta[] =
   CLIENT_TRACKED_STABLECOINS.filter(isReadableStablecoinMeta);
 

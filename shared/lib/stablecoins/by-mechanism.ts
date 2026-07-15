@@ -1,17 +1,19 @@
-import type { MechanismArchetype, StablecoinMeta } from "../../types";
+import type { MechanismArchetype, StablecoinMeta, StablecoinStatus } from "../../types";
 import { MECHANISM_ARCHETYPE_VALUES } from "../../types/core";
 import { resolveMechanismArchetype } from "../classification/resolve-mechanism-archetype";
 import {
   ACTIVE_STABLECOINS,
   ACTIVE_META_BY_ID,
+  DELISTED_STABLECOINS,
   PRE_LAUNCH_STABLECOINS,
   FROZEN_STABLECOINS,
+  QUARANTINED_STABLECOINS,
   TRACKED_META_BY_ID,
 } from "./registry";
 
 const COMMODITY_PEG_CURRENCIES = new Set(["GOLD", "SILVER"] as const);
 
-type LifecycleStatus = "active" | "pre-launch" | "frozen";
+type LifecycleStatus = StablecoinStatus;
 
 type LifecyclePools = Partial<Record<LifecycleStatus, readonly StablecoinMeta[]>>;
 
@@ -93,6 +95,10 @@ export function getCoinsByLifecycleStatus(
     pool = options.pools?.["pre-launch"] ?? PRE_LAUNCH_STABLECOINS;
   } else if (status === "frozen") {
     pool = options.pools?.frozen ?? FROZEN_STABLECOINS;
+  } else if (status === "quarantined") {
+    pool = options.pools?.quarantined ?? QUARANTINED_STABLECOINS;
+  } else if (status === "delisted") {
+    pool = options.pools?.delisted ?? DELISTED_STABLECOINS;
   } else {
     return [];
   }

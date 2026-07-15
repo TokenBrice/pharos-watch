@@ -3,8 +3,10 @@ import canonicalOrderAsset from "../../data/stablecoins/canonical-order.json";
 import { STABLECOIN_META_ASSETS_PREVALIDATED } from "../../data/stablecoins/coins.prevalidated.generated";
 import {
   isActiveStablecoinMeta,
+  isDelistedStablecoinMeta,
   isFrozenStablecoinMeta,
   isPreLaunchStablecoinMeta,
+  isQuarantinedStablecoinMeta,
   isReadableStablecoinMeta,
 } from "./status";
 
@@ -32,14 +34,14 @@ export const TRACKED_IDS: ReadonlySet<string> = new Set(TRACKED_STABLECOINS.map(
 
 /**
  * Stablecoins with full worker processing. After v5.81 this strictly means
- * `status === "active"` — pre-launch coins (no past) and frozen coins (no
- * future) are both excluded from write-side crons and live aggregations.
+ * `status === "active"` (or omitted). Pre-launch, quarantined, delisted, and
+ * frozen coins are excluded from write-side crons and live aggregations.
  */
 export const ACTIVE_STABLECOINS: readonly StablecoinMeta[] = TRACKED_STABLECOINS.filter(
   isActiveStablecoinMeta,
 );
 
-/** Set of active stablecoin IDs (excludes pre-launch and frozen). */
+/** Set of active stablecoin IDs. */
 export const ACTIVE_IDS: ReadonlySet<string> = new Set(ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.id));
 
 /** Map of active stablecoin ID -> metadata. */
@@ -65,11 +67,37 @@ export const FROZEN_META_BY_ID: ReadonlyMap<string, StablecoinMeta> = new Map(
   FROZEN_STABLECOINS.map((stablecoin) => [stablecoin.id, stablecoin]),
 );
 
+/** Assets temporarily withheld from live publication pending a reviewed fix. */
+export const QUARANTINED_STABLECOINS: readonly StablecoinMeta[] = TRACKED_STABLECOINS.filter(
+  isQuarantinedStablecoinMeta,
+);
+
+export const QUARANTINED_IDS: ReadonlySet<string> = new Set(
+  QUARANTINED_STABLECOINS.map((stablecoin) => stablecoin.id),
+);
+
+export const QUARANTINED_META_BY_ID: ReadonlyMap<string, StablecoinMeta> = new Map(
+  QUARANTINED_STABLECOINS.map((stablecoin) => [stablecoin.id, stablecoin]),
+);
+
+/** Out-of-scope assets retained only for historical identity and readback. */
+export const DELISTED_STABLECOINS: readonly StablecoinMeta[] = TRACKED_STABLECOINS.filter(
+  isDelistedStablecoinMeta,
+);
+
+export const DELISTED_IDS: ReadonlySet<string> = new Set(
+  DELISTED_STABLECOINS.map((stablecoin) => stablecoin.id),
+);
+
+export const DELISTED_META_BY_ID: ReadonlyMap<string, StablecoinMeta> = new Map(
+  DELISTED_STABLECOINS.map((stablecoin) => [stablecoin.id, stablecoin]),
+);
+
 /**
- * Stablecoins whose data the site reads back (active + frozen). Use for:
- * sitemap, search, compare picker, API endpoints serving the frozen detail
- * page (`stablecoin-reserves`, `stress-signals`, `og`), rebuild caches,
- * `/api/stablecoins` payload composition.
+ * Stablecoins whose checked-in identity remains readable after launch (active +
+ * quarantined + delisted + frozen). Use for historical/read-only surfaces such
+ * as sitemap, search, canonical-ID redirects, and preserved detail routes. Live
+ * cache publication and provider collection must use the active registry.
  *
  * Pre-launch coins are excluded — they have no historical data to read.
  */
@@ -77,7 +105,7 @@ export const READABLE_STABLECOINS: readonly StablecoinMeta[] = TRACKED_STABLECOI
   isReadableStablecoinMeta,
 );
 
-/** Set of readable stablecoin IDs (active + frozen). */
+/** Set of readable stablecoin IDs (all post-launch lifecycle states). */
 export const READABLE_IDS: ReadonlySet<string> = new Set(READABLE_STABLECOINS.map((stablecoin) => stablecoin.id));
 
 /** Map of readable stablecoin ID -> metadata. */

@@ -214,8 +214,8 @@ export function AltPegCohortHistoryChart({
           </p>
           {coverageStartLabel ? (
             <p className="text-xs text-muted-foreground">
-              Coverage starts {coverageStartLabel}. This uses the cached stablecoin-charts cohort market-cap feed with
-              a fresher live tail point, so read it as a composition view rather than an exact historical ledger.
+              Coverage starts {coverageStartLabel}. This uses the legacy provider-wide stablecoin-charts cohort feed;
+              its live core-universe tail is withheld during the aggregate-policy transition to avoid a false drop.
               Cohorts below the current ${OTHER_THRESHOLD.toLocaleString("en-US")} latest-point threshold roll into
               Other.
             </p>

@@ -1,5 +1,5 @@
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
-import { excludeFrozenIds } from "../shared/exclude-frozen";
+import { includeActiveTrackedIds } from "../shared/exclude-frozen";
 import { normalizeBlacklistSyncStateKey } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { backfillTronFromLedger } from "./amount-recovery";
@@ -54,7 +54,7 @@ export async function loadBlacklistConfigStates(
   db: D1Database,
   signal?: AbortSignal,
 ): Promise<{ configStates: BlacklistConfigState[]; zeroCursorConfigs: string[] }> {
-  const eligibleConfigs = excludeFrozenIds(CONTRACT_CONFIGS, (c) => c.stablecoinId);
+  const eligibleConfigs = includeActiveTrackedIds(CONTRACT_CONFIGS, (c) => c.stablecoinId);
 
   // Single bulk fetch instead of one getLastBlock D1 round-trip per config.
   // The per-config key-normalization that getLastBlock applies is replicated

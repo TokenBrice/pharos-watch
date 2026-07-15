@@ -52,7 +52,7 @@ describe("stablecoin variants", () => {
   it("marks only authored tracked variants", () => {
     expect(isTrackedVariant("susde-ethena")).toBe(true);
     expect(isTrackedVariant("susdai-usd-ai")).toBe(true);
-    expect(isTrackedVariant("busd0-usual")).toBe(true);
+    expect(isTrackedVariant("busd0-usual")).toBe(false);
     expect(isTrackedVariant("sbold-k3-capital")).toBe(true);
     expect(isTrackedVariant("syrupusdc-maple")).toBe(true);
     expect(isTrackedVariant("syrupusdt-maple")).toBe(true);

@@ -8,9 +8,10 @@ const { logWorkerEventMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("@shared/lib/stablecoins/registry", () => ({
-  ACTIVE_STABLECOINS: [
+  TRACKED_STABLECOINS: [
     { id: "usdt-tether", geckoId: "tether" },
     { id: "usdc-circle", geckoId: "usd-coin" },
+    { id: "benji-franklin-templeton", geckoId: "franklin-benji-tokenized-us-government-money-fund", status: "quarantined" },
   ],
 }));
 
@@ -61,6 +62,15 @@ describe("filterDiscoveryCandidates", () => {
     ];
     const result = filterDiscoveryCandidates(cgCoins, TRACKED_GECKO_IDS, 5_000_000);
     expect(result).toHaveLength(0);
+  });
+
+  it("filters durable listing exclusions even when they are no longer active", () => {
+    const cgCoins = [
+      { id: "bfusd", name: "BFUSD", symbol: "BFUSD", market_cap: 100_000_000 },
+      { id: "new-stable", name: "NewStable", symbol: "NST", market_cap: 10_000_000 },
+    ];
+    const result = filterDiscoveryCandidates(cgCoins, TRACKED_GECKO_IDS, 5_000_000);
+    expect(result.map((candidate) => candidate.geckoId)).toEqual(["new-stable"]);
   });
 });
 
@@ -113,6 +123,15 @@ describe("upsertDiscoveryCandidates", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("does not persist an excluded provider ID from any discovery source", async () => {
+    const db = mockD1();
+    const upserted = await upsertDiscoveryCandidates(db, [
+      { geckoId: "bfusd", name: "BFUSD", symbol: "BFUSD", marketCap: 100_000_000, source: "coingecko" },
+    ]);
+    expect(upserted).toBe(0);
+    expect(db.getHistory()).toHaveLength(0);
   });
 });
 
@@ -173,6 +192,29 @@ describe("runDiscoveryScan", () => {
     expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}") as { reason: string };
     expect(metadata.reason).toBe("fetch-failed");
+  });
+
+  it("does not rediscover a quarantined catalog row", async () => {
+    mockFetch([{
+      match: "coins/markets",
+      body: [
+        {
+          id: "franklin-benji-tokenized-us-government-money-fund",
+          name: "Franklin OnChain U.S. Government Money Fund",
+          symbol: "benji",
+          market_cap: 500_000_000,
+        },
+        { id: "new-stable", name: "New Stable", symbol: "nst", market_cap: 9_000_000 },
+      ],
+    }]);
+    const db = mockD1();
+
+    const result = await runDiscoveryScan(db);
+
+    expect(result.status).toBeUndefined();
+    expect(result.itemCount).toBe(1);
+    expect(db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO discovery_candidates")))
+      .toHaveLength(1);
   });
 
   it("returns degraded when a successful upstream response violates the array contract", async () => {

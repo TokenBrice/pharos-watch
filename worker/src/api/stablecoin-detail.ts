@@ -1,6 +1,7 @@
 import { getCache } from "../lib/db-cache";
-import { withErrorHandler } from "../lib/api-utils";
+import { errorResponse, withErrorHandler } from "../lib/api-utils";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import {
   CACHE_TTL_SECONDS,
   DETAIL_STALE_CACHE_MAX_AGE_SECONDS,
@@ -110,6 +111,9 @@ export const handleStablecoinDetail = withErrorHandler(
     const cacheKey = `detail:${id}`;
     const cached = await getCache(db, cacheKey);
     const meta = TRACKED_META_BY_ID.get(id);
+    // Preserve the legacy provider lookup for unknown IDs, but never schedule
+    // new collection for a known non-active catalog record.
+    const providerRefreshAllowed = meta == null || isActiveStablecoinMeta(meta);
     const pegType = `pegged${meta?.flags.pegCurrency ?? "USD"}`;
     const normalizedCached = cached
       ? { ...cached, value: applyCuratedDetailAddress(cached.value, meta) }
@@ -119,6 +123,9 @@ export const handleStablecoinDetail = withErrorHandler(
       const age = Math.floor(Date.now() / 1000) - normalizedCached.updatedAt;
       if (age < CACHE_TTL_SECONDS) {
         return createFreshCacheHitResponse(normalizedCached.value, age);
+      }
+      if (!providerRefreshAllowed) {
+        return createStaleCacheHitResponse(normalizedCached.value, age);
       }
       if (age >= DETAIL_STALE_CACHE_MAX_AGE_SECONDS) {
         console.warn(
@@ -136,6 +143,10 @@ export const handleStablecoinDetail = withErrorHandler(
       }
       scheduleStablecoinDetailRefresh({ db, id, pegType, cached: normalizedCached, ctx, coingeckoApiKey });
       return createStaleCacheHitResponse(normalizedCached.value, age);
+    }
+
+    if (!providerRefreshAllowed) {
+      return errorResponse(404, "Live detail data is unavailable for this inactive catalog record");
     }
 
     const response = await startStablecoinDetailRefresh({

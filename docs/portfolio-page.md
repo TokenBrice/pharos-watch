@@ -50,7 +50,7 @@ There is no dedicated `/api/portfolio` endpoint. Portfolio holdings stay client-
 - `presets.ts` owns the curated preset definitions.
 - `src/components/portfolio-empty-state.tsx` owns preset-first empty-state onboarding.
 
-The page uses `CLIENT_ACTIVE_STABLECOINS` for `PORTFOLIO_COIN_OPTIONS`, excluding pre-launch and frozen assets. It does not filter against `DEAD_STABLECOINS`.
+The page uses `CLIENT_ACTIVE_STABLECOINS` for `PORTFOLIO_COIN_OPTIONS`, excluding every non-active lifecycle state. It does not filter against `DEAD_STABLECOINS`.
 
 ---
 

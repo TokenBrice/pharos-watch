@@ -24,13 +24,15 @@ Route contract for `/stablecoin/[id]/`, the central per-asset analytics surface.
 - renders `ExploreNextSection` after the interactive client
 - emits N-level `BreadcrumbJsonLd` plus a Dataset JSON-LD payload for active assets
 
-Active stablecoin Dataset JSON-LD is intentionally static and crawlable: `variableMeasured` advertises price, market cap, circulating supply, Peg Score, DEWS, Safety Grade, and Redemption Backstop coverage. Dataset nodes inline the Pharos `Organization` for `creator` / `publisher`, expose the CC BY 4.0 license URL, carry the stable Pharos coin URN in `identifier`, and keep `sameAs` populated from provider/profile URLs or the canonical detail page. Frozen assets use archive-specific historical variables, and pre-launch assets use conservative `WebPage` / `Thing` JSON-LD instead of a live analytics `Dataset`.
+Active stablecoin Dataset JSON-LD is intentionally static and crawlable: `variableMeasured` advertises price, market cap, circulating supply, Peg Score, DEWS, Safety Grade, and Redemption Backstop coverage. Dataset nodes inline the Pharos `Organization` for `creator` / `publisher`, expose the CC BY 4.0 license URL, carry the stable Pharos coin URN in `identifier`, and keep `sameAs` populated from provider/profile URLs or the canonical detail page. Frozen assets use archive-specific historical variables, quarantined and delisted records use inactive-listing variables without live claims, and pre-launch assets use conservative `WebPage` / `Thing` JSON-LD.
 
 If the ID is not tracked, the server shell returns a not-found-style fallback instead of mounting the full client.
 
 If the ID is tracked but `coin.status === "pre-launch"`, the server route returns `PreLaunchDetail` instead of mounting the normal detail client.
 
-The `/stablecoin/[id]/yield/` subroute is statically generated for non-pre-launch coins that are intrinsically yield-bearing or have a curated deterministic auto-lending override. Those durable workbench routes use `noindex,follow` metadata. A lending opportunity can still appear dynamically for another tracked coin; when no static workbench exists, the Pages stablecoin function redirects that known coin to `/yield/?compare=<id>&from=detail-fallback` instead of serving a dead link. Unknown IDs retain normal static 404 handling. This policy removes low-value empty workbench pages from the Cloudflare export while preserving a useful handoff for runtime discoveries; see [yield-intelligence.md](./yield-intelligence.md) for the per-source APY history contract.
+If the ID is quarantined or delisted, the server route renders a static read-only profile with `ListingStateBanner`, the sourced lifecycle reason, FAQ, breadcrumbs, and conservative structured data. It does not mount live hooks. The Worker detail endpoint may return retained cache for historical context, but it never refreshes providers for a known non-active record; without retained cache it returns `404`.
+
+The `/stablecoin/[id]/yield/` subroute is statically generated only for active coins that are intrinsically yield-bearing or have a curated deterministic auto-lending override. Those durable workbench routes use `noindex,follow` metadata. A lending opportunity can still appear dynamically for another active coin; when no static workbench exists, the Pages stablecoin function redirects that known coin to `/yield/?compare=<id>&from=detail-fallback` instead of serving a dead link. Unknown IDs retain normal static 404 handling. This policy removes low-value empty workbench pages from the Cloudflare export while preserving a useful handoff for runtime discoveries; see [yield-intelligence.md](./yield-intelligence.md) for the per-source APY history contract.
 
 ### Pre-launch detail variant
 
@@ -90,7 +92,7 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 1. `QueryFreshnessNotices` — single banner covering errors and staleness across core, historical, and enabled supplemental detail sources, driven by `viewModel.staleQueries` (in the normal section stream; `QueryErrorNotice` appears only in the `list-error` and not-found early-return branches, not here)
 2. `HeroCard`
 3. `ExploitNoticeBanner`
-4. `FrozenStateBanner` for frozen tracked assets with `obituary` and `frozenAt` metadata
+4. `ListingStateBanner` for quarantined/delisted metadata when the reusable client composition is rendered, then `FrozenStateBanner` for frozen tracked assets with `obituary` and `frozenAt`; the route normally short-circuits quarantined/delisted records to its static server profile
 5. `MobileRiskSnapshot` on `<lg`, using the current report-card/resilience payload so phone users see the grade, peg state, collateral/custody posture, and key caveat before the full report card
 6. `MobileStickySummary`
 7. Content grid (Figma coin template): single column below `xl`; at `xl+` an `xl:grid-cols-[minmax(0,1fr)_22rem]` grid places the summary rail beside the main column. The main column holds everything in items 8–16; the rail is item 17.

@@ -15,7 +15,7 @@ Route contract for `/screener/`, the filterable and exportable view of the full 
 
 ## Universe And Data Sources
 
-The table universe is `CLIENT_TRACKED_STABLECOINS`, including active, pre-launch, and frozen rows. Live data is joined by canonical stablecoin ID from:
+The row builder starts from `CLIENT_TRACKED_STABLECOINS` and explicitly excludes quarantined and delisted records. The visible universe therefore contains active, pre-launch, and frozen rows; policy-withheld records remain available only through their static detail pages. Live data is joined by canonical stablecoin ID from:
 
 - `useStablecoins()` for supply and short supply trend
 - `usePegSummary()` for Peg Score and peg-deviation context
@@ -39,7 +39,7 @@ The Screener uses `getCirculatingRaw()` for USD supply. It does not introduce it
 
 Enum lists are comma-delimited. Default values are omitted by the shared codec, and updates clear only Screener-owned keys so unrelated query parameters survive.
 
-Legacy `mechanism=<slug>` links normalize once after hydration to `mechanisms=<slug>`. When that alias arrives without lifecycle state, normalization pins `lifecycle=active` so a historical deep link does not unexpectedly include pre-launch or frozen assets. Invalid or deprecated aliases are removed; canonical writers use the schema keys above.
+Legacy `mechanism=<slug>` links normalize once after hydration to `mechanisms=<slug>`. When that alias arrives without lifecycle state, normalization pins `lifecycle=active` so a historical deep link does not unexpectedly include pre-launch or frozen assets. Quarantined and delisted records are excluded regardless of URL state. Invalid or deprecated aliases are removed; canonical writers use the schema keys above.
 
 ## Loading, Error, And Freshness
 

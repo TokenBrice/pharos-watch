@@ -63,7 +63,7 @@ describe("AltPegCohortHistoryChart", () => {
     expect(screen.getByRole("heading", { name: /alt-peg market cap by cohort/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: "1Y" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByText(/coverage starts/i)).toBeTruthy();
-    expect(screen.getByText(/cached stablecoin-charts cohort market-cap feed/i)).toBeTruthy();
+    expect(screen.getByText(/legacy provider-wide stablecoin-charts cohort feed/i)).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /open large cohort chart/i }));
     expect(onOpenFocus).toHaveBeenCalledWith("1y");

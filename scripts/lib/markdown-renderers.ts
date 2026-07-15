@@ -111,6 +111,10 @@ export function renderStablecoinDetail(
 
   if (coin.status === "pre-launch") {
     parts.push("## Live Data\n\nThis is a pre-launch stablecoin profile. Live API data is not available until launch.");
+  } else if (coin.status === "quarantined" || coin.status === "delisted") {
+    parts.push(
+      `## Listing Status\n\n${coin.listingStatusReview?.reason ?? "This record is outside Pharos's active universe."} Current live monitoring is disabled; the canonical profile remains available for historical reference.`,
+    );
   } else {
     parts.push(
       `## Live Data\n\nReal-time price, supply, peg score, liquidity, and flow data live at https://api.pharos.watch/api/stablecoin/${id}.`,

@@ -14,6 +14,7 @@ import { runAdminJob } from "../lib/admin-job";
 import { acquireCronLease, createLeaseOwner, releaseCronLease, renewCronLease } from "../lib/cron-lease";
 import { logWorkerEvent } from "../lib/structured-log";
 import { parseOptionalDayWindow } from "./backfill-depegs-window";
+import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
 
 // Advisory lease key fencing concurrent admin invocations of this rebuild. It
 // is intentionally distinct from the "stability-index" cron job key.
@@ -273,6 +274,7 @@ export async function handleBackfillStabilityIndex(
                 result.band,
                 JSON.stringify(result.components),
                 JSON.stringify({
+                  aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
                   depegCount: input.depegCount,
                   totalMcapUsd: input.totalMcapUsd,
                   mcap7dChangePct: input.mcap7dChangePct,

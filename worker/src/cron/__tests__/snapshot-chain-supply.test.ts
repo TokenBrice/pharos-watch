@@ -8,6 +8,10 @@ vi.mock("@shared/lib/stablecoins/registry", () => ({
   ACTIVE_IDS: new Set(["usdt-tether", "usdc-circle"]),
 }));
 
+vi.mock("@shared/lib/stablecoins/aggregate-registry", () => ({
+  CORE_AGGREGATE_ACTIVE_IDS: new Set(["usdt-tether", "usdc-circle"]),
+}));
+
 vi.mock("@shared/lib/supply", () => ({
   sumPegBuckets: (c: Record<string, number> | undefined) => {
     if (!c) return 0;
@@ -29,10 +33,7 @@ function completionMarker(params: {
   writtenChains?: number;
 }): string {
   const requiredIds = params.requiredIds ?? DEFAULT_REQUIRED_IDS;
-  const expectation = buildSupplySnapshotCoverageExpectation(
-    requiredIds,
-    params.appliedWaivers ?? [],
-  );
+  const expectation = buildSupplySnapshotCoverageExpectation(requiredIds, params.appliedWaivers ?? []);
   return JSON.stringify({
     snapshotDate: params.snapshotDate,
     coverageVersion: 2,
@@ -107,16 +108,20 @@ describe("snapshotChainSupply", () => {
   it("normalizes chain display names through the canonical resolver before snapshotting", async () => {
     const payload = completePayload();
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
-    const db = mockD1([{
-      match: "cache",
-      matchBinds: ["stablecoins"],
-      rows: [],
-      first: { key: "stablecoins", value: JSON.stringify(payload), updated_at: freshUpdatedAt },
-    }]);
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: { key: "stablecoins", value: JSON.stringify(payload), updated_at: freshUpdatedAt },
+      },
+    ]);
     const result = await snapshotChainSupply(db);
     expect(result.itemCount).toBe(3);
 
-    const inserts = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO chain_supply_history"));
+    const inserts = db
+      .getHistory()
+      .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO chain_supply_history"));
     expect(inserts).toHaveLength(1);
     expect(inserts[0]!.binds.filter((_, index) => index % 4 === 0)).toEqual(["ethereum", "bsc", "citrea"]);
     expect(inserts[0]!.binds.filter((_, index) => index % 4 === 2)).toEqual([60, 40, 10]);
@@ -149,12 +154,14 @@ describe("snapshotChainSupply", () => {
       ],
     };
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
-    const db = mockD1([{
-      match: "cache",
-      matchBinds: ["stablecoins"],
-      rows: [],
-      first: { key: "stablecoins", value: JSON.stringify(payload), updated_at: freshUpdatedAt },
-    }]);
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: { key: "stablecoins", value: JSON.stringify(payload), updated_at: freshUpdatedAt },
+      },
+    ]);
 
     const result = await snapshotChainSupply(db);
 
@@ -167,12 +174,14 @@ describe("snapshotChainSupply", () => {
     const payload = completePayload();
     payload.peggedAssets.pop();
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
-    const db = mockD1([{
-      match: "cache",
-      matchBinds: ["stablecoins"],
-      rows: [],
-      first: { key: "stablecoins", value: JSON.stringify(payload), updated_at: freshUpdatedAt },
-    }]);
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [],
+        first: { key: "stablecoins", value: JSON.stringify(payload), updated_at: freshUpdatedAt },
+      },
+    ]);
 
     const result = await snapshotChainSupply(db);
 
@@ -196,12 +205,15 @@ describe("snapshotChainSupply", () => {
       reason: "upstream supply unavailable",
       expiresAt: Math.floor(Date.now() / 1000) + 600,
     };
-    const buildDb = () => mockD1([{
-      match: "cache",
-      matchBinds: ["stablecoins"],
-      rows: [],
-      first: { key: "stablecoins", value: JSON.stringify(payload), updated_at: freshUpdatedAt },
-    }]);
+    const buildDb = () =>
+      mockD1([
+        {
+          match: "cache",
+          matchBinds: ["stablecoins"],
+          rows: [],
+          first: { key: "stablecoins", value: JSON.stringify(payload), updated_at: freshUpdatedAt },
+        },
+      ]);
 
     const beforeExpiry = await snapshotChainSupply(buildDb(), undefined, {
       nowSec: waiver.expiresAt - 1,
@@ -228,23 +240,27 @@ describe("snapshotChainSupply", () => {
       {
         match: "cache",
         matchBinds: ["stablecoins"],
-        rows: [{
-          key: "stablecoins",
-          value: JSON.stringify(completePayload()),
-          updated_at: freshUpdatedAt,
-        }],
+        rows: [
+          {
+            key: "stablecoins",
+            value: JSON.stringify(completePayload()),
+            updated_at: freshUpdatedAt,
+          },
+        ],
       },
       {
         match: "cache",
         matchBinds: ["snapshot-chain-supply:last-write"],
-        rows: [{
-          key: "snapshot-chain-supply:last-write",
-          value: completionMarker({
-            snapshotDate,
-            requiredIds: ["usdt-tether", "eurt-test"],
-          }),
-          updated_at: freshUpdatedAt,
-        }],
+        rows: [
+          {
+            key: "snapshot-chain-supply:last-write",
+            value: completionMarker({
+              snapshotDate,
+              requiredIds: ["usdt-tether", "eurt-test"],
+            }),
+            updated_at: freshUpdatedAt,
+          },
+        ],
       },
     ]);
 
@@ -296,11 +312,13 @@ describe("snapshotChainSupply", () => {
       {
         match: "cache",
         matchBinds: ["snapshot-chain-supply:last-write"],
-        rows: [{
-          key: "snapshot-chain-supply:last-write",
-          value: completionMarker({ snapshotDate }),
-          updated_at: freshUpdatedAt,
-        }],
+        rows: [
+          {
+            key: "snapshot-chain-supply:last-write",
+            value: completionMarker({ snapshotDate }),
+            updated_at: freshUpdatedAt,
+          },
+        ],
       },
     ]);
 
@@ -309,7 +327,9 @@ describe("snapshotChainSupply", () => {
     });
 
     expect(result.itemCount).toBe(3);
-    const inserts = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO chain_supply_history"));
+    const inserts = db
+      .getHistory()
+      .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO chain_supply_history"));
     expect(inserts.flatMap((entry) => entry.binds)).toContain(85);
   });
 
@@ -337,16 +357,18 @@ describe("snapshotChainSupply", () => {
       {
         match: "cache",
         matchBinds: ["snapshot-chain-supply:last-write"],
-        rows: [{
-          key: "snapshot-chain-supply:last-write",
-          value: completionMarker({
-            snapshotDate,
-            requiredIds: previousIds,
-            ownedRowIds: ["bsc", "citrea", "ethereum", "polygon"],
-            writtenChains: 4,
-          }),
-          updated_at: freshUpdatedAt,
-        }],
+        rows: [
+          {
+            key: "snapshot-chain-supply:last-write",
+            value: completionMarker({
+              snapshotDate,
+              requiredIds: previousIds,
+              ownedRowIds: ["bsc", "citrea", "ethereum", "polygon"],
+              writtenChains: 4,
+            }),
+            updated_at: freshUpdatedAt,
+          },
+        ],
       },
     ]);
 
@@ -354,12 +376,16 @@ describe("snapshotChainSupply", () => {
 
     expect(result.itemCount).toBe(3);
     const history = db.getHistory();
-    expect(history.some((entry) => (
-      entry.sql.includes("DELETE FROM chain_supply_history")
-      && entry.binds[0] === snapshotDate
-    ))).toBe(true);
-    expect(history.filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO chain_supply_history"))
-      .flatMap((entry) => entry.binds)).not.toContain("polygon");
+    expect(
+      history.some(
+        (entry) => entry.sql.includes("DELETE FROM chain_supply_history") && entry.binds[0] === snapshotDate,
+      ),
+    ).toBe(true);
+    expect(
+      history
+        .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO chain_supply_history"))
+        .flatMap((entry) => entry.binds),
+    ).not.toContain("polygon");
   });
 
   it("invalidates completion when an applied waiver owner or expiry changes", async () => {
@@ -388,14 +414,16 @@ describe("snapshotChainSupply", () => {
         {
           match: "cache",
           matchBinds: ["snapshot-chain-supply:last-write"],
-          rows: [{
-            key: "snapshot-chain-supply:last-write",
-            value: completionMarker({
-              snapshotDate,
-              appliedWaivers: [originalWaiver],
-            }),
-            updated_at: nowSec - 60,
-          }],
+          rows: [
+            {
+              key: "snapshot-chain-supply:last-write",
+              value: completionMarker({
+                snapshotDate,
+                appliedWaivers: [originalWaiver],
+              }),
+              updated_at: nowSec - 60,
+            },
+          ],
         },
       ]);
 
@@ -438,10 +466,12 @@ describe("snapshotChainSupply", () => {
 
     const retried = await snapshotChainSupply(legacyDb);
     expect(retried.itemCount).toBe(3);
-    const markerWrite = legacyDb.getHistory().find((entry) => (
-      entry.sql.includes("INSERT OR REPLACE INTO cache")
-      && entry.binds[0] === "snapshot-chain-supply:last-write"
-    ));
+    const markerWrite = legacyDb
+      .getHistory()
+      .find(
+        (entry) =>
+          entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "snapshot-chain-supply:last-write",
+      );
     expect(JSON.parse(String(markerWrite?.binds[1]))).toMatchObject({
       snapshotDate,
       coverageVersion: 2,
@@ -503,11 +533,13 @@ describe("snapshotChainSupply", () => {
     expect(result.status).toBe("degraded");
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ reason: "db_write_failed" });
     expect(batches).toHaveLength(1);
-    expect(batches[0]!.map((statement) => (statement as { sql?: string }).sql)).toEqual(expect.arrayContaining([
-      expect.stringContaining("DELETE FROM chain_supply_history"),
-      expect.stringContaining("INSERT OR REPLACE INTO chain_supply_history"),
-      expect.stringContaining("INSERT OR REPLACE INTO cache"),
-    ]));
+    expect(batches[0]!.map((statement) => (statement as { sql?: string }).sql)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("DELETE FROM chain_supply_history"),
+        expect.stringContaining("INSERT OR REPLACE INTO chain_supply_history"),
+        expect.stringContaining("INSERT OR REPLACE INTO cache"),
+      ]),
+    );
   });
 
   it("returns degraded when aborted", async () => {

@@ -34,6 +34,10 @@ export const CEMETERY_FOOTERS = [
 
 type TrackedStablecoinMeta = (typeof TRACKED_STABLECOINS)[number];
 
+function isTrackedAnnouncementCoin(coin: TrackedStablecoinMeta): boolean {
+  return coin.status == null || coin.status === "active" || coin.status === "pre-launch";
+}
+
 export interface TelegramDigestSuccessAction {
   key: string;
   value: string;
@@ -112,7 +116,7 @@ function buildFrozenAppendix(ids: Iterable<string>): string {
 }
 
 function buildTrackedSnapshotPayload(): string {
-  return JSON.stringify(TRACKED_STABLECOINS.map((coin) => coin.id));
+  return JSON.stringify(TRACKED_STABLECOINS.filter(isTrackedAnnouncementCoin).map((coin) => coin.id));
 }
 
 function parseSnapshotKeys(raw: string): Set<string> | null {
@@ -321,7 +325,7 @@ export async function prepareTelegramDigestAppendices(
 
     for (const id of trackedIds) {
       const coin = TRACKED_META_BY_ID.get(id);
-      if (!coin) continue;
+      if (!coin || !isTrackedAnnouncementCoin(coin)) continue;
       if (coin.status === "pre-launch") {
         preLaunchCoins.push(coin);
       } else {
@@ -371,6 +375,7 @@ export async function prepareTelegramDigestAppendices(
     } else {
       const appendixTrackedIds = new Set(pendingTrackedIds);
       for (const coin of TRACKED_STABLECOINS) {
+        if (!isTrackedAnnouncementCoin(coin)) continue;
         if (!previousTrackedKeys.has(coin.id)) {
           appendixTrackedIds.add(coin.id);
         }

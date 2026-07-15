@@ -16,7 +16,7 @@ import {
 import type { BlacklistRow } from "../cron/blacklist/shared";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { runAdminRoute } from "../lib/route-wrappers";
-import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 
 const DEFAULT_LIMIT = 500;
 const MAX_LIMIT = 2000;
@@ -53,7 +53,7 @@ export async function handleBackfillBlacklistCurrentBalances(
       const dryRun = url.searchParams.get("dryRun") === "true";
 
       const configs = CONTRACT_CONFIGS.filter((config) => {
-        if (FROZEN_IDS.has(config.stablecoinId)) return false;
+        if (!ACTIVE_IDS.has(config.stablecoinId)) return false;
         if (stablecoinParam && config.stablecoin !== stablecoinParam) return false;
         if (chainIdParam && config.chain.chainId !== chainIdParam) return false;
         return true;

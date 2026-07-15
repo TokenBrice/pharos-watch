@@ -3,6 +3,8 @@ import { round1 } from "@shared/lib/math";
 import type { StablecoinData } from "@shared/types/market";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { getDisplayedPsi } from "@shared/lib/psi-view-model";
+import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
+import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { getConditionBand } from "../../lib/stability-index";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
@@ -78,6 +80,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     return {
       inputData: {
         digestVersion: 2,
+        aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
         totalMcapUsd: 0,
         mcap7dDelta: 0,
         degradedSources: [stablecoinsCacheResult.reason],
@@ -102,9 +105,12 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
 
   const stablecoinAssets = stablecoinsCacheResult.payload.peggedAssets as StablecoinData[];
   const trackedStablecoinAssets = stablecoinAssets.filter((coin) => ACTIVE_IDS.has(coin.id));
+  const coreAggregateStablecoinAssets = trackedStablecoinAssets.filter((coin) =>
+    CORE_AGGREGATE_ACTIVE_IDS.has(coin.id),
+  );
   const stablecoinAssetById = new Map<string, StablecoinData>();
   const mcapById = new Map<string, number>();
-  for (const coin of stablecoinAssets) {
+  for (const coin of trackedStablecoinAssets) {
     stablecoinAssetById.set(coin.id, coin);
     const raw = getCirculatingRaw(coin);
     if (raw > 0) mcapById.set(coin.id, raw);
@@ -116,7 +122,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   const supplyChanges7d: NonNullable<DigestInputData["supplyChanges7d"]> = [];
   let biggestAbsChange = 0;
 
-  for (const coin of trackedStablecoinAssets) {
+  for (const coin of coreAggregateStablecoinAssets) {
     const mcap = getCirculatingRaw(coin);
     const prevWeek = getPrevWeekRaw(coin);
     if (mcap <= 0) continue;
@@ -147,6 +153,9 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   const ctx: CollectorContext = {
     db,
     trackedStablecoinAssets,
+    trackedStablecoinIds: ACTIVE_IDS,
+    coreAggregateStablecoinAssets,
+    coreAggregateStablecoinIds: CORE_AGGREGATE_ACTIVE_IDS,
     stablecoinAssetById,
     mcapById,
     nowSec,
@@ -248,6 +257,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
 
   const inputData: DigestInputData = {
     digestVersion: 2,
+    aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
     totalMcapUsd,
     mcap7dDelta: totalMcapUsd - totalPrevWeek,
     totalMcapAth,

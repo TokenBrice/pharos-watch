@@ -37,9 +37,11 @@ Each digest has four fields produced by the LLM:
 
 The cron assembles a `DigestInputData` object from the collector set below before calling the LLM:
 
+All ecosystem monetary aggregates use the `core-stablecoins-v1` universe: active `core-stablecoin` and `cash-equivalent` listings only. Tracked variants and stable-value investments remain fully monitored and can appear in digest depeg, DEWS, safety, yield, and liquidity signals, but they are excluded from total market cap, supply change/velocity, mint/burn aggregates, and PSI contribution. Every new input snapshot persists `aggregateUniverse: "core-stablecoins-v1"`; weekly rollups prefer marked rows so legacy and core totals are not mixed during the cutover week.
+
 | Category | Source | Key signals |
 |----------|--------|-------------|
-| Market metrics | stablecoins cache | Total mcap, 7d delta, biggest supply mover (>$1M), cache age |
+| Market metrics | stablecoins cache + listing governance registry | Core-universe total mcap, 7d delta, biggest supply mover (>$1M), cache age |
 | Editorial candidates | derived from all collected signals | Pre-ranked lead candidates with impact, novelty, confidence, artifact risk, and suppression reasons |
 | Depeg events | `depeg_events` table + current `stablecoins` cache price as display context | Active count and active depeg inclusion follow open `depeg_events` rows (the canonical detector closes recovered events); top 8 are ranked by critical severity then recorded event impact (\|event bps\| × mcap), with cache price shown only as supplemental context, active age/chronic suppression with critical-depeg override, historical peak context, and resolved depegs by absolute impact |
 | Stability Index | `stability_index_samples` + `stability_index` | Current PSI from latest 30-minute sample, yesterday's from daily table |
@@ -48,7 +50,7 @@ The cron assembles a `DigestInputData` object from the collector set below befor
 | Safety scores | computed real-time | Report card grades for mentioned coins + 2 "tension" coins (high peg score but low overall grade — structurally fragile despite stable peg) |
 | Resolved depegs | `depeg_events` (last 48h) | Filters: peak >100 bps AND mcap >$20M; top 5 by impact score |
 | Mint-burn flows | `mint_burn_hourly` | Bank Run Gauge (mcap-weighted composite), Flight-to-Quality (safe-haven vs risky net flows via `buildFlightToQualityClassification()`), top pressure coins (\|FIS\| > 20), top 3 chains by absolute 24h net flow |
-| Total mcap ATH | derived from `daily_digest` archive (`json_extract` on stored `totalMcapUsd`) | Anchors current total mcap against its Digest-window ATH value and date |
+| Total mcap ATH | derived from core-marked `daily_digest` rows (`json_extract` on stored `totalMcapUsd`) | Anchors current core total mcap against its post-cutover Digest-window ATH value and date |
 | DEWS stress | `stress_signals` + `stress_signal_history` | Band distribution (CALM/WATCH/ALERT/WARNING/DANGER), all band changes (any rank-changing band move), elevated coins (ALERT+ with mcap >$10M) |
 | Historical context | `stability_index` + `supply_history` | PSI precedent (last time score was at/below current), band streak, supply mover ATH and largest historical weekly change |
 | Grade transitions | `safety_grade_history` | Report card grade changes (last 48h) with dimensional context; methodology re-grade guard (>15 simultaneous changes that are >=80% one-directional excluded) |
@@ -60,7 +62,7 @@ The cron assembles a `DigestInputData` object from the collector set below befor
 | Recent digests | last 7 non-weekly rows from `daily_digest` | Passed to LLM to enforce daily variety |
 | Digest intelligence | current `DigestInputData` + latest archived `input_data` | Deterministic risk tape, what changed since yesterday, prior next-trigger outcomes, next triggers, calm-day frame, and editorial audit |
 
-`DigestInputData` is defined in `shared/types/digest.ts` (re-exported via `shared/types/index.ts`) and imported by the digest cron, digest snapshot API, and frontend snapshot hook.
+`DigestInputData` is defined in `shared/types/digest.ts` (re-exported via `shared/types/index.ts`) and imported by the digest cron, digest snapshot API, and frontend snapshot hook. Its optional `aggregateUniverse` marker preserves compatibility with archived pre-cutover rows.
 
 Four additional optional fields were added to `DigestInputData` in the v2 refinement: `mintBurnFlows`, `dewsStress`, `historicalContext`, and `gradeTransitions`. All are populated only when their source data exists — the LLM writes from what's available.
 

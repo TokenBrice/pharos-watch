@@ -23,15 +23,17 @@ export const AUTO_LENDING_POOL_MAP = {
 
 export interface StaticYieldWorkbenchCoin {
   id: string;
-  status?: string;
+  status?: StablecoinStatus;
   flags: {
     yieldBearing?: boolean;
   };
 }
 
 export function hasStaticYieldWorkbench(coin: StaticYieldWorkbenchCoin): boolean {
-  return coin.status !== "pre-launch" && (
+  return isActiveStablecoinMeta(coin) && (
     coin.flags.yieldBearing === true
     || Object.prototype.hasOwnProperty.call(AUTO_LENDING_POOL_MAP, coin.id)
   );
 }
+import { isActiveStablecoinMeta } from "./stablecoins/status";
+import type { StablecoinStatus } from "../types";

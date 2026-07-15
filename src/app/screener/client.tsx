@@ -31,7 +31,6 @@ import {
 } from "@/app/screener/screener-filters";
 import {
   CLIENT_ACTIVE_META_BY_ID,
-  CLIENT_TRACKED_META_BY_ID,
   CLIENT_TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/client-registry";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
@@ -234,6 +233,7 @@ export function ScreenerClient() {
 
     const rows: ScreenerRow[] = [];
     for (const meta of CLIENT_TRACKED_STABLECOINS) {
+      if (meta.status === "quarantined" || meta.status === "delisted") continue;
       const lifecycle = meta.status ?? "active";
       const safety = reportById.get(meta.id) ?? null;
       const pegCoin = pegById.get(meta.id);
@@ -336,13 +336,16 @@ export function ScreenerClient() {
     },
   ]);
 
-  const totalTracked = CLIENT_TRACKED_META_BY_ID.size;
+  const totalTracked = CLIENT_TRACKED_STABLECOINS.filter(
+    (coin) => coin.status !== "quarantined" && coin.status !== "delisted",
+  ).length;
   const totalRows = allRows.length || totalTracked;
   const matchingRows = scoreFilterDataLoading ? totalRows : filteredRows.length;
   const active = hasActiveFilters(filters);
   const activeFilterCount = countActiveScreenerFilters(filters);
   // One coin-count story: the screener universe is the full tracked registry
-  // (pre-launch and frozen included), unlike the active-only dashboard table.
+  // (visible pre-launch and frozen rows included), unlike the active-only dashboard table.
+  // Policy-withheld quarantined and delisted records remain detail-only.
   // The live matched count is the toolbar's One Beam (frost) figure.
 
   return (

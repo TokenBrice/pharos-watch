@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const STABILITY_INDEX_V3: readonly MethodologyChangelogEntry[] = [
   {
+    version: "3.6",
+    title: "Core-market aggregate universe",
+    date: "2026-07-15",
+    effectiveAt: 1784073600,
+    summary:
+      "PSI now measures the core stablecoin market without counting parent-linked variants or investment products as independent monetary supply.",
+    impact: [
+      "The live and historical PSI universes include active core stablecoins, active cash equivalents, and PSI-only shadow assets",
+      "Tracked variants remain readable on their detail and browse surfaces but no longer contribute market cap, trend, depeg severity, breadth, or DEWS stress breadth to PSI",
+      "Stable-value investment products remain tracked for research while staying outside the ecosystem monetary aggregate",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "3.5",
     title: "Exact DEWS generation dependency",
     date: "2026-06-19",
@@ -81,8 +96,7 @@ export const STABILITY_INDEX_V3: readonly MethodologyChangelogEntry[] = [
     title: "DEWS stress breadth component",
     date: "2026-03-01",
     effectiveAt: 1772379888,
-    summary:
-      "Added DEWS-derived stress breadth as an explicit PSI component to capture broad non-depeg stress.",
+    summary: "Added DEWS-derived stress breadth as an explicit PSI component to capture broad non-depeg stress.",
     impact: [
       "Formula changed to: 100 - severity - breadth - stressBreadth + trend",
       "New stressBreadth cap of 5 points",

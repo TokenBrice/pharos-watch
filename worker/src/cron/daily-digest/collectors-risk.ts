@@ -29,7 +29,7 @@ export async function collectSafetyScores(
   try {
     const source = await loadActiveV8SafetyScoreHistorySource(ctx.db);
     const allGrades: CanonicalSafetyGradeRow[] = source.snapshot.cards
-      .filter((card) => !card.isDefunct && !card.rawInputs.navToken)
+      .filter((card) => ctx.trackedStablecoinIds.has(card.id) && !card.isDefunct && !card.rawInputs.navToken)
       .map((card) => ({
         id: card.id,
         symbol: card.symbol,
@@ -128,14 +128,17 @@ export async function collectDewsStress(
       return undefined;
     }
 
-    const todayRows = publishedDews.rows;
+    const todayRows = publishedDews.rows.filter((row) => ctx.trackedStablecoinIds.has(row.stablecoin_id));
     if (todayRows.length > 0) {
       const yesterdayDews = await ctx.db
         .prepare("SELECT stablecoin_id, score, band FROM stress_signal_history WHERE snapshot_date = ?")
         .bind(ctx.yesterdayTs)
         .all<{ stablecoin_id: string; score: number; band: string }>();
 
-      const yesterdayMap = new Map((yesterdayDews.results ?? []).map((row) => [row.stablecoin_id, row]));
+      const yesterdayRows = (yesterdayDews.results ?? []).filter((row) =>
+        ctx.trackedStablecoinIds.has(row.stablecoin_id),
+      );
+      const yesterdayMap = new Map(yesterdayRows.map((row) => [row.stablecoin_id, row]));
       const initCounts = () => ({ calm: 0, watch: 0, alert: 0, warning: 0, danger: 0 });
       const bandCounts = initCounts();
       const yesterdayBandCounts = initCounts();
@@ -144,7 +147,7 @@ export async function collectDewsStress(
         const key = row.band.toLowerCase() as keyof typeof bandCounts;
         if (key in bandCounts) bandCounts[key]++;
       }
-      for (const row of yesterdayDews.results ?? []) {
+      for (const row of yesterdayRows) {
         const key = row.band.toLowerCase() as keyof typeof yesterdayBandCounts;
         if (key in yesterdayBandCounts) yesterdayBandCounts[key]++;
       }

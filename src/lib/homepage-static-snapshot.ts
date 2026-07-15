@@ -1,5 +1,5 @@
 import topStablecoinsDataset from "../../public/datasets/top-stablecoins/latest.json";
-import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
+import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
 import { HOMEPAGE_COHORT_BUCKET_IDS, type HomepageCohortBucketKey } from "@/lib/homepage-cohort-config";
 import type { TotalMcapChartRow } from "@/lib/total-mcap-chart";
 import { numberValue } from "@shared/lib/type-guards";
@@ -47,7 +47,7 @@ export function getHomepageHeroSnapshot(): HomepageHeroSnapshot {
   let sky = 0;
 
   for (const row of rows) {
-    if (typeof row.id !== "string" || !ACTIVE_STABLECOIN_ID_SET.has(row.id)) {
+    if (typeof row.id !== "string" || !CORE_AGGREGATE_ACTIVE_IDS.has(row.id)) {
       continue;
     }
 

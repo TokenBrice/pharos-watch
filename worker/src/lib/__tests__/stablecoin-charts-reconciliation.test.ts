@@ -101,6 +101,30 @@ describe("stablecoin-charts reconciliation", () => {
           chainCirculating: {},
           chains: [],
         },
+        {
+          id: "susds-sky",
+          symbol: "sUSDS",
+          name: "Sky Savings USDS",
+          geckoId: "savings-usds",
+          pegType: "peggedUSD",
+          pegMechanism: "yield-bearing",
+          price: 1,
+          priceSource: "defillama",
+          priceConfidence: "high",
+          priceUpdatedAt: null,
+          priceObservedAt: null,
+          priceObservedAtMode: null,
+          priceSyncedAt: null,
+          consensusSources: [],
+          agreeSources: [],
+          supplySource: "defillama",
+          circulating: { peggedUSD: 999 },
+          circulatingPrevDay: {},
+          circulatingPrevWeek: {},
+          circulatingPrevMonth: {},
+          chainCirculating: {},
+          chains: [],
+        },
       ],
       500,
     );
@@ -111,22 +135,38 @@ describe("stablecoin-charts reconciliation", () => {
         peggedREAL: 40,
         peggedUSD: 90,
       },
+      aggregateUniverse: "core-stablecoins-v1",
     });
   });
 
   it("appends a live current point after historical points", () => {
     const points = appendOrReplaceCurrentStablecoinChartsPoint(
       [
-        { date: 100, totalCirculatingUSD: { peggedUSD: 100 } },
-        { date: 200, totalCirculatingUSD: { peggedUSD: 120 } },
+        { date: 100, totalCirculatingUSD: { peggedUSD: 100 }, aggregateUniverse: "core-stablecoins-v1" },
+        { date: 200, totalCirculatingUSD: { peggedUSD: 120 }, aggregateUniverse: "core-stablecoins-v1" },
       ],
-      { date: 250, totalCirculatingUSD: { peggedUSD: 140 } },
+      { date: 250, totalCirculatingUSD: { peggedUSD: 140 }, aggregateUniverse: "core-stablecoins-v1" },
     );
 
     expect(points).toEqual([
-      { date: 100, totalCirculatingUSD: { peggedUSD: 100 } },
-      { date: 200, totalCirculatingUSD: { peggedUSD: 120 } },
-      { date: 250, totalCirculatingUSD: { peggedUSD: 140 } },
+      { date: 100, totalCirculatingUSD: { peggedUSD: 100 }, aggregateUniverse: "core-stablecoins-v1" },
+      { date: 200, totalCirculatingUSD: { peggedUSD: 120 }, aggregateUniverse: "core-stablecoins-v1" },
+      { date: 250, totalCirculatingUSD: { peggedUSD: 140 }, aggregateUniverse: "core-stablecoins-v1" },
     ]);
+  });
+
+  it("does not join a core live point onto legacy provider history", () => {
+    const legacyPoints = [
+      {
+        date: 200,
+        totalCirculatingUSD: { peggedUSD: 150 },
+        aggregateUniverse: "legacy-provider-all-stablecoins-v1" as const,
+      },
+    ];
+
+    expect(appendOrReplaceCurrentStablecoinChartsPoint(
+      legacyPoints,
+      { date: 250, totalCirculatingUSD: { peggedUSD: 120 }, aggregateUniverse: "core-stablecoins-v1" },
+    )).toEqual(legacyPoints);
   });
 });

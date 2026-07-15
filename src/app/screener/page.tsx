@@ -5,9 +5,9 @@ import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import type { FaqItem } from "@/lib/faq";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import { TRACKED_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 
-const screenerDescription = `Filter ${TRACKED_STABLECOIN_COUNT} stablecoins by DEWS, Safety Grade, Safety Score dimensions, Mint Authority Score, supply, type, mechanism, peg, and lifecycle.`;
+const screenerDescription =
+  "Filter the screenable stablecoin catalog by DEWS, Safety Grade, Safety Score dimensions, Mint Authority Score, supply, type, mechanism, peg, and lifecycle.";
 
 export const metadata = buildPageMetadata({
   title: "Pharos Screener: Filter Stablecoins by Score & Mechanism",
@@ -20,7 +20,7 @@ const FAQ_ITEMS = [
   {
     question: "What does the Pharos Screener do?",
     answer:
-      "The Screener filters the tracked stablecoin universe by DEWS, Safety Grade, Safety Score dimensions, Mint Authority Score, supply, type, mechanism, peg, mint authority route, and lifecycle. Share the URL to share the exact filter state.",
+      "The Screener filters active, pre-launch, and frozen catalog records by DEWS, Safety Grade, Safety Score dimensions, Mint Authority Score, supply, type, mechanism, peg, mint authority route, and lifecycle. Quarantined and delisted records remain available through static detail pages. Share the URL to share the exact filter state.",
   },
   {
     question: "How is filter state shared?",

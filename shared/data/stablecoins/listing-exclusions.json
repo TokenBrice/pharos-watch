@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "exclusions": [
+    {
+      "catalogId": "pc0000031-tradable",
+      "decidedAt": "2026-07-15",
+      "reason": "Permissioned, deal-specific private-credit ownership note priced at contractual par rather than a transferable stable-value monetary instrument.",
+      "providerIds": {
+        "coingecko": ["tradable-na-rent-financing-platform-sstn"]
+      },
+      "contracts": [
+        {
+          "chain": "zksync",
+          "address": "0xac4de1e9a9e83524f24af77972dd39d588de8164"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "Tradable investor documentation",
+          "url": "https://doc.tradable.xyz/product-docs/investors"
+        }
+      ]
+    },
+    {
+      "catalogId": "pc0000033-tradable",
+      "decidedAt": "2026-07-15",
+      "reason": "Permissioned, deal-specific private-credit ownership note priced at contractual par rather than a transferable stable-value monetary instrument.",
+      "providerIds": {
+        "coingecko": ["tradable-apac-diversified-finance-provider-sstn"]
+      },
+      "contracts": [
+        {
+          "chain": "zksync",
+          "address": "0x6ff4fafd8d604614c704a5936d9146c0af19bd1e"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "Tradable investor documentation",
+          "url": "https://doc.tradable.xyz/product-docs/investors"
+        }
+      ]
+    },
+    {
+      "catalogId": "pc0000089-tradable",
+      "decidedAt": "2026-07-15",
+      "reason": "Permissioned, deal-specific private-credit ownership note priced at contractual par rather than a transferable stable-value monetary instrument.",
+      "providerIds": {
+        "coingecko": ["latam-residential-sstl"]
+      },
+      "contracts": [
+        {
+          "chain": "zksync",
+          "address": "0xfb3fccdd38a96c3f769c62e578323f22c3bfcbec"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "Tradable investor documentation",
+          "url": "https://doc.tradable.xyz/product-docs/investors"
+        }
+      ]
+    },
+    {
+      "catalogId": "pc0000101-tradable",
+      "decidedAt": "2026-07-15",
+      "reason": "Permissioned, deal-specific private-credit ownership note priced at contractual par rather than a transferable stable-value monetary instrument.",
+      "providerIds": {
+        "coingecko": ["na-post-settlement-legal-financing-receivables"]
+      },
+      "contracts": [
+        {
+          "chain": "zksync",
+          "address": "0x3d19625bb8e4b52ac4ca28ecec2b5e243ae2ee81"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "Tradable investor documentation",
+          "url": "https://doc.tradable.xyz/product-docs/investors"
+        }
+      ]
+    },
+    {
+      "catalogId": "bfusd-binance",
+      "decidedAt": "2026-07-15",
+      "reason": "Non-withdrawable Binance account balance rather than a transferable production token.",
+      "providerIds": {
+        "coingecko": ["bfusd"]
+      },
+      "contracts": [],
+      "evidence": [
+        {
+          "label": "Binance BFUSD explanation",
+          "url": "https://academy.binance.com/en/articles/what-is-bfusd"
+        }
+      ]
+    }
+  ]
+}

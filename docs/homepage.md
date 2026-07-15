@@ -14,7 +14,7 @@ Route contract for `/`, the main Pharos dashboard.
 
 The route does not use `FeaturePageShell`. Instead, the server page renders:
 
-1. `CollectionPage` + `ItemList` JSON-LD payloads for the top 20 active stablecoins
+1. `CollectionPage` + `ItemList` JSON-LD payloads for the top 20 core stablecoins and cash equivalents
 2. `HomeAltHero`, which owns the visible `h1` (exactly one raw `<h1>` in built HTML)
 3. `HomeAltClient`
 
@@ -24,7 +24,7 @@ Metadata is authored directly in `src/app/page.tsx` with canonical `/` and the s
 
 ## Top-Fold Contract
 
-`src/app/page.tsx` reads the active/tracked stablecoin counts for metadata and JSON-LD, then reads `getHomepageHeroSnapshot()` for the server-rendered hero market summary.
+`src/app/page.tsx` reads the tracked and core-aggregate stablecoin counts for metadata and JSON-LD, then reads `getHomepageHeroSnapshot()` for the server-rendered hero market summary. The hero snapshot and market-cap KPI exclude tracked variants and stable-value investments.
 
 The visible top fold is split across three independently composed surfaces:
 
@@ -94,10 +94,12 @@ The homepage table uses browser URL search params as its public state contract.
 Managed by `src/hooks/use-home-alt-filters.ts` and `src/hooks/use-url-filters.ts`:
 
 - `peg` -> one active peg cohort filter (`usd-peg`, `fiat-non-usd-peg`, `commodity-peg`)
+- `variant` -> listing universe (`variants` or `catalog`); an absent value selects the core universe
 
 Rules:
 
 - only one peg cohort filter is active at a time
+- the rankings table defaults to core stablecoins and cash equivalents; `variant=variants` exposes tracked variants and `variant=catalog` exposes all active listing classes
 - invalid peg params normalize to the unfiltered `all` state
 - the homepage peg browse strip groups landing pages into `Fiat`, `Commodity`, and `Other` categories, displaying all active pegs through `PEG_LABELS_SHORT`
 - `"all"` and empty-string values clear the param instead of persisting it

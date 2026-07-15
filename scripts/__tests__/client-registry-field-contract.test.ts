@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildClientRegistryOutput,
   projectCoin,
   projectBlacklistStatus,
   projectGeniusProfile,
@@ -27,6 +28,14 @@ function projectedMintAuthorityInput(projected: Partial<StablecoinClientMeta> | 
 }
 
 describe("client registry field contract", () => {
+  it("projects only the compact listing class from the decision ledger", () => {
+    const { slimCoins } = buildClientRegistryOutput();
+    expect(slimCoins).toHaveLength(TRACKED_STABLECOINS.length);
+    expect(slimCoins.every((coin) => typeof coin.listingClass === "string")).toBe(true);
+    expect(slimCoins.find((coin) => coin.id === "susds-sky")?.listingClass).toBe("stablecoin-variant");
+    expect(slimCoins.every((coin) => !("priceBasis" in coin) && !("exitMechanism" in coin))).toBe(true);
+  });
+
   it("reads the canonical ordered field list from the shared TypeScript contract", () => {
     expect(readCanonicalClientFields()).toEqual([...STABLECOIN_CLIENT_META_FIELDS]);
   });
@@ -46,6 +55,8 @@ describe("client registry field contract", () => {
       symbol: "USDC",
       oneLiner: "A dollar-backed stablecoin.",
       marketAvailability: "market-traded",
+      priceBasis: "executable-market",
+      exitMechanism: "secondary-market",
       flags: {
         pegCurrency: "USD",
         backing: "fiat",
@@ -67,6 +78,12 @@ describe("client registry field contract", () => {
       variantOf: null,
       variantKind: null,
       status: "active",
+      listingStatusReview: {
+        reviewedAt: "2026-07-15",
+        reviewer: "test",
+        rationale: "Admitted for runtime publication.",
+        evidence: [{ label: "Policy", url: "https://example.com/policy" }],
+      },
       tags: ["major"],
       frozenAt: null,
       launchDate: "2018-09-26",

@@ -3,12 +3,7 @@ import { createTableComparator } from "@/lib/table-comparator";
 import { getResolvedBlacklistStatus, getResolvedBlacklistStatusLabel } from "@/lib/blacklist-status";
 import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import type { ColumnId } from "@/hooks/use-preferences";
-import {
-  GRADE_FILTER_TAGS,
-  getFilterTags,
-  gradeMatchesFilter,
-  OTHER_PEG_TAGS,
-} from "@shared/lib/filter-tags";
+import { GRADE_FILTER_TAGS, getFilterTags, gradeMatchesFilter, OTHER_PEG_TAGS } from "@shared/lib/filter-tags";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import {
@@ -79,9 +74,10 @@ export function prioritizePinnedStablecoins(
 export function buildTrackedIdSet(
   activeFilters: readonly FilterTag[],
   reportCards?: Record<string, ReportCard>,
+  eligibleIds: ReadonlySet<string> = ACTIVE_IDS,
 ): ReadonlySet<string> {
   if (activeFilters.length === 0) {
-    return ACTIVE_IDS;
+    return eligibleIds;
   }
 
   // Separate grade filters from regular filters
@@ -90,12 +86,11 @@ export function buildTrackedIdSet(
 
   return new Set(
     ACTIVE_STABLECOINS.filter((stablecoin) => {
+      if (!eligibleIds.has(stablecoin.id)) return false;
       // Check regular filters (from metadata tags)
       const tags = getFilterTags(stablecoin);
       const regularMatch = regularFilters.every((filter) =>
-        filter === "other-peg"
-          ? tags.some((tag) => OTHER_PEG_TAGS.includes(tag))
-          : tags.includes(filter),
+        filter === "other-peg" ? tags.some((tag) => OTHER_PEG_TAGS.includes(tag)) : tags.includes(filter),
       );
       if (!regularMatch) return false;
 

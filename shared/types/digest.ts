@@ -85,6 +85,7 @@ export interface DigestEditorialAudit {
 
 export interface DigestInputData {
   digestVersion?: number;
+  aggregateUniverse?: "core-stablecoins-v1";
   totalMcapUsd: number;
   mcap7dDelta: number;
   totalMcapAth?: {
@@ -412,6 +413,7 @@ export type DigestArchiveResponse = z.infer<typeof DigestArchiveResponseSchema>;
 // may omit them); the goal is type-safety, not presence enforcement.
 const DigestSnapshotInputDataSchema = z
   .object({
+    aggregateUniverse: z.literal("core-stablecoins-v1").optional(),
     totalMcapUsd: z.number().optional(),
     mcap7dDelta: z.number().optional(),
     activeDepegCount: z.number().optional(),

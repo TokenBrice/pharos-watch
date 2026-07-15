@@ -5,6 +5,7 @@ import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, POR_BADGE_STYLES }
 import { CHAIN_META } from "@shared/lib/chains";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import type { StablecoinAiSummary, StablecoinMeta } from "@shared/types";
 import { buildAiDisclosureLine, formatAiSummaryDate } from "@/components/ai-disclosure";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
@@ -21,6 +22,7 @@ import {
 import { stripTermMarkup } from "@/lib/term-markup";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { getVariantAccessibleLabel, getVariantDisplay } from "@shared/lib/variant-display";
+import { ListingStateBanner } from "@/components/stablecoin-detail/listing-state-banner";
 
 interface StablecoinDetailSeoContentProps {
   coin: StablecoinMeta;
@@ -119,8 +121,7 @@ function VariantRelationshipSummary({ coin }: { coin: StablecoinMeta }) {
     (candidate) =>
       candidate.variantOf === parent.id &&
       candidate.id !== coin.id &&
-      candidate.status !== "pre-launch" &&
-      candidate.status !== "frozen",
+      isActiveStablecoinMeta(candidate),
   ).slice(0, 4);
 
   return (
@@ -215,6 +216,10 @@ function buildSafetyAnswer(coin: StablecoinMeta): string {
     return `${coin.name} is a frozen Pharos archive, not a current safety endorsement. The archived static profile records a ${governanceLabel} governance model, ${backingLabel} backing, ${reserveEvidence}, and notes that ${freezeControl}.`;
   }
 
+  if (coin.status === "quarantined" || coin.status === "delisted") {
+    return `${coin.name} is not in Pharos's active universe. ${coin.listingStatusReview?.reason ?? "Its listing is retained only as a static catalog record."}`;
+  }
+
   return `Pharos does not mark ${coin.symbol} as absolutely safe. Static metadata says ${coin.name} uses a ${governanceLabel} governance model and ${backingLabel} backing, with ${reserveEvidence}; the main caveat is that ${freezeControl}. Treat the live peg, liquidity, reserve, dependency, and Safety Score sections below as the current risk read.`;
 }
 
@@ -253,7 +258,9 @@ export function buildStablecoinFaqItems(coin: StablecoinMeta): FaqItem[] {
     `Based on tracked contract metadata and blacklist coverage, ${describeFreezeControl(coin)}.`,
     coin.status === "frozen"
       ? `${coin.symbol} is a frozen Pharos archive; the recorded history below is read-only.`
-      : `Live freeze and blacklist events for ${coin.symbol}, when applicable, appear in the dossier below.`,
+      : isActiveStablecoinMeta(coin)
+        ? `Live freeze and blacklist events for ${coin.symbol}, when applicable, appear in the dossier below.`
+        : `${coin.symbol} is outside active monitoring; this static record preserves the reviewed control context.`,
   ].join(" ");
 
   const identityQuestion =
@@ -309,8 +316,14 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
       <h1 className="sr-only">
         {coin.status === "frozen"
           ? `${coin.name} (${coin.symbol}) frozen stablecoin archive`
-          : `${coin.name} (${coin.symbol}) stablecoin analytics`}
+          : coin.status === "delisted"
+            ? `${coin.name} (${coin.symbol}) delisted stablecoin record`
+            : coin.status === "quarantined"
+              ? `${coin.name} (${coin.symbol}) quarantined stablecoin record`
+              : `${coin.name} (${coin.symbol}) stablecoin analytics`}
       </h1>
+
+      <ListingStateBanner coin={coin} />
 
       {coin.oneLiner ? <p className="text-base italic leading-relaxed text-muted-foreground">{coin.oneLiner}</p> : null}
 
@@ -419,11 +432,13 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
           <div className="rounded-lg border border-border/50 bg-background/50 px-3 py-3">
             <p className="pharos-kicker">Next Actions</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <Link href={compareHref} className={ACTION_LINK_CLASS}>
-                <ArrowRight aria-hidden="true" className={ACTION_ICON_CLASS} />
-                Compare {coin.symbol}
-              </Link>
-              {coin.status !== "frozen" ? (
+              {isActiveStablecoinMeta(coin) ? (
+                <Link href={compareHref} className={ACTION_LINK_CLASS}>
+                  <ArrowRight aria-hidden="true" className={ACTION_ICON_CLASS} />
+                  Compare {coin.symbol}
+                </Link>
+              ) : null}
+              {isActiveStablecoinMeta(coin) ? (
                 <Link href="/pharoswatchbot/#getting-started" className={ACTION_LINK_CLASS}>
                   <Bell aria-hidden="true" className={ACTION_ICON_CLASS} />
                   Telegram alerts
@@ -438,7 +453,7 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
                 API access
               </Link>
             </div>
-            {coin.status !== "frozen" ? (
+            {isActiveStablecoinMeta(coin) ? (
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
                 Exact bot target:{" "}
                 <code className="rounded bg-muted/60 px-1.5 py-0.5 font-mono text-[11px] text-foreground">
@@ -447,15 +462,17 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
               </p>
             ) : (
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                Frozen archives keep historical context; live alerts are available for active tracked assets.
+                This record preserves static and historical context; live actions are available only for active assets.
               </p>
             )}
           </div>
         </div>
 
         <p className="mt-4 border-t border-border/50 pt-3 text-xs leading-relaxed text-muted-foreground">
-          Source: checked-in StablecoinMeta profile fields. Live price, supply, reserve, liquidity, event, and safety
-          data load in the interactive dossier below
+          Source: checked-in StablecoinMeta profile fields.
+          {isActiveStablecoinMeta(coin)
+            ? " Live price, supply, reserve, liquidity, event, and safety data load in the interactive dossier below"
+            : " This inactive record does not participate in current live monitoring"}
           {summaryUpdatedAt ? `; the summary above was last updated ${summaryUpdatedAt}` : ""}.
         </p>
       </section>

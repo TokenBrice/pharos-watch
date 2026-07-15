@@ -14,8 +14,11 @@ import {
 } from "@shared/lib/stablecoin-id-registry";
 import {
   ACTIVE_STABLECOINS,
+  DELISTED_STABLECOINS,
   FROZEN_STABLECOINS,
   PRE_LAUNCH_STABLECOINS,
+  QUARANTINED_STABLECOINS,
+  READABLE_STABLECOINS,
   TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/registry";
 import { SHADOW_STABLECOINS } from "@shared/lib/shadow-stablecoins";
@@ -25,6 +28,8 @@ const USDT_META = REGISTRY_BY_LLAMA_ID.get("1");
 const CANONICAL_USDT_ID = USDT_META?.id ?? "1";
 const PRE_LAUNCH_ID = PRE_LAUNCH_STABLECOINS[0]?.id;
 const FROZEN_ID = FROZEN_STABLECOINS[0]?.id;
+const QUARANTINED_ID = QUARANTINED_STABLECOINS[0]?.id;
+const DELISTED_ID = DELISTED_STABLECOINS[0]?.id;
 const SHADOW_ID = SHADOW_STABLECOINS[0]?.id;
 
 describe("REGISTRY_BY_ID", () => {
@@ -68,7 +73,7 @@ describe("REGISTRY_BY_LLAMA_ID", () => {
 describe("scoped ID registries", () => {
   it("keeps tracked, readable, and PSI-inclusive ID scopes explicit", () => {
     expect(TRACKED_REGISTRY_BY_ID.size).toBe(TRACKED_STABLECOINS.length);
-    expect(READABLE_REGISTRY_BY_ID.size).toBe(ACTIVE_STABLECOINS.length + FROZEN_STABLECOINS.length);
+    expect(READABLE_REGISTRY_BY_ID.size).toBe(READABLE_STABLECOINS.length);
     expect(PSI_INCLUSIVE_REGISTRY_BY_ID.size).toBe(ACTIVE_STABLECOINS.length + SHADOW_STABLECOINS.length);
   });
 
@@ -91,6 +96,16 @@ describe("scoped ID registries", () => {
     expect(TRACKED_REGISTRY_BY_ID.has(FROZEN_ID!)).toBe(true);
     expect(READABLE_REGISTRY_BY_ID.has(FROZEN_ID!)).toBe(true);
     expect(PSI_INCLUSIVE_REGISTRY_BY_ID.has(FROZEN_ID!)).toBe(false);
+  });
+
+  it("keeps quarantined and delisted IDs readable but not PSI-inclusive", () => {
+    expect(QUARANTINED_ID).toBeTruthy();
+    expect(DELISTED_ID).toBeTruthy();
+    for (const id of [QUARANTINED_ID!, DELISTED_ID!]) {
+      expect(TRACKED_REGISTRY_BY_ID.has(id)).toBe(true);
+      expect(READABLE_REGISTRY_BY_ID.has(id)).toBe(true);
+      expect(PSI_INCLUSIVE_REGISTRY_BY_ID.has(id)).toBe(false);
+    }
   });
 });
 
@@ -123,11 +138,13 @@ describe("resolveStablecoinId", () => {
 });
 
 describe("scoped ID resolvers", () => {
-  it("resolves tracked IDs including pre-launch and frozen entries", () => {
+  it("resolves tracked IDs across lifecycle states", () => {
     expect(PRE_LAUNCH_ID).toBeTruthy();
     expect(FROZEN_ID).toBeTruthy();
     expect(resolveTrackedStablecoinId(PRE_LAUNCH_ID!)).toEqual({ canonicalId: PRE_LAUNCH_ID });
     expect(resolveTrackedStablecoinId(FROZEN_ID!)).toEqual({ canonicalId: FROZEN_ID });
+    expect(resolveTrackedStablecoinId(QUARANTINED_ID!)).toEqual({ canonicalId: QUARANTINED_ID });
+    expect(resolveTrackedStablecoinId(DELISTED_ID!)).toEqual({ canonicalId: DELISTED_ID });
     expect(resolveTrackedStablecoinId(SHADOW_ID!)).toBeNull();
   });
 
@@ -135,11 +152,13 @@ describe("scoped ID resolvers", () => {
     expect(FROZEN_ID).toBeTruthy();
     expect(resolveReadableStablecoinId(CANONICAL_USDT_ID)).toEqual({ canonicalId: CANONICAL_USDT_ID });
     expect(resolveReadableStablecoinId(FROZEN_ID!)).toEqual({ canonicalId: FROZEN_ID });
+    expect(resolveReadableStablecoinId(QUARANTINED_ID!)).toEqual({ canonicalId: QUARANTINED_ID });
+    expect(resolveReadableStablecoinId(DELISTED_ID!)).toEqual({ canonicalId: DELISTED_ID });
     expect(resolveReadableStablecoinId(PRE_LAUNCH_ID!)).toBeNull();
     expect(resolveReadableStablecoinId(SHADOW_ID!)).toBeNull();
   });
 
-  it("resolves PSI-inclusive IDs but excludes pre-launch and frozen tracked entries", () => {
+  it("resolves PSI-inclusive IDs but excludes non-active tracked entries", () => {
     expect(resolvePsiInclusiveStablecoinId(CANONICAL_USDT_ID)).toEqual({ canonicalId: CANONICAL_USDT_ID });
     expect(resolvePsiInclusiveStablecoinId(SHADOW_ID!)).toEqual({ canonicalId: SHADOW_ID });
     expect(resolvePsiInclusiveStablecoinId(PRE_LAUNCH_ID!)).toBeNull();

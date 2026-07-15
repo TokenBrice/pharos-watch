@@ -202,6 +202,7 @@ describe("syncStablecoinCharts", () => {
       .filter((entry) => entry.sql.includes("FROM supply_history"));
     expect(supplyHistoryQueries.length).toBe(metadata.supplementalHistoryChunks);
     expect(Math.max(...supplyHistoryQueries.map((entry) => entry.binds.length))).toBeLessThanOrEqual(90);
+    expect(supplyHistoryQueries.flatMap((entry) => entry.binds)).not.toContain("susds-sky");
 
     const insert = getCacheInsert(db as MockD1Database);
     const cached = JSON.parse(String(insert?.binds[1])) as Array<{
@@ -213,7 +214,7 @@ describe("syncStablecoinCharts", () => {
 
     expect(recentPoint?.totalCirculatingUSD.peggedUSD).toBeGreaterThan(25);
     expect(recentPoint?.totalCirculatingUSD.peggedGOLD).toBe(7);
-    expect(targetPoint?.totalCirculatingUSD.peggedUSD).toBe(1_090_038);
+    expect(targetPoint?.totalCirculatingUSD.peggedUSD).toBe(1_090_013);
   });
 
   it("returns degraded status when DefiLlama API fails", async () => {

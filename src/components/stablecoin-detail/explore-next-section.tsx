@@ -10,6 +10,7 @@ import {
   resolveMechanismArchetype,
 } from "@shared/lib/classification";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import type { StablecoinMeta } from "@shared/types";
 import { buildLiveCompareUrl } from "@/lib/compare-links";
@@ -102,7 +103,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
     { href: "/digest/", label: "Read the daily digest" },
     { href: "/api/", label: "Use the Pharos API" },
   ];
-  if (coin.status !== "frozen") {
+  if (isActiveStablecoinMeta(coin)) {
     actionLinks.splice(1, 0, {
       href: "/pharoswatchbot/#getting-started",
       label: `Set ${coin.symbol} Telegram alerts`,

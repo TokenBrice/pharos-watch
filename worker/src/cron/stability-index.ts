@@ -1,6 +1,6 @@
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
+import { CORE_PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/stability-index-version";
 import { round1 } from "@shared/lib/math";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
@@ -11,6 +11,7 @@ import { computeStabilityIndex, DEWS_STRESS_BREADTH_SCALE, getDepreciationFactor
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadPublishedStressSignalGeneration } from "../lib/stress-signals-current-rows";
 import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry";
+import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
 import { throwIfAborted } from "../lib/abort";
 
 const REPLAY_PRICE_CACHE_TTL_SEC = 6 * 60 * 60;
@@ -31,7 +32,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     };
   }
 
-  const tracked = stablecoinsCache.payload.peggedAssets.filter((coin) => PSI_ELIGIBLE_IDS.has(coin.id));
+  const tracked = stablecoinsCache.payload.peggedAssets.filter((coin) => CORE_PSI_ELIGIBLE_IDS.has(coin.id));
 
   let totalMcapUsd = 0;
   let totalPrevWeek = 0;
@@ -46,9 +47,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     symbolById.set(coin.id, coin.symbol);
   }
 
-  const mcap7dChangePct = totalPrevWeek > 0
-    ? ((totalMcapUsd - totalPrevWeek) / totalPrevWeek) * 100
-    : 0;
+  const mcap7dChangePct = totalPrevWeek > 0 ? ((totalMcapUsd - totalPrevWeek) / totalPrevWeek) * 100 : 0;
 
   throwIfAborted(signal);
 
@@ -97,7 +96,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
         Number.isFinite(cached.price) &&
         cached.price > 0 &&
         Number.isFinite(cached.updatedAt) &&
-        (now - cached.updatedAt) < REPLAY_PRICE_CACHE_TTL_SEC
+        now - cached.updatedAt < REPLAY_PRICE_CACHE_TTL_SEC
       ) {
         replayPriceById.set(assetId, cached.price);
       }
@@ -118,7 +117,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     dewsUnavailable = true;
     dewsFailureReason = publishedDews.reason;
   } else {
-    const rows = publishedDews.rows;
+    const rows = publishedDews.rows.filter((row) => CORE_PSI_ELIGIBLE_IDS.has(row.stablecoin_id));
     dewsRowsRead = rows.length;
     for (const row of rows) {
       if (!Number.isFinite(row.computed_at)) {
@@ -128,15 +127,12 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       }
 
       dewsLatestComputedAt =
-        dewsLatestComputedAt == null
-          ? row.computed_at
-          : Math.max(dewsLatestComputedAt, row.computed_at);
+        dewsLatestComputedAt == null ? row.computed_at : Math.max(dewsLatestComputedAt, row.computed_at);
 
       const rowAgeSec = now - row.computed_at;
       if (rowAgeSec > DEWS_STRESS_MAX_AGE_SEC) {
         dewsUnavailable = true;
-        dewsFailureReason ??=
-          `stress_signals latest row for ${row.stablecoin_id} is stale (ageSec=${rowAgeSec}, maxAgeSec=${DEWS_STRESS_MAX_AGE_SEC})`;
+        dewsFailureReason ??= `stress_signals latest row for ${row.stablecoin_id} is stale (ageSec=${rowAgeSec}, maxAgeSec=${DEWS_STRESS_MAX_AGE_SEC})`;
       }
     }
 
@@ -180,8 +176,12 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
 
   const depegs: { bps: number; mcapUsd: number; depegAgeDays: number }[] = [];
   const contributors: {
-    id: string; symbol: string; bps: number; mcapUsd: number;
-    ageDays: number; factor: number;
+    id: string;
+    symbol: string;
+    bps: number;
+    mcapUsd: number;
+    ageDays: number;
+    factor: number;
   }[] = [];
   let replayPriceFallbackCount = 0;
 
@@ -246,7 +246,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   await db
     .prepare(
       `INSERT OR REPLACE INTO stability_index_samples (stored_at, score, band, components, input_snapshot, methodology_version)
-       VALUES (?, ?, ?, ?, ?, ?)`
+       VALUES (?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       now,
@@ -254,6 +254,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       result.band,
       JSON.stringify(result.components),
       JSON.stringify({
+        aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
         depegCount: depegs.length,
         totalMcapUsd,
         mcap7dChangePct,
@@ -274,7 +275,8 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     .run();
 
   // Prune samples older than 90 days
-  await db.prepare("DELETE FROM stability_index_samples WHERE stored_at < ?")
+  await db
+    .prepare("DELETE FROM stability_index_samples WHERE stored_at < ?")
     .bind(Math.floor(Date.now() / 1000) - 90 * DAY_SECONDS)
     .run();
 
@@ -284,17 +286,20 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     productivity: {
       productive: true,
       reason: "psi-sample-published",
-      publications: [{
-        surface: "psi",
-        generationId: `psi:${now}`,
-        publishedAt: now,
-        candidateRows: 1,
-        publishedRows: 1,
-        expectedRows: 1,
-        validationSummary: { methodologyVersion: PSI_METHODOLOGY_VERSION },
-      }],
+      publications: [
+        {
+          surface: "psi",
+          generationId: `psi:${now}`,
+          publishedAt: now,
+          candidateRows: 1,
+          publishedRows: 1,
+          expectedRows: 1,
+          validationSummary: { methodologyVersion: PSI_METHODOLOGY_VERSION },
+        },
+      ],
     },
     metadata: JSON.stringify({
+      aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
       score: result.score,
       band: result.band,
       dewsStressBreadth,

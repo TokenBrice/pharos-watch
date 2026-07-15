@@ -70,6 +70,29 @@ describe("validateVariantRelationships", () => {
     expect(validateVariantRelationships([parent, child])).toEqual([]);
   });
 
+  it("preserves variant metadata on quarantined historical records", () => {
+    const parent = makeParent("parent-a", "fiat-cash");
+    const child = makeChild("child-a", "parent-a", {
+      status: "quarantined",
+      listingStatusReview: {
+        changedAt: "2026-07-15",
+        reason: "Runtime coverage is under review.",
+        reviewBy: "2026-08-15",
+      },
+    });
+
+    expect(validateVariantRelationships([parent, child])).toEqual([]);
+  });
+
+  it("rejects variant metadata on pre-launch records", () => {
+    const parent = makeParent("parent-a", "fiat-cash");
+    const child = makeChild("child-a", "parent-a", { status: "pre-launch" });
+
+    expect(validateVariantRelationships([parent, child])).toEqual([
+      expect.stringContaining("only post-launch readable assets"),
+    ]);
+  });
+
   it("passes when a child diverges and sets archetypeOverride: true", () => {
     const parent = makeParent("parent-a", "fiat-cash");
     const child = makeChild("child-a", "parent-a", {

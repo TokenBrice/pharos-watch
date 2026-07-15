@@ -213,7 +213,7 @@ describe("cache-passthrough: handleStablecoinCharts", () => {
     expect(res.status).toBe(503);
   });
 
-  it("accepts legacy cached string dates and appends the live stablecoins snapshot", async () => {
+  it("marks legacy provider history and does not append a mixed-universe live point", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
       {
@@ -270,11 +270,18 @@ describe("cache-passthrough: handleStablecoinCharts", () => {
     const res = await handleStablecoinCharts(db);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as Array<{ date: number; totalCirculatingUSD: Record<string, number> }>;
+    const body = (await res.json()) as Array<{
+      date: number;
+      totalCirculatingUSD: Record<string, number>;
+      aggregateUniverse: string;
+    }>;
 
     expect(body).toEqual([
-      { date: nowSec - 3600, totalCirculatingUSD: { peggedUSD: 100 } },
-      { date: nowSec, totalCirculatingUSD: { peggedUSD: 120 } },
+      {
+        date: nowSec - 3600,
+        totalCirculatingUSD: { peggedUSD: 100 },
+        aggregateUniverse: "legacy-provider-all-stablecoins-v1",
+      },
     ]);
     expect(typeof body[0]?.date).toBe("number");
     expect(res.headers.get("X-Data-Age")).toBe("5");

@@ -15,7 +15,7 @@ Shadow stablecoins preserve historically important collapse events in systems th
 
 They are used where historical continuity matters:
 
-- `shared/lib/psi-eligible.ts` combines active tracked + shadow assets into `PSI_ELIGIBLE_STABLECOINS`, excluding pre-launch and frozen tracked entries
+- `shared/lib/psi-eligible.ts` combines active tracked + shadow assets into `PSI_ELIGIBLE_STABLECOINS`, excluding every non-active tracked entry
 - `worker/src/cron/detect-depegs.ts` and `worker/src/cron/compute-dews.ts` use the PSI-eligible set
 - `worker/src/cron/stability-index.ts` filters the live cache against `PSI_ELIGIBLE_IDS`
 - `worker/src/cron/snapshot-supply.ts` and `worker/src/api/backfill-supply-history.ts` use the PSI-eligible registry
@@ -50,7 +50,7 @@ They are used where historical continuity matters:
 
 Shadow stablecoins are not part of the public tracked-set metadata used for dashboard counts, filters, and table inclusion:
 
-- `ACTIVE_STABLECOIN_COUNT` (from `src/lib/stablecoin-static-data.ts`, kept in sync with `ACTIVE_STABLECOINS.length` by a test) drives public counts in page metadata and copy
+- `ACTIVE_STABLECOIN_COUNT` remains the technical live-listing count, while `CORE_AGGREGATE_STABLECOIN_COUNT` drives market-aggregate copy; both static projections are kept in sync with their shared registries by tests
 - `src/components/stablecoin-table-logic.ts` uses the client registry projection (`CLIENT_ACTIVE_IDS` / `CLIENT_ACTIVE_STABLECOINS` from `shared/lib/stablecoins/client-registry.ts`) as its default inclusion set
 - taxonomy/filter pages derive their selectable universe from tracked metadata, not shadow metadata
 

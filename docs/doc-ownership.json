@@ -9,8 +9,8 @@
       "id": "stablecoin-registry",
       "label": "Stablecoin metadata or registry",
       "risk": "high",
-      "docsToRead": ["docs/stablecoin-data.md", "docs/classification.md", "docs/shadow-stablecoins.md", "shared/data/stablecoins/AGENTS.md"],
-      "docsLikelyRequired": ["docs/about-page.md", "docs/classification.md", "feature methodology docs when behavior changes"],
+      "docsToRead": ["docs/stablecoin-data.md", "docs/listing-policy.md", "docs/classification.md", "docs/shadow-stablecoins.md", "shared/data/stablecoins/AGENTS.md"],
+      "docsLikelyRequired": ["docs/about-page.md", "docs/listing-policy.md", "docs/classification.md", "feature methodology docs when behavior changes"],
       "checks": ["npm run check:stablecoin-data", "vitest run shared/lib/stablecoins shared/lib/__tests__/stablecoin-id-registry.test.ts"],
       "hardRules": ["Keep canonical order, generated data, and schemas aligned.", "Do not add manual supply overrides."],
       "prefixes": ["shared/data/stablecoins/", "shared/lib/stablecoins/"],
@@ -142,7 +142,7 @@
     {
       "name": "stablecoin-metadata",
       "sources": ["shared/data/stablecoins/**", "shared/lib/stablecoins/**", "shared/lib/stablecoin-id-registry.ts", "shared/lib/shadow-stablecoins.ts"],
-      "docs": ["docs/stablecoin-data.md", "docs/classification.md", "docs/shadow-stablecoins.md", "docs/about-page.md", "README.md"],
+      "docs": ["docs/stablecoin-data.md", "docs/listing-policy.md", "docs/classification.md", "docs/shadow-stablecoins.md", "docs/about-page.md", "README.md"],
       "notes": ["Update methodology docs only when scoring or classification semantics change."]
     },
     {

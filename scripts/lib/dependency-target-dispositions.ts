@@ -1,4 +1,4 @@
-export type DependencyTargetLifecycle = "active" | "frozen" | "pre-launch";
+export type DependencyTargetLifecycle = "active" | "pre-launch" | "quarantined" | "delisted" | "frozen";
 
 export interface DependencyTargetDisposition {
   targetId: string;
@@ -54,7 +54,7 @@ export const DEPENDENCY_TARGET_DISPOSITIONS: readonly DependencyTargetDispositio
   },
   {
     targetId: "rusd-reservoir",
-    expectedLifecycle: "active",
+    expectedLifecycle: "quarantined",
     action: "retain-reviewed-link",
     reviewer: "Codex dependency review",
     reviewedAt: "2026-07-12",
@@ -79,7 +79,7 @@ export const DEPENDENCY_TARGET_DISPOSITIONS: readonly DependencyTargetDispositio
       { label: "WisdomTree Connect", url: "https://www.wisdomtree.com/connect" },
     ],
     rationale:
-      "WTGXX reserve slices are direct claims on the tracked WisdomTree fund. The fund is active but currently NR, so those reviewed links remain correct and use unavailable-upstream scoring.",
+      "WTGXX reserve slices are direct claims on the tracked WisdomTree fund. The fund is quarantined from active publication while runtime supply coverage is remediated, so those reviewed historical links remain correct without contributing an upstream score.",
   },
   {
     targetId: "zsd-zephyr-protocol",

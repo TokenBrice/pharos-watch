@@ -19,6 +19,8 @@ import type { ThreatBand } from "./classification/risk";
 
 export type StablecoinVerdictArchetype =
   | "pre-launch"
+  | "quarantined-record"
+  | "delisted-record"
   | "frozen-archive"
   | "distressed"
   | "yield-bearing-hybrid"
@@ -45,6 +47,8 @@ export interface VerdictInputs {
 
 const VERDICT_LABELS: Record<StablecoinVerdictArchetype, string> = {
   "pre-launch": "Pre-launch",
+  "quarantined-record": "Quarantined Record",
+  "delisted-record": "Delisted Record",
   "frozen-archive": "Frozen Archive",
   distressed: "Distressed",
   "yield-bearing-hybrid": "Yield-Bearing Hybrid",
@@ -76,6 +80,14 @@ function buildVerdict(archetype: StablecoinVerdictArchetype): StablecoinVerdict 
 export function deriveStablecoinVerdict(inputs: VerdictInputs): StablecoinVerdict {
   if (inputs.status === "pre-launch") {
     return buildVerdict("pre-launch");
+  }
+
+  if (inputs.status === "quarantined") {
+    return buildVerdict("quarantined-record");
+  }
+
+  if (inputs.status === "delisted") {
+    return buildVerdict("delisted-record");
   }
 
   if (inputs.status === "frozen") {

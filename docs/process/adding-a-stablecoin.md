@@ -2,7 +2,7 @@
 
 Reference for adding a tracked asset to Pharos.
 
-Current source of truth is the per-coin JSON registry under `shared/data/stablecoins/coins/*.json` plus selective research sidecars under `shared/data/stablecoins/domains/<domain>/*.json`, loaded through the generated runtime aggregate `shared/data/stablecoins/coins.generated.json`, and validated by `shared/lib/stablecoins/schema.ts`. Pre-launch entries are ordinary per-coin files with `status: "pre-launch"`. The older top-level stablecoin barrel, helper-constructor paths, and legacy category-shard edit paths are obsolete; the Claude/Codex skills (`stablecoin-addition-orchestrator`, `stablecoin-runtime-price-marketcap-gate`, `stablecoin-info-fetch`, `contract-populate`, `contract-enrich`, `reserve-research`, `write-ai-summaries`, `resilience-classify`, `pre-launch-update`, `coingecko-id-verif`) remain supported and can be used per their own triggers. Sidecar ownership and migrations are documented in [Stablecoin Research Sidecars](./stablecoin-research-sidecars.md).
+Current source of truth is the per-coin JSON registry under `shared/data/stablecoins/coins/*.json` plus selective research sidecars under `shared/data/stablecoins/domains/<domain>/*.json`, loaded through the generated runtime aggregate `shared/data/stablecoins/coins.generated.json`, and validated by `shared/lib/stablecoins/schema.ts`. Pre-launch entries are ordinary per-coin files with `status: "pre-launch"`. Eligibility and lifecycle decisions follow [Stablecoin Listing Policy](../listing-policy.md). The older top-level stablecoin barrel, helper-constructor paths, and legacy category-shard edit paths are obsolete; the Claude/Codex skills (`stablecoin-addition-orchestrator`, `stablecoin-runtime-price-marketcap-gate`, `stablecoin-info-fetch`, `contract-populate`, `contract-enrich`, `reserve-research`, `write-ai-summaries`, `resilience-classify`, `pre-launch-update`, `coingecko-id-verif`) remain supported and can be used per their own triggers. Sidecar ownership and migrations are documented in [Stablecoin Research Sidecars](./stablecoin-research-sidecars.md).
 
 > Completion gate: do not consider the job done until every phase below has been evaluated. The minimum normal diff is the per-coin registry JSON, regenerated `shared/data/stablecoins/coins.generated.json`, `shared/data/stablecoins/canonical-order.json`, `data/logos.json`, and `data/ai-summaries.json`. If the asset needs runtime coverage, also evaluate yield, live reserves, redemption backstops, mint/burn, Mint Authority, Bluechip, and history-backfill branches.
 
@@ -14,11 +14,13 @@ Current source of truth is the per-coin JSON registry under `shared/data/stablec
 
 | File                                                                                                            | Purpose                                                                                                          |
 | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `shared/data/stablecoins/coins/*.json`                                                                          | Editable source of truth for active and pre-launch stablecoin metadata                                           |
+| `shared/data/stablecoins/coins/*.json`                                                                          | Editable source of truth for all catalog metadata and lifecycle state                                            |
 | `shared/data/stablecoins/domains/<domain>/*.json`                                                               | Optional strict sidecars for migrated reserves, mint-authority, compliance, and risk-review research             |
 | `shared/data/stablecoins/coins.generated.json`                                                                  | Generated/runtime aggregate; regenerate with `npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` |
 | `shared/data/stablecoins/usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, `pre-launch.json` | Read-only legacy compatibility shells; do not add entries                                                        |
 | `shared/data/stablecoins/canonical-order.json`                                                                  | Canonical tracked order used to build `TRACKED_STABLECOINS`                                                      |
+| `shared/data/stablecoins/listing-decisions.json`                                                                | Compact exhaustive catalog ID to listing-class map                                                              |
+| `shared/data/stablecoins/listing-exclusions.json`                                                               | Delisted provider and contract fingerprints blocked from rediscovery                                            |
 | `shared/data/stablecoins/AGENTS.md`                                                                             | Agent notes pinned to the registry directory                                                                     |
 | `data/logos.json`                                                                                               | Static logo map used by the frontend                                                                             |
 | `data/ai-summaries.json`                                                                                        | Static editorial summaries used on detail and upcoming surfaces                                                  |
@@ -26,6 +28,7 @@ Current source of truth is the per-coin JSON registry under `shared/data/stablec
 Useful repo references before editing:
 
 - `docs/classification.md`
+- `docs/listing-policy.md`
 - `docs/data-pipeline.md`
 - `docs/live-reserves.md`
 - `docs/yield-intelligence.md`
@@ -455,6 +458,7 @@ Use `sourceFreeRationale` instead of `review.sources` only when the review is in
 - Add or update the asset's JSON object in `shared/data/stablecoins/coins/*.json`.
 - Regenerate `shared/data/stablecoins/coins.generated.json` with `npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts`.
 - Add the ID to `shared/data/stablecoins/canonical-order.json`.
+- Add the ID and derived class to `shared/data/stablecoins/listing-decisions.json`.
 - Keep new keys canonical and consistent with the current schema.
 - For active assets, ensure there is a runtime cache admission path and a Phase 1a price + market-cap gate record:
   - DefiLlama-tracked assets need `llamaId`.
@@ -464,7 +468,7 @@ Use `sourceFreeRationale` instead of `review.sources` only when the review is in
 - If `mintAuthority` is present, keep it sourced and schema-valid; if it is missing for a high-value active addition, record the intentional gap in Phase 5 coverage notes.
 - If the asset is a dominant centralized issuer (a top stablecoin or a major centralized RWA token), add its ID to the curated `MAJOR_CENTRALIZED_IDS` allowlist in `src/lib/portfolio-analysis.ts` so the portfolio grouped-exposure view folds it into the "Major Centralized Stablecoins" row.
 - Update the coupled static files that hard-code the tracked set — the build and tests fail on **every** addition (active or pre-launch) until these match the registry:
-  - `src/lib/stablecoin-static-data.ts` — the status count constants (`TRACKED_STABLECOIN_COUNT`, `ACTIVE_STABLECOIN_COUNT`, `PRE_LAUNCH_STABLECOIN_COUNT`, …), `ACTIVE_PEG_CURRENCY_COUNTS`, the `TRACKED_STABLECOIN_IDS` array (canonical order), and `NON_ACTIVE_STABLECOIN_ID_SET` for pre-launch/frozen entries.
+  - `src/lib/stablecoin-static-data.ts` — the status count constants (`TRACKED_STABLECOIN_COUNT`, `ACTIVE_STABLECOIN_COUNT`, `PRE_LAUNCH_STABLECOIN_COUNT`, …), `ACTIVE_PEG_CURRENCY_COUNTS`, the `TRACKED_STABLECOIN_IDS` array (canonical order), and `NON_ACTIVE_STABLECOIN_ID_SET` for pre-launch, quarantined, delisted, and frozen entries.
   - `src/lib/command-palette-search-data.ts` — add a `COMMAND_PALETTE_STABLECOINS` search row; `src/lib/__tests__/stablecoin-static-data.test.ts` enforces sync with the shared registry.
   - `shared/lib/__tests__/stablecoins.test.ts` — hardcoded tracked/active length expectations.
 - Use `npm run check:stablecoin-data` before moving on.

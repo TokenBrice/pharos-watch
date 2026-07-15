@@ -33,11 +33,13 @@ import { isDirectRun } from "../lib/smoke-runtime.mjs";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
 const SOURCE_JSON_REL = "shared/data/stablecoins/coins.generated.json";
+const LISTING_DECISIONS_JSON_REL = "shared/data/stablecoins/listing-decisions.json";
 const OUTPUT_JSON_REL = "shared/data/stablecoins/coins.client.generated.json";
 const COMPLIANCE_OUTPUT_JSON_REL = "shared/data/stablecoins/coins.compliance.generated.json";
 const TELEGRAM_MINI_APP_OUTPUT_JSON_REL = "shared/data/stablecoins/coins.telegram-mini-app.generated.json";
 const CLIENT_META_TS_REL = "shared/types/stablecoin-client-meta.ts";
 const SOURCE_JSON_ABS = resolve(REPO_ROOT, SOURCE_JSON_REL);
+const LISTING_DECISIONS_JSON_ABS = resolve(REPO_ROOT, LISTING_DECISIONS_JSON_REL);
 const OUTPUT_JSON_ABS = resolve(REPO_ROOT, OUTPUT_JSON_REL);
 const COMPLIANCE_OUTPUT_JSON_ABS = resolve(REPO_ROOT, COMPLIANCE_OUTPUT_JSON_REL);
 const TELEGRAM_MINI_APP_OUTPUT_JSON_ABS = resolve(REPO_ROOT, TELEGRAM_MINI_APP_OUTPUT_JSON_REL);
@@ -49,6 +51,29 @@ const BLACKLIST_STATUS_FIELD = "blacklistStatus";
 const MINT_AUTHORITY_SUMMARY_FIELD = "mintAuthoritySummary";
 const LIVE_RESERVE_ADAPTER_FIELD = "liveReserveAdapter";
 const GENIUS_FIELD = "genius";
+const LISTING_CLASS_FIELD = "listingClass";
+const LISTING_CLASS_VALUES = new Set([
+  "core-stablecoin",
+  "cash-equivalent",
+  "stablecoin-variant",
+  "stable-value-investment",
+  "excluded",
+]);
+
+function readListingClassById(sourcePath = LISTING_DECISIONS_JSON_ABS) {
+  const parsed = JSON.parse(readFileSync(sourcePath, "utf8"));
+  if (!isPlainObject(parsed?.listingClassById)) {
+    throw new Error(`[client-registry] ${LISTING_DECISIONS_JSON_REL} has no listingClassById map`);
+  }
+  const byId = new Map();
+  for (const [id, listingClass] of Object.entries(parsed.listingClassById)) {
+    if (!LISTING_CLASS_VALUES.has(listingClass)) {
+      throw new Error(`[client-registry] invalid listing class for ${id} in ${LISTING_DECISIONS_JSON_REL}`);
+    }
+    byId.set(id, listingClass);
+  }
+  return byId;
+}
 
 /**
  * Read the canonical field allowlist from `shared/types/stablecoin-client-meta.ts`.
@@ -444,11 +469,13 @@ export function validateGeniusComplianceProjection(
 
 export function buildClientRegistryOutput({
   sourceJsonPath = SOURCE_JSON_ABS,
+  listingDecisionsJsonPath = LISTING_DECISIONS_JSON_ABS,
   clientFields = readCanonicalClientFields(),
   geniusClientFields = DEFAULT_GENIUS_CLIENT_FIELDS,
 } = {}) {
   const rawJson = readFileSync(sourceJsonPath, "utf8");
   const parsed = JSON.parse(rawJson);
+  const listingClassById = readListingClassById(listingDecisionsJsonPath);
 
   if (!Array.isArray(parsed)) {
     throw new Error(`[client-registry] ${SOURCE_JSON_REL} is not a JSON array`);
@@ -456,6 +483,11 @@ export function buildClientRegistryOutput({
 
   const slimCoins = parsed.map((coin, index) => {
     const slim = projectCoin(coin, clientFields, geniusClientFields);
+    const listingClass = listingClassById.get(coin.id);
+    if (!listingClass) {
+      throw new Error(`[client-registry] entry ${index} (${coin.id}): missing listing decision`);
+    }
+    slim[LISTING_CLASS_FIELD] = listingClass;
     validateProjection(slim, coin, index, clientFields, geniusClientFields);
     return slim;
   });
@@ -503,7 +535,7 @@ export function buildTelegramMiniAppCatalogOutput({ sourceJsonPath = SOURCE_JSON
   }
 
   const searchableCoins = parsed
-    .filter((coin) => (coin.status ?? "active") !== "frozen")
+    .filter((coin) => !["frozen", "quarantined", "delisted"].includes(coin.status ?? "active"))
     .map((coin, index) => {
       if (
         typeof coin.id !== "string" ||

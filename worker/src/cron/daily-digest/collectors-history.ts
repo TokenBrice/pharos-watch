@@ -2,21 +2,16 @@ import type { DigestInputData } from "@shared/types/digest";
 import { round1 } from "@shared/lib/math";
 import { SECONDS } from "../../lib/time-constants";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./shared";
-import {
-  logCollectorParseFailure,
-  markCollectorDegraded,
-  type CollectorContext,
-} from "./collectors-shared";
+import { logCollectorParseFailure, markCollectorDegraded, type CollectorContext } from "./collectors-shared";
 
-export async function collectTotalMcapAth(
-  ctx: CollectorContext,
-): Promise<DigestInputData["totalMcapAth"]> {
+export async function collectTotalMcapAth(ctx: CollectorContext): Promise<DigestInputData["totalMcapAth"]> {
   try {
     const row = await ctx.db
       .prepare(
         `SELECT CAST(json_extract(input_data, '$.totalMcapUsd') AS REAL) as ath_value, generated_at as ath_date
          FROM daily_digest
          WHERE (${NON_WEEKLY_DIGEST_SQL_FILTER})
+           AND json_extract(input_data, '$.aggregateUniverse') = 'core-stablecoins-v1'
            AND json_extract(input_data, '$.totalMcapUsd') IS NOT NULL
          ORDER BY CAST(json_extract(input_data, '$.totalMcapUsd') AS REAL) DESC
          LIMIT 1`,
@@ -35,14 +30,12 @@ export async function collectTotalMcapAth(
   }
 }
 
-export async function collectPsiContributors(
-  ctx: CollectorContext,
-): Promise<DigestInputData["psiContributors"]> {
+export async function collectPsiContributors(ctx: CollectorContext): Promise<DigestInputData["psiContributors"]> {
   try {
-	    const latestSample = await ctx.db
-	      .prepare("SELECT input_snapshot FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
-	      .first<{ input_snapshot: string }>();
-	    if (!latestSample || typeof latestSample.input_snapshot !== "string") return undefined;
+    const latestSample = await ctx.db
+      .prepare("SELECT input_snapshot FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
+      .first<{ input_snapshot: string }>();
+    if (!latestSample || typeof latestSample.input_snapshot !== "string") return undefined;
 
     const snapshot = JSON.parse(latestSample.input_snapshot) as {
       contributors?: { id: string; symbol: string; bps: number; mcapUsd: number; ageDays: number; factor: number }[];
@@ -50,20 +43,21 @@ export async function collectPsiContributors(
     if (!snapshot.contributors || snapshot.contributors.length === 0) return undefined;
 
     return snapshot.contributors
-      .filter((contributor) =>
-        typeof contributor.bps === "number" &&
-        typeof contributor.mcapUsd === "number" &&
-        typeof contributor.factor === "number" &&
-        contributor.bps >= 0 &&
-        contributor.bps <= 10000 &&
-        contributor.factor >= 0 &&
-        contributor.mcapUsd > 0
+      .filter(
+        (contributor) =>
+          typeof contributor.bps === "number" &&
+          typeof contributor.mcapUsd === "number" &&
+          typeof contributor.factor === "number" &&
+          contributor.bps >= 0 &&
+          contributor.bps <= 10000 &&
+          contributor.factor >= 0 &&
+          contributor.mcapUsd > 0,
       )
       .map((contributor) => ({
         symbol: contributor.symbol,
         bps: contributor.bps,
         mcapUsd: contributor.mcapUsd,
-        marketImpact: round1(Math.abs(contributor.bps) * contributor.mcapUsd / 1e9 * contributor.factor),
+        marketImpact: round1(((Math.abs(contributor.bps) * contributor.mcapUsd) / 1e9) * contributor.factor),
       }))
       .sort((a, b) => b.marketImpact - a.marketImpact)
       .slice(0, 3);
@@ -80,9 +74,7 @@ export async function collectHistoricalContext(
   biggestSupplyChange: DigestInputData["biggestSupplyChange"],
 ): Promise<DigestInputData["historicalContext"]> {
   try {
-    const histDepth = await ctx.db
-      .prepare("SELECT COUNT(*) as cnt FROM stability_index")
-      .first<{ cnt: number }>();
+    const histDepth = await ctx.db.prepare("SELECT COUNT(*) as cnt FROM stability_index").first<{ cnt: number }>();
 
     const oldestDigest = await ctx.db
       .prepare(
@@ -169,9 +161,7 @@ export async function collectHistoricalContext(
             allTimeHighDate: athDate,
             largestWeeklyChange: largestChangeRow.abs_change,
             largestWeeklyChangeDate: largestChangeRow.snapshot_date,
-            largestWeeklyChangeDaysAgo: Math.round(
-              (ctx.todayTs - largestChangeRow.snapshot_date) / SECONDS.ONE_DAY,
-            ),
+            largestWeeklyChangeDaysAgo: Math.round((ctx.todayTs - largestChangeRow.snapshot_date) / SECONDS.ONE_DAY),
           };
         }
       }
@@ -205,6 +195,7 @@ export async function collectCrossDayTrends(
 
     const psiTrajectory: { date: string; score: number; band: string }[] = [];
     const mcapTrajectory: { date: string; mcapUsd: number }[] = [];
+    const legacyMcapTrajectory: { date: string; mcapUsd: number }[] = [];
     const gaugeTrajectory: { date: string; gaugeScore: number }[] = [];
 
     for (const row of entries) {
@@ -215,7 +206,10 @@ export async function collectCrossDayTrends(
         if (data.stabilityIndex) {
           psiTrajectory.push({ date, score: data.stabilityIndex.score, band: data.stabilityIndex.band });
         }
-        mcapTrajectory.push({ date, mcapUsd: data.totalMcapUsd });
+        if (data.aggregateUniverse === "core-stablecoins-v1") {
+          mcapTrajectory.push({ date, mcapUsd: data.totalMcapUsd });
+        }
+        legacyMcapTrajectory.push({ date, mcapUsd: data.totalMcapUsd });
         if (data.mintBurnFlows) {
           gaugeTrajectory.push({ date, gaugeScore: data.mintBurnFlows.gaugeScore });
         }
@@ -226,6 +220,9 @@ export async function collectCrossDayTrends(
     }
 
     psiTrajectory.reverse();
+    if (mcapTrajectory.length === 0) {
+      mcapTrajectory.push(...legacyMcapTrajectory);
+    }
     mcapTrajectory.reverse();
     gaugeTrajectory.reverse();
 

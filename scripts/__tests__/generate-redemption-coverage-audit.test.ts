@@ -163,7 +163,7 @@ describe("generate-redemption-coverage-audit", () => {
     ).toThrow("stablecoin is not active");
   });
 
-  it("separates pre-launch and frozen unconfigured coins from active gaps", () => {
+  it("separates non-active unconfigured coins from active gaps", () => {
     const activeCoins = [coin({ id: "usdc-circle" })];
     const preLaunchCoins = [coin({ id: "krw1-bdacs", status: "pre-launch" }), coin({ id: "brd-volpon" })];
     const frozenCoins = [coin({ id: "buck-buck-assets", status: "frozen" }), coin({ id: "statusless-frozen" })];

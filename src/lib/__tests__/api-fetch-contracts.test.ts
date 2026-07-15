@@ -313,8 +313,16 @@ describe("api contract validation policy", () => {
 
   it("validates stablecoin chart points before chart consumers use them", () => {
     expect(
-      StablecoinChartResponseSchema.parse([{ date: 1771977600, totalCirculatingUSD: { peggedUSD: 1, peggedEUR: 2 } }]),
-    ).toEqual([{ date: 1771977600, totalCirculatingUSD: { peggedUSD: 1, peggedEUR: 2 } }]);
+      StablecoinChartResponseSchema.parse([{
+        date: 1771977600,
+        aggregateUniverse: "legacy-provider-all-stablecoins-v1",
+        totalCirculatingUSD: { peggedUSD: 1, peggedEUR: 2 },
+      }]),
+    ).toEqual([{
+      date: 1771977600,
+      aggregateUniverse: "legacy-provider-all-stablecoins-v1",
+      totalCirculatingUSD: { peggedUSD: 1, peggedEUR: 2 },
+    }]);
 
     expect(() =>
       StablecoinChartResponseSchema.parse([{ date: "1771977600", totalCirculatingUSD: { peggedUSD: 1 } }]),

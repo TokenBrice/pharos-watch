@@ -556,5 +556,11 @@
       "reviewedAt": "2026-07-14"
     }
   },
-  "launchDate": "2021-04-06"
+  "launchDate": "2021-04-06",
+  "status": "quarantined",
+  "listingStatusReview": {
+    "changedAt": "2026-07-15",
+    "reviewBy": "2026-08-15",
+    "reason": "Temporarily withheld because permitted runtime sources do not provide a positive circulating supply or market cap."
+  }
 }

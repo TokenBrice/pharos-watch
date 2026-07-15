@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { API_PATHS } from "@shared/lib/api-endpoints";
-import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { CoinSelector } from "@/components/coin-selector";
 import type {
   AdminActionDialogState,
@@ -67,7 +67,7 @@ const RESULT_MODE_LABEL = {
 const PHAROS_REPOSITORY_BLOB_URL = "https://github.com/TokenBrice/pharos-watch/blob/main";
 const EMPTY_READINESS_CHECKS = [] as const;
 const NOOP_SUBSCRIBE = () => () => {};
-const ADMIN_ASSET_OPTIONS: CoinOption[] = CLIENT_TRACKED_STABLECOINS.map(({ id, name, symbol, status }) => ({
+const ADMIN_ASSET_OPTIONS: CoinOption[] = CLIENT_ACTIVE_STABLECOINS.map(({ id, name, symbol, status }) => ({
   id,
   name,
   symbol,

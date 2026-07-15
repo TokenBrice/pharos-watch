@@ -244,5 +244,16 @@
         }
       ]
     }
+  },
+  "priceBasis": "contractual-par",
+  "exitMechanism": "discretionary",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-07-15",
+    "reason": "Out of scope: this is a permissioned, deal-specific private-credit ownership note priced at contractual par, not a transferable stable-value monetary instrument.",
+    "source": {
+      "label": "Tradable investor documentation",
+      "url": "https://doc.tradable.xyz/product-docs/investors"
+    }
   }
 }

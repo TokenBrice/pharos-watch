@@ -3,11 +3,15 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { fetchJsonWithRetry } from "../lib/fetch-retry";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DISCOVERY_MIN_MCAP } from "@shared/lib/status-thresholds";
 import type { CronResult } from "../lib/cron-logger";
 import { createNeutralSkippedCronResult } from "../lib/cron-result";
 import { isRecord } from "@shared/lib/type-guards";
+import {
+  EXCLUDED_GECKO_IDS,
+  isDiscoveryCandidateExcluded,
+} from "@shared/lib/stablecoins/listing-governance";
 import { logWorkerEvent } from "../lib/structured-log";
 const DISMISSED_CLEANUP_DAYS = 90;
 const DISCOVERY_ID_MAX_LENGTH = 200;
@@ -52,6 +56,7 @@ interface DiscoveryUpsertResult {
   persisted: number;
   failed: number;
   invalid: number;
+  excluded: number;
 }
 
 function boundedNonEmptyString(value: unknown, maxLength: number): value is string {
@@ -108,11 +113,13 @@ export function filterDiscoveryCandidates(
   coins: CgMarketCoin[],
   trackedGeckoIds: Set<string>,
   minMcap: number,
+  excludedGeckoIds: ReadonlySet<string> = EXCLUDED_GECKO_IDS,
 ): { geckoId: string; name: string; symbol: string; marketCap: number }[] {
   return coins
     .filter((c) =>
       c.id &&
       !trackedGeckoIds.has(c.id) &&
+      !excludedGeckoIds.has(c.id) &&
       c.market_cap != null &&
       c.market_cap >= minMcap,
     )
@@ -151,13 +158,18 @@ async function upsertDiscoveryCandidatesDetailed(
   candidates: DiscoveryCandidateInput[],
 ): Promise<DiscoveryUpsertResult> {
   if (candidates.length === 0) {
-    return { changes: 0, attempted: 0, persisted: 0, failed: 0, invalid: 0 };
+    return { changes: 0, attempted: 0, persisted: 0, failed: 0, invalid: 0, excluded: 0 };
   }
   const nowSec = Math.floor(Date.now() / 1000);
 
   const stmts: Array<{ statement: D1PreparedStatement; candidateKey: string }> = [];
   let invalid = 0;
+  let excluded = 0;
   for (const c of candidates) {
+    if (isDiscoveryCandidateExcluded(c)) {
+      excluded += 1;
+      continue;
+    }
     if (!isValidDiscoveryCandidate(c)) {
       invalid += 1;
       logWorkerEvent({
@@ -246,7 +258,7 @@ async function upsertDiscoveryCandidatesDetailed(
       }
     }
   }
-  return { changes, attempted: stmts.length, persisted, failed, invalid };
+  return { changes, attempted: stmts.length, persisted, failed, invalid, excluded };
 }
 
 export async function upsertDiscoveryCandidates(
@@ -278,7 +290,7 @@ export async function runDiscoveryScan(
   }
 
   const trackedGeckoIds = new Set(
-    ACTIVE_STABLECOINS.map((s) => s.geckoId).filter(Boolean) as string[],
+    TRACKED_STABLECOINS.map((s) => s.geckoId).filter(Boolean) as string[],
   );
 
   let cgCandidates: { geckoId: string; name: string; symbol: string; marketCap: number }[] = [];
@@ -391,6 +403,7 @@ export async function runDiscoveryScan(
       persistencePersisted: persistence.persisted,
       persistenceFailed: persistence.failed,
       persistenceInvalid: persistence.invalid,
+      persistenceExcluded: persistence.excluded,
       cleaned,
       cgFetched,
       cgAllowed,

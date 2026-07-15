@@ -7,6 +7,7 @@ import type {
   StablecoinLink,
   StablecoinMeta,
 } from "./core";
+import type { ListingClass } from "./stablecoin-taxonomy";
 
 export type {
   MintAuthorityConfidence,
@@ -136,6 +137,7 @@ export type StablecoinClientMeta = Pick<
   | "variantOf"
   | "variantKind"
   | "status"
+  | "listingStatusReview"
   | "tags"
   | "frozenAt"
   | "launchDate"
@@ -152,6 +154,8 @@ export type StablecoinClientMeta = Pick<
   | "reserves"
   | "collateralQuality"
 > & {
+  /** Compact decision-ledger projection used by client aggregate filters. */
+  listingClass: ListingClass;
   blacklistStatus?: BlacklistClientStatus;
   genius?: GeniusClientProfile;
   mintAuthoritySummary?: MintAuthorityCoverageSummary;
@@ -180,6 +184,7 @@ export const STABLECOIN_CLIENT_META_FIELDS = [
   "variantOf",
   "variantKind",
   "status",
+  "listingStatusReview",
   "tags",
   "frozenAt",
   "launchDate",

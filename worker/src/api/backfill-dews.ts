@@ -12,7 +12,7 @@ import { getCache } from "../lib/db-cache";
 import { computeDEWS } from "../lib/dews";
 import type { DEWSInput } from "../lib/dews";
 import { runAdminRoute } from "../lib/route-wrappers";
-import { assertNotFrozen } from "../lib/frozen-guards";
+import { assertActiveStablecoin } from "../lib/frozen-guards";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { computeAndStoreDEWS } from "../cron/compute-dews";
 import { buildDewsScoringResult } from "../cron/dews/scoring";
@@ -238,8 +238,8 @@ async function handlePruneHistoryRepair(
   const stablecoinId = resolvedStablecoin?.canonicalId ?? null;
 
   if (stablecoinId) {
-    const frozenRejection = assertNotFrozen(stablecoinId);
-    if (frozenRejection) return frozenRejection;
+    const inactiveRejection = assertActiveStablecoin(stablecoinId);
+    if (inactiveRejection) return inactiveRejection;
   }
 
   const todayMidnight = getTodayMidnightUtcSec();

@@ -1,13 +1,14 @@
 import type { DigestInputData } from "@shared/types/digest";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import {
-  ACTIVE_DEPEG_PROMPT_LIMIT,
-  getDepegMarketImpactScore,
-  isCriticalDepegRisk,
-} from "@shared/lib/digest-risk";
+import { ACTIVE_DEPEG_PROMPT_LIMIT, getDepegMarketImpactScore, isCriticalDepegRisk } from "@shared/lib/digest-risk";
 import { buildInClause } from "../../lib/db";
-import { computeFlowIntensity, computeGaugeScore, getGaugeBand, detectFlightToQuality } from "../../lib/mint-burn-scoring";
+import {
+  computeFlowIntensity,
+  computeGaugeScore,
+  getGaugeBand,
+  detectFlightToQuality,
+} from "../../lib/mint-burn-scoring";
 import { isCanonicalMintBurnPair } from "../../lib/mint-burn-canonical-chain";
 import { SECONDS } from "../../lib/time-constants";
 import { computeDigestMintBurnFtqFlows } from "./mint-burn-ftq";
@@ -29,11 +30,7 @@ type FlowIntensityRow = {
 
 type FlowIntensityRowWithIntensity = FlowIntensityRow & { intensity: number };
 
-function getActiveDepegSuppressReason(params: {
-  mcapUsd: number;
-  ageHours: number;
-  bps: number;
-}): string | undefined {
+function getActiveDepegSuppressReason(params: { mcapUsd: number; ageHours: number; bps: number }): string | undefined {
   if (isCriticalDepegRisk(params)) {
     return undefined;
   }
@@ -57,7 +54,9 @@ export async function collectActiveDepegs(
 ): Promise<CollectorResult<{ activeDepegCount: number; topDepegs: DigestInputData["topDepegs"] }>> {
   try {
     const activeDepegs = await ctx.db
-      .prepare("SELECT stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, peak_price, peg_reference FROM depeg_events WHERE ended_at IS NULL")
+      .prepare(
+        "SELECT stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, peak_price, peg_reference FROM depeg_events WHERE ended_at IS NULL",
+      )
       .all<{
         stablecoin_id: string;
         symbol: string;
@@ -71,19 +70,16 @@ export async function collectActiveDepegs(
     const rows = activeDepegs.results ?? [];
 
     const withImpact = rows.flatMap((row) => {
-      if (FROZEN_IDS.has(row.stablecoin_id)) {
+      if (!ctx.trackedStablecoinIds.has(row.stablecoin_id) || FROZEN_IDS.has(row.stablecoin_id)) {
         return [];
       }
       const mcapUsd = ctx.mcapById.get(row.stablecoin_id) ?? 0;
       const ageHours = Math.max(0, Math.round((ctx.nowSec - row.started_at) / SECONDS.ONE_HOUR));
       const asset = ctx.stablecoinAssetById.get(row.stablecoin_id);
-      const livePrice = typeof asset?.price === "number" && Number.isFinite(asset.price) && asset.price > 0
-        ? asset.price
-        : null;
+      const livePrice =
+        typeof asset?.price === "number" && Number.isFinite(asset.price) && asset.price > 0 ? asset.price : null;
       const direction = row.direction;
-      const bps = direction === "below"
-        ? -Math.abs(row.peak_deviation_bps)
-        : Math.abs(row.peak_deviation_bps);
+      const bps = direction === "below" ? -Math.abs(row.peak_deviation_bps) : Math.abs(row.peak_deviation_bps);
       const impactScore = getDepegMarketImpactScore(bps, mcapUsd);
       return {
         stablecoinId: row.stablecoin_id,
@@ -104,33 +100,37 @@ export async function collectActiveDepegs(
       const criticalDelta = Number(isCriticalDepegRisk(b)) - Number(isCriticalDepegRisk(a));
       return criticalDelta || b.impactScore - a.impactScore || Math.abs(b.bps) - Math.abs(a.bps);
     });
-    const topDepegs = withImpact.slice(0, ACTIVE_DEPEG_PROMPT_LIMIT).map(({
-      stablecoinId,
-      symbol,
-      bps,
-      direction,
-      mcapUsd,
-      startedAt,
-      ageHours,
-      impactScore,
-      peakBps,
-      peakPriceUsd,
-      currentPriceUsd,
-      suppressReason,
-    }) => ({
-      stablecoinId,
-      symbol,
-      bps,
-      direction,
-      mcapUsd,
-      startedAt,
-      ageHours,
-      impactScore,
-      peakBps,
-      ...(peakPriceUsd != null ? { peakPriceUsd } : {}),
-      ...(currentPriceUsd != null ? { currentPriceUsd } : {}),
-      ...(suppressReason ? { suppressReason } : {}),
-    }));
+    const topDepegs = withImpact
+      .slice(0, ACTIVE_DEPEG_PROMPT_LIMIT)
+      .map(
+        ({
+          stablecoinId,
+          symbol,
+          bps,
+          direction,
+          mcapUsd,
+          startedAt,
+          ageHours,
+          impactScore,
+          peakBps,
+          peakPriceUsd,
+          currentPriceUsd,
+          suppressReason,
+        }) => ({
+          stablecoinId,
+          symbol,
+          bps,
+          direction,
+          mcapUsd,
+          startedAt,
+          ageHours,
+          impactScore,
+          peakBps,
+          ...(peakPriceUsd != null ? { peakPriceUsd } : {}),
+          ...(currentPriceUsd != null ? { currentPriceUsd } : {}),
+          ...(suppressReason ? { suppressReason } : {}),
+        }),
+      );
 
     return collectorOk({ activeDepegCount: withImpact.length, topDepegs });
   } catch (error) {
@@ -181,7 +181,7 @@ export async function collectSupplyVelocity(
   ctx: CollectorContext,
 ): Promise<CollectorResult<DigestInputData["supplyVelocity"]>> {
   try {
-    const top10 = ctx.trackedStablecoinAssets
+    const top10 = ctx.coreAggregateStablecoinAssets
       .map((coin) => ({ id: coin.id, symbol: coin.symbol, mcap: getCirculatingRaw(coin) }))
       .sort((a, b) => b.mcap - a.mcap)
       .slice(0, 10);
@@ -227,12 +227,12 @@ export async function collectSupplyVelocity(
 
         if (!hasMaterialDailyMove && !hasMaterialWeeklyMove) continue;
 
-        if ((directionReversed && hasMaterialDailyMove) || (sameDirection && velocityRatio > 2.5 && hasMaterialDailyMove) || (sameDirection && velocityRatio < 0.4 && hasMaterialWeeklyMove)) {
-          const signal = directionReversed
-            ? "reversed"
-            : velocityRatio > 2.5
-              ? "accelerating"
-              : "decelerating";
+        if (
+          (directionReversed && hasMaterialDailyMove) ||
+          (sameDirection && velocityRatio > 2.5 && hasMaterialDailyMove) ||
+          (sameDirection && velocityRatio < 0.4 && hasMaterialWeeklyMove)
+        ) {
+          const signal = directionReversed ? "reversed" : velocityRatio > 2.5 ? "accelerating" : "decelerating";
           velocitySignals.push({ coin: coin.symbol, change1d, change7d, signal });
         }
       }
@@ -248,9 +248,7 @@ export async function collectSupplyVelocity(
   return collectorOk(undefined);
 }
 
-export async function collectResolvedDepegs(
-  ctx: CollectorContext,
-): Promise<DigestInputData["resolvedDepegs"]> {
+export async function collectResolvedDepegs(ctx: CollectorContext): Promise<DigestInputData["resolvedDepegs"]> {
   try {
     const cutoff48h = ctx.nowSec - SECONDS.TWO_DAYS;
     const resolvedRows = await ctx.db
@@ -262,7 +260,14 @@ export async function collectResolvedDepegs(
          LIMIT 20`,
       )
       .bind(cutoff48h)
-      .all<{ symbol: string; direction: "above" | "below"; peak_deviation_bps: number; started_at: number; ended_at: number; stablecoin_id: string }>();
+      .all<{
+        symbol: string;
+        direction: "above" | "below";
+        peak_deviation_bps: number;
+        started_at: number;
+        ended_at: number;
+        stablecoin_id: string;
+      }>();
 
     const candidates = (resolvedRows.results ?? [])
       .map((row) => {
@@ -324,11 +329,21 @@ export async function collectMintBurnFlows(
          GROUP BY stablecoin_id, chain_id`,
       )
       .bind(cutoff30d)
-      .all<{ stablecoin_id: string; chain_id: string; avg_daily_net: number; avg_daily_abs: number; data_days: number }>();
+      .all<{
+        stablecoin_id: string;
+        chain_id: string;
+        avg_daily_net: number;
+        avg_daily_abs: number;
+        data_days: number;
+      }>();
 
     const flow24h = new Map<string, { net_24h: number; mint_24h: number; burn_24h: number }>();
     for (const row of flow24hRows.results ?? []) {
-      if (!isCanonicalMintBurnPair(row.stablecoin_id, row.chain_id)) continue;
+      if (
+        !ctx.coreAggregateStablecoinIds.has(row.stablecoin_id) ||
+        !isCanonicalMintBurnPair(row.stablecoin_id, row.chain_id)
+      )
+        continue;
       const aggregate = flow24h.get(row.stablecoin_id) ?? { net_24h: 0, mint_24h: 0, burn_24h: 0 };
       aggregate.net_24h += row.net_24h;
       aggregate.mint_24h += row.mint_24h;
@@ -337,7 +352,11 @@ export async function collectMintBurnFlows(
     }
     const flow30d = new Map<string, { avg_daily_net: number; avg_daily_abs: number; data_days: number }>();
     for (const row of flow30dRows.results ?? []) {
-      if (!isCanonicalMintBurnPair(row.stablecoin_id, row.chain_id)) continue;
+      if (
+        !ctx.coreAggregateStablecoinIds.has(row.stablecoin_id) ||
+        !isCanonicalMintBurnPair(row.stablecoin_id, row.chain_id)
+      )
+        continue;
       const aggregate = flow30d.get(row.stablecoin_id) ?? { avg_daily_net: 0, avg_daily_abs: 0, data_days: 0 };
       aggregate.avg_daily_net += row.avg_daily_net;
       aggregate.avg_daily_abs += row.avg_daily_abs;
@@ -362,13 +381,21 @@ export async function collectMintBurnFlows(
         dataAgeDays: flow30.data_days,
         currentDailyAbs: flow24.mint_24h + flow24.burn_24h,
       });
-      coinIntensities.push({ id, symbol: coin.symbol, intensity, net24h: flow24.net_24h, mcap: getCirculatingRaw(coin) });
+      coinIntensities.push({
+        id,
+        symbol: coin.symbol,
+        intensity,
+        net24h: flow24.net_24h,
+        mcap: getCirculatingRaw(coin),
+      });
     }
     if (mintBurnExcluded > 0) {
       console.log(`[daily-digest] mint-burn: excluded ${mintBurnExcluded} coins without 30d baseline`);
     }
 
-    const gaugeScore = computeGaugeScore(coinIntensities.map((coin) => ({ intensity: coin.intensity, mcap: coin.mcap })));
+    const gaugeScore = computeGaugeScore(
+      coinIntensities.map((coin) => ({ intensity: coin.intensity, mcap: coin.mcap })),
+    );
     if (gaugeScore !== null) {
       const ftqFlows = await computeDigestMintBurnFtqFlows(ctx.db, coinIntensities);
       const { safeNet24h, riskyNet24h } = ftqFlows;
@@ -377,14 +404,20 @@ export async function collectMintBurnFlows(
         markCollectorDegraded(degradedReasons, `mint-burn-ftq:${ftqFlows.reason}`);
       }
       const topPressure = coinIntensities
-        .filter((coin): coin is FlowIntensityRowWithIntensity => coin.intensity !== null && Math.abs(coin.intensity) > 20)
+        .filter(
+          (coin): coin is FlowIntensityRowWithIntensity => coin.intensity !== null && Math.abs(coin.intensity) > 20,
+        )
         .sort((a, b) => Math.abs(b.intensity) - Math.abs(a.intensity))
         .slice(0, 3)
         .map((coin) => ({ symbol: coin.symbol, intensity: coin.intensity, net24hUsd: coin.net24h }));
 
       const chainTotals = new Map<string, number>();
       for (const row of flow24hRows.results ?? []) {
-        if (!isCanonicalMintBurnPair(row.stablecoin_id, row.chain_id)) continue;
+        if (
+          !ctx.coreAggregateStablecoinIds.has(row.stablecoin_id) ||
+          !isCanonicalMintBurnPair(row.stablecoin_id, row.chain_id)
+        )
+          continue;
         chainTotals.set(row.chain_id, (chainTotals.get(row.chain_id) ?? 0) + row.net_24h);
       }
       const topChains = [...chainTotals.entries()]
@@ -409,9 +442,7 @@ export async function collectMintBurnFlows(
   return undefined;
 }
 
-export async function collectLiquidityShifts(
-  ctx: CollectorContext,
-): Promise<DigestInputData["liquidityShifts"]> {
+export async function collectLiquidityShifts(ctx: CollectorContext): Promise<DigestInputData["liquidityShifts"]> {
   try {
     const lookbackStart = ctx.yesterdayTs - 2 * SECONDS.ONE_DAY;
     const rows = await ctx.db

@@ -16,8 +16,10 @@ import { CANONICAL_ETH_RESERVE_RISK } from "../reserve-asset-risk";
 import {
   ACTIVE_META_BY_ID,
   ACTIVE_STABLECOINS,
+  DELISTED_STABLECOINS,
   FROZEN_STABLECOINS,
   PRE_LAUNCH_STABLECOINS,
+  QUARANTINED_STABLECOINS,
   TRACKED_META_BY_ID,
   TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/registry";
@@ -116,9 +118,18 @@ describe("tracked stablecoin metadata", () => {
     expect(preLaunchCoins.every((coin) => coin.status === "pre-launch")).toBe(true);
   });
 
-  it("keeps active and pre-launch partitions aligned after the JSON migration", () => {
-    const inactiveStablecoinCount = PRE_LAUNCH_STABLECOINS.length + FROZEN_STABLECOINS.length;
-    const partitionIds = [...ACTIVE_STABLECOINS, ...PRE_LAUNCH_STABLECOINS, ...FROZEN_STABLECOINS].map(
+  it("keeps every lifecycle partition aligned after the JSON migration", () => {
+    const inactiveStablecoinCount = PRE_LAUNCH_STABLECOINS.length
+      + FROZEN_STABLECOINS.length
+      + QUARANTINED_STABLECOINS.length
+      + DELISTED_STABLECOINS.length;
+    const partitionIds = [
+      ...ACTIVE_STABLECOINS,
+      ...PRE_LAUNCH_STABLECOINS,
+      ...FROZEN_STABLECOINS,
+      ...QUARANTINED_STABLECOINS,
+      ...DELISTED_STABLECOINS,
+    ].map(
       (coin) => coin.id,
     );
 
@@ -454,7 +465,6 @@ describe("tracked stablecoin metadata", () => {
       "aa-falconx-mev-capital",
       "susdd-tron-dao-reserve",
       "susdai-usd-ai",
-      "busd0-usual",
       "sgho-aave",
       "stkgho-umbrella-aave",
       "stcusd-cap",

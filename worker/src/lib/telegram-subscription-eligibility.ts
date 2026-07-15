@@ -1,21 +1,23 @@
-import {
-  FROZEN_IDS,
-  TRACKED_META_BY_ID,
-  TRACKED_STABLECOINS,
-} from "@shared/lib/stablecoins/registry";
+import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { isActiveStablecoinMeta, isPreLaunchStablecoinMeta } from "@shared/lib/stablecoins/status";
 
 /**
  * Coins eligible for new Telegram alert state. Pre-launch assets stay eligible
- * for launch alerts; frozen assets remain addressable only by cleanup paths.
+ * for launch alerts; all other lifecycle states remain addressable only by
+ * cleanup paths.
  */
 export const TELEGRAM_SUBSCRIBABLE_STABLECOINS = Object.freeze(
-  TRACKED_STABLECOINS.filter((coin) => !FROZEN_IDS.has(coin.id)),
+  TRACKED_STABLECOINS.filter(
+    (coin) => isActiveStablecoinMeta(coin) || isPreLaunchStablecoinMeta(coin),
+  ),
 );
 
 export function isSubscribableCoin(stablecoinId: string | undefined): stablecoinId is string {
   return typeof stablecoinId === "string"
-    && TRACKED_META_BY_ID.has(stablecoinId)
-    && !FROZEN_IDS.has(stablecoinId);
+    && (() => {
+      const meta = TRACKED_META_BY_ID.get(stablecoinId);
+      return meta != null && (isActiveStablecoinMeta(meta) || isPreLaunchStablecoinMeta(meta));
+    })();
 }
 
 export function assertSubscribableCoin(stablecoinId: string): void {

@@ -200,23 +200,24 @@ Load-bearing, deliberately-locked decisions and _why_ they exist, so the rationa
 
 ## Stablecoin lifecycle phases
 
-Every entry in `TRACKED_STABLECOINS` is in one of three lifecycle phases. The phase controls which write-side crons ingest the coin, which read-side endpoints serve it, and which UI surfaces list it. Phase transitions are a data-collection policy, not a scoring algorithm change — per-domain methodology version constants under `shared/lib/*-version*.ts` are unaffected.
+Every entry in `TRACKED_STABLECOINS` is in one of five lifecycle phases. The phase controls write-side collection, live aggregates, and public presentation. Phase transitions are a catalog policy change, not a scoring-algorithm change, so per-domain methodology versions are unaffected unless the scoring formula also changes.
 
-| Phase      | `status` field                               | New data collected?   | Score recomputation? | Listed on                                                                                                      |
-| ---------- | -------------------------------------------- | --------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Active     | `"active"` (or omitted)                      | Yes                   | Yes                  | Homepage table, active taxonomy pages, portfolio picker, live aggregates, and `/stablecoin/<id>/` detail pages |
-| Pre-launch | `"pre-launch"`                               | No (no live data yet) | No                   | `/upcoming/` cards and the pre-launch `/stablecoin/<id>/` detail variant                                       |
-| Frozen     | `"frozen"` (requires `frozenAt`, `obituary`) | No (archive)          | No                   | `/cemetery/` (with archived-data link) and the preserved detail page at `/stablecoin/<id>/`                    |
+| Phase | `status` field | New data collected? | Score recomputation? | Public treatment |
+| --- | --- | --- | --- | --- |
+| Active | `"active"` (or omitted) | Yes | Yes | Live tables, analytics, aggregates, alerts, and detail page |
+| Pre-launch | `"pre-launch"` | No | No | `/upcoming/` and pre-launch detail variant |
+| Quarantined | `"quarantined"` plus `listingStatusReview` | No | No | Static read-only detail record with reason and review date |
+| Delisted | `"delisted"` plus sourced `listingStatusReview` | No | No | Static historical detail record; discovery fingerprints remain blocked |
+| Frozen | `"frozen"` plus `frozenAt` and `obituary` | No | No | `/cemetery/` and preserved archive detail page |
 
-The registry exposes five universes from `shared/lib/stablecoins/registry.ts`:
+The main registry universes from `shared/lib/stablecoins/registry.ts` are:
 
-- `TRACKED_STABLECOINS` — every tracked coin (active + pre-launch + frozen). Used for canonical-ID lookups, registry validation, shared metadata reads, static stablecoin detail params, and stablecoin detail sitemap entries.
-- `ACTIVE_STABLECOINS` — excludes pre-launch and frozen. Used by every write-side cron, live aggregator, PSI/DEWS/Bank-Run-Gauge inputs, and Telegram alert eligibility.
-- `PRE_LAUNCH_STABLECOINS` — `status === "pre-launch"` only. Drives `/upcoming/` cards and the pre-launch detail-page variant.
-- `READABLE_STABLECOINS` — active + frozen. Used by the compare picker and readback/archive surfaces that should preserve frozen assets while excluding pre-launch assets.
-- `FROZEN_STABLECOINS` — `status === "frozen"` only. Drives the cemetery merge, the static cemetery dataset export, and the frozen detail-page banner/footer.
+- `TRACKED_STABLECOINS` — the complete catalog across all five phases. Use for canonical identity, schema validation, static detail params, sitemap entries, and known provider IDs in discovery.
+- `ACTIVE_STABLECOINS` — active or omitted status only. Every write-side cron, live aggregator, PSI/DEWS/Bank-Run-Gauge input, and Telegram alert target must use this universe.
+- `PRE_LAUNCH_STABLECOINS`, `QUARANTINED_STABLECOINS`, `DELISTED_STABLECOINS`, and `FROZEN_STABLECOINS` — explicit lifecycle partitions that drive their respective static or archive surfaces.
+- `READABLE_STABLECOINS` — all post-launch records: active, quarantined, delisted, and frozen. Use only for historical/read-only navigation and identity resolution, never live collection or cache publication.
 
-The freeze procedure is documented in [`docs/freezing-stablecoins.md`](./freezing-stablecoins.md).
+Listing scope, classes, quarantine, and delisting are defined in [Stablecoin Listing Policy](./listing-policy.md). The freeze procedure is documented in [Freezing a Tracked Stablecoin](./freezing-stablecoins.md).
 
 ## Funding page
 

@@ -188,5 +188,16 @@
       ]
     }
   },
-  "launchDate": "2024-11-27"
+  "launchDate": "2024-11-27",
+  "priceBasis": "contractual-par",
+  "exitMechanism": "ordinary-redemption",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-07-15",
+    "reason": "Out of scope: BFUSD is a non-withdrawable Binance account balance rather than a transferable production token.",
+    "source": {
+      "label": "Binance BFUSD explanation",
+      "url": "https://academy.binance.com/en/articles/what-is-bfusd"
+    }
+  }
 }

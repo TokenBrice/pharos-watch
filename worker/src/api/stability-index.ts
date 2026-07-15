@@ -19,6 +19,7 @@ import {
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 import { upsertPsiHistoryPoint } from "@shared/lib/psi-view-model";
 import { round1 } from "@shared/lib/math";
+import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
 
 import { isRecord } from "@shared/lib/type-guards";
 
@@ -236,6 +237,9 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
       components: currentComponents.value,
       contributors,
       ...(inputDegradation ? { inputDegradation } : {}),
+      ...(snapshot.value.aggregateUniverse === CORE_STABLECOIN_AGGREGATE_UNIVERSE
+        ? { aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE }
+        : {}),
       totalMcapUsd: typeof snapshot.value.totalMcapUsd === "number" ? snapshot.value.totalMcapUsd : 0,
       computedAt,
       methodologyVersion,

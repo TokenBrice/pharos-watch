@@ -469,6 +469,18 @@ describe("generateDailyDigest", () => {
               circulating: { peggedUSD: 60_000_000 },
               circulatingPrevWeek: { peggedUSD: 62_000_000 },
             }),
+            makeAsset({
+              id: "susds-sky",
+              symbol: "sUSDS",
+              circulating: { peggedUSD: 1_000_000_000 },
+              circulatingPrevWeek: { peggedUSD: 900_000_000 },
+            }),
+            makeAsset({
+              id: "acred-apollo-securitize",
+              symbol: "ACRED",
+              circulating: { peggedUSD: 500_000_000 },
+              circulatingPrevWeek: { peggedUSD: 450_000_000 },
+            }),
           ],
         },
         updatedAt: Math.floor(Date.now() / 1000),
@@ -579,6 +591,7 @@ describe("generateDailyDigest", () => {
     expect(insertBinds?.[2]).toBe("Calm Drift");
 
     const storedInput = JSON.parse(String(insertBinds?.[3])) as {
+      aggregateUniverse?: string;
       totalMcapUsd: number;
       activeDepegCount: number;
       topDepegs: Array<{ symbol: string; bps: number }>;
@@ -589,6 +602,7 @@ describe("generateDailyDigest", () => {
       editorialAudit?: { leadCandidateId?: string | null; usedCandidateIds?: string[] };
     };
     expect(storedInput.totalMcapUsd).toBe(160_000_000);
+    expect(storedInput.aggregateUniverse).toBe("core-stablecoins-v1");
     expect(storedInput.activeDepegCount).toBe(1);
     expect(storedInput.topDepegs[0]).toMatchObject({ symbol: "USDT", bps: -150, mcapUsd: 100_000_000 });
     expect(storedInput.editorialCandidates?.length).toBeGreaterThan(0);
@@ -2141,6 +2155,9 @@ function makeCollectorCtx(db: D1Database): CollectorContext {
   return {
     db: db as unknown as D1Database,
     trackedStablecoinAssets,
+    trackedStablecoinIds: new Set(trackedStablecoinAssets.map((asset) => asset.id)),
+    coreAggregateStablecoinAssets: trackedStablecoinAssets,
+    coreAggregateStablecoinIds: new Set(trackedStablecoinAssets.map((asset) => asset.id)),
     stablecoinAssetById,
     mcapById,
     nowSec,
@@ -2275,6 +2292,40 @@ describe("collectActiveDepegs", () => {
       currentPriceUsd: 0.99,
       peakPriceUsd: 0.443,
     });
+  });
+
+  it("reports monitored variant depegs without adding variants to monetary aggregates", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM depeg_events WHERE ended_at IS NULL",
+        rows: [
+          {
+            stablecoin_id: "susds-sky",
+            symbol: "sUSDS",
+            direction: "below",
+            peak_deviation_bps: -125,
+            started_at: nowSec - 3600,
+          },
+        ],
+      },
+    ]);
+    const ctx = makeCollectorCtx(db);
+    const variant = makeAsset({
+      id: "susds-sky",
+      symbol: "sUSDS",
+      circulating: { peggedUSD: 1_000_000_000 },
+    });
+    ctx.trackedStablecoinAssets.push(variant);
+    (ctx.trackedStablecoinIds as Set<string>).add(variant.id);
+    ctx.stablecoinAssetById.set(variant.id, variant);
+    ctx.mcapById.set(variant.id, 1_000_000_000);
+
+    const result = await collectActiveDepegs(ctx);
+
+    expect(ctx.coreAggregateStablecoinIds.has(variant.id)).toBe(false);
+    expect(result.value.activeDepegCount).toBe(1);
+    expect(result.value.topDepegs[0]).toMatchObject({ stablecoinId: "susds-sky", symbol: "sUSDS" });
   });
 
   it("filters frozen coins out of digest active depeg candidates", async () => {

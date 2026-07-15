@@ -1,19 +1,18 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type { UsdsStatusResponse } from "@shared/types";
 import { UsdsStatusResponseSchema } from "@shared/types/stability";
-import { BluechipRatingsMapSchema, StablecoinListResponseSchema } from "@shared/types/market";
+import {
+  BluechipRatingsMapSchema,
+  STABLECOIN_CHART_LEGACY_AGGREGATE_UNIVERSE,
+  StablecoinListResponseSchema,
+} from "@shared/types/market";
 import {
   createCacheHandler,
   errorResponse,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { RESPONSE_READY_CACHE_SCHEMA_IDS } from "../lib/response-ready-cache-contracts";
-import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { normalizeStablecoinChartPoints } from "../lib/stablecoin-charts-payload";
-import {
-  appendOrReplaceCurrentStablecoinChartsPoint,
-  buildCurrentStablecoinChartsPoint,
-} from "../lib/stablecoin-charts-reconciliation";
 
 export { handleYieldRankings } from "./yield-rankings-cache";
 
@@ -37,24 +36,16 @@ export const handleStablecoinCharts = createCacheHandler(
   API_FRESHNESS_MAX_AGE_SEC.stablecoinCharts,
   {
     injectMeta: "never",
-    transform: async (payload, { db }) => {
+    transform: (payload) => {
       const normalizedPoints = normalizeStablecoinChartPoints(payload);
       if (!normalizedPoints) {
         return errorResponse(503, "Cached stablecoin-charts payload is malformed");
       }
 
-      let points = normalizedPoints;
-
-      const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
-      if (stablecoinsCache.kind === "ok") {
-        const currentPoint = buildCurrentStablecoinChartsPoint(
-          stablecoinsCache.payload.peggedAssets,
-          stablecoinsCache.updatedAt,
-        );
-        points = appendOrReplaceCurrentStablecoinChartsPoint(points, currentPoint);
-      }
-
-      return points;
+      return normalizedPoints.map((point) => ({
+        ...point,
+        aggregateUniverse: point.aggregateUniverse ?? STABLECOIN_CHART_LEGACY_AGGREGATE_UNIVERSE,
+      }));
     },
   },
 );

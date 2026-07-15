@@ -16,6 +16,7 @@ const {
   useStressSignalsMock,
   useHomeAltFiltersMock,
   usePinnedStablecoinsMock,
+  setActiveUniverseMock,
 } = vi.hoisted(() => ({
   stablecoinTablePropsMock: vi.fn(),
   togglePinnedMock: vi.fn(),
@@ -27,6 +28,7 @@ const {
   useStressSignalsMock: vi.fn(),
   useHomeAltFiltersMock: vi.fn(),
   usePinnedStablecoinsMock: vi.fn(),
+  setActiveUniverseMock: vi.fn(),
 }));
 
 vi.mock("next/dynamic", () => ({
@@ -88,6 +90,7 @@ describe("HomeAltRankingsSection", () => {
   beforeEach(() => {
     stablecoinTablePropsMock.mockClear();
     togglePinnedMock.mockClear();
+    setActiveUniverseMock.mockClear();
     useStablecoinsMock.mockReturnValue({
       data: { peggedAssets: [{ id: "usdt-tether" }] },
       isLoading: false,
@@ -97,7 +100,11 @@ describe("HomeAltRankingsSection", () => {
     useDexLiquidityMock.mockReturnValue({ data: {} });
     useReportCardsMock.mockReturnValue({ data: { cards: [], dependencyGraph: { edges: [] } } });
     useStressSignalsMock.mockReturnValue({ data: { signals: {} } });
-    useHomeAltFiltersMock.mockReturnValue({ activeFilters: [] });
+    useHomeAltFiltersMock.mockReturnValue({
+      activeFilters: [],
+      activeUniverse: "core",
+      setActiveUniverse: setActiveUniverseMock,
+    });
     usePinnedStablecoinsMock.mockReturnValue({ pinnedIds: ["usdc-circle"], togglePinned: togglePinnedMock });
   });
 
@@ -110,6 +117,8 @@ describe("HomeAltRankingsSection", () => {
 
     expect(screen.getByTestId("peg-browse-strip")).toBeTruthy();
     expect(screen.getByTestId("stablecoin-table")).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "Core" }).getAttribute("data-state")).toBe("on");
+    expect(screen.getByRole("radio", { name: "Variants" })).toBeTruthy();
     // The section now owns the "Stablecoin Overview" heading (carrying the
     // region's labelled id) rather than the table toolbar.
     const heading = screen.getByRole("heading", { name: "Stablecoin Overview" });
@@ -137,6 +146,7 @@ describe("HomeAltRankingsSection", () => {
         pinnedStablecoinIds: ["usdc-circle"],
         onTogglePinnedStablecoin: togglePinnedMock,
         toolbarVariant: "figmaOverview",
+        eligibleIds: expect.any(Set),
       }),
     );
     expect(stablecoinTablePropsMock.mock.calls[0]?.[0]).not.toHaveProperty("usePageVerticalScroll");

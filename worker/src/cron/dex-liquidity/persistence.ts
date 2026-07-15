@@ -630,8 +630,8 @@ export async function persistScores(
   );
 
   // Clean up orphaned rows from stablecoins no longer in the tracked set.
-  // Preserve TRACKED (active + frozen) plus the `__global__` aggregate so
-  // frozen coins keep their historical DEX rows.
+  // Preserve the complete tracked catalog plus the `__global__` aggregate so
+  // non-active records keep any historical DEX rows.
   const DEX_LIQUIDITY_TABLES = ["dex_liquidity", "dex_liquidity_history", "dex_discovery_meta"] as const;
   try {
     for (const table of DEX_LIQUIDITY_TABLES) {

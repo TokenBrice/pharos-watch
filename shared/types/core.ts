@@ -7,12 +7,26 @@ import {
   GOVERNANCE_TYPE_VALUES,
   type GovernanceType,
   type MechanismArchetype,
+  type StablecoinExitMechanism,
+  type StablecoinPriceBasis,
   type StablecoinStatus,
 } from "./stablecoin-taxonomy";
 export type { DependencyType } from "./dependency-types";
 export type { ReserveRisk, ReserveSlice } from "./reserves";
-export { GOVERNANCE_TYPE_VALUES, MECHANISM_ARCHETYPE_VALUES, STABLECOIN_STATUS_VALUES } from "./stablecoin-taxonomy";
-export type { GovernanceType, MechanismArchetype, StablecoinStatus } from "./stablecoin-taxonomy";
+export {
+  GOVERNANCE_TYPE_VALUES,
+  MECHANISM_ARCHETYPE_VALUES,
+  STABLECOIN_EXIT_MECHANISM_VALUES,
+  STABLECOIN_PRICE_BASIS_VALUES,
+  STABLECOIN_STATUS_VALUES,
+} from "./stablecoin-taxonomy";
+export type {
+  GovernanceType,
+  MechanismArchetype,
+  StablecoinExitMechanism,
+  StablecoinPriceBasis,
+  StablecoinStatus,
+} from "./stablecoin-taxonomy";
 export { RESERVE_RISK_VALUES, ReserveRiskSchema } from "./reserves";
 export { DEPENDENCY_TYPE_VALUES, DependencyTypeSchema } from "./dependency-types";
 
@@ -940,11 +954,24 @@ export interface StablecoinObituary {
   sourceLabel: string;
 }
 
+export interface StablecoinListingStatusReview {
+  /** Date on which the lifecycle decision took effect. */
+  changedAt: string;
+  /** Concise public explanation for the quarantine or delisting. */
+  reason: string;
+  /** Required follow-up date for reversible quarantines. */
+  reviewBy?: string;
+  /** Primary evidence for an out-of-scope decision or runtime hold. */
+  source?: StablecoinLink;
+}
+
 export interface StablecoinMeta {
   id: string;
   llamaId?: string;
   detailProvider?: DetailProvider;
   marketAvailability?: MarketAvailability;
+  priceBasis?: StablecoinPriceBasis;
+  exitMechanism?: StablecoinExitMechanism;
   name: string;
   symbol: string;
   oneLiner?: string;
@@ -993,6 +1020,8 @@ export interface StablecoinMeta {
   tags?: string[];
   yieldConfig?: YieldConfig;
   status?: StablecoinStatus;
+  /** Required for quarantined and delisted assets; rendered on preserved detail pages. */
+  listingStatusReview?: StablecoinListingStatusReview;
   /** YYYY-MM-DD; required when status === "frozen". */
   frozenAt?: string;
   /** Obituary content surfaced on the detail page banner and cemetery tombstone; required when status === "frozen". */

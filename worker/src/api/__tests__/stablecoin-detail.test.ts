@@ -114,6 +114,41 @@ describe("handleStablecoinDetail", () => {
     });
   });
 
+  it.each([
+    "bfusd-binance",
+    "benji-franklin-templeton",
+    "usr-resolv",
+    "hkdr-rd-technologies",
+  ])(
+    "does not refresh providers for inactive catalog record %s",
+    async (stablecoinId) => {
+      const db = mockD1([{ match: "cache", rows: [] }]);
+      const ctx = makeCtx();
+
+      const res = await handleStablecoinDetail(db, stablecoinId, ctx);
+
+      expect(res.status).toBe(404);
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(ctx.waitUntil).not.toHaveBeenCalled();
+    },
+  );
+
+  it("serves an inactive record's retained cache without scheduling refresh", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([{
+      match: "cache",
+      rows: [],
+      first: { value: makeDLDetailBody(), updated_at: now - 3_600 },
+    }]);
+    const ctx = makeCtx();
+
+    const res = await handleStablecoinDetail(db, "bfusd-binance", ctx);
+
+    expect(res.status).toBe(200);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(ctx.waitUntil).not.toHaveBeenCalled();
+  });
+
   it("returns 200 with JSON from DefiLlama for a regular stablecoin", async () => {
     const dlBody = makeDLDetailBody();
 
