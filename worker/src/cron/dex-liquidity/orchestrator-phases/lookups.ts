@@ -1,6 +1,9 @@
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../../lib/stablecoins-cache";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import { classifyPrimaryDepegTrust } from "../../../lib/depeg-trust-policy";
+import {
+  classifyPrimaryDepegTrust,
+  hasFreshMultiSourcePrimaryAgreement,
+} from "../../../lib/depeg-trust-policy";
 
 export interface TrackedStablecoinMaps {
   stablecoinPriceById: Map<string, number>;
@@ -24,7 +27,10 @@ export async function loadTrackedStablecoinMaps(
         asset.price != null &&
         Number.isFinite(asset.price) &&
         asset.price > 0 &&
-        classifyPrimaryDepegTrust(asset, syncStartSec) === "authoritative"
+        (
+          classifyPrimaryDepegTrust(asset, syncStartSec) === "authoritative" ||
+          hasFreshMultiSourcePrimaryAgreement(asset, syncStartSec)
+        )
       ) {
         stablecoinPriceById.set(asset.id, asset.price);
       } else {
