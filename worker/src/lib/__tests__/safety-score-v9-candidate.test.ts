@@ -148,11 +148,12 @@ function exactFixedInput(
           : {
               exitRouteObservationCoverage: {
                 status: "populated" as const,
-                capabilityMatrixVersion: "fixture-observed-capability-v1",
+                capabilityMatrixVersion: "p4a.4",
                 retainedPoolCount: 1,
                 observationCount: 1,
                 scoreEligibleObservationCount: 1,
                 scoreEligiblePoolCount: 1,
+                scoreEligibleCapabilityPoolCount: 1,
                 unsupportedPoolCount: 0,
                 evidenceCounts: { "reserve-based-amm-simulation": 1 },
                 unsupportedReasons: {},
