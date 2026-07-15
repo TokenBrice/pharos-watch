@@ -62,7 +62,6 @@ export interface V9ScoreTrace {
 
 const SCORE_MIN = 0;
 const SCORE_MAX = 100;
-const EPSILON = 1e-9;
 
 function compareCodeUnits(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
