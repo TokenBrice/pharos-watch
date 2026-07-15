@@ -46,11 +46,13 @@ export const DexMeasuredExecutionQuotePointProofSchema = z.object({
   amountInRaw: z.string().regex(/^[1-9][0-9]*$/),
   amountOutRaw: z.string().regex(/^[0-9]+$/),
   callData: z.string().regex(/^0x[0-9a-f]+$/),
-  returnData: z.string().regex(/^0x[0-9a-f]+$/),
+  returnData: z.string().regex(/^0x[0-9a-f]*$/),
   inputUsd: z.number().finite().positive(),
   outputUsd: z.number().finite().nonnegative(),
   costBps: z.number().finite().nonnegative(),
   passesCostBound: z.boolean(),
+  /** A decoded Multicall inner failure at this exact input, not an RPC failure. */
+  reverted: z.literal(true).optional(),
 });
 export type DexMeasuredExecutionQuotePointProof = z.infer<typeof DexMeasuredExecutionQuotePointProofSchema>;
 
@@ -345,7 +347,13 @@ export function validateDexMeasuredExecutionProfile(input: {
       return Math.abs(point.inputUsd - claimed.inputUsd) > 0.02 ||
         Math.abs(point.outputUsd - claimed.outputUsd) > 0.02 ||
         Math.abs(point.costBps - claimed.costBps) > 0.02 ||
-        point.passesCostBound !== claimed.passesCostBound;
+        point.passesCostBound !== claimed.passesCostBound ||
+        (claimed.reverted === true
+          ? claimed.amountOutRaw !== "0" ||
+            claimed.outputUsd !== 0 ||
+            Math.abs(claimed.costBps - 10_000) > 0.02 ||
+            claimed.passesCostBound
+          : claimed.returnData === "0x");
     })
   ) issues.add("invalid-quote-proof");
   const recomputedMarginal = recomputedProof[0];
