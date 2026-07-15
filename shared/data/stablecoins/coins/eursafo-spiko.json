@@ -210,10 +210,13 @@
         ]
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
-      "evidence": "Verified at Ethereum block 25295092. EURSAFO is a UUPS proxy at 0x0990b149 (impl 0x13ae01cb, Token contract); authority() = PermissionManager proxy at 0x344278aff (ERC1967Proxy → PermissionManager impl 0xd3f5f152). PermissionManager deployed at block 19690257; initialization logs confirm: ADMIN group (group 0) → 0x4eaa52b6 (Safe 1.4.1, 8/3, no modules/guard); minter/burner access → two issuer-backend relayer proxies (0xa0769f7a, 0xe4880249). PermissionManager UUPS has no separate proxy admin; the ADMIN group itself gates upgradeToAndCall.",
+      "evidence": "Verified at Ethereum block 25295092. EURSAFO is a UUPS proxy at 0x0990b149 (impl 0x13ae01cb, Token contract); authority() = PermissionManager proxy at 0x344278aff (ERC1967Proxy → PermissionManager impl 0xd3f5f152). PermissionManager deployed at block 19690257; initialization logs confirm: ADMIN group (group 0) → 0x4eaa52b6 (Safe 1.4.1, 8/3, no modules/guard); minter/burner access → two issuer-backend relayer proxies (0xa0769f7a, 0xe4880249). PermissionManager UUPS has no separate proxy admin; the ADMIN group itself gates upgradeToAndCall. Economic-control evidence reviewed 2026-07-15: CACEIS independently calculates daily fund NAV and PwC performs four statutory audits per year; the latest holdings data disclosed by Spiko was updated 2026-03-03. The AMF GECO registry matches the exact Spiko Amundi Overnight Swap Fund containing EUR share class FR0014015LD3.",
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Spiko smart contracts",
@@ -226,6 +229,10 @@
         {
           "label": "EURSAFO contract on Etherscan",
           "url": "https://etherscan.io/address/0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+        },
+        {
+          "label": "AMF GECO - Spiko Amundi Overnight Swap Fund",
+          "url": "https://geco.amf-france.org/produit-d-epargne/c79399"
         }
       ]
     }

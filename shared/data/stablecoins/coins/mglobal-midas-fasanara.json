@@ -319,10 +319,13 @@
         "evidence": "At Ethereum block 25527148, all three mint-critical transparent proxies shared ProxyAdmin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac. Its owner was MidasTimelockController 0xe3eee3e0d2398799c884a47fc40c029c8e241852 with a 172800-second delay. Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89 was the timelock's sole proposer, executor, and canceller; it was 1-of-3 with no enabled modules and a zero guard."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "At Ethereum block 25527148, the current mGLOBAL direct minters were EOA 0x76e350c5a674db787918e5f728466c7356d4d361 and DepositVault proxy 0xce29c36c6d4556f2d01d79414c1354b968dddef1. The previously recorded EOA 0x425bbc2cff0c7e7960baa9bac2f0cb67b41d3bef and address 0xd36f095556d5717fd9231a2091e8e98beb7cb621 were not live mGLOBAL mint controls; 0xd36f095556d5717fd9231a2091e8e98beb7cb621 is unrelated to the current vault. Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89 and EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 each held DEFAULT_ADMIN_ROLE and could immediately change the role set. The complete mint-critical proxy inventory was token 0x7433806912eae67919e66aea853d46fa0aef98a8, DepositVault 0xce29c36c6d4556f2d01d79414c1354b968dddef1, and shared MidasAccessControl 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b, with implementations 0xd22be883b7194ac2d1751bf8e6e4962d87f2f75a, 0x08e4432f84e660235821c63764fb2ffcc7e2b477, and 0xdd5a54ba2ab379a5e642c58f98ad793a183960e2 respectively. Each EIP-1967 admin slot resolved to ProxyAdmin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac, owned by the 172800-second Midas timelock. The timelock's sole initiating Safe was 1-of-3 with no enabled modules and a zero guard.",
+      "evidence": "At Ethereum block 25527148, the current mGLOBAL direct minters were EOA 0x76e350c5a674db787918e5f728466c7356d4d361 and DepositVault proxy 0xce29c36c6d4556f2d01d79414c1354b968dddef1. The previously recorded EOA 0x425bbc2cff0c7e7960baa9bac2f0cb67b41d3bef and address 0xd36f095556d5717fd9231a2091e8e98beb7cb621 were not live mGLOBAL mint controls; 0xd36f095556d5717fd9231a2091e8e98beb7cb621 is unrelated to the current vault. Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89 and EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 each held DEFAULT_ADMIN_ROLE and could immediately change the role set. The complete mint-critical proxy inventory was token 0x7433806912eae67919e66aea853d46fa0aef98a8, DepositVault 0xce29c36c6d4556f2d01d79414c1354b968dddef1, and shared MidasAccessControl 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b, with implementations 0xd22be883b7194ac2d1751bf8e6e4962d87f2f75a, 0x08e4432f84e660235821c63764fb2ffcc7e2b477, and 0xdd5a54ba2ab379a5e642c58f98ad793a183960e2 respectively. Each EIP-1967 admin slot resolved to ProxyAdmin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac, owned by the 172800-second Midas timelock. The timelock's sole initiating Safe was 1-of-3 with no enabled modules and a zero guard. Economic-control evidence reviewed 2026-07-15: JTC Luxembourg independently values the mGLOBAL underlying assets monthly, with the latest product period shown as 2026-05-01 through 2026-05-31; the Midas engine notarizes and independently verifies each checkpoint. The exempt Luxembourg securitisation compartment is not evidenced as a prudentially supervised fund.",
       "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-13",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "mGLOBAL token proxy",
@@ -347,6 +350,18 @@
         {
           "label": "Midas admin Safe",
           "url": "https://eth.blockscout.com/address/0xb60842e9dabcd1c52e354ac30e82a97661cb7e89"
+        },
+        {
+          "label": "Midas mGLOBAL Aave Horizon and attestation disclosure",
+          "url": "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/"
+        },
+        {
+          "label": "Midas mGLOBAL product",
+          "url": "https://midas.app/mGLOBAL"
+        },
+        {
+          "label": "Midas Attestation Engine",
+          "url": "https://blog.midas.app/introducing-the-midas-attestation-engine/"
         }
       ]
     }

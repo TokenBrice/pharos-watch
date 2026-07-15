@@ -762,6 +762,8 @@
         "evidence": "At the exact cutoff, Ethereum role 1 was held by 0xacc5...311a and role 0 by 0x7b0c...9403, 0xacc5...311a, and 0x45a1...545a; proxy-admin owner was 0x7b0c...9403. Base role 1 and proxy-admin ownership were held by 0xd630...051f, while role 0 also included 0xacc5...311a and 0xb65a...09c6. Polygon role 1 was held by 0xacc5...311a, role 0 also included 0x7b0c...9403, and proxy-admin owner was 0x88f2...af4a. Etherlink role 1 was empty, role 0 included 0x21f5...59c1, 0xacc5...311a, and 0xb65a...09c6, and proxy-admin owner was 0x21f5...59c1. Any one listed EVM principal can reach an upgrade path immediately. Tezos owner tz1Rk3...dsm3 can replace implementation KT1SU44cZ3Jobc4tVA87TZa5JZVVY8CrdmXd or RBAC KT1KL1zq1BG4UHSagHDqXDhRuNtYnCY6u3qd."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -795,11 +797,23 @@
         {
           "label": "Stellar VNXAU issuer",
           "url": "https://horizon.stellar.org/accounts/GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3"
+        },
+        {
+          "label": "AREVA VNXAU 2025 report",
+          "url": "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf"
+        },
+        {
+          "label": "VNX transparency",
+          "url": "https://vnx.li/transparency/"
+        },
+        {
+          "label": "Liechtenstein FMA register search - VNX",
+          "url": "https://register.fma-li.li/search?searchText=VNX"
         }
       ],
-      "evidence": "Exact-cutoff state at 2026-07-13T20:34:40Z was reconstructed from Ethereum block 25526129 (hash 0xd2eca668433c517ab710c73c244a2545203f12b35a83e4fb521595be762bdc3f), Base block 48592766 (0xa99a4dae34debb8307285b94373592fafc63005a817dbf45d54d48607a821872), Polygon block 90179923 (0x64a5f7f3fc10d6571c92d89894aac431fb8a523db7eaeba33787b9604a0d34d4), Etherlink block 48196648 (0x921eee47831143a0374020ffe2015a8e172fee01de3baae7c31f1eaf692cd97a), finalized Solana slot 432714278 and block height 410782389 (2zmgf9eoeHxnc8cU4jzyYSRPi8RkxAXhPWutQwR9w9ZS), Tezos level 14047971 (BM9Cp1cVnVAa15NFHehSBPLonuNVh91MfZX4G5ggKhDtvd3YBJW), and Stellar ledger 63463325 (abd18d4cad6e6a0baf1bd42f9f95f4657fae28ac2a773a98a2a7640438730a1). Storage, role membership, EIP-1967 implementation/admin/beacon slots, code status, owners, program authorities, Tezos exact-level storage, and Stellar signers/flags were checked. All seven independent mint paths and every immediate authorization or upgrade bypass are represented above. No Safe or other on-chain multisig, timelock, guard, or cap was found; off-chain MPC/HSM custody remains unknown.",
-      "reviewer": "Codex VNX family authority audit",
-      "reviewedAt": "2026-07-13"
+      "evidence": "Exact-cutoff state at 2026-07-13T20:34:40Z was reconstructed from Ethereum block 25526129 (hash 0xd2eca668433c517ab710c73c244a2545203f12b35a83e4fb521595be762bdc3f), Base block 48592766 (0xa99a4dae34debb8307285b94373592fafc63005a817dbf45d54d48607a821872), Polygon block 90179923 (0x64a5f7f3fc10d6571c92d89894aac431fb8a523db7eaeba33787b9604a0d34d4), Etherlink block 48196648 (0x921eee47831143a0374020ffe2015a8e172fee01de3baae7c31f1eaf692cd97a), finalized Solana slot 432714278 and block height 410782389 (2zmgf9eoeHxnc8cU4jzyYSRPi8RkxAXhPWutQwR9w9ZS), Tezos level 14047971 (BM9Cp1cVnVAa15NFHehSBPLonuNVh91MfZX4G5ggKhDtvd3YBJW), and Stellar ledger 63463325 (abd18d4cad6e6a0baf1bd42f9f95f4657fae28ac2a773a98a2a7640438730a1). Storage, role membership, EIP-1967 implementation/admin/beacon slots, code status, owners, program authorities, Tezos exact-level storage, and Stellar signers/flags were checked. All seven independent mint paths and every immediate authorization or upgrade bypass are represented above. No Safe or other on-chain multisig, timelock, guard, or cap was found; off-chain MPC/HSM custody remains unknown. Mint-tier review (2026-07-15): AREVA General Auditing and Trust Company Limited performs recurring annual agreed-upon procedures; the latest VNXAU report covers 2025-12-31 and was published 2026-03-23, reconciling each chain's supply to allocated physical gold. Liechtenstein FMA's register matches VNX Commodities AG only as a TT Service Provider, not a prudential ART issuer.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15"
     },
     "upgradeability": {
       "model": "custom",

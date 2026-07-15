@@ -94,7 +94,10 @@
         "evidence": "Inherited from reviewed usdc-circle parent; base USDC issuance is Circle-controlled."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Morpho vault page",
@@ -103,11 +106,23 @@
         {
           "label": "Morpho curation docs",
           "url": "https://docs.morpho.org/curate/"
+        },
+        {
+          "label": "Circle USDC transparency",
+          "url": "https://www.circle.com/transparency"
+        },
+        {
+          "label": "Deloitte USDC examination - May 2026",
+          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20May%2026.pdf"
+        },
+        {
+          "label": "NYDFS regulated virtual currency businesses",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
         }
       ],
-      "evidence": "At Ethereum block 25295208: vault is immutable (no EIP-1967 proxy slots), asset()=USDC confirmed, owner=Safe 4/7 v1.3.0 (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec), no modules. Shares minted deposit-only. Base USDC mint authority remains with Circle.",
+      "evidence": "At Ethereum block 25295208: vault is immutable (no EIP-1967 proxy slots), asset()=USDC confirmed, owner=Safe 4/7 v1.3.0 (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec), no modules. Shares minted deposit-only. Base USDC mint authority remains with Circle. Economic-control evidence reviewed 2026-07-15: the immutable MetaMorpho vault can mint shares only against deposited USDC; the inherited base issuer publishes monthly Deloitte reserve examinations. The latest USDC report covers May 2026, and the NYDFS list matches Circle Internet Financial, LLC.",
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "reviewedAt": "2026-07-15"
     }
   },
   "variantOf": "usdc-circle",

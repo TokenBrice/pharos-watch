@@ -279,7 +279,10 @@
         ]
       }
     ],
+    "reconciliation": "continuous",
+    "supervision": "prudential",
     "review": {
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Anemoy ACRDX launch",
@@ -288,11 +291,23 @@
         {
           "label": "Ethereum Blockscout ACRDX ShareToken",
           "url": "https://eth.blockscout.com/address/0x9477724bb54ad5417de8baff29e59df3fb4da74f"
+        },
+        {
+          "label": "Chronicle ACRDX Proof of Asset",
+          "url": "https://chroniclelabs.org/blog/chronicle-s-proof-of-asset-unlocks-apollo-s-acrdx-curated-by-steakhouse"
+        },
+        {
+          "label": "BVI FSC - Anemoy Capital SPC Limited",
+          "url": "https://www.bvifsc.vg/regulated-entities/anemoy-capital-spc-limited"
+        },
+        {
+          "label": "BVI FSC - Anemoy Asset Management Limited",
+          "url": "https://www.bvifsc.vg/regulated-entities/anemoy-asset-management-limited"
         }
       ],
-      "evidence": "Anemoy/Centrifuge materials describe a permissioned, NAV-accreting fund-share token. Ethereum confirmed at block 25295029: ShareToken wards = Root (0x7ed4), Spoke (0xec35), BalanceSheet (0x12a1); Root governed by ProtocolGuardian (0xceb7) which holds a 4/9 Gnosis Safe v1.4.1 (0x9711...7d225, no modules, no guard). Plume confirmed at block 74211635 (rpc.plume.org): wards(Spoke) = 1, wards(Root) = 1 on ShareToken 0x9477...4a74f. Monad confirmed at block 80740709 (rpc.monad.xyz): wards(Spoke) = 1 on ShareToken 0x2fabf1...3245; Root ward = 0 on Monad (Monad uses Spoke-only ward layout, consistent with Centrifuge cross-chain architecture where Root may not be deployed per spoke chain).",
+      "evidence": "Anemoy/Centrifuge materials describe a permissioned, NAV-accreting fund-share token. Ethereum confirmed at block 25295029: ShareToken wards = Root (0x7ed4), Spoke (0xec35), BalanceSheet (0x12a1); Root governed by ProtocolGuardian (0xceb7) which holds a 4/9 Gnosis Safe v1.4.1 (0x9711...7d225, no modules, no guard). Plume confirmed at block 74211635 (rpc.plume.org): wards(Spoke) = 1, wards(Root) = 1 on ShareToken 0x9477...4a74f. Monad confirmed at block 80740709 (rpc.monad.xyz): wards(Spoke) = 1 on ShareToken 0x2fabf1...3245; Root ward = 0 on Monad (Monad uses Spoke-only ward layout, consistent with Centrifuge cross-chain architecture where Root may not be deployed per spoke chain). Economic-control evidence reviewed 2026-07-15: Chronicle Proof of Asset continuously verifies ACRDX asset and NAV data from the fund administrator. The BVI FSC registry matches Anemoy Capital SPC Limited, the exact current professional-fund issuer.",
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "reviewedAt": "2026-07-15"
     }
   },
   "launchDate": "2025-09-16",

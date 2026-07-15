@@ -190,6 +190,7 @@
         "evidence": "At Celo block 69287341, owner() on COPm returned 0x890DB8A597940165901372Dd7DB61C9f246e2147; EIP-1967 proxy admin slot returned the same address. getMinDelay() on the Timelock returned 0x2a300 = 172800 seconds (48 hours)."
       }
     ],
+    "economicCapSemantics": "raiseable",
     "review": {
       "sources": [
         {
@@ -201,9 +202,9 @@
           "url": "https://celo.blockscout.com/address/0x8a567e2ae79ca692bd748ab832081c45de4041ea"
         }
       ],
-      "evidence": "At Celo block 69287341: owner() = Timelock 0x890DB8A597940165901372Dd7DB61C9f246e2147 (confirmed); EIP-1967 proxy admin slot = same Timelock; getMinDelay() = 172800s (48h); broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD (Mento BrokerProxy, confirmed as sole authorized minter); Broker EIP-1967 proxy admin = same Timelock. Celo Registry confirms Broker = 0x777A... All mint-capable surfaces resolved.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Celo block 69287341: owner() = Timelock 0x890DB8A597940165901372Dd7DB61C9f246e2147 (confirmed); EIP-1967 proxy admin slot = same Timelock; getMinDelay() = 172800s (48h); broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD (Mento BrokerProxy, confirmed as sole authorized minter); Broker EIP-1967 proxy admin = same Timelock. Celo Registry confirms Broker = 0x777A... All mint-capable surfaces resolved. Economically, Broker issuance is the collateral-exchange path; changing that path or authorizing different mint logic requires the independently enforced 48-hour Mento Timelock, so the encoding-derived unbounded cap is superseded by raiseable semantics.",
+      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review",
+      "reviewedAt": "2026-07-15"
     }
   },
   "chainTier": "established-alt-l1",

@@ -219,10 +219,13 @@
         "evidence": "Underlying USDT supply is issuer-minted by Tether; Ethereum getOwner() resolves to this 3/6 multisig-style owner with direct supply authority. syrupUSDT wrapper shares inherit that base USDT authority."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "syrupUSDT (variantOf usdt-tether, variantKind strategy-vault) is a Maple lending vault receipt whose shares track deposited USDT. At Ethereum block 25295160: EIP-1967 impl and proxy admin slots both zero — vault token is immutable, not a proxy, no upgrade path. Durable mint authority inherits from reviewed USDT parent.",
+      "evidence": "syrupUSDT (variantOf usdt-tether, variantKind strategy-vault) is a Maple lending vault receipt whose shares track deposited USDT. At Ethereum block 25295160: EIP-1967 impl and proxy admin slots both zero — vault token is immutable, not a proxy, no upgrade path. Durable mint authority inherits from reviewed USDT parent. Economic-control evidence reviewed 2026-07-15: Maple launched recurring The Network Firm reports on 2026-05-07, sourcing loan collateral directly from custodians and onchain activity for syrupUSDT; the current report dashboard was reviewed 2026-07-15. No exact issuer/product prudential registry entry was found.",
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Maple Finance",
@@ -231,6 +234,14 @@
         {
           "label": "syrupUSDT contract",
           "url": "https://etherscan.io/address/0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d"
+        },
+        {
+          "label": "Maple syrupUSDC and syrupUSDT Proof of Reserves",
+          "url": "https://maple.finance/insights/introducing-proof-of-reserves"
+        },
+        {
+          "label": "Maple transparency dashboard",
+          "url": "https://maple.finance/transparency"
         }
       ]
     }

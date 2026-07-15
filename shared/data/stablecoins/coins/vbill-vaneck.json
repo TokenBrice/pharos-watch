@@ -124,7 +124,10 @@
         "evidence": "At Ethereum block 25295081, eth_getCode for 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee returned empty bytecode (confirmed EOA). On-chain model is issuer-operated EOA; off-chain MPC/HSM custody is indistinguishable and does not block verified."
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "prudential",
     "review": {
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Securitize VBILL",
@@ -137,11 +140,23 @@
         {
           "label": "Etherscan VBILL token",
           "url": "https://etherscan.io/address/0x2255718832bc9fd3be1caf75084f4803da14ff01"
+        },
+        {
+          "label": "VanEck and Securitize VBILL launch",
+          "url": "https://investors.securitize.io/news/news-details/2025/VanEck-Launches-First-Tokenized-Fund-VBILL-on-Securitize-05-13-2025/default.aspx"
+        },
+        {
+          "label": "RedStone Securitize NAV feed methodology",
+          "url": "https://blog.redstone.finance/2026/07/06/tokenize-the-world-redstones-role-in-the-securitize-ecosystem/"
+        },
+        {
+          "label": "BVI FSC professional-fund registry page containing VanEck Treasury Fund",
+          "url": "https://www.bvifsc.vg/regulated-entities/hatstone-fund-services-limited?page=741"
         }
       ],
-      "evidence": "At Ethereum block 25295081: owner() confirmed returning EOA 0x59c1eA...76Ee; eth_getCode confirms EOA (no bytecode). DSToken source confirms mint is gated by owner. All addressable mint-capable surfaces verified.",
+      "evidence": "At Ethereum block 25295081: owner() confirmed returning EOA 0x59c1eA...76Ee; eth_getCode confirms EOA (no bytecode). DSToken source confirms mint is gated by owner. All addressable mint-capable surfaces verified. Evidence challenge completed 2026-07-15: VBILL publishes Securitize-administered daily NAV through RedStone and identifies State Street as custodian, but no dated independent fund supply-to-assets attestation was found. The BVI FSC registry matches VanEck Treasury Fund, Ltd. as a professional fund, so supervision is established while reconciliation remains unknown.",
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "reviewedAt": "2026-07-15"
     }
   },
   "chainTier": "ethereum",

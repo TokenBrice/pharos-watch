@@ -359,10 +359,12 @@
         "evidence": "At Ethereum block 25295171, custom proxy admin slot (0x10d6a5...) = 0x4d64a2ccfed1a162c8b1d7a3d8fffeccab3305ca; eth_getCode = 0x (EOA confirmed). Same address in Arbitrum block 472412264 proxy admin slot."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
-      "evidence": "MXNB on Ethereum and Arbitrum is an upgradeable FiatToken-fork proxy. masterMinter() and owner() both resolve to EOA 0xcf3783...b739 on both chains. The proxy admin slot also resolves to an EOA 0x4d64a2...05ca. All confirmed via eth_call and eth_getCode at blocks 25295171 (ETH) and 472412264 (ARB). The same contract address 0xf197ffc... is used on all five listed chains.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "MXNB on Ethereum and Arbitrum is an upgradeable FiatToken-fork proxy. masterMinter() and owner() both resolve to EOA 0xcf3783...b739 on both chains. The proxy admin slot also resolves to an EOA 0x4d64a2...05ca. All confirmed via eth_call and eth_getCode at blocks 25295171 (ETH) and 472412264 (ARB). The same contract address 0xf197ffc... is used on all five listed chains. Mint-tier review (2026-07-15): BDO Mexico, through Castillo Miranda y Compania, performs quarterly independent reserve reconciliation; the latest report covers 2026-03-31 and was published 2026-06-23. El Salvador CNAD's issuer registry exactly matches Nvio Pagos El Salvador, S.A. de C.V. as stablecoin issuer EME-0005, providing prudential issuer supervision.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
           "label": "MXNB whitepaper (FiatToken fork, masterMinter)",
@@ -371,6 +373,18 @@
         {
           "label": "Bitso/Juno docs",
           "url": "https://docs.bitso.com/juno"
+        },
+        {
+          "label": "BDO Mexico MXNB Q1 2026 report",
+          "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q1_2026_en.pdf"
+        },
+        {
+          "label": "MXNB transparency archive",
+          "url": "https://mxnb.mx/en-US/transparency"
+        },
+        {
+          "label": "El Salvador CNAD stablecoin issuers",
+          "url": "https://cnad.gob.sv/es/issuers/"
         }
       ]
     }

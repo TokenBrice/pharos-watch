@@ -148,10 +148,12 @@
         ]
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "AUDD whitepaper and transparency materials describe a single regulated issuer (AUDC Pty Ltd / Novatti) minting against off-chain AUD reserves with William Buck attestations. All addressable mint surfaces confirmed: Ethereum (owner EOA 0x59a5..., proxy admin EOA 0x840b...) and Base (owner EOA 0xa375..., proxy admin EOA 0x31c9...) via EIP-1967 reads. Stellar (3-of-7 multisig, master key weight 0). XRPL (single master key, no SignerList). Solana SPL mintAuthority = EOA CnwUo... Hedera supply_key = issuer protobuf key. XDC owner = EOA 0x994a... Redbelly uses same contract structure as Ethereum (not independently queried, note-only). Multiple distinct EOA owners per chain is consistent with per-chain issuer key management for a centralized fiat-backed issuer.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "AUDD whitepaper and transparency materials describe a single regulated issuer (AUDC Pty Ltd / Novatti) minting against off-chain AUD reserves with William Buck attestations. All addressable mint surfaces confirmed: Ethereum (owner EOA 0x59a5..., proxy admin EOA 0x840b...) and Base (owner EOA 0xa375..., proxy admin EOA 0x31c9...) via EIP-1967 reads. Stellar (3-of-7 multisig, master key weight 0). XRPL (single master key, no SignerList). Solana SPL mintAuthority = EOA CnwUo... Hedera supply_key = issuer protobuf key. XDC owner = EOA 0x994a... Redbelly uses same contract structure as Ethereum (not independently queried, note-only). Multiple distinct EOA owners per chain is consistent with per-chain issuer key management for a centralized fiat-backed issuer. William Buck performs monthly independent agreed-upon procedures; the latest reviewed report covers June 30, 2026, was published July 6, 2026, and fully reconciles AUDD liabilities to reserve accounts. ASIC's professional register and AUDC's terms match AFSL 700123 to AUDC Pty Ltd, but an AFSL is conduct authorization rather than APRA prudential supervision and AUDC is not an APRA-authorized deposit-taking institution. Supervision is therefore attestation-only.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
           "label": "Ethereum Blockscout AUDD contract",
@@ -168,6 +170,18 @@
         {
           "label": "Hedera Mirror Node AUDD token",
           "url": "https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.8317071"
+        },
+        {
+          "label": "William Buck AUDD Agreed-Upon Procedures Report - June 2026",
+          "url": "https://www.audd.digital/wp-content/uploads/2026/07/AUDC-Agreed-upon-procedures-report-Jun26_.pdf"
+        },
+        {
+          "label": "ASIC professional registers",
+          "url": "https://connectonline.asic.gov.au/RegistrySearch/faces/landing/ProfessionalRegisters.jspx"
+        },
+        {
+          "label": "APRA authorized deposit-taking institutions",
+          "url": "https://www.apra.gov.au/registers/list-registered-authorised-deposit-taking-institutions"
         }
       ]
     }

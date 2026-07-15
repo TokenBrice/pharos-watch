@@ -397,10 +397,12 @@
         ]
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "At Base block 47200691: IDRX (ERC1967 UUPS proxy, no external proxy admin) → implementation at 0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693. MINTER_ROLE held by 3 Safes (2-of-3, 2-of-8, 2-of-4; all without modules) and 1 ElevatedMinterBurner (owned by EOA 0x46d58b...). DEFAULT_ADMIN = EOA 0x5515be... The CertiK-described MPC pattern manifests here as multiple Safe-multisig minters plus an ElevatedMinterBurner. Verified on Base only; other chains use same address pattern.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Base block 47200691: IDRX (ERC1967 UUPS proxy, no external proxy admin) → implementation at 0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693. MINTER_ROLE held by 3 Safes (2-of-3, 2-of-8, 2-of-4; all without modules) and 1 ElevatedMinterBurner (owned by EOA 0x46d58b...). DEFAULT_ADMIN = EOA 0x5515be... The CertiK-described MPC pattern manifests here as multiple Safe-multisig minters plus an ElevatedMinterBurner. Verified on Base only; other chains use same address pattern. Mint-tier review (2026-07-15): No credible independent reserve reconciliation was located: IDRX documentation makes generic audit claims but publishes no named reserve attestor, stable cadence, or dated reserve-to-liability report; the downloadable CertiK document is a smart-contract security assessment. No exact prudential stablecoin-issuer match for the issuer was established in OJK's public regulatory materials.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
           "label": "IDRX docs",
@@ -413,6 +415,14 @@
         {
           "label": "IDRX Base token (Basescan)",
           "url": "https://basescan.org/address/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        },
+        {
+          "label": "IDRX document center",
+          "url": "https://home.idrx.co/en/docs/"
+        },
+        {
+          "label": "OJK digital financial innovation directory",
+          "url": "https://inovasi.ojk.go.id/id/ikd/penyelenggara-ikd-tercatat"
         }
       ]
     }

@@ -369,6 +369,7 @@
         ]
       }
     ],
+    "economicCapSemantics": "raiseable",
     "review": {
       "sources": [
         {
@@ -388,9 +389,9 @@
           "url": "https://eth.blockscout.com/address/0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b"
         }
       ],
-      "evidence": "At Ethereum block 25527135, ReceiptToken 0x48f9e38f3070ad8945dfeae3fa70987722e3d89c, Core 0xf6d48735eccf12bdc1df2674b1ce3fcb3bd25490, MintController 0x49877d937b9a00d50557bdc3d87287b5c3a4c256, PLSmoother 0xc324569141697045b9ede54b5d4623a691ed57a4, and MigrationController 0x5f5403656e4db95accf1064a714b1bce351839f8 were direct non-proxy deployments. YieldSharing 0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b was a transparent proxy with implementation 0x0d5dbf208a9a7540018d204a9a0ad08a091407e5 and ProxyAdmin 0x094227ee5e9c3877860ac212f1e5218441e5b4eb. The 4-of-7 Safe had no immediate GOVERNOR or ProxyAdmin-owner path: mint-role administration, ReceiptToken core replacement, and YieldSharing upgrades all converged on Timelock 0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9 with a 604800-second minimum delay.",
-      "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-13"
+      "evidence": "At Ethereum block 25527135, ReceiptToken 0x48f9e38f3070ad8945dfeae3fa70987722e3d89c, Core 0xf6d48735eccf12bdc1df2674b1ce3fcb3bd25490, MintController 0x49877d937b9a00d50557bdc3d87287b5c3a4c256, PLSmoother 0xc324569141697045b9ede54b5d4623a691ed57a4, and MigrationController 0x5f5403656e4db95accf1064a714b1bce351839f8 were direct non-proxy deployments. YieldSharing 0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b was a transparent proxy with implementation 0x0d5dbf208a9a7540018d204a9a0ad08a091407e5 and ProxyAdmin 0x094227ee5e9c3877860ac212f1e5218441e5b4eb. The 4-of-7 Safe had no immediate GOVERNOR or ProxyAdmin-owner path: mint-role administration, ReceiptToken core replacement, and YieldSharing upgrades all converged on Timelock 0x3d18480cc32b6ab3b833dcabd80e76cfd41c48a9 with a 604800-second minimum delay. IUSD is receipt-token issuance through the fixed protocol minters, and every path to replace the receipt core, add a minter, or change the upgradeable mint module traverses that seven-day delay; economic cap semantics are therefore raiseable rather than unbounded.",
+      "reviewer": "Codex Safety Score V9 registry pass; SOL-V mint-tier review",
+      "reviewedAt": "2026-07-15"
     }
   },
   "collateralQuality": "exotic",

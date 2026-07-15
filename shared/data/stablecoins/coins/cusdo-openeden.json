@@ -396,8 +396,10 @@
         "evidence": "At finalized Solana slot 433002244, getAccountInfo for cUSDO mint BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs returned this same public key as mintAuthority and freezeAuthority. Its account is system-program owned, not a Token-2022 multisig or program account."
       }
     ],
+    "reconciliation": "continuous",
+    "supervision": "prudential",
     "review": {
-      "evidence": "At Ethereum block 25535942, Base block 48651922, and BSC block 110075208, the three EVM cUSDO deployments resolved through zero-admin-slot EIP-1967 proxies to the listed implementations. The same no-bytecode EOA held DEFAULT_ADMIN_ROLE, UPGRADE_ROLE, and PAUSE_ROLE on all three, and verified source makes UUPS upgrades depend on UPGRADE_ROLE. These wrappers mint cUSDO only against their chain's USDO asset, so base-USDO issuance remains inherited from usdo-openeden. At finalized Solana slot 433002244, cUSDO's Token-2022 mint and freeze authority was the direct system-account signer FPyi9yJKNX8y5gkadeFvbC2pDB9VVqxpwfofHxJ6Ed7i.",
+      "evidence": "At Ethereum block 25535942, Base block 48651922, and BSC block 110075208, the three EVM cUSDO deployments resolved through zero-admin-slot EIP-1967 proxies to the listed implementations. The same no-bytecode EOA held DEFAULT_ADMIN_ROLE, UPGRADE_ROLE, and PAUSE_ROLE on all three, and verified source makes UUPS upgrades depend on UPGRADE_ROLE. These wrappers mint cUSDO only against their chain's USDO asset, so base-USDO issuance remains inherited from usdo-openeden. At finalized Solana slot 433002244, cUSDO's Token-2022 mint and freeze authority was the direct system-account signer FPyi9yJKNX8y5gkadeFvbC2pDB9VVqxpwfofHxJ6Ed7i. Reserve reconciliation: cUSDO is a wrapped form of USDO, and OpenEden's transparency materials describe Chainlink Proof of Reserve as an independent, real-time verification feed for USDO reserve coverage; this is recurring third-party reconciliation rather than issuer-only reporting. Prudential supervision: the Bermuda Monetary Authority registry lists OpenEden Digital Limited (registration number 202403468) with a Class F digital-asset-business licence effective 2026-05-26, matching the legal entity identified for the USDO/cUSDO product. Reviewed 2026-07-15.",
       "reviewer": "OpenAI Codex control verification",
       "reviewedAt": "2026-07-15",
       "disposition": "scoreable",
@@ -433,6 +435,18 @@
         {
           "label": "Solana mainnet JSON-RPC",
           "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "OpenEden USDO transparency",
+          "url": "https://openeden.com/usdo/transparency"
+        },
+        {
+          "label": "OpenEden and Chainlink USDO proof-of-reserve announcement",
+          "url": "https://openeden.com/news/openeden-chainlink-partner-stablecoin-usdo-interoperability/"
+        },
+        {
+          "label": "Bermuda Monetary Authority regulated-entities registry",
+          "url": "https://www.bma.bm/regulated-entities"
         }
       ]
     }

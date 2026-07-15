@@ -209,6 +209,8 @@
         "evidence": "At Ethereum block 25295081, eth_getCode returns empty (confirmed EOA). This address issued 77 successful VEUR mint() calls on Ethereum and owns VNXManager. Issuer-context EOA; off-chain MPC/HSM indistinguishable on-chain, does not block verified."
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -222,11 +224,23 @@
         {
           "label": "Blockscout VNXManager contract",
           "url": "https://eth.blockscout.com/address/0xCdB3867935247049e87c38eA270edD305D84c9AE/contracts"
+        },
+        {
+          "label": "AREVA VNX fiat-token report for 2024",
+          "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
+        },
+        {
+          "label": "AREVA VNX fiat-token report for 2023",
+          "url": "https://vnx.li/wp-content/uploads/2024/01/VNX-COMMODITIES-AG_Reserve-Report-31.12.2023.pdf"
+        },
+        {
+          "label": "Liechtenstein FMA register search - VNX",
+          "url": "https://register.fma-li.li/search?searchText=VNX"
         }
       ],
-      "evidence": "At Ethereum block 25295081: rbacManager confirmed at storage slot 0x33 = VNXManager 0xCdB386...c9AE; VNXManager owner() = EOA 0x7b0c15...9403 (eth_getCode empty); 77 successful mint() calls confirm that EOA as the sole active minter for VEUR. Same VNX architecture as VCHF/VNXAU.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25295081: rbacManager confirmed at storage slot 0x33 = VNXManager 0xCdB386...c9AE; VNXManager owner() = EOA 0x7b0c15...9403 (eth_getCode empty); 77 successful mint() calls confirm that EOA as the sole active minter for VEUR. Same VNX architecture as VCHF/VNXAU. Mint-tier review (2026-07-15): AREVA General Auditing and Trust Company Limited issued annual agreed-upon-procedures reports for 2023 and 2024, but the latest covers 2024-12-31 and was published 2025-02-05; the expected 2025 annual report is overdue as of 2026-07-15, so current recurring reconciliation is not established. Liechtenstein FMA's register matches VNX Commodities AG only as a TT Service Provider, not a prudential EMT issuer.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15"
     }
   },
   "deploymentModel": "native-multichain",

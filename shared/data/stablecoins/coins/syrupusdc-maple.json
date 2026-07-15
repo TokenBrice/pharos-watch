@@ -372,14 +372,25 @@
         "evidence": "Underlying USDC token owner/admin can authorize USDC mint administration; syrupUSDC wrapper shares inherit this base USDC authority."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "At Ethereum block 25295167: syrupUSDC asset() = USDC 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 confirmed; EIP-1967 impl slot = 0x0, admin slot = 0x0 (not upgradeable, no proxy admin surface). Wrapper is a non-upgradeable ERC-4626 vault; durable mint authority inherits from reviewed parent USDC (usdc-circle).",
+      "evidence": "At Ethereum block 25295167: syrupUSDC asset() = USDC 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 confirmed; EIP-1967 impl slot = 0x0, admin slot = 0x0 (not upgradeable, no proxy admin surface). Wrapper is a non-upgradeable ERC-4626 vault; durable mint authority inherits from reviewed parent USDC (usdc-circle). Economic-control evidence reviewed 2026-07-15: Maple launched recurring The Network Firm reports on 2026-05-07, sourcing loan collateral directly from custodians and onchain activity for syrupUSDC; the current report dashboard was reviewed 2026-07-15. No exact issuer/product prudential registry entry was found.",
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Maple Finance",
           "url": "https://maple.finance/"
+        },
+        {
+          "label": "Maple syrupUSDC and syrupUSDT Proof of Reserves",
+          "url": "https://maple.finance/insights/introducing-proof-of-reserves"
+        },
+        {
+          "label": "Maple transparency dashboard",
+          "url": "https://maple.finance/transparency"
         }
       ],
       "sourceFreeRationale": "Wrapper/strategy-vault classification follows from coin metadata (variantOf usdc-circle, strategy-vault, wrapper reserve); posture mirrors the verified USDC parent mint authority."

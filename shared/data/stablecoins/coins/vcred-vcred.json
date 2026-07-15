@@ -128,7 +128,10 @@
         }
       ]
     },
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Hemi contract source",
@@ -137,11 +140,15 @@
         {
           "label": "Safe API Hemi",
           "url": "https://api.safe.global/tx-service/hemi/api/v1/safes/0x3eDEEF3ae2e9aA5B55e5Ce4D324f9C24165C75Be/"
+        },
+        {
+          "label": "vCRED official site",
+          "url": "https://vcred.trade/"
         }
       ],
-      "evidence": "At Hemi block 4610504: owner() = 0x3eDEEF (contract, not EOA); Safe API confirmed 1-of-2 Safe v1.4.1+L2, no modules, no guard. Corrected authorityType from eoa to safe with full Safe snapshot.",
+      "evidence": "At Hemi block 4610504: owner() = 0x3eDEEF (contract, not EOA); Safe API confirmed 1-of-2 Safe v1.4.1+L2, no modules, no guard. Corrected authorityType from eoa to safe with full Safe snapshot. No credible recurring reconciliation was established. The reviewed official vCRED site presents a forthcoming product but does not publish a dated independent reserve, collateral, or supply-to-assets reconciliation, its cadence, or an attestation provider. It also supplies no exact registry-backed prudential supervisor for the issuer or product. Reviewed 2026-07-15.",
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "reviewedAt": "2026-07-15"
     }
   },
   "chainTier": "unproven",

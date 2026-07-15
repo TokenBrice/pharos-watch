@@ -336,7 +336,10 @@
         "evidence": "At Ethereum block 25295096, DEFAULT_ADMIN getRoleMember(0) on OUSG_InstantManager returned 0x5AE21c99FC5f1584D8Cb09a298CFFd92B5d178eF. Safe API confirmed 3-of-5, version 1.4.1, modules [], guard zero."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Ondo OUSG product page",
@@ -345,11 +348,23 @@
         {
           "label": "Ondo smart contract addresses",
           "url": "https://docs.ondo.finance/addresses"
+        },
+        {
+          "label": "Ondo OUSG trust and transparency",
+          "url": "https://docs.ondo.finance/qualified-access-products/ousg/trust-and-transparency"
+        },
+        {
+          "label": "Ondo OUSG overview",
+          "url": "https://docs.ondo.finance/qualified-access-products/ousg/overview"
+        },
+        {
+          "label": "SEC OUSG fund offering filing",
+          "url": "https://www.sec.gov/Archives/edgar/data/1974395/000149315225024964/form497ad.htm"
         }
       ],
-      "evidence": "At Ethereum block 25295096: OUSG token MINTER_ROLE has 2 holders: InstantManager (0x93358db7) and a 4-of-7 Ondo Safe (0xAEd4caF2). Safe API confirmed both Safes with threshold/owners/modules/guard. All mint-capable surfaces verified.",
+      "evidence": "At Ethereum block 25295096: OUSG token MINTER_ROLE has 2 holders: InstantManager (0x93358db7) and a 4-of-7 Ondo Safe (0xAEd4caF2). Safe API confirmed both Safes with threshold/owners/modules/guard. All mint-capable surfaces verified. Economic-control evidence reviewed 2026-07-15: NAV Consulting has direct read-only access, independently calculates OUSG NAV, and publishes full fund financial data daily with up to a three-day lag. The current offering document states that the OUSG fund is not registered under the Investment Company Act; adviser registration does not qualify as product prudential supervision.",
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "reviewedAt": "2026-07-15"
     }
   },
   "deploymentModel": "third-party-bridge",

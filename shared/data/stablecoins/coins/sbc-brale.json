@@ -486,10 +486,12 @@
         "evidence": "At Stellar ledger 63473878, Horizon reports the SBC issuer account GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR with one ed25519 signer of weight 1, low/medium/high thresholds all zero, auth_revocable = true, and auth_clawback_enabled = true. Stellar issued assets use the issuer account as the native issuance authority; there is no upgradeable token contract or separate program logic to review."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "Current EVM role reads confirm chain-local upgrade authorities: Ethereum block 25531059 uses legacy multisig 0x4d16d9e3; Arbitrum block 483773115, Optimism block 154217718, Base block 48622433, Celo block 72133454, and Ethereum Classic block 24947752 use Brale EOA 0xb180f98; Polygon block 90219432 uses Safe 0xcf64b5d4; Avalanche block 90290804 uses Safe 0xa8cdd1c1. Polygon and Avalanche Safes are both 3-of-6 with no enabled modules and zero guard storage. Solana uses the immutable canonical Token Program with a 1-of-2 mint-authority multisig, and Stellar uses its native issuer account with one weight-1 signer and no threshold elevation.",
-      "reviewer": "OpenAI Codex control curation",
-      "reviewedAt": "2026-07-14",
+      "evidence": "Current EVM role reads confirm chain-local upgrade authorities: Ethereum block 25531059 uses legacy multisig 0x4d16d9e3; Arbitrum block 483773115, Optimism block 154217718, Base block 48622433, Celo block 72133454, and Ethereum Classic block 24947752 use Brale EOA 0xb180f98; Polygon block 90219432 uses Safe 0xcf64b5d4; Avalanche block 90290804 uses Safe 0xa8cdd1c1. Polygon and Avalanche Safes are both 3-of-6 with no enabled modules and zero guard storage. Solana uses the immutable canonical Token Program with a 1-of-2 mint-authority multisig, and Stellar uses its native issuer account with one weight-1 signer and no threshold elevation. MCCPA/Abdo performs monthly independent examinations; the latest reviewed report covers May 31, 2026, was published June 9, 2026, and fully reconciles SBC liabilities to reserve assets. Brale's disclosed FinCEN MSB and state money-transmitter status does not establish prudential issuer supervision comparable to a banking, trust, or EMI charter, so supervision is attestation-only.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
           "label": "Brale SBC proof of reserve",
@@ -518,6 +520,14 @@
         {
           "label": "Stellar SBC issuer account",
           "url": "https://horizon.stellar.org/accounts/GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR"
+        },
+        {
+          "label": "MCCPA SBC Reserve Attestation Report - May 2026",
+          "url": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-05-2026.pdf"
+        },
+        {
+          "label": "FinCEN MSB registrant search",
+          "url": "https://www.fincen.gov/resources/msb-state-selector"
         }
       ]
     },

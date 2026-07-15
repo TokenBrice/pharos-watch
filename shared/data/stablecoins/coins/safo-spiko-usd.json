@@ -196,10 +196,13 @@
         ]
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
-      "evidence": "Ethereum block 25295023: SAFO token authority = PM 0x344278aff. PM getRequirements(token, mint) = 0x5 (groups 0 or 2). PM ADMIN group 0 = 0x4eaa52b6 (8-signer legacy multisig, threshold 3, no modules confirmed via getModulesPaginated). Group 2 (previously EOA 0x60a9, now removed via remGroup tx history). Current mint authority rests with the 8-signer multisig. Per-chain PM state differs; this verification covers the Ethereum deployment.",
+      "evidence": "Ethereum block 25295023: SAFO token authority = PM 0x344278aff. PM getRequirements(token, mint) = 0x5 (groups 0 or 2). PM ADMIN group 0 = 0x4eaa52b6 (8-signer legacy multisig, threshold 3, no modules confirmed via getModulesPaginated). Group 2 (previously EOA 0x60a9, now removed via remGroup tx history). Current mint authority rests with the 8-signer multisig. Per-chain PM state differs; this verification covers the Ethereum deployment. Economic-control evidence reviewed 2026-07-15: CACEIS independently calculates daily fund NAV and PwC performs four statutory audits per year; the latest holdings data disclosed by Spiko was updated 2026-03-03. The AMF GECO registry matches the exact Spiko Amundi Overnight Swap Fund containing USD share class FR0014015LE1.",
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Spiko smart contracts (tech blog)",
@@ -212,6 +215,14 @@
         {
           "label": "SAFO Ethereum token",
           "url": "https://etherscan.io/address/0xcbade7d9bdee88411cb6cbcbb29952b742036992"
+        },
+        {
+          "label": "Spiko Dollar fund transparency",
+          "url": "https://www.spiko.io/spiko-dollar"
+        },
+        {
+          "label": "AMF GECO - Spiko Amundi Overnight Swap Fund",
+          "url": "https://geco.amf-france.org/produit-d-epargne/c79399"
         }
       ]
     }

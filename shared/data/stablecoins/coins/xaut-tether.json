@@ -206,6 +206,8 @@
         "evidence": "At Ethereum block 25295020, owner() on the XAUT proxy returned 0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828 (unchanged). required() = 3 and getOwners() returned six owners: 0xac3b242e2e561da9f4ce34746e67d004e6341fa0, 0xee5207d3c88562fc814496af0845b34cfd4afc8c, 0x61d5a4d5bd270e59e9320243e574288e2a199fed, 0x25bb61643e4881147e6aabb65e6dd45cf2904155, 0x4096a34e582664f969753b34da6e72d55b3c85c1, 0x4d915dd2c56814bd3db51a1da35b302bcc9c8973. This is not a Safe; Safe modules/guard not applicable."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
       "sources": [
         {
@@ -215,11 +217,23 @@
         {
           "label": "Sourcify XAUT source",
           "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566/sources/project%3A%2Fcontracts%2FTether%2FTetherToken.sol"
+        },
+        {
+          "label": "BDO Tether Gold Q1 2026 report",
+          "url": "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_31.03.2026_RC187322026DV0089.pdf"
+        },
+        {
+          "label": "Tether Gold reports",
+          "url": "https://gold.tether.to/reports"
+        },
+        {
+          "label": "El Salvador CNAD stablecoin issuers",
+          "url": "https://cnad.gob.sv/es/issuers/"
         }
       ],
-      "evidence": "At Ethereum block 25295020: owner() on proxy 0x68749665ff8d2d112fa859aa293f07a622782f38 returned 0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828 (unchanged from prior pass); required() = 3 and getOwners() returned 6 owners on the legacy multisig. Implementation slot confirmed 0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566; Sourcify source shows onlyOwner mint/redeem. All controls confirmed current.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25295020: owner() on proxy 0x68749665ff8d2d112fa859aa293f07a622782f38 returned 0xC6CDE7C39eB2f0F0095F41570af89eFC2C1Ea828 (unchanged from prior pass); required() = 3 and getOwners() returned 6 owners on the legacy multisig. Implementation slot confirmed 0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566; Sourcify source shows onlyOwner mint/redeem. All controls confirmed current. Mint-tier review (2026-07-15): BDO Italia S.p.A. performs quarterly independent ISAE 3000 reserve attestations; the latest report covers 2026-03-31 and was published 2026-04-30, reconciling XAUT supply to allocated gold. El Salvador CNAD's issuer registry exactly matches TG Commodities, S.A. de C.V. as stablecoin issuer EME-0004, providing prudential issuer supervision.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15"
     }
   },
   "custodyModel": "institutional-regulated",

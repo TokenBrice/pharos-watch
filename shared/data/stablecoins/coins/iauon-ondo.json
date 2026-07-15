@@ -277,10 +277,13 @@
         ]
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "At Ethereum block 25295025: IAUon (AccessControl ERC20, non-upgradeable). MINTER_ROLE count=2: GMTokenManager (0x2c158b...) + OndoOFT (0x8ffe0d...). DEFAULT_ADMIN = TimelockController (0x3715b2..., 2h delay, 0 proposers — locked). BSC: DEFAULT_ADMIN = 0x8860bbfc... (contract), MINTER_ROLE count=2 (0x91f8aff... GMTokenManager, 0xeb8ceb... OndoOFT). No proxy admin on any deployment.",
+      "evidence": "At Ethereum block 25295025: IAUon (AccessControl ERC20, non-upgradeable). MINTER_ROLE count=2: GMTokenManager (0x2c158b...) + OndoOFT (0x8ffe0d...). DEFAULT_ADMIN = TimelockController (0x3715b2..., 2h delay, 0 proposers — locked). BSC: DEFAULT_ADMIN = 0x8860bbfc... (contract), MINTER_ROLE count=2 (0x91f8aff... GMTokenManager, 0xeb8ceb... OndoOFT). No proxy admin on any deployment. Economic-control evidence reviewed 2026-07-15: Ankura Trust Company receives read-only account access and independently reconciles Ondo Global Markets assets and liabilities on a daily NAV cadence. The underlying IAU registration does not prudentially supervise the BVI token issuer or IAUon product.",
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Ondo Global Markets overview",
@@ -293,6 +296,10 @@
         {
           "label": "IAUon Ethereum token (Etherscan)",
           "url": "https://etherscan.io/address/0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf"
+        },
+        {
+          "label": "Ondo Global Markets trust and transparency",
+          "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
         }
       ]
     }

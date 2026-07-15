@@ -540,7 +540,10 @@
         ]
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Backed Finance docs",
@@ -553,11 +556,23 @@
         {
           "label": "Backed ProxyAdmin",
           "url": "https://etherscan.io/address/0xf2057bdff8439dbffce073e14a9854945d5e5644#code"
+        },
+        {
+          "label": "Backed proof-of-reserves methodology",
+          "url": "https://docs.backed.fi/backed-ecosystem/proof-of-reserves"
+        },
+        {
+          "label": "Backed Chainlink Proof of Reserve announcement",
+          "url": "https://backed.fi/news-updates/chainlink-proof-of-reserve-is-now-active"
+        },
+        {
+          "label": "Backed Assets Jersey registration document",
+          "url": "https://www.mfsa.mt/wp-content/uploads/2025/06/Backed-Assets-JE-Limited-Registration-Document-dated-08-May-2025.pdf"
         }
       ],
-      "evidence": "Pinned blocks were Ethereum 25526129, Gnosis 47187209, Base 48592766, Polygon 90179923, BSC 109812367, Arbitrum 483535601, and Avalanche 90233120. Every bIB01 deployment was a transparent proxy at the tracked address with implementation 0x28a0b491650fe761c8a66528422bc7ca24ecaeda, ProxyAdmin 0xf2057bdff8439dbffce073e14a9854945d5e5644, and zero beacon. Proxy, implementation, and ProxyAdmin runtime hashes were identical across all seven chains. Direct minters were chain-local 2-of-3 or 3-of-5 Safes, and every token-owner/ProxyAdmin-owner Safe instance resolved to the same separate 2-of-3 EOA signer set. Verified mint() has no cap; setMinter() and ProxyAdmin upgrades are immediate owner-only actions.",
+      "evidence": "Pinned blocks were Ethereum 25526129, Gnosis 47187209, Base 48592766, Polygon 90179923, BSC 109812367, Arbitrum 483535601, and Avalanche 90233120. Every bIB01 deployment was a transparent proxy at the tracked address with implementation 0x28a0b491650fe761c8a66528422bc7ca24ecaeda, ProxyAdmin 0xf2057bdff8439dbffce073e14a9854945d5e5644, and zero beacon. Proxy, implementation, and ProxyAdmin runtime hashes were identical across all seven chains. Direct minters were chain-local 2-of-3 or 3-of-5 Safes, and every token-owner/ProxyAdmin-owner Safe instance resolved to the same separate 2-of-3 EOA signer set. Verified mint() has no cap; setMinter() and ProxyAdmin upgrades are immediate owner-only actions. Economic-control evidence reviewed 2026-07-15: The Network Firm obtains custody data directly and Chainlink refreshes Backed proof-of-reserve values every 24 hours or after a material deviation. The Jersey registration document expressly does not confer regulated status on Backed Assets (JE) Limited, so the recurring reconciliation has no qualifying prudential supervisor.",
       "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-13"
+      "reviewedAt": "2026-07-15"
     }
   },
   "launchDate": "2023-03-02"

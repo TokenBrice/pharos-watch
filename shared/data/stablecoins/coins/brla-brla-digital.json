@@ -171,10 +171,12 @@
         ]
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "Polygon block 88321577: two EOA operator role holders confirmed via hasRole; role hash 0xf48dee1a… is the only mint-capable constant in bytecode (BRLAV1_1 / UUPS, non-enumerable AccessControl). Gnosis block 46643103: three EOA + one ERC1967Proxy operator role holders confirmed. Celo uses the same contract address. Moonbeam totalSupply=0 (inactive). BRLA contract source (BRLAV1_1) verifies mint() gated by the operator role. No proxy admin on any deployment; upgrader role is separate.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "Polygon block 88321577: two EOA operator role holders confirmed via hasRole; role hash 0xf48dee1a… is the only mint-capable constant in bytecode (BRLAV1_1 / UUPS, non-enumerable AccessControl). Gnosis block 46643103: three EOA + one ERC1967Proxy operator role holders confirmed. Celo uses the same contract address. Moonbeam totalSupply=0 (inactive). BRLA contract source (BRLAV1_1) verifies mint() gated by the operator role. No proxy admin on any deployment; upgrader role is separate. UHY Bendoraytes performs monthly independent examinations; the latest reviewed report covers May 31, 2026 and fully reconciles BRLA liabilities to reserve assets. The Banco Central do Brasil supervised-entity registry did not match BRLA Digital/Avenia as an authorized prudential institution, and Avenia's own legal notice identifies BRLA Digital only as Ouribank's foreign-exchange correspondent. Supervision is therefore attestation-only.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
           "label": "BRLA Polygon contract (proxy)",
@@ -187,6 +189,14 @@
         {
           "label": "Avenia BRLA website",
           "url": "https://avenia.io/brla"
+        },
+        {
+          "label": "UHY BRLA Transparency Report - May 31, 2026",
+          "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a"
+        },
+        {
+          "label": "Banco Central do Brasil supervised-entity registry",
+          "url": "https://bcb.gov.br/meubc/encontreinstituicao?modalAberto=Tipos_de_Instituicoes"
         }
       ]
     }

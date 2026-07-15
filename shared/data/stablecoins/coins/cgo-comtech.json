@@ -149,10 +149,12 @@
         "evidence": "CGOController is a source-verified direct deployment. Its EIP-1967 implementation, admin, and beacon slots are zero. It owns the Goldtoken and calls owner-only mint only after a current initiator creates a bar/warrant request and the current executor completes it."
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "At XDC block 104889953, Goldtoken 0x8f9920283470f52128bf11b0c14e798be704fd15 and CGOController 0x21f74fbf81d68291704805d085982000babbf096 were source-verified direct deployments with zero EIP-1967 implementation, admin, and beacon slots. The controller owned the token, and its owner, initiator, executor, and minter-wallet fields all resolved to the same immediate 2-of-4 Safe 0xc639b48ea44e94f1a69da11974a29e6ddb8c6fa1. The controller's fixed 1,000-CGO operation bound had no cumulative cap and could be bypassed by the Safe transferring token ownership to a new uncapped minter.",
-      "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-13",
+      "evidence": "At XDC block 104889953, Goldtoken 0x8f9920283470f52128bf11b0c14e798be704fd15 and CGOController 0x21f74fbf81d68291704805d085982000babbf096 were source-verified direct deployments with zero EIP-1967 implementation, admin, and beacon slots. The controller owned the token, and its owner, initiator, executor, and minter-wallet fields all resolved to the same immediate 2-of-4 Safe 0xc639b48ea44e94f1a69da11974a29e6ddb8c6fa1. The controller's fixed 1,000-CGO operation bound had no cumulative cap and could be bypassed by the Safe transferring token ownership to a new uncapped minter. Mint-tier review (2026-07-15): No credible independent reserve-to-liability reconciliation exists. The latest posted routine-audit document, dated 2026-02-26, is a one-page ComTech FZCO self-signed confirmation of 39 kg of gold and does not reconcile CGO supply; no independent attestor or recurring assurance cadence is identified. DMCC Tradeflow and free-zone registration are commodity-title and commercial records, not prudential stablecoin-issuer supervision.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
           "label": "ComTech Gold",
@@ -161,6 +163,18 @@
         {
           "label": "CGO XDC contract",
           "url": "https://explorer.xinfin.network/address/0x8f9920283470f52128bf11b0c14e798be704fd15"
+        },
+        {
+          "label": "ComTech proof-of-gold page",
+          "url": "https://comtechgold.com/proof-of-gold-audit"
+        },
+        {
+          "label": "ComTech self-signed gold stock letter",
+          "url": "https://comtechgold.com/assets/pdf/ComTech%20FZCO%20-%20Gold%20Stock%20as%20on%2026th%20February%202026.pdf"
+        },
+        {
+          "label": "DMCC ComTech Gold Tradeflow announcement",
+          "url": "https://dmcc.ae/latest-news/dmcc-digitises-gold-trading-through-tokenisation-of-comtech-gold-bullion-backed-by-dmccs-tradeflow-platform"
         }
       ]
     }

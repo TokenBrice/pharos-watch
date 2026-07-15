@@ -392,10 +392,13 @@
         "evidence": "At Ethereum block 25295023, getOwners() returned 6 addresses; getThreshold() = 3. modules() returned sentinel only (no modules). guard slot (0x4a204f...) = 0x00. masterCopy slot = 0xfb1bffc9d739b8d520daf37df666da4c687191ea (Safe v1.3.0 L1 mainnet)."
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "Both nBASIS Teller (0xAD60d4...) and Manager (0x17767f...) return owner() = 0xa08a0dc... at Ethereum block 25295023. That address is a 3-of-6 Gnosis Safe v1.3.0 confirmed via getOwners(), getThreshold(), modules(), guard storage slot, and masterCopy slot. No modules, no guard. All reads performed on-chain via publicnode ETH RPC.",
+      "evidence": "Both nBASIS Teller (0xAD60d4...) and Manager (0x17767f...) return owner() = 0xa08a0dc... at Ethereum block 25295023. That address is a 3-of-6 Gnosis Safe v1.3.0 confirmed via getOwners(), getThreshold(), modules(), guard storage slot, and masterCopy slot. No modules, no guard. All reads performed on-chain via publicnode ETH RPC. Evidence challenge completed 2026-07-15: Nest publishes issuer-operated hourly NAV and live vault composition, with the latest public vault-data snapshot dated 2026-07-08, but no recurring independent reconciliation of nBASIS supply to portfolio assets was found. Nest DAO LLC is a Marshall Islands DAO LLC, not a prudentially supervised fund issuer.",
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Nest smart contracts (Teller/Manager addresses)",
@@ -404,6 +407,18 @@
         {
           "label": "How Nest vaults work (BoringVault/Teller/Manager roles)",
           "url": "https://nest.credit/blog/how-nest-vaults-work"
+        },
+        {
+          "label": "Nest vault NAV methodology",
+          "url": "https://docs.nest.credit/about/vaults/"
+        },
+        {
+          "label": "Nest nBASIS integration",
+          "url": "https://docs.nest.credit/developers/integration-guides/nbasis/"
+        },
+        {
+          "label": "Nest terms identifying Nest DAO LLC",
+          "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/"
         }
       ]
     }

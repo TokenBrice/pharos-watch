@@ -378,10 +378,12 @@
         ]
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "Macropod documentation describes centralized, compliance-gated issuance against custodied AUD reserves. Exact-block reads confirmed the full EVM control graph at Ethereum block 25531408, Base block 48624542, and Redbelly block 3061849: Ethereum and Redbelly proxy 0x081599e4936d12c46bd48913b2329115cd26cbdd and Base proxy 0xeded6ae915b129b67a4ad49901518f2736427063 resolved to implementation 0xebadaf3d0ee4bbaa94717bd9029244b1df2f47aa; DEFAULT_ADMIN EOA 0x999071576cc6d7feadb908bede992ab9e19212cf and MINTER_ROLE EOA 0x3529a9f8193cce36df81123b59cdb4250219db39 retained their respective roles on all three chains. On Redbelly, the proxy had 170-byte UUPS runtime and a zero EIP-1967 admin slot; the implementation's proxiableUUID returned the canonical implementation slot, getRoleAdmin for UPGRADER_ROLE and MINTER_ROLE returned DEFAULT_ADMIN_ROLE, and verified source gates upgrades with UPGRADER_ROLE, allowing the default admin to grant it. At finalized Solana slot 432868722, Token-2022 mint CiYXBwHPrdNkMtxR8YEWKv78K6bQjFoEWhPQrZqEmubi retained mintAuthority BS6KEeboF6Z2yDbxa8FD6UmPvorWwpm4QviYdpNpdAEQ; that account was System Program-owned, non-executable, and zero-data.",
-      "reviewer": "owner-triage",
-      "reviewedAt": "2026-07-14",
+      "evidence": "Macropod documentation describes centralized, compliance-gated issuance against custodied AUD reserves. Exact-block reads confirmed the full EVM control graph at Ethereum block 25531408, Base block 48624542, and Redbelly block 3061849: Ethereum and Redbelly proxy 0x081599e4936d12c46bd48913b2329115cd26cbdd and Base proxy 0xeded6ae915b129b67a4ad49901518f2736427063 resolved to implementation 0xebadaf3d0ee4bbaa94717bd9029244b1df2f47aa; DEFAULT_ADMIN EOA 0x999071576cc6d7feadb908bede992ab9e19212cf and MINTER_ROLE EOA 0x3529a9f8193cce36df81123b59cdb4250219db39 retained their respective roles on all three chains. On Redbelly, the proxy had 170-byte UUPS runtime and a zero EIP-1967 admin slot; the implementation's proxiableUUID returned the canonical implementation slot, getRoleAdmin for UPGRADER_ROLE and MINTER_ROLE returned DEFAULT_ADMIN_ROLE, and verified source gates upgrades with UPGRADER_ROLE, allowing the default admin to grant it. At finalized Solana slot 432868722, Token-2022 mint CiYXBwHPrdNkMtxR8YEWKv78K6bQjFoEWhPQrZqEmubi retained mintAuthority BS6KEeboF6Z2yDbxa8FD6UmPvorWwpm4QviYdpNpdAEQ; that account was System Program-owned, non-executable, and zero-data. Hall Chadwick's 13 May 2026 independent agreed-upon-procedures report reconciled AUDM supply across Ethereum, Redbelly, and Solana to reserve bank accounts at 31 March 2026; Macropod publishes this as a quarterly series. No registry evidence established prudential supervision over AUDM reserve issuance.",
+      "reviewer": "owner-triage; SOL-V mint-tier review",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
           "label": "Macropod documentation",
@@ -426,6 +428,14 @@
         {
           "label": "Solana mainnet RPC",
           "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Macropod AUDM transparency and quarterly reports",
+          "url": "https://www.macropod.com/transparency"
+        },
+        {
+          "label": "Hall Chadwick AUDM reserve verification at 31 March 2026",
+          "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a13a5241d9ac9bc9da6c97e_260401%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%2031st%20March%202026.pdf"
         }
       ]
     }

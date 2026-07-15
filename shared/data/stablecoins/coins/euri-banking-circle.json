@@ -157,6 +157,7 @@
         "evidence": "EIP-1967 proxy admin slot returned 0xE0c6d43e59eF5C56339214e1dDC9f869805d82eC on both Ethereum (block 25294735) and BSC (block 103620570). proxy-admin.owner() returned EOA 0x315ef9e4fECf88B7cFc860d7E995Ff72aD7c7A21 on both chains; eth_getCode = 0x (EOA confirmed)."
       }
     ],
+    "reconciliation": "unknown",
     "review": {
       "sources": [
         {
@@ -170,11 +171,19 @@
         {
           "label": "Ethereum EURI token",
           "url": "https://etherscan.io/address/0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
+        },
+        {
+          "label": "Banking Circle 2024 audited financial statements",
+          "url": "https://www.eurite.com/wp-content/uploads/2025/07/Banking-Circle-S.A_Annual-Accounts_31.12.2024_Final_Signed-by-all-1.pdf"
+        },
+        {
+          "label": "CSSF entity notice naming Banking Circle",
+          "url": "https://www.cssf.lu/en/2025/01/warning-concerning-the-fraudulent-activities-carried-out-by-circle-group-s-a/"
         }
       ],
-      "evidence": "At Ethereum block 25294735 and BSC block 103620570: token owner = EOA 0xfCA77c... (no bytecode on both chains); EIP-1967 proxy admin = 0xE0c6d43e... (same address on both chains), proxy-admin.owner() = EOA 0x315ef9e4... (no bytecode on both chains). All on-chain addressable mint surfaces confirmed across both deployments. Issuer-backend control corroborated by MiCA credit-institution license.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25294735 and BSC block 103620570: token owner = EOA 0xfCA77c... (no bytecode on both chains); EIP-1967 proxy admin = 0xE0c6d43e... (same address on both chains), proxy-admin.owner() = EOA 0x315ef9e4... (no bytecode on both chains). All on-chain addressable mint surfaces confirmed across both deployments. Issuer-backend control corroborated by MiCA credit-institution license. Eurite states that Ernst & Young performs periodic attestations, but the reviewed site exposes no dated token reserve examination; its only linked June item is a smart-contract audit. The latest published EY bank financial audit is for December 31, 2024 and does not reconcile EURI supply to reserves, so cadence and latest qualifying report date remain unavailable and reconciliation is unknown. The CSSF source matches Banking Circle S.A. as both a bank and e-money-token issuer, establishing prudential supervision of the issuer despite the assurance gap.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
+      "reviewedAt": "2026-07-15"
     },
     "upgradeability": {
       "model": "transparent-proxy",

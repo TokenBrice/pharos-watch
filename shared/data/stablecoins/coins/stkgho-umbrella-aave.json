@@ -81,6 +81,7 @@
         "evidence": "At Ethereum block 25295167: stkGHO EIP-1967 proxy admin slot = ProxyAdmin 0xDE9F8379a5a972100d0373103a849E8ABdf56a9a. ProxyAdmin.owner() = 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A, the Aave Governance V3 Level-1 Executor. Implementation upgrades require Aave on-chain governance; this is a bounded admin path."
       }
     ],
+    "economicCapSemantics": "raiseable",
     "review": {
       "sources": [
         {
@@ -92,9 +93,9 @@
           "url": "https://etherscan.io/address/0x4f827a63755855cdf3e8f3bcd20265c833f15033#readContract"
         }
       ],
-      "evidence": "At Ethereum block 25295167: asset() = GHO 0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f confirmed; proxy impl = 0x75e8ac0c063b6966e2a9954adedf39bde9370197; ProxyAdmin 0xDE9F8379a5a972100d0373103a849E8ABdf56a9a owned by Aave Governance V3 Level-1 Executor 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A. Upgrade admin surface confirmed and bounded by on-chain governance. Durable mint authority inherits from reviewed parent GHO.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25295167: asset() = GHO 0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f confirmed; proxy impl = 0x75e8ac0c063b6966e2a9954adedf39bde9370197; ProxyAdmin 0xDE9F8379a5a972100d0373103a849E8ABdf56a9a owned by Aave Governance V3 Level-1 Executor 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A. Upgrade admin surface confirmed and bounded by on-chain governance. Durable mint authority inherits from reviewed parent GHO. stkGHO shares are minted only against deposited GHO, and changing the wrapper's mint economics requires the Aave Governance executor; the encoding-derived unbounded value is therefore superseded by raiseable economic semantics.",
+      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review",
+      "reviewedAt": "2026-07-15"
     }
   },
   "variantOf": "gho-aave",

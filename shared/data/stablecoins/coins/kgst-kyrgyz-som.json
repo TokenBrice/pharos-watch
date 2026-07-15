@@ -163,10 +163,12 @@
         "evidence": "At BSC block 109812367, token owner() and ProxyAdmin.owner() both returned 0xb94f9247bd181fc9aca4d8694fb3774ed99be5d5; token pendingOwner() was zero. The Safe returned five owners, threshold 2, VERSION 1.4.1, no enabled modules, zero guard and module-guard slots, standard fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, and singleton 0x29fcb43b46531bca003ddc8fcb67ffe91900c762."
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "prudential",
     "review": {
-      "evidence": "At BSC block 109812367, KGST proxy 0x94be0bba8e1e303fe998c9360b57b826f1a4f828 used implementation 0xa903a6c1c3bd45927542823528a6fa73a2a410e2 and ProxyAdmin 0xcb628ce396f8f6ffbfae48721fe02a668a9a718b. Token owner and ProxyAdmin owner both resolved to immediate 2-of-5 Safe 0xb94f9247bd181fc9aca4d8694fb3774ed99be5d5. The Safe was version 1.4.1 with no modules, guard, module guard, or timelock. Stablecoin.mint(uint256) had no supply ceiling.",
-      "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-13",
+      "evidence": "At BSC block 109812367, KGST proxy 0x94be0bba8e1e303fe998c9360b57b826f1a4f828 used implementation 0xa903a6c1c3bd45927542823528a6fa73a2a410e2 and ProxyAdmin 0xcb628ce396f8f6ffbfae48721fe02a668a9a718b. Token owner and ProxyAdmin owner both resolved to immediate 2-of-5 Safe 0xb94f9247bd181fc9aca4d8694fb3774ed99be5d5. The Safe was version 1.4.1 with no modules, guard, module guard, or timelock. Stablecoin.mint(uint256) had no supply ceiling. Mint-tier review (2026-07-15): No independent attestor, recurring cadence, or dated KGST reserve-to-liability report was located. Kyrgyzstan's Financial Market Regulation and Supervision Service records an exact match for LLC KGSToken's first public KGST stablecoin issuance, providing registry-backed issuer supervision but not independent reconciliation.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
           "label": "KGST token on BscScan",
@@ -179,6 +181,10 @@
         {
           "label": "KGST website",
           "url": "https://www.kgstoken.kg/"
+        },
+        {
+          "label": "Kyrgyz FSA KGST public-issuance registration",
+          "url": "https://fsa.gov.kg/2025/07/08/%D0%B3%D0%BE%D1%81-%D1%80%D0%B5%D0%B3%D0%B8%D1%81%D1%82%D1%80%D0%B0%D1%86%D0%B8%D0%B8-%D0%B2%D1%8B%D0%BF%D1%83%D1%81%D0%BA%D0%BE%D0%B2-%D1%86%D0%B5%D0%BD%D0%BD%D1%8B%D1%85-%D0%B1%D1%83%D0%BC%D0%B0%D0%B3%D0%B0/"
         }
       ]
     }

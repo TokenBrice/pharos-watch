@@ -312,6 +312,7 @@
         "evidence": "At finalized Solana slot 425774906, the XSGD mint account 71S9cppWipeUEQDFngYwxjoxB6Sz1MUqX72byLsVYJqy had this address as both mint and freeze authority. The authority account decoded as an initialized SPL Token multisig with m=3 and n=10."
       }
     ],
+    "reconciliation": "unknown",
     "review": {
       "sources": [
         {
@@ -321,11 +322,19 @@
         {
           "label": "StraitsX XUSD",
           "url": "https://www.straitsx.com/xusd"
+        },
+        {
+          "label": "StraitsX XSGD January 2026 attestation notice",
+          "url": "https://www.straitsx.com/blog-post/xsgd-january-2026-attestation-reports-now-available"
+        },
+        {
+          "label": "MAS Financial Institutions Directory - StraitsX",
+          "url": "https://eservices.mas.gov.sg/fid/institution?term=StraitsX"
         }
       ],
-      "evidence": "Direct Ethereum and Safe API reads identify StraitsX MasterMinter and token owner controls. Phase 0c second pass rechecked owner/masterMinter at Ethereum block 25294588, refreshed Safe owners/modules/guards, and confirmed the Solana XSGD mint/freeze authority at finalized slot 425774906 as a 3-of-10 SPL Token multisig.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11"
+      "evidence": "Direct Ethereum and Safe API reads identify StraitsX MasterMinter and token owner controls. Phase 0c second pass rechecked owner/masterMinter at Ethereum block 25294588, refreshed Safe owners/modules/guards, and confirmed the Solana XSGD mint/freeze authority at finalized slot 425774906 as a 3-of-10 SPL Token multisig. KK Yap & Associates, an ISCA-listed Singapore accounting firm, performs independent XSGD reserve examinations; the latest visible 2026 archive entry is dated January 15, 2026 and its availability notice was published March 2, 2026. Although the issuer page describes a monthly cadence and reports reconciling XSGD reserve assets to tokens, no February-June 2026 reports were visible by July 15, 2026. The latest report is therefore too stale to establish a current recurring cadence, so reconciliation is unknown. The MAS directory matches StraitsX SGD Issuance Pte. Ltd. as a Major Payment Institution, supporting prudential supervision of the same issuer entity.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
+      "reviewedAt": "2026-07-15"
     }
   },
   "deploymentModel": "native-multichain",

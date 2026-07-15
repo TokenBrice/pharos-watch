@@ -86,7 +86,10 @@
         "evidence": "Inherited from reviewed usdc-circle parent; base USDC issuance is Circle-controlled."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Morpho vault page",
@@ -99,11 +102,23 @@
         {
           "label": "MetaMorpho source",
           "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
+        },
+        {
+          "label": "Circle USDC transparency",
+          "url": "https://www.circle.com/transparency"
+        },
+        {
+          "label": "Deloitte USDC examination - May 2026",
+          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20May%2026.pdf"
+        },
+        {
+          "label": "NYDFS regulated virtual currency businesses",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
         }
       ],
-      "evidence": "RPC and explorer review confirmed an immutable MetaMorpho vault over USDC, deposit-only wrapper minting, and Steakhouse Safe ownership (8 owners, threshold 5, no modules returned). Durable base-asset mint authority remains with Circle USDC.",
+      "evidence": "RPC and explorer review confirmed an immutable MetaMorpho vault over USDC, deposit-only wrapper minting, and Steakhouse Safe ownership (8 owners, threshold 5, no modules returned). Durable base-asset mint authority remains with Circle USDC. Economic-control evidence reviewed 2026-07-15: the immutable MetaMorpho wrapper mints shares only against deposited USDC; base issuance inherits Circle's monthly Deloitte reserve examination. The latest available USDC report covers May 2026, and the NYDFS virtual-currency list matches Circle Internet Financial, LLC.",
       "reviewer": "Codex data review",
-      "reviewedAt": "2026-06-20"
+      "reviewedAt": "2026-07-15"
     }
   },
   "variantOf": "usdc-circle",

@@ -524,10 +524,13 @@
         "evidence": "At Ethereum block 25527148, Base block 48598894, Rootstock block 9049318, Plume block 80928370, and Etherlink block 48212139, every listed token, access-control, and deposit-vault transparent proxy resolved through its chain-local ProxyAdmin. ProxyAdmin ownership resolved to timelocks 0xe3eee3e0d2398799c884a47fc40c029c8e241852, 0x9230f9cbaca32bad2b19cab331d3e6509b8eb0cb, 0x7fc5149f4bb75d5e6778ee9a1b058e6b514352ee, 0x2538325446dd80fc49830eea55d9e662b5acc35c, and 0x852c4f1beb54acb5360dbdba7ebbe9940a698f76. Each returned getMinDelay() = 172800 and assigned sole proposer, executor, and canceller authority to the corresponding chain-local 1-of-3 Safe."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "Pinned chain state was reviewed at Ethereum 25527148, Base 48598894, Rootstock 9049318, Plume 80928370, and Etherlink 48212139. M_TBILL_MINT_OPERATOR_ROLE holders were: Ethereum vault 0x99361435420711723af805f08187c9e6bf796683; Base EOA 0x875c06a295c41c27840b9c9dfda7f3d819d8bc6a plus vault 0x8978e327fe7c72fa4eaf4649c23147e279ae1470; Rootstock 3-of-7 Safe 0x5b087db30433bcf5781f385312b1114e8c4819cc, vault 0xf454a52da2157686ef99702c0c19c0e8d66bc03c, and EOAs 0x875c06a295c41c27840b9c9dfda7f3d819d8bc6a and 0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd; Plume EOA 0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd plus vault 0xb05f6aa8c2ea9ab8537cf09a9b765a21de249224; Etherlink 2-of-5 Safe 0xbb065d6c7f08e783fd3d2d9593c4e363fee5cdd5, EOA 0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd, and vault 0xd65bfeb71271a4408ff335e59ecf6c5b21a33a70. Every chain also retained its local 1-of-3 Safe and shared EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 as immediate DEFAULT_ADMIN_ROLE holders. All current mint-critical transparent proxies resolved through chain-local ProxyAdmins to two-day timelocks controlled by those local Safes.",
+      "evidence": "Pinned chain state was reviewed at Ethereum 25527148, Base 48598894, Rootstock 9049318, Plume 80928370, and Etherlink 48212139. M_TBILL_MINT_OPERATOR_ROLE holders were: Ethereum vault 0x99361435420711723af805f08187c9e6bf796683; Base EOA 0x875c06a295c41c27840b9c9dfda7f3d819d8bc6a plus vault 0x8978e327fe7c72fa4eaf4649c23147e279ae1470; Rootstock 3-of-7 Safe 0x5b087db30433bcf5781f385312b1114e8c4819cc, vault 0xf454a52da2157686ef99702c0c19c0e8d66bc03c, and EOAs 0x875c06a295c41c27840b9c9dfda7f3d819d8bc6a and 0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd; Plume EOA 0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd plus vault 0xb05f6aa8c2ea9ab8537cf09a9b765a21de249224; Etherlink 2-of-5 Safe 0xbb065d6c7f08e783fd3d2d9593c4e363fee5cdd5, EOA 0x7ef55ff58dc56ef387bb73a3b63abe9fc47359dd, and vault 0xd65bfeb71271a4408ff335e59ecf6c5b21a33a70. Every chain also retained its local 1-of-3 Safe and shared EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 as immediate DEFAULT_ADMIN_ROLE holders. All current mint-critical transparent proxies resolved through chain-local ProxyAdmins to two-day timelocks controlled by those local Safes. Economic-control evidence reviewed 2026-07-15: Ankura Trust Company has read-only collateral-account access and independently verifies mTBILL collateral eligibility and NAV daily; current reports remain available through the Midas transparency dashboard. FMA approval applies to the prospectus and is not prudential licensing of Midas Software GmbH.",
       "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-13",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Midas smart contract addresses",
@@ -556,6 +559,18 @@
         {
           "label": "Etherlink MidasAccessControl",
           "url": "https://explorer.etherlink.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
+        },
+        {
+          "label": "Midas mTBILL independent reporting",
+          "url": "https://docs.midas.app/tokens/mtbill/independent-reporting"
+        },
+        {
+          "label": "Midas mTBILL product documentation",
+          "url": "https://docs.midas.app/tokens/mtbill"
+        },
+        {
+          "label": "Midas price oracle verification",
+          "url": "https://docs.midas.app/defi-integration/price-oracle"
         }
       ]
     }

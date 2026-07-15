@@ -836,11 +836,12 @@
         "evidence": "Soroban ledger 63473407: get_role_member(MINTER, 0..2) = GD2ELXTH..., GBWKGT3Q..., GDUFSH23.... Horizon shows each of the three accounts has a single ed25519 signer with weight 1 and thresholds 0/0/0 — none is a Stellar multisig."
       }
     ],
+    "reconciliation": "unknown",
     "review": {
       "disposition": "scoreable",
-      "reviewedAt": "2026-07-14",
+      "reviewedAt": "2026-07-15",
       "reviewer": "Claude V9 CTRL sweep",
-      "evidence": "Every chain in the coin file was read on-chain. EVM (Ethereum 25530961, Polygon 90218705, Arbitrum 483768450, Base 48621853): PermissionManager.getRequirements(token, mint) = groups {0,2} on all four; group membership enumerated from the complete GroupAdded/GroupRemoved log history (Blockscout etherscan-compatible logs API) and every candidate re-checked with getGroups() at head. Group 0 = Spiko admin Safe (3/8 on Ethereum, 3/6 on Polygon/Arbitrum/Base, all Safe v1.4.1, no modules, no guard); group 2 = the Spiko Minter proxy (dailyLimit 500000000000, initiator group 10 + approver group 9) and the Chainlink CCIP BurnWithFromMintTokenPool for each Spiko fund token, all owned by EOA 0xEd608cf3.... Starknet (block 11841234): MINTER_ROLE holders enumerated from a full RoleGranted/RoleRevoked scan and confirmed with has_role — a 3/5 ArgentMultisig plus three single-key accounts. Stellar (Soroban ledger 63473407): the PermissionManager is enumerable, get_role_member(MINTER, 0..2) returns three accounts, and Horizon shows all three plus the owner/admin are single-signer accounts. Upgradeability: all four EVM token proxies are UUPS (EIP-1967 admin slot = 0x0) and getRequirements(token, upgradeToAndCall) = group {0}, so the admin Safe can replace mint logic; Ethereum/Polygon/Base share implementation 0x15ea0ec4..., Arbitrum runs 0xa0769f7a...; the Starknet class is OZ-Upgradeable and owner-gated (simulated upgrade from the 3/5 Argent multisig succeeds) and the Soroban wasm upgrade is owner-gated to single-key account GBYIQXBK... (simulated upgrade succeeds for the owner, fails for a MINTER holder). The open question about the non-Ethereum deployments is resolved and removed.",
+      "evidence": "Every chain in the coin file was read on-chain. EVM (Ethereum 25530961, Polygon 90218705, Arbitrum 483768450, Base 48621853): PermissionManager.getRequirements(token, mint) = groups {0,2} on all four; group membership enumerated from the complete GroupAdded/GroupRemoved log history (Blockscout etherscan-compatible logs API) and every candidate re-checked with getGroups() at head. Group 0 = Spiko admin Safe (3/8 on Ethereum, 3/6 on Polygon/Arbitrum/Base, all Safe v1.4.1, no modules, no guard); group 2 = the Spiko Minter proxy (dailyLimit 500000000000, initiator group 10 + approver group 9) and the Chainlink CCIP BurnWithFromMintTokenPool for each Spiko fund token, all owned by EOA 0xEd608cf3.... Starknet (block 11841234): MINTER_ROLE holders enumerated from a full RoleGranted/RoleRevoked scan and confirmed with has_role — a 3/5 ArgentMultisig plus three single-key accounts. Stellar (Soroban ledger 63473407): the PermissionManager is enumerable, get_role_member(MINTER, 0..2) returns three accounts, and Horizon shows all three plus the owner/admin are single-signer accounts. Upgradeability: all four EVM token proxies are UUPS (EIP-1967 admin slot = 0x0) and getRequirements(token, upgradeToAndCall) = group {0}, so the admin Safe can replace mint logic; Ethereum/Polygon/Base share implementation 0x15ea0ec4..., Arbitrum runs 0xa0769f7a...; the Starknet class is OZ-Upgradeable and owner-gated (simulated upgrade from the 3/5 Argent multisig succeeds) and the Soroban wasm upgrade is owner-gated to single-key account GBYIQXBK... (simulated upgrade succeeds for the owner, fails for a MINTER holder). The open question about the non-Ethereum deployments is resolved and removed. Evidence challenge completed 2026-07-15: the official product page identifies CACEIS as depositary and accountant and states that PwC performs recurring statutory audits, but it still showed allocation data last updated 2025-11-21 and exposed no dated PwC report or other current independent supply-to-assets reconciliation. Those role and cadence claims do not establish a qualifying recurring report, so reconciliation remains unknown. The exact AMF GECO registry evidence is retained in the sources, but supervision is intentionally not authored while reconciliation evidence is absent.",
       "sources": [
         {
           "label": "Spiko documentation",
@@ -881,6 +882,14 @@
         {
           "label": "Stellar Soroban mainnet RPC",
           "url": "https://mainnet.sorobanrpc.com"
+        },
+        {
+          "label": "Spiko Cash and Carry transparency",
+          "url": "https://www.spiko.io/spiko-cash-and-carry"
+        },
+        {
+          "label": "AMF GECO - Spiko Cash and Carry",
+          "url": "https://geco.amf-france.org/produit-d-epargne/c79398"
         }
       ],
       "unresolvedQuestions": []
