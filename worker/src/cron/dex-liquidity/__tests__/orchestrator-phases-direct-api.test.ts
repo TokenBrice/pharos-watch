@@ -156,13 +156,13 @@ describe("integrateDirectApiLiquidityPhase", () => {
       circuitEvents: [],
     };
 
-    const authoritativeConfirmation = buildAuthoritativeStagedPoolConfirmationIndex(rawPhase.results);
     const compacted = compactDirectApiFetchPhasePools(rawPhase, {
       chainAddressToId: new Map([
         [buildChainAddressKey("ethereum", trackedAddress), "tracked-stablecoin"],
       ]),
       symbolToChainScopedIds: new Map(),
     });
+    const authoritativeConfirmation = buildAuthoritativeStagedPoolConfirmationIndex(compacted.phase.results);
 
     expect(compacted.counts).toEqual({
       rawPoolCount,

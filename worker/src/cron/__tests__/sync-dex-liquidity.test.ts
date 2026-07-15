@@ -111,7 +111,7 @@ vi.mock("../../lib/cex-orderbooks", () => ({
 import { syncDexLiquidity } from "../dex-liquidity/orchestrator";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { convertToGtNewPools, extractPriceObservations } from "../../lib/dex-api-common";
-import { fetchDataSources, buildKnownPoolAddresses } from "../dex-liquidity/fetch-primary";
+import { buildCurveLookups, fetchDataSources, buildKnownPoolAddresses } from "../dex-liquidity/fetch-primary";
 import { fetchAerodromeData, fetchUniV3Data } from "../dex-liquidity/subgraph-source-families";
 import { fetchFluidPools } from "../dex-liquidity/fetch-fluid";
 import { fetchRaydiumPools } from "../dex-liquidity/fetch-raydium";
@@ -359,6 +359,28 @@ describe("syncDexLiquidity", () => {
     expect(metadata.sourceCoverage?.qualityDriftFlags).toEqual([]);
     expect(metadata.sourceCoverage?.coinsWithoutMeasuredBalances).toBe(0);
     expect(metadata.sourceCoverage?.protocolCapReductions?.reducedTvlUsd).toBe(0);
+  });
+
+  it("releases consumed Curve payloads before starting direct provider fetches", async () => {
+    const curvePayloads = [{ data: { poolData: [] } }];
+    vi.mocked(fetchDataSources).mockResolvedValueOnce({
+      pools: [],
+      dexProjects: new Set<string>(),
+      protocolTvlCaps: new Map<string, number>(),
+      curvePayloads,
+      graphApiKey: "graph-key",
+      dlYieldsAvailable: true,
+      dlProtocolsAvailable: true,
+    });
+    vi.mocked(fetchFluidPools).mockImplementationOnce(async () => {
+      expect(curvePayloads).toHaveLength(0);
+      return makeDirectApiResult();
+    });
+
+    await syncDexLiquidity(db, "graph-key");
+
+    expect(buildCurveLookups).toHaveBeenCalledOnce();
+    expect(curvePayloads).toHaveLength(0);
   });
 
   it("reports high-SLO stage metadata during source and scoring phases", async () => {

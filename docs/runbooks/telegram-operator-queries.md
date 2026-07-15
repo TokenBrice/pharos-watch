@@ -176,6 +176,8 @@ ORDER BY COALESCE(effect_started_at, created_at) ASC;
 
 Treat both states as execution-unknown once the claim expiry has passed. Inspect Telegram/user reports and the exact job payload context before any manual resend. Never reset these rows to `planned` merely to make the dispatcher retry them.
 
+After review, acknowledge exact `telegram_pending_alerts.id` values with `POST /api/admin-telegram-delivery-control`, action `acknowledge_execution_unknown`, an explicit `operatorReason`, and an idempotency key. The endpoint refuses a partial or stale ID set, archives exact payload/lifecycle evidence, and preserves the authoritative `execution_unknown` outcome. It does not resend.
+
 ## Dead Letters
 
 Dead letters by reason:

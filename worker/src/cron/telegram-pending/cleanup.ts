@@ -15,6 +15,7 @@ import {
   type TelegramTargetFinalDeliveryState,
 } from "../telegram-alert-job-target-outcomes";
 import { projectRecapPendingTerminalOutcome } from "./recap-terminal";
+import { buildInClause } from "../../lib/db";
 
 type ExpiredPendingRow = DeadLetterPendingRow & { expires_at?: number | null };
 type PendingAlertAdminFilter = { chatId: string } | { olderThanCutoffSec: number };
@@ -28,6 +29,11 @@ type PendingAlertFilterClause = {
 export interface DisabledChatPendingCleanupResult {
   deleted: number;
   failed: boolean;
+}
+
+export interface ExecutionUnknownAcknowledgementResult {
+  acknowledgedIds: number[];
+  missingIds: number[];
 }
 
 const PENDING_ALERT_DEAD_LETTER_COLUMNS = [
@@ -82,42 +88,28 @@ async function projectTerminalPendingRows(
   }
 }
 
-export async function archiveAgedExecutionUnknownPendingAlerts(
+async function archiveExecutionUnknownPendingRows(
   db: D1Database,
+  rows: readonly DeadLetterPendingRow[],
   nowSec: number,
 ): Promise<number> {
-  const rows = await db
-    .prepare(
-      `SELECT ${PENDING_ALERT_DEAD_LETTER_COLUMN_SQL}
-         FROM telegram_pending_alerts
-        WHERE delivery_state = 'execution_unknown'
-          AND COALESCE(delivery_completed_at, delivery_started_at, created_at) <= ?
-        ORDER BY COALESCE(delivery_completed_at, delivery_started_at, created_at) ASC, id ASC
-        LIMIT ?`,
-    )
-    .bind(
-      nowSec - TELEGRAM_PENDING_EXECUTION_UNKNOWN_RETENTION_SEC,
-      EXPIRED_PENDING_CLEANUP_BATCH_LIMIT,
-    )
-    .all<DeadLetterPendingRow>();
-  const aged = rows.results ?? [];
-  if (aged.length === 0) return 0;
+  if (rows.length === 0) return 0;
   const deadLettered = await deadLetterTerminalPendingRows(
     db,
-    aged,
+    rows,
     nowSec,
     "execution_unknown_archived",
   );
   if (!deadLettered) return 0;
   await projectTerminalPendingRows(
     db,
-    aged,
+    rows,
     "execution_unknown",
     nowSec,
     "execution_unknown_archived",
   );
   let deleted = 0;
-  for (const row of aged) {
+  for (const row of rows) {
     const archivedAt = row.delivery_completed_at ?? row.delivery_started_at ?? row.created_at;
     const result = await db
       .prepare(
@@ -138,6 +130,62 @@ export async function archiveAgedExecutionUnknownPendingAlerts(
     deleted += Number(result.meta?.changes ?? 0);
   }
   return deleted;
+}
+
+export async function archiveAgedExecutionUnknownPendingAlerts(
+  db: D1Database,
+  nowSec: number,
+): Promise<number> {
+  const rows = await db
+    .prepare(
+      `SELECT ${PENDING_ALERT_DEAD_LETTER_COLUMN_SQL}
+         FROM telegram_pending_alerts
+        WHERE delivery_state = 'execution_unknown'
+          AND COALESCE(delivery_completed_at, delivery_started_at, created_at) <= ?
+        ORDER BY COALESCE(delivery_completed_at, delivery_started_at, created_at) ASC, id ASC
+        LIMIT ?`,
+    )
+    .bind(
+      nowSec - TELEGRAM_PENDING_EXECUTION_UNKNOWN_RETENTION_SEC,
+      EXPIRED_PENDING_CLEANUP_BATCH_LIMIT,
+    )
+    .all<DeadLetterPendingRow>();
+  const aged = rows.results ?? [];
+  return archiveExecutionUnknownPendingRows(db, aged, nowSec);
+}
+
+export async function acknowledgeExecutionUnknownPendingAlertsForAdmin(
+  db: D1Database,
+  pendingIds: readonly number[],
+  nowSec: number,
+): Promise<ExecutionUnknownAcknowledgementResult> {
+  const ids = [...new Set(pendingIds)].sort((a, b) => a - b);
+  if (ids.length === 0 || ids.length > 100 || ids.some((id) => !Number.isSafeInteger(id) || id <= 0)) {
+    throw new Error("Telegram execution-unknown acknowledgement ids are invalid");
+  }
+  const inClause = buildInClause(ids);
+  const selected = await db
+    .prepare(
+      `SELECT ${PENDING_ALERT_DEAD_LETTER_COLUMN_SQL}
+         FROM telegram_pending_alerts
+        WHERE delivery_state = 'execution_unknown'
+          AND id IN (${inClause.sql})
+        ORDER BY id ASC`,
+    )
+    .bind(...inClause.binds)
+    .all<DeadLetterPendingRow>();
+  const rows = selected.results ?? [];
+  const matchedIds = new Set(rows.map((row) => row.id));
+  const missingIds = ids.filter((id) => !matchedIds.has(id));
+  if (missingIds.length > 0) {
+    return { acknowledgedIds: [], missingIds };
+  }
+
+  const deleted = await archiveExecutionUnknownPendingRows(db, rows, nowSec);
+  if (deleted !== rows.length) {
+    throw new Error(`Archived ${deleted} of ${rows.length} Telegram execution-unknown rows`);
+  }
+  return { acknowledgedIds: rows.map((row) => row.id), missingIds: [] };
 }
 
 function pendingAlertFilterClause(filter: PendingAlertAdminFilter): PendingAlertFilterClause {

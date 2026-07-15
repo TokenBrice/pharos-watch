@@ -125,4 +125,87 @@ describe("admin Telegram delivery control", () => {
       "SELECT action, result, http_status FROM admin_action_audit WHERE action = 'telegram-delivery-pause'",
     ).get()).toEqual({ action: "telegram-delivery-pause", result: "error", http_status: 409 });
   });
+
+  it("archives explicitly acknowledged execution-unknown effects without making them replayable", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW * 1_000);
+    const { sqlite, db } = setupLatestSchema();
+    const inserted = sqlite.prepare(
+      `INSERT INTO telegram_pending_alerts (
+         chat_id, message_html, created_at, updated_at, dedupe_key, source_type,
+         delivery_state, delivery_owner, delivery_generation, delivery_started_at,
+         delivery_completed_at, last_error_class
+       ) VALUES (?, ?, ?, ?, ?, 'risk_alert', 'execution_unknown', ?, 1, ?, ?, ?)`
+    ).run(
+      "42",
+      "<b>Ambiguous alert</b>",
+      NOW - 600,
+      NOW - 300,
+      "42:v1:0:ambiguous",
+      "pending-owner",
+      NOW - 500,
+      NOW - 300,
+      "pending_effect_owner_lost",
+    );
+    const pendingId = Number(inserted.lastInsertRowid);
+
+    const response = await handleAdminTelegramDeliveryControl({
+      db,
+      request: request("POST", {
+        action: "acknowledge_execution_unknown",
+        pendingIds: [pendingId],
+        operatorReason: "Confirmed for archival after incident review",
+      }),
+      trustedAdmin: true,
+    });
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      acknowledgement: {
+        pendingIds: [pendingId],
+        disposition: "execution_unknown_archived",
+      },
+    });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
+    expect(sqlite.prepare(
+      "SELECT pending_id, delivery_state, reason FROM telegram_alert_dead_letters",
+    ).get()).toEqual({
+      pending_id: pendingId,
+      delivery_state: "execution_unknown",
+      reason: "execution_unknown_archived",
+    });
+    const audit = sqlite.prepare(
+      "SELECT result, details_json FROM admin_action_audit WHERE action = 'telegram-execution-unknown-acknowledge'",
+    ).get() as { result: string; details_json: string };
+    expect(audit.result).toBe("ok");
+    expect(JSON.parse(audit.details_json)).toMatchObject({
+      pendingIds: [pendingId],
+      operatorReason: "Confirmed for archival after incident review",
+      disposition: "execution_unknown_archived",
+    });
+  });
+
+  it("refuses a partial execution-unknown acknowledgement before mutating", async () => {
+    const { sqlite, db } = setupLatestSchema();
+    const inserted = sqlite.prepare(
+      `INSERT INTO telegram_pending_alerts (
+         chat_id, message_html, created_at, source_type, delivery_state,
+         delivery_owner, delivery_generation, delivery_started_at
+       ) VALUES ('42', '<b>Ambiguous alert</b>', ?, 'risk_alert',
+                 'execution_unknown', 'pending-owner', 1, ?)`
+    ).run(NOW - 600, NOW - 500);
+    const pendingId = Number(inserted.lastInsertRowid);
+
+    const response = await handleAdminTelegramDeliveryControl({
+      db,
+      request: request("POST", {
+        action: "acknowledge_execution_unknown",
+        pendingIds: [pendingId, pendingId + 1],
+        operatorReason: "Review requires exact row identity",
+      }),
+      trustedAdmin: true,
+    });
+    expect(response.status).toBe(409);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 1 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_dead_letters").get()).toEqual({ count: 0 });
+  });
 });

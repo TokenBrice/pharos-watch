@@ -4,6 +4,12 @@ import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const EXPECTED_CUSTOM_DOMAINS = ["api.pharos.watch", "ops-api.pharos.watch", "site-api.pharos.watch"] as const;
 const EXPECTED_RULE_TYPES = ["CompiledWasm", "Data"] as const;
+const EXPECTED_ADDRESS_PRICE_PROVIDERS = [
+  "dexpaprika-address",
+  "coingecko-onchain-address",
+  "alchemy-address",
+  "moralis-address",
+] as const;
 
 interface TomlAssignment {
   key: string;
@@ -177,12 +183,29 @@ export function evaluateWorkerWranglerConfig(toml: string): WorkerWranglerConfig
     );
   }
 
+  const addressPriceProviderVars = assignments.filter(
+    ({ key, section }) => key === "ADDRESS_PRICE_PROVIDERS_ENABLED" && section === "vars",
+  );
+  const configuredAddressPriceProviders = unquote(addressPriceProviderVars[0]?.value)
+    ?.split(",")
+    .map((provider) => provider.trim())
+    .filter(Boolean);
+  if (
+    addressPriceProviderVars.length !== 1 ||
+    JSON.stringify(configuredAddressPriceProviders) !== JSON.stringify(EXPECTED_ADDRESS_PRICE_PROVIDERS)
+  ) {
+    issues.push(
+      `Production address-price providers must be exactly ${EXPECTED_ADDRESS_PRICE_PROVIDERS.join(", ")}; ` +
+      `found ${configuredAddressPriceProviders?.join(", ") || "none"}.`,
+    );
+  }
+
   return { failed: issues.length > 0, issues };
 }
 
 export function printWorkerWranglerConfigReport(report: WorkerWranglerConfigReport): void {
   if (!report.failed) {
-    console.log("Worker Wrangler configuration check passed (3 root custom domains, 2 fallthrough asset rules).");
+    console.log("Worker Wrangler configuration check passed (3 root custom domains, 2 fallthrough asset rules, 4 address-price providers).");
     return;
   }
 

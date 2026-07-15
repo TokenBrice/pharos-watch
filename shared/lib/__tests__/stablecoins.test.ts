@@ -1042,6 +1042,16 @@ describe("tracked stablecoin metadata", () => {
     expect(issues).toEqual([]);
   });
 
+  it("keeps curated-validated live reserve configs backed by curated reserve slices", () => {
+    const issues = TRACKED_STABLECOINS.filter(
+      (coin) => coin.liveReservesConfig?.adapter === "curated-validated",
+    )
+      .filter((coin) => (coin.reserves?.length ?? 0) === 0)
+      .map((coin) => coin.id);
+
+    expect(issues).toEqual([]);
+  });
+
   it("does not let one breaker scope cover multiple distinct live-reserve source configs", () => {
     const liveCoins = TRACKED_STABLECOINS.filter((coin) => coin.liveReservesConfig);
     const scopeSourceGroups = new Map<string, Set<string>>();

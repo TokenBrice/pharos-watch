@@ -1,8 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { makeDexApiFetchResult } from "../../../lib/dex-api-common";
+import { makeDexApiFetchResult, type DexApiPool } from "../../../lib/dex-api-common";
 import { getCircuitRecord } from "../../../lib/circuit-breaker";
 import type { DirectApiFetcher } from "../orchestrator-phases/direct-api";
-import { runDirectApiFetchPhase } from "../orchestrator-phases/direct-api";
+import {
+  compactDirectApiFetchPhasePools,
+  runDirectApiFetchPhase,
+} from "../orchestrator-phases/direct-api";
+import { buildAuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-phases/authoritative";
+import { buildChainAddressKey } from "../token-resolution";
 
 type MockCircuitRecord = {
   state: "closed" | "open" | "half-open";
@@ -98,6 +103,64 @@ describe("runDirectApiFetchPhase", () => {
     expect(result.failedSources).toEqual([]);
     expect(result.fallbackSignals).toEqual([]);
     expect(maxActive).toBe(1);
+  });
+
+  it("compacts each provider before starting the next while retaining raw counts and exact-key evidence", async () => {
+    const trackedAddress = "0x1111111111111111111111111111111111111111";
+    const makePool = (index: number, tracked: boolean): DexApiPool => ({
+      source: "balancer",
+      chain: "ethereum",
+      poolAddress: `0x${index.toString(16).padStart(40, "0")}`,
+      poolType: "balancer-stable",
+      tokens: [
+        {
+          address: tracked ? trackedAddress : `0x${(index + 1_000).toString(16).padStart(40, "0")}`,
+          symbol: tracked ? "TRACKED" : "UNKNOWN",
+          decimals: 6,
+        },
+        {
+          address: `0x${(index + 2_000).toString(16).padStart(40, "0")}`,
+          symbol: "QUOTE",
+          decimals: 6,
+        },
+      ],
+      price: 1,
+      tvlUsd: 1_000_000,
+      volume24hUsd: 50_000,
+      feeRate: null,
+      balances: [500_000, 500_000],
+    });
+    const firstResult = makeDexApiFetchResult(
+      [makePool(1, true), ...Array.from({ length: 256 }, (_, index) => makePool(index + 2, false))],
+      { ok: true, degraded: false, errors: [] },
+    );
+    const lookups = {
+      chainAddressToId: new Map([
+        [buildChainAddressKey("ethereum", trackedAddress), "tracked-stablecoin"],
+      ]),
+      symbolToChainScopedIds: new Map<string, Map<string, string[]>>(),
+    };
+    const fetchers = [
+      makeFetcher("first", async () => firstResult),
+      makeFetcher("second", async () => {
+        expect(firstResult.pools).toHaveLength(1);
+        return makeDexApiFetchResult([], { ok: true, degraded: false, errors: [] });
+      }),
+    ];
+
+    const phase = await runDirectApiFetchPhase({} as D1Database, fetchers, undefined, lookups);
+    const compacted = compactDirectApiFetchPhasePools(phase, lookups);
+    const authoritative = buildAuthoritativeStagedPoolConfirmationIndex(compacted.phase.results);
+
+    expect(compacted.counts).toEqual({
+      rawPoolCount: 257,
+      retainedPoolCount: 1,
+      skippedInvalidUnitCount: 0,
+      skippedUntrackedCount: 256,
+    });
+    expect(authoritative.confirmedExactKeysByProtocol.get("first")).toContain(
+      "ethereum:0x0000000000000000000000000000000000000101",
+    );
   });
 
   it("reports circuit close events after a half-open source recovers", async () => {

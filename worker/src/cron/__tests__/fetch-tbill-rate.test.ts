@@ -171,11 +171,15 @@ function mockByUrl(mapping: Record<string, MockUrlResponse>, calls?: string[]) {
 
 /** Mocks every extended benchmark endpoint with a successful response. Used to
  *  isolate provider-specific test cases from added benchmark coverage. */
-function okExtendedBenchmarkMocks(): Record<string, Response> {
+function okExtendedBenchmarkMocks(): Record<string, MockUrlResponse> {
   return {
     "markets.newyorkfed.org": new Response(NYFED_EFFR_JSON_SNIPPET, { status: 200 }),
     "id=DFF": new Response(FRED_DFF_CSV_SNIPPET, { status: 200 }),
-    "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": new Response(FRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET, { status: 200 }),
+    "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": (_url, opts) => {
+      expect((opts?.headers as Record<string, string> | undefined)?.["User-Agent"])
+        .toBe("Pharos/1.0 (+https://pharos.watch)");
+      return new Response(FRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET, { status: 200 });
+    },
     "bankofengland.co.uk": new Response(BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET, { status: 200 }),
     "stat-search.boj.or.jp": new Response(JSON.stringify({
       RESULTSET: [{
@@ -338,7 +342,11 @@ describe("fetchTbillRate", () => {
   it("returns ok from benchmark feeds", async () => {
     mockByUrl({
       "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
-      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
+      "id=DGS3MO": (_url, opts) => {
+        expect((opts?.headers as Record<string, string> | undefined)?.["User-Agent"])
+          .toBe("Pharos/1.0 (+https://pharos.watch)");
+        return new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 });
+      },
       "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
       "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
       ...okExtendedBenchmarkMocks(),
@@ -414,7 +422,11 @@ describe("fetchTbillRate", () => {
       "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
       ...okExtendedBenchmarkMocks(),
       "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": null,
-      "alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2": new Response(ALFRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET, { status: 200 }),
+      "alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2": (_url, opts) => {
+        expect((opts?.headers as Record<string, string> | undefined)?.["User-Agent"])
+          .toBe("Pharos/1.0 (+https://pharos.watch)");
+        return new Response(ALFRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET, { status: 200 });
+      },
     });
 
     const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
