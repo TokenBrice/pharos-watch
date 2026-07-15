@@ -44,9 +44,23 @@ The V9 implementation establishes candidate infrastructure without changing prod
 - `worker/src/lib/safety-score-v9-candidate.ts` and
   `worker/scripts/replay-safety-score-v9.ts` compile and evaluate the exact
   candidate deterministically. The current policy semantic digest is
-  `6b6f819eb06740634239467ed6041125d7971f8df0fbedf0e4bd836cac405053`;
+  `70a157b370c46380c8cf4eb660270276135080f906d3927a6964ab9f25f23d52`;
   the current evaluation-build digest is
-  `d86b48b412107d9ecd7ee634850c3d42261f2372d1f5fe99342a372727722b7f`.
+  `75f349a21500c3ab68140f470d7cbb7dd8440ed533503f2b2b867ebd7d3210ca`.
+- The 2026-07-15 Batch 3 calibration revision (owner rulings 2026-07-15)
+  applies the two ruled cap changes and nothing else. (1) The centralized-mint
+  severity gains a third rung: a reconciled-but-unbounded mint that carries a
+  reviewed prudential-supervision fact (`economicControlReview.mint.supervision`
+  = `prudential`) graduates from `high` to `moderate` (centralized-mint
+  `moderate` = 74). Supervision defaults to `unknown` everywhere, so the rung is
+  inert until per-coin evidence is curated; compromise and unreconciled minting
+  stay `critical`. (2) Common-mode dependency severity is now conditioned on
+  chain maturity: a shared chain-kind failure domain in the reviewed
+  `materiality.matureChains` set grades at `moderate` (critical-dependency
+  `moderate` = 79, top of B+); any fragile, unreviewed, or non-chain domain
+  stays fail-closed at `high` (64). Dials, bands, and every other cap are
+  untouched; full-distribution confirmation follows the post-DEX-fix
+  measurement.
 - The 2026-07-15 candidate-v2 queue-binding revision adds explicit
   `local-component` paths to seven reason allowlists already emitted as
   aggregate facts. The revision changes evidence-work-queue metadata only;
