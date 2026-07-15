@@ -53,7 +53,7 @@
   "status": "pre-launch",
   "announcedDate": "2026-03",
   "launchPhase": "beta",
-  "launchPhaseDetail": "Dual audits completed (Sherlock Jan 2026, Nethermind Mar 2026); seed round led by Delphi Ventures announced Mar 25; Sepolia and Base Sepolia testnet live; Ethereum mainnet pre-deposit vault opened Jun 23, 2026 with a $50M cap, Accountable proof-of-solvency, Nexus Mutual cover, and a 30-day lock while full protocol launch remains pending; verified Ethereum mainnet token contracts now live with the pre-deposit vault filled to its $50M cap (~$50.1M circulating listed on DefiLlama stablecoins as of Jul 12, 2026), but no price source yet lists trUSD (CoinGecko remains a preview listing), so it stays pre-launch until a fetchable price path exists; Season 1 points phase ongoing with the 30-day deposit lock expiring around Jul 23, 2026",
+  "launchPhaseDetail": "Dual audits completed (Sherlock Jan 2026, Nethermind Mar 2026); seed round led by Delphi Ventures announced Mar 25; Sepolia and Base Sepolia testnet live; Ethereum mainnet pre-deposit vault opened Jun 23, 2026 with a $50M cap, Accountable proof-of-solvency, Nexus Mutual cover, and a 30-day lock while full protocol launch remains pending; verified Ethereum mainnet token contracts now live with the pre-deposit vault filled to its $50M cap (~$50.1M circulating listed on DefiLlama stablecoins as of Jul 12, 2026), but no price source yet lists trUSD (CoinGecko remains a preview listing), so it stays pre-launch until a fetchable price path exists; the pre-deposit phase remains active, and Tori's official app says withdrawals enable after the protocol launches without providing a public launch date",
   "featuredContent": [
     {
       "type": "tweet",
@@ -128,6 +128,13 @@
       "title": "Pre-deposit vault filled to $50M cap; trUSD listed on DefiLlama stablecoins",
       "description": "RockawayX / Upshift pre-deposit vault reached its $50M cap (~$44M in the first 24 hours per third-party coverage); transparency dashboard shows ~$50.08M supply at 100% collateral ratio with 12.2% strUSD APY, and DefiLlama stablecoins now lists ~$50.1M circulating. Still no price source (CoinGecko remains a preview listing). Date reflects observation, not the exact fill date.",
       "sourceUrl": "https://app.tori.finance/transparency"
+    },
+    {
+      "date": "2026-07-15",
+      "type": "milestone",
+      "title": "Pre-deposit phase remains active",
+      "description": "Tori's official app continues to label the vault as pre-deposit, states a 30-day deposit lock, and says withdrawals will be enabled after the protocol launches. It does not disclose a public launch date.",
+      "sourceUrl": "https://app.tori.finance/earn"
     }
   ],
   "yieldConfig": {
