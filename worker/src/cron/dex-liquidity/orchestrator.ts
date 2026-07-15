@@ -28,10 +28,7 @@ import {
   runFallbackCrawlerPhase,
   type DirectApiIntegrationResult,
 } from "./orchestrator-phases";
-import {
-  compactDirectApiFetchPhasePools,
-  type DirectApiPoolCompactionCounts,
-} from "./orchestrator-phases/direct-api";
+import { compactDirectApiFetchPhasePools, type DirectApiPoolCompactionCounts } from "./orchestrator-phases/direct-api";
 import {
   buildPoolIdentity,
   countPoolIdentityKeys,
@@ -225,7 +222,8 @@ interface DexLiquiditySourceState {
 interface DexLiquidityPoolState {
   fallback: DexLiquidityFallbackPhase;
   metrics: Map<string, LiquidityMetrics>;
-  knownPoolIndex: ReturnType<typeof buildKnownPoolAddresses>;
+  pancakeMeasuredExecutionTargets: ReturnType<typeof buildPancakeMeasuredExecutionTargets>;
+  fluidMeasuredExecutionTargets: ReturnType<typeof buildFluidMeasuredExecutionTargets>;
   stagedMergedCount: number;
   stagedSkippedCount: number;
   stagedSkippedByExactIdentityCount: number;
@@ -508,12 +506,17 @@ async function buildDexLiquidityPoolState(
       },
     },
   });
+  const primaryPreference = filterPrimaryPoolsPreferDirectApi(
+    sourceState.dataSources.pools,
+    sourceState.directApiPools,
+    sourceState.lookups.chainAddressToId,
+  );
+  let preferredPrimaryPools = primaryPreference.filteredPools;
   const {
-    filteredPools: preferredPrimaryPools,
     skippedByExactIdentity: primarySkippedByDirectApiExactIdentity,
     skippedByUniqueDerivedIdentity: primarySkippedByDirectApiDerivedIdentity,
     skippedByOptionalWildcardIdentity: primarySkippedByDirectApiWildcardIdentity,
-  } = filterPrimaryPoolsPreferDirectApi(sourceState.dataSources.pools, sourceState.directApiPools, sourceState.lookups.chainAddressToId);
+  } = primaryPreference;
   if (
     primarySkippedByDirectApiExactIdentity > 0 ||
     primarySkippedByDirectApiDerivedIdentity > 0 ||
@@ -523,7 +526,7 @@ async function buildDexLiquidityPoolState(
       `[dex-liquidity] Preferred direct API over DL for ${primarySkippedByDirectApiExactIdentity} exact matches and ` +
         `${primarySkippedByDirectApiDerivedIdentity} unique derived matches and ` +
         `${primarySkippedByDirectApiWildcardIdentity} optional wildcard matches`,
-      );
+    );
   }
   const knownPoolIndex = buildKnownPoolAddresses(
     preferredPrimaryPools,
@@ -549,6 +552,22 @@ async function buildDexLiquidityPoolState(
     ctx.syncStartSec,
     sourceState.validationReferences,
   );
+
+  // Primary pools and enrichment maps have been projected into metrics and the
+  // identity index. Drop their source graphs before D1 materializes staged rows.
+  preferredPrimaryPools = [];
+  primaryPreference.filteredPools = [];
+  sourceState.dataSources.pools = [];
+  sourceState.primaryPoolCounts.pools = [];
+  sourceState.dataSources.dexProjects = new Set();
+  sourceState.curvePoolMap = new Map();
+  sourceState.subgraphEnrichment.uniV3PoolFees = new Map();
+  sourceState.subgraphEnrichment.uniV3SymbolFees = new Map();
+  sourceState.subgraphEnrichment.uniV3PriceObs = new Map();
+  sourceState.subgraphEnrichment.uniV3ExecutionCandidates = new Map();
+  sourceState.subgraphEnrichment.aerodromePriceObs = new Map();
+  sourceState.subgraphEnrichment.aerodromeIsStable = new Map();
+
   const directApiIntegration = await integrateDirectApiLiquidityPhase({
     db: ctx.db,
     directApiPools: sourceState.directApiPools,
@@ -565,6 +584,57 @@ async function buildDexLiquidityPoolState(
   });
   logDirectApiSourceSummary(directApiIntegration, sourceState.directApiPhase.circuitEvents);
 
+  const pancakeMeasuredExecutionTargets = buildPancakeMeasuredExecutionTargets({
+    pools: sourceState.directApiMeasuredExecutionPools,
+    chainAddressToId: sourceState.lookups.chainAddressToId,
+    symbolToChainScopedIds: sourceState.lookups.symbolToChainScopedIds,
+    validationReferences: sourceState.validationReferences,
+    stablecoinPriceById: sourceState.stablecoinPriceById,
+    capturedAt: ctx.syncStartSec,
+  });
+  const fluidMeasuredExecutionTargets = buildFluidMeasuredExecutionTargets({
+    pools: sourceState.directApiMeasuredExecutionPools,
+    chainAddressToId: sourceState.lookups.chainAddressToId,
+    symbolToChainScopedIds: sourceState.lookups.symbolToChainScopedIds,
+    validationReferences: sourceState.validationReferences,
+    stablecoinPriceById: sourceState.stablecoinPriceById,
+    capturedAt: ctx.syncStartSec,
+  });
+
+  // Only diagnostics and the compact measured targets survive the direct phase.
+  // The flattened arrays and provider arrays share pool objects, so clear both
+  // layers before staging allocates its D1 result set.
+  sourceState.directApiPools = [];
+  sourceState.directApiMeasuredExecutionPools = [];
+  for (const entry of sourceState.directApiPhase.results) {
+    entry.result.pools = [];
+    entry.authoritativeExactPoolKeys?.clear();
+    delete entry.authoritativeExactPoolKeys;
+    if (entry.poolCompaction) entry.poolCompaction.measuredExecutionPools = [];
+  }
+  sourceState.lookups.symbolToIds = new Map();
+  sourceState.lookups.symbolToChainScopedIds = new Map();
+  sourceState.lookups.addressToId = new Map();
+  sourceState.lookups.chainAddressToId = new Map();
+  sourceState.lookups.contractMetaByChainAddress = new Map();
+
+  await reportDexLiquidityProgress(ctx, {
+    stage: "pool-processing-core-complete",
+    message: "Completed primary and direct pool integration",
+    providerFamily: "dex-liquidity",
+    itemsDone: metrics.size,
+    itemsTotal: ACTIVE_STABLECOINS.length,
+    metadata: {
+      countTotals: {
+        metricRows: metrics.size,
+        directApiAccepted: Object.values(directApiIntegration.acceptedByProtocolChain).reduce(
+          (sum, count) => sum + count,
+          0,
+        ),
+      },
+    },
+  });
+
   const staged = await mergeStagedPools(
     ctx.db,
     metrics,
@@ -574,6 +644,24 @@ async function buildDexLiquidityPoolState(
     sourceState.authoritativeConfirmation,
   );
   mergeDexPriceObservationMap(sourceState.priceObservations, staged.priceObservations);
+  sourceState.authoritativeConfirmation = {
+    enforcedChainsByProtocol: new Map(),
+    confirmedExactKeysByProtocol: new Map(),
+  };
+
+  await reportDexLiquidityProgress(ctx, {
+    stage: "pool-processing-staged-complete",
+    message: "Completed staged pool merge",
+    providerFamily: "dex-liquidity",
+    itemsDone: staged.mergedCount,
+    itemsTotal: staged.mergedCount + staged.skippedCount,
+    metadata: {
+      countTotals: {
+        stagedPoolsMerged: staged.mergedCount,
+        stagedPoolsSkipped: staged.skippedCount,
+      },
+    },
+  });
 
   const fallback = await runFallbackCrawlerPhase({
     db: ctx.db,
@@ -596,7 +684,10 @@ async function buildDexLiquidityPoolState(
         metricRows: metrics.size,
         stagedPoolsMerged: staged.mergedCount,
         stagedPoolsSkipped: staged.skippedCount,
-        directApiAccepted: Object.values(directApiIntegration.acceptedByProtocolChain).reduce((sum, count) => sum + count, 0),
+        directApiAccepted: Object.values(directApiIntegration.acceptedByProtocolChain).reduce(
+          (sum, count) => sum + count,
+          0,
+        ),
         weakCoverageCoinsBeforeFallback: fallback.weakCoverageCoinsBeforeFallback,
         coverageRecoveredCoins: fallback.coverageRecoveredCoins,
       },
@@ -606,7 +697,8 @@ async function buildDexLiquidityPoolState(
   return {
     fallback,
     metrics,
-    knownPoolIndex,
+    pancakeMeasuredExecutionTargets,
+    fluidMeasuredExecutionTargets,
     stagedMergedCount: staged.mergedCount,
     stagedSkippedCount: staged.skippedCount,
     stagedSkippedByExactIdentityCount: staged.skippedByExactIdentityCount,
@@ -648,22 +740,8 @@ async function scoreDexLiquidityPoolState(
     sourceState.dataSources.protocolTvlCaps,
     sourceState.stablecoinMcapById,
     ctx.syncStartSec,
-    buildPancakeMeasuredExecutionTargets({
-      pools: sourceState.directApiMeasuredExecutionPools,
-      chainAddressToId: sourceState.lookups.chainAddressToId,
-      symbolToChainScopedIds: sourceState.lookups.symbolToChainScopedIds,
-      validationReferences: sourceState.validationReferences,
-      stablecoinPriceById: sourceState.stablecoinPriceById,
-      capturedAt: ctx.syncStartSec,
-    }),
-    buildFluidMeasuredExecutionTargets({
-      pools: sourceState.directApiMeasuredExecutionPools,
-      chainAddressToId: sourceState.lookups.chainAddressToId,
-      symbolToChainScopedIds: sourceState.lookups.symbolToChainScopedIds,
-      validationReferences: sourceState.validationReferences,
-      stablecoinPriceById: sourceState.stablecoinPriceById,
-      capturedAt: ctx.syncStartSec,
-    }),
+    poolState.pancakeMeasuredExecutionTargets,
+    poolState.fluidMeasuredExecutionTargets,
     ctx.signal,
   );
   const analysis = await analyzeDexLiquidityPostScoring({
@@ -798,8 +876,16 @@ async function persistDexLiquidityScoreState(
       },
     },
   });
-  const persistence = (await runWithOverloadRetry(() =>
-    persistScores(ctx.db, poolState.metrics, scoreState.scoreResults, scoreState.globalAgg, ctx.syncStartSec, ctx.signal),
+  const persistence = (await runWithOverloadRetry(
+    () =>
+      persistScores(
+        ctx.db,
+        poolState.metrics,
+        scoreState.scoreResults,
+        scoreState.globalAgg,
+        ctx.syncStartSec,
+        ctx.signal,
+      ),
     3,
     ctx.signal,
   )) ?? {
@@ -823,15 +909,30 @@ async function persistDexLiquidityScoreState(
       return [meta.id, !hasCriticalSourceFailure || hasPublishedRows];
     }),
   );
-  const challengerPublication = await publishDexPriceChallengerSnapshots(ctx.db, {
-    snapshotAt: ctx.syncStartSec,
-    retainedPoolsByStablecoin: scoreState.retainedPoolsByStablecoin,
-    sourceCoverageCompleteByStablecoin,
-    minPoolTvlUsd: POOL_CHALLENGE_MIN_TVL,
-  }, ctx.signal);
-  await computeDexPrices(ctx.db, scoreState.retainedPoolsByStablecoin, ctx.syncStartSec, sourceState.validationReferences, ctx.signal);
+  const challengerPublication = await publishDexPriceChallengerSnapshots(
+    ctx.db,
+    {
+      snapshotAt: ctx.syncStartSec,
+      retainedPoolsByStablecoin: scoreState.retainedPoolsByStablecoin,
+      sourceCoverageCompleteByStablecoin,
+      minPoolTvlUsd: POOL_CHALLENGE_MIN_TVL,
+    },
+    ctx.signal,
+  );
+  await computeDexPrices(
+    ctx.db,
+    scoreState.retainedPoolsByStablecoin,
+    ctx.syncStartSec,
+    sourceState.validationReferences,
+    ctx.signal,
+  );
 
-  const historicalSnapshot = (await writeHistoricalSnapshots(ctx.db, scoreState.scoreResults, ctx.signal, ctx.syncStartSec)) ?? {
+  const historicalSnapshot = (await writeHistoricalSnapshots(
+    ctx.db,
+    scoreState.scoreResults,
+    ctx.signal,
+    ctx.syncStartSec,
+  )) ?? {
     snapshotRowsWritten: 0,
     skipped: false,
     writeFailed: false,
@@ -901,9 +1002,9 @@ function buildDexLiquidityCronResult(
           excludedByReason: poolState.directApiIntegration.excludedByReason,
           circuitEvents: sourceState.directApiPhase.circuitEvents,
           sourceWarnings: sourceState.directApiPhase.sourceWarnings,
-          pagination: sourceState.directApiPhase.results.flatMap((entry) => entry.result.pagination
-            ? [{ source: entry.circuitKey, ...entry.result.pagination }]
-            : []),
+          pagination: sourceState.directApiPhase.results.flatMap((entry) =>
+            entry.result.pagination ? [{ source: entry.circuitKey, ...entry.result.pagination }] : [],
+          ),
         },
         sourceCoverage: scoreState.analysis.sourceCoverage,
         challengerPublication: persistenceState.challengerPublication,

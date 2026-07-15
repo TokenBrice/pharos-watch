@@ -256,6 +256,62 @@ describe("mergeStagedPools", () => {
     expect(metrics.get("test-coin")?.totalTvlUsd).toBe(originalTvl);
   });
 
+  it("streams a production-sized fixture in row order and releases each consumed D1 row", async () => {
+    const now = 1_710_000_000;
+    const rowCount = 4_357;
+    const poolAddress = (index: number) => `0x${(index + 1).toString(16).padStart(40, "0")}`;
+    const rows = Array.from({ length: rowCount }, (_, index) => ({
+      pool_id: `ethereum:${poolAddress(index)}`,
+      stablecoin_id: "usdt-tether",
+      source: "gecko_terminal",
+      chain: "ethereum",
+      protocol: "uniswap-v3",
+      dex_id: "uniswap-v3",
+      symbol: "USDT/USDC",
+      tvl_usd: 100_000 + index,
+      volume_24h: 50_000,
+      quality_multiplier: 0.85,
+      pool_type: "gt-concentrated",
+      fee_tier: null,
+      balance_ratio: null,
+      is_stable: 1,
+      base_token: baseToken,
+      quote_token: quoteToken,
+      quote_symbol: "USDC",
+      price_usd: null,
+      locked_liq_pct: null,
+      raw_json: null,
+      discovered_at: now - 86_400,
+      refreshed_at: now,
+    }));
+    let nextReleasedIndex = 0;
+    let releasedInOrder = true;
+    const trackedRows = new Proxy<Array<(typeof rows)[number] | undefined>>(rows, {
+      set(target, property, value, receiver) {
+        if (value === undefined && typeof property === "string" && /^\d+$/.test(property)) {
+          const index = Number(property);
+          releasedInOrder &&= index === nextReleasedIndex;
+          nextReleasedIndex++;
+        }
+        return Reflect.set(target, property, value, receiver);
+      },
+    });
+    const metrics = new Map();
+    const knownPoolIndex = makeKnownPoolIndex();
+
+    const result = await mergeStagedPools(createMockDb(trackedRows), metrics as never, knownPoolIndex, now);
+    const topPools = metrics.get("usdt-tether")?.topPools as Array<{ poolId: string }>;
+
+    expect(result.mergedCount).toBe(rowCount);
+    expect(result.skippedCount).toBe(0);
+    expect(topPools).toHaveLength(rowCount);
+    expect(topPools.every((pool, index) => pool.poolId === `ethereum:${poolAddress(index)}`)).toBe(true);
+    expect(knownPoolIndex.exactKeys.size).toBe(rowCount);
+    expect(nextReleasedIndex).toBe(rowCount);
+    expect(releasedInOrder).toBe(true);
+    expect(rows).toHaveLength(0);
+  });
+
   it("skips pools that exist in knownPoolAddrs", async () => {
     const mockDb = createMockDb([
       {
