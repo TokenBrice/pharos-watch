@@ -222,7 +222,17 @@
       "commonModeSignal": {
         "kind": "critical-dependency",
         "severity": "high"
-      }
+      },
+      "matureChains": [
+        "arbitrum",
+        "avalanche",
+        "base",
+        "bsc",
+        "ethereum",
+        "optimism",
+        "polygon",
+        "solana"
+      ]
     },
     "backing": {
       "componentQuality": {
@@ -824,7 +834,7 @@
         },
         "critical-dependency": {
           "low": null,
-          "moderate": null,
+          "moderate": 79,
           "high": 64,
           "critical": 49
         },

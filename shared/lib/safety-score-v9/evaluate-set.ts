@@ -8,6 +8,7 @@ import type {
 import type {
   V9EvidenceLevel,
   V9ReasonCode,
+  V9Severity,
   V9StructuralSignal,
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
@@ -247,6 +248,24 @@ function gapReasonsForStatus(
   return reasons.length > 0 ? reasons : [pillarReason(envelope, fallback, path)];
 }
 
+/**
+ * Grades a common-mode dependency signal's severity (owner ruling 2026-07-15
+ * Batch 3.3). Chain concentration across reviewed mature chains grades one rung
+ * lower than the default: only a chain-kind failure domain whose chain is in
+ * the reviewed mature set graduates to "moderate". Any other domain (a fragile
+ * or unreviewed chain, or a non-chain failure domain) stays fail-closed at the
+ * policy's default common-mode severity.
+ */
+export function commonModeSignalSeverity(
+  failureDomain: V9FailureDomainRef,
+  materiality: V9ValidatedPolicyEnvelope["policy"]["semantic"]["materiality"],
+): V9Severity {
+  if (failureDomain.kind === "chain" && materiality.matureChains.includes(failureDomain.key)) {
+    return "moderate";
+  }
+  return materiality.commonModeSignal.severity;
+}
+
 function commonModeSignalsByAsset(
   plan: V9DependencyEvaluationPlan,
   envelope: V9ValidatedPolicyEnvelope,
@@ -262,9 +281,11 @@ function commonModeSignalsByAsset(
       continue;
     }
     const key = domainKey(group.failureDomain);
+    const severity = commonModeSignalSeverity(group.failureDomain, materiality);
     for (const assetId of assetIds) {
       const signal: V9StructuralSignal = {
         ...materiality.commonModeSignal,
+        severity,
         reason: `${group.members.length} reviewed paths across ${assetIds.length} assets share ${key}.`,
         failureDomainKeys: [key],
         evidence: [],

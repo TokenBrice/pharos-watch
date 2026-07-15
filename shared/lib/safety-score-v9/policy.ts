@@ -31,6 +31,10 @@ function semanticPayload(policy: V9MethodologyPolicy): V9MethodologySemanticPayl
     schemaVersion: policy.schemaVersion,
     semantic: {
       ...policy.semantic,
+      materiality: {
+        ...policy.semantic.materiality,
+        matureChains: sortedUnique(policy.semantic.materiality.matureChains),
+      },
       backing: {
         ...policy.semantic.backing,
         reserve: {
