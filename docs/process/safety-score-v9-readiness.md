@@ -46,7 +46,7 @@ The V9 implementation establishes candidate infrastructure without changing prod
   candidate deterministically. The current policy semantic digest is
   `03a8ec9fa123dbfe35609b413855f823bc641937c2350b7aadd743213d1ef854`;
   the current evaluation-build digest is
-  `24ccc0bc831367b9ef0c69ef7408936670869d2056b33fb856572186dd93aff4`.
+  `12d7fd2a1775c026fd8b661cdf2350cc051dbdd72eb8cd67f84e6bb774715800`.
 - The 2026-07-14 `safety-score-v9-candidate-v2` policy revision implements the
   rating-parity re-tier: missing research evidence no longer reason-codes
   `NR`. Thirty-two registry codes moved from `NR` to `ceiling` treatments
