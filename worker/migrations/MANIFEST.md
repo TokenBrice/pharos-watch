@@ -149,6 +149,8 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0203     | `0203_cngn_ddr_event_90548_link.sql`                     | Link reviewed cNGN event 90548 to its unsealed canonical incident and close the durable DDR repair task                                               |
 | 0204     | `0204_safety_score_history_v2_identity_schema.sql`       | Persist the exact Safety Score identity schema version on V2 history rows                                                                            |
 | 0205     | `0205_dex_measured_execution.sql`                        | Add generation-fenced retained-pool target inventories and adapter-neutral measured execution quote rows                                              |
+| 0206     | `0206_cngn_ddr_events_90573_90584_link.sql`              | Link three reviewed cNGN recovery flaps to the active unsealed incident and close their durable DDR repair tasks                                       |
+| 0207     | `0207_telegram_execution_unknown_backlog_archive.sql`     | Guard, archive, and remove the exact reviewed Telegram execution-unknown backlog, then rebuild its ten authoritative job counters                       |
 
 ## Retired Individual Migrations
 
@@ -237,6 +239,8 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0203_cngn_ddr_event_90548_link.sql`: roll back DDR publication behavior by restoring the prior Worker. Keep the append-only repair authorization, consumption, link, and revision as reviewed provenance; do not recreate the closed repair task or detach event 90548 without a separate corrective migration.
 - `0204_safety_score_history_v2_identity_schema.sql`: roll back V2 schema-version reads and writes by restoring the prior Worker. Keep the additive non-null column; older Workers ignore it and the default preserves existing V2 rows.
 - `0205_dex_measured_execution.sql`: roll back measured-execution capture and scoring joins by restoring the prior Worker and removing the isolated quote trigger. Keep the additive target/quote rows and publication-ledger entries for forensic replay; older Workers ignore them.
+- `0206_cngn_ddr_events_90573_90584_link.sql`: roll back DDR publication behavior by restoring the prior Worker. Keep the append-only repair authorizations, consumptions, links, and ordered revisions as reviewed provenance; do not recreate the closed tasks or detach events 90573, 90576, and 90584 without a separate corrective migration.
+- `0207_telegram_execution_unknown_backlog_archive.sql`: do not requeue or reinterpret the archived effects during rollback. Keep the deterministic dead-letter evidence and authoritative `execution_unknown` target truth; restoring live queue rows could duplicate Telegram delivery and requires a separate operator-reviewed reconciliation.
 
 ## Rollback Procedure
 
