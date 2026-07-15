@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
+import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import type { RedemptionBackstopEntry, RedemptionCapacityProfile } from "@shared/types/redemption";
 import {
   buildRedemptionExitRouteObservation,
@@ -244,8 +244,60 @@ describe("derived supply-model route observations", () => {
     });
   });
 
+  it("shapes the sourced redemption-tail outputs and keeps incomplete claims fail-closed", () => {
+    const buildConfigured = (
+      stablecoinId: string,
+      overrides: Partial<Parameters<typeof buildRedemptionExitRouteObservation>[0]> = {},
+    ) => {
+      const configured = getRedemptionBackstopConfig(stablecoinId);
+      expect(configured).toBeDefined();
+      return build({
+        stablecoinId,
+        config: configured!,
+        routeStatus: configured!.routeStatus ?? "open",
+        now: Date.UTC(2026, 6, 15, 12) / 1_000,
+        ...overrides,
+      });
+    };
+
+    for (const [stablecoinId, trackedAssetIds] of [
+      ["ntbill-nest", ["usdc-circle", "pusd-plume"]],
+      ["nbasis-nest", ["usdc-circle", "pusd-plume"]],
+      ["nopal-nest", ["usdc-circle", "pusd-plume", "usdt-tether"]],
+      ["nwisdom-nest", ["usdc-circle", "pusd-plume"]],
+    ] as const) {
+      expect(buildConfigured(stablecoinId)?.output).toEqual({ kind: "tracked-stablecoin", trackedAssetIds });
+    }
+    expect(buildConfigured("ussd-sonic-labs")?.output).toEqual({
+      kind: "tracked-stablecoin",
+      trackedAssetIds: ["frxusd-frax"],
+    });
+    expect(buildConfigured("cusd-celo")?.output).toEqual({
+      kind: "tracked-stablecoin",
+      trackedAssetIds: ["usdc-circle", "usdt-tether"],
+    });
+    expect(buildConfigured("ceur-celo")?.output).toEqual({
+      kind: "tracked-stablecoin",
+      trackedAssetIds: ["cusd-celo"],
+    });
+    expect(buildConfigured("ftusd-flying-tulip")?.output).toEqual({
+      kind: "tracked-stablecoin",
+      trackedAssetIds: ["usdc-circle", "usdt-tether"],
+    });
+
+    const dusd = buildConfigured("dusd-dtrinity", { capacityConfidence: "heuristic" });
+    expect(dusd).toMatchObject({ output: { kind: "unresolved-basket" }, scoreEligible: false });
+
+    const hyusd = buildConfigured("hyusd-hylo");
+    expect(hyusd).toMatchObject({ output: { kind: "collateral" }, scoreEligible: false });
+    expect(hyusd?.output.assetKeys).toBeUndefined();
+    expect(hyusd?.output.trackedAssetIds).toBeUndefined();
+  });
+
   it("derives nothing outside the documented full-supply basis", () => {
-    expect(deriveSupplyModelExitRouteObservation({ ...supplyFullEntry, provider: "reserve-sync-metadata" }, now)).toBeNull();
+    expect(
+      deriveSupplyModelExitRouteObservation({ ...supplyFullEntry, provider: "reserve-sync-metadata" }, now),
+    ).toBeNull();
     expect(deriveSupplyModelExitRouteObservation({ ...supplyFullEntry, resolutionState: "impaired" }, now)).toBeNull();
     expect(deriveSupplyModelExitRouteObservation({ ...supplyFullEntry, routeStatus: "degraded" }, now)).toBeNull();
     expect(deriveSupplyModelExitRouteObservation({ ...supplyFullEntry, docs: null }, now)).toBeNull();
@@ -264,9 +316,7 @@ describe("derived supply-model route observations", () => {
           ...supplyFullEntry,
           capacityProfile: {
             ...supplyFullEntry.capacityProfile!,
-            exitRouteObservations: [
-              deriveSupplyModelExitRouteObservation(supplyFullEntry, now)!,
-            ],
+            exitRouteObservations: [deriveSupplyModelExitRouteObservation(supplyFullEntry, now)!],
           },
         },
         now,

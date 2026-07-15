@@ -37,11 +37,13 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     routeExitCorrelation: "same-protocol-liquidity",
     reviewedAt: "2026-07-13",
     docs: [
-      sourceRef(
-        "3Jane supplier withdrawals",
-        "https://docs.3jane.xyz/architecture/core-money-market/suppliers",
-        ["route", "capacity", "fees", "access", "settlement"],
-      ),
+      sourceRef("3Jane supplier withdrawals", "https://docs.3jane.xyz/architecture/core-money-market/suppliers", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
       sourceRef(
         "3Jane USD3 implementation",
         "https://github.com/3jane-protocol/moneymarket-contracts/blob/main/src/usd3/USD3.sol",
@@ -57,10 +59,18 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     outputAssetType: "stable-basket",
     capacityModel: { kind: "supply-ratio", ratio: 0.4, confidence: "heuristic", basis: "strategy-buffer" },
     costModel: fixedFee(50, "Protocol docs describe redemption fees of up to 50 bps"),
-    reviewedAt: "2026-04-16",
-    docs: [sourceRef("dTrinity documentation", "https://docs.dtrinity.org/", ["route", "capacity", "fees"])],
+    reviewedAt: "2026-07-15",
+    docs: [
+      sourceRef("dTRINITY dUSD reserve assets", "https://docs.dtrinity.org/protocol-components/dusd", [
+        "route",
+        "capacity",
+        "fees",
+      ]),
+    ],
     notes: [
-      "The 40% ratio is a reviewed heuristic reflecting tracked stable-bucket share rather than a published instant-liquidity floor",
+      "The 40% ratio is a reviewed heuristic reflecting tracked stable-bucket share rather than a published instant-liquidity floor.",
+      "dTRINITY currently marks 11 symbols redeem-eligible across Ethereum, Fraxtal, and Katana: USDC, USDT, USDS, sUSDS, frxUSD, sfrxUSD, DAI, sDAI, vbUSDC, vbUSDT, and AUSD.",
+      "outputAssets remains unset so the route resolves as an unresolved basket: vbUSDC and vbUSDT have no tracked Pharos ids, and publishing only the nine tracked economic assets would misstate the documented holder-selectable output set.",
     ],
   }),
   "ousd-origin-protocol": defineStablecoinRedeemConfig({
@@ -654,15 +664,24 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "ftusd-flying-tulip": defineStablecoinRedeemConfig({
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdc-circle", "usdt-tether"],
     capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "strategy-buffer" },
     costModel: undisclosedReviewedFee(
-      "Flying Tulip's MintAndRedeem contract supports permissionless 1:1 mint and redemption against USDC or USDT; public docs reviewed do not publish a fixed redemption fee",
+      "Flying Tulip shows the sell quote at the prevailing rate and any exit or cooldown parameters in-app; public docs do not publish one fixed redemption fee",
     ),
-    reviewedAt: "2026-04-16",
-    docs: [sourceRef("Flying Tulip documentation", "https://docs.flyingtulip.com/", ["route", "capacity"])],
+    reviewedAt: "2026-07-15",
+    docs: [
+      sourceRef("Flying Tulip ftUSD", "https://docs.flyingtulip.com/product-suite/ft-usd/", [
+        "route",
+        "capacity",
+        "fees",
+        "settlement",
+      ]),
+    ],
     notes: [
-      "ftUSD uses delta-neutral stablecoin lending + short perpetual hedging",
-      "The 10% ratio is a reviewed heuristic reflecting typical delta-neutral protocol on-hand stable buffers rather than a published instant-liquidity floor for this specific protocol",
+      "Flying Tulip's current Stage 0 wrapper names USDC and USDT, and the sell flow returns ftUSD to the selected input asset.",
+      "The 10% ratio is a reviewed heuristic reflecting typical delta-neutral protocol on-hand stable buffers rather than a published instant-liquidity floor for this specific protocol.",
     ],
   }),
   "usdz-anzen": defineStablecoinRedeemConfig({
