@@ -297,6 +297,15 @@ function setupDefaultMocks() {
     coveredCount: 4,
     trackedCount: 4,
     coverageRatio: 1,
+    // The producer now requires a publication identity before rating rows.
+    safetyScoreIdentity: {
+      model: "v8",
+      schemaVersion: 1,
+      methodologyVersion: "vTEST",
+      evaluationBuildDigest: "a".repeat(64),
+      baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+      publicationGenerationId: "report-cards-test",
+    },
     scores: new Map([
       ["sdai-maker", { score: 85, grade: "A-" }],
       ["usde-ethena", { score: 70, grade: "B" }],

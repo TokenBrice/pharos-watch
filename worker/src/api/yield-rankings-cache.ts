@@ -571,6 +571,9 @@ function degradeYieldRankingsSafety(
     provenance: row.provenance
       ? {
           ...row.provenance,
+          // Source freshness derives from the row itself, not the safety
+          // snapshot, so the degraded path still reports it honestly.
+          sourceFreshness: resolveHydratedSourceFreshness(row),
           usedDefaultSafety: true,
           safetyProvenance: "safety-snapshot-unavailable" as const,
           safetyReason: reason,

@@ -16,6 +16,25 @@ import {
   fixtureMockD1,
 } from "./telegram-webhook.test-support";
 
+// The hardened /status path loads the identity-matched canonical V8 snapshot;
+// webhook tests exercise command routing, so stub the loader with a minimal
+// matching source (the fail-closed paths have their own focused tests).
+vi.mock("../../lib/safety-score-history-v2", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  loadActiveV8SafetyScoreHistorySource: vi.fn(async () => ({
+    snapshot: {
+      cards: [{ id: "usdc-circle", overallGrade: "A", overallScore: 85, isDefunct: false }],
+    },
+    identity: {
+      model: "v8",
+      methodologyVersion: "vTEST",
+      publicationGenerationId: "report-cards-test",
+    },
+    publishedAtSec: 1700000000,
+  })),
+}));
+
+
 describe("handleTelegramWebhook", () => {
   beforeEach(resetTelegramWebhookTest);
   it("handles /subscribe happy path with unique ticker", async () => {
