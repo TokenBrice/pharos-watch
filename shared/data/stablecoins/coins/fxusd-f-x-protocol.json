@@ -284,7 +284,7 @@
   "reserveReview": {
     "reviewedAt": "2026-07-14",
     "reviewer": "SONG-1 Safety Score V9 reserve review",
-    "confidence": "verified",
+    "confidence": "probable",
     "sources": [
       {
         "label": "f(x) collateral and liquidation documentation",
