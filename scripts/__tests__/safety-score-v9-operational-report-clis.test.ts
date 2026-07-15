@@ -431,13 +431,20 @@ describe("Safety Score v9 evidence-gap queue", () => {
     expect(queue).toMatchObject({
       purpose: "evidence-work-queue-not-release-gate",
       status: "work-required",
-      summary: { gapCount: 1, criticalGapCount: 0, knownSupplyWeightGapCount: 1 },
+      summary: {
+        gapCount: 1,
+        criticalGapCount: 0,
+        knownSupplyWeightGapCount: 1,
+        policyBindingMismatchGapCount: 0,
+      },
     });
     expect(queue.entries[0]).toMatchObject({
       priority: 1,
       assetId: "asset-001",
       reasonCode: "missing-implementation-date",
       ownerDomain: "evidence",
+      factOwnerDomain: "evidence",
+      policyBindingIssues: [],
       applicability: "required",
       observationState: "missing",
       action: "collect-evidence",
@@ -483,6 +490,70 @@ describe("Safety Score v9 evidence-gap queue", () => {
       factOwnerDomain: "control",
       policyBindingIssues: ["fact-owner-domain-mismatch"],
       action: "reconcile-policy-binding",
+    });
+  });
+
+  it("surfaces fact-to-policy path-kind drift as reconciliation work", () => {
+    const core = factSetCore();
+    core.assets[0]!.gaps[0]!.path = {
+      kind: "methodology",
+      componentKey: "implementation.launch-date",
+    };
+    const queue = buildV9EvidenceGapQueue({
+      factSet: compileV9FactSetV2(core),
+      policy: loadV9MethodologyPolicy(policyAsset),
+    });
+
+    expect(queue.summary.policyBindingMismatchGapCount).toBe(1);
+    expect(queue.entries[0]).toMatchObject({
+      ownerDomain: "evidence",
+      factOwnerDomain: "evidence",
+      path: { kind: "methodology" },
+      policyBindingIssues: ["path-kind-not-permitted"],
+      action: "reconcile-policy-binding",
+    });
+  });
+
+  it("surfaces fact-to-policy archetype drift as reconciliation work", () => {
+    const core = factSetCore();
+    core.assets[0]!.gaps[0]!.reasonCode = "incomplete-oracle-liquidation-branch";
+    core.assets[0]!.gaps[0]!.ownerDomain = "control";
+    const queue = buildV9EvidenceGapQueue({
+      factSet: compileV9FactSetV2(core),
+      policy: loadV9MethodologyPolicy(policyAsset),
+    });
+
+    expect(queue.summary.policyBindingMismatchGapCount).toBe(1);
+    expect(queue.entries[0]).toMatchObject({
+      archetype: "algorithmic",
+      ownerDomain: "control",
+      factOwnerDomain: "control",
+      path: { kind: "local-component" },
+      policyBindingIssues: ["archetype-not-permitted"],
+      action: "reconcile-policy-binding",
+    });
+  });
+
+  it.each([
+    ["missing-pillar-evidence", "evidence"],
+    ["missing-access-review", "control"],
+  ] as const)("keeps %s %s-owned and locally bound", (reasonCode, ownerDomain) => {
+    const core = factSetCore();
+    core.assets[0]!.gaps[0]!.reasonCode = reasonCode;
+    core.assets[0]!.gaps[0]!.ownerDomain = ownerDomain;
+    const queue = buildV9EvidenceGapQueue({
+      factSet: compileV9FactSetV2(core),
+      policy: loadV9MethodologyPolicy(policyAsset),
+    });
+
+    expect(queue.summary.policyBindingMismatchGapCount).toBe(0);
+    expect(queue.entries[0]).toMatchObject({
+      reasonCode,
+      ownerDomain,
+      factOwnerDomain: ownerDomain,
+      path: { kind: "local-component" },
+      policyBindingIssues: [],
+      action: "collect-evidence",
     });
   });
 });

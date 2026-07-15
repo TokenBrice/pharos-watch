@@ -44,9 +44,14 @@ The V9 implementation establishes candidate infrastructure without changing prod
 - `worker/src/lib/safety-score-v9-candidate.ts` and
   `worker/scripts/replay-safety-score-v9.ts` compile and evaluate the exact
   candidate deterministically. The current policy semantic digest is
-  `03a8ec9fa123dbfe35609b413855f823bc641937c2350b7aadd743213d1ef854`;
+  `6b6f819eb06740634239467ed6041125d7971f8df0fbedf0e4bd836cac405053`;
   the current evaluation-build digest is
-  `06e371ddf7f9446a7743e99c302f9295a4c7f7ae8ad36427f6c9a3d64db20328`.
+  `94819987e08f55f50028907f2feece5a6099543e91a05b3c437b1cb398da45f3`.
+- The 2026-07-15 candidate-v2 queue-binding revision adds explicit
+  `local-component` paths to seven reason allowlists already emitted as
+  aggregate facts. The revision changes evidence-work-queue metadata only;
+  treatments, ceilings, dispositions, grade bands, and same-input scores are
+  unchanged.
 - The 2026-07-14 `safety-score-v9-candidate-v2` policy revision implements the
   rating-parity re-tier: missing research evidence no longer reason-codes
   `NR`. Thirty-two registry codes moved from `NR` to `ceiling` treatments

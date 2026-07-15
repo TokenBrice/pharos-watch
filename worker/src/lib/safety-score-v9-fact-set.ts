@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { compileV9FactSetV2 } from "@shared/lib/safety-score-v9/compile";
+import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
+import { isDexExitRouteCoverageComplete } from "@shared/lib/p4-exit-route-capacity";
 import { canonicalV9DependencyEdgeKey, canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
 import {
   createV9EvidenceReference,
@@ -721,19 +723,41 @@ function normalizeMechanismReview(
 function buildMechanismReview(context: AssetBuildContext): V9MechanismRiskReviewFactV2 {
   if (context.asset.mechanismRiskReview === null) {
     const unresolvedArchetype = context.asset.archetype === "unresolved";
+    if (unresolvedArchetype) {
+      // A missing archetype is a METHODOLOGY classification failure, not a
+      // backing evidence gap: the policy binds missing-archetype to the
+      // methodology owner and path (queue-contract reconciliation).
+      const gapId = addGap(
+        context,
+        createV9FactGap({
+          gapId: `${context.asset.assetId}:gap:mechanism-risk-review`,
+          reasonCode: "missing-archetype",
+          ownerDomain: "methodology",
+          policyRuleId: "v9.backing.mechanism-review",
+          observationState: "missing",
+          path: { kind: "methodology", componentKey: "mechanism-risk-review" },
+          message: "The asset does not yet have a resolved Safety Score v9 mechanism archetype.",
+        }),
+      );
+      return {
+        status: createV9FactStatus({
+          applicability: requiredV9Applicability("v9.backing.mechanism-review"),
+          observationState: "missing",
+          gapIds: [gapId],
+        }),
+        review: null,
+      };
+    }
     return {
       status: missingLocalFact(context, {
         componentKey: "mechanism-risk-review",
         // An absent review with a resolved archetype is bounded under the
         // candidate policy: the backing pillar scores at the bounded-unknown
-        // quality instead of reason-coding NR. Only an unresolved archetype
-        // stays a critical classification failure.
-        reasonCode: unresolvedArchetype ? "missing-archetype" : "bounded-mechanism-review",
+        // quality instead of reason-coding NR.
+        reasonCode: "bounded-mechanism-review",
         ownerDomain: "backing",
         policyRuleId: "v9.backing.mechanism-review",
-        message: unresolvedArchetype
-          ? "The asset does not yet have a resolved Safety Score v9 mechanism archetype."
-          : "No policy-independent archetype mechanism review is present in the v9 overlay.",
+        message: "No policy-independent archetype mechanism review is present in the v9 overlay.",
       }).status,
       review: null,
     };
@@ -1178,12 +1202,8 @@ function resolvedBaseRouteOutput(observation: ExitRouteObservation): {
 } | null {
   const output = observation.output;
   if (output.kind !== "tracked-stablecoin" && output.kind !== "fiat" && output.kind !== "collateral") return null;
-  const assetKeys = [
-    ...(output.assetKeys ?? []),
-    ...(output.kind === "tracked-stablecoin" ? (output.trackedAssetIds ?? []) : []),
-    ...(output.kind === "fiat" && output.currency ? [`fiat:${output.currency}`] : []),
-  ];
-  return { kind: output.kind, assetKeys: [...new Set(assetKeys)].sort(compareText) };
+  const assetKeys = resolvedExitRouteOutputAssetKeys(output);
+  return assetKeys ? { kind: output.kind, assetKeys } : null;
 }
 
 function assertRouteOutputReviewMatchesBase(
@@ -1574,10 +1594,7 @@ function buildRoutes(context: AssetBuildContext): {
   const coverage = context.fixedInput.dexLiqMap[context.asset.assetId]?.exitRouteObservationCoverage;
   const dexSurfaceComplete =
     coverage != null &&
-    (coverage.retainedPoolCount === 0 ||
-      (coverage.status === "populated" &&
-        coverage.scoreEligiblePoolCount != null &&
-        coverage.scoreEligiblePoolCount === coverage.retainedPoolCount));
+    (coverage.retainedPoolCount === 0 || isDexExitRouteCoverageComplete(coverage));
   const portfolioGapIds = [...gapIds];
   if (!dexSurfaceComplete) {
     portfolioGapIds.push(
@@ -2056,7 +2073,7 @@ function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
     status = missingLocalFact(context, {
       componentKey: "bridge-materiality",
       reasonCode: "runtime-bridge-materiality-unavailable",
-      ownerDomain: "dependency",
+      ownerDomain: "control",
       policyRuleId: "v9.supply.bridge-materiality",
       message: "Circulating USD is known, but bridge-route materiality has not been reviewed.",
       observationState: "bounded-unknown",

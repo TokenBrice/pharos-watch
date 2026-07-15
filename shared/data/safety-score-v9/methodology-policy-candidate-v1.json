@@ -1063,7 +1063,8 @@
         "*"
       ],
       "pathKinds": [
-        "optional-exit"
+        "optional-exit",
+        "local-component"
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
@@ -1307,7 +1308,8 @@
         "*"
       ],
       "pathKinds": [
-        "deployment-control"
+        "deployment-control",
+        "local-component"
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
@@ -1467,7 +1469,8 @@
         "*"
       ],
       "pathKinds": [
-        "peg"
+        "peg",
+        "local-component"
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
@@ -1570,7 +1573,8 @@
         "*"
       ],
       "pathKinds": [
-        "collateral-exposure"
+        "collateral-exposure",
+        "local-component"
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
@@ -1593,7 +1597,8 @@
         "*"
       ],
       "pathKinds": [
-        "optional-exit"
+        "optional-exit",
+        "local-component"
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
@@ -1767,7 +1772,8 @@
         "*"
       ],
       "pathKinds": [
-        "deployment-control"
+        "deployment-control",
+        "local-component"
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
@@ -2017,7 +2023,8 @@
       ],
       "pathKinds": [
         "collateral-exposure",
-        "serial-dependency"
+        "serial-dependency",
+        "local-component"
       ],
       "defaultFactClass": "missing-global-bounded",
       "boundedness": "globally-bounded",
