@@ -571,8 +571,8 @@
     },
     {
       "type": "warning",
-      "title": "Severe ongoing depeg",
-      "message": "As of June 28, 2026, MIM trades near $0.28 after a severe June 2026 depeg. Abracadabra has emergency measures active, including cauldron interest-rate hikes and paused Curve incentives; the issue is tied to thin and imbalanced Curve liquidity rather than a new contract exploit, and no peg-restoration timeline is confirmed."
+      "title": "Severe depeg and unexplained DAO treasury transfers",
+      "message": "MIM remained severely depegged as of July 15, 2026. On July 14, Abracadabra-controlled Ethereum and Arbitrum Safes moved roughly $8.3M of treasury assets at then-current prices, including about 2,142 ETH/WETH to a Binance-tagged deposit address and about $4.30M of USDC/USDT to an unlabeled address that immediately forwarded the funds. The Ethereum Safe had also sold 500,000 MIM into Curve on June 8 and 11 for about $489,000. Pharos found no public explanation from Abracadabra as of July 15. These facts do not establish theft, and treasury assets are not MIM's direct cauldron collateral, but the transfers reduce the DAO's transparent onchain treasury backstop while destination control remains unknown."
     }
   ]
 }
