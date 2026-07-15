@@ -321,7 +321,7 @@ Generated from `public/openapi.json` (`Pharos API` v1.0.0). The OpenAPI artifact
 Total documented public operations: **40**.
 
 | Method | Path | Summary | Tags | Auth | Parameters | Status codes |
-| ------ | ------------------------------------------------ | -------------------------------------------- | ---------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| ------ | ---- | ------- | ---- | ---- | ---------- | ------------ |
 | GET | `/api/blacklist` | Blacklist events | Blacklist | X-API-Key | `stablecoin?`, `chain?`, `chainId?`, `eventType?`, `q?`, `sortBy?`, `sortDirection?`, `limit?`, `offset?`, `includeTotal?` | 200, 400, 401, 429, 503 |
 | GET | `/api/blacklist-summary` | Blacklist summary | Blacklist | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/bluechip-ratings` | Bluechip ratings | Risk | X-API-Key | — | 200, 400, 401, 429, 503 |
