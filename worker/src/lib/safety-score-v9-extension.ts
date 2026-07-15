@@ -924,6 +924,7 @@ function adaptMintReview(
         status: requiredStatus("v9.control.mint-review", "missing", `mint:${meta.id}`),
         controlKey: null,
         reconciliation: "unknown",
+        supervision: "unknown",
         upgrade: { state: "unknown", controlKey: null },
       },
       controls: [],
@@ -1009,6 +1010,9 @@ function adaptMintReview(
       ),
       controlKey: mintControl?.controlKey ?? null,
       reconciliation,
+      // Prudential supervision is not derivable from the mint-authority
+      // profile; it stays "unknown" until a per-coin review curates it.
+      supervision: "unknown",
       upgrade,
     },
     controls,

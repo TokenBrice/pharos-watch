@@ -13,6 +13,7 @@ import type {
 import { assertV9ReasonCodesRegistered, assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
 
 export type V9MintReconciliation = "continuous" | "periodic" | "not-applicable" | "unknown";
+export type V9MintSupervision = "prudential" | "attestation-only" | "none" | "unknown";
 export type V9MintPosture =
   | "none-resolved"
   | "bounded-admin"
@@ -48,6 +49,7 @@ export interface V9MintMechanismReview {
   status: V9FactStatusV2;
   controlKey: string | null;
   reconciliation: V9MintReconciliation;
+  supervision: V9MintSupervision;
   upgrade: V9UpgradeControlReview;
 }
 
@@ -477,17 +479,24 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     if (posture === "unbounded-or-compromised") {
       // Reconciled unbounded minting is a graduated severity: supply is
       // provably matched against reserves even though the mint path itself
-      // carries no on-chain bound. Compromise and unreconciled unbounded
-      // minting remain critical.
+      // carries no on-chain bound. A reviewed prudential-supervision fact
+      // (NYDFS/SEC-class) graduates one further rung to moderate. Compromise
+      // and unreconciled unbounded minting remain critical unconditionally.
       const reconciled =
         !compromised && (mint.reconciliation === "continuous" || mint.reconciliation === "periodic");
+      const prudentiallySupervised = reconciled && mint.supervision === "prudential";
+      const severity: V9Severity =
+        compromised || !reconciled ? "critical" : prudentiallySupervised ? "moderate" : "high";
+      const reason = prudentiallySupervised
+        ? "Minting is economically unbounded but reconciled and prudentially supervised."
+        : reconciled
+          ? "Minting is economically unbounded but supply is reconciled against reserves."
+          : "Economically effective minting is unbounded or compromised.";
       addStructuralFailure({
         kind: "centralized-mint",
-        severity: reconciled ? "high" : "critical",
+        severity,
         binding: mintBinding,
-        reason: reconciled
-          ? "Minting is economically unbounded but supply is reconciled against reserves."
-          : "Economically effective minting is unbounded or compromised.",
+        reason,
         materialSharePct: null,
         controlKeys: componentControlKeys,
         failureDomains: componentFailureDomains,

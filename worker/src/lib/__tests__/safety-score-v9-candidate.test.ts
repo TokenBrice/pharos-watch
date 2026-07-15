@@ -283,6 +283,7 @@ function reviewedExtension(fixedInput = exactFixedInput("alpha")): SafetyScoreV9
       status: notApplicableStatus("v9.control.mint-review"),
       controlKey: null,
       reconciliation: "not-applicable",
+      supervision: "unknown",
       upgrade: { state: "not-applicable", controlKey: null },
     },
     oracle: {

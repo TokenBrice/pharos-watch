@@ -171,6 +171,7 @@ function factSetCore(message = "Launch date evidence has not been established.")
             status: notApplicableStatus("v9.control.mint.not-applicable"),
             controlKey: null,
             reconciliation: "not-applicable",
+            supervision: "unknown",
             upgrade: { state: "not-applicable", controlKey: null },
           },
           oracle: {
