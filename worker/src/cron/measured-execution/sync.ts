@@ -1,0 +1,596 @@
+import {
+  getDexMeasuredExecutionProbeNotionals,
+  validateDexMeasuredExecutionProfile,
+  type DexMeasuredExecutionPoolBindingProof,
+  type DexMeasuredExecutionTarget,
+} from "@shared/types/measured-execution";
+import type { ChainRpcConfig } from "../../lib/chain-registry";
+import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
+import { fetchEvmBlockNumber } from "../../lib/evm-rpc";
+import { toErrorMessage } from "../../lib/error-utils";
+import { readDexSourcePaginationState, writeDexSourcePaginationState } from "../dex-liquidity/source-pagination-state";
+import { rotateFromCursor } from "../shared/cursor-rotation";
+import {
+  buildDexMeasuredQuoteGenerationId,
+  loadLatestPublishedDexMeasuredTargets,
+  publishDexMeasuredQuoteGeneration,
+  pruneDexMeasuredExecutionGenerations,
+  type DexMeasuredQuoteOutcome,
+} from "./persistence";
+import {
+  buildDexMeasuredExecutionProfile,
+  createDexMeasuredExecutionRpcBudget,
+  type DexMeasuredRawQuotePoint,
+} from "./profiles";
+import { quoteQuoterV2Requests, resolveQuoterV2PoolBindings, validateQuoterV2ProfileProof } from "./quoter-v2";
+import {
+  getDexMeasuredExecutionDeployment,
+  verifyDexMeasuredExecutionDeployment,
+  type DexMeasuredExecutionDeployment,
+} from "./registry";
+import {
+  FLUID_RESOLVER_ADAPTER_PROFILE_ID,
+  getFluidResolverDeployment,
+  quoteFluidResolverRequests,
+  validateFluidResolverProfileProof,
+  verifyFluidResolverDeployment,
+  type FluidResolverDeployment,
+} from "./fluid-resolver";
+
+const MAX_QUOTE_CALLS = 6_400;
+const MAX_RPC_REQUESTS = 800;
+const MAX_RUNTIME_MS = 8 * 60 * 1_000;
+const REFINEMENT_ROUNDS = 3;
+export const MEASURED_EXECUTION_ADMISSION_SOURCE_KEY = "measured-execution:quote-admission";
+
+type TargetDeployment =
+  | { kind: "quoter-v2"; config: DexMeasuredExecutionDeployment }
+  | { kind: "fluid-resolver"; config: FluidResolverDeployment };
+
+interface TargetQuoteState {
+  target: DexMeasuredExecutionTarget;
+  deployment: TargetDeployment | null;
+  blockNumber: number | null;
+  blockObservedAt: number | null;
+  endpointCodeHash: `0x${string}` | null;
+  poolBindingProof: DexMeasuredExecutionPoolBindingProof | null;
+  points: DexMeasuredRawQuotePoint[];
+  failedReason: string | null;
+  stopped: boolean;
+  bracket: { lowerPassingUsd: number; upperFailingUsd: number } | null;
+}
+
+async function runWithConcurrency<T>(
+  values: readonly T[],
+  concurrency: number,
+  run: (value: T) => Promise<void>,
+): Promise<void> {
+  let cursor = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, values.length) }, async () => {
+      while (cursor < values.length) {
+        const index = cursor++;
+        await run(values[index]!);
+      }
+    }),
+  );
+}
+
+function deploymentForTarget(target: DexMeasuredExecutionTarget): TargetDeployment | null {
+  if (target.adapterProfileId === FLUID_RESOLVER_ADAPTER_PROFILE_ID) {
+    const deployment = getFluidResolverDeployment(target.chain);
+    return deployment ? { kind: "fluid-resolver", config: deployment } : null;
+  }
+  const deployment = getDexMeasuredExecutionDeployment(target.adapterProfileId, target.chain);
+  return deployment ? { kind: "quoter-v2", config: deployment } : null;
+}
+
+export function admitTargetsWithinBudget(
+  targets: readonly DexMeasuredExecutionTarget[],
+  options: { cursor?: string | null; maxQuoteCalls?: number; refinementRounds?: number } = {},
+): {
+  admitted: Set<string>;
+  deferred: Set<string>;
+  nextCursor: string | null;
+} {
+  const byCoin = new Map<string, DexMeasuredExecutionTarget[]>();
+  for (const target of targets) {
+    const rows = byCoin.get(target.stablecoinId) ?? [];
+    rows.push(target);
+    byCoin.set(target.stablecoinId, rows);
+  }
+  const ranked = [...byCoin].sort((left, right) => {
+    const leftTvl = left[1].reduce((sum, target) => sum + target.retainedTvlUsd, 0);
+    const rightTvl = right[1].reduce((sum, target) => sum + target.retainedTvlUsd, 0);
+    return rightTvl - leftTvl || left[0].localeCompare(right[0]);
+  });
+  const rotated = rotateFromCursor(ranked, options.cursor, ([stablecoinId]) => stablecoinId, {
+    startAfterCursor: true,
+  }).items;
+  const admitted = new Set<string>();
+  const deferred = new Set<string>();
+  let estimatedCalls = 0;
+  let nextCursor = options.cursor ?? null;
+  let overflowed = false;
+  for (const [stablecoinId, coinTargets] of rotated) {
+    const coinCalls = coinTargets.reduce(
+      (sum, target) =>
+        sum +
+        getDexMeasuredExecutionProbeNotionals(target.retainedTvlUsd).length +
+        (options.refinementRounds ?? REFINEMENT_ROUNDS),
+      0,
+    );
+    if (overflowed || estimatedCalls + coinCalls > (options.maxQuoteCalls ?? MAX_QUOTE_CALLS)) {
+      if (!overflowed && admitted.size === 0) nextCursor = stablecoinId;
+      overflowed = true;
+      for (const target of coinTargets) deferred.add(target.targetId);
+      continue;
+    }
+    estimatedCalls += coinCalls;
+    for (const target of coinTargets) admitted.add(target.targetId);
+    nextCursor = stablecoinId;
+  }
+  return { admitted, deferred, nextCursor };
+}
+
+export function resolveMeasuredExecutionCronStatus(input: {
+  failedCount: number;
+  cursorWriteStatus: "not-needed" | "written" | "missing-table" | "write-failed";
+}): "ok" | "degraded" {
+  return input.failedCount > 0 || input.cursorWriteStatus === "write-failed" ? "degraded" : "ok";
+}
+
+function markBudgetStop(states: readonly TargetQuoteState[], reason: string | null): void {
+  if (!reason) return;
+  for (const state of states) {
+    if (!state.failedReason) state.failedReason = reason;
+  }
+}
+
+function applyQuoteOutcome(
+  state: TargetQuoteState,
+  outcome: { point?: DexMeasuredRawQuotePoint; failureReason?: string },
+): void {
+  if (!outcome.point) {
+    state.failedReason = outcome.failureReason ?? "quote-failed";
+    return;
+  }
+  state.points.push(outcome.point);
+  if (!outcome.point.passesCostBound) {
+    state.stopped = true;
+    const passing = state.points
+      .filter((point) => point.passesCostBound && point.inputUsd < outcome.point!.inputUsd)
+      .sort((left, right) => right.inputUsd - left.inputUsd)[0];
+    state.bracket = passing ? { lowerPassingUsd: passing.inputUsd, upperFailingUsd: outcome.point.inputUsd } : null;
+  }
+}
+
+export async function syncDexMeasuredExecution(
+  db: D1Database,
+  chainRpcs: Map<string, ChainRpcConfig>,
+  signal?: AbortSignal,
+  reportProgress?: CronProgressReporter,
+): Promise<CronResult> {
+  const startedAtMs = Date.now();
+  const startedAt = Math.floor(startedAtMs / 1_000);
+  const rpcBudget = createDexMeasuredExecutionRpcBudget({
+    maxRequests: MAX_RPC_REQUESTS,
+    deadlineMs: startedAtMs + MAX_RUNTIME_MS,
+  });
+  const targetGeneration = await loadLatestPublishedDexMeasuredTargets(db, signal);
+  if (!targetGeneration || targetGeneration.targets.length === 0) {
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({ reason: "target-generation-missing" }),
+      productivity: { productive: false, reason: "target-generation-missing" },
+    };
+  }
+
+  const quoteGenerationId = buildDexMeasuredQuoteGenerationId(startedAt);
+  const admissionState = await readDexSourcePaginationState(
+    db,
+    MEASURED_EXECUTION_ADMISSION_SOURCE_KEY,
+    "sync-cl-exit-depth",
+  );
+  const admissionCursor = admissionState.cursor?.trim() || null;
+  const { admitted, deferred, nextCursor } = admitTargetsWithinBudget(targetGeneration.targets, {
+    cursor: admissionCursor,
+  });
+  const states = targetGeneration.targets.map<TargetQuoteState>((target) => ({
+    target,
+    deployment: deploymentForTarget(target),
+    blockNumber: null,
+    blockObservedAt: null,
+    endpointCodeHash: null,
+    poolBindingProof: null,
+    points: [],
+    failedReason: deferred.has(target.targetId) ? "budget-deferred" : null,
+    stopped: false,
+    bracket: null,
+  }));
+  for (const state of states) {
+    if (admitted.has(state.target.targetId) && !state.deployment) {
+      state.failedReason = "unsupported-deployment";
+    }
+  }
+
+  const chainStates = new Map<string, TargetQuoteState[]>();
+  for (const state of states) {
+    if (state.failedReason || !state.deployment) continue;
+    const rows = chainStates.get(state.target.chain) ?? [];
+    rows.push(state);
+    chainStates.set(state.target.chain, rows);
+  }
+  await runWithConcurrency([...chainStates], 3, async ([chain, rows]) => {
+    if (!rpcBudget.canRequestChain(chain)) {
+      markBudgetStop(rows, rpcBudget.stopReason);
+      return;
+    }
+    const blockObservedAt = Math.floor(Date.now() / 1_000);
+    const blockNumber = await fetchEvmBlockNumber(chain, {
+      chainRpcs,
+      signal,
+      timeoutMs: 15_000,
+      deadlineMs: rpcBudget.deadlineMs,
+      beforeRequest: () => rpcBudget.tryConsume(),
+      maxRetries: 0,
+    });
+    rpcBudget.recordChainResult(chain, blockNumber != null);
+    if (rpcBudget.stopReason) {
+      markBudgetStop(rows, rpcBudget.stopReason);
+      return;
+    }
+    if (blockNumber == null) {
+      for (const state of rows) state.failedReason = "block-number-unavailable";
+      return;
+    }
+    for (const state of rows) {
+      state.blockNumber = blockNumber;
+      state.blockObservedAt = blockObservedAt;
+    }
+
+    const deploymentGroups = new Map<string, TargetQuoteState[]>();
+    for (const state of rows) {
+      const config = state.deployment!.config;
+      const key = `${state.deployment!.kind}:${config.endpointAddress}`;
+      const group = deploymentGroups.get(key) ?? [];
+      group.push(state);
+      deploymentGroups.set(key, group);
+    }
+    for (const deploymentRows of deploymentGroups.values()) {
+      const deployment = deploymentRows[0]!.deployment!;
+      if (deployment.kind === "quoter-v2") {
+        const verified = await verifyDexMeasuredExecutionDeployment({
+          deployment: deployment.config,
+          blockNumber,
+          chainRpcs,
+          signal,
+          rpcBudget,
+        });
+        if (!verified.ok) {
+          if (rpcBudget.stopReason) markBudgetStop(deploymentRows, rpcBudget.stopReason);
+          else for (const state of deploymentRows) state.failedReason = verified.reason;
+          continue;
+        }
+        for (const state of deploymentRows) state.endpointCodeHash = verified.codeHash;
+      } else {
+        const verified = await verifyFluidResolverDeployment({
+          deployment: deployment.config,
+          blockNumber,
+          chainRpcs,
+          signal,
+          rpcBudget,
+        });
+        if (!verified.ok) {
+          if (rpcBudget.stopReason) markBudgetStop(deploymentRows, rpcBudget.stopReason);
+          else for (const state of deploymentRows) state.failedReason = verified.reason;
+          continue;
+        }
+        for (const state of deploymentRows) state.endpointCodeHash = verified.codeHash;
+      }
+      if (rpcBudget.stopReason) {
+        markBudgetStop(deploymentRows, rpcBudget.stopReason);
+        break;
+      }
+    }
+  });
+  markBudgetStop(states, rpcBudget.stopReason);
+
+  const quoterStatesByChain = new Map<string, TargetQuoteState[]>();
+  for (const state of states) {
+    if (
+      state.failedReason ||
+      state.deployment?.kind !== "quoter-v2" ||
+      state.blockNumber == null ||
+      !state.endpointCodeHash
+    )
+      continue;
+    const rows = quoterStatesByChain.get(state.target.chain) ?? [];
+    rows.push(state);
+    quoterStatesByChain.set(state.target.chain, rows);
+  }
+  await runWithConcurrency([...quoterStatesByChain.values()], 3, async (rows) => {
+    const rowsByFactory = new Map<string, TargetQuoteState[]>();
+    for (const state of rows) {
+      const deployment = state.deployment!;
+      if (deployment.kind !== "quoter-v2") continue;
+      const key = `${deployment.config.adapterProfileId}:${deployment.config.factoryAddress}`;
+      const deploymentRows = rowsByFactory.get(key) ?? [];
+      deploymentRows.push(state);
+      rowsByFactory.set(key, deploymentRows);
+    }
+    for (const deploymentRows of rowsByFactory.values()) {
+      const deployment = deploymentRows[0]!.deployment!;
+      if (deployment.kind !== "quoter-v2") continue;
+      const outcomes = await resolveQuoterV2PoolBindings({
+        requests: deploymentRows.map((state) => ({
+          target: state.target,
+          factoryAddress: deployment.config.factoryAddress,
+          factoryCodeHash: deployment.config.expectedFactoryCodeHash,
+        })),
+        blockNumber: deploymentRows[0]!.blockNumber!,
+        chainRpcs,
+        signal,
+        rpcBudget,
+      });
+      outcomes.forEach((outcome, index) => {
+        const state = deploymentRows[index]!;
+        if (outcome.proof) state.poolBindingProof = outcome.proof;
+        else if (rpcBudget.stopReason) markBudgetStop([state], rpcBudget.stopReason);
+        else state.failedReason = outcome.failureReason ?? "factory-pool-binding-failed";
+      });
+      if (rpcBudget.stopReason) break;
+    }
+  });
+  markBudgetStop(states, rpcBudget.stopReason);
+
+  let quoteCallCount = 0;
+  const runStage = async (requests: Array<{ state: TargetQuoteState; inputUsd: number }>): Promise<void> => {
+    if (rpcBudget.stopReason) {
+      markBudgetStop(states, rpcBudget.stopReason);
+      return;
+    }
+    const runnable = requests.filter(
+      ({ state }) =>
+        !state.failedReason &&
+        state.deployment != null &&
+        state.blockNumber != null &&
+        state.endpointCodeHash != null &&
+        (state.deployment.kind !== "quoter-v2" || state.poolBindingProof != null),
+    );
+    if (runnable.length === 0) return;
+    if (quoteCallCount + runnable.length > MAX_QUOTE_CALLS) {
+      for (const { state } of runnable) state.failedReason = "quote-call-budget-exhausted";
+      return;
+    }
+    quoteCallCount += runnable.length;
+
+    const byChain = new Map<string, typeof runnable>();
+    for (const request of runnable) {
+      const rows = byChain.get(request.state.target.chain) ?? [];
+      rows.push(request);
+      byChain.set(request.state.target.chain, rows);
+    }
+    await runWithConcurrency([...byChain.values()], 3, async (chainRequests) => {
+      const byAdapter = new Map<TargetDeployment["kind"], typeof chainRequests>();
+      for (const request of chainRequests) {
+        const kind = request.state.deployment!.kind;
+        const rows = byAdapter.get(kind) ?? [];
+        rows.push(request);
+        byAdapter.set(kind, rows);
+      }
+      for (const [kind, adapterRequests] of byAdapter) {
+        if (kind === "quoter-v2") {
+          const outcomes = await quoteQuoterV2Requests({
+            requests: adapterRequests.map(({ state, inputUsd }) => ({
+              target: state.target,
+              inputUsd,
+              endpointAddress: state.deployment!.config.endpointAddress,
+            })),
+            blockNumber: adapterRequests[0]!.state.blockNumber!,
+            chainRpcs,
+            signal,
+            rpcBudget,
+          });
+          outcomes.forEach((outcome, index) => applyQuoteOutcome(adapterRequests[index]!.state, outcome));
+        } else {
+          const outcomes = await quoteFluidResolverRequests({
+            requests: adapterRequests.map(({ state, inputUsd }) => ({
+              target: state.target,
+              inputUsd,
+              blockNumber: state.blockNumber!,
+              endpointAddress: state.deployment!.config.endpointAddress,
+            })),
+            chainRpcs,
+            signal,
+            rpcBudget,
+            deploymentVerified: true,
+          });
+          outcomes.forEach((outcome, index) => applyQuoteOutcome(adapterRequests[index]!.state, outcome));
+        }
+        if (rpcBudget.isChainCircuitOpen(adapterRequests[0]!.state.target.chain)) {
+          for (const { state } of adapterRequests) state.failedReason = "chain-circuit-open";
+        }
+        if (rpcBudget.stopReason) break;
+      }
+    });
+    markBudgetStop(states, rpcBudget.stopReason);
+  };
+
+  await runStage(states.map((state) => ({ state, inputUsd: 1_000 })));
+  for (const notional of [100_000, 1_000_000, 10_000_000, 25_000_000]) {
+    await runStage(
+      states
+        .filter(
+          (state) =>
+            !state.failedReason &&
+            !state.stopped &&
+            getDexMeasuredExecutionProbeNotionals(state.target.retainedTvlUsd).includes(notional),
+        )
+        .map((state) => ({ state, inputUsd: notional })),
+    );
+  }
+  for (let round = 0; round < REFINEMENT_ROUNDS; round++) {
+    await runStage(
+      states.flatMap((state) => {
+        if (state.failedReason || !state.bracket) return [];
+        if (state.bracket.upperFailingUsd - state.bracket.lowerPassingUsd <= 0.02) return [];
+        return [
+          {
+            state,
+            inputUsd: (state.bracket.lowerPassingUsd + state.bracket.upperFailingUsd) / 2,
+          },
+        ];
+      }),
+    );
+    for (const state of states) {
+      if (!state.bracket || state.failedReason) continue;
+      const latest = state.points[state.points.length - 1];
+      if (!latest) continue;
+      if (latest.passesCostBound) state.bracket.lowerPassingUsd = latest.inputUsd;
+      else state.bracket.upperFailingUsd = latest.inputUsd;
+    }
+  }
+
+  const publishedAt = Math.floor(Date.now() / 1_000);
+  const outcomes: DexMeasuredQuoteOutcome[] = states.map((state) => {
+    if (
+      state.failedReason ||
+      !state.deployment ||
+      state.blockNumber == null ||
+      state.blockObservedAt == null ||
+      !state.endpointCodeHash
+    ) {
+      return {
+        target: state.target,
+        status: "failed",
+        failureReason: state.failedReason ?? "deployment-unavailable",
+        rawPayload: { adapterProfileId: state.target.adapterProfileId, targetId: state.target.targetId },
+      };
+    }
+    try {
+      const profile = buildDexMeasuredExecutionProfile({
+        target: state.target,
+        targetGenerationId: targetGeneration.generationId,
+        quoteGenerationId,
+        quotedAt: state.blockObservedAt,
+        blockNumber: state.blockNumber,
+        endpointAddress: state.deployment.config.endpointAddress,
+        endpointCodeHash: state.endpointCodeHash,
+        ...(state.poolBindingProof ? { poolBindingProof: state.poolBindingProof } : {}),
+        points: state.points,
+      });
+      const genericIssues = validateDexMeasuredExecutionProfile({
+        profile,
+        quotedTarget: state.target,
+        currentTarget: state.target,
+        expectedTargetGenerationId: targetGeneration.generationId,
+        expectedQuoteGenerationId: quoteGenerationId,
+        nowSec: publishedAt,
+      });
+      const adapterIssues =
+        state.deployment.kind === "quoter-v2"
+          ? validateQuoterV2ProfileProof(profile)
+          : validateFluidResolverProfileProof(profile);
+      if (genericIssues.length > 0 || adapterIssues.length > 0) {
+        throw new Error([...genericIssues, ...adapterIssues].join(","));
+      }
+      return {
+        target: state.target,
+        status: "measured",
+        profile,
+        rawPayload: {
+          adapterProfileId: state.target.adapterProfileId,
+          targetId: state.target.targetId,
+          points: state.points,
+        },
+      };
+    } catch (error) {
+      return {
+        target: state.target,
+        status: "failed",
+        failureReason: `profile-validation:${toErrorMessage(error)}`,
+        rawPayload: {
+          adapterProfileId: state.target.adapterProfileId,
+          targetId: state.target.targetId,
+          points: state.points,
+        },
+      };
+    }
+  });
+
+  await reportProgress?.({
+    stage: "quote-publication",
+    message: "Publishing measured DEX execution quotes",
+    itemsDone: outcomes.length,
+    itemsTotal: targetGeneration.targets.length,
+    metadata: { quoteCallCount, rpcRequestCount: rpcBudget.requestsUsed },
+  });
+  const publication = await publishDexMeasuredQuoteGeneration({
+    db,
+    targetGeneration,
+    outcomes,
+    quotedAt: publishedAt,
+    generationId: quoteGenerationId,
+    signal,
+  });
+  let cursorWriteStatus: "not-needed" | "written" | "missing-table" | "write-failed" = "not-needed";
+  if (deferred.size > 0 && nextCursor) {
+    const cursorWrite = await writeDexSourcePaginationState({
+      db,
+      sourceKey: MEASURED_EXECUTION_ADMISSION_SOURCE_KEY,
+      cursor: nextCursor,
+      cycleStartedAt: admissionState.cycleStartedAt ?? startedAt,
+      nowSec: publishedAt,
+      completed: false,
+      pagesFetched: admitted.size,
+      diagnostics: [`deferred-targets:${deferred.size}`, `target-generation:${targetGeneration.generationId}`],
+      job: "sync-cl-exit-depth",
+    });
+    cursorWriteStatus = cursorWrite.written
+      ? "written"
+      : cursorWrite.errorClass === "not-configured"
+        ? "write-failed"
+        : cursorWrite.errorClass;
+  }
+  await pruneDexMeasuredExecutionGenerations(db, publishedAt, signal);
+  const metadata = {
+    targetGenerationId: targetGeneration.generationId,
+    quoteGenerationId: publication.generationId,
+    targetCount: targetGeneration.targets.length,
+    measuredCount: publication.measuredCount,
+    failedCount: publication.failedCount,
+    deferredCount: deferred.size,
+    admissionCursor,
+    nextAdmissionCursor: nextCursor,
+    cursorWriteStatus,
+    degradedReasons: [
+      ...(publication.failedCount > 0 ? ["quote-failures"] : []),
+      ...(cursorWriteStatus === "write-failed" ? ["admission-cursor-write-failed"] : []),
+    ],
+    quoteCallCount,
+    rpcRequestCount: rpcBudget.requestsUsed,
+    runtimeBudgetStopReason: rpcBudget.stopReason,
+    openChainCircuits: rpcBudget.openChains,
+    failuresByReason: outcomes.reduce<Record<string, number>>((counts, outcome) => {
+      if (outcome.status === "failed") {
+        const reason = outcome.failureReason ?? "unknown";
+        counts[reason] = (counts[reason] ?? 0) + 1;
+      }
+      return counts;
+    }, {}),
+  };
+  return {
+    status: resolveMeasuredExecutionCronStatus({
+      failedCount: publication.failedCount,
+      cursorWriteStatus,
+    }),
+    itemCount: publication.measuredCount,
+    metadata: JSON.stringify(metadata),
+    productivity: {
+      productive: publication.measuredCount > 0,
+      reason: publication.measuredCount > 0 ? "published-measured-execution" : "no-measured-execution",
+    },
+  };
+}

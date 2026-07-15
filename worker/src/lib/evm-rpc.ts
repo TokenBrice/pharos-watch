@@ -19,6 +19,10 @@ export interface EvmRpcOptions {
   extraRpcUrls?: string[];
   signal?: AbortSignal;
   timeoutMs?: number;
+  /** Absolute wall-clock deadline. Each retry/fallback caps its timeout to the remaining time. */
+  deadlineMs?: number;
+  /** Invoked immediately before each RPC URL attempt. False prevents the request. */
+  beforeRequest?: () => boolean;
   maxRetries?: number;
   /** Gas limit for eth_call (hex string, e.g. "0x7A120"). Needed for cross-contract calls. */
   gas?: string;
@@ -213,11 +217,23 @@ async function fetchJsonRpcResult<T>(
   options?: EvmRpcOptions,
   policy?: JsonRpcResultPolicy<T>,
 ): Promise<T | null> {
-  const timeoutMs = options?.timeoutMs ?? 10_000;
+  const configuredTimeoutMs = options?.timeoutMs ?? 10_000;
   const maxRetries = options?.maxRetries ?? 1;
   const failures: string[] = [];
 
   for (const rpcUrl of urls) {
+    const remainingMs = options?.deadlineMs == null
+      ? configuredTimeoutMs
+      : Math.floor(options.deadlineMs - Date.now());
+    if (remainingMs <= 0) {
+      failures.push(`${rpcUrl}: request deadline exceeded`);
+      break;
+    }
+    if (options?.beforeRequest && !options.beforeRequest()) {
+      failures.push(`${rpcUrl}: request budget exhausted`);
+      break;
+    }
+    const timeoutMs = Math.min(configuredTimeoutMs, remainingMs);
     try {
       const result = await fetchJsonWithRetry<JsonRpcEnvelope<unknown>>(
         rpcUrl,
@@ -334,6 +350,28 @@ export async function fetchEvmCallHexAtBlock(
     },
   });
 
+  return result as `0x${string}` | null;
+}
+
+export async function fetchEvmCodeAtBlock(
+  chainId: string | undefined,
+  address: string,
+  blockNumberOrTag: number | "latest" = "latest",
+  options?: EvmRpcOptions,
+): Promise<`0x${string}` | null> {
+  const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs);
+  if (urls.length === 0) return null;
+
+  const result = await fetchJsonRpcResult<string>(
+    urls,
+    "eth_getCode",
+    [address, toBlockTag(blockNumberOrTag)],
+    options,
+    {
+      acceptResult: (value): value is `0x${string}` => isHexResult(value as string) && value !== "0x",
+      rejectedReason: () => "empty bytecode",
+    },
+  );
   return result as `0x${string}` | null;
 }
 

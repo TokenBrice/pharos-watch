@@ -22,6 +22,8 @@ export const SLOT_RUNNER_LOADER_BY_KEY = {
     import("./scheduled/thirty-minute-dex-discovery").then((mod) => mod.runTwoHourlyDexDiscoverySlot),
   halfHourlyMintBurnExtended: () =>
     import("./scheduled/twenty-minute-mint-burn-extended").then((mod) => mod.runHalfHourlyMintBurnExtendedSlot),
+  halfHourlyMeasuredExecution: () =>
+    import("./scheduled/half-hourly-measured-execution").then((mod) => mod.runHalfHourlyMeasuredExecutionSlot),
   halfHourlyOffset: () => import("./scheduled/half-hourly").then((mod) => mod.runHalfHourlySlot),
   halfHourlyChartsOffset: () =>
     import("./scheduled/half-hourly-charts").then((mod) => mod.runHalfHourlyChartsSlot),
@@ -79,6 +81,7 @@ const SLOT_FENCE_POLICY_BY_RUNNER_KEY: Partial<Record<ScheduledRunnerKey, SlotFe
   fiveMinuteTelegramAlerts: MEDIUM_SLOT_FENCE_POLICY,
   fiveMinuteReserveRecovery: LONG_SLOT_FENCE_POLICY,
   quarterHourly: MEDIUM_SLOT_FENCE_POLICY,
+  halfHourlyMeasuredExecution: MEDIUM_SLOT_FENCE_POLICY,
   halfHourlyOffset: MEDIUM_SLOT_FENCE_POLICY,
   halfHourlyChartsOffset: MEDIUM_SLOT_FENCE_POLICY,
   dewsPsiOffset: MEDIUM_SLOT_FENCE_POLICY,

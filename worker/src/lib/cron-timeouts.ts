@@ -49,6 +49,9 @@ const CRON_TIMEOUT_OVERRIDES_MS: Record<string, number> = {
   "sync-stablecoins": 8 * 60_000,
   "reserve-recovery": 13 * 60_000,
   "sync-live-reserves": 12 * 60_000,
+  // The producer stops RPC work at eight minutes, leaving one minute to publish
+  // a complete quote generation and record the cron result.
+  "sync-cl-exit-depth": 9 * 60_000,
   "sync-dex-liquidity": 13 * 60_000,
   "sync-dex-discovery": 13 * 60_000,
   "sync-yield-data": 10 * 60_000,

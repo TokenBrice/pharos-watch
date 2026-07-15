@@ -12,6 +12,7 @@ import {
   ExitRouteObservationCoverageSchema,
   ExitRouteObservationSchema,
 } from "./exit-route";
+import { DexMeasuredExecutionPublicProfileSchema } from "./measured-execution";
 
 export {
   BluechipRatingSchema,
@@ -242,6 +243,44 @@ export const DexAmmExecutionModelSchema = z
   });
 export type DexAmmExecutionModel = z.infer<typeof DexAmmExecutionModelSchema>;
 
+/**
+ * Exact pool-family evidence that was retained, but whose execution model was
+ * intentionally rejected by a reviewed fail-closed gate. These rows remain in
+ * the exact-route completeness denominator instead of being mistaken for
+ * generic shaped TVL.
+ */
+export const DexExecutionCapabilityGateSchema = z.object({
+  family: z.enum([
+    "curve-stableswap",
+    "curve-cryptoswap",
+    "balancer-amm",
+    "raydium-amm",
+    "measured-execution",
+  ]),
+  reason: z.enum([
+    "unsupported-invariant",
+    "rate-bearing-inputs",
+    "paused-or-swap-disabled",
+    "metapool-unsupported",
+    "incomplete-exact-capture",
+    "invalid-invariant-parameters",
+    "ambiguous-token-identity",
+    "tracked-input-unresolved",
+    "exact-pool-join-unresolved",
+    "target-unresolved",
+    "unsupported-chain",
+    "target-missing",
+    "quote-missing",
+    "quote-failed",
+    "generation-mismatch",
+    "stale-observation",
+    "invalid-observation",
+    "deployment-code-mismatch",
+    "activation-pending",
+  ]),
+});
+export type DexExecutionCapabilityGate = z.infer<typeof DexExecutionCapabilityGateSchema>;
+
 const DexLiquidityPoolSchema = z.object({
   project: z.string(),
   chain: z.string(),
@@ -287,7 +326,9 @@ const DexLiquidityPoolSchema = z.object({
           capped: z.boolean().optional(),
         })
         .optional(),
+      executionCapabilityGate: DexExecutionCapabilityGateSchema.optional(),
       ammExecutionModel: DexAmmExecutionModelSchema.optional(),
+      measuredExecution: DexMeasuredExecutionPublicProfileSchema.optional(),
     })
     .optional(),
 });
