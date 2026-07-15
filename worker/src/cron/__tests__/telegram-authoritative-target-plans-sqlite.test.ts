@@ -276,6 +276,123 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
     });
   });
 
+  it("packs a target page into bounded D1 transactions", async () => {
+    const { sqlite, db: baseDb } = setupLatestSchema();
+    const sourceEventId = "telegram-source:test:v1:batched-page";
+    const chatIds = Array.from({ length: 40 }, (_, index) => String(index + 1).padStart(3, "0"));
+    insertSource(sqlite, sourceEventId);
+    for (const chatId of chatIds) insertSubscriber(sqlite, chatId);
+    const claim = await captureClaim(
+      baseDb,
+      sourceEventId,
+      new Map(chatIds.map((chatId) => [chatId, true])),
+    );
+    const subscribers = await loadTelegramPlanningSubscriberPage(baseDb, claim);
+    let batchCalls = 0;
+    const db = {
+      ...baseDb,
+      batch: async (statements: D1PreparedStatement[]) => {
+        batchCalls += 1;
+        return baseDb.batch(statements);
+      },
+    } as D1Database;
+
+    await materializeTelegramTargetPlanPage(
+      db,
+      claim,
+      0,
+      subscribers.map((subscriber) => ({
+        subscriber,
+        currentPreferenceGeneration: 1,
+        currentEligible: true,
+        routed: [routed(subscriber.chatId, sourceEventId, 1, `-${subscriber.chatId}`)],
+      })),
+      NOW,
+    );
+
+    expect(batchCalls).toBe(3);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_target_plans").get()).toEqual({ count: 40 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_job_targets").get()).toEqual({ count: 40 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_target_plan_items").get()).toEqual({ count: 40 });
+  });
+
+  it("resumes the untouched page suffix after a packed D1 batch fails", async () => {
+    const { sqlite, db: baseDb } = setupLatestSchema();
+    const sourceEventId = "telegram-source:test:v1:batched-page-retry";
+    const chatIds = Array.from({ length: 30 }, (_, index) => String(index + 1).padStart(3, "0"));
+    insertSource(sqlite, sourceEventId);
+    for (const chatId of chatIds) insertSubscriber(sqlite, chatId);
+    const claim = await captureClaim(
+      baseDb,
+      sourceEventId,
+      new Map(chatIds.map((chatId) => [chatId, true])),
+    );
+    const subscribers = await loadTelegramPlanningSubscriberPage(baseDb, claim);
+    let rejectSuffixBatch = true;
+    const failingDb = {
+      ...baseDb,
+      batch: async (statements: D1PreparedStatement[]) => {
+        if (rejectSuffixBatch && statements.length === 50) {
+          throw new Error("injected packed batch failure");
+        }
+        return baseDb.batch(statements);
+      },
+    } as D1Database;
+    const decisions = subscribers.map((subscriber) => ({
+      subscriber,
+      currentPreferenceGeneration: 1,
+      currentEligible: true,
+      routed: [routed(subscriber.chatId, sourceEventId, 1, `-${subscriber.chatId}`)],
+    }));
+
+    await expect(
+      materializeTelegramTargetPlanPage(failingDb, claim, 0, decisions, NOW),
+    ).rejects.toThrow("injected packed batch failure");
+    rejectSuffixBatch = false;
+
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_target_plans").get()).toEqual({ count: 20 });
+    const incomplete = await reconcileIncompleteTelegramTargetPlanPage(baseDb, claim, NOW + 1);
+    expect(incomplete).toMatchObject({ found: true, complete: false, pageIndex: 0 });
+    const remainder = await loadTelegramPlanningSubscriberPage(baseDb, claim, 90, {
+      firstChatId: incomplete.firstChatId!,
+      lastChatId: incomplete.lastChatId!,
+    });
+    expect(remainder).toHaveLength(10);
+
+    await materializeTelegramTargetPlanPage(
+      baseDb,
+      claim,
+      0,
+      remainder.map((subscriber) => ({
+        subscriber,
+        currentPreferenceGeneration: 1,
+        currentEligible: true,
+        routed: [routed(subscriber.chatId, sourceEventId, 1, `-${subscriber.chatId}`)],
+      })),
+      NOW + 1,
+    );
+
+    expect(
+      sqlite
+        .prepare(
+          `SELECT COUNT(*) AS plans, COUNT(DISTINCT plan_ordinal) AS ordinals
+             FROM telegram_alert_target_plans`,
+        )
+        .get(),
+    ).toEqual({ plans: 30, ordinals: 30 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_job_targets").get()).toEqual({ count: 30 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_target_plan_items").get()).toEqual({ count: 30 });
+    expect(
+      sqlite
+        .prepare(
+          `SELECT COUNT(*) AS count FROM telegram_alert_planning_subscribers
+            WHERE planning_outcome = 'pending'`,
+        )
+        .get(),
+    ).toEqual({ count: 0 });
+    expect(sqlite.prepare("SELECT status FROM telegram_alert_target_plan_pages").get()).toEqual({ status: "complete" });
+  });
+
   it.each([
     ["sent", "duplicate_prior_delivery"],
     ["execution_unknown", "duplicate_prior_execution_unknown"],
