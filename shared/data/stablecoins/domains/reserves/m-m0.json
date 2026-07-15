@@ -2,41 +2,69 @@
   "id": "m-m0",
   "reserves": [
     {
-      "name": "Cash, Treasury, and token collateral aggregate",
-      "pct": 100,
+      "name": "USTB tokenized Treasury fund shares",
+      "pct": 97.875243,
+      "risk": "low",
+      "coinId": "ustb-superstate",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Invesco Short Duration US Government Securities Fund",
+      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "smart-contract", "concentration"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Cash",
+      "pct": 2.124642,
+      "risk": "very-low",
+      "assetClass": "cash",
+      "issuerOrObligor": "M0 permissioned issuers' eligible custody arrangements",
+      "riskFactors": ["custody", "counterparty", "liquidity"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Non-eligible token collateral",
+      "pct": 0.000115,
       "risk": "high",
       "assetClass": "other",
-      "issuerOrObligor": "M0 permissioned issuers and collateral obligors",
-      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "smart-contract", "concentration"],
+      "issuerOrObligor": "Undisclosed non-eligible token collateral obligor",
+      "riskFactors": ["credit", "liquidity", "custody", "counterparty", "smart-contract", "concentration"],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "owner-triage",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "Codex V9 reserve curation",
+    "confidence": "verified",
     "sources": [
-      {
-        "label": "M0 platform mechanics and eligible collateral",
-        "url": "https://docs.m0.org/get-started/protocol-mechanics"
-      },
       {
         "label": "M0 collateral-composition API recipe",
         "url": "https://docs.m0.org/api-reference/protocol/recipes/collateral-composition"
+      },
+      {
+        "label": "M0 Protocol API GraphQL endpoint",
+        "url": "https://protocol-api.m0.org/graphql"
+      },
+      {
+        "label": "M0 verified MToken contract source",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api?module=contract&action=getsourcecode&address=0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b"
+      },
+      {
+        "label": "M0 protocol MToken source (pinned)",
+        "url": "https://github.com/m0-foundation/protocol/blob/b42fe5bc13b14202c684f78aaa15be284664834d/src/MToken.sol"
       }
     ],
-    "rationale": "M0 documents an eligible-collateral policy, while its official collateral-composition recipe exposes cash, Treasury, and on-chain token-collateral aggregates, including eligible and non-eligible subcategories. Those sources do not support a static 100% Treasury-bill claim or a durable current split, so the authored fallback remains one unresolved aggregate while the configured M0 adapter supplies live composition.",
-    "compositionBasis": "M0 collateral policy and official collateral-composition API field model",
+    "rationale": "M0's first-party Protocol API capture on 2026-07-15 reports 2.124642% cash, 97.875243% eligible token collateral, and 0.000115% non-eligible token collateral. Its 2026-07-14 token time series identifies USTB as the sole eligible on-chain collateral definition. The Ethereum MToken contract and pinned source corroborate the live token and gateway context without treating token supply as a collateral total.",
+    "compositionBasis": "M0 Protocol API CollateralCurrent capture and 2026-07-14 token time series",
+    "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current cash, Treasury, token, eligibility, maturity, token-identity, and minter-level weights are not pinned in this static review.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "The first-party current response discloses a 0.000115% non-eligible token-collateral residual but does not identify its token or obligor.",
+    "knownUnknownExposurePct": 0.000115,
     "nonLinkDispositions": [
       {
-        "reserveIndex": 0,
-        "reserveName": "Cash, Treasury, and token collateral aggregate",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The official API model identifies several collateral families but the static record lacks a durable normalized split and token-level mapping."
+        "reserveIndex": 2,
+        "reserveName": "Non-eligible token collateral",
+        "pct": 0.000115,
+        "disposition": "insufficient-evidence",
+        "rationale": "The first-party current endpoint reports this residual but does not identify the token or obligor."
       }
     ]
   },

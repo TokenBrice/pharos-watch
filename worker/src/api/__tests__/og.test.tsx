@@ -11,6 +11,9 @@ import satori from "satori";
 import satoriStandalone from "satori/standalone";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
 import { deriveStablecoinOgCardData, handleOg } from "../og";
 import { StablecoinCard, type StablecoinCardData } from "../../lib/og-templates/stablecoin-card";
 
@@ -90,7 +93,30 @@ describe("stablecoin OG card data", () => {
   describe("peg-analytics cache hits", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
-    function makeOgDb(assets: ReturnType<typeof makeAsset>[]) {
+    function completeReportCardCache(updatedAt: number) {
+      const publicationGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`;
+      return {
+        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+        updatedAt,
+        safetyScoreIdentity: buildSafetyScoreV8PublicationIdentity({
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+          publicationGenerationId,
+        }),
+        publicationGenerationId,
+        completeness: {
+          generationId: publicationGenerationId,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          expectedCount: ACTIVE_IDS.size,
+          scoredCount: ACTIVE_IDS.size,
+          notRatedCount: 0,
+          notRatedIds: [],
+        },
+        scores: Object.fromEntries([...ACTIVE_IDS].map((id) => [id, { score: 92, grade: "A" }])),
+      };
+    }
+
+    function makeOgDb(assets: ReturnType<typeof makeAsset>[], reportCardCache?: unknown) {
       const stablecoinsValue = JSON.stringify({ peggedAssets: assets });
       // Nav-inclusive payload, mirroring what the report-cards pass publishes.
       const pegAnalyticsValue = JSON.stringify({
@@ -108,6 +134,9 @@ describe("stablecoin OG card data", () => {
           rows: [
             { key: "stablecoins", value: stablecoinsValue, updated_at: nowSec },
             { key: "peg-analytics", value: pegAnalyticsValue, updated_at: nowSec },
+            ...(reportCardCache
+              ? [{ key: "report_card_cache", value: JSON.stringify(reportCardCache), updated_at: nowSec }]
+              : []),
           ],
         },
         { match: "dex_liquidity", rows: [] },
@@ -123,7 +152,9 @@ describe("stablecoin OG card data", () => {
       satoriMock.mockClear();
       const res = await handleOg(db, path);
       expect(res?.status).toBe(200);
-      const element = satoriMock.mock.calls[satoriMock.mock.calls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
+      const element = satoriMock.mock.calls[satoriMock.mock.calls.length - 1]?.[0] as React.ReactElement<{
+        data: StablecoinCardData;
+      }>;
       expect(element.type).toBe(StablecoinCard);
       return element.props.data;
     }
@@ -151,6 +182,95 @@ describe("stablecoin OG card data", () => {
 
       const data = await renderedCardData(db, "/api/og/stablecoin/usdt-tether");
       expect(data.pegScore).toBe(99);
+    });
+
+    it("renders an explicit non-cacheable degraded state when compact safety identity is unavailable", async () => {
+      const db = makeOgDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
+      const res = await handleOg(db, "/api/og/stablecoin/usdt-tether");
+
+      expect(res?.status).toBe(200);
+      expect(res?.headers.get("Cache-Control")).toBe("no-store");
+      expect(res?.headers.get("X-Safety-Score-Status")).toBe("degraded");
+      const calls = vi.mocked(satoriStandalone).mock.calls;
+      const element = calls[calls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
+      expect(element.props.data).toMatchObject({
+        grade: "NR",
+        lastUpdated: "DEGRADED: Safety score unavailable",
+      });
+    });
+
+    it("renders a non-cacheable degraded state for a complete V9 compact publication on the V8 release", async () => {
+      const v8Cache = completeReportCardCache(nowSec);
+      const v9GenerationId = `safety-score-v9:9.0:${nowSec}`;
+      const v9Cache = {
+        ...v8Cache,
+        safetyScoreIdentity: {
+          model: "v9",
+          schemaVersion: 1,
+          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          policyId: "v9-policy-2026-05",
+          policyDigest: "b".repeat(64),
+          evaluationBuildDigest: "c".repeat(64),
+          baseInputGenerationId: `report-cards-input:v1:${"d".repeat(64)}`,
+          publicationGenerationId: v9GenerationId,
+        },
+        publicationGenerationId: v9GenerationId,
+        completeness: {
+          ...v8Cache.completeness,
+          generationId: v9GenerationId,
+        },
+      };
+      const db = makeOgDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })], v9Cache);
+
+      const res = await handleOg(db, "/api/og/stablecoin/usdt-tether");
+
+      expect(res?.status).toBe(200);
+      expect(res?.headers.get("Cache-Control")).toBe("no-store");
+      expect(res?.headers.get("X-Safety-Score-Status")).toBe("degraded");
+      expect(res?.headers.get("X-Safety-Score-Reason")).toBe("invalid-payload");
+      const calls = vi.mocked(satoriStandalone).mock.calls;
+      const element = calls[calls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
+      expect(element.props.data).toMatchObject({
+        grade: "NR",
+        lastUpdated: "DEGRADED: Safety score unavailable",
+      });
+    });
+
+    it("renders a non-cacheable degraded state for a different V8 evaluation build", async () => {
+      const v8Cache = completeReportCardCache(nowSec);
+      const currentDigest = v8Cache.safetyScoreIdentity.evaluationBuildDigest;
+      const mismatchedCache = {
+        ...v8Cache,
+        safetyScoreIdentity: {
+          ...v8Cache.safetyScoreIdentity,
+          evaluationBuildDigest: currentDigest === "b".repeat(64) ? "c".repeat(64) : "b".repeat(64),
+        },
+      };
+      const db = makeOgDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })], mismatchedCache);
+
+      const res = await handleOg(db, "/api/og/stablecoin/usdt-tether");
+
+      expect(res?.status).toBe(200);
+      expect(res?.headers.get("Cache-Control")).toBe("no-store");
+      expect(res?.headers.get("X-Safety-Score-Status")).toBe("degraded");
+      expect(res?.headers.get("X-Safety-Score-Reason")).toBe("identity-mismatch");
+      const calls = vi.mocked(satoriStandalone).mock.calls;
+      const element = calls[calls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
+      expect(element.props.data).toMatchObject({ grade: "NR" });
+    });
+
+    it("does not cache stale complete compact safety data", async () => {
+      const db = makeOgDb(
+        [makeAsset({ id: "usdt-tether", symbol: "USDT" })],
+        completeReportCardCache(nowSec - 3 * 60 * 60),
+      );
+
+      const res = await handleOg(db, "/api/og/stablecoin/usdt-tether");
+
+      expect(res?.status).toBe(200);
+      expect(res?.headers.get("Cache-Control")).toBe("no-store");
+      expect(res?.headers.get("X-Safety-Score-Status")).toBe("degraded");
+      expect(res?.headers.get("X-Safety-Score-Reason")).toBe("stale-cache");
     });
 
     it("anchors 24h price change to the latest snapshot instead of wall-clock time", async () => {
@@ -314,7 +434,9 @@ describe("chain OG route", () => {
     expect(res?.status).toBe(200);
     expect(res?.headers.get("Content-Type")).toBe("image/png");
 
-    const element = satoriMock.mock.calls[satoriMock.mock.calls.length - 1]?.[0] as React.ReactElement<{ data: ChainCardData }>;
+    const element = satoriMock.mock.calls[satoriMock.mock.calls.length - 1]?.[0] as React.ReactElement<{
+      data: ChainCardData;
+    }>;
     expect(element.type).toBe(ChainCard);
     expect(element.props.data).toMatchObject({
       name: "Ethereum",
@@ -395,9 +517,7 @@ describe("depeg OG handler aggregation", () => {
     expect(data.recoveredToday).toBe(3);
     expect(data.newToday).toBe(4);
     expect(data.psiScore).toBe(88.2);
-    expect(data.activeDepegs).toEqual([
-      { symbol: "USDT", name: "Tether", deviationBps: -150 },
-    ]);
+    expect(data.activeDepegs).toEqual([{ symbol: "USDT", name: "Tether", deviationBps: -150 }]);
   });
 
   it("clamps coinsAtPeg to zero when active depegs exceed tracked coins", async () => {
@@ -503,8 +623,7 @@ describe("og cards render through satori", () => {
     { name: "Geist Mono", data: font("GeistMono-Regular.ttf"), weight: 400 as const, style: "normal" as const },
   ];
 
-  const renderSvg = (element: React.ReactNode) =>
-    satori(element, { width: 1200, height: 628, fonts });
+  const renderSvg = (element: React.ReactNode) => satori(element, { width: 1200, height: 628, fonts });
 
   const calmCoin: StablecoinCardData = {
     name: "Tether",
@@ -556,7 +675,19 @@ describe("og cards render through satori", () => {
     const svg = await renderSvg(
       <SafetyScoresCard
         data={{
-          gradeDistribution: { "A+": 2, A: 10, "A-": 12, "B+": 30, B: 40, "B-": 25, "C+": 12, C: 8, "C-": 4, D: 3, F: 1 },
+          gradeDistribution: {
+            "A+": 2,
+            A: 10,
+            "A-": 12,
+            "B+": 30,
+            B: 40,
+            "B-": 25,
+            "C+": 12,
+            C: 8,
+            "C-": 4,
+            D: 3,
+            F: 1,
+          },
           pulseGrade: "B+",
           pulseScore: 78.4,
           coverageRatio: 0.93,

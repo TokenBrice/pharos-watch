@@ -176,6 +176,8 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     },
     "feusd-felix": {
       ...collateralRedeemBase,
+      outputAssetType: "mixed-collateral",
+      outputAssets: ["asset:whype", "asset:feubtc", "asset:khype", "asset:wsthype"],
       capacityModel: { kind: "reserve-sync-metadata" },
       reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
       costModel: fixedFee(0, "Felix docs describe redemption as fee-free"),
@@ -217,6 +219,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     },
     "fxusd-f-x-protocol": {
       ...collateralRedeemBase,
+      outputAssets: ["asset:wsteth", "asset:wbtc"],
       capacityModel: { kind: "reserve-sync-metadata" },
       reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
       costModel: fixedFee(50, "Protocol docs list a 50 bps redemption fee"),
@@ -253,6 +256,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     },
     "cdp-enosys": {
       ...collateralRedeemBase,
+      outputAssets: ["asset:fxrp", "asset:wflr"],
       capacityModel: { kind: "reserve-sync-metadata" },
       reviewedAt: REVIEWED_FOLLOWUP_REMEDIATION_AT,
       outputAssetType: "mixed-collateral",
@@ -401,6 +405,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     },
     "gbpm-mento": {
       ...collateralRedeemBase,
+      outputAssets: ["cusd-celo"],
       capacityModel: { kind: "reserve-sync-metadata" },
       reviewedAt: REVIEWED_MENTO_LIVE_REDEMPTION_AT,
       outputAssetType: "stable-single",
@@ -478,6 +483,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     "fusd-freedom-dollar": {
       ...collateralRedeemBase,
       ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+      outputAssets: ["asset:zano"],
       executionModel: "rules-based-nav",
       outputAssetType: "bluechip-collateral",
       costModel: undisclosedReviewedFee(
@@ -643,6 +649,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     "hbd-hive": {
       ...collateralRedeemBase,
       ...documentedBoundSupplyFull(REVIEWED_HIVE_HBD_AT),
+      outputAssets: ["asset:hive"],
       settlementModel: "days",
       executionModel: "rules-based-nav",
       outputAssetType: "mixed-collateral",
@@ -678,6 +685,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     "zsd-zephyr-protocol": {
       ...collateralRedeemBase,
       ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+      outputAssets: ["asset:zeph"],
       executionModel: "rules-based-nav",
       outputAssetType: "mixed-collateral",
       costModel: documentedVariableFee(

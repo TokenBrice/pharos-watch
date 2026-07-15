@@ -1514,6 +1514,42 @@ function buildRoutes(context: AssetBuildContext): {
     );
   }
   if (routes.length === 0) {
+    // A reviewed-complete DEX surface with zero retained pools and no
+    // redemption row is KNOWN negative evidence (score-defined zero exit),
+    // not missing evidence; missing is reserved for incomplete coverage
+    // (VER-006).
+    const emptyCoverage = context.fixedInput.dexLiqMap[context.asset.assetId]?.exitRouteObservationCoverage;
+    const emptySurfaceComplete =
+      emptyCoverage != null &&
+      emptyCoverage.status === "populated" &&
+      emptyCoverage.retainedPoolCount === 0 &&
+      emptyCoverage.unsupportedPoolCount === 0;
+    if (emptySurfaceComplete) {
+      const coverageEvidenceId = addEvidence(
+        context,
+        createV9EvidenceReference(
+          {
+            evidenceId: `${context.asset.assetId}:exit-route-observation-coverage`,
+            sourceId: "report-cards-dex-route-observation",
+            sourceGenerationId: context.fixedInput.dexGenerationId,
+            disposition: "observed",
+            observedAtSec: context.fixedInput.clockSec,
+            contentSha256: digest("safety-score-v9.exit-route-observation-coverage.v1", emptyCoverage),
+            maxAgeSec: context.extension.routeFreshness.dexMaxAgeSec,
+          },
+          context.fixedInput.clockSec,
+        ),
+      );
+      return {
+        exitStatus: createV9FactStatus({
+          applicability: requiredV9Applicability("v9.exit.same-notional-route"),
+          observationState: "known",
+          evidenceRefIds: [coverageEvidenceId],
+          gapIds: [],
+        }),
+        exitRoutes: [],
+      };
+    }
     return {
       exitStatus: missingLocalFact(context, {
         componentKey: "exit-routes",
@@ -1784,7 +1820,7 @@ function normalizeAccessStatus(
     context,
     createV9FactGap({
       gapId: `${context.asset.assetId}:gap:access:${componentKey}`,
-      reasonCode: "missing-pillar-evidence",
+      reasonCode: "missing-access-review",
       ownerDomain: "control",
       policyRuleId: original.applicability.policyRuleId,
       observationState: original.observationState,
@@ -1809,7 +1845,7 @@ function buildAccessReview(context: AssetBuildContext): V9AccessReviewV2 {
       transfer: {
         status: missingLocalFact(context, {
           componentKey: "access:transfer",
-          reasonCode: "missing-pillar-evidence",
+          reasonCode: "missing-access-review",
           ownerDomain: "control",
           policyRuleId: "v9.access.transfer-review",
           message: "Transfer permissioning posture has not been reviewed.",
@@ -1819,7 +1855,7 @@ function buildAccessReview(context: AssetBuildContext): V9AccessReviewV2 {
       freeze: {
         status: missingLocalFact(context, {
           componentKey: "access:freeze",
-          reasonCode: "missing-pillar-evidence",
+          reasonCode: "missing-access-review",
           ownerDomain: "control",
           policyRuleId: "v9.access.freeze-review",
           message: "Direct and upstream freeze reach have not been reviewed.",
@@ -2027,6 +2063,29 @@ function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
       evidenceRefIds: [evidenceId],
     }).status;
   } else {
+    // A known supply fact asserts the route-review accounting covers the whole
+    // circulating base: reviewed-selected + selected-unresolved + unknown must
+    // conserve to 1, and the selected rows must reconcile to those shares.
+    // Accepting under-accounted shares silently suppresses the
+    // material-bridge-supply-unmatched control reason (VER-007).
+    const shareSum =
+      (review.selectedRouteSupplyShare ?? 0) +
+      (review.unreviewedRouteSupplyShare ?? 0) +
+      (review.unknownRouteSupplyShare ?? 0);
+    const rowShareSum = review.selectedBridgeRoutes.reduce((sum, route) => sum + route.supplyShare, 0);
+    const selectedShares = (review.selectedRouteSupplyShare ?? 0) + (review.unreviewedRouteSupplyShare ?? 0);
+    if (circulatingUsd > 0 && Math.abs(shareSum - 1) > 0.000001) {
+      throw new Error(
+        `Bridge supply shares do not reconcile for ${context.asset.assetId}: ` +
+          `selected+unreviewed+unknown=${shareSum} must conserve to 1 over positive circulating supply`,
+      );
+    }
+    if (circulatingUsd > 0 && Math.abs(rowShareSum - selectedShares) > 0.000001) {
+      throw new Error(
+        `Bridge supply shares do not reconcile for ${context.asset.assetId}: ` +
+          `selected route rows sum to ${rowShareSum} but the selected/unreviewed shares claim ${selectedShares}`,
+      );
+    }
     status = createV9FactStatus({
       applicability: requiredV9Applicability("v9.supply.current"),
       observationState: "known",

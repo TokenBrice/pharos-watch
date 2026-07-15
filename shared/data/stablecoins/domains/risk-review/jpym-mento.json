@@ -1,7 +1,8 @@
 {
   "id": "jpym-mento",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Mento JPYm documentation",
@@ -12,13 +13,50 @@
         "url": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/contracts.json"
       },
       {
-        "label": "JPYm Celo deployment",
-        "url": "https://explorer.celo.org/mainnet/address/0xc45ecf20f3cd864b32d9794d6f76814ae8892e20"
+        "label": "JPYm Celo proxy verified source and ABI",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xc45ecf20f3cd864b32d9794d6f76814ae8892e20"
+      },
+      {
+        "label": "Mento StableTokenV3 verified implementation source and ABI",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x815795c30d0758a297b08cd4e0643620c974c318"
+      },
+      {
+        "label": "Mento StableTokenV3 official source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/e7884d28a5338dee4db95331d31bc0dc73165fda/contracts/tokens/StableTokenV3.sol"
+      },
+      {
+        "label": "Mento StableTokenSpoke official source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/e7884d28a5338dee4db95331d31bc0dc73165fda/contracts/tokens/StableTokenSpoke.sol"
+      },
+      {
+        "label": "Mento JPYm owner Safe authority on Celo",
+        "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458"
+      },
+      {
+        "label": "Mento Protocol Foundation privacy notice",
+        "url": "https://www.mento.org/privacy"
+      },
+      {
+        "label": "Mento live reserve analytics API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
+      {
+        "label": "Archived Mento Reserve dashboard",
+        "url": "https://arquivo.pt/wayback/20250213024357/https://reserve.mento.org/"
+      },
+      {
+        "label": "Celo Forno fixed-block RPC",
+        "url": "https://forno.celo.org"
+      },
+      {
+        "label": "Monad public RPC control reads",
+        "url": "https://rpc.monad.xyz"
       }
     ],
-    "evidence": "BLOCKED: JPYm is a Mento CDP asset whose upstream USDm reserve includes tracked freezable stablecoins. The official deployment registry and Celo explorer identify the current JPYm branch, but the public source set does not establish a complete holder-control inventory for the token and every upstream reserve route. Inherited exposure is retained and no direct no-freeze conclusion is asserted.",
-    "reviewer": "SONG-5 Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "sourceFreeRationale": "Explicit true: Celo JPYm's live 4-of-6 owner Safe can immediately authorize a burner, and the verified implementation gives every burner an arbitrary-account burn without holder allowance. This direct Celo control does not suppress the separately reviewed USDm reserve exposure.",
+    "evidence": "Celo establishes a direct Yes independently of the Monad route. At Celo block 72188773, JPYm proxy 0xc45ecf20f3cd864b32d9794d6f76814ae8892e20 returned StableTokenV3 implementation 0x815795c30d0758a297b08cd4e0643620c974c318; both proxy _getOwner() and delegated owner() returned 0x58099b74f4acd642da77b4b7966b4138ec5ba458. The deployment registry identifies that address as Mento MigrationMultisig, and the Celo Safe authority observation at block 69291577 records a 4-of-6 Safe with no enabled modules and a zero guard. The verified proxy source gives its owner implementation-change authority; the verified StableTokenV3 source gives the owner setBurner authority, and any burner can call burn(address,uint256) against an arbitrary account without that holder's allowance. JPYm BorrowerOperations and TroveManager both returned isBurner=true at the pinned Celo block. Current zero-value transfer and transferFrom simulations returned true, so this is a live admin-authorizable arbitrary-burn finding rather than a claim that a global transfer stop is currently active. On Monad at block 87842958, tracked 0x22f6a6752800eab67b84748fefc3cc658384af72 reported name Mento Japanese Yen, symbol JPYm, owner 0x58099b74f4acd642da77b4b7966b4138ec5ba458, EIP-1967 implementation slot 0x6a8ff60a89f3f359fa16f45076d6dd1712b5e62e, and ordinary zero-value transfer/transferFrom results. The pinned deployment registry does not map this Monad address, and neither a verified explorer source nor a Sourcify source match was available for its implementation; this direct Celo burn result is not asserted for Monad. Mento's published legal source is a privacy notice rather than token-control authority; live reserve analytics and the archived dashboard establish transparency availability and separate upstream stablecoin exposure, not a holder-control power.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "oracleRisk": {
     "tier": "standard-external",

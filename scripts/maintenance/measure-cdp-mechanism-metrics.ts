@@ -8,6 +8,7 @@ import {
 } from "../lib/cli-args.mjs";
 import { fetchBlockByNumber, pinBlock, JournaledEthCaller } from "../lib/mechanism-measurement/core";
 import { measureLiquityV1 } from "../lib/mechanism-measurement/families/liquity-v1";
+import { measureLiquityV2 } from "../lib/mechanism-measurement/families/liquity-v2";
 import { MechanismMeasurementEvidenceV1Schema } from "../lib/mechanism-measurement/schema";
 import { CDP_MEASUREMENT_TARGETS } from "../lib/mechanism-measurement/targets";
 
@@ -63,7 +64,10 @@ async function measureTarget(options: CliOptions, assetId: string): Promise<void
     try {
       const block = options.block == null ? await pinBlock(rpcUrl) : await fetchBlockByNumber(rpcUrl, options.block);
       const caller = new JournaledEthCaller(rpcUrl, `0x${block.number.toString(16)}`);
-      const evidence = await measureLiquityV1(caller, target, block, rpcUrl);
+      const evidence =
+        target.family === "liquity-v2"
+          ? await measureLiquityV2(caller, target, block, rpcUrl)
+          : await measureLiquityV1(caller, target, block, rpcUrl);
       const parsed = MechanismMeasurementEvidenceV1Schema.parse(evidence);
 
       const date = parsed.block.timestampIso.slice(0, 10);
@@ -87,10 +91,14 @@ async function measureTarget(options: CliOptions, assetId: string): Promise<void
       }
       mkdirSync(dirname(outPath), { recursive: true });
       writeFileSync(outPath, serialized);
+      const priceLine =
+        parsed.family === "liquity-v1"
+          ? `price=${parsed.derived.priceUsd} (chainlink delta ${parsed.derived.chainlink.deltaPct}%, lastGoodPrice delta ${parsed.derived.lastGoodPrice.deltaPct}%)`
+          : `branches=${parsed.derived.branches.length} branchCappedCapacity=${parsed.derived.branchCappedLiquidationCapacityRatio} priceCrossCheck=${parsed.derived.priceCrossCheck.mode}`;
       console.log(
         `[measure-cdp] ${parsed.assetId}: block ${parsed.block.number} (${parsed.block.selection}) via ${rpcUrl}\n` +
           `  collateralizationRatio=${parsed.metrics.collateralizationRatio} liquidationCapacityRatio=${parsed.metrics.liquidationCapacityRatio}\n` +
-          `  price=${parsed.derived.priceUsd} (chainlink delta ${parsed.derived.chainlink.deltaPct}%, lastGoodPrice delta ${parsed.derived.lastGoodPrice.deltaPct}%)\n` +
+          `  ${priceLine}\n` +
           `  checks=${parsed.checks.length} pass -> ${outPath}`,
       );
       return;

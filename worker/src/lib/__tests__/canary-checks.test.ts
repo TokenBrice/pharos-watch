@@ -31,7 +31,7 @@ function stablecoinsPayload(activeCount = ACTIVE_IDS.size) {
   return JSON.stringify({ peggedAssets: assets });
 }
 
-function reportCardPayload(updatedAt = NOW - 60) {
+function reportCardPayload(updatedAt = NOW - 60, evaluationBuildDigest?: string) {
   const scoreIds = [...ACTIVE_IDS].sort();
   const publicationGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`;
   const safetyScoreIdentity = buildSafetyScoreV8PublicationIdentity({
@@ -45,7 +45,42 @@ function reportCardPayload(updatedAt = NOW - 60) {
     payload: {
       updatedAt,
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      safetyScoreIdentity,
+      safetyScoreIdentity: evaluationBuildDigest
+        ? { ...safetyScoreIdentity, evaluationBuildDigest }
+        : safetyScoreIdentity,
+      publicationGenerationId,
+      completeness: {
+        generationId: publicationGenerationId,
+        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+        expectedCount: scoreIds.length,
+        scoredCount: scoreIds.length,
+        notRatedCount: 0,
+        notRatedIds: [],
+      },
+      scores: Object.fromEntries(scoreIds.map((id) => [id, { score: 92, grade: "A" }])),
+    },
+  });
+}
+
+function v9ReportCardPayload(updatedAt = NOW - 60) {
+  const scoreIds = [...ACTIVE_IDS].sort();
+  const publicationGenerationId = `safety-score-v9:9.0:${updatedAt}`;
+  return JSON.stringify({
+    generation: REPORT_CARD_CACHE_GENERATION,
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+    payload: {
+      updatedAt,
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      safetyScoreIdentity: {
+        model: "v9",
+        schemaVersion: 1,
+        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+        policyId: "v9-policy-2026-05",
+        policyDigest: "b".repeat(64),
+        evaluationBuildDigest: "c".repeat(64),
+        baseInputGenerationId: `report-cards-input:v1:${"d".repeat(64)}`,
+        publicationGenerationId,
+      },
       publicationGenerationId,
       completeness: {
         generationId: publicationGenerationId,
@@ -139,6 +174,8 @@ function healthyD1(
     stablecoinsActiveCount?: number;
     gbpFreshRuns?: number;
     gbpFallback?: boolean;
+    reportCardEvaluationBuildDigest?: string;
+    reportCardCacheValue?: string;
   } = {},
 ) {
   const rowCount = dex.rowCount ?? 408;
@@ -194,7 +231,12 @@ function healthyD1(
           updatedAt: NOW - 60,
           updated_at: NOW - 60,
         },
-        { key: "report_card_cache", value: reportCardPayload(), updatedAt: NOW - 60, updated_at: NOW - 60 },
+        {
+          key: "report_card_cache",
+          value: dex.reportCardCacheValue ?? reportCardPayload(NOW - 60, dex.reportCardEvaluationBuildDigest),
+          updatedAt: NOW - 60,
+          updated_at: NOW - 60,
+        },
         dewsPointerRow(publishedDewsRows),
         ...gbpCanaryCacheRows({ freshRuns: dex.gbpFreshRuns, fallback: dex.gbpFallback }),
       ],
@@ -240,6 +282,51 @@ describe("worker data invariant canaries", () => {
       worstStatus: "ok",
       worstSeverity: "info",
     });
+    expect(
+      summary.results.find((result) => result.checkId === "report-card-cache-methodology")?.metadata,
+    ).toMatchObject({ safetyScoreIdentity: { model: "v8" } });
+  });
+
+  it("rejects a complete compact cache from a different deployed evaluation build", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW * 1000));
+
+    const summary = await runCanaryChecks(healthyD1({ reportCardEvaluationBuildDigest: "b".repeat(64) }), {
+      observedAt: NOW,
+      mode: "status",
+    });
+    const reportCards = summary.results.find((result) => result.checkId === "report-card-cache-methodology");
+
+    expect(reportCards).toMatchObject({
+      status: "error",
+      severity: "error",
+      error: "report-card cache identity-mismatch",
+      metadata: {
+        reason: "identity-mismatch",
+        safetyScoreIdentity: { evaluationBuildDigest: "b".repeat(64) },
+      },
+    });
+  });
+
+  it("degrades when the V8 canary encounters a complete V9 compact publication", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW * 1000));
+
+    const summary = await runCanaryChecks(healthyD1({ reportCardCacheValue: v9ReportCardPayload() }), {
+      observedAt: NOW,
+      mode: "status",
+    });
+    const reportCards = summary.results.find((result) => result.checkId === "report-card-cache-methodology");
+
+    expect(reportCards).toMatchObject({
+      status: "degraded",
+      severity: "warning",
+      error: "report-card cache invalid-envelope",
+      metadata: {
+        reason: "invalid-envelope",
+        updatedAt: NOW - 60,
+      },
+    });
   });
 
   it("derives DEWS canary health from the exact published generation", async () => {
@@ -264,10 +351,10 @@ describe("worker data invariant canaries", () => {
   it("degrades and names even one missing active stablecoin", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW * 1000));
-    const summary = await runCanaryChecks(
-      healthyD1({ stablecoinsActiveCount: ACTIVE_IDS.size - 1 }),
-      { observedAt: NOW, mode: "status" },
-    );
+    const summary = await runCanaryChecks(healthyD1({ stablecoinsActiveCount: ACTIVE_IDS.size - 1 }), {
+      observedAt: NOW,
+      mode: "status",
+    });
     const check = summary.results.find((result) => result.checkId === "stablecoins-cache-active-count");
 
     expect(check).toMatchObject({
@@ -278,7 +365,7 @@ describe("worker data invariant canaries", () => {
         expectedActiveCount: ACTIVE_IDS.size,
       }),
     });
-    expect((check?.metadata?.missingActiveIds as string[])).toHaveLength(1);
+    expect(check?.metadata?.missingActiveIds as string[]).toHaveLength(1);
     expect(check?.error).toContain((check?.metadata?.missingActiveIds as string[])[0]!);
   });
 
@@ -567,10 +654,15 @@ describe("worker data invariant canaries", () => {
   );
 
   it("queries only the current authoritative canary mode", async () => {
-    const db = mockD1([{
-      match: "FROM worker_canary_runs",
-      rows: [],
-    }], { requireMatch: true });
+    const db = mockD1(
+      [
+        {
+          match: "FROM worker_canary_runs",
+          rows: [],
+        },
+      ],
+      { requireMatch: true },
+    );
 
     await loadCanaryStatus(db, NOW + 60, "alert");
 

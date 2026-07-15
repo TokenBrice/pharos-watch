@@ -53,17 +53,57 @@
     "reviewedStatus": "inherited",
     "sources": [
       {
-        "label": "BscScan contract source",
+        "label": "BscScan - verified KRWO FiatToken source and ABI",
         "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1#code"
       },
       {
-        "label": "Docs",
+        "label": "BscScan - verified KRWO GimSwap minter and redemption route",
+        "url": "https://bscscan.com/address/0x88cbe5d0088db1dfb302e5c58242153b6171f50b#code"
+      },
+      {
+        "label": "BSC public Blast RPC - pinned KRWO historical calls",
+        "url": "https://bsc-mainnet.public.blastapi.io"
+      },
+      {
+        "label": "BscScan - Open Voucher BSC proxy route",
+        "url": "https://bscscan.com/address/0x872c7eb7f46ece69c9db74f91ce249c2e1b3c2ea#code"
+      },
+      {
+        "label": "Kaiascan - KRWO Kaia deployment",
+        "url": "https://kaiascan.io/token/0x7fc692699f2216647a0e06225d8bdf8cdee40e7f"
+      },
+      {
+        "label": "Kaia public node - pinned KRWO historical calls",
+        "url": "https://public-en.node.kaia.io"
+      },
+      {
+        "label": "GimSwap official FiatToken source",
+        "url": "https://github.com/GimSwap/gimswap-smart-contracts/blob/main/contracts/gimswap/FiatToken.sol"
+      },
+      {
+        "label": "GimSwap official GimSwap route source",
+        "url": "https://github.com/GimSwap/gimswap-smart-contracts/blob/main/contracts/gimswap/GimSwap.sol"
+      },
+      {
+        "label": "GimSwap documentation - what is KRWO",
         "url": "https://docs.gimswap.com/gimswap-guide/what-is-krwo"
+      },
+      {
+        "label": "GimSwap documentation - core principles and claimed reserve audits",
+        "url": "https://docs.gimswap.com/introduction/core-principles"
+      },
+      {
+        "label": "GimSwap public site sitemap (legal inventory)",
+        "url": "https://www.gimswap.com/sitemap.xml"
+      },
+      {
+        "label": "Internet Archive - KRWO documentation snapshot",
+        "url": "https://web.archive.org/web/20260314225118/https://docs.gimswap.com/gimswap-guide/what-is-krwo"
       }
     ],
-    "evidence": "Verified BSC FiatToken source exposes privileged mint authority but no direct holder freeze, blacklist, pause, seize, or arbitrary role-burn function. KRWO is backed by Open Voucher/KRW redemption rails, so FreezeWatch resolves upstream backing/redemption blocking exposure.",
-    "reviewer": "Codex FreezeWatch audit",
-    "reviewedAt": "2026-05-25"
+    "evidence": "At BSC block 110,070,261 via the public Blast RPC, KRWO.owner() returned 0xc34e0d2b73e5c5a826fa4a86c240cac9fd347c1c, MINTER_ADDRESS() returned GimSwap 0x88cbe5d0088db1dfb302e5c58242153b6171f50b, and a zero-value transfer from an unrelated address succeeded. The exact verified FiatToken source has stock ERC-20 transfer/transferFrom behavior, no blacklist, freeze, pause, seize, or transfer-hook gate, and a minter-only burn(uint256) that burns the minter's own balance; a simulated burn(0) succeeds only from the minter. Its verified GimSwap route burns only KRWO sent into that route before returning OV vouchers, rather than exposing arbitrary holder burn. At Kaia block 221,892,959 via public-en.node.kaia.io, KRWO.owner() returned 0xbe025edc4499c0e50a2c14655ba360a840f47c39, MINTER_ADDRESS() returned 0x663e9d64cdd9b8cc7b0f073bbfb927aa8d154be0, local zero-value transfer and minter-only burn simulations succeeded, and the EIP-1967 implementation slot was zero. Kaiascan does not publish verified source for that deployment, so this review does not encode source absence as direct false. The material backing/redemption route is Open Voucher: GimSwap's verified BSC route points to the upgrade-capable OV contract and the issuer describes OV-to-KRW bank-account refund rails. The issuer's source and documentation describe a 1:1 OV/KRW claim and assert regular reserve audits, but the public site sitemap did not expose issuer terms/legal or a dated proof-of-reserves report. That off-token voucher and redemption dependency remains an upstream access exposure, so inherited is retained rather than suppressing it with a direct no-control finding.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

@@ -277,33 +277,57 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "U.S. Treasuries and accepted stablecoin reserves",
+      "name": "AID reserve envelope (U.S. Treasuries and accepted stable assets)",
       "pct": 100,
-      "risk": "low"
+      "risk": "low",
+      "assetClass": "other",
+      "issuerOrObligor": "United States Treasury and GAIB-approved stablecoin issuers",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-12",
-    "reviewer": "OpenAI Codex dependency review",
-    "confidence": "verified",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
     "sources": [
       {
-        "label": "GAIB transparency",
+        "label": "GAIB AID product documentation",
+        "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid"
+      },
+      {
+        "label": "GAIB transparency documentation",
+        "url": "https://docs.gaib.ai/products/gaib-products/transparency"
+      },
+      {
+        "label": "GAIB AID transparency dashboard",
         "url": "https://aid.gaib.ai/transparency"
+      },
+      {
+        "label": "AID Ethereum implementation source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x2db74834f556e1f19ed397e5f935a983e4c2f38b"
       }
     ],
-    "rationale": "The single reserve category combines Treasury assets with accepted stablecoins and provides no constituent split.",
-    "compositionBasis": "GAIB aggregate reserve observation",
-    "scope": "selected-slices",
-    "knownUnknownExposure": "The stablecoin share and identities inside the full aggregate are unresolved.",
+    "rationale": "GAIB states that AID is fully backed by U.S. Treasuries and stable assets and is minted 1:1 with USDC, USDT, and other accepted stablecoins. GAIB's transparency dashboard exposes an attestation-report link, but its owner disables downloads; the public documentation and dashboard do not reproduce a current asset-and-liability component allocation. At Ethereum block 0x1859e17, the AID proxy resolved to 0x2db74834f556e1f19ed397e5f935a983e4c2f38b; the reviewed verified token source exposes token controls but no reserve-accounting view. The complete reserve envelope is retained as one slice.",
+    "compositionBasis": "GAIB AID product and transparency disclosures with a fixed-block Ethereum token-source review; constituent weights are undisclosed",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The Treasury/stable-asset weights, stablecoin identities, custodians, and public assets-and-liabilities reconciliation are not reproduced in accessible source material.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "U.S. Treasuries and accepted stablecoin reserves",
+        "reserveName": "AID reserve envelope (U.S. Treasuries and accepted stable assets)",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "Treasuries and stablecoins are combined without allocation weights."
+        "rationale": "GAIB identifies the reserve categories but does not publish a reproducible current split among them."
       }
     ]
   },

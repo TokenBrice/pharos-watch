@@ -18,17 +18,33 @@
     "reviewedStatus": "possible",
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://wiki.defillama.com/wiki/HomeCoin"
+        "label": "HomeCoin official website",
+        "url": "https://www.homecoin.finance/"
       },
       {
-        "label": "Website",
-        "url": "https://www.homecoin.finance/"
+        "label": "Pinned HomeDAO Pool16 source",
+        "url": "https://github.com/homecoin-finance/HomeDAO/blob/e2742bb707aa6d75eb310ed8729c3ca04f91d296/contracts/PoolCore/Pool16.sol"
+      },
+      {
+        "label": "HOME verified Pool16 implementation",
+        "url": "https://eth.blockscout.com/address/0x366049d336e73cfaf39c6a933780ca4c96ea084c?tab=contract"
+      },
+      {
+        "label": "HOME proxy exact Sourcify source and ABI",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xb8919522331c59f5c16bdfaa6a121a6e03a91f62?fields=abi,metadata"
+      },
+      {
+        "label": "HOME ProxyAdmin verified contract",
+        "url": "https://eth.blockscout.com/address/0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f?tab=contract"
+      },
+      {
+        "label": "Ethereum RPC authority read",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "At Ethereum block 25534724, HOME proxy 0xb8919522331c59f5c16bdfaa6a121a6e03a91f62 points to verified Pool16 implementation 0x366049d336e73cfaf39c6a933780ca4c96ea084c. The reviewed current implementation and ABI expose standard transfer/transferFrom behavior but no blacklist, pause, freeze, owner, or admin selector affecting holder transfers. The EIP-1967 admin is ProxyAdmin 0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f, whose verified ABI exposes upgrade and upgradeAndCall; owner() is legacy Gnosis MultiSigWallet 0xa42f6fb68607048dde54fcd53d2195cc8ca5f486 with five owners and threshold three at the observed block. That 3-of-5 authority can replace the implementation, creating a direct possible future holder-control path. No active holder blacklist or pause is asserted, and no no-freeze conclusion is made.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "collateral": "U.S. home-loan liens and property-backed receivables originated through the HomeCoin/Bacon lending process",
   "pegMechanism": "HOME is minted and redeemed 1:1 for USDC through Bacon Protocol's Pan contract subject to Pan liquidity. The mortgage-lien portfolio is collateral/backstop exposure rather than a direct user redemption asset.",

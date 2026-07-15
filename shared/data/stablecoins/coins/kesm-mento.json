@@ -28,6 +28,26 @@
     "tier": "standard-external",
     "summary": "Mento documents non-USDm/EURm FX stables as USDm-collateralized CDP assets; KESm's complete production oracle and liquidation branch remains unverified.",
     "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "unresolved",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "OpenAI Codex Safety Score V9 oracle review",
+      "rationale": "The current Mento documentation identifies the USDm-collateralized CDP and shared oracle/circuit-breaker infrastructure, but the reviewed public sources do not establish the complete production KESm liquidation and failure-handling branch.",
+      "sources": [
+        {
+          "label": "Mento CDP architecture",
+          "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp"
+        },
+        {
+          "label": "Mento FPMM oracles and circuit breakers",
+          "url": "https://docs.mento.org/mento-v3/dive-deeper/fpmm/oracles-and-circuit-breakers"
+        },
+        {
+          "label": "KESm Celo token",
+          "url": "https://celo.blockscout.com/address/0x456a3d042c0dbd3db53d5489e98dfb038553b0d0"
+        }
+      ]
+    },
     "reviewedAt": "2026-07-14",
     "reviewer": "SOL-3 adversarial verification",
     "confidence": "limited",

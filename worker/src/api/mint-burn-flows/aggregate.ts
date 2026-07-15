@@ -5,7 +5,7 @@ import {
 } from "@shared/lib/mint-burn-signals";
 import { getLatestSuccessfulCronTimestampResult } from "../../lib/api-utils";
 import { buildInClause } from "../../lib/db";
-import { buildFlightToQualityClassification } from "../../lib/flight-to-quality-classification";
+import type { FlightToQualityClassification } from "../../lib/flight-to-quality-classification";
 import {
   buildMintBurnSyncHealth,
 } from "../../lib/mint-burn-health-config";
@@ -287,7 +287,7 @@ export async function fetchAggregateData(
 export function buildCoinSummaries(
   data: AggregateData,
   mcapById: Map<string, number>,
-  gradeClassification: ReturnType<typeof buildFlightToQualityClassification> | null,
+  gradeClassification: FlightToQualityClassification | null,
 ): { coins: CoinFlowSummary[]; gaugeInputs: Array<{ intensity: number | null; mcap: number }>; safeNet24h: number; riskyNet24h: number; trackedMcapUsd: number } {
   const coinAgg = aggregateHourlyRowsByStablecoin(data.hourly24hRows);
   const coins: CoinFlowSummary[] = [];

@@ -20,7 +20,9 @@ describe("page metadata helpers", () => {
 
     expect(buildStablecoinDetailDescription(usdt!)).toContain("backed by real-world assets");
     expect(buildStablecoinDetailDescription(usde!)).toContain("collateralized by crypto assets");
-    expect(buildStablecoinDetailDescription(frax!)).toContain("Freeze risk inherited from upstream collateral");
+    // frax-frax re-graded inherited -> possible by the TERRA deep-drain
+    // re-review (Fraxtal ProxyAdmin upgrade-control finding).
+    expect(buildStablecoinDetailDescription(frax!)).toContain("Blacklist or freeze exposure is possible");
   });
 
   it("uses pre-launch tracker wording before live stablecoin data exists", () => {

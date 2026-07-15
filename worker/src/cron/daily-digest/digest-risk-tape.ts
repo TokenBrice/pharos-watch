@@ -22,39 +22,36 @@ export function buildRiskTape(data: DigestInputData): DigestRiskTapeItem[] {
     id: "risk-tape:depegs",
     label: "Depegs",
     value: topDepeg ? `${topDepeg.symbol} ${Math.abs(topDepeg.bps)}bps` : "None active",
-    tone: topDepeg
-      ? isCriticalDepegRisk(topDepeg) ? "critical" : "warning"
-      : "positive",
+    tone: topDepeg ? (isCriticalDepegRisk(topDepeg) ? "critical" : "warning") : "positive",
     detail: topDepeg
       ? `${data.activeDepegCount} active; ${formatCurrency(topDepeg.mcapUsd, 0)} mcap on top signal.`
       : "No active peg breaks in the digest input.",
   });
 
   if (data.mintBurnFlows) {
+    const { classificationReason, classificationSource, flightToQuality, gaugeBand, gaugeScore } = data.mintBurnFlows;
     items.push({
       id: "risk-tape:gauge",
       label: "Gauge",
-      value: `${formatScore(data.mintBurnFlows.gaugeScore)} ${data.mintBurnFlows.gaugeBand}`,
-      tone: data.mintBurnFlows.gaugeScore < -20
-        ? "warning"
-        : data.mintBurnFlows.gaugeScore > 20 ? "positive" : "neutral",
-      detail: data.mintBurnFlows.flightToQuality.active
-        ? "Flight-to-quality is active."
-        : "No flight-to-quality flag.",
+      value: `${formatScore(gaugeScore)} ${gaugeBand}`,
+      tone: gaugeScore < -20 ? "warning" : gaugeScore > 20 ? "positive" : "neutral",
+      detail:
+        classificationSource === "unavailable"
+          ? `Flight-to-quality classification unavailable${classificationReason ? ` (${classificationReason})` : ""}.`
+          : flightToQuality.active
+            ? "Flight-to-quality is active."
+            : "No flight-to-quality flag.",
     });
   }
 
   if (data.dewsStress) {
-    const alertPlus = data.dewsStress.bandCounts.alert
-      + data.dewsStress.bandCounts.warning
-      + data.dewsStress.bandCounts.danger;
+    const alertPlus =
+      data.dewsStress.bandCounts.alert + data.dewsStress.bandCounts.warning + data.dewsStress.bandCounts.danger;
     items.push({
       id: "risk-tape:dews",
       label: "DEWS",
       value: `${alertPlus} ALERT+`,
-      tone: data.dewsStress.bandCounts.danger > 0
-        ? "critical"
-        : alertPlus > 0 ? "warning" : "positive",
+      tone: data.dewsStress.bandCounts.danger > 0 ? "critical" : alertPlus > 0 ? "warning" : "positive",
       detail: `${data.dewsStress.bandChanges.length} band change${data.dewsStress.bandChanges.length === 1 ? "" : "s"} in the last 24h.`,
     });
   }

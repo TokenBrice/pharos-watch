@@ -56,7 +56,7 @@ export function filterPrimaryPoolsPreferDirectApi(
   const eligibleDirectApiPools = directApiPools.filter((pool) => isPreferredDirectApiPool(pool));
   const directApiKnown = createKnownPoolIdentityIndex();
   for (const pool of eligibleDirectApiPools) {
-    registerKnownPoolIdentity(directApiKnown, buildDirectApiPoolIdentity(pool));
+    registerKnownPoolIdentity(directApiKnown, buildDirectApiPoolIdentity(pool, chainAddressToId));
   }
 
   const primaryIdentities = pools.map((pool) => {

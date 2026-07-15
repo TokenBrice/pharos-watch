@@ -1,30 +1,17 @@
-import { decodeAddressWord, decodeUintWord, type EthCallJournal, type PinnedBlock } from "../core";
-import type { CdpMeasurementTarget } from "../targets";
-import type { MechanismMeasurementEvidenceV1 } from "../schema";
+import {
+  decodeAddressWord,
+  decodeUintWord,
+  relativeDeltaPct,
+  requireCheck,
+  wadToRounded,
+  type EthCallJournal,
+  type MeasurementCheck,
+  type PinnedBlock,
+} from "../core";
+import type { LiquityV1MeasurementTarget } from "../targets";
+import type { LiquityV1MeasurementEvidence } from "../schema";
 
 const WAD = 10n ** 18n;
-
-/** Format a WAD-scaled bigint as a decimal number rounded to three places (overlay convention). */
-function wadToRounded(value: bigint): number {
-  return Number((value * 1000n) / WAD) / 1000;
-}
-
-function relativeDeltaPct(measured: bigint, reference: bigint): number {
-  if (reference === 0n) return Number.POSITIVE_INFINITY;
-  const scaled = Number(((measured - reference) * 1_000_000n) / reference) / 10_000;
-  return scaled;
-}
-
-interface Check {
-  id: string;
-  status: "pass";
-  detail: string;
-}
-
-function requireCheck(checks: Check[], id: string, condition: boolean, detail: string): void {
-  if (!condition) throw new Error(`Check failed: ${id} — ${detail}`);
-  checks.push({ id, status: "pass", detail });
-}
 
 /**
  * Measures Liquity-V1-family system metrics at a pinned block:
@@ -36,11 +23,11 @@ function requireCheck(checks: Check[], id: string, condition: boolean, detail: s
  */
 export async function measureLiquityV1(
   caller: EthCallJournal,
-  target: CdpMeasurementTarget,
+  target: LiquityV1MeasurementTarget,
   block: PinnedBlock,
   rpcUrl: string,
-): Promise<MechanismMeasurementEvidenceV1> {
-  const checks: Check[] = [];
+): Promise<LiquityV1MeasurementEvidence> {
+  const checks: MeasurementCheck[] = [];
   const { token, troveManager, stabilityPool, priceFeed } = target.contracts;
 
   const derivedTroveManager = decodeAddressWord(

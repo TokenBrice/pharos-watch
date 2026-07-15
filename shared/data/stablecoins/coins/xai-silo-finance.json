@@ -59,12 +59,31 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Freeze-only re-review: XAI has no confirmed direct holder-balance freeze in reviewed metadata, but resolves to Upstream through USDC collateral exposure.",
-    "evidence": "XAI resolves to Upstream through USDC Silo credit-line collateral rather than direct token freeze authority.",
-    "reviewer": "Codex FreezeWatch review",
-    "reviewedAt": "2026-05-24"
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "XAI verified Ethereum source and ABI",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac"
+      },
+      {
+        "label": "Silo XAI interface source (pinned commit)",
+        "url": "https://github.com/silo-finance/silo-core-v1/blob/6b66b91bf0edf0d3eac2067e10826fa7f14a7ce4/contracts/xai/IXAI.sol"
+      },
+      {
+        "label": "Silo terms of use",
+        "url": "https://www.silo.finance/terms-of-use"
+      },
+      {
+        "label": "Ethereum PublicNode RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "evidence": "The sole tracked Ethereum XAI deployment is a verified non-proxy Xai contract. Its source and ABI expose standard ERC-20 transfer and transferFrom, owner-only mint, and holder-only burn; they expose no holder blacklist, freeze, pause, seizure, arbitrary burn, or transfer-stop function. At Ethereum block 25534723, owner() returned 0xE8e8041cB5E3158A0829A19E014CA1cf91098554, whose Safe threshold was 3 of 4 owners with no enabled modules; the token's EIP-1967 implementation slot was zero and its code hash was 0xf4d1a948d4f04ab365bb1311ed7841ccca82915b9e4e94f4f9d9ec0f23a5da1a. Silo's terms can restrict interface use and describe protocol-level rescue scenarios, but do not identify an XAI token holder-transfer control.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15",
+    "upstreamSuppressionRationale": "USDC credit-line collateral can carry issuer or protocol risk for XAI backing, but it does not give Circle or Silo authority to freeze an ordinary XAI holder balance or block the reviewed XAI ERC-20 transfer path. This conclusion is limited to the sole tracked Ethereum deployment and does not assert control coverage for unidentified third-party representations."
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

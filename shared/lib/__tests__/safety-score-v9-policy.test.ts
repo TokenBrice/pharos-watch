@@ -26,7 +26,7 @@ describe("Safety Score v9 methodology policy", () => {
     expect(V9_CANDIDATE_POLICY_V1.policy.lifecycle).toBe("candidate");
     expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBeNull();
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "46a73c3cca66ed800b42f3f0ce17d458ca9234c367f732480df17f744df92c3f",
+      "03a8ec9fa123dbfe35609b413855f823bc641937c2350b7aadd743213d1ef854",
     );
     expect(Object.isFrozen(V9_CANDIDATE_POLICY_V1.policy.semantic.formula)).toBe(true);
   });
@@ -73,6 +73,7 @@ describe("Safety Score v9 methodology policy", () => {
       "historical-critical-input",
       "implementation-parent-cycle",
       "insufficient-evidence",
+      "missing-access-review",
       "missing-archetype",
       "missing-parent-score",
       "missing-pillar",

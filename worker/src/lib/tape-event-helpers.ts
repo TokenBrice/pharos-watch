@@ -1,8 +1,5 @@
-import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
-import {
-  getReportCardGradeRank,
-  UNKNOWN_REPORT_CARD_GRADE_RANK,
-} from "@shared/lib/report-card-core";
+import { ScoreTapeEventPayloadSchema, type TapeEvent, type TapeEventSeverity } from "@shared/types/tape-event";
+import { getReportCardGradeRank, UNKNOWN_REPORT_CARD_GRADE_RANK } from "@shared/lib/report-card-core";
 import type { TapeEventRow } from "./tape-event-types";
 
 /** Stable per-row hash for the wire `event_id`. djb2 → 8 hex chars. */
@@ -116,12 +113,41 @@ export function severityForMethodologyBump(version: string): TapeEventSeverity {
 function parsePayload(payloadJson: string): Record<string, unknown> {
   try {
     const parsed = JSON.parse(payloadJson);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : {};
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
   } catch {
     return {};
   }
+}
+
+function isScoreTapeEventType(type: string): boolean {
+  return type === "score.upgraded" || type === "score.downgraded";
+}
+
+function normalizeScoreTapePayload(row: TapeEventRow, payload: Record<string, unknown>): Record<string, unknown> {
+  if (!isScoreTapeEventType(row.type)) return payload;
+
+  const parsed = ScoreTapeEventPayloadSchema.safeParse(payload);
+  if (
+    parsed.success &&
+    (parsed.data.safetyScore.identityStatus === "complete" || row.source_table === "safety_grade_history")
+  ) {
+    return parsed.data;
+  }
+
+  const hasSafetyScore = Object.prototype.hasOwnProperty.call(payload, "safetyScore");
+  if (row.source_table === "safety_grade_history" && !hasSafetyScore) {
+    const legacyPayload = {
+      ...payload,
+      safetyScore: {
+        identityStatus: "legacy-v8-unidentified",
+        identity: null,
+      },
+    };
+    const legacy = ScoreTapeEventPayloadSchema.safeParse(legacyPayload);
+    if (legacy.success) return legacy.data;
+  }
+
+  throw new Error(`Invalid score tape event payload: ${row.source_table}:${row.source_row_id}`);
 }
 
 export function rowToTapeEvent(row: TapeEventRow): TapeEvent {
@@ -137,7 +163,7 @@ export function rowToTapeEvent(row: TapeEventRow): TapeEvent {
     chain: row.chain,
     title: row.title,
     summary: row.summary,
-    payload: parsePayload(row.payload_json),
+    payload: normalizeScoreTapePayload(row, parsePayload(row.payload_json)),
     sourceTable: row.source_table,
     sourceRowId: row.source_row_id,
     transition: row.transition,

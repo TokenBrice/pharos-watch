@@ -8,6 +8,8 @@ import {
   loadReportCardCache,
   REPORT_CARD_CACHE_MAX_AGE_MS,
 } from "./report-card-cache";
+import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
+import { isCurrentSafetyScoreV8Identity } from "./safety-score-current-identity";
 
 interface SafetyResult {
   score: number;
@@ -68,6 +70,7 @@ export type SafetyScoresSnapshotResult = SafetyScoresResultMap | SafetyScoresRes
 
 export type PublishedSafetyScoresResultMap = SafetyScoresResultMap & {
   source: "report-card-cache";
+  safetyScoreIdentity: SafetyScoreV8PublicationIdentity | null;
   publicationGenerationId: string | null;
   methodologyVersion: string | null;
   publishedAt: number | null;
@@ -125,8 +128,25 @@ async function loadPublishedSafetyScoresSnapshot(db: D1Database): Promise<Publis
     return {
       ...toMapResult("degraded", new Map(), ACTIVE_STABLECOINS.length, `report-card-cache:${cached.reason}`),
       source: "report-card-cache",
+      safetyScoreIdentity: null,
       publicationGenerationId: null,
       methodologyVersion: null,
+      publishedAt: cached.updatedAt,
+    };
+  }
+
+  if (!isCurrentSafetyScoreV8Identity(cached.payload.safetyScoreIdentity)) {
+    return {
+      ...toMapResult(
+        "degraded",
+        new Map(),
+        cached.payload.completeness!.expectedCount,
+        "report-card-cache:identity-mismatch",
+      ),
+      source: "report-card-cache",
+      safetyScoreIdentity: cached.payload.safetyScoreIdentity ?? null,
+      publicationGenerationId: cached.payload.publicationGenerationId ?? null,
+      methodologyVersion: cached.payload.methodologyVersion,
       publishedAt: cached.updatedAt,
     };
   }
@@ -143,6 +163,7 @@ async function loadPublishedSafetyScoresSnapshot(db: D1Database): Promise<Publis
       degradedInputs ? "report-card-cache:degraded-inputs" : undefined,
     ),
     source: "report-card-cache",
+    safetyScoreIdentity: cached.payload.safetyScoreIdentity!,
     publicationGenerationId: cached.payload.publicationGenerationId!,
     methodologyVersion: cached.payload.methodologyVersion,
     publishedAt: cached.payload.updatedAt,

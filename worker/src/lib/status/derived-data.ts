@@ -1,11 +1,7 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { STATUS_RECONCILIATION_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { sumPegBuckets } from "@shared/lib/supply";
-import type {
-  MintBurnReconciliationRow,
-  MintBurnReconciliationSummary,
-  StatusResponse,
-} from "@shared/types/status";
+import type { MintBurnReconciliationRow, MintBurnReconciliationSummary, StatusResponse } from "@shared/types/status";
 import { buildInClause } from "../db";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 import {
@@ -17,6 +13,8 @@ import { emptyReserveCompositionOverview } from "../live-reserves-store";
 import { logWorkerEvent } from "../structured-log";
 import { loadMintBurnFirstHourRows } from "../mint-burn-hourly-queries";
 import { readDewsPublishedGenerationResult } from "../dews-publication-pointer";
+import { loadReportCardCache } from "../report-card-cache";
+import { isCurrentSafetyScoreV8Identity } from "../safety-score-current-identity";
 
 export function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {
   return {
@@ -55,6 +53,9 @@ type DatasetFreshnessTarget =
     }
   | {
       type: "dews-publication";
+    }
+  | {
+      type: "report-card-publication";
     };
 
 const DATASET_FRESHNESS_TARGETS: Record<keyof StatusResponse["datasetFreshness"], DatasetFreshnessTarget> = {
@@ -62,7 +63,7 @@ const DATASET_FRESHNESS_TARGETS: Record<keyof StatusResponse["datasetFreshness"]
   blacklist: { type: "cron", jobs: ["sync-blacklist"] },
   mintBurn: { type: "cron", jobs: ["sync-mint-burn", "sync-mint-burn-extended"] },
   supply: { type: "table", table: "supply_history", column: "snapshot_date" },
-  safetyGrades: { type: "table", table: "safety_grade_history", column: "recorded_at" },
+  safetyGrades: { type: "report-card-publication" },
   yield: {
     type: "table",
     table: "yield_data",
@@ -80,9 +81,7 @@ const TABLE_TARGETS = Object.values(DATASET_FRESHNESS_TARGETS).filter(
 );
 const ALLOWED_DATASET_TABLES = new Set(TABLE_TARGETS.map((t) => t.table));
 const ALLOWED_DATASET_COLUMNS = new Set(TABLE_TARGETS.map((t) => t.column));
-const ALLOWED_DATASET_WHERE_CLAUSES = new Set(
-  TABLE_TARGETS.map((t) => t.where).filter(Boolean),
-);
+const ALLOWED_DATASET_WHERE_CLAUSES = new Set(TABLE_TARGETS.map((t) => t.where).filter(Boolean));
 
 async function getLastTableUpdate(
   db: D1Database,
@@ -164,6 +163,37 @@ async function getLastUpdate(db: D1Database, target: DatasetFreshnessTarget, now
     });
     return null;
   }
+  if (target.type === "report-card-publication") {
+    let published: Awaited<ReturnType<typeof loadReportCardCache>>;
+    try {
+      published = await loadReportCardCache(db, { requireCompleteness: true });
+    } catch (err) {
+      logWorkerEvent({
+        scope: "status",
+        level: "error",
+        event: "report_card_publication_freshness_read_failed",
+        route: "status",
+        source: "report_card_cache",
+        message: "Failed to read report-card cache for dataset freshness",
+        error: err,
+      });
+      return null;
+    }
+    if (published.kind === "ok" && isCurrentSafetyScoreV8Identity(published.payload.safetyScoreIdentity)) {
+      return published.updatedAt;
+    }
+    const reason = published.kind === "ok" ? "identity-mismatch" : published.reason;
+    logWorkerEvent({
+      scope: "status",
+      level: "warn",
+      event: "report_card_publication_freshness_unavailable",
+      route: "status",
+      source: "report_card_cache",
+      message: "Failed to validate the complete identified report-card publication for dataset freshness",
+      metadata: { reason, updatedAt: published.updatedAt },
+    });
+    return null;
+  }
   return getLastTableUpdate(db, target);
 }
 
@@ -202,8 +232,8 @@ export async function getMintBurnReconciliation(
   now: number,
   preloadedCache?: StablecoinsCacheLoadResult,
 ): Promise<MintBurnReconciliationSummary | null> {
-  const stablecoinsCacheResult = preloadedCache
-    ?? (await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true }));
+  const stablecoinsCacheResult =
+    preloadedCache ?? (await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true }));
   if (!hasUsableStablecoinsPayload(stablecoinsCacheResult)) {
     return null;
   }
@@ -272,9 +302,7 @@ export async function getMintBurnReconciliation(
   const flowMap = new Map(
     (flowRows.results ?? []).map((row) => [`${row.stablecoin_id}|${row.chain_id}`, row.net_flow_usd]),
   );
-  const firstSeenMap = new Map(
-    firstSeenRows.map((row) => [`${row.stablecoin_id}|${row.chain_id}`, row.first_hour_ts]),
-  );
+  const firstSeenMap = new Map(firstSeenRows.map((row) => [`${row.stablecoin_id}|${row.chain_id}`, row.first_hour_ts]));
 
   const rows = assets
     .map<MintBurnReconciliationRow>((asset) => {
@@ -322,9 +350,11 @@ export async function getMintBurnReconciliation(
       );
       const diffRatio = denominator > 0 ? absoluteDiffUsd / denominator : 0;
       const status: MintBurnReconciliationRow["status"] =
-        absoluteDiffUsd >= STATUS_RECONCILIATION_THRESHOLDS.criticalAbsoluteUsd || diffRatio >= STATUS_RECONCILIATION_THRESHOLDS.criticalRatio
+        absoluteDiffUsd >= STATUS_RECONCILIATION_THRESHOLDS.criticalAbsoluteUsd ||
+        diffRatio >= STATUS_RECONCILIATION_THRESHOLDS.criticalRatio
           ? "critical"
-          : absoluteDiffUsd >= STATUS_RECONCILIATION_THRESHOLDS.warnAbsoluteUsd || diffRatio >= STATUS_RECONCILIATION_THRESHOLDS.warnRatio
+          : absoluteDiffUsd >= STATUS_RECONCILIATION_THRESHOLDS.warnAbsoluteUsd ||
+              diffRatio >= STATUS_RECONCILIATION_THRESHOLDS.warnRatio
             ? "warn"
             : "ok";
 

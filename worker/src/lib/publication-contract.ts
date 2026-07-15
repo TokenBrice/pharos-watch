@@ -14,6 +14,10 @@ import { parseObjectMetadata } from "./json-metadata";
 import { loadReportCardCache } from "./report-card-cache";
 import { loadStablecoinsCache } from "./stablecoins-cache";
 import { loadPublishedStressSignalGeneration } from "./stress-signals-current-rows";
+import { isCurrentSafetyScoreV8Identity } from "./safety-score-current-identity";
+import { safetyScoreV8PublicationIdentitiesMatch } from "@shared/lib/safety-score-v8-publication";
+import { SafetyScoreV8PublicationIdentitySchema } from "@shared/types/safety-score-publication";
+import { isRecord } from "@shared/lib/type-guards";
 
 interface PublicationGenerationRow {
   generation_id: string;
@@ -594,11 +598,43 @@ async function loadReportCardCachePublicationSurface(
   db: D1Database,
   now: number,
 ): Promise<PublicationSurfaceHealth> {
-  const genericSurface = await loadGenericPublicationSurface(db, now, REPORT_CARD_CACHE_SURFACE);
-  if (genericSurface) return genericSurface;
+  const [genericSurface, result] = await Promise.all([
+    loadGenericPublicationSurface(db, now, REPORT_CARD_CACHE_SURFACE),
+    loadReportCardCache(db, { requireCompleteness: true }),
+  ]);
+  if (result.kind === "ok" && isCurrentSafetyScoreV8Identity(result.payload.safetyScoreIdentity)) {
+    const genericPublished = genericSurface?.lastPublishedGeneration;
+    const genericValidationSummary = genericPublished?.metadata?.validationSummary;
+    const genericIdentity = isRecord(genericValidationSummary)
+      ? SafetyScoreV8PublicationIdentitySchema.safeParse(genericValidationSummary.safetyScoreIdentity)
+      : null;
+    if (
+      genericSurface &&
+      genericPublished?.generationId === result.payload.publicationGenerationId &&
+      genericIdentity?.success === true &&
+      safetyScoreV8PublicationIdentitiesMatch(genericIdentity.data, result.payload.safetyScoreIdentity)
+    ) {
+      const enrich = (generation: PublicationGenerationHealth | null): PublicationGenerationHealth | null => {
+        if (!generation || generation.generationId !== result.payload.publicationGenerationId) return generation;
+        return {
+          ...generation,
+          metadata: {
+            ...generation.metadata,
+            safetyScoreIdentity: result.payload.safetyScoreIdentity,
+          },
+        };
+      };
+      return {
+        ...genericSurface,
+        lastPublishedGeneration: enrich(genericSurface.lastPublishedGeneration),
+        lastAttemptedGeneration: enrich(genericSurface.lastAttemptedGeneration),
+        dependencyWatermarks: {
+          ...(genericSurface.dependencyWatermarks ?? {}),
+          reportCardCache: result.updatedAt,
+        },
+      };
+    }
 
-  const result = await loadReportCardCache(db, { requireCompleteness: true });
-  if (result.kind === "ok") {
     const publishedRow = publishedFallbackRow(
       `report-card-cache:${result.updatedAt}`,
       result.updatedAt,
@@ -609,18 +645,20 @@ async function loadReportCardCachePublicationSurface(
         },
         cacheKey: "report_card_cache",
         methodologyVersion: result.payload.methodologyVersion,
+        safetyScoreIdentity: result.payload.safetyScoreIdentity,
         degradedInputs: result.payload.degradedInputs ?? null,
       },
     );
     return buildSurfaceHealth(REPORT_CARD_CACHE_FALLBACK_SURFACE, now, publishedRow, publishedRow, null);
   }
 
+  const reason = result.kind === "ok" ? "identity-mismatch" : result.reason;
   const attemptedAt = result.updatedAt ?? now;
   const failedRow = failedFallbackRow(
     result.updatedAt == null
       ? "report-card-cache:missing"
       : `report-card-cache:${result.updatedAt}:invalid`,
-    result.reason,
+    reason,
     attemptedAt,
     {
       cacheKey: "report_card_cache",

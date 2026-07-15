@@ -2876,34 +2876,63 @@
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "reserves": [
     {
-      "name": "SUI (native token CDPs)",
-      "pct": 45,
-      "risk": "high"
-    },
-    {
-      "name": "USDC (via PSM)",
-      "pct": 12.5,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "mechanism"
-    },
-    {
-      "name": "USDT (via PSM)",
-      "pct": 12.5,
-      "risk": "low",
-      "coinId": "usdt-tether",
-      "depType": "mechanism"
-    },
-    {
-      "name": "BTC (wrapped, via CDPs)",
-      "pct": 15,
-      "risk": "medium"
-    },
-    {
-      "name": "ETH & LSTs (via CDPs)",
-      "pct": 15,
-      "risk": "low"
+      "name": "BUCK V1 dynamic CDP and Peg Stability Module basket",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Bucket Protocol V1 collateral providers and Peg Stability Module counterparties",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Bucket technical resources",
+        "url": "https://docs.bucketprotocol.io/developer-and-security/technical-resources"
+      },
+      {
+        "label": "Bucket terms of service",
+        "url": "https://docs.bucketprotocol.io/resources/terms-of-service"
+      },
+      {
+        "label": "Pinned Bucket V1 interface and deployment registry",
+        "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+      },
+      {
+        "label": "Pinned Sui checkpoint anchor for Bucket branches",
+        "url": "https://suiscan.xyz/mainnet/tx/7wQDgjfrnytQxyhAXr2eazB636ZSsRv1KnKnaVvRSgGB"
+      },
+      {
+        "label": "Archived Bucket V1 Peg Stability Module documentation",
+        "url": "https://web.archive.org/web/20250210142416/https://docs.bucketprotocol.io/mechanisms/peg-stability-module"
+      }
+    ],
+    "rationale": "BUCK is issued through dynamic Bucket V1 collateral positions and Peg Stability Module exchanges. The pinned V1 interface exposes per-asset collateral vaults and CDP borrow, repay, redemption, and liquidation functions; the current branch review identifies 40 registered collateral branches at Sui checkpoint 298434520. At Sui checkpoint 298655668, the shared BucketProtocol object still held the BUCK TreasuryCap with raw total supply 25967024785770812. Neither issuer documentation, legal terms, archived PSM documentation, nor public Sui state publishes a current USD-value cross-basket allocation. The previous five static percentage rows are therefore not defensible.",
+    "compositionBasis": "Bucket V1 source and pinned Sui state; current cross-basket collateral valuation is undisclosed",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current per-bucket collateral balances, asset prices, collateral weights, and any Peg Stability Module balances are not published as a reconciled aggregate.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "BUCK V1 dynamic CDP and Peg Stability Module basket",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The protocol's dynamic CDP and Peg Stability Module backing paths are documented, but public sources do not support durable collateral weights."
+      }
+    ]
+  },
   "launchDate": "2023-06-28"
 }

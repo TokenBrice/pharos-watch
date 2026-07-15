@@ -1,4 +1,5 @@
 import type { YieldBenchmarkMeta, YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
+import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
 import type { EvaluatedYieldSource } from "./evaluation-types";
 import { classifyYieldBenchmarkFreshness } from "./benchmarks";
 import type { YieldEnvelopeRejection } from "./types";
@@ -71,6 +72,7 @@ export function buildYieldSafetySnapshotMeta(input: {
   trackedCount: number;
   reason: string | null;
   source: "report-card-cache";
+  safetyScoreIdentity: SafetyScoreV8PublicationIdentity | null;
   publicationGenerationId: string | null;
   methodologyVersion: string | null;
   publishedAt: number | null;
@@ -82,6 +84,7 @@ export function buildYieldSafetySnapshotMeta(input: {
     trackedCount: input.trackedCount,
     reason: input.reason,
     source: input.source,
+    safetyScoreIdentity: input.safetyScoreIdentity,
     publicationGenerationId: input.publicationGenerationId,
     methodologyVersion: input.methodologyVersion,
     publishedAt: input.publishedAt,

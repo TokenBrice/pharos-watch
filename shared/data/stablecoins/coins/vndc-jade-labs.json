@@ -57,30 +57,54 @@
       "decimals": 0
     }
   ],
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "VNDC official website",
+        "label": "VNDC official issuer website",
         "url": "https://vndc.io/"
       },
       {
-        "label": "Tracked VNDC Ethereum deployment",
+        "label": "Archived VNDC 2.0 issuer website (2025-02-25)",
+        "url": "https://arquivo.pt/wayback/20250225032222/https://vndc.io/"
+      },
+      {
+        "label": "ONUS VNDC 2.0 BSC and Polygon announcement",
+        "url": "https://goonus.io/en/announcement-onus-supports-vndc-2-0-bep20-and-polygon-networks/"
+      },
+      {
+        "label": "ONUS terms of service",
+        "url": "https://goonus.io/en/terms-of-service"
+      },
+      {
+        "label": "Tracked VNDC Ethereum verified VNDCToken source and ABI",
         "url": "https://etherscan.io/address/0x1f3f677ecc58f6a1f9e2cf410df4776a8546b5de#code"
       },
       {
-        "label": "Tracked VNDC Polygon deployment",
+        "label": "Tracked VNDC Polygon verified TokenVNDC source and ABI",
         "url": "https://polygonscan.com/address/0xd0076d7e57aac42ec3f9d6e7c604d04a5b7030fa#code"
       },
       {
-        "label": "Tracked VNDC BSC deployment",
+        "label": "Tracked VNDC BSC verified TokenVNDC source and ABI",
         "url": "https://bscscan.com/address/0xa276dc434a366c62ef010585b3885d0c85154389#code"
+      },
+      {
+        "label": "PublicNode Ethereum RPC used for fixed-block verification",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "PublicNode Polygon Bor RPC used for current-live verification",
+        "url": "https://polygon-bor-rpc.publicnode.com"
+      },
+      {
+        "label": "PublicNode BSC RPC used for current-live verification",
+        "url": "https://bsc-rpc.publicnode.com"
       }
     ],
-    "evidence": "BLOCKED: VNDC's official site supports an issuer-managed mint and redemption model, and the three tracked EVM deployments are identified, but the public source set does not establish the verified implementation, administrator, or holder-control behavior for every deployment. Possible is retained rather than asserting a direct no-freeze result.",
-    "reviewer": "SONG-5 Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At Ethereum block 25535745 on 2026-07-15, queried through the cited PublicNode Ethereum RPC, the tracked verified VNDCToken 0x1f3f677ecc58f6a1f9e2cf410df4776a8546b5de reported deprecated=false, upgradedAddress=zero, paused=false, and owner=EOA 0x004D050267B7cBdD223A591824c34F69A8a7A7b7. Its verified source grants that owner addBlackList/removeBlackList and destroyBlackFunds; transfer and transferFrom reject blacklisted senders and recipients, and destroyBlackFunds can erase a blacklisted holder balance. Owner-origin eth_call simulations of addBlackList(random) and pause() both succeeded without broadcasting; an unlisted random account's zero-value transfer did not revert. At current live PublicNode reads on 2026-07-15 (Polygon head 90257403 and BSC head 110070558), the two tracked, byte-identical verified TokenVNDC deployments reported common owner EOA 0x557D55E71204CE7DfDc5C839446Dd34F1b299354 and paused=false. Their owner-only pause/unpause controls feed an _beforeTokenTransfer whenNotPaused hook, so they halt all ERC-20 transfers, mints, and burns; owner-origin pause simulations succeeded and unprivileged zero-value transfer simulations returned true. The free Polygon/BSC endpoints reject archival calls without a personal token, so these are current-live observations rather than retained fixed-block claims. The Polygon/BSC whitelist maps gate protocol mint/redeem, not ordinary ERC-20 transfers, so individual-address blacklist/confiscation is asserted only for Ethereum and global transfer stoppage for all three routes. The current vndc.io endpoint was unavailable during review, but its archived issuer page and ONUS announcement establish the issuer-facing VNDC 2.0 context. ONUS terms allow platform account restrictions, which are not used to infer the token result. No official VNDC Solidity repository was identified in the reviewed issuer materials; the direct conclusion rests on verified explorers and the cited RPC calls. The issuer liquidity claims and existing self-reported PoR record did not provide an independent reserve attestation and are not evidence for this access-control classification.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "chainTier": "mature-alt-l1",
   "deploymentModel": "native-multichain",

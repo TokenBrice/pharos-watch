@@ -25,6 +25,7 @@ import { handleRedemptionBackstops } from "../api/redemption-backstops";
 import { handleYieldHistory } from "../api/yield-history";
 import { handleYieldAdapterManifest } from "../api/yield-adapter-manifest";
 import { handleSafetyScoreHistory } from "../api/safety-score-history";
+import { handleSafetyScoreHistoryV2 } from "../api/safety-score-history-v2";
 import { handleMintBurnFlows } from "../api/mint-burn-flows";
 import { handleMintBurnEvents } from "../api/mint-burn-events";
 import { handleStressSignals } from "../api/stress-signals";
@@ -62,6 +63,7 @@ export const PUBLIC_STATIC_ROUTES = [
   defineStaticRoute("yield-adapter-manifest", () => handleYieldAdapterManifest()),
   defineStaticRoute("yield-history", ({ db, url }) => handleYieldHistory(db, url)),
   defineStaticRoute("safety-score-history", ({ db, url }) => handleSafetyScoreHistory(db, url)),
+  defineStaticRoute("safety-score-history-v2", ({ db, url }) => handleSafetyScoreHistoryV2(db, url)),
   defineStaticRoute("mint-burn-flows", ({ db, url }) => handleMintBurnFlows(db, url)),
   defineStaticRoute("mint-burn-events", ({ db, url }) => handleMintBurnEvents(db, url)),
   defineStaticRoute("stress-signals", ({ db, url }) => handleStressSignals(db, url)),

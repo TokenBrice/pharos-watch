@@ -44,13 +44,41 @@
     "reviewedStatus": "possible",
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://docs.stoneyield.io/"
+        "label": "StoneYield contract design",
+        "url": "https://docs.stoneyield.io/docs/protocol/contract-design"
+      },
+      {
+        "label": "StoneYield transfer restrictions",
+        "url": "https://docs.stoneyield.io/docs/protocol/transfer-restrictions"
+      },
+      {
+        "label": "StoneYield STUSD token (BscScan)",
+        "url": "https://bscscan.com/address/0x806dd21af6de051fb811760a5768d04a99160eb9#code"
+      },
+      {
+        "label": "StoneYield STUSD wrapper (BscScan)",
+        "url": "https://bscscan.com/address/0xb4d3c1bb59be7b419af4e10e9b240f425782b22a#code"
+      },
+      {
+        "label": "StoneYield sUSDC proxy (BscScan)",
+        "url": "https://bscscan.com/address/0xad66385c6db496258771b5fd8ac376e3dd0d1536#code"
+      },
+      {
+        "label": "StoneYield sUSDC implementation (BscScan)",
+        "url": "https://bscscan.com/address/0xe1bf9310f23db3fd05931aa89879d5247bb2a678#code"
+      },
+      {
+        "label": "StoneYield contracts repository",
+        "url": "https://github.com/stoneyield/stoneyield-contracts"
+      },
+      {
+        "label": "BNB Chain PublicNode RPC",
+        "url": "https://bsc-rpc.publicnode.com"
       }
     ],
-    "evidence": "StoneYield USD is a managed yield wrapper on BNB Chain; docs identify protocol controls, but available sources do not prove an active holder-balance blacklist function.",
-    "reviewer": "Codex coverage expansion",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Reviewed 2026-07-15. Current BSC safe-tag reads returned STUSD wrapper 0xb4d3c1bb59be7b419af4e10e9b240f425782b22a; its owner and STUSD DEFAULT_ADMIN_ROLE were 0x9ab82f8e97bf3202173b92e06e6593f336b76ccf, and wrapper susdcToken() was 0xad66385c6db496258771b5fd8ac376e3dd0d1536. These live reads are not archive-pinned: free RPC providers rejected explicit-block replay at 110064643 because historical state was unavailable. Verified STUSD source v2.0.1 uses the wrapper's getLockInfo(from) in _update and rejects a transfer that consumes an unexpired locked amount. Verified wrapper source v3.0.1 restricts wrapWithLock(to, amount, unlockTime) to its owner or OPERATOR_ROLE and creates the holder lock before issuing. No arbitrary lock of an already-held balance, token-level STUSD pause, or blacklist function was found; a current safe-tag paused() call reverted. This proves a direct possible holder transfer-lock surface, not a confirmed direct blacklist. The verified sUSDC implementation has pause, holder-lock, and burn controls; current safe-tag paused() was false and a non-persistent eth_call from its current owner to pause() succeeded. Those observations show live control, not a historical state snapshot. Issuer docs describe broader transfer restrictions than current STUSD code, so verified explorer source governs deployed behavior. No separate official ToS, proof-of-reserves publication, or archive capture was located in reviewed public materials; that absence was not used as access evidence.",
+    "reviewer": "Codex Wave 11 access review",
+    "reviewedAt": "2026-07-15"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",

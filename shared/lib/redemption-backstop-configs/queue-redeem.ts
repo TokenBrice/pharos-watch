@@ -151,6 +151,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "iusd-infinifi": {
     ...queueRedeemBase,
+    outputAssets: ["usdc-circle"],
     capacityModel: {
       kind: "reserve-sync-metadata",
       fallbackRatio: 0.15,
@@ -185,6 +186,8 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "usdf-falcon": {
     ...queueRedeemBase,
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdt-tether", "usdc-circle", "fdusd-first-digital"],
     accessModel: "whitelisted-onchain",
     capacityModel: { kind: "reserve-sync-metadata" },
     costModel: fixedFee(
@@ -243,6 +246,8 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   }),
   "reusd-re-protocol": {
     ...queueRedeemBase,
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdc-circle", "dai-makerdao", "susde-ethena", "usde-ethena"],
     capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.2, confidence: "documented-bound" },
     reviewedAt: REVIEWED_QUEUE_REDEMPTION_AT,
     costModel: documentedVariableFee(
@@ -488,6 +493,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "usp-pikudao": {
     ...queueRedeemBase,
+    outputAssets: ["usdc-circle"],
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
     capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "documented-bound" },
@@ -576,6 +582,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "usdat-saturn": {
     ...queueRedeemBase,
+    outputAssets: ["usdc-circle"],
     accessModel: "whitelisted-onchain",
     settlementModel: "same-day",
     capacityModel: { kind: "supply-ratio", ratio: 0.5, confidence: "heuristic", basis: "strategy-buffer" },
@@ -610,6 +617,8 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "usdh-hermetica": {
     ...queueRedeemBase,
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdc-circle", "usdt-tether"],
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
     capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "strategy-buffer" },
@@ -657,6 +666,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   "nusd-neutrl": {
     ...queueRedeemBase,
     ...reviewedQueueRedemptionSupplyFull,
+    outputAssets: ["usdc-circle"],
     accessModel: "whitelisted-onchain",
     costModel: undisclosedReviewedFee(
       "Neutrl redemption is available to whitelisted KYC participants and supports instant or queued execution depending on AssetReserve liquidity; public fee schedule is not disclosed",
@@ -676,6 +686,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "onyc-onre": {
     ...queueRedeemBase,
+    outputAssets: ["usdc-circle", "usdg-paxos"],
     capacityModel: { kind: "supply-ratio", ratio: 0.025, confidence: "documented-bound", basis: "strategy-buffer" },
     accessModel: "issuer-api",
     settlementModel: "days",
@@ -803,6 +814,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   "inalpha-nest": {
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    outputAssets: ["usdc-circle", "pusd-plume"],
     accessModel: "issuer-api",
     settlementModel: "days",
     executionModel: "rules-based-nav",

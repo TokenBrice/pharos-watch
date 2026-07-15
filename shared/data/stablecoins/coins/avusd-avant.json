@@ -16,6 +16,52 @@
   "llamaId": "271",
   "detailProvider": "defillama",
   "geckoId": "avant-usd",
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "The native Avalanche avUSD contract is an owner-administered ERC-20 with an authorized-minter map, not a collateralized-debt engine: its verified source has no price-feed, borrower collateral-health, or forced-liquidation logic.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-15",
+      "reviewer": "Codex V9 oracle curation",
+      "rationale": "Avant documents avUSD as an Avalanche-native USDC mint and redemption asset. At Avalanche C-Chain block 90331106, the verified non-proxy avUSD contract exposes ERC-20 operations and owner-managed minter authorization, but no oracle, debt-position, collateral-health, or liquidation function. The PriceStorage documented for the separate avUSDx junior token does not establish a CDP oracle branch for avUSD.",
+      "sources": [
+        {
+          "label": "Avant core tokens",
+          "url": "https://docs.avantprotocol.com/overview/core-tokens"
+        },
+        {
+          "label": "Avant verified avUSD contract source",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x24de8771bc5ddb3362db529fc3358f2df3a0e346"
+        },
+        {
+          "label": "Avalanche C-Chain block 90331106",
+          "url": "https://snowtrace.io/block/90331106"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-15",
+    "reviewer": "Codex V9 oracle curation",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Avant core tokens",
+        "url": "https://docs.avantprotocol.com/overview/core-tokens"
+      },
+      {
+        "label": "Avant verified avUSD contract source",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x24de8771bc5ddb3362db529fc3358f2df3a0e346"
+      },
+      {
+        "label": "Avant verified avUSD contract ABI",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getabi&address=0x24de8771bc5ddb3362db529fc3358f2df3a0e346"
+      },
+      {
+        "label": "Avalanche C-Chain block 90331106",
+        "url": "https://snowtrace.io/block/90331106"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "Avant identifies Avalanche as the native avUSD minting chain and says in-app bridging across supported networks uses Chainlink CCIP and LayerZero. Because the route depends on external messaging/validation networks rather than only issuer-native settlement, it is reviewed as an external validated-network route.",

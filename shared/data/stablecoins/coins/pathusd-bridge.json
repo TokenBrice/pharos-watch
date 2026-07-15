@@ -144,17 +144,25 @@
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://docs.tempo.xyz/protocol/exchange/pathUSD"
+        "label": "Tempo TIP-20 specification",
+        "url": "https://docs.tempo.xyz/protocol/tip20/spec"
       },
       {
-        "label": "Website",
-        "url": "https://tempo.xyz/"
+        "label": "Tempo pathUSD token",
+        "url": "https://explore.tempo.xyz/token/0x20c0000000000000000000000000000000000000"
+      },
+      {
+        "label": "Tempo TIP-20 implementation",
+        "url": "https://github.com/tempoxyz/tempo/tree/main/crates/precompiles/src/tip20"
+      },
+      {
+        "label": "Tempo public RPC",
+        "url": "https://rpc.tempo.xyz"
       }
     ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "At Tempo block 30043787, pathUSD reported paused() = false and transferPolicyId() = 2. The TIP-20 specification and implementation grant PAUSE_ROLE the ability to halt transfers, allow DEFAULT_ADMIN_ROLE to replace the transfer policy, and grant BURN_BLOCKED_ROLE the ability to burn tokens from accounts blocked by the active policy. The current unpaused state does not remove those privileged transfer-control paths, so direct restriction/freeze capability is established.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "chainTier": "unproven",
   "deploymentModel": "single-chain",
@@ -172,34 +180,81 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "pathUSD is Tempo's TIP-20 quote stablecoin issued via Bridge (a FinCEN-registered MSB); the administrative authority over the precompile token can mint and burn supply arbitrarily, and mint/redeem runs through Bridge against its reserve portfolio.",
+    "summary": "At Tempo block 30043787, the observed pathUSD issuance proxy 0x8354d80eea9978faa04c3b36771c1e8b9c3e9058 held ISSUER_ROLE and could mint within the current 100 million pathUSD supply cap. TIP-20 DEFAULT_ADMIN_ROLE can grant or revoke issuer roles and change the cap or transfer policy; its holders and the issuer proxy's upgrade controller are not enumerable through the public TIP-20 interface.",
+    "upgradeability": {
+      "model": "unknown",
+      "proxyAddresses": [
+        "0x8354d80eea9978faa04c3b36771c1e8b9c3e9058"
+      ],
+      "implementationAddresses": [
+        "0x271c4d8616ed81c2cc006446c61f25219b182f8a"
+      ],
+      "canChangeMintLogic": "unknown",
+      "observedAt": "2026-07-15",
+      "observedBlock": 30043787,
+      "sources": [
+        {
+          "label": "Tempo public RPC",
+          "url": "https://rpc.tempo.xyz"
+        },
+        {
+          "label": "Tempo pathUSD token",
+          "url": "https://explore.tempo.xyz/token/0x20c0000000000000000000000000000000000000"
+        }
+      ]
+    },
     "controls": [
       {
-        "label": "pathUSD TIP-20 token administrator (Tempo/Bridge)",
-        "role": "minter-admin",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
         "chain": "tempo",
-        "canRaiseCap": "unknown",
-        "evidence": "pathUSD is a TIP-20 precompile token whose administrative authority can mint or burn arbitrarily; Tempo/Bridge controls supply creation, and primary mint/redeem flows through Bridge MSB rails against custodied reserves."
+        "address": "0x8354d80eea9978faa04c3b36771c1e8b9c3e9058",
+        "label": "pathUSD active TIP-20 issuer proxy",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "At the observation block, supplyCap() was 100,000,000 pathUSD. This proxy held ISSUER_ROLE but not DEFAULT_ADMIN_ROLE, so it could mint only within the current cap and could not raise it directly.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-15",
+        "observedBlock": 30043787,
+        "sources": [
+          {
+            "label": "Tempo TIP-20 specification",
+            "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+          },
+          {
+            "label": "Tempo public RPC",
+            "url": "https://rpc.tempo.xyz"
+          },
+          {
+            "label": "Tempo pathUSD token",
+            "url": "https://explore.tempo.xyz/token/0x20c0000000000000000000000000000000000000"
+          }
+        ],
+        "evidence": "At Tempo block 30043787, public RPC returned hasRole(proxy, ISSUER_ROLE) = true and hasRole(proxy, DEFAULT_ADMIN_ROLE) = false. An RPC trace of transaction 0xbf824b6afb9ce9379fbea4337c51562560d577dd91237d4a35794daa5528de9a shows this proxy calling pathUSD.mint(). Its EIP-1967 implementation slot resolved to 0x271c4d8616ed81c2cc006446c61f25219b182f8a."
       }
     ],
     "review": {
-      "evidence": "Tempo docs describe pathUSD as a TIP-20 precompile stablecoin where the administrative authority can mint/burn arbitrarily; Bridge (FinCEN MSB) operates issuance and redemption against a cash/Treasury/repo/MMF reserve, with no permissionless or user-collateralized mint route.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "Live RPC and a traced pathUSD issuance resolved the prior claim that Tempo had no usable public RPC or explorer: the active issuer proxy and its current ISSUER_ROLE membership are directly observable. At block 30043787, pathUSD was unpaused, had transfer policy 2, and had a 100,000,000 supply cap. Tempo's TIP-20 implementation exposes hasRole(address, bytes32) but no role-member enumeration; the current DEFAULT_ADMIN_ROLE and policy-role holder set therefore remains unavailable without issuer disclosure. The issuer proxy uses an EIP-1967 implementation slot, but owner(), admin(), and upgrade introspection calls did not resolve its upgrade controller, so its mint-logic mutability is recorded as unknown.",
+      "reviewer": "Codex Safety Score V9 access review",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable",
       "sources": [
         {
-          "label": "Tempo pathUSD docs",
-          "url": "https://docs.tempo.xyz/protocol/exchange/pathUSD"
+          "label": "Tempo TIP-20 specification",
+          "url": "https://docs.tempo.xyz/protocol/tip20/spec"
         },
         {
-          "label": "Tempo TIP-20 native stablecoins",
-          "url": "https://docs.tempo.xyz/learn/tempo/native-stablecoins"
+          "label": "Tempo TIP-20 implementation",
+          "url": "https://github.com/tempoxyz/tempo/tree/main/crates/precompiles/src/tip20"
+        },
+        {
+          "label": "Tempo pathUSD token",
+          "url": "https://explore.tempo.xyz/token/0x20c0000000000000000000000000000000000000"
+        },
+        {
+          "label": "Tempo public RPC",
+          "url": "https://rpc.tempo.xyz"
         }
-      ],
-      "unresolvedQuestions": [
-        "Tempo chain has no standard public EVM RPC and no accessible block explorer API; the TIP-20 precompile token administrator address for pathUSD (0x20c0000000000000000000000000000000000000) cannot be confirmed via on-chain reads with available tooling. Resolve via Tempo chain native tooling or issuer disclosure of the administrator key/multisig before raising confidence."
       ]
     }
   },

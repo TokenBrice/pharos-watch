@@ -42,6 +42,17 @@ const mockGetCache = vi.mocked(getCache);
 const mockSetCache = vi.mocked(setCache);
 const mockComputeSafetyScoresSnapshot = vi.mocked(computeSafetyScoresSnapshot);
 
+function v8Identity() {
+  return {
+    model: "v8" as const,
+    schemaVersion: 1 as const,
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+    evaluationBuildDigest: "a".repeat(64),
+    baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+    publicationGenerationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:1774526300`,
+  };
+}
+
 afterEach(() => {
   mockFetchEvmUint256AtBlock.mockReset();
   mockLoadDlStablecoinPools.mockReset();
@@ -87,6 +98,44 @@ describe("buildProtocolCategoryLookupFromCachePayload", () => {
 });
 
 describe("runYieldCoverageAudit", () => {
+  it("defers when the compact safety snapshot is not complete and never requests computed V8 scores", async () => {
+    mockLoadDlStablecoinPools.mockResolvedValue({
+      pools: [{
+        pool: "new-usdc", chain: "Ethereum", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000,
+        apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null,
+      }],
+      meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
+    });
+    mockComputeSafetyScoresSnapshot.mockResolvedValue({
+      kind: "degraded",
+      mode: "map",
+      coveredCount: 0,
+      trackedCount: 1,
+      coverageRatio: 0,
+      reason: "report-card-cache:completeness-mismatch",
+      scores: new Map(),
+      source: "report-card-cache",
+      safetyScoreIdentity: null,
+      publicationGenerationId: null,
+      methodologyVersion: null,
+      publishedAt: null,
+    } as never);
+
+    const result = await runYieldCoverageAudit(mockD1());
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(0);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "safety-snapshot-unavailable:report-card-cache:completeness-mismatch",
+    });
+    expect(mockComputeSafetyScoresSnapshot).toHaveBeenCalledOnce();
+    expect(mockComputeSafetyScoresSnapshot).toHaveBeenCalledWith(expect.anything(), {
+      outputMode: "map",
+      sourceMode: "published-cache",
+    });
+    expect(mockSetCache).not.toHaveBeenCalled();
+  });
+
   it("reports bounded progress stages through cache publication", async () => {
     const dlPools: DlPool[] = [{
       pool: "new-usdc",
@@ -143,6 +192,11 @@ describe("runYieldCoverageAudit", () => {
       trackedCount: 1,
       coverageRatio: 1,
       scores: new Map(),
+      source: "report-card-cache",
+      safetyScoreIdentity: v8Identity(),
+      publicationGenerationId: v8Identity().publicationGenerationId,
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      publishedAt: Math.floor(Date.now() / 1000),
     } as never);
 
     const expectedQueue = buildCoverageAuditOperatorQueue({
@@ -248,7 +302,10 @@ describe("runYieldCoverageAudit", () => {
           safetySnapshotSource: "report-card-cache",
         },
       });
-    expect(mockComputeSafetyScoresSnapshot).not.toHaveBeenCalled();
+    expect(mockComputeSafetyScoresSnapshot).toHaveBeenCalledWith(db, {
+      outputMode: "map",
+      sourceMode: "published-cache",
+    });
     expect(progressUpdates.find((update) => update.stage === "quarantine-probe" && update.itemsDone === 4))
       .toMatchObject({
         metadata: {
@@ -305,6 +362,11 @@ describe("runYieldCoverageAudit", () => {
       trackedCount: 1,
       coverageRatio: 1,
       scores: new Map(),
+      source: "report-card-cache",
+      safetyScoreIdentity: v8Identity(),
+      publicationGenerationId: v8Identity().publicationGenerationId,
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      publishedAt: Math.floor(Date.now() / 1000),
     } as never);
 
     const result = await runYieldCoverageAudit(mockD1([{

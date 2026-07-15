@@ -15,14 +15,25 @@ import type { ReportCard } from "@shared/types/report-cards";
 import {
   SAFETY_SCORE_HISTORY_TAPE_SOURCE_SQL,
   fetchSafetyScoreHistoryCompatibilityRows,
+  fetchSafetyScoreHistoryV2Rows,
   loadActiveV8SafetyScoreHistorySource,
+  prepareSafetyScoreHistoryBoundaryWrite,
+  prepareSafetyScoreHistoryBoundaryWrites,
+  prepareSafetyScoreHistoryV2Write,
   prepareV8OrganicSafetyScoreHistoryWrites,
+  safetyScoreHistoryIdentitiesAreComparable,
+  safetyScoreHistoryIdentitiesMatch,
+  safetyScoreHistoryIdentityFromV2Row,
   safetyScoreLegacyHistoryV2Id,
   type SafetyScoreHistoryV8Identity,
 } from "../safety-score-history-v2";
 
 const MIGRATIONS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../../migrations");
 const HISTORY_V2_MIGRATION = readFileSync(resolve(MIGRATIONS_DIR, "0201_safety_score_history_v2.sql"), "utf8");
+const HISTORY_V2_IDENTITY_SCHEMA_MIGRATION = readFileSync(
+  resolve(MIGRATIONS_DIR, "0204_safety_score_history_v2_identity_schema.sql"),
+  "utf8",
+);
 const digest = (character: string) => character.repeat(64);
 const METHODOLOGY = SAFETY_SCORE_METHODOLOGY_VERSION;
 const BASE_INPUT_GENERATION_ID = `report-cards-input:v1:${digest("a")}`;
@@ -52,6 +63,7 @@ function createHistoryDatabase(): { sqlite: DatabaseSync; db: D1Database } {
   const sqlite = new DatabaseSync(":memory:");
   createLegacySchema(sqlite);
   sqlite.exec(HISTORY_V2_MIGRATION);
+  sqlite.exec(HISTORY_V2_IDENTITY_SCHEMA_MIGRATION);
   return { sqlite, db: createSqliteD1(sqlite) };
 }
 
@@ -64,6 +76,19 @@ function v8Identity(overrides: Partial<SafetyScoreHistoryV8Identity> = {}): Safe
     baseInputGenerationId: BASE_INPUT_GENERATION_ID,
     publicationGenerationId: MODEL_GENERATION_ID,
     ...overrides,
+  };
+}
+
+function v9Identity() {
+  return {
+    model: "v9" as const,
+    schemaVersion: 1 as const,
+    methodologyVersion: "9.0",
+    policyId: "v9-rc-1",
+    policyDigest: digest("d"),
+    evaluationBuildDigest: digest("e"),
+    baseInputGenerationId: BASE_INPUT_GENERATION_ID,
+    publicationGenerationId: "safety-score-v9:300",
   };
 }
 
@@ -165,6 +190,18 @@ async function canonicalCacheValues() {
 }
 
 describe("Safety Score history V2", () => {
+  it("retains exact provenance while comparing ordinary publications within one model series", () => {
+    const current = v8Identity();
+    const refreshed = v8Identity({
+      baseInputGenerationId: `report-cards-input:v1:${digest("c")}`,
+      publicationGenerationId: "report-cards:8.17:201",
+    });
+
+    expect(safetyScoreHistoryIdentitiesMatch(current, refreshed)).toBe(false);
+    expect(safetyScoreHistoryIdentitiesAreComparable(current, refreshed)).toBe(true);
+    expect(safetyScoreHistoryIdentitiesAreComparable(current, v9Identity())).toBe(false);
+  });
+
   it("dual-writes a legacy organic row and its immutable identity-rich V2 twin", async () => {
     const { sqlite, db } = createHistoryDatabase();
     const statements = prepareV8OrganicSafetyScoreHistoryWrites(db, {
@@ -210,6 +247,111 @@ describe("Safety Score history V2", () => {
     });
   });
 
+  it("writes a V9 boundary without creating a legacy projection", async () => {
+    const { sqlite, db } = createHistoryDatabase();
+    await db.batch([
+      prepareSafetyScoreHistoryBoundaryWrite(db, {
+        stablecoinId: "usdc-circle",
+        recordedAt: 300,
+        grade: "A",
+        score: 88,
+        transitionKind: "methodology-boundary-baseline",
+        identity: v9Identity(),
+        createdAt: 301,
+      }),
+    ]);
+
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM safety_grade_history").get()).toEqual({ count: 0 });
+    expect(
+      sqlite
+        .prepare(
+          `SELECT model, policy_id, policy_digest, transition_kind, prev_grade, legacy_recorded_at
+             FROM safety_score_history_v2`,
+        )
+        .get(),
+    ).toEqual({
+      model: "v9",
+      policy_id: "v9-rc-1",
+      policy_digest: digest("d"),
+      transition_kind: "methodology-boundary-baseline",
+      prev_grade: null,
+      legacy_recorded_at: null,
+    });
+  });
+
+  it("writes bounded rollback baselines without legacy projections or duplicate cards", async () => {
+    const { sqlite, db } = createHistoryDatabase();
+    await db.batch(prepareSafetyScoreHistoryBoundaryWrites(db, {
+      cards: [
+        { stablecoinId: "usdc-circle", grade: "A", score: 88 },
+        { stablecoinId: "usdt-tether", grade: "B+", score: 82 },
+      ],
+      recordedAt: 300,
+      transitionKind: "rollback-baseline",
+      identity: v9Identity(),
+      createdAt: 301,
+    }));
+
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM safety_grade_history").get()).toEqual({ count: 0 });
+    expect(
+      sqlite.prepare(
+        `SELECT stablecoin_id, transition_kind, prev_grade, legacy_recorded_at
+           FROM safety_score_history_v2
+          ORDER BY stablecoin_id`,
+      ).all(),
+    ).toEqual([
+      {
+        stablecoin_id: "usdc-circle",
+        transition_kind: "rollback-baseline",
+        prev_grade: null,
+        legacy_recorded_at: null,
+      },
+      {
+        stablecoin_id: "usdt-tether",
+        transition_kind: "rollback-baseline",
+        prev_grade: null,
+        legacy_recorded_at: null,
+      },
+    ]);
+
+    expect(() => prepareSafetyScoreHistoryBoundaryWrites(db, {
+      cards: [
+        { stablecoinId: "usdc-circle", grade: "A", score: 88 },
+        { stablecoinId: "usdc-circle", grade: "A", score: 88 },
+      ],
+      recordedAt: 300,
+      transitionKind: "rollback-baseline",
+      identity: v9Identity(),
+      createdAt: 301,
+    })).toThrow("Duplicate Safety Score boundary card");
+  });
+
+  it("rejects a conflicting replay of one V9 history identity", async () => {
+    const { db } = createHistoryDatabase();
+    const input = {
+      stablecoinId: "usdc-circle",
+      recordedAt: 300,
+      grade: "A" as const,
+      score: 88,
+      prevGrade: null,
+      prevScore: null,
+      transitionKind: "methodology-boundary-baseline" as const,
+      identity: v9Identity(),
+      createdAt: 301,
+    };
+    await db.batch([prepareSafetyScoreHistoryV2Write(db, input)]);
+
+    await expect(
+      db.batch([
+        prepareSafetyScoreHistoryV2Write(db, {
+          ...input,
+          grade: "A-",
+          createdAt: 302,
+        }),
+      ]),
+    ).rejects.toThrow();
+  });
+
   it("rejects organic and baseline transitions with invalid predecessor values", () => {
     const { db } = createHistoryDatabase();
     const common = {
@@ -245,6 +387,25 @@ describe("Safety Score history V2", () => {
         transitionKind: "initial-baseline",
       }),
     ).toThrow("cannot carry comparable previous values");
+
+    expect(() =>
+      prepareSafetyScoreHistoryV2Write(db, {
+        ...common,
+        prevGrade: "B+",
+        prevScore: 79,
+        transitionKind: "organic-grade-change",
+      }),
+    ).toThrow("requires a previous identity");
+    expect(() =>
+      prepareSafetyScoreHistoryV2Write(db, {
+        ...common,
+        prevGrade: "B+",
+        prevScore: 79,
+        transitionKind: "organic-grade-change",
+        identity: v9Identity(),
+        previousIdentity: v8Identity(),
+      }),
+    ).toThrow("cannot cross model or policy identities");
   });
 
   it("fails closed when an existing V2 identity is replayed with different provenance", async () => {
@@ -386,6 +547,43 @@ describe("Safety Score history V2", () => {
     ]);
   });
 
+  it("returns V2 boundaries with their full V9 identity and rejects malformed policy rows", async () => {
+    const { sqlite, db } = createHistoryDatabase();
+    sqlite
+      .prepare(
+        `INSERT INTO safety_score_history_v2
+         (history_id, stablecoin_id, recorded_at, model, methodology_version,
+          policy_id, policy_digest, evaluation_build_digest, base_input_generation_id,
+          model_publication_generation_id, transition_kind,
+          grade, score, prev_grade, prev_score, legacy_recorded_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        "v9-boundary",
+        "usdc-circle",
+        300,
+        "v9",
+        "9.0",
+        "v9-rc-1",
+        digest("d"),
+        digest("e"),
+        BASE_INPUT_GENERATION_ID,
+        "safety-score-v9:300",
+        "methodology-boundary-baseline",
+        "A",
+        88,
+        null,
+        null,
+        null,
+        301,
+      );
+
+    const [row] = await fetchSafetyScoreHistoryV2Rows(db, "usdc-circle", 0);
+    expect(row).toBeDefined();
+    expect(safetyScoreHistoryIdentityFromV2Row(row!)).toEqual(v9Identity());
+    expect(() => safetyScoreHistoryIdentityFromV2Row({ ...row!, policy_id: null })).toThrow();
+  });
+
   it("enforces discriminated policy identity and non-comparable boundary predecessors", () => {
     const { sqlite } = createHistoryDatabase();
     const statement = sqlite.prepare(
@@ -425,10 +623,28 @@ describe("Safety Score history V2", () => {
     ).toThrow();
   });
 
+  it("rejects unsupported persisted identity schema versions", () => {
+    const { sqlite } = createHistoryDatabase();
+
+    expect(() => sqlite.exec(`
+      INSERT INTO safety_score_history_v2
+       (history_id, stablecoin_id, recorded_at, model, identity_schema_version, methodology_version,
+        policy_id, policy_digest, evaluation_build_digest, base_input_generation_id,
+        model_publication_generation_id, transition_kind,
+        grade, score, prev_grade, prev_score, legacy_recorded_at, created_at)
+       VALUES (
+        'unsupported-schema-version', 'usdc-circle', 300, 'v8', 1.5, '${METHODOLOGY}',
+        NULL, NULL, '${digest("b")}', '${BASE_INPUT_GENERATION_ID}', 'report-cards:8.17:300',
+        'initial-baseline', 'A', 88, NULL, NULL, NULL, 301
+       );
+    `)).toThrow();
+  });
+
   it("loads the canonical V8 snapshot only when its exact fixed-input identity agrees", async () => {
     const sqlite = new DatabaseSync(":memory:");
     createLegacySchema(sqlite);
     sqlite.exec(HISTORY_V2_MIGRATION);
+    sqlite.exec(HISTORY_V2_IDENTITY_SCHEMA_MIGRATION);
     const db = createSqliteD1(sqlite);
     const artifacts = await canonicalCacheValues();
     const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, 200)");

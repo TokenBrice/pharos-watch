@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
+import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { handleSnapshotCoin, handleSnapshotDay, handleSnapshotsIndex } from "../snapshot";
 
@@ -18,6 +20,11 @@ const SAMPLE_ENVELOPE = {
     pricingPipeline: "1.0",
     yieldMethodology: "1.0",
   },
+  safetyScoreIdentity: buildSafetyScoreV8PublicationIdentity({
+    methodologyVersion: "7.25",
+    baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+    publicationGenerationId: "report-cards:7.25:1779105600",
+  }),
   stablecoins: [
     {
       id: "usdc-circle",
@@ -72,17 +79,35 @@ const SAMPLE_ENVELOPE = {
   ],
 };
 
+const V9_SAFETY_SCORE_IDENTITY = {
+  model: "v9",
+  schemaVersion: 1,
+  methodologyVersion: "9.0",
+  policyId: "v9-policy-2026-05",
+  policyDigest: "b".repeat(64),
+  evaluationBuildDigest: "c".repeat(64),
+  baseInputGenerationId: `report-cards-input:v1:${"d".repeat(64)}`,
+  publicationGenerationId: "safety-score-v9:9.0:1779105600",
+} satisfies SafetyScorePublicationIdentity;
+
+type SnapshotEnvelope = Omit<typeof SAMPLE_ENVELOPE, "safetyScoreIdentity"> & {
+  safetyScoreIdentity: SafetyScorePublicationIdentity;
+};
+
 async function gzipText(value: string): Promise<Uint8Array> {
   const stream = new Response(new TextEncoder().encode(value)).body!.pipeThrough(new CompressionStream("gzip"));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
-async function buildSnapshotRow(envelope: typeof SAMPLE_ENVELOPE = SAMPLE_ENVELOPE) {
+async function buildSnapshotRow(envelope: SnapshotEnvelope = SAMPLE_ENVELOPE) {
   const jsonText = JSON.stringify(envelope);
   return {
     snapshot_date: envelope.snapshotDate,
     payload_gz: await gzipText(jsonText),
-    methodology_versions: JSON.stringify(envelope.methodologyVersions),
+    methodology_versions: JSON.stringify({
+      ...envelope.methodologyVersions,
+      safetyScoreIdentity: envelope.safetyScoreIdentity,
+    }),
     content_hash: "abc123def456abc123def456abc123def456abc123def456abc123def456abc1",
     byte_size: new TextEncoder().encode(jsonText).byteLength,
     created_at: 1779105600,
@@ -123,12 +148,49 @@ describe("handleSnapshotsIndex", () => {
     const res = await handleSnapshotsIndex(db);
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      snapshots: { snapshotDate: string; contentHash: string; methodologyVersions: { pegScore: string } }[];
+      snapshots: {
+        snapshotDate: string;
+        contentHash: string;
+        methodologyVersions: { pegScore: string };
+        safetyScoreIdentity: { model: string } | null;
+      }[];
     };
     expect(body.snapshots).toHaveLength(2);
     expect(body.snapshots[0]?.snapshotDate).toBe("2026-05-16");
     expect(body.snapshots[0]?.contentHash).toBe("hash1");
     expect(body.snapshots[0]?.methodologyVersions.pegScore).toBe("7.25");
+    expect(body.snapshots[0]?.safetyScoreIdentity).toBeNull();
+  });
+
+  it("exposes the immutable snapshot safety identity from publication metadata", async () => {
+    const row = await buildSnapshotRow();
+    const db = mockD1([{ match: "FROM public_snapshots", rows: [row] }]);
+
+    const res = await handleSnapshotsIndex(db);
+    const body = (await res.json()) as { snapshots: Array<{ safetyScoreIdentity: { model: string } | null }> };
+
+    expect(body.snapshots[0]?.safetyScoreIdentity).toMatchObject({ model: "v8" });
+  });
+
+  it("preserves a valid V9 identity in snapshot index and coin responses", async () => {
+    const row = await buildSnapshotRow({
+      ...SAMPLE_ENVELOPE,
+      safetyScoreIdentity: V9_SAFETY_SCORE_IDENTITY,
+    });
+    const indexDb = mockD1([{ match: "FROM public_snapshots", rows: [row] }]);
+
+    const indexResponse = await handleSnapshotsIndex(indexDb);
+    const indexBody = (await indexResponse.json()) as {
+      snapshots: Array<{ safetyScoreIdentity: unknown }>;
+    };
+
+    expect(indexBody.snapshots[0]?.safetyScoreIdentity).toEqual(V9_SAFETY_SCORE_IDENTITY);
+
+    const coinDb = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+    const coinResponse = await handleSnapshotCoin(coinDb, ISO_DATE, "usdc-circle");
+    const coinBody = (await coinResponse.json()) as { safetyScoreIdentity: unknown };
+
+    expect(coinBody.safetyScoreIdentity).toEqual(V9_SAFETY_SCORE_IDENTITY);
   });
 });
 
@@ -192,6 +254,7 @@ describe("handleSnapshotCoin", () => {
       snapshotDate: string;
       stablecoinId: string;
       methodologyVersions: { pegScore: string };
+      safetyScoreIdentity: { model: string } | null;
       stablecoin: { id: string; symbol: string };
       scores: {
         reportCard: { score: number; grade: string } | null;
@@ -204,6 +267,7 @@ describe("handleSnapshotCoin", () => {
     expect(body.stablecoinId).toBe("usdc-circle");
     expect(body.stablecoin.id).toBe("usdc-circle");
     expect(body.methodologyVersions.pegScore).toBe("7.25");
+    expect(body.safetyScoreIdentity).toMatchObject({ model: "v8" });
     expect(body.scores.reportCard?.grade).toBe("A-");
     expect(body.scores.psi?.score).toBe(87.4);
     expect(body.scores.dews?.stablecoinId).toBe("usdc-circle");

@@ -87,25 +87,47 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://docs.juicedollar.com/"
+        "label": "JuiceDollar smart-contract functions",
+        "url": "https://docs.juicedollar.com/smart-contracts/functions"
       },
       {
-        "label": "Bridge docs",
-        "url": "https://docs.juicedollar.com/swap.html"
+        "label": "JuiceDollar disclaimer",
+        "url": "https://docs.juicedollar.com/disclaimer"
       },
       {
-        "label": "Smart contracts docs",
-        "url": "https://docs.juicedollar.com/smart-contracts.html"
+        "label": "JuiceDollar terms",
+        "url": "https://juicedollar.com/terms"
+      },
+      {
+        "label": "CitreaScan verified JUSD source",
+        "url": "https://api.citreascan.com/api/v2/smart-contracts/0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+      },
+      {
+        "label": "CitreaScan JUSD ABI",
+        "url": "https://api.citreascan.com/api?module=contract&action=getabi&address=0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+      },
+      {
+        "label": "JuiceDollar token source (pinned commit)",
+        "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/JuiceDollar.sol"
+      },
+      {
+        "label": "JuiceDollar StablecoinBridge source (pinned commit)",
+        "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/StablecoinBridge.sol"
+      },
+      {
+        "label": "Citrea Public RPC",
+        "url": "https://rpc.mainnet.citrea.xyz"
       }
     ],
-    "evidence": "Juice Dollar contracts are documented as immutable with no admin keys, so no direct JUSD holder freeze was identified. Active USDC/USDT bridge routes deposit source stablecoins and mint JUSD 1:1, creating upstream freeze exposure.",
-    "reviewer": "Codex FreezeWatch audit",
-    "reviewedAt": "2026-05-25"
+    "evidence": "CitreaScan marks the deployed JUSD contract verified, and its verified source and ABI expose standard transfer and transferFrom operations with no holder blacklist, freeze, pause, seizure, or global transfer-stop function. At Citrea block 9985719, owner() reverted, reserve() resolved to Equity 0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4, and EIP-1967 implementation and admin slots were zero. StablecoinBridge emergencyStop halts bridge issuance but allows users to burn JUSD for its stablecoin; it does not stop native JUSD transfers. Issuer docs and legal materials, GitHub, the explorer, pinned RPC, and the legacy-explorer archive were reviewed; no standalone reserve attestation or transparency report is used for this code-level access conclusion.",
+    "reviewer": "Codex Safety Score V9 data research",
+    "reviewedAt": "2026-07-15",
+    "upstreamSuppressionRationale": "USDC.e, USDT.e, and ctUSD issuer controls can impair bridge collateral or redemption, but Citrea's verified JUSD source does not expose them as native JUSD holder-balance controls; those remain reserve and bridge risks."
   },
   "chainTier": "unproven",
   "deploymentModel": "single-chain",
@@ -127,45 +149,101 @@
   ],
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "bounded-admin",
+    "authorityPosture": "unbounded-or-compromised",
     "confidence": "verified",
-    "summary": "JUSD is an ownerless Frankencoin fork on Citrea. owner() reverts; no EIP-1967 proxy admin; mint() reverts NotMinter() (0xf8d2906c) for unapproved callers, confirming minting is gated to registered minter modules only. JUICE pool-share holders can veto new minters during the application period.",
+    "summary": "JUSD is an ownerless Frankencoin fork on Citrea. owner() reverts and there is no EIP-1967 proxy admin. mint() is gated to registered minters, but an accepted minter can mint an unrestricted amount; qualified JUICE pool-share holders can veto proposed minters during the application period.",
+    "upgradeability": {
+      "model": "immutable",
+      "implementationAddresses": [
+        "0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-15",
+      "observedBlock": 9984927,
+      "sources": [
+        {
+          "label": "JuiceDollar token source (pinned commit)",
+          "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/JuiceDollar.sol"
+        },
+        {
+          "label": "Citrea Public RPC",
+          "url": "https://rpc.mainnet.citrea.xyz"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "citrea",
-        "label": "JUSD Frankencoin-style minter registry",
-        "role": "direct-minter",
+        "address": "0x0987d3720d38847ac6dbb9d025b9de892a3ca35c",
+        "label": "JUSD accepted-minter authorization registry",
+        "role": "minter-admin",
         "authorityType": "contract",
-        "directMintAbility": "cap-limited",
-        "canRaiseCap": true,
+        "directMintAbility": "can-authorize",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "JUSD is minted only by registered positions/minter modules that survive the application/veto period; positions mint against overcollateralized BTC on Citrea with oracle-free on-chain liquidations. The token has no owner and contracts are immutable.",
-        "evidence": "At Citrea block 8542294: owner() reverts (no Ownable); EIP-1967 proxy admin slot = zero (no proxy); implementation slot = zero (not proxied); mint(0x1111...,10) reverts custom error NotMinter() (0xf8d2906c, confirmed via openchain.xyz), identical to the verified Frankencoin ZCHF pattern. Ownerless, immutable hub confirmed on-chain."
+        "capDescription": "There is no numeric per-minter mint cap. After its application period, an accepted minter can call mint() for an unrestricted amount; a candidate is subject to a qualified Equity-holder veto before acceptance.",
+        "observedAt": "2026-07-15",
+        "observedBlock": 9984927,
+        "sources": [
+          {
+            "label": "JuiceDollar token source (pinned commit)",
+            "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/JuiceDollar.sol"
+          },
+          {
+            "label": "CitreaScan verified JUSD source",
+            "url": "https://api.citreascan.com/api/v2/smart-contracts/0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+          },
+          {
+            "label": "Citrea protocol deployment manifest (pinned commit)",
+            "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/deployments/citrea/protocol.json"
+          }
+        ],
+        "evidence": "The Citrea manifest and CitreaScan verified source identify this deployed JUSD token. Its minters mapping gates mint(), while suggestMinter adds a candidate only for the application period during which Equity can veto it. Once accepted, the deployed mint() function has no numeric amount cap. At Citrea block 9984927, owner() reverted and both EIP-1967 slots were zero."
       },
       {
         "chain": "citrea",
+        "address": "0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4",
         "label": "JUICE pool-share holder veto governance",
         "role": "governor",
         "authorityType": "dao-governor",
-        "directMintAbility": "parameter-only",
-        "canRaiseCap": "unknown",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Qualified JUICE pool-share holders (time-weighted votes) can veto proposed minters/positions during the application period; no admin key can alter the system unilaterally.",
-        "evidence": "Frankencoin-style veto governance: the ownerless contract design (confirmed on-chain) requires pool-share holder veto to accept new minters; no admin key."
+        "capDescription": "Qualified JUICE pool-share holders can veto proposed minters during the application period, but the Equity contract cannot mint, set a mint cap, or change mint parameters.",
+        "observedAt": "2026-07-15",
+        "observedBlock": 9984927,
+        "sources": [
+          {
+            "label": "JuiceDollar Equity source (pinned commit)",
+            "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/Equity.sol"
+          },
+          {
+            "label": "Citrea protocol deployment manifest (pinned commit)",
+            "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/deployments/citrea/protocol.json"
+          }
+        ],
+        "evidence": "The Citrea manifest identifies this Equity contract, and JUSD reserve() returned it at block 9984927. Equity's qualified pool-share voting and checkQualified guard supply the veto path for proposed JUSD minters; it does not mint, set a mint cap, or change mint parameters."
       }
     ],
     "review": {
-      "evidence": "At Citrea block 8542294: owner() reverts; EIP-1967 proxy admin slot = 0x00; implementation slot = 0x00; mint() reverts NotMinter() (custom error 0xf8d2906c, confirmed via openchain.xyz). Contract has bytecode and is non-proxied/non-upgradeable. Mint authority is fully gated by the Frankencoin-style minter registry — no owner, no proxy admin, no EOA mint path.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "The pinned JuiceDollar source and CitreaScan verified deployed source make minting contingent on the token's registered minters mapping, but an accepted minter's mint() call has no numeric amount cap. Equity-qualified pool-share holders can veto candidates only during minter application. At Citrea block 9984927, the token's owner() call reverted, reserve() returned Equity 0x2a36f2b204b46fd82653cd06d00c7ff757c99ae4, and EIP-1967 implementation and admin slots were zero. The two reviewed control addresses therefore identify the authorization registry and its governance veto, with no proxy upgrade path.",
+      "reviewer": "Codex Safety Score V9 data research",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
-          "label": "JUSD token on Citrea (explorer)",
-          "url": "https://explorer.citrea.xyz/address/0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+          "label": "JuiceDollar token source (pinned commit)",
+          "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/JuiceDollar.sol"
         },
         {
-          "label": "Juice Dollar (JUSD) site",
-          "url": "https://juicedollar.com/"
+          "label": "CitreaScan verified JUSD source",
+          "url": "https://api.citreascan.com/api/v2/smart-contracts/0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+        },
+        {
+          "label": "Citrea protocol deployment manifest (pinned commit)",
+          "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/deployments/citrea/protocol.json"
+        },
+        {
+          "label": "Citrea Public RPC",
+          "url": "https://rpc.mainnet.citrea.xyz"
         }
       ]
     }

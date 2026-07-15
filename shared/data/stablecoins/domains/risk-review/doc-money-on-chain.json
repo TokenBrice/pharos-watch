@@ -5,21 +5,57 @@
     "reviewedStatus": "possible",
     "sources": [
       {
-        "label": "Money On Chain published contract verification",
+        "label": "Money On Chain published contract verification and upgrade inventory",
         "url": "https://docs.moneyonchain.com/main-rbtc-contract/smart-contracts/contracts-verification"
       },
       {
-        "label": "Money On Chain platform concepts",
-        "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/main-concepts"
+        "label": "Rootstock Blockscout - verified DoCToken source and ABI",
+        "url": "https://rootstock.blockscout.com/address/0xe700691da7b9851f2f35f8b8182c69c53ccad9db"
       },
       {
-        "label": "Money On Chain dapp",
+        "label": "Rootstock Blockscout - MoCExchange proxy and current verified implementation",
+        "url": "https://rootstock.blockscout.com/address/0x6acb83bb0281fb847b43cf7dd5e2766bfdf49038"
+      },
+      {
+        "label": "Rootstock public node - pinned DoCToken historical calls",
+        "url": "https://public-node.rsk.co"
+      },
+      {
+        "label": "Money On Chain OwnerBurnableToken documentation",
+        "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/contracts-architecture/ownerburnabletoken"
+      },
+      {
+        "label": "Sourcify - verified DOC Arbitrum MyOFT source and ABI",
+        "url": "https://sourcify.dev/server/v2/contract/42161/0x2ad62eb9744c720364f6ac856360a43e8a2229b5?fields=abi,metadata"
+      },
+      {
+        "label": "Arbitrum Blockscout - DOC MyOFT deployment",
+        "url": "https://arbitrum.blockscout.com/address/0x2ad62eb9744c720364f6ac856360a43e8a2229b5"
+      },
+      {
+        "label": "Arbitrum public RPC - pinned DOC MyOFT historical calls",
+        "url": "https://arb1.arbitrum.io/rpc"
+      },
+      {
+        "label": "Money On Chain official main-RBTC-contract repository",
+        "url": "https://github.com/money-on-chain/main-RBTC-contract"
+      },
+      {
+        "label": "Money On Chain public dapp transparency surface",
         "url": "https://dapp.moneyonchain.com/"
+      },
+      {
+        "label": "Money On Chain published privacy/legal page",
+        "url": "https://moneyonchain.com/privacy-policy/"
+      },
+      {
+        "label": "Internet Archive - issuer DOC Arbitrum announcement snapshot",
+        "url": "https://web.archive.org/web/20260219091327/https://moneyonchain.com/doc-arbitrum/"
       }
     ],
-    "evidence": "The reviewed Money On Chain documentation establishes issuer, governance, mint, and redemption contracts, but does not establish a complete current holder-level freeze, blacklist, pause, privileged-burn, or transfer-restriction inventory across DOC and its route contracts. Direct access control remains unresolved rather than being treated as absent.",
-    "reviewer": "OpenAI Codex Safety Score V9 curation",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At Rootstock block 9,053,512 via the issuer-published public-node.rsk.co, non-proxy DoCToken.owner() returned MoCExchange 0x6acb83bb0281fb847b43cf7dd5e2766bfdf49038 and a zero-value transfer from an unrelated address succeeded. The verified DoCToken source/ABI has no pause, blacklist, freeze, or transfer-hook restriction, but exposes owner-only burn(address,uint256) for an arbitrary holder: eth_call from MoCExchange succeeded while an unrelated caller reverted. Money On Chain documents that this burn power belongs to the MoC system. The current verified MoCExchange implementation uses it in redemption paths, but MoCExchange is an upgradeable proxy in the documented governance route, so that system-owned path can be changed to seize or block holder value even though an active account blacklist was not observed. On Arbitrum at block 483,998,452, DOC 0x2ad62eb9744c720364f6ac856360a43e8a2229b5 is a verified non-proxy LayerZero MyOFT: owner() returned 0xb2395eaaeb03fb1f46647c423378b24f2e906305, local zero-value transfer succeeded, and the verified ABI has peer/delegate configuration but no holder blacklist, pause, freeze, or seize function. Those owner controls affect cross-chain reachability rather than a current local-transfer freeze. The issuer dapp is the public on-chain transparency surface; the reviewed official legal/sitemap and documentation set did not yield a separate terms or proof-of-reserves report, and the archived issuer route notice was retained for route continuity. Possible is therefore preserved rather than treating an upgradeable system-owned burn capability as direct false.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "oracleRisk": {
     "tier": "standard-external",

@@ -358,11 +358,28 @@
   "deploymentModel": "native-multichain",
   "reserves": [
     {
-      "name": "dForce stablecoin and crypto collateral pool",
+      "name": "dForce crypto collateral and major-stablecoin reserve pool",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "dForce and undisclosed collateral issuers",
+      "riskFactors": ["market", "credit", "liquidity", "custody", "counterparty", "smart-contract", "legal", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SONG-5 Safety Score V9 backing review",
+    "confidence": "probable",
+    "sources": [{"label": "dForce USX documentation", "url": "https://docs.dforce.network/ecosystem/usx-stablecoin"}],
+    "rationale": "dForce describes USX as overcollateralized by crypto assets and as supporting 1:1 minting and redemption with USDT, USDC, and DAI. The reviewed issuer documentation does not publish a current asset allocation, collateral balances, named custody providers, or liability reconciliation, so the complete envelope is represented as one mixed pool rather than an unsupported split.",
+    "compositionBasis": "dForce USX issuer collateral and mint/redemption description",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current crypto and stablecoin constituent identities, weights, balances, custody providers, and liability reconciliation are not disclosed in the reviewed issuer documentation.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [{"reserveIndex": 0, "reserveName": "dForce crypto collateral and major-stablecoin reserve pool", "pct": 100, "disposition": "basket-needs-split", "rationale": "The issuer identifies broad crypto collateral and USDT, USDC, and DAI mint/redemption rails without publishing current reserve weights."}]
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

@@ -57,6 +57,7 @@
       "decimals": 6
     }
   ],
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [
@@ -67,11 +68,67 @@
       {
         "label": "PicWe WEUSD product documentation",
         "url": "https://docs.picwe.org/what-is-weusd"
+      },
+      {
+        "label": "BSC WEUSD verified contract source",
+        "url": "https://bscscan.com/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56#code"
+      },
+      {
+        "label": "Base WEUSD verified contract",
+        "url": "https://base.blockscout.com/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56"
+      },
+      {
+        "label": "Arbitrum WEUSD verified contract",
+        "url": "https://arbitrum.blockscout.com/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56"
+      },
+      {
+        "label": "Plume WEUSD verified contract",
+        "url": "https://explorer.plume.org/address/0xdd73ea766b80417c0607a3f08e34a0c415d89d56"
+      },
+      {
+        "label": "Movement WEUSD module ABI",
+        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/module/weusd"
+      },
+      {
+        "label": "Movement PicWe package registry",
+        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xf39c2674014dc3b3af9fd77f31ac69aa9398d8031f2c13a73fccbaca65641ff6/resources"
+      },
+      {
+        "label": "Aptos fungible asset capability documentation",
+        "url": "https://aptos.dev/build/smart-contracts/fungible-asset"
+      },
+      {
+        "label": "PicWe official documentation repository",
+        "url": "https://github.com/Picwe/picwe-docs"
+      },
+      {
+        "label": "Archived PicWe WEUSD documentation",
+        "url": "https://web.archive.org/web/20260210025231/https://docs.picwe.org/what-is-weusd"
+      },
+      {
+        "label": "DefiLlama WEUSD deployment supply",
+        "url": "https://stablecoins.llama.fi/stablecoin/278"
+      },
+      {
+        "label": "BNB Chain fixed-block RPC",
+        "url": "https://bsc-dataseed.bnbchain.org"
+      },
+      {
+        "label": "Base fixed-block RPC",
+        "url": "https://mainnet.base.org"
+      },
+      {
+        "label": "Arbitrum fixed-block RPC",
+        "url": "https://arb1.arbitrum.io/rpc"
+      },
+      {
+        "label": "Plume fixed-block RPC",
+        "url": "https://rpc.plume.org"
       }
     ],
-    "evidence": "Blocked pending a code-level holder-control inventory. PicWe's official contracts page identifies the same WEUSD address on BSC, Base, Arbitrum, HashKey Chain, and Plume and describes the asset as omnichain, but the issuer documentation does not disclose whether those token deployments expose blacklist, pause, or arbitrary-burn controls. No conclusion is inferred from the issuer's statement that contracts are verified; a dated verified ABI/source review is required for each tracked deployment.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At BSC block 110046907, Base block 48645553, Arbitrum block 483958453, and Plume block 81162729 on 2026-07-15, tracked EVM token 0xdd73ea766b80417c0607a3f08e34a0c415d89d56 had a zero EIP-1967 implementation slot and independently verified PicWe_USD source/ABIs limited to ERC20, permit, AccessControl, MINTER_ROLE, and mint. They expose no pause, freeze, blacklist, or arbitrary-holder-burn function, and burnFrom is allowance-gated. Asset-wide false is not supportable because Movement is 465086.702603 of 501682.757399 current listed deployment supply (92.70%). Its PicWe package publishes neither module source nor source map while its WEUSD ABI stores TransferRef and BurnRef; linked mint/redeem and bridge modules expose pause functions, and publisher-compatible package upgrades leave scope and authorization unprovable. Aptos fungible-asset documentation says TransferRef can freeze holders and BurnRef can burn fungible assets. This is bounded direct possible, not a confirmed current all-holder freeze. Issuer documentation did not provide independently verifiable legal terms or proof-of-reserves/transparency attestations.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "chainTier": "unproven",
   "deploymentModel": "native-multichain",

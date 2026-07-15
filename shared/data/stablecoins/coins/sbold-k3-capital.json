@@ -214,7 +214,15 @@
       "pct": 100,
       "risk": "medium",
       "coinId": "bold-liquity",
-      "depType": "wrapper"
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Liquity V2 Stability Pools and the K3 Capital sBOLD vault",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "market"
+      ],
+      "liquidityHorizon": "over-seven-days"
     }
   ],
   "yieldConfig": {

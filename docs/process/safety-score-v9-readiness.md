@@ -44,9 +44,9 @@ The V9 implementation establishes candidate infrastructure without changing prod
 - `worker/src/lib/safety-score-v9-candidate.ts` and
   `worker/scripts/replay-safety-score-v9.ts` compile and evaluate the exact
   candidate deterministically. The current policy semantic digest is
-  `46a73c3cca66ed800b42f3f0ce17d458ca9234c367f732480df17f744df92c3f`;
+  `03a8ec9fa123dbfe35609b413855f823bc641937c2350b7aadd743213d1ef854`;
   the current evaluation-build digest is
-  `ccb940148c708783791c8115633a8140e63f755f66a5556d47dfe9d473aa07b8`.
+  `06e371ddf7f9446a7743e99c302f9295a4c7f7ae8ad36427f6c9a3d64db20328`.
 - The 2026-07-14 `safety-score-v9-candidate-v2` policy revision implements the
   rating-parity re-tier: missing research evidence no longer reason-codes
   `NR`. Thirty-two registry codes moved from `NR` to `ceiling` treatments

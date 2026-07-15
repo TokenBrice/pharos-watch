@@ -13,24 +13,47 @@
   },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "AA_FalconXUSDC is an inherited tranche exposure; the reviewed token and upstream reserve sources establish inherited access risk but do not establish a complete holder-level freeze or transfer-control inventory for the tranche and its current collateral routes.",
-    "evidence": "Current Pareto and IdleCDO evidence identifies the AA_FalconXUSDC tranche, its deposit-only IdleCDO minter, and underlying USDC/USDf exposure. The inherited posture is retained because the reviewed sources do not prove a direct AA_FalconXUSDC blacklist path or a complete transfer-control inventory across the inherited collateral surfaces.",
     "sources": [
       {
         "label": "Pareto live credit vaults",
         "url": "https://docs.pareto.credit/product/credit-vaults/live-vaults"
       },
       {
-        "label": "Ethereum Blockscout AA FalconX tranche",
+        "label": "Pareto credit-vault audits",
+        "url": "https://docs.pareto.credit/developers/security/audits"
+      },
+      {
+        "label": "Ethereum AA_FalconXUSDC verified source",
         "url": "https://eth.blockscout.com/address/0xc26a6fa2c37b38e549a4a1807543801db684f99c"
       },
       {
-        "label": "Ethereum Blockscout IdleCDO",
+        "label": "Ethereum IdleCDO transparent proxy",
         "url": "https://eth.blockscout.com/address/0x433d5b175148da32ffe1e1a37a939e1b7e79be4d"
+      },
+      {
+        "label": "Ethereum IdleCDOEpochVariant verified implementation",
+        "url": "https://eth.blockscout.com/address/0xdd596250f838af8862d30e9c78a143356894a18d"
+      },
+      {
+        "label": "Idle Finance tranche source (pinned commit)",
+        "url": "https://github.com/Idle-Labs/idle-tranches/blob/d7b98b98328e1506b4322c81d44f0a97f5944852/contracts/IdleCDOTranche.sol"
+      },
+      {
+        "label": "Idle Finance epoch CDO source (pinned commit)",
+        "url": "https://github.com/Idle-Labs/idle-tranches/blob/d7b98b98328e1506b4322c81d44f0a97f5944852/contracts/IdleCDOEpochVariant.sol"
+      },
+      {
+        "label": "Archived Pareto live credit-vault documentation",
+        "url": "https://web.archive.org/web/20250621200444/https://docs.pareto.credit/product/credit-vaults/live-vaults"
+      },
+      {
+        "label": "Ethereum PublicNode fixed-block RPC",
+        "url": "https://ethereum.publicnode.com"
       }
     ],
-    "reviewer": "SONG-2 Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At Ethereum block 25535156 on 2026-07-15, the verified non-proxy IdleCDOTranche 0xc26a6fa2c37b38e549a4a1807543801db684f99c returned IdleCDO 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d as minter and had zero EIP-1967 implementation, admin, and beacon slots. Its direct transfer and transferFrom paths are ordinary ERC-20 code with no pause, blacklist, freeze, transfer hook, or privileged holder-burn function. The minter is a transparent proxy whose current IdleCDOEpochVariant implementation pauses and permission-checks vault operations, but its _withdrawOps helper always calls tranche.burn(msg.sender, amount), including the borrower-only writeOffDeposit route; it cannot currently burn an arbitrary tranche holder or stop a direct share transfer. The minter's separate pause and mint authority do not prove an existing holder-control function. Issuer product, audit, GitHub, archive, legal-route, and transparency review supplied no additional direct transfer-control claim or independent PoR attestation. The tranche has no direct holder-control path in this review, but the overall status remains inherited because its USDC exposure is not suppressed.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",

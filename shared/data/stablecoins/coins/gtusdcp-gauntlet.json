@@ -11,26 +11,58 @@
     "rwa": false,
     "navToken": true
   },
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Gauntlet USDC Prime vault",
         "url": "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime"
       },
       {
-        "label": "Morpho curator documentation",
-        "url": "https://docs.morpho.org/curate/"
+        "label": "Morpho Vault V2 documentation",
+        "url": "https://docs.morpho.org/get-started/resources/contracts/morpho-vaults/"
       },
       {
-        "label": "Gauntlet USDC Prime Ethereum vault contract",
-        "url": "https://etherscan.io/address/0x8c106eedad96553e64287a5a6839c3cc78afa3d0#code"
+        "label": "Ethereum Gauntlet USDC Prime verified VaultV2 source",
+        "url": "https://eth.blockscout.com/address/0x8c106eedad96553e64287a5a6839c3cc78afa3d0"
+      },
+      {
+        "label": "Base Gauntlet USDC Prime Sourcify exact-match MetaMorpho source",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61?fields=sources"
+      },
+      {
+        "label": "Arbitrum Gauntlet USDC Prime verified MetaMorphoV1_1 source",
+        "url": "https://arbitrum.blockscout.com/address/0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed"
+      },
+      {
+        "label": "Morpho Vault V2 official GitHub source",
+        "url": "https://github.com/morpho-org/vault-v2/blob/549b113106e505b83952c7b296622534338d5f92/src/VaultV2.sol"
+      },
+      {
+        "label": "Gauntlet terms of service",
+        "url": "https://www.gauntlet.xyz/tos"
+      },
+      {
+        "label": "Gauntlet branded-vault disclaimer",
+        "url": "https://storage.googleapis.com/gauntlet-public-web-assets/gauntlet-branded-vault-disclaimer-dec-2025.pdf"
+      },
+      {
+        "label": "Ethereum public RPC control reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Base public RPC control reads",
+        "url": "https://base-rpc.publicnode.com"
+      },
+      {
+        "label": "Arbitrum public RPC control reads",
+        "url": "https://arbitrum-one-rpc.publicnode.com"
       }
     ],
-    "sourceFreeRationale": "Bounded unknown retained: the reviewed vault and Morpho materials establish USDC exposure and curator controls, but do not establish a complete holder-level blacklist or freeze inventory for the vault share token and all tracked routes.",
-    "evidence": "gtUSDCp is a Morpho vault exposure to USDC and inherits Circle's upstream blacklist surface. The reviewed vault and curator sources do not prove a direct holder-control function for gtUSDCp itself or a deployment-wide control inventory.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "The full three-deployment inventory is direct and route-specific. Ethereum vault 0x8c106eedad96553e64287a5a6839c3cc78afa3d0 is a verified immutable VaultV2, not a proxy. Its source makes transfer and transferFrom require canSendShares/canReceiveShares and documents that share and asset gates can lock users out of transfers or exits. At Ethereum block 25535318, asset() was USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, owner() was 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec, curator() was 0x9e33faae38ff641094fa68c65c2ce600b3410585, all four gate addresses were zero, canSendShares(0x1) and canReceiveShares(0x2) returned true, and every gate setter had a 604800-second timelock. The curator can submit a gate change and execute it after that delay, so the direct gate surface is possible rather than active/true. Base 0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61 and Arbitrum 0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed are separately reviewed immutable MetaMorpho versions: their verified source/ABI has ordinary ERC20 transfers and no gate, pause, blacklist, or arbitrary-holder-burn function. Base at block 48648113 held native USDC with owner 0x5a4e19842e09000a582c20a4f524c26fb48dd4d0, curator 0x9e33faae38ff641094fa68c65c2ce600b3410585, and 604800-second timelock; current zero-share transfer simulation succeeded. Current Arbitrum reads returned native USDC 0xaf88d065e77c8cc2239327c5edb3a432268e5831, the same owner/curator, a 259200-second timelock, and a successful zero-share transfer simulation. The free Arbitrum and Base endpoints rejected post-read historical simulations as archive-only, but did not affect the pinned source or live-control findings. Gauntlet legal/disclaimer materials and the onchain vault page do not create token-holder controls. Circle USDC exposure remains additional upstream exposure; this explicit direct possible review does not assert an active gate.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

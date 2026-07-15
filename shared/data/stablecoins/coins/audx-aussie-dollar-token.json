@@ -217,6 +217,60 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "AUDX is issued by TAU Pty Ltd (trading as AUDX Token); minting and 1:1 AUD redemption run through the issuer's centralized backend against AUD cash and government-backed instruments held in reserve.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+        "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+        "0x47a365e29697c700c75d58936b3d93a8a20a43c9",
+        "0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+      ],
+      "implementationAddresses": [
+        "0xbe3865c3d9291ad3ce0a7a7db922b2e6e2e2680d",
+        "0x6f128c6fabfb23759163d6796d7f212dccde25eb",
+        "0x54fc2f58cedc4a8813603865e46f4b2f1e641861",
+        "0x6a0080d607c9ed4ecd7ccc8e1d4ad61c53501e4e"
+      ],
+      "adminAddresses": [
+        "0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28",
+        "0x1274d87337eb9091e22b9686ae34ad54c989c883"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "AUDX UUPS UPGRADER_ROLE (Ethereum)",
+      "observedAt": "2026-07-15",
+      "observedBlock": 25534481,
+      "sources": [
+        {
+          "label": "Ethereum Blockscout AUDX verified implementation",
+          "url": "https://eth.blockscout.com/address/0xbe3865c3d9291ad3ce0a7a7db922b2e6e2e2680d"
+        },
+        {
+          "label": "Polygon Blockscout AUDX verified implementation",
+          "url": "https://polygon.blockscout.com/address/0x6f128c6fabfb23759163d6796d7f212dccde25eb"
+        },
+        {
+          "label": "XDC Scan AUDX verified proxy",
+          "url": "https://xdcscan.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Polygon PublicNode RPC",
+          "url": "https://polygon-bor-rpc.publicnode.com"
+        },
+        {
+          "label": "Conflux eSpace RPC",
+          "url": "https://evm.confluxrpc.com"
+        },
+        {
+          "label": "XDC Network RPC",
+          "url": "https://rpc.xinfin.network"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "TAU Pty Ltd issuance backend",
@@ -259,20 +313,128 @@
             "url": "https://evm.confluxrpc.com"
           }
         ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28",
+        "label": "AUDX UUPS UPGRADER_ROLE (Ethereum)",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-15",
+        "observedBlock": 25534481,
+        "evidence": "At Ethereum block 25534481, the EIP-1967 implementation slot on AUDX proxy 0xd687759f35bb747a29246a4b9495c8f52c49e00c held 0xbe3865c3d9291ad3ce0a7a7db922b2e6e2e2680d and the admin slot was zero. The implementation returned the canonical proxiableUUID and UPGRADE_INTERFACE_VERSION = 5.0.0. EOA 0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28 held UPGRADER_ROLE; a same-implementation upgradeToAndCall eth_call from that address succeeded. Verified source gates _authorizeUpgrade with onlyRole(UPGRADER_ROLE).",
+        "sources": [
+          {
+            "label": "Ethereum Blockscout AUDX verified implementation",
+            "url": "https://eth.blockscout.com/address/0xbe3865c3d9291ad3ce0a7a7db922b2e6e2e2680d"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
+      },
+      {
+        "chain": "polygon",
+        "address": "0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28",
+        "label": "AUDX UUPS UPGRADER_ROLE (Polygon)",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-15",
+        "observedBlock": 90246996,
+        "evidence": "At Polygon block 90246996, the EIP-1967 implementation slot on AUDX proxy 0xd687759f35bb747a29246a4b9495c8f52c49e00c held 0x6f128c6fabfb23759163d6796d7f212dccde25eb and the admin slot was zero. The implementation returned the canonical proxiableUUID and UPGRADE_INTERFACE_VERSION = 5.0.0. EOA 0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28 held UPGRADER_ROLE. Verified source gates _authorizeUpgrade with onlyRole(UPGRADER_ROLE), permitting this EOA to replace mint logic without a contract-enforced delay.",
+        "sources": [
+          {
+            "label": "Polygon Blockscout AUDX verified implementation",
+            "url": "https://polygon.blockscout.com/address/0x6f128c6fabfb23759163d6796d7f212dccde25eb"
+          },
+          {
+            "label": "Polygon PublicNode RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          }
+        ]
+      },
+      {
+        "chain": "conflux",
+        "address": "0x1274d87337eb9091e22b9686ae34ad54c989c883",
+        "label": "AUDX UUPS UPGRADER_ROLE (Conflux eSpace)",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-15",
+        "observedBlock": 152097341,
+        "evidence": "At Conflux eSpace block 152097341, the EIP-1967 implementation slot on AUDX proxy 0x47a365e29697c700c75d58936b3d93a8a20a43c9 held 0x54fc2f58cedc4a8813603865e46f4b2f1e641861 and the admin slot was zero. The implementation returned the canonical proxiableUUID and UPGRADE_INTERFACE_VERSION = 5.0.0. EOA 0x1274d87337eb9091e22b9686ae34ad54c989c883 held UPGRADER_ROLE, and a same-implementation upgradeToAndCall eth_call from that address succeeded.",
+        "sources": [
+          {
+            "label": "Conflux eSpace RPC",
+            "url": "https://evm.confluxrpc.com"
+          }
+        ]
+      },
+      {
+        "chain": "xdc",
+        "address": "0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28",
+        "label": "AUDX UUPS UPGRADER_ROLE (XDC)",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-15",
+        "observedBlock": 104935021,
+        "evidence": "At XDC block 104935021, the EIP-1967 implementation slot on AUDX proxy 0xd687759f35bb747a29246a4b9495c8f52c49e00c held 0x6a0080d607c9ed4ecd7ccc8e1d4ad61c53501e4e and the admin slot was zero. The implementation returned the canonical proxiableUUID and UPGRADE_INTERFACE_VERSION = 5.0.0. EOA 0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28 held UPGRADER_ROLE, and a same-implementation upgradeToAndCall eth_call from that address succeeded.",
+        "sources": [
+          {
+            "label": "XDC Scan AUDX verified proxy",
+            "url": "https://xdcscan.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+          },
+          {
+            "label": "XDC Network RPC",
+            "url": "https://rpc.xinfin.network"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "AUDX issuer materials describe a single-entity issuer-managed mint and redemption path against fully backed AUD reserves. All four chains confirmed: Ethereum and Polygon (EOA 0xc9d8...3e28, hasRole at blocks 25295029/88323844); XDC (same EOA 0xc9d8... confirmed via rpc.xinfin.network hasRole calls, block 0x62dbc1a); Conflux eSpace (different EOA 0x1274...c883 holds all roles, confirmed via eth_call at block 149,717,551 — per-chain key management).",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "AUDX issuer materials describe a single-entity issuer-managed mint and redemption path against fully backed AUD reserves. Exact-block reads confirm four UUPS deployment controls: Ethereum (25534481), Polygon (90246996), Conflux eSpace (152097341), and XDC (104935021) resolve through the canonical EIP-1967 implementation slot with a zero proxy-admin slot and UPGRADE_INTERFACE_VERSION 5.0.0. Ethereum, Polygon, and XDC use EOA 0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28; Conflux uses EOA 0x1274d87337eb9091e22b9686ae34ad54c989c883. Each EOA holds DEFAULT_ADMIN_ROLE, MINTER_ROLE, and UPGRADER_ROLE on its deployment. Verified Ethereum and Polygon implementation source gates _authorizeUpgrade with onlyRole(UPGRADER_ROLE); same-implementation upgradeToAndCall eth_call succeeded for Ethereum, Conflux, and XDC. No contract-enforced timelock was observed.",
+      "reviewer": "Codex Safety Score V9 deployment-control review",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
           "label": "Ethereum Blockscout AUDX contract",
           "url": "https://eth.blockscout.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
         },
         {
+          "label": "AUDX issuer terms and conditions",
+          "url": "https://www.audxtoken.com/terms-and-conditions"
+        },
+        {
+          "label": "AUDX transparency",
+          "url": "https://www.audxtoken.com/transparency"
+        },
+        {
+          "label": "Ethereum Blockscout AUDX verified implementation",
+          "url": "https://eth.blockscout.com/address/0xbe3865c3d9291ad3ce0a7a7db922b2e6e2e2680d"
+        },
+        {
+          "label": "Polygon Blockscout AUDX verified implementation",
+          "url": "https://polygon.blockscout.com/address/0x6f128c6fabfb23759163d6796d7f212dccde25eb"
+        },
+        {
           "label": "Conflux eSpace RPC",
           "url": "https://evm.confluxrpc.com"
+        },
+        {
+          "label": "XDC Scan AUDX verified proxy",
+          "url": "https://xdcscan.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
         }
       ]
     }

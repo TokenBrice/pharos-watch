@@ -164,17 +164,92 @@
   "governanceQuality": "regulated-entity",
   "reserves": [
     {
-      "name": "WisdomTree CRDYX / alternative credit vehicles",
-      "pct": 99,
-      "risk": "high"
+      "name": "Liquid USDC balances",
+      "pct": 0.4,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle USDC held in the Nest Wisdom Vault liquidity sleeve",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "immediate"
     },
     {
-      "name": "Stablecoin liquidity buffer (pUSD / USDC) and nTBILL",
-      "pct": 1,
-      "risk": "low",
-      "coinId": "ntbill-nest"
+      "name": "Nest private and structured credit vaults",
+      "pct": 99.2,
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "WisdomTree and Nest Credit strategy counterparties",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "pUSD liquid balance",
+      "pct": 0.4,
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Nest pUSD liquidity sleeve",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "immediate"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Nest nWISDOM positions API",
+        "url": "https://api.nest.credit/v1/vaults/nest-wisdom-vault/positions"
+      },
+      {
+        "label": "Nest smart contracts",
+        "url": "https://docs.nest.credit/developers/smart-contracts/"
+      },
+      {
+        "label": "Nest vault architecture",
+        "url": "https://docs.nest.credit/about/cross-chain/"
+      }
+    ],
+    "rationale": "The current Nest positions capture reports 99.2% Nest private and structured credit vaults, 0.4% liquid USDC balances, and 0.4% pUSD liquid balance for the nWISDOM vault. Those three rows cover the live exposure envelope; the structured-credit and pUSD rows remain unlinked because the current adapter does not resolve them to tracked asset IDs.",
+    "compositionBasis": "Current Nest nWISDOM positions API snapshot",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The live API identifies the aggregate structured-credit and pUSD slices but does not publish the underlying security, obligor, custody, or strategy-level allocation required for further decomposition.",
+    "knownUnknownExposurePct": 99.2,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "Nest private and structured credit vaults",
+        "pct": 99.2,
+        "disposition": "basket-needs-split",
+        "rationale": "The current adapter exposes an aggregate private/structured-credit position without tracked underlying IDs or current constituent weights."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "pUSD liquid balance",
+        "pct": 0.4,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The live adapter identifies pUSD but does not resolve a tracked asset ID for this vault position."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "nest-vault-positions",
     "version": 1,
@@ -216,6 +291,27 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "nWISDOM is a Nest vault share on the Nucleus/BoringVault architecture; the permissioned Teller mints/burns shares when users deposit pUSD at vault NAV, while the Nest-controlled Manager directs WisdomTree-fund allocation. Both Teller and Manager are owned by the same Nest 3-of-6 Safe.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "Nest Wisdom Vault Teller and Manager constructor-deployed contracts",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25295096,
+      "sources": [
+        {
+          "label": "Nest smart contracts",
+          "url": "https://docs.nest.credit/developers/smart-contracts/"
+        },
+        {
+          "label": "Nest Wisdom Vault Teller verified source",
+          "url": "https://etherscan.io/address/0xA1D572b63C963c6421236C22A10140305C6d41fd#code"
+        },
+        {
+          "label": "Nest Wisdom Vault Manager verified source",
+          "url": "https://etherscan.io/address/0x8226B661EbaF1CBA4e2A92aE2616CCF2348F18cc#code"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Nest Wisdom Vault Teller (issuance/redemption)",

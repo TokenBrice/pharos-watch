@@ -83,19 +83,6 @@ function formatHeroRiskContext(row: YieldViewModelRow): string {
   return `${safety} · ${pys} · ${posture} · ${warningCount} warning${warningCount === 1 ? "" : "s"}`;
 }
 
-const MAX_DEFAULT_SCATTER_ROWS = 48;
-
-function selectDefaultScatterRows(rows: readonly YieldViewModelRow[]): YieldViewModelRow[] {
-  if (rows.length <= MAX_DEFAULT_SCATTER_ROWS) return [...rows];
-  const selected = new Map<string, YieldViewModelRow>();
-  for (const row of rows.slice(0, 36)) selected.set(row.id, row);
-  for (const row of [...rows].sort((a, b) => b.apy30d - a.apy30d)) {
-    selected.set(row.id, row);
-    if (selected.size >= MAX_DEFAULT_SCATTER_ROWS) break;
-  }
-  return [...selected.values()];
-}
-
 function YieldApiWarnings({ warnings }: { warnings: YieldRankingsSummaryResponse["warnings"] }) {
   if (!warnings || warnings.length === 0) return null;
 
@@ -246,7 +233,6 @@ export function YieldClient() {
     [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, rankings, watchlist.idSet],
   );
   const visibleRows = viewModel.visibleRows;
-  const scatterRows = useMemo(() => selectDefaultScatterRows(visibleRows), [visibleRows]);
   const storyCallouts = useMemo(() => buildYieldStoryCallouts(visibleRows), [visibleRows]);
   const activeFilterSummaries = useMemo(() => getActiveFilterSummaries(viewModel), [viewModel]);
   const lastZeroResultSignature = useRef<string | null>(null);
@@ -548,7 +534,7 @@ export function YieldClient() {
                   </a>
                 </div>
                 <YieldScatterPlot
-                  rankings={scatterRows}
+                  rankings={visibleRows}
                   benchmarkRate={stats.referenceBenchmark?.rate ?? data.riskFreeRate}
                   benchmarkLabel={stats.referenceBenchmark?.label}
                   benchmarkIsFallback={stats.referenceBenchmark?.isFallback}
@@ -558,12 +544,6 @@ export function YieldClient() {
                   compact
                   frame="bare"
                 />
-                {scatterRows.length < visibleRows.length ? (
-                  <p className="border-t border-border/50 px-4 py-2 text-[11px] text-muted-foreground">
-                    Showing {scatterRows.length} top-ranked and APY-outlier opportunities; all {visibleRows.length}{" "}
-                    remain in the leaderboard.
-                  </p>
-                ) : null}
               </div>
             ) : (
               <div className="flex h-[420px] items-center justify-center p-6 text-center text-sm text-muted-foreground">

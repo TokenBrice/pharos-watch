@@ -846,6 +846,68 @@ describe("filterPrimaryPoolsPreferDirectApi", () => {
     expect(result.skippedByOptionalWildcardIdentity).toBe(0);
   });
 
+  it("deduplicates a DL raydium-amm stable pair against the direct Raydium pool via the tracked-pair stability hint", () => {
+    // Live duplicate observed in production: DL marks USDS-USDC stable
+    // (pool.stablecoin) while the direct Raydium pool type carries no
+    // stability, so without the tracked-pair hint the stability buckets
+    // diverge and both rows survive, double-counting ~$9.1M TVL.
+    const USDS_MINT = "USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA";
+    const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+    const pools: LlamaPool[] = [
+      {
+        pool: "5b6c56a9-3b81-48ee-bee7-3f0dcd862e4d",
+        chain: "Solana",
+        project: "raydium-amm",
+        symbol: "USDS-USDC",
+        tvlUsd: 9_101_152,
+        volumeUsd1d: 1_034_471,
+        volumeUsd7d: null,
+        stablecoin: true,
+        underlyingTokens: [USDS_MINT, USDC_MINT],
+        apyBase: null,
+        apyReward: null,
+        apy: 0,
+        sigma: 0,
+        exposure: "multi",
+        count: 20,
+      },
+    ];
+    const directPool = (poolAddress: string, tvlUsd: number): DexApiPool => ({
+      source: "raydium",
+      chain: "solana",
+      poolAddress,
+      poolType: "raydium-amm",
+      tokens: [
+        { address: USDS_MINT, symbol: "USDS", decimals: 6 },
+        { address: USDC_MINT, symbol: "USDC", decimals: 6 },
+      ],
+      price: 1,
+      tvlUsd,
+      volume24hUsd: tvlUsd / 9,
+      feeRate: 0.0025,
+      balances: [tvlUsd / 2, tvlUsd / 2],
+    });
+    const chainAddressToId = new Map([
+      [`solana:${USDS_MINT}`, "usds-sky"],
+      [`solana:${USDC_MINT}`, "usdc-circle"],
+    ]);
+    const singleTwin = [directPool("AS5MV3ib4bfudpsb65yfmyQwrB9nRbY4rEqMSpjwbAcT", 9_101_153)];
+
+    const withHint = filterPrimaryPoolsPreferDirectApi(pools, singleTwin, chainAddressToId);
+    expect(withHint.filteredPools).toHaveLength(0);
+    expect(withHint.skippedByUniqueDerivedIdentity).toBe(1);
+
+    // Two direct pools with the same identity keep the DL row by the deliberate
+    // pool-level ambiguity guard (the DL row could be a third uncovered pool);
+    // the wildcard fallback is ambiguous for the same reason.
+    const ambiguousTwins = [
+      ...singleTwin,
+      directPool("7kJb5ZQF2jWc5m9R8t2xVb4nD6yPeHhTQ3sLuNvAaBbC", 56_127),
+    ];
+    const ambiguous = filterPrimaryPoolsPreferDirectApi(pools, ambiguousTwins, chainAddressToId);
+    expect(ambiguous.filteredPools).toHaveLength(1);
+  });
+
   it("does not use optional wildcard dedup when multiple direct API Orca pools share the same pair", () => {
     const pools: LlamaPool[] = [
       {

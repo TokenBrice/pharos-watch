@@ -62,7 +62,6 @@ export interface V9ScoreTrace {
 
 const SCORE_MIN = 0;
 const SCORE_MAX = 100;
-const EPSILON = 1e-9;
 
 function compareCodeUnits(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -72,14 +71,23 @@ function clampScore(value: number): number {
   return Math.max(SCORE_MIN, Math.min(SCORE_MAX, value));
 }
 
+/**
+ * Snap binary float noise to the nearest 12-significant-digit decimal before
+ * quantizing: an additive Number.EPSILON is magnitude-blind (one ULP at ~59.5
+ * is ~30x larger), so exact decimal halves could round down (VER-002).
+ */
+function decimalSnap(value: number): number {
+  return Number(value.toPrecision(12));
+}
+
 function roundTo(value: number, decimals: number): number {
   const factor = 10 ** decimals;
-  return Math.round((value + Number.EPSILON) * factor) / factor;
+  return Math.round(decimalSnap(value * factor)) / factor;
 }
 
 function floorTo(value: number, decimals: number): number {
   const factor = 10 ** decimals;
-  return Math.floor((value + Number.EPSILON) * factor) / factor;
+  return Math.floor(decimalSnap(value * factor)) / factor;
 }
 
 function gradeForScore(score: number, policy: V9ValidatedPolicyEnvelope): V9Grade {
@@ -290,7 +298,7 @@ function scoreV9InputWithCaps(
     capCandidates.push({
       source: "bounded-compensability",
       kind: "bounded-compensability",
-      limit: clampScore(weakestPillar.score + formula.compensabilityHeadroom),
+      limit: decimalSnap(clampScore(weakestPillar.score + formula.compensabilityHeadroom)),
       reason: `${weakestPillar.pillar} is the weakest pillar; compensation is bounded.`,
     });
   }
@@ -357,14 +365,18 @@ function scoreV9InputWithCaps(
             compareCodeUnits(left.reason, right.reason),
         )
         .reverse()
-        .map((cap) => [`${cap.source} ${cap.kind} ${cap.limit}`, cap]),
+        .map((cap) => [`${cap.source}\u0000${cap.kind}\u0000${cap.limit}`, cap]),
     ).values(),
   ].reverse();
+  // Caps bind in the QUANTIZED score space: a cap constrains the published
+  // score whenever the rounded uncapped score would exceed the floored cap
+  // limit, even if the raw score sits below the fractional limit (VER-001).
+  const quantizedUncapped = preCapScoreRaw === null ? null : roundTo(preCapScoreRaw, formula.scoreDecimals);
   const bindingCandidate =
-    preCapScoreRaw === null
+    preCapScoreRaw === null || quantizedUncapped === null
       ? null
       : ([...dedupedCandidates]
-          .filter((cap) => cap.limit < preCapScoreRaw - EPSILON)
+          .filter((cap) => floorTo(cap.limit, formula.scoreDecimals) < quantizedUncapped)
           .sort(
             (left, right) =>
               left.limit - right.limit ||

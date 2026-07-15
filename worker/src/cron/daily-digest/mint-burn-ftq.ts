@@ -1,5 +1,6 @@
 import { buildFlightToQualityClassification } from "../../lib/flight-to-quality-classification";
 import { loadReportCardCache } from "../../lib/report-card-cache";
+import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
 
 const REPORT_CARD_MAX_AGE_MS = 2 * 60 * 60 * 1000;
 
@@ -8,16 +9,61 @@ export interface DigestMintBurnCoinIntensity {
   net24h: number;
 }
 
+export type DigestMintBurnFtqFlows =
+  | {
+      kind: "ok";
+      safeNet24h: number;
+      riskyNet24h: number;
+      safetyScoreIdentity: SafetyScoreV8PublicationIdentity;
+    }
+  | {
+      kind: "unavailable";
+      safeNet24h: 0;
+      riskyNet24h: 0;
+      reason: string;
+      safetyScoreIdentity: SafetyScoreV8PublicationIdentity | null;
+    };
+
 export async function computeDigestMintBurnFtqFlows(
   db: D1Database,
   coinIntensities: DigestMintBurnCoinIntensity[],
-): Promise<{ safeNet24h: number; riskyNet24h: number }> {
-  const reportCardCache = await loadReportCardCache(db, { maxAgeMs: REPORT_CARD_MAX_AGE_MS });
+): Promise<DigestMintBurnFtqFlows> {
+  let reportCardCache: Awaited<ReturnType<typeof loadReportCardCache>>;
+  try {
+    reportCardCache = await loadReportCardCache(db, {
+      maxAgeMs: REPORT_CARD_MAX_AGE_MS,
+      requireCompleteness: true,
+    });
+  } catch {
+    return {
+      kind: "unavailable",
+      safeNet24h: 0,
+      riskyNet24h: 0,
+      reason: "cache-read-failed",
+      safetyScoreIdentity: null,
+    };
+  }
   if (reportCardCache.kind !== "ok") {
-    return { safeNet24h: 0, riskyNet24h: 0 };
+    return {
+      kind: "unavailable",
+      safeNet24h: 0,
+      riskyNet24h: 0,
+      reason: reportCardCache.reason,
+      safetyScoreIdentity: null,
+    };
   }
 
-  const gradeClassification = buildFlightToQualityClassification(reportCardCache.payload);
+  const classification = buildFlightToQualityClassification(reportCardCache.payload);
+  if (classification.kind !== "ok") {
+    return {
+      kind: "unavailable",
+      safeNet24h: 0,
+      riskyNet24h: 0,
+      reason: classification.reason,
+      safetyScoreIdentity: reportCardCache.payload.safetyScoreIdentity ?? null,
+    };
+  }
+  const gradeClassification = classification.classification;
   let safeNet24h = 0;
   let riskyNet24h = 0;
   for (const coin of coinIntensities) {
@@ -27,5 +73,10 @@ export async function computeDigestMintBurnFtqFlows(
       riskyNet24h += coin.net24h;
     }
   }
-  return { safeNet24h, riskyNet24h };
+  return {
+    kind: "ok",
+    safeNet24h,
+    riskyNet24h,
+    safetyScoreIdentity: gradeClassification.safetyScoreIdentity,
+  };
 }

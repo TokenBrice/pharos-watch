@@ -5,10 +5,7 @@ import { formatTelegramAge } from "../lib/telegram-format-age";
 import { MANAGE_PAGE_SIZE, isPausedSentinel } from "../lib/telegram-constants";
 import { buildTelegramMiniAppUrl } from "../lib/telegram-webhook-registration";
 import type { ResolvedCoin } from "../lib/telegram-alerts";
-import type {
-  TelegramPresetDefinition,
-  TelegramPresetId,
-} from "../lib/telegram-presets";
+import type { TelegramPresetDefinition, TelegramPresetId } from "../lib/telegram-presets";
 import { isQuietHoursActive } from "../cron/telegram-quiet-hours";
 import { formatTelegramCompactUsd, formatTelegramSignedCompactUsd } from "./telegram-format";
 import type { PresetSubscriptionRow, SubscriberRow, SubscriptionRow } from "./telegram-webhook-shared";
@@ -40,13 +37,15 @@ export function buildStatusAmbiguousMessage(
   candidates: ResolvedCoin[],
   commandName = "/status",
 ): string {
-  return escapeHtml([
-    `"${ticker}" matches ${candidates.length} coins:`,
-    ...candidates.map((coin) => `- ${coin.symbol} — ${coin.name} (${coin.id})`),
-    "",
-    `Re-run ${commandName} with the exact Pharos coin id, e.g.:`,
-    `${commandName} ${candidates[0]?.id ?? "<coin-id>"}`,
-  ].join("\n"));
+  return escapeHtml(
+    [
+      `"${ticker}" matches ${candidates.length} coins:`,
+      ...candidates.map((coin) => `- ${coin.symbol} — ${coin.name} (${coin.id})`),
+      "",
+      `Re-run ${commandName} with the exact Pharos coin id, e.g.:`,
+      `${commandName} ${candidates[0]?.id ?? "<coin-id>"}`,
+    ].join("\n"),
+  );
 }
 
 interface SubscriptionSummaryOptions {
@@ -91,10 +90,7 @@ function appendTruncationLine(lines: string[], totalCount: number, shownCount: n
   }
 }
 
-export function buildUnsubscribeSuccessMessage(
-  coins: ResolvedCoin[],
-  options: UnsubscribeSummaryOptions = {},
-): string {
+export function buildUnsubscribeSuccessMessage(coins: ResolvedCoin[], options: UnsubscribeSummaryOptions = {}): string {
   const sortedCoins = [...coins].sort((a, b) => a.symbol.localeCompare(b.symbol) || a.id.localeCompare(b.id));
   const maxRows = options.maxRows ?? sortedCoins.length;
   const shownCoins = sortedCoins.slice(0, maxRows);
@@ -123,19 +119,18 @@ export function buildSubscriptionSummaryMessage(
   return escapeHtml(lines.join("\n"));
 }
 
-export function buildGlobalAlertSummaryMessage(
-  header: string,
-  subscriber: SubscriberRow | null,
-): string {
-  return escapeHtml([
-    header,
-    `All stablecoins: ${describeGlobalAlertSettings(subscriber)}`,
-    `Quiet hours: ${
-      subscriber?.quiet_hours_enabled
-        ? formatQuietHours(subscriber.quiet_hours_start_utc, subscriber.quiet_hours_end_utc, subscriber.timezone)
-        : "Off"
-    }`,
-  ].join("\n"));
+export function buildGlobalAlertSummaryMessage(header: string, subscriber: SubscriberRow | null): string {
+  return escapeHtml(
+    [
+      header,
+      `All stablecoins: ${describeGlobalAlertSettings(subscriber)}`,
+      `Quiet hours: ${
+        subscriber?.quiet_hours_enabled
+          ? formatQuietHours(subscriber.quiet_hours_start_utc, subscriber.quiet_hours_end_utc, subscriber.timezone)
+          : "Off"
+      }`,
+    ].join("\n"),
+  );
 }
 
 export function buildListMessage(
@@ -163,16 +158,16 @@ export function buildListMessage(
     }
   }
 
-  lines.push(
-    `Coins (${subscriptions.length}):`,
-  );
+  lines.push(`Coins (${subscriptions.length}):`);
 
   if (subscriptions.length === 0) {
     lines.push("None");
   } else {
     const sorted = sortSubscriptions(subscriptions);
     for (const row of sorted) {
-      lines.push(`- ${formatCoinLabel(row.stablecoin_id)}: ${describeSubscriptionSettings(row, nowSec, { perCoinTag: true })}`);
+      lines.push(
+        `- ${formatCoinLabel(row.stablecoin_id)}: ${describeSubscriptionSettings(row, nowSec, { perCoinTag: true })}`,
+      );
     }
   }
 
@@ -416,13 +411,20 @@ export function buildStatusDiscoveryKeyboard(
 ): {
   inline_keyboard: InlineKeyboardButton[][];
 } {
-  const rows: InlineKeyboardButton[][] = [[
-    { text: "Why?", callback_data: `why:${stablecoinId}` },
-    { text: "Coverage", callback_data: `coverage:${stablecoinId}` },
-    { text: "Subscribe", callback_data: `quicksub:${stablecoinId}` },
-  ]];
+  const rows: InlineKeyboardButton[][] = [
+    [
+      { text: "Why?", callback_data: `why:${stablecoinId}` },
+      { text: "Coverage", callback_data: `coverage:${stablecoinId}` },
+      { text: "Subscribe", callback_data: `quicksub:${stablecoinId}` },
+    ],
+  ];
   if (options.includeMiniAppButton) {
-    rows.push([{ text: "Open in app", web_app: { url: buildTelegramMiniAppUrl(options.miniAppPayload ?? formatCoinPayload(stablecoinId)) } }]);
+    rows.push([
+      {
+        text: "Open in app",
+        web_app: { url: buildTelegramMiniAppUrl(options.miniAppPayload ?? formatCoinPayload(stablecoinId)) },
+      },
+    ]);
   }
   return { inline_keyboard: rows };
 }
@@ -432,11 +434,15 @@ export function buildManageEntryKeyboard(options: { includeMiniAppButton?: boole
   inline_keyboard: InlineKeyboardButton[][];
 } {
   const rows: InlineKeyboardButton[][] = [[{ text: "Manage", callback_data: "manage:page:0" }]];
-  if (options.includeMiniAppButton) rows.push([{ text: "Open in app", web_app: { url: buildTelegramMiniAppUrl("watchlist") } }]);
+  if (options.includeMiniAppButton)
+    rows.push([{ text: "Open in app", web_app: { url: buildTelegramMiniAppUrl("watchlist") } }]);
   return { inline_keyboard: rows };
 }
 
-export function buildMiniAppOnlyKeyboard(text = "Open control panel", payload = "watchlist"): {
+export function buildMiniAppOnlyKeyboard(
+  text = "Open control panel",
+  payload = "watchlist",
+): {
   inline_keyboard: InlineKeyboardButton[][];
 } {
   return { inline_keyboard: [[{ text, web_app: { url: buildTelegramMiniAppUrl(payload) } }]] };
@@ -485,10 +491,7 @@ export function buildManageWatchlistKeyboard(
 }
 
 /** Header text rendered above the manage keyboard. */
-export function buildManageWatchlistMessage(
-  subscriptions: SubscriptionRow[],
-  page: number,
-): string {
+export function buildManageWatchlistMessage(subscriptions: SubscriptionRow[], page: number): string {
   if (subscriptions.length === 0) {
     return escapeHtml("No coin subscriptions to manage. Use /subscribe to add some.");
   }
@@ -510,14 +513,18 @@ export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
     ? `DEWS: ${s.dews.band} (score ${s.dews.score}, ${formatAge(s.dews.computedAt, nowSec)})`
     : "DEWS: no recent signal";
   const safetyLine = s.safety
-    ? `Safety: ${s.safety.grade}${s.safety.score != null ? ` (${s.safety.score})` : ""}, ${formatAge(s.safety.recordedAt, nowSec)}`
-    : "Safety: UNKNOWN";
+    ? `Safety: ${s.safety.grade}${s.safety.score != null ? ` (${s.safety.score})` : ""} [${s.safety.model.toUpperCase()} ${s.safety.methodologyVersion}], ${formatAge(s.safety.publishedAt, nowSec)}`
+    : s.safetyUnavailableReason
+      ? "Safety: temporarily unavailable"
+      : "Safety: UNKNOWN";
   const depegLine =
     s.depeg.status === "active"
       ? `Depeg: ACTIVE — ${s.depeg.direction} peg, peak ${(s.depeg.peakDeviationBps / 100).toFixed(1)}%, started ${formatElapsed(s.depeg.startedAt, nowSec)}`
       : "Depeg: stable";
   const supply = formatTelegramCompactUsd(s.supplyUsd);
-  const supplyLine = supply ? `Supply: ${supply}${s.stablecoinsUpdatedAt ? ` (${formatAge(s.stablecoinsUpdatedAt, nowSec)})` : ""}` : null;
+  const supplyLine = supply
+    ? `Supply: ${supply}${s.stablecoinsUpdatedAt ? ` (${formatAge(s.stablecoinsUpdatedAt, nowSec)})` : ""}`
+    : null;
   const liquidityTvl = formatTelegramCompactUsd(s.liquidity?.totalTvlUsd);
   const liquidityLine = s.liquidity
     ? `Liquidity: ${s.liquidity.score ?? "NR"}${liquidityTvl ? `, TVL ${liquidityTvl}` : ""} (${formatAge(s.liquidity.updatedAt, nowSec)})`
@@ -526,8 +533,7 @@ export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
     ? `Yield: ${s.yield.apy30d.toFixed(2)}% 30d at ${escapeHtml(s.yield.source)}${s.yield.pharosYieldScore != null ? `, PYS ${Math.round(s.yield.pharosYieldScore)}` : ""}`
     : null;
   const flowSigned = s.flow ? formatTelegramSignedCompactUsd(s.flow.netFlowUsd) : null;
-  const flowLine =
-    s.flow && flowSigned ? `Flow 24h: ${flowSigned} (${formatAge(s.flow.updatedAt, nowSec)})` : null;
+  const flowLine = s.flow && flowSigned ? `Flow 24h: ${flowSigned} (${formatAge(s.flow.updatedAt, nowSec)})` : null;
   const lines = [
     `<b>${escapeHtml(symbol)}</b>`,
     priceLine,

@@ -57,6 +57,7 @@ export async function runYieldCoordinatorHealthTelemetryStage(
     trackedCount: fetched.safetySnapshot.trackedCount,
     reason: fetched.safetySnapshot.reason ?? null,
     source: fetched.safetySnapshot.source,
+    safetyScoreIdentity: fetched.safetySnapshot.safetyScoreIdentity,
     publicationGenerationId: fetched.safetySnapshot.publicationGenerationId,
     methodologyVersion: fetched.safetySnapshot.methodologyVersion,
     publishedAt: fetched.safetySnapshot.publishedAt,

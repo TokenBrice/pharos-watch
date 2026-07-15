@@ -14,6 +14,22 @@
   "collateral": "Short-term U.S. Treasury bills held off-chain, supplemented by on-chain stablecoins (USDC/USDT); supply rebases daily on New York banking days to match portfolio net asset value including accrued interest",
   "pegMechanism": "Daily rebase on NYC banking days aligning total supply with portfolio NAV; 1:1 USDC redemption via two-step withdrawal (request + claim, 5–7 day settlement); Transmuter enables instant 1:1 conversion between cgUSD and USDC; Elixir AMO manages on-chain liquidity",
   "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-5 Safety Score V9 mechanism review",
+    "rationale": "Cygnus describes cgUSD as collateralized by short-term U.S. Treasuries, with total supply synchronized to portfolio net asset value on New York banking days and a 1:1 USDC redemption path. This is a Treasury-backed, NAV-rebasing stablecoin rather than a borrower-CDP or fiat cash-only issuance design.",
+    "sources": [
+      {
+        "label": "Cygnus cgUSD v1 overview",
+        "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1"
+      },
+      {
+        "label": "Cygnus cgUSD mint mechanics",
+        "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/protocol-mechanics/mint"
+      }
+    ]
+  },
   "llamaId": "166",
   "detailProvider": "defillama",
   "geckoId": "cygnus-finance-global-usd",
@@ -126,6 +142,56 @@
     "evidence": "Inferred review retained: cgUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
+  },
+  "reserves": [
+    {
+      "name": "Short-term U.S. Treasury bills and on-chain stablecoin portfolio",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury and undisclosed stablecoin issuers",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-5 Safety Score V9 backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Cygnus cgUSD v1 overview",
+        "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1"
+      },
+      {
+        "label": "Cygnus cgUSD mint mechanics",
+        "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/protocol-mechanics/mint"
+      }
+    ],
+    "rationale": "Cygnus states that cgUSD's NAV portfolio includes off-chain short-term U.S. Treasuries, on-chain stablecoins, and asset interest. Its mint documentation identifies USDC and USDT as stablecoin inputs, but the reviewed issuer material does not publish the current Treasury/stablecoin split, stablecoin identities held in the portfolio, reserve balances, custodian allocation, or liability reconciliation.",
+    "compositionBasis": "Cygnus issuer description of the cgUSD NAV portfolio and mint inputs",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current Treasury and stablecoin weights, holdings, reserve balances, custodians, and independent assurance are not disclosed in the reviewed issuer documentation.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Short-term U.S. Treasury bills and on-chain stablecoin portfolio",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The issuer identifies the portfolio categories but does not publish a current constituent or weight-level allocation."
+      }
+    ]
   },
   "custodyModel": "institutional-unregulated",
   "liveReservesConfig": {

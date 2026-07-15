@@ -18,11 +18,11 @@
   "detailProvider": "defillama",
   "geckoId": "balanced-dollars",
   "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "Balanced bnUSD loans depend on external collateral price feeds, with public sources tying Balanced oracle integration to Band but not showing stronger failover handling.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
-    "confidence": "verified",
+    "tier": "opaque-or-unknown",
+    "summary": "The historical bnUSD v1 design used external collateral pricing, with public sources tying Balanced oracle integration to Band. Balanced's current documentation says the v1 app is no longer supported after the April 2026 v2 launch, so the active v2 oracle and failover path are not established for this tracked v1 record.",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-1 Safety Score V9 evidence review",
+    "confidence": "unknown",
     "sources": [
       {
         "label": "Balanced bnUSD overview",
@@ -31,6 +31,10 @@
       {
         "label": "Band Protocol Balanced partnership",
         "url": "https://medium.com/bandprotocol/balanced-network-strategic-partnership-with-band-protocol-and-launch-review-1cfbde8adaef"
+      },
+      {
+        "label": "Balanced v1 transition guide",
+        "url": "https://docs.balanced.network/"
       }
     ]
   },
@@ -89,11 +93,15 @@
       {
         "label": "Balanced docs",
         "url": "https://docs.balanced.network"
+      },
+      {
+        "label": "Balanced v1 transition guide",
+        "url": "https://docs.balanced.network/"
       }
     ],
-    "evidence": "No direct bnUSD holder blacklist was identified, but Balanced's Stability Fund swaps USDC and USDT 1:1 for bnUSD and holds those stablecoins as collateral. That creates upstream freeze exposure under the any-reserve policy.",
-    "reviewer": "Codex FreezeWatch audit",
-    "reviewedAt": "2026-05-25"
+    "evidence": "No direct bnUSD holder blacklist was identified in the reviewed Balanced materials. The Stability Fund's documented USDC and USDT collateral creates upstream freeze exposure under the any-reserve policy. Balanced's current documentation now says the original v1 app is no longer supported, so no current v2 holder-control inventory is asserted for this tracked v1 record.",
+    "reviewer": "SONG-1 Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
@@ -120,18 +128,23 @@
       }
     ],
     "review": {
-      "evidence": "Balanced docs describe a DAO-governed overcollateralized CDP on ICON where the Loans contract mints bnUSD against sICX and bridged Hub collateral; the same supply circulates cross-chain via xCall rather than via independent wrapper mints.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "Historical Balanced materials describe a DAO-governed overcollateralized CDP on ICON where the Loans contract mints bnUSD against sICX and bridged Hub collateral. The current Balanced documentation says v2 launched on April 7, 2026 and the original v1 app is no longer supported; the tracked ICON Loans authority and any active v2 mint path therefore remain unresolved.",
+      "reviewer": "SONG-1 Safety Score V9 control review",
+      "reviewedAt": "2026-07-14",
       "sources": [
         {
-          "label": "Balanced docs",
-          "url": "https://docs.balanced.network"
+          "label": "Balanced v1 transition guide",
+          "url": "https://docs.balanced.network/"
+        },
+        {
+          "label": "Balanced stablecoin page",
+          "url": "https://balanced.network/stablecoin/"
         }
       ],
-      "sourceFreeRationale": "CDP mechanism and DAO governance confirmed from Balanced docs. ICON chain has no keyless EVM RPC; ICON contract state (Loans contract admin, DAO execution path) cannot be read from standard EVM tooling.",
+      "sourceFreeRationale": "Historical CDP mechanism and DAO governance are documented, but the current Balanced v1 transition leaves the active mint boundary unresolved. ICON-native contract state and the v2 replacement authority were not available through the reviewed public sources.",
       "unresolvedQuestions": [
-        "ICON chain has no publicly accessible keyless RPC for contract reads; cannot verify the Balanced Loans contract admin/owner on-chain. Requires ICON-native tooling (e.g. ICON node API or tracker API) to enumerate the cx88fd7df7ddff82f7cc735c871dc519838cb235bb contract admin and DAO governance execution path."
+        "ICON chain has no publicly accessible keyless RPC for contract reads; cannot verify the Balanced Loans contract admin/owner on-chain. Requires ICON-native tooling (e.g. ICON node API or tracker API) to enumerate the cx88fd7df7ddff82f7cc735c871dc519838cb235bb contract admin and DAO governance execution path.",
+        "Balanced's current docs state the v1 app is no longer supported after the April 2026 v2 launch; the reviewed sources do not identify the active v2 bnUSD mint contract or authority for this tracked record."
       ]
     }
   },
@@ -252,8 +265,8 @@
     },
     {
       "type": "info",
-      "title": "v2 migration to Sonic in progress",
-      "message": "Balanced is migrating to a v2 architecture that re-anchors bnUSD issuance on Sonic. The cross-chain deployments tracked here are the v1 (ICON-Hub) bnUSD that DefiLlama indexes under id 204; the v2 bnUSD on Sonic is a separate contract not yet tracked. Expect supply distribution and the canonical issuance chain to shift over time."
+      "title": "Balanced v1 transition and v2 launch",
+      "message": "Balanced's current documentation says v2 launched on April 7, 2026 and the original v1 app is no longer supported. The deployments tracked here are the historical v1 ICON-Hub bnUSD entry; current v2 issuance, reserves, and authority are not asserted until a verified active contract inventory is available."
     }
   ],
   "reserves": [
@@ -269,5 +282,41 @@
       "blacklistable": true
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-1 Safety Score V9 reserve review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Balanced v1 transition guide",
+        "url": "https://docs.balanced.network/"
+      },
+      {
+        "label": "Balanced stablecoin page",
+        "url": "https://balanced.network/stablecoin/"
+      }
+    ],
+    "rationale": "The catalog's 90/10 rows describe the historical ICON v1 collateral envelope, but Balanced's current documentation says v1 is no longer supported after the April 2026 v2 launch. No current v2 reserve inventory is published in the reviewed sources, so both historical rows remain explicitly unresolved rather than being presented as active composition.",
+    "compositionBasis": "Balanced current v1 transition documentation and historical catalog reserve envelope",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The tracked v1 reserve weights are not current evidence after the v2 launch, and no active v2 bnUSD reserve inventory was found in the reviewed public sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "sICX (staked ICX) collateral on ICON",
+        "pct": 90,
+        "disposition": "insufficient-evidence",
+        "rationale": "The historical v1 row is not treated as a current reserve allocation after the documented v2 transition."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Cross-chain Hub and Stability Fund collateral (BTC, ETH, BNB, AVAX, INJ, USDC, USDT and other bridged assets)",
+        "pct": 10,
+        "disposition": "insufficient-evidence",
+        "rationale": "The historical v1 row is not treated as a current reserve allocation after the documented v2 transition."
+      }
+    ]
+  },
   "launchDate": "2021-04-25"
 }

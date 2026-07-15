@@ -14,6 +14,17 @@
   "collateral": "Short-dated Eurozone sovereign Treasury bills (issued by AAA / strong-Member-State issuers) with weighted average maturity under two months, held by a UCITS-compliant short-term money market fund administered under Spiko's AMF authorization",
   "pegMechanism": "EUR-denominated NAV-accreting share token (ISIN FR001400ODL1) of the Spiko SICAV short-term VNAV money market sub-fund authorised by the AMF, backed primarily by French and German Eurozone sovereign T-bills (and other top-rated Member-State issuers such as the Netherlands) with a regulatory weighted-average maturity ceiling under 60 days; subscription and redemption are KYC-gated to allowlisted wallets through Spiko's transfer agent with a daily 11:30 Paris cutoff settling at the day's published NAV (T+0 / next-business-day for late orders) and a €1k minimum; cross-chain issuance on Ethereum, Arbitrum, and Polygon is relayed through Chainlink CCIP. Prospectus: https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
   "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SONG-5 Safety Score V9 mechanism review",
+    "rationale": "EUTBL is an NAV-accreting, regulated Spiko SICAV money-market fund share backed by a short-term Eurozone sovereign bill mandate. The prospectus and KID support the T-bill fund classification, daily dealing, and eligible-instrument maturity limits. They do not establish a current security-level allocation, complete holder seniority and loss-recovery design, or all chain-specific implementation controls.",
+    "sources": [
+      {"label": "Spiko EU T-Bills product page", "url": "https://www.spiko.io/spiko-treasury-bills-euro"},
+      {"label": "Spiko SICAV prospectus", "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"},
+      {"label": "Spiko EU T-Bills Money Market Fund KID", "url": "https://cdn.spiko.finance/legal_docs/EN/KID_EUTBL_EN.pdf"}
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "eutbl",
   "proofOfReserves": {

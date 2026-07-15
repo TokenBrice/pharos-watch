@@ -14,6 +14,17 @@
   "collateral": "Malaysian Ringgit cash deposits held in a ring-fenced bank account at Maybank (Malayan Banking Berhad) under the custody and trustee services of Universal Trustee (Malaysia) Bhd (UTMB)",
   "pegMechanism": "1:1 mint and redemption against Malaysian Ringgit via Malaysian banking rails (FPX). Eligibility requires Malaysian eKYC (MyKad) and a linked Malaysian bank account; mint authority on each chain is restricted to a Blox-controlled key.",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SONG-5 Safety Score V9 mechanism review",
+    "rationale": "BLOX describes MYRC as a 1:1 Malaysian Ringgit stablecoin minted and redeemed through domestic banking rails, with ring-fenced Maybank deposits under UTMB trustee custody. This supports the fiat-cash classification. The reviewed product, transparency, and whitepaper materials do not expose a dated reserve-balance report, account-level legal terms, independent assurance, or a full liability reconciliation.",
+    "sources": [
+      {"label": "BLOX MYRC transparency", "url": "https://www.blox.my/myrc/transparency"},
+      {"label": "MYRC whitepaper", "url": "https://cdn.blox.my/misc/MYRC-Whitepaper.pdf"},
+      {"label": "BLOX MYRC product page", "url": "https://www.blox.my"}
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "blox-myrc",
   "proofOfReserves": {

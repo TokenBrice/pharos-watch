@@ -230,6 +230,42 @@
       "risk": "high"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "YieldPoint core flows",
+        "url": "https://docs.yieldpoint.io/protocol/core-flows"
+      },
+      {
+        "label": "XSY Accountable reserve dashboard",
+        "url": "https://accountable.xsy.fi/"
+      }
+    ],
+    "rationale": "YieldPoint documents USDC deposits into the Base hub and a strategy-managed delta-neutral posture. The Accountable dashboard is the designated live-reserve surface, but the reviewed public materials do not establish a reconciled point-in-time split across spot, hedge, exchange, and custodian positions.",
+    "compositionBasis": "YieldPoint issuance documentation and XSY's designated Accountable reserve dashboard",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The historic USDC/long-AVAX/short-perpetual labels describe the strategy, not a current attested allocation. Current position weights, exchange and custodian counterparties, hedge notional, margin, and liquidation buffers remain undisclosed.",
+    "knownUnknownExposurePct": 70,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "Long AVAX spot positions",
+        "pct": 35,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed sources do not establish current long-spot exposure, venue, or custody."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Short AVAX perpetual futures (delta-neutral hedge)",
+        "pct": 35,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed sources do not establish current short-perpetual notional, venue, margin, or liquidation buffers."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "accountable",
     "version": 1,

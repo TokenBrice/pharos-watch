@@ -41,26 +41,42 @@
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
-    "evidence": "Current HedgeCore documentation and the sUSD contract identify a soul-bound, operator-controlled redemption and wrapper path, but the reviewed sources do not prove a holder-balance blacklist or freeze function on the sUSD token. Possible access risk is retained for the issuer, wrapper, and admin surfaces.",
+    "reviewedStatus": true,
+    "evidence": "At BSC block 110064032, replayed through BSC Blast API, the sole tracked sUSD deployment 0xbe1922750760c4cae69edb6fe79a22ae9b62a23d was a direct 3,757-byte contract whose wrapper() resolved to 0x34eea40fb819bfc762b836dd6269f975227794d3; both token and wrapper EIP-1967 implementation slots were zero. The token DEFAULT_ADMIN_ROLE and wrapper owner() were EOA 0x30829883394adfc36f95a84881be1254f60bdd35, and the wrapper held the token BURNER_ROLE. Verified wrapper source exposes hedgeBurnLocked(from, amount) to that owner or an OPERATOR_ROLE account; it calls the BURNER_ROLE-gated reclaimFromWrapper(from, amount), which burns the specified holder without an allowance. An eth_call from the owner successfully simulated a one-wei hedgeBurnLocked against address 0x67a2d21c408efbba83de8fe081ca31e38e15e745, which then held 3,229.290083316479002966 sUSD and had no active wrapper lock. Separately, SUDC _update only blocks a transfer that would consume an active per-address wrapper lock; otherwise it executes the standard ERC-20 update, and a zero-value transfer simulation returned true. This is a direct holder-burn and lock-aware transfer-control path. Issuer documentation conflicts between a soul-bound/non-transferable claim and the live transferable-sUSD page; it is context only, not evidence of authority. This access review makes no finding about legal terms, proof of reserves, or transparency because no corresponding official artifact is cited or relied upon for this classification.",
     "sources": [
       {
-        "label": "HedgeCore yield generation",
-        "url": "https://docs.hedgecore.io/docs/protocol/yield-generation"
+        "label": "HedgeCore sUSD contract registry",
+        "url": "https://hedgecore.io/susd"
       },
       {
-        "label": "HedgeCore hUSDC wrapper",
-        "url": "https://docs.hedgecore.io/docs/protocol/husdc-wrapper"
+        "label": "HedgeCore sUSD verified BSC source",
+        "url": "https://bscscan.com/address/0xbe1922750760c4cae69edb6fe79a22ae9b62a23d#code"
       },
       {
-        "label": "sUSD BSC contract",
-        "url": "https://bscscan.com/token/0xbe1922750760c4cae69edb6fe79a22ae9b62a23d"
+        "label": "HedgeCore HUSDCWrapper verified BSC source",
+        "url": "https://bscscan.com/address/0x34eea40fb819bfc762b836dd6269f975227794d3#code"
+      },
+      {
+        "label": "HedgeCore contracts repository at reviewed commit",
+        "url": "https://github.com/HedgeCore-Protocol/hedgecore-contracts/tree/fe646eca8ab3ae1433cc9abcd58f655deb01213b"
+      },
+      {
+        "label": "HedgeCore transfer and security documentation",
+        "url": "https://docs.hedgecore.io/docs/about/how-it-works"
+      },
+      {
+        "label": "BSC Blast API fixed-block RPC",
+        "url": "https://bsc-mainnet.public.blastapi.io"
+      },
+      {
+        "label": "Arquivo.pt HedgeCore availability search",
+        "url": "https://arquivo.pt/textsearch?versionHistory=hedgecore.io&maxItems=10"
       }
     ],
-    "reviewer": "SONG-2 Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "reviewer": "Codex Wave 11 access review",
+    "reviewedAt": "2026-07-15"
   },
   "liveReservesConfig": {
     "adapter": "curated-validated",

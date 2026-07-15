@@ -14,6 +14,23 @@
   "collateral": "USD and dollar-equivalent reserves including U.S. Treasuries, held in segregated accounts custodied by BitGo Trust (Qualified Custodian)",
   "pegMechanism": "Direct 1:1 USD redemption through Anzens via KYC-verified bank transfers; minting and burning available to retail and institutional users in eligible U.S. states",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "TERRA-ULTRA implementation review",
+    "rationale": "Anzens' current terms and EMURGO's launch announcement describe a fully reserved, Cardano-native USDA issued through the Anzens portal with issuer-operated mint and burn flows, establishing the fiat-cash archetype.",
+    "sources": [
+      {
+        "label": "EMURGO Anzens USDA minting launch",
+        "url": "https://www.emurgo.io/press-news/anzens-is-live-usda-stablecoin-minting-access-is-here-cardano/"
+      },
+      {
+        "label": "Anzens terms and conditions",
+        "url": "https://www.anzens.com/landing/terms-and-conditions"
+      }
+    ]
+  },
+  "implementationLaunchDate": "2025-03-21",
   "llamaId": "245",
   "detailProvider": "defillama",
   "geckoId": "anzens-usda",

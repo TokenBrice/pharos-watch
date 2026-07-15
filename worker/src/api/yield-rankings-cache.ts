@@ -1,6 +1,6 @@
-import type { ReportCard } from "@shared/types/report-cards";
+import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
+import { safetyScoreV8MethodologyIdentitiesMatch } from "@shared/lib/safety-score-v8-publication";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   YieldRankingsResponseSchema,
   type YieldCalculationMode,
@@ -34,8 +34,7 @@ import {
   jsonResponse,
 } from "../lib/api-utils";
 import { CACHE_PROFILES, DEFAULT_SAFETY_SCORE } from "../lib/constants";
-import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
-import { loadPublishedReportCardsSnapshot } from "../lib/report-cards-snapshot-cache";
+import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
 
 const YIELD_RANKINGS_MAX_AGE_SEC = CRON_INTERVALS["sync-yield-data"];
 
@@ -256,7 +255,7 @@ function hydrateRoycoTrancheSourceRisk(params: {
   };
 }
 
-function resolveHydratedSafety(params: { row: YieldRanking; card: ReportCard | undefined }): {
+function resolveHydratedSafety(params: { row: YieldRanking; safety: { score: number; grade: string } | undefined }): {
   score: number;
   grade: YieldRanking["safetyGrade"];
   sourceRisk: YieldRanking["sourceRisk"];
@@ -264,8 +263,8 @@ function resolveHydratedSafety(params: { row: YieldRanking; card: ReportCard | u
   usedDefaultSafety: boolean;
   reason: YieldSafetyReason | null;
 } {
-  const underlyingSafetyScore = params.card?.overallScore ?? DEFAULT_SAFETY_SCORE;
-  const usedDefaultSafety = params.card?.overallScore == null;
+  const underlyingSafetyScore = params.safety?.score ?? DEFAULT_SAFETY_SCORE;
+  const usedDefaultSafety = params.safety == null;
 
   const hydratedSourceRisk = hydrateRoycoTrancheSourceRisk({
     sourceRisk: params.row.sourceRisk,
@@ -312,7 +311,7 @@ function resolveHydratedSafety(params: { row: YieldRanking; card: ReportCard | u
     }
     return {
       score: underlyingSafetyScore,
-      grade: params.card?.overallGrade ?? "NR",
+      grade: (params.safety?.grade as YieldRanking["safetyGrade"] | undefined) ?? "NR",
       sourceRisk: opportunitySourceRisk,
       provenance: usedDefaultSafety ? "default-safety" : "live-report-card",
       usedDefaultSafety,
@@ -322,13 +321,13 @@ function resolveHydratedSafety(params: { row: YieldRanking; card: ReportCard | u
 
   return {
     score: underlyingSafetyScore,
-    grade: params.card?.overallGrade ?? "NR",
+    grade: (params.safety?.grade as YieldRanking["safetyGrade"] | undefined) ?? "NR",
     sourceRisk: hydratedSourceRisk,
     provenance: usedDefaultSafety ? "default-safety" : "live-report-card",
     usedDefaultSafety,
     reason: usedDefaultSafety
       ? "report-card-score-missing"
-      : params.card?.overallGrade === "NR"
+      : params.safety?.grade === "NR"
         ? "report-card-grade-not-rated"
         : null,
   };
@@ -363,7 +362,8 @@ function hydrateAltSourcesWithLiveSafety(row: YieldRanking, underlyingSafetyScor
 }
 
 interface LiveSafetyHydrationSource {
-  source: "report-cards:snapshot" | "computed-report-cards";
+  source: "report-card-cache";
+  safetyScoreIdentity: SafetyScoreV8PublicationIdentity | null;
   publicationGenerationId: string | null;
   methodologyVersion: string | null;
   publishedAt: number | null;
@@ -372,17 +372,15 @@ interface LiveSafetyHydrationSource {
 
 function hydrateYieldRankingsWithLiveSafety(
   payload: YieldRankingsResponse,
-  cards: ReportCard[],
+  scores: Map<string, { score: number; grade: string }>,
   source: LiveSafetyHydrationSource,
 ): { payload: YieldRankingsResponse; degradationReasons: string[] } {
-  const reportCardById = new Map(cards.filter((card) => !card.isDefunct).map((card) => [card.id, card]));
-
   const hydratedRows = payload.rankings
     .map((row) => {
-      const card = reportCardById.get(row.id);
-      const hydratedSafety = resolveHydratedSafety({ row, card });
+      const safety = scores.get(row.id);
+      const hydratedSafety = resolveHydratedSafety({ row, safety });
       const safetyInputScore = hydratedSafety.score;
-      const underlyingSafetyScore = card?.overallScore ?? DEFAULT_SAFETY_SCORE;
+      const underlyingSafetyScore = safety?.score ?? DEFAULT_SAFETY_SCORE;
       const sourceFreshness = resolveHydratedSourceFreshness(row);
       const benchmarkFreshness = resolveHydratedBenchmarkFreshness(row);
       const evidenceClass = resolveHydratedEvidenceClass(row);
@@ -455,6 +453,7 @@ function hydrateYieldRankingsWithLiveSafety(
                 usedDefaultSafety: hydratedSafety.usedDefaultSafety,
                 safetyProvenance: hydratedSafety.provenance,
                 safetyReason: hydratedSafety.reason,
+                safetyScoreIdentity: source.safetyScoreIdentity,
                 calculationMode: resolveHydratedCalculationMode(row),
                 evidenceClass,
                 evidenceCompleteness: evidenceAssessment.evidenceCompleteness,
@@ -545,29 +544,71 @@ function hydrateYieldRankingsWithLiveSafety(
   };
 }
 
-function getReportCardHydrationDegradationReasons(snapshot: {
-  updatedAt?: number;
-  liquidityStale?: boolean;
-  redemptionStale?: boolean;
-  inputFreshness?: {
-    dexLiquidity?: { stale?: boolean };
-    redemptionBackstops?: { stale?: boolean };
+function hasCompatibleSafetyIdentity(
+  payload: YieldRankingsResponse,
+  identity: SafetyScoreV8PublicationIdentity,
+): boolean {
+  const published = payload.provenance?.safetySnapshot.safetyScoreIdentity;
+  return published != null && safetyScoreV8MethodologyIdentitiesMatch(published, identity);
+}
+
+function degradeYieldRankingsSafety(
+  payload: YieldRankingsResponse,
+  reason: "safety-snapshot-unavailable" | "safety-identity-missing" | "safety-identity-mismatch",
+  source: LiveSafetyHydrationSource,
+): YieldRankingsResponse {
+  const rankings = payload.rankings.map((row) => ({
+    ...row,
+    safetyScore: null,
+    safetyGrade: "NR" as const,
+    safetyReason: reason,
+    pharosYieldScore: null,
+    pysNullReason: "safety-unrated" as const,
+    yieldToRisk: null,
+    warningSignals: row.warningSignals.includes("safety-unrated")
+      ? row.warningSignals
+      : [...row.warningSignals, "safety-unrated"],
+    provenance: row.provenance
+      ? {
+          ...row.provenance,
+          // Source freshness derives from the row itself, not the safety
+          // snapshot, so the degraded path still reports it honestly.
+          sourceFreshness: resolveHydratedSourceFreshness(row),
+          usedDefaultSafety: true,
+          safetyProvenance: "safety-snapshot-unavailable" as const,
+          safetyReason: reason,
+          safetyScoreIdentity: source.safetyScoreIdentity,
+          scoreQualification: "NR" as const,
+          scoreQualified: false,
+        }
+      : null,
+  }));
+  const { degradationReasons: _degradationReasons, ...liveSafetyHydration } = source;
+  return {
+    ...payload,
+    rankings,
+    warnings: [
+      ...(payload.warnings ?? []),
+      {
+        code: "yield-safety-hydration-degraded",
+        message: "Yield safety is unavailable because the published compact safety snapshot cannot be used.",
+        reasons: [reason],
+      },
+    ],
+    provenance: payload.provenance
+      ? {
+          ...payload.provenance,
+          liveSafetyHydration: {
+            kind: "degraded" as const,
+            coveredCount: 0,
+            trackedCount: rankings.length,
+            coverageRatio: 0,
+            reason,
+            ...liveSafetyHydration,
+          },
+        }
+      : payload.provenance,
   };
-}): string[] {
-  const reasons: string[] = [];
-  if (snapshot.liquidityStale || snapshot.inputFreshness?.dexLiquidity?.stale) {
-    reasons.push("dex-liquidity-input-stale");
-  }
-  if (snapshot.redemptionStale || snapshot.inputFreshness?.redemptionBackstops?.stale) {
-    reasons.push("redemption-backstop-input-stale");
-  }
-  if (
-    snapshot.updatedAt != null &&
-    Math.floor(Date.now() / 1000) - snapshot.updatedAt > API_FRESHNESS_MAX_AGE_SEC.reportCards
-  ) {
-    reasons.push("report-card-snapshot-stale");
-  }
-  return reasons;
 }
 
 function buildYieldRankingsResponse(
@@ -600,8 +641,8 @@ function buildYieldRankingsResponse(
 
 /**
  * GET /api/yield-rankings
- * Returns cached yield rankings, with live Safety Score fields hydrated from the
- * current report-card snapshot so the endpoint cannot drift from /api/report-cards.
+ * Returns cached yield rankings with values hydrated only from the exact,
+ * complete published compact Safety Score snapshot.
  */
 function createYieldRankingsCacheHandler(
   endpoint: "yield-rankings" | "yield-rankings-summary",
@@ -616,53 +657,57 @@ function createYieldRankingsCacheHandler(
     transform: async (payload, { db, cached }) => {
       const validatedPayload = normalizeYieldRankingsContract(payload as YieldRankingsResponse, cached);
       try {
-        const publishedSnapshot = await loadPublishedReportCardsSnapshot(db);
-        let cards: ReportCard[];
-        let hydrationSource: LiveSafetyHydrationSource;
-        if (publishedSnapshot.kind === "ok") {
-          cards = publishedSnapshot.payload.cards;
-          hydrationSource = {
-            source: "report-cards:snapshot",
-            publicationGenerationId: publishedSnapshot.payload.publication?.generationId ?? null,
-            methodologyVersion: publishedSnapshot.payload.publication?.methodologyVersion ?? null,
-            publishedAt: publishedSnapshot.payload.updatedAt,
-            degradationReasons: getReportCardHydrationDegradationReasons(publishedSnapshot.payload),
-          };
-        } else {
-          const computedSnapshot = await buildReportCardsSnapshot(db);
-          cards = computedSnapshot.cards;
-          hydrationSource = {
-            source: "computed-report-cards",
-            publicationGenerationId: null,
-            methodologyVersion: null,
-            publishedAt: null,
-            degradationReasons: getReportCardHydrationDegradationReasons(computedSnapshot),
-          };
-        }
-        if (publishedSnapshot.kind !== "ok") {
-          console.warn(
-            `[yield-rankings] Published report-card snapshot unavailable; computed fallback reason=${publishedSnapshot.reason}`,
+        const snapshot = await computeSafetyScoresSnapshot(db, {
+          outputMode: "map",
+          sourceMode: "published-cache",
+        });
+        const hydrationSource: LiveSafetyHydrationSource = {
+          source: "report-card-cache",
+          safetyScoreIdentity: snapshot.safetyScoreIdentity,
+          publicationGenerationId: snapshot.publicationGenerationId,
+          methodologyVersion: snapshot.methodologyVersion,
+          publishedAt: snapshot.publishedAt,
+          degradationReasons: snapshot.kind === "ok" ? [] : [snapshot.reason ?? "safety-snapshot-unavailable"],
+        };
+        if (snapshot.kind !== "ok" || snapshot.safetyScoreIdentity == null) {
+          const reason = snapshot.safetyScoreIdentity == null && snapshot.kind === "ok"
+            ? "safety-identity-missing"
+            : "safety-snapshot-unavailable";
+          return buildYieldRankingsResponse(
+            project(degradeYieldRankingsSafety(validatedPayload, reason, hydrationSource)),
+            cached,
+            [reason],
           );
         }
-        const hydrated = hydrateYieldRankingsWithLiveSafety(validatedPayload, cards, hydrationSource);
+        if (!hasCompatibleSafetyIdentity(validatedPayload, snapshot.safetyScoreIdentity)) {
+          const publishedIdentity = validatedPayload.provenance?.safetySnapshot.safetyScoreIdentity;
+          const reason = publishedIdentity == null ? "safety-identity-missing" : "safety-identity-mismatch";
+          return buildYieldRankingsResponse(
+            project(degradeYieldRankingsSafety(validatedPayload, reason, hydrationSource)),
+            cached,
+            [reason],
+          );
+        }
+        const hydrated = hydrateYieldRankingsWithLiveSafety(validatedPayload, snapshot.scores, hydrationSource);
         if (hydrated.degradationReasons.length > 0) {
           return buildYieldRankingsResponse(project(hydrated.payload), cached, hydrated.degradationReasons);
         }
         return project(hydrated.payload);
       } catch (err) {
         console.warn("[yield-rankings] Live safety hydration failed:", err instanceof Error ? err.message : err);
-        const degradedPayload: YieldRankingsResponse = {
-          ...validatedPayload,
-          warnings: [
-            ...(validatedPayload.warnings ?? []),
-            {
-              code: "yield-safety-hydration-degraded",
-              message: "Live safety hydration failed; cached published safety fields were returned.",
-              reasons: ["live-report-card-hydration-failed"],
-            },
-          ],
+        const hydrationSource: LiveSafetyHydrationSource = {
+          source: "report-card-cache",
+          safetyScoreIdentity: null,
+          publicationGenerationId: null,
+          methodologyVersion: null,
+          publishedAt: null,
+          degradationReasons: ["safety-snapshot-unavailable"],
         };
-        return buildYieldRankingsResponse(project(degradedPayload), cached, ["live-report-card-hydration-failed"]);
+        return buildYieldRankingsResponse(
+          project(degradeYieldRankingsSafety(validatedPayload, "safety-snapshot-unavailable", hydrationSource)),
+          cached,
+          ["safety-snapshot-unavailable"],
+        );
       }
     },
   });

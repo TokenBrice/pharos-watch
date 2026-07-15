@@ -238,16 +238,16 @@
         }
       ],
       "evidence": "Liquity documentation describes LUSD as minted through collateralized Troves and immutable protocol contracts rather than an issuer minter.",
-      "reviewer": "Codex mint-authority address pass",
-      "reviewedAt": "2026-05-24"
+      "reviewer": "SONG-1 mint-authority evidence review",
+      "reviewedAt": "2026-07-14"
     }
   },
   "deploymentModel": "canonical-bridge",
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
     "summary": "LUSD can only be minted on Ethereum mainnet and L2 deployments rely on official rollup bridges for routes such as Arbitrum and Optimism, so the reviewed cross-chain exposure is canonical bridge risk rather than an external token bridge.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-1 bridge-route evidence review",
     "confidence": "verified",
     "protocols": [
       {

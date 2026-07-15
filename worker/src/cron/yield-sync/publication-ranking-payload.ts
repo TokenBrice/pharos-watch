@@ -87,6 +87,7 @@ function evaluatedSourceToRanking(
           ...provenance,
           safetyProvenance: source.safetyProvenance,
           safetyReason: source.safetyReason,
+          safetyScoreIdentity: source.safetyScoreIdentity ?? null,
           sourceFreshness: source.sourceFreshness,
           benchmarkFreshness: source.benchmarkFreshness,
           calculationMode: source.calculationMode,

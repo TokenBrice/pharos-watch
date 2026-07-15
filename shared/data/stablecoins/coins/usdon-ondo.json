@@ -2,7 +2,7 @@
   "id": "usdon-ondo",
   "name": "Ondo U.S. Dollar Token",
   "symbol": "USDon",
-  "oneLiner": "USDon is Ondo's regulated USD settlement token for tokenized assets on Ondo Global Markets, backed 1:1 by cash held at U.S. broker-dealers.",
+  "oneLiner": "USDon is Ondo Global Markets' USD settlement token, backed by cash held by Ondo at a brokerage.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,19 +12,11 @@
     "navToken": false
   },
   "mechanismArchetype": "fiat-cash",
-  "collateral": "U.S. dollar cash or cash equivalents held in Ondo Global Markets brokerage accounts at regulated U.S. custodial broker-dealers",
+  "collateral": "U.S. dollar cash held by Ondo at a brokerage for USDon settlement",
   "pegMechanism": "USDon is used as the native settlement stablecoin for Ondo Global Markets; USDC can be swapped 1:1 into USDon for purchases, and tokenized-asset redemptions can settle to USDon or to USDC when swapper liquidity is available",
   "detailProvider": "coingecko",
   "geckoId": "ondo-u-s-dollar-token",
   "cmcSlug": "us-dollar-tokenized-currency-ondo",
-  "proofOfReserves": {
-    "type": "independent-audit",
-    "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
-    "provider": "Ankura Trust Company daily verification",
-    "attestorTier": "niche",
-    "cadence": "daily-nav",
-    "attestorJurisdiction": "United States"
-  },
   "links": [
     {
       "label": "Website",
@@ -337,41 +329,61 @@
   },
   "reserves": [
     {
-      "name": "U.S. dollar cash and cash equivalents in Global Markets brokerage accounts",
+      "name": "USDon settlement cash held at an Ondo Global Markets brokerage",
       "pct": 100,
-      "risk": "very-low"
+      "risk": "very-low",
+      "assetClass": "cash",
+      "issuerOrObligor": "Undisclosed brokerage holding Ondo Global Markets settlement cash",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "OpenAI Codex backing review",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Ondo Global Markets available assets",
-        "url": "https://docs.ondo.finance/ondo-global-markets/available-assets"
+        "label": "Ondo Global Markets smart-contract audit index",
+        "url": "https://docs.ondo.finance/audits"
+      },
+      {
+        "label": "Ondo July 2025 Cyfrin Global Markets audit",
+        "url": "https://docs-v2-git-prod-ondo-docs.vercel.app/pdf/2025-07-14-cyfrin-ondo-global-markets-v2.0.pdf"
       },
       {
         "label": "Ondo Global Markets addresses",
         "url": "https://docs.ondo.finance/addresses"
       },
       {
-        "label": "Ondo Global Markets trust and transparency",
-        "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+        "label": "Ondo Stocks trust and transparency",
+        "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency"
+      },
+      {
+        "label": "USDon Ethereum implementation source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x267e11bb559f5d392e498cdd0e2342057031a2cf"
       }
     ],
-    "rationale": "Ondo's Global Markets materials identify USDON as a dollar-denominated brokerage-account product, matching the fixed aggregate reserve description. The reviewed sources do not publish a dated current cash-equivalent allocation, account-level balances, or independent reserve reconciliation for USDON.",
-    "compositionBasis": "Ondo Global Markets product, address, and trust documentation",
+    "rationale": "The official July 2025 Cyfrin Global Markets report states that USDon represents cash held by Ondo at a brokerage and is used to purchase securities; current address documentation identifies USDon as the Global Markets settlement token. The current trust page scopes Ankura's daily reports to Ondo tokenized-stock holdings and their underlying securities, not a USDon cash report, so the prior USDon proof-of-reserves claim is removed. At Ethereum block 0x1859e17, the USDon proxy resolved to 0x267e11bb559f5d392e498cdd0e2342057031a2cf; the reviewed source exposes token and compliance controls but no reserve ledger. No current USDon cash balance, brokerage identity, account reconciliation, or reserve assurance was found.",
+    "compositionBasis": "Official Ondo Global Markets audit and address documentation with a fixed-block USDon token-source review",
+    "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current brokerage-account balances, cash-equivalent instruments, provider allocation, custody, and independent reserve assurance are not disclosed in the reviewed sources.",
+    "knownUnknownExposure": "Current cash balances, brokerage identity, account reconciliation, provider allocation, custody terms, and USDon-specific reserve assurance are not disclosed in the reviewed sources.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "U.S. dollar cash and cash equivalents in Global Markets brokerage accounts",
+        "reserveName": "USDon settlement cash held at an Ondo Global Markets brokerage",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "The aggregate reserve category is documented, but the current instrument and account composition cannot be reconciled from public evidence."
+        "rationale": "The cash backing category is documented, but the current amount, account composition, and reserve reconciliation cannot be reproduced from public evidence."
       }
     ]
   },

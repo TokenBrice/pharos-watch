@@ -398,7 +398,7 @@ export async function integrateDirectApiLiquidityPhase(params: {
 
   const trackedDirectApiPoolEntries = trackedDirectApiPools.map((pool) => ({
     pool,
-    identity: buildDirectApiPoolIdentity(pool),
+    identity: buildDirectApiPoolIdentity(pool, params.chainAddressToId),
   }));
   const eligibleDirectApiPoolEntries = trackedDirectApiPoolEntries.filter(({ pool }) => {
     const eligible = isEligibleDirectApiPool(pool);

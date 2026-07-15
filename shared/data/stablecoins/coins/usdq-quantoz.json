@@ -14,6 +14,17 @@
   "collateral": "U.S. dollar deposits and government bonds (Netherlands, Germany, US) held in segregated, bankruptcy-remote accounts at Tier 1 European banks by Stichting Quantoz, supervised by DNB; reserve ratio disclosed on Quantoz's transparency page",
   "pegMechanism": "Direct 1:1 redemption through Quantoz Payments for onboarded customers; reserves are disclosed against circulating supply on the Quantoz transparency page",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SONG-5 Safety Score V9 mechanism review",
+    "rationale": "Quantoz's USDQ disclosure describes direct 1:1 redemption for onboarded customers and a segregated reserve of cash deposits and government bonds. The disclosed 30% cash and 70% government-bond allocation supports the fiat-cash classification. The reviewed materials do not provide an independent current assurance opinion, full bank/custodian identity, or complete legal claim and insolvency treatment, so no stronger mechanism-component conclusion is made.",
+    "sources": [
+      {"label": "Quantoz transparency", "url": "https://www.quantoz.com/transparency"},
+      {"label": "Quantoz USDQ whitepaper v1.4", "url": "https://cdn.prod.website-files.com/681a44e26c4471fa4634aa06/69f8a95a68591924cd02b363_USDQ-WP-1.4%20(30-04-2026).pdf"},
+      {"label": "DNB public register - Quantoz Payments B.V.", "url": "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"}
+    ]
+  },
   "llamaId": "275",
   "detailProvider": "defillama",
   "geckoId": "quantoz-usdq",

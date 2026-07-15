@@ -17,6 +17,10 @@ import {
 } from "@shared/lib/api-endpoints";
 import { errorResponse, jsonResponse, withErrorHandler } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
+import {
+  SafetyScorePublicationIdentitySchema,
+  type SafetyScorePublicationIdentity,
+} from "@shared/types/safety-score-publication";
 
 const IMMUTABLE_CACHE_CONTROL = "public, s-maxage=31536000, max-age=31536000, immutable";
 
@@ -51,7 +55,22 @@ async function gunzipToString(bytes: Uint8Array): Promise<string> {
 function safeParseMethodology(value: string): Record<string, string> | null {
   try {
     const parsed = JSON.parse(value);
-    return parsed && typeof parsed === "object" ? (parsed as Record<string, string>) : null;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    return Object.fromEntries(
+      Object.entries(parsed).filter(([, version]) => typeof version === "string"),
+    ) as Record<string, string>;
+  } catch {
+    return null;
+  }
+}
+
+function safeParseSafetyScoreIdentity(value: string): SafetyScorePublicationIdentity | null {
+  try {
+    const parsed = JSON.parse(value);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    return SafetyScorePublicationIdentitySchema.safeParse(
+      (parsed as { safetyScoreIdentity?: unknown }).safetyScoreIdentity,
+    ).data ?? null;
   } catch {
     return null;
   }
@@ -97,6 +116,7 @@ export const handleSnapshotsIndex = withErrorHandler("snapshots-index", async (d
   const snapshots = (result.results ?? []).map((row) => ({
     snapshotDate: row.snapshot_date,
     methodologyVersions: safeParseMethodology(row.methodology_versions),
+    safetyScoreIdentity: safeParseSafetyScoreIdentity(row.methodology_versions),
     contentHash: row.content_hash,
     byteSize: row.byte_size,
     createdAt: row.created_at,
@@ -142,6 +162,7 @@ export const handleSnapshotCoin = withErrorHandler("snapshot-coin", async (
     snapshotDate?: string;
     generatedAt?: number;
     methodologyVersions?: Record<string, string>;
+    safetyScoreIdentity?: SafetyScorePublicationIdentity;
     stablecoins?: { id: string }[];
     reportCards?: { scores?: Record<string, unknown> } | null;
     psi?: unknown;
@@ -173,6 +194,7 @@ export const handleSnapshotCoin = withErrorHandler("snapshot-coin", async (
     stablecoinId,
     generatedAt: envelope.generatedAt ?? loaded.row.created_at,
     methodologyVersions: envelope.methodologyVersions ?? safeParseMethodology(loaded.row.methodology_versions),
+    safetyScoreIdentity: envelope.safetyScoreIdentity ?? safeParseSafetyScoreIdentity(loaded.row.methodology_versions),
     stablecoin,
     scores: {
       reportCard,

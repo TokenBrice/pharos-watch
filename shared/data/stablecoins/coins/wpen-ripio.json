@@ -71,13 +71,21 @@
     "reviewedStatus": "possible",
     "sources": [
       {
-        "label": "Website",
+        "label": "Ripio wFIAT",
+        "url": "https://www.ripio.com/en/wfiat"
+      },
+      {
+        "label": "Ripio local stablecoins",
         "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "WPEN Ethereum deployment",
+        "url": "https://etherscan.io/address/0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe#code"
       }
     ],
-    "evidence": "Ripio wPEN is centrally issued across multiple EVM chains; the public source confirms issuer-managed wFIAT mechanics but does not prove a holder-level blacklist path.",
-    "reviewer": "Codex coverage expansion",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Ripio wPEN is centrally issued across six tracked EVM routes under the wFIAT framework. The current public issuer material and verified Ethereum deployment confirm issuer-managed minting and pausing surfaces but do not provide a complete deployment-wide holder blacklist or freeze inventory, so possible is retained.",
+    "reviewer": "OpenAI Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {

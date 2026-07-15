@@ -14,6 +14,18 @@
   "collateral": "Current reserve assets and custodians are not established by a recent issuer disclosure. Fluid Finance's December 2021 launch FAQ described 1:1 USD cash backing in safeguarded partner-bank accounts, but that future-oriented design is not a current reserve report.",
   "pegMechanism": "Fluid Finance's 2021 launch design described issuer-operated mint and redemption against USD plus an oracle-published offchain balance ceiling. Current redemption availability, oracle operation, reserve balances, and banking counterparties are evidence-blocked.",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-1 mechanism evidence review",
+    "rationale": "Fluid's first-party FAQ describes DUSD as cash-backed digital dollars minted from user deposits, burned on redemption, and reconciled against a treasury account through an oracle. That establishes the fiat-cash mechanism classification, while current operation remains separately evidence-blocked.",
+    "sources": [
+      {
+        "label": "Fluid Finance DUSD FAQ",
+        "url": "https://medium.com/fluidfi/faq-fluidfis-frequently-asked-questions-22bacb12e3f8"
+      }
+    ]
+  },
   "llamaId": "70",
   "cmcSlug": "digitaldollar",
   "detailProvider": "defillama",
@@ -50,9 +62,9 @@
         "url": "https://fluid.ch/"
       }
     ],
-    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Current review remains Possible: the reviewed Fluid product route was unavailable during this pass and the available public metadata does not prove whether an active holder-balance blacklist path exists. DUSD is therefore not upgraded to Yes or No.",
+    "reviewer": "SONG-1 access evidence review",
+    "reviewedAt": "2026-07-14"
   },
   "chainTier": "stage1-l2",
   "deploymentModel": "single-chain",
@@ -72,6 +84,7 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
+  "implementationLaunchDate": "2021-12-31",
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,
@@ -99,7 +112,7 @@
   "mintAuthority": {
     "mintPath": "unknown",
     "authorityPosture": "unknown",
-    "confidence": "manual-review",
+    "confidence": "unknown",
     "summary": "The DUSD TransparentUpgradeableProxy has an EOA proxy admin that can change mint logic. The implementation is unverified, so the current direct minter, reserve-cap mechanism, issuer backend, and redemption operation remain unresolved; the 2021 issuer design is not treated as current evidence.",
     "controls": [
       {
@@ -120,8 +133,9 @@
     ],
     "review": {
       "evidence": "At Arbitrum block 472412309, the DUSD TransparentUpgradeableProxy admin slot resolved EOA 0xdeab81c9ff7528de932890058579c0c2341f7223. The implementation at 0xe825f4f14b93a329fbae230ef6b222f26cca4028 is unverified, so its internal minter, any current reserve-balance cap, and the issuer redemption backend cannot be established from public code. The 2021 FAQ is retained only as historical design context.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "reviewer": "SONG-1 mint-control evidence review",
+      "reviewedAt": "2026-07-14",
+      "disposition": "unresolved",
       "sources": [
         {
           "label": "Fluid Finance DUSD reserve FAQ (December 2021)",
@@ -133,7 +147,8 @@
         }
       ],
       "unresolvedQuestions": [
-        "Verify or obtain the implementation ABI and current issuer documentation to identify the direct minter, determine whether a reserve-balance cap still operates, and establish current redemption and banking-provider status."
+        "Verify or obtain the implementation ABI and current issuer documentation to identify the direct minter, determine whether a reserve-balance cap still operates, and establish current redemption and banking-provider status.",
+        "The current implementation, proxy-admin operating posture, and any pause or upgrade authority remain unresolved despite the historical Arbitrum slot observation."
       ]
     }
   }

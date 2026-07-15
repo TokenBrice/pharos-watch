@@ -80,21 +80,30 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
-        "label": "Aster asUSDF FAQ",
-        "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs"
+        "label": "Aster asUSDF contract inventory",
+        "url": "https://docs.asterdex.com/overview/smart-contracts"
       },
       {
-        "label": "BscScan asUSDF contract",
-        "url": "https://bscscan.com/token/0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb#code"
+        "label": "Sourcify exact-match asUSDF source",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb?fields=sources"
+      },
+      {
+        "label": "Pinned Aster asUSDF source",
+        "url": "https://github.com/astherus-contract/ass-usdf-earn-contract/blob/752903309d775b12d6583c879d1f64db88e051ee/contracts/oft/asUSDF.sol"
+      },
+      {
+        "label": "BNB Chain public RPC control reads",
+        "url": "https://bsc-dataseed.bnbchain.org"
       }
     ],
-    "evidence": "Bounded unknown retained: asUSDF is a staked wrapper of USDF and inherits the parent asset's custody, reserve, and issuer-control exposure. The reviewed holder-facing contract is role-controlled and pausable, but a complete current holder blacklist/freeze inventory and admin path were not established.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "asUSDF on BSC (0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb) has a direct, contract-wide pause surface: its exact-match source gives ADMIN_ROLE pause() and unpause() access and routes _update through ERC20Pausable, which blocks ordinary transfers, transferFrom, minting, and burning while paused. At the 2026-07-15 BSC head snapshot (block 110054844), paused() was false; follow-up control reads found the Astherus timelock 0xe829a87f4dfa41b032d8b6feca6c2213d6ee1861 held DEFAULT_ADMIN_ROLE but not ADMIN_ROLE, and getMinDelay() returned 21600 seconds. DEFAULT_ADMIN_ROLE administers ADMIN_ROLE, so the timelock can grant pause authority after its six-hour delay, but no current pause executor was demonstrated. The current MINTER_AND_BURN_ROLE grantee was official AsterEarn 0xdb57a53c428a9fafcbfeffb6dd80d0f427543695; its role alone is not treated as a demonstrated FreezeWatch controller. No holder-specific blacklist mapping was identified. This is a direct possible transfer-freeze exposure; the upstream USDF exposure remains additional.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",

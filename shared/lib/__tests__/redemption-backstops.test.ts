@@ -620,7 +620,9 @@ describe("getRedemptionBackstopConfig", () => {
       accessModel: "whitelisted-onchain",
       settlementModel: "immediate",
       executionModel: "deterministic-onchain",
-      outputAssetType: "stable-single",
+      // Ethena's API docs list both USDT/USDe and USDC/USDe redeem pairs.
+      outputAssetType: "stable-basket",
+      outputAssets: ["usdt-tether", "usdc-circle"],
       capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.005 },
       costModel: { kind: "fee-bps", feeBps: 10 },
       reviewedAt: "2026-03-23",
@@ -632,7 +634,9 @@ describe("getRedemptionBackstopConfig", () => {
       accessModel: "whitelisted-onchain",
       settlementModel: "queued",
       executionModel: "rules-based-nav",
-      outputAssetType: "stable-single",
+      // Falcon docs: redeem USDf for the original deposits (USDT, USDC, or FDUSD) 1:1.
+      outputAssetType: "stable-basket",
+      outputAssets: ["usdt-tether", "usdc-circle", "fdusd-first-digital"],
       capacityModel: { kind: "reserve-sync-metadata" },
       costModel: { kind: "fee-bps", feeBps: 0 },
       reviewedAt: "2026-03-23",

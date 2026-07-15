@@ -27,9 +27,9 @@
         "url": "https://tetradg.com/cadd-stablecoin/"
       }
     ],
-    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "BLOCKED: On 2026-07-14, the issuer's CADD product and supported-blockchains pages returned an access-verification challenge rather than the token-control evidence needed to establish a current holder-level blacklist, freeze, pause, or transfer-restriction inventory. The tracked Ethereum and Base deployments remain in scope, but the available primary issuer pages do not support a stronger conclusion. Possible is retained rather than treating central issuance or upstream uncertainty as proof of a direct holder-control function.",
+    "reviewer": "SONG-5 Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",

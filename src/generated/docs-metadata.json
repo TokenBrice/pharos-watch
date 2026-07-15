@@ -1,6 +1,6 @@
 {
   "api-reference": {
-    "dateModified": "2026-07-14T08:43:18+02:00",
+    "dateModified": "2026-07-15T09:13:00+02:00",
     "dateCreated": "2026-02-23T15:28:17+01:00"
   },
   "architecture": {
@@ -60,7 +60,7 @@
     "dateCreated": "2026-03-01T16:21:41+01:00"
   },
   "yield-intelligence": {
-    "dateModified": "2026-07-14T17:08:44+02:00",
+    "dateModified": "2026-07-14T23:53:42+02:00",
     "dateCreated": "2026-03-01T16:21:41+01:00"
   },
   "shadow-stablecoins": {

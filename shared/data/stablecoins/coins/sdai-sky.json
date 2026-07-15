@@ -13,10 +13,71 @@
   },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: sDAI resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Spark sDAI token documentation",
+        "url": "https://docs.spark.fi/dev/savings/sdai-token"
+      },
+      {
+        "label": "Ethereum sDAI verified SavingsDai source",
+        "url": "https://etherscan.io/address/0x83f20f44975d03b1b09e64809b757c47f942beea#code"
+      },
+      {
+        "label": "Sky official pinned SavingsDai source",
+        "url": "https://github.com/sky-ecosystem/sdai/blob/2b7acb95289a9eb3a8844206d5712eabfa206efc/src/SavingsDai.sol"
+      },
+      {
+        "label": "Base sDAI Sourcify source match",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0x99ac4484e8a1dbd6a185380b3a811913ac884d87?fields=sources"
+      },
+      {
+        "label": "OP Mainnet sDAI Sourcify source match",
+        "url": "https://sourcify.dev/server/v2/contract/10/0x2218a117083f5b482b0bb821d27056ba9c04b1d3?fields=sources"
+      },
+      {
+        "label": "Optimism Standard Bridge source",
+        "url": "https://github.com/ethereum-optimism/optimism/blob/develop/packages/contracts-bedrock/src/universal/StandardBridge.sol"
+      },
+      {
+        "label": "Base L2 Standard Bridge v1.1.0 verified implementation",
+        "url": "https://base.blockscout.com/address/0xc0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d3c0d30010"
+      },
+      {
+        "label": "OP Mainnet L2 Standard Bridge v1.13.2 verified implementation",
+        "url": "https://optimism.blockscout.com/address/0xae9ed42f43a3ee45c3a9def8ae6b48cbb58ed1a1"
+      },
+      {
+        "label": "Base Standard Bridge documentation",
+        "url": "https://docs.base.org/base-chain/specs/protocol/bridging/bridges"
+      },
+      {
+        "label": "Sky savings transparency dashboard",
+        "url": "https://financial.skyeco.com/usds/savings"
+      },
+      {
+        "label": "Sky terms of use",
+        "url": "https://docs.sky.money/legal/skybase-international/terms-of-use"
+      },
+      {
+        "label": "Sky archived shutdown documentation",
+        "url": "https://developers.skyeco.com/archive/shutdown/shutdown/"
+      },
+      {
+        "label": "Ethereum public RPC control reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Base public RPC control reads",
+        "url": "https://base-rpc.publicnode.com"
+      },
+      {
+        "label": "OP Mainnet public RPC control reads",
+        "url": "https://optimism-rpc.publicnode.com"
+      }
+    ],
+    "evidence": "The three tracked deployments were reviewed separately. Ethereum sDAI 0x83f20f44975d03b1b09e64809b757c47f942beea is a verified non-proxy SavingsDai wrapper: at block 25535318 asset() and dai() returned DAI 0x6b175474e89094c44da98b954eedeac495271d0f, pot() returned 0x197e90f9fad81970ba7976f33cbd77088e5d7cf7, daiJoin() returned 0x9759a6ac90977b93b58547b4a71c78317f391a28, and both EIP-1967 slots were zero. Its source has no owner, role, pause, blacklist, gate, or arbitrary-holder-burn method; transfer/transferFrom are ordinary balance-and-allowance paths, and withdraw/redeem burn another holder's shares only with that holder's allowance. A zero-share transfer simulation returned true. Base 0x99ac4484e8a1dbd6a185380b3a811913ac884d87 and OP Mainnet 0x2218a117083f5b482b0bb821d27056ba9c04b1d3 are source-matched immutable OptimismMintableERC20 representations. At Base block 48648113 and OP block 154243398, each reported BRIDGE 0x4200000000000000000000000000000000000010 and REMOTE_TOKEN as Ethereum sDAI. Their mint/burn functions are onlyBridge: direct zero-amount burns from that bridge succeed for an arbitrary from address, while a non-bridge caller reverts. The BRIDGE is an EIP-1967 L2StandardBridge proxy, with current verified Base v1.1.0 and OP v1.13.2 implementations. Their current withdrawal paths pass msg.sender as the burn from address, so they burn only the caller's representation; current zero-share transfer and withdrawal simulations succeeded. The free Base and OP endpoints rejected later fixed-block simulations as archive-only; verified/matched code and the pinned bridge/token reads remain sufficient for the current direct-holder conclusion. A future bridge implementation could change the onlyBridge route, but that is a possible future surface rather than an active holder freeze and does not displace sDAI's inherited DAI status. Sky transparency, terms, and archived shutdown material do not add a live token-level freeze path. No direct override is authored: sDAI retains the separately reviewed inherited DAI parent exposure.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

@@ -95,6 +95,26 @@
       "risk": "high"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Hive Backed Dollar overview",
+        "url": "https://hive.io/hbd/"
+      },
+      {
+        "label": "Hive dynamic global properties documentation",
+        "url": "https://developers.hive.io/tutorials-recipes/understanding-dynamic-global-properties.html"
+      }
+    ],
+    "rationale": "HBD is a native Hive protocol liability, not a claim on a segregated reserve portfolio. Hive documents the reciprocal HIVE/HBD conversions and the debt-ratio haircut that bounds the conversion mechanism.",
+    "compositionBasis": "Hive protocol conversion and haircut mechanism",
+    "scope": "full-composition",
+    "knownUnknownExposure": "There is no external reserve custodian, asset allocation, or legally segregated collateral pool. HBD holders instead depend on Hive protocol value, witness-set price submissions, and the protocol debt-limit and haircut rules.",
+    "knownUnknownExposurePct": 0
+  },
   "yieldConfig": {
     "yieldSource": "Hive Savings interest rate",
     "yieldType": "governance-set"
@@ -156,5 +176,6 @@
         }
       ]
     }
-  }
+  },
+  "launchDate": "2020-03-20"
 }

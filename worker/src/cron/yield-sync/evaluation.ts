@@ -14,6 +14,7 @@ import type {
   YieldSafetyReason,
   YieldSourceInputMeta,
 } from "@shared/types/yield";
+import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
@@ -76,6 +77,9 @@ export interface EvaluateYieldSourcesInput {
   startSec: number;
   sevenDaysAgoSec: number;
   safetyScores: Map<string, { score: number; grade: string }>;
+  /** False only when the exact published compact safety snapshot is unavailable. */
+  safetySnapshotAvailable?: boolean;
+  safetyScoreIdentity?: SafetyScoreV8PublicationIdentity | null;
   riskFreeRates: ParsedYieldBenchmarkRegistry;
   tier1PrevRates: Map<string, number | null>;
   sourceHistory: Map<string, YieldHistorySnapshotRow[]>;
@@ -283,21 +287,28 @@ function evaluateYieldSourceGroup(
     const apyMin30d = samples.length > 0 ? samples.reduce((min, value) => Math.min(min, value), Infinity) : null;
     const apyMax30d = samples.length > 0 ? samples.reduce((max, value) => Math.max(max, value), -Infinity) : null;
 
-    const safety = input.safetyScores.get(stablecoinId);
+    const safetySnapshotUnavailable = input.safetySnapshotAvailable === false;
+    const safety = safetySnapshotUnavailable ? undefined : input.safetyScores.get(stablecoinId);
     const usedDefaultSafety = safety == null;
     if (usedDefaultSafety) accumulator.defaultSafetyIds.add(stablecoinId);
     const underlyingSafetyScore = safety?.score ?? DEFAULT_SAFETY_SCORE;
     const underlyingSafetyGrade = safety?.grade ?? "NR";
     let safetyScore = underlyingSafetyScore;
     let safetyGrade = underlyingSafetyGrade;
-    let safetyProvenance: YieldSafetyProvenance = usedDefaultSafety ? "default-safety" : "cached-publish";
-    let safetyReason: YieldSafetyReason | null = usedDefaultSafety
-      ? "report-card-score-missing"
-      : underlyingSafetyGrade === "NR"
-        ? "report-card-grade-not-rated"
-        : null;
+    let safetyProvenance: YieldSafetyProvenance = safetySnapshotUnavailable
+      ? "safety-snapshot-unavailable"
+      : usedDefaultSafety
+        ? "default-safety"
+        : "cached-publish";
+    let safetyReason: YieldSafetyReason | null = safetySnapshotUnavailable
+      ? "safety-snapshot-unavailable"
+      : usedDefaultSafety
+        ? "report-card-score-missing"
+        : underlyingSafetyGrade === "NR"
+          ? "report-card-grade-not-rated"
+          : null;
     let sourceRisk = y.sourceRisk ?? null;
-    if (isRoycoDawnTrancheSourceRisk(sourceRisk)) {
+    if (!safetySnapshotUnavailable && isRoycoDawnTrancheSourceRisk(sourceRisk)) {
       const trancheSafety = computeRoycoDawnTrancheSafetyScore({
         underlyingSafetyScore,
         sourceRisk,
@@ -373,7 +384,7 @@ function evaluateYieldSourceGroup(
     // the same contract; missing critical market evidence produces NR below.
     const opportunityClass = deriveYieldOpportunityClass(yieldType);
     let opportunityRisk: YieldOpportunityRisk | null = null;
-    if (opportunityClass != null) {
+    if (!safetySnapshotUnavailable && opportunityClass != null) {
       if (safetyProvenance === "opportunity-safety") {
         opportunityRisk = {
           opportunityClass,
@@ -419,7 +430,8 @@ function evaluateYieldSourceGroup(
       opportunityEvidenceComplete,
     });
     const { evidenceCompleteness, scoreQualification } = evidenceAssessment;
-    const scoreQualified = scoreQualification !== "NR";
+    const effectiveScoreQualification = safetySnapshotUnavailable ? "NR" : scoreQualification;
+    const scoreQualified = effectiveScoreQualification !== "NR";
     // Reviewer-set cross-venue dependency concentration (yield v8.292): resolve by
     // stablecoin id and attach it so it both penalizes PYS and surfaces on the row.
     const dependencyConcentration =
@@ -461,20 +473,24 @@ function evaluateYieldSourceGroup(
       : benchmarkFreshness === "stale"
         ? "benchmark-stale" as const
         : null;
-    const pharosYieldScore = evidenceNullReason == null && Number.isFinite(computedPharosYieldScore)
+    const pharosYieldScore = !safetySnapshotUnavailable && evidenceNullReason == null && Number.isFinite(computedPharosYieldScore)
       ? computedPharosYieldScore
       : null;
-    const pysNullReason = evidenceNullReason ?? (computedPharosYieldScore > 0
-      ? null
-      : derivePysNullReason({
-          apy30d,
-          safetyScore,
-          apyVarianceScore,
-          scalingFactor: PYS_SCALING_FACTOR,
-          benchmarkRate,
-          sourceRiskPenalty: sourceRiskPenaltyInput,
-        }));
-    const yieldToRisk = 101 - safetyScore > 0 ? apy30d / (101 - safetyScore) : null;
+    const pysNullReason = safetySnapshotUnavailable
+      ? "safety-unrated" as const
+      : evidenceNullReason ?? (
+        computedPharosYieldScore > 0
+          ? null
+          : derivePysNullReason({
+              apy30d,
+              safetyScore,
+              apyVarianceScore,
+              scalingFactor: PYS_SCALING_FACTOR,
+              benchmarkRate,
+              sourceRiskPenalty: sourceRiskPenaltyInput,
+            })
+      );
+    const yieldToRisk = !safetySnapshotUnavailable && 101 - safetyScore > 0 ? apy30d / (101 - safetyScore) : null;
 
     const anomalies: string[] = [];
     if (historySelection.usedLegacyHistory) anomalies.push("legacy-history-fallback");
@@ -536,6 +552,7 @@ function evaluateYieldSourceGroup(
       safetyGrade,
       safetyProvenance,
       safetyReason,
+      safetyScoreIdentity: input.safetyScoreIdentity ?? null,
       yieldToRisk,
       excessYield,
       benchmarkKey: benchmarkSelection.key,
@@ -555,7 +572,7 @@ function evaluateYieldSourceGroup(
       calculationMode,
       evidenceClass,
       evidenceCompleteness,
-      scoreQualification,
+      scoreQualification: effectiveScoreQualification,
       scoreQualified,
       prevExchangeRate,
       prevTvlUsd,

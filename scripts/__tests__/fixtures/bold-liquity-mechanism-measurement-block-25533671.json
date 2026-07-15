@@ -1,0 +1,426 @@
+{
+  "schemaVersion": 1,
+  "kind": "cdp-mechanism-measurement",
+  "assetId": "bold-liquity",
+  "archetype": "cdp",
+  "chain": {
+    "key": "ethereum",
+    "evmChainId": 1
+  },
+  "rpcUrl": "https://ethereum-rpc.publicnode.com",
+  "block": {
+    "number": 25533671,
+    "hash": "0xf583ebf01673c9602977093a760fedfd7d0b11a2c4ef0d193120578a44786355",
+    "timestampUnix": 1784065751,
+    "timestampIso": "2026-07-14T21:49:11.000Z",
+    "selection": "finalized"
+  },
+  "calls": [
+    {
+      "name": "token.collateralRegistryAddress",
+      "to": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
+      "signature": "collateralRegistryAddress()",
+      "selector": "0x45a74626",
+      "callData": "0x45a74626",
+      "returnData": "0x000000000000000000000000f949982b91c8c61e952b3ba942cbbfaef5386684",
+      "decoded": "0xf949982b91c8c61e952b3ba942cbbfaef5386684"
+    },
+    {
+      "name": "token.totalSupply",
+      "to": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
+      "signature": "totalSupply()",
+      "selector": "0x18160ddd",
+      "callData": "0x18160ddd",
+      "returnData": "0x0000000000000000000000000000000000000000001821cd359e7db7f36ab0dd",
+      "decoded": "29173843210884668289888477"
+    },
+    {
+      "name": "registry.totalCollaterals",
+      "to": "0xf949982b91c8c61e952b3ba942cbbfaef5386684",
+      "signature": "totalCollaterals()",
+      "selector": "0x30504b6f",
+      "callData": "0x30504b6f",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000003",
+      "decoded": "3"
+    },
+    {
+      "name": "registry.getTroveManager(0)",
+      "to": "0xf949982b91c8c61e952b3ba942cbbfaef5386684",
+      "signature": "getTroveManager(uint256)",
+      "selector": "0x0bc17feb",
+      "callData": "0x0bc17feb0000000000000000000000000000000000000000000000000000000000000000",
+      "returnData": "0x0000000000000000000000007bcb64b2c9206a5b699ed43363f6f98d4776cf5a",
+      "decoded": "0x7bcb64b2c9206a5b699ed43363f6f98d4776cf5a"
+    },
+    {
+      "name": "registry.getToken(0)",
+      "to": "0xf949982b91c8c61e952b3ba942cbbfaef5386684",
+      "signature": "getToken(uint256)",
+      "selector": "0xe4b50cb8",
+      "callData": "0xe4b50cb80000000000000000000000000000000000000000000000000000000000000000",
+      "returnData": "0x000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+      "decoded": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+    },
+    {
+      "name": "troveManager[0].getEntireBranchColl",
+      "to": "0x7bcb64b2c9206a5b699ed43363f6f98d4776cf5a",
+      "signature": "getEntireBranchColl()",
+      "selector": "0x3ecaaa3f",
+      "callData": "0x3ecaaa3f",
+      "returnData": "0x0000000000000000000000000000000000000000000001ad78bfd82a0ef5b72b",
+      "decoded": "7922354118301651941163"
+    },
+    {
+      "name": "troveManager[0].getEntireBranchDebt",
+      "to": "0x7bcb64b2c9206a5b699ed43363f6f98d4776cf5a",
+      "signature": "getEntireBranchDebt()",
+      "selector": "0x105b403b",
+      "callData": "0x105b403b",
+      "returnData": "0x00000000000000000000000000000000000000000006832f00e200cfa76e8348",
+      "decoded": "7873051987529399524033352"
+    },
+    {
+      "name": "troveManager[0].stabilityPool",
+      "to": "0x7bcb64b2c9206a5b699ed43363f6f98d4776cf5a",
+      "signature": "stabilityPool()",
+      "selector": "0x048c661d",
+      "callData": "0x048c661d",
+      "returnData": "0x0000000000000000000000005721cbbd64fc7ae3ef44a0a3f9a790a9264cf9bf",
+      "decoded": "0x5721cbbd64fc7ae3ef44a0a3f9a790a9264cf9bf"
+    },
+    {
+      "name": "stabilityPool[0].getTotalBoldDeposits()",
+      "to": "0x5721cbbd64fc7ae3ef44a0a3f9a790a9264cf9bf",
+      "signature": "getTotalBoldDeposits()",
+      "selector": "0xf71c6940",
+      "callData": "0xf71c6940",
+      "returnData": "0x000000000000000000000000000000000000000000038c1cabed7229be1c695c",
+      "decoded": "4288437663963375296342364"
+    },
+    {
+      "name": "troveManager[0].shutdownTime",
+      "to": "0x7bcb64b2c9206a5b699ed43363f6f98d4776cf5a",
+      "signature": "shutdownTime()",
+      "selector": "0x58569081",
+      "callData": "0x58569081",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "decoded": "0"
+    },
+    {
+      "name": "troveManager[0].getUnbackedPortionPriceAndRedeemability",
+      "to": "0x7bcb64b2c9206a5b699ed43363f6f98d4776cf5a",
+      "signature": "getUnbackedPortionPriceAndRedeemability()",
+      "selector": "0x4ea15f37",
+      "callData": "0x4ea15f37",
+      "returnData": "0x00000000000000000000000000000000000000000002f71254f48ea5e95219ec0000000000000000000000000000000000000000000000659164e8c031ab3c000000000000000000000000000000000000000000000000000000000000000001",
+      "decoded": "price=1873597905990000000000 redeemable=true"
+    },
+    {
+      "name": "registry.getTroveManager(1)",
+      "to": "0xf949982b91c8c61e952b3ba942cbbfaef5386684",
+      "signature": "getTroveManager(uint256)",
+      "selector": "0x0bc17feb",
+      "callData": "0x0bc17feb0000000000000000000000000000000000000000000000000000000000000001",
+      "returnData": "0x000000000000000000000000a2895d6a3bf110561dfe4b71ca539d84e1928b22",
+      "decoded": "0xa2895d6a3bf110561dfe4b71ca539d84e1928b22"
+    },
+    {
+      "name": "registry.getToken(1)",
+      "to": "0xf949982b91c8c61e952b3ba942cbbfaef5386684",
+      "signature": "getToken(uint256)",
+      "selector": "0xe4b50cb8",
+      "callData": "0xe4b50cb80000000000000000000000000000000000000000000000000000000000000001",
+      "returnData": "0x0000000000000000000000007f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+      "decoded": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0"
+    },
+    {
+      "name": "troveManager[1].getEntireBranchColl",
+      "to": "0xa2895d6a3bf110561dfe4b71ca539d84e1928b22",
+      "signature": "getEntireBranchColl()",
+      "selector": "0x3ecaaa3f",
+      "callData": "0x3ecaaa3f",
+      "returnData": "0x000000000000000000000000000000000000000000000475d3b472aeb9f3f830",
+      "decoded": "21062989932035178756144"
+    },
+    {
+      "name": "troveManager[1].getEntireBranchDebt",
+      "to": "0xa2895d6a3bf110561dfe4b71ca539d84e1928b22",
+      "signature": "getEntireBranchDebt()",
+      "selector": "0x105b403b",
+      "callData": "0x105b403b",
+      "returnData": "0x0000000000000000000000000000000000000000000e4fe88448a1b460e733c5",
+      "decoded": "17302317603423018455348165"
+    },
+    {
+      "name": "troveManager[1].stabilityPool",
+      "to": "0xa2895d6a3bf110561dfe4b71ca539d84e1928b22",
+      "signature": "stabilityPool()",
+      "selector": "0x048c661d",
+      "callData": "0x048c661d",
+      "returnData": "0x0000000000000000000000009502b7c397e9aa22fe9db7ef7daf21cd2aebe56b",
+      "decoded": "0x9502b7c397e9aa22fe9db7ef7daf21cd2aebe56b"
+    },
+    {
+      "name": "stabilityPool[1].getTotalBoldDeposits()",
+      "to": "0x9502b7c397e9aa22fe9db7ef7daf21cd2aebe56b",
+      "signature": "getTotalBoldDeposits()",
+      "selector": "0xf71c6940",
+      "callData": "0xf71c6940",
+      "returnData": "0x00000000000000000000000000000000000000000009fbdbe6e1ecca0080a366",
+      "decoded": "12069702837522936732099430"
+    },
+    {
+      "name": "troveManager[1].shutdownTime",
+      "to": "0xa2895d6a3bf110561dfe4b71ca539d84e1928b22",
+      "signature": "shutdownTime()",
+      "selector": "0x58569081",
+      "callData": "0x58569081",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "decoded": "0"
+    },
+    {
+      "name": "troveManager[1].getUnbackedPortionPriceAndRedeemability",
+      "to": "0xa2895d6a3bf110561dfe4b71ca539d84e1928b22",
+      "signature": "getUnbackedPortionPriceAndRedeemability()",
+      "selector": "0x4ea15f37",
+      "callData": "0x4ea15f37",
+      "returnData": "0x00000000000000000000000000000000000000000004540c9d66b4ea6066905f00000000000000000000000000000000000000000000007e1ba768585cbea5090000000000000000000000000000000000000000000000000000000000000001",
+      "decoded": "price=2326282429376260646153 redeemable=true"
+    },
+    {
+      "name": "registry.getTroveManager(2)",
+      "to": "0xf949982b91c8c61e952b3ba942cbbfaef5386684",
+      "signature": "getTroveManager(uint256)",
+      "selector": "0x0bc17feb",
+      "callData": "0x0bc17feb0000000000000000000000000000000000000000000000000000000000000002",
+      "returnData": "0x000000000000000000000000b2b2abeb5c357a234363ff5d180912d319e3e19e",
+      "decoded": "0xb2b2abeb5c357a234363ff5d180912d319e3e19e"
+    },
+    {
+      "name": "registry.getToken(2)",
+      "to": "0xf949982b91c8c61e952b3ba942cbbfaef5386684",
+      "signature": "getToken(uint256)",
+      "selector": "0xe4b50cb8",
+      "callData": "0xe4b50cb80000000000000000000000000000000000000000000000000000000000000002",
+      "returnData": "0x000000000000000000000000ae78736cd615f374d3085123a210448e74fc6393",
+      "decoded": "0xae78736cd615f374d3085123a210448e74fc6393"
+    },
+    {
+      "name": "troveManager[2].getEntireBranchColl",
+      "to": "0xb2b2abeb5c357a234363ff5d180912d319e3e19e",
+      "signature": "getEntireBranchColl()",
+      "selector": "0x3ecaaa3f",
+      "callData": "0x3ecaaa3f",
+      "returnData": "0x0000000000000000000000000000000000000000000001361ac6949796394278",
+      "decoded": "5720420055719117144696"
+    },
+    {
+      "name": "troveManager[2].getEntireBranchDebt",
+      "to": "0xb2b2abeb5c357a234363ff5d180912d319e3e19e",
+      "signature": "getEntireBranchDebt()",
+      "selector": "0x105b403b",
+      "callData": "0x105b403b",
+      "returnData": "0x000000000000000000000000000000000000000000034ed030eddb633af510d9",
+      "decoded": "3998962492990353975873753"
+    },
+    {
+      "name": "troveManager[2].stabilityPool",
+      "to": "0xb2b2abeb5c357a234363ff5d180912d319e3e19e",
+      "signature": "stabilityPool()",
+      "selector": "0x048c661d",
+      "callData": "0x048c661d",
+      "returnData": "0x000000000000000000000000d442e41019b7f5c4dd78f50dc03726c446148695",
+      "decoded": "0xd442e41019b7f5c4dd78f50dc03726c446148695"
+    },
+    {
+      "name": "stabilityPool[2].getTotalBoldDeposits()",
+      "to": "0xd442e41019b7f5c4dd78f50dc03726c446148695",
+      "signature": "getTotalBoldDeposits()",
+      "selector": "0xf71c6940",
+      "callData": "0xf71c6940",
+      "returnData": "0x00000000000000000000000000000000000000000002470ecf9ac9805481be5e",
+      "decoded": "2753412873420700368617054"
+    },
+    {
+      "name": "troveManager[2].shutdownTime",
+      "to": "0xb2b2abeb5c357a234363ff5d180912d319e3e19e",
+      "signature": "shutdownTime()",
+      "selector": "0x58569081",
+      "callData": "0x58569081",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "decoded": "0"
+    },
+    {
+      "name": "troveManager[2].getUnbackedPortionPriceAndRedeemability",
+      "to": "0xb2b2abeb5c357a234363ff5d180912d319e3e19e",
+      "signature": "getUnbackedPortionPriceAndRedeemability()",
+      "selector": "0x4ea15f37",
+      "callData": "0x4ea15f37",
+      "returnData": "0x0000000000000000000000000000000000000000000107c1615311e2e673527b0000000000000000000000000000000000000000000000769188a43606d8a4e90000000000000000000000000000000000000000000000000000000000000001",
+      "decoded": "price=2187202612982009341161 redeemable=true"
+    },
+    {
+      "name": "chainlink.latestRoundData",
+      "to": "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
+      "signature": "latestRoundData()",
+      "selector": "0xfeaf968c",
+      "callData": "0xfeaf968c",
+      "returnData": "0x0000000000000000000000000000000000000000000000070000000000007b440000000000000000000000000000000000000000000000000000002b9f838607000000000000000000000000000000000000000000000000000000006a56a3ed000000000000000000000000000000000000000000000000000000006a56a4030000000000000000000000000000000000000000000000070000000000007b44",
+      "decoded": "answer=187359790599 updatedAt=1784062979"
+    }
+  ],
+  "metrics": {
+    "collateralizationRatio": 2.617,
+    "liquidationCapacityRatio": 0.655
+  },
+  "checks": [
+    {
+      "id": "graph.collateralRegistry",
+      "status": "pass",
+      "detail": "token.collateralRegistryAddress() 0xf949982b91c8c61e952b3ba942cbbfaef5386684 matches pinned config"
+    },
+    {
+      "id": "supply.positive",
+      "status": "pass",
+      "detail": "token totalSupply 29173843210884668289888477 is positive"
+    },
+    {
+      "id": "branches.count",
+      "status": "pass",
+      "detail": "registry enumerates 3 branches (max 16)"
+    },
+    {
+      "id": "branch[0].not-shut-down",
+      "status": "pass",
+      "detail": "branch 0 shutdownTime is 0 (never shut down)"
+    },
+    {
+      "id": "branch[0].price",
+      "status": "pass",
+      "detail": "branch 0 protocol price 1873597905990000000000 with redeemable=true"
+    },
+    {
+      "id": "branch[1].not-shut-down",
+      "status": "pass",
+      "detail": "branch 1 shutdownTime is 0 (never shut down)"
+    },
+    {
+      "id": "branch[1].price",
+      "status": "pass",
+      "detail": "branch 1 protocol price 2326282429376260646153 with redeemable=true"
+    },
+    {
+      "id": "branch[2].not-shut-down",
+      "status": "pass",
+      "detail": "branch 2 shutdownTime is 0 (never shut down)"
+    },
+    {
+      "id": "branch[2].price",
+      "status": "pass",
+      "detail": "branch 2 protocol price 2187202612982009341161 with redeemable=true"
+    },
+    {
+      "id": "debt.positive",
+      "status": "pass",
+      "detail": "total branch debt 29174332083942771955255270 is positive"
+    },
+    {
+      "id": "derivation.supply-vs-debt",
+      "status": "pass",
+      "detail": "total branch debt diverges 0.0016% from token totalSupply (max 0.5%)"
+    },
+    {
+      "id": "price.chainlink-branch0-fresh",
+      "status": "pass",
+      "detail": "Chainlink answer 187359790599 is 2772s old at the pinned block (heartbeat 3600s)"
+    },
+    {
+      "id": "price.chainlink-branch0-agree",
+      "status": "pass",
+      "detail": "branch 0 protocol price deviates 0.0000% from Chainlink (tolerance 1%)"
+    },
+    {
+      "id": "metric.cr-sanity",
+      "status": "pass",
+      "detail": "collateralization ratio 2.617 within [1, 100]"
+    },
+    {
+      "id": "metric.capacity-sanity",
+      "status": "pass",
+      "detail": "liquidation capacity ratio 0.655 is non-negative"
+    }
+  ],
+  "overlaySources": [
+    {
+      "label": "Liquity V2 on-chain system state (CollateralRegistry branch enumeration, per-branch TroveManager coll/debt/price, StabilityPool getTotalBoldDeposits)",
+      "url": "https://etherscan.io/address/0xf949982b91c8c61e952b3ba942cbbfaef5386684"
+    },
+    {
+      "label": "Liquity V2 documentation (per-branch MCR, Stability Pool liquidation mechanics, branch isolation)",
+      "url": "https://docs.liquity.org/"
+    }
+  ],
+  "tool": {
+    "name": "measure-cdp-mechanism-metrics",
+    "version": "1"
+  },
+  "family": "liquity-v2",
+  "derived": {
+    "branches": [
+      {
+        "index": 0,
+        "collateralToken": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+        "troveManager": "0x7bcb64b2c9206a5b699ed43363f6f98d4776cf5a",
+        "stabilityPool": "0x5721cbbd64fc7ae3ef44a0a3f9a790a9264cf9bf",
+        "collateral": "7922354118301651941163",
+        "debt": "7873051987529399524033352",
+        "spDeposits": "4288437663963375296342364",
+        "priceWei": "1873597905990000000000",
+        "priceUsd": 1873.59790599,
+        "redeemable": true,
+        "shutdownTime": 0
+      },
+      {
+        "index": 1,
+        "collateralToken": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+        "troveManager": "0xa2895d6a3bf110561dfe4b71ca539d84e1928b22",
+        "stabilityPool": "0x9502b7c397e9aa22fe9db7ef7daf21cd2aebe56b",
+        "collateral": "21062989932035178756144",
+        "debt": "17302317603423018455348165",
+        "spDeposits": "12069702837522936732099430",
+        "priceWei": "2326282429376260646153",
+        "priceUsd": 2326.2824293762606,
+        "redeemable": true,
+        "shutdownTime": 0
+      },
+      {
+        "index": 2,
+        "collateralToken": "0xae78736cd615f374d3085123a210448e74fc6393",
+        "troveManager": "0xb2b2abeb5c357a234363ff5d180912d319e3e19e",
+        "stabilityPool": "0xd442e41019b7f5c4dd78f50dc03726c446148695",
+        "collateral": "5720420055719117144696",
+        "debt": "3998962492990353975873753",
+        "spDeposits": "2753412873420700368617054",
+        "priceWei": "2187202612982009341161",
+        "priceUsd": 2187.202612982009,
+        "redeemable": true,
+        "shutdownTime": 0
+      }
+    ],
+    "totalCollateralValueWei": "76353487168807287051448341",
+    "totalDebt": "29174332083942771955255270",
+    "spDepositsTotal": "19111553374907012397058848",
+    "totalSupply": "29173843210884668289888477",
+    "supplyDebtDivergencePct": 0.0016,
+    "branchCappedLiquidationCapacityRatio": 0.655,
+    "priceCrossCheck": {
+      "mode": "chainlink-branch0",
+      "chainlink": {
+        "answer": "187359790599",
+        "updatedAt": 1784062979,
+        "ageSeconds": 2772,
+        "deltaPct": 0
+      }
+    }
+  }
+}

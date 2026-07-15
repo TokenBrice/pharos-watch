@@ -402,10 +402,23 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: wsrUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Reservoir wsrUSD product documentation",
+        "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd"
+      },
+      {
+        "label": "Blockscout verified wsrUSD Savingcoin source",
+        "url": "https://eth.blockscout.com/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094?tab=contract"
+      },
+      {
+        "label": "Reservoir rUSD parent record",
+        "url": "https://app.reservoir.xyz/reserves"
+      }
+    ],
+    "evidence": "Current-source access review: the verified wsrUSD contract is a constructor-deployed ERC-4626 wrapper with no identified holder blacklist or freeze selector; MANAGER and DEFAULT_ADMIN controls govern wrapper parameters rather than individual holder transfers. wsrUSD inherits the upstream rUSD reserve and protocol-control exposure, so parent access risk remains conservatively retained.",
+    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
@@ -567,9 +580,44 @@
       "pct": 100,
       "risk": "medium",
       "coinId": "rusd-reservoir",
-      "depType": "wrapper"
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Reservoir Protocol and the underlying rUSD reserve basket",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Reservoir wsrUSD product documentation",
+        "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd"
+      },
+      {
+        "label": "Blockscout verified wsrUSD Savingcoin source",
+        "url": "https://eth.blockscout.com/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094?tab=contract"
+      },
+      {
+        "label": "Reservoir live reserves",
+        "url": "https://app.reservoir.xyz/api/reserves/raw"
+      }
+    ],
+    "rationale": "The verified wsrUSD ERC-4626 wrapper reports rUSD as its underlying asset, and the current record's fixed-block review confirms that wrapper shares are minted through deposits rather than an independent reserve claim. The direct wsrUSD reserve is therefore one 100% wrapper position linked to tracked asset rusd-reservoir; the underlying rUSD basket is inherited and is not duplicated here.",
+    "compositionBasis": "Verified wsrUSD ERC-4626 asset() relationship and Reservoir reserve documentation",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The direct dependency is fully identified as rUSD, but the underlying rUSD reserve composition, strategy allocation, and legal custody terms remain upstream facts.",
+    "knownUnknownExposurePct": 0
+  },
   "liveReservesConfig": {
     "adapter": "reservoir",
     "version": 1,

@@ -368,6 +368,7 @@ export async function withMintBurnFlowFallback(
   scope: "aggregate" | "per-coin",
   cacheKey: string,
   execute: () => Promise<Response>,
+  formatCachedResponse: (cached: { value: string; updatedAt: number }) => Response | Promise<Response> = cachedFlowFallbackResponse,
 ): Promise<Response> {
   try {
     return await execute();
@@ -375,7 +376,7 @@ export async function withMintBurnFlowFallback(
     const cached = await getCache(db, cacheKey);
     if (cached) {
       logMintBurnFallbackFailure(scope, cacheKey, err);
-      return cachedFlowFallbackResponse(cached);
+      return formatCachedResponse(cached);
     }
     throw err;
   }

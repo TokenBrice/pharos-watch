@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { DepegDirection } from "./market";
+import type { SafetyScoreV8PublicationIdentity } from "./safety-score-publication";
 
 export type DigestEditorialCandidateKind =
   | "depeg"
@@ -59,12 +60,7 @@ export interface DigestDataQuality {
 export type DigestRiskTapeTone = "critical" | "warning" | "neutral" | "positive";
 
 export type DigestNextTriggerMetric =
-  | "depeg-bps"
-  | "supply-1d-usd"
-  | "supply-7d-usd"
-  | "bank-run-gauge"
-  | "dews-band"
-  | "psi-score";
+  "depeg-bps" | "supply-1d-usd" | "supply-7d-usd" | "bank-run-gauge" | "dews-band" | "psi-score";
 
 export type DigestNextTriggerComparator = "abs-gte" | "gte" | "lte" | "band-gte";
 
@@ -158,6 +154,15 @@ export interface DigestInputData {
     medianGrade: string;
     aboveBCount: number;
     fCount: number;
+    provenance: {
+      model: "v8";
+      schemaVersion: 1;
+      methodologyVersion: string;
+      evaluationBuildDigest: string;
+      baseInputGenerationId: string;
+      publicationGenerationId: string;
+      publishedAt: number;
+    };
   };
   resolvedDepegs?: {
     stablecoinId?: string;
@@ -173,6 +178,9 @@ export interface DigestInputData {
   mintBurnFlows?: {
     gaugeScore: number;
     gaugeBand: string;
+    classificationSource?: "report-card-cache" | "unavailable";
+    classificationReason?: string | null;
+    safetyScoreIdentity?: SafetyScoreV8PublicationIdentity | null;
     flightToQuality: {
       active: boolean;
       safeNetUsd: number;
@@ -348,29 +356,31 @@ const DigestRiskSignalSchema = z.object({
 });
 export type DigestRiskSignal = z.infer<typeof DigestRiskSignalSchema>;
 
-export const DailyDigestResponseSchema = z.object({
-  digest: z.string().nullable(),
-  digestTitle: z.string().nullable().optional(),
-  digestExtended: z.string().nullable().optional(),
-  generatedAt: z.number().nullable().optional(),
-  editionNumber: z.number().nullable().optional(),
-  riskSignal: DigestRiskSignalSchema.nullable().optional(),
-  changeSummary: DigestChangeSummarySchema.nullable().optional(),
-  nextTriggers: z.array(DigestNextTriggerSchema).nullable().optional(),
-  forwardLookOutcomes: z.array(DigestForwardLookOutcomeSchema).nullable().optional(),
-  riskTape: z.array(DigestRiskTapeItemSchema).nullable().optional(),
-}).transform((value) => ({
-  digest: value.digest,
-  digestTitle: value.digestTitle ?? null,
-  digestExtended: value.digestExtended ?? null,
-  generatedAt: value.generatedAt ?? null,
-  editionNumber: value.editionNumber ?? null,
-  riskSignal: value.riskSignal ?? null,
-  changeSummary: value.changeSummary ?? null,
-  nextTriggers: value.nextTriggers ?? null,
-  forwardLookOutcomes: value.forwardLookOutcomes ?? null,
-  riskTape: value.riskTape ?? null,
-}));
+export const DailyDigestResponseSchema = z
+  .object({
+    digest: z.string().nullable(),
+    digestTitle: z.string().nullable().optional(),
+    digestExtended: z.string().nullable().optional(),
+    generatedAt: z.number().nullable().optional(),
+    editionNumber: z.number().nullable().optional(),
+    riskSignal: DigestRiskSignalSchema.nullable().optional(),
+    changeSummary: DigestChangeSummarySchema.nullable().optional(),
+    nextTriggers: z.array(DigestNextTriggerSchema).nullable().optional(),
+    forwardLookOutcomes: z.array(DigestForwardLookOutcomeSchema).nullable().optional(),
+    riskTape: z.array(DigestRiskTapeItemSchema).nullable().optional(),
+  })
+  .transform((value) => ({
+    digest: value.digest,
+    digestTitle: value.digestTitle ?? null,
+    digestExtended: value.digestExtended ?? null,
+    generatedAt: value.generatedAt ?? null,
+    editionNumber: value.editionNumber ?? null,
+    riskSignal: value.riskSignal ?? null,
+    changeSummary: value.changeSummary ?? null,
+    nextTriggers: value.nextTriggers ?? null,
+    forwardLookOutcomes: value.forwardLookOutcomes ?? null,
+    riskTape: value.riskTape ?? null,
+  }));
 export type DailyDigestResponse = z.infer<typeof DailyDigestResponseSchema>;
 
 const DigestArchiveEntrySchema = z.object({
@@ -466,6 +476,17 @@ const DigestSnapshotInputDataSchema = z
         medianGrade: z.string(),
         aboveBCount: z.number(),
         fCount: z.number(),
+        provenance: z
+          .object({
+            model: z.literal("v8"),
+            schemaVersion: z.literal(1),
+            methodologyVersion: z.string(),
+            evaluationBuildDigest: z.string(),
+            baseInputGenerationId: z.string(),
+            publicationGenerationId: z.string(),
+            publishedAt: z.number(),
+          })
+          .optional(),
       })
       .passthrough()
       .optional(),

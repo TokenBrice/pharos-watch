@@ -102,6 +102,8 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "xusd-babelfish": {
     ...basketRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_YIELD_COVERAGE_WAVE_AT),
+    outputAssetType: "stable-basket",
+    outputAssets: ["dllr-sovryn", "doc-money-on-chain", "usdt-tether", "usdc-circle", "dai-makerdao", "usdrif-rif"],
     costModel: documentedVariableFee(
       "BabelFish uses basket-balancing withdrawal fees rather than one fixed public redemption fee",
     ),
@@ -131,6 +133,8 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "gho-aave": {
     ...psmSwapBase,
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdc-circle", "usdt-tether"],
     capacityModel: { kind: "reserve-sync-metadata" },
     costModel: fixedFee(
       10,
@@ -232,6 +236,8 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "lisusd-lista": {
     ...psmSwapBase,
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdt-tether", "usdc-circle"],
     capacityModel: { kind: "supply-ratio", ratio: 0.15, dailyLimitUsd: 500_000, confidence: "documented-bound" },
     costModel: fixedFee(
       200,
@@ -329,6 +335,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "xmd-metal-dollar": {
     ...basketRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_FOLLOWUP_REMEDIATION_AT),
+    outputAssets: ["usdc-circle", "pyusd-paypal", "usdp-paxos"],
     accessModel: "whitelisted-onchain",
     outputAssetType: "stable-basket",
     costModel: fixedFee(

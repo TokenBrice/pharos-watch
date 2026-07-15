@@ -49,11 +49,11 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "IST's PSM bucket aggregates multiple IBC stablecoins, so no single tracked stablecoin coinId is representative.",
   ],
   [
-    "jpyt-dephaser::Locked USDT on Optimism and USDC on Base::USDC",
+    "jpyt-dephaser::Locked USDT on Optimism and USDC on Base routed into Aave::USDC",
     "JPYT uses chain-specific USDT and USDC collateral paths, so no single fixed reserve coinId or weight is representative.",
   ],
   [
-    "jpyt-dephaser::Locked USDT on Optimism and USDC on Base::USDT",
+    "jpyt-dephaser::Locked USDT on Optimism and USDC on Base routed into Aave::USDT",
     "JPYT uses chain-specific USDT and USDC collateral paths, so no single fixed reserve coinId or weight is representative.",
   ],
   [
@@ -147,10 +147,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
     "usg-tangent::Productive DeFi collateral (Curve LP tokens, Pendle PTs, and related LP/yield positions, including material USDC-paired LP exposure)::USDC",
     "USG's static reserve slice is an aggregate productive-collateral bucket; USDC is one paired LP route rather than a separately weighted reserve slice.",
-  ],
-  [
-    "iusd-infinifi::Aave Horizon USDC/RLUSD (institutional pools)::USDC",
-    "infiniFi's static fallback groups Aave Horizon USDC and RLUSD into one small mixed bucket; live farm data carries exact coinIds when the source separates positions.",
   ],
   [
     "silk-shade-protocol::Stablecoin redemption pools (USDC, other stables)::USDC",

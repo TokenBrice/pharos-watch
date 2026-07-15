@@ -25,10 +25,7 @@ import {
   type CollectorContext,
   type CollectorResult,
 } from "./collectors";
-import {
-  buildRecentDigestMeta,
-  type RecentDigestMetaEntry,
-} from "./runtime-helpers";
+import { buildRecentDigestMeta, type RecentDigestMetaEntry } from "./runtime-helpers";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./shared";
 import { buildEditorialCandidates } from "./editorial-candidates";
 import { buildDigestIntelligence, parseStoredDigestInput } from "./digest-intelligence";
@@ -75,7 +72,9 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
 
   const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
   if (stablecoinsCacheResult.kind !== "ok") {
-    console.warn(`[daily-digest] stablecoins cache unavailable (${stablecoinsCacheResult.reason}), skipping regeneration`);
+    console.warn(
+      `[daily-digest] stablecoins cache unavailable (${stablecoinsCacheResult.reason}), skipping regeneration`,
+    );
     return {
       inputData: {
         digestVersion: 2,
@@ -145,7 +144,15 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   const todayTs = nowSec - (nowSec % SECONDS.ONE_DAY);
   const yesterdayTs = todayTs - SECONDS.ONE_DAY;
 
-  const ctx: CollectorContext = { db, trackedStablecoinAssets, stablecoinAssetById, mcapById, nowSec, todayTs, yesterdayTs };
+  const ctx: CollectorContext = {
+    db,
+    trackedStablecoinAssets,
+    stablecoinAssetById,
+    mcapById,
+    nowSec,
+    todayTs,
+    yesterdayTs,
+  };
 
   const { activeDepegCount, topDepegs } = consumeCollectorResult(await collectActiveDepegs(ctx), degradedReasons);
 
@@ -154,7 +161,9 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
       .prepare("SELECT score, band, components, stored_at FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
       .first<{ score: number; band: string; components: string; stored_at: number }>(),
     db
-      .prepare("SELECT score, band, components, computed_at as stored_at FROM stability_index ORDER BY computed_at DESC LIMIT 1")
+      .prepare(
+        "SELECT score, band, components, computed_at as stored_at FROM stability_index ORDER BY computed_at DESC LIMIT 1",
+      )
       .first<{ score: number; band: string; components: string; stored_at: number }>(),
     db
       .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ?")
@@ -167,18 +176,16 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   ]);
   const currentPsiSource = latestSample ?? latestDaily;
 
-  const avg24h = avg24hRow?.avg != null
-    ? round1(avg24hRow.avg)
-    : null;
+  const avg24h = avg24hRow?.avg != null ? round1(avg24hRow.avg) : null;
 
   const displayPsi = currentPsiSource
     ? getDisplayedPsi({
-      score: currentPsiSource.score,
-      band: currentPsiSource.band,
-      avg24h: avg24h ?? undefined,
-      avg24hBand: avg24h != null ? getConditionBand(avg24h) : undefined,
-      computedAt: nowSec,
-    })
+        score: currentPsiSource.score,
+        band: currentPsiSource.band,
+        avg24h: avg24h ?? undefined,
+        avg24hBand: avg24h != null ? getConditionBand(avg24h) : undefined,
+        computedAt: nowSec,
+      })
     : null;
   const displayScore = displayPsi?.score ?? null;
   const displayBand = displayPsi?.band ?? null;
@@ -192,13 +199,12 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
       parsedComponents = null;
     }
   }
-  const stabilityIndex = currentPsiSource && displayScore != null && displayBand && parsedComponents != null
-    ? { score: displayScore, band: displayBand, components: parsedComponents }
-    : null;
+  const stabilityIndex =
+    currentPsiSource && displayScore != null && displayBand && parsedComponents != null
+      ? { score: displayScore, band: displayBand, components: parsedComponents }
+      : null;
 
-  const yesterdayIndex = yesterdayRow
-    ? { score: yesterdayRow.score, band: yesterdayRow.band }
-    : null;
+  const yesterdayIndex = yesterdayRow ? { score: yesterdayRow.score, band: yesterdayRow.band } : null;
 
   const blacklistActivity = consumeCollectorResult(await collectBlacklistActivity(ctx), degradedReasons);
   const supplyVelocity = consumeCollectorResult(await collectSupplyVelocity(ctx), degradedReasons);
@@ -207,7 +213,11 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   for (const d of topDepegs) mentionedSymbols.add(d.symbol);
   if (biggestSupplyChange) mentionedSymbols.add(biggestSupplyChange.symbol);
   if (supplyVelocity) for (const v of supplyVelocity) mentionedSymbols.add(v.coin);
-  const { safetyScores, safetyGrades } = await collectSafetyScores(ctx, mentionedSymbols, degradedReasons);
+  const { safetyScores, safetyGrades, safetyIdentity } = await collectSafetyScores(
+    ctx,
+    mentionedSymbols,
+    degradedReasons,
+  );
 
   // These eight collectors are independent (no cross-collector inputs) and only
   // issue D1 queries, so run them concurrently. They mutate degradedReasons via
@@ -225,7 +235,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     totalMcapAth,
   ] = await Promise.all([
     collectResolvedDepegs(ctx),
-    collectMintBurnFlows(ctx),
+    collectMintBurnFlows(ctx, degradedReasons),
     collectDewsStress(ctx, degradedReasons),
     collectPsiContributors(ctx),
     collectYieldAnomalies(ctx, degradedReasons),
@@ -234,70 +244,72 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     collectTotalMcapAth(ctx),
   ]);
   const historicalContext = await collectHistoricalContext(ctx, displayScore, displayBand, biggestSupplyChange);
-  const gradeTransitions = await collectGradeTransitions(ctx, safetyGrades, degradedReasons);
+  const gradeTransitions = await collectGradeTransitions(ctx, safetyGrades, safetyIdentity, degradedReasons);
 
   const inputData: DigestInputData = {
-      digestVersion: 2,
-      totalMcapUsd,
-      mcap7dDelta: totalMcapUsd - totalPrevWeek,
-      totalMcapAth,
-      dataQuality: {
-        generatedAt: nowSec,
-        stablecoinsCacheUpdatedAt: stablecoinsCacheResult.updatedAt,
-        stablecoinsCacheAgeSec: stablecoinsCacheResult.updatedAt
-          ? Math.max(0, nowSec - stablecoinsCacheResult.updatedAt)
-          : null,
-        // Intentional dual-write of degradedReasons (mirrored at top level below):
-        // this nested copy feeds the LLM prompt data-quality block (prompt/data-fmt.ts
-        // reads quality.degradedSources), while the top-level copy feeds editorial
-        // confidence scoring (editorial-candidates.ts reads data.degradedSources).
-        // Both are snapshotted from the same array at the same time and must stay in sync.
-        ...(degradedReasons.length > 0 ? { degradedSources: [...degradedReasons] } : {}),
-        windows: {
-          blacklistActivity: {
-            label: "rolling last 24h",
-            start: nowSec - SECONDS.ONE_DAY,
-            end: nowSec,
-          },
-          mintBurnFlows: {
-            label: "rolling last 24h",
-            start: nowSec - SECONDS.ONE_DAY,
-            end: nowSec,
-          },
-          supplyVelocity: {
-            label: "UTC snapshots: today, yesterday, 7d ago",
-            dates: [todayTs, yesterdayTs, todayTs - 7 * SECONDS.ONE_DAY],
-          },
-          psi: {
-            label: latestSample ? "latest 30-minute sample with daily snapshot fallback" : "latest daily snapshot fallback",
-            sampleAt: latestSample?.stored_at ?? null,
-            dailySnapshotAt: latestDaily?.stored_at ?? null,
-          },
+    digestVersion: 2,
+    totalMcapUsd,
+    mcap7dDelta: totalMcapUsd - totalPrevWeek,
+    totalMcapAth,
+    dataQuality: {
+      generatedAt: nowSec,
+      stablecoinsCacheUpdatedAt: stablecoinsCacheResult.updatedAt,
+      stablecoinsCacheAgeSec: stablecoinsCacheResult.updatedAt
+        ? Math.max(0, nowSec - stablecoinsCacheResult.updatedAt)
+        : null,
+      // Intentional dual-write of degradedReasons (mirrored at top level below):
+      // this nested copy feeds the LLM prompt data-quality block (prompt/data-fmt.ts
+      // reads quality.degradedSources), while the top-level copy feeds editorial
+      // confidence scoring (editorial-candidates.ts reads data.degradedSources).
+      // Both are snapshotted from the same array at the same time and must stay in sync.
+      ...(degradedReasons.length > 0 ? { degradedSources: [...degradedReasons] } : {}),
+      windows: {
+        blacklistActivity: {
+          label: "rolling last 24h",
+          start: nowSec - SECONDS.ONE_DAY,
+          end: nowSec,
+        },
+        mintBurnFlows: {
+          label: "rolling last 24h",
+          start: nowSec - SECONDS.ONE_DAY,
+          end: nowSec,
+        },
+        supplyVelocity: {
+          label: "UTC snapshots: today, yesterday, 7d ago",
+          dates: [todayTs, yesterdayTs, todayTs - 7 * SECONDS.ONE_DAY],
+        },
+        psi: {
+          label: latestSample
+            ? "latest 30-minute sample with daily snapshot fallback"
+            : "latest daily snapshot fallback",
+          sampleAt: latestSample?.stored_at ?? null,
+          dailySnapshotAt: latestDaily?.stored_at ?? null,
         },
       },
-      // Top-level mirror of dataQuality.degradedSources (see comment above): consumed
-      // by editorial-candidates.ts for confidence scoring; kept separate so the LLM
-      // prompt block and editorial scoring read from their own stable field.
-      ...(degradedReasons.length > 0 ? { degradedSources: [...degradedReasons] } : {}),
-      activeDepegCount,
-      topDepegs,
-      biggestSupplyChange,
-      stabilityIndex,
-      yesterdayIndex,
-      blacklistActivity,
-      supplyVelocity,
-      supplyChanges7d,
-      safetyScores,
-      resolvedDepegs,
-      mintBurnFlows,
-      dewsStress,
-      historicalContext,
-      psiContributors,
-      gradeTransitions,
-      yieldAnomalies,
-      liquidityShifts,
-      crossDayTrends,
-    };
+    },
+    // Top-level mirror of dataQuality.degradedSources (see comment above): consumed
+    // by editorial-candidates.ts for confidence scoring; kept separate so the LLM
+    // prompt block and editorial scoring read from their own stable field.
+    ...(degradedReasons.length > 0 ? { degradedSources: [...degradedReasons] } : {}),
+    activeDepegCount,
+    topDepegs,
+    biggestSupplyChange,
+    stabilityIndex,
+    yesterdayIndex,
+    blacklistActivity,
+    supplyVelocity,
+    supplyChanges7d,
+    safetyScores,
+    resolvedDepegs,
+    mintBurnFlows,
+    dewsStress,
+    historicalContext,
+    psiContributors,
+    gradeTransitions,
+    yieldAnomalies,
+    liquidityShifts,
+    crossDayTrends,
+  };
   inputData.editorialCandidates = buildEditorialCandidates(inputData);
   Object.assign(inputData, buildDigestIntelligence(inputData, previousInputData));
 

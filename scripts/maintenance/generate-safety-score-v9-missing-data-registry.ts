@@ -319,6 +319,7 @@ const WORK_TYPES: Record<V9MissingDataWorkType, WorkTypeDefinition> = {
 
 const WORK_TYPE_BY_REASON: Partial<Record<string, V9MissingDataWorkType>> = {
   "bounded-mechanism-review": "MECHANISM_REVIEW",
+  "missing-access-review": "ACCESS_REVIEW",
   "incomplete-dex-route-coverage": "EXIT_DEX_COVERAGE",
   "incomplete-oracle-liquidation-branch": "ORACLE_BRANCH",
   "material-reserve-slice-unstructured": "RESERVE_SLICE",

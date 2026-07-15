@@ -1,4 +1,25 @@
 import { z } from "zod";
+import { SafetyScoreV8PublicationIdentitySchema } from "./safety-score-publication";
+
+export const ChainsFreshnessMetaSchema = z.object({
+  updatedAt: z.number(),
+  ageSeconds: z.number(),
+  status: z.enum(["fresh", "degraded", "stale"]),
+  warning: z.string().optional(),
+  dependencies: z.object({
+    reportCards: z.object({
+      updatedAt: z.number().nullable().optional(),
+      ageSeconds: z.number().nullable().optional(),
+      status: z.enum(["fresh", "degraded", "stale", "unavailable"]),
+      reason: z.string().nullable().optional(),
+      inputsStale: z.boolean().optional(),
+      staleInputs: z.array(z.string()).optional(),
+    }),
+  }).optional(),
+  safetyScoreIdentity: SafetyScoreV8PublicationIdentitySchema.nullable().optional(),
+});
+
+export type ChainsFreshnessMeta = z.infer<typeof ChainsFreshnessMetaSchema>;
 
 export const ChainHealthFactorsSchema = z.object({
   concentration: z.number(),
@@ -104,6 +125,8 @@ export const ChainsResponseSchema = z.object({
   globalChange30dPct: z.number(),
   updatedAt: z.number(),
   healthMethodologyVersion: z.string(),
+  safetyScoreIdentity: SafetyScoreV8PublicationIdentitySchema.nullable().optional(),
+  _meta: ChainsFreshnessMetaSchema.optional(),
 });
 
 export type ChainsResponse = z.infer<typeof ChainsResponseSchema>;

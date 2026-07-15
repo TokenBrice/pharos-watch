@@ -12,7 +12,6 @@ const EXPECTED_RETIRED_DILUTABLE_UPSTREAM_IDS = [
   "crvusd-curve",
   "dai-makerdao",
   "dola-inverse-finance",
-  "fpi-frax",
   "jpyt-dephaser",
   "pht-pht",
   "reusd-resupply",
@@ -20,7 +19,6 @@ const EXPECTED_RETIRED_DILUTABLE_UPSTREAM_IDS = [
   "usdd-tron-dao-reserve",
   "usde-ethena",
   "usdu-unitas",
-  "xai-silo-finance",
 ] as const;
 
 function deterministicShuffle<T>(values: readonly T[]): T[] {
@@ -127,7 +125,11 @@ describe("report-card blacklist authority", () => {
     expect(resolved.get("dllr-sovryn")).toBe("possible");
     expect(resolved.get("fxd-fathom")).toBe("possible");
     expect(resolved.get("cjpy-yamato")).toBe("possible");
-    expect(resolved.get("jusd-juicedollar")).toBe("inherited");
+    // jusd-juicedollar: TERRA re-review confirmed the verified Citrea JUSD source
+    // exposes no native holder freeze/blacklist and added a reviewed
+    // upstreamSuppressionRationale, so USDC.e/USDT.e/ctUSD reserve exposure no
+    // longer propagates as inheritance.
+    expect(resolved.get("jusd-juicedollar")).toBe(false);
     expect(resolved.get("silk-shade-protocol")).toBe("inherited");
     expect(resolved.get("bnusd-balanced")).toBe("inherited");
   });
@@ -141,8 +143,18 @@ describe("report-card blacklist authority", () => {
 
     expect(resolved.get("krwo-gimswap")).toBe("inherited");
     expect(resolved.get("luausd-lumi-finance")).toBe("inherited");
-    expect(resolved.get("usdn-smardex")).toBe("possible");
+    // usdn-smardex: TERRA re-review of the verified Ethereum USDN source found no
+    // direct holder freeze/blacklist and added a reviewed suppression (same-symbol
+    // false positive vs the unrelated Noble USDN), re-graded to direct false.
+    expect(resolved.get("usdn-smardex")).toBe(false);
     expect(resolved.get("vcred-vcred")).toBe(false);
+    // fpi-frax: TERRA re-review found an owner-controlled ProxyAdmin upgrade path
+    // on Fraxtal (upgrade-control, not active freeze), re-graded to "possible".
+    expect(resolved.get("fpi-frax")).toBe("possible");
+    // xai-silo-finance: TERRA re-review of the sole verified Ethereum XAI source
+    // found no holder-transfer control and added a reviewed suppression, so USDC
+    // Silo collateral no longer propagates as inheritance.
+    expect(resolved.get("xai-silo-finance")).toBe(false);
 
     for (const meta of TRACKED_STABLECOINS) {
       expect(meta.canBeBlacklisted).not.toBe("dilutable");

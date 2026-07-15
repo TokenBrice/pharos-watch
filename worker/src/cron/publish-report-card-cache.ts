@@ -107,6 +107,7 @@ export async function publishReportCardCache(db: D1Database, signal?: AbortSigna
             methodologyVersion: snapshot.methodology.version,
             scoredCount: publication.completeness.scoredCount,
             notRatedCount: publication.completeness.notRatedCount,
+            safetyScoreIdentity,
           },
         },
       ],

@@ -392,7 +392,8 @@ function extension(): SafetyScoreV9FactSetExtensionV2 {
         supplyReview: {
           selectedBridgeRoutes: [],
           selectedRouteSupplyShare: 0,
-          unknownRouteSupplyShare: 0,
+          // Single-chain native with no route rows conserves to unknown=1 (VER-007).
+          unknownRouteSupplyShare: 1,
           unreviewedRouteSupplyShare: 0,
           failureDomains: [],
         },
@@ -439,7 +440,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     });
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
     expect(compiled.assets[0]!.gaps.map((gap) => gap.reasonCode)).toEqual(
-      expect.arrayContaining(["missing-pillar-evidence"]),
+      expect.arrayContaining(["missing-access-review"]),
     );
     expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace.finalGrade).not.toBe("NR");
   });

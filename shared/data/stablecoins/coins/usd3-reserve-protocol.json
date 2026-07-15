@@ -49,10 +49,23 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USD3 resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Reserve Protocol pause and freeze states",
+        "url": "https://github.com/reserve-protocol/protocol/blob/master/docs/pause-and-freeze.md"
+      },
+      {
+        "label": "USD3 Main proxy on Ethereum Blockscout",
+        "url": "https://eth.blockscout.com/address/0x81117e3e98910C3dCF956b5Fc97a7212E047AcF4"
+      },
+      {
+        "label": "USD3 Base OptimismMintableERC20 on Blockscout",
+        "url": "https://base.blockscout.com/address/0xefb97aaf77993922ac4be4da8fbc9a2425322677"
+      }
+    ],
+    "evidence": "Current-source access review: the Ethereum USD3 RToken inherits Reserve Protocol's governance-controlled system pause/freeze surface; the current Main review records frozen=false and issuancePaused=false, with the OWNER_ROLE held by a three-day TimelockController. Reserve's documented frozen state leaves ERC-20 functions enabled rather than providing a holder blacklist. The Base OptimismMintableERC20 representation uses the canonical bridge and no separate holder blacklist was identified. Upstream USDC, USDS, and Steakhouse exposures remain conservatively inherited.",
+    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "reviewedAt": "2026-07-14"
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
@@ -408,9 +421,9 @@
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-13",
+    "reviewedAt": "2026-07-14",
     "reviewer": "Codex mechanism review",
-    "rationale": "USD3 is a redeemable Reserve Protocol basket token backed by dollar-stablecoin and lending-vault positions with RSR first-loss capital.",
+    "rationale": "USD3 is a redeemable Reserve Protocol basket token backed by dollar-stablecoin and lending-vault positions with RSR first-loss capital. The current public disclosures identify the basket, Reserve governance, and redemption design but do not expose the v9 overlay's measured assurance-and-reconciliation, claim-and-segregation, or custody-continuity metrics; those mechanism components remain a methodology-capability blocker and are not inferred from the archetype classification.",
     "sources": [
       {
         "label": "Reserve Protocol docs",

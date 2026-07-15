@@ -179,21 +179,42 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
-        "label": "Re Protocol documentation",
-        "url": "https://docs.re.xyz/"
+        "label": "Re Protocol smart contract addresses",
+        "url": "https://docs.re.xyz/protocol/smart-contract-addresses"
       },
       {
-        "label": "reUSD Ethereum deployment",
-        "url": "https://etherscan.io/address/0x5086bf358635b81d8c47c66d1c8b9e567db70c72#code"
+        "label": "Re Protocol disclosure",
+        "url": "https://re.xyz/disclosure"
+      },
+      {
+        "label": "Re Protocol terms",
+        "url": "https://re.xyz/terms"
+      },
+      {
+        "label": "reUSD Ethereum ShareToken implementation",
+        "url": "https://etherscan.io/address/0xb5276c436F65913Cd5332DE745d04feDEb4a21D4#code"
+      },
+      {
+        "label": "Re Protocol source organization",
+        "url": "https://github.com/resilience-foundation/"
+      },
+      {
+        "label": "Re Protocol transparency dashboard",
+        "url": "https://app.re.xyz/transparency"
+      },
+      {
+        "label": "Archived Re Protocol historical documentation",
+        "url": "https://web.archive.org/web/20260512212054/https://docs.re.xyz/insurance-capital-layers/what-is-reusd"
       }
     ],
-    "evidence": "BLOCKED: reviewed issuer documentation and the Ethereum deployment do not establish a current holder-level freeze or transfer-restriction authority for reUSD across Ethereum, Avalanche, Arbitrum, Base, BNB Chain, and Ink. The review preserves the inherited upstream exposure and records the missing multi-deployment control evidence.",
-    "reviewer": "OpenAI Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "On 2026-07-15, the issuer deployment inventory and verified implementation or ABI review across the tracked Ethereum, Avalanche, Arbitrum, Base, BNB Chain, and Ink proxies found ShareToken implementations with MINTER_ROLE-gated burn(address user, uint256 amount), which burns an arbitrary supplied holder balance without an allowance. At Ethereum block 25534130 (0x1859eb2), role administration and UUPS upgrades resolved through a 172800-second timelock, while observed minter contracts used constrained protocol paths. No deployed ShareToken ABI exposed a named holder blacklist, freeze, pause, or transfer-hook restriction; issuer terms and disclosure establish KYC-gated product and redemption access but do not prove a standalone self-custody transfer freeze. This is a direct, timelock-mediated holder-intervention surface, so Possible is retained rather than asserting an immediate token blacklist.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
