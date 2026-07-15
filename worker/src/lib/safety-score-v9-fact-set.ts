@@ -1545,6 +1545,10 @@ function buildRoutes(context: AssetBuildContext): {
       emptyCoverage.retainedPoolCount === 0 &&
       emptyCoverage.unsupportedPoolCount === 0;
     if (emptySurfaceComplete) {
+      // Known-empty negative evidence must carry the DEX producer's observation
+      // time, not the scoring clock: a stale empty surface is not a current
+      // "known" zero-exit fact but a bounded-unknown/stale one (VER2-007). Fresh
+      // populated 0/0 coverage remains known negative evidence (exit 0).
       const coverageEvidenceId = addEvidence(
         context,
         createV9EvidenceReference(
@@ -1553,19 +1557,35 @@ function buildRoutes(context: AssetBuildContext): {
             sourceId: "report-cards-dex-route-observation",
             sourceGenerationId: context.fixedInput.dexGenerationId,
             disposition: "observed",
-            observedAtSec: context.fixedInput.clockSec,
+            observedAtSec: context.fixedInput.dexLiqMap[context.asset.assetId]!.updatedAt,
             contentSha256: digest("safety-score-v9.exit-route-observation-coverage.v1", emptyCoverage),
             maxAgeSec: context.extension.routeFreshness.dexMaxAgeSec,
           },
           context.fixedInput.clockSec,
         ),
       );
+      const coverageStale = context.evidence.get(coverageEvidenceId)!.freshness.state === "stale";
+      const staleGapId = coverageStale
+        ? addGap(
+            context,
+            createV9FactGap({
+              gapId: `${context.asset.assetId}:gap:exit-route-observation-coverage:stale`,
+              reasonCode: "missing-runtime-route-evidence",
+              ownerDomain: "exit",
+              policyRuleId: "v9.exit.same-notional-route",
+              observationState: "stale",
+              path: { kind: "local-component", componentKey: "exit-routes" },
+              message: "The known-empty DEX exit-route coverage observation is older than the lane freshness bound.",
+              evidenceRefIds: [coverageEvidenceId],
+            }),
+          )
+        : null;
       return {
         exitStatus: createV9FactStatus({
           applicability: requiredV9Applicability("v9.exit.same-notional-route"),
-          observationState: "known",
+          observationState: coverageStale ? "stale" : "known",
           evidenceRefIds: [coverageEvidenceId],
-          gapIds: [],
+          gapIds: staleGapId ? [staleGapId] : [],
         }),
         exitRoutes: [],
       };
@@ -1593,8 +1613,15 @@ function buildRoutes(context: AssetBuildContext): {
   // demote the state: absent redemption evidence can only understate the
   // score, and the zero-score path still requires an observed portfolio.
   const coverage = context.fixedInput.dexLiqMap[context.asset.assetId]?.exitRouteObservationCoverage;
+  // "known" upgrades the exit surface and arms the reviewed-complete zero-score
+  // path, so it requires populated DEX coverage. An `unknown`/`unsupported`
+  // surface stays bounded-unknown even when its retained-pool count is zero: a
+  // score-ineligible diagnostic route must never certify unobserved coverage
+  // nor let evidence arrival drop the score below the bounded-unknown floor
+  // (VER2-006).
   const dexSurfaceComplete =
     coverage != null &&
+    coverage.status === "populated" &&
     (coverage.retainedPoolCount === 0 || isDexExitRouteCoverageComplete(coverage));
   const portfolioGapIds = [...gapIds];
   if (!dexSurfaceComplete) {

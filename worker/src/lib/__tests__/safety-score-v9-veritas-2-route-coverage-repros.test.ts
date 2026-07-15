@@ -24,7 +24,7 @@ function compileAsset(draft: ReportCardsFixedInputDraft) {
   };
 }
 
-describe.skip("VERITAS-II finding stale known-empty DEX coverage is treated as current", () => {
+describe("VERITAS-II finding stale known-empty DEX coverage is treated as current", () => {
   it("retains the DEX observation time and bounds a stale empty surface", () => {
     const draft = freshDraft();
     const observedAtSec = draft.clockSec - 100_000;
@@ -64,7 +64,7 @@ describe.skip("VERITAS-II finding stale known-empty DEX coverage is treated as c
   });
 });
 
-describe.skip("VERITAS-II finding a diagnostic redemption route completes unknown DEX coverage", () => {
+describe("VERITAS-II finding a diagnostic redemption route completes unknown DEX coverage", () => {
   it("keeps an unknown zero-pool surface bounded when only a score-ineligible route exists", () => {
     const draft = freshDraft();
     const dex = draft.dexLiqMap[ASSET_ID]!;
