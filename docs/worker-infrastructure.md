@@ -75,11 +75,10 @@ Data-invariant canaries: unset `WORKER_CANARY_MODE` defaults to `off`, but the c
 Reserve interruption recovery: unset `WORKER_RESERVE_RECOVERY_MODE` defaults to `off`, while the checked-in Worker config sets `shadow`. Producer checkpoints are written in every mode. The isolated recovery lane uses `off` for no scan, `shadow` for read-only eligibility/blocker telemetry, `reconcile` for generation-fenced abandonment and ready-attempt preparation without a claim, and `recover` for claim plus suffix/sidecar replay. `WORKER_RESERVE_FAULT_INJECTION_ENABLED` is a separate fail-closed test-harness gate: only a trimmed, case-normalized literal `true` enables arming and scheduled execution, disabling it neutralizes retained fault rows, and the production `worker/wrangler.toml` intentionally leaves it unset.
 
 <!-- ENV-CONTRACT:WORKER-INFRASTRUCTURE:BEGIN -->
-
 Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worker and Pages env modules derive their `required` / `optional` / `reserved` views from that manifest.
 
 | Binding | Type | Worker | Pages ops | Pages site-data | Description |
-| ----------------------------------------------- | ----------------------- | -------- | --------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| --- | --- | --- | --- | --- | --- |
 | `DB` | `D1Database` | required | - | required | Primary D1 binding for worker reads/writes; Pages uses it for optional site-data attribution telemetry and required atomic selector-snapshot write quotas. |
 | `CF_VERSION_METADATA` | `WorkerVersionMetadata` | required | - | - | Cloudflare version metadata binding attached to scheduled attempt and checkpoint telemetry for deployment correlation. |
 | `TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT` | `RateLimit` | required | - | - | Cloudflare pre-authentication rate limiter for Telegram webhook requests. |
@@ -161,7 +160,6 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `SELECTOR_SNAPSHOTS` | `KVNamespace` | - | - | required | KV namespace binding for the Pages-only Stablecoin Picker snapshot store at `functions/selector-snapshot/[[path]].ts`; new content-addressed `s:{sid}` entries carry server-recomputed trust metadata, while legacy entries remain client-unverified. HMAC-IP write-quota counters live in D1 for atomic reservations. |
 | `SELECTOR_SNAPSHOT_IP_HASH_SECRET` | `string` | - | - | required | Dedicated HMAC pepper for selector-snapshot IP rate-limit and daily-quota keys; raw IP addresses are never stored. |
 | `TELEGRAM_ADOPTION_IP_HASH_SECRET` | `string` | - | - | required | Dedicated HMAC pepper for PharosWatchBot CTA telemetry per-client minute quotas; raw IP addresses are never stored. |
-
 <!-- ENV-CONTRACT:WORKER-INFRASTRUCTURE:END -->
 
 ---
