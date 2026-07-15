@@ -131,6 +131,22 @@ function parsePreviousCronRows(
   return parsedRows;
 }
 
+function readLatestProductiveDexLiquiditySummary(rows: ParsedPreviousCronRow[]) {
+  const latestProductiveRow = rows.find(
+    (row) =>
+      (row.status === "ok" || row.status === "degraded") &&
+      row.metadata.persistence?.skipped !== true &&
+      [
+        row.metadata.stagedPoolsMerged,
+        row.metadata.stagedPoolsSkipped,
+        row.metadata.sourceCoverage.priceObservationCoins,
+        row.metadata.sourceCoverage.measuredBalanceCoveragePct,
+        row.metadata.sourceCoverage.weakCoverageCoins,
+      ].every((value) => typeof value === "number" && Number.isFinite(value)),
+  );
+  return readPreviousDexLiquiditySummary(latestProductiveRow?.metadata ?? null);
+}
+
 function isApproxSameTvl(left: number | null, right: number | null): boolean {
   if (!isFinitePositive(left) || !isFinitePositive(right)) return false;
   const scale = Math.max(1, Math.abs(left), Math.abs(right));
@@ -360,6 +376,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
         `SELECT started_at, status, metadata
          FROM cron_runs
          WHERE job = 'sync-dex-liquidity'
+           AND status IN ('ok', 'degraded')
            AND metadata IS NOT NULL
          ORDER BY started_at DESC
          LIMIT 12`,
@@ -479,7 +496,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
     }
   }
 
-  const previousSummary = readPreviousDexLiquiditySummary(parsedPreviousCronRows[0]?.metadata ?? null);
+  const previousSummary = readLatestProductiveDexLiquiditySummary(parsedPreviousCronRows);
   const watchlistPreviousById = new Map((previousWatchlistRows.results ?? []).map((row) => [row.stablecoin_id, row]));
 
   const retainedPoolCountBySourceFamily: Record<string, number> = {};

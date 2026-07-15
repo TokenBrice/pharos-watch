@@ -58,6 +58,12 @@ type PoolHourData = {
   pool: { id: string };
 };
 
+function parseTokenDecimals(value: string): number {
+  if (value.trim() === "") return 18;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 && parsed <= 255 ? parsed : 18;
+}
+
 function buildPoolsQuery(skip: number): string {
   return `{
     pools(
@@ -255,12 +261,12 @@ export async function fetchPancakeSwapPools(
               {
                 address: pool.token0.id,
                 symbol: pool.token0.symbol,
-                decimals: parseInt(pool.token0.decimals, 10) || 18,
+                decimals: parseTokenDecimals(pool.token0.decimals),
               },
               {
                 address: pool.token1.id,
                 symbol: pool.token1.symbol,
-                decimals: parseInt(pool.token1.decimals, 10) || 18,
+                decimals: parseTokenDecimals(pool.token1.decimals),
               },
             ],
             price: Number.isFinite(token0Price) && token0Price > 0 ? token0Price : null,

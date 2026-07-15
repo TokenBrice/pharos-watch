@@ -31,7 +31,7 @@ function directPool(
     poolAddress: POOL,
     poolType: source === "fluid" ? "fluid-dex" : "pancakeswap-v3",
     tokens,
-    price: 999,
+    price: 0.98,
     tvlUsd: 4_000_000,
     volume24hUsd: 100_000,
     feeRate: source === "pancakeswap" ? 0.0001 : 0.00005,
@@ -162,5 +162,31 @@ describe("measured execution target inventory", () => {
         ...common,
       }).size,
     ).toBe(0);
+  });
+
+  it("excludes a Pancake direction whose retained spot price is implausibly favorable", () => {
+    const idrx = "0x4444444444444444444444444444444444444444";
+    const pool = directPool("pancakeswap", [
+      { address: USDT, symbol: "USDT", decimals: 18 },
+      { address: idrx, symbol: "IDRX", decimals: 18 },
+    ]);
+    pool.price = 1_250;
+    const targets = buildPancakeMeasuredExecutionTargets({
+      pools: [pool],
+      chainAddressToId: addressMap([
+        [USDT, "usdt-tether"],
+        [idrx, "idrx-idrx"],
+      ]),
+      symbolToChainScopedIds: new Map(),
+      stablecoinPriceById: new Map([
+        ["usdt-tether", 1],
+        ["idrx-idrx", 1 / 18_000],
+      ]),
+      capturedAt: 1_752_560_000,
+    });
+    const poolId = `ethereum:${POOL}`;
+
+    expect(targets.has(buildMeasuredPoolDirectionKey("idrx-idrx", poolId))).toBe(false);
+    expect(targets.has(buildMeasuredPoolDirectionKey("usdt-tether", poolId))).toBe(true);
   });
 });
