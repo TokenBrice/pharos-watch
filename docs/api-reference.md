@@ -5742,6 +5742,18 @@ Reads the authoritative Telegram transport circuit and the independent `fresh`, 
 
 Resume is also generation-fenced. It retains the row as inert audit state, advances its generation, and sets `expiresAt` to the current time. A stale generation returns `409` and does not mutate the active control.
 
+**Execution-unknown acknowledgement body**
+
+```json
+{
+  "action": "acknowledge_execution_unknown",
+  "pendingIds": [30557, 30558],
+  "operatorReason": "Reviewed the interrupted send owner and accepted the at-most-once outcome."
+}
+```
+
+This action accepts 1-100 exact pending-row IDs. Every row must still be `execution_unknown`; otherwise the request returns `409` without changing any row. A successful acknowledgement preserves the exact payload and lifecycle in `telegram_alert_dead_letters` with `reason = "execution_unknown_archived"`, retains `execution_unknown` as the authoritative target outcome, removes the row from the active backlog, and records the operator reason in `admin_action_audit`. It never resends or changes an ambiguous effect to accepted.
+
 **Response**
 
 ```json

@@ -13,6 +13,7 @@ import {
   setTelegramDeliveryPause,
   TELEGRAM_DELIVERY_MODES,
 } from "../lib/telegram-transport-control";
+import { acknowledgeExecutionUnknownPendingAlertsForAdmin } from "../cron/telegram-pending";
 
 const PauseRequestSchema = z.discriminatedUnion("action", [
   z.object({
@@ -26,6 +27,12 @@ const PauseRequestSchema = z.discriminatedUnion("action", [
     action: z.literal("resume"),
     mode: z.enum(TELEGRAM_DELIVERY_MODES),
     expectedGeneration: z.number().int().min(1),
+  }),
+  z.object({
+    action: z.literal("acknowledge_execution_unknown"),
+    pendingIds: z.array(z.number().int().positive()).min(1).max(100)
+      .refine((ids) => new Set(ids).size === ids.length, "pendingIds must be unique"),
+    operatorReason: z.string().trim().min(8).max(500),
   }),
 ]);
 
@@ -51,6 +58,50 @@ export const handleAdminTelegramDeliveryControl = makeConditionalIdempotentAdmin
       formatSchemaError: (issues) => issues[0]?.message ?? "Invalid Telegram delivery control request",
     });
     if (parsed instanceof Response) return parsed;
+
+    if (parsed.action === "acknowledge_execution_unknown") {
+      const acknowledgement = await acknowledgeExecutionUnknownPendingAlertsForAdmin(
+        db,
+        parsed.pendingIds,
+        nowSec,
+      );
+      if (acknowledgement.missingIds.length > 0) {
+        await logAdminAction(db, {
+          action: "telegram-execution-unknown-acknowledge",
+          target: parsed.pendingIds.join(","),
+          result: "error",
+          httpStatus: 409,
+          details: {
+            pendingIds: parsed.pendingIds,
+            missingIds: acknowledgement.missingIds,
+            operatorReason: parsed.operatorReason,
+            reason: "execution-unknown-row-changed",
+          },
+        }, request);
+        return adminJsonResponse({
+          error: "Telegram execution-unknown rows changed; inspect current state before retrying",
+          missingIds: acknowledgement.missingIds,
+        }, { status: 409 });
+      }
+      await logAdminAction(db, {
+        action: "telegram-execution-unknown-acknowledge",
+        target: acknowledgement.acknowledgedIds.join(","),
+        result: "ok",
+        httpStatus: 200,
+        details: {
+          pendingIds: acknowledgement.acknowledgedIds,
+          operatorReason: parsed.operatorReason,
+          disposition: "execution_unknown_archived",
+        },
+      }, request);
+      return adminJsonResponse({
+        now: nowSec,
+        acknowledgement: {
+          pendingIds: acknowledgement.acknowledgedIds,
+          disposition: "execution_unknown_archived",
+        },
+      });
+    }
 
     const actor = (request.headers.get("Cf-Access-Authenticated-User-Email")?.trim() || "internal").slice(0, 320);
     const pause = parsed.action === "pause"

@@ -638,7 +638,7 @@ The TTL — not a per-row attempts cap — bounds how long the queue keeps retry
 Each drain re-selects unexpired rows whose `not_before_at` has elapsed; rows that age
 past their TTL are copied into `telegram_alert_dead_letters` and then deleted in a
 capped cleanup batch at the end of the run, leaving any overflow for later dispatch
-runs. `execution_unknown` rows are excluded from ordinary TTL and blocked-chat cleanup. They remain queryable for 90 days, then are projected to target truth, copied to the dead-letter audit with `reason = 'execution_unknown_archived'`, and deleted only by an owner/generation/timestamp CAS. Operator resolution racing that archive wins and preserves the live row.
+runs. `execution_unknown` rows are excluded from ordinary TTL and blocked-chat cleanup. They remain queryable for 90 days, then are projected to target truth, copied to the dead-letter audit with `reason = 'execution_unknown_archived'`, and deleted only by an owner/generation/timestamp CAS. After reviewing the exact effect evidence, an operator may acknowledge exact pending IDs through `POST /api/admin-telegram-delivery-control`; this uses the same fail-closed archive path, preserves the ambiguous target outcome, and records the reason without replaying the effect. Operator resolution racing automatic archival fails with a row-change conflict instead of overwriting evidence.
 Admin broadcasts preflight `messageHtml` before target selection or enqueue. The accepted
 Telegram HTML subset is `a[href]`, `b`/`strong`, `i`/`em`, `u`/`ins`, `s`/`strike`/`del`,
 `code`, `pre`, `tg-spoiler`, and `blockquote` with optional `expandable`; only simple
