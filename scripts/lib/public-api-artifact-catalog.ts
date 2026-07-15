@@ -446,6 +446,16 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     },
   },
   {
+    key: "report-cards-v9",
+    summary: "Safety Score V9 report cards (shadow)",
+    description: "Versioned, strict V9 Safety Score report-card contract sourced from the canonical V9 shadow publication. It does not change the V8 compatibility product at /api/report-cards.",
+    tags: ["Risk"],
+    responseSchema: "ReportCardsV9Response",
+    postman: {
+      folder: "Risk and market structure",
+    },
+  },
+  {
     key: "depeg-resolver",
     summary: "Depeg Duration Resolver",
     description:

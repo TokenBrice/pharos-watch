@@ -123,6 +123,37 @@ describe("handleReportCards", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("depeg_events"))).toBe(false);
   });
 
+  it("keeps the V8 compatibility response isolated from a shadow V9 cache row", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const snapshot = await makeExactCachedSnapshot(updatedAt);
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [
+          {
+            key: "report-cards:snapshot",
+            value: JSON.stringify(makeCachedSnapshotEnvelope(snapshot)),
+            updated_at: updatedAt,
+          },
+          {
+            key: "report-cards:v9-shadow",
+            value: "not-a-v8-report-card-snapshot",
+            updated_at: updatedAt,
+          },
+        ],
+      },
+    ]) as MockD1Database;
+
+    const response = await handleReportCards(db);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      safetyScoreIdentity: { model: "v8" },
+      updatedAt,
+    });
+    expect(db.getHistory().some((entry) => entry.binds.includes("report-cards:v9-shadow"))).toBe(false);
+  });
+
   it("rejects a published snapshot from an old cache generation and computes on read", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
     const staleSnapshot = makeCachedSnapshot(updatedAt);

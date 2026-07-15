@@ -3,7 +3,7 @@
   "generatedAt": "2026-07-15",
   "files": {
     "src/lib/api.ts": 95.4,
-    "worker/src/api/safety-score-history-v2.ts": 11.1,
+    "worker/src/api/safety-score-history-v2.ts": 100,
     "worker/src/lib/safety-score-current-identity.ts": 100,
     "worker/src/lib/api-cache-read.ts": 95.5,
     "worker/src/lib/api-freshness.ts": 97.4,
@@ -102,6 +102,7 @@
     "shared/lib/safety-score-v8-publication.ts": 100,
     "worker/src/api/admin-safety-score-v9.ts": 86.1,
     "worker/src/lib/safety-score-history-v2.ts": 76,
+    "worker/src/lib/safety-score-history-boundary-operation.ts": 92.9,
     "worker/src/lib/safety-score-v9-cache-codec.ts": 90.7,
     "worker/src/lib/safety-score-v9-candidate.ts": 87.7,
     "worker/src/lib/safety-score-v9-extension.ts": 85.4,
