@@ -99,18 +99,20 @@ function publishedDewsPointer(rows = STRESS_ROWS) {
   return {
     match: "FROM cache WHERE key = ?",
     matchBinds: ["dews:published-generation"],
-    rows: [{
-      key: "dews:published-generation",
-      value: JSON.stringify({
-        updatedAt: computedAt,
-        source: "compute-dews",
-        publishStatus: "published",
-        coverageVersion: 2,
-        expectedRowCount: rows.length,
-        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(rows.map((row) => row.stablecoin_id)),
-      }),
-      updated_at: computedAt,
-    }],
+    rows: [
+      {
+        key: "dews:published-generation",
+        value: JSON.stringify({
+          updatedAt: computedAt,
+          source: "compute-dews",
+          publishStatus: "published",
+          coverageVersion: 2,
+          expectedRowCount: rows.length,
+          stablecoinIdsDigest: buildDewsStablecoinIdsDigest(rows.map((row) => row.stablecoin_id)),
+        }),
+        updated_at: computedAt,
+      },
+    ],
   };
 }
 
@@ -137,9 +139,7 @@ async function gunzipToText(bytes: Uint8Array): Promise<string> {
 }
 
 function getInsertBinds(db: MockD1Database): unknown[] | undefined {
-  return db
-    .getHistory()
-    .find((entry) => entry.sql.includes("INSERT OR IGNORE INTO public_snapshots"))?.binds;
+  return db.getHistory().find((entry) => entry.sql.includes("INSERT OR IGNORE INTO public_snapshots"))?.binds;
 }
 
 describe("snapshotPublicDataset", () => {
@@ -155,9 +155,7 @@ describe("snapshotPublicDataset", () => {
   it("throws before D1 work when the cron signal is already aborted", async () => {
     const controller = new AbortController();
     controller.abort(new Error("snapshot-public-dataset aborted"));
-    await expect(snapshotPublicDataset(mockD1(), controller.signal)).rejects.toThrow(
-      "snapshot-public-dataset aborted",
-    );
+    await expect(snapshotPublicDataset(mockD1(), controller.signal)).rejects.toThrow("snapshot-public-dataset aborted");
   });
 
   it("degrades gracefully when the stablecoins cache is missing", async () => {
@@ -167,9 +165,7 @@ describe("snapshotPublicDataset", () => {
     expect(result.itemCount).toBe(0);
     expect(result.metadata).toContain("stablecoins_cache_unavailable");
 
-    const insert = db
-      .getHistory()
-      .find((entry) => entry.sql.includes("INSERT OR IGNORE INTO public_snapshots"));
+    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT OR IGNORE INTO public_snapshots"));
     expect(insert).toBeUndefined();
   });
 
@@ -329,9 +325,7 @@ describe("snapshotPublicDataset", () => {
     const db = mockD1([
       {
         match: "FROM cache WHERE key",
-        rows: [
-          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC },
-        ],
+        rows: [{ key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC }],
       },
     ]);
 
@@ -391,6 +385,46 @@ describe("snapshotPublicDataset", () => {
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
       reason: "report_card_cache_unavailable",
       cacheReason: "identity-mismatch",
+    });
+    expect(getInsertBinds(db)).toBeUndefined();
+  });
+
+  it("does not publish an immutable snapshot from a complete V9 compact publication on the V8 release", async () => {
+    const v9GenerationId = `safety-score-v9:9.0:${NOW_SEC}`;
+    const v9ReportCardCache = {
+      ...REPORT_CARD_CACHE_PAYLOAD,
+      safetyScoreIdentity: {
+        model: "v9",
+        schemaVersion: 1,
+        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+        policyId: "v9-policy-2026-05",
+        policyDigest: "b".repeat(64),
+        evaluationBuildDigest: "c".repeat(64),
+        baseInputGenerationId: `report-cards-input:v1:${"d".repeat(64)}`,
+        publicationGenerationId: v9GenerationId,
+      },
+      publicationGenerationId: v9GenerationId,
+      completeness: {
+        ...REPORT_CARD_CACHE_PAYLOAD.completeness,
+        generationId: v9GenerationId,
+      },
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key",
+        rows: [
+          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC },
+          { key: "report_card_cache", value: JSON.stringify(v9ReportCardCache), updated_at: NOW_SEC },
+        ],
+      },
+    ]);
+
+    const result = await snapshotPublicDataset(db);
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "report_card_cache_unavailable",
+      cacheReason: "invalid-payload",
     });
     expect(getInsertBinds(db)).toBeUndefined();
   });
@@ -477,10 +511,12 @@ describe("snapshotPublicDataset", () => {
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
       reason: "public_snapshot_section_read_failed",
       missingSections: ["dews"],
-      failedSections: [{
-        section: "dews",
-        error: "published generation coverage mismatch: rows=1/2",
-      }],
+      failedSections: [
+        {
+          section: "dews",
+          error: "published generation coverage mismatch: rows=1/2",
+        },
+      ],
     });
     expect(getInsertBinds(db)).toBeUndefined();
   });

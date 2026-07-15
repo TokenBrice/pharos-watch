@@ -209,6 +209,44 @@ describe("score projector", () => {
     });
   });
 
+  it("projects an organic V9 row with complete policy provenance", async () => {
+    const db = mockD1(
+      tables([
+        gradeRow({
+          source_table: "safety_score_history_v2",
+          source_row_id: "safety-score-history:v2:v9:123",
+          row_sort_id: "v2:safety-score-history:v2:v9:123",
+          methodology_version: "9.0",
+          model: "v9",
+          policy_id: "safety-score-v9-policy",
+          policy_digest: "c".repeat(64),
+          evaluation_build_digest: "a".repeat(64),
+          base_input_generation_id: `report-cards-input:v1:${"b".repeat(64)}`,
+          model_publication_generation_id: "safety-score-v9:123",
+        }),
+      ]),
+    ) as MockD1Database;
+
+    const result = await projectScoreUpgraded(db);
+
+    expect(result).toEqual({ projected: 1, advanced: SEC });
+    expect(JSON.parse(String(extractInsertBinds(db)[0]?.[11]))).toMatchObject({
+      safetyScore: {
+        identityStatus: "complete",
+        identity: {
+          model: "v9",
+          schemaVersion: 1,
+          methodologyVersion: "9.0",
+          policyId: "safety-score-v9-policy",
+          policyDigest: "c".repeat(64),
+          evaluationBuildDigest: "a".repeat(64),
+          baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+          publicationGenerationId: "safety-score-v9:123",
+        },
+      },
+    });
+  });
+
   it("skips a V9 row whose policy identity is incomplete", async () => {
     const db = mockD1(
       tables([

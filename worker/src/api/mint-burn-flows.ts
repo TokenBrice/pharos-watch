@@ -6,25 +6,24 @@ import {
   parseQueryParams,
   getLatestSuccessfulCronTimestampResult,
 } from "../lib/api-utils";
-import {
-  buildMintBurnScope,
-  getMintBurnConfigsForStablecoin,
-} from "../lib/mint-burn-contracts";
+import { buildMintBurnScope, getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
 import { buildMintBurnSyncHealth } from "../lib/mint-burn-health-config";
-import {
-  computeGaugeScore,
-  detectFlightToQuality,
-  getGaugeBand,
-} from "../lib/mint-burn-scoring";
+import { computeGaugeScore, detectFlightToQuality, getGaugeBand } from "../lib/mint-burn-scoring";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import type { StablecoinData } from "@shared/types/market";
 import { sumMcapForTrackedChains } from "../lib/mint-burn-mcap-weighting";
 import { loadReportCardCache } from "../lib/report-card-cache";
-import { buildFlightToQualityClassification } from "../lib/flight-to-quality-classification";
+import {
+  buildFlightToQualityClassification,
+  type FlightToQualityClassification,
+} from "../lib/flight-to-quality-classification";
 import { buildInClause } from "../lib/db";
 import { isRecord } from "@shared/lib/type-guards";
 import { safetyScoreV8PublicationIdentitiesMatch } from "@shared/lib/safety-score-v8-publication";
-import { SafetyScoreV8PublicationIdentitySchema } from "@shared/types/safety-score-publication";
+import {
+  SafetyScoreV8PublicationIdentitySchema,
+  type SafetyScoreV8PublicationIdentity,
+} from "@shared/types/safety-score-publication";
 import {
   aggregateFlowCacheKey,
   aggregateHourlyRowsByChain,
@@ -85,21 +84,29 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   const params = buildAggregateQueryParams(nowSec, hours);
 
   // Load grade-based classification (FTQ disabled when cache unavailable)
-  const reportCardCache = await loadReportCardCache(db, {
-    maxAgeMs: REPORT_CARD_MAX_AGE_MS,
-    requireCompleteness: true,
-  });
-  const classification = reportCardCache.kind === "ok"
-    ? buildFlightToQualityClassification(reportCardCache.payload)
-    : { kind: "unavailable" as const, reason: reportCardCache.reason };
+  let classification:
+    { kind: "ok"; classification: FlightToQualityClassification } | { kind: "unavailable"; reason: string };
+  try {
+    const reportCardCache = await loadReportCardCache(db, {
+      maxAgeMs: REPORT_CARD_MAX_AGE_MS,
+      requireCompleteness: true,
+    });
+    classification =
+      reportCardCache.kind === "ok"
+        ? buildFlightToQualityClassification(reportCardCache.payload)
+        : { kind: "unavailable", reason: reportCardCache.reason };
+  } catch (error) {
+    console.warn(
+      "[mint-burn-flows] Failed to load report-card FTQ classification:",
+      error instanceof Error ? error.message : error,
+    );
+    classification = { kind: "unavailable", reason: "cache-read-failed" };
+  }
   const gradeClassification = classification.kind === "ok" ? classification.classification : null;
-  const classificationWarning = classification.kind === "ok"
-    ? null
-    : `Report-card FTQ classification unavailable (${classification.reason})`;
+  const classificationWarning =
+    classification.kind === "ok" ? null : `Report-card FTQ classification unavailable (${classification.reason})`;
   const classificationSource = classification.kind === "ok" ? "report-card-cache" : "unavailable";
-  const safetyScoreIdentity = classification.kind === "ok"
-    ? classification.classification.safetyScoreIdentity
-    : null;
+  const safetyScoreIdentity = classification.kind === "ok" ? classification.classification.safetyScoreIdentity : null;
   if (classificationWarning) console.warn(`[mint-burn-flows] ${classificationWarning}`);
 
   // Load stablecoins cache for mcap lookup
@@ -122,8 +129,11 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   }
 
   const data = await fetchAggregateData(db, params);
-  const { coins, gaugeInputs, safeNet24h, riskyNet24h, trackedMcapUsd } =
-    buildCoinSummaries(data, mcapById, gradeClassification);
+  const { coins, gaugeInputs, safeNet24h, riskyNet24h, trackedMcapUsd } = buildCoinSummaries(
+    data,
+    mcapById,
+    gradeClassification,
+  );
 
   const gaugeScore = computeGaugeScore(gaugeInputs);
   const gaugeBand = gaugeScore !== null ? getGaugeBand(gaugeScore) : null;
@@ -133,12 +143,20 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
 
   const body = {
     gauge: {
-      score: gaugeScore, band: gaugeBand, intensitySemantics: "signed-v2",
-      flightToQuality: ftq.active, flightIntensity: ftq.intensity, classificationSource,
+      score: gaugeScore,
+      band: gaugeBand,
+      intensitySemantics: "signed-v2",
+      flightToQuality: ftq.active,
+      flightIntensity: ftq.intensity,
+      classificationSource,
       safetyScoreIdentity,
-      trackedCoins: coins.length, trackedMcapUsd,
+      trackedCoins: coins.length,
+      trackedMcapUsd,
     },
-    coins, hourly, updatedAt, windowHours: hours,
+    coins,
+    hourly,
+    updatedAt,
+    windowHours: hours,
     scope: buildAggregateScope(),
     sync: {
       ...data.sync,
@@ -150,15 +168,30 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, data.latestSuccessfulSyncAt ?? 0);
 }
 
-function cachedAggregateUsesSafety(payload: unknown): boolean {
+function cachedAggregateNeedsSafetyValidation(payload: unknown): boolean {
   if (!isRecord(payload) || !isRecord(payload.gauge)) return false;
-  return payload.gauge.classificationSource === "report-card-cache"
-    || payload.gauge.flightToQuality === true
-    || payload.gauge.safetyScoreIdentity != null;
+  // A fully degraded cache entry is already fail-closed. Legacy and partial
+  // entries must be revalidated before exposing any FTQ state.
+  return !(
+    payload.gauge.classificationSource === "unavailable" &&
+    payload.gauge.flightToQuality === false &&
+    payload.gauge.flightIntensity === 0 &&
+    payload.gauge.safetyScoreIdentity === null &&
+    isRecord(payload.sync) &&
+    typeof payload.sync.classificationWarning === "string" &&
+    payload.sync.classificationWarning.length > 0
+  );
+}
+
+function cachedAggregateSafetyIdentity(payload: Record<string, unknown>): SafetyScoreV8PublicationIdentity | null {
+  const gauge = payload.gauge;
+  if (!isRecord(gauge)) return null;
+  const parsed = SafetyScoreV8PublicationIdentitySchema.safeParse(gauge.safetyScoreIdentity);
+  return parsed.success ? parsed.data : null;
 }
 
 function cachedAggregateSafetyReason(
-  payload: Record<string, unknown>,
+  cachedIdentity: SafetyScoreV8PublicationIdentity,
   reportCardCache: Awaited<ReturnType<typeof loadReportCardCache>>,
 ): string | null {
   if (reportCardCache.kind !== "ok") return reportCardCache.reason;
@@ -166,14 +199,7 @@ function cachedAggregateSafetyReason(
   const classification = buildFlightToQualityClassification(reportCardCache.payload);
   if (classification.kind !== "ok") return classification.reason;
 
-  const gauge = payload.gauge;
-  if (!isRecord(gauge)) return "identity-missing";
-  const cachedIdentity = SafetyScoreV8PublicationIdentitySchema.safeParse(gauge.safetyScoreIdentity);
-  if (!cachedIdentity.success) return "identity-missing";
-  return safetyScoreV8PublicationIdentitiesMatch(
-    cachedIdentity.data,
-    classification.classification.safetyScoreIdentity,
-  )
+  return safetyScoreV8PublicationIdentitiesMatch(cachedIdentity, classification.classification.safetyScoreIdentity)
     ? null
     : "identity-mismatch";
 }
@@ -196,21 +222,24 @@ async function reconcileCachedAggregateSafetyResponse(
   } catch {
     return fallback;
   }
-  if (!cachedAggregateUsesSafety(payload) || !isRecord(payload)) return fallback;
+  if (!cachedAggregateNeedsSafetyValidation(payload) || !isRecord(payload)) return fallback;
 
-  let reason: string | null;
-  try {
-    const reportCardCache = await loadReportCardCache(db, {
-      maxAgeMs: REPORT_CARD_MAX_AGE_MS,
-      requireCompleteness: true,
-    });
-    reason = cachedAggregateSafetyReason(payload, reportCardCache);
-  } catch (error) {
-    console.warn(
-      "[mint-burn-flows] Failed to validate cached FTQ classification:",
-      error instanceof Error ? error.message : error,
-    );
-    reason = "cache-read-failed";
+  const cachedIdentity = cachedAggregateSafetyIdentity(payload);
+  let reason: string | null = cachedIdentity ? null : "identity-missing";
+  if (cachedIdentity) {
+    try {
+      const reportCardCache = await loadReportCardCache(db, {
+        maxAgeMs: REPORT_CARD_MAX_AGE_MS,
+        requireCompleteness: true,
+      });
+      reason = cachedAggregateSafetyReason(cachedIdentity, reportCardCache);
+    } catch (error) {
+      console.warn(
+        "[mint-burn-flows] Failed to validate cached FTQ classification:",
+        error instanceof Error ? error.message : error,
+      );
+      reason = "cache-read-failed";
+    }
   }
   if (reason == null) return fallback;
 
@@ -236,10 +265,12 @@ async function reconcileCachedAggregateSafetyResponse(
     },
     ...(isRecord(sync) ? { sync } : {}),
   };
+  const headers = new Headers(fallback.headers);
+  headers.append("Warning", `199 - "${warning}"`);
   return new Response(JSON.stringify(degraded), {
     status: fallback.status,
     statusText: fallback.statusText,
-    headers: new Headers(fallback.headers),
+    headers,
   });
 }
 
@@ -260,11 +291,7 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
 // Per-coin mode (with stablecoin param)
 // ---------------------------------------------------------------------------
 
-async function handlePerCoin(
-  db: D1Database,
-  stablecoinId: string,
-  hours: number,
-): Promise<Response> {
+async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number): Promise<Response> {
   const configs = getMintBurnConfigsForStablecoin(stablecoinId);
   if (configs.length === 0) {
     return errorResponse(404, `Stablecoin "${stablecoinId}" is not tracked for mint/burn flows`);
@@ -295,13 +322,12 @@ async function handlePerCoin(
     ]);
 
     const rows = hourlyResult.results ?? [];
-    const fallbackSyncAt =
-      latestCronSnapshot.startedAt
-      ?? (rows.length > 0 ? resolveFlowUpdatedAt(rows, 0) : null);
+    const fallbackSyncAt = latestCronSnapshot.startedAt ?? (rows.length > 0 ? resolveFlowUpdatedAt(rows, 0) : null);
     const latestSuccessfulSyncAt = latestSuccessfulSyncLookup.timestamp ?? fallbackSyncAt;
-    const freshnessLookupWarning = latestSuccessfulSyncLookup.status === "lookup_failed"
-      ? "Mint/burn freshness lookup failed; falling back to cached row timestamps."
-      : null;
+    const freshnessLookupWarning =
+      latestSuccessfulSyncLookup.status === "lookup_failed"
+        ? "Mint/burn freshness lookup failed; falling back to cached row timestamps."
+        : null;
     const sync = buildMintBurnSyncHealth(nowSec, latestSuccessfulSyncAt, latestCronSnapshot.status);
 
     // Per-chain breakdown

@@ -149,6 +149,7 @@ vi.mock("../../lib/telegram-digest-outbox", () => ({
 vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
 
 import { generateDailyDigest, classifyRegime } from "../daily-digest";
+import { buildUserPrompt } from "../daily-digest/prompt";
 import {
   parseDigestModelResponse,
   validateDigestModelOutput,
@@ -1843,6 +1844,30 @@ describe("digest intelligence enrichment", () => {
     expect(intelligence.changeSummary?.worsenedSignals[0]).toMatchObject({ label: "USDT depeg widened" });
     expect(intelligence.forwardLookOutcomes?.[0]).toMatchObject({ status: "hit", triggerId: "trigger:depeg:usdt" });
     expect(intelligence.calmNarrativeFrame?.label).toBe("Supply rotation");
+  });
+
+  it("keeps unavailable flight-to-quality classification explicit in prompt and risk tape", () => {
+    const data: DigestInputData = {
+      ...current,
+      mintBurnFlows: {
+        gaugeScore: 0,
+        gaugeBand: "NEUTRAL",
+        classificationSource: "unavailable",
+        classificationReason: "identity-missing",
+        safetyScoreIdentity: null,
+        flightToQuality: { active: false, safeNetUsd: 0, riskyNetUsd: 0 },
+        topPressure: [],
+      },
+    };
+
+    const prompt = buildUserPrompt(data);
+    const gauge = buildDigestIntelligence(data, null).riskTape?.find((item) => item.id === "risk-tape:gauge");
+
+    expect(prompt).toContain("Flight-to-Quality: unavailable (identity-missing)");
+    expect(prompt).not.toContain("Flight-to-Quality: inactive");
+    expect(gauge).toMatchObject({
+      detail: "Flight-to-quality classification unavailable (identity-missing).",
+    });
   });
 
   it("evaluates a supply-7d trigger against the coin's weekly change when no velocity signal is emitted", () => {

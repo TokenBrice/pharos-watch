@@ -50,6 +50,35 @@ function stablecoinPayload(count = 2): string {
   });
 }
 
+function v9ReportCardCachePayload(updatedAt = NOW - 180): string {
+  const scoreIds = [...ACTIVE_IDS].sort();
+  const publicationGenerationId = `safety-score-v9:9.0:${updatedAt}`;
+  return JSON.stringify({
+    scores: Object.fromEntries(scoreIds.map((id) => [id, { score: 92, grade: "A" }])),
+    safetyScoreIdentity: {
+      model: "v9",
+      schemaVersion: 1,
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      policyId: "v9-policy-2026-05",
+      policyDigest: "b".repeat(64),
+      evaluationBuildDigest: "c".repeat(64),
+      baseInputGenerationId: `report-cards-input:v1:${"d".repeat(64)}`,
+      publicationGenerationId,
+    },
+    publicationGenerationId,
+    completeness: {
+      generationId: publicationGenerationId,
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      expectedCount: scoreIds.length,
+      scoredCount: scoreIds.length,
+      notRatedCount: 0,
+      notRatedIds: [],
+    },
+    updatedAt,
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+  });
+}
+
 describe("loadPublicationHealth", () => {
   it("maps existing DEX and yield publication ledgers into shared surface health", async () => {
     const db = mockD1([
@@ -526,25 +555,27 @@ describe("loadPublicationHealth", () => {
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["report_card_cache"],
-        rows: [{
-          key: "report_card_cache",
-          value: JSON.stringify({
-            scores: Object.fromEntries(reportCardIds.map((id) => [id, { score: 92, grade: "A" }])),
-            safetyScoreIdentity: incompatibleIdentity,
-            publicationGenerationId: reportCardGenerationId,
-            completeness: {
-              generationId: reportCardGenerationId,
+        rows: [
+          {
+            key: "report_card_cache",
+            value: JSON.stringify({
+              scores: Object.fromEntries(reportCardIds.map((id) => [id, { score: 92, grade: "A" }])),
+              safetyScoreIdentity: incompatibleIdentity,
+              publicationGenerationId: reportCardGenerationId,
+              completeness: {
+                generationId: reportCardGenerationId,
+                methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+                expectedCount: reportCardIds.length,
+                scoredCount: reportCardIds.length,
+                notRatedCount: 0,
+                notRatedIds: [],
+              },
+              updatedAt: reportCardsAt,
               methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-              expectedCount: reportCardIds.length,
-              scoredCount: reportCardIds.length,
-              notRatedCount: 0,
-              notRatedIds: [],
-            },
-            updatedAt: reportCardsAt,
-            methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-          }),
-          updated_at: reportCardsAt,
-        }],
+            }),
+            updated_at: reportCardsAt,
+          },
+        ],
       },
     ]);
 
@@ -554,6 +585,35 @@ describe("loadPublicationHealth", () => {
       sourceOfTruth: "cache[report_card_cache]",
       lastPublishedGeneration: null,
       lastFailureReason: "identity-mismatch",
+    });
+  });
+
+  it("reports a complete V9 compact publication as degraded on the V8 release", async () => {
+    const reportCardsAt = NOW - 180;
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["report_card_cache"],
+        rows: [
+          {
+            key: "report_card_cache",
+            value: v9ReportCardCachePayload(reportCardsAt),
+            updated_at: reportCardsAt,
+          },
+        ],
+      },
+    ]);
+
+    const health = await loadPublicationHealth(db, NOW);
+
+    expect(health.surfaces["report-card-cache"]).toMatchObject({
+      sourceOfTruth: "cache[report_card_cache]",
+      lastPublishedGeneration: null,
+      lastFailureReason: "invalid-payload",
+      lastAttemptedGeneration: {
+        state: "failed",
+        failureReason: "invalid-payload",
+      },
     });
   });
 
@@ -582,9 +642,7 @@ describe("loadPublicationHealth", () => {
       {
         match: "pharos:stress-signals:published-exact",
         matchBinds: [dewsAt],
-        rows: [
-          { stablecoin_id: "usdc-circle", score: 10, band: "CALM", signals_json: "{}", computed_at: dewsAt },
-        ],
+        rows: [{ stablecoin_id: "usdc-circle", score: 10, band: "CALM", signals_json: "{}", computed_at: dewsAt }],
       },
     ]);
 

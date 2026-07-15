@@ -27,9 +27,7 @@ export function buildUserPrompt(
   recentMeta: { meta: DigestMeta | null; rawText: string | null; title: string | null }[] = [],
 ): string {
   const regime = classifyRegime(data);
-  const lines: string[] = [
-    `Market regime: ${regime}`,
-  ];
+  const lines: string[] = [`Market regime: ${regime}`];
 
   pushDataQualityLines(lines, data);
   pushEditorialCandidateLines(lines, data);
@@ -46,7 +44,7 @@ export function buildUserPrompt(
   );
 
   if (data.totalMcapAth && data.totalMcapAth.value > 0) {
-    const pctFromAth = ((data.totalMcapAth.value - data.totalMcapUsd) / data.totalMcapAth.value * 100).toFixed(2);
+    const pctFromAth = (((data.totalMcapAth.value - data.totalMcapUsd) / data.totalMcapAth.value) * 100).toFixed(2);
     const relation = data.totalMcapUsd < data.totalMcapAth.value ? "below" : "above";
     lines.push(
       `Context: total mcap is ${pctFromAth}% ${relation} its Digest-window ATH (${formatCurrency(data.totalMcapAth.value)} set ${data.totalMcapAth.daysAgo} days ago).`,
@@ -59,10 +57,10 @@ export function buildUserPrompt(
       const age = depeg.ageHours != null ? ` | age ${depeg.ageHours}h` : "";
       const suppression = depeg.suppressReason ? ` | suppress: ${depeg.suppressReason}` : "";
       const currentPrice = formatDigestUsdPrice(depeg.currentPriceUsd);
-      const peak = depeg.peakBps != null && depeg.peakBps !== depeg.bps
-        ? ` | peak ${Math.abs(depeg.peakBps)} bps`
-        : "";
-      lines.push(`  ${depeg.symbol} | ${Math.abs(depeg.bps)} bps ${depeg.direction ?? (depeg.bps >= 0 ? "above" : "below")}-peg${currentPrice ? ` | current ${currentPrice}` : ""}${peak} | ${formatCurrency(depeg.mcapUsd)} mcap | impact ${depeg.impactScore ?? "n/a"}${age}${suppression}`);
+      const peak = depeg.peakBps != null && depeg.peakBps !== depeg.bps ? ` | peak ${Math.abs(depeg.peakBps)} bps` : "";
+      lines.push(
+        `  ${depeg.symbol} | ${Math.abs(depeg.bps)} bps ${depeg.direction ?? (depeg.bps >= 0 ? "above" : "below")}-peg${currentPrice ? ` | current ${currentPrice}` : ""}${peak} | ${formatCurrency(depeg.mcapUsd)} mcap | impact ${depeg.impactScore ?? "n/a"}${age}${suppression}`,
+      );
     }
   }
 
@@ -72,7 +70,9 @@ export function buildUserPrompt(
     lines.push(
       `Pharos Stability Index: ${score} [${band}] (severity=${components.severity}, breadth=${components.breadth}, trend=${trendStr})`,
     );
-    lines.push("  (severity: weighted depeg impact 0-68; breadth: coin-count pressure 0-17; trend: 7d mcap momentum -5 to +5)");
+    lines.push(
+      "  (severity: weighted depeg impact 0-68; breadth: coin-count pressure 0-17; trend: 7d mcap momentum -5 to +5)",
+    );
     if (data.yesterdayIndex) {
       lines.push(`Yesterday: ${data.yesterdayIndex.score} [${data.yesterdayIndex.band}]`);
     }
@@ -81,9 +81,13 @@ export function buildUserPrompt(
       const trackingWindow = digestTrackingDays > 0 ? ` (Digest history: ${digestTrackingDays} days)` : "";
       if (psiPrecedent && psiPrecedent.lastSeenDaysAgo >= 2) {
         const precedentDate = new Date(psiPrecedent.lastSeenDate * 1000).toISOString().slice(0, 10);
-        lines.push(`Context: last below ${score} on ${precedentDate}, ${psiPrecedent.lastSeenDaysAgo} days ago${trackingWindow}. Current ${band} streak: ${psiBandStreak} days.`);
+        lines.push(
+          `Context: last below ${score} on ${precedentDate}, ${psiPrecedent.lastSeenDaysAgo} days ago${trackingWindow}. Current ${band} streak: ${psiBandStreak} days.`,
+        );
       } else if (!psiPrecedent) {
-        lines.push(`Context: lowest since Digest tracking began${trackingWindow}. Current ${band} streak: ${psiBandStreak} days.`);
+        lines.push(
+          `Context: lowest since Digest tracking began${trackingWindow}. Current ${band} streak: ${psiBandStreak} days.`,
+        );
       } else {
         lines.push(`Context: current ${band} streak: ${psiBandStreak} days.`);
       }
@@ -93,7 +97,9 @@ export function buildUserPrompt(
   if (data.psiContributors && data.psiContributors.length > 0) {
     lines.push("  PSI severity contributors (top coins driving the score):");
     for (const contributor of data.psiContributors) {
-      lines.push(`    ${contributor.symbol}: ${contributor.bps} bps, mcap ${formatCurrency(contributor.mcapUsd)}, impact ${contributor.marketImpact}`);
+      lines.push(
+        `    ${contributor.symbol}: ${contributor.bps} bps, mcap ${formatCurrency(contributor.mcapUsd)}, impact ${contributor.marketImpact}`,
+      );
     }
   }
 
@@ -101,25 +107,33 @@ export function buildUserPrompt(
     const { psiTrajectory, mcapTrajectory, gaugeTrajectory } = data.crossDayTrends;
     if (psiTrajectory.length >= 3) {
       const psiMissing = psiTrajectory.length < 7 ? ` (${7 - psiTrajectory.length} days missing)` : "";
-      lines.push(`PSI 7-day trajectory: ${psiTrajectory.map((point) => `${point.date}: ${point.score} [${point.band}]`).join(" -> ")}${psiMissing}`);
+      lines.push(
+        `PSI 7-day trajectory: ${psiTrajectory.map((point) => `${point.date}: ${point.score} [${point.band}]`).join(" -> ")}${psiMissing}`,
+      );
     }
     if (mcapTrajectory.length >= 3) {
       const mcapMissing = mcapTrajectory.length < 7 ? ` (${7 - mcapTrajectory.length} days missing)` : "";
-      lines.push(`Market cap 7-day trajectory: ${mcapTrajectory.map((point) => `${point.date}: ${formatCurrency(point.mcapUsd)}`).join(" -> ")}${mcapMissing}`);
+      lines.push(
+        `Market cap 7-day trajectory: ${mcapTrajectory.map((point) => `${point.date}: ${formatCurrency(point.mcapUsd)}`).join(" -> ")}${mcapMissing}`,
+      );
     }
     if (gaugeTrajectory && gaugeTrajectory.length >= 3) {
       const gaugeMissing = gaugeTrajectory.length < 7 ? ` (${7 - gaugeTrajectory.length} days missing)` : "";
-      lines.push(`Bank Run Gauge 7-day trajectory: ${gaugeTrajectory.map((point) => `${point.date}: ${round1(point.gaugeScore)}`).join(" -> ")}${gaugeMissing}`);
+      lines.push(
+        `Bank Run Gauge 7-day trajectory: ${gaugeTrajectory.map((point) => `${point.date}: ${round1(point.gaugeScore)}`).join(" -> ")}${gaugeMissing}`,
+      );
     }
   }
 
   if (data.biggestSupplyChange) {
     const { symbol, changeUsd, currentMcap } = data.biggestSupplyChange;
     const direction = changeUsd >= 0 ? "increase" : "decrease";
-    lines.push(`Biggest 7d supply ${direction}: ${symbol} ${changeUsd >= 0 ? "+" : ""}${formatCurrency(changeUsd)} (now ${formatCurrency(currentMcap)})`);
+    lines.push(
+      `Biggest 7d supply ${direction}: ${symbol} ${changeUsd >= 0 ? "+" : ""}${formatCurrency(changeUsd)} (now ${formatCurrency(currentMcap)})`,
+    );
     if (data.historicalContext?.supplyMoverContext) {
       const context = data.historicalContext.supplyMoverContext;
-      const athPct = ((context.allTimeHighMcap - currentMcap) / context.allTimeHighMcap * 100).toFixed(0);
+      const athPct = (((context.allTimeHighMcap - currentMcap) / context.allTimeHighMcap) * 100).toFixed(0);
       const relation = currentMcap < context.allTimeHighMcap ? "below" : "above";
       const athDate = new Date(context.allTimeHighDate * 1000).toISOString().slice(0, 10);
       lines.push(
@@ -130,7 +144,10 @@ export function buildUserPrompt(
 
   if (data.blacklistActivity) {
     const { eventCount, totalAmountUsd, topEvents } = data.blacklistActivity;
-    lines.push("", `Blacklist activity (rolling last 24h): ${eventCount} events, ${formatCurrency(totalAmountUsd)} affected`);
+    lines.push(
+      "",
+      `Blacklist activity (rolling last 24h): ${eventCount} events, ${formatCurrency(totalAmountUsd)} affected`,
+    );
     for (const event of topEvents) {
       lines.push(`  ${event.symbol} on ${event.chain}: ${event.type} (${formatCurrency(event.amountUsd)})`);
     }
@@ -146,18 +163,25 @@ export function buildUserPrompt(
   }
 
   if (data.mintBurnFlows) {
-    const { gaugeScore, gaugeBand, flightToQuality, topPressure } = data.mintBurnFlows;
+    const { gaugeScore, gaugeBand, classificationReason, classificationSource, flightToQuality, topPressure } =
+      data.mintBurnFlows;
     lines.push("", "Mint/Burn Flows (24h on-chain):");
     lines.push(`  Bank Run Gauge: ${round1(gaugeScore)} [${gaugeBand}]`);
-    if (flightToQuality.active) {
-      lines.push(`  Flight-to-Quality: ACTIVE, ${formatCurrency(flightToQuality.safeNetUsd)} into safe havens, ${formatCurrency(flightToQuality.riskyNetUsd)} out of risky coins`);
+    if (classificationSource === "unavailable") {
+      lines.push(`  Flight-to-Quality: unavailable${classificationReason ? ` (${classificationReason})` : ""}`);
+    } else if (flightToQuality.active) {
+      lines.push(
+        `  Flight-to-Quality: ACTIVE, ${formatCurrency(flightToQuality.safeNetUsd)} into safe havens, ${formatCurrency(flightToQuality.riskyNetUsd)} out of risky coins`,
+      );
     } else {
       lines.push("  Flight-to-Quality: inactive");
     }
     if (topPressure.length > 0) {
       lines.push("  Top pressure shifts vs 30d baseline:");
       for (const pressure of topPressure) {
-        lines.push(`    ${pressure.symbol}: ${Math.round(pressure.intensity)} (net ${formatCurrency(pressure.net24hUsd)} yesterday)`);
+        lines.push(
+          `    ${pressure.symbol}: ${Math.round(pressure.intensity)} (net ${formatCurrency(pressure.net24hUsd)} yesterday)`,
+        );
       }
     }
     if (data.mintBurnFlows.topChains && data.mintBurnFlows.topChains.length > 0) {
@@ -177,7 +201,9 @@ export function buildUserPrompt(
     if (bandChanges.length > 0) {
       lines.push("  Band changes (last 24h):");
       for (const change of bandChanges) {
-        lines.push(`    ${change.symbol}: ${change.from} -> ${change.to} (score ${change.score}, driven by ${change.topDriver})`);
+        lines.push(
+          `    ${change.symbol}: ${change.from} -> ${change.to} (score ${change.score}, driven by ${change.topDriver})`,
+        );
       }
     }
     if (elevatedCoins.length > 0) {
@@ -186,7 +212,9 @@ export function buildUserPrompt(
         const driverStr = coin.topSignals?.length
           ? `driven by ${coin.topSignals.map((signal) => `${signal.name}=${signal.value}`).join(", ")}`
           : "";
-        lines.push(`    ${coin.symbol} | ${coin.band} score ${coin.score} | ${formatCurrency(coin.mcapUsd)} mcap | ${driverStr}`);
+        lines.push(
+          `    ${coin.symbol} | ${coin.band} score ${coin.score} | ${formatCurrency(coin.mcapUsd)} mcap | ${driverStr}`,
+        );
       }
     }
   }
@@ -217,7 +245,9 @@ export function buildUserPrompt(
   if (data.yieldAnomalies && data.yieldAnomalies.length > 0) {
     lines.push("", "Yield Anomalies:");
     for (const anomaly of data.yieldAnomalies) {
-      lines.push(`  ${anomaly.symbol} | ${anomaly.currentApy}% APY (7d avg ${anomaly.apy7d}%, 30d avg ${anomaly.apy30d}%) | ${formatCurrency(anomaly.mcapUsd)} mcap | ${anomaly.warnings.join(", ")}`);
+      lines.push(
+        `  ${anomaly.symbol} | ${anomaly.currentApy}% APY (7d avg ${anomaly.apy7d}%, 30d avg ${anomaly.apy30d}%) | ${formatCurrency(anomaly.mcapUsd)} mcap | ${anomaly.warnings.join(", ")}`,
+      );
     }
   }
 
@@ -225,14 +255,18 @@ export function buildUserPrompt(
     lines.push("", "DEX Liquidity Shifts (day-over-day):");
     for (const shift of data.liquidityShifts) {
       const dir = shift.scoreDelta > 0 ? "+" : "";
-      lines.push(`  ${shift.symbol} | score ${shift.previousScore} -> ${shift.currentScore} (${dir}${shift.scoreDelta}) | ${formatCurrency(shift.mcapUsd)} mcap | TVL ${formatCurrency(shift.previousTvl)} -> ${formatCurrency(shift.currentTvl)}`);
+      lines.push(
+        `  ${shift.symbol} | score ${shift.previousScore} -> ${shift.currentScore} (${dir}${shift.scoreDelta}) | ${formatCurrency(shift.mcapUsd)} mcap | TVL ${formatCurrency(shift.previousTvl)} -> ${formatCurrency(shift.currentTvl)}`,
+      );
     }
   }
 
   if (data.resolvedDepegs && data.resolvedDepegs.length > 0) {
     lines.push("", "Recently resolved depegs:");
     for (const resolved of data.resolvedDepegs) {
-      lines.push(`  ${resolved.symbol} | ${resolved.peakBps} bps peak, ${resolved.durationHours}h duration | ${formatCurrency(resolved.mcapUsd)} mcap | recovered`);
+      lines.push(
+        `  ${resolved.symbol} | ${resolved.peakBps} bps peak, ${resolved.durationHours}h duration | ${formatCurrency(resolved.mcapUsd)} mcap | recovered`,
+      );
     }
   }
 
@@ -242,7 +276,9 @@ export function buildUserPrompt(
     const entry = recentMeta[i];
     if (entry.meta) {
       const meta = entry.meta;
-      metaLines.push(`  Day -${i + 1}: "${entry.title}" — lead: ${meta.lead ?? "unknown"}, tone: ${meta.tone ?? "unknown"}, coins: ${(meta.coins ?? []).join(", ") || "none"}`);
+      metaLines.push(
+        `  Day -${i + 1}: "${entry.title}" — lead: ${meta.lead ?? "unknown"}, tone: ${meta.tone ?? "unknown"}, coins: ${(meta.coins ?? []).join(", ") || "none"}`,
+      );
     } else if (entry.rawText) {
       rawFallbacks.push(`- "${entry.rawText}"`);
     }

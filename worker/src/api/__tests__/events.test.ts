@@ -1,7 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { handleEvents } from "../events";
-import { TapeEventsResponseSchema } from "@shared/types/tape-event";
+import {
+  SafetyScoreTapeProvenanceSchema,
+  ScoreTapeEventPayloadSchema,
+  TapeEventsResponseSchema,
+} from "@shared/types/tape-event";
 
 const SEC = 1_700_000_000;
 
@@ -31,6 +35,113 @@ function makeRow(overrides: Record<string, unknown> = {}) {
 }
 
 describe("handleEvents", () => {
+  it("serializes a V9 score event with its complete policy identity", async () => {
+    const payload = {
+      prevGrade: "B",
+      newGrade: "A",
+      prevScore: 75,
+      newScore: 90,
+      safetyScore: {
+        identityStatus: "complete",
+        identity: {
+          model: "v9",
+          schemaVersion: 1,
+          methodologyVersion: "9.0",
+          policyId: "safety-score-v9-policy",
+          policyDigest: "c".repeat(64),
+          evaluationBuildDigest: "a".repeat(64),
+          baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+          publicationGenerationId: "safety-score-v9:1700000000",
+        },
+      },
+    };
+    const db = mockD1([
+      {
+        match: "FROM tape_events",
+        rows: [
+          makeRow({
+            type: "score.upgraded",
+            payload_json: JSON.stringify(payload),
+            source_table: "safety_score_history_v2",
+          }),
+        ],
+      },
+      { match: "cron_runs", rows: [], first: { started_at: SEC } },
+    ]);
+
+    const res = await handleEvents(db, new URL("https://x/api/events"));
+
+    expect(res.status).toBe(200);
+    const body = TapeEventsResponseSchema.parse(await res.json());
+    expect(ScoreTapeEventPayloadSchema.parse(body.events[0]!.payload).safetyScore).toEqual(payload.safetyScore);
+  });
+
+  it("normalizes provenance-free legacy safety score events", async () => {
+    const db = mockD1([
+      {
+        match: "FROM tape_events",
+        rows: [
+          makeRow({
+            type: "score.downgraded",
+            payload_json: JSON.stringify({
+              prevGrade: "A",
+              newGrade: "B",
+              prevScore: 90,
+              newScore: 75,
+            }),
+            source_table: "safety_grade_history",
+          }),
+        ],
+      },
+      { match: "cron_runs", rows: [], first: { started_at: SEC } },
+    ]);
+
+    const res = await handleEvents(db, new URL("https://x/api/events"));
+
+    expect(res.status).toBe(200);
+    const body = TapeEventsResponseSchema.parse(await res.json());
+    expect(ScoreTapeEventPayloadSchema.parse(body.events[0]!.payload).safetyScore).toEqual({
+      identityStatus: "legacy-v8-unidentified",
+      identity: null,
+    });
+  });
+
+  it("fails closed for malformed V2 score provenance", async () => {
+    const db = mockD1([
+      {
+        match: "FROM tape_events",
+        rows: [
+          makeRow({
+            type: "score.upgraded",
+            payload_json: JSON.stringify({
+              prevGrade: "B",
+              newGrade: "A",
+              prevScore: 75,
+              newScore: 90,
+              safetyScore: {
+                identityStatus: "legacy-v8-unidentified",
+                identity: null,
+              },
+            }),
+            source_table: "safety_score_history_v2",
+          }),
+        ],
+      },
+      { match: "cron_runs", rows: [], first: { started_at: SEC } },
+    ]);
+
+    const res = await handleEvents(db, new URL("https://x/api/events"));
+
+    expect(
+      SafetyScoreTapeProvenanceSchema.safeParse({
+        identityStatus: "complete",
+        identity: null,
+      }).success,
+    ).toBe(false);
+    expect(res.status).toBe(500);
+    await expect(res.json()).resolves.toEqual({ error: "Internal Server Error" });
+  });
+
   it("returns 200 with mapped events and freshness meta", async () => {
     const db = mockD1([
       { match: "FROM tape_events", rows: [makeRow()] },
