@@ -17,6 +17,7 @@ export type { V9MechanismFactV1, V9MechanismQualityLevel } from "../../types/saf
 import type { V9MechanismFactV1 } from "../../types/safety-score-v9-backing";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
+import { decimalSnap } from "./formula";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
 
 type ReserveAssetClass = NonNullable<V9ReserveExposureFactV2["assetClass"]>;
@@ -500,7 +501,9 @@ export function evaluateV9ReserveExposures(
     });
 
     const material = isV9MaterialShare(materialityWeight, threshold);
-    if (material && exposure.assetClass === "private-credit") {
+    // Named-obligor private-credit rows aggregate below (same-obligor group);
+    // only obligor-less rows keep the per-row speculative-credit treatment.
+    if (material && exposure.assetClass === "private-credit" && exposure.issuerOrObligorKey === null) {
       structuralReasons.push(
         createV9BackingStructuralReason(policy, backing.structural.speculativeCreditSignal, {
           pathKey,
@@ -520,6 +523,36 @@ export function evaluateV9ReserveExposures(
         }),
       );
     }
+  }
+
+  // Speculative-credit materiality aggregates private-credit rows that share
+  // one obligor: three 4% rows to one borrower are as material as a single
+  // 12% row, so a named split cannot dodge the structural cap (VER2-002). One
+  // reason is emitted per crossing obligor group with the union of evidence
+  // and failure domains.
+  const obligorGroups = new Map<
+    string,
+    { share: number; evidence: string[]; failureDomains: V9FailureDomainRef[] }
+  >();
+  for (const exposure of exposures) {
+    if (exposure.assetClass !== "private-credit" || exposure.issuerOrObligorKey === null) continue;
+    const key = exposure.issuerOrObligorKey;
+    const group = obligorGroups.get(key) ?? { share: 0, evidence: [], failureDomains: [] };
+    group.share += exposure.weight;
+    group.evidence.push(...exposure.status.evidenceRefIds);
+    group.failureDomains.push(...exposure.failureDomains);
+    obligorGroups.set(key, group);
+  }
+  for (const [key, group] of [...obligorGroups].sort((left, right) => compareText(left[0], right[0]))) {
+    if (!isV9MaterialShare(group.share, threshold)) continue;
+    structuralReasons.push(
+      createV9BackingStructuralReason(policy, backing.structural.speculativeCreditSignal, {
+        pathKey: `same-obligor:${key}`,
+        materialShare: group.share,
+        evidenceRefIds: uniqueSorted(group.evidence),
+        failureDomains: canonicalDomains(group.failureDomains),
+      }),
+    );
   }
 
   const residualWeight = Math.max(0, 1 - totalWeight);
@@ -598,7 +631,10 @@ export function evaluateV9ReserveExposures(
   const reserveScore =
     exposureScore * (1 - backing.reserve.concentrationWeight) + concentration * backing.reserve.concentrationWeight;
   return {
-    score: clampScore(reserveScore),
+    // Snap binary-float summation noise (per the formula convention) so an
+    // exposure split across rows yields the same reserve score as one row
+    // (VER2-002); the 15-digit window never crosses a genuine boundary.
+    score: clampScore(decimalSnap(reserveScore)),
     contributions,
     structuralReasons,
     unresolved,

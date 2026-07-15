@@ -88,7 +88,7 @@ function scoreBacking(result: ReturnType<typeof evaluateV9ReserveExposures>) {
   );
 }
 
-describe.skip("VERITAS-II finding named rows evade same-issuer speculative-credit materiality", () => {
+describe("VERITAS-II finding named rows evade same-issuer speculative-credit materiality", () => {
   it("keeps a 12% private-credit issuer material after it is split into three 4% rows", () => {
     const direct = evaluateV9ReserveExposures(
       reserveAsset([

@@ -78,7 +78,7 @@ function clampScore(value: number): number {
  * window is 15 digits (~22 ULPs), NOT wider: a coarser snap can lift a
  * genuine sub-boundary value across a rounding or floor boundary (VER2-009).
  */
-function decimalSnap(value: number): number {
+export function decimalSnap(value: number): number {
   return Number(value.toPrecision(15));
 }
 
