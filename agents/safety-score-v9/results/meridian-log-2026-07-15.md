@@ -218,3 +218,20 @@ writing that key (any value) is now step 0 of activation; rollback deletes
 it. The C21 FTQ grade-set predicate and C20 DDR source swap in c5401b8fe are
 implementations of the owner-adopted packet decisions and ship live with the
 next release (expected FTQ classification shifts).
+
+## Meridian III — VERITAS II Consumer Fixes (2026-07-15)
+
+- **VER2-005:** Confirmed that degraded yield hydration cleared row-level
+  safety/PYS fields but retained selected and alternate nested opportunity and
+  tranche safety values. `961527e4df51d91b3937cc6ddbbdbe335022d8fe` clears those
+  safety derivatives and cached PYS attribution while preserving independent
+  source-risk evidence and row-derived freshness. The unskipped repro and the
+  focused yield/history suites pass.
+- **VER2-008:** Confirmed that a legacy-only grade row has no complete
+  publication identity but could become an organic V2 predecessor.
+  `9acf69a79de6e1fbc30c9d271d62260093e9fd66` writes a V2
+  methodology-boundary baseline from the current identified V8 snapshot;
+  legacy compatibility output remains unchanged and boundary rows remain
+  excluded. The unskipped repro and history/yield compatibility suites pass.
+- Worker TypeScript has no Meridian III error; the remaining errors are in
+  concurrent `dex-liquidity` producer files.
