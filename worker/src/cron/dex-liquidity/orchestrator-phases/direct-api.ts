@@ -154,46 +154,50 @@ function compactDirectApiProviderEntry(
   if (entry.poolCompaction) return entry;
 
   const rawPools = entry.result.pools;
-  let authoritativeExactPoolKeys: Set<string> | undefined;
-  if (entry.result.ok && !entry.result.degraded && (entry.result.warnings?.length ?? 0) === 0) {
-    authoritativeExactPoolKeys = new Set<string>();
-    for (const pool of rawPools) {
-      const exactPoolKey = buildDirectApiPoolIdentity(pool).exactPoolKey;
+  const authoritativeExactPoolKeys =
+    entry.result.ok && !entry.result.degraded && (entry.result.warnings?.length ?? 0) === 0
+      ? new Set<string>()
+      : undefined;
+  const measuredExecutionPools: DexApiPool[] = [];
+  const retainedPools: DexApiPool[] = [];
+  let normalizedPoolCount = 0;
+  let skippedInvalidUnitCount = 0;
+
+  for (const rawPool of rawPools) {
+    if (authoritativeExactPoolKeys) {
+      const exactPoolKey = buildDirectApiPoolIdentity(rawPool).exactPoolKey;
       if (exactPoolKey) authoritativeExactPoolKeys.add(exactPoolKey);
     }
-  }
-  const measuredExecutionPools: DexApiPool[] = [];
-  for (const pool of rawPools) {
     if (
-      (pool.source === "fluid" || pool.source === "pancakeswap") &&
-      hasTrackedDirectApiToken(pool, lookups)
+      (rawPool.source === "fluid" || rawPool.source === "pancakeswap") &&
+      hasTrackedDirectApiToken(rawPool, lookups)
     ) {
-      measuredExecutionPools.push(pool);
+      measuredExecutionPools.push(rawPool);
     }
-  }
 
-  const rawPoolCount = rawPools.length;
-  const normalized = normalizeDexApiPoolsForMerge(rawPools);
-  const normalizedPoolCount = normalized.pools.length;
-  let retainedPoolCount = 0;
-  for (const pool of normalized.pools) {
+    // Normalize one pool at a time so the full raw provider graph never
+    // coexists with a second full normalized graph.
+    const normalized = normalizeDexApiPoolsForMerge([rawPool]);
+    skippedInvalidUnitCount += normalized.skippedInvalidUnitCount;
+    const pool = normalized.pools[0];
+    if (!pool) continue;
+    normalizedPoolCount++;
     if (hasTrackedDirectApiToken(pool, lookups)) {
-      normalized.pools[retainedPoolCount++] = pool;
+      retainedPools.push(pool);
     }
   }
-  normalized.pools.length = retainedPoolCount;
 
   // The fetch result owns this array. Replacing it here drops the raw provider
   // graph before the serialized phase advances to the next provider.
-  entry.result.pools = normalized.pools;
+  entry.result.pools = retainedPools;
   return {
     ...entry,
     ...(authoritativeExactPoolKeys ? { authoritativeExactPoolKeys } : {}),
     poolCompaction: {
-      rawPoolCount,
-      retainedPoolCount,
-      skippedInvalidUnitCount: normalized.skippedInvalidUnitCount,
-      skippedUntrackedCount: normalizedPoolCount - retainedPoolCount,
+      rawPoolCount: rawPools.length,
+      retainedPoolCount: retainedPools.length,
+      skippedInvalidUnitCount,
+      skippedUntrackedCount: normalizedPoolCount - retainedPools.length,
       measuredExecutionPools,
     },
   };
