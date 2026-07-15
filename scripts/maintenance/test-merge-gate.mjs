@@ -423,12 +423,15 @@ export async function runExecutionBatches(
   const parallelMode = resolveMergeGateParallelMode(env, availableCores ?? os.availableParallelism());
   const batches = parallelMode ? buildExecutionBatches(plan) : plan.map((item) => [createExecutionUnit([item])]);
 
-  await runCommandBatches(batches, {
-    exit,
+  const result = await runCommandBatches(batches, {
     getCommandEnv: (item) => getCommandEnv(item.cmd, changedFiles, env),
     label: "merge-gate",
     runCommandImpl,
   });
+  if (result.status !== 0) {
+    exit(result.status);
+  }
+  return result;
 }
 
 export function printMergeGateTimingSummary(
@@ -553,7 +556,7 @@ export async function runMergeGate({
   };
   const gateStartedAt = Date.now();
 
-  await runExecutionBatches(plan, changedFiles, env, {
+  const executionResult = await runExecutionBatches(plan, changedFiles, env, {
     runCommandImpl: timedRunCommandImpl,
     // Print the timing summary on failure exits too, so slow-and-broken runs
     // still leave a per-command cost trail.
@@ -562,6 +565,10 @@ export async function runMergeGate({
       process.exit(status);
     },
   });
+
+  if (executionResult.status !== 0) {
+    return;
+  }
 
   printMergeGateTimingSummary(commandTimings, Date.now() - gateStartedAt, env);
   if (!stagedMode && writeReceiptImpl) {

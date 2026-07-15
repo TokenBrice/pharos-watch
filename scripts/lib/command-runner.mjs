@@ -4,9 +4,9 @@ import { spawn } from "node:child_process";
 /** @typedef {{ status: number, aborted: boolean }} CommandResult */
 /** @typedef {(cmd: string, extraEnv?: Record<string, string>, options?: { signal?: AbortSignal }) => number | CommandResult | Promise<number | CommandResult>} CommandImplementation */
 
-/** @template T @param {T[]} commands @returns {{ commands: T[] }} */
-export function createExecutionUnit(commands) {
-  return { commands };
+/** @template T @param {T[]} commands @param {Record<string, unknown>} [metadata] */
+export function createExecutionUnit(commands, metadata = {}) {
+  return { ...metadata, commands };
 }
 
 export function getCommandText(command) {
@@ -137,7 +137,6 @@ export function reportFailedCommand(result, label) {
 /**
  * @param {Array<Array<{ commands: RunnerCommand[] }>>} batches
  * @param {{
- *   exit?: (status: number) => unknown,
  *   getCommandEnv?: (command: RunnerCommand) => Record<string, string>,
  *   getCommandText?: (command: RunnerCommand) => string,
  *   label?: string,
@@ -147,7 +146,6 @@ export function reportFailedCommand(result, label) {
 export async function runCommandBatches(
   batches,
   {
-    exit = process.exit,
     getCommandEnv = () => ({}),
     getCommandText: getBatchCommandText = getCommandText,
     label,
@@ -164,7 +162,6 @@ export async function runCommandBatches(
       });
       if (result.status !== 0) {
         reportFailedCommand(result, label);
-        exit(result.status);
         return result;
       }
       continue;
@@ -195,7 +192,6 @@ export async function runCommandBatches(
           controllers[index].abort();
         }
         await Promise.allSettled(pending.values());
-        exit(settled.result.status);
         return settled.result;
       }
     }
@@ -204,11 +200,21 @@ export async function runCommandBatches(
   return { status: 0, failedCmd: null, aborted: false };
 }
 
+/**
+ * @param {Array<{ commands: RunnerCommand[], [key: string]: unknown }>} units
+ * @param {{
+ *   continueOnError?: boolean,
+ *   getCommandEnv?: (command: RunnerCommand) => Record<string, string>,
+ *   getCommandText?: (command: RunnerCommand) => string,
+ *   label?: string,
+ *   maxParallel?: number,
+ *   runCommandImpl?: CommandImplementation,
+ * }} [options]
+ */
 export async function runParallelExecutionUnits(
   units,
   {
     continueOnError = false,
-    exit = process.exit,
     getCommandEnv = () => ({}),
     getCommandText: getUnitCommandText = getCommandText,
     label,
@@ -216,18 +222,25 @@ export async function runParallelExecutionUnits(
     runCommandImpl = runShellCommand,
   } = {},
 ) {
+  if (units.length === 0) {
+    return { status: 0, failedCmd: null, aborted: false, failures: [], results: [] };
+  }
+
   const concurrency = Math.max(1, Math.min(maxParallel, units.length));
   const controllers = new Set();
   const failures = [];
+  const results = new Array(units.length);
   let nextIndex = 0;
   let aborting = false;
 
   async function runNext() {
     while (nextIndex < units.length && (continueOnError || !aborting)) {
-      const unit = units[nextIndex];
+      const index = nextIndex;
+      const unit = units[index];
       nextIndex += 1;
       const controller = new AbortController();
       controllers.add(controller);
+      const startedAt = Date.now();
       const result = await runExecutionUnit(unit, {
         getCommandEnv,
         getCommandText: getUnitCommandText,
@@ -236,9 +249,18 @@ export async function runParallelExecutionUnits(
         signal: controller.signal,
       });
       controllers.delete(controller);
+      const unitResult = {
+        ...result,
+        durationMs: Date.now() - startedAt,
+        index,
+        unit,
+      };
+      results[index] = unitResult;
 
       if (result.status !== 0) {
-        failures.push(result);
+        if (!result.aborted) {
+          failures.push(unitResult);
+        }
         reportFailedCommand(result, label);
         if (!continueOnError) {
           aborting = true;
@@ -256,9 +278,21 @@ export async function runParallelExecutionUnits(
 
   if (failures.length > 0) {
     const first = failures[0];
-    exit(first.status);
-    return first;
+    return {
+      status: first.status,
+      failedCmd: first.failedCmd,
+      aborted: false,
+      failures,
+      results: results.filter(Boolean),
+    };
   }
 
-  return { status: 0, failedCmd: null, aborted: false };
+  const firstAborted = results.find((result) => result?.aborted);
+  return {
+    status: firstAborted?.status ?? 0,
+    failedCmd: firstAborted?.failedCmd ?? null,
+    aborted: firstAborted?.aborted ?? false,
+    failures,
+    results: results.filter(Boolean),
+  };
 }

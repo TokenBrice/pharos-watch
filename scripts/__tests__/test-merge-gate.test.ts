@@ -518,6 +518,7 @@ describe("buildCommandPlan", () => {
       LANG: "C.UTF-8",
       CI: "true",
       [VALIDATE_PREBUILD_SURFACE_ENV]: "pages",
+      GENERATED_ARTIFACTS_CONTINUE_ON_ERROR: "1",
       VALIDATE_PREBUILD_CONTINUE_ON_ERROR: "1",
     });
     expect(getDiscoveryCommandEnv({ cmd: "npm run build" }, ["src/app/page.tsx"], testEnv())).toEqual(
@@ -539,6 +540,7 @@ describe("buildCommandPlan", () => {
       [VALIDATE_PREBUILD_INCLUDE_ADVISORY_ENV]: "1",
       [VALIDATE_PREBUILD_SURFACE_ENV]: "pages",
       [VALIDATE_PREBUILD_SKIP_COMMANDS_ENV]: "npm run audit:deps,npm run audit:pricing-providers",
+      GENERATED_ARTIFACTS_CONTINUE_ON_ERROR: "1",
       VALIDATE_PREBUILD_CONTINUE_ON_ERROR: "1",
     });
   });
@@ -860,7 +862,7 @@ describe("runMergeGate fetch and node_modules wiring", () => {
     let exitStatus: number | undefined;
     const runCommandImpl = mockCommandRunner((cmd) => {
       runCommandCalls.push(cmd);
-      if (cmd === "npm run validate:prebuild") {
+      if (cmd === "npm run typecheck") {
         return Promise.resolve({ status: 7, aborted: false });
       }
       if (cmd === "npm run test:noncritical -- --shard=1/2") {
@@ -877,28 +879,24 @@ describe("runMergeGate fetch and node_modules wiring", () => {
       exit: captureProcessExit((status) => {
         exitStatus = status;
       }),
+      writeReportImpl: () => ({ fingerprintPath: "ignored", latestPath: "ignored" }),
     });
 
-    expect(result).toEqual({ status: 7 });
+    expect(result.status).toBe(7);
     expect(exitStatus).toBe(7);
-    expect(runCommandCalls.slice(0, 2)).toEqual([
-      "node scripts/ci/check-node-modules-fresh.mjs --strict",
-      "npm run validate:prebuild",
+    expect(runCommandCalls[0]).toBe("node scripts/ci/check-node-modules-fresh.mjs --strict");
+    expect(runCommandCalls).not.toContain("npm run validate:prebuild");
+    expect(runCommandCalls).toContain("npm run typecheck");
+    expect(runCommandCalls).toContain("tsx scripts/maintenance/generate-sitemap-dates.ts --check");
+    expect(runCommandCalls).toContain("npm run build");
+    expect(runCommandCalls).toContain("npm run test:noncritical -- --shard=1/2");
+    expect(runCommandCalls).toContain("npm run check:feature-flag-inlining");
+    expect(runCommandCalls).toContain("npm run seo:check");
+    expect(runCommandCalls).toContain("npm run check:phishing-signatures");
+    expect(result.report?.results.filter((item) => item.status === "failed").map((item) => item.id)).toEqual([
+      "prebuild:typecheck",
+      "tests:noncritical-1",
     ]);
-    expect(new Set(runCommandCalls)).toEqual(
-      new Set([
-        "node scripts/ci/check-node-modules-fresh.mjs --strict",
-        "npm run validate:prebuild",
-        "npm run build",
-        "npm run test:noncritical -- --shard=1/2",
-        "npm run test:noncritical -- --shard=2/2",
-        "npm run typecheck:worker",
-        "npm run check:feature-flag-inlining",
-        "npm run seo:check",
-        "npm run check:phishing-signatures",
-        "npm run check:classifier-sensitive-copy",
-      ]),
-    );
     expect(runCommandCalls).not.toContain("npm run validate:pages-smoke");
   });
 
@@ -919,9 +917,11 @@ describe("runMergeGate fetch and node_modules wiring", () => {
         return Promise.resolve({ status: 0, aborted: false });
       }),
       execFile,
+      writeReportImpl: () => ({ fingerprintPath: "ignored", latestPath: "ignored" }),
     });
 
-    expect(result).toEqual({ status: 0 });
+    expect(result.status).toBe(0);
+    expect(result.report?.target).toBe("pr");
     expect(runCommandCalls).toEqual([]);
   });
 

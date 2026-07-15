@@ -87,9 +87,11 @@ Useful controls:
 - `PHAROS_PRE_PUSH_GATE=all git push -u origin <release-branch>` opts into the exact-range local gate for a release-branch push; normal branch pushes leave the heavy hook disabled.
 - `MERGE_GATE_PAGES_SMOKE=0 npm run test:merge-gate` only when the user explicitly asked to skip Pages smoke.
 - `MERGE_GATE_WORKER_SMOKE=1 npm run test:merge-gate` when worker smoke is needed before a risky worker release.
-- `npm run test:merge-gate:discover` for large failure-discovery passes only. It runs the deploy-impact plan diagnostically, skips advisory prebuild unless `VALIDATE_PREBUILD_INCLUDE_ADVISORY=1` is set, skips smoke unless `MERGE_GATE_DISCOVERY_SMOKE=1` is set, caps default fan-out at 3, and does not create a release proof or receipt.
+- For a large production-bound batch, use the exact `.nvmrc` Node version, load the intended public configuration, commit to a clean snapshot, then run `MERGE_GATE_PRODUCTION_ENV=1 npm run test:merge-gate:discover -- --target=release`. This adds deterministic build-size/build-attribution checks and a credential-free Worker bundle proof to the protected-PR contract.
+- Read the final discovery summary and `.cache/merge-gate/discovery/latest.json`. Fix every blocking root failure with its focused rerun command. When a producer failure left nodes blocked or tainted, run `npm run test:merge-gate:discover -- --target=release --resume`; do not repeatedly run the full target after each individual fix.
+- `--target=pr` predicts the protected PR path, `--target=local-gate` predicts the optional local gate including Pages smoke, and `--target=maintenance` adds nonblocking cleanup advisories. Every target is diagnostic only: it writes no receipt and cannot prove D1 mutation, Cloudflare activation, propagation, or live external state.
 
-Fix failures locally, commit the fixes, and rerun the failing focused command. Use the local merge gate manually only for deliberate rehearsal or failure investigation.
+Fix failures locally and rerun the failing focused command. Because release discovery requires a clean committed snapshot for parity, commit remediation before a targeted resume or another full release discovery. Use the local merge gate manually only for deliberate rehearsal or failure investigation.
 
 ### 4. Publish Through The Protected Gate
 
@@ -129,7 +131,7 @@ The parent agent owns staging, committing, pushing, and final judgment.
 End with:
 
 - commits created or pushed
-- focused validation commands and pre-push gate outcome, if the hook was opted into the local gate
+- focused validation commands, discovery target/report status (including incomplete or provisional evidence), and pre-push gate outcome if opted in
 - GitHub Actions run watched and final status, if pushed
 - any dirty files intentionally left out
 - any skipped checks and the reason

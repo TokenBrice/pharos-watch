@@ -76,13 +76,20 @@ After `npm run validate:prebuild` succeeds, the local merge gate runs independen
 
 Gate builds skip the prebuild artifact regeneration (`GENERATED_ARTIFACTS_SKIP` covering every registry id): the same run's `check:generated-artifacts` already byte-verified the committed artifacts, so regenerating them inside `npm run build` is guaranteed no-op work. The gate also records wall-clock per command and prints a slowest-first timing summary at the end (on failures too); when the total exceeds the soft runtime budget (default 8 minutes, `MERGE_GATE_BUDGET_MINUTES` overrides, `0` disables) it emits a non-fatal warning so runtime regressions surface immediately instead of accreting silently. Advisory coverage, docs, agent-infra, dependency/provider, stale-flag, unused-code, and ratchet checks now live outside the default blocking prebuild path unless a caller explicitly enables advisory prebuild mode. Pages validate lanes cover build, feature-flag inlining, SEO, phishing signatures, and classifier-sensitive copy after the static export exists; broader a11y, build-size, and build-attribution checks remain production/scheduled/manual concerns.
 
-For post-swarm or very large local batches, use diagnostic discovery when you need one pass to surface multiple local failures:
+For post-swarm or very large local batches, select the diagnostic target explicitly:
 
 ```bash
-npm run test:merge-gate:discover
+npm run test:merge-gate:discover -- --target=pr
+npm run test:merge-gate:discover -- --target=local-gate
+MERGE_GATE_PRODUCTION_ENV=1 npm run test:merge-gate:discover -- --target=release
+npm run test:merge-gate:discover -- --target=maintenance
 ```
 
-`scripts/maintenance/run-merge-gate-discovery.mjs` uses the same diff, deploy-surface classifier, node_modules freshness check, and deploy-impact command plan as `test:merge-gate`, but it is optimized for diagnostics rather than release proof. It runs the reduced blocking `validate:prebuild` surface with `VALIDATE_PREBUILD_CONTINUE_ON_ERROR=1`; advisory prebuild checks stay skipped unless `VALIDATE_PREBUILD_INCLUDE_ADVISORY=1` is set. It then keeps independent postbuild groups running after failures so one pass can expose static-check, build/test, and Worker-validation failures together. Discovery mode skips smoke by default; set `MERGE_GATE_DISCOVERY_SMOKE=1` when smoke failures are the current target, and use `MERGE_GATE_DISCOVERY_MAX_PARALLEL=<n>` to cap local fan-out (default max: 3). Discovery success or failure does not create a release proof, does not write a reusable receipt, and does not replace GitHub Actions as the authoritative release gate.
+`pr` is the default and predicts the protected PR contract: classifier-selected standard or internal-docs-only validation plus the pinned range-scoped Gitleaks scan. Pages-changing `pr` parity requires `MERGE_GATE_PRODUCTION_ENV=1` with the intended public configuration; otherwise the report is explicitly incomplete. `local-gate` mirrors the optional local gate, including path-selected advisory prebuild checks and default Pages smoke. `release` adds production-config Pages build-size/attribution checks and a credential-free pinned Wrangler dry-run bundle; it also requires the exact `.nvmrc` Node version, a content-consistent install snapshot, required Playwright browsers, and a clean committed snapshot. `maintenance` adds broad advisories without turning them into release blockers. Cloudflare upload/activation, D1 mutation, release-marker propagation, and live external state remain explicit omissions.
+
+Discovery classifies the union of `base...HEAD`, staged, tracked worktree, and untracked non-ignored files unless `--staged` requests the narrower staged view. It records start/end snapshot and redacted environment evidence. A moving worktree makes the report provisional; environment mismatches are `INCOMPLETE`, not silent success. Pages build is an explicit producer: its independent output checks all run after a successful build, or all become `BLOCKED_BY=pages:build` without reading stale `out/`. Generated-artifact phases continue diagnostically and label downstream checks tainted by failed declared inputs. The stable final summary and ignored JSON report under `.cache/merge-gate/discovery/` account for every selected or omitted node.
+
+After the full run, fix every blocking root failure and use each finding's focused rerun command while editing. If the report contains blocked or tainted nodes, run `npm run test:merge-gate:discover -- --target=<same-target> --resume`; resume reruns those nodes and their prerequisites while marking other nodes omitted, so it is convergence evidence rather than a reusable proof. Do not rerun the full discovery after every individual fix. Discovery never writes a merge-gate receipt and never replaces the protected GitHub PR gate.
 
 Pages-impacting files use the same broad matcher as CI deploy classification: any `src/`, `shared/`, `functions/`, `public/`, or `data/` path, selected build/config scripts, shared validate/guardrail infrastructure, and the Pages release workflow files all require local export validation when `test:merge-gate` is run. Worker-impacting files use the same worker/shared/deploy-infra matcher as CI, but `shared/` is classified by subpath so known Pages-only helpers do not request Worker validation or deployment. `test:merge-gate` runs Pages browser smoke by default as an intentionally deeper local rehearsal than the deterministic production publish job; Worker smoke remains explicit via `MERGE_GATE_WORKER_SMOKE=1`.
 
@@ -94,10 +101,12 @@ Useful merge-gate controls:
 - `MERGE_GATE_FULL_DEPLOY=1` to force the full local deploy validate path when there is no usable base ref
 - `MERGE_GATE_DRY_RUN=1` to print the command plan without executing it
 - `MERGE_GATE_PARALLEL=1`/`=0` to force parallel or serial post-validate execution. The default auto-enables parallel on machines with ≥12 available cores and stays serial below that to avoid local CPU contention; CI always runs the parallel matrix via separate runners
-- `npm run test:merge-gate:discover -- --dry-run` to print the diagnostic discovery plan without executing commands
-- `npm run test:merge-gate:discover` to run the local deploy-impact plan in failure-discovery mode while debugging large batches or CI failures
+- `npm run test:merge-gate:discover -- --target=pr --dry-run` to print and persist the default protected-PR diagnostic plan without executing commands
+- `npm run test:merge-gate:discover -- --target=pr|local-gate|release|maintenance` to select the contract being predicted; `pr` is the default
+- `npm run test:merge-gate:discover -- --target=<same-target> --resume` to rerun failed, blocked, and tainted nodes plus dependencies from the latest compatible report; use `--resume=<path>` for a specific report
+- `npm run test:merge-gate:discover -- --report=<path>` to override the ignored latest-report path
 - `MERGE_GATE_DISCOVERY_MAX_PARALLEL=<n>` to cap discovery-mode postbuild fan-out (default max: 3)
-- `MERGE_GATE_DISCOVERY_SMOKE=1` to include smoke commands in discovery mode; smoke stays on by default only in the final merge gate
+- `MERGE_GATE_DISCOVERY_SMOKE=1` or `--smoke` to add Pages smoke outside targets that select it; `local-gate` selects Pages smoke by default
 - Production Pages environment rehearsal is opt-in: set `MERGE_GATE_PRODUCTION_ENV=1` and export the production `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_PHAROS_*`, `STATIC_EXPORT_API_BASE`, `STATIC_EXPORT_SITE_API_BASE`, `PHAROS_API_KEY` or `STATIC_EXPORT_API_KEY`, and `SITE_API_SHARED_SECRET` values before `npm run test:merge-gate`. With `NEXT_PUBLIC_GA_ID` present, the local browser smoke verifies that measurement ID. Without the opt-in, the gate clears production feature-flag env locally while applying the same static-export build contract as CI.
 - `MERGE_GATE_PAGES_SMOKE=0` to skip default `npm run validate:pages-smoke` after build for Pages-impacting diffs. By default this serves the static export and runs desktop/local `smoke-ui` on the canary routes with 6 workers. The production Pages release does not run a browser.
 - `MERGE_GATE_WORKER_SMOKE=1` to opt in to `npm run validate:worker-smoke` after worker validation for worker-impacting diffs (slow, ~1-2 min). Local worker smoke defaults to `SMOKE_API_SCOPE=canary` unless `SMOKE_API_SCOPE` is explicitly set
@@ -364,10 +373,10 @@ Production smoke for this surface should request a smoke key, receive the email,
 If an explicit local `test:merge-gate` rehearsal fails:
 
 1. Do not treat the local rehearsal as green.
-2. For a small change, fix the failing command directly. For a large merged batch or repeated fail-fast loop, run `npm run test:merge-gate:discover` to collect more failing lanes in one pass.
-3. Re-run the narrow failing command(s) until clean.
-4. Re-run `npm run test:merge-gate`.
-5. Push after the relevant focused checks or local rehearsal pass; GitHub Actions remains the authoritative release gate.
+2. For a small change, fix the failing command directly. For a large batch, run one full discovery for the intended target and read the final structured summary.
+3. Fix all blocking root failures and re-run their focused commands while editing.
+4. If producers left blocked or tainted nodes, use discovery `--resume` with the same target. Run another full discovery only when the changed snapshot broadly invalidates the original plan.
+5. Run `npm run test:merge-gate` only when an explicit local rehearsal is desired, then push to the protected PR gate. GitHub Actions remains authoritative.
 
 If a production deployment fails after mutation:
 

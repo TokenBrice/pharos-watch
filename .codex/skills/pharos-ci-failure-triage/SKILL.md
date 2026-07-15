@@ -59,7 +59,7 @@ Record:
 Common local repro commands:
 
 ```bash
-npm run test:merge-gate:discover
+npm run test:merge-gate:discover -- --target=pr
 npm run check:generated-artifacts
 npm run check:doc-source-paths
 npm run check:doc-sync
@@ -75,7 +75,9 @@ npm run validate:pages-smoke
 npm run validate:worker-smoke
 ```
 
-Use `npm run test:merge-gate:discover` when a large local batch is failing one lane at a time. It runs the deploy-impact command plan diagnostically, uses the reduced blocking `validate:prebuild` surface with continue-on-error, keeps independent postbuild lanes running after failures, and skips smoke by default. Advisory prebuild checks stay opt-in with `VALIDATE_PREBUILD_INCLUDE_ADVISORY=1`; tune fan-out with `MERGE_GATE_DISCOVERY_MAX_PARALLEL=<n>` (default max: 3); set `MERGE_GATE_DISCOVERY_SMOKE=1` only when smoke is the current target. Discovery success is not a release proof and does not write a reusable receipt.
+Use one full `npm run test:merge-gate:discover -- --target=pr` when a large local batch is failing one lane at a time. The runner expands prebuild and generated-artifact checks into atomic nodes, runs all dependency-ready work, blocks `out/` consumers after a failed Pages build, and writes a stable failed/blocked/tainted/incomplete/omitted summary to `.cache/merge-gate/discovery/latest.json`. For Pages-changing PR parity, load the intended public values and set `MERGE_GATE_PRODUCTION_ENV=1`; otherwise treat the explicit environment result as incomplete. Use `local-gate` for optional local-gate parity, `release` for a clean production-bound snapshot, and `maintenance` for broad nonblocking advisories. Tune fan-out with `MERGE_GATE_DISCOVERY_MAX_PARALLEL=<n>`.
+
+Fix every blocking root failure from the report and use the listed focused rerun commands while editing. If failed producers left blocked or tainted nodes, run the same target with `--resume`; this reruns those nodes and their dependencies without claiming that prior passing nodes are release proof. Run another full discovery only when the changed snapshot broadly invalidates the original plan. A provisional or incomplete report is not green, and no discovery report is a reusable receipt.
 
 `coverage:critical` failures belong to the weekly/manual Critical Coverage Ratchet workflow or direct local rehearsals, not the blocking reusable validate workflow. The normal `test:noncritical` lane includes critical tests despite the legacy script name.
 
@@ -101,7 +103,8 @@ Avoid broad rewrites while fixing CI. Make the smallest root-cause patch.
 Rerun the failing local command first. If the user asked for release/push:
 
 ```bash
-npm run test:merge-gate:discover # for large batches only; diagnostic
+npm run test:merge-gate:discover -- --target=pr # one full large-batch diagnostic
+npm run test:merge-gate:discover -- --target=pr --resume # blocked/tainted convergence only
 git push -u origin <fix-branch>
 gh pr create --base main --head <fix-branch>
 gh pr checks <pr-number> --watch

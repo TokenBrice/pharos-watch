@@ -32,6 +32,28 @@ export function normalizeChangedFiles(rawOutput) {
     .filter(Boolean);
 }
 
+export function classifyChangedFiles(changedFiles, { reason } = {}) {
+  const normalizedFiles = [...new Set(changedFiles.map((file) => normalizeRepoPath(file)))].sort();
+  const pagesChanged = hasPagesDeployImpact(normalizedFiles);
+  const pagesDeployRequired = hasPagesPublishImpact(normalizedFiles);
+  const workerChanged = hasWorkerDeployImpact(normalizedFiles);
+  const workerDeployRequired = hasWorkerReleaseImpact(normalizedFiles);
+  return {
+    changedFiles: normalizedFiles,
+    deployRequired: hasDeployImpact(normalizedFiles),
+    docsOnly: hasOnlyInternalDocsImpact(normalizedFiles),
+    pagesChanged,
+    pagesDeployRequired,
+    reason:
+      reason ??
+      (normalizedFiles.length > 0
+        ? `Detected ${normalizedFiles.length} changed file(s)`
+        : "No changed files detected"),
+    workerChanged,
+    workerDeployRequired,
+  };
+}
+
 /**
  * @param {{
  *   baseSha?: string,
@@ -86,23 +108,12 @@ export function classifyDeployChanges({ baseSha, eventName, execFile = execFileS
     };
   }
 
-  const pagesChanged = hasPagesDeployImpact(changedFiles);
-  const pagesDeployRequired = hasPagesPublishImpact(changedFiles);
-  const workerChanged = hasWorkerDeployImpact(changedFiles);
-  const workerDeployRequired = hasWorkerReleaseImpact(changedFiles);
-  return {
-    changedFiles,
-    deployRequired: hasDeployImpact(changedFiles),
-    docsOnly: hasOnlyInternalDocsImpact(changedFiles),
-    pagesChanged,
-    pagesDeployRequired,
+  return classifyChangedFiles(changedFiles, {
     reason:
       changedFiles.length > 0
         ? `Detected ${changedFiles.length} changed file(s) in push range`
         : "No changed files detected in push range",
-    workerChanged,
-    workerDeployRequired,
-  };
+  });
 }
 
 function writeGithubOutputLine(key, value) {

@@ -367,6 +367,7 @@ describe("validate-ci parity", () => {
     expect(parseGeneratedArtifactsArgs(["--check", "--only=api-reference,og-case-studies", "--phase", "2,3"])).toEqual({
       bootstrap: false,
       check: true,
+      continueOnError: false,
       dryRun: false,
       help: false,
       only: ["api-reference", "og-case-studies"],
@@ -401,7 +402,7 @@ describe("validate-ci parity", () => {
     });
 
     expect(executed).toBe(false);
-    expect(result).toEqual({ status: 0, failedCmd: null, aborted: false });
+    expect(result).toEqual({ status: 0, failedCmd: null, aborted: false, failures: [], results: [] });
     expect(logs).toEqual([
       "[generated-artifacts] Dry run enabled; 2 command(s) will not execute.",
       "[generated-artifacts] Command plan:",

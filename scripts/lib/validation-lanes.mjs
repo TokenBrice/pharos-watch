@@ -8,12 +8,25 @@ export const VALIDATE_PREBUILD_INCLUDE_ADVISORY_ENV = "VALIDATE_PREBUILD_INCLUDE
 export const VALIDATE_PREBUILD_MAX_PARALLEL = 8;
 export const NONCRITICAL_TEST_SHARD_COUNT = 2;
 
-function prebuild(command, prebuildOrder, surfaces = SURFACES, terminal = false) {
-  return { command, phase: "prebuild", prebuildOrder, surfaces, ...(terminal ? { terminal: true } : {}) };
+function prebuild(command, prebuildOrder, surfaces = SURFACES, terminal = false, discoveryCommands = undefined) {
+  return {
+    command,
+    phase: "prebuild",
+    prebuildOrder,
+    surfaces,
+    ...(terminal ? { terminal: true } : {}),
+    ...(discoveryCommands ? { discoveryCommands } : {}),
+  };
 }
 
-function advisoryPrebuild(command, prebuildOrder, surfaces = SURFACES, terminal = false) {
-  return { ...prebuild(command, prebuildOrder, surfaces, terminal), blocking: false };
+function advisoryPrebuild(
+  command,
+  prebuildOrder,
+  surfaces = SURFACES,
+  terminal = false,
+  discoveryCommands = undefined,
+) {
+  return { ...prebuild(command, prebuildOrder, surfaces, terminal, discoveryCommands), blocking: false };
 }
 
 /** @returns {{ command: string, phase: string, prebuildOrder?: number, phaseOrder?: number, surfaces: string[] }} */
@@ -29,7 +42,13 @@ export const VALIDATION_LANES = [
   {
     id: "format-and-lint",
     impactPaths: impactPaths(),
-    leaves: [prebuild("npm run lint", 5), prebuild("npm run lint:typed", 6)],
+    leaves: [
+      prebuild("npm run lint", 5, SURFACES, false, [
+        { command: "npm run check:table-primitives", id: "prebuild:table-primitives" },
+        { command: "npm run lint:eslint", id: "prebuild:eslint" },
+      ]),
+      prebuild("npm run lint:typed", 6),
+    ],
   },
   {
     id: "root-and-worker-typecheck",
@@ -170,6 +189,7 @@ export const VALIDATION_LANES = [
         "worker/package.json",
         "scripts/ci/check-agent-doc-sync.mjs",
         "scripts/ci/check-agent-skill-symlinks.mjs",
+        "scripts/ci/check-worker-package.mjs",
         "scripts/lib/agent-skill-symlink-waivers.json",
         "scripts/ci/check-cli-args-policy.mjs",
         "scripts/lib/cli-argv-policy.mjs",
@@ -181,6 +201,7 @@ export const VALIDATION_LANES = [
         "scripts/ci/check-script-entrypoints.mjs",
         "scripts/ci/check-stale-flags.mjs",
         "scripts/ci/check-verified-doc-links.mjs",
+        "scripts/ci/run-gitleaks.mjs",
       ],
       pages: ["scripts/ci/check-phishing-signatures.mjs", "scripts/ci/check-classifier-sensitive-copy.mjs"],
       worker: ["scripts/ci/check-worker-wrangler-config.ts", "worker/wrangler.toml"],
@@ -188,7 +209,10 @@ export const VALIDATION_LANES = [
     leaves: [
       advisoryPrebuild("npm run audit:deps", 1),
       advisoryPrebuild("npm run check:agent-doc-sync", 9),
-      advisoryPrebuild("npm run check:agent-skill-symlinks", 10),
+      advisoryPrebuild("npm run check:agent-skill-symlinks", 10, SURFACES, false, [
+        { command: "npm run check:agent-skill-symlinks:only", id: "prebuild:agent-skill-symlinks" },
+        { command: "npm run check:agent-infra", id: "prebuild:agent-infra" },
+      ]),
       advisoryPrebuild("npm run check:cli-args-policy", 12),
       advisoryPrebuild("npm run check:doc-source-paths", 20),
       advisoryPrebuild("npm run check:doc-sync", 21),
@@ -237,6 +261,16 @@ function commandsForPhase(phase) {
         left.command.localeCompare(right.command),
     )
     .map((leaf) => leaf.command);
+}
+
+export function buildManualAdvisoryLeaves({ surface } = {}) {
+  const normalizedSurface = normalizeValidatePrebuildSurface(surface);
+  return VALIDATION_LANES.flatMap((lane) =>
+    lane.leaves.map((leaf) => ({ ...leaf, laneId: lane.id })),
+  )
+    .filter((leaf) => leaf.phase === "manual-advisory" && leaf.surfaces.includes(normalizedSurface))
+    .sort((left, right) => left.command.localeCompare(right.command))
+    .map((leaf) => ({ ...leaf }));
 }
 
 export const ALL_VALIDATE_PREBUILD_COMMANDS = ALL_LEAVES.filter((leaf) => leaf.phase === "prebuild")
@@ -294,17 +328,24 @@ export function shouldIncludeAdvisoryPrebuildChecks(value) {
 
 /** @param {ValidatePrebuildCommandOptions} [options] */
 export function buildValidatePrebuildCommands({ surface, skipCommands, includeAdvisory = false } = {}) {
+  return buildValidatePrebuildLeaves({ surface, skipCommands, includeAdvisory }).map((leaf) => leaf.command);
+}
+
+export function buildValidatePrebuildLeaves({ surface, skipCommands, includeAdvisory = false } = {}) {
   const normalizedSurface = normalizeValidatePrebuildSurface(surface);
   const skipped = new Set(skipCommands ?? []);
-  return ALL_LEAVES.filter(
-    (leaf) =>
-      leaf.phase === "prebuild" &&
-      leaf.surfaces.includes(normalizedSurface) &&
-      (includeAdvisory || leaf.blocking !== false) &&
-      !skipped.has(leaf.command),
+  return VALIDATION_LANES.flatMap((lane) =>
+    lane.leaves.map((leaf) => ({ ...leaf, laneId: lane.id })),
   )
+    .filter(
+      (leaf) =>
+        leaf.phase === "prebuild" &&
+        leaf.surfaces.includes(normalizedSurface) &&
+        (includeAdvisory || leaf.blocking !== false) &&
+        !skipped.has(leaf.command),
+    )
     .sort((left, right) => left.prebuildOrder - right.prebuildOrder)
-    .map((leaf) => leaf.command);
+    .map((leaf) => ({ ...leaf }));
 }
 
 /**
@@ -353,6 +394,7 @@ export function validateValidationLanes(lanes = VALIDATION_LANES) {
 
   const laneIds = new Set();
   const commands = new Set();
+  const discoveryIds = new Set();
   const leaves = lanes.flatMap((lane) => lane.leaves ?? []);
 
   for (const lane of lanes) {
@@ -371,6 +413,15 @@ export function validateValidationLanes(lanes = VALIDATION_LANES) {
       }
       for (const surface of leaf.surfaces) {
         if (!SURFACES.includes(surface)) throw new Error(`Unknown validation surface for ${leaf.command}: ${surface}`);
+      }
+      for (const discoveryCommand of leaf.discoveryCommands ?? []) {
+        if (!discoveryCommand.id || !discoveryCommand.command) {
+          throw new Error(`Invalid atomic discovery command for ${leaf.command}`);
+        }
+        if (discoveryIds.has(discoveryCommand.id)) {
+          throw new Error(`Duplicate atomic discovery id: ${discoveryCommand.id}`);
+        }
+        discoveryIds.add(discoveryCommand.id);
       }
     }
   }
