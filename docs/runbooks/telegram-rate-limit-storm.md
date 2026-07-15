@@ -30,7 +30,7 @@ Detection signals:
 
 ## Remediation
 
-1. **Wait one drain cycle.** Each dispatch run drains up to 25% of its budget from the pending queue. Risk-alert pending rows are ordered ahead of low-priority admin broadcasts, and fresh risk alerts do not spend the run's pending-drain share on admin broadcasts during contention. If `pendingDeliveries`, `oldestPendingAgeSec`, and `estimatedDrainTimeSec` are decreasing run-over-run, no action.
+1. **Wait one drain cycle.** Each dispatch run reserves up to 1,800 of its 3,600 message attempts for the pending queue and drains existing due rows before authoritative target planning. Risk-alert pending rows are ordered ahead of low-priority admin broadcasts, and fresh risk alerts do not spend the run's pending-drain share on admin broadcasts during contention. If `pendingDeliveries`, `oldestPendingAgeSec`, and `estimatedDrainTimeSec` are decreasing run-over-run, no action.
 2. **Clear pending queue for a specific chat.** Use the admin pending endpoint, filtered. This is an idempotent admin mutation; include Cloudflare Access service-token headers, `X-Pharos-Admin: 1`, and an `Idempotency-Key`.
 
    ```bash

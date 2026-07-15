@@ -73,14 +73,14 @@ export function resolveTelegramTargetExpiresAt(
   return decision.targetExpiresAt ?? claim.detectedAt + strictestAlertTtlSec(routed.alertTypes ?? [routed.alertType]);
 }
 
-async function persistNonTargetOutcome(
+function prepareNonTargetOutcomeStatement(
   db: D1Database,
   claim: TelegramTargetPlanningClaim,
   decision: TelegramPlanningDecision,
   outcome: Exclude<TelegramPlanningOutcome, "target_planned">,
   nowSec: number,
-): Promise<void> {
-  await db
+): D1PreparedStatement {
+  return db
     .prepare(
       `UPDATE telegram_alert_planning_subscribers
           SET planning_outcome = ?,
@@ -98,11 +98,10 @@ async function persistNonTargetOutcome(
       claim.sourceEventId,
       claim.generation,
       decision.subscriber.chatId,
-    )
-    .run();
+    );
 }
 
-async function persistOneTargetPlan(args: {
+function prepareOneTargetPlanStatements(args: {
   db: D1Database;
   claim: TelegramTargetPlanningClaim;
   decision: TelegramPlanningDecision;
@@ -110,7 +109,7 @@ async function persistOneTargetPlan(args: {
   pageIndex: number;
   planOrdinal: number;
   nowSec: number;
-}): Promise<void> {
+}): D1PreparedStatement[] {
   const { db, claim, decision, plan, pageIndex, planOrdinal, nowSec } = args;
   if (
     plan.payload.messages.length > TELEGRAM_TARGET_PLAN_MAX_CHUNKS ||
@@ -234,24 +233,77 @@ async function persistOneTargetPlan(args: {
   if (statements.length > D1_BATCH_SIZE) {
     throw new Error(`Telegram target plan unit exceeds the D1 batch limit (${statements.length})`);
   }
-  await executeAtomicBatch(db, statements);
+  return statements;
+}
 
-  const counts = await db
+async function executeTargetPlanStatementUnits(
+  db: D1Database,
+  claim: TelegramTargetPlanningClaim,
+  pageIndex: number,
+  units: readonly {
+    statements: readonly D1PreparedStatement[];
+    plans: readonly SerializedTelegramTargetPlan[];
+  }[],
+  nowSec: number,
+): Promise<void> {
+  let batchStatements: D1PreparedStatement[] = [];
+  let batchPlans: SerializedTelegramTargetPlan[] = [];
+  const flush = async () => {
+    await executeAtomicBatch(db, batchStatements);
+    await verifyMaterializedTargetPlans(db, claim, pageIndex, batchPlans, nowSec);
+    batchStatements = [];
+    batchPlans = [];
+  };
+  for (const unit of units) {
+    if (unit.statements.length > D1_BATCH_SIZE) {
+      throw new Error(`Telegram target plan unit exceeds the D1 batch limit (${unit.statements.length})`);
+    }
+    if (
+      batchStatements.length > 0 &&
+      batchStatements.length + unit.statements.length > D1_BATCH_SIZE
+    ) {
+      await flush();
+    }
+    batchStatements.push(...unit.statements);
+    batchPlans.push(...unit.plans);
+  }
+  if (batchStatements.length > 0) await flush();
+}
+
+async function verifyMaterializedTargetPlans(
+  db: D1Database,
+  claim: TelegramTargetPlanningClaim,
+  pageIndex: number,
+  plans: readonly SerializedTelegramTargetPlan[],
+  nowSec: number,
+): Promise<void> {
+  if (plans.length === 0) return;
+  const rows = await db
     .prepare(
-      `SELECT
-         (SELECT COUNT(*) FROM telegram_alert_job_targets
-           WHERE source_event_id = ? AND plan_generation = ? AND plan_key = ?) AS targets,
-         (SELECT COUNT(*) FROM telegram_alert_target_plan_items
-           WHERE source_event_id = ? AND plan_generation = ? AND plan_key = ?) AS items`,
+      `SELECT plan.plan_key,
+              (SELECT COUNT(*) FROM telegram_alert_job_targets target
+                WHERE target.source_event_id = plan.source_event_id
+                  AND target.plan_generation = plan.plan_generation
+                  AND target.plan_key = plan.plan_key) AS targets,
+              (SELECT COUNT(*) FROM telegram_alert_target_plan_items item
+                WHERE item.source_event_id = plan.source_event_id
+                  AND item.plan_generation = plan.plan_generation
+                  AND item.plan_key = plan.plan_key) AS items
+         FROM telegram_alert_target_plans plan
+        WHERE plan.source_event_id = ? AND plan.plan_generation = ? AND plan.page_index = ?`,
     )
-    .bind(claim.sourceEventId, claim.generation, plan.planKey, claim.sourceEventId, claim.generation, plan.planKey)
-    .first<{ targets: number; items: number }>();
-  if (
-    Number(counts?.targets ?? -1) !== plan.payload.messages.length ||
-    Number(counts?.items ?? -1) !== plan.payload.itemKeys.length
-  ) {
-    await markTelegramTargetPlanDegraded(db, claim, "target_plan_count_mismatch", nowSec);
-    throw new Error("Telegram target plan materialization did not reconcile");
+    .bind(claim.sourceEventId, claim.generation, pageIndex)
+    .all<{ plan_key: string; targets: number; items: number }>();
+  const countsByPlan = new Map((rows.results ?? []).map((row) => [row.plan_key, row]));
+  for (const plan of plans) {
+    const counts = countsByPlan.get(plan.planKey);
+    if (
+      Number(counts?.targets ?? -1) !== plan.payload.messages.length ||
+      Number(counts?.items ?? -1) !== plan.payload.itemKeys.length
+    ) {
+      await markTelegramTargetPlanDegraded(db, claim, "target_plan_count_mismatch", nowSec);
+      throw new Error("Telegram target plan materialization did not reconcile");
+    }
   }
 }
 
@@ -325,18 +377,37 @@ export async function materializeTelegramTargetPlanPage(
     .bind(claim.sourceEventId, claim.generation, pageIndex)
     .first<{ maximum: number | null }>();
   let nextPlanOrdinal = ordinalRow?.maximum == null ? pageIndex * 10_000 : Number(ordinalRow.maximum) + 1;
+  const statementUnits: Array<{
+    statements: D1PreparedStatement[];
+    plans: SerializedTelegramTargetPlan[];
+  }> = [];
   for (const [decisionIndex, decision] of decisions.entries()) {
     const entry = serialized[decisionIndex];
     if (entry.outcome !== "target_planned") {
-      await persistNonTargetOutcome(db, claim, decision, entry.outcome, nowSec);
+      statementUnits.push({
+        statements: [prepareNonTargetOutcomeStatement(db, claim, decision, entry.outcome, nowSec)],
+        plans: [],
+      });
       continue;
     }
     for (const plan of entry.plans) {
       const planOrdinal = nextPlanOrdinal;
       nextPlanOrdinal += 1;
-      await persistOneTargetPlan({ db, claim, decision, plan, pageIndex, planOrdinal, nowSec });
+      statementUnits.push({
+        statements: prepareOneTargetPlanStatements({
+          db,
+          claim,
+          decision,
+          plan,
+          pageIndex,
+          planOrdinal,
+          nowSec,
+        }),
+        plans: [plan],
+      });
     }
   }
+  await executeTargetPlanStatementUnits(db, claim, pageIndex, statementUnits, nowSec);
 
   const reconciled = await db
     .prepare(
