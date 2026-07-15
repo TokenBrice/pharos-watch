@@ -121,7 +121,7 @@ describe.skip("VERITAS-II finding named rows evade same-issuer speculative-credi
   });
 });
 
-describe.skip("VERITAS-II finding exact threshold disagrees on dependency treatment and structural cap", () => {
+describe("VERITAS-II finding exact threshold disagrees on dependency treatment and structural cap", () => {
   it("classifies an exact 10% unavailable upstream consistently across projection and backing", () => {
     const weights = [0.001, 0.009, 0.09];
     expect(weights.reduce((sum, weight) => sum + weight, 0)).toBeLessThan(0.1);

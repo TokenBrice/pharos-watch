@@ -99,7 +99,7 @@ function scoreBacking(result: ReturnType<typeof evaluateV9ReserveExposures>) {
   );
 }
 
-describe.skip("VERITAS-II finding VER2-001: transitive wrapper splits evade aggregate materiality", () => {
+describe("VERITAS-II finding VER2-001: transitive wrapper splits evade aggregate materiality", () => {
   it("keeps two 6% wrappers sharing one failed serial root as material", () => {
     const plan = buildV9DependencyEvaluationPlan({
       activeAssetIds: ["root", "wrapper-a", "wrapper-b", "child"],

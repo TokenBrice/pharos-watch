@@ -27,6 +27,15 @@ export interface V9ResolvedUpstreamExposure {
   readonly evidenceLevel: V9EvidenceLevel;
   readonly reasonCodes: readonly V9ReasonCode[];
   readonly failureDomains: readonly V9FailureDomainRef[];
+  /**
+   * Terminal unavailable-asset roots this exposure ultimately depends on,
+   * propagated through wrappers by the evaluator. Materiality aggregates by
+   * these roots so a failure reachable through several immediate upstreams
+   * cannot be split below the threshold (VER2-001). Absent (unit callers) →
+   * derived from the upstream's reserve-issuer/custodian failure domains, then
+   * the immediate identity.
+   */
+  readonly failureRootAssetIds?: readonly string[];
 }
 
 export interface V9BackingAssetInput {
@@ -100,7 +109,23 @@ export interface V9ArchetypeBackingInput {
   readonly additionalStructuralReasons?: readonly V9BackingStructuralReason[];
 }
 
-const SCORE_EPSILON = 0.000001;
+export const SCORE_EPSILON = 0.000001;
+
+/**
+ * The single materiality predicate shared by projection (evaluate-set) and
+ * backing: a share is material once it reaches the threshold within float
+ * noise. Using one epsilon-tolerant contract in both places keeps the public
+ * dependency reason and the structural cap from disagreeing on an exact
+ * partition (VER2-010).
+ */
+export function isV9MaterialShare(weight: number, threshold: number): boolean {
+  return weight + SCORE_EPSILON >= threshold;
+}
+
+const AVAILABILITY_REASON_CODES: ReadonlySet<V9ReasonCode> = new Set<V9ReasonCode>([
+  "material-dependency-unavailable",
+  "nonmaterial-dependency-unavailable",
+]);
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -122,6 +147,31 @@ function canonicalDomains(domains: readonly V9FailureDomainRef[]): V9FailureDoma
   return [...new Map(domains.map((domain) => [domainKey(domain), domain])).values()].sort((left, right) =>
     compareText(domainKey(left), domainKey(right)),
   );
+}
+
+/**
+ * Materiality-aggregation root keys for one exposure. An unavailable upstream
+ * contributes its propagated terminal roots (so wrappers over one failed asset
+ * aggregate); an available upstream or a directly tracked asset contributes its
+ * own immediate identity (so same-asset row splits still aggregate — VER-004).
+ * Cash-like rows with no tracked identity have no root.
+ */
+function materialityRootKeys(
+  exposure: V9ReserveExposureFactV2,
+  upstream: V9ResolvedUpstreamExposure | undefined,
+): readonly string[] {
+  if (upstream && upstream.score === null) {
+    if (upstream.failureRootAssetIds && upstream.failureRootAssetIds.length > 0) {
+      return uniqueSorted(upstream.failureRootAssetIds.map((id) => `asset:${id}`));
+    }
+    const domainRoots = upstream.failureDomains
+      .filter((domain) => domain.kind === "reserve-issuer" || domain.kind === "reserve-custodian")
+      .map(domainKey);
+    if (domainRoots.length > 0) return uniqueSorted(domainRoots);
+    return [`asset:${upstream.upstreamAssetId}`];
+  }
+  const identityId = upstream?.upstreamAssetId ?? exposure.trackedAssetId;
+  return identityId === null ? [] : [`asset:${identityId}`];
 }
 
 function gapReasons(
@@ -342,45 +392,80 @@ export function evaluateV9ReserveExposures(
       ...gapReasons(asset, asset.reserveStatus.gapIds, "reserve-envelope", "ceiling", "partial-reserve-review"),
     );
   }
-  // Aggregate exposure weight per upstream identity: materiality and
-  // structural ceilings must not be evadable by splitting one upstream
-  // exposure across multiple reserve rows (VER-004).
-  const upstreamAggregateWeight = new Map<string, number>();
+  const threshold = backing.structural.materialExposureShare;
+  // Materiality is judged on the AGGREGATE exposure to a shared FAILED
+  // dependency root, not the immediate reserve row: splitting one exposure
+  // across several rows — or across several wrappers that all terminate at the
+  // same unavailable asset — must not demote it below the structural threshold
+  // (VER-004, VER2-001). Each exposure contributes its full weight to every
+  // root it reaches; its materiality is the strongest (max) root aggregate.
+  const rootAggregateWeight = new Map<string, number>();
+  const rootsByExposure = new Map<string, readonly string[]>();
   for (const exposure of exposures) {
-    const identityId = upstreamByExposure.get(exposure.exposureKey)?.upstreamAssetId ?? exposure.trackedAssetId;
-    if (identityId === null) continue;
-    upstreamAggregateWeight.set(identityId, (upstreamAggregateWeight.get(identityId) ?? 0) + exposure.weight);
+    const roots = materialityRootKeys(exposure, upstreamByExposure.get(exposure.exposureKey));
+    rootsByExposure.set(exposure.exposureKey, roots);
+    for (const root of roots) {
+      rootAggregateWeight.set(root, (rootAggregateWeight.get(root) ?? 0) + exposure.weight);
+    }
   }
+  const materialityWeightFor = (exposure: V9ReserveExposureFactV2): number => {
+    const roots = rootsByExposure.get(exposure.exposureKey) ?? [];
+    return roots.length === 0
+      ? exposure.weight
+      : Math.max(...roots.map((root) => rootAggregateWeight.get(root) ?? exposure.weight));
+  };
   for (const exposure of exposures) {
     const pathKey = `reserve:${exposure.exposureKey}`;
     const state = exposure.status.observationState;
     const upstream = upstreamByExposure.get(exposure.exposureKey);
-    const identityId = upstream?.upstreamAssetId ?? exposure.trackedAssetId;
-    const materialityWeight = identityId !== null ? (upstreamAggregateWeight.get(identityId) ?? exposure.weight) : exposure.weight;
+    const materialityWeight = materialityWeightFor(exposure);
     const requiredUnknown = exposure.status.applicability.state === "unresolved";
     let score =
       state === "known" || state === "stale"
         ? scoreV9ReserveExposureClassification(exposure, policy)
         : backing.boundedUnknownQuality;
+    // The availability materiality is decided HERE from the aggregate root
+    // weight and never read from the projected reason codes: a split that reads
+    // nonmaterial per immediate row is still material at its shared root
+    // (VER2-001/VER2-010). Projected availability codes are dropped so the
+    // trace cannot publish contradictory material/nonmaterial reasons.
     if (upstream) {
       score = Math.min(score, upstream.score ?? backing.boundedUnknownQuality);
+      // For an UNAVAILABLE upstream backing owns the availability decision:
+      // drop any projected availability code and recompute it from the root
+      // aggregate. An available upstream's projected codes pass through
+      // unchanged.
+      const projected =
+        upstream.score === null
+          ? uniqueSorted(upstream.reasonCodes).filter((code) => !AVAILABILITY_REASON_CODES.has(code))
+          : uniqueSorted(upstream.reasonCodes);
       unresolved.push(
-        ...uniqueSorted(upstream.reasonCodes).map((code) => ({
+        ...projected.map((code) => ({
           code,
           pathKey,
           gapIds: [],
           treatment: resolveV9ReasonPolicy(policy, code).reason.defaultTreatment,
         })),
       );
+      if (upstream.score === null) {
+        const unavailableCode = isV9MaterialShare(materialityWeight, threshold)
+          ? ("material-dependency-unavailable" as const)
+          : ("nonmaterial-dependency-unavailable" as const);
+        unresolved.push({
+          code: unavailableCode,
+          pathKey,
+          gapIds: [],
+          treatment: resolveV9ReasonPolicy(policy, unavailableCode).reason.defaultTreatment,
+        });
+      }
     } else if (
       exposure.trackedAssetId !== null &&
       !seriallyResolvedUpstreamAssetIds.has(exposure.trackedAssetId)
     ) {
       score = Math.min(score, backing.boundedUnknownQuality);
-      const unavailableCode =
-        materialityWeight + SCORE_EPSILON >= backing.structural.materialExposureShare
-          ? ("material-dependency-unavailable" as const)
-          : ("nonmaterial-dependency-unavailable" as const);
+      const unavailableCode = isV9MaterialShare(materialityWeight, threshold)
+        ? ("material-dependency-unavailable" as const)
+        : ("nonmaterial-dependency-unavailable" as const);
       unresolved.push({
         code: unavailableCode,
         pathKey,
@@ -389,7 +474,7 @@ export function evaluateV9ReserveExposures(
       });
     }
     if (state !== "known" || requiredUnknown) {
-      const material = exposure.weight + SCORE_EPSILON >= backing.structural.materialExposureShare;
+      const material = isV9MaterialShare(exposure.weight, threshold);
       unresolved.push(
         ...gapReasons(
           asset,
@@ -414,7 +499,7 @@ export function evaluateV9ReserveExposures(
       upstreamAssetId: upstream?.upstreamAssetId ?? exposure.trackedAssetId,
     });
 
-    const material = materialityWeight + SCORE_EPSILON >= backing.structural.materialExposureShare;
+    const material = isV9MaterialShare(materialityWeight, threshold);
     if (material && exposure.assetClass === "private-credit") {
       structuralReasons.push(
         createV9BackingStructuralReason(policy, backing.structural.speculativeCreditSignal, {
@@ -439,7 +524,7 @@ export function evaluateV9ReserveExposures(
 
   const residualWeight = Math.max(0, 1 - totalWeight);
   if (residualWeight > SCORE_EPSILON) {
-    const material = residualWeight + SCORE_EPSILON >= backing.structural.materialExposureShare;
+    const material = isV9MaterialShare(residualWeight, threshold);
     contributions.push({
       componentKey: "reserve:unclassified-residual",
       source: "reserve-exposure",
