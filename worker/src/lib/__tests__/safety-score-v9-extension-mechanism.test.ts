@@ -4,6 +4,7 @@ import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import {
   buildSafetyScoreV9MechanismReview,
   expandOverlayReview,
+  MechanismReviewOverlaySchema,
   type MechanismReviewOverlay,
 } from "../safety-score-v9-extension-mechanism";
 
@@ -71,6 +72,7 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     if (review?.archetype !== "cdp") throw new Error("expected the curated bold-liquity CDP overlay");
     expect(review.collateralizationRatio).toBeCloseTo(2.455, 3);
     expect(review.liquidationCapacityRatio).toBeCloseTo(0.658, 3);
+    expect(review.metricApplicability.collateralizationRatio.state).toBe("measured");
     expect(review.collateralizationParameters.status.observationState).toBe("known");
     expect(review.collateralizationParameters.quality).toBe("adequate");
     expect(review.backstop.status.observationState).toBe("bounded-unknown");
@@ -121,5 +123,96 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(() => expandOverlayReview({ ...overlay, metrics: { navDeviationBps: 5 } })).toThrow(
       /Unknown tbill mechanism metric/,
     );
+  });
+
+  it("expands sourced structural CDP N/A without turning analogous capacity into liquidation capacity", () => {
+    const sourceUrl = "https://example.com/protocol-design";
+    const overlay = MechanismReviewOverlaySchema.parse({
+      assetId: "conversion-token",
+      archetype: "cdp",
+      reviewedAt: "2026-07-15",
+      sources: [{ label: "Protocol design", url: sourceUrl }],
+      notes: "The token has a conversion route but no independent vault or liquidation pool.",
+      metrics: { collateralizationRatio: null, liquidationCapacityRatio: null },
+      metricApplicability: {
+        collateralizationRatio: {
+          state: "not-applicable",
+          rationale: "No independent per-token vault system exists.",
+          sourceUrl,
+        },
+        liquidationCapacityRatio: {
+          state: "not-applicable",
+          rationale: "Conversion inventory is not committed liquidation capital.",
+          sourceUrl,
+        },
+      },
+      analogousMetrics: { conversionCapacityCounterUnits: 123 },
+      components: {
+        collateralizationParameters: {
+          applicability: "not-applicable",
+          rationale: "No independent per-token vault system exists.",
+          sourceUrl,
+        },
+        liquidationMechanics: {
+          applicability: "not-applicable",
+          rationale: "The conversion pool is not a liquidation pool.",
+          sourceUrl,
+        },
+        structuralRedemption: { quality: "adequate" },
+      },
+    });
+    const review = expandOverlayReview(overlay);
+    if (review.archetype !== "cdp") throw new Error("unexpected archetype");
+    expect(review.collateralizationRatio).toBeNull();
+    expect(review.liquidationCapacityRatio).toBeNull();
+    expect(review.metricApplicability.liquidationCapacityRatio.state).toBe("not-applicable");
+    expect(review.liquidationMechanics.status.applicability.state).toBe("not-applicable");
+  });
+
+  it("publishes complete unhealthy USDQ evidence as failed health rather than missing coverage", () => {
+    const review = buildSafetyScoreV9MechanismReview(fixedInputStub(), { id: "usdq-quill" } as MechanismMeta, "cdp");
+    if (review?.archetype !== "cdp") throw new Error("expected the curated USDQ CDP overlay");
+    expect(review.collateralizationRatio).toBe(0.676425);
+    expect(review.liquidationCapacityRatio).toBe(0.00383);
+    expect(review.metricApplicability.collateralizationRatio.state).toBe("measured");
+    expect(review.shutdownAndBadDebt.status.observationState).toBe("known");
+    expect(review.shutdownAndBadDebt.quality).toBe("failed");
+  });
+
+  it("publishes Mento conversion inventory only as a structural analogue", () => {
+    const review = buildSafetyScoreV9MechanismReview(fixedInputStub(), { id: "audm-mento" } as MechanismMeta, "cdp");
+    if (review?.archetype !== "cdp") throw new Error("expected the curated Mento CDP overlay");
+    expect(review.collateralizationRatio).toBeNull();
+    expect(review.liquidationCapacityRatio).toBeNull();
+    expect(review.metricApplicability.collateralizationRatio.state).toBe("not-applicable");
+    expect(review.metricApplicability.liquidationCapacityRatio.state).toBe("not-applicable");
+    expect(review.liquidationMechanics.status.applicability.state).toBe("not-applicable");
+    expect(review.structuralRedemption.quality).toBe("adequate");
+  });
+
+  it("rejects measured-null and unsourced structural N/A overlay claims", () => {
+    const base = {
+      assetId: "invalid",
+      archetype: "cdp" as const,
+      reviewedAt: "2026-07-15",
+      sources: [{ label: "Protocol design", url: "https://example.com/source" }],
+      notes: "Invalid fixture.",
+      metrics: { collateralizationRatio: null, liquidationCapacityRatio: 0.5 },
+      components: {},
+    };
+    const measuredNull = MechanismReviewOverlaySchema.parse(base);
+    expect(() => expandOverlayReview(measuredNull)).toThrow(/measured collateralizationRatio/);
+    expect(() =>
+      MechanismReviewOverlaySchema.parse({
+        ...base,
+        metricApplicability: {
+          collateralizationRatio: {
+            state: "not-applicable",
+            rationale: "No vault system.",
+            sourceUrl: "https://example.com/not-in-sources",
+          },
+        },
+      }),
+    ).toThrow(/sourceUrl must match/);
   });
 });

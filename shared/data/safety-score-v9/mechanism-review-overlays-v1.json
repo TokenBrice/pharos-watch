@@ -129,52 +129,49 @@
     {
       "assetId": "fxusd-f-x-protocol",
       "archetype": "cdp",
-      "reviewedAt": "2026-07-14",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
-          "label": "fxUSD token (FxUSDRegeneracy) — totalSupply, legacyTotalSupply, poolManager()",
+          "label": "f(x) fxUSD, PoolManager, long-pool, oracle, and fxBASE state on Ethereum",
           "url": "https://etherscan.io/address/0x085780639CC2cACd35E474e71f4d000e2405d8f6#readProxyContract"
-        },
-        {
-          "label": "f(x) PoolManager — RegisterPool events, fxBASE(), reservePool(), getPoolInfo()",
-          "url": "https://etherscan.io/address/0x250893CA4Ba5d05626C785e8da758026928FCD24#readProxyContract"
-        },
-        {
-          "label": "f(x) WBTC long pool — getTotalRawCollaterals/getTotalRawDebts/priceOracle",
-          "url": "https://etherscan.io/address/0xAB709e26Fa6B0A30c119D8c55B887DeD24952473#readProxyContract"
-        },
-        {
-          "label": "f(x) wstETH long pool — getTotalRawCollaterals/getTotalRawDebts/priceOracle",
-          "url": "https://etherscan.io/address/0x6Ecfa38FeE8a5277B91eFdA204c235814F0122E8#readProxyContract"
-        },
-        {
-          "label": "FxUSDBasePool (fxBASE) — totalYieldToken/totalStableToken/nav",
-          "url": "https://etherscan.io/address/0x65C9A641afCEB9C0E6034e558A319488FA0FA3be#readProxyContract"
         },
         {
           "label": "f(x) Protocol documentation",
           "url": "https://fxprotocol.gitbook.io/fx-docs"
         }
       ],
-      "notes": "Measured on-chain at Ethereum block 25531000 (2026-07-14T12:51:47Z). Contract graph derived on-chain: fxUSD.poolManager() -> PoolManager 0x250893CA...FCD24; pool set enumerated from PoolManager RegisterPool logs = exactly two pools (wstETH-long 0x6Ecfa38F...22E8, WBTC-long 0xAB709e26...2473); PoolManager.fxBASE() -> 0x65C9A641...A3be. collateralizationRatio: wstETH pool getTotalRawCollaterals()=5543.712255 (stETH-denominated; = accounted wstETH x Lido stEthPerToken 1.239355) x oracle anchor 1836.2618 = $10,179,707; WBTC pool 1197.801749 x anchor 63489.7307 = $76,048,110; total $86,227,817 / fxUSD totalSupply 58,676,356.139 = 1.4695. Oracle anchors cross-checked against Chainlink independently: ETH/USD 1836.416 (0.008% delta) and BTC/USD 63,493.716 (0.006% delta) - this also confirms the wstETH pool oracle returns the ETH price, hence raw collateral is stETH-denominated. Second independent collateral read from custody: PoolManager holds 4455.705 wstETH x 1.239355 x Chainlink ETH + 1195.9057 WBTC x Chainlink BTC = $86,073,557 -> CR 1.4669, i.e. 0.18% below the accounted figure. GAP DISCLOSED: PoolManager's own accounting (getPoolInfo collateralBalance: 4473.54 wstETH / 1197.86 WBTC) exceeds its actual token custody by 17.84 wstETH and 1.96 WBTC (~$165k, 0.19% of collateral). No Aave strategy deployment (aWstETH/aWBTC balances are 0) and accumulatedPoolOpenFees/CloseFees are 0, so the gap is not explained by a strategy or fee accrual; the ReservePool (0xE93F5DD5...45Ed) holds 17.707 wstETH + 0.4247 WBTC, which covers the wstETH side almost exactly but not the WBTC side. Immaterial to the ratio; flagged for a future curator. COMPLETENESS PROOF (the USDD test): sum of pool debts 5,890,682.051290619336 + 52,785,410.029922129280 = 58,676,092.081212748616, plus legacyTotalSupply 264.058184281645855 = 58,676,356.139397030262 = fxUSD.totalSupply() to the wei. No fxUSD is minted outside the two pools, so a system-wide CR is legitimately applicable to total supply. liquidationCapacityRatio: fxBASE is the committed liquidation counterparty (PoolManager.fxBASE()); it holds 52,299,016.076 fxUSD + 10,793.78 USDC @ 0.99972819 = $52,309,806.92 of instantly-committed absorbing capital / 58,676,356.139 = 0.8915. Cross-checked against fxBASE.totalSupply() 51,784,044.438 shares x nav 1.009888862 = $52,296,129.72 (0.026% delta). This is committed capital in the Liquity Stability Pool sense, not a governance cap: liquidation/rebalance draws directly on the pool. Parameters read on-chain: max debt ratio 0.866667 (min CR 1.1538), rebalance trigger 0.88 (bonus 2.5%), liquidate trigger 0.95 (bonus 4%, i.e. only ~5% buffer to insolvency), maxRedeemRatioPerTick 0.2, isBorrowPaused=false, isRedeemPaused=false. Concentration: 90% of debt (52.79M of 58.68M) sits on the WBTC branch, and WBTC is a custodial wrapper. ReservePool bad-debt backstop is ~$71k, immaterial. shutdownAndBadDebt not reviewed - left bounded-unknown.",
+      "notes": "Measured at operator-pinned Ethereum block 25536894; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/fxusd-f-x-protocol/2026-07-15-block-25536894.json. The add-only RegisterPool history was queried from the PoolManager deployment block through the pinned block and contains exactly the two configured long pools. Both were graph-checked against PoolManager; pool debt plus legacy supply reconciled to total supply with 0.000000% divergence, and manager accounting agreed within 0.0024%. Protocol anchor-valued collateral over supply gives 1.493559. fxBASE token inventory gives 0.891605 committed liquidation capacity and agrees with share NAV within 0.0227%. Both pools were unpaused for borrowing and redemption at the pinned block.",
       "metrics": {
-        "collateralizationRatio": 1.4695,
-        "liquidationCapacityRatio": 0.8915
+        "collateralizationRatio": 1.493559,
+        "liquidationCapacityRatio": 0.891605
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "measured"
+        },
+        "liquidationCapacityRatio": {
+          "state": "measured"
+        }
       },
       "components": {
         "collateralizationParameters": {
+          "applicability": "measured",
           "quality": "adequate"
         },
         "liquidationMechanics": {
-          "quality": "strong"
+          "applicability": "measured",
+          "quality": "adequate"
         },
         "backstop": {
+          "applicability": "measured",
           "quality": "strong"
         },
         "branchIsolation": {
+          "applicability": "measured",
           "quality": "limited"
         },
         "structuralRedemption": {
+          "applicability": "measured",
           "quality": "adequate"
         }
       }
@@ -182,49 +179,734 @@
     {
       "assetId": "reusd-resupply",
       "archetype": "cdp",
-      "reviewedAt": "2026-07-14",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
-          "label": "reUSD token — totalSupply, core()",
-          "url": "https://etherscan.io/address/0x57aB1E0003F623289CD798B1824Be09a793e4Bec#readContract"
-        },
-        {
-          "label": "ResupplyRegistry — getAllPairAddresses(), insurancePool(), liquidationHandler()",
+          "label": "Resupply Registry, pair accounting, collateral-vault conversion, and InsurancePool state on Ethereum",
           "url": "https://etherscan.io/address/0x10101010E0C3171D894B71B3400668aF311e7D94#readContract"
         },
         {
-          "label": "Resupply InsurancePool — totalAssets(), convertToAssets(), withdrawTime()",
-          "url": "https://etherscan.io/address/0x00000000efe883b3304aFf71eaCf72Dbc3e1b577#readContract"
-        },
-        {
-          "label": "Resupply LiquidationHandler — insurancePool() wiring",
-          "url": "https://etherscan.io/address/0x88888888c227c36401493Ed9F3e3Dcc3800B2634#readContract"
-        },
-        {
-          "label": "Largest pair (CurveLend crvUSD/sfrxUSD) — totalBorrow/totalCollateral/maxLTV/convexPid",
-          "url": "https://etherscan.io/address/0xC5184cccf85b81EDdc661330acB3E41bd89F34A1#readContract"
-        },
-        {
-          "label": "Resupply protocol documentation",
-          "url": "https://docs.resupply.finance/"
+          "label": "Resupply protocol stability-mechanics documentation",
+          "url": "https://docs.resupply.fi/resupply-protocol/stability-mechanics"
         }
       ],
-      "notes": "Measured on-chain at Ethereum block 25531000 (2026-07-14T12:51:47Z). Contract graph derived on-chain: reUSD.core() -> 0xc07e0000...0a7d; candidate registry verified by round-trip (Registry.core() == reUSD.core() AND Registry.token() == reUSD), then Registry.getAllPairAddresses() -> 19 pairs (registeredPairsLength()==19). collateralizationRatio: for each pair, collateral is an ERC4626 lending-market receipt (Curve Lend 'Curve Vault for crvUSD' shares, or Fraxlend frxUSD pair shares). Value = collateralToken.convertToAssets(pair.totalCollateral()), denominated in the underlying (crvUSD or frxUSD, taken at par to USD). Summed across all 19 pairs = 34,522,682 underlying units; total reUSD debt = sum of pair totalBorrow().amount = 31,995,499. CR = 1.0790. LAYERED-CLAIM CAVEAT (this materially qualifies the number): the collateral is not an asset Resupply holds, it is a *lender-side claim on another lending market*. Its par value is only realizable if Curve Lend / Fraxlend remain solvent and borrowers repay. Two quantified consequences. (1) Exit is not liquid: Resupply owns 99.8% / 99.7% / 92.7% / 99.0% / 86.4% of the lender side of the crvUSD-sfrxUSD, -WBTC, -sUSDe, -wstETH and -WETH markets respectively, so it effectively *is* the market and cannot redeem its claim for crvUSD faster than borrowers repay; idle withdrawable underlying across the top markets is ~$13.8M against a $34.5M claim. (2) Reflexivity: $8,440,577 (24.5% of all collateral) is the CurveLend crvUSD/sreUSD market - a claim on a market whose borrowers post *staked reUSD* as their collateral, so reUSD partially backs itself; a further $108k sits in crvUSD/fxSAVE. Cross-check 1 (debt/completeness): sum of pair debt 31,995,499 vs reUSD.totalSupply() 31,986,803.374 = 0.027% apart, the difference being accrued-but-unminted interest. No reUSD is minted outside the 19 registry pairs. Cross-check 2 (collateral): convertToAssets() reproduced manually as shares x vault.totalAssets()/vault.totalSupply() - matched to the cent on the four largest pairs. Cross-check 3 (custody): pairs hold 0 collateral tokens directly - the shares are staked in Convex. Verified on 7/7 pairs checked that ConvexBooster.poolInfo(convexPid()).crvRewards.balanceOf(pair) + collateralToken.balanceOf(pair) == pair.totalCollateral() exactly. liquidationCapacityRatio: InsurancePool.totalAssets() = 3,219,784.519 reUSD, cross-checked exactly against reUSD.balanceOf(insurancePool) = 3,219,784.519. / 31,995,499 debt = 0.1006. This IS committed slashable capital, not a governance cap: LiquidationHandler.insurancePool() points at the pool (both share the same registry), liquidations burn its reUSD in exchange for seized collateral, deposits carry a 7-day withdraw cooldown (withdrawTime 604801s) plus a 3-day claim window (withdrawTimeLimit 259201s), and the pool's share price is convertToAssets(1e18) = 0.8752 reUSD - i.e. below par because it has *already absorbed realised losses*, which is empirical proof of slashability. Parameters: pair maxLTV 95,000/100,000 = 95% (min CR 1.0526), liquidationFee 5%, per-pair borrowLimit 50M. The 7.9% system overcollateralization is thin given the collateral is a par-valued claim on an external market: a small NAV impairment in Curve Lend or Fraxlend consumes the buffer. structuralRedemption (a redemptionHandler exists at 0x5eeB063d...A025 but its fee/caps were not measured) and shutdownAndBadDebt were not reviewed - left bounded-unknown.",
+      "notes": "Measured at finalized Ethereum block 25536894; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/reusd-resupply/2026-07-15-block-25536894.json. The registry enumerated 19 unique pairs and their collateral vault conversions; active-pair collateral over debt gives 1.078969, with debt and token supply diverging 0.0304%. Three zero-debt pairs remain enumerated but their converted assets are excluded from the system ratio. InsurancePool reUSD held against debt gives 0.100629 committed liquidation capacity. Collateral is a layered ERC-4626 claim on crvUSD/frxUSD lending markets valued at protocol accounting par, not proof of immediate underlying liquidity.",
       "metrics": {
-        "collateralizationRatio": 1.079,
-        "liquidationCapacityRatio": 0.1006
+        "collateralizationRatio": 1.078969,
+        "liquidationCapacityRatio": 0.100629
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "measured"
+        },
+        "liquidationCapacityRatio": {
+          "state": "measured"
+        }
       },
       "components": {
         "collateralizationParameters": {
+          "applicability": "measured",
           "quality": "limited"
         },
         "liquidationMechanics": {
+          "applicability": "measured",
           "quality": "adequate"
         },
         "backstop": {
+          "applicability": "measured",
           "quality": "limited"
         },
         "branchIsolation": {
+          "applicability": "measured",
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "cdp-enosys",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Enosys Loans registry and branch state on Flare",
+          "url": "https://flare-explorer.flare.network/address/0x9474206bc035D03d142264fd9913d1D51246d3AC"
+        },
+        {
+          "label": "Enosys Loans documentation",
+          "url": "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans"
+        }
+      ],
+      "notes": "Measured at finalized Flare block 65110774; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/cdp-enosys/2026-07-15-block-65110774.json. The token-derived registry enumerated all four configured branches, with unique controllers and collateral tokens. Debt and supply diverged 0.0014%. Protocol-priced collateral over debt gives 1.741687; Stability Pool deposits over supply give 0.851917, or 0.850663 after capping each pool to its own branch debt. Every branch was live and redeemable at the pinned block.",
+      "metrics": {
+        "collateralizationRatio": 1.741687,
+        "liquidationCapacityRatio": 0.851917
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "measured"
+        },
+        "liquidationCapacityRatio": {
+          "state": "measured"
+        }
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "branchIsolation": {
+          "applicability": "measured",
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "usdq-quill",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Quill CollateralRegistry and branch state on Scroll",
+          "url": "https://scrollscan.com/address/0x358d90036e70542ae24b3813c0efecc1f8811442"
+        },
+        {
+          "label": "Quill deployment documentation",
+          "url": "https://docs.quill.finance/documentation/contract-addresses"
+        }
+      ],
+      "notes": "Measured at finalized Scroll block 34367075; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/usdq-quill/2026-07-15-block-34367075.json. The token-derived registry enumerated all four configured branches and reconciled debt to supply within 0.3577%, so controller coverage is complete. The measured health state is failed: aggregate protocol-priced collateral over debt is 0.676425, Stability Pool deposits over supply are 0.003830, and SCR branch 3 reports shutdownTime 1775494874 with redeemable=false. Those observations are retained as warnings and are not averaged away or mislabeled as incomplete coverage.",
+      "metrics": {
+        "collateralizationRatio": 0.676425,
+        "liquidationCapacityRatio": 0.00383
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "measured"
+        },
+        "liquidationCapacityRatio": {
+          "state": "measured"
+        }
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "applicability": "measured",
+          "quality": "weak"
+        },
+        "branchIsolation": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "shutdownAndBadDebt": {
+          "applicability": "measured",
+          "quality": "failed"
+        }
+      }
+    },
+    {
+      "assetId": "gbpm-mento",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Mento GBPm CollateralRegistry, TroveManager, ActivePool, and StabilityPool state on Celo",
+          "url": "https://celoscan.io/address/0x1bEDD4334335522B0a0e8e610d326B16B0a605Fb"
+        },
+        {
+          "label": "Mento V3 CDP documentation",
+          "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp"
+        }
+      ],
+      "notes": "Measured at finalized Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/gbpm-mento/2026-07-15-block-72202985.json. The registry enumerated its single configured branch, the ActivePool debt matched the controller, and debt matched supply exactly. Protocol-priced USDm collateral over debt gives 2.142757; Stability Pool deposits over supply give 0.094585. The branch was live and redeemable at the pinned block.",
+      "metrics": {
+        "collateralizationRatio": 2.142757,
+        "liquidationCapacityRatio": 0.094585
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "measured"
+        },
+        "liquidationCapacityRatio": {
+          "state": "measured"
+        }
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "branchIsolation": {
+          "applicability": "measured",
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "audm-mento",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Mento BiPoolManager and FPMM conversion state on Celo",
+          "url": "https://celoscan.io/address/0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901"
+        },
+        {
+          "label": "Mento V3 reserve conversion documentation",
+          "url": "https://docs.mento.org/mento-v3"
+        }
+      ],
+      "notes": "Pinned Celo block 72202914; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/audm-mento/2026-07-15-block-72202914.json. The producer enumerated all 16 live exchange IDs, found the configured token/USDm pair exactly once, and measured 10000000 USDm of counter-bucket capacity at a 15 bps spread. Conversion capacity is an analogous exit metric only and is not relabeled as collateralization or liquidation capital.",
+      "metrics": {
+        "collateralizationRatio": null,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "not-applicable",
+          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        }
+      },
+      "analogousMetrics": {
+        "conversionCapacityCounterUnits": 10000000
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "not-applicable",
+          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "liquidationMechanics": {
+          "applicability": "not-applicable",
+          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "cadm-mento",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Mento BiPoolManager and FPMM conversion state on Celo",
+          "url": "https://celoscan.io/address/0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901"
+        },
+        {
+          "label": "Mento V3 reserve conversion documentation",
+          "url": "https://docs.mento.org/mento-v3"
+        }
+      ],
+      "notes": "Pinned Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/cadm-mento/2026-07-15-block-72202985.json. The producer enumerated all 16 live exchange IDs, found the configured token/USDm pair exactly once, and measured 10000000 USDm of counter-bucket capacity at a 15 bps spread. Conversion capacity is an analogous exit metric only and is not relabeled as collateralization or liquidation capital.",
+      "metrics": {
+        "collateralizationRatio": null,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "not-applicable",
+          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        }
+      },
+      "analogousMetrics": {
+        "conversionCapacityCounterUnits": 10000000
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "not-applicable",
+          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "liquidationMechanics": {
+          "applicability": "not-applicable",
+          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "copm-mento",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Mento BiPoolManager and FPMM conversion state on Celo",
+          "url": "https://celoscan.io/address/0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901"
+        },
+        {
+          "label": "Mento V3 reserve conversion documentation",
+          "url": "https://docs.mento.org/mento-v3"
+        }
+      ],
+      "notes": "Pinned Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/copm-mento/2026-07-15-block-72202985.json. The producer enumerated all 16 live exchange IDs, found the configured token/USDm pair exactly once, and measured 10000000 USDm of counter-bucket capacity at a 15 bps spread. Conversion capacity is an analogous exit metric only and is not relabeled as collateralization or liquidation capital.",
+      "metrics": {
+        "collateralizationRatio": null,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "not-applicable",
+          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        }
+      },
+      "analogousMetrics": {
+        "conversionCapacityCounterUnits": 10000000
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "not-applicable",
+          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "liquidationMechanics": {
+          "applicability": "not-applicable",
+          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "ghsm-mento",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Mento BiPoolManager and FPMM conversion state on Celo",
+          "url": "https://celoscan.io/address/0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901"
+        },
+        {
+          "label": "Mento V3 reserve conversion documentation",
+          "url": "https://docs.mento.org/mento-v3"
+        }
+      ],
+      "notes": "Pinned Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/ghsm-mento/2026-07-15-block-72202985.json. The producer enumerated all 16 live exchange IDs, found the configured token/USDm pair exactly once, and measured 10000000 USDm of counter-bucket capacity at a 15 bps spread. Conversion capacity is an analogous exit metric only and is not relabeled as collateralization or liquidation capital.",
+      "metrics": {
+        "collateralizationRatio": null,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "not-applicable",
+          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        }
+      },
+      "analogousMetrics": {
+        "conversionCapacityCounterUnits": 10000000
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "not-applicable",
+          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "liquidationMechanics": {
+          "applicability": "not-applicable",
+          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "kesm-mento",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Mento BiPoolManager and FPMM conversion state on Celo",
+          "url": "https://celoscan.io/address/0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901"
+        },
+        {
+          "label": "Mento V3 reserve conversion documentation",
+          "url": "https://docs.mento.org/mento-v3"
+        }
+      ],
+      "notes": "Pinned Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/kesm-mento/2026-07-15-block-72202985.json. The producer enumerated all 16 live exchange IDs, found the configured token/USDm pair exactly once, and measured 10000000 USDm of counter-bucket capacity at a 15 bps spread. Conversion capacity is an analogous exit metric only and is not relabeled as collateralization or liquidation capital.",
+      "metrics": {
+        "collateralizationRatio": null,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "not-applicable",
+          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        }
+      },
+      "analogousMetrics": {
+        "conversionCapacityCounterUnits": 10000000
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "not-applicable",
+          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "liquidationMechanics": {
+          "applicability": "not-applicable",
+          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "phpm-mento",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Mento BiPoolManager and FPMM conversion state on Celo",
+          "url": "https://celoscan.io/address/0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901"
+        },
+        {
+          "label": "Mento V3 reserve conversion documentation",
+          "url": "https://docs.mento.org/mento-v3"
+        }
+      ],
+      "notes": "Pinned Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/phpm-mento/2026-07-15-block-72202985.json. The producer enumerated all 16 live exchange IDs, found the configured token/USDm pair exactly once, and measured 10000000 USDm of counter-bucket capacity at a 15 bps spread. Conversion capacity is an analogous exit metric only and is not relabeled as collateralization or liquidation capital.",
+      "metrics": {
+        "collateralizationRatio": null,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "not-applicable",
+          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        }
+      },
+      "analogousMetrics": {
+        "conversionCapacityCounterUnits": 10000000
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "not-applicable",
+          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "liquidationMechanics": {
+          "applicability": "not-applicable",
+          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "zarm-mento",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Mento BiPoolManager and FPMM conversion state on Celo",
+          "url": "https://celoscan.io/address/0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901"
+        },
+        {
+          "label": "Mento V3 reserve conversion documentation",
+          "url": "https://docs.mento.org/mento-v3"
+        }
+      ],
+      "notes": "Pinned Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/zarm-mento/2026-07-15-block-72202985.json. The producer enumerated all 16 live exchange IDs, found the configured token/USDm pair exactly once, and measured 10000000 USDm of counter-bucket capacity at a 15 bps spread. Conversion capacity is an analogous exit metric only and is not relabeled as collateralization or liquidation capital.",
+      "metrics": {
+        "collateralizationRatio": null,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "not-applicable",
+          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        }
+      },
+      "analogousMetrics": {
+        "conversionCapacityCounterUnits": 10000000
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "not-applicable",
+          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "liquidationMechanics": {
+          "applicability": "not-applicable",
+          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "jpym-mento",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Mento BiPoolManager and FPMM conversion state on Celo",
+          "url": "https://celoscan.io/address/0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901"
+        },
+        {
+          "label": "Mento V3 reserve conversion documentation",
+          "url": "https://docs.mento.org/mento-v3"
+        }
+      ],
+      "notes": "Pinned Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/jpym-mento/2026-07-15-block-72202985.json. The producer measured the configured FPMM pool USDm balance as 27446.7576191; no verified global fee getter exists, so fee remains unresolved. Conversion capacity is an analogous exit metric only and is not relabeled as collateralization or liquidation capital.",
+      "metrics": {
+        "collateralizationRatio": null,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "not-applicable",
+          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        }
+      },
+      "analogousMetrics": {
+        "conversionCapacityCounterUnits": 27446.7576191
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "not-applicable",
+          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "liquidationMechanics": {
+          "applicability": "not-applicable",
+          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "chfm-mento",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Mento BiPoolManager and FPMM conversion state on Celo",
+          "url": "https://celoscan.io/address/0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901"
+        },
+        {
+          "label": "Mento V3 reserve conversion documentation",
+          "url": "https://docs.mento.org/mento-v3"
+        }
+      ],
+      "notes": "Pinned Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/chfm-mento/2026-07-15-block-72202985.json. The producer measured the configured FPMM pool USDm balance as 43761.52670413; no verified global fee getter exists, so fee remains unresolved. Conversion capacity is an analogous exit metric only and is not relabeled as collateralization or liquidation capital.",
+      "metrics": {
+        "collateralizationRatio": null,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "not-applicable",
+          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        }
+      },
+      "analogousMetrics": {
+        "conversionCapacityCounterUnits": 43761.52670413
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "not-applicable",
+          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "liquidationMechanics": {
+          "applicability": "not-applicable",
+          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
+          "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "cjpy-yamato",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Yamato getStates, priceFeed, pool, and CJPY accounting on Ethereum",
+          "url": "https://etherscan.io/address/0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257#readProxyContract"
+        },
+        {
+          "label": "Yamato protocol documentation (no-liquidation design and redemptions)",
+          "url": "https://docs.yamato.fi/readme/english-overview"
+        }
+      ],
+      "notes": "Measured at finalized Ethereum block 25536894; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/cjpy-yamato/2026-07-15-block-25536894.json. Yamato getStates collateral and debt, its resolved protocol price feed, and exact debt-to-token-supply reconciliation give a system collateralization ratio of 2.292195. Yamato documents no forced liquidation, so liquidation capacity is structurally N/A. The protocol pool balance over debt is 0.007045 and is retained only as an analogous redemption/sweep ratio.",
+      "metrics": {
+        "collateralizationRatio": 2.292195,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "measured"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "Yamato has a no-liquidation design; its protocol pool is a redemption resource, not committed liquidation capital.",
+          "sourceUrl": "https://docs.yamato.fi/readme/english-overview"
+        }
+      },
+      "analogousMetrics": {
+        "protocolRedemptionPoolRatio": 0.007045
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "applicability": "not-applicable",
+          "rationale": "Yamato has a no-liquidation design; its protocol pool is a redemption resource, not a liquidation pool.",
+          "sourceUrl": "https://docs.yamato.fi/readme/english-overview"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "gho-aave",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "GHO facilitator registry and tracked GSM state on Ethereum",
+          "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readContract"
+        },
+        {
+          "label": "Aave GHO facilitator documentation",
+          "url": "https://aave.com/help/gho-stablecoin/facilitators"
+        }
+      ],
+      "notes": "Measured at finalized Ethereum block 25536894; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/gho-aave/2026-07-15-block-25536894.json. All six facilitator bucket levels sum exactly to 599,000,000 GHO total supply, proving issuance allocation rather than collateral adequacy. Shared multi-debt Aave accounts have no honest GHO-only system collateralization ratio, and external liquidators are not a GHO-dedicated committed pool, so both requested ratios are structurally N/A. Unused facilitator capacity is 0.447412 of supply but is governance mint authority, not backstop capital. The two directly inspected, unfrozen and unseized GSMs provide a non-exhaustive swappable-capacity lower bound of 0.099750.",
+      "metrics": {
+        "collateralizationRatio": null,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "not-applicable",
+          "rationale": "GHO facilitators mint against heterogeneous shared lending markets, so no GHO-only system collateralization ratio exists.",
+          "sourceUrl": "https://aave.com/help/gho-stablecoin/facilitators"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "Aave liquidations use external liquidators rather than a GHO-dedicated pool committed to debt offset.",
+          "sourceUrl": "https://aave.com/help/gho-stablecoin/facilitators"
+        }
+      },
+      "analogousMetrics": {
+        "facilitatorUnusedCapacityRatio": 0.447412,
+        "directSwappableGsmCapacityRatio": 0.09975
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "not-applicable",
+          "rationale": "GHO has no independent per-token vault collateralization system.",
+          "sourceUrl": "https://aave.com/help/gho-stablecoin/facilitators"
+        },
+        "liquidationMechanics": {
+          "applicability": "not-applicable",
+          "rationale": "External Aave liquidators are not a GHO-dedicated committed liquidation pool.",
+          "sourceUrl": "https://aave.com/help/gho-stablecoin/facilitators"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
           "quality": "limited"
         }
       }
@@ -1458,6 +2140,10 @@
       "reviewedAt": "2026-07-15",
       "sources": [
         {
+          "label": "Crown PT Platform Terms of Service, updated April 27, 2026",
+          "url": "https://dfg4lo8c2lfcn.cloudfront.net/Crown_PT_Platform_Terms_of_Service_f8e2317fef.pdf"
+        },
+        {
           "label": "Crown BRLV product disclosure",
           "url": "https://www.crown-brlv.com/en/"
         },
@@ -1470,11 +2156,11 @@
           "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_5_2026_79d38795ea.pdf"
         }
       ],
-      "notes": "Crown self-reports segregated, bankruptcy-remote federal-bond collateral pledged to an independent security agent for direct holder enforcement. The May 2026 Fact Finance report reconciles reserve assets and token supply but is not the governing security instrument and names neither the institutions nor the security agent. This supports only limited fund claim and seniority. Independent NAV administration and valuation method, current portfolio maturity or WAM, and a liquidity table were not established, so NAV valuation and duration and liquidity remain uncurated.",
+      "notes": "Binding Crown terms name bankruptcy-remote Luxembourg SPV Krona Two S.a.r.l., Dutch stichting ownership and independent directors, fiduciary assignment for the collective benefit of holders, Vortx Servicos Fiduciarios as security agent with enforcement authority, Banco Genial custody, and a September 12, 2025 fiduciary-assignment agreement registered through SELIC/B3. The May 2026 Fact Finance report independently reconciles 372.522 million tokens to 373.281 million of reserves, 99.99% Brazilian Treasuries. These facts support adequate fund claim and seniority. Strong is not supported because the referenced security agreement is not public, the terms bind approved users, and final regulator-supervised status was not established. Independent BRLV NAV administration and a current holdings-level maturity or liquidity table remain uncurated.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
-          "quality": "limited"
+          "quality": "adequate"
         }
       }
     },
@@ -1987,12 +2673,39 @@
         {
           "label": "WisdomTree Government Money Market Digital Fund document gateway",
           "url": "https://dataspanapi.wisdomtree.com/pdr/documents/WEBSITE_FUND_DETAILS/WDT/US/EN-US/WTGXX_3/"
+        },
+        {
+          "label": "WisdomTree WTGXX live product page",
+          "url": "https://www.wisdomtreeconnect.com/digital-funds/money-market/wtgxx"
+        },
+        {
+          "label": "WisdomTree WTGXX live WAM and WAL aggregates",
+          "url": "https://dataspanapi.wisdomtree.com/funddetails/aggregates/?ticker=WTGXX"
+        },
+        {
+          "label": "WisdomTree WTGXX live daily and weekly liquid assets",
+          "url": "https://dataspanapi.wisdomtree.com/funddetails/liquid_assets/?ticker=WTGXX"
+        },
+        {
+          "label": "WisdomTree WTGXX itemized money-market holdings",
+          "url": "https://dataspanapi.wisdomtree.com/funddetails/money_market_holdings/?ticker=WTGXX"
+        },
+        {
+          "label": "WTGXX SEC Form N-MFP3 for June 30, 2026",
+          "url": "https://www.sec.gov/Archives/edgar/data/1859001/000119312526296145/primary_doc.xml"
+        },
+        {
+          "label": "WTGXX prospectus dated March 10, 2026",
+          "url": "https://www.sec.gov/Archives/edgar/data/1859001/000121465926003052/wtd39260497.htm"
         }
       ],
-      "notes": "Official fund materials establish WTGXX as an open-end 1940 Act Rule 2a-7 fund, supporting limited fund claim and seniority. The materials document a daily 4 p.m. NAV but do not identify an independent administrator or establish the valuation method, so NAV valuation remains uncurated. Rule 2a-7 maturity and liquidity constraints are mandate limits rather than a current itemized maturity attestation, so duration and liquidity also remains uncurated.",
+      "notes": "Official fund materials establish WTGXX as an open-end 1940 Act Rule 2a-7 fund, supporting limited fund claim and seniority. Live issuer data reports WAM of 29 days and WAL of 32 days as of July 14, 2026 and daily and weekly liquid assets of 99.86989% as of July 13, 2026; itemized holdings and the June 30 SEC N-MFP3 corroborate measured maturity and liquidity consistent with T+0 eligible-day settlement. This supports limited duration and liquidity because the API and N-MFP figures are fund-reported and no independent stress or liquidation attestation was established. The materials document a daily 4 p.m. NAV but do not identify an independent administrator, so NAV valuation remains uncurated.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
+          "quality": "limited"
+        },
+        "durationAndLiquidity": {
           "quality": "limited"
         }
       }
@@ -2089,6 +2802,184 @@
         },
         "custodyContinuity": {
           "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "usx-solstice",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Solstice binding terms and conditions",
+          "url": "https://docs.solstice.finance/legal-documents/terms-and-conditions.md"
+        },
+        {
+          "label": "Solstice current attestations and proof-of-solvency disclosure",
+          "url": "https://docs.solstice.finance/legal-documents/attestations-and-proof-of-solvency.md"
+        },
+        {
+          "label": "Solstice risk disclosures",
+          "url": "https://docs.solstice.finance/legal-documents/risk-disclosures.md"
+        }
+      ],
+      "notes": "Solstice's current proof disclosure expressly states that USX holders have no direct ownership, claim, or beneficial interest in collateral, while the binding terms state that the Foundation is not a trustee, agent, or fiduciary and disclaims fiduciary duties. This affirmative adverse evidence supports weak claim and segregation rather than treating a missing document as negative evidence. Current documents name Copper Technologies and Ceffu but provide no current reserve-owner mapping or provider allocations, reserve-wide anti-rehypothecation, estate-segregation terms, failure recovery, or succession; historical Equinox Fund I letters do not establish current USX custody continuity.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "eusd-telcoin",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Telcoin Digital Asset Bank Customer Agreement, effective June 15, 2026",
+          "url": "https://bank.telco.in/customer-agreement"
+        },
+        {
+          "label": "Telcoin Digital Asset Bank Terms of Use, effective June 15, 2026",
+          "url": "https://bank.telco.in/terms-of-use"
+        },
+        {
+          "label": "Nebraska Financial Innovation Act reserve requirements",
+          "url": "https://nebraskalegislature.gov/laws/statutes.php?statute=8-3009"
+        }
+      ],
+      "notes": "The binding TDAB Customer Agreement transfers the redemption right with each eUSD token subject to onboarding, defines unencumbered liquid reserves in segregated accounts for holders, keeps those reserves separate and unavailable for general debts, and gives holder redemption claims priority over all other TDAB claims in insolvency subject to applicable law. This supports limited claim and segregation because the banks and accounts are unnamed, no public trust or custody agreement creates a direct reserve-property interest, no current independent reserve report was found, and recovery remains subject to bankruptcy law. Custody providers, allocations, anti-rehypothecation controls, failure recovery, and alternates remain uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "dusd-dtrinity",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "dTRINITY binding terms of use, effective June 24, 2026",
+          "url": "https://docs.dtrinity.org/informational/terms-of-use"
+        },
+        {
+          "label": "dTRINITY dUSD product documentation",
+          "url": "https://docs.dtrinity.org/protocol-components/dusd"
+        }
+      ],
+      "notes": "Binding dTRINITY terms expressly state that token ownership gives no redemption right or legal or beneficial interest in protocol assets, that no associated person is a trustee or custodian, and that nobody owes recovery or compensation. This affirmative adverse legal evidence supports weak claim and segregation despite onchain smart-contract redemption. No named offchain reserve custodian, allocation, anti-rehypothecation control, or provider recovery establishes custody continuity.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "gldt-gold-dao",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Gold DAO binding terms of service",
+          "url": "https://docs.gold-dao.org/legal/terms-of-service"
+        },
+        {
+          "label": "Gold DAO physical redemption documentation",
+          "url": "https://docs.gold-dao.org/how-to/redeem-physical-gold"
+        },
+        {
+          "label": "KPMG GLD NFT agreed-upon procedures report dated March 6, 2025",
+          "url": "https://2669388926-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FhyYilEcr51QGR1f1ZQ8w%2Fuploads%2FtV5XDYtDxRlFqbMeI7MD%2FAudit%20report%2003-2025.pdf?alt=media&token=0c07359e-0e0d-4473-b8ef-b345c1f6fcc0"
+        }
+      ],
+      "notes": "Gold DAO's binding terms expressly state that GLDT is not legal ownership of gold and that Gold DAO does not guarantee redemption or conversion; a holder must reverse-swap GLDT to a GLD NFT, which alone is described as a deed to a bar. This affirmative contradiction supports weak claim and segregation. The March 2025 KPMG agreed-upon-procedures report is over twelve months old, gives no assurance conclusion, and does not establish current inventory allocation, anti-encumbrance, insurance beneficiary status, alternate vaults, or failure recovery, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "krwo-gimswap",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Gimswap KRWO documentation",
+          "url": "https://docs.gimswap.com/gimswap-guide/what-is-krwo"
+        },
+        {
+          "label": "Open Asset Voucher binding terms, effective August 1, 2024",
+          "url": "https://victorious-lawyer-65b.notion.site/English-Open-Voucher-Terms-and-Conditions-49f8464e1ec842f7b377b7236eaa1505"
+        },
+        {
+          "label": "Open Voucher service-closure notice",
+          "url": "https://www.openvoucher.co.kr/ko"
+        }
+      ],
+      "notes": "Gimswap documents Open Voucher as KRWO's collateral and redemption route. Binding Open Asset Voucher terms establish the upstream voucher as unsecured issuer credit with no separate guarantee or compensation insurance, and the service ended May 25, 2026. That affirmative adverse upstream structure supports weak KRWO claim and segregation. No named reserve bank or custodian, allocation, independent current report, reserve-wide anti-rehypothecation, or closure and replacement recovery establishes custody continuity.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "audf-forte",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Forte AUD binding terms of use version 3.0, dated December 5, 2024",
+          "url": "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/675fbb6d8867cf4f44974abb/1734327151022/Forte%2BAUD%2BTerms%2Bof%2BUse%2BDecember%2B2024.pdf"
+        },
+        {
+          "label": "AUDF seller product disclosure statement dated November 27, 2025",
+          "url": "https://www.cointree.com/company/pds/audf-pds/"
+        },
+        {
+          "label": "AUDF reserve report as of September 30, 2025",
+          "url": "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/698d1428c2bfea7755ffcd51/1770853416057/AUDF%2B-%2BReserves%2BReport%2B%28September%2B2025%29.pdf"
+        }
+      ],
+      "notes": "Binding AUDF terms expressly deny holders a security interest, right to reserves or proceeds, trust, and fiduciary relationship; the current seller PDS describes holders as unsecured creditors and states that reserves are not on trust and may be reached by adverse creditors. This affirmative adverse evidence supports weak claim and segregation. The reserve report reconciles one unnamed bank account and does not establish named providers and allocations, reserve-wide anti-rehypothecation, succession, or failure recovery, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "audx-aussie-dollar-token",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "AUDX binding platform terms, updated June 24, 2025",
+          "url": "https://www.audxtoken.com/terms-and-conditions"
+        },
+        {
+          "label": "AUDX product disclosure statement dated December 19, 2025",
+          "url": "https://www.audxtoken.com/_files/ugd/539754_a67b17ada9b3459ca3d94fcc8736803d.pdf"
+        },
+        {
+          "label": "Aura AUDX limited-assurance reserve report as of May 31, 2026",
+          "url": "https://www.audxtoken.com/_files/ugd/539754_4d37414d003148f582f99d625f903ef6.pdf"
+        }
+      ],
+      "notes": "Binding AUDX terms designate fiat as client money held in a statutory trust account for all AUDX holders, the product disclosure statement confirms client beneficial ownership, and Aura's June 2026 limited-assurance report directly confirms designated accounts and reconciles A$4,008,056 of supply to A$4,018,780.50 of reserves. This supports limited claim and segregation. Adequate is not supported because no institution is publicly named and TAU remains under relief while applying for an AFSL. Named providers and allocations, provider-level anti-rehypothecation, succession, and failure recovery remain uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
         }
       }
     }

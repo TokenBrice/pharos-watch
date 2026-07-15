@@ -41,6 +41,24 @@ function knownFact(componentKey: string, quality: V9MechanismQualityLevel): V9Me
   return { status: status("known", componentKey), quality, failureDomains: [] };
 }
 
+function notApplicableFact(componentKey: string, rationale: string): V9MechanismFactV1 {
+  return {
+    status: {
+      applicability: {
+        state: "not-applicable",
+        policyRuleId: MECHANISM_POLICY_RULE_ID,
+        rationale,
+        gapId: null,
+      },
+      observationState: "known",
+      evidenceRefIds: [`extension-evidence:mechanism:${componentKey}`],
+      gapIds: [],
+    },
+    quality: null,
+    failureDomains: [],
+  };
+}
+
 /**
  * Quality of the assurance-and-reconciliation component from the reviewed
  * latest proof-of-reserves report. The tiers restate the report's own
@@ -109,40 +127,93 @@ function buildTbillReview(
   };
 }
 
-const OverlayComponentSchema = z
+const OverlayMeasuredComponentSchema = z
   .object({
     quality: z.enum(["strong", "adequate", "limited", "weak", "failed"]),
   })
   .strict();
 
-const OverlaySourceSchema = z
-  .object({ label: z.string().min(1), url: z.string().url() })
-  .strict();
+const OverlayComponentSchema = z.union([
+  // Legacy rows predate explicit applicability; a numeric quality always
+  // meant that the component was measured/reviewed.
+  OverlayMeasuredComponentSchema,
+  z
+    .object({
+      applicability: z.literal("measured"),
+      quality: z.enum(["strong", "adequate", "limited", "weak", "failed"]),
+    })
+    .strict(),
+  z
+    .object({
+      applicability: z.literal("not-applicable"),
+      rationale: z.string().trim().min(1),
+      sourceUrl: z.string().url(),
+    })
+    .strict(),
+]);
 
-const MechanismReviewOverlaySchema = z
+const OverlayMetricApplicabilitySchema = z.discriminatedUnion("state", [
+  z.object({ state: z.literal("measured") }).strict(),
+  z
+    .object({
+      state: z.literal("not-applicable"),
+      rationale: z.string().trim().min(1),
+      sourceUrl: z.string().url(),
+    })
+    .strict(),
+]);
+
+const OverlaySourceSchema = z.object({ label: z.string().min(1), url: z.string().url() }).strict();
+
+export const MechanismReviewOverlaySchema = z
   .object({
     assetId: z.string().min(1),
     archetype: z.enum(["cdp", "synthetic-delta-neutral", "algorithmic", "rwa-credit-fund", "fiat-cash", "tbill"]),
     reviewedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     sources: z.array(OverlaySourceSchema).min(1),
     notes: z.string().min(1),
-    metrics: z.record(z.string(), z.number().finite()),
+    metrics: z.record(z.string(), z.number().finite().nullable()),
+    metricApplicability: z.record(z.string(), OverlayMetricApplicabilitySchema).optional(),
+    analogousMetrics: z.record(z.string(), z.number().finite()).optional(),
     venueShares: z
       .array(
         z
           .object({
             venueKey: z.string().min(1),
             share: z.number().min(0).max(1),
-            failureDomains: z
-              .array(z.object({ kind: z.string().min(1), key: z.string().min(1) }).strict())
-              .default([]),
+            failureDomains: z.array(z.object({ kind: z.string().min(1), key: z.string().min(1) }).strict()).default([]),
           })
           .strict(),
       )
       .optional(),
     components: z.record(z.string(), OverlayComponentSchema),
   })
-  .strict();
+  .strict()
+  .superRefine((overlay, ctx) => {
+    const sourceUrls = new Set(overlay.sources.map((source) => source.url));
+    for (const [componentKey, component] of Object.entries(overlay.components)) {
+      if (
+        "applicability" in component &&
+        component.applicability === "not-applicable" &&
+        !sourceUrls.has(component.sourceUrl)
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["components", componentKey, "sourceUrl"],
+          message: "Not-applicable component sourceUrl must match an overlay source",
+        });
+      }
+    }
+    for (const [metricKey, applicability] of Object.entries(overlay.metricApplicability ?? {})) {
+      if (applicability.state === "not-applicable" && !sourceUrls.has(applicability.sourceUrl)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["metricApplicability", metricKey, "sourceUrl"],
+          message: "Not-applicable metric sourceUrl must match an overlay source",
+        });
+      }
+    }
+  });
 
 const MechanismReviewOverlayFileSchema = z
   .object({
@@ -156,6 +227,31 @@ const MechanismReviewOverlayFileSchema = z
     if (new Set(ids).size !== ids.length) {
       ctx.addIssue({ code: "custom", path: ["overlays"], message: "Duplicate overlay assetId" });
     }
+    file.overlays.forEach((overlay, overlayIndex) => {
+      const sourceUrls = new Set(overlay.sources.map((source) => source.url));
+      for (const [componentKey, component] of Object.entries(overlay.components)) {
+        if (
+          "applicability" in component &&
+          component.applicability === "not-applicable" &&
+          !sourceUrls.has(component.sourceUrl)
+        ) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["overlays", overlayIndex, "components", componentKey, "sourceUrl"],
+            message: "Not-applicable component sourceUrl must match an overlay source",
+          });
+        }
+      }
+      for (const [metricKey, applicability] of Object.entries(overlay.metricApplicability ?? {})) {
+        if (applicability.state === "not-applicable" && !sourceUrls.has(applicability.sourceUrl)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["overlays", overlayIndex, "metricApplicability", metricKey, "sourceUrl"],
+            message: "Not-applicable metric sourceUrl must match an overlay source",
+          });
+        }
+      }
+    });
   });
 
 export type MechanismReviewOverlay = z.infer<typeof MechanismReviewOverlaySchema>;
@@ -236,11 +332,42 @@ export function expandOverlayReview(
       throw new Error(`Unknown ${overlay.archetype} mechanism metric in overlay ${overlay.assetId}: ${key}`);
     }
   }
+  for (const key of Object.keys(overlay.metricApplicability ?? {})) {
+    if (!metricKeys.includes(key)) {
+      throw new Error(
+        `Unknown ${overlay.archetype} mechanism metric applicability in overlay ${overlay.assetId}: ${key}`,
+      );
+    }
+  }
   const fallbackComponents =
     fallbackReview && fallbackReview.archetype === overlay.archetype
       ? (fallbackReview as unknown as Record<string, V9MechanismFactV1>)
       : null;
   const review: Record<string, unknown> = { archetype: overlay.archetype, ...overlay.metrics };
+  if (overlay.archetype === "cdp") {
+    const metricApplicability: Record<string, unknown> = {};
+    for (const metricKey of metricKeys) {
+      const value = overlay.metrics[metricKey];
+      const applicability = overlay.metricApplicability?.[metricKey] ?? { state: "measured" as const };
+      if (applicability.state === "measured" && value == null) {
+        throw new Error(`Overlay ${overlay.assetId} has measured ${metricKey} without a numeric value`);
+      }
+      if (applicability.state === "not-applicable" && value !== null) {
+        throw new Error(`Overlay ${overlay.assetId} has not-applicable ${metricKey} with a numeric value`);
+      }
+      metricApplicability[metricKey] =
+        applicability.state === "measured"
+          ? { state: "measured" }
+          : {
+              state: "not-applicable",
+              rationale: applicability.rationale,
+              evidenceRefIds: [`extension-evidence:mechanism:${kebabCase(metricKey)}`],
+            };
+    }
+    review.metricApplicability = metricApplicability;
+  } else if (Object.values(overlay.metrics).some((value) => value === null)) {
+    throw new Error(`Only CDP overlays support structurally not-applicable metrics (${overlay.assetId})`);
+  }
   if (overlay.archetype === "synthetic-delta-neutral") {
     review.venueShares = overlay.venueShares ?? [];
   }
@@ -251,7 +378,9 @@ export function expandOverlayReview(
     // stays bounded-unknown; serial mechanism components are never published
     // as missing.
     review[componentField] = curated
-      ? knownFact(kebabCase(componentField), curated.quality)
+      ? !("applicability" in curated) || curated.applicability === "measured"
+        ? knownFact(kebabCase(componentField), curated.quality)
+        : notApplicableFact(kebabCase(componentField), curated.rationale)
       : (fallbackComponents?.[componentField] ?? boundedFact(kebabCase(componentField), true));
   }
   return V9MechanismRiskReviewSchema.parse(review);
