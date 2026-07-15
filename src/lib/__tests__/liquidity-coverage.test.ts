@@ -13,7 +13,7 @@ describe("liquidity coverage", () => {
         classified.push(`${meta.id}:${c.chain}:${getDexDiscoveryProviders(c.chain).join(",") || "provider-inaccessible"}`);
       }
     }
-    expect(classified.filter((row) => row.endsWith(":provider-inaccessible"))).toHaveLength(263);
+    expect(classified.filter((row) => row.endsWith(":provider-inaccessible"))).toHaveLength(269);
   });
 
   it("all colliding symbols have contracts for address-based disambiguation", () => {
