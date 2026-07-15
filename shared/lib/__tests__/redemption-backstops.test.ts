@@ -255,22 +255,24 @@ describe("getRedemptionBackstopConfig", () => {
   });
 
   it("promotes the next non-top-100 tranche to reviewed medium-confidence routes", () => {
-    // cUSD/cEUR moved to live reserve-sync-metadata capacity (Mento broker-pool
-    // redemption telemetry) on 2026-07-09; see the Mento redemption batch.
+    // cUSD/cEUR retain the 2026-07-09 live broker-pool capacity model; their
+    // concrete stable outputs were reconciled against those pools on 2026-07-15.
     expect(getRedemptionBackstopConfig("cusd-celo")).toMatchObject({
       routeFamily: "collateral-redeem",
-      outputAssetType: "mixed-collateral",
+      outputAssetType: "stable-basket",
+      outputAssets: ["usdc-circle", "usdt-tether"],
       capacityModel: { kind: "reserve-sync-metadata" },
       costModel: { kind: "dynamic-or-unclear" },
-      reviewedAt: "2026-07-09",
+      reviewedAt: "2026-07-15",
     });
 
     expect(getRedemptionBackstopConfig("ceur-celo")).toMatchObject({
       routeFamily: "collateral-redeem",
-      outputAssetType: "mixed-collateral",
+      outputAssetType: "stable-single",
+      outputAssets: ["cusd-celo"],
       capacityModel: { kind: "reserve-sync-metadata" },
       costModel: { kind: "dynamic-or-unclear" },
-      reviewedAt: "2026-07-09",
+      reviewedAt: "2026-07-15",
     });
 
     expect(getRedemptionBackstopConfig("alusd-alchemix")).toMatchObject({
@@ -914,5 +916,52 @@ describe("getRedemptionBackstopConfig", () => {
       "immediate-bounded",
     );
     expect(resolveCapacitySemantics(getRedemptionBackstopConfig("usdrif-rif")!.capacityModel)).toBe("eventual-only");
+  });
+
+  it("records the sourced redemption-tail output rulings without resolving incomplete baskets", () => {
+    const nestOutputs = new Map([
+      ["ntbill-nest", ["usdc-circle", "pusd-plume"]],
+      ["nbasis-nest", ["usdc-circle", "pusd-plume"]],
+      ["nopal-nest", ["usdc-circle", "pusd-plume", "usdt-tether"]],
+      ["nwisdom-nest", ["usdc-circle", "pusd-plume"]],
+    ] as const);
+    for (const [id, outputAssets] of nestOutputs) {
+      expect(getRedemptionBackstopConfig(id)).toMatchObject({
+        routeFamily: "queue-redeem",
+        settlementModel: "days",
+        executionModel: "rules-based-nav",
+        outputAssetType: "stable-basket",
+        outputAssets,
+        reviewedAt: "2026-07-15",
+      });
+    }
+
+    expect(getRedemptionBackstopConfig("ussd-sonic-labs")).toMatchObject({
+      outputAssetType: "stable-single",
+      outputAssets: ["frxusd-frax"],
+      costModel: { kind: "fee-bps", feeBps: 0 },
+      reviewedAt: "2026-07-15",
+    });
+    expect(getRedemptionBackstopConfig("ftusd-flying-tulip")).toMatchObject({
+      outputAssetType: "stable-basket",
+      outputAssets: ["usdc-circle", "usdt-tether"],
+      reviewedAt: "2026-07-15",
+    });
+    expect(getRedemptionBackstopConfig("hyusd-hylo")).toMatchObject({
+      routeStatus: "unknown",
+      outputAssetType: "mixed-collateral",
+      reviewedAt: "2026-07-15",
+    });
+    expect(getRedemptionBackstopConfig("hyusd-hylo")?.outputAssets).toBeUndefined();
+
+    const dusd = getRedemptionBackstopConfig("dusd-dtrinity");
+    expect(dusd).toMatchObject({ outputAssetType: "stable-basket", reviewedAt: "2026-07-15" });
+    expect(dusd?.outputAssets).toBeUndefined();
+    expect(dusd?.notes).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("11 symbols"),
+        expect.stringContaining("vbUSDC and vbUSDT have no tracked Pharos ids"),
+      ]),
+    );
   });
 });

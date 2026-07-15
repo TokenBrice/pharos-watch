@@ -40,6 +40,10 @@ import {
   buildDexLiquidityCronMetadata,
   isDexLiquidityDegraded,
 } from "./orchestrator-metadata";
+import {
+  buildFluidMeasuredExecutionTargets,
+  buildPancakeMeasuredExecutionTargets,
+} from "../measured-execution/inventory";
 
 const DEX_LIQUIDITY_PERSISTENCE_BLOCKING_FAILURES = new Set(["defillama-yields", "defillama-protocols"]);
 
@@ -486,6 +490,10 @@ async function buildDexLiquidityPoolState(
     sourceState.subgraphEnrichment.uniV3PoolFees,
     sourceState.subgraphEnrichment.uniV3SymbolFees,
     sourceState.subgraphEnrichment.aerodromeIsStable,
+    sourceState.subgraphEnrichment.uniV3ExecutionCandidates,
+    sourceState.stablecoinPriceById,
+    ctx.syncStartSec,
+    sourceState.validationReferences,
   );
   const directApiIntegration = await integrateDirectApiLiquidityPhase({
     db: ctx.db,
@@ -585,6 +593,23 @@ async function scoreDexLiquidityPoolState(
     sourceState.dataSources.protocolTvlCaps,
     sourceState.stablecoinMcapById,
     ctx.syncStartSec,
+    buildPancakeMeasuredExecutionTargets({
+      pools: sourceState.directApiPools,
+      chainAddressToId: sourceState.lookups.chainAddressToId,
+      symbolToChainScopedIds: sourceState.lookups.symbolToChainScopedIds,
+      validationReferences: sourceState.validationReferences,
+      stablecoinPriceById: sourceState.stablecoinPriceById,
+      capturedAt: ctx.syncStartSec,
+    }),
+    buildFluidMeasuredExecutionTargets({
+      pools: sourceState.directApiPools,
+      chainAddressToId: sourceState.lookups.chainAddressToId,
+      symbolToChainScopedIds: sourceState.lookups.symbolToChainScopedIds,
+      validationReferences: sourceState.validationReferences,
+      stablecoinPriceById: sourceState.stablecoinPriceById,
+      capturedAt: ctx.syncStartSec,
+    }),
+    ctx.signal,
   );
   const analysis = await analyzeDexLiquidityPostScoring({
     db: ctx.db,

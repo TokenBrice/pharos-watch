@@ -1,3 +1,5 @@
+import type { DexExecutionCapabilityGate } from "@shared/types/market";
+
 export interface DexApiPoolToken {
   address: string;
   symbol: string;
@@ -44,6 +46,8 @@ export interface DexApiPool {
    * paper convention before simulation.
    */
   amp?: number | null;
+  /** Reviewed exact-family failure that must survive direct-API shaping. */
+  executionCapabilityGate?: DexExecutionCapabilityGate;
 }
 
 export type DexPaginationPersistenceErrorClass =

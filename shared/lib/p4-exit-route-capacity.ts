@@ -1,6 +1,7 @@
 import type {
   DexAmmExecutionModel,
   DexAmmExecutionToken,
+  DexExecutionCapabilityGate,
   ExitRouteCapacityPoint,
   ExitRouteConfidence,
   ExitRouteEvidenceKind,
@@ -17,8 +18,13 @@ import {
   encodeExitRouteIdentityPart,
   normalizeExitRouteCorrelationKey,
 } from "./exit-route-identity";
+import {
+  DEX_MEASURED_FRESHNESS_MAX_SEC,
+  DexMeasuredExecutionPublicProfileSchema,
+  type DexMeasuredExecutionPublicProfile,
+} from "../types/measured-execution";
 
-const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.3";
+const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.4";
 
 const DEFAULT_NOTIONALS_USD = [100_000, 1_000_000, 10_000_000, 25_000_000] as const;
 const REFERENCE_NOTIONAL_USD = 1_000_000;
@@ -53,6 +59,7 @@ export interface DexRouteSourceCapability {
     | "constant-product"
     | "weighted-constant-mean"
     | "stableswap"
+    | "measured-quote"
     | "curve-stableswap-retained"
     | "amm-tvl-proxy"
     | "synthetic-fallback";
@@ -75,6 +82,40 @@ export interface DexRouteSourceCapability {
  * This intentionally describes retained evidence, not upstream capabilities.
  */
 export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] = [
+  {
+    id: "quoter-v2-measured-exact",
+    sourceFamilies: ["dl", "direct_api"],
+    model: "measured-quote",
+    tokenIdentity: "exact",
+    exactBalancesOrReserves: "absent",
+    poolInvariantParameters: "exact",
+    outputIdentity: "exact",
+    fees: "exact",
+    observationTime: "source-observed",
+    outputEvidenceKind: "measured-executable-depth",
+    confidence: "high",
+    outputKinds: ["tracked-stablecoin", "collateral"],
+    commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
+    scoreEligible: true,
+    limitations: ["Activated only for consumer-validated Uniswap V3 and PancakeSwap V3 QuoterV2 profiles."],
+  },
+  {
+    id: "measured-adapter-shadow",
+    sourceFamilies: ["direct_api", "dl"],
+    model: "measured-quote",
+    tokenIdentity: "exact",
+    exactBalancesOrReserves: "absent",
+    poolInvariantParameters: "exact",
+    outputIdentity: "exact",
+    fees: "partial",
+    observationTime: "source-observed",
+    outputEvidenceKind: "measured-executable-depth",
+    confidence: "high",
+    outputKinds: ["tracked-stablecoin", "collateral"],
+    commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
+    scoreEligible: false,
+    limitations: ["Shadow-only measured adapters require an activation-pending gate and cannot satisfy completeness."],
+  },
   {
     id: "raydium-constant-product-exact",
     sourceFamilies: ["direct_api"],
@@ -281,7 +322,10 @@ export interface P4DexRoutePoolInput {
     measurement?: {
       synthetic?: boolean;
     };
+    executionCapabilityGate?: DexExecutionCapabilityGate;
     ammExecutionModel?: DexAmmExecutionModel;
+    measuredExecution?: DexMeasuredExecutionPublicProfile;
+    measuredExecutionPhysicalPoolId?: string;
   };
 }
 
@@ -292,16 +336,24 @@ export interface P4DexRouteObservationResult {
 
 /**
  * Exact-route scoring may replace the aggregate DEX path only when every
- * retained pool produced a score-eligible modeled observation. Partial
- * producer support remains useful shadow evidence but is not an exhaustive
- * view of the holder's DEX exits.
+ * retained pool with a reviewed score-eligible capability produced an
+ * observation. Shaped evidence that can never be executable remains visible
+ * in diagnostics but is not part of an impossible completeness denominator.
+ * Malformed or gated exact-capability pools stay in the denominator and fail
+ * it closed.
  */
 export function isDexExitRouteCoverageComplete(coverage: ExitRouteObservationCoverage | null | undefined): boolean {
+  if (
+    coverage?.status !== "populated" ||
+    coverage.capabilityMatrixVersion !== DEX_ROUTE_CAPABILITY_MATRIX_VERSION ||
+    coverage.scoreEligiblePoolCount == null ||
+    coverage.scoreEligibleCapabilityPoolCount == null
+  ) return false;
+
   return (
-    coverage?.status === "populated" &&
-    coverage.retainedPoolCount > 0 &&
-    coverage.unsupportedPoolCount === 0 &&
-    coverage.scoreEligiblePoolCount === coverage.retainedPoolCount
+    coverage.scoreEligibleCapabilityPoolCount > 0 &&
+    coverage.scoreEligibleCapabilityPoolCount <= coverage.retainedPoolCount &&
+    coverage.scoreEligiblePoolCount === coverage.scoreEligibleCapabilityPoolCount
   );
 }
 
@@ -335,6 +387,15 @@ function capabilityById(id: string): DexRouteSourceCapability {
 }
 
 function capabilityForPool(pool: P4DexRoutePoolInput): DexRouteSourceCapability {
+  const measuredProfile = pool.extra?.measuredExecution;
+  if (measuredProfile) {
+    return capabilityById(
+      measuredProfile.adapterProfileId === "uniswap-v3-quoter-v2" ||
+        measuredProfile.adapterProfileId === "pancakeswap-v3-quoter-v2"
+        ? "quoter-v2-measured-exact"
+        : "measured-adapter-shadow",
+    );
+  }
   if (
     pool.poolType === "orderbook" &&
     pool.source === "cg_tickers" &&
@@ -393,6 +454,47 @@ function buildCapacityCurve(
     return DEFAULT_NOTIONALS_USD.map((notional) => buildCapacityPoint(notional, REFERENCE_COST_BPS, capacityUsd));
   }
   return null;
+}
+
+function validateMeasuredExecutionProfile(
+  profile: DexMeasuredExecutionPublicProfile,
+  context: { pool: P4DexRoutePoolInput; stablecoinId: string; observedAt: number },
+): string[] {
+  const issues: string[] = [];
+  if (!DexMeasuredExecutionPublicProfileSchema.safeParse(profile).success) issues.push("invalid-profile-schema");
+  if (profile.adapterProfileId !== "uniswap-v3-quoter-v2" && profile.adapterProfileId !== "pancakeswap-v3-quoter-v2") {
+    issues.push("adapter-not-score-eligible");
+  }
+  if (
+    canonicalExitRouteChain(profile.chain) !== canonicalExitRouteChain(context.pool.chain) ||
+    normalizedKey(profile.protocol) !== normalizedKey(context.pool.project)
+  ) issues.push("pool-identity-mismatch");
+  if (
+    !context.pool.extra?.measuredExecutionPhysicalPoolId ||
+    canonicalExitRouteScopedKey(profile.chain, profile.poolId) !==
+      canonicalExitRouteScopedKey(context.pool.chain, context.pool.extra.measuredExecutionPhysicalPoolId)
+  ) issues.push("retained-physical-pool-mismatch");
+  if (profile.tokenIn.trackedAssetId !== context.stablecoinId) issues.push("tracked-input-mismatch");
+  if (profile.tokenOut.trackedAssetId === context.stablecoinId) issues.push("self-output-asset");
+  if (profile.poolTokenAddresses?.length !== 2) issues.push("invalid-cl-token-count");
+  if (
+    profile.poolProvenance == null ||
+    canonicalExitRouteAssetKey(profile.chain, profile.poolProvenance.resolvedPoolAddress) !== profile.poolId
+  ) issues.push("physical-pool-provenance-mismatch");
+  if (context.observedAt - profile.quotedAt > DEX_MEASURED_FRESHNESS_MAX_SEC) issues.push("stale-profile");
+  if (profile.quotedAt > context.observedAt + 60) issues.push("future-profile");
+  if (
+    !Number.isFinite(profile.retainedTvlUsdAtQuote) ||
+    Math.abs(profile.retainedTvlUsdAtQuote / context.pool.tvlUsd - 1) > 0.2
+  ) issues.push("retained-tvl-mismatch");
+  if (profile.capacityCurve.some((point) => point.executableUsd > context.pool.tvlUsd * 1.5 + 0.01)) {
+    issues.push("capacity-above-retained-tvl-bound");
+  }
+  if (profile.marginalOutputRatio < 0.98 && profile.capacityCurve.some((point) => point.executableUsd > 0)) {
+    issues.push("marginal-failure-with-positive-capacity");
+  }
+  issues.push(...validateExitRouteCapacityCurve(profile.capacityCurve));
+  return [...new Set(issues)];
 }
 
 function validateAmmExecutionModel(
@@ -582,7 +684,10 @@ function buildAmmCapacityCurve(model: DexAmmExecutionModel, outputTokenIndex: nu
   );
 }
 
-function outputFromAmmToken(chain: string, token: DexAmmExecutionToken): ExitRouteOutput {
+function outputFromAmmToken(
+  chain: string,
+  token: Pick<DexAmmExecutionToken, "address" | "symbol" | "trackedAssetId">,
+): ExitRouteOutput {
   const assetKey = canonicalExitRouteAssetKey(chain, token.address);
   if (token.trackedAssetId) {
     return {
@@ -677,15 +782,101 @@ export function buildP4DexExitRouteObservations(params: {
   const unsupportedReasons: Record<string, number> = {};
   let unsupportedPoolCount = 0;
   let scoreEligiblePoolCount = 0;
+  let scoreEligibleCapabilityPoolCount = 0;
 
   for (const pool of params.retainedPools) {
     if (!Number.isFinite(pool.tvlUsd) || pool.tvlUsd <= 0 || !pool.poolId || !pool.project || !pool.chain) {
+      // An invalid retained row cannot prove that it belongs to a diagnostic-only
+      // capability, so keep it in the executable denominator and fail closed.
+      scoreEligibleCapabilityPoolCount++;
       unsupportedPoolCount++;
       unsupportedReasons.invalidRetainedPool = (unsupportedReasons.invalidRetainedPool ?? 0) + 1;
       continue;
     }
     const capability = capabilityForPool(pool);
     const ammModel = pool.extra?.ammExecutionModel;
+    const executionCapabilityGate = pool.extra?.executionCapabilityGate;
+    if (executionCapabilityGate != null) {
+      scoreEligibleCapabilityPoolCount++;
+      unsupportedPoolCount++;
+      const reason = ammModel == null
+        ? `executionCapabilityGate:${executionCapabilityGate.family}:${executionCapabilityGate.reason}`
+        : "conflictingExecutionCapabilityEvidence";
+      unsupportedReasons[reason] = (unsupportedReasons[reason] ?? 0) + 1;
+      continue;
+    }
+    if (capability.scoreEligible) scoreEligibleCapabilityPoolCount++;
+    const measuredProfile = pool.extra?.measuredExecution;
+    if (measuredProfile != null) {
+      if (ammModel != null) {
+        unsupportedPoolCount++;
+        unsupportedReasons.conflictingExecutionCapabilityEvidence =
+          (unsupportedReasons.conflictingExecutionCapabilityEvidence ?? 0) + 1;
+        continue;
+      }
+      if (!capability.scoreEligible) {
+        scoreEligibleCapabilityPoolCount++;
+        unsupportedPoolCount++;
+        unsupportedReasons.shadowMeasuredProfileWithoutGate =
+          (unsupportedReasons.shadowMeasuredProfileWithoutGate ?? 0) + 1;
+        continue;
+      }
+      const profileIssues = validateMeasuredExecutionProfile(measuredProfile, {
+        pool,
+        stablecoinId: params.stablecoinId,
+        observedAt: params.observedAt,
+      });
+      if (profileIssues.length > 0) {
+        unsupportedPoolCount++;
+        for (const issue of profileIssues) {
+          const reason = `invalidMeasuredExecution:${issue}`;
+          unsupportedReasons[reason] = (unsupportedReasons[reason] ?? 0) + 1;
+        }
+        continue;
+      }
+      const referencePoint = measuredProfile.capacityCurve.find(
+        (point) => point.requestedNotionalUsd === REFERENCE_NOTIONAL_USD && point.maxCostBps === REFERENCE_COST_BPS,
+      );
+      if (!referencePoint) {
+        unsupportedPoolCount++;
+        unsupportedReasons.missingReferencePoint = (unsupportedReasons.missingReferencePoint ?? 0) + 1;
+        continue;
+      }
+      const output = outputFromAmmToken(pool.chain, measuredProfile.tokenOut);
+      const outputIdentity = canonicalExitRouteAssetKey(pool.chain, measuredProfile.tokenOut.address);
+      const physicalPool = { ...pool, poolId: measuredProfile.poolId };
+      observations.push({
+        routeId: buildDexRouteId([
+          normalizedKey(params.stablecoinId),
+          normalizedKey(pool.source),
+          canonicalExitRouteScopedKey(pool.chain, measuredProfile.poolId),
+          outputIdentity,
+        ]),
+        routeFamily: "dex-amm",
+        scope: {
+          kind: "chain-contract",
+          chain: pool.chain,
+          contractOrPoolId: measuredProfile.poolId,
+          protocol: pool.project,
+        },
+        requestedNotionalUsd: referencePoint.requestedNotionalUsd,
+        settlementHorizonSec: IMMEDIATE_SETTLEMENT_HORIZON_SEC,
+        maxCostBps: referencePoint.maxCostBps,
+        executableUsd: referencePoint.executableUsd,
+        completionRatio: referencePoint.completionRatio,
+        output,
+        evidenceKind: capability.outputEvidenceKind,
+        confidence: capability.confidence,
+        scoreEligible: true,
+        observedAt: measuredProfile.quotedAt,
+        freshnessSeconds: Math.max(0, params.observedAt - measuredProfile.quotedAt),
+        commonModeKeys: commonModeKeys(physicalPool, output),
+        capacityCurve: measuredProfile.capacityCurve,
+      });
+      evidenceCounts[capability.outputEvidenceKind] = (evidenceCounts[capability.outputEvidenceKind] ?? 0) + 1;
+      scoreEligiblePoolCount++;
+      continue;
+    }
     if (ammModel != null) {
       const modelIssues = validateAmmExecutionModel(ammModel, {
         chain: pool.chain,
@@ -819,6 +1010,7 @@ export function buildP4DexExitRouteObservations(params: {
       observationCount: observations.length,
       scoreEligibleObservationCount: observations.filter((observation) => observation.scoreEligible).length,
       scoreEligiblePoolCount,
+      scoreEligibleCapabilityPoolCount,
       unsupportedPoolCount,
       evidenceCounts,
       unsupportedReasons,

@@ -46,6 +46,9 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
   halfHourlyMintBurnExtended: {
     jobChains: [["sync-mint-burn-extended"]],
   },
+  halfHourlyMeasuredExecution: {
+    jobChains: [["sync-cl-exit-depth"]],
+  },
   halfHourlyOffset: {
     jobChains: [["sync-dex-liquidity"]],
   },

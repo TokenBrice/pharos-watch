@@ -7,7 +7,11 @@ import {
 } from "@shared/lib/redemption-backstop-scoring";
 import { SITE_DATA_PROXY_SECRET_HEADER } from "@shared/lib/site-data-lane";
 import type { SelectorInput } from "@shared/lib/selector/types";
-import { recomputeVerifiedSelectorSnapshot } from "../lib/selector-canonical-snapshot";
+import { makeReportCardsV9Response } from "../../src/test/fixtures/safety-score-v9";
+import {
+  recomputeDeferredV9SelectorSnapshot,
+  recomputeVerifiedSelectorSnapshot,
+} from "../lib/selector-canonical-snapshot";
 
 const NOW_MS = 1_700_000_000_000;
 const NOW_SEC = NOW_MS / 1_000;
@@ -198,5 +202,29 @@ describe("canonical selector snapshot recomputation", () => {
     await expect(recompute()).rejects.toThrow(`Canonical selector source unavailable: ${failedPath}`);
     expect(fetchMock).toHaveBeenCalledTimes(4);
     expect(consumed).toEqual(new Set(sourcePaths.slice(0, 4)));
+  });
+
+  it("builds the dark V9 snapshot from only the versioned V9 contract", async () => {
+    const response = makeReportCardsV9Response();
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(typeof input === "string" ? input : input.toString());
+      expect(url.pathname).toBe(API_PATHS.reportCardsV9());
+      return new Response(JSON.stringify(response), { headers: { "Content-Type": "application/json" } });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const snapshot = await recomputeDeferredV9SelectorSnapshot(
+      new Request("https://pharos.watch/selector-snapshot", { method: "POST" }),
+      { SITE_API_ORIGIN, SITE_API_SHARED_SECRET },
+      response.safetyScoreIdentity,
+      NOW_MS,
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(snapshot).toMatchObject({
+      safetyScoreIdentity: response.safetyScoreIdentity,
+      recommendation: { status: "deferred", reason: "v9-selector-thresholds-unreviewed" },
+    });
+    expect(snapshot.datasetHash).toMatch(/^[0-9a-f]{64}$/);
   });
 });

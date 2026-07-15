@@ -4,7 +4,11 @@ import { QUALITY_MULTIPLIERS, normalizeDexSymbol } from "./dex-cron-constants";
 import { buildPoolIdentity } from "../cron/dex-liquidity/pool-identity";
 import { isPlausibleDexObservationPrice } from "../cron/dex-liquidity/price-sanity";
 import type { PriceValidationReferences } from "./price-validation";
-import type { DexAmmExecutionModel, DexAmmExecutionToken } from "@shared/types/market";
+import type {
+  DexAmmExecutionModel,
+  DexAmmExecutionToken,
+  DexExecutionCapabilityGate,
+} from "@shared/types/market";
 import { canonicalExitRouteScopedId, canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import type { DexApiFetchResult, DexApiPool, DexApiPoolToken } from "./dex-api-types";
 import {
@@ -99,14 +103,17 @@ export function normalizeDexApiPoolsForMerge(pools: DexApiPool[]): DexApiPoolNor
       continue;
     }
 
+    const reviewedExactCandidate =
+      pool.source === "balancer" ||
+      (pool.source === "raydium" && pool.poolType === "raydium-amm");
     const tokens = pool.tokens
-      .filter((token) => typeof token.address === "string" && token.address.trim().length > 0)
+      .filter((token) => reviewedExactCandidate || (typeof token.address === "string" && token.address.trim().length > 0))
       .map((token) => ({
         ...token,
         priceUsd: toPositiveFiniteNumberOrNull(token.priceUsd),
         weight: toPositiveFiniteNumberOrNull(token.weight),
       }));
-    if (tokens.length < 2) {
+    if (tokens.length < 2 && !reviewedExactCandidate) {
       skippedInvalidUnitCount++;
       continue;
     }
@@ -263,58 +270,118 @@ function resolveExecutionToken(
   };
 }
 
-function buildAmmExecutionModel(
+interface AmmExecutionCapability {
+  executionModel: DexAmmExecutionModel | null;
+  gate: DexExecutionCapabilityGate | null;
+}
+
+function capabilityGate(
+  family: DexExecutionCapabilityGate["family"],
+  reason: DexExecutionCapabilityGate["reason"],
+): AmmExecutionCapability {
+  return { executionModel: null, gate: { family, reason } };
+}
+
+function isCanonicalEvmAddress(value: string): boolean {
+  return /^0x[a-f0-9]{40}$/.test(value.trim().toLowerCase());
+}
+
+function buildAmmExecutionCapability(
   pool: DexApiPool,
   trackedTokenIndex: number,
   chainAddressToId: Map<string, string>,
   symbolToChainScopedIds: Map<string, Map<string, string[]>>,
   validationReferences?: PriceValidationReferences,
   trackedStablecoinPrices?: Map<string, number>,
-): DexAmmExecutionModel | null {
+): AmmExecutionCapability {
+  const family: DexExecutionCapabilityGate["family"] | null =
+    pool.source === "balancer"
+      ? "balancer-amm"
+      : pool.source === "raydium" && pool.poolType === "raydium-amm"
+        ? "raydium-amm"
+        : null;
+  if (pool.executionCapabilityGate) {
+    return { executionModel: null, gate: pool.executionCapabilityGate };
+  }
+  if (family == null) return { executionModel: null, gate: null };
+
+  if (
+    trackedTokenIndex < 0 ||
+    trackedTokenIndex >= pool.tokens.length
+  ) {
+    return capabilityGate(family, "tracked-input-unresolved");
+  }
   if (
     pool.balancesNormalized !== true ||
     pool.balances == null ||
     pool.balances.length !== pool.tokens.length ||
-    trackedTokenIndex < 0 ||
-    trackedTokenIndex >= pool.tokens.length ||
-    pool.feeRate == null ||
-    !Number.isFinite(pool.feeRate) ||
-    pool.feeRate < 0 ||
-    pool.feeRate >= 1
+    pool.feeRate == null
   ) {
-    return null;
+    return capabilityGate(family, "incomplete-exact-capture");
+  }
+  if (!Number.isFinite(pool.feeRate) || pool.feeRate < 0 || pool.feeRate >= 1) {
+    return capabilityGate(family, "invalid-invariant-parameters");
   }
 
-  const invariant =
-    pool.source === "raydium" && pool.poolType === "raydium-amm" && pool.tokens.length === 2
-      ? "constant-product"
-      : pool.source === "balancer" && pool.poolType === "balancer-weighted"
-        ? "weighted-constant-mean"
-        : pool.source === "balancer" &&
-            pool.poolType === "balancer-stable" &&
-            toPositiveFiniteNumberOrNull(pool.amp) != null
-          ? "stableswap"
-          : null;
-  if (invariant == null) return null;
+  let invariant: DexAmmExecutionModel["invariant"];
+  if (pool.source === "raydium" && pool.poolType === "raydium-amm") {
+    if (pool.tokens.length !== 2) return capabilityGate(family, "unsupported-invariant");
+    invariant = "constant-product";
+  } else if (pool.source === "balancer" && pool.poolType === "balancer-weighted") {
+    invariant = "weighted-constant-mean";
+  } else if (pool.source === "balancer" && pool.poolType === "balancer-stable") {
+    if (pool.amp == null) return capabilityGate(family, "incomplete-exact-capture");
+    if (!Number.isFinite(pool.amp) || pool.amp <= 0) {
+      return capabilityGate(family, "invalid-invariant-parameters");
+    }
+    invariant = "stableswap";
+  } else {
+    return capabilityGate(family, "unsupported-invariant");
+  }
 
   // Composable stable pools list the pool's own phantom BPT as a token; it is
   // not a swappable counter-asset and must not enter the invariant.
   const poolAddress = pool.poolAddress.trim().toLowerCase();
+  if (family === "balancer-amm" && !isCanonicalEvmAddress(poolAddress)) {
+    return capabilityGate(family, "incomplete-exact-capture");
+  }
   const entries = pool.tokens.map((token, index) => ({ token, balance: pool.balances![index]!, index }));
   const modelEntries =
     invariant === "stableswap"
       ? entries.filter(({ token }) => token.address.trim().toLowerCase() !== poolAddress)
       : entries;
-  if (modelEntries.length < 2 || modelEntries.length > 8) return null;
+  if (modelEntries.length < 2) return capabilityGate(family, "incomplete-exact-capture");
+  if (modelEntries.length > 8) return capabilityGate(family, "unsupported-invariant");
   const modelTrackedIndex = modelEntries.findIndex(({ index }) => index === trackedTokenIndex);
-  if (modelTrackedIndex === -1) return null;
+  if (modelTrackedIndex === -1) return capabilityGate(family, "tracked-input-unresolved");
+
+  if (modelEntries.some(({ token }) =>
+    (family === "balancer-amm" ? !isCanonicalEvmAddress(token.address) : !token.address.trim()) ||
+    !normalizeDexSymbol(token.symbol) ||
+    !Number.isFinite(token.decimals) ||
+    token.decimals < 0 ||
+    token.decimals > 255
+  )) {
+    return capabilityGate(family, "incomplete-exact-capture");
+  }
+  if (modelEntries.some(({ balance }) => !Number.isFinite(balance) || balance <= 0)) {
+    return capabilityGate(family, "invalid-invariant-parameters");
+  }
+
+  const identityKeys = modelEntries.map(({ token }) => canonicalExitRouteScopedId(pool.chain, token.address));
+  if (new Set(identityKeys).size !== identityKeys.length) {
+    return capabilityGate(family, "ambiguous-token-identity");
+  }
 
   // Stable math runs on rate-scaled balances; every modeled token needs a measured rate.
   const priceRates =
-    invariant === "stableswap"
-      ? modelEntries.map(({ token }) => toPositiveFiniteNumberOrNull(token.priceRate))
-      : null;
-  if (priceRates != null && priceRates.some((rate) => rate == null)) return null;
+    invariant === "stableswap" ? modelEntries.map(({ token }) => token.priceRate) : null;
+  if (priceRates != null && priceRates.some((rate) => rate == null)) {
+    return capabilityGate(family, "incomplete-exact-capture");
+  }
+  if (priceRates != null && priceRates.some((rate) => typeof rate !== "number" || !Number.isFinite(rate) || rate <= 0)) {
+    return capabilityGate(family, "invalid-invariant-parameters");
+  }
 
   const tokens = modelEntries.map(({ token, balance }) =>
     resolveExecutionToken(
@@ -327,16 +394,20 @@ function buildAmmExecutionModel(
       trackedStablecoinPrices,
     ),
   );
-  if (tokens.some((token) => token == null)) return null;
+  if (tokens.some((token) => token == null)) {
+    return capabilityGate(family, "incomplete-exact-capture");
+  }
   let exactTokens = tokens as DexAmmExecutionToken[];
-  const identityKeys = exactTokens.map((token) => canonicalExitRouteScopedId(pool.chain, token.address));
-  if (new Set(identityKeys).size !== identityKeys.length) return null;
 
   if (invariant === "weighted-constant-mean") {
     const weights = exactTokens.map((token) => token.weight);
-    if (weights.some((weight) => weight == null)) return null;
+    if (weights.some((weight) => weight == null)) {
+      return capabilityGate(family, "incomplete-exact-capture");
+    }
     const weightSum = (weights as number[]).reduce((sum, weight) => sum + weight, 0);
-    if (!Number.isFinite(weightSum) || Math.abs(weightSum - 1) > 0.0001) return null;
+    if (!Number.isFinite(weightSum) || Math.abs(weightSum - 1) > 0.0001) {
+      return capabilityGate(family, "invalid-invariant-parameters");
+    }
   }
 
   let amplification: number | undefined;
@@ -358,12 +429,15 @@ function buildAmmExecutionModel(
   }
 
   return {
-    source: invariant === "constant-product" ? "raydium" : "balancer",
-    invariant,
-    trackedTokenIndex: modelTrackedIndex,
-    feeRate: pool.feeRate,
-    ...(amplification != null ? { amplification } : {}),
-    tokens: exactTokens,
+    executionModel: {
+      source: invariant === "constant-product" ? "raydium" : "balancer",
+      invariant,
+      trackedTokenIndex: modelTrackedIndex,
+      feeRate: pool.feeRate,
+      ...(amplification != null ? { amplification } : {}),
+      tokens: exactTokens,
+    },
+    gate: null,
   };
 }
 
@@ -505,7 +579,7 @@ export function convertToGtNewPools(
         validationReferences,
         trackedStablecoinPrices,
       );
-      const ammExecutionModel = buildAmmExecutionModel(
+      const executionCapability = buildAmmExecutionCapability(
         pool,
         i,
         chainAddressToId,
@@ -534,7 +608,12 @@ export function convertToGtNewPools(
             }
           : {}),
         ...(feeTierBps != null ? { feeTierBps } : {}),
-        ...(ammExecutionModel ? { ammExecutionModel } : {}),
+        ...(executionCapability.executionModel
+          ? { ammExecutionModel: executionCapability.executionModel }
+          : {}),
+        ...(executionCapability.gate
+          ? { executionCapabilityGate: executionCapability.gate }
+          : {}),
         measurement: {
           tvlMeasured: true,
           volumeMeasured: pool.tokenVolumes24h != null || (Number.isFinite(pool.volume24hUsd) && pool.volume24hUsd > 0),
@@ -564,6 +643,10 @@ export function extractPriceObservations(
   const result = new Map<string, DexPriceObs[]>();
 
   for (const pool of pools) {
+    if (
+      pool.executionCapabilityGate?.family === "balancer-amm" &&
+      pool.executionCapabilityGate.reason === "paused-or-swap-disabled"
+    ) continue;
     if (!isEligibleDirectApiPool(pool, DIRECT_API_PRICE_MIN_TVL_USD)) continue;
     const identity = buildPoolIdentity({
       chain: pool.chain,

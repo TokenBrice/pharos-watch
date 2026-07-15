@@ -196,17 +196,25 @@
     "reviewedStatus": "possible",
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://xsy-1.gitbook.io/xsy-main"
+        "label": "YieldPoint contract addresses",
+        "url": "https://docs.yieldpoint.io/protocol/architecture/contracts"
       },
       {
-        "label": "Website",
-        "url": "https://xsy.fi/"
+        "label": "Base UTY proxy and verified implementation",
+        "url": "https://base.blockscout.com/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
+      },
+      {
+        "label": "Avalanche UTY contract",
+        "url": "https://snowtrace.io/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
+      },
+      {
+        "label": "Katana UTY contract",
+        "url": "https://katanascan.com/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
       }
     ],
-    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Pinned 2026-07-14 review covers the tracked Base vault and Avalanche/Katana OFT deployments. No active holder blacklist or freeze path was established, but the same immediate EOA owner controls the UUPS upgrade path on all three deployments and can replace transfer logic, so a bounded possible posture is retained.",
+    "reviewer": "TERRA-II access verification",
+    "reviewedAt": "2026-07-15"
   },
   "chainTier": "established-alt-l1",
   "collateralQuality": "exotic",

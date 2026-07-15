@@ -94,6 +94,65 @@ describe("evm-rpc helpers", () => {
     expect(fetchWithRetryMock).toHaveBeenCalledTimes(2);
   });
 
+  it("caps each fallback request to the remaining absolute deadline", async () => {
+    let nowMs = 1_000;
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+    fetchWithRetryMock.mockImplementation(async () => {
+      nowMs += 400;
+      return null;
+    });
+
+    await fetchEvmUint256AtBlock(undefined, "0xToken", "0x18160ddd", "latest", {
+      extraRpcUrls: ["https://rpc.primary", "https://rpc.fallback"],
+      timeoutMs: 10_000,
+      deadlineMs: 2_000,
+      maxRetries: 0,
+    });
+
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(2);
+    expect(fetchWithRetryMock.mock.calls[0]?.[3]).toEqual(expect.objectContaining({ timeoutMs: 1_000 }));
+    expect(fetchWithRetryMock.mock.calls[1]?.[3]).toEqual(expect.objectContaining({ timeoutMs: 600 }));
+    nowSpy.mockRestore();
+  });
+
+  it("does not start a fallback RPC after the absolute deadline", async () => {
+    let nowMs = 1_000;
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+    fetchWithRetryMock.mockImplementation(async () => {
+      nowMs = 2_001;
+      return null;
+    });
+
+    await fetchEvmUint256AtBlock(undefined, "0xToken", "0x18160ddd", "latest", {
+      extraRpcUrls: ["https://rpc.primary", "https://rpc.fallback"],
+      timeoutMs: 10_000,
+      deadlineMs: 2_000,
+      maxRetries: 0,
+    });
+
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
+    nowSpy.mockRestore();
+  });
+
+  it("charges the request guard separately for primary and fallback URL attempts", async () => {
+    fetchWithRetryMock.mockResolvedValue(null);
+    let attemptsRemaining = 1;
+    const beforeRequest = vi.fn(() => {
+      if (attemptsRemaining <= 0) return false;
+      attemptsRemaining -= 1;
+      return true;
+    });
+
+    await fetchEvmUint256AtBlock(undefined, "0xToken", "0x18160ddd", "latest", {
+      extraRpcUrls: ["https://rpc.primary", "https://rpc.fallback"],
+      maxRetries: 0,
+      beforeRequest,
+    });
+
+    expect(beforeRequest).toHaveBeenCalledTimes(2);
+    expect(fetchWithRetryMock).toHaveBeenCalledTimes(1);
+  });
+
   it("encodes Multicall3 aggregate3 calldata", () => {
     expect(
       encodeMulticall3Aggregate3CallData([

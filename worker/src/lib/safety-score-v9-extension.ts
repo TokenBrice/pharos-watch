@@ -1104,7 +1104,11 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     researchOverlays: {
       generationId: `registry:${fixedInput.registryRevision}`,
       observedAtSec: registryObservedAtSec,
-      maxAgeSec: null,
+      // Curated mechanism/reserve/route overlays re-bound after twelve months,
+      // consistent with the D1 overlay standard and the mechanism-overlay
+      // expiry gate (VER2-004). Registry-observed overlays stay current well
+      // inside this window, so the current cohort is unaffected.
+      maxAgeSec: 31_536_000,
     },
   } satisfies SafetyScoreV9FactSetExtensionV2["sources"];
 

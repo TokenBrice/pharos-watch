@@ -1,3 +1,5 @@
+import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
+import { isDexExitRouteCoverageComplete } from "@shared/lib/p4-exit-route-capacity";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { deriveSupplyModelExitRouteObservation } from "./redemption-exit-route-observations";
@@ -36,18 +38,6 @@ function capacityPoints(observation: ExitRouteObservation): RouteReview["executi
     );
 }
 
-function resolvedOutputAssetKeys(observation: ExitRouteObservation): string[] | null {
-  const output = observation.output;
-  if (output.kind !== "tracked-stablecoin" && output.kind !== "fiat" && output.kind !== "collateral") return null;
-  const assetKeys = [
-    ...(output.assetKeys ?? []),
-    ...(output.kind === "tracked-stablecoin" ? (output.trackedAssetIds ?? []) : []),
-    ...(output.kind === "fiat" && output.currency ? [`fiat:${output.currency}`] : []),
-  ];
-  if (assetKeys.length === 0) return null;
-  return [...new Set(assetKeys)].sort(compareText);
-}
-
 function trackedStablecoinValuation(
   fixedInput: Readonly<ReportCardsFixedInput>,
   trackedAssetId: string,
@@ -72,7 +62,7 @@ function buildOutputReview(
 ): RouteOutputReview | null {
   const output = observation.output;
   if (output.kind !== "tracked-stablecoin" && output.kind !== "fiat" && output.kind !== "collateral") return null;
-  const assetKeys = resolvedOutputAssetKeys(observation);
+  const assetKeys = resolvedExitRouteOutputAssetKeys(output);
   if (assetKeys === null) return null;
   const observedAtSec = Math.min(observation.observedAt, fixedInput.clockSec);
   const shared = {
@@ -157,12 +147,7 @@ function dexPhysicalResourceKeys(observation: ExitRouteObservation): string[] {
 
 function dexCoverageClass(fixedInput: Readonly<ReportCardsFixedInput>, assetId: string): RouteReview["coverageClass"] {
   const coverage = fixedInput.dexLiqMap[assetId]?.exitRouteObservationCoverage;
-  if (
-    coverage &&
-    coverage.status === "populated" &&
-    coverage.scoreEligiblePoolCount != null &&
-    coverage.scoreEligiblePoolCount === coverage.retainedPoolCount
-  ) {
+  if (isDexExitRouteCoverageComplete(coverage)) {
     return "exact-complete";
   }
   return "exact-lower-bound";

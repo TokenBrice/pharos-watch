@@ -29,7 +29,12 @@ export function buildGeneratedArtifactExecutionPhases({
 } = {}) {
   return buildGeneratedArtifactPhases({ bootstrap, check, only, phases, skip }).map(({ phase, artifacts }) => ({
     phase,
-    units: artifacts.map((artifact) => createExecutionUnit([artifact.command])),
+    units: artifacts.map((artifact) =>
+      createExecutionUnit([artifact.command], {
+        dependsOn: artifact.dependsOn ?? [],
+        id: artifact.id,
+      }),
+    ),
   }));
 }
 
@@ -53,6 +58,7 @@ export function parseGeneratedArtifactsArgs(argv = []) {
   const options = {
     bootstrap: false,
     check: false,
+    continueOnError: false,
     dryRun: false,
     help: false,
     only: [],
@@ -67,6 +73,10 @@ export function parseGeneratedArtifactsArgs(argv = []) {
     }
     if (arg === "--check") {
       options.check = true;
+      continue;
+    }
+    if (arg === "--continue-on-error") {
+      options.continueOnError = true;
       continue;
     }
     if (arg === "--dry-run") {
@@ -115,11 +125,14 @@ export function parseGeneratedArtifactsArgs(argv = []) {
 }
 
 export function printGeneratedArtifactsHelp(log = console.log) {
-  log("Usage: npm run prebuild -- [--bootstrap|--check] [--only id[,id]] [--phase n[,n]] [--dry-run|--help]");
+  log(
+    "Usage: npm run prebuild -- [--bootstrap|--check] [--continue-on-error] [--only id[,id]] [--phase n[,n]] [--dry-run|--help]",
+  );
   log("");
   log("Options:");
   log("  --bootstrap       Run only bootstrap-safe generators (ignored in --check mode).");
   log("  --check           Verify generated artifacts instead of writing them.");
+  log("  --continue-on-error  Diagnostic mode: retain all failures and continue through dependency phases.");
   log("  --only <ids>      Run one or more artifact ids and their declared dependencies.");
   log("  --phase <phases>  Run artifacts in one or more numeric dependency phases.");
   log("  --dry-run         Print the resolved command plan without executing commands.");
@@ -138,17 +151,26 @@ export function resolveGeneratedArtifactsSkip({ check = false, env = process.env
   return check ? [] : parseGeneratedArtifactsSkip(env);
 }
 
+/**
+ * @param {{
+ *   argv?: string[],
+ *   env?: NodeJS.ProcessEnv,
+ *   log?: (message: string) => unknown,
+ *   runCommandImpl?: (command: string, extraEnv?: Record<string, string>, options?: Record<string, any>) => any,
+ * }} [options]
+ */
 export async function runGeneratedArtifacts({
   argv = process.argv.slice(2),
   env = process.env,
-  exit = process.exit,
   log = console.log,
   runCommandImpl = runShellCommand,
 } = {}) {
-  const { bootstrap, check, dryRun, help, only, phases } = parseGeneratedArtifactsArgs(argv);
+  const { bootstrap, check, continueOnError: cliContinueOnError, dryRun, help, only, phases } =
+    parseGeneratedArtifactsArgs(argv);
+  const continueOnError = cliContinueOnError || env.GENERATED_ARTIFACTS_CONTINUE_ON_ERROR === "1";
   if (help) {
     printGeneratedArtifactsHelp(log);
-    return { status: 0, failedCmd: null, aborted: false };
+    return { status: 0, failedCmd: null, aborted: false, failures: [], results: [] };
   }
 
   const skip = resolveGeneratedArtifactsSkip({ check, env });
@@ -176,25 +198,65 @@ export async function runGeneratedArtifacts({
         log(`  ${index + 1}. ${unit.commands[0]}`);
       }
     }
-    return { status: 0, failedCmd: null, aborted: false };
+    return { status: 0, failedCmd: null, aborted: false, failures: [], results: [] };
   }
 
+  const allResults = [];
+  const failedArtifactIds = new Set();
+  const taintByArtifactId = new Map();
+
   for (const { phase, units } of executionPhases) {
+    for (const unit of units) {
+      const taintedBy = new Set();
+      for (const dependencyId of unit.dependsOn ?? []) {
+        if (failedArtifactIds.has(dependencyId)) taintedBy.add(dependencyId);
+        for (const inheritedId of taintByArtifactId.get(dependencyId) ?? []) taintedBy.add(inheritedId);
+      }
+      taintByArtifactId.set(unit.id, [...taintedBy].sort());
+    }
+
     const result = await runParallelExecutionUnits(units, {
-      exit,
+      continueOnError,
       label: `${label}:phase-${phase}`,
       maxParallel: GENERATED_ARTIFACTS_MAX_PARALLEL,
       runCommandImpl,
     });
-    if (result.status !== 0) return result;
+    for (const unitResult of result.results ?? []) {
+      const artifactId = unitResult.unit.id;
+      const taintedBy = taintByArtifactId.get(artifactId) ?? [];
+      const artifactResult = {
+        ...unitResult,
+        id: artifactId,
+        phase,
+        statusLabel: unitResult.status === 0 ? (taintedBy.length > 0 ? "tainted" : "passed") : "failed",
+        taintedBy,
+      };
+      allResults.push(artifactResult);
+      if (unitResult.status !== 0 && !unitResult.aborted) failedArtifactIds.add(artifactId);
+    }
+
+    if (result.status !== 0 && !continueOnError) {
+      return { ...result, results: allResults };
+    }
   }
 
-  return { status: 0, failedCmd: null, aborted: false };
+  const failures = allResults.filter((result) => result.status !== 0 && !result.aborted);
+  const firstFailure = failures[0];
+  return {
+    status: firstFailure?.status ?? 0,
+    failedCmd: firstFailure?.failedCmd ?? null,
+    aborted: false,
+    failures,
+    results: allResults,
+  };
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {
-  runGeneratedArtifacts().catch((error) => {
+  try {
+    const result = await runGeneratedArtifacts();
+    process.exitCode = result.status;
+  } catch (error) {
     console.error(`[generated-artifacts] FAILED: ${error instanceof Error ? error.message : String(error)}`);
-    process.exit(1);
-  });
+    process.exitCode = 1;
+  }
 }

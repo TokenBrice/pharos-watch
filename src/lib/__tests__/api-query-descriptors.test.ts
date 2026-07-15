@@ -28,6 +28,7 @@ const EXPECTED_RESPONSE_MODES: {
   mintBurnEvents: "meta",
   pegSummary: "meta",
   reportCards: "meta",
+  reportCardsV9: "meta",
   depegResolver: "meta",
   depegResolverReview: "meta",
   redemptionBackstops: "meta",

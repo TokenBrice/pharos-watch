@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { MethodologyEnvelopeSchema } from "./methodology-envelope";
 import { DepegDirectionSchema } from "./market";
+import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
 
 /**
  * Depeg Duration Resolver (DDR) shared contract.
@@ -127,6 +128,11 @@ export const DdrRelatedContextSchema = z.object({
   liquidityScore: z.number().nullable().optional().default(null),
   safetyGrade: z.string().nullable().optional().default(null),
   safetyScore: z.number().nullable().optional().default(null),
+  safetyContext: z.object({
+    status: z.enum(["v8-identified", "identity-missing", "identity-mismatch", "unsupported-model", "cache-unavailable"]),
+    reason: z.string().nullable(),
+    identity: SafetyScorePublicationIdentitySchema.nullable(),
+  }).optional(),
   supplyChange7dPct: z.number().nullable().optional().default(null),
   supplyChange30dPct: z.number().nullable().optional().default(null),
   /** Abnormal mint expansion into the break (the USR tell); null when supply coverage is missing. */

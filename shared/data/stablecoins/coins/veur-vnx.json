@@ -330,8 +330,8 @@
   "launchDate": "2022-11-18",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "VEUR is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
-    "reviewedAt": "2026-06-13",
+    "summary": "VNX currently supports VEUR on Ethereum, Solana, Stellar, ICP, Base, Celo, and Etherlink/Tezos and has discontinued Polygon, Avalanche, Arbitrum, XRPL, and Fraxtal support. Issuer issuance is verified on Ethereum; exact settlement semantics for the other current and discontinued deployments remain conservatively unresolved.",
+    "reviewedAt": "2026-07-15",
     "reviewer": "Codex bridge route review",
     "confidence": "probable",
     "protocols": [
@@ -343,12 +343,16 @@
     ],
     "sources": [
       {
-        "label": "VNX",
-        "url": "https://vnx.li/"
+        "label": "VNX supported-blockchain notice",
+        "url": "https://vnx.li/strategic-focus-on-supported-blockchains/"
       },
       {
-        "label": "VNX Euro on RWA.xyz",
-        "url": "https://app.rwa.xyz/assets/VEUR"
+        "label": "VEUR Ethereum proxy",
+        "url": "https://eth.blockscout.com/address/0x6ba75d640bebfe5da1197bb5a2aff3327789b5d3"
+      },
+      {
+        "label": "VEUR Ethereum verified implementation",
+        "url": "https://eth.blockscout.com/address/0xd1d7193ce1aa7808d577058f48ef8289fc2f81fc/contracts"
       }
     ],
     "routes": [
@@ -356,16 +360,32 @@
         "id": "ethereum:0x6ba75d640bebfe5da1197bb5a2aff3327789b5d3",
         "destinationChain": "ethereum",
         "contractAddress": "0x6ba75d640bebfe5da1197bb5a2aff3327789b5d3",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "canonicalChain": "ethereum",
+        "protocol": "VNX native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Ethereum block 25536925, the VEUR proxy's EIP-1967 implementation slot resolved to 0xd1d7193ce1aa7808d577058f48ef8289fc2f81fc and its token storage resolved the VNX RBAC manager 0xcdb3867935247049e87c38ea270edd305d84c9ae.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-15",
+        "observedBlock": 25536925,
+        "sources": [
+          {
+            "label": "VEUR Ethereum proxy",
+            "url": "https://eth.blockscout.com/address/0x6ba75d640bebfe5da1197bb5a2aff3327789b5d3"
+          },
+          {
+            "label": "VEUR Ethereum verified implementation",
+            "url": "https://eth.blockscout.com/address/0xd1d7193ce1aa7808d577058f48ef8289fc2f81fc/contracts"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
       },
       {
         "id": "avalanche:0x7678e162f38ec9ef2bfd1d0aaf9fd93355e5fa0b",

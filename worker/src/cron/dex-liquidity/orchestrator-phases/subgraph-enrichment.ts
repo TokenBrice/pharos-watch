@@ -1,12 +1,13 @@
 import { rethrowIfAborted } from "../../../lib/abort";
 import type { PriceValidationReferences } from "../../../lib/price-validation";
 import { fetchUniV3Data, fetchAerodromeData } from "../subgraph-source-families";
-import type { DexPriceObs, SymbolLookups } from "../types";
+import type { DexPriceObs, SymbolLookups, UniV3Lookups } from "../types";
 
 export interface SubgraphEnrichmentPhaseResult {
   uniV3PoolFees: Map<string, number>;
   uniV3SymbolFees: Map<string, number>;
   uniV3PriceObs: Map<string, DexPriceObs[]>;
+  uniV3ExecutionCandidates: UniV3Lookups["uniV3ExecutionCandidates"];
   aerodromePriceObs: Map<string, DexPriceObs[]>;
   aerodromeIsStable: Map<string, boolean>;
 }
@@ -23,6 +24,7 @@ export async function fetchSubgraphEnrichmentPhase(params: {
   let uniV3PoolFees = new Map<string, number>();
   let uniV3SymbolFees = new Map<string, number>();
   let uniV3PriceObs = new Map<string, DexPriceObs[]>();
+  let uniV3ExecutionCandidates: UniV3Lookups["uniV3ExecutionCandidates"] = new Map();
   try {
     const uniV3Data = await fetchUniV3Data(
       params.graphApiKey,
@@ -34,6 +36,7 @@ export async function fetchSubgraphEnrichmentPhase(params: {
     uniV3PoolFees = uniV3Data.uniV3PoolFees;
     uniV3SymbolFees = uniV3Data.uniV3SymbolFees;
     uniV3PriceObs = uniV3Data.uniV3PriceObs;
+    uniV3ExecutionCandidates = uniV3Data.uniV3ExecutionCandidates;
   } catch (err) {
     rethrowIfAborted(err, params.signal);
     console.warn("[dex-liquidity] UniV3 fetch failed (non-fatal):", err);
@@ -62,6 +65,7 @@ export async function fetchSubgraphEnrichmentPhase(params: {
     uniV3PoolFees,
     uniV3SymbolFees,
     uniV3PriceObs,
+    uniV3ExecutionCandidates,
     aerodromePriceObs,
     aerodromeIsStable,
     failedSources,

@@ -24,12 +24,19 @@ const REVIEWED_HIVE_HBD_AT = REVIEWED_MAY_BATCH_AT;
 // Liquity-v2-fork CDP, or the JPYm/CHFm FPMM pools), so their capacity model
 // moves from documented-bound to reserve-sync-metadata.
 const REVIEWED_MENTO_LIVE_REDEMPTION_AT = "2026-07-09";
+const REVIEWED_REDEMPTION_OUTPUTS_AT = "2026-07-15";
 const MENTO_BIPOOLMANAGER_DOC = sourceRef(
   "Mento BiPoolManager smart-contract docs",
   "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager",
   ["route", "capacity", "fees"],
 );
 const MENTO_V3_DOC = sourceRef("Mento V3 docs", "https://docs.mento.org/mento-v3", ["route"]);
+const MENTO_V3_FPMM_DOC = sourceRef("Mento V3 FPMM mechanics", "https://docs.mento.org/mento-v3/dive-deeper/fpmm", [
+  "route",
+  "capacity",
+  "fees",
+  "settlement",
+]);
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_DIRECT_REDEMPTION_AT);
 const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/collateral-redeem.ts";
 const BASE_COLLATERAL_REDEEM_IDS = [
@@ -124,9 +131,13 @@ const mentoBrokerPoolRedeemConfig: RedemptionBackstopConfig = {
 
 export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = defineBackstopRegistry([
   ...defineBatch(BASE_COLLATERAL_REDEEM_IDS, collateralRedeemBase, { sourceFilePath: SOURCE_FILE_PATH }),
-  ...defineBatch(["jpym-mento"], { ...mentoFpmmPoolRedeemConfig, outputAssets: ["cusd-celo"] }, {
-    sourceFilePath: SOURCE_FILE_PATH,
-  }),
+  ...defineBatch(
+    ["jpym-mento"],
+    { ...mentoFpmmPoolRedeemConfig, outputAssets: ["cusd-celo"] },
+    {
+      sourceFilePath: SOURCE_FILE_PATH,
+    },
+  ),
   ...defineBatch(["chfm-mento"], mentoFpmmPoolRedeemConfig, {
     sourceFilePath: SOURCE_FILE_PATH,
   }),
@@ -235,14 +246,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       ...collateralRedeemBase,
       capacityModel: { kind: "reserve-sync-metadata" },
       reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
-      outputAssets: [
-        "asset:wbtc",
-        "asset:tbtc",
-        "asset:susds",
-        "asset:sfrxusd",
-        "asset:scrvusd",
-        "asset:ysybold",
-      ],
+      outputAssets: ["asset:wbtc", "asset:tbtc", "asset:susds", "asset:sfrxusd", "asset:scrvusd", "asset:ysybold"],
       outputAssetType: "mixed-collateral",
       costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
     },
@@ -326,7 +330,9 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       ...collateralRedeemBase,
       ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
       outputAssetType: "stable-single",
-      costModel: fixedFee(0, "Zero minting and redemption fees per Sonic Labs documentation"),
+      outputAssets: ["frxusd-frax"],
+      reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_AT,
+      costModel: fixedFee(0, "The verified Sonic BrandedCustodian returned redeemFee() = 0 at Sonic block 75971769."),
       docs: [
         sourceRef("Sonic USSD docs", "https://docs.soniclabs.com/sonic/ussd", [
           "route",
@@ -334,7 +340,15 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
           "access",
           "settlement",
         ]),
+        sourceRef(
+          "USSD BrandedCustodian verified contract",
+          "https://sonicscan.org/address/0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03#code",
+          ["route", "capacity", "fees", "settlement"],
+        ),
         sourceRef("Sonic USSD page", "https://www.soniclabs.com/ussd", ["route", "capacity", "settlement"]),
+      ],
+      notes: [
+        "Sonic's public page describes a broader upstream supported-USD-asset set, but the deployed direct holder route is the USSD BrandedCustodian. At Sonic block 75971769 its custodianTkn() returned Sonic frxUSD (0x80Eede496655FB9047dd39d9f418d5483ED600df).",
       ],
     },
     "reusd-resupply": {
@@ -359,47 +373,51 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     },
     "cusd-celo": {
       ...collateralRedeemBase,
+      outputAssets: ["usdc-circle", "usdt-tether"],
       capacityModel: { kind: "reserve-sync-metadata" },
-      reviewedAt: REVIEWED_MENTO_LIVE_REDEMPTION_AT,
-      outputAssetType: "mixed-collateral",
+      reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_AT,
+      outputAssetType: "stable-basket",
       costModel: documentedVariableFee(
         "Mento broker pool spread, set on-chain per pool (PoolConfig.spread, currently 5 bps on USDm stable pools per MGP-13); live telemetry supplies the current bps",
         "formula",
       ),
       docs: [
-        sourceRef("Mento reserve docs", "https://docs.mento.org/mento/overview/core-concepts/the-reserve", [
+        sourceRef("Mento V3 reserve docs", "https://docs.mento.org/mento-v3/dive-deeper/the-reserve", [
           "route",
           "capacity",
         ]),
         sourceRef("Mento reserve dashboard", "https://reserve.mento.org/", ["capacity"]),
         MENTO_BIPOOLMANAGER_DOC,
+        MENTO_V3_FPMM_DOC,
         MENTO_V3_DOC,
       ],
       notes: [
-        "Mento docs describe cUSD as mintable by depositing reserve collateral and burnable back into reserve assets at oracle value, with overcollateralization and circuit breakers governing the reserve",
+        "Mento V3 documents USDm (the tracked cusd-celo asset) as Reserve-backed, while its direct FPMM swap route returns the configured counter asset at the oracle rate minus fees.",
         "Live reserve sync now enumerates USDm's Mento Broker/BiPoolManager pools (getExchangeIds/getPoolExchange) each run, summing the matched USDC/USDT counter-asset bucket depths as direct redemption capacity and reporting the current pool spread as fee.",
       ],
     },
     "ceur-celo": {
       ...collateralRedeemBase,
+      outputAssets: ["cusd-celo"],
       capacityModel: { kind: "reserve-sync-metadata" },
-      reviewedAt: REVIEWED_MENTO_LIVE_REDEMPTION_AT,
-      outputAssetType: "mixed-collateral",
+      reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_AT,
+      outputAssetType: "stable-single",
       costModel: documentedVariableFee(
         "Mento broker pool spread, set on-chain per pool (PoolConfig.spread, currently 5 bps on USDm stable pools per MGP-13); live telemetry supplies the current bps",
         "formula",
       ),
       docs: [
-        sourceRef("Mento reserve docs", "https://docs.mento.org/mento/overview/core-concepts/the-reserve", [
+        sourceRef("Mento V3 reserve docs", "https://docs.mento.org/mento-v3/dive-deeper/the-reserve", [
           "route",
           "capacity",
         ]),
         sourceRef("Mento reserve dashboard", "https://reserve.mento.org/", ["capacity"]),
         MENTO_BIPOOLMANAGER_DOC,
+        MENTO_V3_FPMM_DOC,
         MENTO_V3_DOC,
       ],
       notes: [
-        "Mento docs describe cEUR as mintable by depositing reserve collateral and burnable back into reserve assets at oracle value, with overcollateralization and circuit breakers governing the reserve",
+        "Mento V3 documents EURm as Reserve-backed, while the current Celo FPMM direct holder route swaps EURm into USDm (tracked as cusd-celo) at the oracle rate minus fees.",
         "Live reserve sync now enumerates EURm's Mento Broker/BiPoolManager USDm/EURm pool (getExchangeIds/getPoolExchange) each run, reporting the USDm counter-asset bucket depth as direct redemption capacity and the current pool spread as fee.",
       ],
     },
@@ -460,24 +478,26 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     "hyusd-hylo": {
       ...collateralRedeemBase,
       ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
-      outputAssetType: "bluechip-collateral",
+      routeStatus: "unknown",
+      outputAssetType: "mixed-collateral",
+      reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_AT,
       costModel: undisclosedReviewedFee(
-        "Hylo docs describe hyUSD burns/redemptions against the SOL LST collateral pool through protocol pricing; public materials reviewed do not publish one fixed redemption fee",
+        "Hylo V2 docs describe pool-specific dynamic redemption fees; the active production version and routable pool set could not be reconciled from public primary sources",
       ),
       docs: [
-        sourceRef("Hylo hyUSD and xSOL", "https://docs.hylo.so/protocol-overview/hyUSD-%26-xSOL", [
+        sourceRef("Hylo multi-asset architecture", "https://docs.hylo.so/protocol-overview/multi-asset-architecture", [
           "route",
           "capacity",
-          "fees",
         ]),
-        sourceRef("Hylo risk management", "https://docs.hylo.so/protocol-overview/risk-management", [
-          "capacity",
-          "settlement",
-          "access",
-        ]),
+        sourceRef(
+          "Hylo dynamic collateral routing",
+          "https://docs.hylo.so/protocol-overview/dynamic-collateral-routing",
+          ["route", "fees", "settlement"],
+        ),
       ],
       notes: [
-        "Hylo is modeled as protocol collateral redemption into SOL LST-backed value, with xSOL absorbing reserve volatility before hyUSD holders.",
+        "Hylo's current architecture page distinguishes V1's SOL-only LST pool from V2's independent SOL, BTC, and USDC collateral pools, and its routing page says redemptions select among pools using dynamic fees.",
+        "No primary source reviewed identifies which architecture and complete pool/output set is active for the tracked hyUSD deployment. The route is therefore unknown and outputAssets is intentionally unset so neither the legacy SOL-only nor the V2 multi-asset claim can score.",
       ],
     },
     "fusd-freedom-dollar": {

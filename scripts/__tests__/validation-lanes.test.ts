@@ -3,6 +3,7 @@ import {
   ALL_VALIDATE_PREBUILD_COMMANDS,
   buildNoncriticalTestShardCommands,
   buildValidatePrebuildCommands,
+  buildValidatePrebuildLeaves,
   COMMON_VALIDATE_POSTBUILD_COMMANDS,
   flattenValidationImpactPaths,
   PAGES_SMOKE_VALIDATE_COMMANDS,
@@ -91,6 +92,20 @@ describe("validation lane authority", () => {
     expect(buildValidatePrebuildCommands({ surface: "pages", skipCommands, includeAdvisory: true })).not.toContain(
       "npm run audit:deps",
     );
+  });
+
+  it("exposes compound wrappers as stable atomic discovery leaves", () => {
+    const leaves = buildValidatePrebuildLeaves({ includeAdvisory: true });
+    const lintLeaf = leaves.find((leaf) => leaf.command === "npm run lint");
+    const agentLeaf = leaves.find((leaf) => leaf.command === "npm run check:agent-skill-symlinks");
+    expect(lintLeaf && "discoveryCommands" in lintLeaf ? lintLeaf.discoveryCommands : undefined).toEqual([
+      { command: "npm run check:table-primitives", id: "prebuild:table-primitives" },
+      { command: "npm run lint:eslint", id: "prebuild:eslint" },
+    ]);
+    expect(agentLeaf && "discoveryCommands" in agentLeaf ? agentLeaf.discoveryCommands : undefined).toEqual([
+      { command: "npm run check:agent-skill-symlinks:only", id: "prebuild:agent-skill-symlinks" },
+      { command: "npm run check:agent-infra", id: "prebuild:agent-infra" },
+    ]);
   });
 
   it("keeps Pages, postbuild, Worker, smoke, and shard plans exact", () => {

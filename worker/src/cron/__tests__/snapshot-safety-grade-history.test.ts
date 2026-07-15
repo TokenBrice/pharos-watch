@@ -76,6 +76,27 @@ function makeCard(id: string, grade: ReportCardGrade, score: number | null, isDe
   };
 }
 
+function makeV8HistoryRow(id: string, grade: ReportCardGrade, score: number | null, recordedAt: number) {
+  return {
+    history_id: `v8-${id}-${recordedAt}`,
+    stablecoin_id: id,
+    recorded_at: recordedAt,
+    model: "v8" as const,
+    identity_schema_version: 1,
+    methodology_version: SAFETY_SCORE_METHODOLOGY_VERSION,
+    policy_id: null,
+    policy_digest: null,
+    evaluation_build_digest: DIGEST,
+    base_input_generation_id: BASE_INPUT_GENERATION_ID,
+    model_publication_generation_id: MODEL_PUBLICATION_GENERATION_ID,
+    transition_kind: "organic-grade-change" as const,
+    grade,
+    score,
+    prev_grade: null,
+    prev_score: null,
+  };
+}
+
 function mockSnapshot(
   cards: ReportCard[],
   overrides: Partial<{
@@ -196,6 +217,13 @@ describe("snapshotSafetyGradeHistory", () => {
           { stablecoin_id: "usdc-circle", grade: "A", score: 83, recorded_at: 1_777_680_000 },
         ],
       },
+      {
+        match: "FROM safety_score_history_v2",
+        rows: [
+          makeV8HistoryRow("usdt-tether", "B", 71, 1_777_680_000),
+          makeV8HistoryRow("usdc-circle", "A", 83, 1_777_680_000),
+        ],
+      },
     ]);
 
     const result = await snapshotSafetyGradeHistory(db);
@@ -220,6 +248,13 @@ describe("snapshotSafetyGradeHistory", () => {
         rows: [
           { stablecoin_id: "usdt-tether", grade: "B", score: 72, recorded_at: 1_777_760_000 },
           { stablecoin_id: "usdc-circle", grade: "A", score: 84, recorded_at: 1_777_760_000 },
+        ],
+      },
+      {
+        match: "FROM safety_score_history_v2",
+        rows: [
+          makeV8HistoryRow("usdt-tether", "B", 72, 1_777_760_000),
+          makeV8HistoryRow("usdc-circle", "A", 84, 1_777_760_000),
         ],
       },
     ]);

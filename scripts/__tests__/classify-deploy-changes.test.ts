@@ -263,7 +263,7 @@ describe("classifyDeployChanges", () => {
     expect(result.workerChanged).toBe(false);
     expect(result.workerDeployRequired).toBe(false);
     expect(result.pagesChanged).toBe(true);
-    expect(result.changedFiles).toEqual(["src/app/page.tsx", "docs/testing.md"]);
+    expect(result.changedFiles).toEqual(["docs/testing.md", "src/app/page.tsx"]);
   });
 
   it("runs only the worker path for worker-only push diffs", () => {
@@ -280,7 +280,7 @@ describe("classifyDeployChanges", () => {
     expect(result.workerChanged).toBe(true);
     expect(result.workerDeployRequired).toBe(true);
     expect(result.pagesChanged).toBe(false);
-    expect(result.changedFiles).toEqual(["worker/src/api/health.ts", "docs/testing.md"]);
+    expect(result.changedFiles).toEqual(["docs/testing.md", "worker/src/api/health.ts"]);
   });
 
   it("keeps both deploy paths enabled for shared or deploy-infra changes", () => {
@@ -297,7 +297,7 @@ describe("classifyDeployChanges", () => {
     expect(result.workerChanged).toBe(true);
     expect(result.workerDeployRequired).toBe(true);
     expect(result.pagesChanged).toBe(true);
-    expect(result.changedFiles).toEqual(["src/app/page.tsx", "shared/lib/classification.ts"]);
+    expect(result.changedFiles).toEqual(["shared/lib/classification.ts", "src/app/page.tsx"]);
   });
 
   it("conservatively deploys both surfaces for root package changes", () => {
@@ -357,7 +357,7 @@ describe("classifyDeployChanges", () => {
     expect(result.workerDeployRequired).toBe(false);
     expect(result.pagesChanged).toBe(false);
     expect(result.pagesDeployRequired).toBe(false);
-    expect(result.changedFiles).toEqual(["docs/testing.md", "docs/process/notes.md"]);
+    expect(result.changedFiles).toEqual(["docs/process/notes.md", "docs/testing.md"]);
   });
 
   it("validates test-only Pages changes without publishing them", () => {

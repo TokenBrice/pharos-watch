@@ -7,6 +7,8 @@
  * or thinner support rather than fabricating output.
  */
 
+import type { SafetyScorePublicationIdentity } from "../../types/safety-score-publication";
+
 /** Structural metadata for the depegging coin (from the stablecoin registry). */
 export interface DdrCoinStructural {
   id: string;
@@ -38,6 +40,20 @@ export interface DdrSupplyContext {
   mintSurge: boolean | null;
 }
 
+/** Safety provenance controls whether V8-only numeric anchors are available. */
+export type DdrSafetyContextStatus =
+  | "v8-identified"
+  | "identity-missing"
+  | "identity-mismatch"
+  | "unsupported-model"
+  | "cache-unavailable";
+
+export interface DdrSafetyContextProvenance {
+  status: DdrSafetyContextStatus;
+  reason: string | null;
+  identity: SafetyScorePublicationIdentity | null;
+}
+
 /** Live stress / liquidity / exit context at evaluation time. */
 export interface DdrLiveContext {
   dewsBand?: string | null;
@@ -51,6 +67,7 @@ export interface DdrLiveContext {
   concentrationHhi?: number | null;
   safetyGrade?: string | null;
   safetyScore?: number | null;
+  safetyContext?: DdrSafetyContextProvenance;
   /** Immediately redeemable fraction of circulating supply, 0..1. */
   redemptionCapacityRatio?: number | null;
   /** Redemption route family when a fresh redemption-backstop row is available. */

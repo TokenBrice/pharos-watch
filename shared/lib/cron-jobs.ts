@@ -16,6 +16,7 @@ const CRON_SCHEDULE_DEFINITIONS = {
   halfHourlyMintBurnCritical: { schedule: "4,34 * * * *", intervalSec: 1800, offsetSec: 4 * 60 },
   twoHourlyDexDiscovery: { schedule: "6 */2 * * *", intervalSec: 2 * 3600, offsetSec: 6 * 60 },
   halfHourlyMintBurnExtended: { schedule: "13,43 * * * *", intervalSec: 1800, offsetSec: 13 * 60 },
+  halfHourlyMeasuredExecution: { schedule: "0,30 * * * *", intervalSec: 1800, offsetSec: 0 },
   halfHourlyOffset: { schedule: "10,40 * * * *", intervalSec: 1800, offsetSec: 10 * 60 },
   halfHourlyChartsOffset: { schedule: "16,46 * * * *", intervalSec: 1800, offsetSec: 16 * 60 },
   dewsPsiOffset: { schedule: "26,56 * * * *", intervalSec: 1800, offsetSec: 26 * 60 },
@@ -342,6 +343,14 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     scheduleKey: "twoHourlyDexDiscovery",
     triggerMode: "isolated",
     maxConnections: 1, // Rate-limited sequential GeckoTerminal/CoinGecko crawl
+  },
+  {
+    job: "sync-cl-exit-depth",
+    label: "CL exit depth",
+    group: "half-hourly",
+    scheduleKey: "halfHourlyMeasuredExecution",
+    triggerMode: "isolated",
+    maxConnections: 3, // At most three chain lanes; each lane serializes its RPC requests.
   },
   {
     job: "sync-dex-liquidity",

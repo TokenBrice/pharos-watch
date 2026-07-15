@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
 import type { CurvePoolEntry, LlamaPool } from "../dex-liquidity/types";
 import { processPoolMetrics } from "../dex-liquidity/process-pools";
 import { buildPoolFingerprint } from "../dex-liquidity/pool-helpers";
@@ -763,5 +764,142 @@ describe("processPoolMetrics", () => {
       invariant: "stableswap",
       amplification: 100,
     });
+  });
+
+  it("retains an exact-address Curve invariant gate for P4 completeness", () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const USDC = "0x00000000000000000000000000000000000000c1";
+    const WETH = "0x00000000000000000000000000000000000000c2";
+    const addressToId = new Map([[USDC, "usdc-circle"]]);
+    const chainAddressToId = buildChainAddressToId(addressToId, ["ethereum"]);
+    const symbolToIds = new Map<string, string[]>();
+    const symbolToChainScopedIds = buildSymbolToChainScopedIds(symbolToIds, ["ethereum"]);
+    const fingerprintKey = buildPoolFingerprint("ethereum", "curve", [USDC, WETH]);
+    const curvePoolMap = new Map([
+      [
+        fingerprintKey!,
+        makeCurveEntry({
+          A: 20_000_000,
+          registryId: "factory-twocrypto",
+          executionCoins: [
+            { address: USDC, symbol: "USDC", decimals: 6, balance: 5_000_000, usdPrice: 1 },
+            { address: WETH, symbol: "WETH", decimals: 18, balance: 2_000, usdPrice: 2_500 },
+          ],
+        }),
+      ],
+    ]);
+
+    const metrics = processPoolMetrics(
+      [
+        makePool({
+          pool: "4dbfda50-1111-2222-3333-444455556666",
+          project: "curve-dex",
+          symbol: "USDC-WETH",
+          tvlUsd: 10_000_000,
+          underlyingTokens: [USDC, WETH],
+          count: 3,
+        }),
+      ],
+      new Set(["curve-dex"]),
+      symbolToIds,
+      symbolToChainScopedIds,
+      new Map(),
+      chainAddressToId,
+      curvePoolMap,
+      new Map(),
+      new Map(),
+      new Map(),
+    );
+
+    expect(metrics.get("usdc-circle")?.topPools[0]?.extra).toMatchObject({
+      executionCapabilityGate: {
+        family: "curve-cryptoswap",
+        reason: "unsupported-invariant",
+      },
+    });
+    expect(metrics.get("usdc-circle")?.topPools[0]?.extra?.ammExecutionModel).toBeUndefined();
+  });
+
+  it("keeps unresolved Curve joins in the exact-capability denominator", () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const USDC = "0x00000000000000000000000000000000000000c1";
+    const USDT = "0x00000000000000000000000000000000000000c2";
+    const POOL_A = "0x00000000000000000000000000000000000000a1";
+    const POOL_B = "0x00000000000000000000000000000000000000b1";
+    const addressToId = new Map([
+      [USDC, "usdc-circle"],
+      [USDT, "usdt-tether"],
+    ]);
+    const chainAddressToId = buildChainAddressToId(addressToId, ["ethereum"]);
+    const symbolToIds = new Map<string, string[]>();
+    const symbolToChainScopedIds = buildSymbolToChainScopedIds(symbolToIds, ["ethereum"]);
+    const entry = makeCurveEntry({
+      executionCoins: [
+        { address: USDC, symbol: "USDC", decimals: 6, balance: 5_000_000, usdPrice: 1 },
+        { address: USDT, symbol: "USDT", decimals: 6, balance: 5_000_000, usdPrice: 1 },
+      ],
+    });
+    const symbolKey = "ethereum:USDC-USDT";
+    const cases: Array<{ name: string; curvePoolMap: Map<string, CurvePoolEntry> }> = [
+      { name: "no Curve map entry", curvePoolMap: new Map() },
+      { name: "symbol-only fallback", curvePoolMap: new Map([[symbolKey, entry]]) },
+      {
+        name: "ambiguous coin-set fingerprint",
+        // buildCurveLookups retains both exact addresses and the diagnostic
+        // symbol fallback, but deletes the shared fingerprint as ambiguous.
+        curvePoolMap: new Map([
+          [`ethereum:${POOL_A}`, entry],
+          [`ethereum:${POOL_B}`, { ...entry, A: 200 }],
+          [symbolKey, entry],
+        ]),
+      },
+    ];
+
+    for (const testCase of cases) {
+      const metrics = processPoolMetrics(
+        [makePool({
+          pool: "4dbfda50-1111-2222-3333-444455556666",
+          project: "curve-dex",
+          symbol: "USDC-USDT",
+          tvlUsd: 1_500_000,
+          underlyingTokens: [USDC, USDT],
+          count: 3,
+        })],
+        new Set(["curve-dex"]),
+        symbolToIds,
+        symbolToChainScopedIds,
+        new Map(),
+        chainAddressToId,
+        testCase.curvePoolMap,
+        new Map(),
+        new Map(),
+        new Map(),
+      );
+      const retainedPools = metrics.get("usdc-circle")?.topPools ?? [];
+      expect(retainedPools, testCase.name).toHaveLength(1);
+      expect(retainedPools[0]?.extra, testCase.name).toMatchObject({
+        executionCapabilityGate: {
+          family: "curve-stableswap",
+          reason: "exact-pool-join-unresolved",
+        },
+      });
+      expect(retainedPools[0]?.extra?.ammExecutionModel, testCase.name).toBeUndefined();
+
+      const routeResult = buildP4DexExitRouteObservations({
+        stablecoinId: "usdc-circle",
+        retainedPools,
+        observedAt: 1_000,
+      });
+      expect(routeResult.coverage, testCase.name).toMatchObject({
+        capabilityMatrixVersion: "p4a.4",
+        retainedPoolCount: 1,
+        scoreEligiblePoolCount: 0,
+        scoreEligibleCapabilityPoolCount: 1,
+        unsupportedPoolCount: 1,
+        unsupportedReasons: {
+          "executionCapabilityGate:curve-stableswap:exact-pool-join-unresolved": 1,
+        },
+      });
+    }
   });
 });

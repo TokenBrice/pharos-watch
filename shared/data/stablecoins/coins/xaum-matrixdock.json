@@ -24,7 +24,22 @@
     "attestorTier": "niche",
     "cadence": "semi-annual",
     "attestorJurisdiction": "Singapore",
-    "attestorLicense": "Bullion vault inspection and assurance"
+    "attestorLicense": "Bullion vault inspection and assurance",
+    "latestReport": {
+      "periodEnd": "2026-01-07",
+      "publishedAt": "2026-01-15",
+      "assuranceMethod": "audit",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "TERRA-II attestation restoration",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Matrixdock H2 2025 XAUm physical gold audit",
+          "url": "https://www.matrixdock.com/blog/announcements/matrixdock-releases-latest-semi-annual-physical-gold-audit-report-"
+        }
+      ]
+    }
   },
   "links": [
     {

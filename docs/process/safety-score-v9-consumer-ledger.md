@@ -74,3 +74,22 @@ the activation critical path.
 For each row, the closing change must replace `OPEN` with the implementing
 commit or PR, the reviewed diff artifact, and the focused test command. The
 activation release is blocked while any row above remains `OPEN`.
+
+## Meridian II Implementation Update (2026-07-15)
+
+The adopted contract and dark consumer dispositions are implemented without
+changing the active V8 route or frontend selection. These rows remain `OPEN`
+only because their required consumer-specific V8/V9 diff or content review has
+not been approved; implementation alone is not activation approval.
+
+| Rows | Implemented disposition | Remaining activation evidence |
+| --- | --- | --- |
+| C01 | Strict `/api/report-cards/v9` public schema/route/cache projection; full identity and completeness; `503` on invalid/missing V9; no V8 fallback; `/api/report-cards` regression coverage. | External compatibility and restored-V8 review. |
+| C02-C05 | Separate V9 hook/query identity and native renderer; three-pillar/cap/reason/evidence/access/dependency projections; explicit mismatch unavailable state; registry freeze fallback marked non-V9 evidence. | Visual/content, table membership/rank, graph-edge, and coverage bucket reviews. |
+| C06 | Immutable V9 selector snapshot with score/grade, three pillars, access posture, dependency summaries, full identity-bound hash, and structurally deferred recommendations. V8 selector output is unchanged. | Recommendation/ranking diff and re-approval of grade floors and the numeric `>=88` rule. |
+| C07-C08 | Identity-bound three-pillar portfolio aggregate with no synthetic asset grade; V9 stress simulator is explicitly unavailable until a native stress mapping is approved. | Portfolio cohort and scenario-output reviews. |
+| C09-C10 | Separate three-pillar V9 radar with exact-identity cohort isolation and mixed-model rejection; V9 Bluechip floor remains explicitly unavailable. | Radar/cohort review and V8/V9 roster membership diff. |
+| C13 | Model-neutral alert envelope/comparison, V9 cap/evidence/weakest-pillar explanations, and boundary reseeding; active dispatcher source remains V8. | Alert sample and false-fan-out review. |
+| C15 | Exact-identity bounded activation/rollback/restoration operation with distinct non-comparable V2 baseline kinds; not routed, scheduled, or executed. | Transition review plus activation-day dry run against the approved identities. |
+| C20 | Resolver safety context now carries complete V8 provenance and suppresses V8 numeric anchors for V9, stale, missing, or mismatched context. | Outcome/incident diff and replacement-anchor decision. |
+| C21 | Reviewed V9 grade classes exist behind strict identity/completeness opt-in: B- or better safe, C+/C/C- neutral, D/F risky. Active API/digest selection remains V8. | Flow-event/class membership diff and digest output review. |

@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import type { DimensionKey, ReportCard, ReportCardDimension, ReportCardGrade } from "@shared/types";
 import {
   assessAlertSafetySourceCache,
+  alertSafetyIdentitiesAreComparable,
   buildAlertSafetySnapshotEnvelope,
   buildAlertSafetySourceEnvelope,
+  buildAlertSafetyV9SourceEnvelope,
   getAlertSafetySourceGeneration,
   parseAlertSafetySnapshotEnvelope,
 } from "../alert-safety-source-cache";
+import { makeWorkerReportCardsV9Response, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 
 const DIMENSION_KEYS: readonly DimensionKey[] = [
   "pegStability",
@@ -70,6 +73,63 @@ function buildSource(cards: ReportCard[], methodologyVersion: string, publishedA
 }
 
 describe("alert safety source cache", () => {
+  it("treats model and V9 policy changes as alert-baseline boundaries", () => {
+    const v8 = sourceEnvelope({}, "8.0", 1).safetyScoreIdentity;
+    const v9 = {
+      model: "v9" as const,
+      schemaVersion: 1 as const,
+      methodologyVersion: "9.0",
+      policyId: "safety-score-v9",
+      policyDigest: "c".repeat(64),
+      evaluationBuildDigest: "d".repeat(64),
+      baseInputGenerationId: `report-cards-input:v1:${"e".repeat(64)}`,
+      publicationGenerationId: "report-cards:v9:1",
+    };
+    expect(alertSafetyIdentitiesAreComparable(v8, v9)).toBe(false);
+    expect(alertSafetyIdentitiesAreComparable(v9, { ...v9, policyDigest: "f".repeat(64) })).toBe(false);
+    expect(alertSafetyIdentitiesAreComparable(v9, { ...v9, publicationGenerationId: "report-cards:v9:2" })).toBe(true);
+  });
+
+  it("builds a strict opt-in V9 envelope with native explanations", () => {
+    const cap = {
+      kind: "structural-ceiling",
+      limit: 80,
+      source: "structural" as const,
+      reason: "Single-entity controls bind the result.",
+      binding: true,
+    };
+    const response = makeWorkerReportCardsV9Response({
+      cards: [makeWorkerV9Card({
+        caps: [cap],
+        bindingCap: cap,
+        evidence: {
+          level: "limited",
+          freshness: "current",
+          reasons: [{ code: "mint-control-question", message: "Mint authority remains concentrated.", path: null }],
+        },
+      })],
+    });
+
+    expect(buildAlertSafetyV9SourceEnvelope(response, { allowShadowLifecycle: false })).toBeNull();
+    expect(buildAlertSafetyV9SourceEnvelope(response, { allowShadowLifecycle: true })).toMatchObject({
+      lifecycle: "shadow",
+      safetyScoreIdentity: response.safetyScoreIdentity,
+      snapshot: {
+        "usdc-circle": {
+          v9Explain: {
+            reasons: [{ code: "mint-control-question", message: "Mint authority remains concentrated." }],
+            bindingCap: { kind: "structural-ceiling", limit: 80 },
+            weakestPillar: { pillar: "backing", score: 80 },
+          },
+        },
+      },
+    });
+    expect(buildAlertSafetyV9SourceEnvelope(
+      { ...response, completeness: { ...response.completeness, expectedCount: 2 } },
+      { allowShadowLifecycle: true },
+    )).toBeNull();
+  });
+
   it("builds a generation-aware envelope with explain data", () => {
     const envelope = buildSource(
       [

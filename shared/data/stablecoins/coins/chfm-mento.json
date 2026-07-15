@@ -161,6 +161,11 @@
       "chain": "celo",
       "address": "0xb55a79f398e759e43c95b979163f30ec87ee131d",
       "decimals": 18
+    },
+    {
+      "chain": "monad",
+      "address": "0xf64e91ffef7ef43aa314f0bc2ac39f770797990c",
+      "decimals": 18
     }
   ],
   "canBeBlacklisted": "possible",
@@ -349,21 +354,89 @@
     }
   },
   "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
+  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
-    "tier": "single-chain-or-native",
-    "summary": "CHFm currently has one tracked Celo contract and no separate cross-chain route in local metadata. The L2BEAT Celo signal is chain infrastructure context, not evidence of a token bridge route for CHFm.",
-    "reviewedAt": "2026-06-13",
+    "tier": "external-validated-network",
+    "summary": "CHFm now has a Celo native token and a Monad spoke connected through Mento's Wormhole NTT deployment. The Celo NTT manager locks CHFm for the outbound path while the Monad spoke uses burn/mint, leaving cross-chain supply dependent on Wormhole's external validation network.",
+    "reviewedAt": "2026-07-15",
     "reviewer": "Codex bridge route review",
     "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "Mento Wormhole Native Token Transfer",
+        "url": "https://github.com/mento-protocol/deployments-v2/blob/main/script/config/wormhole/NTTConfig.sol",
+        "bridgeTypes": ["lock-mint", "burn-mint", "external-validated-network"],
+        "note": "The issuer configuration defines a locking Celo CHFm NTT manager and a burning Monad CHFm spoke manager."
+      }
+    ],
     "sources": [
       {
-        "label": "Mento CHFm docs",
-        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        "label": "Mento NTT configuration",
+        "url": "https://github.com/mento-protocol/deployments-v2/blob/main/script/config/wormhole/NTTConfig.sol"
       },
       {
-        "label": "L2BEAT Celo",
-        "url": "https://l2beat.com/interop/protocols/celo"
+        "label": "Mento contract registry (CHFmSpoke)",
+        "url": "https://github.com/mento-protocol/deployments-v2/blob/main/packages/contracts/contracts.json"
+      },
+      {
+        "label": "Monad RPC",
+        "url": "https://rpc.monad.xyz"
+      }
+    ],
+    "routes": [
+      {
+        "id": "celo:0xb55a79f398e759e43c95b979163f30ec87ee131d",
+        "destinationChain": "celo",
+        "canonicalChain": "celo",
+        "contractAddress": "0xb55a79f398e759e43c95b979163f30ec87ee131d",
+        "protocol": "Mento / Wormhole NTT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": ["wormhole:ntt:chfm"],
+        "observedAt": "2026-07-15",
+        "sources": [
+          {
+            "label": "Mento NTT configuration",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/main/script/config/wormhole/NTTConfig.sol"
+          }
+        ]
+      },
+      {
+        "id": "monad:0xf64e91ffef7ef43aa314f0bc2ac39f770797990c",
+        "destinationChain": "monad",
+        "canonicalChain": "celo",
+        "contractAddress": "0xf64e91ffef7ef43aa314f0bc2ac39f770797990c",
+        "protocol": "Mento / Wormhole NTT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": ["wormhole:ntt:chfm"],
+        "observedAt": "2026-07-15",
+        "observedBlock": 87876758,
+        "sources": [
+          {
+            "label": "Mento contract registry (CHFmSpoke)",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/main/packages/contracts/contracts.json"
+          },
+          {
+            "label": "Monad RPC",
+            "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "Mento NTT configuration",
+            "url": "https://github.com/mento-protocol/deployments-v2/blob/main/script/config/wormhole/NTTConfig.sol"
+          }
+        ]
       }
     ]
   },

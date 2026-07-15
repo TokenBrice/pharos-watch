@@ -1,0 +1,1379 @@
+{
+  "schemaVersion": 1,
+  "kind": "cdp-mechanism-measurement",
+  "assetId": "reusd-resupply",
+  "archetype": "cdp",
+  "chain": {
+    "key": "ethereum",
+    "evmChainId": 1
+  },
+  "rpcUrl": "https://ethereum-rpc.publicnode.com",
+  "block": {
+    "number": 25536894,
+    "hash": "0x9b5d38fcb302bfc941f2704759a37402b0a5f9f3c1ad6fc0badaf20219cb6422",
+    "timestampUnix": 1784104535,
+    "timestampIso": "2026-07-15T08:35:35.000Z",
+    "selection": "finalized"
+  },
+  "calls": [
+    {
+      "name": "token.core",
+      "to": "0x57ab1e0003f623289cd798b1824be09a793e4bec",
+      "signature": "core()",
+      "selector": "0xf2f4eb26",
+      "callData": "0xf2f4eb26",
+      "returnData": "0x000000000000000000000000c07e000044f95655c11fda4cd37f70a94d7e0a7d",
+      "decoded": "0xc07e000044f95655c11fda4cd37f70a94d7e0a7d"
+    },
+    {
+      "name": "registry.core",
+      "to": "0x10101010e0c3171d894b71b3400668af311e7d94",
+      "signature": "core()",
+      "selector": "0xf2f4eb26",
+      "callData": "0xf2f4eb26",
+      "returnData": "0x000000000000000000000000c07e000044f95655c11fda4cd37f70a94d7e0a7d",
+      "decoded": "0xc07e000044f95655c11fda4cd37f70a94d7e0a7d"
+    },
+    {
+      "name": "registry.token",
+      "to": "0x10101010e0c3171d894b71b3400668af311e7d94",
+      "signature": "token()",
+      "selector": "0xfc0c546a",
+      "callData": "0xfc0c546a",
+      "returnData": "0x00000000000000000000000057ab1e0003f623289cd798b1824be09a793e4bec",
+      "decoded": "0x57ab1e0003f623289cd798b1824be09a793e4bec"
+    },
+    {
+      "name": "token.totalSupply",
+      "to": "0x57ab1e0003f623289cd798b1824be09a793e4bec",
+      "signature": "totalSupply()",
+      "selector": "0x18160ddd",
+      "callData": "0x18160ddd",
+      "returnData": "0x0000000000000000000000000000000000000000001a757815df8df7e4672932",
+      "decoded": "31986803373899442609924402"
+    },
+    {
+      "name": "registry.getAllPairAddresses",
+      "to": "0x10101010e0c3171d894b71b3400668af311e7d94",
+      "signature": "getAllPairAddresses()",
+      "selector": "0x607b6d16",
+      "callData": "0x607b6d16",
+      "returnData": "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000013000000000000000000000000c5184cccf85b81eddc661330acb3e41bd89f34a100000000000000000000000008064a8eeecf71203449228f3eac65e462009fdf00000000000000000000000039ea8e7f44e9303a7441b1e1a4f5731f1028505c0000000000000000000000003b037329ff77b5863e6a3c844ad2a7506abe570600000000000000000000000022b12110f1479d5d6fd53d0da35482371feb3c7e0000000000000000000000002d8ecd48b58e53972dbc54d8d0414002b41abc9d000000000000000000000000cf1deb0570c2f7dee8c07a7e5fa2bd4b2b96520d0000000000000000000000004a7c64932d1ef0b4a2d430ea10184e3b87095e330000000000000000000000003f2b20b8e8ce30bb52239d3dfadf826ecfe6a5f7000000000000000000000000212589b06ebba4d89d9defcc8ddc58d80e141ea000000000000000000000000055c49c707aa0ad254f34a389a8dfd0d103894adb00000000000000000000000024ccbd9130ec24945916095ec54e9acc7382c864000000000000000000000000b5575fe3d3b7877415a166001f67c2df94d4e6c100000000000000000000000027ab448a75d548ecff73f8b4f36fcc949676879700000000000000000000000057e69699381a651fb0bbdbb31888f5d655bf3f06000000000000000000000000f4a6113fbd71ac1825751a6fe844a156f60c83ef0000000000000000000000006e90c85a495d54c6d7e1f3400fef1f6e59f86bd6000000000000000000000000d42535cda82a4569ba7209857446222abd14a82c0000000000000000000000002fdd3c0a682e5774205f0f6d3ed3c9d1b9cb9413",
+      "decoded": "count=19"
+    },
+    {
+      "name": "registry.registeredPairsLength",
+      "to": "0x10101010e0c3171d894b71b3400668af311e7d94",
+      "signature": "registeredPairsLength()",
+      "selector": "0x23103b7d",
+      "callData": "0x23103b7d",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000013",
+      "decoded": "19"
+    },
+    {
+      "name": "registry.insurancePool",
+      "to": "0x10101010e0c3171d894b71b3400668af311e7d94",
+      "signature": "insurancePool()",
+      "selector": "0xab2adc00",
+      "callData": "0xab2adc00",
+      "returnData": "0x00000000000000000000000000000000efe883b3304aff71eacf72dbc3e1b577",
+      "decoded": "0x00000000efe883b3304aff71eacf72dbc3e1b577"
+    },
+    {
+      "name": "registry.liquidationHandler",
+      "to": "0x10101010e0c3171d894b71b3400668af311e7d94",
+      "signature": "liquidationHandler()",
+      "selector": "0xd25adeb3",
+      "callData": "0xd25adeb3",
+      "returnData": "0x00000000000000000000000088888888c227c36401493ed9f3e3dcc3800b2634",
+      "decoded": "0x88888888c227c36401493ed9f3e3dcc3800b2634"
+    },
+    {
+      "name": "liquidationHandler.insurancePool",
+      "to": "0x88888888c227c36401493ed9f3e3dcc3800b2634",
+      "signature": "insurancePool()",
+      "selector": "0xab2adc00",
+      "callData": "0xab2adc00",
+      "returnData": "0x00000000000000000000000000000000efe883b3304aff71eacf72dbc3e1b577",
+      "decoded": "0x00000000efe883b3304aff71eacf72dbc3e1b577"
+    },
+    {
+      "name": "liquidationHandler.registry",
+      "to": "0x88888888c227c36401493ed9f3e3dcc3800b2634",
+      "signature": "registry()",
+      "selector": "0x7b103999",
+      "callData": "0x7b103999",
+      "returnData": "0x00000000000000000000000010101010e0c3171d894b71b3400668af311e7d94",
+      "decoded": "0x10101010e0c3171d894b71b3400668af311e7d94"
+    },
+    {
+      "name": "pair[0].underlying",
+      "to": "0xc5184cccf85b81eddc661330acb3e41bd89f34a1",
+      "signature": "underlying()",
+      "selector": "0x6f307dc3",
+      "callData": "0x6f307dc3",
+      "returnData": "0x000000000000000000000000f939e0a03fb07f59a73314e73794be0e57ac1b4e",
+      "decoded": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+    },
+    {
+      "name": "pair[0].getPairAccounting",
+      "to": "0xc5184cccf85b81eddc661330acb3e41bd89f34a1",
+      "signature": "getPairAccounting()",
+      "selector": "0xcdd72d52",
+      "callData": "0xcdd72d52",
+      "returnData": "0x0000000000000000000000000000000000000000000000f6ead9895bace5f9ac0000000000000000000000000000000000000000000c726087f225fc83979c6c0000000000000000000000000000000000000000dd2122aff9fb7531e895bbcc000000000000000000000000000000000000000031a0e81079c8f1378879de9e",
+      "decoded": "borrow=15047240297787671721778284 collateralShares=15359289505331709067256258206"
+    },
+    {
+      "name": "pair[0].collateral",
+      "to": "0xc5184cccf85b81eddc661330acb3e41bd89f34a1",
+      "signature": "collateral()",
+      "selector": "0xd8dfeb45",
+      "callData": "0xd8dfeb45",
+      "returnData": "0x0000000000000000000000008e3009b59200668e1efda0a2f2ac42b24baa2982",
+      "decoded": "0x8e3009b59200668e1efda0a2f2ac42b24baa2982"
+    },
+    {
+      "name": "collateral[0].convertToAssets",
+      "to": "0x8e3009b59200668e1efda0a2f2ac42b24baa2982",
+      "signature": "convertToAssets(uint256)",
+      "selector": "0x07a2d13a",
+      "callData": "0x07a2d13a000000000000000000000000000000000000000031a0e81079c8f1378879de9e",
+      "returnData": "0x0000000000000000000000000000000000000000000d5bc8dd8a224699c2bc18",
+      "decoded": "16149476317355574686825496"
+    },
+    {
+      "name": "pair[1].underlying",
+      "to": "0x08064a8eeecf71203449228f3eac65e462009fdf",
+      "signature": "underlying()",
+      "selector": "0x6f307dc3",
+      "callData": "0x6f307dc3",
+      "returnData": "0x000000000000000000000000f939e0a03fb07f59a73314e73794be0e57ac1b4e",
+      "decoded": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+    },
+    {
+      "name": "pair[1].getPairAccounting",
+      "to": "0x08064a8eeecf71203449228f3eac65e462009fdf",
+      "signature": "getPairAccounting()",
+      "selector": "0xcdd72d52",
+      "callData": "0xcdd72d52",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007dd9b00035d1b44180000000000000000000000000000000000000000000013dc9d40b3b6a75157af0000000000000000000000000000000000000000000230c54a64bde1b87cd59b",
+      "decoded": "borrow=145095565434186056728 collateralShares=2648164599607755739551131"
+    },
+    {
+      "name": "pair[1].collateral",
+      "to": "0x08064a8eeecf71203449228f3eac65e462009fdf",
+      "signature": "collateral()",
+      "selector": "0xd8dfeb45",
+      "callData": "0xd8dfeb45",
+      "returnData": "0x00000000000000000000000014361c243174794e2207296a6ad59bb0dec1d388",
+      "decoded": "0x14361c243174794e2207296a6ad59bb0dec1d388"
+    },
+    {
+      "name": "collateral[1].convertToAssets",
+      "to": "0x14361c243174794e2207296a6ad59bb0dec1d388",
+      "signature": "convertToAssets(uint256)",
+      "selector": "0x07a2d13a",
+      "callData": "0x07a2d13a0000000000000000000000000000000000000000000230c54a64bde1b87cd59b",
+      "returnData": "0x00000000000000000000000000000000000000000000009910f855462ee58806",
+      "decoded": "2823574664336315353094"
+    },
+    {
+      "name": "pair[2].underlying",
+      "to": "0x39ea8e7f44e9303a7441b1e1a4f5731f1028505c",
+      "signature": "underlying()",
+      "selector": "0x6f307dc3",
+      "callData": "0x6f307dc3",
+      "returnData": "0x000000000000000000000000f939e0a03fb07f59a73314e73794be0e57ac1b4e",
+      "decoded": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+    },
+    {
+      "name": "pair[2].getPairAccounting",
+      "to": "0x39ea8e7f44e9303a7441b1e1a4f5731f1028505c",
+      "signature": "getPairAccounting()",
+      "selector": "0xcdd72d52",
+      "callData": "0xcdd72d52",
+      "returnData": "0x00000000000000000000000000000000000000000000001ddb261b5252bd1335000000000000000000000000000000000000000000018a0f668e35a0501b5c7a00000000000000000000000000000000000000001612e4e94517cc454e6ee00c000000000000000000000000000000000000000005f61fe4fc8d185c50c0eb5d",
+      "decoded": "borrow=1860896485314747074043002 collateralShares=1844971418148770339425938269"
+    },
+    {
+      "name": "pair[2].collateral",
+      "to": "0x39ea8e7f44e9303a7441b1e1a4f5731f1028505c",
+      "signature": "collateral()",
+      "selector": "0xd8dfeb45",
+      "callData": "0xd8dfeb45",
+      "returnData": "0x0000000000000000000000004a7999c55d3a93daf72ea112985e57c2e3b9e95d",
+      "decoded": "0x4a7999c55d3a93daf72ea112985e57c2e3b9e95d"
+    },
+    {
+      "name": "collateral[2].convertToAssets",
+      "to": "0x4a7999c55d3a93daf72ea112985e57c2e3b9e95d",
+      "signature": "convertToAssets(uint256)",
+      "selector": "0x07a2d13a",
+      "callData": "0x07a2d13a000000000000000000000000000000000000000005f61fe4fc8d185c50c0eb5d",
+      "returnData": "0x00000000000000000000000000000000000000000001b13797110defe10cdbd1",
+      "decoded": "2045810143503708658129873"
+    },
+    {
+      "name": "pair[3].underlying",
+      "to": "0x3b037329ff77b5863e6a3c844ad2a7506abe5706",
+      "signature": "underlying()",
+      "selector": "0x6f307dc3",
+      "callData": "0x6f307dc3",
+      "returnData": "0x000000000000000000000000f939e0a03fb07f59a73314e73794be0e57ac1b4e",
+      "decoded": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+    },
+    {
+      "name": "pair[3].getPairAccounting",
+      "to": "0x3b037329ff77b5863e6a3c844ad2a7506abe5706",
+      "signature": "getPairAccounting()",
+      "selector": "0xcdd72d52",
+      "callData": "0xcdd72d52",
+      "returnData": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000173abd1c8c85868cf500000000000000000000000000000000000000906145593898e1b8ad0fb93976000000000000000000000000000000000000000000047b4a196dceeace826dc1",
+      "decoded": "borrow=428507684309979008245 collateralShares=5417921247261068858912193"
+    },
+    {
+      "name": "pair[3].collateral",
+      "to": "0x3b037329ff77b5863e6a3c844ad2a7506abe5706",
+      "signature": "collateral()",
+      "selector": "0xd8dfeb45",
+      "callData": "0xd8dfeb45",
+      "returnData": "0x000000000000000000000000c687141c18f20f7ba405e45328825579fddd3195",
+      "decoded": "0xc687141c18f20f7ba405e45328825579fddd3195"
+    },
+    {
+      "name": "collateral[3].convertToAssets",
+      "to": "0xc687141c18f20f7ba405e45328825579fddd3195",
+      "signature": "convertToAssets(uint256)",
+      "selector": "0x07a2d13a",
+      "callData": "0x07a2d13a000000000000000000000000000000000000000000047b4a196dceeace826dc1",
+      "returnData": "0x000000000000000000000000000000000000000000000136d2791cde6f3d1a98",
+      "decoded": "5733656847811782449816"
+    },
+    {
+      "name": "pair[4].underlying",
+      "to": "0x22b12110f1479d5d6fd53d0da35482371feb3c7e",
+      "signature": "underlying()",
+      "selector": "0x6f307dc3",
+      "callData": "0x6f307dc3",
+      "returnData": "0x000000000000000000000000f939e0a03fb07f59a73314e73794be0e57ac1b4e",
+      "decoded": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+    },
+    {
+      "name": "pair[4].getPairAccounting",
+      "to": "0x22b12110f1479d5d6fd53d0da35482371feb3c7e",
+      "signature": "getPairAccounting()",
+      "selector": "0xcdd72d52",
+      "callData": "0xcdd72d52",
+      "returnData": "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000031c25d17510dd18d75",
+      "decoded": "borrow=0 collateralShares=917895835664851766645"
+    },
+    {
+      "name": "pair[4].collateral",
+      "to": "0x22b12110f1479d5d6fd53d0da35482371feb3c7e",
+      "signature": "collateral()",
+      "selector": "0xd8dfeb45",
+      "callData": "0xd8dfeb45",
+      "returnData": "0x000000000000000000000000b2b23c87a4b6d1b03ba603f7c3eb9a81fdc0aac9",
+      "decoded": "0xb2b23c87a4b6d1b03ba603f7c3eb9a81fdc0aac9"
+    },
+    {
+      "name": "collateral[4].convertToAssets",
+      "to": "0xb2b23c87a4b6d1b03ba603f7c3eb9a81fdc0aac9",
+      "signature": "convertToAssets(uint256)",
+      "selector": "0x07a2d13a",
+      "callData": "0x07a2d13a000000000000000000000000000000000000000000000031c25d17510dd18d75",
+      "returnData": "0x0000000000000000000000000000000000000000000000000f6c1ed4245bb360",
+      "decoded": "1111297104545559392"
+    },
+    {
+      "name": "pair[5].underlying",
+      "to": "0x2d8ecd48b58e53972dbc54d8d0414002b41abc9d",
+      "signature": "underlying()",
+      "selector": "0x6f307dc3",
+      "callData": "0x6f307dc3",
+      "returnData": "0x000000000000000000000000f939e0a03fb07f59a73314e73794be0e57ac1b4e",
+      "decoded": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+    },
+    {
+      "name": "pair[5].getPairAccounting",
+      "to": "0x2d8ecd48b58e53972dbc54d8d0414002b41abc9d",
+      "signature": "getPairAccounting()",
+      "selector": "0xcdd72d52",
+      "callData": "0xcdd72d52",
+      "returnData": "0x000000000000000000000000000000000000000000000020aa2d33d072dff67200000000000000000000000000000000000000000003380a9889283891b1dd880000000000000000000000000000000000000052548058cf58fd3b94182a24bc00000000000000000000000000000000000000000c44f03c3d3f1ed709763f02",
+      "decoded": "borrow=3891425440685913753640328 collateralShares=3797161552763748814773698306"
+    },
+    {
+      "name": "pair[5].collateral",
+      "to": "0x2d8ecd48b58e53972dbc54d8d0414002b41abc9d",
+      "signature": "collateral()",
+      "selector": "0xd8dfeb45",
+      "callData": "0xd8dfeb45",
+      "returnData": "0x000000000000000000000000ccd37eb6374ae5b1f0b85ac97eff14770e0d0063",
+      "decoded": "0xccd37eb6374ae5b1f0b85ac97eff14770e0d0063"
+    },
+    {
+      "name": "collateral[5].convertToAssets",
+      "to": "0xccd37eb6374ae5b1f0b85ac97eff14770e0d0063",
+      "signature": "convertToAssets(uint256)",
+      "selector": "0x07a2d13a",
+      "callData": "0x07a2d13a00000000000000000000000000000000000000000c44f03c3d3f1ed709763f02",
+      "returnData": "0x000000000000000000000000000000000000000000038185730aa78e2bd17297",
+      "decoded": "4238424441718168318210711"
+    },
+    {
+      "name": "pair[6].underlying",
+      "to": "0xcf1deb0570c2f7dee8c07a7e5fa2bd4b2b96520d",
+      "signature": "underlying()",
+      "selector": "0x6f307dc3",
+      "callData": "0x6f307dc3",
+      "returnData": "0x000000000000000000000000f939e0a03fb07f59a73314e73794be0e57ac1b4e",
+      "decoded": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+    },
+    {
+      "name": "pair[6].getPairAccounting",
+      "to": "0xcf1deb0570c2f7dee8c07a7e5fa2bd4b2b96520d",
+      "signature": "getPairAccounting()",
+      "selector": "0xcdd72d52",
+      "callData": "0xcdd72d52",
+      "returnData": "0x00000000000000000000000000000000000000000000000689cd9b1f7b3c108500000000000000000000000000000000000000000000612e877fa34bb117b512000000000000000000000000000000000000000005aca7db3253568ba41018a3000000000000000000000000000000000000000001a6d8e89ea8493ae48cd5e7",
+      "decoded": "borrow=458927862767808876623122 collateralShares=511191018114766627079509479"
+    },
+    {
+      "name": "pair[6].collateral",
+      "to": "0xcf1deb0570c2f7dee8c07a7e5fa2bd4b2b96520d",
+      "signature": "collateral()",
+      "selector": "0xd8dfeb45",
+      "callData": "0xd8dfeb45",
+      "returnData": "0x0000000000000000000000008fb1c7aedcbbc1222325c39dd5c1d2d23420cae3",
+      "decoded": "0x8fb1c7aedcbbc1222325c39dd5c1d2d23420cae3"
+    },
+    {
+      "name": "collateral[6].convertToAssets",
+      "to": "0x8fb1c7aedcbbc1222325c39dd5c1d2d23420cae3",
+      "signature": "convertToAssets(uint256)",
+      "selector": "0x07a2d13a",
+      "callData": "0x07a2d13a000000000000000000000000000000000000000001a6d8e89ea8493ae48cd5e7",
+      "returnData": "0x00000000000000000000000000000000000000000000769e70057e9999c7df2b",
+      "decoded": "560161902539369550962475"
+    },
+    {
+      "name": "pair[7].underlying",
+      "to": "0x4a7c64932d1ef0b4a2d430ea10184e3b87095e33",
+      "signature": "underlying()",
+      "selector": "0x6f307dc3",
+      "callData": "0x6f307dc3",
+      "returnData": "0x000000000000000000000000f939e0a03fb07f59a73314e73794be0e57ac1b4e",
+      "decoded": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+    },
+    {
+      "name": "pair[7].getPairAccounting",
+      "to": "0x4a7c64932d1ef0b4a2d430ea10184e3b87095e33",
+      "signature": "getPairAccounting()",
+      "selector": "0xcdd72d52",
+      "callData": "0xcdd72d52",
+      "returnData": "0x00000000000000000000000000000000000000000000001059c8500cde4f13ea00000000000000000000000000000000000000000000d4801f62346c1522811500000000000000000000000000000000000000115fb3903335605b13419a26de000000000000000000000000000000000000000003278b615491b8a44b84ff15",
+      "decoded": "borrow=1003505139037401317015829 collateralShares=976261340798154561089240853"
+    },
+    {
+      "name": "pair[7].collateral",
+      "to": "0x4a7c64932d1ef0b4a2d430ea10184e3b87095e33",
+      "signature": "collateral()",
+      "selector": "0xd8dfeb45",
+      "callData": "0xd8dfeb45",
+      "returnData": "0x00000000000000000000000021cf1c5dc48c603b89907fe6a7ae83ea5e3709af",
+      "decoded": "0x21cf1c5dc48c603b89907fe6a7ae83ea5e3709af"
+    },
+    {
+      "name": "collateral[7].convertToAssets",
+      "to": "0x21cf1c5dc48c603b89907fe6a7ae83ea5e3709af",
+      "signature": "convertToAssets(uint256)",
+      "selector": "0x07a2d13a",
+      "callData": "0x07a2d13a000000000000000000000000000000000000000003278b615491b8a44b84ff15",
+      "returnData": "0x00000000000000000000000000000000000000000000e3edc4d0149f52945556",
+      "decoded": "1076363251814779734742358"
+    },
+    {
+      "name": "pair[8].underlying",
+      "to": "0x3f2b20b8e8ce30bb52239d3dfadf826ecfe6a5f7",
+      "signature": "underlying()",
+      "selector": "0x6f307dc3",
+      "callData": "0x6f307dc3",
+      "returnData": "0x000000000000000000000000cacd6fd266af91b8aed52accc382b4e165586e29",
+      "decoded": "0xcacd6fd266af91b8aed52accc382b4e165586e29"
+    },
+    {
+      "name": "pair[8].getPairAccounting",
+      "to": "0x3f2b20b8e8ce30bb52239d3dfadf826ecfe6a5f7",
+      "signature": "getPairAccounting()",
+      "selector": "0xcdd72d52",
+      "callData": "0xcdd72d52",
+      "returnData": "0x000000000000000000000000000000000000000000000013d61ae6e9317a433600000000000000000000000000000000000000000000e7fbce7505605160033c000000000000000000000000000000000000000002578163b73b784c8cbce6e500000000000000000000000000000000000000000000efde182b1ba8dac0f4bf",
+      "decoded": "borrow=1095511667108244470367036 collateralShares=1132742508106301673895103"
+    },
+    {
+      "name": "pair[8].collateral",
+      "to": "0x3f2b20b8e8ce30bb52239d3dfadf826ecfe6a5f7",
+      "signature": "collateral()",
+      "selector": "0xd8dfeb45",
+      "callData": "0xd8dfeb45",
+      "returnData": "0x000000000000000000000000ab3cb84c310186b2fa4b4503624a5d90b5dcb22d",
+      "decoded": "0xab3cb84c310186b2fa4b4503624a5d90b5dcb22d"
+    },
+    {
+      "name": "collateral[8].convertToAssets",
+      "to": "0xab3cb84c310186b2fa4b4503624a5d90b5dcb22d",
+      "signature": "convertToAssets(uint256)",
+      "selector": "0x07a2d13a",
+      "callData": "0x07a2d13a00000000000000000000000000000000000000000000efde182b1ba8dac0f4bf",
+      "returnData": "0x00000000000000000000000000000000000000000000fc4e3d81c2de00fefd63",
+      "decoded": "1191479631758667003395427"
+    },
+    {
+      "name": "pair[9].underlying",
+      "to": "0x212589b06ebba4d89d9defcc8ddc58d80e141ea0",
+      "signature": "underlying()",
+      "selector": "0x6f307dc3",
+      "callData": "0x6f307dc3",
+      "returnData": "0x000000000000000000000000cacd6fd266af91b8aed52accc382b4e165586e29",
+      "decoded": "0xcacd6fd266af91b8aed52accc382b4e165586e29"
+    },
+    {
+      "name": "pair[9].getPairAccounting",
+      "to": "0x212589b06ebba4d89d9defcc8ddc58d80e141ea0",
+      "signature": "getPairAccounting()",
+      "selector": "0xcdd72d52",
+      "callData": "0xcdd72d52",
+      "returnData": "0x000000000000000000000000000000000000000000000001a598261fc3dfe898000000000000000000000000000000000000000000001ceb1887cfb47a35e7e400000000000000000000000000000000000000000009fe71c15e14ebaa37aeee0000000000000000000000000000000000000000000021187f4eb1b1c84c7513",
+      "decoded": "borrow=136563013987424628238308 collateralShares=156289989257335449351443"
+    },
+    {
+      "name": "pair[9].collateral",
+      "to": "0x212589b06ebba4d89d9defcc8ddc58d80e141ea0",
+      "signature": "collateral()",
+      "selector": "0xd8dfeb45",
+      "callData": "0xd8dfeb45",
+      "returnData": "0x00000000000000000000000028cdf6ce79702aaefbf217cf98cbd11f5639b9f1",
+      "decoded": "0x28cdf6ce79702aaefbf217cf98cbd11f5639b9f1"
+    },
+    {
+      "name": "collateral[9].convertToAssets",
+      "to": "0x28cdf6ce79702aaefbf217cf98cbd11f5639b9f1",
+      "signature": "convertToAssets(uint256)",
+      "selector": "0x07a2d13a",
+      "callData": "0x07a2d13a0000000000000000000000000000000000000000000021187f4eb1b1c84c7513",
+      "returnData": "0x0000000000000000000000000000000000000000000021ffe2cf7c47914dde20",
+      "decoded": "160558357091713800855072"
+    },
+    {
+      "name": "pair[10].underlying",
+      "to": "0x55c49c707aa0ad254f34a389a8dfd0d103894adb",
+      "signature": "underlying()",
+      "selector": "0x6f307dc3",
+      "callData": "0x6f307dc3",
+      "returnData": "0x000000000000000000000000cacd6fd266af91b8aed52accc382b4e165586e29",
+      "decoded": "0xcacd6fd266af91b8aed52accc382b4e165586e29"
+    },
+    {
+      "name": "pair[10].getPairAccounting",
+      "to": "0x55c49c707aa0ad254f34a389a8dfd0d103894adb",
+      "signature": "getPairAccounting()",
+      "selector": "0xcdd72d52",
+      "callData": "0xcdd72d52",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "decoded": "borrow=0 collateralShares=0"
+    },
+    {
+      "name": "pair[10].collateral",
+      "to": "0x55c49c707aa0ad254f34a389a8dfd0d103894adb",
+      "signature": "collateral()",
+      "selector": "0xd8dfeb45",
+      "callData": "0xd8dfeb45",
+      "returnData": "0x00000000000000000000000037110563e3856d413b821f07c7e3991c4493673d",
+      "decoded": "0x37110563e3856d413b821f07c7e3991c4493673d"
+    },
+    {
+      "name": "collateral[10].convertToAssets",
+      "to": "0x37110563e3856d413b821f07c7e3991c4493673d",
+      "signature": "convertToAssets(uint256)",
+      "selector": "0x07a2d13a",
+      "callData": "0x07a2d13a0000000000000000000000000000000000000000000000000000000000000000",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "decoded": "0"
+    },
+    {
+      "name": "pair[11].underlying",
+      "to": "0x24ccbd9130ec24945916095ec54e9acc7382c864",
+      "signature": "underlying()",
+      "selector": "0x6f307dc3",
+      "callData": "0x6f307dc3",
+      "returnData": "0x000000000000000000000000cacd6fd266af91b8aed52accc382b4e165586e29",
+      "decoded": "0xcacd6fd266af91b8aed52accc382b4e165586e29"
+    },
+    {
+      "name": "pair[11].getPairAccounting",
+      "to": "0x24ccbd9130ec24945916095ec54e9acc7382c864",
+      "signature": "getPairAccounting()",
+      "selector": "0xcdd72d52",
+      "callData": "0xcdd72d52",
+      "returnData": "0x000000000000000000000000000000000000000000000001c9f30264ac04b8f80000000000000000000000000000000000000000000010541a09c0fb0b3818ac0000000000000000000000000000000000000000002d35e67eb14ce8ef5bbf360000000000000000000000000000000000000000000010e47d59bc85fde4e52b",
+      "decoded": "borrow=77109266471010159827116 collateralShares=79772753832531445736747"
+    },
+    {
+      "name": "pair[11].collateral",
+      "to": "0x24ccbd9130ec24945916095ec54e9acc7382c864",
+      "signature": "collateral()",
+      "selector": "0xd8dfeb45",
+      "callData": "0xd8dfeb45",
+      "returnData": "0x0000000000000000000000008087346b8865e5b0bf9f8a49742c2d83f6a50a6c",
+      "decoded": "0x8087346b8865e5b0bf9f8a49742c2d83f6a50a6c"
+    },
+    {
+      "name": "collateral[11].convertToAssets",
+      "to": "0x8087346b8865e5b0bf9f8a49742c2d83f6a50a6c",
+      "signature": "convertToAssets(uint256)",
+      "selector": "0x07a2d13a",
+      "callData": "0x07a2d13a0000000000000000000000000000000000000000000010e47d59bc85fde4e52b",
+      "returnData": "0x000000000000000000000000000000000000000000001150d20ccacf6d3cf1ba",
+      "decoded": "81771105430120657908154"
+    },
+    {
+      "name": "pair[12].underlying",
+      "to": "0xb5575fe3d3b7877415a166001f67c2df94d4e6c1",
+      "signature": "underlying()",
+      "selector": "0x6f307dc3",
+      "callData": "0x6f307dc3",
+      "returnData": "0x000000000000000000000000cacd6fd266af91b8aed52accc382b4e165586e29",
+      "decoded": "0xcacd6fd266af91b8aed52accc382b4e165586e29"
+    },
+    {
+      "name": "pair[12].getPairAccounting",
+      "to": "0xb5575fe3d3b7877415a166001f67c2df94d4e6c1",
+      "signature": "getPairAccounting()",
+      "selector": "0xcdd72d52",
+      "callData": "0xcdd72d52",
+      "returnData": "0x000000000000000000000000000000000000000000000001e23a86abdec6c3dd000000000000000000000000000000000000000000001948613cd2714f96ab5e000000000000000000000000000000000000000000846ef90b76aff1934a4199000000000000000000000000000000000000000000001ab7cfc8197e1d31f1b3",
+      "decoded": "borrow=119394334351552608119646 collateralShares=126172254965090263101875"
+    },
+    {
+      "name": "pair[12].collateral",
+      "to": "0xb5575fe3d3b7877415a166001f67c2df94d4e6c1",
+      "signature": "collateral()",
+      "selector": "0xd8dfeb45",
+      "callData": "0xd8dfeb45",
+      "returnData": "0x0000000000000000000000008e5f09de0cd7841239410f929a905e214443d9e0",
+      "decoded": "0x8e5f09de0cd7841239410f929a905e214443d9e0"
+    },
+    {
+      "name": "collateral[12].convertToAssets",
+      "to": "0x8e5f09de0cd7841239410f929a905e214443d9e0",
+      "signature": "convertToAssets(uint256)",
+      "selector": "0x07a2d13a",
+      "callData": "0x07a2d13a000000000000000000000000000000000000000000001ab7cfc8197e1d31f1b3",
+      "returnData": "0x000000000000000000000000000000000000000000001b3768200b314f4f56f5",
+      "decoded": "128525968970820057257717"
+    },
+    {
+      "name": "pair[13].underlying",
+      "to": "0x27ab448a75d548ecff73f8b4f36fcc9496768797",
+      "signature": "underlying()",
+      "selector": "0x6f307dc3",
+      "callData": "0x6f307dc3",
+      "returnData": "0x000000000000000000000000f939e0a03fb07f59a73314e73794be0e57ac1b4e",
+      "decoded": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+    },
+    {
+      "name": "pair[13].getPairAccounting",
+      "to": "0x27ab448a75d548ecff73f8b4f36fcc9496768797",
+      "signature": "getPairAccounting()",
+      "selector": "0xcdd72d52",
+      "callData": "0xcdd72d52",
+      "returnData": "0x0000000000000000000000000000000000000000000000057d3ffad0175b8d890000000000000000000000000000000000000000000038be7d3fc888734fd916000000000000000000000000000000000000000000eac42d04139399db033357000000000000000000000000000000000000000000f2fe7be1b4c83efe8be07f",
+      "decoded": "borrow=267966429567371596257558 collateralShares=293761814646754543663833215"
+    },
+    {
+      "name": "pair[13].collateral",
+      "to": "0x27ab448a75d548ecff73f8b4f36fcc9496768797",
+      "signature": "collateral()",
+      "selector": "0xd8dfeb45",
+      "callData": "0xd8dfeb45",
+      "returnData": "0x000000000000000000000000992b77179a5cf876bcd566ff4b3eae6482012b90",
+      "decoded": "0x992b77179a5cf876bcd566ff4b3eae6482012b90"
+    },
+    {
+      "name": "collateral[13].convertToAssets",
+      "to": "0x992b77179a5cf876bcd566ff4b3eae6482012b90",
+      "signature": "convertToAssets(uint256)",
+      "selector": "0x07a2d13a",
+      "callData": "0x07a2d13a000000000000000000000000000000000000000000f2fe7be1b4c83efe8be07f",
+      "returnData": "0x0000000000000000000000000000000000000000000040d2801798eabb09ea6f",
+      "decoded": "306114501173231546395247"
+    },
+    {
+      "name": "pair[14].underlying",
+      "to": "0x57e69699381a651fb0bbdbb31888f5d655bf3f06",
+      "signature": "underlying()",
+      "selector": "0x6f307dc3",
+      "callData": "0x6f307dc3",
+      "returnData": "0x000000000000000000000000f939e0a03fb07f59a73314e73794be0e57ac1b4e",
+      "decoded": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+    },
+    {
+      "name": "pair[14].getPairAccounting",
+      "to": "0x57e69699381a651fb0bbdbb31888f5d655bf3f06",
+      "signature": "getPairAccounting()",
+      "selector": "0xcdd72d52",
+      "callData": "0xcdd72d52",
+      "returnData": "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008fc403a6fd2719ab76bc",
+      "decoded": "borrow=0 collateralShares=678914232064778961647292"
+    },
+    {
+      "name": "pair[14].collateral",
+      "to": "0x57e69699381a651fb0bbdbb31888f5d655bf3f06",
+      "signature": "collateral()",
+      "selector": "0xd8dfeb45",
+      "callData": "0xd8dfeb45",
+      "returnData": "0x000000000000000000000000c33aa628b10655b36eaa7ee880d6bc4789dd2289",
+      "decoded": "0xc33aa628b10655b36eaa7ee880d6bc4789dd2289"
+    },
+    {
+      "name": "collateral[14].convertToAssets",
+      "to": "0xc33aa628b10655b36eaa7ee880d6bc4789dd2289",
+      "signature": "convertToAssets(uint256)",
+      "selector": "0x07a2d13a",
+      "callData": "0x07a2d13a000000000000000000000000000000000000000000008fc403a6fd2719ab76bc",
+      "returnData": "0x00000000000000000000000000000000000000000000002657c89377458a6c27",
+      "decoded": "707301742618081913895"
+    },
+    {
+      "name": "pair[15].underlying",
+      "to": "0xf4a6113fbd71ac1825751a6fe844a156f60c83ef",
+      "signature": "underlying()",
+      "selector": "0x6f307dc3",
+      "callData": "0x6f307dc3",
+      "returnData": "0x000000000000000000000000f939e0a03fb07f59a73314e73794be0e57ac1b4e",
+      "decoded": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+    },
+    {
+      "name": "pair[15].getPairAccounting",
+      "to": "0xf4a6113fbd71ac1825751a6fe844a156f60c83ef",
+      "signature": "getPairAccounting()",
+      "selector": "0xcdd72d52",
+      "callData": "0xcdd72d52",
+      "returnData": "0x000000000000000000000000000000000000000000000000000711253e20933c000000000000000000000000000000000000000000000000490dadb855dda7bf0000000000000000000000000000000000000000000000ce72006c0e24f3491c00000000000000000000000000000000000000000015ec184a72205d8029f850",
+      "decoded": "borrow=5264054546692155327 collateralShares=26502368788107910074464336"
+    },
+    {
+      "name": "pair[15].collateral",
+      "to": "0xf4a6113fbd71ac1825751a6fe844a156f60c83ef",
+      "signature": "collateral()",
+      "selector": "0xd8dfeb45",
+      "callData": "0xd8dfeb45",
+      "returnData": "0x000000000000000000000000dfa525bd3a8e59d336ef725309f855250538c337",
+      "decoded": "0xdfa525bd3a8e59d336ef725309f855250538c337"
+    },
+    {
+      "name": "collateral[15].convertToAssets",
+      "to": "0xdfa525bd3a8e59d336ef725309f855250538c337",
+      "signature": "convertToAssets(uint256)",
+      "selector": "0x07a2d13a",
+      "callData": "0x07a2d13a00000000000000000000000000000000000000000015ec184a72205d8029f850",
+      "returnData": "0x0000000000000000000000000000000000000000000005b90c3adcf07bf9b767",
+      "decoded": "27025361327587027695463"
+    },
+    {
+      "name": "pair[16].underlying",
+      "to": "0x6e90c85a495d54c6d7e1f3400fef1f6e59f86bd6",
+      "signature": "underlying()",
+      "selector": "0x6f307dc3",
+      "callData": "0x6f307dc3",
+      "returnData": "0x000000000000000000000000f939e0a03fb07f59a73314e73794be0e57ac1b4e",
+      "decoded": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+    },
+    {
+      "name": "pair[16].getPairAccounting",
+      "to": "0x6e90c85a495d54c6d7e1f3400fef1f6e59f86bd6",
+      "signature": "getPairAccounting()",
+      "selector": "0xcdd72d52",
+      "callData": "0xcdd72d52",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+      "decoded": "borrow=0 collateralShares=1"
+    },
+    {
+      "name": "pair[16].collateral",
+      "to": "0x6e90c85a495d54c6d7e1f3400fef1f6e59f86bd6",
+      "signature": "collateral()",
+      "selector": "0xd8dfeb45",
+      "callData": "0xd8dfeb45",
+      "returnData": "0x00000000000000000000000001144442fba7adccb5c9dc9cf33dd009d50a9e1d",
+      "decoded": "0x01144442fba7adccb5c9dc9cf33dd009d50a9e1d"
+    },
+    {
+      "name": "collateral[16].convertToAssets",
+      "to": "0x01144442fba7adccb5c9dc9cf33dd009d50a9e1d",
+      "signature": "convertToAssets(uint256)",
+      "selector": "0x07a2d13a",
+      "callData": "0x07a2d13a0000000000000000000000000000000000000000000000000000000000000001",
+      "returnData": "0x0000000000000000000000000000000000000000000000001dcc2ef3d15f027e",
+      "decoded": "2147142747073479294"
+    },
+    {
+      "name": "pair[17].underlying",
+      "to": "0xd42535cda82a4569ba7209857446222abd14a82c",
+      "signature": "underlying()",
+      "selector": "0x6f307dc3",
+      "callData": "0x6f307dc3",
+      "returnData": "0x000000000000000000000000f939e0a03fb07f59a73314e73794be0e57ac1b4e",
+      "decoded": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+    },
+    {
+      "name": "pair[17].getPairAccounting",
+      "to": "0xd42535cda82a4569ba7209857446222abd14a82c",
+      "signature": "getPairAccounting()",
+      "selector": "0xcdd72d52",
+      "callData": "0xcdd72d52",
+      "returnData": "0x0000000000000000000000000000000000000000000000039d7f895c8ac2e8a200000000000000000000000000000000000000000000145bd841f546f8b03e3700000000000000000000000000000000000000000002c16e866a7f8c03ec22b1000000000000000000000000000000000000000000562d441720ed17d7f8fc19",
+      "decoded": "borrow=96141566373971320913463 collateralShares=104181383023776804099390489"
+    },
+    {
+      "name": "pair[17].collateral",
+      "to": "0xd42535cda82a4569ba7209857446222abd14a82c",
+      "signature": "collateral()",
+      "selector": "0xd8dfeb45",
+      "callData": "0xd8dfeb45",
+      "returnData": "0x0000000000000000000000007430f11eeb64a4ce50c8f92177485d34c48da72c",
+      "decoded": "0x7430f11eeb64a4ce50c8f92177485d34c48da72c"
+    },
+    {
+      "name": "collateral[17].convertToAssets",
+      "to": "0x7430f11eeb64a4ce50c8f92177485d34c48da72c",
+      "signature": "convertToAssets(uint256)",
+      "selector": "0x07a2d13a",
+      "callData": "0x07a2d13a000000000000000000000000000000000000000000562d441720ed17d7f8fc19",
+      "returnData": "0x0000000000000000000000000000000000000000000016f25a18e6dbbe42f265",
+      "decoded": "108362666881664225047141"
+    },
+    {
+      "name": "pair[18].underlying",
+      "to": "0x2fdd3c0a682e5774205f0f6d3ed3c9d1b9cb9413",
+      "signature": "underlying()",
+      "selector": "0x6f307dc3",
+      "callData": "0x6f307dc3",
+      "returnData": "0x000000000000000000000000f939e0a03fb07f59a73314e73794be0e57ac1b4e",
+      "decoded": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e"
+    },
+    {
+      "name": "pair[18].getPairAccounting",
+      "to": "0x2fdd3c0a682e5774205f0f6d3ed3c9d1b9cb9413",
+      "signature": "getPairAccounting()",
+      "selector": "0xcdd72d52",
+      "callData": "0xcdd72d52",
+      "returnData": "0x0000000000000000000000000000000000000000000000a0f995da33a68b3fa30000000000000000000000000000000000000000000691a150e85468197df6c90000000000000000000000000000000000000000000d5aee7738187dc28485bc00000000000000000000000000000000000000001ab34662695121722dd05626",
+      "decoded": "borrow=7941273813502264554157769 collateralShares=8263340358089594129192343078"
+    },
+    {
+      "name": "pair[18].collateral",
+      "to": "0x2fdd3c0a682e5774205f0f6d3ed3c9d1b9cb9413",
+      "signature": "collateral()",
+      "selector": "0xd8dfeb45",
+      "callData": "0xd8dfeb45",
+      "returnData": "0x000000000000000000000000c32b0cf36e06c790a568667a17de80cba95a5aad",
+      "decoded": "0xc32b0cf36e06c790a568667a17de80cba95a5aad"
+    },
+    {
+      "name": "collateral[18].convertToAssets",
+      "to": "0xc32b0cf36e06c790a568667a17de80cba95a5aad",
+      "signature": "convertToAssets(uint256)",
+      "selector": "0x07a2d13a",
+      "callData": "0x07a2d13a00000000000000000000000000000000000000001ab34662695121722dd05626",
+      "returnData": "0x00000000000000000000000000000000000000000006fb614a655306f02aac6b",
+      "decoded": "8440663599845426542062699"
+    },
+    {
+      "name": "insurancePool.totalAssets",
+      "to": "0x00000000efe883b3304aff71eacf72dbc3e1b577",
+      "signature": "totalAssets()",
+      "selector": "0x01e1d114",
+      "callData": "0x01e1d114",
+      "returnData": "0x00000000000000000000000000000000000000000002a9d0de56ca4b2ac2ad39",
+      "decoded": "3219784518816708583140665"
+    },
+    {
+      "name": "token.balanceOf(insurancePool)",
+      "to": "0x57ab1e0003f623289cd798b1824be09a793e4bec",
+      "signature": "balanceOf(address)",
+      "selector": "0x70a08231",
+      "callData": "0x70a0823100000000000000000000000000000000efe883b3304aff71eacf72dbc3e1b577",
+      "returnData": "0x00000000000000000000000000000000000000000002a9d0de56ca4b2ac2ad39",
+      "decoded": "3219784518816708583140665"
+    },
+    {
+      "name": "insurancePool.withdrawTime",
+      "to": "0x00000000efe883b3304aff71eacf72dbc3e1b577",
+      "signature": "withdrawTime()",
+      "selector": "0x45cb3dde",
+      "callData": "0x45cb3dde",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000093a81",
+      "decoded": "604801"
+    },
+    {
+      "name": "insurancePool.withdrawTimeLimit",
+      "to": "0x00000000efe883b3304aff71eacf72dbc3e1b577",
+      "signature": "withdrawTimeLimit()",
+      "selector": "0x4f04a86b",
+      "callData": "0x4f04a86b",
+      "returnData": "0x000000000000000000000000000000000000000000000000000000000003f481",
+      "decoded": "259201"
+    }
+  ],
+  "metrics": {
+    "collateralizationRatio": 1.078969,
+    "liquidationCapacityRatio": 0.100629,
+    "applicability": {
+      "collateralizationRatio": {
+        "state": "measured"
+      },
+      "liquidationCapacityRatio": {
+        "state": "measured"
+      }
+    }
+  },
+  "completeness": {
+    "complete": true,
+    "blockers": []
+  },
+  "warnings": [
+    "Collateral is valued as the protocol's ERC-4626 claim on crvUSD/frxUSD lending markets; this is layered par-value accounting, not proof of immediate underlying liquidity.",
+    "Registered pair 0x22b12110f1479d5d6fd53d0da35482371feb3c7e has zero debt; its 1111297104545559392 converted collateral assets are excluded from system CR.",
+    "Registered pair 0x57e69699381a651fb0bbdbb31888f5d655bf3f06 has zero debt; its 707301742618081913895 converted collateral assets are excluded from system CR.",
+    "Registered pair 0x6e90c85a495d54c6d7e1f3400fef1f6e59f86bd6 has zero debt; its 2147142747073479294 converted collateral assets are excluded from system CR."
+  ],
+  "checks": [
+    {
+      "id": "graph.core",
+      "status": "pass",
+      "detail": "registry and token share core 0xc07e000044f95655c11fda4cd37f70a94d7e0a7d"
+    },
+    {
+      "id": "graph.token",
+      "status": "pass",
+      "detail": "registry token 0x57ab1e0003f623289cd798b1824be09a793e4bec matches reUSD"
+    },
+    {
+      "id": "supply.positive",
+      "status": "pass",
+      "detail": "reUSD supply 31986803373899442609924402 is positive"
+    },
+    {
+      "id": "pairs.count",
+      "status": "pass",
+      "detail": "registry array and length getter both report 19 pairs"
+    },
+    {
+      "id": "pairs.unique",
+      "status": "pass",
+      "detail": "every registered pair address is unique"
+    },
+    {
+      "id": "graph.insurance-pool",
+      "status": "pass",
+      "detail": "registry insurance pool 0x00000000efe883b3304aff71eacf72dbc3e1b577 matches config"
+    },
+    {
+      "id": "graph.liquidation-handler",
+      "status": "pass",
+      "detail": "registry liquidation handler 0x88888888c227c36401493ed9f3e3dcc3800b2634 matches config"
+    },
+    {
+      "id": "graph.handler-insurance-pool",
+      "status": "pass",
+      "detail": "liquidation handler points to the registered InsurancePool"
+    },
+    {
+      "id": "graph.handler-registry",
+      "status": "pass",
+      "detail": "liquidation handler points to registry"
+    },
+    {
+      "id": "pair[0].underlying",
+      "status": "pass",
+      "detail": "underlying 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e is in the reviewed crvUSD/frxUSD set"
+    },
+    {
+      "id": "pair[0].state-readable",
+      "status": "pass",
+      "detail": "positive debt 15047240297787671721778284 has positive collateral shares 15359289505331709067256258206"
+    },
+    {
+      "id": "pair[0].converted-collateral-positive",
+      "status": "pass",
+      "detail": "converted collateral 16149476317355574686825496 is positive"
+    },
+    {
+      "id": "pair[1].underlying",
+      "status": "pass",
+      "detail": "underlying 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e is in the reviewed crvUSD/frxUSD set"
+    },
+    {
+      "id": "pair[1].state-readable",
+      "status": "pass",
+      "detail": "positive debt 145095565434186056728 has positive collateral shares 2648164599607755739551131"
+    },
+    {
+      "id": "pair[1].converted-collateral-positive",
+      "status": "pass",
+      "detail": "converted collateral 2823574664336315353094 is positive"
+    },
+    {
+      "id": "pair[2].underlying",
+      "status": "pass",
+      "detail": "underlying 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e is in the reviewed crvUSD/frxUSD set"
+    },
+    {
+      "id": "pair[2].state-readable",
+      "status": "pass",
+      "detail": "positive debt 1860896485314747074043002 has positive collateral shares 1844971418148770339425938269"
+    },
+    {
+      "id": "pair[2].converted-collateral-positive",
+      "status": "pass",
+      "detail": "converted collateral 2045810143503708658129873 is positive"
+    },
+    {
+      "id": "pair[3].underlying",
+      "status": "pass",
+      "detail": "underlying 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e is in the reviewed crvUSD/frxUSD set"
+    },
+    {
+      "id": "pair[3].state-readable",
+      "status": "pass",
+      "detail": "positive debt 428507684309979008245 has positive collateral shares 5417921247261068858912193"
+    },
+    {
+      "id": "pair[3].converted-collateral-positive",
+      "status": "pass",
+      "detail": "converted collateral 5733656847811782449816 is positive"
+    },
+    {
+      "id": "pair[4].underlying",
+      "status": "pass",
+      "detail": "underlying 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e is in the reviewed crvUSD/frxUSD set"
+    },
+    {
+      "id": "pair[4].state-readable",
+      "status": "pass",
+      "detail": "positive debt 0 has positive collateral shares 917895835664851766645"
+    },
+    {
+      "id": "pair[5].underlying",
+      "status": "pass",
+      "detail": "underlying 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e is in the reviewed crvUSD/frxUSD set"
+    },
+    {
+      "id": "pair[5].state-readable",
+      "status": "pass",
+      "detail": "positive debt 3891425440685913753640328 has positive collateral shares 3797161552763748814773698306"
+    },
+    {
+      "id": "pair[5].converted-collateral-positive",
+      "status": "pass",
+      "detail": "converted collateral 4238424441718168318210711 is positive"
+    },
+    {
+      "id": "pair[6].underlying",
+      "status": "pass",
+      "detail": "underlying 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e is in the reviewed crvUSD/frxUSD set"
+    },
+    {
+      "id": "pair[6].state-readable",
+      "status": "pass",
+      "detail": "positive debt 458927862767808876623122 has positive collateral shares 511191018114766627079509479"
+    },
+    {
+      "id": "pair[6].converted-collateral-positive",
+      "status": "pass",
+      "detail": "converted collateral 560161902539369550962475 is positive"
+    },
+    {
+      "id": "pair[7].underlying",
+      "status": "pass",
+      "detail": "underlying 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e is in the reviewed crvUSD/frxUSD set"
+    },
+    {
+      "id": "pair[7].state-readable",
+      "status": "pass",
+      "detail": "positive debt 1003505139037401317015829 has positive collateral shares 976261340798154561089240853"
+    },
+    {
+      "id": "pair[7].converted-collateral-positive",
+      "status": "pass",
+      "detail": "converted collateral 1076363251814779734742358 is positive"
+    },
+    {
+      "id": "pair[8].underlying",
+      "status": "pass",
+      "detail": "underlying 0xcacd6fd266af91b8aed52accc382b4e165586e29 is in the reviewed crvUSD/frxUSD set"
+    },
+    {
+      "id": "pair[8].state-readable",
+      "status": "pass",
+      "detail": "positive debt 1095511667108244470367036 has positive collateral shares 1132742508106301673895103"
+    },
+    {
+      "id": "pair[8].converted-collateral-positive",
+      "status": "pass",
+      "detail": "converted collateral 1191479631758667003395427 is positive"
+    },
+    {
+      "id": "pair[9].underlying",
+      "status": "pass",
+      "detail": "underlying 0xcacd6fd266af91b8aed52accc382b4e165586e29 is in the reviewed crvUSD/frxUSD set"
+    },
+    {
+      "id": "pair[9].state-readable",
+      "status": "pass",
+      "detail": "positive debt 136563013987424628238308 has positive collateral shares 156289989257335449351443"
+    },
+    {
+      "id": "pair[9].converted-collateral-positive",
+      "status": "pass",
+      "detail": "converted collateral 160558357091713800855072 is positive"
+    },
+    {
+      "id": "pair[10].underlying",
+      "status": "pass",
+      "detail": "underlying 0xcacd6fd266af91b8aed52accc382b4e165586e29 is in the reviewed crvUSD/frxUSD set"
+    },
+    {
+      "id": "pair[10].state-readable",
+      "status": "pass",
+      "detail": "positive debt 0 has positive collateral shares 0"
+    },
+    {
+      "id": "pair[11].underlying",
+      "status": "pass",
+      "detail": "underlying 0xcacd6fd266af91b8aed52accc382b4e165586e29 is in the reviewed crvUSD/frxUSD set"
+    },
+    {
+      "id": "pair[11].state-readable",
+      "status": "pass",
+      "detail": "positive debt 77109266471010159827116 has positive collateral shares 79772753832531445736747"
+    },
+    {
+      "id": "pair[11].converted-collateral-positive",
+      "status": "pass",
+      "detail": "converted collateral 81771105430120657908154 is positive"
+    },
+    {
+      "id": "pair[12].underlying",
+      "status": "pass",
+      "detail": "underlying 0xcacd6fd266af91b8aed52accc382b4e165586e29 is in the reviewed crvUSD/frxUSD set"
+    },
+    {
+      "id": "pair[12].state-readable",
+      "status": "pass",
+      "detail": "positive debt 119394334351552608119646 has positive collateral shares 126172254965090263101875"
+    },
+    {
+      "id": "pair[12].converted-collateral-positive",
+      "status": "pass",
+      "detail": "converted collateral 128525968970820057257717 is positive"
+    },
+    {
+      "id": "pair[13].underlying",
+      "status": "pass",
+      "detail": "underlying 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e is in the reviewed crvUSD/frxUSD set"
+    },
+    {
+      "id": "pair[13].state-readable",
+      "status": "pass",
+      "detail": "positive debt 267966429567371596257558 has positive collateral shares 293761814646754543663833215"
+    },
+    {
+      "id": "pair[13].converted-collateral-positive",
+      "status": "pass",
+      "detail": "converted collateral 306114501173231546395247 is positive"
+    },
+    {
+      "id": "pair[14].underlying",
+      "status": "pass",
+      "detail": "underlying 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e is in the reviewed crvUSD/frxUSD set"
+    },
+    {
+      "id": "pair[14].state-readable",
+      "status": "pass",
+      "detail": "positive debt 0 has positive collateral shares 678914232064778961647292"
+    },
+    {
+      "id": "pair[15].underlying",
+      "status": "pass",
+      "detail": "underlying 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e is in the reviewed crvUSD/frxUSD set"
+    },
+    {
+      "id": "pair[15].state-readable",
+      "status": "pass",
+      "detail": "positive debt 5264054546692155327 has positive collateral shares 26502368788107910074464336"
+    },
+    {
+      "id": "pair[15].converted-collateral-positive",
+      "status": "pass",
+      "detail": "converted collateral 27025361327587027695463 is positive"
+    },
+    {
+      "id": "pair[16].underlying",
+      "status": "pass",
+      "detail": "underlying 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e is in the reviewed crvUSD/frxUSD set"
+    },
+    {
+      "id": "pair[16].state-readable",
+      "status": "pass",
+      "detail": "positive debt 0 has positive collateral shares 1"
+    },
+    {
+      "id": "pair[17].underlying",
+      "status": "pass",
+      "detail": "underlying 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e is in the reviewed crvUSD/frxUSD set"
+    },
+    {
+      "id": "pair[17].state-readable",
+      "status": "pass",
+      "detail": "positive debt 96141566373971320913463 has positive collateral shares 104181383023776804099390489"
+    },
+    {
+      "id": "pair[17].converted-collateral-positive",
+      "status": "pass",
+      "detail": "converted collateral 108362666881664225047141 is positive"
+    },
+    {
+      "id": "pair[18].underlying",
+      "status": "pass",
+      "detail": "underlying 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e is in the reviewed crvUSD/frxUSD set"
+    },
+    {
+      "id": "pair[18].state-readable",
+      "status": "pass",
+      "detail": "positive debt 7941273813502264554157769 has positive collateral shares 8263340358089594129192343078"
+    },
+    {
+      "id": "pair[18].converted-collateral-positive",
+      "status": "pass",
+      "detail": "converted collateral 8440663599845426542062699 is positive"
+    },
+    {
+      "id": "derivation.supply-vs-debt",
+      "status": "pass",
+      "detail": "registered pair debt diverges 0.030400% from token supply"
+    },
+    {
+      "id": "insurance.assets-vs-balance",
+      "status": "pass",
+      "detail": "InsurancePool assets exactly equal held reUSD (3219784518816708583140665)"
+    },
+    {
+      "id": "insurance.withdrawal-lock",
+      "status": "pass",
+      "detail": "withdraw cooldown 604801s and claim window 259201s are positive"
+    }
+  ],
+  "overlaySources": [
+    {
+      "label": "Resupply Registry, pair accounting, collateral-vault conversion, and InsurancePool state on Ethereum",
+      "url": "https://etherscan.io/address/0x10101010E0C3171D894B71B3400668aF311e7D94#readContract"
+    },
+    {
+      "label": "Resupply protocol stability-mechanics documentation",
+      "url": "https://docs.resupply.fi/resupply-protocol/stability-mechanics"
+    }
+  ],
+  "tool": {
+    "name": "measure-cdp-mechanism-metrics",
+    "version": "2"
+  },
+  "family": "resupply-pairs-v1",
+  "derived": {
+    "token": "0x57ab1e0003f623289cd798b1824be09a793e4bec",
+    "registry": "0x10101010e0c3171d894b71b3400668af311e7d94",
+    "insurancePool": "0x00000000efe883b3304aff71eacf72dbc3e1b577",
+    "liquidationHandler": "0x88888888c227c36401493ed9f3e3dcc3800b2634",
+    "totalSupplyRaw": "31986803373899442609924402",
+    "totalDebtRaw": "31996534184259672938201761",
+    "totalCollateralAssetsRaw": "34523294480922979907290743",
+    "insuranceAssetsRaw": "3219784518816708583140665",
+    "pairCount": 19,
+    "supplyDebtDivergencePct": 0.0304,
+    "pairs": [
+      {
+        "address": "0xc5184cccf85b81eddc661330acb3e41bd89f34a1",
+        "underlying": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+        "collateral": "0x8e3009b59200668e1efda0a2f2ac42b24baa2982",
+        "totalBorrowRaw": "15047240297787671721778284",
+        "totalCollateralSharesRaw": "15359289505331709067256258206",
+        "totalCollateralAssetsRaw": "16149476317355574686825496",
+        "active": true
+      },
+      {
+        "address": "0x08064a8eeecf71203449228f3eac65e462009fdf",
+        "underlying": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+        "collateral": "0x14361c243174794e2207296a6ad59bb0dec1d388",
+        "totalBorrowRaw": "145095565434186056728",
+        "totalCollateralSharesRaw": "2648164599607755739551131",
+        "totalCollateralAssetsRaw": "2823574664336315353094",
+        "active": true
+      },
+      {
+        "address": "0x39ea8e7f44e9303a7441b1e1a4f5731f1028505c",
+        "underlying": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+        "collateral": "0x4a7999c55d3a93daf72ea112985e57c2e3b9e95d",
+        "totalBorrowRaw": "1860896485314747074043002",
+        "totalCollateralSharesRaw": "1844971418148770339425938269",
+        "totalCollateralAssetsRaw": "2045810143503708658129873",
+        "active": true
+      },
+      {
+        "address": "0x3b037329ff77b5863e6a3c844ad2a7506abe5706",
+        "underlying": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+        "collateral": "0xc687141c18f20f7ba405e45328825579fddd3195",
+        "totalBorrowRaw": "428507684309979008245",
+        "totalCollateralSharesRaw": "5417921247261068858912193",
+        "totalCollateralAssetsRaw": "5733656847811782449816",
+        "active": true
+      },
+      {
+        "address": "0x22b12110f1479d5d6fd53d0da35482371feb3c7e",
+        "underlying": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+        "collateral": "0xb2b23c87a4b6d1b03ba603f7c3eb9a81fdc0aac9",
+        "totalBorrowRaw": "0",
+        "totalCollateralSharesRaw": "917895835664851766645",
+        "totalCollateralAssetsRaw": "1111297104545559392",
+        "active": false
+      },
+      {
+        "address": "0x2d8ecd48b58e53972dbc54d8d0414002b41abc9d",
+        "underlying": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+        "collateral": "0xccd37eb6374ae5b1f0b85ac97eff14770e0d0063",
+        "totalBorrowRaw": "3891425440685913753640328",
+        "totalCollateralSharesRaw": "3797161552763748814773698306",
+        "totalCollateralAssetsRaw": "4238424441718168318210711",
+        "active": true
+      },
+      {
+        "address": "0xcf1deb0570c2f7dee8c07a7e5fa2bd4b2b96520d",
+        "underlying": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+        "collateral": "0x8fb1c7aedcbbc1222325c39dd5c1d2d23420cae3",
+        "totalBorrowRaw": "458927862767808876623122",
+        "totalCollateralSharesRaw": "511191018114766627079509479",
+        "totalCollateralAssetsRaw": "560161902539369550962475",
+        "active": true
+      },
+      {
+        "address": "0x4a7c64932d1ef0b4a2d430ea10184e3b87095e33",
+        "underlying": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+        "collateral": "0x21cf1c5dc48c603b89907fe6a7ae83ea5e3709af",
+        "totalBorrowRaw": "1003505139037401317015829",
+        "totalCollateralSharesRaw": "976261340798154561089240853",
+        "totalCollateralAssetsRaw": "1076363251814779734742358",
+        "active": true
+      },
+      {
+        "address": "0x3f2b20b8e8ce30bb52239d3dfadf826ecfe6a5f7",
+        "underlying": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+        "collateral": "0xab3cb84c310186b2fa4b4503624a5d90b5dcb22d",
+        "totalBorrowRaw": "1095511667108244470367036",
+        "totalCollateralSharesRaw": "1132742508106301673895103",
+        "totalCollateralAssetsRaw": "1191479631758667003395427",
+        "active": true
+      },
+      {
+        "address": "0x212589b06ebba4d89d9defcc8ddc58d80e141ea0",
+        "underlying": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+        "collateral": "0x28cdf6ce79702aaefbf217cf98cbd11f5639b9f1",
+        "totalBorrowRaw": "136563013987424628238308",
+        "totalCollateralSharesRaw": "156289989257335449351443",
+        "totalCollateralAssetsRaw": "160558357091713800855072",
+        "active": true
+      },
+      {
+        "address": "0x55c49c707aa0ad254f34a389a8dfd0d103894adb",
+        "underlying": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+        "collateral": "0x37110563e3856d413b821f07c7e3991c4493673d",
+        "totalBorrowRaw": "0",
+        "totalCollateralSharesRaw": "0",
+        "totalCollateralAssetsRaw": "0",
+        "active": false
+      },
+      {
+        "address": "0x24ccbd9130ec24945916095ec54e9acc7382c864",
+        "underlying": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+        "collateral": "0x8087346b8865e5b0bf9f8a49742c2d83f6a50a6c",
+        "totalBorrowRaw": "77109266471010159827116",
+        "totalCollateralSharesRaw": "79772753832531445736747",
+        "totalCollateralAssetsRaw": "81771105430120657908154",
+        "active": true
+      },
+      {
+        "address": "0xb5575fe3d3b7877415a166001f67c2df94d4e6c1",
+        "underlying": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+        "collateral": "0x8e5f09de0cd7841239410f929a905e214443d9e0",
+        "totalBorrowRaw": "119394334351552608119646",
+        "totalCollateralSharesRaw": "126172254965090263101875",
+        "totalCollateralAssetsRaw": "128525968970820057257717",
+        "active": true
+      },
+      {
+        "address": "0x27ab448a75d548ecff73f8b4f36fcc9496768797",
+        "underlying": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+        "collateral": "0x992b77179a5cf876bcd566ff4b3eae6482012b90",
+        "totalBorrowRaw": "267966429567371596257558",
+        "totalCollateralSharesRaw": "293761814646754543663833215",
+        "totalCollateralAssetsRaw": "306114501173231546395247",
+        "active": true
+      },
+      {
+        "address": "0x57e69699381a651fb0bbdbb31888f5d655bf3f06",
+        "underlying": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+        "collateral": "0xc33aa628b10655b36eaa7ee880d6bc4789dd2289",
+        "totalBorrowRaw": "0",
+        "totalCollateralSharesRaw": "678914232064778961647292",
+        "totalCollateralAssetsRaw": "707301742618081913895",
+        "active": false
+      },
+      {
+        "address": "0xf4a6113fbd71ac1825751a6fe844a156f60c83ef",
+        "underlying": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+        "collateral": "0xdfa525bd3a8e59d336ef725309f855250538c337",
+        "totalBorrowRaw": "5264054546692155327",
+        "totalCollateralSharesRaw": "26502368788107910074464336",
+        "totalCollateralAssetsRaw": "27025361327587027695463",
+        "active": true
+      },
+      {
+        "address": "0x6e90c85a495d54c6d7e1f3400fef1f6e59f86bd6",
+        "underlying": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+        "collateral": "0x01144442fba7adccb5c9dc9cf33dd009d50a9e1d",
+        "totalBorrowRaw": "0",
+        "totalCollateralSharesRaw": "1",
+        "totalCollateralAssetsRaw": "2147142747073479294",
+        "active": false
+      },
+      {
+        "address": "0xd42535cda82a4569ba7209857446222abd14a82c",
+        "underlying": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+        "collateral": "0x7430f11eeb64a4ce50c8f92177485d34c48da72c",
+        "totalBorrowRaw": "96141566373971320913463",
+        "totalCollateralSharesRaw": "104181383023776804099390489",
+        "totalCollateralAssetsRaw": "108362666881664225047141",
+        "active": true
+      },
+      {
+        "address": "0x2fdd3c0a682e5774205f0f6d3ed3c9d1b9cb9413",
+        "underlying": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+        "collateral": "0xc32b0cf36e06c790a568667a17de80cba95a5aad",
+        "totalBorrowRaw": "7941273813502264554157769",
+        "totalCollateralSharesRaw": "8263340358089594129192343078",
+        "totalCollateralAssetsRaw": "8440663599845426542062699",
+        "active": true
+      }
+    ]
+  }
+}

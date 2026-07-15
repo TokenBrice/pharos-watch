@@ -80,7 +80,7 @@ Stage 1 combines **what the coin *is*** (structural fragility — can supply be 
 
 **Event fingerprint** (event row plus live and reconstructed signals): depth bucket from `peak_deviation_bps`; direction; speed from start-to-peak timing; supply behavior (Δ7d / Δ30d from daily supply history plus mint/burn net flow into the break — the supply-weaponization tell); live DEWS band and which sub-signals fire; liquidity and exit signals; concurrent blacklist surge; and the orphan-close flag from related closed events.
 
-Runtime DDR context hydrates those live fields from `stress_signals.signals_json` (DEWS supply and blacklist sub-signals), `dex_liquidity` plus `dex_liquidity_history` (current liquidity score and 7-day TVL change using the same trend baseline selector as `/api/dex-liquidity`), `redemption_backstop_run_rows` (from the latest completed `redemption_backstop_runs` snapshot), and the latest `safety_grade_history` row. If a required context-source query fails, the writer publishes DDR as degraded rather than scoring with silently absent live inputs.
+Runtime DDR context hydrates those live fields from `stress_signals.signals_json` (DEWS supply and blacklist sub-signals), `dex_liquidity` plus `dex_liquidity_history` (current liquidity score and 7-day TVL change using the same trend baseline selector as `/api/dex-liquidity`), `redemption_backstop_run_rows` (from the latest completed `redemption_backstop_runs` snapshot), and the complete identity-bearing V8 report-card cache. A V9, stale, missing, or mismatched safety identity leaves the resolver's safety context explicitly degraded and cannot apply V8 numeric anchors; other resolver signals remain available.
 
 ### Kill signals (terminal pressure)
 
@@ -104,7 +104,7 @@ Each anchor is rated `weak` or `strong`.
 | **R2** | Hard collateral + live redemption | Native or very-low-risk collateral, redemption capacity above threshold, functioning route — arbitrage redemption works |
 | **R3** | No supply / flow anomaly | Flat supply, no mint surge, calm supply and flow sub-signals — a pure market dislocation |
 | **R4** | No single freeze point | Decentralized governance, on-chain custody, not blacklistable — nobody can block recovery |
-| **R5** | Proven mean-reversion | `Strong safety score` — a high safety/peg-quality track-record proxy (safetyScore ≥ 85) |
+| **R5** | Proven mean-reversion | `Strong safety score` — a high safety/peg-quality track-record proxy (V8 safetyScore ≥ 85 only when the resolver has a complete, current V8 identity) |
 
 ### Verdict mapping
 

@@ -350,7 +350,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const publicationGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${now}`;
     const scores = Object.fromEntries([...ACTIVE_IDS].map((id) => [id, { score: 60, grade: "B-" }]));
     scores["usdc-circle"] = { score: 80, grade: "A" };
-    scores["usdt-tether"] = { score: 40, grade: "C" };
+    scores["usdt-tether"] = { score: 40, grade: "D" };
     const reportCardCache = JSON.stringify({
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
       scores,

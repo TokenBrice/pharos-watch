@@ -1205,6 +1205,15 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
         "Lower-severity active-depeg bands cannot impose a tighter limit",
       );
     }
+    const declaredGrade = V9_RATED_GRADES.find((grade) => cap.kind === `active-depeg:${grade.toLowerCase()}`);
+    const resolvedGrade = grades.find((threshold) => cap.limit >= threshold.minScore)?.grade ?? "F";
+    if (declaredGrade !== undefined && resolvedGrade !== declaredGrade) {
+      addPolicyIssue(
+        ctx,
+        ["semantic", "formula", "activeDepegCaps", index, "limit"],
+        `Active-depeg cap ${cap.kind} must remain inside its declared ${declaredGrade} grade band`,
+      );
+    }
   });
 
   const dispositionClasses = policy.semantic.evidence.dispositions.map((entry) => entry.factClass);

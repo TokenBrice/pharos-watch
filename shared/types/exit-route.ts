@@ -183,6 +183,8 @@ export const ExitRouteObservationCoverageSchema = z
     observationCount: z.number().int().nonnegative(),
     scoreEligibleObservationCount: z.number().int().nonnegative(),
     scoreEligiblePoolCount: z.number().int().nonnegative().optional(),
+    /** Retained pools whose reviewed capability could emit a score-eligible observation. */
+    scoreEligibleCapabilityPoolCount: z.number().int().nonnegative().optional(),
     unsupportedPoolCount: z.number().int().nonnegative(),
     evidenceCounts: z.record(z.string(), z.number().int().nonnegative()),
     unsupportedReasons: z.record(z.string(), z.number().int().nonnegative()),
@@ -215,6 +217,25 @@ export const ExitRouteObservationCoverageSchema = z
           code: "custom",
           path: ["scoreEligiblePoolCount"],
           message: "each score-eligible pool requires a score-eligible observation",
+        });
+      }
+    }
+    if (coverage.scoreEligibleCapabilityPoolCount != null) {
+      if (coverage.scoreEligibleCapabilityPoolCount > coverage.retainedPoolCount) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["scoreEligibleCapabilityPoolCount"],
+          message: "score-eligible capability pools cannot exceed retained pools",
+        });
+      }
+      if (
+        coverage.scoreEligiblePoolCount != null &&
+        coverage.scoreEligiblePoolCount > coverage.scoreEligibleCapabilityPoolCount
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["scoreEligiblePoolCount"],
+          message: "score-eligible pools cannot exceed score-eligible capability pools",
         });
       }
     }

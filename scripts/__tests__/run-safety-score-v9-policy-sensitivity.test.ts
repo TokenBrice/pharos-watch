@@ -48,9 +48,14 @@ describe("Safety Score v9 candidate policy sensitivity", { timeout: V9_EVALUATIO
   });
 
   it("reports a perturbation that violates a durable ordering constraint", () => {
+    // Lowering the active-depeg:d cap by one narrows the moderate-vs-severe
+    // depeg gap from 10 to 9. Raising the active-depeg:f cap (its old form)
+    // would break the same gap but now escapes its F grade band and is
+    // rejected at policy load by the VER-005 band-coupling invariant, so this
+    // exercises the harness's pairwise reporting with a schema-valid case.
     const report = generateV9PolicySensitivityReport({
-      parameterPaths: ["semantic.formula.activeDepegCaps[0].limit"],
-      deltas: [1],
+      parameterPaths: ["semantic.formula.activeDepegCaps[1].limit"],
+      deltas: [-1],
     });
 
     expect(report.summary.newPairwiseViolationCount).toBeGreaterThan(0);

@@ -21,20 +21,22 @@ const REVIEWED_QUEUE_REDEMPTION_AT = REVIEWED_FIRST_WAVE_AT;
 const REVIEWED_WRAPPER_QUEUE_AT = REVIEWED_WRAPPER_WAVE_AT;
 const REVIEWED_PHASE_4_COVERAGE_AT = "2026-05-10";
 const REVIEWED_CONFIG_ONLY_GAPS_AT = "2026-05-17";
+const REVIEWED_REDEMPTION_OUTPUTS_AT = "2026-07-15";
 const reviewedQueueRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_QUEUE_REDEMPTION_AT);
 
 /** Nest NAV-vault redemptions (nTBILL/nBASIS/nOPAL/nWISDOM) share an identical
- *  issuer-API queued-NAV shape and docs[]; they differ only in the fee-description
- *  token name and the expected redemption-window note. The inalpha-nest vault has
- *  a different docs[]/notes[] shape and stays inline below. */
+ *  issuer-API queued-NAV shape and docs[]; they differ only in the documented
+ *  stablecoin output basket and fee-description token name. The inalpha-nest
+ *  vault has a different docs[]/notes[] shape and stays inline below. */
 const nestNavVaultBase: RedemptionBackstopConfig = {
   ...queueRedeemBase,
   ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
   accessModel: "issuer-api",
   settlementModel: "days",
   executionModel: "rules-based-nav",
-  outputAssetType: "nav",
+  outputAssetType: "stable-basket",
   costModel: undisclosedReviewedFee(),
+  reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_AT,
   docs: [
     sourceRef("Nest available vaults", "https://docs.nest.credit/about/available-vaults", [
       "route",
@@ -46,20 +48,21 @@ const nestNavVaultBase: RedemptionBackstopConfig = {
   ],
 };
 
-const NEST_NAV_VAULTS: readonly [id: string, ticker: string, windowNote: string][] = [
-  ["ntbill-nest", "nTBILL", "Nest docs list an expected nTBILL redemption window of 1-3 business days."],
-  ["nbasis-nest", "nBASIS", "Nest docs list an expected nBASIS redemption window of 3-5 business days."],
-  ["nopal-nest", "nOPAL", "Nest docs list an expected nOPAL redemption window from minutes to 7 business days."],
-  ["nwisdom-nest", "nWISDOM", "Nest docs list an expected nWISDOM redemption window from minutes to 7 business days."],
+const NEST_NAV_VAULTS: readonly [id: string, ticker: string, outputAssets: readonly string[]][] = [
+  ["ntbill-nest", "nTBILL", ["usdc-circle", "pusd-plume"]],
+  ["nbasis-nest", "nBASIS", ["usdc-circle", "pusd-plume"]],
+  ["nopal-nest", "nOPAL", ["usdc-circle", "pusd-plume", "usdt-tether"]],
+  ["nwisdom-nest", "nWISDOM", ["usdc-circle", "pusd-plume"]],
 ];
 
 const NEST_NAV_VAULT_CONFIGS: Record<string, RedemptionBackstopConfig> = Object.fromEntries(
-  NEST_NAV_VAULTS.map(([id, ticker, windowNote]) => {
+  NEST_NAV_VAULTS.map(([id, ticker, outputAssets]) => {
     const config = cloneRedemptionBackstopConfig(nestNavVaultBase);
+    config.outputAssets = [...outputAssets];
     config.costModel = undisclosedReviewedFee(
       `Nest docs describe ${ticker} redemptions through the Nest app; public materials reviewed do not publish one fixed redemption fee`,
     );
-    config.notes = [windowNote];
+    config.notes = [`Nest's current vault directory lists a ${ticker} redemption estimate of 4 days.`];
     return [id, config];
   }),
 );

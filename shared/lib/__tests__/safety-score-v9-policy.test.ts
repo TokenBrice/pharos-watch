@@ -26,7 +26,7 @@ describe("Safety Score v9 methodology policy", () => {
     expect(V9_CANDIDATE_POLICY_V1.policy.lifecycle).toBe("candidate");
     expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBeNull();
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "03a8ec9fa123dbfe35609b413855f823bc641937c2350b7aadd743213d1ef854",
+      "6b6f819eb06740634239467ed6041125d7971f8df0fbedf0e4bd836cac405053",
     );
     expect(Object.isFrozen(V9_CANDIDATE_POLICY_V1.policy.semantic.formula)).toBe(true);
   });
@@ -85,6 +85,31 @@ describe("Safety Score v9 methodology policy", () => {
       expect(entry.ceilingRule, entry.code).not.toBeNull();
       expect(resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, entry.code).ceiling?.limit, entry.code).toBeGreaterThan(0);
     }
+  });
+
+  it("binds aggregate gaps to explicit local-component policy paths", () => {
+    const expectedKinds = {
+      "incomplete-dex-route-coverage": ["optional-exit", "local-component"],
+      "missing-bridge-routes": ["deployment-control", "local-component"],
+      "missing-peg-input": ["peg", "local-component"],
+      "missing-reserve-composition": ["collateral-exposure", "local-component"],
+      "missing-runtime-route-evidence": ["optional-exit", "local-component"],
+      "runtime-bridge-materiality-unavailable": ["deployment-control", "local-component"],
+      "unreviewed-dependency-relationships": ["collateral-exposure", "serial-dependency", "local-component"],
+    } as const;
+    for (const [code, pathKinds] of Object.entries(expectedKinds)) {
+      const entry = V9_CANDIDATE_POLICY_V1.policy.reasonRegistry.find((candidate) => candidate.code === code);
+      expect(entry?.pathKinds, code).toEqual(expect.arrayContaining([...pathKinds]));
+      expect(entry?.pathKinds, code).not.toContain("*");
+    }
+
+    expect(resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, "runtime-bridge-materiality-unavailable").reason).toMatchObject(
+      { ownerDomain: "control", defaultTreatment: "ceiling" },
+    );
+    expect(resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, "missing-archetype").reason).toMatchObject({
+      ownerDomain: "methodology",
+      pathKinds: ["methodology"],
+    });
   });
 
   it("excludes lifecycle identity but includes every semantic decision", () => {

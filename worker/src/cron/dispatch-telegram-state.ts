@@ -2,6 +2,7 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   ALERT_SAFETY_SOURCE_CACHE_KEY,
+  alertSafetyIdentitiesAreComparable,
   assessAlertSafetySourceCache,
   buildAlertSafetySnapshotEnvelope,
   getAlertSafetySourceGeneration,
@@ -14,7 +15,6 @@ import { getCache, setCache } from "../lib/db-cache";
 import { logTelegramEvent } from "../lib/telegram-log";
 import { loadTelegramDewsCurrentRows } from "../lib/stress-signals-current-rows";
 import type { PendingCapacitySnapshot } from "./telegram-pending";
-import { safetyScoreV8MethodologyIdentitiesMatch } from "@shared/lib/safety-score-v8-publication";
 import {
   ALERT_RESERVE_SOURCE_GENERATION,
   assessAlertReserveSourceCache,
@@ -257,7 +257,7 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
       previousSafetyEnvelope.generation !== (safetySourceAssessment.generation ?? "") ||
       !previousSafetyEnvelope.safetyScoreIdentity ||
       !safetySourceAssessment.envelope?.safetyScoreIdentity ||
-      !safetyScoreV8MethodologyIdentitiesMatch(
+      !alertSafetyIdentitiesAreComparable(
         previousSafetyEnvelope.safetyScoreIdentity,
         safetySourceAssessment.envelope.safetyScoreIdentity,
       ));

@@ -8,6 +8,15 @@ import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
+import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import { buildMeasuredPoolDirectionKey } from "../measured-execution/inventory";
+import {
+  joinDexMeasuredExecutionEvidence,
+  loadDexMeasuredExecutionJoinEvidence,
+  stripDexMeasuredExecutionInternalFields,
+  type DexMeasuredExecutionJoinDiagnostics,
+} from "../measured-execution/join";
+import { publishDexMeasuredTargetInventory } from "../measured-execution/persistence";
 import { dexPriceConfidenceForSourceFamily } from "./constants";
 import { computeDurabilityScore, computeLiquidityScore } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
@@ -29,6 +38,11 @@ const PRIMARY_PRICE_OUTLIER_MAX_DEVIATION_RATIO = 2.5;
 const DISPLAY_PRICE_RATIO_MIN = 0.5,
   DISPLAY_PRICE_RATIO_MAX = 2.0;
 
+function isP4OnlyPausedBalancerPool(pool: LiquidityMetrics["topPools"][number]): boolean {
+  const gate = pool.extra?.executionCapabilityGate;
+  return gate?.family === "balancer-amm" && gate.reason === "paused-or-swap-disabled";
+}
+
 interface ProtocolCapDiagnostics {
   cappedPoolCount: number;
   cappedProtocols: number;
@@ -37,6 +51,13 @@ interface ProtocolCapDiagnostics {
 
 interface ScoreDiagnostics {
   protocolCapReductions: ProtocolCapDiagnostics;
+  measuredExecution: {
+    join: DexMeasuredExecutionJoinDiagnostics;
+    inventoryTargetCount: number;
+    targetPublication:
+      | { status: "published"; generationId: string; rowCount: number }
+      | { status: "skipped" | "failed"; reason: string };
+  };
 }
 
 type P4aFullScoreResult = FullScoreResult & {
@@ -121,6 +142,9 @@ export async function computeStablecoinScores(
   protocolTvlCaps: Map<string, number>,
   mcapById?: Map<string, number>,
   routeObservedAtSec = Math.floor(Date.now() / 1000),
+  pancakeMeasuredTargets: ReadonlyMap<string, DexMeasuredExecutionTarget> = new Map(),
+  fluidMeasuredTargets: ReadonlyMap<string, DexMeasuredExecutionTarget> = new Map(),
+  signal?: AbortSignal,
 ): Promise<{
   scores: Map<string, FullScoreResult>;
   globalAgg: GlobalAgg;
@@ -151,15 +175,84 @@ export async function computeStablecoinScores(
   let globalPoolCount = 0;
   const globalChains = new Set<string>();
   const protocolCapDiagnostics: ProtocolCapDiagnostics = { cappedPoolCount: 0, cappedProtocols: 0, reducedTvlUsd: 0 };
+  const preparedRetainedPools = new Map<string, LiquidityMetrics["topPools"]>();
+  const p4OnlyRetainedPools = new Map<string, LiquidityMetrics["topPools"]>();
 
   for (const [id, m] of [...metrics].filter(([stablecoinId]) => ACTIVE_IDS.has(stablecoinId))) {
-    m.topPools = filterRetainedPools(m.topPools);
+    throwIfAborted(signal);
+    p4OnlyRetainedPools.set(id, m.topPools.filter(isP4OnlyPausedBalancerPool));
+    m.topPools = filterRetainedPools(m.topPools.filter((pool) => !isP4OnlyPausedBalancerPool(pool)));
     const capResult = applyProtocolCaps(m.topPools, protocolTvlCaps);
     protocolCapDiagnostics.cappedPoolCount += capResult.cappedPoolCount;
     protocolCapDiagnostics.cappedProtocols += capResult.cappedProtocols;
     protocolCapDiagnostics.reducedTvlUsd += capResult.reducedTvlUsd;
 
     const retainedPools = [...m.topPools];
+    for (const pool of retainedPools) {
+      const existingTarget = pool.extra?.measuredExecutionTarget;
+      const candidate = pool.project === "pancakeswap" && pool.poolType.startsWith("pancakeswap-v3")
+        ? pancakeMeasuredTargets.get(buildMeasuredPoolDirectionKey(id, pool.poolId))
+        : pool.project === "fluid" && pool.poolType.includes("fluid")
+          ? fluidMeasuredTargets.get(buildMeasuredPoolDirectionKey(id, pool.poolId))
+          : existingTarget;
+      const adapterProfileId = pool.project === "pancakeswap"
+        ? "pancakeswap-v3-quoter-v2"
+        : pool.project === "fluid"
+          ? "fluid-resolver-measured"
+          : existingTarget?.adapterProfileId;
+      if (!adapterProfileId) continue;
+
+      pool.extra = { ...(pool.extra ?? {}) };
+      if (!candidate || candidate.poolTokenAddresses?.length !== 2) {
+        delete pool.extra.measuredExecutionTarget;
+        delete pool.extra.measuredExecution;
+        delete pool.extra.measuredExecutionProfile;
+        delete pool.extra.measuredExecutionPhysicalPoolId;
+        pool.extra.executionCapabilityGate = { family: "measured-execution", reason: "target-unresolved" };
+        pool.extra.measuredExecutionDiagnostic = { adapterProfileId };
+        continue;
+      }
+      pool.extra.measuredExecutionTarget = {
+        ...candidate,
+        retainedTvlUsd: pool.tvlUsd,
+        capturedAt: routeObservedAt,
+      };
+      pool.extra.measuredExecutionPhysicalPoolId = candidate.poolId;
+      if (pool.extra.executionCapabilityGate?.family === "measured-execution") {
+        delete pool.extra.executionCapabilityGate;
+      }
+      pool.extra.measuredExecutionDiagnostic = {
+        adapterProfileId: candidate.adapterProfileId,
+        targetId: candidate.targetId,
+      };
+    }
+    preparedRetainedPools.set(id, retainedPools);
+  }
+
+  const joinEvidence = await loadDexMeasuredExecutionJoinEvidence(db, signal);
+  const measuredExecutionJoin = joinDexMeasuredExecutionEvidence({
+    poolsByStablecoin: preparedRetainedPools,
+    evidence: joinEvidence,
+    nowSec: routeObservedAt,
+  });
+  const targetInventoryById = new Map<string, DexMeasuredExecutionTarget>();
+  for (const pools of preparedRetainedPools.values()) {
+    for (const pool of pools) {
+      const target = pool.extra?.measuredExecutionTarget;
+      if (target) targetInventoryById.set(target.targetId, target);
+    }
+  }
+
+  for (const [id, m] of [...metrics].filter(([stablecoinId]) => ACTIVE_IDS.has(stablecoinId))) {
+    throwIfAborted(signal);
+    const retainedPools = preparedRetainedPools.get(id) ?? [];
+    const rebuilt = rebuildMetricsFromPools(retainedPools);
+    const routeObservationResult = buildP4DexExitRouteObservations({
+      stablecoinId: id,
+      retainedPools: [...retainedPools, ...(p4OnlyRetainedPools.get(id) ?? [])],
+      observedAt: routeObservedAt,
+    });
+    stripDexMeasuredExecutionInternalFields(retainedPools);
     retainedPoolsByStablecoin.set(
       id,
       retainedPools.map((pool) => ({
@@ -167,12 +260,6 @@ export async function computeStablecoinScores(
         extra: pool.extra ? { ...pool.extra } : undefined,
       })),
     );
-    const rebuilt = rebuildMetricsFromPools(retainedPools);
-    const routeObservationResult = buildP4DexExitRouteObservations({
-      stablecoinId: id,
-      retainedPools,
-      observedAt: routeObservedAt,
-    });
 
     applyRebuiltMetrics(m, rebuilt);
     const globalDelta = accumulateGlobalAggregate(
@@ -238,6 +325,24 @@ export async function computeStablecoinScores(
     results.set(id, fullScoreResult);
   }
 
+  let targetPublication: ScoreDiagnostics["measuredExecution"]["targetPublication"];
+  if (targetInventoryById.size === 0) {
+    targetPublication = { status: "skipped", reason: "no-applicable-targets" };
+  } else {
+    try {
+      const publication = await publishDexMeasuredTargetInventory({
+        db,
+        targets: [...targetInventoryById.values()],
+        capturedAt: routeObservedAt,
+        signal,
+      });
+      targetPublication = { status: "published", ...publication };
+    } catch (error) {
+      rethrowIfAborted(error, signal);
+      targetPublication = { status: "failed", reason: String(error).slice(0, 500) };
+    }
+  }
+
   // Global protocol-level TVL cap: when reducing excess, chain TVLs are
   // distributed proportionally rather than attributed to the chain with the
   // most excess. Exact chain attribution would require per-pool chain data
@@ -287,6 +392,11 @@ export async function computeStablecoinScores(
         cappedPoolCount: protocolCapDiagnostics.cappedPoolCount,
         cappedProtocols: protocolCapDiagnostics.cappedProtocols,
         reducedTvlUsd: protocolCapDiagnostics.reducedTvlUsd + Math.round(globalCapReduction),
+      },
+      measuredExecution: {
+        join: measuredExecutionJoin,
+        inventoryTargetCount: targetInventoryById.size,
+        targetPublication,
       },
     },
   };

@@ -14,10 +14,16 @@ function cleanPool() {
     type: "STABLE",
     chain: "MAINNET",
     address: "0xaabbccddeeff00112233445566778899aabbccdd",
-    dynamicData: { totalLiquidity: "5000000", volume24h: "1000000", swapFee: "0.0001" },
+    dynamicData: {
+      totalLiquidity: "5000000",
+      volume24h: "1000000",
+      swapFee: "0.0001",
+      isPaused: false,
+      swapEnabled: true,
+    },
     poolTokens: [
-      { address: "0xaa", symbol: "USDC", decimals: 6, balance: "2500000", balanceUSD: "2500000", weight: "0.5" },
-      { address: "0xbb", symbol: "USDT", decimals: 6, balance: "2500000", balanceUSD: "2500000", weight: "0.5" },
+      { address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", symbol: "USDC", decimals: 6, balance: "2500000", balanceUSD: "2500000", weight: "0.5" },
+      { address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", symbol: "USDT", decimals: 6, balance: "2500000", balanceUSD: "2500000", weight: "0.5" },
     ],
   };
 }
@@ -102,6 +108,14 @@ describe("fetchBalancerPools stable-math amp join", () => {
     return pool;
   }
 
+  function weightedPool() {
+    const pool = cleanPool();
+    pool.id = "0x22bbccddeeff00112233445566778899aabbccdd000200000000000000000002";
+    pool.address = "0x22bbccddeeff00112233445566778899aabbccdd";
+    pool.type = "WEIGHTED";
+    return pool;
+  }
+
   it("attaches amp to stable-math pools present in the aggregator sweep", async () => {
     dispatchByQuery(
       [stablePool(), gyroPool()],
@@ -112,25 +126,128 @@ describe("fetchBalancerPools stable-math amp join", () => {
     const gyro = result.pools.find((pool) => pool.poolAddress === "0x11bbccddeeff00112233445566778899aabbccdd");
     expect(stable?.amp).toBe(250);
     expect(stable?.tokens.every((token) => token.priceRate === 1.02)).toBe(true);
+    expect(stable?.executionCapabilityGate).toBeUndefined();
     // Gyro pools do not use stable math; amp must never attach even if the sweep returns a row.
     expect(gyro?.amp).toBeUndefined();
+    expect(gyro?.executionCapabilityGate).toEqual({
+      family: "balancer-amm",
+      reason: "unsupported-invariant",
+    });
   });
 
-  it("drops paused and swap-disabled pools entirely", async () => {
+  it("retains paused, swap-disabled, and unknown-state pools behind explicit gates", async () => {
     const paused = {
       ...stablePool(),
       id: "0x33bbccddeeff00112233445566778899aabbccdd000200000000000000000003",
       address: "0x33bbccddeeff00112233445566778899aabbccdd",
-      dynamicData: { totalLiquidity: "5000000", volume24h: "1000000", swapFee: "0.0001", isPaused: true },
+      dynamicData: {
+        totalLiquidity: "5000000",
+        volume24h: "1000000",
+        swapFee: "0.0001",
+        isPaused: true,
+        swapEnabled: true,
+      },
     };
     const disabled = {
-      ...gyroPool(),
-      dynamicData: { totalLiquidity: "5000000", volume24h: "1000000", swapFee: "0.0001", swapEnabled: false },
+      ...weightedPool(),
+      dynamicData: {
+        totalLiquidity: "5000000",
+        volume24h: "1000000",
+        swapFee: "0.0001",
+        isPaused: false,
+        swapEnabled: false,
+      },
     };
-    dispatchByQuery([paused, disabled, cleanPool()], []);
+    const unknown = {
+      ...stablePool(),
+      id: "0x44bbccddeeff00112233445566778899aabbccdd000200000000000000000004",
+      address: "0x44bbccddeeff00112233445566778899aabbccdd",
+      dynamicData: {
+        totalLiquidity: "5000000",
+        volume24h: "1000000",
+        swapFee: "0.0001",
+        isPaused: false,
+      },
+    };
+    dispatchByQuery([paused, disabled, unknown], []);
+    const result = await fetchBalancerPools();
+    expect(result.pools).toHaveLength(3);
+    expect(result.pools.find((pool) => pool.poolAddress === paused.address)?.executionCapabilityGate).toEqual({
+      family: "balancer-amm",
+      reason: "paused-or-swap-disabled",
+    });
+    expect(result.pools.find((pool) => pool.poolAddress === disabled.address)?.executionCapabilityGate).toEqual({
+      family: "balancer-amm",
+      reason: "paused-or-swap-disabled",
+    });
+    expect(result.pools.find((pool) => pool.poolAddress === unknown.address)?.executionCapabilityGate).toEqual({
+      family: "balancer-amm",
+      reason: "incomplete-exact-capture",
+    });
+  });
+
+  it("keeps complete-sweep misses explicit for stable and weighted candidates", async () => {
+    dispatchByQuery([stablePool(), weightedPool()], []);
+    const result = await fetchBalancerPools();
+    expect(result.pools.find((pool) => pool.poolType === "balancer-stable")?.executionCapabilityGate).toEqual({
+      family: "balancer-amm",
+      reason: "rate-bearing-inputs",
+    });
+    expect(result.pools.find((pool) => pool.poolType === "balancer-weighted")?.executionCapabilityGate).toEqual({
+      family: "balancer-amm",
+      reason: "incomplete-exact-capture",
+    });
+  });
+
+  it("authorizes a weighted model only when the hook-free capability sweep contains it", async () => {
+    const weighted = weightedPool();
+    dispatchByQuery(
+      [weighted],
+      [{ id: weighted.id, chain: weighted.chain, amp: null }],
+    );
     const result = await fetchBalancerPools();
     expect(result.pools).toHaveLength(1);
-    expect(result.pools[0]!.poolAddress).toBe("0xaabbccddeeff00112233445566778899aabbccdd");
+    expect(result.pools[0]?.executionCapabilityGate).toBeUndefined();
+    expect(result.pools[0]?.amp).toBeUndefined();
+  });
+
+  it("retains a reviewed custom invariant as a gated diagnostic row", async () => {
+    const custom = weightedPool();
+    custom.type = "COW_AMM";
+    dispatchByQuery([custom], []);
+    const result = await fetchBalancerPools();
+    expect(result.pools).toHaveLength(1);
+    expect(result.pools[0]?.poolType).toBe("balancer-custom");
+    expect(result.pools[0]?.executionCapabilityGate).toEqual({
+      family: "balancer-amm",
+      reason: "unsupported-invariant",
+    });
+  });
+
+  it("never authorizes exact models with malformed EVM pool or token identities", async () => {
+    const malformedPool = weightedPool();
+    malformedPool.address = "not-an-address";
+    malformedPool.id = "not-a-pool-id";
+    const malformedToken = weightedPool();
+    malformedToken.id = "0x55bbccddeeff00112233445566778899aabbccdd000200000000000000000005";
+    malformedToken.address = "0x55bbccddeeff00112233445566778899aabbccdd";
+    malformedToken.poolTokens[1]!.address = "0xbb";
+    dispatchByQuery(
+      [malformedPool, malformedToken],
+      [
+        { id: malformedPool.id, chain: malformedPool.chain, amp: null },
+        { id: malformedToken.id, chain: malformedToken.chain, amp: null },
+      ],
+    );
+
+    const result = await fetchBalancerPools();
+
+    expect(result.pools).toHaveLength(2);
+    expect(result.pools.map((pool) => pool.executionCapabilityGate)).toEqual([
+      { family: "balancer-amm", reason: "incomplete-exact-capture" },
+      { family: "balancer-amm", reason: "incomplete-exact-capture" },
+    ]);
+    expect(result.pools.every((pool) => pool.amp == null)).toBe(true);
   });
 
   it("keys the amp join by chain so same-id pools on other chains cannot cross-attach", async () => {
@@ -151,7 +268,7 @@ describe("fetchBalancerPools stable-math amp join", () => {
     expect(arbitrum?.amp).toBe(5000);
   });
 
-  it("degrades to no amp when the sweep fails, without dropping pools", async () => {
+  it("degrades a failed capability sweep to an explicit incomplete-capture gate", async () => {
     mockFetch.mockImplementation((_url: unknown, init?: { body?: unknown }) => {
       const body = typeof init?.body === "string" ? init.body : "";
       if (body.includes("aggregatorPools")) {
@@ -162,6 +279,10 @@ describe("fetchBalancerPools stable-math amp join", () => {
     const result = await fetchBalancerPools();
     expect(result.pools.length).toBe(1);
     expect(result.pools[0]!.amp).toBeUndefined();
+    expect(result.pools[0]!.executionCapabilityGate).toEqual({
+      family: "balancer-amm",
+      reason: "incomplete-exact-capture",
+    });
     expect(result.ok).toBe(true);
   });
 });

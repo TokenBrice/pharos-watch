@@ -57,6 +57,14 @@ export function printValidatePrebuildCommandPlan(units, { log = console.log } = 
   }
 }
 
+/**
+ * @param {{
+ *   argv?: string[],
+ *   env?: NodeJS.ProcessEnv,
+ *   log?: (message: string) => unknown,
+ *   runExecutionUnits?: (units: any[], options?: Record<string, any>) => Promise<any>,
+ * }} [options]
+ */
 export async function runValidatePrebuild({
   argv = process.argv.slice(2),
   env = process.env,
@@ -112,17 +120,30 @@ export async function runValidatePrebuild({
 
   const generatedResult = await runExecutionUnits(generatedArtifactUnits, {
     continueOnError: env.VALIDATE_PREBUILD_CONTINUE_ON_ERROR === "1",
+    getCommandEnv: () =>
+      env.VALIDATE_PREBUILD_CONTINUE_ON_ERROR === "1" ? { GENERATED_ARTIFACTS_CONTINUE_ON_ERROR: "1" } : {},
     label: "validate:prebuild",
     maxParallel: 1,
   });
 
-  if (leadingResult.status !== 0) {
-    return leadingResult;
-  }
-
-  return generatedResult;
+  const results = [...(leadingResult.results ?? []), ...(generatedResult.results ?? [])];
+  const failures = [...(leadingResult.failures ?? []), ...(generatedResult.failures ?? [])];
+  const firstFailure = leadingResult.status !== 0 ? leadingResult : generatedResult;
+  return {
+    status: firstFailure.status,
+    failedCmd: firstFailure.failedCmd,
+    aborted: firstFailure.aborted,
+    ...(results.length > 0 ? { results } : {}),
+    ...(failures.length > 0 ? { failures } : {}),
+  };
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {
-  await runValidatePrebuild();
+  try {
+    const result = await runValidatePrebuild();
+    process.exitCode = result.status;
+  } catch (error) {
+    console.error(`[validate:prebuild] FAILED: ${error instanceof Error ? error.message : String(error)}`);
+    process.exitCode = 1;
+  }
 }

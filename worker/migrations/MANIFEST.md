@@ -148,6 +148,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0202     | `0202_safety_score_v9_movement_reviews.sql`              | Add append-only semantic classifications for material V8-to-V9 score movements with exact candidate and evaluator identities                         |
 | 0203     | `0203_cngn_ddr_event_90548_link.sql`                     | Link reviewed cNGN event 90548 to its unsealed canonical incident and close the durable DDR repair task                                               |
 | 0204     | `0204_safety_score_history_v2_identity_schema.sql`       | Persist the exact Safety Score identity schema version on V2 history rows                                                                            |
+| 0205     | `0205_dex_measured_execution.sql`                        | Add generation-fenced retained-pool target inventories and adapter-neutral measured execution quote rows                                              |
 
 ## Retired Individual Migrations
 
@@ -235,6 +236,7 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0202_safety_score_v9_movement_reviews.sql`: roll back the movement-review workflow by restoring the prior Worker and Pages versions. Keep append-only review rows as audit evidence; older Workers ignore them, and no review row activates or publishes V9 by itself.
 - `0203_cngn_ddr_event_90548_link.sql`: roll back DDR publication behavior by restoring the prior Worker. Keep the append-only repair authorization, consumption, link, and revision as reviewed provenance; do not recreate the closed repair task or detach event 90548 without a separate corrective migration.
 - `0204_safety_score_history_v2_identity_schema.sql`: roll back V2 schema-version reads and writes by restoring the prior Worker. Keep the additive non-null column; older Workers ignore it and the default preserves existing V2 rows.
+- `0205_dex_measured_execution.sql`: roll back measured-execution capture and scoring joins by restoring the prior Worker and removing the isolated quote trigger. Keep the additive target/quote rows and publication-ledger entries for forensic replay; older Workers ignore them.
 
 ## Rollback Procedure
 

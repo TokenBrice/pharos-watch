@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "kind": "cdp-mechanism-measurement",
+  "assetId": "cjpy-yamato",
+  "archetype": "cdp",
+  "chain": {
+    "key": "ethereum",
+    "evmChainId": 1
+  },
+  "rpcUrl": "https://ethereum-rpc.publicnode.com",
+  "block": {
+    "number": 25536894,
+    "hash": "0x9b5d38fcb302bfc941f2704759a37402b0a5f9f3c1ad6fc0badaf20219cb6422",
+    "timestampUnix": 1784104535,
+    "timestampIso": "2026-07-15T08:35:35.000Z",
+    "selection": "finalized"
+  },
+  "calls": [
+    {
+      "name": "yamato.currencyOS",
+      "to": "0x02fe72b2e9ff717ebf3049333b184e9cd984f257",
+      "signature": "currencyOS()",
+      "selector": "0x19eb292c",
+      "callData": "0x19eb292c",
+      "returnData": "0x000000000000000000000000e69c6bf0a6ea2f12abe054988a3e2091a8a3784f",
+      "decoded": "0xe69c6bf0a6ea2f12abe054988a3e2091a8a3784f"
+    },
+    {
+      "name": "currencyOS.currency",
+      "to": "0xe69c6bf0a6ea2f12abe054988a3e2091a8a3784f",
+      "signature": "currency()",
+      "selector": "0xe5a6b10f",
+      "callData": "0xe5a6b10f",
+      "returnData": "0x0000000000000000000000001cfa5641c01406ab8ac350ded7d735ec41298372",
+      "decoded": "0x1cfa5641c01406ab8ac350ded7d735ec41298372"
+    },
+    {
+      "name": "yamato.getStates",
+      "to": "0x02fe72b2e9ff717ebf3049333b184e9cd984f257",
+      "signature": "getStates()",
+      "selector": "0xd8ab8274",
+      "callData": "0xd8ab8274",
+      "returnData": "0x000000000000000000000000000000000000000000000024a06c7425c9c6320300000000000000000000000000000000000000000049f0f6635afa79a292b9290000000000000000000000000000000000000000000000000000000000000082000000000000000000000000000000000000000000000000000000000000005000000000000000000000000000000000000000000000000000000000000000140000000000000000000000000000000000000000000000000000000000000001",
+      "decoded": "collateral=675642528702744900099 debt=89389497846108735138871593 MCR=130 RRR=80 SRR=20 GRR=1"
+    },
+    {
+      "name": "yamato.priceFeed",
+      "to": "0x02fe72b2e9ff717ebf3049333b184e9cd984f257",
+      "signature": "priceFeed()",
+      "selector": "0x741bef1a",
+      "callData": "0x741bef1a",
+      "returnData": "0x0000000000000000000000003f4e4dad0ac01da50a774f3389b70506c96fff2f",
+      "decoded": "0x3f4e4dad0ac01da50a774f3389b70506c96fff2f"
+    },
+    {
+      "name": "priceFeed.getPrice",
+      "to": "0x3f4e4dad0ac01da50a774f3389b70506c96fff2f",
+      "signature": "getPrice()",
+      "selector": "0x98d5fdca",
+      "callData": "0x98d5fdca",
+      "returnData": "0x000000000000000000000000000000000000000000004037fbe167ba0f069f97",
+      "decoded": "303264175729733412495255"
+    },
+    {
+      "name": "yamato.pool",
+      "to": "0x02fe72b2e9ff717ebf3049333b184e9cd984f257",
+      "signature": "pool()",
+      "selector": "0x16f0115b",
+      "callData": "0x16f0115b",
+      "returnData": "0x0000000000000000000000009c1f0e3d4bd4a513721c028e1d4610cd17745f0b",
+      "decoded": "0x9c1f0e3d4bd4a513721c028e1d4610cd17745f0b"
+    },
+    {
+      "name": "token.totalSupply",
+      "to": "0x1cfa5641c01406ab8ac350ded7d735ec41298372",
+      "signature": "totalSupply()",
+      "selector": "0x18160ddd",
+      "callData": "0x18160ddd",
+      "returnData": "0x00000000000000000000000000000000000000000049f0f6635afa79a292b929",
+      "decoded": "89389497846108735138871593"
+    },
+    {
+      "name": "token.balanceOf(pool)",
+      "to": "0x1cfa5641c01406ab8ac350ded7d735ec41298372",
+      "signature": "balanceOf(address)",
+      "selector": "0x70a08231",
+      "callData": "0x70a082310000000000000000000000009c1f0e3d4bd4a513721c028e1d4610cd17745f0b",
+      "returnData": "0x00000000000000000000000000000000000000000000855bfabec606720fa946",
+      "decoded": "629771464028856425359686"
+    }
+  ],
+  "metrics": {
+    "collateralizationRatio": 2.292195,
+    "liquidationCapacityRatio": null,
+    "applicability": {
+      "collateralizationRatio": {
+        "state": "measured"
+      },
+      "liquidationCapacityRatio": {
+        "state": "not-applicable",
+        "rationale": "Yamato documents a no-liquidation design; the protocol pool is a redemption/sweep resource, not committed liquidation capital."
+      }
+    }
+  },
+  "completeness": {
+    "complete": true,
+    "blockers": []
+  },
+  "checks": [
+    {
+      "id": "graph.currency",
+      "status": "pass",
+      "detail": "CurrencyOS token 0x1cfa5641c01406ab8ac350ded7d735ec41298372 equals configured CJPY"
+    },
+    {
+      "id": "system.positive",
+      "status": "pass",
+      "detail": "collateral 675642528702744900099 and debt 89389497846108735138871593 are positive"
+    },
+    {
+      "id": "price.positive",
+      "status": "pass",
+      "detail": "protocol ETH/JPY price 303264175729733412495255 is positive"
+    },
+    {
+      "id": "graph.pool",
+      "status": "pass",
+      "detail": "protocol pool 0x9c1f0e3d4bd4a513721c028e1d4610cd17745f0b matches configured graph"
+    },
+    {
+      "id": "derivation.supply-vs-debt",
+      "status": "pass",
+      "detail": "token supply 89389497846108735138871593 exactly equals Yamato debt"
+    },
+    {
+      "id": "pool.balance-positive",
+      "status": "pass",
+      "detail": "protocol pool balance 629771464028856425359686 is positive"
+    }
+  ],
+  "overlaySources": [
+    {
+      "label": "Yamato getStates, priceFeed, pool, and CJPY accounting on Ethereum",
+      "url": "https://etherscan.io/address/0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257#readProxyContract"
+    },
+    {
+      "label": "Yamato protocol documentation (no-liquidation design and redemptions)",
+      "url": "https://docs.yamato.fi/readme/english-overview"
+    }
+  ],
+  "tool": {
+    "name": "measure-cdp-mechanism-metrics",
+    "version": "2"
+  },
+  "family": "yamato-system-v1",
+  "derived": {
+    "yamato": "0x02fe72b2e9ff717ebf3049333b184e9cd984f257",
+    "currencyOs": "0xe69c6bf0a6ea2f12abe054988a3e2091a8a3784f",
+    "token": "0x1cfa5641c01406ab8ac350ded7d735ec41298372",
+    "priceFeed": "0x3f4e4dad0ac01da50a774f3389b70506c96fff2f",
+    "pool": "0x9c1f0e3d4bd4a513721c028e1d4610cd17745f0b",
+    "totalCollateralRaw": "675642528702744900099",
+    "totalDebtRaw": "89389497846108735138871593",
+    "totalSupplyRaw": "89389497846108735138871593",
+    "priceRaw": "303264175729733412495255",
+    "poolBalanceRaw": "629771464028856425359686",
+    "mcrPct": 130
+  },
+  "analogousMetrics": {
+    "protocolRedemptionPoolRatio": 0.007045
+  }
+}

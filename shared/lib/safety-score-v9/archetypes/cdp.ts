@@ -17,7 +17,11 @@ export function evaluateV9CdpBacking(
 ): V9BackingResult {
   const backing = policy.policy.semantic.backing;
   const structuralReasons: V9BackingStructuralReason[] = [];
-  if (review.collateralizationRatio < backing.structural.cdp.minimumCollateralizationRatio) {
+  if (
+    review.metricApplicability.collateralizationRatio.state === "measured" &&
+    review.collateralizationRatio !== null &&
+    review.collateralizationRatio < backing.structural.cdp.minimumCollateralizationRatio
+  ) {
     structuralReasons.push(
       createV9BackingStructuralReason(policy, backing.structural.cdp.collateralizationSignal, {
         pathKey: "mechanism:collateralization-parameters",
@@ -27,7 +31,11 @@ export function evaluateV9CdpBacking(
       }),
     );
   }
-  if (review.liquidationCapacityRatio < backing.structural.cdp.minimumLiquidationCapacityRatio) {
+  if (
+    review.metricApplicability.liquidationCapacityRatio.state === "measured" &&
+    review.liquidationCapacityRatio !== null &&
+    review.liquidationCapacityRatio < backing.structural.cdp.minimumLiquidationCapacityRatio
+  ) {
     structuralReasons.push(
       createV9BackingStructuralReason(policy, backing.structural.cdp.liquidationSignal, {
         pathKey: "mechanism:liquidation-mechanics",

@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { compileV9FactSetV2 } from "@shared/lib/safety-score-v9/compile";
+import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
+import { isDexExitRouteCoverageComplete } from "@shared/lib/p4-exit-route-capacity";
 import { canonicalV9DependencyEdgeKey, canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
 import {
   createV9EvidenceReference,
@@ -721,19 +723,41 @@ function normalizeMechanismReview(
 function buildMechanismReview(context: AssetBuildContext): V9MechanismRiskReviewFactV2 {
   if (context.asset.mechanismRiskReview === null) {
     const unresolvedArchetype = context.asset.archetype === "unresolved";
+    if (unresolvedArchetype) {
+      // A missing archetype is a METHODOLOGY classification failure, not a
+      // backing evidence gap: the policy binds missing-archetype to the
+      // methodology owner and path (queue-contract reconciliation).
+      const gapId = addGap(
+        context,
+        createV9FactGap({
+          gapId: `${context.asset.assetId}:gap:mechanism-risk-review`,
+          reasonCode: "missing-archetype",
+          ownerDomain: "methodology",
+          policyRuleId: "v9.backing.mechanism-review",
+          observationState: "missing",
+          path: { kind: "methodology", componentKey: "mechanism-risk-review" },
+          message: "The asset does not yet have a resolved Safety Score v9 mechanism archetype.",
+        }),
+      );
+      return {
+        status: createV9FactStatus({
+          applicability: requiredV9Applicability("v9.backing.mechanism-review"),
+          observationState: "missing",
+          gapIds: [gapId],
+        }),
+        review: null,
+      };
+    }
     return {
       status: missingLocalFact(context, {
         componentKey: "mechanism-risk-review",
         // An absent review with a resolved archetype is bounded under the
         // candidate policy: the backing pillar scores at the bounded-unknown
-        // quality instead of reason-coding NR. Only an unresolved archetype
-        // stays a critical classification failure.
-        reasonCode: unresolvedArchetype ? "missing-archetype" : "bounded-mechanism-review",
+        // quality instead of reason-coding NR.
+        reasonCode: "bounded-mechanism-review",
         ownerDomain: "backing",
         policyRuleId: "v9.backing.mechanism-review",
-        message: unresolvedArchetype
-          ? "The asset does not yet have a resolved Safety Score v9 mechanism archetype."
-          : "No policy-independent archetype mechanism review is present in the v9 overlay.",
+        message: "No policy-independent archetype mechanism review is present in the v9 overlay.",
       }).status,
       review: null,
     };
@@ -1178,12 +1202,8 @@ function resolvedBaseRouteOutput(observation: ExitRouteObservation): {
 } | null {
   const output = observation.output;
   if (output.kind !== "tracked-stablecoin" && output.kind !== "fiat" && output.kind !== "collateral") return null;
-  const assetKeys = [
-    ...(output.assetKeys ?? []),
-    ...(output.kind === "tracked-stablecoin" ? (output.trackedAssetIds ?? []) : []),
-    ...(output.kind === "fiat" && output.currency ? [`fiat:${output.currency}`] : []),
-  ];
-  return { kind: output.kind, assetKeys: [...new Set(assetKeys)].sort(compareText) };
+  const assetKeys = resolvedExitRouteOutputAssetKeys(output);
+  return assetKeys ? { kind: output.kind, assetKeys } : null;
 }
 
 function assertRouteOutputReviewMatchesBase(
@@ -1525,6 +1545,10 @@ function buildRoutes(context: AssetBuildContext): {
       emptyCoverage.retainedPoolCount === 0 &&
       emptyCoverage.unsupportedPoolCount === 0;
     if (emptySurfaceComplete) {
+      // Known-empty negative evidence must carry the DEX producer's observation
+      // time, not the scoring clock: a stale empty surface is not a current
+      // "known" zero-exit fact but a bounded-unknown/stale one (VER2-007). Fresh
+      // populated 0/0 coverage remains known negative evidence (exit 0).
       const coverageEvidenceId = addEvidence(
         context,
         createV9EvidenceReference(
@@ -1533,19 +1557,35 @@ function buildRoutes(context: AssetBuildContext): {
             sourceId: "report-cards-dex-route-observation",
             sourceGenerationId: context.fixedInput.dexGenerationId,
             disposition: "observed",
-            observedAtSec: context.fixedInput.clockSec,
+            observedAtSec: context.fixedInput.dexLiqMap[context.asset.assetId]!.updatedAt,
             contentSha256: digest("safety-score-v9.exit-route-observation-coverage.v1", emptyCoverage),
             maxAgeSec: context.extension.routeFreshness.dexMaxAgeSec,
           },
           context.fixedInput.clockSec,
         ),
       );
+      const coverageStale = context.evidence.get(coverageEvidenceId)!.freshness.state === "stale";
+      const staleGapId = coverageStale
+        ? addGap(
+            context,
+            createV9FactGap({
+              gapId: `${context.asset.assetId}:gap:exit-route-observation-coverage:stale`,
+              reasonCode: "missing-runtime-route-evidence",
+              ownerDomain: "exit",
+              policyRuleId: "v9.exit.same-notional-route",
+              observationState: "stale",
+              path: { kind: "local-component", componentKey: "exit-routes" },
+              message: "The known-empty DEX exit-route coverage observation is older than the lane freshness bound.",
+              evidenceRefIds: [coverageEvidenceId],
+            }),
+          )
+        : null;
       return {
         exitStatus: createV9FactStatus({
           applicability: requiredV9Applicability("v9.exit.same-notional-route"),
-          observationState: "known",
+          observationState: coverageStale ? "stale" : "known",
           evidenceRefIds: [coverageEvidenceId],
-          gapIds: [],
+          gapIds: staleGapId ? [staleGapId] : [],
         }),
         exitRoutes: [],
       };
@@ -1566,18 +1606,23 @@ function buildRoutes(context: AssetBuildContext): {
   const evidenceRefIds = [...new Set(statuses.flatMap((status) => status.evidenceRefIds))];
   // "known" asserts the whole exit surface is observed (it upgrades evidence
   // level and arms the reviewed-complete zero-score path), so it additionally
-  // requires every retained DEX pool to carry a score-eligible observation.
+  // requires every reviewed score-eligible DEX capability pool to carry an
+  // observation. Structurally non-executable shaped rows remain diagnostics.
   // A portfolio holding only diagnostic routes over an incompletely observed
   // DEX surface stays bounded-unknown. A missing redemption row does not
   // demote the state: absent redemption evidence can only understate the
   // score, and the zero-score path still requires an observed portfolio.
   const coverage = context.fixedInput.dexLiqMap[context.asset.assetId]?.exitRouteObservationCoverage;
+  // "known" upgrades the exit surface and arms the reviewed-complete zero-score
+  // path, so it requires populated DEX coverage. An `unknown`/`unsupported`
+  // surface stays bounded-unknown even when its retained-pool count is zero: a
+  // score-ineligible diagnostic route must never certify unobserved coverage
+  // nor let evidence arrival drop the score below the bounded-unknown floor
+  // (VER2-006).
   const dexSurfaceComplete =
     coverage != null &&
-    (coverage.retainedPoolCount === 0 ||
-      (coverage.status === "populated" &&
-        coverage.scoreEligiblePoolCount != null &&
-        coverage.scoreEligiblePoolCount === coverage.retainedPoolCount));
+    coverage.status === "populated" &&
+    (coverage.retainedPoolCount === 0 || isDexExitRouteCoverageComplete(coverage));
   const portfolioGapIds = [...gapIds];
   if (!dexSurfaceComplete) {
     portfolioGapIds.push(
@@ -1590,7 +1635,7 @@ function buildRoutes(context: AssetBuildContext): {
           policyRuleId: "v9.exit.same-notional-route",
           observationState: "bounded-unknown",
           path: { kind: "local-component", componentKey: "exit-portfolio-coverage" },
-          message: "Retained DEX pools do not all carry score-eligible exact route observations.",
+          message: "Reviewed DEX execution-capability pools do not all carry score-eligible exact route observations.",
           evidenceRefIds,
         }),
       ),
@@ -2056,7 +2101,7 @@ function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
     status = missingLocalFact(context, {
       componentKey: "bridge-materiality",
       reasonCode: "runtime-bridge-materiality-unavailable",
-      ownerDomain: "dependency",
+      ownerDomain: "control",
       policyRuleId: "v9.supply.bridge-materiality",
       message: "Circulating USD is known, but bridge-route materiality has not been reviewed.",
       observationState: "bounded-unknown",

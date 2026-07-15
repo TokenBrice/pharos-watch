@@ -100,6 +100,25 @@ describe("normalizeTopPools", () => {
     expect((result[0]?.extra as Record<string, unknown>).ammExecutionModel).toEqual(ammExecutionModel);
   });
 
+  it("preserves reviewed execution capability gates", () => {
+    const executionCapabilityGate = {
+      family: "curve-stableswap",
+      reason: "rate-bearing-inputs",
+    };
+    const result = normalizeTopPools(JSON.stringify([{
+      project: "curve",
+      chain: "Ethereum",
+      symbol: "DOLA / sUSDe",
+      poolType: "curve-stableswap",
+      tvlUsd: 4_000_000,
+      volumeUsd1d: 100_000,
+      source: "dl",
+      extra: { executionCapabilityGate },
+    }]));
+
+    expect((result[0]?.extra as Record<string, unknown>).executionCapabilityGate).toEqual(executionCapabilityGate);
+  });
+
   it("returns an empty array for non-array JSON payloads", () => {
     expect(normalizeTopPools("{}")).toEqual([]);
     expect(normalizeTopPools("null")).toEqual([]);

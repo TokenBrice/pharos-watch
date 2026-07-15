@@ -110,20 +110,31 @@ describe("purgeCloudflareZoneCache", () => {
   });
 
   it("retries a transient purge failure after a successful one-time lookup", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(zoneResponse())
-      .mockResolvedValueOnce(new Response("upstream unavailable", { status: 502 }))
-      .mockResolvedValueOnce(purgeResponse());
+    vi.useFakeTimers();
+    try {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(zoneResponse())
+        .mockResolvedValueOnce(new Response("upstream unavailable", { status: 502 }))
+        .mockResolvedValueOnce(purgeResponse());
 
-    await purgeCloudflareZoneCache({
-      apiToken: "token-1",
-      zoneName: "pharos.watch",
-      fetchImpl: fetchMock,
-      maxAttempts: 3,
-      retryDelayMs: 0,
-    });
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+      const purgePromise = purgeCloudflareZoneCache({
+        apiToken: "token-1",
+        zoneName: "pharos.watch",
+        fetchImpl: fetchMock,
+        maxAttempts: 3,
+        retryDelayMs: 250,
+      });
+
+      await vi.advanceTimersByTimeAsync(249);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+
+      await vi.advanceTimersByTimeAsync(1);
+      await purgePromise;
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("validates DNS zone names before making a request", async () => {

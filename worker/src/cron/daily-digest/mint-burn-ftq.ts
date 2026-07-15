@@ -1,6 +1,6 @@
-import { buildFlightToQualityClassification } from "../../lib/flight-to-quality-classification";
+import { buildFlightToQualityClassificationFromV8Cache } from "../../lib/flight-to-quality-classification";
 import { loadReportCardCache } from "../../lib/report-card-cache";
-import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
+import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 
 const REPORT_CARD_MAX_AGE_MS = 2 * 60 * 60 * 1000;
 
@@ -14,14 +14,14 @@ export type DigestMintBurnFtqFlows =
       kind: "ok";
       safeNet24h: number;
       riskyNet24h: number;
-      safetyScoreIdentity: SafetyScoreV8PublicationIdentity;
+      safetyScoreIdentity: SafetyScorePublicationIdentity;
     }
   | {
       kind: "unavailable";
       safeNet24h: 0;
       riskyNet24h: 0;
       reason: string;
-      safetyScoreIdentity: SafetyScoreV8PublicationIdentity | null;
+      safetyScoreIdentity: SafetyScorePublicationIdentity | null;
     };
 
 export async function computeDigestMintBurnFtqFlows(
@@ -53,7 +53,7 @@ export async function computeDigestMintBurnFtqFlows(
     };
   }
 
-  const classification = buildFlightToQualityClassification(reportCardCache.payload);
+  const classification = buildFlightToQualityClassificationFromV8Cache(reportCardCache.payload);
   if (classification.kind !== "ok") {
     return {
       kind: "unavailable",

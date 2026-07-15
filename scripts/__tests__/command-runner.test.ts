@@ -4,6 +4,7 @@ import {
   normalizeCommandResult,
   runCommandBatches,
   runExecutionUnit,
+  runParallelExecutionUnits,
   runShellCommand,
 } from "../lib/command-runner.mjs";
 
@@ -46,12 +47,7 @@ describe("command runner", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const calls: string[] = [];
-    let exitStatus: number | undefined;
-
     const result = await runCommandBatches([[createExecutionUnit(["first", "second"])]], {
-      exit: (status) => {
-        exitStatus = status;
-      },
       label: "gate",
       runCommandImpl: (cmd) => {
         calls.push(cmd);
@@ -60,7 +56,6 @@ describe("command runner", () => {
     });
 
     expect(result).toEqual({ status: 7, failedCmd: "first", aborted: false });
-    expect(exitStatus).toBe(7);
     expect(calls).toEqual(["first"]);
     expect(errorSpy).toHaveBeenCalledWith("[gate] FAILED: first exited with status 7");
   });
@@ -70,14 +65,9 @@ describe("command runner", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const calls: string[] = [];
     const aborted: string[] = [];
-    let exitStatus: number | undefined;
-
     const result = await runCommandBatches(
       [[createExecutionUnit(["fail", "never"]), createExecutionUnit(["wait-a"]), createExecutionUnit(["wait-b"])]],
       {
-        exit: (status) => {
-          exitStatus = status;
-        },
         label: "parallel",
         runCommandImpl: (cmd, _extraEnv, { signal } = {}) => {
           calls.push(cmd);
@@ -97,10 +87,52 @@ describe("command runner", () => {
     );
 
     expect(result).toEqual({ status: 5, failedCmd: "fail", aborted: false });
-    expect(exitStatus).toBe(5);
     expect(calls).toEqual(["fail", "wait-a", "wait-b"]);
     expect(aborted).toEqual(["wait-a", "wait-b"]);
     expect(errorSpy).toHaveBeenCalledWith("[parallel] FAILED: fail exited with status 5");
+  });
+
+  it("returns every independent result without terminating after failures", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await runParallelExecutionUnits(
+      [
+        createExecutionUnit(["first"], { id: "first" }),
+        createExecutionUnit(["second"], { id: "second" }),
+        createExecutionUnit(["third"], { id: "third" }),
+      ],
+      {
+        continueOnError: true,
+        label: "aggregate",
+        runCommandImpl: (cmd) => ({ status: cmd === "second" ? 6 : 0, aborted: false }),
+      },
+    );
+
+    expect(result.status).toBe(6);
+    expect(result.failures).toHaveLength(1);
+    expect(result.results.map((item) => item.unit.id)).toEqual(["first", "second", "third"]);
+    expect(result.results.map((item) => item.status)).toEqual([0, 6, 0]);
+  });
+
+  it("does not classify aborted parallel siblings as root failures", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const result = await runParallelExecutionUnits(
+      [createExecutionUnit(["fail"], { id: "fail" }), createExecutionUnit(["wait"], { id: "wait" })],
+      {
+        label: "abort-classification",
+        runCommandImpl: (cmd, _env, { signal } = {}) => {
+          if (cmd === "fail") return Promise.resolve({ status: 7, aborted: false });
+          return new Promise((resolve) => {
+            signal?.addEventListener("abort", () => resolve({ status: 130, aborted: true }));
+          });
+        },
+      },
+    );
+
+    expect(result.failures.map((item) => item.unit.id)).toEqual(["fail"]);
+    expect(result.results.find((item) => item.unit.id === "wait")).toMatchObject({ aborted: true, status: 130 });
   });
 
   it("returns an aborted result without spawning when the signal is already aborted", async () => {

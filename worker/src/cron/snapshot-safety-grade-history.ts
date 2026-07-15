@@ -8,6 +8,7 @@ import type { ReportCardsResponse } from "@shared/types/report-cards";
 import {
   fetchLatestSafetyScoreHistoryV2Rows,
   loadActiveV8SafetyScoreHistorySource,
+  prepareSafetyScoreHistoryBoundaryWrite,
   prepareV8OrganicSafetyScoreHistoryWrites,
   safetyScoreHistoryIdentitiesAreComparable,
   safetyScoreHistoryIdentityFromV2Row,
@@ -82,6 +83,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
   let suppressedSeeds = 0;
   let suppressedTransitions = 0;
   let suppressedIdentityTransitions = 0;
+  let identityBoundaryBaselines = 0;
   const stmts: D1PreparedStatement[] = [];
 
   for (const card of liveCards) {
@@ -106,6 +108,27 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
         suppressedIdentityTransitions++;
         continue;
       }
+    } else if (latest) {
+      // Legacy rows have no complete publication identity, so they can never
+      // establish an organic predecessor for the current V8 snapshot.
+      suppressedIdentityTransitions++;
+      if (degradedReportCardInputs) {
+        suppressedTransitions++;
+        continue;
+      }
+      identityBoundaryBaselines++;
+      stmts.push(
+        prepareSafetyScoreHistoryBoundaryWrite(db, {
+          stablecoinId: card.id,
+          recordedAt: snapshotDay,
+          grade: card.overallGrade,
+          score: card.overallScore,
+          transitionKind: "methodology-boundary-baseline",
+          identity,
+          createdAt: nowSec,
+        }),
+      );
+      continue;
     }
 
     if (!latest) {
@@ -160,7 +183,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
   }
   return {
     ...(degradedReportCardInputs || suppressedIdentityTransitions > 0 ? { status: "degraded" as const } : {}),
-    itemCount: seeded + changed,
+    itemCount: seeded + changed + identityBoundaryBaselines,
     metadata: JSON.stringify({
       snapshotDay,
       methodologyVersion,
@@ -170,7 +193,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
       modelPublicationGenerationId: identity.publicationGenerationId,
       seeded,
       changed,
-      v2RowsWritten: seeded + changed,
+      v2RowsWritten: seeded + changed + identityBoundaryBaselines,
       skipped,
       degradedReportCardInputs,
       gradeHistorySuppressed: degradedReportCardInputs,
@@ -178,6 +201,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
       suppressedTransitions,
       identityHistorySuppressed: suppressedIdentityTransitions > 0,
       suppressedIdentityTransitions,
+      identityBoundaryBaselines,
       reportCardCacheOwner: "publish-report-card-cache",
     }),
   };

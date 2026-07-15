@@ -7,6 +7,7 @@ import {
   getBackstopRegistrySourceFilePaths,
 } from "@shared/lib/redemption-backstop-configs/factory";
 import { buildRedemptionBackstopRegistry } from "@shared/lib/redemption-backstop-configs/manifest";
+import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
 import {
   getAllowedRedemptionCapacityWarningReason,
   isRedemptionFreshnessAllowedByPolicy,
@@ -531,5 +532,40 @@ describe("validateRedemptionBackstopRegistry", () => {
         }),
       ]),
     );
+  });
+
+  it("aligns configured output baskets to the 16-member exit-route asset-key bound", () => {
+    const outputAssets = Array.from({ length: 16 }, (_, index) => `tracked-stablecoin-${index}`);
+    expect(
+      RedemptionBackstopConfigSchema.safeParse({
+        ...baseConfig,
+        outputAssetType: "stable-basket",
+        outputAssets,
+      }).success,
+    ).toBe(true);
+
+    const oversized = RedemptionBackstopConfigSchema.safeParse({
+      ...baseConfig,
+      outputAssetType: "stable-basket",
+      outputAssets: [...outputAssets, "tracked-stablecoin-16"],
+    });
+    expect(oversized.success).toBe(false);
+    if (!oversized.success) {
+      expect(oversized.error.issues).toContainEqual(
+        expect.objectContaining({ code: "too_big", path: ["outputAssets"], maximum: 16 }),
+      );
+    }
+
+    const mixedTrackedAndUntracked = RedemptionBackstopConfigSchema.safeParse({
+      ...baseConfig,
+      outputAssetType: "stable-basket",
+      outputAssets: ["usdc-circle", "asset:vbusdc"],
+    });
+    expect(mixedTrackedAndUntracked.success).toBe(false);
+    if (!mixedTrackedAndUntracked.success) {
+      expect(mixedTrackedAndUntracked.error.issues[0]?.message).toContain(
+        "stable outputAssets must be tracked stablecoin ids",
+      );
+    }
   });
 });

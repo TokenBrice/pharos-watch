@@ -580,12 +580,12 @@ describe("fetchBalancerPools", () => {
 
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: { poolGetPools: page1 } })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { poolGetPools: page2 } })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { aggregatorPools: [] } })));
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { poolGetPools: page2 } })));
 
     const pools = await fetchBalancerPools();
     expect(pools.pools.length).toBe(1001);
-    expect(mockFetch).toHaveBeenCalledTimes(3);
+    // Missing pause/swap state fails closed before the supplemental capability sweep.
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
   it("skips pools with unknown chain", async () => {

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { DepegDirection } from "./market";
-import type { SafetyScoreV8PublicationIdentity } from "./safety-score-publication";
+import type { SafetyScorePublicationIdentity } from "./safety-score-publication";
 
 export type DigestEditorialCandidateKind =
   | "depeg"
@@ -180,7 +180,7 @@ export interface DigestInputData {
     gaugeBand: string;
     classificationSource?: "report-card-cache" | "unavailable";
     classificationReason?: string | null;
-    safetyScoreIdentity?: SafetyScoreV8PublicationIdentity | null;
+    safetyScoreIdentity?: SafetyScorePublicationIdentity | null;
     flightToQuality: {
       active: boolean;
       safeNetUsd: number;

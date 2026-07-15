@@ -393,6 +393,88 @@ describe("dex-liquidity scoring", () => {
     expect(result.globalAgg.poolCount).toBe(1);
   });
 
+  it("keeps paused Balancer pools only in the P4 capability denominator", async () => {
+    const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
+    const metrics = initMetrics("usdc-circle", "USDC");
+    metrics.topPools = [
+      {
+        poolId: "ethereum:0xpaused-balancer",
+        project: "balancer-v3",
+        chain: "ethereum",
+        tvlUsd: 10_000_000,
+        symbol: "USDC / USDT",
+        volumeUsd1d: 100_000,
+        volumeUsd7d: 700_000,
+        poolType: "balancer-stable",
+        source: "gecko_terminal",
+        extra: {
+          executionCapabilityGate: {
+            family: "balancer-amm",
+            reason: "paused-or-swap-disabled",
+          },
+        },
+      },
+      {
+        poolId: "ethereum:0xrate-bearing-balancer",
+        project: "balancer-v3",
+        chain: "ethereum",
+        tvlUsd: 150_000,
+        symbol: "USDC / waUSDT",
+        volumeUsd1d: 10_000,
+        volumeUsd7d: 70_000,
+        poolType: "balancer-stable",
+        source: "gecko_terminal",
+        extra: {
+          executionCapabilityGate: {
+            family: "balancer-amm",
+            reason: "rate-bearing-inputs",
+          },
+        },
+      },
+    ];
+
+    const result = await computeStablecoinScores(
+      db,
+      new Map([["usdc-circle", metrics]]),
+      new Map([["balancer", 100_000]]),
+    );
+    const coverage = (result.scores.get("usdc-circle") as {
+      exitRouteObservationCoverage?: {
+        retainedPoolCount: number;
+        scoreEligibleCapabilityPoolCount?: number;
+        unsupportedPoolCount: number;
+        unsupportedReasons: Record<string, number>;
+      };
+    } | undefined)?.exitRouteObservationCoverage;
+
+    expect(coverage).toMatchObject({
+      retainedPoolCount: 2,
+      scoreEligibleCapabilityPoolCount: 2,
+      unsupportedPoolCount: 2,
+      unsupportedReasons: {
+        "executionCapabilityGate:balancer-amm:paused-or-swap-disabled": 1,
+        "executionCapabilityGate:balancer-amm:rate-bearing-inputs": 1,
+      },
+    });
+    expect(metrics.totalTvlUsd).toBe(100_000);
+    expect(metrics.poolCount).toBe(1);
+    expect(metrics.topPools).toHaveLength(1);
+    expect(metrics.topPools[0]).toMatchObject({
+      poolId: "ethereum:0xrate-bearing-balancer",
+      tvlUsd: 100_000,
+    });
+    expect(result.retainedPoolsByStablecoin.get("usdc-circle")).toHaveLength(1);
+    expect(result.globalAgg).toMatchObject({
+      totalTvl: 100_000,
+      poolCount: 1,
+      protocolTvl: { balancer: 100_000 },
+    });
+    expect(result.diagnostics.protocolCapReductions).toMatchObject({
+      cappedPoolCount: 1,
+      reducedTvlUsd: 50_000,
+    });
+  });
+
   it("treats missing stability and volume-history tables as first-run state", async () => {
     const db = makeQueryDb([
       { match: "depth_stability", throwError: new Error("no such table: dex_liquidity") },

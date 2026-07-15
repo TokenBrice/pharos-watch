@@ -57,13 +57,13 @@ export function describeDexPaginationWriteFailure(
   return `${label}: pagination cursor persistence failed (write-failed); stored cursor remains retryable`;
 }
 
-function warnStateFailure(error: unknown, operation: "read" | "write"): void {
+function warnStateFailure(error: unknown, operation: "read" | "write", job = "sync-dex-liquidity"): void {
   if (!isMissingTableError(error)) {
     logWorkerEvent({
       scope: "lib",
       level: "warn",
       event: "dex_liquidity.pagination_state_unavailable",
-      job: "sync-dex-liquidity",
+      job,
       message: operation === "read"
         ? "Durable DEX pagination cursor unavailable; using head fallback"
         : "Durable DEX pagination cursor write failed; stored cursor remains retryable",
@@ -76,6 +76,7 @@ function warnStateFailure(error: unknown, operation: "read" | "write"): void {
 export async function readDexSourcePaginationState(
   db: D1Database | undefined,
   sourceKey: string,
+  job = "sync-dex-liquidity",
 ): Promise<DexSourcePaginationState> {
   if (!db) {
     return { cursor: null, cycleStartedAt: null, updatedAt: null, completedAt: null, pagesFetched: 0 };
@@ -100,7 +101,7 @@ export async function readDexSourcePaginationState(
       pagesFetched: row?.pages_fetched ?? 0,
     };
   } catch (error) {
-    warnStateFailure(error, "read");
+    warnStateFailure(error, "read", job);
     return { cursor: null, cycleStartedAt: null, updatedAt: null, completedAt: null, pagesFetched: 0 };
   }
 }
@@ -114,6 +115,7 @@ export async function writeDexSourcePaginationState(params: {
   completed: boolean;
   pagesFetched: number;
   diagnostics?: readonly string[];
+  job?: string;
 }): Promise<DexSourcePaginationWriteOutcome> {
   if (!params.db) return { written: false, errorClass: "not-configured" };
   const diagnostics = (params.diagnostics ?? []).slice(0, 12).map((value) => value.slice(0, 240));
@@ -140,7 +142,7 @@ export async function writeDexSourcePaginationState(params: {
     ).run();
     return { written: true, errorClass: null };
   } catch (error) {
-    warnStateFailure(error, "write");
+    warnStateFailure(error, "write", params.job);
     return {
       written: false,
       errorClass: isMissingTableError(error) ? "missing-table" : "write-failed",

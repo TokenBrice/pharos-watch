@@ -19,6 +19,7 @@ import { handleDigestArchive } from "../api/digest-archive";
 import { handleDigestSnapshot } from "../api/digest-snapshot";
 import { handleStabilityIndex } from "../api/stability-index";
 import { handleReportCards } from "../api/report-cards";
+import { handleReportCardsV9 } from "../api/report-cards-v9";
 import { handleDepegResolver } from "../api/depeg-resolver";
 import { handleDepegResolverReview } from "../api/depeg-resolver-review";
 import { handleRedemptionBackstops } from "../api/redemption-backstops";
@@ -56,6 +57,7 @@ export const PUBLIC_STATIC_ROUTES = [
   defineStaticRoute("snapshots-index", ({ db }) => handleSnapshotsIndex(db)),
   defineStaticRoute("stability-index", ({ db, url }) => handleStabilityIndex(db, url)),
   defineStaticRoute("report-cards", ({ db }) => handleReportCards(db)),
+  defineStaticRoute("report-cards-v9", ({ db }) => handleReportCardsV9(db)),
   defineStaticRoute("depeg-resolver", ({ db }) => handleDepegResolver(db)),
   defineStaticRoute("depeg-resolver-review", ({ db }) => handleDepegResolverReview(db)),
   defineStaticRoute("redemption-backstops", ({ db }) => handleRedemptionBackstops(db)),

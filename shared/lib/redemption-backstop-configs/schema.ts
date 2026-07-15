@@ -21,6 +21,7 @@ import type { RedemptionBackstopConfig, RedemptionCapacityModel, RedemptionCostM
 type RedemptionBackstopDocSourceConfig = NonNullable<RedemptionBackstopConfig["docs"]>[number];
 
 const REVIEWED_AT_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_REDEMPTION_OUTPUT_ASSETS = 16;
 const RatioSchema = z.number().finite().gt(0).lte(1);
 const StaticCapacityConfidenceSchema = RedemptionCapacityConfidenceSchema.exclude(["live-direct", "live-proxy"]);
 const ReviewedAtSchema = z
@@ -122,7 +123,7 @@ export const RedemptionBackstopConfigSchema: z.ZodType<RedemptionBackstopConfig>
     routeStatus: z.enum(["open", "unknown"]).optional(),
     routeExitCorrelation: RedemptionRouteExitCorrelationSchema.optional(),
     totalScoreCap: z.number().gt(0).lte(100).optional(),
-    outputAssets: z.array(z.string().min(1)).min(1).max(8).optional(),
+    outputAssets: z.array(z.string().min(1)).min(1).max(MAX_REDEMPTION_OUTPUT_ASSETS).optional(),
     docs: z.array(RedemptionDocSourceSchema).optional(),
     reviewedAt: ReviewedAtSchema.optional(),
     notes: z.array(z.string()).optional(),

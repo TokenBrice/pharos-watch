@@ -22,11 +22,12 @@ import {
 import { buildPoolIdentity } from "./pool-identity";
 import { resolveTrackedStablecoinId } from "./token-resolution";
 import { runSubgraphFamily } from "./subgraph-family-runner";
+import { buildUniV3ExecutionCandidateKey } from "../measured-execution/inventory";
 
 type UniV3SubgraphPool = {
   id: string;
-  token0: { id: string; symbol: string };
-  token1: { id: string; symbol: string };
+  token0: { id: string; symbol: string; decimals: string };
+  token1: { id: string; symbol: string; decimals: string };
   feeTier: string;
   totalValueLockedUSD: string;
   volumeUSD: string;
@@ -112,6 +113,7 @@ export async function fetchUniV3Data(
       uniV3PoolFees: new Map<string, number>(),
       uniV3SymbolFees: new Map<string, number>(),
       uniV3PriceObs: new Map<string, DexPriceObs[]>(),
+      uniV3ExecutionCandidates: new Map(),
     }),
     buildConfig: (chain, subgraphUrl, combinedSignal, lookups) => ({
       subgraphUrl,
@@ -136,10 +138,41 @@ export async function fetchUniV3Data(
           lookups.uniV3SymbolFees.set(symKey, feeTier);
         }
 
-        if (isNaN(tvl) || tvl < DEX_PRICE_OBSERVATION_MIN_TVL_USD) return [];
-
+        const token0Decimals = Number.parseInt(pool.token0.decimals, 10);
+        const token1Decimals = Number.parseInt(pool.token1.decimals, 10);
         const token0Price = parseFloat(pool.token0Price);
         const token1Price = parseFloat(pool.token1Price);
+        const executionKey = buildUniV3ExecutionCandidateKey(
+          chain,
+          [pool.token0.id, pool.token1.id],
+          feeTier,
+        );
+        if (
+          executionKey &&
+          Number.isFinite(tvl) && tvl > 0 &&
+          Number.isInteger(token0Decimals) && token0Decimals >= 0 && token0Decimals <= 255 &&
+          Number.isInteger(token1Decimals) && token1Decimals >= 0 && token1Decimals <= 255 &&
+          Number.isFinite(token0Price) && token0Price > 0 &&
+          Number.isFinite(token1Price) && token1Price > 0
+        ) {
+          const candidates = lookups.uniV3ExecutionCandidates.get(executionKey) ?? [];
+          candidates.push({
+            chain,
+            poolAddress: pool.id,
+            feePips: feeTier,
+            tvlUsd: tvl,
+            token0Price,
+            token1Price,
+            tokens: [
+              { address: pool.token0.id, symbol: pool.token0.symbol, decimals: token0Decimals },
+              { address: pool.token1.id, symbol: pool.token1.symbol, decimals: token1Decimals },
+            ],
+          });
+          lookups.uniV3ExecutionCandidates.set(executionKey, candidates);
+        }
+
+        if (isNaN(tvl) || tvl < DEX_PRICE_OBSERVATION_MIN_TVL_USD) return [];
+
         if (isNaN(token0Price) || isNaN(token1Price) || token0Price <= 0 || token1Price <= 0) return [];
 
         const sym0 = normalizeDexSymbol(pool.token0.symbol);

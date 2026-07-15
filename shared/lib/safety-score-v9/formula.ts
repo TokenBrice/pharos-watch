@@ -72,12 +72,14 @@ function clampScore(value: number): number {
 }
 
 /**
- * Snap binary float noise to the nearest 12-significant-digit decimal before
+ * Snap binary float noise to the nearest 15-significant-digit decimal before
  * quantizing: an additive Number.EPSILON is magnitude-blind (one ULP at ~59.5
- * is ~30x larger), so exact decimal halves could round down (VER-002).
+ * is ~30x larger), so exact decimal halves could round down (VER-002). The
+ * window is 15 digits (~22 ULPs), NOT wider: a coarser snap can lift a
+ * genuine sub-boundary value across a rounding or floor boundary (VER2-009).
  */
-function decimalSnap(value: number): number {
-  return Number(value.toPrecision(12));
+export function decimalSnap(value: number): number {
+  return Number(value.toPrecision(15));
 }
 
 function roundTo(value: number, decimals: number): number {

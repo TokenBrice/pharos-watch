@@ -85,6 +85,7 @@ export function resolveDdrIncidents(context: DdrLoadedContext, nowSec: number): 
       concentrationHhi: liqFresh ? liq.concentration_hhi : null,
       safetyGrade: safety?.grade ?? null,
       safetyScore: safety?.score ?? null,
+      safetyContext: context.safetyContext,
       redemptionCapacityRatio: redemptionFresh ? redemption.immediate_capacity_ratio : null,
       redemptionRouteFamily: redemptionFresh ? redemption.route_family : null,
     };

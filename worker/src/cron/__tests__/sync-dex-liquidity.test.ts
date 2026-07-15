@@ -22,6 +22,7 @@ vi.mock("../dex-liquidity/subgraph-source-families", () => ({
     uniV3PoolFees: new Map(),
     uniV3SymbolFees: new Map(),
     uniV3PriceObs: new Map(),
+    uniV3ExecutionCandidates: new Map(),
   })),
   fetchAerodromeData: vi.fn(async () => ({ aerodromePriceObs: new Map(), aerodromeIsStable: new Map() })),
 }));
@@ -412,7 +413,12 @@ describe("syncDexLiquidity", () => {
   });
 
   it("waits for subgraph enrichment before starting direct API fetches", async () => {
-    const emptyUniV3 = { uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(), uniV3PriceObs: new Map() };
+    const emptyUniV3 = {
+      uniV3PoolFees: new Map(),
+      uniV3SymbolFees: new Map(),
+      uniV3PriceObs: new Map(),
+      uniV3ExecutionCandidates: new Map(),
+    };
     const emptyAerodrome = { aerodromePriceObs: new Map(), aerodromeIsStable: new Map() };
     const uniV3Gate = deferred<typeof emptyUniV3>();
     const aerodromeGate = deferred<typeof emptyAerodrome>();

@@ -306,44 +306,34 @@ function resolvedBackingExposures(
   asset: V9AssetFactsV2,
   dependencyInputs: V9ResolvedDependencyInputs,
   evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
+  unavailabilityRootsById: ReadonlyMap<string, readonly string[]>,
   envelope: V9ValidatedPolicyEnvelope,
 ): V9ResolvedUpstreamExposure[] {
   const basketByUpstream = new Map(
     dependencyInputs.basket.map((dependency) => [dependency.upstreamAssetId, dependency]),
   );
-  const threshold = envelope.policy.semantic.backing.structural.materialExposureShare;
-  // Materiality is judged on the AGGREGATE exposure to one upstream asset:
-  // splitting one 12% exposure into two 6% rows must not demote the
-  // availability reason below the structural threshold (VER-004).
-  const aggregateByUpstream = new Map<string, number>();
-  for (const exposure of asset.reserveExposures) {
-    if (exposure.trackedAssetId === null) continue;
-    aggregateByUpstream.set(
-      exposure.trackedAssetId,
-      (aggregateByUpstream.get(exposure.trackedAssetId) ?? 0) + exposure.weight,
-    );
-  }
+  // The availability materiality decision lives in backing, which aggregates by
+  // the propagated terminal failure roots (VER2-001) under the shared
+  // materiality predicate (VER2-010). This projection only carries the roots
+  // and evidence; it no longer emits an availability reason code.
   return asset.reserveExposures.flatMap((exposure) => {
     if (exposure.trackedAssetId === null) return [];
     const dependency = basketByUpstream.get(exposure.trackedAssetId);
     if (!dependency) return [];
     const upstream = evaluatedById.get(dependency.upstreamAssetId);
-    const aggregateWeight = aggregateByUpstream.get(exposure.trackedAssetId) ?? exposure.weight;
-    const unavailableCode: V9ReasonCode =
-      aggregateWeight >= threshold ? "material-dependency-unavailable" : "nonmaterial-dependency-unavailable";
-    // An unrateable basket upstream surfaces only the availability code; its
-    // own NR codes stay on the upstream trace. The exposure score is already
-    // floored at the bounded-unknown quality, and the availability code's
-    // policy treatment (ceiling or diagnostic) bounds the child.
-    const reasonCodes = upstream?.trace.finalScore === null ? [unavailableCode] : [];
+    const unavailable = upstream?.trace.finalScore === null;
+    const failureRootAssetIds = unavailable
+      ? (unavailabilityRootsById.get(dependency.upstreamAssetId) ?? [dependency.upstreamAssetId])
+      : [dependency.upstreamAssetId];
     return [
       {
         exposureKey: exposure.exposureKey,
         upstreamAssetId: dependency.upstreamAssetId,
         score: upstream?.trace.finalScore ?? null,
         evidenceLevel: upstream ? worstEvidenceLevel(upstream.scoreInput.pillars, envelope) : "insufficient",
-        reasonCodes,
+        reasonCodes: [],
         failureDomains: upstream ? resultFailureDomains(upstream) : [],
+        failureRootAssetIds,
       },
     ];
   });
@@ -485,6 +475,11 @@ export function evaluateV9FactSet(
   });
   const commonSignals = commonModeSignalsByAsset(dependencyPlan, envelope);
   const evaluatedById = new Map<string, V9EvaluatedAsset>();
+  // Terminal unavailable-asset roots per evaluated asset, propagated in
+  // topological order: an unavailable asset inherits the union of the roots of
+  // its own unavailable upstreams, or is its own root when nothing upstream is
+  // unavailable. Backing aggregates materiality by these roots (VER2-001).
+  const unavailabilityRootsById = new Map<string, readonly string[]>();
   const identity = {
     factSetDigest: factSet.v9FactSetDigest,
     baseInputGenerationId: factSet.baseInputGenerationId,
@@ -507,7 +502,13 @@ export function evaluateV9FactSet(
       reserveStatus: asset.reserveStatus,
       reserveExposures: asset.reserveExposures,
       gaps: asset.gaps,
-      resolvedUpstreamExposures: resolvedBackingExposures(asset, resolved, evaluatedById, envelope),
+      resolvedUpstreamExposures: resolvedBackingExposures(
+        asset,
+        resolved,
+        evaluatedById,
+        unavailabilityRootsById,
+        envelope,
+      ),
       seriallyResolvedUpstreamAssetIds: resolved.serial.map((dependency) => dependency.upstreamAssetId),
     };
     const backing =
@@ -553,6 +554,15 @@ export function evaluateV9FactSet(
       methodologyReasons,
     };
     const trace = scoreV9EvaluatedAsset(scoreInput, envelope);
+    const unavailableUpstreamRoots = uniqueSorted(
+      [...resolved.basket, ...resolved.serial]
+        .filter((dependency) => evaluatedById.get(dependency.upstreamAssetId)?.trace.finalScore === null)
+        .flatMap((dependency) => unavailabilityRootsById.get(dependency.upstreamAssetId) ?? [dependency.upstreamAssetId]),
+    );
+    unavailabilityRootsById.set(
+      assetId,
+      trace.finalScore !== null || unavailableUpstreamRoots.length === 0 ? [assetId] : unavailableUpstreamRoots,
+    );
     const stressState = createV9PublicStressState(scoreInput, {
       circulatingUsd: asset.supply.status.observationState === "known" ? asset.supply.circulatingUsd : null,
       portfolioStatus:

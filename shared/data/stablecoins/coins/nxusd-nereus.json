@@ -4,7 +4,7 @@
   "detailProvider": "defillama",
   "name": "NXUSD",
   "symbol": "NXUSD",
-  "oneLiner": "NXUSD is a Nereus Finance overcollateralized CDP minted on Avalanche; the token has shown a sustained soft-depeg pattern between $0.95 and $1.01.",
+  "oneLiner": "NXUSD is a Nereus Finance overcollateralized CDP issued on Avalanche and Polygon; the token has shown a sustained soft-depeg pattern between $0.95 and $1.01.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -434,6 +434,11 @@
       "chain": "avalanche",
       "address": "0xf14f4ce569cb3679e99d5059909e23b07bd2f387",
       "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0xf955a6694c6f5629f5ecd514094b3bd450b59000",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {
@@ -446,6 +451,14 @@
       {
         "label": "Nereus pinned NXUSD source",
         "url": "https://github.com/nereusfinance/nereus-stablecoin-core/blob/e75e91b072a9d2346503383aafa2d40abc7ea582/contracts/NXUSD.sol"
+      },
+      {
+        "label": "Polygon NXUSDV2 verified source",
+        "url": "https://polygonscan.com/address/0xf955a6694c6f5629f5ecd514094b3bd450b59000#code"
+      },
+      {
+        "label": "Nereus Polygon expansion announcement",
+        "url": "https://medium.com/nereus-protocol/nereus-finance-expands-to-polygon-blockchain-ec81c172dcfd"
       },
       {
         "label": "Nereus pinned Avalanche deployment manifest",
@@ -468,22 +481,88 @@
         "url": "https://api.avax.network/ext/bc/C/rpc"
       }
     ],
-    "evidence": "At Avalanche block 90343075, the sole tracked NXUSD deployment 0xf14f4ce569cb3679e99d5059909e23b07bd2f387 was a 5,007-byte direct deployment with a zero EIP-1967 implementation slot. Sourcify exact-match ABI/source exposes ordinary ERC-20 transfer, transferFrom, approval, and permit behavior; owner-only mint and mintToBentoBox; and burn(uint256), which subtracts only msg.sender's balance. It has no pause, blacklist, freeze, seizure, or privileged arbitrary-holder-burn function. owner() remained the 2-of-3 Safe 0xdd3de3b819edd3a014fda93868d7dfc873341467, but that ownership cannot add a holder-control path to the immutable deployed code. Zero-value transfer and self-burn eth_call simulations succeeded at the reviewed block. The official Nereus Avalanche manifest also identifies USDCCauldron 0xd75a20314fb7fbe79ec7474497d5bf09e9c00cfc; at that block collateral() returned native Circle USDC 0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e and totalBorrow was 182,497.852160412510292820 NXUSD. The verified current Circle USDC implementation exposes blacklist/unBlacklist and gates transfer and transferFrom with notBlacklisted, establishing an active upstream collateral exposure. Current issuer legal material and the archived issuer page were reviewed as context but do not establish a direct NXUSD holder restriction. Inherited therefore preserves the upstream USDC risk without claiming a direct NXUSD freeze.",
+    "evidence": "At Avalanche block 90343075, the tracked NXUSD deployment 0xf14f4ce569cb3679e99d5059909e23b07bd2f387 was a 5,007-byte direct deployment with a zero EIP-1967 implementation slot. Sourcify exact-match ABI/source exposes ordinary ERC-20 transfer, transferFrom, approval, and permit behavior; owner-only mint and mintToBentoBox; and burn(uint256), which subtracts only msg.sender's balance. It has no pause, blacklist, freeze, seizure, or privileged arbitrary-holder-burn function. owner() remained the 2-of-3 Safe 0xdd3de3b819edd3a014fda93868d7dfc873341467, but that ownership cannot add a holder-control path to the immutable deployed code. Zero-value transfer and self-burn eth_call simulations succeeded at the reviewed block. At Polygon block 90266253, the separately deployed NXUSDV2 token 0xf955a6694c6f5629f5ecd514094b3bd450b59000 returned name and symbol NXUSD, 18 decimals, positive supply, and owner 0xc4eca7d55db3dc217a2edfff3da05fca4d8a7ef8; verified source exposes owner-gated mint and burn without a holder blacklist or freeze surface. The official Nereus Avalanche manifest also identifies USDCCauldron 0xd75a20314fb7fbe79ec7474497d5bf09e9c00cfc; at that block collateral() returned native Circle USDC 0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e and totalBorrow was 182,497.852160412510292820 NXUSD. The verified current Circle USDC implementation exposes blacklist/unBlacklist and gates transfer and transferFrom with notBlacklisted, establishing an active upstream collateral exposure. Current issuer legal material and the archived issuer page were reviewed as context but do not establish a direct NXUSD holder restriction. Inherited therefore preserves the upstream USDC risk without claiming a direct NXUSD freeze.",
     "reviewer": "Codex Wave 11 access review",
     "reviewedAt": "2026-07-15"
   },
   "chainTier": "established-alt-l1",
-  "deploymentModel": "single-chain",
+  "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
-    "tier": "single-chain-or-native",
-    "summary": "NXUSD has a single Avalanche deployment in the reviewed metadata and no sourced bridge, lockbox, or cross-chain route was resolved. Pharos treats this secondary-triage row as single-chain/native.",
-    "reviewedAt": "2026-06-13",
+    "tier": "issuer-native-burn-mint",
+    "summary": "Nereus issued distinct owner-mintable NXUSD contracts on Avalanche and Polygon. No lockbox or third-party bridge contract was identified, so the two deployments are treated as issuer-native issuance rather than one bridged token.",
+    "reviewedAt": "2026-07-15",
     "reviewer": "Codex bridge route review",
     "confidence": "probable",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "Nereus native NXUSD issuance",
+        "url": "https://medium.com/nereus-protocol/nereus-finance-expands-to-polygon-blockchain-ec81c172dcfd",
+        "bridgeTypes": ["issuer-native-mint-redeem"]
+      }
+    ],
     "sources": [
       {
-        "label": "Nereus Finance",
-        "url": "https://nereus.finance/"
+        "label": "Nereus Polygon expansion announcement",
+        "url": "https://medium.com/nereus-protocol/nereus-finance-expands-to-polygon-blockchain-ec81c172dcfd"
+      },
+      {
+        "label": "Avalanche NXUSD verified source",
+        "url": "https://repo.sourcify.dev/contracts/full_match/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387/sources/contracts/NXUSD.sol"
+      },
+      {
+        "label": "Polygon NXUSDV2 verified source",
+        "url": "https://polygonscan.com/address/0xf955a6694c6f5629f5ecd514094b3bd450b59000#code"
+      }
+    ],
+    "routes": [
+      {
+        "id": "avalanche:0xf14f4ce569cb3679e99d5059909e23b07bd2f387",
+        "destinationChain": "avalanche",
+        "canonicalChain": "avalanche",
+        "contractAddress": "0xf14f4ce569cb3679e99d5059909e23b07bd2f387",
+        "protocol": "Nereus native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-15",
+        "observedBlock": 90359157,
+        "sources": [
+          {
+            "label": "Avalanche NXUSD verified source",
+            "url": "https://repo.sourcify.dev/contracts/full_match/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387/sources/contracts/NXUSD.sol"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0xf955a6694c6f5629f5ecd514094b3bd450b59000",
+        "destinationChain": "polygon",
+        "canonicalChain": "avalanche",
+        "contractAddress": "0xf955a6694c6f5629f5ecd514094b3bd450b59000",
+        "protocol": "Nereus native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-15",
+        "observedBlock": 90266253,
+        "sources": [
+          {
+            "label": "Polygon NXUSDV2 verified source",
+            "url": "https://polygonscan.com/address/0xf955a6694c6f5629f5ecd514094b3bd450b59000#code"
+          },
+          {
+            "label": "Nereus Polygon expansion announcement",
+            "url": "https://medium.com/nereus-protocol/nereus-finance-expands-to-polygon-blockchain-ec81c172dcfd"
+          }
+        ]
       }
     ]
   },
