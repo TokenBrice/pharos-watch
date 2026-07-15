@@ -513,8 +513,27 @@
         "evidence": "This umbrella record exists solely because the current upgradeability schema accepts one controlRef. It does not represent an additional authority or one common quorum: the same Safe address has independent chain-local state and thresholds of 3-of-8 on Ethereum, 3-of-7 on Base, 1-of-7 on Arbitrum, and 2-of-7 on Monad."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
+        {
+          "label": "AFI rwaUSDi current proof of reserves",
+          "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs"
+        },
+        {
+          "label": "AFI rwaUSDi periodic reserve reports",
+          "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/periodic-report?pageNo=1&offset=20"
+        },
+        {
+          "label": "AFI independent-attestation network FAQ",
+          "url": "https://docs.afiprotocol.xyz/resources/faqs"
+        },
+        {
+          "label": "Multipli regulatory disclosures",
+          "url": "https://docs.multipli.fi/legal/terms-of-use"
+        },
         {
           "label": "Ethereum rwaUSDi token",
           "url": "https://eth.blockscout.com/address/0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4"
@@ -537,8 +556,8 @@
         }
       ],
       "evidence": "At the fixed cutoff, all four positive-supply deployments exposed the same mint, Auth, RolesAuthority, and UUPS ABI. The 23,116-byte implementations expose mint(address,uint256), authority(), isAuthorized(address,bytes4), setAuthority(address), and upgradeToAndCall(address,bytes), with no cap or minter-allowance entry point. Fixed-block simulations proved the shared role-5 EOA and each token-owner Safe can mint, while a random address reverts UNAUTHORIZED; only the Safe could execute the current upgrade path. Complete RolesAuthority event scans found one role-5 holder per chain, the same EOA, and the RolesAuthority owner is each chain-local Safe. Exact ERC-1967 slots, Safe owner lists, thresholds, module sentinels, guard slots, fallback handlers, and block hashes were checked on Ethereum, Base, Arbitrum, and Monad. External bridge or route semantics remain unresolved in bridgeRouteRisk and are not treated as reviewed by this control audit.",
-      "reviewer": "Codex Safety Score V9 evidence audit",
-      "reviewedAt": "2026-07-13"
+      "reviewer": "Codex Safety Score V9 evidence audit / SOL-IV calibration",
+      "reviewedAt": "2026-07-15"
     }
   },
   "launchDate": "2025-11-23"

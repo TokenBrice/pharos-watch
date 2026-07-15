@@ -475,8 +475,19 @@
         "evidence": "At Avalanche block 90233120 (hash 0xf877fd5e314a603d15a48db4b8775613f9efe1979911875c2e2922c1ddaa4651), the token proxy implementation was 0x1bd4...c315 and owner was controller 0xc3a2...dc1c. The controller implementation was 0x0008...13e1 and both owner/proxyOwner were this 2/3 Safe. On-chain reads found the same signer set as BSC, no modules, zero guard/module guard, and no execution delay."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
+        {
+          "label": "TrueUSD reserve-transparency archive",
+          "url": "https://tusd.io/transparency"
+        },
+        {
+          "label": "Moore CPA TrueUSD reserve report, July 2026",
+          "url": "https://widget.verinumus.io/api/v1/tusd/report?tokens=%5BTrueUSD%5D"
+        },
         {
           "label": "TrueUSD supported contracts and native deployments",
           "url": "https://tusd.io/"
@@ -499,8 +510,8 @@
         }
       ],
       "evidence": "Exact-cutoff review used Ethereum block 25526129, Tron block 84434937, BSC block 109812367, and Avalanche block 90233120. On every native deployment the token proxy owner was its TokenController proxy, while the final controller owner also owned the controller proxy. The controller source permits owner requestMint/finalizeMint without approval or pool subtraction and owner-controlled mint-key, threshold, limit, and proxy upgrades. Ethereum was a 2/3 Safe; Tron was a 1/1 native account; BSC and Avalanche were separate 2/3 Safes sharing all three owners. No enabled Safe modules, guards, module guards, or timelocks were found. The smaller Polygon, Arbitrum, Optimism, and Fantom contracts remain separately scoped as unresolved bridge routes rather than being asserted as issuer-native mint paths.",
-      "reviewer": "Codex Safety Score V9 TUSD authority audit",
-      "reviewedAt": "2026-07-13",
+      "reviewer": "Codex Safety Score V9 TUSD authority audit / SOL-IV calibration",
+      "reviewedAt": "2026-07-15",
       "disposition": "scoreable"
     }
   },

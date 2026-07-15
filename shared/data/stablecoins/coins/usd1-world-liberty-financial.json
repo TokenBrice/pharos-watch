@@ -279,8 +279,23 @@
         "evidence": "At Ethereum block 25526176, the EIP-1967 admin slot resolves to this verified ProxyAdmin and the implementation slot resolves to 0x694aa534bdef8ed63244eb902e7914e527891f08. ProxyAdmin.owner() resolves to 3-of-5 Safe 0x6a8dc6dbf909f542f2536edf8676d52630cf59e1, which can call upgrade or upgradeAndCall without an on-chain timelock."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
       "sources": [
+        {
+          "label": "USD1 May 2026 Crowe reserve attestation",
+          "url": "https://landing.bitgo.com/rs/552-OGK-141/images/USD1_Reserve_Attestation_Report_May_2026.pdf?version=0"
+        },
+        {
+          "label": "OCC BitGo national trust conversion record",
+          "url": "https://apps.occ.gov/CAAS_CATS/CAAS_Details.aspx?FilingID=342474&FilingSubtypeID=1117&FilingTypeID=23"
+        },
+        {
+          "label": "BitGo USD1 issuer terms",
+          "url": "https://www.bitgo.com/usd1-terms/"
+        },
         {
           "label": "USD1 website",
           "url": "https://worldlibertyfinancial.com/usd1"
@@ -291,8 +306,8 @@
         }
       ],
       "evidence": "At block 25294739: token owner() = controller 0xee9b1a09 (contract, confirmed). Controller defaultAdmin() = 3/6 Safe 0x0D190B74 (Safe API snapshot: 6 owners, no modules, guard=zero). MINTER_ROLE active holders: Safe 0x0D190B74, BitGo WalletSimple 0x0f33afb0 (2/3 signers confirmed), EOA 0x87e001. One earlier MINTER_ROLE holder (0xf9e47d37) revoked. All on-chain mint surfaces confirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "reviewer": "Claude Phase 0c continuation / SOL-IV calibration",
+      "reviewedAt": "2026-07-15"
     }
   },
   "deploymentModel": "third-party-bridge",

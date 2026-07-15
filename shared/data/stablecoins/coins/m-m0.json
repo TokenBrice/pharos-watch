@@ -155,6 +155,9 @@
         "evidence": "At finalized Solana slot 432835922, getAccountInfo on programData GBcoKgAkTQ5ZYJM2PzsjhRnDfkwBcgx7hapcAJjrcu5n returned upgrade authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW."
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -166,13 +169,17 @@
           "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
         },
         {
+          "label": "M0 minting and collateral verification",
+          "url": "https://docs.m0.org/protocol/minting-burning"
+        },
+        {
           "label": "Solana M mint on Solscan",
           "url": "https://solscan.io/token/mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo"
         }
       ],
-      "evidence": "At Ethereum block 25530270, verified MinterGateway and MToken contracts had zero EIP-1967 implementation/admin slots; MToken.minterGateway() resolved to the reviewed gateway. Gateway reads returned TTG Registrar 0x119F..., mint ratio 9950, mint delay 300 seconds, and validator threshold 1. At finalized Solana slot 432835922, the Portal program was upgradeable through the explicitly reviewed 9QpF8a9T... authority. Contract and validator-attested issuance is continuously constrained onchain; no mint-authority incident is recorded in the reviewed sources.",
-      "reviewer": "Codex V9 control curation",
-      "reviewedAt": "2026-07-14"
+      "evidence": "At Ethereum block 25530270, verified MinterGateway and MToken contracts had zero EIP-1967 implementation/admin slots; MToken.minterGateway() resolved to the reviewed gateway. Gateway reads returned TTG Registrar 0x119F..., mint ratio 9950, mint delay 300 seconds, and validator threshold 1. At finalized Solana slot 432835922, the Portal program was upgradeable through the explicitly reviewed 9QpF8a9T... authority. Contract and validator-attested issuance is continuously constrained onchain; no mint-authority incident is recorded in the reviewed sources. On 2026-07-15, the current M0 minting specification was rechecked: collateral values require approved validator signatures, expire on a governance-set interval that is typically daily, and bound mint execution to the verified collateral ratio after a delay. Because that third-party validator constraint is independent of a minter's signing path, the economic cap remains raiseable rather than unbounded; there is no unified prudential supervisor.",
+      "reviewer": "Codex V9 control curation / SOL-IV calibration",
+      "reviewedAt": "2026-07-15"
     }
   },
   "infrastructures": [

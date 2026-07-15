@@ -487,11 +487,22 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
           "label": "Apyx docs",
           "url": "https://docs.apyx.fi"
+        },
+        {
+          "label": "Apyx third-party reserve attestations",
+          "url": "https://docs.apyx.fi/collateral-and-custody/third-party-attestation"
+        },
+        {
+          "label": "Apyx terms of service",
+          "url": "https://docs.apyx.fi/resources/terms-of-service"
         },
         {
           "label": "Apyx EVM contracts",
@@ -510,9 +521,9 @@
           "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/bridge/BridgedApyxToken.sol"
         }
       ],
-      "evidence": "Current reads at Ethereum block 25526753, Base block 48596526, and BSC block 109829074 resolved every listed token's UUPS implementation, AccessManager, active mint path, cap authority, and upgrade role. Ethereum minting is scheduled through MinterV0 with a four-hour token-mint delay and the operator Safe controls request/execute. Base and BSC mint only through the Chainlink directory-listed pools returned by getCCIPPool(). Chain-local instances of the same 3/6 Safe control upgrades after three days on Ethereum, seven days on Base, and immediately on BSC; no enabled Safe modules were detected.",
-      "reviewer": "OpenAI Codex control review",
-      "reviewedAt": "2026-07-13"
+      "evidence": "Current reads at Ethereum block 25526753, Base block 48596526, and BSC block 109829074 resolved every listed token's UUPS implementation, AccessManager, active mint path, cap authority, and upgrade role. Ethereum minting is scheduled through MinterV0 with a four-hour token-mint delay and the operator Safe controls request/execute. Base and BSC mint only through the Chainlink directory-listed pools returned by getCCIPPool(). Chain-local instances of the same 3/6 Safe control upgrades after three days on Ethereum, seven days on Base, and immediately on BSC; no enabled Safe modules were detected. On 2026-07-15, Apyx's primary attestation index was rechecked and listed Wolf & Company reports for March, April, and May 2026. The BVI service entity has no named prudential reserve supervisor, while the same operator signer set can raise caps and retains an immediate BSC upgrade path, so the mint is economically unbounded but periodically reconciled under attestation-only oversight.",
+      "reviewer": "OpenAI Codex control review / SOL-IV calibration",
+      "reviewedAt": "2026-07-15"
     }
   },
   "collateralQuality": "rwa",

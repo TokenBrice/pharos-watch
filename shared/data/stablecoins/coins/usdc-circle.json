@@ -481,8 +481,23 @@
         "evidence": "org.zeppelinos.proxy.admin storage slot of the USDC FiatTokenProxy resolves to this admin contract; it can replace the token implementation, including mint logic, with no timelock."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
       "sources": [
+        {
+          "label": "Circle May 2026 Deloitte USDC examination",
+          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20May%2026.pdf"
+        },
+        {
+          "label": "ESMA MiCA electronic-money-token issuer register",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
+        {
+          "label": "NYDFS virtual-currency businesses and greenlist",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
+        },
         {
           "label": "Circle USDC docs",
           "url": "https://developers.circle.com/stablecoins/what-is-usdc"
@@ -497,8 +512,8 @@
         }
       ],
       "evidence": "At Ethereum block 25294757: masterMinter() = 0xE982615... (MinterAdmin contract, getMinterManager confirms it manages USDC token); MinterAdmin owner = EOA 0xc1d9fe41...; USDC owner() = EOA 0xFcb19e...; proxy admin slot 1 = EOA 0x4914f61.... All mint-capable addressable controls confirmed as Circle-operated EOAs (enterprise MPC/HSM custody expected). No on-chain multisig; issuer-backend mint model corroborated.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "reviewer": "Claude Phase 0c continuation / SOL-IV calibration",
+      "reviewedAt": "2026-07-15"
     }
   },
   "deploymentModel": "native-multichain",

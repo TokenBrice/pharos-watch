@@ -561,8 +561,27 @@
         "evidence": "This umbrella registry record preserves three independent immediate upgrade domains solely because the current upgradeability schema accepts one controlRef. It does not represent one common signer or quorum: Ethereum owner 0x13ff...dd6, BSC owner 0xcd63...f70e, and Solana program upgrader P3S7...vb7B are separate keys."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
       "sources": [
+        {
+          "label": "Circle USYC fund, issuer, and regulatory disclosures",
+          "url": "https://www.circle.com/usyc"
+        },
+        {
+          "label": "Circle USYC regulated-fund overview",
+          "url": "https://developers.circle.com/tokenized/usyc/overview"
+        },
+        {
+          "label": "Hashnote USYC daily token-price reconciliation",
+          "url": "https://usyc.docs.hashnote.com/overview/token-price"
+        },
+        {
+          "label": "BMA regulated-entities registry",
+          "url": "https://www.bma.bm/regulated-entities"
+        },
         {
           "label": "Official USYC smart contracts",
           "url": "https://usyc.docs.hashnote.com/overview/smart-contracts"
@@ -593,8 +612,8 @@
         }
       ],
       "evidence": "At exact cutoff Ethereum block 25526129, six accounts had uint256.max minter allowance: Teller 0xeE35..., TokenMinterV2 0xfd78..., TokenManagerProxy 0x6A41..., PriceReporterProxy 0x9fde..., FundAdmin 0xDbE0..., and EOA 0x85fB.... At BSC block 109812367, TokenMinterV2 0xfd78... and EOA 0x85fB... had uint256.max allowance. The shared FundAdmin could immediately set new max allowances; chain-local RolesAuthority-owner EOAs could change FundAdmin permissions. Ethereum and BSC UUPS implementations had separate no-delay token-owner EOAs. At Solana slot 432714278, the mint/freeze PDA was controlled by the documented Teller and Permissions program, whose ProgramData retained one no-delay upgrade EOA. No source supports the prior MPC/HSM custody assertion, so it is not repeated.",
-      "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-13"
+      "reviewer": "Codex Safety Score V9 registry pass / SOL-IV calibration",
+      "reviewedAt": "2026-07-15"
     }
   },
   "deploymentModel": "native-multichain",

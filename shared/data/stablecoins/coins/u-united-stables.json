@@ -392,8 +392,15 @@
         "evidence": "Ethereum and BSC token ProxyAdmins are immediately owned by chain-local instances of the same 2/4 Safe. Tron token ProxyAdmin and AutoOwner upgrade authority are immediately controlled by the native 2/4 account. No deployment enforces a timelock; the failure-domain keys preserve the three independent chain-local authorities."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
+        {
+          "label": "United Stables issuer terms and regulatory disclosures",
+          "url": "https://u.tech/terms/"
+        },
         {
           "label": "U website",
           "url": "https://u.tech/"
@@ -416,8 +423,8 @@
         }
       ],
       "evidence": "Deployment-wide review covered Ethereum, BSC, and Tron token proxies plus their AutoOwner mint endpoints. Ethereum and BSC use chain-local 2/4 Safe instances with identical signers; Tron uses a native 2/4 account permission. The owner paths can mint directly, change AutoOwner limits, and immediately administer the mixed transparent/UUPS upgrade surfaces. AutoOwner's 20,000,000 U limit is per call without a cumulative or time-window bound. Current Safe/API, explorer source, storage, owner, permission, and whitelist reads were pinned on 2026-07-13.",
-      "reviewer": "Codex Safety Score V9 data research",
-      "reviewedAt": "2026-07-13"
+      "reviewer": "Codex Safety Score V9 data research / SOL-IV calibration",
+      "reviewedAt": "2026-07-15"
     }
   },
   "deploymentModel": "native-multichain",

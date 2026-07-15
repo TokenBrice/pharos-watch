@@ -367,8 +367,19 @@
         "evidence": "At height 32226495, marker uylds.fcc had allow_governance_control=true and marker-module governance enabled. Provenance proposal-handler source permits governance to change marker access and supply and to replace native chain logic through a software-upgrade proposal. The fastest enforced governance path is the 86,400-second expedited voting period; normal voting is 172,800 seconds. Governance can raise the chain marker limits or authorize a different mint surface."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
       "sources": [
+        {
+          "label": "Figure Certificate Company 2025 Form 10-K",
+          "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000006/fcc-20251231.htm"
+        },
+        {
+          "label": "Figure Certificate Company Q1 2026 Form 10-Q",
+          "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000008/fcc-20260331.htm"
+        },
         {
           "label": "Solana RPC",
           "url": "https://api.mainnet-beta.solana.com"
@@ -395,8 +406,8 @@
         }
       ],
       "evidence": "At the fixed cutoff, Solana slot 432714278 and Provenance height 32226495 resolved every tracked mint authority. Solana used one external SPL mint key and immutable shared token code. Provenance marker uylds.fcc was active, restricted, not supply-fixed, and governance-enabled; its exact ACCESS_MINT set was one 4-of-6 group policy plus four individual BaseAccounts. Bank supply was 503,748,076.285525 YLDS and the marker module's chain limit was 1,000,000,000,000.000001 YLDS. Chain governance can change marker supply controls or native runtime after the fastest one-day expedited vote.",
-      "reviewer": "Codex Safety Score V9 evidence audit",
-      "reviewedAt": "2026-07-13"
+      "reviewer": "Codex Safety Score V9 evidence audit / SOL-IV calibration",
+      "reviewedAt": "2026-07-15"
     }
   },
   "deploymentModel": "native-multichain",

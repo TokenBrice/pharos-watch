@@ -208,6 +208,9 @@
         "evidence": "At block 25526610, the EIP-1967 implementation slot resolved to 0xC181Faf98a90993BBa78Af4A9d5DDe37D3DbAdAF, while the admin and beacon slots were zero. The implementation's proxiableUUID() returned the EIP-1967 implementation slot."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -219,9 +222,9 @@
           "url": "https://etherscan.io/address/0xaf6186b3521b60e27396b5d23b48abc34bf585c5"
         }
       ],
-      "evidence": "At Ethereum block 25526610, the UUPS proxy implementation was 0xC181Faf98a90993BBa78Af4A9d5DDe37D3DbAdAF with zero EIP-1967 admin and beacon slots. The implementation returned the standard proxiableUUID and exposes upgradeToAndCall guarded by UPGRADER_ROLE. Complete RoleGranted/RoleRevoked enumeration from proxy creation block 23237330 identifies EOA 0x83393a... as the sole minter and EOA 0x191af8... as both default admin and upgrader, with no revocations; current hasRole and eth_getCode reads confirmed both identities.",
-      "reviewer": "Codex Safety Score V9 data research",
-      "reviewedAt": "2026-07-13"
+      "evidence": "At Ethereum block 25526610, the UUPS proxy implementation was 0xC181Faf98a90993BBa78Af4A9d5DDe37D3DbAdAF with zero EIP-1967 admin and beacon slots. The implementation returned the standard proxiableUUID and exposes upgradeToAndCall guarded by UPGRADER_ROLE. Complete RoleGranted/RoleRevoked enumeration from proxy creation block 23237330 identifies EOA 0x83393a... as the sole minter and EOA 0x191af8... as both default admin and upgrader, with no revocations; current hasRole and eth_getCode reads confirmed both identities. On 2026-07-15, Gate's GUSD product page was rechecked: it makes issuer reserve claims but provides no dated recurring independent supply-to-reserve report or prudential issuer registry, so reconciliation remains unknown and the no-delay issuer-controlled mint is economically unbounded.",
+      "reviewer": "Codex Safety Score V9 data research / SOL-IV calibration",
+      "reviewedAt": "2026-07-15"
     }
   },
   "custodyModel": "cex",

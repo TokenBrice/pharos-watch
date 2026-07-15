@@ -199,8 +199,19 @@
         "evidence": "At Ethereum block 25530270, owner() on the USD0 token, DaoCollateral, and RegistryAccess ProxyAdmins (0xc15091d3..., 0xc6b60c..., and 0x77c5d6...) returned 0xaaDa24.... Safe API returned an 8-of-15 threshold, no modules, zero guard, and the standard fallback handler."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
+        {
+          "label": "Usual FAQ on USD0 reserve attestations",
+          "url": "https://docs.usual.money/start-here/faq"
+        },
+        {
+          "label": "ESMA current electronic-money-token register",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
         {
           "label": "USD0 docs",
           "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0"
@@ -215,8 +226,8 @@
         }
       ],
       "evidence": "At Ethereum block 25530270, DaoCollateral held keccak256('USD0_MINT') while the prior SwapperEngine address did not and its current verified implementation exposed no mint function. USD0, DaoCollateral, and RegistryAccess are transparent proxies with distinct ProxyAdmins owned by the 8-of-15 0xaaDa24 Safe. RegistryAccess DEFAULT_ADMIN remains the separate 8-of-15 0x6e9d65 Safe. Contract-based issuance requires no off-chain mint reconciliation; no mint-authority incident is recorded in the reviewed sources.",
-      "reviewer": "Codex V9 control curation",
-      "reviewedAt": "2026-07-14"
+      "reviewer": "Codex V9 control curation / SOL-IV calibration",
+      "reviewedAt": "2026-07-15"
     }
   },
   "collateral": "Tokenized short-term U.S. Treasury bills and reverse repos, primarily via Hashnote USYC; also M by M0, USDtb by Ethena (via UsualUSDtb wrapper), and indirect USDC gateway liquidity",

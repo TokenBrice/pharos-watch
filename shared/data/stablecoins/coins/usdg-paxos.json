@@ -268,8 +268,23 @@
         "evidence": "At Ethereum block 25526176, SupplyControl owner()/defaultAdmin() and USDG defaultAdmin() returned this TimelockController, whose getMinDelay() returned 86400 seconds. The USDG EIP-1967 implementation slot resolved to 0xfacd5ff359adf87822374275699dd518aaf9a65f and its admin slot was zero. Paxos documents the UUPS design, and the verified USDG implementation restricts _authorizeUpgrade to DEFAULT_ADMIN_ROLE. Prior role review found the Paxos admin EOA as the TimelockController's sole proposer and executor."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
       "sources": [
+        {
+          "label": "USDG May 2026 KPMG reserve attestation",
+          "url": "https://framerusercontent.com/assets/o61pz3wuO4LmxEuDTUxmINc09qc.pdf"
+        },
+        {
+          "label": "MAS Paxos Digital Singapore institution record",
+          "url": "https://eservices.mas.gov.sg/fid/institution/detail/420524-PAXOS-DIGITAL-SINGAPORE-PTE-LTD"
+        },
+        {
+          "label": "ESMA MiCA electronic-money-token issuer register",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
         {
           "label": "Paxos USDG mainnet docs",
           "url": "https://docs.paxos.com/guides/stablecoin/usdg/mainnet"
@@ -280,8 +295,8 @@
         }
       ],
       "evidence": "At Ethereum block 25294757: supplyControl() = 0x9a7164... (contract confirmed); SupplyControl owner() and defaultAdmin() = 0x9036566... (OZ TimelockController, 24h delay, proposer+executor = Paxos EOA 0x3Af3e85...); eth_getCode on Paxos EOA confirms no bytecode. Data drift: prior data listed the Paxos EOA as the SupplyControl owner; the TimelockController has since been interposed. All controls updated to current chain state.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "reviewer": "Claude Phase 0c continuation / SOL-IV calibration",
+      "reviewedAt": "2026-07-15"
     }
   },
   "deploymentModel": "native-multichain",

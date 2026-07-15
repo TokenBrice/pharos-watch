@@ -298,8 +298,19 @@
         "evidence": "RLUSD proxy initialization calldata assigns UPGRADER_ROLE to 0x863c. At block 25530195, hasRole(UPGRADER_ROLE, 0x863c) returned true; the verified Ripple MultiSign reports quorum 7 and the same 12-signer set as the role-admin MultiSign."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
       "sources": [
+        {
+          "label": "RLUSD May 2026 Deloitte reserve attestation",
+          "url": "https://cdn.sanity.io/files/ior4a5y3/production/00bb3899f244c392ab77e55e65dee33cf271dfce.pdf/RLUSD_Attestation_Report_-_May_2026_Final.pdf"
+        },
+        {
+          "label": "NYDFS virtual-currency businesses and greenlist",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
+        },
         {
           "label": "Ripple stablecoin",
           "url": "https://ripple.com/solutions/stablecoin/"
@@ -314,8 +325,8 @@
         }
       ],
       "evidence": "ETH: MINTER_ROLE holder is 0x97e9 (Ripple MultiSign, quorum 2 of 31). The proxy creation calldata names 0x66fc as DEFAULT_ADMIN_ROLE and 0x863c as UPGRADER_ROLE; current hasRole reads at block 25530195 confirm both assignments, and both verified MultiSign contracts report quorum 7 of 12. XRPL: issuer rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De has its master key active and no signer list.",
-      "reviewer": "Codex V9 control curation",
-      "reviewedAt": "2026-07-14"
+      "reviewer": "Codex V9 control curation / SOL-IV calibration",
+      "reviewedAt": "2026-07-15"
     }
   },
   "custodyModel": "institutional-regulated",

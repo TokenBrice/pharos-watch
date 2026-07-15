@@ -324,11 +324,22 @@
         "evidence": "Solana getAccountInfo for AUSD Token-2022 mint AUSD1jCcCyPLybk1YnvPWsHQSrZ46dxwoMniN4N2UEB9 returned mintAuthority EARe2Bbuv3y8K1tvmGfjxTTjE6cXKSkR96kM4RURLgbP, freezeAuthority 6QZAZqTmvvSCNLsJvwtkvk4FjbxstS7p2TQR9duwPSuH, and permanent delegate 6HAFLav8Qn2QfeSRVPLwtmPKHMm8f93uWSQMp2n1MyoU."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
           "label": "Agora docs",
           "url": "https://docs.agora.finance/"
+        },
+        {
+          "label": "Agora monthly reserve attestations",
+          "url": "https://docs.agora.finance/developer/transparency"
+        },
+        {
+          "label": "OCC digital-asset licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html"
         },
         {
           "label": "Etherscan — AUSD proxy",
@@ -339,9 +350,9 @@
           "url": "https://github.com/agora-finance"
         }
       ],
-      "evidence": "Ethereum RPC at block 25530324 enumerated one MINTER_ROLE holder, one BRIDGE_MINTER_ROLE holder, one RATE_LIMIT_MANAGER_ROLE holder, and one ACCESS_CONTROL_MANAGER_ROLE holder. The custom proxy getter and verified AgoraProxyAdmin establish the upgrade path through the same access-control EOA. The Solana Token-2022 mint authority remains the separately reviewed EARe2... account.",
-      "reviewer": "Codex Safety Score V9 CTRL curation",
-      "reviewedAt": "2026-07-14",
+      "evidence": "Ethereum RPC at block 25530324 enumerated one MINTER_ROLE holder, one BRIDGE_MINTER_ROLE holder, one RATE_LIMIT_MANAGER_ROLE holder, and one ACCESS_CONTROL_MANAGER_ROLE holder. The custom proxy getter and verified AgoraProxyAdmin establish the upgrade path through the same access-control EOA. The Solana Token-2022 mint authority remains the separately reviewed EARe2... account. On 2026-07-15, Agora's transparency index was rechecked and listed Grant Thornton monthly reserve attestations through May 2026. The OCC registry still listed Agora National Trust Bank only as a pending application received April 20, 2026; no operative prudential charter was found. AUSD therefore earns attestation-only periodic reconciliation, not the proposed prudential tier, and its issuer-controlled rate limits and mint roles are economically unbounded.",
+      "reviewer": "Codex Safety Score V9 CTRL curation / SOL-IV calibration",
+      "reviewedAt": "2026-07-15",
       "disposition": "scoreable"
     }
   },
