@@ -6,6 +6,16 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-07-13 to 2026-07-15
+
+USD3 joins coverage, exact liquidity evidence expands, and yield filters show every qualifying result.
+
+- **USD3 coverage**: USD3 joins active tracking as a NAV-bearing senior-credit asset, with sourced issuer, reserve, mint, yield, redemption, and Ethereum flow coverage.
+- **Exact pool models**: Exact StableSwap simulations now cover Curve and hook-free Balancer pools, turning eligible pool evidence into more precise exit-liquidity capacity estimates.
+- **Resolved exit routes**: Reviewed redemption rails now identify their concrete output assets, allowing eligible routes to resolve, value their exit capacity, and contribute evidence without guessing.
+- **Corrected depeg history**: A reviewed cNGN recovery event now links to its canonical incident, keeping the public depeg timeline aligned with the underlying market record.
+- **Yield result completeness**: Yield rankings now retain every opportunity that passes selected filters, making the displayed opportunity set match the user's chosen criteria.
+
 ## 2026-07-06 to 2026-07-12
 
 The coin page completes its redesign, PharosWatchBot adds personalized daily recaps, and ~$189B of reserves go live.
