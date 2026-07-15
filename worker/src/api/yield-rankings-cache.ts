@@ -552,6 +552,34 @@ function hasCompatibleSafetyIdentity(
   return published != null && safetyScoreV8MethodologyIdentitiesMatch(published, identity);
 }
 
+function removeSafetyDerivedSourceRisk(sourceRisk: YieldRanking["sourceRisk"]): YieldRanking["sourceRisk"] {
+  if (sourceRisk == null) return sourceRisk;
+
+  const { opportunityRisk: _opportunityRisk, ...independentSourceRisk } = sourceRisk;
+  return {
+    ...independentSourceRisk,
+    underlyingSafetyScore: null,
+    trancheSafetyScore: null,
+    trancheSafetyPenalty: null,
+  };
+}
+
+function removeSafetyDerivedRankChangeAttribution(
+  attribution: YieldRanking["rankChangeAttribution"],
+): YieldRanking["rankChangeAttribution"] {
+  if (attribution == null) return attribution;
+
+  return {
+    ...attribution,
+    previousPys: null,
+    pysDelta: null,
+    primaryDriver: attribution.primaryDriver === "stablecoin-safety" ? null : attribution.primaryDriver,
+    driverContributions: attribution.driverContributions
+      ? { ...attribution.driverContributions, stablecoinSafety: null }
+      : attribution.driverContributions,
+  };
+}
+
 function degradeYieldRankingsSafety(
   payload: YieldRankingsResponse,
   reason: "safety-snapshot-unavailable" | "safety-identity-missing" | "safety-identity-mismatch",
@@ -565,6 +593,12 @@ function degradeYieldRankingsSafety(
     pharosYieldScore: null,
     pysNullReason: "safety-unrated" as const,
     yieldToRisk: null,
+    sourceRisk: removeSafetyDerivedSourceRisk(row.sourceRisk),
+    altSources: row.altSources.map((alternate) => ({
+      ...alternate,
+      sourceRisk: removeSafetyDerivedSourceRisk(alternate.sourceRisk),
+    })),
+    rankChangeAttribution: removeSafetyDerivedRankChangeAttribution(row.rankChangeAttribution),
     warningSignals: row.warningSignals.includes("safety-unrated")
       ? row.warningSignals
       : [...row.warningSignals, "safety-unrated"],
