@@ -60,10 +60,12 @@ const DEFAULT_BUDGETS = {
   // Yield source-role / alternate-summary contracts then pushed the generated
   // API reference helper to ~1.33 MB. Night Watch publication and recovery
   // contracts measured 1,350,636 bytes; the July 2026 API-reference expansion
-  // dependency provenance contracts measured 1,380,021 bytes. Retain about
-  // 10 KB of headroom so the next public schema expansion still has to
-  // re-ratchet deliberately.
-  largestTxtBytes: 1_390_000,
+  // dependency provenance contracts measured 1,380,021 bytes. The FORGE III
+  // dark V9 consumer contracts (the versioned report-cards/v9 endpoint plus its
+  // ReportCardsV9 schema and dependency-graph shape) then measured 1,391,012
+  // bytes. Retain about 10 KB of headroom so the next public schema expansion
+  // still has to re-ratchet deliberately.
+  largestTxtBytes: 1_401_000,
   // Production Pages builds hydrate mirrors from live API data. USDC's detail
   // page now carries richer SEO JSON-LD plus the inline critical-CSS block
   // (~68 KB raw) that replaced the render-blocking global stylesheet, so the
