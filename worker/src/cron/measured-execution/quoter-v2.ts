@@ -246,10 +246,10 @@ export async function quoteQuoterV2Requests(input: {
       for (const result of initial) resultsByLabel.set(result.label, result);
 
       const failedCalls = calls.filter((call) => !resultsByLabel.get(call.label)?.success);
-      if (failedCalls.length > 0) {
+      for (const failedCall of failedCalls) {
         const retry = await executeAdaptiveChunk({
           chain,
-          calls: failedCalls,
+          calls: [failedCall],
           blockNumber: input.blockNumber,
           chainRpcs: input.chainRpcs,
           signal: input.signal,

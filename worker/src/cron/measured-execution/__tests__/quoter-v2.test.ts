@@ -293,4 +293,31 @@ describe("QuoterV2 pinned-block replay proofs", () => {
       8, 4, 2, 2, 4, 2, 2,
     ]);
   });
+
+  it("retries failed inner quotes as serialized singletons", async () => {
+    const fixture = REPLAYS[0]!;
+    const target = makeTarget(fixture);
+    const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
+      async (_chain: string, calls: Array<{ label: string }>) =>
+        calls.map((call, index) => ({
+          label: call.label,
+          success: calls.length === 1 || index === 0,
+          returnData: calls.length === 1 || index === 0 ? fixture.quoteReturnData : "0x",
+        })),
+    );
+
+    const outcomes = await quoteQuoterV2Requests({
+      requests: Array.from({ length: 3 }, () => ({
+        target,
+        inputUsd: 1_000_000,
+        endpointAddress: deployment.endpointAddress,
+      })),
+      blockNumber: fixture.blockNumber,
+      chainRpcs: new Map(),
+    });
+
+    expect(outcomes.every((outcome) => outcome.point != null)).toBe(true);
+    expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mock.calls.map((call) => call[1].length)).toEqual([3, 1, 1]);
+  });
 });
