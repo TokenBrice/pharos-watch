@@ -27,10 +27,10 @@ Options:
 const DEFAULT_PARAMETER_PATHS = [
   "semantic.evidence.ceilings.adequate",
   "semantic.evidence.ceilings.limited",
-  // activeDepegCaps[0].limit sits at the top of its grade band, so any positive
-  // perturbation violates the band-coupling invariant (VER-005); it is not a
-  // default-runnable path. Test it explicitly with a negative --delta if needed.
-  "semantic.formula.activeDepegCaps[1].limit",
+  // activeDepegCaps[0] and [1] limits sit at the top of their grade bands, so
+  // any positive perturbation violates the band-coupling invariant (VER-005);
+  // they are not default-runnable paths. Test them explicitly with a negative
+  // --delta if needed.
   "semantic.formula.compensabilityHeadroom",
   "semantic.formula.pegExponent",
   "semantic.formula.trackRecordCeilings[0].limit",
