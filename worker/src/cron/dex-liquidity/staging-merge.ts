@@ -15,7 +15,6 @@ import { isPlausibleDexObservationPrice } from "./price-sanity";
 import type { CgNewPool, GtNewPool, LiquidityMetrics, DexPriceObs } from "./types";
 import {
   buildPoolIdentity,
-  countPoolIdentityKeys,
   createKnownPoolIdentityIndex,
   getIdentityDedupReason,
   registerKnownPoolIdentity,
@@ -118,21 +117,25 @@ function hasMixedCaseNativeIdentity(row: StagedPoolRow): boolean {
   return values.some((value) => value !== value.toLowerCase());
 }
 
-function collectSupersededLegacyLowercaseRows(rows: readonly StagedPoolRow[]): ReadonlySet<StagedPoolRow> {
+function collectSupersededLegacyLowercaseRows(rows: readonly (StagedPoolRow | undefined)[]): WeakSet<StagedPoolRow> {
   const correctedByIdentity = new Map<string, number>();
   for (const row of rows) {
+    if (!row) continue;
     const key = legacyLowercaseIdentityKey(row);
     if (!key || !hasMixedCaseNativeIdentity(row)) continue;
     correctedByIdentity.set(key, Math.max(correctedByIdentity.get(key) ?? Number.NEGATIVE_INFINITY, row.refreshed_at));
   }
 
-  return new Set(
-    rows.filter((row) => {
-      const key = legacyLowercaseIdentityKey(row);
-      if (!key || hasMixedCaseNativeIdentity(row)) return false;
-      return (correctedByIdentity.get(key) ?? Number.NEGATIVE_INFINITY) > row.refreshed_at;
-    }),
-  );
+  const supersededRows = new WeakSet<StagedPoolRow>();
+  for (const row of rows) {
+    if (!row) continue;
+    const key = legacyLowercaseIdentityKey(row);
+    if (!key || hasMixedCaseNativeIdentity(row)) continue;
+    if ((correctedByIdentity.get(key) ?? Number.NEGATIVE_INFINITY) > row.refreshed_at) {
+      supersededRows.add(row);
+    }
+  }
+  return supersededRows;
 }
 
 function readCgTickerOrderbookMetadata(rawJson: string | null): CgTickerOrderbookMetadata | null {
@@ -174,7 +177,22 @@ function getStablecoinIdentityIndex(
   return created;
 }
 
-function poolIdentityRegistrationKey(identity: ReturnType<typeof buildPoolIdentity>): string {
+type StagedPoolIdentity = ReturnType<typeof buildPoolIdentity>;
+
+interface StagedPoolEntry {
+  dexId: string;
+  poolType: string;
+  qualityMultiplier: number;
+  identity: StagedPoolIdentity;
+  confidence: number;
+}
+
+interface StagedPoolIdentityCounts {
+  derived: Map<string, number>;
+  wildcard: Map<string, number>;
+}
+
+function poolIdentityRegistrationKey(identity: StagedPoolIdentity): string {
   return JSON.stringify([identity.exactPoolKey, identity.derivedMatchKey, identity.optionalWildcardKey]);
 }
 
@@ -230,6 +248,63 @@ function resolveStagedPoolProfile(stagedPool: StagedPool): {
     poolType: stagedPool.poolType ?? (stagedPool.isStable ? "stable" : "amm"),
     qualityMultiplier: stagedPool.qualityMultiplier ?? getGtDexQuality(dexId),
   };
+}
+
+function hasInvalidTvl(stagedPool: StagedPool): boolean {
+  return (
+    stagedPool.tvlUsd == null ||
+    !Number.isFinite(stagedPool.tvlUsd) ||
+    stagedPool.tvlUsd < 0 ||
+    stagedPool.tvlUsd > STAGED_POOL_MAX_TVL_USD
+  );
+}
+
+function buildStagedPoolEntry(stagedPool: StagedPool, nowSec: number): StagedPoolEntry {
+  const profile = resolveStagedPoolProfile(stagedPool);
+  // Orderbook ids retain their prefix so downstream exact-key detection can
+  // distinguish them from legacy exchange-only rows.
+  const poolAddressOrId =
+    stagedPool.chain === "orderbook"
+      ? stagedPool.poolId
+      : stagedPool.poolId.includes(":")
+        ? stagedPool.poolId.split(":").slice(1).join(":")
+        : stagedPool.poolId;
+  const identity = buildPoolIdentity({
+    chain: stagedPool.chain,
+    protocol: profile.dexId,
+    poolAddressOrId,
+    tokenAddresses: [stagedPool.baseToken ?? "", stagedPool.quoteToken ?? ""],
+    poolType: profile.poolType,
+    feeTierBps: stagedPool.feeTier,
+    isStable: stagedPool.isStable,
+  });
+  const ageHours = (nowSec - stagedPool.refreshedAt) / 3600;
+
+  return {
+    dexId: profile.dexId,
+    poolType: profile.poolType,
+    qualityMultiplier: profile.qualityMultiplier,
+    identity,
+    confidence: stagedPoolConfidence(ageHours),
+  };
+}
+
+function incrementStagedIdentityCounts(
+  countsByStablecoin: Map<string, StagedPoolIdentityCounts>,
+  stablecoinId: string,
+  identity: StagedPoolIdentity,
+): void {
+  const counts = countsByStablecoin.get(stablecoinId) ?? {
+    derived: new Map<string, number>(),
+    wildcard: new Map<string, number>(),
+  };
+  if (identity.derivedMatchKey) {
+    counts.derived.set(identity.derivedMatchKey, (counts.derived.get(identity.derivedMatchKey) ?? 0) + 1);
+  }
+  if (identity.optionalWildcardKey) {
+    counts.wildcard.set(identity.optionalWildcardKey, (counts.wildcard.get(identity.optionalWildcardKey) ?? 0) + 1);
+  }
+  countsByStablecoin.set(stablecoinId, counts);
 }
 
 function requiresAuthoritativeProtocolConfirmation(
@@ -291,7 +366,7 @@ export async function mergeStagedPools(
   skipDimensions: StagedPoolSkipDimension[];
   priceObservations: Map<string, DexPriceObs[]>;
 }> {
-  let rows: StagedPoolRow[];
+  let rows: Array<StagedPoolRow | undefined>;
   try {
     const result = await db
       .prepare(
@@ -333,18 +408,10 @@ export async function mergeStagedPools(
   let authoritativeProtocolSkipped = 0;
   const skipDimensions = new Map<string, StagedPoolSkipDimension>();
   const supersededLegacyLowercaseRows = collectSupersededLegacyLowercaseRows(rows);
-
-  const stagedEntries: Array<{
-    stagedPool: StagedPool;
-    dexId: string;
-    poolType: string;
-    qualityMultiplier: number;
-    orderbookMetadata: CgTickerOrderbookMetadata | null;
-    identity: ReturnType<typeof buildPoolIdentity>;
-    confidence: number;
-  }> = [];
+  const stagedIdentityCountsByStablecoin = new Map<string, StagedPoolIdentityCounts>();
 
   for (const row of rows) {
+    if (!row) continue;
     if (supersededLegacyLowercaseRows.has(row)) {
       skippedCount++;
       incrementSkipDimension(skipDimensions, "legacy_lowercase_identity_superseded", row);
@@ -356,67 +423,32 @@ export async function mergeStagedPools(
       incrementSkipDimension(skipDimensions, "malformed_identity", row);
       continue;
     }
-    if (
-      stagedPool.tvlUsd == null ||
-      !Number.isFinite(stagedPool.tvlUsd) ||
-      stagedPool.tvlUsd < 0 ||
-      stagedPool.tvlUsd > STAGED_POOL_MAX_TVL_USD
-    ) {
+    if (hasInvalidTvl(stagedPool)) {
       skippedCount++;
       incrementSkipDimension(skipDimensions, "invalid_tvl", stagedPool, { threshold: STAGED_POOL_MAX_TVL_USD });
       continue;
     }
 
-    const profile = resolveStagedPoolProfile(stagedPool);
-    const orderbookMetadata =
-      stagedPool.source === "cg_tickers" ? readCgTickerOrderbookMetadata(stagedPool.rawJson) : null;
-    // For orderbook pools, preserve the full poolId so that
-    // isTrustworthyExactPoolId recognises the "orderbook:" prefix and
-    // registers a usable exact key for downstream dedup.
-    const poolAddressOrId =
-      stagedPool.chain === "orderbook"
-        ? stagedPool.poolId
-        : stagedPool.poolId.includes(":")
-          ? stagedPool.poolId.split(":").slice(1).join(":")
-          : stagedPool.poolId;
-    const identity = buildPoolIdentity({
-      chain: stagedPool.chain,
-      protocol: profile.dexId,
-      poolAddressOrId,
-      tokenAddresses: [stagedPool.baseToken ?? "", stagedPool.quoteToken ?? ""],
-      poolType: profile.poolType,
-      feeTierBps: stagedPool.feeTier,
-      isStable: stagedPool.isStable,
-    });
-    const ageHours = (nowSec - stagedPool.refreshedAt) / 3600;
-    const confidence = stagedPoolConfidence(ageHours);
-    stagedEntries.push({
-      stagedPool,
-      dexId: profile.dexId,
-      poolType: profile.poolType,
-      qualityMultiplier: profile.qualityMultiplier,
-      orderbookMetadata,
-      identity,
-      confidence,
-    });
-  }
-  const stagedEntriesByStablecoin = new Map<string, typeof stagedEntries>();
-  for (const entry of stagedEntries) {
+    const entry = buildStagedPoolEntry(stagedPool, nowSec);
     if (entry.confidence <= 0) continue;
-    const entries = stagedEntriesByStablecoin.get(entry.stagedPool.stablecoinId) ?? [];
-    entries.push(entry);
-    stagedEntriesByStablecoin.set(entry.stagedPool.stablecoinId, entries);
-  }
-  const stagedIdentityCountsByStablecoin = new Map<string, ReturnType<typeof countPoolIdentityKeys>>();
-  for (const [stablecoinId, entries] of stagedEntriesByStablecoin) {
-    stagedIdentityCountsByStablecoin.set(stablecoinId, countPoolIdentityKeys(entries.map((entry) => entry.identity)));
+    incrementStagedIdentityCounts(stagedIdentityCountsByStablecoin, stagedPool.stablecoinId, entry.identity);
   }
   const acceptedStagedIndexesByStablecoin = new Map<string, KnownPoolIdentityIndex>();
-  const acceptedStagedIdentities: Array<ReturnType<typeof buildPoolIdentity>> = [];
+  const acceptedStagedIdentities: StagedPoolIdentity[] = [];
   const acceptedStagedIdentityKeys = new Set<string>();
 
-  for (const entry of stagedEntries) {
-    const { stagedPool, dexId, poolType, qualityMultiplier, orderbookMetadata, identity, confidence } = entry;
+  for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+    const row = rows[rowIndex];
+    rows[rowIndex] = undefined;
+    if (!row || supersededLegacyLowercaseRows.has(row)) continue;
+
+    const stagedPool = toStagedPool(row);
+    // These validation skips were recorded during the identity-count pass to
+    // preserve existing skip-dimension ordering.
+    if (!stagedPool.poolId || !stagedPool.stablecoinId || hasInvalidTvl(stagedPool)) continue;
+
+    const entry = buildStagedPoolEntry(stagedPool, nowSec);
+    const { dexId, poolType, qualityMultiplier, identity, confidence } = entry;
     const normalizedProtocol = normalizeProtocol(stagedPool.protocol || dexId);
 
     // Compute confidence and adjusted TVL early — needed for price observation gate
@@ -528,6 +560,8 @@ export async function mergeStagedPools(
     const firstColonIndex = stagedPool.poolId.indexOf(":");
     const address = firstColonIndex >= 0 ? stagedPool.poolId.slice(firstColonIndex + 1) : stagedPool.poolId;
     const maturityDays = stagedPoolMaturityDays(stagedPool.discoveredAt, nowSec);
+    const orderbookMetadata =
+      stagedPool.source === "cg_tickers" ? readCgTickerOrderbookMetadata(stagedPool.rawJson) : null;
 
     if (stagedPool.source === "cg_onchain") {
       pushPool(cgPoolMap, stagedPool.stablecoinId, {
@@ -604,6 +638,7 @@ export async function mergeStagedPools(
           }),
     });
   }
+  rows.length = 0;
 
   if (uniqueDerivedIdentitySkipped > 0) {
     console.log(`[dex-liquidity] Skipped ${uniqueDerivedIdentitySkipped} staged pools via unique derived identity`);
@@ -629,9 +664,19 @@ export async function mergeStagedPools(
   for (const identity of acceptedStagedIdentities) {
     registerKnownPoolIdentity(knownPoolIndex, identity);
   }
+  acceptedStagedIdentities.length = 0;
+  acceptedStagedIdentityKeys.clear();
+  acceptedStagedIndexesByStablecoin.clear();
+  stagedIdentityCountsByStablecoin.clear();
 
-  if (cgPoolMap.size > 0) await mergeCgPools(metrics, cgPoolMap, db);
-  if (gtPoolMap.size > 0) await mergeGtPools(metrics, gtPoolMap, db);
+  if (cgPoolMap.size > 0) {
+    await mergeCgPools(metrics, cgPoolMap, db);
+    cgPoolMap.clear();
+  }
+  if (gtPoolMap.size > 0) {
+    await mergeGtPools(metrics, gtPoolMap, db);
+    gtPoolMap.clear();
+  }
 
   return {
     mergedCount,

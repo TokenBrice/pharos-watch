@@ -43,6 +43,19 @@ vi.mock("../dex-liquidity/process-pools", () => ({
   processPoolMetrics: vi.fn(() => new Map()),
 }));
 
+vi.mock("../dex-liquidity/staging-merge", () => ({
+  mergeStagedPools: vi.fn(async () => ({
+    mergedCount: 0,
+    skippedCount: 0,
+    skippedByExactIdentityCount: 0,
+    skippedByUniqueDerivedIdentityCount: 0,
+    skippedByOptionalWildcardIdentityCount: 0,
+    skippedByAuthoritativeProtocolCount: 0,
+    skipDimensions: [],
+    priceObservations: new Map(),
+  })),
+}));
+
 vi.mock("../dex-liquidity/scoring", () => ({
   computeStablecoinScores: vi.fn(async () => ({
     scores: new Map([["usdt-tether", { coverageClass: "primary", tvl: 0 }]]),
@@ -115,6 +128,7 @@ import { buildCurveLookups, fetchDataSources, buildKnownPoolAddresses } from "..
 import { fetchAerodromeData, fetchUniV3Data } from "../dex-liquidity/subgraph-source-families";
 import { fetchFluidPools } from "../dex-liquidity/fetch-fluid";
 import { fetchRaydiumPools } from "../dex-liquidity/fetch-raydium";
+import { fetchPancakeSwapPools } from "../dex-liquidity/fetch-pancakeswap";
 import { computeDepthStability, computeDexPrices, computeStablecoinScores } from "../dex-liquidity/scoring";
 import { persistScores, writeHistoricalSnapshots } from "../dex-liquidity/persistence";
 import {
@@ -123,6 +137,7 @@ import {
 } from "../dex-liquidity/orchestrator";
 import { buildSymbolLookups } from "../dex-liquidity/pool-helpers";
 import { processPoolMetrics } from "../dex-liquidity/process-pools";
+import { mergeStagedPools } from "../dex-liquidity/staging-merge";
 
 const db = {
   prepare: () => ({
@@ -457,16 +472,9 @@ describe("syncDexLiquidity", () => {
     });
     const progressUpdates: CronProgressUpdate[] = [];
 
-    const result = await syncDexLiquidity(
-      db,
-      "graph-key",
-      undefined,
-      undefined,
-      undefined,
-      async (update) => {
-        progressUpdates.push(update);
-      },
-    );
+    const result = await syncDexLiquidity(db, "graph-key", undefined, undefined, undefined, async (update) => {
+      progressUpdates.push(update);
+    });
 
     const knownPoolCalls = vi.mocked(buildKnownPoolAddresses).mock.calls;
     const processPoolCalls = vi.mocked(processPoolMetrics).mock.calls;
@@ -491,6 +499,175 @@ describe("syncDexLiquidity", () => {
       rawPoolCount,
       retainedPoolCount: 1,
       skippedUntrackedCount: rawPoolCount - 1,
+    });
+  });
+
+  it("releases consumed source graphs before materializing staged pools", async () => {
+    const lookups = buildSymbolLookups();
+    const trackedEntry = [...lookups.chainAddressToId].find(
+      ([key, stablecoinId]) => key.startsWith("ethereum:") && stablecoinId === "usdt-tether",
+    );
+    const quoteEntry = [...lookups.chainAddressToId].find(
+      ([key, stablecoinId]) => key.startsWith("ethereum:") && stablecoinId === "usdc-circle",
+    );
+    expect(trackedEntry).toBeDefined();
+    expect(quoteEntry).toBeDefined();
+    const chain = "ethereum";
+    const address = trackedEntry![0].slice("ethereum:".length);
+    const quoteAddress = quoteEntry![0].slice("ethereum:".length);
+    const primaryPool: LlamaPool = {
+      pool: "primary-pool",
+      chain,
+      project: "memory-dex",
+      symbol: "TRACKED-QUOTE",
+      tvlUsd: 1_000_000,
+      volumeUsd1d: 50_000,
+      volumeUsd7d: 300_000,
+      stablecoin: false,
+      underlyingTokens: [address, quoteAddress],
+      apyBase: null,
+      apyReward: null,
+      apy: 0,
+      sigma: 0,
+      exposure: "multi",
+      count: 20,
+    };
+    const sourceData = {
+      pools: [primaryPool],
+      dexProjects: new Set(["memory-dex"]),
+      protocolTvlCaps: new Map<string, number>(),
+      curvePayloads: [],
+      graphApiKey: "graph-key",
+      dlYieldsAvailable: true,
+      dlProtocolsAvailable: true,
+    };
+    const directPool: DexApiPool = {
+      source: "fluid",
+      chain,
+      poolAddress: "0x1111111111111111111111111111111111111111",
+      poolType: "fluid-dex",
+      tokens: [
+        { address, symbol: "TRACKED", decimals: 18 },
+        { address: quoteAddress, symbol: "QUOTE", decimals: 18 },
+      ],
+      price: 1,
+      tvlUsd: 1_000_000,
+      volume24hUsd: 50_000,
+      feeRate: 0.0005,
+      balances: [1_000_000, 1_000_000],
+    };
+    const pancakePool: DexApiPool = {
+      ...directPool,
+      source: "pancakeswap",
+      poolAddress: "0x3333333333333333333333333333333333333333",
+      poolType: "pancakeswap-v3",
+    };
+    const directResult = {
+      pools: [directPool],
+      ok: true,
+      degraded: false,
+      errors: [] as string[],
+      pagination: {
+        state: "partial" as const,
+        headRefreshed: true,
+        pagesFetched: 5,
+        cursor: "next-page",
+        cycleCompleted: false,
+      },
+    };
+    const pancakeResult = { pools: [pancakePool], ok: true, degraded: false, errors: [] as string[] };
+    const curvePoolMap = new Map([["curve-key", {} as never]]);
+    const uniV3PoolFees = new Map([["fee-key", 500]]);
+    const uniV3ExecutionCandidates = new Map([["candidate-key", []]]);
+
+    vi.mocked(fetchDataSources).mockResolvedValueOnce(sourceData);
+    vi.mocked(fetchFluidPools).mockResolvedValueOnce(directResult);
+    vi.mocked(fetchPancakeSwapPools).mockResolvedValueOnce(pancakeResult);
+    vi.mocked(fetchRaydiumPools).mockResolvedValueOnce({
+      pools: [],
+      ok: true,
+      degraded: false,
+      errors: [],
+      warnings: ["release-warning"],
+    });
+    vi.mocked(buildCurveLookups).mockResolvedValueOnce({ curvePoolMap, priceObservations: new Map() });
+    vi.mocked(fetchUniV3Data).mockResolvedValueOnce({
+      uniV3PoolFees,
+      uniV3SymbolFees: new Map(),
+      uniV3PriceObs: new Map(),
+      uniV3ExecutionCandidates,
+    });
+    vi.mocked(mergeStagedPools).mockImplementationOnce(
+      async (_db, _metrics, _known, _now, _references, confirmation) => {
+        expect(sourceData.pools).toEqual([]);
+        expect(sourceData.dexProjects.size).toBe(0);
+        expect(directResult.pools).toEqual([]);
+        expect(pancakeResult.pools).toEqual([]);
+        expect(curvePoolMap.size).toBe(1);
+        expect(uniV3PoolFees.size).toBe(1);
+        expect(uniV3ExecutionCandidates.size).toBe(1);
+        expect(confirmation?.enforcedChainsByProtocol.get("fluid")).toContain("ethereum");
+        expect(confirmation?.confirmedExactKeysByProtocol.get("fluid")?.size).toBe(1);
+        return {
+          mergedCount: 0,
+          skippedCount: 0,
+          skippedByExactIdentityCount: 0,
+          skippedByUniqueDerivedIdentityCount: 0,
+          skippedByOptionalWildcardIdentityCount: 0,
+          skippedByAuthoritativeProtocolCount: 0,
+          skipDimensions: [],
+          priceObservations: new Map(),
+        };
+      },
+    );
+
+    const startedAt = Math.floor(Date.now() / 1000);
+    const result = await syncDexLiquidity(db, "graph-key");
+    expect(mergeStagedPools).toHaveBeenCalledOnce();
+    const scoreCalls = vi.mocked(computeStablecoinScores).mock.calls;
+    const scoreCall = scoreCalls[scoreCalls.length - 1];
+    const pancakeTargets = scoreCall?.[5];
+    const fluidTargets = scoreCall?.[6];
+    expect([...pancakeTargets!.values()]).toContainEqual(
+      expect.objectContaining({
+        stablecoinId: "usdt-tether",
+        adapterProfileId: "pancakeswap-v3-quoter-v2",
+        poolId: "ethereum:0x3333333333333333333333333333333333333333",
+        poolTokenAddresses: [address, quoteAddress],
+        tokenIn: expect.objectContaining({ address, trackedAssetId: "usdt-tether" }),
+        tokenOut: expect.objectContaining({ address: quoteAddress, trackedAssetId: "usdc-circle" }),
+        feePips: 500,
+        retainedTvlUsd: 1_000_000,
+        capturedAt: expect.any(Number),
+      }),
+    );
+    expect([...fluidTargets!.values()]).toContainEqual(
+      expect.objectContaining({
+        stablecoinId: "usdt-tether",
+        adapterProfileId: "fluid-resolver-measured",
+        poolId: "ethereum:0x1111111111111111111111111111111111111111",
+        poolTokenAddresses: [address, quoteAddress],
+        tokenIn: expect.objectContaining({ address, trackedAssetId: "usdt-tether" }),
+        tokenOut: expect.objectContaining({ address: quoteAddress, trackedAssetId: "usdc-circle" }),
+        retainedTvlUsd: 1_000_000,
+        capturedAt: expect.any(Number),
+      }),
+    );
+    expect([...fluidTargets!.values()].every((target) => target.capturedAt >= startedAt)).toBe(true);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      directApiSourceSummary?: {
+        sourceWarnings?: string[];
+        pagination?: Array<Record<string, unknown>>;
+      };
+    };
+    expect(metadata.directApiSourceSummary?.sourceWarnings).toContain("raydium-api: release-warning");
+    expect(metadata.directApiSourceSummary?.pagination).toContainEqual({
+      source: "fluid-dex-api",
+      state: "partial",
+      headRefreshed: true,
+      pagesFetched: 5,
+      cursor: "next-page",
+      cycleCompleted: false,
     });
   });
 
@@ -1012,10 +1189,7 @@ describe("filterPrimaryPoolsPreferDirectApi", () => {
     // Two direct pools with the same identity keep the DL row by the deliberate
     // pool-level ambiguity guard (the DL row could be a third uncovered pool);
     // the wildcard fallback is ambiguous for the same reason.
-    const ambiguousTwins = [
-      ...singleTwin,
-      directPool("7kJb5ZQF2jWc5m9R8t2xVb4nD6yPeHhTQ3sLuNvAaBbC", 56_127),
-    ];
+    const ambiguousTwins = [...singleTwin, directPool("7kJb5ZQF2jWc5m9R8t2xVb4nD6yPeHhTQ3sLuNvAaBbC", 56_127)];
     const ambiguous = filterPrimaryPoolsPreferDirectApi(pools, ambiguousTwins, chainAddressToId);
     expect(ambiguous.filteredPools).toHaveLength(1);
   });
