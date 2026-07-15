@@ -6,7 +6,13 @@ vi.mock("../../../lib/evm-rpc", () => ({
 }));
 
 import { fetchEvmCallHexAtBlock } from "../../../lib/evm-rpc";
-import { fetchSlipstreamPools, sqrtRatioToSpotPrice, getSlipstreamPoolFeeBps } from "../fetch-slipstream";
+import {
+  fetchSlipstreamPools,
+  getSlipstreamPoolFeeBps,
+  projectSugarPoolPage,
+  projectSugarTokens,
+  sqrtRatioToSpotPrice,
+} from "../fetch-slipstream";
 
 const ABI = parseAbi([
   "function all(uint256 _limit, uint256 _offset) view returns ((address lp,string symbol,uint8 decimals,uint256 liquidity,int24 type,int24 tick,uint160 sqrt_ratio,address token0,uint256 reserve0,uint256 staked0,address token1,uint256 reserve1,uint256 staked1,address gauge,uint256 gauge_liquidity,bool gauge_alive,address fee,address bribe,address factory,uint256 emissions,address emissions_token,uint256 pool_fee,uint256 unstaked_fee,uint256 token0_fees,uint256 token1_fees,address nfpm,address alm,address root)[])",
@@ -54,6 +60,71 @@ describe("getSlipstreamPoolFeeBps", () => {
     expect(getSlipstreamPoolFeeBps(-1n)).toBe(null);
     expect(getSlipstreamPoolFeeBps(10_001n)).toBe(null);
     expect(getSlipstreamPoolFeeBps(20_000n)).toBe(null);
+  });
+});
+
+describe("Sugar ABI projection", () => {
+  it("drops non-CL rows and retains exactly the consumed pool fields in source order", () => {
+    const makeDecodedPool = (lp: string, type: number, reserve0: bigint) => ({
+      lp,
+      symbol: `pool-${lp.slice(-2)}`,
+      decimals: 18,
+      liquidity: 123n,
+      type,
+      tick: 7,
+      sqrt_ratio: 1n << 96n,
+      token0: "0x00000000000000000000000000000000000000bb",
+      reserve0,
+      staked0: 11n,
+      token1: "0x00000000000000000000000000000000000000cc",
+      reserve1: 50_000_000n,
+      staked1: 12n,
+      gauge: "0x0000000000000000000000000000000000000001",
+      pool_fee: 5n,
+      emissions: 13n,
+    });
+    const decoded = [
+      makeDecodedPool("0x0000000000000000000000000000000000000011", 0, 10n),
+      makeDecodedPool("0x0000000000000000000000000000000000000022", 1, 20n),
+      makeDecodedPool("0x0000000000000000000000000000000000000033", 2, 30n),
+    ];
+
+    const projected = projectSugarPoolPage(decoded);
+
+    expect(projected.map((pool) => pool.lp)).toEqual([
+      "0x0000000000000000000000000000000000000022",
+      "0x0000000000000000000000000000000000000033",
+    ]);
+    expect(projected.map((pool) => Object.keys(pool))).toEqual([
+      ["lp", "type", "token0", "reserve0", "token1", "reserve1", "sqrt_ratio", "pool_fee"],
+      ["lp", "type", "token0", "reserve0", "token1", "reserve1", "sqrt_ratio", "pool_fee"],
+    ]);
+    expect(projected.map((pool) => pool.reserve0)).toEqual([20n, 30n]);
+  });
+
+  it("retains exactly the consumed token fields", () => {
+    const decoded = [
+      {
+        token_address: "0x00000000000000000000000000000000000000BB",
+        symbol: "USDC",
+        decimals: 6,
+        account_balance: 123n,
+        listed: true,
+      },
+    ];
+
+    const tokens = projectSugarTokens(decoded);
+
+    expect(tokens.get("0x00000000000000000000000000000000000000bb")).toEqual({
+      token_address: "0x00000000000000000000000000000000000000BB",
+      symbol: "USDC",
+      decimals: 6,
+    });
+    expect(Object.keys(tokens.values().next().value ?? {})).toEqual([
+      "token_address",
+      "symbol",
+      "decimals",
+    ]);
   });
 });
 
@@ -141,9 +212,27 @@ describe("fetchSlipstreamPools", () => {
     expect(result.pools[0]).toMatchObject({
       source: "aerodrome-slipstream",
       chain: "base",
+      poolAddress: "0x00000000000000000000000000000000000000AA",
       poolType: "aerodrome-slipstream-1bp",
       feeRate: 0.0001,
       tvlUsd: 100,
+      price: null,
+      volume24hUsd: 0,
+      balances: [50, 50],
+      tokens: [
+        {
+          address: "0x00000000000000000000000000000000000000bb",
+          symbol: "USDC",
+          decimals: 6,
+          priceUsd: 1,
+        },
+        {
+          address: "0x00000000000000000000000000000000000000cc",
+          symbol: "DAI",
+          decimals: 18,
+          priceUsd: 1,
+        },
+      ],
     });
   });
 });
