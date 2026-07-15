@@ -46,7 +46,7 @@ The V9 implementation establishes candidate infrastructure without changing prod
   candidate deterministically. The current policy semantic digest is
   `9913d3dc3f4d4f00842c99be47a8ee5ac608b589867329ef18f7ad9c63e94ded`;
   the current evaluation-build digest is
-  `40d569f8b52de4e1d4a8db9583f06e30b7f849ca14994d557da589b7fef357d1`.
+  `5217a5797a77071a6c01564b27198316b2a2093352e67290301741553d026247`.
 - The 2026-07-15 Batch 3 calibration revision (owner rulings 2026-07-15)
   applies the two ruled cap changes and nothing else. (1) The mint posture gains
   a distinct `unbounded-reconciled` rung (`mintPostureQuality` = 55) for an
@@ -61,9 +61,13 @@ The V9 implementation establishes candidate infrastructure without changing prod
   chain maturity: a shared chain-kind failure domain in the reviewed
   `materiality.matureChains` set grades at `moderate` (critical-dependency
   `moderate` = 79, top of B+); any fragile, unreviewed, or non-chain domain
-  stays fail-closed at `high` (64). Dials, bands, and every other cap are
-  untouched; full-distribution confirmation follows the post-DEX-fix
-  measurement.
+  stays fail-closed at `high` (64). The ruling is on chains rather than string
+  encodings, so the failure-domain key is normalized to its canonical slug via
+  `resolveChainId` before the `matureChains` match — exit-route facts key by slug
+  (`ethereum`) while supply facts key by DefiLlama display name (`Ethereum`,
+  `OP Mainnet`), and both now tier identically; an unresolvable name stays
+  fail-closed at `high`. Dials, bands, and every other cap are untouched;
+  full-distribution confirmation follows the post-DEX-fix measurement.
 - The 2026-07-15 candidate-v2 queue-binding revision adds explicit
   `local-component` paths to seven reason allowlists already emitted as
   aggregate facts. The revision changes evidence-work-queue metadata only;
