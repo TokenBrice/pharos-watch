@@ -365,7 +365,7 @@ function scoreV9InputWithCaps(
             compareCodeUnits(left.reason, right.reason),
         )
         .reverse()
-        .map((cap) => [`${cap.source} ${cap.kind} ${cap.limit}`, cap]),
+        .map((cap) => [`${cap.source}\u0000${cap.kind}\u0000${cap.limit}`, cap]),
     ).values(),
   ].reverse();
   // Caps bind in the QUANTIZED score space: a cap constrains the published

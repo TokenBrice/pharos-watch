@@ -166,7 +166,7 @@
     {
       "name": "Liquid USDC balances",
       "pct": 0.4,
-      "risk": "medium",
+      "risk": "low",
       "coinId": "usdc-circle",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle USDC held in the Nest Wisdom Vault liquidity sleeve",
