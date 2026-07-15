@@ -24,10 +24,16 @@ export function buildAuthoritativeStagedPoolConfirmationIndex(
     enforcedChainsByProtocol.set(entry.normalizedProtocol, enforcedChains);
 
     const confirmedExactKeys = confirmedExactKeysByProtocol.get(entry.normalizedProtocol) ?? new Set<string>();
-    for (const pool of entry.result.pools) {
-      const exactPoolKey = buildDirectApiPoolIdentity(pool).exactPoolKey;
-      if (exactPoolKey) {
+    if (entry.authoritativeExactPoolKeys) {
+      for (const exactPoolKey of entry.authoritativeExactPoolKeys) {
         confirmedExactKeys.add(exactPoolKey);
+      }
+    } else {
+      for (const pool of entry.result.pools) {
+        const exactPoolKey = buildDirectApiPoolIdentity(pool).exactPoolKey;
+        if (exactPoolKey) {
+          confirmedExactKeys.add(exactPoolKey);
+        }
       }
     }
     confirmedExactKeysByProtocol.set(entry.normalizedProtocol, confirmedExactKeys);

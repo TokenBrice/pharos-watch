@@ -375,6 +375,8 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     lookups.chainAddressToId,
     validationReferences,
   );
+  // Downstream phases use only the derived maps, so release the raw response trees now.
+  dataSources.curvePayloads.length = 0;
 
   const directApiFetchers = buildDexDirectApiFetchers({
     db: ctx.db,
@@ -434,7 +436,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
       },
     },
   });
-  let directApiPhase = await runDirectApiFetchPhase(ctx.db, directApiFetchers, ctx.signal);
+  let directApiPhase = await runDirectApiFetchPhase(ctx.db, directApiFetchers, ctx.signal, lookups);
   failedSources.push(...directApiPhase.failedSources);
   fallbackSignals.push(...directApiPhase.fallbackSignals);
   const authoritativeConfirmation = buildAuthoritativeStagedPoolConfirmationIndex(directApiPhase.results);
