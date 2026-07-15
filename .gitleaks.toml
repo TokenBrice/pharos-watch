@@ -1,0 +1,15 @@
+# Gitleaks configuration for pharos-watch.
+#
+# Extends the default ruleset. The only repo-specific carve-out is for
+# EVM contract/account addresses (0x + exactly 40 hex chars): they are
+# public on-chain identifiers, not credentials, and keys named "token"
+# or "collateralToken" in measurement targets/fixtures otherwise trip
+# the generic-api-key rule.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "EVM addresses (0x + 40 hex) are public on-chain identifiers, not secrets"
+regexTarget = "secret"
+regexes = ['''^0x[a-fA-F0-9]{40}$''']
