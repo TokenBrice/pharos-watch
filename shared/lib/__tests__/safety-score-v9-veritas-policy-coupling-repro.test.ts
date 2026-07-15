@@ -22,6 +22,7 @@ describe("VERITAS finding VER-005: active-depeg caps can cross their locked grad
       fixture.minScore;
 
     expect(() => loadV9MethodologyPolicy(policy)).toThrow(
+      // eslint-disable-next-line security/detect-non-literal-regexp -- fragments come from the in-test it.each fixture constants, not user input.
       new RegExp(`${fixture.capKind}.*${fixture.declaredGrade} grade band`, "i"),
     );
   });
