@@ -2,6 +2,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "@shared/lib/exit-route-identity";
 import { QUALITY_MULTIPLIERS, isBlockedDexId } from "../../lib/dex-cron-constants";
+import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { LlamaPool, CurvePoolEntry, LiquidityMetrics } from "./types";
 import {
   classifyPoolType,
@@ -16,7 +17,13 @@ import {
 } from "./pool-helpers";
 import { isTrustworthyExactPoolId } from "./pool-identity";
 import { resolveLlamaPoolStablecoinMatches } from "./pool-match-resolution";
-import type { DexAmmExecutionModel } from "@shared/types/market";
+import type { DexAmmExecutionModel, DexExecutionCapabilityGate } from "@shared/types/market";
+import {
+  buildUniV3ExecutionCandidateKey,
+  buildUniV3MeasuredExecutionTarget,
+  parseUniV3FeePips,
+  type UniV3ExecutionCandidate,
+} from "../measured-execution/inventory";
 
 /**
  * The Curve pools endpoint does not publish per-pool fees. Standard
@@ -41,22 +48,63 @@ const CURVE_STABLESWAP_FEE_BOUND = 0.001;
  */
 const CURVE_STABLESWAP_MAX_COIN_PRICE_SPREAD = 1.01;
 
-export function buildCurveStableswapExecutionModel(
+export interface CurveStableswapExecutionCapability {
+  executionModel: DexAmmExecutionModel | null;
+  gate: DexExecutionCapabilityGate | null;
+}
+
+export function buildCurveStableswapExecutionCapability(
   curveData: CurvePoolEntry | undefined,
   chainNorm: string,
   stablecoinId: string,
   chainAddressToId: Map<string, string>,
-): DexAmmExecutionModel | null {
+): CurveStableswapExecutionCapability {
+  if (!curveData) {
+    return {
+      executionModel: null,
+      gate: { family: "curve-stableswap", reason: "exact-pool-join-unresolved" },
+    };
+  }
+  if (isCryptoSwap(curveData.registryId)) {
+    return {
+      executionModel: null,
+      gate: { family: "curve-cryptoswap", reason: "unsupported-invariant" },
+    };
+  }
+  if (curveData.isMetaPool) {
+    return {
+      executionModel: null,
+      gate: { family: "curve-stableswap", reason: "metapool-unsupported" },
+    };
+  }
+  if (!Number.isFinite(curveData.A) || curveData.A <= 0) {
+    return {
+      executionModel: null,
+      gate: { family: "curve-stableswap", reason: "invalid-invariant-parameters" },
+    };
+  }
   const coins = curveData?.executionCoins;
-  if (!coins || curveData.isMetaPool || !Number.isFinite(curveData.A) || curveData.A <= 0) return null;
-  // CryptoSwap (Curve v2) pools publish an amplification coefficient too, but
-  // price on a different invariant; a stableswap model overstates their
-  // capacity massively (1.5x+ measured on EURS/USDC).
-  if (isCryptoSwap(curveData.registryId)) return null;
+  if (!coins || coins.length < 2) {
+    return {
+      executionModel: null,
+      gate: { family: "curve-stableswap", reason: "incomplete-exact-capture" },
+    };
+  }
   const prices = coins.map((coin) => coin.usdPrice);
   const maxPrice = Math.max(...prices);
   const minPrice = Math.min(...prices);
-  if (!(minPrice > 0) || maxPrice / minPrice > CURVE_STABLESWAP_MAX_COIN_PRICE_SPREAD) return null;
+  if (!Number.isFinite(minPrice) || !Number.isFinite(maxPrice) || !(minPrice > 0)) {
+    return {
+      executionModel: null,
+      gate: { family: "curve-stableswap", reason: "incomplete-exact-capture" },
+    };
+  }
+  if (maxPrice / minPrice > CURVE_STABLESWAP_MAX_COIN_PRICE_SPREAD) {
+    return {
+      executionModel: null,
+      gate: { family: "curve-stableswap", reason: "rate-bearing-inputs" },
+    };
+  }
   const tokens = coins.map((coin) => {
     const trackedAssetId = chainAddressToId.get(`${chainNorm}:${coin.address.toLowerCase()}`);
     return {
@@ -70,9 +118,19 @@ export function buildCurveStableswapExecutionModel(
     };
   });
   const trackedTokenIndex = tokens.findIndex((token) => token.trackedAssetId === stablecoinId);
-  if (trackedTokenIndex === -1) return null;
+  if (trackedTokenIndex === -1) {
+    return {
+      executionModel: null,
+      gate: { family: "curve-stableswap", reason: "tracked-input-unresolved" },
+    };
+  }
   const addresses = tokens.map((token) => `${chainNorm}:${token.address.toLowerCase()}`);
-  if (new Set(addresses).size !== addresses.length) return null;
+  if (new Set(addresses).size !== addresses.length) {
+    return {
+      executionModel: null,
+      gate: { family: "curve-stableswap", reason: "ambiguous-token-identity" },
+    };
+  }
   // The Curve API reports the contract amplification (Ann = A_contract * n); the
   // execution model stores the plain paper convention (Ann = A * n^n). Converting by
   // n^(n-1) reproduces on-chain get_dy exactly (verified against 3pool and the
@@ -80,13 +138,30 @@ export function buildCurveStableswapExecutionModel(
   // overstates amplification and therefore exit capacity.
   const n = tokens.length;
   return {
-    source: "curve",
-    invariant: "stableswap",
-    trackedTokenIndex,
-    feeRate: CURVE_STABLESWAP_FEE_BOUND,
-    amplification: curveData.A / n ** (n - 1),
-    tokens,
+    executionModel: {
+      source: "curve",
+      invariant: "stableswap",
+      trackedTokenIndex,
+      feeRate: CURVE_STABLESWAP_FEE_BOUND,
+      amplification: curveData.A / n ** (n - 1),
+      tokens,
+    },
+    gate: null,
   };
+}
+
+export function buildCurveStableswapExecutionModel(
+  curveData: CurvePoolEntry | undefined,
+  chainNorm: string,
+  stablecoinId: string,
+  chainAddressToId: Map<string, string>,
+): DexAmmExecutionModel | null {
+  return buildCurveStableswapExecutionCapability(
+    curveData,
+    chainNorm,
+    stablecoinId,
+    chainAddressToId,
+  ).executionModel;
 }
 
 /** Match DeFiLlama pools to tracked stablecoins and compute per-pool metrics. */
@@ -101,6 +176,10 @@ export function processPoolMetrics(
   uniV3PoolFees: Map<string, number>,
   uniV3SymbolFees: Map<string, number>,
   aerodromeIsStable: Map<string, boolean>,
+  uniV3ExecutionCandidates: Map<string, UniV3ExecutionCandidate[]> = new Map(),
+  stablecoinPriceById?: Map<string, number>,
+  measuredTargetCapturedAt = Math.floor(Date.now() / 1000),
+  validationReferences?: PriceValidationReferences,
 ): Map<string, LiquidityMetrics> {
   const metrics = new Map<string, LiquidityMetrics>();
   const enforceDexProjectFilter = dexProjects.size > 0;
@@ -152,6 +231,13 @@ export function processPoolMetrics(
       // own TVL and never carry a model.
       const curveAddressMatch =
         curvePoolMap.has(addrCurveKey) || (fpCurveKey != null && curvePoolMap.has(fpCurveKey));
+      const uniV3FeePips = protocol === "uniswap-v3" ? parseUniV3FeePips(pool.poolMeta) : null;
+      const uniV3ExecutionKey = protocol === "uniswap-v3"
+        ? buildUniV3ExecutionCandidateKey(chainNorm, pool.underlyingTokens, uniV3FeePips)
+        : null;
+      const uniV3Candidates = uniV3ExecutionKey
+        ? (uniV3ExecutionCandidates.get(uniV3ExecutionKey) ?? [])
+        : [];
 
       // --- v2: Enhanced quality resolution ---
       let qualMult: number;
@@ -305,12 +391,30 @@ export function processPoolMetrics(
         // whose complete per-coin inputs survived capture. The fee is not
         // published by the pools endpoint, so the model carries a documented
         // conservative bound and the capacity result is an exact lower bound.
-        const ammExecutionModel = buildCurveStableswapExecutionModel(
-          curveAddressMatch ? curveData : undefined,
-          chainNorm,
-          id,
-          chainAddressToId,
-        );
+        const curveExecutionCapability = protocol === "curve"
+          ? buildCurveStableswapExecutionCapability(
+              curveAddressMatch ? curveData : undefined,
+              chainNorm,
+              id,
+              chainAddressToId,
+            )
+          : { executionModel: null, gate: null };
+        const ammExecutionModel = curveExecutionCapability.executionModel;
+        const uniV3MeasuredTarget = protocol === "uniswap-v3" && uniV3Candidates.length === 1
+          ? buildUniV3MeasuredExecutionTarget({
+              stablecoinId: id,
+              candidate: uniV3Candidates[0]!,
+              stablecoinPriceById,
+              chainAddressToId,
+              symbolToChainScopedIds,
+              validationReferences,
+              retainedTvlUsd: rawContribTvl,
+              capturedAt: measuredTargetCapturedAt,
+            })
+          : null;
+        const measuredExecutionGate: DexExecutionCapabilityGate | null = protocol === "uniswap-v3" && !uniV3MeasuredTarget
+          ? { family: "measured-execution", reason: "target-unresolved" }
+          : null;
 
         // Pool entry with enriched extra
         m.topPools.push({
@@ -340,6 +444,12 @@ export function processPoolMetrics(
                 ? { feeTier: Math.round(feeTierForExtra / 100) }
                 : {}),
             ...(ammExecutionModel ? { ammExecutionModel } : {}),
+            ...(curveExecutionCapability.gate
+              ? { executionCapabilityGate: curveExecutionCapability.gate }
+              : measuredExecutionGate
+                ? { executionCapabilityGate: measuredExecutionGate }
+              : {}),
+            ...(uniV3MeasuredTarget ? { measuredExecutionTarget: uniV3MeasuredTarget } : {}),
             qualityAdjustedTvl: Math.round(poolQualityAdjustedTvl),
             effectiveTvl: Math.round(poolEffTvl),
             organicFraction: Math.round(organicFraction * 100) / 100,

@@ -1586,7 +1586,8 @@ function buildRoutes(context: AssetBuildContext): {
   const evidenceRefIds = [...new Set(statuses.flatMap((status) => status.evidenceRefIds))];
   // "known" asserts the whole exit surface is observed (it upgrades evidence
   // level and arms the reviewed-complete zero-score path), so it additionally
-  // requires every retained DEX pool to carry a score-eligible observation.
+  // requires every reviewed score-eligible DEX capability pool to carry an
+  // observation. Structurally non-executable shaped rows remain diagnostics.
   // A portfolio holding only diagnostic routes over an incompletely observed
   // DEX surface stays bounded-unknown. A missing redemption row does not
   // demote the state: absent redemption evidence can only understate the
@@ -1607,7 +1608,7 @@ function buildRoutes(context: AssetBuildContext): {
           policyRuleId: "v9.exit.same-notional-route",
           observationState: "bounded-unknown",
           path: { kind: "local-component", componentKey: "exit-portfolio-coverage" },
-          message: "Retained DEX pools do not all carry score-eligible exact route observations.",
+          message: "Reviewed DEX execution-capability pools do not all carry score-eligible exact route observations.",
           evidenceRefIds,
         }),
       ),

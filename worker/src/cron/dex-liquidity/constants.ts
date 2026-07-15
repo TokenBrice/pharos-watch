@@ -38,8 +38,8 @@ export const buildUniV3PoolQuery = (skip: number): string => `{
     where: { totalValueLockedUSD_gt: "10000" }
   ) {
     id
-    token0 { id symbol }
-    token1 { id symbol }
+    token0 { id symbol decimals }
+    token1 { id symbol decimals }
     feeTier
     totalValueLockedUSD
     volumeUSD

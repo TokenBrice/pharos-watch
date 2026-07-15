@@ -34,11 +34,16 @@ export function addSecondaryPoolContribution(
     ? existingPoolsById.get(incomingPoolId)
     : m.topPools.find((existing) => existing.poolId === incomingPoolId);
   if (existingPool) {
-    if (pool.ammExecutionModel) {
-      existingPool.extra = {
-        ...(existingPool.extra ?? {}),
-        ammExecutionModel: pool.ammExecutionModel,
-      };
+    if (pool.ammExecutionModel || pool.executionCapabilityGate) {
+      const exactEvidence = { ...(existingPool.extra ?? {}) };
+      if (pool.ammExecutionModel) {
+        delete exactEvidence.executionCapabilityGate;
+        exactEvidence.ammExecutionModel = pool.ammExecutionModel;
+      } else if (pool.executionCapabilityGate) {
+        delete exactEvidence.ammExecutionModel;
+        exactEvidence.executionCapabilityGate = pool.executionCapabilityGate;
+      }
+      existingPool.extra = exactEvidence;
     }
     return;
   }
@@ -128,6 +133,9 @@ export function addSecondaryPoolContribution(
       ...(pool.orderbookTvlBasis ? { orderbookTvlBasis: pool.orderbookTvlBasis } : {}),
       ...(measurement ? { measurement } : {}),
       ...(pool.ammExecutionModel ? { ammExecutionModel: pool.ammExecutionModel } : {}),
+      ...(pool.executionCapabilityGate
+        ? { executionCapabilityGate: pool.executionCapabilityGate }
+        : {}),
     },
   };
   m.topPools.push(poolEntry);

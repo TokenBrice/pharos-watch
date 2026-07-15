@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { DexAmmExecutionModelSchema } from "@shared/types/market";
-import { buildCurveStableswapExecutionModel } from "../process-pools";
+import {
+  buildCurveStableswapExecutionCapability,
+  buildCurveStableswapExecutionModel,
+} from "../process-pools";
 import type { CurvePoolEntry } from "../types";
 
 const USDC = "0x00000000000000000000000000000000000000c1";
@@ -91,6 +94,14 @@ describe("buildCurveStableswapExecutionModel", () => {
       ),
     ).toBeNull();
     expect(
+      buildCurveStableswapExecutionCapability(
+        entry({ registryId: "factory-twocrypto", A: 20_000_000 }),
+        "ethereum",
+        "usdc-circle",
+        chainAddressToId,
+      ).gate,
+    ).toEqual({ family: "curve-cryptoswap", reason: "unsupported-invariant" });
+    expect(
       buildCurveStableswapExecutionModel(
         entry({ registryId: "factory-tricrypto" }),
         "ethereum",
@@ -110,6 +121,9 @@ describe("buildCurveStableswapExecutionModel", () => {
       ],
     });
     expect(buildCurveStableswapExecutionModel(rateBearing, "ethereum", "usdc-circle", chainAddressToId)).toBeNull();
+    expect(
+      buildCurveStableswapExecutionCapability(rateBearing, "ethereum", "usdc-circle", chainAddressToId).gate,
+    ).toEqual({ family: "curve-stableswap", reason: "rate-bearing-inputs" });
     // A sub-1% spread (normal peg noise) still models.
     const pegNoise = entry({
       executionCoins: [
@@ -128,5 +142,8 @@ describe("buildCurveStableswapExecutionModel", () => {
       ],
     });
     expect(buildCurveStableswapExecutionModel(duplicated, "ethereum", "usdc-circle", chainAddressToId)).toBeNull();
+    expect(
+      buildCurveStableswapExecutionCapability(duplicated, "ethereum", "usdc-circle", chainAddressToId).gate,
+    ).toEqual({ family: "curve-stableswap", reason: "ambiguous-token-identity" });
   });
 });

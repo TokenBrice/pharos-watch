@@ -72,10 +72,16 @@ export interface LiquidityMetrics {
 
 import type {
   DexAmmExecutionModel,
+  DexExecutionCapabilityGate,
   LiquidityPoolSourceFamily,
   LiquiditySourceMixEntry,
   LiquidityCoverageClass,
 } from "@shared/types/market";
+import type {
+  DexMeasuredExecutionProfile,
+  DexMeasuredExecutionPublicProfile,
+  DexMeasuredExecutionTarget,
+} from "@shared/types/measured-execution";
 
 export type { LiquidityPoolSourceFamily, LiquiditySourceMixEntry, LiquidityCoverageClass };
 
@@ -117,8 +123,24 @@ export interface PoolEntry {
       isTracked: boolean;
     }[];
     measurement?: PoolMeasurementFlags;
+    /** Reviewed exact-family failure retained for P4 completeness accounting. */
+    executionCapabilityGate?: DexExecutionCapabilityGate;
     /** Exact direct-API inputs retained for supported AMM execution simulation. */
     ammExecutionModel?: DexAmmExecutionModel;
+    /** Internal all-retained target descriptor; stripped before top-pool publication. */
+    measuredExecutionTarget?: DexMeasuredExecutionTarget;
+    /** Proof-free validated capacity/provenance projection retained for P4 and API publication. */
+    measuredExecution?: DexMeasuredExecutionPublicProfile;
+    /** Internal D1 proof profile; stripped before top-pool publication. */
+    measuredExecutionProfile?: DexMeasuredExecutionProfile;
+    /** Target-derived physical pool id consumed by P4 before publication. */
+    measuredExecutionPhysicalPoolId?: string;
+    /** Internal cohort diagnostics retained in cron metadata, not the public pool envelope. */
+    measuredExecutionDiagnostic?: {
+      adapterProfileId: string;
+      targetId?: string;
+      detail?: string;
+    };
   };
 }
 
@@ -247,6 +269,10 @@ export interface UniV3Lookups {
   uniV3PoolFees: Map<string, number>;
   uniV3SymbolFees: Map<string, number>;
   uniV3PriceObs: Map<string, DexPriceObs[]>;
+  uniV3ExecutionCandidates: Map<
+    string,
+    import("../measured-execution/inventory").UniV3ExecutionCandidate[]
+  >;
 }
 
 export interface ScoreResult {
@@ -306,6 +332,8 @@ export interface GtNewPool {
   measurement?: PoolMeasurementFlags;
   /** Exact direct-API inputs retained only for supported AMM invariant families. */
   ammExecutionModel?: DexAmmExecutionModel;
+  /** Reviewed exact-family failure retained for P4 completeness accounting. */
+  executionCapabilityGate?: DexExecutionCapabilityGate;
   /** CoinGecko 2% downside orderbook depth when available. */
   orderbookDepthUsd?: number | null;
   /** CoinGecko 2% upside orderbook depth when available. */

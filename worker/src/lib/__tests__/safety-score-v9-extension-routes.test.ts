@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import {
@@ -127,6 +128,73 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       "usdc-circle": { currentDeviationBps: 2, priceObservedAt: NOW },
     };
     expect(buildSafetyScoreV9RouteReviews(fixedInput, "dai-makerdao")[0]!.output?.valuation).toBeNull();
+  });
+
+  it("values production-shaped tracked DEX output aliases by canonical stablecoin id", () => {
+    const fixedInput = fixedInputStub(undefined);
+    const route: ExitRouteObservation = {
+      routeId:
+        "dex:asset-input:dl:ethereum%3Afp%3Aethereum%3Acurve%3Apool:ethereum%3A0xfa2b947eec368f42195f24f36d2af29f7c24cec2",
+      routeFamily: "dex-amm",
+      scope: { kind: "chain-contract", chain: "ethereum", contractOrPoolId: "pool", protocol: "curve" },
+      requestedNotionalUsd: 1_000_000,
+      settlementHorizonSec: 300,
+      maxCostBps: 200,
+      executableUsd: 900_000,
+      completionRatio: 0.9,
+      output: {
+        kind: "tracked-stablecoin",
+        trackedAssetIds: ["usdf-falcon"],
+        assetKeys: ["ethereum:0xfa2b947eec368f42195f24f36d2af29f7c24cec2"],
+      },
+      evidenceKind: "reserve-based-amm-simulation",
+      confidence: "high",
+      scoreEligible: true,
+      observedAt: NOW,
+      freshnessSeconds: 0,
+      commonModeKeys: ["chain:ethereum", "protocol:curve"],
+    };
+    (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
+      "asset-input": {
+        exitRouteObservations: [route],
+        exitRouteObservationCoverage: {
+          status: "populated",
+          capabilityMatrixVersion: "p4a.4",
+          retainedPoolCount: 2_418,
+          observationCount: 44,
+          scoreEligibleObservationCount: 44,
+          scoreEligiblePoolCount: 38,
+          scoreEligibleCapabilityPoolCount: 38,
+          unsupportedPoolCount: 2_380,
+          evidenceCounts: { "reserve-based-amm-simulation": 44 },
+          unsupportedReasons: {
+            "nonExecutableEvidence:defillama-pool-shaped": 1_449,
+            "nonExecutableEvidence:curve-stableswap-shaped": 11,
+            "nonExecutableEvidence:direct-api-amm-shaped": 653,
+            "nonExecutableEvidence:discovery-pool-shaped": 267,
+          },
+        },
+      },
+    };
+    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
+      "usdf-falcon": { currentDeviationBps: -12, priceObservedAt: NOW },
+    };
+
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "asset-input")).toEqual([
+      expect.objectContaining({
+        lane: "dex",
+        routeId: route.routeId,
+        coverageClass: "exact-complete",
+        output: expect.objectContaining({
+          kind: "tracked-stablecoin",
+          assetKeys: ["usdf-falcon"],
+          valuation: expect.objectContaining({
+            referenceAssetKey: "usdf-falcon",
+            unitValueUsd: 0.9988,
+          }),
+        }),
+      }),
+    ]);
   });
 
   it("derives nothing when the row already carries observations or is absent", () => {

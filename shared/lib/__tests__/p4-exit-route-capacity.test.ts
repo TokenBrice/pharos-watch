@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { ExitRouteObservationCoverageSchema } from "@shared/types/market";
 import {
+  DEX_MEASURED_CAPACITY_NOTIONALS_USD,
+  DEX_MEASURED_EXECUTION_SCHEMA_VERSION,
+  DEX_MEASURED_MAX_COST_BPS,
+  type DexMeasuredExecutionPublicProfile,
+} from "@shared/types/measured-execution";
+import {
   DEX_ROUTE_SOURCE_CAPABILITIES,
   P4_AMM_MODELED_TVL_MAX_RATIO,
   P4_AMM_MODELED_TVL_MIN_RATIO,
@@ -10,6 +16,195 @@ import {
 } from "../p4-exit-route-capacity";
 
 describe("P4 DEX exit route observations", () => {
+  function measuredProfile(quotedAt: number): DexMeasuredExecutionPublicProfile {
+    const physicalPool = "0x3333333333333333333333333333333333333333" as const;
+    return {
+      schemaVersion: DEX_MEASURED_EXECUTION_SCHEMA_VERSION,
+      kind: "measured-executable-depth",
+      targetId: "target-1",
+      targetGenerationId: "target-generation",
+      quoteGenerationId: "quote-generation",
+      adapterProfileId: "uniswap-v3-quoter-v2",
+      protocol: "uniswap-v3",
+      chain: "ethereum",
+      poolId: `ethereum:${physicalPool}`,
+      poolTokenAddresses: [
+        "0x1111111111111111111111111111111111111111",
+        "0x2222222222222222222222222222222222222222",
+      ],
+      tokenIn: {
+        address: "0x1111111111111111111111111111111111111111",
+        symbol: "USDC",
+        decimals: 6,
+        referencePriceUsd: 1,
+        trackedAssetId: "usdc-circle",
+      },
+      tokenOut: {
+        address: "0x2222222222222222222222222222222222222222",
+        symbol: "USDT",
+        decimals: 6,
+        referencePriceUsd: 1,
+        trackedAssetId: "usdt-tether",
+      },
+      feePips: 100,
+      retainedTvlUsdAtQuote: 2_000_000,
+      retainedPoolPriceUsdAtQuote: 1,
+      quotedAt,
+      blockNumber: 25_536_894,
+      executionEndpoint: {
+        address: "0x4444444444444444444444444444444444444444",
+        codeHash: `0x${"ab".repeat(32)}`,
+      },
+      poolProvenance: {
+        factoryAddress: "0x5555555555555555555555555555555555555555",
+        factoryCodeHash: `0x${"cd".repeat(32)}`,
+        resolvedPoolAddress: physicalPool,
+      },
+      maxCostBps: DEX_MEASURED_MAX_COST_BPS,
+      marginalOutputRatio: 0.999,
+      capacityCurve: DEX_MEASURED_CAPACITY_NOTIONALS_USD.map((requestedNotionalUsd) => {
+        const executableUsd = Math.min(requestedNotionalUsd, 1_000_000);
+        return {
+          requestedNotionalUsd,
+          maxCostBps: DEX_MEASURED_MAX_COST_BPS,
+          executableUsd,
+          completionRatio: executableUsd / requestedNotionalUsd,
+        };
+      }),
+    };
+  }
+
+  it("routes a retained DL UUID through its independently bound physical CL pool", () => {
+    const observedAt = 1_752_560_000;
+    const physicalPoolId = "ethereum:0x3333333333333333333333333333333333333333";
+    const result = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle",
+      observedAt,
+      retainedPools: [{
+        poolId: "defillama-yields-uuid",
+        project: "uniswap-v3",
+        chain: "ethereum",
+        tvlUsd: 2_000_000,
+        symbol: "USDC-USDT",
+        poolType: "uniswap-v3",
+        source: "dl",
+        extra: {
+          measuredExecution: measuredProfile(observedAt - 60),
+          measuredExecutionPhysicalPoolId: physicalPoolId,
+        },
+      }],
+    });
+
+    expect(result.coverage).toMatchObject({
+      capabilityMatrixVersion: "p4a.4",
+      retainedPoolCount: 1,
+      scoreEligibleCapabilityPoolCount: 1,
+      scoreEligiblePoolCount: 1,
+      unsupportedPoolCount: 0,
+    });
+    expect(isDexExitRouteCoverageComplete(result.coverage)).toBe(true);
+    expect(result.observations[0]).toMatchObject({
+      scope: { kind: "chain-contract", contractOrPoolId: physicalPoolId },
+      observedAt: observedAt - 60,
+      freshnessSeconds: 60,
+      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdt-tether"] },
+    });
+    expect(result.observations[0]?.routeId).toContain("3333333333333333333333333333333333333333");
+  });
+
+  it("keeps stale, conflicting, and marginal-failed measured profiles in the incomplete denominator", () => {
+    const observedAt = 1_752_560_000;
+    const cases = [
+      {
+        profile: measuredProfile(observedAt - 3_601),
+        extra: {},
+        reason: "invalidMeasuredExecution:stale-profile",
+      },
+      {
+        profile: measuredProfile(observedAt - 60),
+        extra: { ammExecutionModel: { source: "raydium" } },
+        reason: "conflictingExecutionCapabilityEvidence",
+      },
+      {
+        profile: { ...measuredProfile(observedAt - 60), marginalOutputRatio: 0.97 },
+        extra: {},
+        reason: "invalidMeasuredExecution:marginal-failure-with-positive-capacity",
+      },
+    ] as const;
+
+    for (const testCase of cases) {
+      const result = buildP4DexExitRouteObservations({
+        stablecoinId: "usdc-circle",
+        observedAt,
+        retainedPools: [{
+          poolId: "defillama-yields-uuid",
+          project: "uniswap-v3",
+          chain: "ethereum",
+          tvlUsd: 2_000_000,
+          symbol: "USDC-USDT",
+          poolType: "uniswap-v3",
+          source: "dl",
+          extra: {
+            measuredExecution: testCase.profile,
+            measuredExecutionPhysicalPoolId: "ethereum:0x3333333333333333333333333333333333333333",
+            ...(testCase.extra as object),
+          },
+        }],
+      });
+
+      expect(result.coverage.scoreEligibleCapabilityPoolCount).toBe(1);
+      expect(result.coverage.scoreEligiblePoolCount).toBe(0);
+      expect(result.coverage.unsupportedReasons[testCase.reason]).toBeGreaterThan(0);
+      expect(isDexExitRouteCoverageComplete(result.coverage)).toBe(false);
+    }
+  });
+  it("requires an explicit capability denominator before production-shaped coverage can be complete", () => {
+    const legacyProductionCoverage = {
+      status: "populated" as const,
+      capabilityMatrixVersion: "p4a.3",
+      retainedPoolCount: 2_418,
+      observationCount: 44,
+      scoreEligibleObservationCount: 44,
+      scoreEligiblePoolCount: 38,
+      unsupportedPoolCount: 2_380,
+      evidenceCounts: { "reserve-based-amm-simulation": 44 },
+      unsupportedReasons: {
+        "nonExecutableEvidence:defillama-pool-shaped": 1_449,
+        "nonExecutableEvidence:curve-stableswap-shaped": 11,
+        "nonExecutableEvidence:direct-api-amm-shaped": 653,
+        "nonExecutableEvidence:discovery-pool-shaped": 267,
+      },
+    };
+
+    // p4a.3 discarded exact-family gate reasons into the same shaped buckets
+    // as generic rows, so no safe denominator can be reconstructed.
+    expect(isDexExitRouteCoverageComplete(legacyProductionCoverage)).toBe(false);
+    const explicitProductionCoverage = {
+      ...legacyProductionCoverage,
+      capabilityMatrixVersion: "p4a.4",
+      scoreEligibleCapabilityPoolCount: 38,
+    };
+    expect(
+      isDexExitRouteCoverageComplete({
+        ...explicitProductionCoverage,
+        capabilityMatrixVersion: "p4a.3",
+      }),
+    ).toBe(false);
+    expect(isDexExitRouteCoverageComplete(explicitProductionCoverage)).toBe(true);
+    expect(
+      isDexExitRouteCoverageComplete({
+        ...explicitProductionCoverage,
+        retainedPoolCount: 2_419,
+        scoreEligibleCapabilityPoolCount: 39,
+        unsupportedPoolCount: 2_381,
+        unsupportedReasons: {
+          ...legacyProductionCoverage.unsupportedReasons,
+          "invalidExecutionModel:invalid-amplification": 1,
+        },
+      }),
+    ).toBe(false);
+  });
+
   it("rejects internally inconsistent producer coverage counts", () => {
     const coverage = {
       status: "populated",
@@ -29,6 +224,14 @@ describe("P4 DEX exit route observations", () => {
         ...coverage,
         scoreEligiblePoolCount: 0,
         scoreEligibleObservationCount: 1,
+      }).success,
+    ).toBe(false);
+    expect(
+      ExitRouteObservationCoverageSchema.safeParse({
+        ...coverage,
+        observationCount: 1,
+        scoreEligibleObservationCount: 1,
+        scoreEligibleCapabilityPoolCount: 0,
       }).success,
     ).toBe(false);
     expect(
@@ -81,7 +284,7 @@ describe("P4 DEX exit route observations", () => {
     expect(validateExitRouteCapacityCurve(result.observations[0]!.capacityCurve!)).toEqual([]);
   });
 
-  it("does not infer complete pool coverage from multiple observations emitted by one exact pool", () => {
+  it("counts exact pools rather than emitted observations or diagnostic orderbooks", () => {
     const result = buildP4DexExitRouteObservations({
       stablecoinId: "usdc-circle",
       observedAt: 1_720_000_000,
@@ -154,7 +357,8 @@ describe("P4 DEX exit route observations", () => {
       scoreEligiblePoolCount: 1,
       unsupportedPoolCount: 0,
     });
-    expect(isDexExitRouteCoverageComplete(result.coverage)).toBe(false);
+    expect(result.coverage.scoreEligibleCapabilityPoolCount).toBe(1);
+    expect(isDexExitRouteCoverageComplete(result.coverage)).toBe(true);
   });
 
   it("scores exact Curve stableswap pools through the invariant simulation", () => {
@@ -205,6 +409,7 @@ describe("P4 DEX exit route observations", () => {
     expect(result.coverage).toMatchObject({
       retainedPoolCount: 1,
       scoreEligiblePoolCount: 1,
+      scoreEligibleCapabilityPoolCount: 1,
       unsupportedPoolCount: 0,
       evidenceCounts: { "reserve-based-amm-simulation": 1 },
     });
@@ -311,6 +516,7 @@ describe("P4 DEX exit route observations", () => {
       retainedPools: [balancerStableswapPool("raydium")],
     });
     expect(rejected.observations).toEqual([]);
+    expect(rejected.coverage.scoreEligibleCapabilityPoolCount).toBe(1);
     expect(rejected.coverage.unsupportedPoolCount).toBe(1);
     expect(rejected.coverage.unsupportedReasons).toMatchObject({
       "invalidExecutionModel:invalid-stableswap-model-source": 1,
@@ -347,11 +553,91 @@ describe("P4 DEX exit route observations", () => {
     expect(result.coverage).toMatchObject({
       status: "unsupported",
       observationCount: 0,
+      scoreEligibleCapabilityPoolCount: 0,
       unsupportedPoolCount: 1,
       unsupportedReasons: {
         "nonExecutableEvidence:curve-stableswap-shaped": 1,
       },
     });
+  });
+
+  it("keeps reviewed invariant, rate-bearing, and pause gates in the completeness denominator", () => {
+    const result = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle",
+      observedAt: 1_720_000_000,
+      retainedPools: [
+        {
+          poolId: "ethereum:0xcrypto",
+          project: "curve",
+          chain: "ethereum",
+          tvlUsd: 5_000_000,
+          symbol: "USDC / WETH",
+          poolType: "curve-cryptoswap",
+          source: "dl",
+          extra: {
+            executionCapabilityGate: { family: "curve-cryptoswap", reason: "unsupported-invariant" },
+          },
+        },
+        {
+          poolId: "ethereum:0xrate",
+          project: "curve",
+          chain: "ethereum",
+          tvlUsd: 8_000_000,
+          symbol: "USDC / sUSDe",
+          poolType: "curve-stableswap",
+          source: "dl",
+          extra: {
+            executionCapabilityGate: { family: "curve-stableswap", reason: "rate-bearing-inputs" },
+          },
+        },
+        {
+          poolId: "ethereum:0xpaused",
+          project: "balancer",
+          chain: "ethereum",
+          tvlUsd: 3_000_000,
+          symbol: "USDC / USDT",
+          poolType: "balancer-stable",
+          source: "direct_api",
+          extra: {
+            executionCapabilityGate: { family: "balancer-amm", reason: "paused-or-swap-disabled" },
+          },
+        },
+        {
+          poolId: "ethereum:0xgeneric-dl",
+          project: "uniswap-v3",
+          chain: "ethereum",
+          tvlUsd: 7_000_000,
+          symbol: "USDC / USDT",
+          poolType: "uniswap-v3-5bp",
+          source: "dl",
+        },
+        {
+          poolId: "ethereum:0xgeneric-direct",
+          project: "aerodrome",
+          chain: "base",
+          tvlUsd: 4_000_000,
+          symbol: "USDC / USDbC",
+          poolType: "aerodrome-stable",
+          source: "direct_api",
+        },
+      ],
+    });
+
+    expect(result.observations).toEqual([]);
+    expect(result.coverage).toMatchObject({
+      retainedPoolCount: 5,
+      scoreEligibleCapabilityPoolCount: 3,
+      scoreEligiblePoolCount: 0,
+      unsupportedPoolCount: 5,
+      unsupportedReasons: {
+        "executionCapabilityGate:curve-cryptoswap:unsupported-invariant": 1,
+        "executionCapabilityGate:curve-stableswap:rate-bearing-inputs": 1,
+        "executionCapabilityGate:balancer-amm:paused-or-swap-disabled": 1,
+        "nonExecutableEvidence:defillama-pool-shaped": 1,
+        "nonExecutableEvidence:direct-api-amm-shaped": 1,
+      },
+    });
+    expect(isDexExitRouteCoverageComplete(result.coverage)).toBe(false);
   });
 
   it("simulates a Raydium constant-product exit from exact retained reserves", () => {

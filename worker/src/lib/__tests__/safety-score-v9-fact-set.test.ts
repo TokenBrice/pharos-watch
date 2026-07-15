@@ -144,11 +144,12 @@ function exactFixedInput(args: { liquidityScore?: number; classifiedReserve?: bo
         exitRouteObservations: [route()],
         exitRouteObservationCoverage: {
           status: "populated",
-          capabilityMatrixVersion: "fixture-v1",
+          capabilityMatrixVersion: "p4a.4",
           retainedPoolCount: 1,
           observationCount: 1,
           scoreEligibleObservationCount: 1,
           scoreEligiblePoolCount: 1,
+          scoreEligibleCapabilityPoolCount: 1,
           unsupportedPoolCount: 0,
           evidenceCounts: { "reserve-based-amm-simulation": 1 },
           unsupportedReasons: {},
@@ -678,6 +679,68 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     const high = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput({ liquidityScore: 99 }), extension());
     expect(low.assets).toEqual(high.assets);
     expect(low.baseInputGenerationId).not.toBe(high.baseInputGenerationId);
+  });
+
+  it("keeps shaped diagnostic pools out of the DEX completeness denominator without hiding exact gates", () => {
+    const fixedWithCoverage = (exactCapabilityPoolCount: number) => {
+      const original = exactFixedInput();
+      const {
+        schemaVersion: omittedSchemaVersion,
+        activeAssetIds: omittedActiveAssetIds,
+        dexPayloadFingerprint: omittedDexPayloadFingerprint,
+        redemptionPayloadFingerprint: omittedRedemptionPayloadFingerprint,
+        registryFingerprint: omittedRegistryFingerprint,
+        inputMethodologyVersions: omittedInputMethodologyVersions,
+        baseInputGenerationId: omittedBaseInputGenerationId,
+        ...draft
+      } = original;
+      void [
+        omittedSchemaVersion,
+        omittedActiveAssetIds,
+        omittedDexPayloadFingerprint,
+        omittedRedemptionPayloadFingerprint,
+        omittedRegistryFingerprint,
+        omittedInputMethodologyVersions,
+        omittedBaseInputGenerationId,
+      ];
+      return createReportCardsFixedInput({
+        ...draft,
+        activeAssetIds: ["alpha"],
+        dexLiqMap: {
+          alpha: {
+            ...original.dexLiqMap.alpha!,
+            exitRouteObservationCoverage: {
+              status: "populated",
+              capabilityMatrixVersion: "p4a.4",
+              retainedPoolCount: 2_380 + exactCapabilityPoolCount,
+              observationCount: 1,
+              scoreEligibleObservationCount: 1,
+              scoreEligiblePoolCount: 1,
+              scoreEligibleCapabilityPoolCount: exactCapabilityPoolCount,
+              unsupportedPoolCount: 2_379 + exactCapabilityPoolCount,
+              evidenceCounts: { "reserve-based-amm-simulation": 1 },
+              unsupportedReasons: {
+                "nonExecutableEvidence:defillama-pool-shaped": 1_449,
+                "nonExecutableEvidence:curve-stableswap-shaped": 11,
+                "nonExecutableEvidence:direct-api-amm-shaped": 653,
+                "nonExecutableEvidence:discovery-pool-shaped": 267,
+                ...(exactCapabilityPoolCount > 1
+                  ? { "executionCapabilityGate:curve-stableswap:rate-bearing-inputs": 1 }
+                  : {}),
+              },
+            },
+          },
+        },
+      });
+    };
+
+    const complete = compileSafetyScoreV9FactSetFromFixedInput(fixedWithCoverage(1), extension()).assets[0]!;
+    expect(complete.exitStatus.observationState).toBe("known");
+    expect(complete.gaps.map((gap) => gap.reasonCode)).not.toContain("incomplete-dex-route-coverage");
+
+    const gated = compileSafetyScoreV9FactSetFromFixedInput(fixedWithCoverage(2), extension()).assets[0]!;
+    expect(gated.exitStatus.observationState).toBe("bounded-unknown");
+    expect(gated.gaps.map((gap) => gap.reasonCode)).toContain("incomplete-dex-route-coverage");
   });
 
   it("treats a pure NAV peg reference as not-applicable while fiat assets still require a peg row", () => {

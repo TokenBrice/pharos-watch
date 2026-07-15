@@ -444,18 +444,23 @@ describe("convertToGtNewPools", () => {
     const pool: DexApiPool = {
       ...MOCK_POOL,
       source: "balancer",
+      poolAddress: "0x1111111111111111111111111111111111111111",
       poolType: "balancer-weighted",
       balances: [8_000_000, 2_000],
       balancesNormalized: true,
       feeRate: 0.003,
       price: null,
       tokens: [
-        { address: "0xusdc", symbol: "USDC", decimals: 6, priceUsd: 1, weight: 0.8 },
-        { address: "0xweth", symbol: "WETH", decimals: 18, priceUsd: 1_000, weight: 0.2 },
+        { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", symbol: "USDC", decimals: 6, priceUsd: 1, weight: 0.8 },
+        { address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", symbol: "WETH", decimals: 18, priceUsd: 1_000, weight: 0.2 },
       ],
     };
 
-    const result = convertToGtNewPools([pool], new Map([["0xusdc", "usdc-circle"]]), new Map());
+    const result = convertToGtNewPools(
+      [pool],
+      new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc-circle"]]),
+      new Map(),
+    );
     const model = result.get("usdc-circle")![0].ammExecutionModel;
 
     expect(model).toMatchObject({
@@ -568,6 +573,32 @@ describe("extractPriceObservations", () => {
     const addressToId = new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"]]);
     const result = extractPriceObservations([balancerPool], addressToId, new Map());
     expect(result.get("usdc")![0].price).toBeCloseTo(1.0001);
+  });
+
+  it("excludes only paused Balancer pools from direct price observations", () => {
+    const addressToId = new Map([
+      ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"],
+      ["0xdac17f958d2ee523a2206206994597c13d831ec7", "usdt"],
+    ]);
+    const paused: DexApiPool = {
+      ...MOCK_POOL,
+      source: "balancer",
+      tvlUsd: 900_000,
+      executionCapabilityGate: { family: "balancer-amm", reason: "paused-or-swap-disabled" },
+    };
+    const rateBearing: DexApiPool = {
+      ...MOCK_POOL,
+      source: "balancer",
+      poolAddress: "0xrate-bearing",
+      tvlUsd: 150_000,
+      executionCapabilityGate: { family: "balancer-amm", reason: "rate-bearing-inputs" },
+    };
+
+    const result = extractPriceObservations([paused, rateBearing], addressToId, new Map());
+
+    expect(result.get("usdc")).toHaveLength(1);
+    expect(result.get("usdc")?.[0]?.tvl).toBe(150_000);
+    expect(result.get("usdt")).toHaveLength(1);
   });
 
   it("skips pools with null price and no per-token priceUsd", () => {

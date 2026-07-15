@@ -235,7 +235,9 @@ const ALLOWED_EXTRA_KEYS = new Set<string>([
   "orderbookDepthUsd",
   "orderbookDepthUpUsd",
   "orderbookTvlBasis",
+  "executionCapabilityGate",
   "ammExecutionModel",
+  "measuredExecution",
 ]);
 
 export function normalizeTopPools(
