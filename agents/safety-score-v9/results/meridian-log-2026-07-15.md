@@ -219,6 +219,28 @@ it. The C21 FTQ grade-set predicate and C20 DDR source swap in c5401b8fe are
 implementations of the owner-adopted packet decisions and ship live with the
 next release (expected FTQ classification shifts).
 
+## Coordinator amendment — marker ordering reconciliation (2026-07-15)
+
+The "step 0" wording above is superseded on ordering. Writing
+`safety-score-v9:public-activation` exposes `/api/report-cards/v9`
+immediately, so it must NOT precede verification. Reconciled sequence:
+
+1. All C15 pre-activation verification (Worker identity, canonical V9
+   source, boundary preconditions) completes first, with the marker absent
+   and the endpoint dark.
+2. The marker write is the FIRST step of the execution block only — the
+   gate that begins public exposure — followed by boundary write and
+   frontend selection per C15.
+3. Rollback deletes the marker before any other rollback action. V8
+   restoration does NOT recreate the marker; it stays absent until a future
+   activation re-executes step 2.
+
+Two explicitly open pre-activation decision items (HERALD handoff): the
+marker is existence-only (any value accepted — owner may instead bind the
+approved identity), and the strict V9 response still emits
+`lifecycle: "shadow"` post-marker; both need an owner ruling during
+activation, not before.
+
 ## Meridian III — VERITAS II Consumer Fixes (2026-07-15)
 
 - **VER2-005:** Confirmed that degraded yield hydration cleared row-level
