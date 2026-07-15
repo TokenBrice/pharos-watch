@@ -25,6 +25,7 @@ export const STRICT_CONTRACT_SMOKE_PATHS = [
   "/api/dex-liquidity",
   "/api/stability-index",
   "/api/report-cards",
+  "/api/report-cards/v9",
   "/api/depeg-resolver",
   "/api/depeg-resolver-review",
   "/api/redemption-backstops",
@@ -288,6 +289,22 @@ export const ENDPOINT_ASSERTIONS = {
     assert(
       body.methodology && typeof body.methodology.version === "string" && body.methodology.version.length > 0,
       "/api/report-cards missing methodology.version",
+    );
+    return `${body.cards.length} cards`;
+  },
+  "/api/report-cards/v9": (result) => {
+    // Dark until the owner-gated activation marker is written; a 404 is the
+    // expected pre-activation contract (see worker handleReportCardsV9).
+    if (result.status === 404) {
+      return "dark (not activated)";
+    }
+    assert(result.status === 200, `/api/report-cards/v9 returned ${result.status}`);
+    const body = stripMeta(result.body);
+    assert(body && Array.isArray(body.cards), "/api/report-cards/v9 missing cards[]");
+    assert(body.cards.length > 0, "/api/report-cards/v9 returned empty cards[]");
+    assert(
+      body.methodology && typeof body.methodology.version === "string" && body.methodology.version.length > 0,
+      "/api/report-cards/v9 missing methodology.version",
     );
     return `${body.cards.length} cards`;
   },

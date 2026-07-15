@@ -29,6 +29,11 @@ function makeRouteCtx(overrides: Partial<FullRouteContext> & { url: URL }): Full
   return { db, execCtx, request: defaultRequest, trustedAdmin: false, ...overrides };
 }
 
+// Dark-gated public endpoints return 404 until an owner-gated activation
+// marker is written; that pre-activation 404 is their contract, not a routing
+// failure. See worker/src/api/report-cards-v9.ts.
+const DARK_GATED_PATHS = new Set(["/api/report-cards/v9"]);
+
 describe("router contract: strict frontend paths are routable", () => {
   it("routes all strict contract paths", async () => {
     for (const path of STRICT_CONTRACT_PATHS_LIST) {
@@ -36,7 +41,9 @@ describe("router contract: strict frontend paths are routable", () => {
       expect(result, `expected route for ${path}`).not.toBeNull();
 
       const response = await result!;
-      expect(response.status, `unexpected 404 for ${path}`).not.toBe(404);
+      if (!DARK_GATED_PATHS.has(path)) {
+        expect(response.status, `unexpected 404 for ${path}`).not.toBe(404);
+      }
       expect(response.status, `unexpected 500 for ${path}`).not.toBe(500);
     }
   });
@@ -150,8 +157,9 @@ describe("router contract: strict frontend paths are routable", () => {
           method,
           headers: method === "POST" ? { "X-Pharos-Admin": "1" } : undefined,
         });
-        const expectedPublicStatuses =
-          endpoint.path === "/api/telegram-webhook"
+        const expectedPublicStatuses = DARK_GATED_PATHS.has(endpoint.path)
+          ? [200, 400, 404, 502, 503]
+          : endpoint.path === "/api/telegram-webhook"
             ? [200, 400, 501, 502, 503]
             : endpoint.path === "/api/stablecoin-reserves/iusd-infinifi"
               ? [200, 400, 502, 503]
