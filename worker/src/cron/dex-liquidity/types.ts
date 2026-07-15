@@ -271,7 +271,7 @@ export interface UniV3Lookups {
   uniV3PriceObs: Map<string, DexPriceObs[]>;
   uniV3ExecutionCandidates: Map<
     string,
-    import("../measured-execution/inventory").UniV3ExecutionCandidate[]
+    import("../measured-execution/candidate-types").UniV3ExecutionCandidate[]
   >;
 }
 

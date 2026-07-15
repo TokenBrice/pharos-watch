@@ -1,0 +1,15 @@
+// Leaf module (no imports): dex-liquidity/types.ts references this shape, so it
+// must not pull in the measured-execution runtime graph, which imports
+// dex-liquidity modules back (check:shared-cycles).
+export interface UniV3ExecutionCandidate {
+  chain: string;
+  poolAddress: string;
+  feePips: number;
+  tvlUsd: number;
+  token0Price: number;
+  token1Price: number;
+  tokens: readonly [
+    { address: string; symbol: string; decimals: number },
+    { address: string; symbol: string; decimals: number },
+  ];
+}
