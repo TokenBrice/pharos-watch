@@ -60,10 +60,29 @@ describe("handleReportCardsV9", () => {
     mockBuildReportCardsSnapshot.mockReset();
   });
 
-  it("is registered at the versioned endpoint and returns the strict V9 shadow contract", async () => {
+  const activatedDb = () =>
+    mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["safety-score-v9:public-activation"],
+        rows: [{ value: "activated", updated_at: 1700000000 }],
+        first: { value: "activated", updated_at: 1700000000 },
+      },
+    ]);
+
+  it("stays dark (404) until the owner-gated activation marker exists", async () => {
     mockLoadPublishedReportCardsV9Snapshot.mockResolvedValue(snapshot());
 
     const response = await handleReportCardsV9(mockD1());
+
+    expect(response.status).toBe(404);
+    expect(mockLoadPublishedReportCardsV9Snapshot).not.toHaveBeenCalled();
+  });
+
+  it("is registered at the versioned endpoint and returns the strict V9 shadow contract", async () => {
+    mockLoadPublishedReportCardsV9Snapshot.mockResolvedValue(snapshot());
+
+    const response = await handleReportCardsV9(activatedDb());
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -81,7 +100,7 @@ describe("handleReportCardsV9", () => {
       new MockV9UnavailableError("Canonical Safety Score V9 shadow cache is unavailable"),
     );
 
-    const response = await handleReportCardsV9(mockD1());
+    const response = await handleReportCardsV9(activatedDb());
 
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toEqual({ error: "Canonical Safety Score V9 shadow cache is unavailable" });

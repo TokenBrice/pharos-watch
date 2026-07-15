@@ -46,7 +46,7 @@ The V9 implementation establishes candidate infrastructure without changing prod
   candidate deterministically. The current policy semantic digest is
   `6b6f819eb06740634239467ed6041125d7971f8df0fbedf0e4bd836cac405053`;
   the current evaluation-build digest is
-  `94819987e08f55f50028907f2feece5a6099543e91a05b3c437b1cb398da45f3`.
+  `78b082388627e5478ee870f93f0d414dc2e9bd37486ceb768bfa0c68cf537f1c`.
 - The 2026-07-15 candidate-v2 queue-binding revision adds explicit
   `local-component` paths to seven reason allowlists already emitted as
   aggregate facts. The revision changes evidence-work-queue metadata only;
@@ -77,6 +77,16 @@ The V9 implementation establishes candidate infrastructure without changing prod
   unresolved-archetype classifications. Grade-band re-anchoring against the
   resulting compressed distribution remains an open owner calibration
   decision recorded in the research corpus.
+- The 2026-07-15 shadow mechanism-review revision makes CDP metric
+  applicability explicit: a null ratio is valid only as source-cited
+  structural N/A and is excluded only from its corresponding threshold, while
+  measured nulls fail schema validation. Measurement completeness describes
+  controller and issuance coverage rather than health, so a fully enumerated
+  shutdown or non-redeemable branch remains complete while retaining its
+  health warnings and failed mechanism facts. This is candidate-only evaluator
+  behavior and does not change active V8.17; its final identity must be carried
+  by a regenerated evaluation-build digest before replay or freeze,
+  coordinated with the release owner.
 - The shadow extension builder now maps reviewed repository evidence into the
   strict fact set instead of clamping every fact to an unresolved state: peg
   references from the registry peg currency, chain-supply bridge materiality
