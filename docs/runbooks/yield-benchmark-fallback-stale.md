@@ -47,7 +47,7 @@ WHERE key = 'yield-rankings';
 ## Common Causes
 
 - FRED, Treasury.gov, ECB, SIX, or central-bank benchmark fetches failed during the daily `0 8 * * *` lane.
-- The GBP SONIA source family (FRED graph CSV, ALFRED graph CSV, and BoE IADB `IUDZOS2`) failed on consecutive daily runs, so `fetch-tbill-rate` retained the last GBP market benchmark and fired the repeated-fallback alert.
+- The GBP SONIA source family (FRED graph CSV, ALFRED graph CSV, and BoE IADB `IUDZOS2`) failed on consecutive daily runs, so `fetch-tbill-rate` retained the last GBP market benchmark and fired the repeated-fallback alert. HTTP 520 from both St. Louis Fed graph hosts can indicate that their required contact-bearing Worker user agent drifted.
 - `fetch-tbill-rate` retained the last market-derived rate after an upstream outage.
 - The benchmark cache exists but is malformed or missing one of the structured benchmark entries.
 - `sync-yield-data` is healthy but continues to mark rankings degraded because the retained USD benchmark is too old.
@@ -55,7 +55,7 @@ WHERE key = 'yield-rankings';
 ## Remediation
 
 - If the benchmark fetch failed once and the retained rate is recent, monitor until the next daily benchmark lane or manually trigger the established cron path if available to operators.
-- If the GBP SONIA retained-fallback alert or canary fired, inspect `cache['fetch-tbill-rate:gbp-retained-fallback-streak']` for `consecutiveRetainedRuns`, `consecutiveFreshRuns`, `lastMarketSource`, `lastMarketRecordDate`, `lastFreshSource`, `lastFreshRecordDate`, and `lastAlertedAt`. Inspect the latest `fetch-tbill-rate` cron metadata `gbpResponseAttempts` to distinguish transport failure, HTTP status failure, empty body, and parse failure across FRED, ALFRED, and BoE. Treat provider recovery as the normal fix; response bodies and URLs are intentionally absent from diagnostics.
+- If the GBP SONIA retained-fallback alert or canary fired, inspect `cache['fetch-tbill-rate:gbp-retained-fallback-streak']` for `consecutiveRetainedRuns`, `consecutiveFreshRuns`, `lastMarketSource`, `lastMarketRecordDate`, `lastFreshSource`, `lastFreshRecordDate`, and `lastAlertedAt`. Inspect the latest `fetch-tbill-rate` cron metadata `gbpResponseAttempts` to distinguish transport failure, HTTP status failure, empty body, and parse failure across FRED, ALFRED, and BoE. If FRED and ALFRED both return HTTP 520, verify their adapter still sends `Pharos/1.0 (+https://pharos.watch)` before treating the incident as an upstream outage. Response bodies and URLs are intentionally absent from diagnostics.
 - If a provider-specific outage is visible, wait for upstream recovery rather than replacing rates manually.
 - If `fetch-tbill-rate` is stale because of a lease issue, confirm no active run exists before clearing the stale lease through the standard admin reset-lease flow for `fetch-tbill-rate`.
 - If only non-USD benchmarks are missing while USD is healthy, document the affected peg currencies in incident notes; USD rankings remain the primary availability path.
