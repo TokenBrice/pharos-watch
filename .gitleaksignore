@@ -143,6 +143,7 @@ b0c670ada4dc92341a2a0edd1eb9dd3cebb397c0:worker/src/lib/__tests__/api-keys.test.
 b568e11b3fde8cf41cc2f154bdfa7ee60d03d04e:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:489
 b7dbeb79f9a73fa42b2ea3eced626910685c4fc6:docs/api-reference.md:generic-api-key:2614
 b7dbeb79f9a73fa42b2ea3eced626910685c4fc6:docs/api-reference.md:generic-api-key:2615
+ba346703312c2d7d8f206c3bfeb8ef8e8c89e7c8:shared/data/safety-score-v9/mechanism-review-overlays-v1.json:generic-api-key:2897
 c0b0bc25cd6224d5aec1d39771c697583956cc81:worker/src/cron/yield-config-lending-protocols.ts:generic-api-key:132
 c0b0bc25cd6224d5aec1d39771c697583956cc81:worker/src/cron/yield-config-lending-protocols.ts:generic-api-key:141
 c0b0bc25cd6224d5aec1d39771c697583956cc81:worker/src/cron/yield-config-lending-protocols.ts:generic-api-key:156
