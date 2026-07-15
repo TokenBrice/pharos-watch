@@ -4,11 +4,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { PriceConfidence, PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { binarySearchNearest } from "../binary-search";
-import {
-  fetchEvmCallHexAtBlock,
-  resolveClosestBlockAtOrBeforeTimestamp,
-  type EvmBlockSearchCache,
-} from "../evm-rpc";
+import { fetchEvmCallHexAtBlock, resolveClosestBlockAtOrBeforeTimestamp, type EvmBlockSearchCache } from "../evm-rpc";
 import { encodeUint256 } from "../evm-selectors";
 export { encodeAddress, encodeUint256 } from "../evm-selectors";
 import { throwIfAborted } from "../abort";
@@ -34,6 +30,35 @@ export interface Erc4626NavVaultConfig {
   assetDecimals: number;
   rpcUrls?: readonly string[];
   allowFreshNonReplaySafeParent?: boolean;
+}
+
+export function defineRegistryErc4626NavVault(input: {
+  id: string;
+  parentId: string;
+  chain: string;
+  allowFreshNonReplaySafeParent?: boolean;
+}): Erc4626NavVaultConfig {
+  const vaultDeployment = TRACKED_META_BY_ID.get(input.id)?.contracts?.find(
+    (deployment) => deployment.chain === input.chain,
+  );
+  const assetDeployment = TRACKED_META_BY_ID.get(input.parentId)?.contracts?.find(
+    (deployment) => deployment.chain === input.chain,
+  );
+  if (!vaultDeployment || !assetDeployment) {
+    throw new Error(
+      `[authoritative-price-sources] ${input.id}: missing ${input.chain} vault or parent deployment in the stablecoin registry`,
+    );
+  }
+
+  return {
+    id: input.id,
+    parentId: input.parentId,
+    chain: input.chain,
+    vault: vaultDeployment.address,
+    vaultDecimals: vaultDeployment.decimals,
+    assetDecimals: assetDeployment.decimals,
+    ...(input.allowFreshNonReplaySafeParent === true ? { allowFreshNonReplaySafeParent: true } : {}),
+  };
 }
 
 interface BoundedVaultQuoteConfig {
@@ -213,10 +238,12 @@ function getFinitePositivePrice(asset: Pick<PeggedAsset, "price"> | undefined): 
 }
 
 function isExplicitAuthoritativeParent(asset: PeggedAsset): boolean {
-  return asset.priceSource === PROTOCOL_REDEEM_SOURCE &&
+  return (
+    asset.priceSource === PROTOCOL_REDEEM_SOURCE &&
     asset.priceConfidence !== "fallback" &&
     asset.priceConfidence !== "low" &&
-    asset.priceConfidence != null;
+    asset.priceConfidence != null
+  );
 }
 
 function normalizeFreshSyncedAt(value: number | null | undefined, nowSec: number): number | null {
@@ -231,7 +258,11 @@ interface LiveParentTrustOptions {
   allowFreshReplaySafeSingleSourceParent?: boolean;
 }
 
-function resolveTrustedInheritedParent(asset: PeggedAsset, nowSec: number, options?: LiveParentTrustOptions): {
+function resolveTrustedInheritedParent(
+  asset: PeggedAsset,
+  nowSec: number,
+  options?: LiveParentTrustOptions,
+): {
   price: number;
   observedAt: number;
   observedAtMode: PriceObservedAtMode | null;
@@ -251,13 +282,11 @@ function resolveTrustedInheritedParent(asset: PeggedAsset, nowSec: number, optio
   const confidenceTrusted =
     parentConfidence === "high" ||
     isExplicitAuthoritativeParent(asset) ||
-    (
-      options?.allowFreshReplaySafeSingleSourceParent === true &&
+    (options?.allowFreshReplaySafeSingleSourceParent === true &&
       parentConfidence === "single-source" &&
       replaySafe &&
       sourceParts.length === 1 &&
-      !sourceParts.includes("cached")
-    );
+      !sourceParts.includes("cached"));
   if (!confidenceTrusted || parentConfidence == null) return null;
   const trustedConfidence = parentConfidence;
 
@@ -349,8 +378,8 @@ export function buildParentDerivedLiveOverride(
   if (!Number.isFinite(price) || price <= 0) return null;
 
   const parentObservedAt = parent.parentAsset.priceObservedAt ?? parent.parentAsset.priceUpdatedAt ?? null;
-  const inheritsSingleSourceSoftParent = parent.trustedParent.confidence === "single-source" &&
-    parent.trustedParent.source !== PROTOCOL_REDEEM_SOURCE;
+  const inheritsSingleSourceSoftParent =
+    parent.trustedParent.confidence === "single-source" && parent.trustedParent.source !== PROTOCOL_REDEEM_SOURCE;
 
   return {
     price,
@@ -369,10 +398,7 @@ export function buildParentDerivedLiveOverride(
   };
 }
 
-export function findNearestSupply(
-  snapshots: HistoricalSupplySnapshot[] | undefined,
-  timestamp: number,
-): number | null {
+export function findNearestSupply(snapshots: HistoricalSupplySnapshot[] | undefined, timestamp: number): number | null {
   if (!snapshots || snapshots.length === 0) return null;
   const nearest = binarySearchNearest(snapshots, timestamp, (s) => s.ts);
   return nearest?.supply ?? null;

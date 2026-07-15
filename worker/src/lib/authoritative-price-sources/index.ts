@@ -72,15 +72,41 @@ function hasUsableLivePrice(asset: PeggedAsset): boolean {
 export function prioritizeAuthoritativeLivePriceCandidates<T extends AuthoritativeLivePriceCandidate>(
   candidates: readonly T[],
 ): T[] {
-  return [...candidates].sort((a, b) => {
-    const priorityDelta = getProviderLivePriority(a.provider) - getProviderLivePriority(b.provider);
-    if (priorityDelta !== 0) return priorityDelta;
+  const interleaveProviders = (partition: readonly T[]): T[] => {
+    const grouped = new Map<LivePriceProvider, T[]>();
+    for (const candidate of partition) {
+      const group = grouped.get(candidate.provider) ?? [];
+      group.push(candidate);
+      grouped.set(candidate.provider, group);
+    }
 
-    const missingPriceDelta = Number(hasUsableLivePrice(a.asset)) - Number(hasUsableLivePrice(b.asset));
-    if (missingPriceDelta !== 0) return missingPriceDelta;
+    const groups = [...grouped.entries()]
+      .map(([provider, entries]) => ({
+        provider,
+        entries: [...entries].sort((a, b) => a.originalIndex - b.originalIndex),
+      }))
+      .sort((a, b) => {
+        const priorityDelta = getProviderLivePriority(a.provider) - getProviderLivePriority(b.provider);
+        if (priorityDelta !== 0) return priorityDelta;
+        return (a.entries[0]?.originalIndex ?? 0) - (b.entries[0]?.originalIndex ?? 0);
+      });
 
-    return a.originalIndex - b.originalIndex;
-  });
+    const prioritized: T[] = [];
+    for (let round = 0; ; round += 1) {
+      let added = false;
+      for (const group of groups) {
+        const candidate = group.entries[round];
+        if (!candidate) continue;
+        prioritized.push(candidate);
+        added = true;
+      }
+      if (!added) return prioritized;
+    }
+  };
+
+  const missing = candidates.filter((candidate) => !hasUsableLivePrice(candidate.asset));
+  const priced = candidates.filter((candidate) => hasUsableLivePrice(candidate.asset));
+  return [...interleaveProviders(missing), ...interleaveProviders(priced)];
 }
 
 export function createAuthoritativeLivePriceOverrideStats(
@@ -103,6 +129,23 @@ export interface AuthoritativeLivePriceOverrideOptions {
   db?: D1Database;
   wallClockBudgetMs?: number;
   stats?: AuthoritativeLivePriceOverrideStats;
+  maxProviderLivePriority?: number;
+}
+
+function applyOverrideToLiveContext(context: LivePriceContext, assetId: string, override: CurrentPriceOverride): void {
+  const asset = context.assetsById.get(assetId);
+  if (!asset) return;
+  const nowSec = Math.floor(Date.now() / 1000);
+  asset.price = override.price;
+  asset.priceSource = override.source;
+  asset.priceSelectedSource = override.source;
+  asset.priceConfidence = override.confidence;
+  asset.priceObservedAt = override.observedAt ?? nowSec;
+  asset.priceObservedAtMode = override.observedAtMode ?? "local_fetch";
+  asset.priceUpdatedAt = override.observedAt ?? nowSec;
+  asset.priceSyncedAt = nowSec;
+  asset.agreeSources = [override.source];
+  asset.consensusSources = [override.source];
 }
 
 async function shouldAttemptLiveFetch(
@@ -125,7 +168,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
 ): Promise<Map<string, CurrentPriceOverride>> {
   const results = new Map<string, CurrentPriceOverride>();
   const liveContext: LivePriceContext = {
-    assetsById: new Map(assets.map((asset) => [asset.id, asset])),
+    assetsById: new Map(assets.map((asset) => [asset.id, { ...asset }])),
     validationReferences,
   };
   const candidates = assets
@@ -134,8 +177,11 @@ export async function fetchAuthoritativeLivePriceOverrides(
       originalIndex,
       provider: AUTHORITATIVE_PRICE_PROVIDERS.find((candidate) => candidate.matches(asset.id)),
     }))
-    .filter((entry): entry is AuthoritativeLivePriceCandidate =>
-      typeof entry.provider?.fetchLivePrice === "function"
+    .filter(
+      (entry): entry is AuthoritativeLivePriceCandidate =>
+        typeof entry.provider?.fetchLivePrice === "function" &&
+        (options?.maxProviderLivePriority == null ||
+          getProviderLivePriority(entry.provider) <= options.maxProviderLivePriority),
     );
   const prioritizedCandidates = prioritizeAuthoritativeLivePriceCandidates(candidates);
   const budgetMs = options?.wallClockBudgetMs ?? AUTHORITATIVE_LIVE_OVERRIDE_BUDGET_MS;
@@ -145,9 +191,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
     stats.candidateCount += prioritizedCandidates.length;
   }
   const budgetSignal = budgetMs > 0 ? AbortSignal.timeout(budgetMs) : undefined;
-  const liveSignal = signal && budgetSignal
-    ? AbortSignal.any([signal, budgetSignal])
-    : budgetSignal ?? signal;
+  const liveSignal = signal && budgetSignal ? AbortSignal.any([signal, budgetSignal]) : (budgetSignal ?? signal);
   const circuitAttempts = new Map<string, boolean>();
 
   for (let index = 0; index < prioritizedCandidates.length; index += 1) {
@@ -174,6 +218,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
       const override = await provider.fetchLivePrice(asset, liveContext, liveSignal);
       if (override) {
         results.set(asset.id, override);
+        applyOverrideToLiveContext(liveContext, asset.id, override);
         if (stats) stats.successCount += 1;
         if (circuitSource && options?.db) {
           await recordOutcomeSafe(options.db, circuitSource, true);
@@ -212,8 +257,8 @@ export async function fetchAuthoritativeHistoricalPriceSeries(
   meta: StablecoinMeta,
   context: HistoricalPriceContext,
 ): Promise<HistoricalPriceResolution> {
-  const provider = AUTHORITATIVE_PRICE_PROVIDERS.find((candidate) =>
-    candidate.matches(meta.id) && (candidate.matchesHistoricalPrices?.(meta.id) ?? true)
+  const provider = AUTHORITATIVE_PRICE_PROVIDERS.find(
+    (candidate) => candidate.matches(meta.id) && (candidate.matchesHistoricalPrices?.(meta.id) ?? true),
   );
   if (!provider?.fetchHistoricalPrices) {
     return { matched: false, source: null, prices: null };

@@ -49,12 +49,65 @@ describe("computePriceConsensus", () => {
   });
 
   it("returns single-source when only one source available", () => {
-    const sources: SourcePrice[] = [
-      { source: "pyth", price: 0.999, weight: 1 },
-    ];
+    const sources: SourcePrice[] = [{ source: "pyth", price: 0.999, weight: 1 }];
     const result = computePriceConsensus(sources, 1.0, 50);
     expect(result!.confidence).toBe("single-source");
     expect(result!.price).toBe(0.999);
+  });
+
+  it("collapses repeated deployment quotes from one provider before consensus", () => {
+    const sources: SourcePrice[] = [
+      { source: "alchemy-address", price: 0.999, weight: 1, observedAt: 1_700_000_000 },
+      { source: "alchemy-address", price: 1.0, weight: 1, observedAt: 1_700_000_010 },
+      { source: "alchemy-address", price: 1.001, weight: 1, observedAt: 1_700_000_020 },
+    ];
+
+    const result = computePriceConsensus(sources, 1.0, 50);
+
+    expect(result).toMatchObject({
+      price: 1,
+      source: "alchemy-address",
+      confidence: "single-source",
+      agreeSources: ["alchemy-address"],
+      allPrices: { "alchemy-address": 1 },
+      observedAt: 1_700_000_000,
+    });
+  });
+
+  it("does not let repeated provider deployments outweigh an independent source", () => {
+    const sources: SourcePrice[] = [
+      { source: "alchemy-address", price: 0.998, weight: 1 },
+      { source: "alchemy-address", price: 0.999, weight: 1 },
+      { source: "alchemy-address", price: 1.0, weight: 1 },
+      { source: "coingecko", price: 1.002, weight: 2 },
+    ];
+
+    const result = computePriceConsensus(sources, 1.0, 50);
+
+    expect(result).toMatchObject({
+      price: 1.0005,
+      confidence: "high",
+    });
+    expect(result?.agreeSources.sort()).toEqual(["alchemy-address", "coingecko"]);
+  });
+
+  it("treats CoinGecko list and ticker quotes as one independent family", () => {
+    const result = computePriceConsensus(
+      [
+        { source: "coingecko", price: 1.0002, weight: 2 },
+        { source: "cg-ticker", price: 0.9999, weight: 2 },
+      ],
+      1.0,
+      50,
+    );
+
+    expect(result).toMatchObject({
+      price: 0.9999,
+      source: "cg-ticker",
+      selectedSource: "cg-ticker",
+      confidence: "single-source",
+      agreeSources: ["cg-ticker"],
+    });
   });
 
   it("selects price closest to peg reference when diverging", () => {
@@ -116,8 +169,8 @@ describe("computePriceConsensus", () => {
     //   soft: coingecko(w=2)+defillama-list(w=1)  at 1.000
     //   hard: pyth(w=2)+binance(w=1)              at 0.992
     // Equal size AND equal weight → tiebreak: hard tier wins.
-    const softA: SourcePrice = { source: "coingecko", price: 1.000, weight: 2 };
-    const softB: SourcePrice = { source: "defillama-list", price: 1.000, weight: 1 };
+    const softA: SourcePrice = { source: "coingecko", price: 1.0, weight: 2 };
+    const softB: SourcePrice = { source: "defillama-list", price: 1.0, weight: 1 };
     const hardA: SourcePrice = { source: "pyth", price: 0.992, weight: 2 };
     const hardB: SourcePrice = { source: "binance", price: 0.992, weight: 1 };
     const consensus = computePriceConsensus([softA, softB, hardA, hardB], 1.0, 50, { mode: "fixed" });
@@ -182,20 +235,20 @@ describe("computePriceConsensus", () => {
   it("breaks weight tie for NAV tokens by choosing source closest to cluster median", () => {
     const sources: SourcePrice[] = [
       { source: "coingecko", price: 1.12, weight: 2 },
-      { source: "binance", price: 1.10, weight: 2 },
+      { source: "binance", price: 1.1, weight: 2 },
       { source: "defillama", price: 1.11, weight: 1 },
     ];
     const result = computePriceConsensus(sources, null, 50);
     expect(result!.confidence).toBe("high");
     expect(result!.price).toBe(1.11);
-    expect([ "coingecko", "binance" ]).toContain(result!.selectedSource);
+    expect(["coingecko", "binance"]).toContain(result!.selectedSource);
   });
 
   it("agrees at exactly 50bps boundary (inclusive)", () => {
     // 1.0000 and 1.0050 are exactly 50bps apart: |1.0050-1.0000|/1.0025 * 10000 ≈ 49.9 bps
     const sources: SourcePrice[] = [
-      { source: "coingecko", price: 1.0000, weight: 1 },
-      { source: "defillama", price: 1.0050, weight: 1 },
+      { source: "coingecko", price: 1.0, weight: 1 },
+      { source: "defillama", price: 1.005, weight: 1 },
     ];
     const result = computePriceConsensus(sources, 1.0, 50);
     expect(result!.confidence).toBe("high");
@@ -220,8 +273,8 @@ describe("computePriceConsensus", () => {
   it("disagrees just beyond 50bps boundary", () => {
     // 1.0000 and 1.0060 are ~60bps apart — should disagree
     const sources: SourcePrice[] = [
-      { source: "coingecko", price: 1.0000, weight: 1 },
-      { source: "defillama", price: 1.0060, weight: 1 },
+      { source: "coingecko", price: 1.0, weight: 1 },
+      { source: "defillama", price: 1.006, weight: 1 },
     ];
     const result = computePriceConsensus(sources, 1.0, 50);
     expect(result!.confidence).toBe("low");

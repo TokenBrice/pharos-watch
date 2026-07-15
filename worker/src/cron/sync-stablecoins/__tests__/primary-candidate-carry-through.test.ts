@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { getPrimaryCandidatePricesForCurrentAsset } from "../pricing";
+import {
+  getPostEnrichmentCandidatePricesForCurrentAsset,
+  getPrimaryCandidatePricesForCurrentAsset,
+} from "../pricing";
 import type { PeggedAsset, PrimaryPriceResult } from "../enrich-prices";
 
 function makeAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
@@ -82,5 +85,72 @@ describe("getPrimaryCandidatePricesForCurrentAsset", () => {
     ]);
 
     expect(getPrimaryCandidatePricesForCurrentAsset(asset, results)).toBeUndefined();
+  });
+});
+
+describe("getPostEnrichmentCandidatePricesForCurrentAsset", () => {
+  it("merges a same-run primary quote with the current fallback quote", () => {
+    const asset = makeAsset({
+      id: "usx-dforce",
+      price: 0.3904,
+      priceSource: "dexscreener-exact",
+      priceConfidence: "fallback",
+    });
+    const results = new Map([
+      [
+        "usx-dforce",
+        makePrimaryPriceResult({
+          price: 0.390247,
+          source: "coingecko",
+          confidence: "single-source",
+          allPrices: { coingecko: 0.390247 },
+        }),
+      ],
+    ]);
+
+    expect(getPostEnrichmentCandidatePricesForCurrentAsset(asset, results)).toEqual({
+      coingecko: 0.390247,
+      "dexscreener-exact": 0.3904,
+    });
+  });
+
+  it("adds the current fallback even when primary metadata already matches it", () => {
+    const asset = makeAsset({
+      id: "usx-dforce",
+      price: 0.3904,
+      priceSource: "dexscreener-exact",
+      priceConfidence: "fallback",
+    });
+    const results = new Map([
+      [
+        "usx-dforce",
+        makePrimaryPriceResult({
+          price: 0.3904,
+          source: "dexscreener-exact",
+          confidence: "fallback",
+          allPrices: { coingecko: 0.390247 },
+        }),
+      ],
+    ]);
+
+    expect(getPostEnrichmentCandidatePricesForCurrentAsset(asset, results)).toEqual({
+      coingecko: 0.390247,
+      "dexscreener-exact": 0.3904,
+    });
+  });
+
+  it("does not merge same-run evidence into a non-fallback replacement", () => {
+    const asset = makeAsset({
+      price: 0.3904,
+      priceSource: "protocol-redeem",
+      priceConfidence: "single-source",
+    });
+
+    expect(
+      getPostEnrichmentCandidatePricesForCurrentAsset(
+        asset,
+        new Map([[asset.id, makePrimaryPriceResult({ allPrices: { coingecko: 0.390247 } })]]),
+      ),
+    ).toBeUndefined();
   });
 });

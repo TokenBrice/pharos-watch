@@ -63,6 +63,34 @@ vi.mock("@shared/lib/stablecoins/registry", () => ({
         geckoId: "aegis-yusd",
       },
     ],
+    [
+      "gho-aave",
+      {
+        id: "gho-aave",
+        contracts: [{ chain: "ethereum", address: "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f", decimals: 18 }],
+      },
+    ],
+    [
+      "sgho-aave",
+      {
+        id: "sgho-aave",
+        contracts: [{ chain: "ethereum", address: "0xe1753f2e00940cc31213dd92013cf019dfe4ca1d", decimals: 18 }],
+      },
+    ],
+    [
+      "aid-gaib",
+      {
+        id: "aid-gaib",
+        contracts: [{ chain: "ethereum", address: "0x18f52b3fb465118731d9e0d276d4eb3599d57596", decimals: 18 }],
+      },
+    ],
+    [
+      "said-gaib",
+      {
+        id: "said-gaib",
+        contracts: [{ chain: "ethereum", address: "0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8", decimals: 18 }],
+      },
+    ],
   ]),
 }));
 
@@ -145,13 +173,9 @@ describe("authoritative-price-sources", () => {
       const signal = new AbortController().signal;
       fetchEvmCallHexAtBlockMock.mockResolvedValue(IUSD_QUOTE_HEX);
 
-      await expect(fetchVaultAssetsPerShareViaSelector(
-        vaultConfig,
-        "0x12345678",
-        "previewRedeem",
-        123,
-        signal,
-      )).resolves.toBe(1);
+      await expect(
+        fetchVaultAssetsPerShareViaSelector(vaultConfig, "0x12345678", "previewRedeem", 123, signal),
+      ).resolves.toBe(1);
 
       expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledWith(
         "ethereum",
@@ -169,16 +193,24 @@ describe("authoritative-price-sources", () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
       fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(null);
-      await expect(fetchVaultAssetsPerShareViaSelector(vaultConfig, "0x12345678", "previewRedeem", "latest")).resolves.toBeNull();
+      await expect(
+        fetchVaultAssetsPerShareViaSelector(vaultConfig, "0x12345678", "previewRedeem", "latest"),
+      ).resolves.toBeNull();
 
       fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(ZERO_WORD_HEX);
-      await expect(fetchVaultAssetsPerShareViaSelector(vaultConfig, "0x12345678", "previewRedeem", "latest")).resolves.toBeNull();
+      await expect(
+        fetchVaultAssetsPerShareViaSelector(vaultConfig, "0x12345678", "previewRedeem", "latest"),
+      ).resolves.toBeNull();
 
       fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${encodeUint256(11_000_000)}`);
-      await expect(fetchVaultAssetsPerShareViaSelector(vaultConfig, "0x12345678", "previewRedeem", "latest")).resolves.toBeNull();
+      await expect(
+        fetchVaultAssetsPerShareViaSelector(vaultConfig, "0x12345678", "previewRedeem", "latest"),
+      ).resolves.toBeNull();
 
       expect(warnSpy).toHaveBeenCalledWith("[authoritative-price-sources] test-vault: previewRedeem() returned null");
-      expect(warnSpy).toHaveBeenCalledWith("[authoritative-price-sources] test-vault: previewRedeem() returned zero or invalid output");
+      expect(warnSpy).toHaveBeenCalledWith(
+        "[authoritative-price-sources] test-vault: previewRedeem() returned zero or invalid output",
+      );
       expect(warnSpy).toHaveBeenCalledWith(
         "[authoritative-price-sources] test-vault: previewRedeem() ratio 11 outside trusted bounds",
       );
@@ -227,29 +259,36 @@ describe("authoritative-price-sources", () => {
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
-        rows: [{
-          key: `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
-          value: JSON.stringify({
-            state: "open",
-            consecutiveFailures: 3,
-            lastFailureAt: nowSec,
-            lastSuccessAt: null,
-            openedAt: nowSec,
-          }),
-          updated_at: nowSec,
-        }],
+        rows: [
+          {
+            key: `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
+            value: JSON.stringify({
+              state: "open",
+              consecutiveFailures: 3,
+              lastFailureAt: nowSec,
+              lastSuccessAt: null,
+              openedAt: nowSec,
+            }),
+            updated_at: nowSec,
+          },
+        ],
       },
     ]);
     const stats = createAuthoritativeLivePriceOverrideStats();
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "cusd-cap",
-        name: "Cap cUSD",
-        symbol: "CUSD",
-        circulating: { peggedUSD: 114_000_000 },
-      },
-    ], undefined, undefined, { db, stats });
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [
+        {
+          id: "cusd-cap",
+          name: "Cap cUSD",
+          symbol: "CUSD",
+          circulating: { peggedUSD: 114_000_000 },
+        },
+      ],
+      undefined,
+      undefined,
+      { db, stats },
+    );
 
     expect(overrides.size).toBe(0);
     expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
@@ -266,35 +305,42 @@ describe("authoritative-price-sources", () => {
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
         matchBinds: [`circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`],
-        rows: [{
-          key: `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
-          value: JSON.stringify({
-            state: "open",
-            consecutiveFailures: 3,
-            lastFailureAt: nowSec,
-            lastSuccessAt: null,
-            openedAt: nowSec,
-          }),
-          updated_at: nowSec,
-        }],
+        rows: [
+          {
+            key: `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
+            value: JSON.stringify({
+              state: "open",
+              consecutiveFailures: 3,
+              lastFailureAt: nowSec,
+              lastSuccessAt: null,
+              openedAt: nowSec,
+            }),
+            updated_at: nowSec,
+          },
+        ],
       },
     ]);
     const stats = createAuthoritativeLivePriceOverrideStats();
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "cusd-cap",
-        name: "Cap cUSD",
-        symbol: "CUSD",
-        circulating: { peggedUSD: 114_000_000 },
-      },
-      {
-        id: "iusd-infinifi",
-        name: "infiniFi USD",
-        symbol: "IUSD",
-        circulating: { peggedUSD: 180_000_000 },
-      },
-    ], undefined, undefined, { db, stats });
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [
+        {
+          id: "cusd-cap",
+          name: "Cap cUSD",
+          symbol: "CUSD",
+          circulating: { peggedUSD: 114_000_000 },
+        },
+        {
+          id: "iusd-infinifi",
+          name: "infiniFi USD",
+          symbol: "IUSD",
+          circulating: { peggedUSD: 180_000_000 },
+        },
+      ],
+      undefined,
+      undefined,
+      { db, stats },
+    );
 
     expect(overrides.size).toBe(0);
     expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
@@ -305,9 +351,10 @@ describe("authoritative-price-sources", () => {
     });
     const circuitReads = db
       .getHistory()
-      .filter((entry) =>
-        entry.sql.includes("SELECT value, updated_at FROM cache WHERE key = ?") &&
-        entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`
+      .filter(
+        (entry) =>
+          entry.sql.includes("SELECT value, updated_at FROM cache WHERE key = ?") &&
+          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
       );
     expect(circuitReads).toHaveLength(1);
   });
@@ -324,14 +371,19 @@ describe("authoritative-price-sources", () => {
     ]);
     const stats = createAuthoritativeLivePriceOverrideStats();
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "cusd-cap",
-        name: "Cap cUSD",
-        symbol: "CUSD",
-        circulating: { peggedUSD: 114_000_000 },
-      },
-    ], undefined, undefined, { db, stats });
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [
+        {
+          id: "cusd-cap",
+          name: "Cap cUSD",
+          symbol: "CUSD",
+          circulating: { peggedUSD: 114_000_000 },
+        },
+      ],
+      undefined,
+      undefined,
+      { db, stats },
+    );
 
     expect(overrides.size).toBe(0);
     expect(stats).toMatchObject({
@@ -341,9 +393,10 @@ describe("authoritative-price-sources", () => {
     });
     const circuitWrite = db
       .getHistory()
-      .find((entry) =>
-        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
-        entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`
+      .find(
+        (entry) =>
+          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
       );
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
       consecutiveFailures: 1,
@@ -363,14 +416,19 @@ describe("authoritative-price-sources", () => {
     ]);
     const stats = createAuthoritativeLivePriceOverrideStats();
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "cusd-cap",
-        name: "Cap cUSD",
-        symbol: "CUSD",
-        circulating: { peggedUSD: 114_000_000 },
-      },
-    ], undefined, undefined, { db, stats });
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [
+        {
+          id: "cusd-cap",
+          name: "Cap cUSD",
+          symbol: "CUSD",
+          circulating: { peggedUSD: 114_000_000 },
+        },
+      ],
+      undefined,
+      undefined,
+      { db, stats },
+    );
 
     expect(overrides.size).toBe(0);
     expect(stats).toMatchObject({
@@ -380,9 +438,10 @@ describe("authoritative-price-sources", () => {
     });
     const circuitWrite = db
       .getHistory()
-      .find((entry) =>
-        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
-        entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`
+      .find(
+        (entry) =>
+          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
       );
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
       consecutiveFailures: 1,
@@ -403,24 +462,29 @@ describe("authoritative-price-sources", () => {
     const stats = createAuthoritativeLivePriceOverrideStats();
     const nowSec = Math.floor(Date.now() / 1000);
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "susdc-spark",
-        name: "Spark USDC Vault",
-        symbol: "sUSDC",
-        circulating: { peggedUSD: 100_000_000 },
-      },
-      {
-        id: "usdc-circle",
-        name: "USD Coin",
-        symbol: "USDC",
-        price: 1,
-        priceSource: "protocol-redeem",
-        priceConfidence: "single-source",
-        priceObservedAt: nowSec - 60,
-        priceObservedAtMode: "local_fetch",
-      },
-    ], undefined, undefined, { db, stats });
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [
+        {
+          id: "susdc-spark",
+          name: "Spark USDC Vault",
+          symbol: "sUSDC",
+          circulating: { peggedUSD: 100_000_000 },
+        },
+        {
+          id: "usdc-circle",
+          name: "USD Coin",
+          symbol: "USDC",
+          price: 1,
+          priceSource: "protocol-redeem",
+          priceConfidence: "single-source",
+          priceObservedAt: nowSec - 60,
+          priceObservedAtMode: "local_fetch",
+        },
+      ],
+      undefined,
+      undefined,
+      { db, stats },
+    );
 
     expect(overrides.size).toBe(0);
     expect(stats).toMatchObject({
@@ -430,9 +494,10 @@ describe("authoritative-price-sources", () => {
     });
     const circuitWrite = db
       .getHistory()
-      .find((entry) =>
-        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
-        entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`
+      .find(
+        (entry) =>
+          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
       );
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
       consecutiveFailures: 1,
@@ -444,7 +509,7 @@ describe("authoritative-price-sources", () => {
     expect(createAuthoritativeLivePriceOverrideStats().budgetMs).toBe(10_000);
   });
 
-  it("prioritizes local live providers and missing prices within each override tier", () => {
+  it("prioritizes every missing price before already-priced override candidates", () => {
     const prioritized = prioritizeAuthoritativeLivePriceCandidates([
       makePriorityCandidate("rpc-priced", 1, undefined, 0),
       makePriorityCandidate("rpc-missing-a", null, undefined, 1),
@@ -455,35 +520,65 @@ describe("authoritative-price-sources", () => {
 
     expect(prioritized.map((entry) => entry.asset.id)).toEqual([
       "local-missing",
-      "local-priced",
       "rpc-missing-a",
       "rpc-missing-b",
+      "local-priced",
       "rpc-priced",
     ]);
   });
 
+  it("round-robins missing candidates across providers within the shared budget", () => {
+    const firstProvider = makePriorityProvider(1);
+    const secondProvider = makePriorityProvider(10);
+    const candidates: AuthoritativeLivePriceCandidate[] = [
+      ...[0, 1, 2].map((originalIndex) => ({
+        asset: { id: `first-${originalIndex}`, price: null } as PeggedAsset,
+        provider: firstProvider,
+        originalIndex,
+      })),
+      {
+        asset: { id: "second-0", price: null } as PeggedAsset,
+        provider: secondProvider,
+        originalIndex: 3,
+      },
+    ];
+
+    expect(prioritizeAuthoritativeLivePriceCandidates(candidates).map((entry) => entry.asset.id)).toEqual([
+      "first-0",
+      "second-0",
+      "first-1",
+      "first-2",
+    ]);
+  });
+
   it("stops live RPC protocol-redeem overrides when the wall-clock budget expires", async () => {
-    fetchEvmCallHexAtBlockMock.mockImplementation((
-      _chain: string,
-      _to: string,
-      _data: string,
-      _block: number | "latest",
-      options?: { signal?: AbortSignal },
-    ) => new Promise((_resolve, reject) => {
-      options?.signal?.addEventListener("abort", () => {
-        reject(options.signal?.reason ?? new DOMException("Aborted", "AbortError"));
-      }, { once: true });
-    }));
+    fetchEvmCallHexAtBlockMock.mockImplementation(
+      (_chain: string, _to: string, _data: string, _block: number | "latest", options?: { signal?: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          options?.signal?.addEventListener(
+            "abort",
+            () => {
+              reject(options.signal?.reason ?? new DOMException("Aborted", "AbortError"));
+            },
+            { once: true },
+          );
+        }),
+    );
     const stats = createAuthoritativeLivePriceOverrideStats(1);
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "cusd-cap",
-        name: "Cap cUSD",
-        symbol: "CUSD",
-        circulating: { peggedUSD: 114_000_000 },
-      },
-    ], undefined, undefined, { wallClockBudgetMs: 1, stats });
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [
+        {
+          id: "cusd-cap",
+          name: "Cap cUSD",
+          symbol: "CUSD",
+          circulating: { peggedUSD: 114_000_000 },
+        },
+      ],
+      undefined,
+      undefined,
+      { wallClockBudgetMs: 1, stats },
+    );
 
     expect(overrides.size).toBe(0);
     expect(stats).toMatchObject({
@@ -1594,6 +1689,43 @@ describe("authoritative-price-sources", () => {
     });
   });
 
+  it("resolves a same-run wM -> M -> Noble USDN dependency chain", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "m-m0",
+        name: "M",
+        symbol: "M",
+        price: null,
+      },
+      {
+        id: "usdn-noble",
+        name: "Noble Dollar",
+        symbol: "USDN",
+        price: null,
+      },
+      {
+        id: "wm-m0",
+        name: "Wrapped M",
+        symbol: "wM",
+        price: 0.999812,
+        priceSource: "coingecko+raydium-dex",
+        priceConfidence: "high",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "upstream",
+      },
+    ]);
+
+    expect(overrides.get("m-m0")).toMatchObject({
+      price: 0.999812,
+      metadata: { inheritedFrom: "wm-m0" },
+    });
+    expect(overrides.get("usdn-noble")).toMatchObject({
+      price: 0.999812,
+      metadata: { inheritedFrom: "m-m0" },
+    });
+  });
+
   it("does not return a crvUSD override (demoted to regular consensus source)", async () => {
     const overrides = await fetchAuthoritativeLivePriceOverrides([
       {
@@ -1900,7 +2032,7 @@ describe("authoritative-price-sources", () => {
     expect(overrides.get("sbold-k3-capital")?.price).toBeCloseTo(1.062 * 1.0001, 6);
   });
 
-  it("prices legacy Aave sGHO from previewRedeem() x tracked GHO price", async () => {
+  it("prices Aave sGHO from the registry vault previewRedeem() x tracked GHO price", async () => {
     const oneGhoRaw = 1_000_000_000_000_000_000n.toString(16).padStart(64, "0");
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${oneGhoRaw}`);
     const nowSec = Math.floor(Date.now() / 1000);
@@ -1926,7 +2058,7 @@ describe("authoritative-price-sources", () => {
 
     expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledWith(
       "ethereum",
-      "0x1a88df1cfe15af22b3c4c783d4e6f7f9e0c1885d",
+      "0xe1753f2e00940cc31213dd92013cf019dfe4ca1d",
       expect.stringMatching(/^0x4cdad506/),
       "latest",
       expect.any(Object),
@@ -1936,6 +2068,45 @@ describe("authoritative-price-sources", () => {
       source: "protocol-redeem",
       confidence: "high",
       metadata: { inheritedFrom: "gho-aave" },
+    });
+  });
+
+  it("prices GAIB sAID from its registry ERC-4626 vault x tracked AID price", async () => {
+    const assetsPerShareRaw = 1_059_200_000_000_000_000n.toString(16).padStart(64, "0");
+    fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${assetsPerShareRaw}`);
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "said-gaib",
+        name: "GAIB sAID",
+        symbol: "sAID",
+        price: null,
+      },
+      {
+        id: "aid-gaib",
+        name: "GAIB AID",
+        symbol: "AID",
+        price: 1,
+        priceSource: "coingecko+defillama-list",
+        priceConfidence: "high",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "upstream",
+      },
+    ]);
+
+    expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledWith(
+      "ethereum",
+      "0xb3b3c527ba57cd61648e2ec2f5e006a0b390a9f8",
+      expect.stringMatching(/^0x07a2d13a/),
+      "latest",
+      expect.any(Object),
+    );
+    expect(overrides.get("said-gaib")).toMatchObject({
+      price: 1.0592,
+      source: "protocol-redeem",
+      confidence: "high",
+      metadata: { inheritedFrom: "aid-gaib" },
     });
   });
 

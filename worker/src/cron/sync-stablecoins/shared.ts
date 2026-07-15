@@ -15,14 +15,12 @@ const VALIDATION_ISSUES_MAX_CHARS = 400;
 const FX_REFERENCE_MAX_AGE_SEC = 6 * 3600;
 const MISSING_PRICE_SOURCE = "missing";
 const SUPPLEMENTAL_TRACKED_IDS = new Set(
-  ACTIVE_STABLECOINS
-    .filter(
-      (meta) =>
-        (meta.flags.pegCurrency === "GOLD" && !!meta.geckoId) ||
-        (meta.flags.pegCurrency === "SILVER" && !!meta.geckoId) ||
-        meta.detailProvider === "coingecko",
-    )
-    .map((meta) => meta.id),
+  ACTIVE_STABLECOINS.filter(
+    (meta) =>
+      (meta.flags.pegCurrency === "GOLD" && !!meta.geckoId) ||
+      (meta.flags.pegCurrency === "SILVER" && !!meta.geckoId) ||
+      meta.detailProvider === "coingecko",
+  ).map((meta) => meta.id),
 );
 
 export type StablecoinsPayload = {
@@ -86,27 +84,27 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload): Stable
         supplyRestored: _ignoredSupplyRestored,
         ...rest
       } = asset as PeggedAsset & { gecko_id?: unknown };
+      const hasUsablePrice = typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0;
       const confidence = asset.priceConfidence;
       const priceUpdatedAt =
-        typeof asset.priceUpdatedAt === "number" && Number.isFinite(asset.priceUpdatedAt)
-          ? asset.priceUpdatedAt
-          : null;
+        typeof asset.priceUpdatedAt === "number" && Number.isFinite(asset.priceUpdatedAt) ? asset.priceUpdatedAt : null;
       const priceObservedAt =
         typeof asset.priceObservedAt === "number" && Number.isFinite(asset.priceObservedAt)
           ? asset.priceObservedAt
           : priceUpdatedAt;
       const priceObservedAtMode =
-        asset.priceObservedAtMode === "upstream" || asset.priceObservedAtMode === "local_fetch" || asset.priceObservedAtMode === "unknown"
+        asset.priceObservedAtMode === "upstream" ||
+        asset.priceObservedAtMode === "local_fetch" ||
+        asset.priceObservedAtMode === "unknown"
           ? asset.priceObservedAtMode
           : null;
       const priceSyncedAt =
-        typeof asset.priceSyncedAt === "number" && Number.isFinite(asset.priceSyncedAt)
-          ? asset.priceSyncedAt
-          : null;
-      const priceSelectedSource =
-        typeof asset.priceSelectedSource === "string" && asset.priceSelectedSource.length > 0
+        typeof asset.priceSyncedAt === "number" && Number.isFinite(asset.priceSyncedAt) ? asset.priceSyncedAt : null;
+      const priceSelectedSource = !hasUsablePrice
+        ? null
+        : typeof asset.priceSelectedSource === "string" && asset.priceSelectedSource.length > 0
           ? asset.priceSelectedSource
-          : asset.priceSource ?? MISSING_PRICE_SOURCE;
+          : (asset.priceSource ?? MISSING_PRICE_SOURCE);
       const normalizedConfidence =
         confidence === "high" || confidence === "single-source" || confidence === "low" || confidence === "fallback"
           ? confidence
@@ -116,13 +114,17 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload): Stable
       return {
         ...rest,
         geckoId: resolveGeckoId(asset),
-        priceSource: asset.priceSource ?? MISSING_PRICE_SOURCE,
-        priceConfidence: normalizedConfidence,
-        priceUpdatedAt: priceObservedAt ?? priceUpdatedAt,
-        priceObservedAt,
-        priceObservedAtMode,
-        priceSyncedAt,
+        price: hasUsablePrice ? asset.price : null,
+        priceSource: hasUsablePrice ? (asset.priceSource ?? MISSING_PRICE_SOURCE) : MISSING_PRICE_SOURCE,
+        priceConfidence: hasUsablePrice ? normalizedConfidence : null,
+        priceUpdatedAt: hasUsablePrice ? (priceObservedAt ?? priceUpdatedAt) : null,
+        priceObservedAt: hasUsablePrice ? priceObservedAt : null,
+        priceObservedAtMode: hasUsablePrice ? priceObservedAtMode : null,
+        priceSyncedAt: hasUsablePrice ? priceSyncedAt : null,
         priceSelectedSource,
+        consensusSources: hasUsablePrice ? (asset.consensusSources ?? []) : [],
+        agreeSources: hasUsablePrice ? (asset.agreeSources ?? []) : [],
+        priceSourceConfidenceProfile: hasUsablePrice ? (asset.priceSourceConfidenceProfile ?? null) : null,
         ...(supplyObservedAt != null ? { supplyObservedAt } : {}),
         ...(asset.supplyRestored === true ? { supplyRestored: true } : {}),
         circulatingPrevDay: toPegBuckets(asset.circulatingPrevDay),
@@ -271,10 +273,7 @@ export async function loadPreviousStablecoinsById(db: D1Database): Promise<Map<s
     if (!prevData) return new Map();
     const cacheUpdatedAt = normalizeOptionalTimestamp(prevCache.updatedAt);
     return new Map(
-      prevData.peggedAssets.map((asset) => [
-        String(asset.id),
-        stampPreviousSupplyObservedAt(asset, cacheUpdatedAt),
-      ]),
+      prevData.peggedAssets.map((asset) => [String(asset.id), stampPreviousSupplyObservedAt(asset, cacheUpdatedAt)]),
     );
   } catch (err) {
     console.warn("[sync-stablecoins] Failed to parse previous stablecoins cache:", err);
@@ -282,9 +281,7 @@ export async function loadPreviousStablecoinsById(db: D1Database): Promise<Map<s
   }
 }
 
-export async function loadReplayPriceCacheForTrustedContinuity(
-  db: D1Database,
-): Promise<Map<string, PriceCacheEntry>> {
+export async function loadReplayPriceCacheForTrustedContinuity(db: D1Database): Promise<Map<string, PriceCacheEntry>> {
   try {
     return await getPriceCache(db);
   } catch (error) {

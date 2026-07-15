@@ -60,14 +60,18 @@ describe("runDexScreenerPass", () => {
       },
     ]);
 
-    const result = await runDexScreenerPass([
-      makeMissingAsset({
-        id: "exact-usd",
-        symbol: "EXACT",
-        address: "0xabc",
-        chains: ["Base"],
-      }),
-    ], undefined, db);
+    const result = await runDexScreenerPass(
+      [
+        makeMissingAsset({
+          id: "exact-usd",
+          symbol: "EXACT",
+          address: "0xabc",
+          chains: ["Base"],
+        }),
+      ],
+      undefined,
+      db,
+    );
 
     expect(result).toMatchObject({
       resolved: 0,
@@ -83,28 +87,18 @@ describe("runDexScreenerPass", () => {
         }),
       ],
     });
-    expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledWith(
-      "base",
-      "0xabc",
-      undefined,
-      expect.any(Number),
-      0,
-    );
+    expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledWith("base", "0xabc", undefined, expect.any(Number), 0);
 
-    const circuitWrites = db
-      .getHistory()
-      .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
-    const exactWrite = circuitWrites.find((entry) =>
-      entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`
-    );
+    const circuitWrites = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    const exactWrite = circuitWrites.find((entry) => entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`);
 
     expect(JSON.parse(String(exactWrite?.binds[1]))).toMatchObject({
       state: "closed",
       consecutiveFailures: 1,
     });
-    expect(circuitWrites.some((entry) =>
-      entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_SEARCH}`
-    )).toBe(false);
+    expect(circuitWrites.some((entry) => entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_SEARCH}`)).toBe(
+      false,
+    );
   });
 
   it("includes DexScreener response status details in exact lookup diagnostics", async () => {
@@ -124,14 +118,18 @@ describe("runDexScreenerPass", () => {
       },
     ]);
 
-    const result = await runDexScreenerPass([
-      makeMissingAsset({
-        id: "exact-usd",
-        symbol: "EXACT",
-        address: "0xabc",
-        chains: ["Base"],
-      }),
-    ], undefined, db);
+    const result = await runDexScreenerPass(
+      [
+        makeMissingAsset({
+          id: "exact-usd",
+          symbol: "EXACT",
+          address: "0xabc",
+          chains: ["Base"],
+        }),
+      ],
+      undefined,
+      db,
+    );
 
     expect(result).toMatchObject({
       resolved: 0,
@@ -193,5 +191,36 @@ describe("runDexScreenerPass", () => {
     expect(asset.price).toBe(1.0);
     expect(asset.priceSource).toBe("dexscreener-exact");
     expect(asset.priceConfidence).toBe("fallback");
+  });
+
+  it("attempts one deployment per asset before spending requests on second deployments", async () => {
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValue({
+      ok: true,
+      pairs: [],
+    });
+
+    const multiChain = makeMissingAsset({
+      id: "multi-chain",
+      symbol: "MULTI",
+      address: "0xaaa",
+      chains: ["Ethereum", "Base", "Arbitrum"],
+      circulating: { peggedUSD: 2_000_000 },
+    });
+    const singleChain = makeMissingAsset({
+      id: "single-chain",
+      symbol: "SINGLE",
+      address: "0xbbb",
+      chains: ["Base"],
+      circulating: { peggedUSD: 1_000_000 },
+    });
+
+    await runDexScreenerPass([multiChain, singleChain], undefined, undefined);
+
+    expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledTimes(4);
+    const firstTwoAddresses = vi
+      .mocked(fetchDsTokenPoolsWithStatus)
+      .mock.calls.slice(0, 2)
+      .map((call) => call[1]);
+    expect(firstTwoAddresses).toEqual(["0xaaa", "0xbbb"]);
   });
 });

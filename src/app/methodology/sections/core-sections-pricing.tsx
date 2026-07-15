@@ -284,6 +284,7 @@ export function PricingPipelineMethodologySection() {
             <p>The consensus engine clusters all available source prices for an asset and picks the most reliable result:</p>
             <ol className="list-decimal list-inside space-y-1">
               <li>Collect all source prices with non-failed circuit breakers</li>
+              <li>Collapse repeated quotes from one source to their median, then count each registered provider family as one independent voice by retaining its strongest representative</li>
               <li>Find the largest fully pairwise cluster of sources that agree within <code className="text-xs">50 bps</code> (fixed pegs) or <code className="text-xs">500 bps</code> (NAV tokens)</li>
               <li>Break equal-size clusters by total weight, then stronger trust tier, then tighter spread, then peg proximity when available</li>
               <li>If the winning cluster has 2+ members, publish its median price and separately keep the best cluster member for provenance</li>

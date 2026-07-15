@@ -3,23 +3,20 @@ import {
   STATUS_CACHE_RATIO_THRESHOLDS,
   STATUS_MISSING_PRICE_THRESHOLDS,
 } from "@shared/lib/status-thresholds";
-import type {
-  DataQuality,
-  StatusCause,
-  StatusResponse,
-} from "@shared/types/status";
+import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
+import type { DataQuality, StatusCause, StatusResponse } from "@shared/types/status";
 import type { PublicHealthAssessment } from "../public-health-assessment";
-import {
-  STATUS_RESERVE_HIGH_DEFERRED_RATIO,
-  STATUS_RESERVE_REPEATED_TRUNCATION_COUNT,
-} from "./evaluation-state";
+import { STATUS_RESERVE_HIGH_DEFERRED_RATIO, STATUS_RESERVE_REPEATED_TRUNCATION_COUNT } from "./evaluation-state";
 import { formatRatio } from "./format";
 import { getSourceFailureMessage } from "./section-errors";
 
 function formatPersistentStaleIndependentFeeds(
   coins: StatusResponse["reserveComposition"]["persistentlyStaleIndependentCoins"],
 ): string {
-  const examples = coins.slice(0, 3).map((coin) => coin.stablecoinId).join(", ");
+  const examples = coins
+    .slice(0, 3)
+    .map((coin) => coin.stablecoinId)
+    .join(", ");
   const suffix = coins.length > 3 ? `, +${coins.length - 3} more` : "";
   return `${coins.length} persistently stale independent feed(s)${examples ? ` (${examples}${suffix})` : ""}`;
 }
@@ -67,10 +64,7 @@ function pushCause(bucket: StatusCause[], cause: StatusCause): void {
   bucket.push(withRunbook(cause));
 }
 
-export function synthesizeOverallCauses(
-  availability: StatusCause[],
-  dataQuality: StatusCause[],
-): StatusCause[] {
+export function synthesizeOverallCauses(availability: StatusCause[], dataQuality: StatusCause[]): StatusCause[] {
   const sorted = [...availability, ...dataQuality].sort((a, b) => {
     const severityOrder = { critical: 0, warning: 1, info: 2 };
     return severityOrder[a.severity] - severityOrder[b.severity];
@@ -124,10 +118,12 @@ export function buildAvailabilityCauses(input: {
   }
 
   if (cacheFailures.length > 0) {
-    const cacheTargets = cacheFailures.map((failure) => {
-      const diagnostic = cacheDiagnostics.find((entry) => entry.key === failure.key);
-      return diagnostic ? `${failure.key} via ${diagnostic.freshnessSource}` : failure.key;
-    }).join(", ");
+    const cacheTargets = cacheFailures
+      .map((failure) => {
+        const diagnostic = cacheDiagnostics.find((entry) => entry.key === failure.key);
+        return diagnostic ? `${failure.key} via ${diagnostic.freshnessSource}` : failure.key;
+      })
+      .join(", ");
     pushCause(availabilityCauses, {
       code: "cache_freshness_query_failed",
       layer: "availability",
@@ -141,9 +137,7 @@ export function buildAvailabilityCauses(input: {
     pushCause(availabilityCauses, {
       code: "fx_cached_fallback",
       layer: "availability",
-      severity: fxCache.consecutiveFallbackRuns != null && fxCache.consecutiveFallbackRuns >= 4
-        ? "warning"
-        : "info",
+      severity: fxCache.consecutiveFallbackRuns != null && fxCache.consecutiveFallbackRuns >= 4 ? "warning" : "info",
       message:
         fxCache.warning ??
         `FX references are running in cached fallback mode (${fxCache.consecutiveFallbackRuns ?? 0} consecutive runs).`,
@@ -169,9 +163,7 @@ export function buildAvailabilityCauses(input: {
       code: "fx_source_degraded",
       layer: "availability",
       severity: "warning",
-      message:
-        fxCache.warning ??
-        "Non-USD FX reference source data is behind its expected update cadence.",
+      message: fxCache.warning ?? "Non-USD FX reference source data is behind its expected update cadence.",
       metric: "fxSourceAgeSeconds",
       value: fxCache.sourceAgeSeconds ?? undefined,
     });
@@ -190,13 +182,27 @@ export function buildAvailabilityCauses(input: {
 
   const dexLiquidityCache = caches["dex-liquidity"];
   const dewsCache = caches.dews;
+  if (dexLiquidityCache?.ageSeconds != null && dexLiquidityCache.ageSeconds > DEX_FRESHNESS_SEC) {
+    pushCause(availabilityCauses, {
+      code: "dex_pricing_bridge_stale",
+      layer: "availability",
+      severity: "warning",
+      message:
+        "DEX liquidity remains available for public display, but its age exceeds the 35-minute live-pricing admission window; promoted DEX sources and pool challenges are no longer receiving fresh observations.",
+      metric: "dexLiquidityAgeSeconds",
+      value: dexLiquidityCache.ageSeconds,
+      threshold: DEX_FRESHNESS_SEC,
+    });
+  }
+
   if (dexLiquidityCache && dewsCache && !dexLiquidityCache.healthy && !dewsCache.healthy) {
     pushCause(availabilityCauses, {
       code: "dews_downstream_of_dex_liquidity",
       layer: "availability",
-      severity: dexLiquidityCache.ageSeconds != null && dexLiquidityCache.ageSeconds > dexLiquidityCache.maxAge
-        ? "warning"
-        : "info",
+      severity:
+        dexLiquidityCache.ageSeconds != null && dexLiquidityCache.ageSeconds > dexLiquidityCache.maxAge
+          ? "warning"
+          : "info",
       message:
         "DEWS freshness is downstream of DEX liquidity; both lanes are unhealthy, so investigate sync-dex-liquidity first.",
       metric: "dexLiquidityAgeSeconds",
@@ -262,9 +268,10 @@ export function buildAvailabilityCauses(input: {
     });
   } else if (input.publicHealth.d1Capacity?.thresholdState !== "normal" && input.publicHealth.d1Capacity) {
     const capacity = input.publicHealth.d1Capacity;
-    const exhaustion = capacity.daysUntilExhaustion == null
-      ? "Exhaustion forecast is not yet available."
-      : `Projected exhaustion is ${capacity.daysUntilExhaustion} days away.`;
+    const exhaustion =
+      capacity.daysUntilExhaustion == null
+        ? "Exhaustion forecast is not yet available."
+        : `Projected exhaustion is ${capacity.daysUntilExhaustion} days away.`;
     pushCause(availabilityCauses, {
       code: `d1_capacity_${capacity.thresholdState}`,
       layer: "availability",
@@ -460,8 +467,7 @@ export function buildDataQualityCauses(input: {
       code: "ddr_repair_debt_present",
       layer: "data-quality",
       severity: "warning",
-      message:
-        `${input.dataQuality.ddrRepairDebtCount} DDR source event(s) are quarantined pending explicit repair migration.`,
+      message: `${input.dataQuality.ddrRepairDebtCount} DDR source event(s) are quarantined pending explicit repair migration.`,
       metric: "ddrRepairDebtCount",
       value: input.dataQuality.ddrRepairDebtCount,
       threshold: 1,
@@ -554,9 +560,10 @@ export function buildDataQualityCauses(input: {
   const persistentStaleIndependentFeedText = formatPersistentStaleIndependentFeeds(
     input.reserveComposition.persistentlyStaleIndependentCoins,
   );
-  const reserveDeferredRatio = input.reserveComposition.configuredCoins > 0
-    ? input.reserveComposition.deferredCoins / input.reserveComposition.configuredCoins
-    : 0;
+  const reserveDeferredRatio =
+    input.reserveComposition.configuredCoins > 0
+      ? input.reserveComposition.deferredCoins / input.reserveComposition.configuredCoins
+      : 0;
   const reserveTruncationCount = input.reserveComposition.runBudgetTruncationCount;
 
   if (input.reserveComposition.writeTimeoutUncertain > 0) {
@@ -617,13 +624,18 @@ export function buildDataQualityCauses(input: {
 
   const historyWriteGaps = input.reserveComposition.historyWriteGaps;
   if (historyWriteGaps.length > 0) {
-    const examples = historyWriteGaps.slice(0, 3).map((gap) => {
-      const missing = [
-        gap.compositionHistoryMissing ? "composition" : null,
-        gap.attemptHistoryMissing ? "attempt" : null,
-      ].filter((entry): entry is string => entry != null).join("+");
-      return `${gap.stablecoinId}:${missing || "history"}`;
-    }).join(", ");
+    const examples = historyWriteGaps
+      .slice(0, 3)
+      .map((gap) => {
+        const missing = [
+          gap.compositionHistoryMissing ? "composition" : null,
+          gap.attemptHistoryMissing ? "attempt" : null,
+        ]
+          .filter((entry): entry is string => entry != null)
+          .join("+");
+        return `${gap.stablecoinId}:${missing || "history"}`;
+      })
+      .join(", ");
     pushCause(dataQualityCauses, {
       code: "reserve_sync_history_write_gap",
       layer: "data-quality",

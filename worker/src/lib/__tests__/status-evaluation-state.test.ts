@@ -45,9 +45,7 @@ function makeReserveComposition(
   };
 }
 
-function makePublicHealth(
-  overrides?: Partial<PublicHealthAssessment>,
-): PublicHealthAssessment {
+function makePublicHealth(overrides?: Partial<PublicHealthAssessment>): PublicHealthAssessment {
   return {
     dbHealthy: true,
     overallStatus: "healthy",
@@ -179,15 +177,17 @@ function makeAvailabilityCauseInput(publicHealth: PublicHealthAssessment) {
 
 describe("status evaluation policy", () => {
   it("keeps reserve status healthy for low-count issues when fresh coverage remains high", () => {
-    const assessment = deriveReserveCompositionStatus(makeReserveComposition({
-      freshCoins: 8,
-      staleCoins: 1,
-      errorCoins: 1,
-      independentFreshEligible: 3,
-      independentFreshUnverified: 2,
-      staticValidatedFresh: 2,
-      weakProbeFresh: 1,
-    }));
+    const assessment = deriveReserveCompositionStatus(
+      makeReserveComposition({
+        freshCoins: 8,
+        staleCoins: 1,
+        errorCoins: 1,
+        independentFreshEligible: 3,
+        independentFreshUnverified: 2,
+        staticValidatedFresh: 2,
+        weakProbeFresh: 1,
+      }),
+    );
 
     expect(assessment.status).toBe("healthy");
     expect(assessment.freshCoverageRatio).toBe(0.8);
@@ -195,15 +195,17 @@ describe("status evaluation policy", () => {
   });
 
   it("degrades reserve status when fresh or authoritative coverage drops below policy thresholds", () => {
-    const assessment = deriveReserveCompositionStatus(makeReserveComposition({
-      freshCoins: 7,
-      staleCoins: 2,
-      errorCoins: 1,
-      independentFreshEligible: 2,
-      independentFreshUnverified: 1,
-      staticValidatedFresh: 1,
-      weakProbeFresh: 3,
-    }));
+    const assessment = deriveReserveCompositionStatus(
+      makeReserveComposition({
+        freshCoins: 7,
+        staleCoins: 2,
+        errorCoins: 1,
+        independentFreshEligible: 2,
+        independentFreshUnverified: 1,
+        staticValidatedFresh: 1,
+        weakProbeFresh: 3,
+      }),
+    );
 
     expect(assessment.status).toBe("degraded");
     expect(assessment.freshCoverageRatio).toBe(0.7);
@@ -211,11 +213,11 @@ describe("status evaluation policy", () => {
   });
 
   it("degrades reserve status when independent feeds are persistently stale despite high coverage", () => {
-    const assessment = deriveReserveCompositionStatus(makeReserveComposition({
-      persistentlyStaleIndependentCoins: [
-        { stablecoinId: "coin-a", ageSec: 1_300_000 },
-      ],
-    }));
+    const assessment = deriveReserveCompositionStatus(
+      makeReserveComposition({
+        persistentlyStaleIndependentCoins: [{ stablecoinId: "coin-a", ageSec: 1_300_000 }],
+      }),
+    );
 
     expect(assessment.status).toBe("degraded");
     expect(assessment.freshCoverageRatio).toBe(1);
@@ -266,25 +268,29 @@ describe("status evaluation policy", () => {
       }),
       cursorTailState: "incomplete",
     } as StatusResponse["reserveComposition"]);
-    const uncertainWrite = deriveReserveCompositionStatus(makeReserveComposition({
-      writeTimeoutUncertain: 1,
-    }));
+    const uncertainWrite = deriveReserveCompositionStatus(
+      makeReserveComposition({
+        writeTimeoutUncertain: 1,
+      }),
+    );
 
     expect(incompleteTail.status).toBe("degraded");
     expect(uncertainWrite.status).toBe("degraded");
   });
 
   it("marks reserve status stale only when no fresh coverage remains", () => {
-    const assessment = deriveReserveCompositionStatus(makeReserveComposition({
-      freshCoins: 0,
-      staleCoins: 4,
-      missingCoins: 4,
-      errorCoins: 2,
-      independentFreshEligible: 0,
-      independentFreshUnverified: 0,
-      staticValidatedFresh: 0,
-      weakProbeFresh: 0,
-    }));
+    const assessment = deriveReserveCompositionStatus(
+      makeReserveComposition({
+        freshCoins: 0,
+        staleCoins: 4,
+        missingCoins: 4,
+        errorCoins: 2,
+        independentFreshEligible: 0,
+        independentFreshUnverified: 0,
+        staticValidatedFresh: 0,
+        weakProbeFresh: 0,
+      }),
+    );
 
     expect(assessment.status).toBe("stale");
   });
@@ -337,6 +343,32 @@ describe("status evaluation policy", () => {
 });
 
 describe("status cause text", () => {
+  it("warns when DEX data is display-valid but stale for live pricing", () => {
+    const causes = buildAvailabilityCauses(
+      makeAvailabilityCauseInput(
+        makePublicHealth({
+          caches: {
+            "dex-liquidity": {
+              ageSeconds: 2_101,
+              maxAge: 43_200,
+              healthy: true,
+            },
+          },
+        }),
+      ),
+    );
+
+    expect(causes).toContainEqual(
+      expect.objectContaining({
+        code: "dex_pricing_bridge_stale",
+        severity: "warning",
+        metric: "dexLiquidityAgeSeconds",
+        value: 2_101,
+        threshold: 2_100,
+      }),
+    );
+  });
+
   it("groups DEWS stale health downstream of DEX liquidity", () => {
     const causes = buildAvailabilityCauses({
       publicHealth: makePublicHealth({
@@ -365,60 +397,74 @@ describe("status cause text", () => {
       cronLeaseQueryFailed: false,
     });
 
-    expect(causes).toContainEqual(expect.objectContaining({
-      code: "dews_downstream_of_dex_liquidity",
-      severity: "warning",
-      metric: "dexLiquidityAgeSeconds",
-      value: 8_000,
-    }));
+    expect(causes).toContainEqual(
+      expect.objectContaining({
+        code: "dews_downstream_of_dex_liquidity",
+        severity: "warning",
+        metric: "dexLiquidityAgeSeconds",
+        value: 8_000,
+      }),
+    );
   });
 
   it("gives mint/burn query failure precedence over stale public classification", () => {
-    const causes = buildAvailabilityCauses(makeAvailabilityCauseInput(makePublicHealth({
-      mintBurnImpactStatus: "stale",
-      mintBurnQueryError: "Mint/burn health data unavailable.",
-      mintBurnLastRunStatus: "error",
-      mintBurn: {
-        ...makePublicHealth().mintBurn,
-        sync: {
-          lastSuccessfulSyncAt: null,
-          freshnessStatus: "stale",
-          warning: "Mint/burn sync freshness is stale versus the 30-minute cron cadence.",
-          criticalLaneHealthy: false,
-        },
-      },
-    })));
+    const causes = buildAvailabilityCauses(
+      makeAvailabilityCauseInput(
+        makePublicHealth({
+          mintBurnImpactStatus: "stale",
+          mintBurnQueryError: "Mint/burn health data unavailable.",
+          mintBurnLastRunStatus: "error",
+          mintBurn: {
+            ...makePublicHealth().mintBurn,
+            sync: {
+              lastSuccessfulSyncAt: null,
+              freshnessStatus: "stale",
+              warning: "Mint/burn sync freshness is stale versus the 30-minute cron cadence.",
+              criticalLaneHealthy: false,
+            },
+          },
+        }),
+      ),
+    );
 
-    expect(causes).toContainEqual(expect.objectContaining({
-      code: "mint_burn_health_query_failed",
-      severity: "info",
-      message:
-        "Mint/burn health query failed; diagnostics are temporarily unavailable. " +
-        "Latest critical cron run status: error.",
-    }));
+    expect(causes).toContainEqual(
+      expect.objectContaining({
+        code: "mint_burn_health_query_failed",
+        severity: "info",
+        message:
+          "Mint/burn health query failed; diagnostics are temporarily unavailable. " +
+          "Latest critical cron run status: error.",
+      }),
+    );
     expect(causes.some((cause) => cause.code === "mint_burn_public_stale")).toBe(false);
   });
 
   it("emits stale mint/burn cause when the timestamp query succeeds with no recent sync", () => {
-    const causes = buildAvailabilityCauses(makeAvailabilityCauseInput(makePublicHealth({
-      mintBurnImpactStatus: "stale",
-      mintBurnQueryError: null,
-      mintBurnLastRunStatus: "error",
-      mintBurn: {
-        ...makePublicHealth().mintBurn,
-        sync: {
-          lastSuccessfulSyncAt: null,
-          freshnessStatus: "stale",
-          warning: "Mint/burn sync freshness is stale versus the 30-minute cron cadence.",
-          criticalLaneHealthy: false,
-        },
-      },
-    })));
+    const causes = buildAvailabilityCauses(
+      makeAvailabilityCauseInput(
+        makePublicHealth({
+          mintBurnImpactStatus: "stale",
+          mintBurnQueryError: null,
+          mintBurnLastRunStatus: "error",
+          mintBurn: {
+            ...makePublicHealth().mintBurn,
+            sync: {
+              lastSuccessfulSyncAt: null,
+              freshnessStatus: "stale",
+              warning: "Mint/burn sync freshness is stale versus the 30-minute cron cadence.",
+              criticalLaneHealthy: false,
+            },
+          },
+        }),
+      ),
+    );
 
-    expect(causes).toContainEqual(expect.objectContaining({
-      code: "mint_burn_public_stale",
-      severity: "critical",
-    }));
+    expect(causes).toContainEqual(
+      expect.objectContaining({
+        code: "mint_burn_public_stale",
+        severity: "critical",
+      }),
+    );
     expect(causes.some((cause) => cause.code === "mint_burn_health_query_failed")).toBe(false);
   });
 
@@ -443,10 +489,12 @@ describe("status cause text", () => {
       reserveComposition,
     });
 
-    expect(causes).toContainEqual(expect.objectContaining({
-      code: "reserve_sync_degraded",
-      message: expect.stringContaining("4 persistently stale independent feed(s) (coin-a, coin-b, coin-c, +1 more)."),
-    }));
+    expect(causes).toContainEqual(
+      expect.objectContaining({
+        code: "reserve_sync_degraded",
+        message: expect.stringContaining("4 persistently stale independent feed(s) (coin-a, coin-b, coin-c, +1 more)."),
+      }),
+    );
   });
 
   it("emits a warning cause for one-off low-share reserve truncation", () => {
@@ -471,11 +519,13 @@ describe("status cause text", () => {
       reserveComposition,
     });
 
-    expect(causes).toContainEqual(expect.objectContaining({
-      code: "reserve_sync_budget_truncated",
-      severity: "warning",
-      message: expect.stringContaining("deferred 1 coin(s)"),
-    }));
+    expect(causes).toContainEqual(
+      expect.objectContaining({
+        code: "reserve_sync_budget_truncated",
+        severity: "warning",
+        message: expect.stringContaining("deferred 1 coin(s)"),
+      }),
+    );
   });
 
   it("emits a distinct warning cause for DDR repair debt", () => {
@@ -497,12 +547,14 @@ describe("status cause text", () => {
       reserveComposition: makeReserveComposition(),
     });
 
-    expect(causes).toContainEqual(expect.objectContaining({
-      code: "ddr_repair_debt_present",
-      severity: "warning",
-      metric: "ddrRepairDebtCount",
-      value: 2,
-    }));
+    expect(causes).toContainEqual(
+      expect.objectContaining({
+        code: "ddr_repair_debt_present",
+        severity: "warning",
+        metric: "ddrRepairDebtCount",
+        value: 2,
+      }),
+    );
   });
 
   it("degrades and explains unavailable exact publication evidence", () => {
@@ -537,10 +589,12 @@ describe("status cause text", () => {
     });
 
     expect(status).toBe("degraded");
-    expect(causes).toContainEqual(expect.objectContaining({
-      code: "stablecoin_publication_unknown",
-      severity: "warning",
-    }));
+    expect(causes).toContainEqual(
+      expect.objectContaining({
+        code: "stablecoin_publication_unknown",
+        severity: "warning",
+      }),
+    );
   });
 
   it("emits reserve causes for truncation, incomplete tail state, and uncertain writes", () => {
@@ -550,7 +604,7 @@ describe("status cause text", () => {
         runBudgetTruncated: true,
         deferredCoins: 3,
         nextCursorStablecoinId: "coin-tail",
-      writeTimeoutUncertain: 1,
+        writeTimeoutUncertain: 1,
       }),
       cursorTailState: "incomplete",
       cursorTailError: "batch unavailable",
@@ -576,22 +630,30 @@ describe("status cause text", () => {
       reserveComposition,
     });
 
-    expect(causes).toContainEqual(expect.objectContaining({
-      code: "reserve_sync_write_uncertain",
-      severity: "warning",
-    }));
-    expect(causes).toContainEqual(expect.objectContaining({
-      code: "reserve_sync_tail_incomplete",
-      message: expect.stringContaining("batch unavailable"),
-    }));
-    expect(causes).toContainEqual(expect.objectContaining({
-      code: "reserve_sync_budget_truncated",
-      message: expect.stringContaining("next cursor coin-tail"),
-    }));
-    expect(causes).toContainEqual(expect.objectContaining({
-      code: "reserve_sync_history_write_gap",
-      message: expect.stringContaining("coin-history:composition+attempt"),
-    }));
+    expect(causes).toContainEqual(
+      expect.objectContaining({
+        code: "reserve_sync_write_uncertain",
+        severity: "warning",
+      }),
+    );
+    expect(causes).toContainEqual(
+      expect.objectContaining({
+        code: "reserve_sync_tail_incomplete",
+        message: expect.stringContaining("batch unavailable"),
+      }),
+    );
+    expect(causes).toContainEqual(
+      expect.objectContaining({
+        code: "reserve_sync_budget_truncated",
+        message: expect.stringContaining("next cursor coin-tail"),
+      }),
+    );
+    expect(causes).toContainEqual(
+      expect.objectContaining({
+        code: "reserve_sync_history_write_gap",
+        message: expect.stringContaining("coin-history:composition+attempt"),
+      }),
+    );
   });
 });
 
