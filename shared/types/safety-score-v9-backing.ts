@@ -71,11 +71,29 @@ const V9TbillMechanismRiskReviewSchema = z
   .strict();
 export type V9TbillMechanismRiskReview = z.infer<typeof V9TbillMechanismRiskReviewSchema>;
 
+const V9CdpMetricApplicabilitySchema = z.discriminatedUnion("state", [
+  z.object({ state: z.literal("measured") }).strict(),
+  z
+    .object({
+      state: z.literal("not-applicable"),
+      rationale: z.string().trim().min(1),
+      evidenceRefIds: z.array(z.string().trim().min(1)).min(1),
+    })
+    .strict(),
+]);
+export type V9CdpMetricApplicability = z.infer<typeof V9CdpMetricApplicabilitySchema>;
+
 const V9CdpMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("cdp"),
-    collateralizationRatio: z.number().finite().nonnegative(),
-    liquidationCapacityRatio: z.number().finite().nonnegative(),
+    collateralizationRatio: z.number().finite().nonnegative().nullable(),
+    liquidationCapacityRatio: z.number().finite().nonnegative().nullable(),
+    metricApplicability: z
+      .object({
+        collateralizationRatio: V9CdpMetricApplicabilitySchema,
+        liquidationCapacityRatio: V9CdpMetricApplicabilitySchema,
+      })
+      .strict(),
     collateralizationParameters: V9MechanismFactV1Schema,
     liquidationMechanics: V9MechanismFactV1Schema,
     backstop: V9MechanismFactV1Schema,
@@ -83,7 +101,27 @@ const V9CdpMechanismRiskReviewSchema = z
     shutdownAndBadDebt: V9MechanismFactV1Schema,
     structuralRedemption: V9MechanismFactV1Schema,
   })
-  .strict();
+  .strict()
+  .superRefine((review, ctx) => {
+    for (const metric of ["collateralizationRatio", "liquidationCapacityRatio"] as const) {
+      const applicability = review.metricApplicability[metric];
+      const value = review[metric];
+      if (applicability.state === "measured" && value === null) {
+        ctx.addIssue({
+          code: "custom",
+          path: [metric],
+          message: `Measured ${metric} needs a numeric value`,
+        });
+      }
+      if (applicability.state === "not-applicable" && value !== null) {
+        ctx.addIssue({
+          code: "custom",
+          path: [metric],
+          message: `Not-applicable ${metric} must be null`,
+        });
+      }
+    }
+  });
 export type V9CdpMechanismRiskReview = z.infer<typeof V9CdpMechanismRiskReviewSchema>;
 
 const V9SyntheticVenueShareSchema = z

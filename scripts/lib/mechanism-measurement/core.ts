@@ -1,4 +1,4 @@
-import type { MeasurementCall } from "./schema";
+import type { MeasurementCall, MeasurementLog, MeasurementLogQuery } from "./schema";
 
 export interface PinnedBlock {
   number: number;
@@ -46,6 +46,20 @@ export function decodeAddressWord(returnData: string, callName = "call"): string
   return `0x${word.toString(16).padStart(40, "0")}`;
 }
 
+export function decodeBoolWord(returnData: string, wordIndex = 0, callName = "call"): boolean {
+  const word = decodeUintWord(returnData, wordIndex, callName);
+  if (word !== 0n && word !== 1n) throw new Error(`${callName}: expected boolean word, received ${word}`);
+  return word === 1n;
+}
+
+export function normalizeAddress(address: string, callName = "address"): string {
+  const normalized = address.toLowerCase();
+  if (!/^0x[0-9a-f]{40}$/.test(normalized) || normalized === `0x${"0".repeat(40)}`) {
+    throw new Error(`${callName}: invalid or zero address ${address}`);
+  }
+  return normalized;
+}
+
 export interface EthCallSpec {
   name: string;
   to: string;
@@ -54,11 +68,26 @@ export interface EthCallSpec {
   args?: readonly bigint[];
 }
 
+export interface LogQuerySpec {
+  name: string;
+  address: string;
+  fromBlock: number;
+  toBlock: number;
+  topics: readonly string[];
+}
+
 const WAD = 10n ** 18n;
 
 /** Format a WAD-scaled bigint as a decimal number rounded to three places (overlay convention). */
 export function wadToRounded(value: bigint): number {
   return Number((value * 1000n) / WAD) / 1000;
+}
+
+/** Convert a non-negative rational to a bounded decimal only at display time. */
+export function ratioToRounded(numerator: bigint, denominator: bigint, decimals = 6): number {
+  if (numerator < 0n || denominator <= 0n) throw new Error("Cannot format an invalid ratio");
+  const scale = 10n ** BigInt(decimals);
+  return Number((numerator * scale) / denominator) / Number(scale);
 }
 
 export function relativeDeltaPct(measured: bigint, reference: bigint): number {
@@ -81,8 +110,11 @@ export function requireCheck(checks: MeasurementCheck[], id: string, condition: 
 /** Journaling eth_call transport contract; tests substitute a recorded-returndata stub. */
 export interface EthCallJournal {
   readonly calls: MeasurementCall[];
+  readonly logQueries: MeasurementLogQuery[];
   call(spec: EthCallSpec): Promise<string>;
   recordDecoded(decoded: string): void;
+  queryLogs(spec: LogQuerySpec): Promise<readonly MeasurementLog[]>;
+  recordLogsDecoded(decoded: string): void;
 }
 
 /**
@@ -93,6 +125,7 @@ export interface EthCallJournal {
  */
 export class JournaledEthCaller implements EthCallJournal {
   readonly calls: MeasurementCall[] = [];
+  readonly logQueries: MeasurementLogQuery[] = [];
 
   constructor(
     private readonly rpcUrl: string,
@@ -125,6 +158,143 @@ export class JournaledEthCaller implements EthCallJournal {
     const last = this.calls[this.calls.length - 1];
     if (!last) throw new Error("recordDecoded called before any call");
     last.decoded = decoded;
+  }
+
+  async queryLogs(spec: LogQuerySpec): Promise<readonly MeasurementLog[]> {
+    if (spec.fromBlock < 0 || spec.toBlock < spec.fromBlock) throw new Error(`${spec.name}: invalid log range`);
+    const address = normalizeAddress(spec.address, `${spec.name} address`);
+    const topics = spec.topics.map((topic) => topic.toLowerCase());
+    if (topics.some((topic) => !/^0x[0-9a-f]{64}$/.test(topic))) {
+      throw new Error(`${spec.name}: malformed log topic`);
+    }
+    const raw = await rpcRequest(this.rpcUrl, "eth_getLogs", [
+      {
+        address,
+        fromBlock: `0x${spec.fromBlock.toString(16)}`,
+        toBlock: `0x${spec.toBlock.toString(16)}`,
+        topics,
+      },
+    ]);
+    if (!Array.isArray(raw)) throw new Error(`${spec.name}: malformed eth_getLogs result`);
+    const logs = raw.map((entry, index): MeasurementLog => {
+      if (!entry || typeof entry !== "object") throw new Error(`${spec.name}: malformed log ${index}`);
+      const log = entry as Record<string, unknown>;
+      const normalized = {
+        address: String(log.address).toLowerCase(),
+        blockHash: String(log.blockHash).toLowerCase(),
+        blockNumber: String(log.blockNumber).toLowerCase(),
+        transactionHash: String(log.transactionHash).toLowerCase(),
+        transactionIndex: String(log.transactionIndex).toLowerCase(),
+        logIndex: String(log.logIndex).toLowerCase(),
+        data: String(log.data).toLowerCase(),
+        topics: Array.isArray(log.topics) ? log.topics.map((topic) => String(topic).toLowerCase()) : [],
+        removed: log.removed === true,
+      };
+      if (
+        normalized.address !== address ||
+        !/^0x[0-9a-f]{64}$/.test(normalized.blockHash) ||
+        !/^0x[0-9a-f]+$/.test(normalized.blockNumber) ||
+        !/^0x[0-9a-f]{64}$/.test(normalized.transactionHash) ||
+        !/^0x[0-9a-f]+$/.test(normalized.transactionIndex) ||
+        !/^0x[0-9a-f]+$/.test(normalized.logIndex) ||
+        !/^0x[0-9a-f]*$/.test(normalized.data) ||
+        normalized.topics.length === 0 ||
+        normalized.topics.some((topic) => !/^0x[0-9a-f]{64}$/.test(topic)) ||
+        normalized.removed
+      ) {
+        throw new Error(`${spec.name}: invalid or removed log ${index}`);
+      }
+      return normalized;
+    });
+    this.logQueries.push({
+      name: spec.name,
+      address,
+      fromBlock: spec.fromBlock,
+      toBlock: spec.toBlock,
+      topics,
+      logs,
+      decoded: "",
+    });
+    return logs;
+  }
+
+  recordLogsDecoded(decoded: string): void {
+    const last = this.logQueries[this.logQueries.length - 1];
+    if (!last) throw new Error("recordLogsDecoded called before any log query");
+    last.decoded = decoded;
+  }
+}
+
+/** Offline caller that verifies and replays a captured eth_call journal in order. */
+export class ReplayEthCaller implements EthCallJournal {
+  readonly calls: MeasurementCall[] = [];
+  readonly logQueries: MeasurementLogQuery[] = [];
+  private index = 0;
+  private logIndex = 0;
+
+  constructor(
+    private readonly recorded: readonly MeasurementCall[],
+    private readonly recordedLogQueries: readonly MeasurementLogQuery[] = [],
+  ) {}
+
+  async call(spec: EthCallSpec): Promise<string> {
+    const callData = `${spec.selector}${(spec.args ?? []).map(encodeWord).join("")}`.toLowerCase();
+    const expected = this.recorded[this.index];
+    if (!expected) throw new Error(`Replay journal ended before ${spec.name}`);
+    if (
+      expected.name !== spec.name ||
+      expected.to !== spec.to.toLowerCase() ||
+      expected.signature !== spec.signature ||
+      expected.selector !== spec.selector ||
+      expected.callData !== callData
+    ) {
+      throw new Error(
+        `Replay call ${this.index} mismatch: expected ${expected.name} ${expected.to}:${expected.callData}, got ${spec.name} ${spec.to.toLowerCase()}:${callData}`,
+      );
+    }
+    this.calls.push({ ...expected, decoded: "" });
+    this.index += 1;
+    return expected.returnData;
+  }
+
+  recordDecoded(decoded: string): void {
+    const current = this.calls[this.calls.length - 1];
+    if (!current) throw new Error("recordDecoded called before any replayed call");
+    current.decoded = decoded;
+  }
+
+  async queryLogs(spec: LogQuerySpec): Promise<readonly MeasurementLog[]> {
+    const expected = this.recordedLogQueries[this.logIndex];
+    if (!expected) throw new Error(`Replay log journal ended before ${spec.name}`);
+    const address = spec.address.toLowerCase();
+    const topics = spec.topics.map((topic) => topic.toLowerCase());
+    if (
+      expected.name !== spec.name ||
+      expected.address !== address ||
+      expected.fromBlock !== spec.fromBlock ||
+      expected.toBlock !== spec.toBlock ||
+      JSON.stringify(expected.topics) !== JSON.stringify(topics)
+    ) {
+      throw new Error(`Replay log query ${this.logIndex} mismatch: expected ${expected.name}, got ${spec.name}`);
+    }
+    this.logQueries.push({ ...expected, logs: expected.logs.map((log) => ({ ...log })), decoded: "" });
+    this.logIndex += 1;
+    return expected.logs;
+  }
+
+  recordLogsDecoded(decoded: string): void {
+    const current = this.logQueries[this.logQueries.length - 1];
+    if (!current) throw new Error("recordLogsDecoded called before any replayed log query");
+    current.decoded = decoded;
+  }
+
+  assertExhausted(): void {
+    if (this.index !== this.recorded.length) {
+      throw new Error(`Replay consumed ${this.index}/${this.recorded.length} journaled calls`);
+    }
+    if (this.logIndex !== this.recordedLogQueries.length) {
+      throw new Error(`Replay consumed ${this.logIndex}/${this.recordedLogQueries.length} journaled log queries`);
+    }
   }
 }
 

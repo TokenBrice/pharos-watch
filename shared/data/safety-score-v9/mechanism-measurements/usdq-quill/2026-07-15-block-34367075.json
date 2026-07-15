@@ -1,0 +1,577 @@
+{
+  "schemaVersion": 1,
+  "kind": "cdp-mechanism-measurement",
+  "assetId": "usdq-quill",
+  "archetype": "cdp",
+  "chain": {
+    "key": "scroll",
+    "evmChainId": 534352
+  },
+  "rpcUrl": "https://rpc.scroll.io",
+  "block": {
+    "number": 34367075,
+    "hash": "0x11f21746bf40a8592909819694e51aa10fadd7ba192b1bc6fda8db4e1845f51d",
+    "timestampUnix": 1784098965,
+    "timestampIso": "2026-07-15T07:02:45.000Z",
+    "selection": "finalized"
+  },
+  "calls": [
+    {
+      "name": "token.collateralRegistryAddress",
+      "to": "0xdb9e8f82d6d45fff803161f2a5f75543972b229a",
+      "signature": "collateralRegistryAddress()",
+      "selector": "0x45a74626",
+      "callData": "0x45a74626",
+      "returnData": "0x000000000000000000000000358d90036e70542ae24b3813c0efecc1f8811442",
+      "decoded": "0x358d90036e70542ae24b3813c0efecc1f8811442"
+    },
+    {
+      "name": "token.totalSupply",
+      "to": "0xdb9e8f82d6d45fff803161f2a5f75543972b229a",
+      "signature": "totalSupply()",
+      "selector": "0x18160ddd",
+      "callData": "0x18160ddd",
+      "returnData": "0x000000000000000000000000000000000000000000001c046cf070872ad50bc7",
+      "decoded": "132307898394521252465607"
+    },
+    {
+      "name": "registry.totalCollaterals",
+      "to": "0x358d90036e70542ae24b3813c0efecc1f8811442",
+      "signature": "totalCollaterals()",
+      "selector": "0x30504b6f",
+      "callData": "0x30504b6f",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000004",
+      "decoded": "4"
+    },
+    {
+      "name": "registry.controller(0)",
+      "to": "0x358d90036e70542ae24b3813c0efecc1f8811442",
+      "signature": "getTroveManager(uint256)",
+      "selector": "0x0bc17feb",
+      "callData": "0x0bc17feb0000000000000000000000000000000000000000000000000000000000000000",
+      "returnData": "0x0000000000000000000000009d2ad9712f3905f3e7803c92d027a197b4c8da90",
+      "decoded": "0x9d2ad9712f3905f3e7803c92d027a197b4c8da90"
+    },
+    {
+      "name": "registry.getToken(0)",
+      "to": "0x358d90036e70542ae24b3813c0efecc1f8811442",
+      "signature": "getToken(uint256)",
+      "selector": "0xe4b50cb8",
+      "callData": "0xe4b50cb80000000000000000000000000000000000000000000000000000000000000000",
+      "returnData": "0x0000000000000000000000005300000000000000000000000000000000000004",
+      "decoded": "0x5300000000000000000000000000000000000004"
+    },
+    {
+      "name": "controller[0].getEntireBranchColl",
+      "to": "0x9d2ad9712f3905f3e7803c92d027a197b4c8da90",
+      "signature": "getEntireBranchColl()",
+      "selector": "0x3ecaaa3f",
+      "callData": "0x3ecaaa3f",
+      "returnData": "0x000000000000000000000000000000000000000000000000083f2331322b270e",
+      "decoded": "594232370038253326"
+    },
+    {
+      "name": "controller[0].getEntireBranchDebt",
+      "to": "0x9d2ad9712f3905f3e7803c92d027a197b4c8da90",
+      "signature": "getEntireBranchDebt()",
+      "selector": "0x105b403b",
+      "callData": "0x105b403b",
+      "returnData": "0x000000000000000000000000000000000000000000000013efd4f16caed6d5f1",
+      "decoded": "367769840519700993521"
+    },
+    {
+      "name": "controller[0].stabilityPool",
+      "to": "0x9d2ad9712f3905f3e7803c92d027a197b4c8da90",
+      "signature": "stabilityPool()",
+      "selector": "0x048c661d",
+      "callData": "0x048c661d",
+      "returnData": "0x00000000000000000000000060f8d7cff7822b564758114a9ef557a651296604",
+      "decoded": "0x60f8d7cff7822b564758114a9ef557a651296604"
+    },
+    {
+      "name": "stabilityPool[0].deposits",
+      "to": "0x60f8d7cff7822b564758114a9ef557a651296604",
+      "signature": "getTotalBoldDeposits()",
+      "selector": "0xf71c6940",
+      "callData": "0xf71c6940",
+      "returnData": "0x0000000000000000000000000000000000000000000000000de1dd6c2b2c1caf",
+      "decoded": "1000324048903478447"
+    },
+    {
+      "name": "controller[0].shutdownTime",
+      "to": "0x9d2ad9712f3905f3e7803c92d027a197b4c8da90",
+      "signature": "shutdownTime()",
+      "selector": "0x58569081",
+      "callData": "0x58569081",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "decoded": "0"
+    },
+    {
+      "name": "controller[0].priceAndRedeemability",
+      "to": "0x9d2ad9712f3905f3e7803c92d027a197b4c8da90",
+      "signature": "getUnbackedPortionPriceAndRedeemability()",
+      "selector": "0x4ea15f37",
+      "callData": "0x4ea15f37",
+      "returnData": "0x000000000000000000000000000000000000000000000013e1f3140083aab942000000000000000000000000000000000000000000000065bce54330b8cf74000000000000000000000000000000000000000000000000000000000000000001",
+      "decoded": "price=1876732510770000000000 redeemable=true"
+    },
+    {
+      "name": "registry.controller(1)",
+      "to": "0x358d90036e70542ae24b3813c0efecc1f8811442",
+      "signature": "getTroveManager(uint256)",
+      "selector": "0x0bc17feb",
+      "callData": "0x0bc17feb0000000000000000000000000000000000000000000000000000000000000001",
+      "returnData": "0x000000000000000000000000a57aae77fbb22f9c1fb55d516e44b856614e143e",
+      "decoded": "0xa57aae77fbb22f9c1fb55d516e44b856614e143e"
+    },
+    {
+      "name": "registry.getToken(1)",
+      "to": "0x358d90036e70542ae24b3813c0efecc1f8811442",
+      "signature": "getToken(uint256)",
+      "selector": "0xe4b50cb8",
+      "callData": "0xe4b50cb80000000000000000000000000000000000000000000000000000000000000001",
+      "returnData": "0x000000000000000000000000f610a9dfb7c89644979b4a0f27063e9e7d7cda32",
+      "decoded": "0xf610a9dfb7c89644979b4a0f27063e9e7d7cda32"
+    },
+    {
+      "name": "controller[1].getEntireBranchColl",
+      "to": "0xa57aae77fbb22f9c1fb55d516e44b856614e143e",
+      "signature": "getEntireBranchColl()",
+      "selector": "0x3ecaaa3f",
+      "callData": "0x3ecaaa3f",
+      "returnData": "0x000000000000000000000000000000000000000000000001a58c0458b3ab2809",
+      "decoded": "30375658365725124617"
+    },
+    {
+      "name": "controller[1].getEntireBranchDebt",
+      "to": "0xa57aae77fbb22f9c1fb55d516e44b856614e143e",
+      "signature": "getEntireBranchDebt()",
+      "selector": "0x105b403b",
+      "callData": "0x105b403b",
+      "returnData": "0x0000000000000000000000000000000000000000000005db797e32a4a4d915c6",
+      "decoded": "27660423856898994410950"
+    },
+    {
+      "name": "controller[1].stabilityPool",
+      "to": "0xa57aae77fbb22f9c1fb55d516e44b856614e143e",
+      "signature": "stabilityPool()",
+      "selector": "0x048c661d",
+      "callData": "0x048c661d",
+      "returnData": "0x000000000000000000000000b2c4e8c5486d3623365526fdd1232578d1646da3",
+      "decoded": "0xb2c4e8c5486d3623365526fdd1232578d1646da3"
+    },
+    {
+      "name": "stabilityPool[1].deposits",
+      "to": "0xb2c4e8c5486d3623365526fdd1232578d1646da3",
+      "signature": "getTotalBoldDeposits()",
+      "selector": "0xf71c6940",
+      "callData": "0xf71c6940",
+      "returnData": "0x00000000000000000000000000000000000000000000001b28c58d9696b40000",
+      "decoded": "501000000000000000000"
+    },
+    {
+      "name": "controller[1].shutdownTime",
+      "to": "0xa57aae77fbb22f9c1fb55d516e44b856614e143e",
+      "signature": "shutdownTime()",
+      "selector": "0x58569081",
+      "callData": "0x58569081",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "decoded": "0"
+    },
+    {
+      "name": "controller[1].priceAndRedeemability",
+      "to": "0xa57aae77fbb22f9c1fb55d516e44b856614e143e",
+      "signature": "getUnbackedPortionPriceAndRedeemability()",
+      "selector": "0x4ea15f37",
+      "callData": "0x4ea15f37",
+      "returnData": "0x0000000000000000000000000000000000000000000005c050b8a50e0e2515c600000000000000000000000000000000000000000000007e16e19a0d527a1a730000000000000000000000000000000000000000000000000000000000000001",
+      "decoded": "price=2325938521608006802035 redeemable=true"
+    },
+    {
+      "name": "registry.controller(2)",
+      "to": "0x358d90036e70542ae24b3813c0efecc1f8811442",
+      "signature": "getTroveManager(uint256)",
+      "selector": "0x0bc17feb",
+      "callData": "0x0bc17feb0000000000000000000000000000000000000000000000000000000000000002",
+      "returnData": "0x000000000000000000000000f645d67733b76e9d69908108d2eef6bec53dd7c8",
+      "decoded": "0xf645d67733b76e9d69908108d2eef6bec53dd7c8"
+    },
+    {
+      "name": "registry.getToken(2)",
+      "to": "0x358d90036e70542ae24b3813c0efecc1f8811442",
+      "signature": "getToken(uint256)",
+      "selector": "0xe4b50cb8",
+      "callData": "0xe4b50cb80000000000000000000000000000000000000000000000000000000000000002",
+      "returnData": "0x00000000000000000000000001f0a31698c4d065659b9bdc21b3610292a1c506",
+      "decoded": "0x01f0a31698c4d065659b9bdc21b3610292a1c506"
+    },
+    {
+      "name": "controller[2].getEntireBranchColl",
+      "to": "0xf645d67733b76e9d69908108d2eef6bec53dd7c8",
+      "signature": "getEntireBranchColl()",
+      "selector": "0x3ecaaa3f",
+      "callData": "0x3ecaaa3f",
+      "returnData": "0x00000000000000000000000000000000000000000000000005df5233875e0744",
+      "decoded": "423147271264012100"
+    },
+    {
+      "name": "controller[2].getEntireBranchDebt",
+      "to": "0xf645d67733b76e9d69908108d2eef6bec53dd7c8",
+      "signature": "getEntireBranchDebt()",
+      "selector": "0x105b403b",
+      "callData": "0x105b403b",
+      "returnData": "0x0000000000000000000000000000000000000000000000001f310f29f6ee6f2c",
+      "decoded": "2247594361945485100"
+    },
+    {
+      "name": "controller[2].stabilityPool",
+      "to": "0xf645d67733b76e9d69908108d2eef6bec53dd7c8",
+      "signature": "stabilityPool()",
+      "selector": "0x048c661d",
+      "callData": "0x048c661d",
+      "returnData": "0x00000000000000000000000090ace556c09465ca9fbe8fd3e2a1246ac20c70f1",
+      "decoded": "0x90ace556c09465ca9fbe8fd3e2a1246ac20c70f1"
+    },
+    {
+      "name": "stabilityPool[2].deposits",
+      "to": "0x90ace556c09465ca9fbe8fd3e2a1246ac20c70f1",
+      "signature": "getTotalBoldDeposits()",
+      "selector": "0xf71c6940",
+      "callData": "0xf71c6940",
+      "returnData": "0x00000000000000000000000000000000000000000000000029378f43a6e90000",
+      "decoded": "2970000000000000000"
+    },
+    {
+      "name": "controller[2].shutdownTime",
+      "to": "0xf645d67733b76e9d69908108d2eef6bec53dd7c8",
+      "signature": "shutdownTime()",
+      "selector": "0x58569081",
+      "callData": "0x58569081",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "decoded": "0"
+    },
+    {
+      "name": "controller[2].priceAndRedeemability",
+      "to": "0xf645d67733b76e9d69908108d2eef6bec53dd7c8",
+      "signature": "getUnbackedPortionPriceAndRedeemability()",
+      "selector": "0x4ea15f37",
+      "callData": "0x4ea15f37",
+      "returnData": "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006fd34fd1764cddd9430000000000000000000000000000000000000000000000000000000000000001",
+      "decoded": "price=2062815211352949119299 redeemable=true"
+    },
+    {
+      "name": "registry.controller(3)",
+      "to": "0x358d90036e70542ae24b3813c0efecc1f8811442",
+      "signature": "getTroveManager(uint256)",
+      "selector": "0x0bc17feb",
+      "callData": "0x0bc17feb0000000000000000000000000000000000000000000000000000000000000003",
+      "returnData": "0x000000000000000000000000862ec870184a66fd3ed6bd7e122bc18355002076",
+      "decoded": "0x862ec870184a66fd3ed6bd7e122bc18355002076"
+    },
+    {
+      "name": "registry.getToken(3)",
+      "to": "0x358d90036e70542ae24b3813c0efecc1f8811442",
+      "signature": "getToken(uint256)",
+      "selector": "0xe4b50cb8",
+      "callData": "0xe4b50cb80000000000000000000000000000000000000000000000000000000000000003",
+      "returnData": "0x000000000000000000000000d29687c813d741e2f938f4ac377128810e217b1b",
+      "decoded": "0xd29687c813d741e2f938f4ac377128810e217b1b"
+    },
+    {
+      "name": "controller[3].getEntireBranchColl",
+      "to": "0x862ec870184a66fd3ed6bd7e122bc18355002076",
+      "signature": "getEntireBranchColl()",
+      "selector": "0x3ecaaa3f",
+      "callData": "0x3ecaaa3f",
+      "returnData": "0x000000000000000000000000000000000000000000008e5c7e3a630d5f297ced",
+      "decoded": "672282236713577409510637"
+    },
+    {
+      "name": "controller[3].getEntireBranchDebt",
+      "to": "0x862ec870184a66fd3ed6bd7e122bc18355002076",
+      "signature": "getEntireBranchDebt()",
+      "selector": "0x105b403b",
+      "callData": "0x105b403b",
+      "returnData": "0x00000000000000000000000000000000000000000000162e8dd2a51305c3967c",
+      "decoded": "104750832262528410818172"
+    },
+    {
+      "name": "controller[3].stabilityPool",
+      "to": "0x862ec870184a66fd3ed6bd7e122bc18355002076",
+      "signature": "stabilityPool()",
+      "selector": "0x048c661d",
+      "callData": "0x048c661d",
+      "returnData": "0x00000000000000000000000031d6efc07ae8f9291932b0ac8ebc794b85696376",
+      "decoded": "0x31d6efc07ae8f9291932b0ac8ebc794b85696376"
+    },
+    {
+      "name": "stabilityPool[3].deposits",
+      "to": "0x31d6efc07ae8f9291932b0ac8ebc794b85696376",
+      "signature": "getTotalBoldDeposits()",
+      "selector": "0xf71c6940",
+      "callData": "0xf71c6940",
+      "returnData": "0x00000000000000000000000000000000000000000000000018ff79a1a6ffb4d1",
+      "decoded": "1801292111169959121"
+    },
+    {
+      "name": "controller[3].shutdownTime",
+      "to": "0x862ec870184a66fd3ed6bd7e122bc18355002076",
+      "signature": "shutdownTime()",
+      "selector": "0x58569081",
+      "callData": "0x58569081",
+      "returnData": "0x0000000000000000000000000000000000000000000000000000000069d3e6da",
+      "decoded": "1775494874"
+    },
+    {
+      "name": "controller[3].priceAndRedeemability",
+      "to": "0x862ec870184a66fd3ed6bd7e122bc18355002076",
+      "signature": "getUnbackedPortionPriceAndRedeemability()",
+      "selector": "0x4ea15f37",
+      "callData": "0x4ea15f37",
+      "returnData": "0x00000000000000000000000000000000000000000000162e74d32b715ec3e1ab000000000000000000000000000000000000000000000000005ac555c0b5f0000000000000000000000000000000000000000000000000000000000000000000",
+      "decoded": "price=25549720000000000 redeemable=false"
+    }
+  ],
+  "metrics": {
+    "collateralizationRatio": 0.676425,
+    "liquidationCapacityRatio": 0.00383,
+    "applicability": {
+      "collateralizationRatio": {
+        "state": "measured"
+      },
+      "liquidationCapacityRatio": {
+        "state": "measured"
+      }
+    }
+  },
+  "completeness": {
+    "complete": true,
+    "blockers": []
+  },
+  "warnings": [
+    "Branch 3 is shut down at timestamp 1775494874.",
+    "Branch 3 protocol oracle marks the branch non-redeemable."
+  ],
+  "checks": [
+    {
+      "id": "graph.collateralRegistry",
+      "status": "pass",
+      "detail": "token registry 0x358d90036e70542ae24b3813c0efecc1f8811442 matches configured registry"
+    },
+    {
+      "id": "supply.positive",
+      "status": "pass",
+      "detail": "token supply 132307898394521252465607 is positive"
+    },
+    {
+      "id": "branches.count",
+      "status": "pass",
+      "detail": "registry count 4 equals 4 configured branches"
+    },
+    {
+      "id": "branch[0].controller",
+      "status": "pass",
+      "detail": "controller 0x9d2ad9712f3905f3e7803c92d027a197b4c8da90 matches configured branch"
+    },
+    {
+      "id": "branch[0].controller-unique",
+      "status": "pass",
+      "detail": "controller 0x9d2ad9712f3905f3e7803c92d027a197b4c8da90 appears once"
+    },
+    {
+      "id": "branch[0].collateral-token",
+      "status": "pass",
+      "detail": "collateral token 0x5300000000000000000000000000000000000004 matches configured branch"
+    },
+    {
+      "id": "branch[0].positive-state",
+      "status": "pass",
+      "detail": "collateral 594232370038253326 and debt 367769840519700993521 are positive"
+    },
+    {
+      "id": "branch[0].price-positive",
+      "status": "pass",
+      "detail": "protocol price 1876732510770000000000 is positive"
+    },
+    {
+      "id": "branch[1].controller",
+      "status": "pass",
+      "detail": "controller 0xa57aae77fbb22f9c1fb55d516e44b856614e143e matches configured branch"
+    },
+    {
+      "id": "branch[1].controller-unique",
+      "status": "pass",
+      "detail": "controller 0xa57aae77fbb22f9c1fb55d516e44b856614e143e appears once"
+    },
+    {
+      "id": "branch[1].collateral-token",
+      "status": "pass",
+      "detail": "collateral token 0xf610a9dfb7c89644979b4a0f27063e9e7d7cda32 matches configured branch"
+    },
+    {
+      "id": "branch[1].positive-state",
+      "status": "pass",
+      "detail": "collateral 30375658365725124617 and debt 27660423856898994410950 are positive"
+    },
+    {
+      "id": "branch[1].price-positive",
+      "status": "pass",
+      "detail": "protocol price 2325938521608006802035 is positive"
+    },
+    {
+      "id": "branch[2].controller",
+      "status": "pass",
+      "detail": "controller 0xf645d67733b76e9d69908108d2eef6bec53dd7c8 matches configured branch"
+    },
+    {
+      "id": "branch[2].controller-unique",
+      "status": "pass",
+      "detail": "controller 0xf645d67733b76e9d69908108d2eef6bec53dd7c8 appears once"
+    },
+    {
+      "id": "branch[2].collateral-token",
+      "status": "pass",
+      "detail": "collateral token 0x01f0a31698c4d065659b9bdc21b3610292a1c506 matches configured branch"
+    },
+    {
+      "id": "branch[2].positive-state",
+      "status": "pass",
+      "detail": "collateral 423147271264012100 and debt 2247594361945485100 are positive"
+    },
+    {
+      "id": "branch[2].price-positive",
+      "status": "pass",
+      "detail": "protocol price 2062815211352949119299 is positive"
+    },
+    {
+      "id": "branch[3].controller",
+      "status": "pass",
+      "detail": "controller 0x862ec870184a66fd3ed6bd7e122bc18355002076 matches configured branch"
+    },
+    {
+      "id": "branch[3].controller-unique",
+      "status": "pass",
+      "detail": "controller 0x862ec870184a66fd3ed6bd7e122bc18355002076 appears once"
+    },
+    {
+      "id": "branch[3].collateral-token",
+      "status": "pass",
+      "detail": "collateral token 0xd29687c813d741e2f938f4ac377128810e217b1b matches configured branch"
+    },
+    {
+      "id": "branch[3].positive-state",
+      "status": "pass",
+      "detail": "collateral 672282236713577409510637 and debt 104750832262528410818172 are positive"
+    },
+    {
+      "id": "branch[3].price-positive",
+      "status": "pass",
+      "detail": "protocol price 25549720000000000 is positive"
+    },
+    {
+      "id": "branch[3].health-state-captured",
+      "status": "pass",
+      "detail": "retained unhealthy state: shutdownTime=1775494874, redeemable=false"
+    },
+    {
+      "id": "debt.positive",
+      "status": "pass",
+      "detail": "total debt 132781273554309051707743 is positive"
+    },
+    {
+      "id": "derivation.supply-vs-debt",
+      "status": "pass",
+      "detail": "debt/supply divergence 0.357700% is within 0.5%"
+    }
+  ],
+  "overlaySources": [
+    {
+      "label": "Quill CollateralRegistry and branch state on Scroll",
+      "url": "https://scrollscan.com/address/0x358d90036e70542ae24b3813c0efecc1f8811442"
+    },
+    {
+      "label": "Quill deployment documentation",
+      "url": "https://docs.quill.finance/documentation/contract-addresses"
+    }
+  ],
+  "tool": {
+    "name": "measure-cdp-mechanism-metrics",
+    "version": "2"
+  },
+  "family": "liquity-v2-enumerated-v1",
+  "derived": {
+    "registry": "0x358d90036e70542ae24b3813c0efecc1f8811442",
+    "branches": [
+      {
+        "index": 0,
+        "collateralToken": "0x5300000000000000000000000000000000000004",
+        "troveManager": "0x9d2ad9712f3905f3e7803c92d027a197b4c8da90",
+        "stabilityPool": "0x60f8d7cff7822b564758114a9ef557a651296604",
+        "collateral": "594232370038253326",
+        "debt": "367769840519700993521",
+        "spDeposits": "1000324048903478447",
+        "priceWei": "1876732510770000000000",
+        "priceUsd": 1876.73251077,
+        "collateralDecimals": 18,
+        "debtDecimals": 18,
+        "priceDecimals": 18,
+        "redeemable": true,
+        "shutdownTime": 0
+      },
+      {
+        "index": 1,
+        "collateralToken": "0xf610a9dfb7c89644979b4a0f27063e9e7d7cda32",
+        "troveManager": "0xa57aae77fbb22f9c1fb55d516e44b856614e143e",
+        "stabilityPool": "0xb2c4e8c5486d3623365526fdd1232578d1646da3",
+        "collateral": "30375658365725124617",
+        "debt": "27660423856898994410950",
+        "spDeposits": "501000000000000000000",
+        "priceWei": "2325938521608006802035",
+        "priceUsd": 2325.9385216,
+        "collateralDecimals": 18,
+        "debtDecimals": 18,
+        "priceDecimals": 18,
+        "redeemable": true,
+        "shutdownTime": 0
+      },
+      {
+        "index": 2,
+        "collateralToken": "0x01f0a31698c4d065659b9bdc21b3610292a1c506",
+        "troveManager": "0xf645d67733b76e9d69908108d2eef6bec53dd7c8",
+        "stabilityPool": "0x90ace556c09465ca9fbe8fd3e2a1246ac20c70f1",
+        "collateral": "423147271264012100",
+        "debt": "2247594361945485100",
+        "spDeposits": "2970000000000000000",
+        "priceWei": "2062815211352949119299",
+        "priceUsd": 2062.81521135,
+        "collateralDecimals": 18,
+        "debtDecimals": 18,
+        "priceDecimals": 18,
+        "redeemable": true,
+        "shutdownTime": 0
+      },
+      {
+        "index": 3,
+        "collateralToken": "0xd29687c813d741e2f938f4ac377128810e217b1b",
+        "troveManager": "0x862ec870184a66fd3ed6bd7e122bc18355002076",
+        "stabilityPool": "0x31d6efc07ae8f9291932b0ac8ebc794b85696376",
+        "collateral": "672282236713577409510637",
+        "debt": "104750832262528410818172",
+        "spDeposits": "1801292111169959121",
+        "priceWei": "25549720000000000",
+        "priceUsd": 0.02554972,
+        "collateralDecimals": 18,
+        "debtDecimals": 18,
+        "priceDecimals": 18,
+        "redeemable": false,
+        "shutdownTime": 1775494874
+      }
+    ],
+    "totalCollateralValueWad": "89816626656658799057122",
+    "totalDebtWad": "132781273554309051707743",
+    "spDepositsWad": "506771616160073437568",
+    "totalSupplyWad": "132307898394521252465607",
+    "supplyDebtDivergencePct": 0.3577,
+    "branchCappedLiquidationCapacityRatio": 0.003811
+  }
+}

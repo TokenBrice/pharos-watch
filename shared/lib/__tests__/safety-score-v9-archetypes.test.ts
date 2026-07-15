@@ -63,6 +63,10 @@ const reviews: readonly V9MechanismRiskReview[] = [
     archetype: "cdp",
     collateralizationRatio: 1.5,
     liquidationCapacityRatio: 1,
+    metricApplicability: {
+      collateralizationRatio: { state: "measured" },
+      liquidationCapacityRatio: { state: "measured" },
+    },
     collateralizationParameters: strongFact("collateralization"),
     liquidationMechanics: strongFact("liquidation"),
     backstop: strongFact("backstop"),
@@ -200,6 +204,52 @@ describe("Safety Score v9 archetype backing adapters", () => {
 
     expect(result.rateability).toBe("rateable");
     expect(result.contributions.some((entry) => entry.componentKey === "mechanism:duration-and-liquidity")).toBe(false);
+  });
+
+  it("requires explicit evidenced N/A metrics and skips only their CDP threshold signals", () => {
+    const base = reviews[2] as Extract<V9MechanismRiskReview, { archetype: "cdp" }>;
+    const measured = evaluateV9Backing(
+      asset(),
+      { ...base, collateralizationRatio: 0.5, liquidationCapacityRatio: 0 },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const notApplicable = V9MechanismRiskReviewSchema.parse({
+      ...base,
+      collateralizationRatio: null,
+      liquidationCapacityRatio: null,
+      metricApplicability: {
+        collateralizationRatio: {
+          state: "not-applicable",
+          rationale: "No independent per-token collateral system exists.",
+          evidenceRefIds: ["evidence:cr-na"],
+        },
+        liquidationCapacityRatio: {
+          state: "not-applicable",
+          rationale: "No committed debt-offset liquidation pool exists.",
+          evidenceRefIds: ["evidence:liquidation-na"],
+        },
+      },
+    });
+    if (notApplicable.archetype !== "cdp") throw new Error("unexpected archetype");
+    const skipped = evaluateV9Backing(asset(), notApplicable, V9_CANDIDATE_POLICY_V1);
+
+    expect(measured.structuralReasons.length).toBeGreaterThan(skipped.structuralReasons.length);
+    expect(() =>
+      V9MechanismRiskReviewSchema.parse({
+        ...base,
+        collateralizationRatio: null,
+      }),
+    ).toThrow(/Measured collateralizationRatio/);
+    expect(() =>
+      V9MechanismRiskReviewSchema.parse({
+        ...base,
+        collateralizationRatio: null,
+        metricApplicability: {
+          ...base.metricApplicability,
+          collateralizationRatio: { state: "not-applicable", rationale: "No vault system.", evidenceRefIds: [] },
+        },
+      }),
+    ).toThrow();
   });
 
   it("emits the algorithmic reflexivity ceiling independently of strong components", () => {

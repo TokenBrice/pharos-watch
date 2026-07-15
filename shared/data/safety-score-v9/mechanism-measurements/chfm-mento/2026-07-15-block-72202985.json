@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "kind": "cdp-mechanism-measurement",
+  "assetId": "chfm-mento",
+  "archetype": "cdp",
+  "chain": {
+    "key": "celo",
+    "evmChainId": 42220
+  },
+  "rpcUrl": "https://forno.celo.org",
+  "block": {
+    "number": 72202985,
+    "hash": "0x26a9f9589f4d014e03ff934eb197507e481cecc8bdb23d5c8e9f81a83270b120",
+    "timestampUnix": 1784103743,
+    "timestampIso": "2026-07-15T08:22:23.000Z",
+    "selection": "finalized"
+  },
+  "calls": [
+    {
+      "name": "token.totalSupply",
+      "to": "0xb55a79f398e759e43c95b979163f30ec87ee131d",
+      "signature": "totalSupply()",
+      "selector": "0x18160ddd",
+      "callData": "0x18160ddd",
+      "returnData": "0x000000000000000000000000000000000000000000000ef8b608fca01b1fa137",
+      "decoded": "70701040302134298386743"
+    },
+    {
+      "name": "counterToken.balanceOf(pool)",
+      "to": "0x765de816845861e75a25fca122bb6898b8b1282a",
+      "signature": "balanceOf(address)",
+      "selector": "0x70a08231",
+      "callData": "0x70a08231000000000000000000000000dc81135fd82f02cae736e261fb676b716663e8b8",
+      "returnData": "0x000000000000000000000000000000000000000000000944512e86e8bdad5468",
+      "decoded": "43761526704139230073960"
+    }
+  ],
+  "metrics": {
+    "collateralizationRatio": null,
+    "liquidationCapacityRatio": null,
+    "applicability": {
+      "collateralizationRatio": {
+        "state": "not-applicable",
+        "rationale": "This token is a reserve/conversion product without an independently collateralized per-token vault system."
+      },
+      "liquidationCapacityRatio": {
+        "state": "not-applicable",
+        "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital contractually committed to debt-offset liquidation."
+      }
+    }
+  },
+  "completeness": {
+    "complete": true,
+    "blockers": []
+  },
+  "checks": [
+    {
+      "id": "supply.positive",
+      "status": "pass",
+      "detail": "token supply 70701040302134298386743 is positive"
+    },
+    {
+      "id": "conversion.capacity-positive",
+      "status": "pass",
+      "detail": "pool counter balance 43761526704139230073960 is positive"
+    }
+  ],
+  "overlaySources": [
+    {
+      "label": "Mento BiPoolManager/FPMM conversion state on Celo at the pinned block",
+      "url": "https://celoscan.io/address/0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901"
+    },
+    {
+      "label": "Mento V3 documentation (permissionless reserve conversion design)",
+      "url": "https://docs.mento.org/mento-v3"
+    }
+  ],
+  "tool": {
+    "name": "measure-cdp-mechanism-metrics",
+    "version": "2"
+  },
+  "family": "mento-conversion-evidence-v1",
+  "derived": {
+    "mode": "fpmm-pool",
+    "selfToken": "0xb55a79f398e759e43c95b979163f30ec87ee131d",
+    "counterToken": "0x765de816845861e75a25fca122bb6898b8b1282a",
+    "pool": "0xdc81135fd82f02cae736e261fb676b716663e8b8",
+    "counterCapacityRaw": "43761526704139230073960",
+    "feeBps": null,
+    "totalSupplyRaw": "70701040302134298386743"
+  },
+  "analogousMetrics": {
+    "conversionCapacityCounterUnits": 43761.52670413
+  }
+}
