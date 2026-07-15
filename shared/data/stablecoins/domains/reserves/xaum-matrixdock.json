@@ -2,7 +2,7 @@
   "id": "xaum-matrixdock",
   "reserves": [
     {
-      "name": "Physical gold bars (LBMA-certified 99.99%, Asian vault custody)",
+      "name": "Physical gold bars (LBMA 99.99%)",
       "pct": 100,
       "risk": "medium",
       "assetClass": "other",

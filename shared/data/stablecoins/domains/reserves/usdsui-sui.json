@@ -2,19 +2,19 @@
   "id": "usdsui-sui",
   "reserves": [
     {
-      "name": "Bridge USD reserves (short-dated Treasuries, Treasury repos, government MMFs, and cash)",
+      "name": "Bridge USD reserve envelope (cash, on-chain stablecoins, short-dated Treasuries, Treasury repos, and government MMFs)",
       "pct": 100,
-      "risk": "very-low",
+      "risk": "low",
       "assetClass": "other",
-      "issuerOrObligor": "United States Treasury, regulated financial institutions, and permitted money-market fund issuers",
-      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "concentration"],
-      "liquidityHorizon": "one-day"
+      "issuerOrObligor": "United States Treasury, Bridge-approved stablecoin issuers, and permitted reserve counterparties",
+      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "smart-contract", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-07-15",
     "reviewer": "OpenAI Codex backing review",
-    "confidence": "verified",
+    "confidence": "probable",
     "sources": [
       {
         "label": "Bridge reserve management",
@@ -25,20 +25,20 @@
         "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
       },
       {
-        "label": "Bridge issuance overview",
-        "url": "https://apidocs.bridge.xyz/platform/issuance/overview"
+        "label": "Bridge reporting and transparency",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency"
       }
     ],
-    "rationale": "Bridge states that issued stablecoins are at least 1:1 collateralized and that the reserve basket may include cash, on-chain stablecoins, short-dated U.S. Treasuries, overnight Treasury repos, and government money-market funds. The USDsui-specific allocation and individual bank, repo, and fund counterparties are not disclosed, so the complete basket is retained as one explicit aggregate slice.",
+    "rationale": "Bridge states that issued stablecoins are at least 1:1 collateralized. Its reserve-management documentation allows allocation across USD, on-chain stablecoins, and Treasuries, while its FAQ identifies cash, short-dated U.S. Treasuries, overnight Treasury repos, and government money-market funds. No public USDsui-specific reserve report or authenticated reserve-API output identifies current weights, providers, or holdings, so the complete basket is retained as one aggregate slice.",
     "compositionBasis": "Bridge Open Issuance reserve categories; USDsui-specific component weights are undisclosed",
-    "compositionAsOf": "2026-07-14",
+    "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "The reserve categories are identified, but USDsui-specific weights and individual bank, repo, and money-market-fund counterparties are not published.",
+    "knownUnknownExposure": "The reserve categories are identified, but USDsui-specific weights, stablecoin identities, and individual bank, repo, and money-market-fund counterparties are not published.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Bridge USD reserves (short-dated Treasuries, Treasury repos, government MMFs, and cash)",
+        "reserveName": "Bridge USD reserve envelope (cash, on-chain stablecoins, short-dated Treasuries, Treasury repos, and government MMFs)",
         "pct": 100,
         "disposition": "basket-needs-split",
         "rationale": "Bridge publishes the permitted reserve categories but not the current USDsui allocation among them."

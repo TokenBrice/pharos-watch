@@ -70,14 +70,38 @@
     }
   ],
   "deploymentModel": "single-chain",
-  "canBeBlacklisted": false,
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: iUSD resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12",
-    "upstreamSuppressionRationale": "The peg mechanism references USDC, USDT, and TUSD only as oracle price inputs for the median peg target; iUSD reserves are ADA CDP collateral, so those fiat-stablecoin freeze surfaces are not upstream backing exposure."
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Cardano native-token transfer model",
+        "url": "https://developers.cardano.org/docs/build/smart-contracts/lessons/theory/native-tokens/"
+      },
+      {
+        "label": "Indigo Protocol V3 documentation",
+        "url": "https://docs.indigoprotocol.io/readme/indigo-protocol-v3.md"
+      },
+      {
+        "label": "Indigo V3 mainnet system parameters",
+        "url": "https://config.indigoprotocol.io/mainnet/mainnet-system-params-v3.json"
+      },
+      {
+        "label": "Koios V3 PSM reference output API",
+        "url": "https://api.koios.rest/api/v1/utxo_info"
+      },
+      {
+        "label": "USDCx Portal Terms of Use",
+        "url": "https://usdcx.iog.io/docs/USDCx_portal_terms_of_use.pdf"
+      },
+      {
+        "label": "Indigo Protocol disclaimer",
+        "url": "https://indigoprotocol.io/disclaimer.html"
+      }
+    ],
+    "evidence": "Indigo's V3 documentation, last updated 2026-06-25, describes an iUSD/USDCx Peg Stabilization Module: USDCx-to-iUSD minting and iUSD-to-USDCx redemption. It states that the DAO can enable or disable each direction of a stable pair and that the Indigo Foundation controlled loan redemptions at V3 launch. The official V3 configuration identifies PSM reference output 5a3581c7623683ca7a458f368d215816390c9cdaa8b5748deb7904b571889005#0; a Koios POST to utxo_info on 2026-07-15 returned PlutusV3 script hash 245425bb49411414dca4af8f25097c5a27f923249c0779ffaa2bc5a3, whose serialized validation messages include 'Minting is not enabled' and 'Redeeming is not enabled'. The current iUSD policy reference 8fac023fd9556f66ffdac8cb71879fabd6995480f7ad976213d1e1ee85de75cd#0 is PlutusV2, so the earlier policy was not treated as current PSM source evidence. Cardano documents that ordinary native-token transfers do not execute a policy, and no holder-address blacklist or direct iUSD transfer freeze was established. USDCx terms state that Circle may delay or deny xReserve USDC release and bridge parties may pause the bridge. This establishes possible governed PSM and upstream redemption-route access exposure, not a claim that an issuer can freeze standalone iUSD balances.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "chainTier": "mature-alt-l1",
   "governanceQuality": "dao-governance",

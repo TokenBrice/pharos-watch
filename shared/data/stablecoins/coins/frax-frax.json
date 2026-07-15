@@ -152,7 +152,7 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
       {
         "label": "Frax documentation",
@@ -161,11 +161,27 @@
       {
         "label": "FRAX Ethereum deployment",
         "url": "https://etherscan.io/address/0x853d955acef822db058eb8505911ed77f175b99e#code"
+      },
+      {
+        "label": "FRAX Ethereum verified contract API",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x853d955acef822db058eb8505911ed77f175b99e"
+      },
+      {
+        "label": "Fraxtal WFRAX proxy",
+        "url": "https://fraxscan.com/address/0xfc00000000000000000000000000000000000002?tab=contract"
+      },
+      {
+        "label": "Fraxtal verified ProxyAdmin implementation",
+        "url": "https://fraxscan.com/address/0xfc00000000000000000000000000000000000009?tab=contract"
+      },
+      {
+        "label": "Fraxtal public RPC",
+        "url": "https://rpc.frax.com"
       }
     ],
-    "evidence": "BLOCKED: the reviewed Frax documentation and Ethereum deployment do not establish a current holder-level freeze or transfer-restriction path for every material deployment. FRAX has fourteen tracked deployments, so the Ethereum review cannot safely resolve chain-wide control reach; inherited upstream exposure remains recorded.",
+    "evidence": "At Fraxtal block 0x24d7f6f, the tracked WFRAX proxy 0xfc00000000000000000000000000000000000002 stored implementation 0x1af97083ddb4fb40aad9644bacc8ef9edcf595d4 and admin 0xfc0000000000000000000000000000000000000a. That admin proxy stored verified ProxyAdmin implementation 0xfc00000000000000000000000000000000000009, whose owner() returned 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6; its verified source exposes owner-only upgrade and upgradeAndCall. The owner can therefore replace the WFRAX implementation and introduce holder-level transfer restrictions. This is an upgrade-control finding, not a claim that every FRAX deployment or the current code exposes an active global freeze or blacklist.",
     "reviewer": "OpenAI Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",

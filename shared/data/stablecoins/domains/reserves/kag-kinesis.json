@@ -2,7 +2,7 @@
   "id": "kag-kinesis",
   "reserves": [
     {
-      "name": "Physical silver bullion (999 fine, ABX global vaults)",
+      "name": "Physical silver reserves",
       "pct": 100,
       "risk": "very-low",
       "assetClass": "other",
@@ -40,7 +40,7 @@
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Physical silver bullion (999 fine, ABX global vaults)",
+        "reserveName": "Physical silver reserves",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Allocated physical silver is an exogenous commodity reserve rather than a tracked stablecoin dependency."

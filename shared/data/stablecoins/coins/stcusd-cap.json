@@ -11,26 +11,51 @@
     "rwa": false,
     "navToken": true
   },
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": "possible",
     "sources": [
+      {
+        "label": "Cap contract addresses",
+        "url": "https://docs.cap.app/developers/addresses"
+      },
       {
         "label": "Cap stcUSD mechanics",
         "url": "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics"
       },
       {
-        "label": "stcUSD Ethereum deployment",
+        "label": "stcUSD proxy (Etherscan)",
         "url": "https://etherscan.io/address/0x88887be419578051ff9f4eb6c858a951921d8888#code"
       },
       {
-        "label": "Cap protocol repository",
-        "url": "https://github.com/cap-labs-dev"
+        "label": "StakedCap implementation (Blockscout)",
+        "url": "https://eth.blockscout.com/address/0x42c0e0ef7c2f35de073f4d6f9c0e4483429c3d31?tab=contract"
+      },
+      {
+        "label": "cUSD implementation (Blockscout)",
+        "url": "https://eth.blockscout.com/address/0xa76645e15c267b876999bf7689e0b2c1ee29bfe6?tab=contract"
+      },
+      {
+        "label": "Cap platform terms",
+        "url": "https://docs.cap.app/resources/terms-and-conditions/platform-terms-of-use"
+      },
+      {
+        "label": "Cap cUSD reserve transparency",
+        "url": "https://cap.app/vault/reserves/cUSD"
+      },
+      {
+        "label": "Cap contracts repository",
+        "url": "https://github.com/cap-labs-dev/cap-contracts"
+      },
+      {
+        "label": "Archived Cap stcUSD mechanics",
+        "url": "https://web.archive.org/web/20260622023019/https://docs.cap.app/overview/protocol-overview/stcusd-mechanics"
       }
     ],
-    "sourceFreeRationale": "Bounded unknown retained: Cap documentation and the verified Ethereum deployment establish the stcUSD mechanics, but do not establish a complete holder-level blacklist or freeze inventory for the token and its collateral dependencies.",
-    "evidence": "The reviewed Cap sources describe stcUSD issuance and the Ethereum token deployment, but no deployment-wide holder-control function is proven. Upstream collateral exposure remains separate from direct stcUSD holder access and is not inferred as a direct blacklist.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "sourceFreeRationale": "Explicit possible: the verified stcUSD UUPS proxy can replace its implementation through Cap's external AccessControl, one-day TimelockController, and 3-of-5 governance Safe. The active implementation has no direct holder restriction, but this bounded live authority can introduce one.",
+    "evidence": "Reviewed 2026-07-15. At Ethereum safe block 25,535,489 (0x185a401; hash 0x5ecfd74206eab6171c6acac2c9b2d1a5c253f17c3178fb272b2db06ffb4bc57a), stcUSD asset() returned cUSD and EIP-1967 slots resolved the stcUSD proxy to 0x42c0e0ef7c2f35de073f4d6f9c0e4483429c3d31 and cUSD to 0xa76645e15c267b876999bf7689e0b2c1ee29bfe6. The verified StakedCap source has standard ERC-4626/ERC-20 transfer paths and no pause, blacklist, freeze, seize, or address-lock function; paused() reverted. The record's verified mint-authority observation at block 25,531,350 establishes the live UUPS upgrade path: external AccessControl, then a one-day TimelockController, then the Cap 3-of-5 governance Safe. This establishes a bounded governance-controlled future holder-control possibility, not a current direct blacklist. The verified cUSD implementation exposes protocol- and asset-level pause functions, which remain additive upstream exposure. Cap's terms and reserve dashboard provided no additional deployed holder-control mechanism. The official mechanics page has a 2026-06-22 archive capture.",
+    "reviewer": "Codex Wave 11 access review",
+    "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

@@ -131,22 +131,62 @@
     "reviewedStatus": "inherited",
     "sources": [
       {
-        "label": "Mento V3 stablecoin documentation",
+        "label": "Mento BRLm Celo availability documentation",
         "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
       },
       {
-        "label": "BRLm Celo token verified source",
-        "url": "https://celo.blockscout.com/address/0xe8537a3d056da446677b9e9d6c5db704eaab4787?tab=contract"
+        "label": "Mento deployment address inventory",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
       },
       {
-        "label": "Mento reserve configuration",
-        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+        "label": "BRLm current mainnet StableTokenV2 verified implementation",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563B0604BE100F04B7Ae485BcafE3c9D8850E"
+      },
+      {
+        "label": "Mento StableTokenV2 source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/5cad9ee941b1e27efcfca7fe44a283f3b180dc82/contracts/tokens/StableTokenV2.sol"
+      },
+      {
+        "label": "Mento patched ERC20 source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/5cad9ee941b1e27efcfca7fe44a283f3b180dc82/contracts/tokens/patched/ERC20Upgradeable.sol"
+      },
+      {
+        "label": "Mento Celo VM gas-accounting guard source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/5cad9ee941b1e27efcfca7fe44a283f3b180dc82/contracts/common/CalledByVm.sol"
+      },
+      {
+        "label": "Mento Broker verified implementation",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x1B78f6acD05e7BcB00f74863bfd8a7C264143e37"
+      },
+      {
+        "label": "Pinned Mento deployment registry",
+        "url": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/contracts.json"
+      },
+      {
+        "label": "Mento privacy policy",
+        "url": "https://www.mento.org/privacy"
+      },
+      {
+        "label": "Mento Reserve analytics API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
+      {
+        "label": "Archived Mento Reserve dashboard",
+        "url": "https://arquivo.pt/wayback/20250213024357/https://reserve.mento.org/"
+      },
+      {
+        "label": "Mento governance proxy-upgrade example",
+        "url": "https://forum.mento.org/t/mgp-16-copm-and-brlm-renaming/105"
+      },
+      {
+        "label": "Celo Forno fixed-block RPC",
+        "url": "https://forno.celo.org"
       }
     ],
-    "sourceFreeRationale": "Bounded unknown retained: Mento documentation and the verified BRLm deployment establish the reserve-backed system, but do not establish a complete holder-level blacklist or freeze inventory for the token and its upstream reserve assets.",
-    "evidence": "BRLm inherits upstream freeze exposure because the Mento reserve mix includes tracked freezable stablecoins such as USDC, USDT, and EURC. No direct BRLm holder-control function is asserted without a deployment-wide verified control inventory.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "sourceFreeRationale": "Direct production-token controls were fully inventoried at Celo block 72180952 on 2026-07-15. The verified BRLm StableTokenV2 implementation has no holder blacklist, freeze, pause, seizure, or privileged holder-burn path. This time-bounded finding does not suppress Mento Reserve's independently evidenced upstream freezable-asset exposure; the token remains timelock-upgradeable.",
+    "evidence": "At Celo block 72180952, BRLm proxy 0xe8537a3d056da446677b9e9d6c5db704eaab4787 resolved to verified StableTokenV2 implementation 0x434563B0604BE100F04B7Ae485BcafE3c9D8850E. Its ABI/source contains standard ERC-20 transfers, permissioned minting, self-burn (with the Broker first pulling from msg.sender), and Celo-VM-only gas accounting, but no direct blacklist, freeze, pause, seizure, or holder-targeted burn. The official registry/docs identify this Celo mainnet token and only a matching Celo Sepolia test token. Mento's live and archived reserve transparency sources show USDT, EURC, and USDC-family collateral, so upstream exposure remains inherited. The 172800-second Mento Timelock can upgrade token logic, making the direct-code conclusion snapshot-specific.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

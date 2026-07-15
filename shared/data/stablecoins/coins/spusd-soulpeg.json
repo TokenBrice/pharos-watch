@@ -37,12 +37,50 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: spUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "SoulPeg website",
+        "url": "https://www.soulpeg.io/"
+      },
+      {
+        "label": "SoulPeg SPUSD overview",
+        "url": "https://docs.soulpeg.io/docs/introducing/what-is-soulpeg"
+      },
+      {
+        "label": "SoulPeg security model",
+        "url": "https://docs.soulpeg.io/docs/whitepaper/security-model"
+      },
+      {
+        "label": "SoulPeg terms of service",
+        "url": "https://www.soulpeg.io/terms"
+      },
+      {
+        "label": "SPUSD verified token source",
+        "url": "https://bscscan.com/address/0x40ff3dea2eec93a7b71879874dc4407918da77a6#code"
+      },
+      {
+        "label": "SoulPeg SPUSD wrapper source",
+        "url": "https://bscscan.com/address/0x0e8fb2e774b827711e0f86069931c1321113238e#code"
+      },
+      {
+        "label": "SoulPeg sUSDC source",
+        "url": "https://bscscan.com/address/0xc603ef9cab5e4131c52f6b8bcf06cc0568c32a24#code"
+      },
+      {
+        "label": "BSC PublicNode RPC",
+        "url": "https://bsc-rpc.publicnode.com"
+      },
+      {
+        "label": "SoulPeg official documentation source repository",
+        "url": "https://github.com/soulpeg-labs/soulpeg-docs"
+      }
+    ],
+    "evidence": "At BSC block 110058930 on 2026-07-15, direct SPUSD token 0x40ff3dea2eec93a7b71879874dc4407918da77a6 was an immutable non-proxy ERC-20 with no global pause or blacklist endpoint. Its verified _update() nevertheless reads the wrapper's getLockInfo(from) and rejects a transfer that would take a time-locked sender below its locked balance before unlock; this is a direct, time-bounded SPUSD transfer restriction. DEFAULT_ADMIN_ROLE is held by EOA 0xF683ab3aC7dCb195a8dF52D7F5fD796e81A75075 and administers BURNER_ROLE; the wrapper is the current BURNER_ROLE holder. A nonpersistent grantRole(BURNER_ROLE, 0xF683ab3aC7dCb195a8dF52D7F5fD796e81A75075) call from that default admin succeeded. A BURNER_ROLE holder can call the direct token's burnFrom(from, amount), which burns any holder without allowance, so the default admin can authorize arbitrary holder burns. This is a direct Yes. The wrapper's public unwrap only burns the caller's SPUSD; separately, owner/operator controls on the sUSDC conversion route can pause or burn sUSDC and impair conversion, but do not supply the direct-SPUSD transfer conclusion outside the token's own lock check. The documented USDC reserve exposure remains additive. Official docs, terms, and repository were checked; the immutable-wrapper description applies to the wrapper, while this finding is based on verified direct-token source and live role state.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",

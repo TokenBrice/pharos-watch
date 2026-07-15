@@ -440,21 +440,37 @@
     "reviewedStatus": "inherited",
     "sources": [
       {
-        "label": "Sourcify NXUSD source",
-        "url": "https://repo.sourcify.dev/contracts/full_match/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387/sources/contracts/NXUSD.sol"
+        "label": "NXUSD exact-match source and ABI",
+        "url": "https://sourcify.dev/server/v2/contract/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387?fields=abi,sources"
       },
       {
-        "label": "Nereus peg article",
-        "url": "https://medium.com/nereus-protocol/algorithmic-stablecoin-peg-mechanisms-4eb3e2eef411"
+        "label": "Nereus pinned NXUSD source",
+        "url": "https://github.com/nereusfinance/nereus-stablecoin-core/blob/e75e91b072a9d2346503383aafa2d40abc7ea582/contracts/NXUSD.sol"
       },
       {
-        "label": "Nereus NXUSD overview",
-        "url": "https://medium.com/nereus-protocol/everything-you-need-to-know-about-nxsud-1234fc84ed29"
+        "label": "Nereus pinned Avalanche deployment manifest",
+        "url": "https://github.com/nereusfinance/nereus-stablecoin-core/tree/e75e91b072a9d2346503383aafa2d40abc7ea582/deployments/avalanche"
+      },
+      {
+        "label": "Circle USDC Avalanche verified implementation",
+        "url": "https://routescan.io/address/0xa3fa3D254bf6aF295b5B22cC6730b04144314890/contract/43114/code"
+      },
+      {
+        "label": "Nereus terms and conditions",
+        "url": "https://www.nereus.finance/terms-and-conditions"
+      },
+      {
+        "label": "Archived Nereus issuer landing page",
+        "url": "https://arquivo.pt/wayback/20220503210156/https://nereus.finance/"
+      },
+      {
+        "label": "Avalanche C-Chain fixed-block RPC",
+        "url": "https://api.avax.network/ext/bc/C/rpc"
       }
     ],
-    "evidence": "NXUSD token source exposes owner mint and user burn paths but no direct freeze, blacklist, pause, or seize function. Nereus materials describe DAI among NXUSD collateral, so DAI's freeze exposure resolves upstream.",
-    "reviewer": "Codex FreezeWatch audit",
-    "reviewedAt": "2026-05-25"
+    "evidence": "At Avalanche block 90343075, the sole tracked NXUSD deployment 0xf14f4ce569cb3679e99d5059909e23b07bd2f387 was a 5,007-byte direct deployment with a zero EIP-1967 implementation slot. Sourcify exact-match ABI/source exposes ordinary ERC-20 transfer, transferFrom, approval, and permit behavior; owner-only mint and mintToBentoBox; and burn(uint256), which subtracts only msg.sender's balance. It has no pause, blacklist, freeze, seizure, or privileged arbitrary-holder-burn function. owner() remained the 2-of-3 Safe 0xdd3de3b819edd3a014fda93868d7dfc873341467, but that ownership cannot add a holder-control path to the immutable deployed code. Zero-value transfer and self-burn eth_call simulations succeeded at the reviewed block. The official Nereus Avalanche manifest also identifies USDCCauldron 0xd75a20314fb7fbe79ec7474497d5bf09e9c00cfc; at that block collateral() returned native Circle USDC 0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e and totalBorrow was 182,497.852160412510292820 NXUSD. The verified current Circle USDC implementation exposes blacklist/unBlacklist and gates transfer and transferFrom with notBlacklisted, establishing an active upstream collateral exposure. Current issuer legal material and the archived issuer page were reviewed as context but do not establish a direct NXUSD holder restriction. Inherited therefore preserves the upstream USDC risk without claiming a direct NXUSD freeze.",
+    "reviewer": "Codex Wave 11 access review",
+    "reviewedAt": "2026-07-15"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",

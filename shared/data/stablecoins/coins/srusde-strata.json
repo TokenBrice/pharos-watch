@@ -14,9 +14,9 @@
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: srUSDe resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Current review remains Upstream: srUSDe is an ERC-4626 wrapper over Strata's USDe strategy and inherits upstream USDe and sUSDe access controls. The wrapper and inherited dependencies are therefore retained as the relevant holder-control surface.",
+    "reviewer": "SONG-1 access evidence review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
@@ -55,8 +55,8 @@
         }
       ],
       "evidence": "At Ethereum block 25295172, EIP-1967 admin slot for 0x3d7d6fdf returns 0x30a17d6bcbdbf1579d6fbba453acf776d01fbb50 (ProxyAdmin contract). ProxyAdmin.owner() = 0xb2a3cf69c97afd4de7882e5fee120e4efc77b706 (StrataMasterChef per Blockscout). StrataMasterChef hasRole(DEFAULT_ADMIN_ROLE, self)=true but its governance chain (proposers/executors/human admin) could not be resolved: getRoleMember enumeration reverts and no RoleGranted logs found. Wrapper can be upgraded but upgrade authority is unconfirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "reviewer": "SONG-1 mint-control evidence review",
+      "reviewedAt": "2026-07-14",
       "unresolvedQuestions": [
         "Resolve StrataMasterChef (0xb2a3cf69c97afd4de7882e5fee120e4efc77b706) governance: who are the PROPOSER_ROLE/EXECUTOR_ROLE holders or human admin of this AccessControl contract that controls the srUSDe proxy upgrade path?"
       ]
@@ -144,13 +144,46 @@
   "governanceQuality": "wrapper",
   "reserves": [
     {
-      "name": "Senior tranche exposure to USDe yield strategy",
+      "name": "Senior tranche USDe vault shares",
       "pct": 100,
       "risk": "high",
       "coinId": "usde-ethena",
-      "depType": "wrapper"
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "riskFactors": [
+        "smart-contract",
+        "market",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "seven-days"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-1 Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Strata protocol overview",
+        "url": "https://docs.strata.markets/technical-documentation/protocol-overview"
+      },
+      {
+        "label": "Strata Ethena USDe market",
+        "url": "https://docs.strata.markets/markets"
+      },
+      {
+        "label": "Strata FAQ redemption terms",
+        "url": "https://docs.strata.markets/resources/faqs"
+      }
+    ],
+    "rationale": "The current live reserve capture is a single 100% senior-tranche USDe vault-share exposure. Strata documents srUSDe as an ERC-4626 senior tranche over the Ethena USDe/sUSDe strategy, with USDe withdrawals subject to a seven-day cooldown; the existing tracked dependency preserves the upstream USDe failure domain.",
+    "compositionBasis": "Current Strata live reserve capture and official srUSDe market documentation",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The reviewed sources establish the wrapper and upstream strategy identity but do not publish a current breakdown of underlying Ethena backing assets inside the srUSDe position.",
+    "knownUnknownExposurePct": 0
+  },
   "yieldConfig": {
     "yieldSource": "Strata senior USDe tranche",
     "yieldType": "nav-appreciation"

@@ -2,7 +2,7 @@
   "id": "lusd-liquity",
   "reserves": [
     {
-      "name": "ETH collateral in Liquity V1 Troves",
+      "name": "ETH",
       "pct": 100,
       "risk": "very-low",
       "assetClass": "cryptoasset",
@@ -42,7 +42,7 @@
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "ETH collateral in Liquity V1 Troves",
+        "reserveName": "ETH",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Native ETH is direct protocol collateral rather than a tracked stablecoin dependency."

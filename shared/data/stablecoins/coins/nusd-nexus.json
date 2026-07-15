@@ -46,10 +46,24 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "NUSD inherits upstream freeze exposure because the modeled reserve basket references DAI, USDC, and USDT stablecoin liquidity.",
-    "reviewer": "Codex coverage expansion",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Synapse documentation",
+        "url": "https://docs.synapseprotocol.com/"
+      },
+      {
+        "label": "NUSD LPToken deployment",
+        "url": "https://eth.blockscout.com/address/0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f"
+      },
+      {
+        "label": "Synapse nexus pool deployment",
+        "url": "https://etherscan.io/address/0x1116898dda4015ed8ddefb84b6e8bc24528af2d8#readContract"
+      }
+    ],
+    "sourceFreeRationale": "Bounded unknown retained: the reviewed Synapse documentation and Ethereum deployments identify the legacy NUSD pool token and its DAI, USDC, and USDT upstream exposure, but do not establish a complete holder-level blacklist or freeze inventory for the token and legacy bridge routes.",
+    "evidence": "NUSD inherits upstream freeze exposure because the modeled reserve basket references DAI, USDC, and USDT stablecoin liquidity. The pool token and canonical Ethereum pool are identified, but no deployment-wide holder-control path is asserted without additional route evidence.",
+    "reviewer": "OpenAI Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "chainTier": "ethereum",
   "deploymentModel": "third-party-bridge",

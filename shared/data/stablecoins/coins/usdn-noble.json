@@ -219,6 +219,17 @@
   "collateral": "Short-term U.S. Treasury Bills held in bankruptcy-remote SPVs via M0 Protocol; over 100% collateral coverage maintained by M0 Minters (including Superstate and MXON); collateral verified daily on-chain",
   "pegMechanism": "Rebasing yield-bearing stablecoin; USDN is collateralized by M0's $M token on Ethereum via M0's Portal bridge (Wormhole NTT); the Noble chain module tracks each holder's principal against the latest rebasing multiplier from M0 on Ethereum, accruing T-bill yield directly to USDN balances; users mint/redeem via USDC through the Noble Express app",
   "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SONG-5 Safety Score V9 mechanism review",
+    "rationale": "Noble documents USDN as a representation of M0's M token locked through the M0 Portal, with M0's Treasury-backed and rebasing design determining the underlying value. The direct USDN reserve relationship is therefore the M token, while the current individual Treasury allocations, fund claim terms, duration, NAV methodology, and loss-recovery design remain M0-level facts not disclosed by Noble's USDN documentation.",
+    "sources": [
+      {"label": "Noble USDN overview", "url": "https://docs.noble.xyz/learn/usdn/overview/"},
+      {"label": "Noble USDN architecture", "url": "https://docs.noble.xyz/usdn/architecture/"},
+      {"label": "Noble Dollar collateral disclosure", "url": "https://dollar.noble.xyz/how-noble-dollar-works"}
+    ]
+  },
   "llamaId": "282",
   "detailProvider": "defillama",
   "geckoId": "noble-dollar-usdn",

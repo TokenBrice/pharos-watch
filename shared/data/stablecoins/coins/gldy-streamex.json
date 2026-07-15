@@ -251,11 +251,45 @@
   "custodyModel": "institutional-unregulated",
   "reserves": [
     {
-      "name": "Physical gold bullion and gold leasing receivables",
+      "name": "Physical gold reserves",
       "pct": 100,
-      "risk": "low"
+      "risk": "low",
+      "assetClass": "other",
+      "issuerOrObligor": "Streamex Ltd. and Monetary Metals lease counterparties",
+      "riskFactors": [
+        "market",
+        "custody",
+        "counterparty",
+        "liquidity",
+        "legal"
+      ],
+      "liquidityHorizon": "over-seven-days"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-1 Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Streamex GLDY product disclosure",
+        "url": "https://www.streamex.com/GLDY"
+      },
+      {
+        "label": "Streamex first independent GLDY reserve attestation",
+        "url": "https://ir.streamex.com/press-releases/detail/428/streamex-corp-announces-first-independent-reserve"
+      },
+      {
+        "label": "Chainlink GLDY Proof of Reserve feed",
+        "url": "https://data.chain.link/feeds/base/base/gldy-reserves"
+      }
+    ],
+    "rationale": "Streamex describes GLDY as backed by investment-grade gold bullion, with some bullion leased through Monetary Metals while title remains with the issuer. The July 2026 independent examination announcement reports redemption assets measured in fine troy ounces at or above GLDY obligations; the Chainlink feed supplies the current on-chain reserve observation.",
+    "compositionBasis": "Streamex issuer disclosure, independent reserve attestation, and Chainlink Proof of Reserve",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The reviewed sources establish the physical-gold reserve category but do not disclose current bar-level custody allocation, lease-counterparty concentration, or redemption timing for each reserve position.",
+    "knownUnknownExposurePct": 0
+  },
   "liveReservesConfig": {
     "adapter": "chainlink-por",
     "version": 1,

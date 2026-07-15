@@ -212,18 +212,86 @@
       "reviewedAt": "2026-06-11"
     }
   },
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "Website",
-        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        "label": "Ripio wCOP product documentation",
+        "url": "https://www.ripio.com/en/cryptocurrencies/wcop"
+      },
+      {
+        "label": "Ripio wFIAT deployment and transparency page",
+        "url": "https://www.ripio.com/en/wfiat"
+      },
+      {
+        "label": "Ripio Colombia wallet terms",
+        "url": "https://terms.ripio.com/co/wallet"
+      },
+      {
+        "label": "Ethereum WCOP proxy and verified implementation",
+        "url": "https://etherscan.io/address/0x8a1d45e102e886510e891d2ec656a708991e2d76#code"
+      },
+      {
+        "label": "Base WCOP implementation source",
+        "url": "https://base.blockscout.com/address/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652"
+      },
+      {
+        "label": "Worldchain WCOP implementation verified source",
+        "url": "https://worldscan.org/address/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652#code"
+      },
+      {
+        "label": "BSC WCOP implementation source",
+        "url": "https://bscscan.com/address/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652#code"
+      },
+      {
+        "label": "Polygon WCOP compliance implementation source",
+        "url": "https://polygon.blockscout.com/address/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652"
+      },
+      {
+        "label": "Gnosis WCOP compliance implementation source",
+        "url": "https://gnosis.blockscout.com/address/0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652"
+      },
+      {
+        "label": "Ripio official GitHub organization",
+        "url": "https://github.com/ripio"
+      },
+      {
+        "label": "wCOP March 2026 collateral certification",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wCOP__Token-Certification.pdf"
+      },
+      {
+        "label": "Ethereum fixed-block RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Base fixed-block RPC",
+        "url": "https://mainnet.base.org"
+      },
+      {
+        "label": "Worldchain fixed-block RPC",
+        "url": "https://worldchain-mainnet.g.alchemy.com/public"
+      },
+      {
+        "label": "BNB Chain fixed-block RPC",
+        "url": "https://bsc-dataseed.binance.org"
+      },
+      {
+        "label": "Polygon fixed-block RPC",
+        "url": "https://polygon-bor-rpc.publicnode.com"
+      },
+      {
+        "label": "Gnosis fixed-block RPC",
+        "url": "https://gnosis-rpc.publicnode.com"
+      },
+      {
+        "label": "Archive.org availability check",
+        "url": "https://archive.org/wayback/available?url=https%3A%2F%2Fwww.ripio.com%2Fen%2Fwfiat&timestamp=20260715"
       }
     ],
-    "evidence": "Ripio wCOP is centrally issued across multiple EVM chains; the public source confirms issuer-managed wFIAT mechanics but does not prove a holder-level blacklist path.",
-    "reviewer": "Codex coverage expansion",
-    "reviewedAt": "2026-05-12"
+    "evidence": "At fixed 2026-07-15 blocks Ethereum 25534997, Base 48646186, Worldchain 32373046, BSC 110049753, Polygon 90251163, and Gnosis 47208124, every tracked WCOP proxy resolved to 0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652 and returned paused() = false. On each route, 0x466c02e2cc67b81a696af5afdb61605c41fe247b held both PAUSER_ROLE and UPGRADER_ROLE. Ethereum, Base, and Worldchain run the verified pausable LatamStable variant, so that EOA can halt all ERC-20 updates; BSC, Polygon, and Gnosis run the verified compliance variant, which additionally exposes blockUser, unblockUser, and setEnforceBlocklist and rejects a blocked sender or receiver in _update when enforcement is enabled. This is an asset-wide direct freeze conclusion from all six tracked routes, but address-specific blocklisting is only asserted for BSC, Polygon, and Gnosis. The V9 transfer review is resolved by the direct pause/blocklist mechanisms, not a permissioning-adapter inference. Ripio's public GitHub organization did not expose a wFIAT/LatamStable Solidity repository, and Archive.org returned no snapshot for the reviewed English wFIAT page; deployed explorer source and fixed RPC evidence remain sufficient. The issuer's March 2026 collateral certification was reviewed as transparency evidence, not as access-control proof.",
+    "reviewer": "Codex Wave 8 access review",
+    "reviewedAt": "2026-07-15"
   },
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",

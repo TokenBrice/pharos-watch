@@ -146,6 +146,33 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "ftUSD on both Ethereum and Sonic is controlled by the same 3/5 Safe (0x1118e1c0): it is token owner, masterMinter, and owner of the minter contract (0x56c5892b). The minter contract is a UUPS proxy (impl 0xf47bb65f on Sonic) with no separate ProxyAdmin. Identical ownership confirmed on both chains.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x56c5892b0cf41b792217cCDd208f0Fa85B178cA9"
+      ],
+      "adminAddresses": [
+        "0x1118E1C057211306A40A4D7006C040dBFE1370cb"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "ftUSD token owner / masterMinter",
+      "observedAt": "2026-06-11",
+      "observedBlock": 73503133,
+      "sources": [
+        {
+          "label": "Flying Tulip contract addresses",
+          "url": "https://docs.flyingtulip.com/contract-addresses/"
+        },
+        {
+          "label": "Flying Tulip ftUSD Sonic minter",
+          "url": "https://sonicscan.org/address/0x56c5892b0cf41b792217cCDd208f0Fa85B178cA9#code"
+        },
+        {
+          "label": "ftUSD owner Safe",
+          "url": "https://app.safe.global/eth:0x1118e1c057211306a40a4d7006c040dbfe1370cb/home"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -222,20 +249,48 @@
     {
       "name": "USDC strategy wrappers (Ethereum and Sonic)",
       "pct": 67.865,
-      "risk": "low",
-      "coinId": "usdc-circle"
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave strategy and Circle USDC",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "USDT strategy wrapper (Ethereum)",
       "pct": 31.9591,
-      "risk": "low",
-      "coinId": "usdt-tether"
+      "risk": "medium",
+      "coinId": "usdt-tether",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave strategy and Tether USDT",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "USSD strategy wrapper (Sonic)",
       "pct": 0.1759,
       "risk": "medium",
-      "coinId": "ussd-sonic-labs"
+      "coinId": "ussd-sonic-labs",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave strategy and Sonic USSD",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {

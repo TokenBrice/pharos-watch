@@ -96,11 +96,49 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "ZARm inherits upstream freeze exposure because the Mento reserve mix includes tracked freezable stablecoins such as USDC, USDT, and EURC.",
-    "reviewer": "Codex coverage expansion",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Mento Celo deployment inventory",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+      },
+      {
+        "label": "ZARm proxy exact-match source and ABI",
+        "url": "https://sourcify.dev/server/v2/contract/42220/0x4c35853a3b4e647fd266f4de678dcc8fec410bf6?fields=abi,metadata,sources"
+      },
+      {
+        "label": "Mento StableTokenV2 verified implementation source and ABI",
+        "url": "https://sourcify.dev/server/v2/contract/42220/0x434563b0604be100f04b7ae485bcafe3c9d8850e?fields=abi,metadata,sources"
+      },
+      {
+        "label": "Mento StableTokenV2 source archive",
+        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV2.sol"
+      },
+      {
+        "label": "Mento governance proxy-upgrade example",
+        "url": "https://forum.mento.org/t/mgp-16-copm-and-brlm-renaming/105"
+      },
+      {
+        "label": "Mento Protocol Foundation privacy notice",
+        "url": "https://www.mento.org/privacy"
+      },
+      {
+        "label": "Mento live reserve analytics API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
+      {
+        "label": "Archived Mento Reserve dashboard",
+        "url": "https://arquivo.pt/wayback/20250213024357/https://reserve.mento.org/"
+      },
+      {
+        "label": "Celo Forno fixed-block RPC",
+        "url": "https://forno.celo.org"
+      }
+    ],
+    "sourceFreeRationale": "Explicit possible: the current verified implementation has no active holder blacklist, freeze, pause, or transfer hook, but the proxy owner can replace that holder-facing logic through the verified 172800-second Mento timelock path. This direct possibility does not rely on, or suppress, the separately evidenced upstream reserve exposure.",
+    "evidence": "At Celo block 72189914 on 2026-07-15, ZARm proxy 0x4c35853a3b4e647fd266f4de678dcc8fec410bf6 returned StableTokenV2 implementation 0x434563B0604BE100F04B7Ae485BcafE3c9D8850E; proxy _getOwner() and delegated owner() both returned 0x890DB8A597940165901372Dd7DB61C9f246e2147, whose getMinDelay() returned 172800 seconds. Exact-match proxy source limits implementation changes to that owner. The verified StableTokenV2 ABI/source has ordinary ERC-20 transfer and transferFrom, permissioned minting, and burn(uint256), which burns only msg.sender; it has no active holder blacklist, freeze, pause, seizure, arbitrary-holder burn, or transfer hook. A zero-value transfer eth_call from 0x0000000000000000000000000000000000000001 returned true at the pinned block. The Mento governance upgrade example establishes that the proxy path is a real direct future-control path, so the result is Possible rather than a false direct claim. The legal source is a privacy notice, not token-control authority. Mento's live reserve API and archived transparency dashboard separately evidence reserve-side USDC, USDT, and EURC-family exposure; that upstream risk remains additive.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",

@@ -81,6 +81,31 @@
       "risk": "high"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Midas mGLOBAL disclosure",
+        "url": "https://midas.app/mGLOBAL"
+      }
+    ],
+    "rationale": "Midas identifies mGLOBAL as a tokenized strategy tracking Fasanara Capital's Global Diversified Alternative Debt strategy, a portfolio of short-duration investment-grade asset-backed credit sourced from SMEs across more than 60 countries.",
+    "compositionBasis": "Midas issuer disclosure of the Fasanara Global Diversified Alternative Debt strategy",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The issuer does not publish a current loan tape, receivable-level weights, obligor concentrations, warehouse facilities, custody providers, valuation inputs, or liquidity schedule. The full portfolio remains one disclosed private-credit strategy envelope.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Fasanara global private-credit / strategy portfolio",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The issuer identifies the strategy envelope but does not publish a current underlying portfolio allocation or individual obligor and counterparty exposures."
+      }
+    ]
+  },
   "yieldConfig": {
     "yieldSource": "Midas Fasanara Global NAV",
     "yieldType": "nav-appreciation"

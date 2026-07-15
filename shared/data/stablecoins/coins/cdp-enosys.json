@@ -351,17 +351,49 @@
     "reviewedStatus": "possible",
     "sources": [
       {
-        "label": "Docs",
+        "label": "Enosys Loans official documentation",
         "url": "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans"
       },
       {
-        "label": "Website",
-        "url": "https://enosys.global/"
+        "label": "Enosys Loans technical documentation",
+        "url": "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans/technical-docs"
+      },
+      {
+        "label": "CDP Flare proxy verified source and ABI",
+        "url": "https://flare-explorer.flare.network/api/v2/smart-contracts/0x6cd3a5ba46fa254d4d2e3c2b37350ae337e94a0f"
+      },
+      {
+        "label": "CDP Flare BoldToken verified implementation source and ABI",
+        "url": "https://flare-explorer.flare.network/api/v2/smart-contracts/0x03dc7269d65018516133987de01104cf2607c884"
+      },
+      {
+        "label": "CoinGecko CDP Flare deployment inventory",
+        "url": "https://api.coingecko.com/api/v3/coins/enosys-loans-cdp"
+      },
+      {
+        "label": "Flare public RPC fixed-block reads",
+        "url": "https://flare-api.flare.network/ext/C/rpc"
+      },
+      {
+        "label": "Official flrfinance Bold fork reviewed as non-exact source",
+        "url": "https://github.com/flrfinance/bold/blob/9069b371ba53d24664e3660594f0f779eb10a52f/contracts/src/BoldToken.sol"
+      },
+      {
+        "label": "Enosys official documentation index",
+        "url": "https://help.enosys.global/enosys/llms.txt"
+      },
+      {
+        "label": "Official footer Terms of Service target, unavailable at review",
+        "url": "https://flrfinance.notion.site/FLR-Finance-Terms-of-Service-2667f46b02794f35bea6a9d6b22c9da8"
+      },
+      {
+        "label": "Archive.org availability check for Enosys Loans docs",
+        "url": "https://archive.org/wayback/available?url=https%3A%2F%2Fhelp.enosys.global%2Fenosys%2Fenosys-ecosystem%2Fenosys-loans&timestamp=20260715"
       }
     ],
-    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Possible is now source-backed, not generic uncertainty. CoinGecko and the tracked catalog list one CDP route: Flare proxy 0x6cd3a5ba46fa254d4d2e3c2b37350ae337e94a0f. At historical block 65060608 and fixed 2026-07-15 block 65092269, its EIP-1967 implementation was 0x03dc7269d65018516133987de01104cf2607c884 and admin was 0xd6363e03cf93d35103592f11ae7160179e0be3ff. The verified BoldToken ABI/source has no pause, unpause, holder blacklist, freeze, or dynamic recipient-list function; paused() reverts. transfer and transferFrom only reject the zero address and CDP itself, so the source header's blacklist wording is not a holder blacklist. The token owner was the unchanged 2-of-6 Safe 0xdedda08961216adb9ca09b88986d110127b24270. Its onlyOwner setBranchAddresses can register arbitrary addresses as StabilityPool, TroveManager, BorrowerOperations, and ActivePool; a registered StabilityPool can call sendToPool(sender,pool,amount), and registered StabilityPool, TroveManager, or BorrowerOperations addresses can call burn(account,amount), both without holder approval. setCollateralRegistry supplies another owner-configurable burn caller. Separately, the 1057-byte ProxyAdmin exposes UPGRADE_INTERFACE_VERSION 5.0.0 and its owner was the unchanged EOA 0xfc75f3c7dba8decd0f5c923fe577bf2ff111bce4, which can replace token logic. No active user-specific blacklist or global pause is asserted, so this remains Possible rather than Yes or No. Enosys documentation describes a Flare Liquity V2 friendly fork, but its technical page links the upstream Liquity source; the official flrfinance Bold fork differs from the deployed upgradeable CDP source. The published Enosys docs index exposed no dedicated legal/privacy, proof-of-reserves, or CDP audit page; the official footer Terms target resolved only to a generic Notion landing page, and Archive.org had no snapshot of the reviewed Loans page. Those limitations do not alter the on-chain control finding.",
+    "reviewer": "Codex Wave 9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

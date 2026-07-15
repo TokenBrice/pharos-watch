@@ -212,22 +212,86 @@
       "reviewedAt": "2026-06-11"
     }
   },
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "Website",
-        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        "label": "Ripio wMXN product documentation",
+        "url": "https://www.ripio.com/en/cryptocurrencies/wmxn"
       },
       {
-        "label": "Ethereum WMXN verified contract",
+        "label": "Ripio wFIAT deployment and transparency page",
+        "url": "https://www.ripio.com/en/wfiat"
+      },
+      {
+        "label": "Ripio Mexico wallet terms",
+        "url": "https://terms.ripio.com/mx/wallet"
+      },
+      {
+        "label": "Ethereum WMXN proxy and verified implementation",
         "url": "https://etherscan.io/address/0x337e7456b420bd3481e7fa61fa9850343d610d34#code"
+      },
+      {
+        "label": "Base WMXN implementation source",
+        "url": "https://base.blockscout.com/address/0x425abec6165c83d30fcf81ec66635c6c7ee2bbf7"
+      },
+      {
+        "label": "Worldchain WMXN implementation verified source",
+        "url": "https://worldscan.org/address/0x425abec6165c83d30fcf81ec66635c6c7ee2bbf7#code"
+      },
+      {
+        "label": "BSC WMXN implementation source",
+        "url": "https://bscscan.com/address/0x425abec6165c83d30fcf81ec66635c6c7ee2bbf7#code"
+      },
+      {
+        "label": "Polygon WMXN compliance implementation source",
+        "url": "https://polygon.blockscout.com/address/0x425abec6165c83d30fcf81ec66635c6c7ee2bbf7"
+      },
+      {
+        "label": "Gnosis WMXN compliance implementation source",
+        "url": "https://gnosis.blockscout.com/address/0x425abec6165c83d30fcf81ec66635c6c7ee2bbf7"
+      },
+      {
+        "label": "Ripio official GitHub organization",
+        "url": "https://github.com/ripio"
+      },
+      {
+        "label": "wMXN March 2026 collateral certification",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wMXN__Token-Certification.pdf"
+      },
+      {
+        "label": "Ethereum fixed-block RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Base fixed-block RPC",
+        "url": "https://mainnet.base.org"
+      },
+      {
+        "label": "Worldchain fixed-block RPC",
+        "url": "https://worldchain-mainnet.g.alchemy.com/public"
+      },
+      {
+        "label": "BNB Chain fixed-block RPC",
+        "url": "https://bsc-dataseed.binance.org"
+      },
+      {
+        "label": "Polygon fixed-block RPC",
+        "url": "https://polygon-bor-rpc.publicnode.com"
+      },
+      {
+        "label": "Gnosis fixed-block RPC",
+        "url": "https://gnosis-rpc.publicnode.com"
+      },
+      {
+        "label": "Archive.org availability check",
+        "url": "https://archive.org/wayback/available?url=https%3A%2F%2Fwww.ripio.com%2Fen%2Fwfiat&timestamp=20260715"
       }
     ],
-    "evidence": "Ripio wMXN is centrally issued across multiple EVM chains. The reviewed Ripio and verified token sources establish issuer-managed mint/admin surfaces but do not prove a holder-level blacklist or freeze path; the possible posture is retained.",
-    "reviewer": "SONG-2 Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At fixed 2026-07-15 blocks Ethereum 25534997, Base 48646186, Worldchain 32373046, BSC 110049753, Polygon 90251163, and Gnosis 47208124, every tracked WMXN proxy resolved to 0x425abec6165c83d30fcf81ec66635c6c7ee2bbf7 and returned paused() = false. On each route, 0x466c02e2cc67b81a696af5afdb61605c41fe247b held both PAUSER_ROLE and UPGRADER_ROLE. Ethereum, Base, and Worldchain run the verified pausable LatamStable variant, so that EOA can halt all ERC-20 updates; BSC, Polygon, and Gnosis run the verified compliance variant, which additionally exposes blockUser, unblockUser, and setEnforceBlocklist and rejects a blocked sender or receiver in _update when enforcement is enabled. This is an asset-wide direct freeze conclusion from all six tracked routes, but address-specific blocklisting is only asserted for BSC, Polygon, and Gnosis. The V9 transfer review is resolved by the direct pause/blocklist mechanisms, not a permissioning-adapter inference. Ripio's public GitHub organization did not expose a wFIAT/LatamStable Solidity repository, and Archive.org returned no snapshot for the reviewed English wFIAT page; deployed explorer source and fixed RPC evidence remain sufficient. The issuer's March 2026 collateral certification was reviewed as transparency evidence, not as access-control proof.",
+    "reviewer": "Codex Wave 8 access review",
+    "reviewedAt": "2026-07-15"
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {

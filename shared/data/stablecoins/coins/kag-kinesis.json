@@ -22,7 +22,26 @@
     "url": "https://kinesis.money/trust-security/",
     "provider": "Bureau Veritas (Inspectorate International)",
     "attestorTier": "niche",
-    "cadence": "semi-annual"
+    "cadence": "semi-annual",
+    "latestReport": {
+      "periodEnd": "2026-04-20",
+      "publishedAt": "2026-06-03",
+      "assuranceMethod": "audit",
+      "scope": "assets-only",
+      "liabilityReconciliation": "unknown",
+      "reviewer": "Inspectorate International",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Kinesis April 2026 independent audit",
+          "url": "https://kinesis.money/audit-april-2026/"
+        },
+        {
+          "label": "Kinesis trust and security",
+          "url": "https://kinesis.money/trust-security/"
+        }
+      ]
+    }
   },
   "links": [
     {

@@ -68,17 +68,33 @@
     "reviewedStatus": "inherited",
     "sources": [
       {
-        "label": "Cod3x technical documentation",
+        "label": "Cod3x cdxUSD technical overview",
         "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
       },
       {
-        "label": "Verified cdxUSD Base deployment",
-        "url": "https://basescan.org/address/0xc0d3700000987c99b3c9009069e4f8413fd22330#code"
+        "label": "Base Blockscout verified CdxUSD source and ABI",
+        "url": "https://base.blockscout.com/address/0xc0d3700000987c99b3c9009069e4f8413fd22330"
+      },
+      {
+        "label": "Cod3x Terms of Use",
+        "url": "https://www.cod3x.org/terms-of-use/"
+      },
+      {
+        "label": "Archived Cod3x cdxUSD technical overview",
+        "url": "https://web.archive.org/web/20240925205114/https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+      },
+      {
+        "label": "Base PublicNode RPC",
+        "url": "https://base-rpc.publicnode.com"
+      },
+      {
+        "label": "Cod3x-Labs official GitHub organization",
+        "url": "https://github.com/Cod3x-Labs"
       }
     ],
-    "evidence": "BLOCKED: Cod3x documents cdxUSD as a facilitator-managed CDP asset and the Base deployment is identified in the tracked contract set, but the public source set does not establish a complete holder-control inventory for the token and its strategy/facilitator routes. The inherited upstream exposure remains recorded without asserting direct holder blacklistability or a direct no-freeze result.",
-    "reviewer": "SONG-5 Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "The verified Base source and ABI for the sole tracked CdxUSD deployment expose standard ERC-20 transfer/transferFrom plus facilitator mint/burn, but no holder blacklist, freeze, seizure, or global ERC-20 pause path. Live latest-state reads from Base PublicNode during review returned owner=0xc0D3700924301AC384E5Eae3272E08220752DE3D, guardian=0x0D1d0f89cb988678B37FD5b5c6C1A5bBdc55f8ba, lzPause=false, one facilitator, and a 24-hour owner TimelockController; a 1-wei transfer simulation from the funded facilitator returned true. These are current live observations, not a claimed archival replay. The guardian can call pauseBridge(), but source confines that switch to LayerZero _debit/send(), not ordinary ERC-20 transfers; the owner can adjust facilitator/OFT parameters but cannot add holder-freeze logic to this deployed code. Cod3x Terms reserve Application access only, not token-balance control. Inherited: issuer materials describe facilitator credit against stablecoin collateral, but neither current nor archived disclosures identify its current collateral or custodian composition. The Upstream status records that unresolved collateral exposure without naming an issuer or asserting it can directly freeze cdxUSD holders.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
     "mintPath": "facilitator-bucket-mint",

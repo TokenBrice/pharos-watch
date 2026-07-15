@@ -140,8 +140,41 @@
     {
       "name": "ADA reserves in the Cardano Djed contract",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Cardano ADA held by the Djed reserve contract",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "COTI Djed overcollateralization FAQ",
+        "url": "https://faq.coticommunity.com/djed-and-shen/djed/overcollateralization"
+      },
+      {
+        "label": "COTI Djed minting and burning FAQ",
+        "url": "https://faq.coticommunity.com/djed-and-shen/djed/minting-and-burning"
+      },
+      {
+        "label": "IOG Djed design article",
+        "url": "https://www.iog.io/news/djed-implementing-algorithmic-stablecoins-for-proven-price-stability"
+      }
+    ],
+    "rationale": "Current COTI and IOG materials identify ADA as DJED's exogenous reserve and SHEN as the reserve coin; the 400%-800% band governs mint and burn. The reviewed public materials do not provide a current reconciled ADA balance or detailed operational custody account information, so the reserve remains one fixed ADA envelope.",
+    "compositionBasis": "COTI Djed overcollateralization and minting/burning disclosures",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The reserve asset class and protocol reserve contract are identified, but current ADA balance, reserve account state, and operational custody details are not disclosed in the reviewed public sources.",
+    "knownUnknownExposurePct": 0
+  },
   "launchDate": "2023-01-31"
 }

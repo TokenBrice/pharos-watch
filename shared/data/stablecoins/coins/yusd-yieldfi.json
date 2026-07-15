@@ -371,9 +371,37 @@
       "pct": 100,
       "risk": "high",
       "coinId": "usdc-circle",
-      "depType": "wrapper"
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "market",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "YieldFi yUSD token terms",
+        "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
+      }
+    ],
+    "rationale": "YieldFi identifies yUSD as a USDC-denominated strategy-vault share. The direct reserve envelope is therefore the USDC wrapper exposure, while the manager's active vault, private-credit, and market-neutral deployments remain strategy risk rather than a public current asset allocation.",
+    "compositionBasis": "YieldFi yUSD token terms",
+    "scope": "dependency-relationships",
+    "knownUnknownExposure": "The terms do not publish current allocations across Pendle, Morpho, Silo, private-credit, or market-neutral strategies, nor the related custodian and counterparty weights.",
+    "knownUnknownExposurePct": 0
+  },
   "yieldConfig": {
     "yieldSource": "YieldFi yUSD strategies",
     "yieldType": "nav-appreciation"

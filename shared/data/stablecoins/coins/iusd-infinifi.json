@@ -67,11 +67,44 @@
     ]
   },
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: IUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "infiniFi contract-address documentation",
+        "url": "https://docs.infinifi.xyz/dev-docs/contracts"
+      },
+      {
+        "label": "Ethereum IUSD ReceiptToken verified source",
+        "url": "https://eth.blockscout.com/address/0x48f9e38f3070ad8945dfeae3fa70987722e3d89c"
+      },
+      {
+        "label": "BNB IUSD OFT verified source",
+        "url": "https://bscscan.com/address/0x60B14ec49874Af1BA471685cb11132101aeBdF09"
+      },
+      {
+        "label": "Plasma IUSD ReceiptToken verified source",
+        "url": "https://plasmascan.to/address/0x626c23fE62F5C3a45fe0F1E79Ea577Bd7d134d54"
+      },
+      {
+        "label": "Tempo TIP-20 IUSD",
+        "url": "https://explore.tempo.xyz/address/0x20c000000000000000000000AB02D39df30bd17E"
+      },
+      {
+        "label": "Tempo TIP-20 specification",
+        "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+      },
+      {
+        "label": "Tempo IUSD OFT adapter",
+        "url": "https://explore.tempo.xyz/address/0xfA339b5a3AD03fd9Ff048F574636b60d0FC7538A"
+      },
+      {
+        "label": "infiniFi protocol source",
+        "url": "https://github.com/InfiniFi-Labs/infinifi-protocol"
+      }
+    ],
+    "evidence": "The official deployment inventory includes Ethereum ReceiptToken 0x48f9e38f3070ad8945dfeae3fa70987722e3d89c, BNB OFT IUSD 0x60B14ec49874Af1BA471685cb11132101aeBdF09, Plasma IUSD 0x626c23fE62F5C3a45fe0F1E79Ea577Bd7d134d54, and Tempo TIP-20 IUSD 0x20c000000000000000000000AB02D39df30bd17E with OFT adapter 0xfA339b5a3AD03fd9Ff048F574636b60d0FC7538A. At Ethereum block 25534201 and Plasma block 27132766, the verified ReceiptToken deployments were unpaused and their source has no transfer hook or holder blacklist. At BNB block 110030607, verified InfiniFiOFT source exposed standard OFT/ERC-20 transfers without a pause ABI. At Tempo block 30008157, TIP-20 IUSD reported paused() = false and transferPolicyId() = 1, while its official specification permits PAUSE_ROLE, DEFAULT_ADMIN_ROLE transfer-policy changes, and BURN_BLOCKED_ROLE burns of policy-blocked balances; the OFT adapter resolved token() to TIP-20 IUSD and owner() to the infiniFi Safe. Route role membership and Tempo adapter source were not fully enumerable, so a global no-freeze/no-restriction conclusion is unsupported.",
+    "reviewer": "Codex Safety Score V9 multi-deployment access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
@@ -247,110 +280,101 @@
   "collateralQuality": "exotic",
   "reserves": [
     {
-      "name": "Fasanara Capital (mGLOBAL + Genesis, private credit illiquid)",
-      "pct": 21,
-      "risk": "high"
+      "name": "Fasanara mGLOBAL (GDADF)",
+      "pct": 49.6,
+      "risk": "high",
+      "blacklistable": true,
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Fasanara Capital",
+      "riskFactors": ["credit", "liquidity", "counterparty"],
+      "liquidityHorizon": "over-seven-days"
     },
     {
-      "name": "Sentora PYUSD (institutional lending, illiquid)",
-      "pct": 18,
+      "name": "Hedged STRCx",
+      "pct": 16.4,
+      "risk": "high",
+      "blacklistable": true,
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "Strategy Inc.",
+      "riskFactors": ["credit", "liquidity", "counterparty", "market", "basis"],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "Spark sUSDC",
+      "pct": 10.8,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sky",
+      "riskFactors": ["credit", "liquidity", "smart-contract"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "New Silver",
+      "pct": 8.1,
+      "risk": "high",
+      "blacklistable": true,
+      "assetClass": "private-credit",
+      "issuerOrObligor": "New Silver",
+      "riskFactors": ["credit", "liquidity", "counterparty"],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "Aave USDG",
+      "pct": 4.8,
+      "risk": "low",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Paxos / Aave",
+      "riskFactors": ["credit", "liquidity", "counterparty", "smart-contract"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Sentora PRIME Main",
+      "pct": 4.4,
       "risk": "high",
       "coinId": "pyusd-paypal",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Figure",
+      "riskFactors": ["credit", "liquidity", "counterparty", "smart-contract"],
+      "liquidityHorizon": "seven-days"
     },
     {
-      "name": "FalconX Institutional (prime broker lending, illiquid)",
-      "pct": 15,
-      "risk": "high"
+      "name": "Fasanara Genesis Fund",
+      "pct": 4.1,
+      "risk": "high",
+      "blacklistable": true,
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Fasanara Capital",
+      "riskFactors": ["liquidity", "counterparty", "market"],
+      "liquidityHorizon": "over-seven-days"
     },
     {
-      "name": "Maple Institutional (private credit, illiquid)",
-      "pct": 12,
-      "risk": "high"
-    },
-    {
-      "name": "Spark sUSDC (liquid money market)",
-      "pct": 12,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral"
-    },
-    {
-      "name": "Fluid USDC (liquid DeFi lending)",
-      "pct": 7,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral"
-    },
-    {
-      "name": "AutoUSD (illiquid yield strategy)",
-      "pct": 5,
-      "risk": "medium"
-    },
-    {
-      "name": "Morpho infiniFi Ecosystem (steakUSDCinfinifi, illiquid)",
-      "pct": 4,
+      "name": "Morpho infiniFi Ecosystem Vault",
+      "pct": 1.8,
       "risk": "medium",
       "coinId": "usdc-circle",
-      "depType": "collateral"
-    },
-    {
-      "name": "Cap stcUSD (illiquid vault)",
-      "pct": 3,
-      "risk": "medium",
-      "coinId": "stcusd-cap",
-      "depType": "collateral"
-    },
-    {
-      "name": "Aave Horizon USDC/RLUSD (institutional pools)",
-      "pct": 2,
-      "risk": "low"
-    },
-    {
-      "name": "sGHO (Aave GHO staking)",
-      "pct": 1,
-      "risk": "medium",
-      "coinId": "sgho-aave",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Steakhouse Financial / Morpho",
+      "riskFactors": ["credit", "liquidity", "counterparty", "smart-contract"],
+      "liquidityHorizon": "seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-12",
-    "reviewer": "OpenAI Codex dependency review",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 reserve review",
     "confidence": "verified",
     "sources": [
-      { "label": "infiniFi statistics", "url": "https://stats.infinifi.xyz/" },
-      { "label": "infiniFi documentation", "url": "https://docs.infinifi.xyz/" }
+      { "label": "infiniFi real-time protocol data", "url": "https://eth-api.infinifi.xyz/api/protocol/data" },
+      { "label": "infiniFi vault documentation", "url": "https://docs.infinifi.xyz/vaults" }
     ],
-    "rationale": "The reviewed labels distinguish external credit strategies from tracked reserve claims and preserve the one mixed stablecoin pool as unresolved.",
-    "compositionBasis": "infiniFi protocol allocation data",
-    "scope": "selected-slices",
-    "knownUnknownExposure": "A 2% Aave Horizon pool combines USDC and RLUSD; named private-credit and AutoUSD strategy labels are not canonical tracked claims.",
-    "knownUnknownExposurePct": 2,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Fasanara Capital (mGLOBAL + Genesis, private credit illiquid)",
-        "pct": 21,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "This is an external private-credit strategy rather than a tracked stablecoin reserve claim."
-      },
-      {
-        "reserveIndex": 6,
-        "reserveName": "AutoUSD (illiquid yield strategy)",
-        "pct": 5,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "The adapter label identifies a Tokemak strategy and is not evidence for the separately tracked Auto Finance asset."
-      },
-      {
-        "reserveIndex": 9,
-        "reserveName": "Aave Horizon USDC/RLUSD (institutional pools)",
-        "pct": 2,
-        "disposition": "basket-needs-split",
-        "rationale": "USDC and RLUSD are tracked, but the combined pool allocation has no constituent split.",
-        "candidateCoinIds": ["usdc-circle", "rlusd-ripple"]
-      }
-    ]
+    "rationale": "The real-time farm snapshot names and quantifies every material farm position. The source descriptions establish each position's published strategy and redemption terms; no material basket requires an assumed constituent allocation.",
+    "compositionBasis": "infiniFi protocol data API active-farm allocation",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unresolved material composition group remains: the only non-farm protocol position is RedeemController, whose source-total reconciliation gap is below the adapter's 0.5% threshold.",
+    "knownUnknownExposurePct": 0
   },
   "liveReservesConfig": {
     "adapter": "infinifi",

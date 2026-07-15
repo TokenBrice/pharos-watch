@@ -337,6 +337,68 @@
     }
   },
   "custodyModel": "institutional-unregulated",
+  "reserves": [
+    {
+      "name": "ZeUSD RWA collateral envelope (Treasuries, ETFs, money-market funds, reverse repos, and on-chain RWAs)",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "Multiple eligible RWA issuers and unspecified escrow counterparties",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Zoth ZeUSD product documentation",
+        "url": "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token"
+      },
+      {
+        "label": "Zoth ZeUSD mechanics",
+        "url": "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token/mechanics-of-zeusd"
+      },
+      {
+        "label": "Zoth ZeUSD terms and conditions",
+        "url": "https://docs.zoth.io/zoth/legal/zeusd/terms-and-conditions"
+      },
+      {
+        "label": "Zoth contract deployments",
+        "url": "https://docs.zoth.io/zoth/tech-center/contract-deployments"
+      },
+      {
+        "label": "ZeUSD V1 Ethereum implementation source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xc80a5a2658fd44e76b0940773bd3c2c2cd9454de"
+      }
+    ],
+    "rationale": "Zoth describes ZeUSD as a CDP against Treasuries, ETFs, money-market funds, reverse repos, and on-chain RWAs. Its mechanics document specifies isolated smart-contract escrows for on-chain assets and traditional or omnibus escrow for off-chain assets. The V1 deployment registry labels the legacy V1 deployments \"Depricated\" and identifies historical USYC, wSTBT, T-Bill, and other sub-vaults. At Ethereum block 0x1859e17, the V1 token proxy resolved to 0xc80a5a2658fd44e76b0940773bd3c2c2cd9454de; the reviewed source exposes token/router controls but no aggregate reserve or liability-accounting view. No current ZeUSD allocation or attestation could be reconciled.",
+    "compositionBasis": "Zoth's stated ZeUSD eligible collateral categories and legacy V1 deployment inventory; current component weights are undisclosed",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The current collateral positions, values, RWA issuers, escrow providers, cross-chain allocation, and assets-and-liabilities reconciliation are not published in accessible source material.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "ZeUSD RWA collateral envelope (Treasuries, ETFs, money-market funds, reverse repos, and on-chain RWAs)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The issuer documents eligible collateral categories and historical V1 vaults, but not a current component allocation."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

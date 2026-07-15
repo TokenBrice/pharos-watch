@@ -13,10 +13,23 @@
   },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: stkGHO.v1 resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Aave Umbrella documentation",
+        "url": "https://aave.com/help/umbrella/umbrella"
+      },
+      {
+        "label": "stkGHO verified Ethereum contract",
+        "url": "https://etherscan.io/address/0x4f827a63755855cdf3e8f3bcd20265c833f15033#readContract"
+      },
+      {
+        "label": "Aave GHO contract",
+        "url": "https://etherscan.io/token/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+      }
+    ],
+    "evidence": "stkGHO is an Umbrella staking receipt whose asset() is GHO. The reviewed wrapper and parent GHO token surfaces establish an inherited Aave governance and GHO-facilitator exposure, but neither source establishes a holder-level blacklist, freeze, seizure, pause, or transfer-restriction path for stkGHO balances. The inherited status records that upstream control exposure without claiming direct balance control.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

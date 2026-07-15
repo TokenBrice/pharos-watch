@@ -12,11 +12,36 @@
     "navToken": true
   },
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: savUSD resolves to Upstream because the strategy vault wraps avUSD and inherits Avant issuer controls through its backing asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Avant savUSD contract registry",
+        "url": "https://docs.avantprotocol.com/security/contract-addresses"
+      },
+      {
+        "label": "Verified Avalanche StakedAvUSDV2 source",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x06d47f3fb376649c3a9dafe069b3d6e35572219e"
+      },
+      {
+        "label": "Avant StakedAvUSD source",
+        "url": "https://github.com/Avant-Protocol/avUSD-Contracts/blob/43858abc5a3c481e3b2d02790d168b88e630e7b1/contracts/StakedAvUSD.sol"
+      },
+      {
+        "label": "Avant Terms of Use",
+        "url": "https://docs.avantprotocol.com/legal-and-risk/terms-of-use"
+      },
+      {
+        "label": "Avant transparency dashboard",
+        "url": "https://app.avantprotocol.com/transparency"
+      },
+      {
+        "label": "Avalanche public RPC control reads",
+        "url": "https://api.avax.network/ext/bc/C/rpc"
+      }
+    ],
+    "evidence": "READY_FOR_REPLAY: the official registry identifies Avalanche 0x06d47f3fb376649c3a9dafe069b3d6e35572219e as native Staked avUSD. At Avalanche block 90341316, its verified non-proxy StakedAvUSDV2 runtime had owner() 0xd4d23209aaE8630bf386b7393763a5b7865e57cb, which held DEFAULT_ADMIN_ROLE; BLACKLIST_MANAGER_ROLE was administered by DEFAULT_ADMIN_ROLE. The verified source lets a blacklist manager assign FULL_RESTRICTED_STAKER_ROLE through addToBlacklist(), blocks a fully restricted holder's transfers, transferFrom, deposits, and withdrawals in _update/_deposit/_withdraw, and lets DEFAULT_ADMIN_ROLE burn or redirect that holder's entire balance with redistributeLockedAmount(). Because the current default admin can grant itself BLACKLIST_MANAGER_ROLE, this is an active direct holder-control path, so the review is Yes. The official registry labels the other tracked savUSD contracts Bridged. This direct finding is limited to the native Avalanche deployment and does not assert that any bridged representation shares its blacklist, restriction, or seizure code; route-specific bridge controls remain separately scoped bridge-risk evidence. Avant's Terms govern interface/protocol access but do not replace the on-chain finding; the transparency page is available, and Archive.org returned no snapshot for the reviewed contract registry or Terms URLs.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "variantOf": "avusd-avant",
   "variantKind": "strategy-vault",

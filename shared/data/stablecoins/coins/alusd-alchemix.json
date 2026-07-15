@@ -96,12 +96,46 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: ALUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Alchemix on L2 documentation",
+        "url": "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemix-on-l2.md"
+      },
+      {
+        "label": "Alchemix CrossChainCanonicalAlchemicTokenV2 source (pinned)",
+        "url": "https://github.com/alchemix-finance/v2-foundry/blob/02dbb39d44385621ece8a3ae13e76b2f07facf72/src/CrossChainCanonicalAlchemicTokenV2.sol"
+      },
+      {
+        "label": "Alchemix token base source (pinned)",
+        "url": "https://github.com/alchemix-finance/v2-foundry/blob/02dbb39d44385621ece8a3ae13e76b2f07facf72/src/AlchemicTokenV2Base.sol"
+      },
+      {
+        "label": "Ethereum alUSD verified source and ABI",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbc6da0fe9ad5f3b0d58160288917aa56653660e9"
+      },
+      {
+        "label": "Arbitrum alUSD exact implementation verification",
+        "url": "https://sourcify.dev/server/v2/contract/42161/0x37704b70cba0ffd12eb039274ff46992544a1f16?fields=abi,metadata"
+      },
+      {
+        "label": "Optimism alUSD exact implementation verification",
+        "url": "https://sourcify.dev/server/v2/contract/10/0x29ef9f2fa6f636eafe74e5fba057c7949a37ffa6?fields=abi,metadata"
+      },
+      {
+        "label": "Arbitrum public RPC",
+        "url": "https://arb1.arbitrum.io/rpc"
+      },
+      {
+        "label": "Optimism public RPC",
+        "url": "https://mainnet.optimism.io"
+      }
+    ],
+    "evidence": "At Arbitrum block 0x1cd87f90, the tracked proxy 0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a stored implementation 0x37704b70cba0ffd12eb039274ff46992544a1f16 and ProxyAdmin 0xa44f69aeac480e23c0abfa9a55d99c9f098beac6, whose owner() was 0x7e108711771dfdb10743f016d46d75a9379ca043. At Optimism block 0x9318364, the same proxy address stored implementation 0x29ef9f2fa6f636eafe74e5fba057c7949a37ffa6 and the same ProxyAdmin, whose owner() was 0xc224bf25dcc99236f00843c7d8c4194abe8aa94a. Sourcify exactly verifies both material L2 implementations and the owner-only OpenZeppelin ProxyAdmin. Those owners can replace holder-facing token implementations and introduce per-holder transfer or balance restrictions. The current L2 source has standard transfer paths and only pauses minters; Ethereum's setBlacklist likewise targets a minter rather than an alUSD holder. This is an upgrade-control finding, not an assertion of a live or uniform holder blacklist across every deployment.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

@@ -89,12 +89,31 @@
     }
   ],
   "deploymentModel": "single-chain",
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as upstream exposure because the documented V2 collateral design includes USDC and cbBTC; no separate manual override source is attached.",
-    "evidence": "Inferred review updated: HYUSD resolves to Upstream because its documented V2 collateral set includes USDC and cbBTC, which introduce issuer-side freeze exposure.",
-    "reviewer": "Codex inferred-status reconciliation",
-    "reviewedAt": "2026-07-14"
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "Hylo on-chain addresses",
+        "url": "https://docs.hylo.so/security/onchain-addresses.md"
+      },
+      {
+        "label": "Solana mainnet RPC",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Solana SPL Token authority source (pinned)",
+        "url": "https://github.com/solana-program/token/blob/405c9172df3aeb508712142aae1caf0d31ada671/program/src/processor.rs#L423-L512"
+      },
+      {
+        "label": "Hylo stablecoin documentation",
+        "url": "https://docs.hylo.so/product-guide/stablecoin.md"
+      }
+    ],
+    "evidence": "At finalized Solana slot 432965547, the sole tracked HYUSD mint 5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E was owned by the SPL Token program, had freezeAuthority = null, and had mintAuthority = the Hylo exchange PDA. The exchange ProgramData account BA5b6FzvZ77m7MZbsMEVSCFW1x86f7jM98wjcecVwzYN retained upgrade authority DLkcqeNNX8nRQgD87DN7LjHkcLQd9K2wuqaCbhkERJxL, but that authority changes Hylo mint logic, not the existing SPL Token transfer program. The pinned SPL Token source requires the current freeze authority to freeze accounts and makes a disabled freeze authority impossible to re-enable. No direct HYUSD holder blacklist, freeze, seize, privileged burn, or transfer-control path was established. This direct-token review preserves separate inherited upstream collateral exposure.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15",
+    "upstreamSuppressionRationale": "USDC and cbBTC collateral can carry issuer-side freeze or redemption risk for HYUSD backing, but neither issuer holds the tracked mint's SPL Token freeze authority or can alter ordinary HYUSD transfers. This explicit false is limited to direct holder control on the sole tracked HYUSD mint and does not suppress collateral or protocol risk."
   },
   "chainTier": "mature-alt-l1",
   "collateralQuality": "alt-lst-bridged-or-mixed",

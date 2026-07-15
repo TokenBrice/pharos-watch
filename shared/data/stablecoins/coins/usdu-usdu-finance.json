@@ -38,11 +38,32 @@
   ],
   "deploymentModel": "single-chain",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDU resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "USDU Finance transparency and governance disclosure",
+        "url": "https://usdu.finance/transparency/"
+      },
+      {
+        "label": "Ethereum Blockscout verified USDU Stablecoin source and ABI",
+        "url": "https://eth.blockscout.com/address/0xdde3ec717f220fc6a29d6a4be73f91da5b718e55"
+      },
+      {
+        "label": "USDU core Stablecoin source",
+        "url": "https://github.com/usdu-finance/usdu-core/blob/main/contracts/stablecoin/Stablecoin.sol"
+      },
+      {
+        "label": "USDU curator Aragon DAO proxy",
+        "url": "https://eth.blockscout.com/address/0x9fe66037c44236c87d9ac8345f489b4413fdff06"
+      },
+      {
+        "label": "Ethereum PublicNode RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "evidence": "At Ethereum block 25535640, the sole tracked USDU token returned curator=0x9fe66037c44236c87D9Ac8345F489b4413fDFf06, guardian=zero, timelock=604800 seconds, and no pending role or timelock change. Its verified source makes setFreeze(account, message) curator-only and immediately records the account timestamp; the ERC-20 _update hook then rejects transfers from a frozen sender. An eth_call simulation of setFreeze from the current curator succeeded without broadcasting state, while the same call from an unprivileged address reverted; a normal transfer simulation from a funded holder currently returned true. The curator is an EIP-1967 Aragon DAO proxy, so its governance is an additional control layer, but no delayed parameter change is needed for the current curator to freeze a holder. The issuer transparency page independently states that the curator can freeze specific USDU accounts. Inherited USDC backing remains a separate reserve exposure and is not the basis for this direct-token result.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "collateralQuality": "exotic",
   "notices": [

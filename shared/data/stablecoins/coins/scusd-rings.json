@@ -49,12 +49,30 @@
       "decimals": 6
     }
   ],
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: scUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Veda BoringVault source",
+        "url": "https://github.com/Veda-Labs/boring-vault/blob/f5ab09de989adb5d682312c7f205d928b67d57f2/src/base/BoringVault.sol"
+      },
+      {
+        "label": "Ethereum scUSD BoringVault verified source",
+        "url": "https://etherscan.io/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae#code"
+      },
+      {
+        "label": "Sonic scUSD BoringVault verified source",
+        "url": "https://sonicscan.org/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae#code"
+      },
+      {
+        "label": "Veda Teller architecture",
+        "url": "https://docs.veda.tech/architecture-and-flow-of-funds/teller"
+      }
+    ],
+    "evidence": "The current Ethereum and Sonic scUSD BoringVault deployments are immutable, with a LayerZeroTeller as the documented mint entry point and chain-specific Safe/timelock governance controlling RolesAuthority capabilities. The reviewed source and deployment evidence do not establish a current direct holder blacklist, freeze, or transfer-pause function. Possible is retained because privileged capability administration and cross-chain teller routing remain material intervention surfaces; upstream stablecoin exposure is not treated as proof of direct scUSD holder control.",
+    "reviewer": "SONG-5 Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "deploymentModel": "native-multichain",
   "collateralQuality": "exotic",

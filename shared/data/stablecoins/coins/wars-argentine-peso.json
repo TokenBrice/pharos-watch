@@ -208,18 +208,58 @@
       "reviewedAt": "2026-06-11"
     }
   },
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "Website",
+        "label": "Ripio local stablecoins",
         "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "Ripio Wallet terms (Argentina)",
+        "url": "https://terms.ripio.com/ar/wallet"
+      },
+      {
+        "label": "Ethereum WARS ERC-1967 proxy",
+        "url": "https://eth.blockscout.com/address/0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d?tab=contract"
+      },
+      {
+        "label": "Ethereum WARS LatamStable implementation",
+        "url": "https://eth.blockscout.com/address/0xba0030bba7112171a8a5bcc417ee1994051321b9?tab=contract"
+      },
+      {
+        "label": "Independent public accountant certification for wARS - March 2026",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331_wARS_Certification.pdf"
+      },
+      {
+        "label": "Ethereum PublicNode RPC fixed-block reads",
+        "url": "https://ethereum.publicnode.com"
+      },
+      {
+        "label": "Base PublicNode RPC fixed-block reads",
+        "url": "https://base.publicnode.com"
+      },
+      {
+        "label": "BSC PublicNode RPC fixed-block reads",
+        "url": "https://bsc.publicnode.com"
+      },
+      {
+        "label": "Polygon PublicNode RPC fixed-block reads",
+        "url": "https://polygon-bor.publicnode.com"
+      },
+      {
+        "label": "Gnosis PublicNode RPC fixed-block reads",
+        "url": "https://gnosis.publicnode.com"
+      },
+      {
+        "label": "Worldchain RPC fixed-block reads",
+        "url": "https://worldchain-mainnet.gateway.tenderly.co"
       }
     ],
-    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "The verified Ethereum LatamStable implementation inherits ERC20PausableUpgradeable, grants PAUSER_ROLE, and exposes pause() and unpause(); its transfer path is halted while paused. At Ethereum block 25534802, Base block 48645001, BSC block 110044458, Polygon block 90249572, Gnosis block 47207655, and Worldchain block 32371857, hasRole(PAUSER_ROLE, 0x466c02e2cc67b81a696af5afdb61605c41fe247b) returned true on each tracked WARS contract. This EOA can halt token transfers system-wide across every tracked deployment; this is active pause authority, not mint or upgrade exposure alone.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {

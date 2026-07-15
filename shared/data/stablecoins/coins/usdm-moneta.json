@@ -160,6 +160,13 @@
   },
   "chainTier": "established-alt-l1",
   "custodyModel": "institutional-regulated",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Implementation date not publicly established",
+      "message": "Safety Score V9 implementation-date review on 2026-07-14 checked the current Moneta, NBX, Cardano, and USDM deployment materials but found no reliable dated launch or implementation event for the scored USDM implementation; no date is inferred."
+    }
+  ],
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",

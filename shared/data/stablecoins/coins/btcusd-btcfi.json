@@ -142,21 +142,42 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "BTCFi BtcUSD documentation",
-        "url": "https://docs.bifrostnetwork.com/eng.btcfi.one"
+        "label": "BtcUSD Base proxy deployment",
+        "url": "https://basescan.org/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4#code"
       },
       {
-        "label": "Verified BtcUSD Base deployment",
-        "url": "https://basescan.org/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4#code"
+        "label": "BtcUSD Base verified ERC20_Bridged implementation",
+        "url": "https://base.blockscout.com/address/0x6e9070b8a8dbbc6cad6b6d029a5c6f6a653b74a9?tab=contract"
+      },
+      {
+        "label": "BtcUSD Base Sourcify source and ABI",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0x6e9070b8a8dbbc6cad6b6d029a5c6f6a653b74a9?fields=abi,metadata"
+      },
+      {
+        "label": "BtcUSD Bifrost native deployment",
+        "url": "https://explorer.mainnet.bifrostnetwork.com/address/0x6906ccda405926fc3f04240187dd4fad5df6d555"
+      },
+      {
+        "label": "Bifrost public RPC documentation",
+        "url": "https://docs.bifrostnetwork.com/bifrost-network/add-network/metamask"
+      },
+      {
+        "label": "BTCFi BtcUSD documentation",
+        "url": "https://docs.bifrostnetwork.com/eng.btcfi.one/dashboard/3.-mint-btcusd"
+      },
+      {
+        "label": "Bifrost terms of use",
+        "url": "https://bifrostnetwork.com/terms-of-use"
       }
     ],
-    "evidence": "BLOCKED: BTCFi documentation describes BtcUSD as a CDP asset backed by BTC variants, and the Base deployment is a verified transparent proxy, but the public source set does not establish a complete holder-control inventory for both the Base and Bifrost deployments. The inherited upstream exposure remains recorded; no direct no-freeze conclusion is asserted without deployment-wide evidence.",
-    "reviewer": "SONG-5 Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At Base block 48644528, the BtcUSD proxy points to verified ERC20_Bridged implementation 0x6e9070b8a8dbbc6cad6b6d029a5c6f6a653b74a9 and is unpaused. Its source gives every owner or admin authority to call set_blacklists(address[], bool), and transfer hooks reject both blacklisted senders and recipients; set_pause(bool) stops all token transfers. Current owners are 0x26FcE52a077b4f1dbD7C920b6f23a1D9d18DdDbE and 0xf98e8601A1eEF3BCE943f9B002e83Db8a0951Aa5, and current admin is 0x4F7aB59b5AC112970F5dD66D8a7ac505c8E5e08B; the latter owner successfully simulated both control calls through the proxy without broadcasting state. At Bifrost block 36763950, native BtcUSD reports paused=false, owner/defaultAdmin 0xa4247099c1462f9D9121a1809D001c1a6cC70dD5 has DEFAULT_ADMIN_ROLE, and the runtime exposes pause/unpause; an unprivileged pause call reverts for the missing default-admin role. The Bifrost explorer did not expose verified source or ABI, so this does not assert native blacklist semantics, but both deployments have direct holder-transfer restriction surfaces.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

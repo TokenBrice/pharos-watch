@@ -68,9 +68,9 @@
         "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1?tab=contract"
       }
     ],
-    "evidence": "Freeze-only re-review: the reviewed Hemi source shows admin mint authority but no holder freeze, blacklist, pause, seize, or arbitrary burn function.",
-    "reviewer": "Codex FreezeWatch review",
-    "reviewedAt": "2026-05-24"
+    "evidence": "The tracked Hemi deployment is the only catalogued vCRED token contract. Its reviewed verified source exposes standard ERC-20 transfer and transferFrom behavior plus admin mint authority, but no holder freeze, blacklist, pause, seize, arbitrary burn, or transfer-restriction function. The admin mint surface is recorded separately and is not treated as authority to block an existing holder transfer.",
+    "reviewer": "SONG-5 Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

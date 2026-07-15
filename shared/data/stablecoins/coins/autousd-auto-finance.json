@@ -11,12 +11,54 @@
     "rwa": false,
     "navToken": true
   },
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "autoUSD is a USDC autopool share token and inherits Circle USDC's upstream blacklist surface through the underlying asset.",
-    "reviewer": "Codex Royco coverage addition",
-    "reviewedAt": "2026-06-13"
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Auto Finance autoUSD contract-address documentation",
+        "url": "https://docs.auto.finance/developer-docs/contracts-overview/contract-addresses"
+      },
+      {
+        "label": "Auto Finance security and audit disclosures",
+        "url": "https://docs.auto.finance/developer-docs/security-and-audits"
+      },
+      {
+        "label": "Auto Finance autoUSD launch announcement",
+        "url": "https://blog.auto.finance/post/the-stablecoin-autopool-autousd-is-now-live"
+      },
+      {
+        "label": "Ethereum autoUSD transparent proxy",
+        "url": "https://eth.blockscout.com/address/0xa7569a44f348d3d70d8ad5889e50f78e33d80d35"
+      },
+      {
+        "label": "Ethereum AutopoolETH verified implementation",
+        "url": "https://eth.blockscout.com/address/0xfb2ebdedc38a7d19080e44ab1d621bc9afad0695"
+      },
+      {
+        "label": "Tokemak AutopoolETH source (pinned commit)",
+        "url": "https://github.com/Tokemak/v2-core-pub/blob/de163d5a1edf99281d7d000783b4dc8ade03591e/src/vault/AutopoolETH.sol"
+      },
+      {
+        "label": "Tokemak Pausable source (pinned commit)",
+        "url": "https://github.com/Tokemak/v2-core-pub/blob/de163d5a1edf99281d7d000783b4dc8ade03591e/src/security/Pausable.sol"
+      },
+      {
+        "label": "Ethereum Auto Finance AccessController verified source",
+        "url": "https://eth.blockscout.com/address/0x37767cbff88cb623e9404e959560984f7d742df6"
+      },
+      {
+        "label": "Archived Auto Finance contract-address documentation",
+        "url": "https://web.archive.org/web/20251114203521/https://docs.auto.finance/developer-docs/contracts-overview/contract-addresses"
+      },
+      {
+        "label": "Ethereum PublicNode fixed-block RPC",
+        "url": "https://ethereum.publicnode.com"
+      }
+    ],
+    "evidence": "At Ethereum block 25535156 on 2026-07-15, autoUSD proxy 0xa7569a44f348d3d70d8ad5889e50f78e33d80d35 resolved to verified AutopoolETH implementation 0xfb2ebdedc38a7d19080e44ab1d621bc9afad0695 and EIP-1967 ProxyAdmin 0x84a317a45248d6d3f92f40102680ffeda2ab95c0. The implementation applies whenNotPaused to both transfer and transferFrom. Its inherited pause and unpause functions require the Auto Finance AccessController EMERGENCY_PAUSER role, and SystemSecurity's same-role pauseSystem can pause every connected pool. At the pinned block, autoUSD paused() and isShutdown() were false, SystemSecurity was not paused, and the AccessController enumerated four EMERGENCY_PAUSER accounts. Any one of those role holders can block all current autoUSD holder transfers; no per-address blacklist is required for this direct Yes. Issuer documentation, audit, GitHub, archive, legal-route, and transparency review supplied no narrower legal exception or independent PoR claim. The separate underlying-USDC exposure remains additive.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

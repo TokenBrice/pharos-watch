@@ -151,21 +151,33 @@
     "reviewedStatus": "possible",
     "sources": [
       {
-        "label": "Docs",
+        "label": "Yamato documentation",
         "url": "https://docs.yamato.fi/v/en"
       },
       {
-        "label": "GitHub",
-        "url": "https://github.com/DeFiGeek-Community/yamato"
+        "label": "CJPY verified contract and ABI",
+        "url": "https://eth.blockscout.com/address/0x1cfa5641c01406ab8ac350ded7d735ec41298372"
       },
       {
-        "label": "Ethereum contract",
-        "url": "https://etherscan.io/address/0x1cfa5641c01406ab8ac350ded7d735ec41298372"
+        "label": "CJPY Currency source (pinned)",
+        "url": "https://github.com/DeFiGeek-Community/yamato/blob/f0eb294909f9d95c60a7eabba6ca783842f0153b/contracts/Currency.sol"
+      },
+      {
+        "label": "CurrencyOS source (pinned)",
+        "url": "https://github.com/DeFiGeek-Community/yamato/blob/f0eb294909f9d95c60a7eabba6ca783842f0153b/contracts/CurrencyOS.sol"
+      },
+      {
+        "label": "Yamato source (pinned)",
+        "url": "https://github.com/DeFiGeek-Community/yamato/blob/f0eb294909f9d95c60a7eabba6ca783842f0153b/contracts/Yamato.sol"
+      },
+      {
+        "label": "Live Yamato proxy",
+        "url": "https://etherscan.io/address/0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257"
       }
     ],
-    "evidence": "No direct CJPY blacklist or transfer freeze was confirmed, but Yamato's CurrencyOS/Yamato routing is governance-settable and includes protocol burn and pause paths. Treat as possible mutable holder-facing protocol control.",
-    "reviewer": "Codex FreezeWatch audit",
-    "reviewedAt": "2026-05-25"
+    "evidence": "At Ethereum block 25534914, the verified non-proxy CJPY ABI exposes mint(address,uint256), burn(address,uint256), revokeGovernance(), setCurrencyOS(address), and standard ERC-20 functions; it has no blacklist, freeze, pause, or transfer-restriction function. The pinned Currency source gates mint and burn to CurrencyOS and lets its private governance address replace CurrencyOS, but the live ABI exposes neither the private governance nor currencyOS value. The pinned CurrencyOS and Yamato sources describe a conditional architecture in which registered Yamato contracts can call burnCurrency(to, amount) and Yamato module routing and pause state are governance-controlled. At the same block, the live Yamato UUPS proxy resolved to implementation 0x0bfa59f9fbe9565c240cd64311c86e90e59a4838 and governance() returned 0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec, but that observation cannot bind the Safe to CJPY's current private CurrencyOS route. Retain possible only for this source-level conditional, not as evidence of an active holder blacklist, freeze, or current mutable CJPY control path.",
+    "reviewer": "Codex Wave 7 curation",
+    "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

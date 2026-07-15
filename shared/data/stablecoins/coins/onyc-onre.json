@@ -270,5 +270,26 @@
       ]
     }
   },
-  "mechanismArchetype": "rwa-credit-fund"
+  "mechanismArchetype": "rwa-credit-fund",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "Codex Safety Score V9 implementation-date review",
+    "rationale": "OnRe's 4 July 2025 media release announces ONyc's launch as tokenized reinsurance collateral. Current OnRe documentation describes ONyc as a Solana token representing a proportional interest in a regulated Bermuda segregated account with NAV-based value, matching the tracked rwa-credit-fund mechanism. This dated launch is the determinable boundary for the current product implementation.",
+    "sources": [
+      {
+        "label": "OnRe ONyc launch announcement",
+        "url": "https://www.onre.finance/resources/media"
+      },
+      {
+        "label": "OnRe tokenized reinsurance documentation",
+        "url": "https://docs.onre.finance/introduction/onre-tokenized-reinsurance-onyc.md"
+      },
+      {
+        "label": "OnRe token configuration",
+        "url": "https://docs.onre.finance/technical-resources/token-configuration-and-reference.md"
+      }
+    ]
+  },
+  "implementationLaunchDate": "2025-07-04"
 }

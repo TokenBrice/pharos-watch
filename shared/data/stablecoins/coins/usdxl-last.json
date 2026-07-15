@@ -1363,6 +1363,11 @@
       "type": "info",
       "title": "No direct public redemption rail",
       "message": "USDXL is minted and repaid through HypurrFi debt positions. Pharos does not model a redemption backstop because public Last/HypurrFi materials reviewed do not expose an enabled direct 1:1 holder redemption route."
+    },
+    {
+      "type": "warning",
+      "title": "Implementation date not publicly established",
+      "message": "Safety Score V9 implementation-date review on 2026-07-14 checked the current Last, HypurrFi, and USDXL deployment materials but found no reliable dated launch or implementation event for the scored USDXL implementation; no date is inferred."
     }
   ],
   "mintAuthority": {

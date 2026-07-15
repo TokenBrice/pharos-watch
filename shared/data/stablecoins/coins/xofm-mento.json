@@ -123,12 +123,43 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "XOFm depends on USDm collateral; USDm's Mento reserve mix includes tracked freezable stablecoins such as USDC, USDT, and EURC.",
-    "reviewer": "Codex DefiLlama path addition",
-    "reviewedAt": "2026-05-14"
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Mento stable assets on Celo",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "XOFm Celo proxy verified source",
+        "url": "https://celo.blockscout.com/address/0x73f93dcc49cb8a239e2032663e9475dd5ef29a08?tab=contract"
+      },
+      {
+        "label": "XOFm StableTokenV2 implementation verified source",
+        "url": "https://celo.blockscout.com/address/0x434563b0604be100f04b7ae485bcafe3c9d8850e?tab=contract"
+      },
+      {
+        "label": "Mento StableTokenV2 v2.2.0 source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/c2e344ebd5f3018253cf26cb39a50f81d8db7c21/contracts/tokens/StableTokenV2.sol"
+      },
+      {
+        "label": "Mento XOFm owner timelock proxy",
+        "url": "https://celo.blockscout.com/address/0x890DB8A597940165901372Dd7DB61C9f246e2147?tab=contract"
+      },
+      {
+        "label": "Mento TimelockController implementation verified source",
+        "url": "https://celo.blockscout.com/address/0x3eFAD8F997F705675924470Ec84677DB68c5A2d0?tab=contract"
+      },
+      {
+        "label": "Mento reserve transparency dashboard",
+        "url": "https://reserve.mento.org/"
+      }
+    ],
+    "sourceFreeRationale": "Explicit possible: the verified Celo XOFm proxy owner can replace token logic through a timelocked governance path, while the current implementation exposes ordinary transfers and no active holder blacklist, freeze, or pause function.",
+    "evidence": "At Celo block 72180456, the sole tracked XOFm proxy 0x73f93dcc49cb8a239e2032663e9475dd5ef29a08 resolved to verified StableTokenV2 implementation 0x434563b0604be100f04b7ae485bcafe3c9d8850e and proxy owner 0x890DB8A597940165901372Dd7DB61C9f246e2147. The verified proxy source makes _setImplementation owner-only; the owner resolves to a verified TimelockController proxy with a 172800-second delay. The active implementation's verified ABI/source exposes standard transfer and transferFrom, and zero-value RPC simulations of both succeeded at that block; it has no direct pause, freeze, or blacklist function. This establishes a possible governance-controlled future holder-transfer restriction, not an active blacklist. USDm collateral exposure remains separately represented in reserves; the Mento reserve dashboard does not prove a token-level XOFm freeze.",
+    "reviewer": "Codex Wave 8 curation",
+    "reviewedAt": "2026-07-15"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",

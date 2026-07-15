@@ -66,40 +66,220 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "XAGm MToken minting is operator-controlled and budget-limited by reserve/mint-budget accounting; the owner can change the operator. Ethereum and Sui State controls confirmed: owner EOA and operator verified on both chains.",
+    "summary": "XAGm has issuer-controlled Ethereum and Sui operator paths. Each operator can add local mint budget through a manual budget-receive path, while durable mint execution requires the current four-hour request/execute delay. Ethereum's owner controls delayed UUPS upgrades; Sui's State owner holds the MToken package UpgradeCap.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x123ffe0a3c62878dcbee2742227dc8990058d9e1"
+      ],
+      "implementationAddresses": [
+        "0x5e072c6689610c66e49a3067a4b488b4e27bc744"
+      ],
+      "adminAddresses": [
+        "0xb573c94260582f0715FC477928B04A2708dd36D7"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 14400,
+      "controlRef": "Matrixdock Ethereum MToken UUPS upgrade authority",
+      "observedAt": "2026-07-15",
+      "observedBlock": 25535946,
+      "sources": [
+        {
+          "label": "Sourcify Matrixdock delayed UUPS source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5e072c6689610c66e49a3067a4b488b4e27bc744/sources/contracts/DelayedUpgradeable.sol"
+        },
+        {
+          "label": "XAGm Ethereum token",
+          "url": "https://etherscan.io/address/0x123ffe0a3c62878dcbee2742227dc8990058d9e1"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0x123ffe0a3c62878dcbee2742227dc8990058d9e1",
-        "label": "XAGm MToken operator mint path",
+        "address": "0x89Bb23E4a82E04a253d9f11767feDf321C127799",
+        "label": "Matrixdock Ethereum XAGm operator",
         "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "cap-limited",
-        "canRaiseCap": "unknown",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "timelockDelaySec": 14400,
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Verified source allows operator mintTo only within mintBudget; mintBudget read as 0 during this pass.",
+        "capDescription": "The operator can use ccReceiveMintBudgetManually to add local mintBudget without a reserve-feed read. mintTo consumes that budget only after its current 14,400-second request delay.",
+        "observedAt": "2026-07-15",
+        "observedBlock": 25535946,
+        "bypassSurfaces": [
+          "ccReceiveMintBudgetManually adds local mint budget without a source-side reserve or global-budget check."
+        ],
         "sources": [
           {
             "label": "Sourcify Matrixdock MToken source",
             "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5e072c6689610c66e49a3067a4b488b4e27bc744/sources/contracts/MToken.sol"
           },
           {
-            "label": "Matrixdock XAGm",
-            "url": "https://www.matrixdock.com/xagm"
+            "label": "Matrixdock XAGm PoR and Mint Budget",
+            "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/smart-contract/por-and-mint-budget"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Ethereum block 25295020: implementation slot returns 0x5e072c6689610c66e49a3067a4b488b4e27bc744 (unchanged), operator() = 0x89Bb23E4a82E04a253d9f11767feDf321C127799, owner() = 0xb573c94260582f0715FC477928B04A2708dd36D7. eth_getCode on owner returned 0x (EOA confirmed). Sui State object 0xc2aa8379b988f31442f2435d61b739ca34872f841a2ee304e4d19c4152f12b4c shows same structure: owner 0x567d08ac6939ad0fbe0bdf60a3cbe97568b4becf2ca225fd665b9ad3bf0b6fb8, operator 0xdb0769b530e4425b9872de332a9e17104128cafde3dd5fdf80ea881b4134aee2, mint_budget 0."
+        "evidence": "At Ethereum block 25535946, operator() returned this code-empty address, mintBudget() was 0, and delay() was 14,400 seconds. Verified MToken source makes ccReceiveMintBudgetManually onlyOperator and increases mintBudget directly; mintTo first stores a request, then permits minting only after the delay and deducts that budget."
       },
       {
         "chain": "ethereum",
         "address": "0xb573c94260582f0715FC477928B04A2708dd36D7",
-        "label": "Matrixdock token owner",
+        "label": "Matrixdock Ethereum MToken owner",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
+        "timelockDelaySec": 14400,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "At Ethereum block 25295020: eth_getCode on 0xb573c94260582f0715FC477928B04A2708dd36D7 returned 0x (EOA confirmed). This EOA can call setOperator() on the MToken contract and set a non-zero mintBudget. Consistent with issuer-operated EOA custody (enterprise MPC/HSM indistinguishable on-chain)."
+        "capDescription": "The owner can schedule an operator replacement, which can then use the manual budget-receive and mint paths. The current delay is 14,400 seconds; source permits the owner to reduce it no lower than one hour through the existing delayed change path.",
+        "observedAt": "2026-07-15",
+        "observedBlock": 25535946,
+        "bypassSurfaces": [
+          "The owner can lower the future delay to one hour after the current delayed setDelay process completes."
+        ],
+        "sources": [
+          {
+            "label": "Sourcify Matrixdock MToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5e072c6689610c66e49a3067a4b488b4e27bc744/sources/contracts/MToken.sol"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25535946, owner() returned this code-empty address. Verified source restricts setOperator and setDelay to onlyOwner; setOperator's request/effect path uses the current delay. On-chain state showed delay() = 14,400 and nextOperator() equal to the current operator. Off-chain key custody is not disclosed on-chain."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb573c94260582f0715FC477928B04A2708dd36D7",
+        "label": "Matrixdock Ethereum MToken UUPS upgrade authority",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 14400,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-15",
+        "observedBlock": 25535946,
+        "bypassSurfaces": [
+          "The owner can reduce the future delay to one hour through the current delayed setDelay process before scheduling a later upgrade."
+        ],
+        "sources": [
+          {
+            "label": "Sourcify Matrixdock delayed UUPS source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5e072c6689610c66e49a3067a4b488b4e27bc744/sources/contracts/DelayedUpgradeable.sol"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25535946, this code-empty owner controlled the UUPS proxy implementation 0x5e072c6689610c66e49a3067a4b488b4e27bc744. DelayedUpgradeable requires onlyOwner to request an upgrade, records an effective time from getDelay(), and its UUPS authorization is onlyOwner; current delay() was 14,400 seconds and no pending implementation was set."
+      },
+      {
+        "chain": "sui",
+        "address": "0xdb0769b530e4425b9872de332a9e17104128cafde3dd5fdf80ea881b4134aee2",
+        "label": "Matrixdock Sui XAGm operator",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "timelockDelaySec": 14400,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The operator can call cc_receive_mint_budget_manually to add local mint_budget. request_mint_to and execute_mint_to require the State's current 14,400-second request delay before TreasuryCap minting.",
+        "observedAt": "2026-07-15",
+        "observedBlock": 298761036,
+        "bypassSurfaces": [
+          "cc_receive_mint_budget_manually adds local mint budget without an on-chain reserve or global-budget read."
+        ],
+        "sources": [
+          {
+            "label": "XAGm Sui State",
+            "url": "https://suiscan.xyz/mainnet/object/0xc2aa8379b988f31442f2435d61b739ca34872f841a2ee304e4d19c4152f12b4c"
+          },
+          {
+            "label": "Matrixdock Sui MToken package",
+            "url": "https://suiscan.xyz/mainnet/object/0x951c97e77a74ad2bc534258bdcb82c0eddb478b51df45998b35c1d2d75adbf02"
+          },
+          {
+            "label": "Sui fullnode RPC",
+            "url": "https://fullnode.mainnet.sui.io:443"
+          }
+        ],
+        "evidence": "At Sui checkpoint 298761036, shared State 0xc2aa...2b4c listed this address as operator, mint_budget = 0, and delay = 14,400. The current MToken package's disassembly makes cc_receive_mint_budget_manually operator-only and adds its argument to mint_budget; its request_mint_to and execute_mint_to paths are operator-only and delay execution through State.get_effective_time. RPC reports this controller as a non-object address; signer and off-chain custody configuration are not disclosed."
+      },
+      {
+        "chain": "sui",
+        "address": "0x567d08ac6939ad0fbe0bdf60a3cbe97568b4becf2ca225fd665b9ad3bf0b6fb8",
+        "label": "Matrixdock Sui XAGm State owner",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 14400,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The State owner can request a replacement operator, which becomes effective after the current delay and can then use the local mint-budget and mint paths.",
+        "observedAt": "2026-07-15",
+        "observedBlock": 298761036,
+        "bypassSurfaces": [
+          "The owner can lower the future delay to one hour through the current delayed request/execute path."
+        ],
+        "sources": [
+          {
+            "label": "XAGm Sui State",
+            "url": "https://suiscan.xyz/mainnet/object/0xc2aa8379b988f31442f2435d61b739ca34872f841a2ee304e4d19c4152f12b4c"
+          },
+          {
+            "label": "Matrixdock Sui MToken package",
+            "url": "https://suiscan.xyz/mainnet/object/0x951c97e77a74ad2bc534258bdcb82c0eddb478b51df45998b35c1d2d75adbf02"
+          },
+          {
+            "label": "Sui fullnode RPC",
+            "url": "https://fullnode.mainnet.sui.io:443"
+          }
+        ],
+        "evidence": "At Sui checkpoint 298761036, shared State 0xc2aa...2b4c listed this address as owner with delay = 14,400. The current MToken package's request_set_operator and execute_set_operator paths check this owner and require State.get_effective_time; request_set_delay accepts no value below 3,600 seconds. RPC reports this controller as a non-object address; signer and off-chain custody configuration are not disclosed."
+      },
+      {
+        "chain": "sui",
+        "address": "0x567d08ac6939ad0fbe0bdf60a3cbe97568b4becf2ca225fd665b9ad3bf0b6fb8",
+        "label": "Matrixdock Sui MToken UpgradeCap holder",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-15",
+        "observedBlock": 298761036,
+        "bypassSurfaces": [
+          "The Sui UpgradeCap is independently address-owned and policy 0 permits native package upgrades without the State delay."
+        ],
+        "sources": [
+          {
+            "label": "XAGm Sui MToken UpgradeCap",
+            "url": "https://suiscan.xyz/mainnet/object/0x1a8df052e949f1ae088398881f8d32c9798b5646cc6dad03c1d1415488a043ee"
+          },
+          {
+            "label": "Matrixdock Sui MToken package",
+            "url": "https://suiscan.xyz/mainnet/object/0x951c97e77a74ad2bc534258bdcb82c0eddb478b51df45998b35c1d2d75adbf02"
+          },
+          {
+            "label": "Sui fullnode RPC",
+            "url": "https://fullnode.mainnet.sui.io:443"
+          }
+        ],
+        "evidence": "At Sui checkpoint 298761036, UpgradeCap 0x1a8d...43ee was AddressOwner-held by this non-object address and named current MToken package 0x951c...bf02 with policy = 0 and version = 2. The package upgrade transaction FNtNoUk...pAnZ used package::authorize_upgrade, Upgrade, and package::commit_upgrade directly with that capability; the State's 14,400-second delay is not part of the native UpgradeCap path."
       }
     ],
     "review": {
@@ -113,13 +293,29 @@
           "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5e072c6689610c66e49a3067a4b488b4e27bc744/sources/contracts/MToken.sol"
         },
         {
-          "label": "XAGm Ethereum token",
-          "url": "https://etherscan.io/address/0x123ffe0a3c62878dcbee2742227dc8990058d9e1"
+          "label": "Sourcify Matrixdock delayed UUPS source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5e072c6689610c66e49a3067a4b488b4e27bc744/sources/contracts/DelayedUpgradeable.sol"
+        },
+        {
+          "label": "XAGm Sui State",
+          "url": "https://suiscan.xyz/mainnet/object/0xc2aa8379b988f31442f2435d61b739ca34872f841a2ee304e4d19c4152f12b4c"
+        },
+        {
+          "label": "XAGm Sui MToken UpgradeCap",
+          "url": "https://suiscan.xyz/mainnet/object/0x1a8df052e949f1ae088398881f8d32c9798b5646cc6dad03c1d1415488a043ee"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Sui fullnode RPC",
+          "url": "https://fullnode.mainnet.sui.io:443"
         }
       ],
-      "evidence": "At Ethereum block 25295020: proxy implementation 0x5e072c6689610c66e49a3067a4b488b4e27bc744 confirmed, owner() = EOA 0xb573c94..., operator() = 0x89Bb23E4... Both addresses unchanged from prior pass. eth_getCode on owner = 0x (EOA). Sui State 0xc2aa8379... confirmed same owner/operator/mint_budget=0 structure via Sui fullnode.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25535946, the XAGm proxy resolved to implementation 0x5e072c6689610c66e49a3067a4b488b4e27bc744, owner() was 0xb573c94260582f0715FC477928B04A2708dd36D7, operator() was 0x89Bb23E4a82E04a253d9f11767feDf321C127799, mintBudget() was 0, and delay() was 14,400 seconds. Verified source shows operator-only manual local-budget increases, delayed mint execution, and owner-authorized delayed UUPS replacement. At Sui checkpoint 298761036, shared State 0xc2aa...2b4c listed owner 0x567d...6fb8, operator 0xdb07...aee2, mint_budget 0, delay 14,400, and UpgradeCap 0x1a8d...43ee. That policy-0 UpgradeCap was address-owned by the State owner and controls current MToken package 0x951c...bf02. On-chain data does not disclose the controllers' signer arrangements or off-chain key custody.",
+      "reviewer": "OpenAI Codex deployment-controls review",
+      "reviewedAt": "2026-07-15"
     }
   },
   "chainTier": "ethereum",

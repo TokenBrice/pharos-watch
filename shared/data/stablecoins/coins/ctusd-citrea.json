@@ -264,15 +264,22 @@
   "deploymentModel": "single-chain",
   "reserves": [
     {
-      "name": "M (M0 base stablecoin)",
-      "pct": 100,
-      "risk": "low",
-      "coinId": "m-m0",
-      "depType": "mechanism",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "M by M0",
-      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
-      "liquidityHorizon": "unknown"
+      "name": "Tokenized treasury collateral",
+      "pct": 97.9,
+      "risk": "very-low",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "M0 Protocol and underlying U.S. Treasury reserve providers",
+      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "smart-contract", "concentration"],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Cash",
+      "pct": 2.1,
+      "risk": "very-low",
+      "assetClass": "cash",
+      "issuerOrObligor": "Undisclosed M0 reserve institutions",
+      "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
@@ -287,14 +294,34 @@
       {
         "label": "M0 Extensions documentation",
         "url": "https://docs.m0.org/protocol/extensions"
+      },
+      {
+        "label": "M0 protocol API",
+        "url": "https://protocol-api.m0.org/graphql"
       }
     ],
-    "rationale": "Citrea identifies ctUSD as an M0-minted stablecoin and directs reserve verification to the M0 network. M0 specifies that extensions wrap and unwrap the base M token through SwapFacility at a perfect 1:1 relationship. The direct dependency is therefore 100% M; the existing live M0 adapter supplies the changing cash, Treasury, and tokenized-Treasury look-through beneath M without creating duplicate graph edges.",
-    "compositionBasis": "Documented 1:1 M0 extension relationship through SwapFacility",
+    "rationale": "Citrea identifies ctUSD as an M0-minted stablecoin and directs reserve verification to the M0 network. M0 specifies that extensions wrap and unwrap the base M token through SwapFacility at a perfect 1:1 relationship. The current M0 protocol API exposes the look-through reserve categories as 97.9% Tokenized treasury collateral and 2.1% Cash; the direct M relationship remains represented by the documented extension path and is not duplicated as a second reserve graph edge.",
+    "compositionBasis": "Current M0 protocol category snapshot combined with the documented 1:1 M0 extension relationship",
     "compositionAsOf": "2026-07-14",
-    "scope": "dependency-relationships",
-    "knownUnknownExposure": "No unidentified direct stablecoin dependency remains in the documented M0 extension path; M's underlying reserves are reviewed on the upstream asset and exposed by the live adapter.",
-    "knownUnknownExposurePct": 0
+    "scope": "full-composition",
+    "knownUnknownExposure": "The current M0 API identifies the two reserve categories but does not publish ctUSD-specific underlying positions, custodians, or provider weights.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Tokenized treasury collateral",
+        "pct": 97.9,
+        "disposition": "basket-needs-split",
+        "rationale": "The current API identifies the tokenized treasury category but does not publish ctUSD-specific underlying positions, custodians, or provider weights."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Cash",
+        "pct": 2.1,
+        "disposition": "insufficient-evidence",
+        "rationale": "The current API identifies a cash category but does not publish ctUSD-specific institutions or account-level allocation."
+      }
+    ]
   },
   "liveReservesConfig": {
     "adapter": "m0",

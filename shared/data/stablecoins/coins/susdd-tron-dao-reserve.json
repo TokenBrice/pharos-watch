@@ -13,10 +13,47 @@
   },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: sUSDD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "USDD sUSDD mechanism",
+        "url": "https://docs.usdd.io/susdd-mechanism"
+      },
+      {
+        "label": "USDD official contract inventory",
+        "url": "https://docs.usdd.io/introduction/collateral-asset-contract-addresses"
+      },
+      {
+        "label": "Ethereum sUSDD verified SavingsUsdd source",
+        "url": "https://etherscan.io/address/0xc5d6a7b61d18afa11435a889557b068bb9f29930#code"
+      },
+      {
+        "label": "BNB Chain sUSDD verified SavingsUsdd source",
+        "url": "https://bscscan.com/address/0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d#code"
+      },
+      {
+        "label": "USDD terms of use",
+        "url": "https://docs.usdd.io/lrgals/terms-of-use"
+      },
+      {
+        "label": "USDD transparency dashboard",
+        "url": "https://usdd.io/data"
+      },
+      {
+        "label": "Archived USDD sUSDD mechanism availability record",
+        "url": "https://archive.org/wayback/available?url=https%3A%2F%2Fdocs.usdd.io%2Fsusdd-mechanism&timestamp=20260715"
+      },
+      {
+        "label": "Ethereum public RPC control reads",
+        "url": "https://ethereum.publicnode.com"
+      },
+      {
+        "label": "BNB Chain public RPC control reads",
+        "url": "https://bsc-dataseed.binance.org"
+      }
+    ],
+    "evidence": "Direct routes: the official inventory identifies Ethereum 0xc5d6a7b61d18afa11435a889557b068bb9f29930 and BNB Chain 0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d as sUSDD. Their verified SavingsUsdd sources expose ordinary ERC-20 transfer/transferFrom plus ERC-4626 deposit, mint, withdraw, and redeem paths, but no owner, role administration, pause, blacklist, denylist, seizure, or arbitrary-holder-burn function; withdrawal/redeem of another holder's shares requires that holder's allowance. At Ethereum block 25535628, asset() and usdd() both returned USDD 0x4f8e5de400de08b164e7421b3ee387f461becd1a, deploymentChainId() returned 1, both EIP-1967 slots were zero, zero-value transfer and transferFrom simulations returned true, and owner() reverted. On BNB Chain, newest-state reads returned Savings Usdd / sUSDD, asset() = USDD 0x45e51bc23d592eb2dba86da3985299f7895d66ba, and both zero-value transfer simulations returned true; the endpoint's immediately observed head was 110067528. Its numeric historical-state call at block 110067225 returned missing trie node, so this BNB result is bounded to verified source plus contemporaneous latest-state reads. Future route: the direct verified wrapper sources do not provide an upgrade or holder-control mechanism; no USDD-maintained GitHub source repository was linked by issuer documentation or identified by the targeted source check, so explorer-verified source is the direct-code authority. The terms govern the hosted interface and its availability, while the transparency dashboard and archived mechanism snapshot do not establish a holder-balance control. Inherited route: sUSDD is a claim on USDD, and the parent retains its separately reviewed upstream PSM/reserve exposure; the official inventory itself lists the USDT and USDC PSM paths. No direct override is authored, so that upstream exposure remains distinct from the verified wrapper result.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "variantOf": "usdd-tron-dao-reserve",
   "variantKind": "savings-passthrough",

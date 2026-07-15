@@ -501,10 +501,39 @@
   },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDaf resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Asymmetry USDaf overview",
+        "url": "https://docs.asymmetry.finance/usdaf-stablecoin/what-is-usdaf"
+      },
+      {
+        "label": "Asymmetry Terms of Service",
+        "url": "https://docs.asymmetry.finance/legal/terms-of-service"
+      },
+      {
+        "label": "Ethereum USDaf BoldToken verified source and ABI",
+        "url": "https://eth.blockscout.com/address/0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8?tab=contract"
+      },
+      {
+        "label": "Pinned USDaf V2 BoldToken source",
+        "url": "https://github.com/asymmetryfinance/USDaf-v2/blob/c51caef00ccd2d42ec7ed569009e53e7537d1546/contracts/src/BoldToken.sol"
+      },
+      {
+        "label": "Asymmetry USDaf transparency statistics",
+        "url": "https://app.asymmetry.finance/api/stats"
+      },
+      {
+        "label": "Archived Asymmetry Finance website snapshot",
+        "url": "https://web.archive.org/web/20260307073239/https://www.asymmetry.finance/"
+      },
+      {
+        "label": "Ethereum PublicNode fixed-block reads",
+        "url": "https://ethereum.publicnode.com"
+      }
+    ],
+    "evidence": "At Ethereum block 25534889, the sole tracked USDaf BoldToken 0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8 had owner() = zero and zero EIP-1967 implementation, admin, and beacon slots. Its verified ABI has no pause, unpause, blacklist, freeze, or address-flag function; those selector probes reverted, while unprivileged zero-value transfer and transferFrom calls returned true. Exact verified BoldToken source limits transfer and transferFrom only by rejecting the zero address and the token itself, not a mutable holder list. Owner-only branch-registration functions cannot be reached after ownership renunciation. The issuer Terms can restrict Website access but state that Asymmetry has no control over distributed-ledger transactions, and do not identify an on-chain USDaf holder-control function. This is direct-token evidence only: reserve-linked upstream exposure remains unsuppressed and is not asserted absent.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "immutable-code",

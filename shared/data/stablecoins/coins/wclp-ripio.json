@@ -158,13 +158,13 @@
     "reviewedStatus": "possible",
     "sources": [
       {
-        "label": "Website",
+        "label": "Ripio local stablecoins",
         "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
       }
     ],
-    "evidence": "Ripio wCLP is centrally issued across multiple EVM chains; the public source confirms issuer-managed wFIAT mechanics but does not prove a holder-level blacklist path.",
-    "reviewer": "Codex coverage expansion",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Ripio's current issuer page lists wCLP in its local-stablecoin product family and describes issuer-managed local-currency stablecoins. It does not publish a current token-level blacklist, freeze, pause, privileged-burn, or transfer-restriction inventory for all tracked wCLP deployments. Possible is retained for centrally issued multi-chain mechanics without asserting a direct holder-control function.",
+    "reviewer": "SONG-5 Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {

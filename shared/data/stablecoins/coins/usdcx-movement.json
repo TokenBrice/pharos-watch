@@ -47,10 +47,23 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: USDCx resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Circle xReserve",
+        "url": "https://www.circle.com/xreserve"
+      },
+      {
+        "label": "Movement: Introducing USDCx",
+        "url": "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin"
+      },
+      {
+        "label": "Movement USDCx package module at reviewed ledger version",
+        "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/module/usdcx?ledger_version=174443182"
+      }
+    ],
+    "evidence": "Circle documents xReserve as locking USDC to back partner-chain tokens one-to-one, and Movement identifies USDCx as its xReserve-backed stablecoin. This creates inherited Circle-USDC reserve and redemption exposure. The reviewed Movement USDCx module establishes attester-authorized minting and an admin upgrade path, but does not establish a Circle or Movement holder-level blacklist, freeze, seizure, pause, or transfer-restriction path for USDCx balances. The inherited status therefore does not claim direct holder-balance control.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
   },
   "deploymentModel": "single-chain",
   "bridgeRouteRisk": {

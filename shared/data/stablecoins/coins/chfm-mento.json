@@ -163,12 +163,42 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: CHFm resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Mento CHFm on Celo documentation",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "Mento Protocol Foundation privacy notice",
+        "url": "https://www.mento.org/privacy"
+      },
+      {
+        "label": "CHFm Celo token proxy",
+        "url": "https://celo.blockscout.com/address/0xb55a79f398e759e43c95b979163f30ec87ee131d?tab=contract"
+      },
+      {
+        "label": "CHFm StableTokenV3 implementation",
+        "url": "https://celo.blockscout.com/address/0x815795c30d0758a297b08cd4e0643620c974c318?tab=contract"
+      },
+      {
+        "label": "Mento StableTokenV3 source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV3.sol"
+      },
+      {
+        "label": "Mento Protocol source organization",
+        "url": "https://github.com/mento-protocol/"
+      },
+      {
+        "label": "Mento Reserve dashboard",
+        "url": "https://reserve.mento.org/"
+      }
+    ],
+    "evidence": "On 2026-07-15, the verified CHFm StableTokenV3 implementation exposed owner-gated setBurner(address,bool), whose enabled burner can burn(address account,uint256 value) from an arbitrary holder balance, and owner-gated setOperator(address,bool), whose enabled operator can sendToPool(sender,pool,amount) from an arbitrary holder balance. At Celo block 72170200, owner() and the custom proxy owner resolved to the existing 4-of-6 Mento Safe; observed burner and operator contracts used constrained protocol paths, but the Safe can immediately add another burner or operator. The token ABI has no named blacklist, freeze, or pause function. Current Mento terms endpoints and archive discovery did not establish separate transfer restrictions, so the direct owner-mediated holder-intervention surface is classified Possible rather than an immediate blacklist.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
@@ -345,9 +375,47 @@
       "name": "USDm (Mento Dollar) CDP collateral",
       "pct": 100,
       "risk": "low",
-      "coinId": "cusd-celo"
+      "coinId": "cusd-celo",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "Codex Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento analytics CHFm backing configuration",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts#L88-L101"
+      },
+      {
+        "label": "Mento Reserve dashboard",
+        "url": "https://reserve.mento.org/"
+      },
+      {
+        "label": "Mento Reserve API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
+      {
+        "label": "Mento CHFm on Celo documentation",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      }
+    ],
+    "rationale": "Mento's pinned analytics configuration names CHFm as a CDP backed by USDm, and the live reserve endpoint's CHFm trove records USDm as collateral. The static category is exactly one tracked USDm exposure; USDm's underlying basket remains owned by cusd-celo and is not duplicated here.",
+    "compositionBasis": "Mento CHFm CDP collateral configuration and live reserve dashboard",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "CHFm's sole direct collateral category is USDm; USDm's own reserve composition is reviewed separately on cusd-celo.",
+    "knownUnknownExposurePct": 0
+  },
   "liveReservesConfig": {
     "adapter": "mento",
     "version": 1,

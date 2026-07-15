@@ -27,8 +27,29 @@
   "oracleRisk": {
     "tier": "redundant-with-failover",
     "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "unresolved",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "OpenAI Codex Safety Score V9 oracle review",
+      "rationale": "The current Mento documentation identifies shared SortedOracles, OracleAdapter, and BreakerBox infrastructure, but the reviewed public sources do not establish the complete production GBPm liquidation and failure-handling branch for both tracked deployments.",
+      "sources": [
+        {
+          "label": "Mento V3 smart contracts docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
+        },
+        {
+          "label": "Mento BreakerBox docs",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+        },
+        {
+          "label": "Mento deployment addresses",
+          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex Safety Score V9 oracle review",
     "confidence": "verified",
     "sources": [
       {

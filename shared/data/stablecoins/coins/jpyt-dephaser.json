@@ -90,11 +90,19 @@
       {
         "label": "Docs",
         "url": "https://docs.dephaser.com/concept/what-is-jpyt"
+      },
+      {
+        "label": "DephaserJPY verified source on Optimism",
+        "url": "https://optimism.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
+      },
+      {
+        "label": "DephaserJPY verified source on Base",
+        "url": "https://base.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
       }
     ],
-    "evidence": "Freeze-only re-review: JPYT has no direct holder freeze or blacklist function in the reviewed source; burnFrom remains allowance-gated even when called by BURNER_ROLE. JPYT resolves to Upstream through locked USDT/USDC reserve exposure.",
+    "evidence": "Current-source re-review: the verified DephaserJPY token source exposes no direct holder freeze or blacklist function, and PAUSER_ROLE has no members on the reviewed Optimism or Base deployments. burnFrom remains allowance-gated even when called by BURNER_ROLE. JPYT resolves to Upstream through locked USDT/USDC reserve exposure.",
     "reviewer": "Codex FreezeWatch review",
-    "reviewedAt": "2026-05-24"
+    "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
@@ -346,11 +354,66 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "Locked USDT on Optimism and USDC on Base",
+      "name": "Locked USDT on Optimism and USDC on Base routed into Aave",
       "pct": 100,
-      "risk": "low",
-      "blacklistable": true
+      "risk": "medium",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether and Circle via DePhaser DepositManager and Aave custody routes",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "concentration",
+        "custody"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "DePhaser JPYT overview",
+        "url": "https://docs.dephaser.com/concept/what-is-jpyt"
+      },
+      {
+        "label": "DephaserJPY verified source on Optimism",
+        "url": "https://optimism.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
+      },
+      {
+        "label": "DephaserJPY verified source on Base",
+        "url": "https://base.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
+      },
+      {
+        "label": "DePhaser USDT DepositManager source on Optimism",
+        "url": "https://optimism.blockscout.com/address/0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9?tab=contract"
+      },
+      {
+        "label": "DePhaser USDC DepositManager source on Base",
+        "url": "https://base.blockscout.com/address/0x0eab9d66adb8527cd7c0e7e7c1782580431ec276?tab=contract"
+      }
+    ],
+    "rationale": "The current DePhaser token and DepositManager records identify two collateral routes: USDT on Optimism and USDC on Base, with deposited collateral routed into Aave. The reviewed sources do not publish a current chain-level allocation split, so the complete reserve is represented as one aggregate basket and no unsupported 50/50 allocation is inferred.",
+    "compositionBasis": "DePhaser JPYT documentation plus current verified token and DepositManager sources",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The collateral asset family and Aave routing are identified, but the current Optimism/Base allocation, exact Aave positions, and custody/legal terms are not published in the reviewed sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Locked USDT on Optimism and USDC on Base routed into Aave",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The issuer identifies both tracked stablecoin routes but does not publish a current defensible allocation split.",
+        "candidateCoinIds": [
+          "usdt-tether",
+          "usdc-circle"
+        ]
+      }
+    ]
+  },
   "launchDate": "2024-10-16"
 }

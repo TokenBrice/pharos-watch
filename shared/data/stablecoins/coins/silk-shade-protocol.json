@@ -20,8 +20,29 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Shade documents Band Protocol data feeds for SILK basket pricing and Shade apps, with SupraOracles noted separately but no stronger failover tier verified.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "unresolved",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "OpenAI Codex Safety Score V9 oracle review",
+      "rationale": "Shade documents Band Protocol basket pricing and several SILK stabilization routes, but the reviewed public sources do not establish a complete current production oracle and liquidation branch for the vault, redemption-pool, and governance-controlled paths.",
+      "sources": [
+        {
+          "label": "Shade tech stack",
+          "url": "https://docs.shadeprotocol.io/shade-protocol/shade-protocol/tech-stack.md"
+        },
+        {
+          "label": "SILK basket composition",
+          "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/basket-composition.md"
+        },
+        {
+          "label": "SILK minting and redemption",
+          "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex Safety Score V9 oracle review",
     "confidence": "verified",
     "sources": [
       {
@@ -77,7 +98,7 @@
     ],
     "evidence": "No direct SILK holder blacklist was identified, but Shade documentation lists stablecoins such as USDC in collateral/redemption pool routes. Under the any-reserve FreezeWatch policy, that resolves as upstream freeze exposure.",
     "reviewer": "Codex FreezeWatch audit",
-    "reviewedAt": "2026-05-25"
+    "reviewedAt": "2026-07-14"
   },
   "chainTier": "unproven",
   "deploymentModel": "single-chain",

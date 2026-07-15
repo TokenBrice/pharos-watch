@@ -136,26 +136,46 @@
       }
     ]
   },
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "Blast documentation",
-        "url": "https://docs.blast.io/"
+        "label": "Blast USDB implementation source",
+        "url": "https://github.com/blast-io/blast/blob/b82105486bfe33c8b12986e7cd42388fbab7d1d2/blast-optimism/packages/contracts-bedrock/src/L2/USDB.sol"
       },
       {
-        "label": "Blast native USDB deployment",
+        "label": "Blast ProxyAdmin source",
+        "url": "https://github.com/blast-io/blast/blob/b82105486bfe33c8b12986e7cd42388fbab7d1d2/blast-optimism/packages/contracts-bedrock/src/universal/ProxyAdmin.sol"
+      },
+      {
+        "label": "Blast L2BlastBridge source",
+        "url": "https://github.com/blast-io/blast/blob/b82105486bfe33c8b12986e7cd42388fbab7d1d2/blast-optimism/packages/contracts-bedrock/src/mainnet-bridge/L2BlastBridge.sol"
+      },
+      {
+        "label": "USDB Blast implementation (Blastscan)",
+        "url": "https://blastscan.io/address/0x4ef0d788470e2feb6559b93075ec5be51dba737d#code"
+      },
+      {
+        "label": "USDB Blast native proxy (Blastscan)",
         "url": "https://blastscan.io/address/0x4300000000000000000000000000000000000003#code"
       },
       {
-        "label": "Blast official site",
-        "url": "https://blast.io/"
+        "label": "Blast documentation - USDB yield and redemption",
+        "url": "https://docs.blast.io/about-blast"
+      },
+      {
+        "label": "Blast terms of service",
+        "url": "https://blast.io/terms-of-service"
+      },
+      {
+        "label": "Blast and Ethereum fixed-block RPC reads",
+        "url": "https://rpc.blast.io"
       }
     ],
-    "sourceFreeRationale": "Bounded unknown retained: Blast documentation and the native USDB deployment identify the tracked route, but do not establish a complete holder-level blacklist or freeze inventory for the native token.",
-    "evidence": "USDB is represented by Blast's native deployment at 0x4300000000000000000000000000000000000003. The reviewed Blast sources establish the route but do not prove a direct holder-control function or a deployment-wide control inventory.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At Blast block 37633619, the USDB proxy at 0x4300000000000000000000000000000000000003 resolved to implementation 0x4ef0d788470e2feb6559b93075ec5be51dba737d, with bridge() = 0x4300000000000000000000000000000000000005 and REPORTER = L1 USDYieldManager 0xa230285d5683C74935aD14c446e137c8c8828438. The verified implementation exposes ordinary transfer and transferFrom and has no active pause, blacklist, or freeze function; its mint and burn functions are restricted to the L2 bridge, and fixed-block calls from an unrelated account reverted. However, admin() is L2 ProxyAdmin 0x4200000000000000000000000000000000000018, whose owner is 3-of-5 Safe 0xb9ca260493a0a6f9cfc1c2931faca48ac4af0937 with no enabled modules. The verified ProxyAdmin source permits its owner to replace the USDB implementation, so this known control can make holder transfers or balances restrictable even though the live implementation has no direct blacklist function.",
+    "reviewer": "TERRA-ULTRA access review",
+    "reviewedAt": "2026-07-15"
   },
   "chainTier": "stage1-l2",
   "collateralQuality": "alt-lst-bridged-or-mixed",

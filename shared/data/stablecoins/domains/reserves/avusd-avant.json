@@ -12,8 +12,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "owner-triage",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "Codex V9 reserve curation",
     "confidence": "verified",
     "sources": [
       {
@@ -35,10 +35,15 @@
       {
         "label": "Avant avUSD reserve-fund API",
         "url": "https://app.avantprotocol.com/api/reserve-fund/balance?product=avusd"
+      },
+      {
+        "label": "Avant terms of use",
+        "url": "https://docs.avantprotocol.com/legal-and-risk/terms-of-use"
       }
     ],
-    "rationale": "Avant states that capital backing unstaked avUSD is deployed into underlying strategies and describes avUSD as a diversified market-neutral basket. The first-party portfolio API reports a leveraged positive/negative book, including negative net USDC, while the separate reserve fund is only a small first-loss buffer. USDC is therefore the mint/redemption asset, not a 100% currently held reserve slice. Exact strategy weights remain mutable and liability-aware.",
-    "compositionBasis": "Issuer-defined dynamic strategy envelope corroborated by the live first-party avUSD balance sheet",
+    "rationale": "Avant documents USDC as avUSD's mint and redemption asset, while its reserve-fund documentation states that capital backing unstaked avAssets is deployed into underlying strategies. The issuer's transparency snapshot dated 2026-07-07 lists a leveraged positive and negative book, including positive Stablecoins, Other, and derivative categories alongside negative Perpetuals. The separately reported reserve-fund balance is not modeled as the whole backing. A static positive-weight split would erase the portfolio's liabilities and hedge structure.",
+    "compositionBasis": "Issuer avUSD transparency balance sheet at 2026-07-07 and strategy documentation",
+    "compositionAsOf": "2026-07-07",
     "scope": "full-composition",
     "knownUnknownExposure": "Current constituent identities, positive and negative weights, venue exposures, hedge effectiveness, and net liability attribution are intentionally unresolved in the static record and require a liability-aware live adapter.",
     "knownUnknownExposurePct": 100,

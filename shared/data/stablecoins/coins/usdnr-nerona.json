@@ -60,9 +60,9 @@
       "decimals": 6
     }
   ],
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "M0 Extensions documentation",
@@ -79,11 +79,35 @@
       {
         "label": "Ethereum USDnr current implementation",
         "url": "https://eth.blockscout.com/address/0x1028a0e146d2915c509c8e019e0e5c66d3d22ae0?tab=contract"
+      },
+      {
+        "label": "Fluent USDnr proxy",
+        "url": "https://fluentscan.xyz/address/0xd48e565561416de59da1050ed70b8d75e8ef28f9?tab=contract"
+      },
+      {
+        "label": "Fluent USDnr current implementation",
+        "url": "https://fluentscan.xyz/address/0x18091d82d55f68205f7f829acadb7897a7cb7d9c?tab=contract"
+      },
+      {
+        "label": "Ethereum USDnr role events",
+        "url": "https://eth.blockscout.com/address/0xd48e565561416de59da1050ed70b8d75e8ef28f9/logs?topic=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+      },
+      {
+        "label": "Fluent USDnr role events",
+        "url": "https://fluentscan.xyz/address/0xd48e565561416de59da1050ed70b8d75e8ef28f9/logs?topic=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+      },
+      {
+        "label": "Ethereum PublicNode RPC fixed-block role reads",
+        "url": "https://ethereum.publicnode.com"
+      },
+      {
+        "label": "Fluent RPC fixed-block role reads",
+        "url": "https://rpc.fluent.xyz"
       }
     ],
-    "evidence": "Blocked pending a complete deployment-level holder-control inventory. On 2026-07-14, the tracked Ethereum proxy resolves to a verified M0 JMIExtension implementation, and M0's official documentation describes extensions as custom ERC-20 wrappers on the M token foundation. The reviewed primary sources do not establish a USDnr blacklist, pause, or arbitrary-burn path, nor do they establish that the matching Fluent deployment has the same immutable control surface. Possible is retained rather than inferring a no-freeze conclusion across both deployments.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At Ethereum block 25534825 and Fluent block 10309817, the EIP-1967 implementation slots resolve to the independently verified JMIExtension implementations 0x1028a0e146d2915c509c8e019e0e5c66d3d22ae0 and 0x18091d82d55f68205f7f829acadb7897a7cb7d9c. Both verified implementations expose FREEZE_MANAGER_ROLE, freeze(address), freezeAccounts(address[]), unfreeze, unfreezeAccounts, and pause controls. Role-event histories show FREEZE_MANAGER_ROLE was transferred from the deployment account to 0x169A3703D64a100897C0E208a3Dcad86F3F6eC29; pinned hasRole reads for that account return true on both deployments. Therefore an active privileged authority can directly freeze arbitrary holder accounts across every tracked USDnr deployment.",
+    "reviewer": "Codex Wave 6 access review",
+    "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
     "mintPath": "m0-permissioned-minter",

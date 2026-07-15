@@ -88,21 +88,38 @@
       "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
     }
   ],
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
     "reviewedStatus": false,
     "sources": [
       {
-        "label": "Docs",
+        "label": "Zephyr native-asset documentation",
         "url": "https://zephyrprotocol.com/documentation"
       },
       {
-        "label": "GitHub",
-        "url": "https://github.com/ZephyrProtocol/zephyr"
+        "label": "Zephyr v2.3.0 transaction-type source",
+        "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_protocol/enums.h#L46-L62"
+      },
+      {
+        "label": "Zephyr v2.3.0 native transfer routing",
+        "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_core/cryptonote_tx_utils.cpp#L478-L535"
+      },
+      {
+        "label": "Zephyr v2.3.0 wallet and daemon control source",
+        "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/wallet/wallet2.cpp#L1975-L2059"
+      },
+      {
+        "label": "Zephyr Explorer block 819289",
+        "url": "https://explorer.zephyrprotocol.com/api/block/819289"
+      },
+      {
+        "label": "Zephyr reserve snapshot",
+        "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
       }
     ],
-    "evidence": "Zephyr documentation presents ZSD as a native asset on a Monero-derived protocol and does not identify an issuer-controlled freeze, blacklist, pause, privileged burn, or proxy-upgrade control surface for holder balances.",
-    "reviewer": "Codex metadata pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Reviewed on 2026-07-15 against official Zephyr v2.3.0 source commit 67c5f53 and native-chain Explorer state. ZSD is a native Zephyr asset, not an issuer-deployed production EVM token. Same-asset ZSD sends map to STABLE_TRANSFER; the reviewed consensus paths expose no address blacklist, holder freeze, seize, privileged burn, or current issuer/admin transfer-pause path. Wallet-RPC freeze marks only a locally held transfer/key image in that wallet's m_transfers state, while daemon set_bans concerns P2P hosts or subnets. At height 819289, block 386f59b9b27984fc4d476d89e1142f0b3189987e2da245eace0268e5fe50cc19, the network was at HF11 and the official reserve snapshot corroborated that height. The 2025 audit hardfork previously restricted normal network transactions and invalidated legacy asset types, but this was a historical consensus-wide migration rather than a current account-targeted issuer control. No direct blacklistability established.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
     "mintPath": "immutable-user-collateralized",
