@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "note": "Curated Safety Score v9 mechanism-review overlays for archetypes whose review requires measured mechanism ratios (CDP, synthetic-delta-neutral, algorithmic, rwa-credit-fund). Every numeric metric and every curated component quality must cite at least one source URL in `sources`; components without curated evidence are published bounded-unknown by the extension. Schema is enforced by MechanismReviewOverlayFileSchema in worker/src/lib/safety-score-v9-extension-mechanism.ts.",
+  "note": "Curated Safety Score v9 mechanism-review overlays for archetypes whose review requires measured mechanism ratios or evidence-backed qualitative legal and custody facts (CDP, synthetic-delta-neutral, algorithmic, rwa-credit-fund, fiat-cash, tbill). Every numeric metric and every curated component quality must cite at least one source URL in `sources`; components without curated evidence are published bounded-unknown by the extension. Schema is enforced by MechanismReviewOverlayFileSchema in worker/src/lib/safety-score-v9-extension-mechanism.ts.",
   "overlays": [
     {
       "assetId": "bold-liquity",
@@ -226,6 +226,1869 @@
         },
         "branchIsolation": {
           "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "usdc-circle",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Circle USDC Terms (segregated accounts, holder redemption assignment, and eligibility conditions; updated 2025-12-12)",
+          "url": "https://www.circle.com/legal/usdc-terms"
+        },
+        {
+          "label": "Deloitte USDC examination report for May 2026 (itemized reserve assets, segregated-account definition, and assets/liabilities reconciliation)",
+          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20May%2026.pdf"
+        },
+        {
+          "label": "Circle USDC reserve and custody disclosure (Circle Reserve Fund, BNY Mellon custody, BlackRock management, and regulated-bank cash)",
+          "url": "https://www.circle.com/usdc"
+        },
+        {
+          "label": "Circle Internet Group 2025 Form 10-K (beneficial ownership, bankruptcy-treatment uncertainty, reserve allocation, custodians, and no-encumbrance policy)",
+          "url": "https://www.sec.gov/Archives/edgar/data/1876042/000187604226000062/crcl-20251231.htm"
+        }
+      ],
+      "notes": "Circle Internet Financial, LLC's USDC Terms state that reserves are held in Segregated Accounts apart from corporate funds, on behalf of and for the benefit of users, and transfer to each subsequent holder an eligibility-conditioned right to redeem through Circle Mint. Deloitte's May 2026 examination defines the Circle Reserve Fund NAV and unencumbered Segregated Accounts held on behalf of USDC holders, itemizes the reserve assets, and reconciles them to circulation. Circle's 2025 Form 10-K says holders have absolute beneficial ownership while Circle retains bare legal title and states Circle's position that reserves should remain outside its bankruptcy estate, but also acknowledges that no court has determined this treatment and a court could treat holders as general unsecured creditors. Claim and segregation are therefore adequate rather than strong. The same filing reports approximately 88% of USDC reserves in the BlackRock-managed Circle Reserve Fund custodied by The Bank of New York Mellon, with the remainder distributed across several banks, primarily GSIBs and including six FDIC-insured institutions; it also states that reserves are not lent, borrowed against, or encumbered. Custody continuity is adequate. Individual cash-bank identities and shares, explicit custodian-failure replacement terms, and the concentration at BNY Mellon remain unresolved.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "adequate"
+        },
+        "custodyContinuity": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "usdt-tether",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Tether Token Terms of Sale and Service (personal contractual redemption right and eligibility conditions; updated 2026-02-26)",
+          "url": "https://tether.to/en/legal/"
+        },
+        {
+          "label": "Tether International Relevant Information Document (issuer, primary-market obligation, and reserve-funded redemption lifecycle; published 2026-02-20)",
+          "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+        },
+        {
+          "label": "Tether transparency and assurance disclosures (issuer-owned reserve characterization)",
+          "url": "https://tether.to/transparency/?tab=reports"
+        }
+      ],
+      "notes": "Tether International, S.A. de C.V.'s Terms make purchase and redemption a personal contractual right available only to verified customers. The 2026 Relevant Information Document and Tether's transparency disclosures characterize reserves as issuer-held and issuer-owned assets that Tether invests and manages at its discretion, while the post-sale obligation is conditional redemption for eligible primary-market customers. The reviewed sources establish neither beneficial ownership or a direct reserve-asset claim for holders nor reserve segregation, a holder trust, or bankruptcy-remoteness protection. Claim and segregation are therefore weak. The Relevant Information Document says reserves are held through various third parties, including banks and licensed financial institutions, but no reviewed primary source names the USDT reserve custodians, provider shares, failure-continuity protections, or rehypothecation restrictions, so custody continuity remains uncurated and bounded-unknown.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "usd1-world-liberty-financial",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "BitGo USD1 Terms (segregated reserves, redemption rights, and denial of holder property interests)",
+          "url": "https://www.bitgo.com/usd1-terms/"
+        },
+        {
+          "label": "Crowe USD1 Reserve Attestation Report for May 2026 (Fidelity money-market fund and demand deposits)",
+          "url": "https://landing.bitgo.com/rs/552-OGK-141/images/USD1_Reserve_Attestation_Report_May_2026.pdf?version=0"
+        }
+      ],
+      "notes": "BitGo's terms require USD1 reserve assets to be held separately from BitGo's own assets and for the benefit of users, but expressly deny holders a property interest in the reserve securities and provide only an eligibility-conditioned redemption right. That contradiction to a direct reserve-asset claim makes claim and segregation weak despite documented segregation. Crowe's May 2026 report identifies approximately $4.024 billion in the Fidelity Government Portfolio held at BitGo Trust and approximately $710.2 million in demand deposits at unnamed U.S. banks. Those bank identities and shares, an alternate-custodian recovery arrangement, and reserve-wide non-rehypothecation terms were not established, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "usdg-paxos",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Paxos stablecoin terms (USDG issuer routing, holder claims, and segregated custodial accounts)",
+          "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
+        },
+        {
+          "label": "Paxos USDG EU whitepaper (EU holder priority and insolvency treatment)",
+          "url": "https://www.paxos.com/terms-and-conditions/usdg-eu-whitepaper"
+        },
+        {
+          "label": "KPMG USDG Redemption Assets Report for May 2026 (itemized and unencumbered reserves)",
+          "url": "https://framerusercontent.com/assets/o61pz3wuO4LmxEuDTUxmINc09qc.pdf"
+        }
+      ],
+      "notes": "Paxos's terms route USDG issuance between MAS-supervised Paxos Digital Singapore and FIN-FSA-supervised Paxos Issuance Europe, document holder claims, and require reserve assets in segregated custodial accounts for holders. The EU whitepaper adds proportional priority and insolvency exclusion for the Paxos EU issuance and EU residents; those EU-specific protections are not asserted globally. KPMG's May 2026 reasonable-assurance report itemizes unencumbered money-market funds, Treasury bills, and cash. This regulator-supervised, segregated, and examined structure supports strong claim and segregation. The current report anonymizes the commercial banks and qualified custodian and does not establish current provider shares, replacement continuity, or a blanket no-rehypothecation covenant, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "strong"
+        }
+      }
+    },
+    {
+      "assetId": "usyc-hashnote",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Circle USYC product disclosure (tokenized fund-share representation)",
+          "url": "https://www.circle.com/usyc"
+        },
+        {
+          "label": "Circle USYC developer overview (fund and token-administrator identities)",
+          "url": "https://developers.circle.com/tokenized/usyc/overview"
+        }
+      ],
+      "notes": "Circle states that each USYC token represents a share of Hashnote International Short Duration Yield Fund Ltd. and identifies Circle International Bermuda Limited as token administrator. Because only issuer product disclosures were public and no offering memorandum or equivalent governing document was reviewed, the direct fund-share claim is limited rather than adequate. Liquidation priority and seniority, an independent fund administrator and NAV methodology or cadence, and a current portfolio maturity or WAM table were not established. NAV valuation and duration and liquidity therefore remain uncurated.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "buidl-blackrock",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "SEC-filed BUIDL/Securitize agreement (authenticated participating shares and transfer-agent controls)",
+          "url": "https://www.sec.gov/Archives/edgar/data/2094496/000121390026042685/ea026411904ex10-9.htm"
+        },
+        {
+          "label": "SEC BUIDL Form D filing",
+          "url": "https://www.sec.gov/Archives/edgar/data/2013810/0002014390-24-000001-index.htm"
+        },
+        {
+          "label": "Securitize BUIDL product disclosure (BlackRock manager, BNY Mellon custodian, and tokenized-share structure)",
+          "url": "https://securitize.io/blackrock/buidl"
+        }
+      ],
+      "notes": "The SEC-filed agreement defines BUIDL tokens as authenticated non-voting participating shares, requires confirmation that shares are validly issued, fully paid, and nonassessable, and identifies Securitize as registrar and transfer agent. Securitize identifies the BlackRock USD Institutional Digital Liquidity Fund, BlackRock as manager, and The Bank of New York Mellon as custodian. The agreement defers governing rights, redemptions, and liquidation treatment to a confidential offering memorandum, so public evidence establishes a fund-share representation but not seniority or liquidation priority; fund claim and seniority is limited. No public independent NAV-administrator methodology or current maturity table was established, so NAV valuation and duration and liquidity remain uncurated.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "pyusd-paypal",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Paxos stablecoin terms (PYUSD issuer, segregated accounts, bankruptcy treatment, and recorded ownership interest)",
+          "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
+        },
+        {
+          "label": "KPMG PYUSD Redemption Assets Report for May 2026 (cash and overnight-repo reconciliation)",
+          "url": "https://framerusercontent.com/assets/99N5QwJCmGdSIzUsGoGdLXxYI0.pdf"
+        },
+        {
+          "label": "OCC approval of Paxos conversion to a national trust bank",
+          "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125e.pdf"
+        }
+      ],
+      "notes": "PYUSD is issued by the OCC-supervised Paxos trust entity. Paxos's terms place reserves in segregated custodial accounts for holders, describe the assets as bankruptcy remote, and provide an opt-in recorded indirect ownership interest in cash deposits. KPMG's May 2026 report itemizes and reconciles approximately $262.4 million of cash and $2.768 billion of overnight reverse repos and states that the Treasury collateral may not be sold or repledged. This regulator-supervised, segregated, and itemized structure supports strong claim and segregation. The banks, broker-dealers, subcustodians, provider shares, and recovery-continuity arrangements are not named, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "strong"
+        }
+      }
+    },
+    {
+      "assetId": "usdy-ondo-finance",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Ondo trust and security disclosure (Ankura collateral-agent and perfected-security-interest structure)",
+          "url": "https://docs.ondo.finance/trust-and-security"
+        },
+        {
+          "label": "Ondo USDY comparison disclosure (secured note rather than fund share)",
+          "url": "https://docs.ondo.finance/general-access-products/usdy/comparison-stablecoins"
+        },
+        {
+          "label": "Ondo USDY basics (reference price and monthly token yield rate)",
+          "url": "https://docs.ondo.finance/general-access-products/usdy/basics"
+        },
+        {
+          "label": "Ondo USDY Instant Manager guide (daily price-range publication)",
+          "url": "https://docs.ondo.finance/developer-guides/usdy-instant-manager-integration"
+        }
+      ],
+      "notes": "USDY is a secured debt obligation rather than a direct fund share. Ondo states that Ankura Trust Company, as collateral agent, holds a perfected security interest and can liquidate collateral after default, but the reviewed public material is issuer disclosure and the current offering and security agreements, liquidation waterfall, and post-transition seniority terms were not available. Fund claim and seniority is therefore limited. Ondo describes a daily reference and redemption price driven by an issuer-set monthly token yield rate rather than an independently struck fund NAV, directly supporting weak NAV valuation. A current maturity or WAM table consistent with redemption terms was not established, so duration and liquidity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "limited"
+        },
+        "navValuation": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "rlusd-ripple",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Ripple Stablecoin Terms (reserve segregation and denial of holder property interests)",
+          "url": "https://ripple.com/legal/stablecoin/"
+        },
+        {
+          "label": "Deloitte RLUSD examination report for May 2026 (segregated reserve reconciliation)",
+          "url": "https://cdn.sanity.io/files/ior4a5y3/production/00bb3899f244c392ab77e55e65dee33cf271dfce.pdf/RLUSD_Attestation_Report_-_May_2026_Final.pdf"
+        }
+      ],
+      "notes": "Ripple's terms require RLUSD reserve assets to be segregated but expressly deny holders any direct or indirect property interest in the reserves or a right to withdraw reserve assets. Deloitte's May 2026 report confirms segregated reserve assets at NYDFS-approved U.S. depositories and custodians. The governing terms therefore contradict the direct reserve-asset claim required for a higher tier, so claim and segregation is weak. The report does not identify the depositories or custodians, allocations, failure-continuity arrangements, or reserve-wide non-rehypothecation protections, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "u-united-stables",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "United Stables Terms (issuer-owned reserves, no segregation duty, no holder claim, and discretionary custody)",
+          "url": "https://www.u.tech/terms/"
+        },
+        {
+          "label": "United Stables product disclosure (segregated-custody marketing claim contradicted by governing terms)",
+          "url": "https://www.u.tech/"
+        }
+      ],
+      "notes": "United Stables' governing terms state that reserves need not be segregated or held in trust, remain property held for the issuer's own account, and give holders no preferential, secured, proprietary, fiduciary, or trust claim. That affirmative contradiction to the product site's segregated-custody marketing makes claim and segregation failed. The terms also make the custodian set and reserve mix discretionary, provide no assurance about exact custody, and establish no encumbrance or replacement-continuity protection. Custody continuity is therefore failed. Provider identities, allocations, and any recovery arrangement remain undisclosed.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "failed"
+        },
+        "custodyContinuity": {
+          "quality": "failed"
+        }
+      }
+    },
+    {
+      "assetId": "usdgo-osl",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Anchorage Digital Bank Covered Stablecoin Terms (South Dakota reserve trust and non-client rights)",
+          "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms"
+        },
+        {
+          "label": "Anchorage USDGO Reserve Report for May 2026 (segregated fiduciary accounts and itemized reserves)",
+          "url": "https://learn.anchorage.com/05.31.26_USDGO_Stablecoin_Attestation_Report_signed.pdf"
+        },
+        {
+          "label": "Anchorage USDGO reserve-attestation index",
+          "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations"
+        }
+      ],
+      "notes": "Anchorage Digital Bank's terms place covered-stablecoin reserves in a South Dakota express trust and impose fiduciary duties, while the May 2026 examination reports segregated, unencumbered fiduciary accounts and itemizes money-market funds, BUIDL, and cash. The same terms, however, state that non-clients have no contractual or enforceable rights and limit direct redemption to Anchorage clients; no public trust agreement identifies all token holders as beneficiaries. A direct holder claim is therefore contradicted for non-clients, making claim and segregation weak rather than strong. The underlying banks and money-market-fund custodians, alternate-trustee recovery, provider shares, and continuity protections are not established, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "usdtb-ethena",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Anchorage Digital Bank Covered Stablecoin Terms (issuer obligation and service-provider asset rights)",
+          "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms"
+        },
+        {
+          "label": "Ethena USDtb documentation (BUIDL-backed stablecoin structure)",
+          "url": "https://docs.usdtb.money/"
+        },
+        {
+          "label": "Anchorage USDtb Reserve Report for May 2026",
+          "url": "https://learn.anchorage.com/05.31.26_USDtb_Stablecoin_Attestation_Report_signed.pdf"
+        }
+      ],
+      "notes": "USDtb is an Anchorage-issued stablecoin obligation whose reserves are predominantly BUIDL; it is not itself a direct BUIDL fund share. Anchorage's terms deny holders any right, title, lien, or claim against service-provider assets or accounts, so fund claim and seniority is weak. BUIDL's reported daily NAV does not establish an independent USDtb NAV process, and the reviewed USDtb sources do not provide an independent NAV administrator and method or a current underlying maturity or WAM table. NAV valuation and duration and liquidity remain uncurated.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "usd0-usual",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Usual USD0 fact sheet (protocol collateral ownership and redemption)",
+          "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/usd0"
+        },
+        {
+          "label": "Usual USD0 flow and architecture (mint and redemption path)",
+          "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0/flow-and-architecture"
+        },
+        {
+          "label": "Usual RWA collateral policy",
+          "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0/rwa-collateral"
+        }
+      ],
+      "notes": "USD0 is a protocol wrapper whose DAO-controlled contracts own the RWA collateral. Holders may redeem USD0 into an underlying RWA token at par, but holding USD0 does not confer direct ownership or seniority in USYC or another underlying fund. Fund claim and seniority is therefore weak. The wrapper uses par and oracle mechanics rather than an independently administered fund NAV, and protocol duration-eligibility ceilings are policy limits rather than a measured portfolio maturity table. NAV valuation and duration and liquidity remain uncurated.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "ylds-figure",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Figure Certificate Company YLDS prospectus (unsecured certificate and valuation terms)",
+          "url": "https://cdn.figure.com/docs/markets/fcc-prospectus.pdf"
+        },
+        {
+          "label": "Figure Certificate Company Form 10-Q for March 31, 2026 (qualified assets, providers, and maturities)",
+          "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000008/fcc-20260331.htm"
+        }
+      ],
+      "notes": "The FCC prospectus defines YLDS certificates as unsecured obligations backed only generally by Figure Certificate Company assets and not secured by particular reserve assets, so fund claim and seniority is weak. Certificates accrue simple interest at face value, while investments use amortized cost and an affiliated administrator rather than an independently struck fund NAV; NAV valuation is weak. FCC's Form 10-Q identifies UMB Bank, Flagstar Bank, Goldman Sachs Financial Square, overnight repo, and Treasury-bill maturities. Duration and liquidity is not overlaid because the current measured reserve path already bounds overnight repo at one day and Treasury bills at 49 days.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "weak"
+        },
+        "navValuation": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "tusd-trueusd",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Moore TUSD attestation endpoint (holder funds, trust accounts, liens, and provider concentration)",
+          "url": "https://widget.verinumus.io/api/v1/tusd/report?tokens=%5BTrueUSD%5D"
+        },
+        {
+          "label": "TUSD transparency disclosure",
+          "url": "https://tusd.io/transparency"
+        },
+        {
+          "label": "TUSD terms of use",
+          "url": "https://app.tusd.io/terms-of-use"
+        }
+      ],
+      "notes": "Moore's current report describes deposits held for TUSD holders and fund assets held in trust accounts, generally outside issuer or agent property and free of liens. Together with the governing redemption terms, this supports adequate claim and segregation rather than a regulator-supervised strong tier. The report also places approximately $501.85 million, about 99.98% of reported reserves, at First Digital Trust at cost. That documented single-provider concentration and the absence of an alternate-provider recovery arrangement make custody continuity weak. No court-order, freezing-injunction, or collateral-access assertion is made because those facts were not established by the cited primary packet; fair value and provider-failure continuity also remain unresolved.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "adequate"
+        },
+        "custodyContinuity": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "eurc-circle",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Circle EURC Terms (regulated issuer, holder scope, and reserve segregation)",
+          "url": "https://www.circle.com/legal/eurc-terms"
+        },
+        {
+          "label": "Deloitte EURC examination report for May 2026 (unencumbered segregated balances)",
+          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20May%2026.pdf"
+        },
+        {
+          "label": "French REGAFI register entry for Circle's electronic-money institution",
+          "url": "https://www.regafi.fr/spip.php?bic=&cat=22-TBR07&cib=&denomination=&id_secteur=1&lang=fr&nom=&num=&page=results&retrait=0&siren=&siren_agent=&type=advanced"
+        },
+        {
+          "label": "Circle EURC reserve disclosure (bankruptcy-remoteness statement)",
+          "url": "https://www.circle.com/eurc"
+        }
+      ],
+      "notes": "Circle Internet Financial Europe SAS is an ACPR-supervised electronic-money institution. Its EURC terms apply to Circle Mint and non-Mint holders, state that reserves are held in segregated accounts for users' benefit, and provide par redemption subject to eligibility; Circle's product disclosure describes the reserves as bankruptcy remote. Deloitte's May 2026 examination confirms unencumbered segregated balances, including approximately EUR 373.377 million of cash. This regulator-supervised, segregated, and itemized structure supports strong claim and segregation. The reviewed sources identify only categories of regulated institutions, not bank identities, allocations, provider-specific no-rehypothecation terms, or replacement arrangements, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "strong"
+        }
+      }
+    },
+    {
+      "assetId": "fdusd-first-digital",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "First Digital FDUSD terms (FD121 reserve ownership, holder rights, and redemption eligibility)",
+          "url": "https://www.firstdigitallabs.com/legal/fdd-terms"
+        },
+        {
+          "label": "First Digital transparency disclosure (First Digital Trust custody, segregation, and monthly reports)",
+          "url": "https://www.firstdigitallabs.com/transparency"
+        }
+      ],
+      "notes": "FDUSD's binding terms state that FD121 (BVI) Limited beneficially owns the reserves and that holders have no contractual or trust entitlement to reserve assets; only eligible account holders receive a conditional right to sell FDUSD. Claim and segregation is therefore weak despite custody segregation. First Digital's current transparency disclosure names licensed Hong Kong trust company First Digital Trust as reserve custodian, states that reserve assets are segregated from that custodian's own assets, and publishes monthly independent reports, supporting adequate custody continuity. The reviewed sources do not establish custodian-replacement terms, provider shares, reserve-wide non-rehypothecation, or bankruptcy protection against FD121 itself.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "weak"
+        },
+        "custodyContinuity": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "frax-frax",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Frax v3 overview (legacy FRAX non-redeemability and denial of rights to specific backing instruments)",
+          "url": "https://docs.frax.finance/frax-v3-100-cr-and-more/overview"
+        },
+        {
+          "label": "Frax balance-sheet API (mixed protocol portfolio)",
+          "url": "https://api.frax.finance/v2/frax/balance-sheet/latest"
+        }
+      ],
+      "notes": "Frax explicitly describes legacy FRAX as non-redeemable and states that holding it gives no right to any specific financial instrument or token. The live balance sheet is a mixed protocol portfolio that includes tokenized funds, protocol positions, and self-issued FRAX-family assets rather than a direct holder fund share. That affirmative contrary evidence makes fund claim and seniority weak. No independently administered composite NAV method, current asset-level maturity or WAM table, or reviewed holder loss-recovery waterfall was established, so NAV valuation and duration and liquidity remain uncurated.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "ausd-agora",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Agora AUSD terms (Bermuda segregated-account company, holder recourse, and insolvency separation)",
+          "url": "https://static.agora.finance/termsofuse.pdf"
+        },
+        {
+          "label": "Agora AUSD product disclosure (State Street custody and administration; VanEck management)",
+          "url": "https://www.agora.finance/product/ausd"
+        },
+        {
+          "label": "Agora transparency page",
+          "url": "https://docs.agora.finance/developer/transparency"
+        },
+        {
+          "label": "Grant Thornton AUSD Reserve Report for May 2026",
+          "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf"
+        }
+      ],
+      "notes": "Agora's current terms identify a BMA Class F-regulated Bermuda segregated account company, link each AUSD holder to the AUSD segregated account, bar general-creditor recourse even in insolvency, and limit holder recovery to that account's assets. Grant Thornton supplies a current monthly examination. This regulator-supervised, segregated structure supports strong claim and segregation. Agora names State Street as cash custodian and fund administrator and VanEck as reserve manager, supporting adequate custody continuity. Alternate-custodian and failover provisions, provider concentration, custody-contract termination mechanics, and reserve-wide non-rehypothecation were not established; direct redemption also remains eligibility-conditioned and may be delayed or paid in kind after reserve loss or illiquidity.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "strong"
+        },
+        "custodyContinuity": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "usat-tether",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Anchorage USAT policies and disclosures (South Dakota reserve trust, creditor separation, and no-rehypothecation policy)",
+          "url": "https://www.anchorage.com/usat-policies-disclosures"
+        },
+        {
+          "label": "Anchorage USAT reserve-attestation index",
+          "url": "https://www.anchorage.com/platform/usat-reserve-attestations"
+        },
+        {
+          "label": "Deloitte USAT Reserve Report for May 2026",
+          "url": "https://learn.anchorage.com/05.31.26_USAT_Stablecoin_Attestation_Report_signed.pdf"
+        }
+      ],
+      "notes": "OCC-supervised Anchorage Digital Bank places USAT reserves in a South Dakota express trust titled to the USAT Reserve Trust, segregated from the bank and unavailable to its creditors or anyone other than lawful USAT holders, and generally prohibits lending, pledging, or rehypothecation. Deloitte's May 2026 examination itemizes and reconciles the reserves. This supports strong claim and segregation. The policies identify only one or more unnamed third-party depositories, custodians, subcustodians, and asset managers; provider identities, shares, replacement arrangements, and provider-level continuity remain missing, so custody continuity is uncurated. Direct redemption is limited to Anchorage clients.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "strong"
+        }
+      }
+    },
+    {
+      "assetId": "eurcv-societe-generale-forge",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "SG-FORGE CoinVertible product disclosure (reserve composition and bankruptcy-remoteness claim)",
+          "url": "https://www.sgforge.com/product/coinvertible/"
+        },
+        {
+          "label": "SG-FORGE EURCV MiCA whitepaper (EEA holder claim, redemption, safeguarding, and same-group custody risk)",
+          "url": "https://www.sgforge.com/wp-content/uploads/2025/10/EURCV-WP-Ethereum-Solana_XRPL_Stellar_2025.10.14.pdf"
+        }
+      ],
+      "notes": "EURCV is a MiCA e-money token issued by ACPR-licensed electronic-money institution SG-FORGE. Its whitepaper gives EEA-resident permitted holders an Article 49 MiCA issuer claim and par redemption right and documents safeguarded segregated accounts; the product disclosure reports bankruptcy remoteness. That regulator-supervised structure supports strong claim and segregation within the disclosed EEA and permitted-holder scope, not universal direct redemption. The whitepaper names Societe Generale, SG-FORGE's parent, as initial custodian, discloses the same-group conflict, and the July 14 disclosure places 100% of EUR reserves there. Because this is self-reported, concentrated same-group custody without a live alternate provider or independent current reconciliation, custody continuity is limited. Failover mechanics and concentration limits were not established.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "strong"
+        },
+        "custodyContinuity": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "cash-phantom",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Bridge Building stablecoin terms (segregated accounts, assigned redemption right, and denial of reserve property interests)",
+          "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc"
+        },
+        {
+          "label": "Bridge reserve-management documentation (configurable platform provider menu)",
+          "url": "https://apidocs.bridge.xyz/platform/issuance/reserve-management"
+        },
+        {
+          "label": "Phantom CASH product disclosure",
+          "url": "https://www.usecash.xyz/"
+        }
+      ],
+      "notes": "CASH is issued through Bridge Building Inc. Bridge's binding terms require segregated reserve accounts but expressly deny holders any direct or indirect reserve property interest; only an eligible Bridge user receives the assigned contractual redemption right. Claim and segregation is therefore weak. Bridge's reserve documentation lists configurable platform providers such as Lead Bank, BlackRock, Fidelity, Superstate, and BUIDL, but it is not a CASH-specific custody allocation. A current CASH reserve report, exact providers and shares, legal trust or insolvency priority, encumbrance terms, independent reconciliation, and failure continuity were not established, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "moveusd-cfx",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "CFX MoveUSD disclosure (beneficiary account and FDIC-member-bank custody)",
+          "url": "https://cfx.to/"
+        },
+        {
+          "label": "CFX legal and regulatory identity disclosure",
+          "url": "https://cfx.to/about-us"
+        },
+        {
+          "label": "CFX product documentation",
+          "url": "https://docs.cfx.to/docs/key-features"
+        }
+      ],
+      "notes": "CFX self-reports that MoveUSD collateral is held in a beneficiary account at an FDIC-member bank and that custodial accounts are in the bank's name and separate from CFX assets. This is useful segregation evidence but is not a governing holder claim; CFX is a FinCEN money-services business and state money transmitter rather than a prudentially supervised stablecoin issuer. Claim and segregation is therefore limited. The beneficiary's legal identity, holder priority and redemption contract, bank or custodian name and share, non-rehypothecation, alternate-provider recovery, and an independent current reserve reconciliation were not established, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "frxusd-frax",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Frax frxUSD documentation (enshrined-custodian wrapper and redemption mechanics)",
+          "url": "https://docs.frax.com/protocol/assets/frxusd/frxusd"
+        },
+        {
+          "label": "Frax frxUSD mint and redeem routes",
+          "url": "https://docs.frax.com/frxusd/mint-and-redeem-routes"
+        },
+        {
+          "label": "Frax frxUSD balance-sheet API (mixed reserve-token portfolio)",
+          "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+        }
+      ],
+      "notes": "frxUSD is a wrapper stablecoin backed by enshrined-custodian tokens rather than a direct fund share. Frax self-reports that users can redeem through inventory-bearing custodian contracts, but guarantees neither a particular reserve asset nor continuous custodian availability; the current portfolio includes WTGXX, USTB, BUIDL, USDC, and USDB. These issuer-reported indirect wrapper mechanics support only limited fund claim and seniority, not weak contrary evidence. Holder bankruptcy and pass-through terms, an independent composite NAV administrator and method, current underlying maturity or WAM, and a reviewed loss waterfall were not established, so NAV valuation and duration and liquidity remain uncurated.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "mnee-mnee",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "MNEE terms (issuer-held discretionary reserves and customer-only redemption)",
+          "url": "https://www.mnee.io/terms"
+        },
+        {
+          "label": "MNEE transparency disclosure",
+          "url": "https://www.mnee.io/transparency"
+        },
+        {
+          "label": "Wolf & Company MNEE examination report for May 2026",
+          "url": "https://mnee.ghost.io/content/files/2026/06/MNEE---Attestation-Opinion--May-2026--Final.pdf"
+        }
+      ],
+      "notes": "MNEE's terms state that MNEE holds the reserve assets, controls their composition at its sole discretion, and grants a personal redemption contract only to verified customers. Wolf & Company's May 2026 report says assets are held with regulated custodians on behalf of token holders, but does not establish a holder trust, reserve-property interest, or insolvency priority. The governing issuer-held structure contradicts a direct segregated holder claim, so claim and segregation is weak. Custodian identities and shares, non-rehypothecation, and replacement continuity were not established, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "usdsui-sui",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Sui USDsui launch disclosure (Bridge Open Issuance identity)",
+          "url": "https://blog.sui.io/sui-dollar-launch-bridge/"
+        },
+        {
+          "label": "Bridge Building stablecoin terms (segregated accounts and denial of reserve property interests)",
+          "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc"
+        },
+        {
+          "label": "Bridge reserve-management documentation (generic platform providers)",
+          "url": "https://apidocs.bridge.xyz/platform/issuance/reserve-management"
+        }
+      ],
+      "notes": "USDsui is issued through Bridge's Open Issuance platform. Bridge's binding terms segregate reserves but deny holders a reserve property interest and condition the assigned redemption right on becoming an eligible Bridge user, so claim and segregation is weak. Bridge's generic provider menu is not a USDsui-specific reserve or custody allocation. A current USDsui reserve report, provider identities and shares, holder trust or insolvency priority, encumbrance policy, independent reconciliation, and failure continuity were not established, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "jupusd-jupiter",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Jupiter JupUSD user documentation (USDtb/USDC reserves, Porto custody, and benefactor redemption)",
+          "url": "https://docs.jup.ag/user-docs/earn/jupusd"
+        },
+        {
+          "label": "Jupiter JupUSD developer documentation",
+          "url": "https://developers.jup.ag/docs/jupusd"
+        },
+        {
+          "label": "JupUSD transparency dashboard",
+          "url": "https://jupusd.money/transparency"
+        },
+        {
+          "label": "JupUSD live reserve API",
+          "url": "https://api.jupusd.money/api/data"
+        }
+      ],
+      "notes": "Jupiter reports that JupUSD directly holds USDtb and USDC in program vaults and Anchorage Porto wallets and restricts direct minting and redemption to registered benefactors. The reviewed sources do not provide governing holder terms that pass through USDtb trust rights or USDC issuer claims, so claim and segregation remains uncurated. Jupiter names the Anchorage Porto arrangement and explicitly warns that custodian failure can impair reserve access; this self-reported, concentrated custody evidence supports limited custody continuity. The legal owner and signers of the wallets, provider-failure recovery, pass-through rights, and an independent current assets-and-liabilities examination were not established.",
+      "metrics": {},
+      "components": {
+        "custodyContinuity": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "fidd-fidelity",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Fidelity FIDD terms (direct payment promise, segregated reserve pool, and reserve-use restrictions)",
+          "url": "https://www.fidelitydigitalassets.com/fidd-terms"
+        },
+        {
+          "label": "Fidelity FIDD product disclosure (BNY Mellon accounts and Fidelity reserve manager)",
+          "url": "https://www.fidelitydigitalassets.com/stablecoin"
+        },
+        {
+          "label": "PwC FIDD Reserve Attestation Report for May 2026",
+          "url": "https://fwc.widen.net/s/sqqnvljnw5/fidelity-digital-assets---fidd-reserve-attestation-report---may-2026"
+        }
+      ],
+      "notes": "Fidelity Digital Assets, National Association makes each FIDD a direct promise to pay one U.S. dollar and requires a reserve pool held for users in segregated accounts separate from operating assets, with restrictions on reserve use. The terms do not establish a statutory trust, fiduciary duty, or explicit bankruptcy-remote holder property claim, so claim and segregation is adequate rather than strong. Fidelity names The Bank of New York Mellon reserve accounts and Fidelity Management & Research as reserve manager, while PwC's May 2026 report examines segregated BNY Mellon accounts and reserve coverage. This supports adequate custody continuity. Alternate-custodian and failover terms, BNY concentration and subcustody detail, and reserve-wide non-rehypothecation were not established.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "adequate"
+        },
+        "custodyContinuity": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "xusd-straitsx",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "KK Yap XUSD Reserve Account Report for May 2026 (holder trust account, MAS requirements, and itemized reserves)",
+          "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a44bd73219d7e8e1139a331_XUSD_SCS_Reserve_Account_Report_(31_May_2026).docx.pdf"
+        }
+      ],
+      "notes": "KK Yap's May 2026 reasonable-assurance examination confirms that XUSD reserve assets are held in a segregated trust account designated for XUSD holders, verifies compliance with Monetary Authority of Singapore reserve requirements, and itemizes cash, fixed deposits, and short-dated U.S. Treasury exposure. This regulator-supervised holder trust and itemized independent report support strong claim and segregation. The reviewed report does not name the safeguarding institution or any subcustodian, provider allocation, replacement mechanism, or reserve-wide non-rehypothecation covenant, so custody continuity remains uncurated. StraitsX's terms labeled effective July 18, 2026 were not relied on for this July 15 review.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "strong"
+        }
+      }
+    },
+    {
+      "assetId": "gusd-gemini",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Gemini Dollar disclosure (direct Gemini Trust issuance and NYDFS supervision)",
+          "url": "https://www.gemini.com/dollar"
+        },
+        {
+          "label": "BPM GUSD Reserves Report for May 2026 (segregated holder accounts and named reserve banks)",
+          "url": "https://assets.ctfassets.net/jg6lo9a2ukvr/37f7Yx41qkN4XELuRzQrDv/e7d67a902d19e5fbf6a85ee620838d51/Gemini_Trust_Company__LLC_053126_GUSD_Reserves_Report_May_2026_-_Issued.pdf"
+        }
+      ],
+      "notes": "Gemini Trust Company is the NYDFS-supervised direct GUSD issuer. BPM's May 2026 examination reports compliance with NYDFS reserve requirements, including accounts segregated and titled for GUSD holders, supporting strong claim and segregation. The report names State Street Bank and Trust Company and Western Alliance Bank as cash-reserve banks, supporting adequate custody continuity. It does not disclose provider allocations, substitute-custodian or failure-recovery mechanics, or a blanket reserve-wide non-rehypothecation covenant.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "strong"
+        },
+        "custodyContinuity": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "euri-banking-circle",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Banking Circle EURI whitepaper (fiduciary estate, holder benefit, redemption, and bankruptcy remoteness)",
+          "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-white-paper.html"
+        },
+        {
+          "label": "EURI issuer product disclosure",
+          "url": "https://www.eurite.com/"
+        }
+      ],
+      "notes": "Banking Circle's issuer whitepaper describes a separate fiduciary estate under Luxembourg law, identifies EURI holders as third-party beneficiaries, grants par redemption, and states that estate assets are bankruptcy remote from Banking Circle. Because the reviewed evidence is issuer-published and no current itemized independent reserve report was available, claim and segregation is limited rather than strong. Current reserve banks or custodians, provider shares, no-rehypothecation, and replacement continuity were not established, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "eure-monerium",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Monerium EURe disclosure (licensed e-money, safeguarded euros, redemption, and priority claim)",
+          "url": "https://monerium.com/eure/"
+        },
+        {
+          "label": "Monerium fee and redemption schedule",
+          "url": "https://monerium.com/fee-schedule/"
+        }
+      ],
+      "notes": "Monerium self-reports that EURe is licensed e-money representing one safeguarded euro, redeemable at par, with priority claims on safeguarded assets held in segregated accounts. This issuer-only disclosure supports limited claim and segregation. The reviewed sources do not name safeguarding institutions or allocations, provide a current independent assets-and-liabilities report, establish provider-level no-rehypothecation, or describe replacement continuity, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "usdp-paxos",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Paxos stablecoin terms (segregated custodial accounts and bankruptcy-remote holder assets)",
+          "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
+        },
+        {
+          "label": "KPMG USDP Reserve Report for May 2026",
+          "url": "https://framerusercontent.com/assets/aEYkxLoItegSVUhVudrg5lQZQEQ.pdf"
+        },
+        {
+          "label": "Paxos USDP transparency disclosure",
+          "url": "https://www.paxos.com/usdp-transparency"
+        }
+      ],
+      "notes": "Paxos's governing terms place USDP cash and permitted reserve assets in segregated custodial accounts for holders and describe those Paxos Trust assets as bankruptcy remote. KPMG's May 2026 examination covers unencumbered USDP redemption assets in segregated accounts and outstanding redeemable tokens, supporting strong claim and segregation for this supervised trust-company structure. The report aggregates asset types and does not identify current banks, fund custodians, provider shares, alternate-custodian mechanics, or provider-level continuity, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "strong"
+        }
+      }
+    },
+    {
+      "assetId": "usdx-hex-trust",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "HT Digital Assets USDX disclosure (segregated reserve accounts and Hex Trust custody)",
+          "url": "https://www.htdigitalassets.com/"
+        }
+      ],
+      "notes": "HT Digital Assets self-reports that USDX is backed one-to-one by Treasury and cash assets held in segregated accounts and redeemable by approved parties. This supports limited claim and segregation only: the reviewed source does not provide binding holder terms, an independent current reserve examination, legal title, or insolvency priority. Although it refers generally to Hex Trust custody, it does not establish provider allocation, subcustody, non-rehypothecation, or failure and recovery terms, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "usdcv-societe-generale-forge",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "SG-FORGE USDCV whitepaper (EEA holder claim, segregated account, and BNY Mellon custody)",
+          "url": "https://www.sgforge.com/wp-content/uploads/2025/08/SG-Forge-USDCV-White-Paper_V2.0_Ethereum_Solana_11082025.pdf"
+        }
+      ],
+      "notes": "SG-FORGE's MiCA whitepaper gives eligible EEA holders an at-par redemption claim and describes an exclusive insolvency-protected claim over collateral held in a French-law segregated account. Because this evidence is issuer-published without a current itemized independent reserve report, claim and segregation is limited rather than strong. The whitepaper names BNY Mellon SA/NV as the initial collateral custodian and permits later custodians, supporting limited custody continuity. Current independent custody assurance, provider allocation, anti-rehypothecation, and failure or replacement mechanics were not established.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
+        },
+        "custodyContinuity": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "audd-novatti",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "AUDD transparency and reserve-report index",
+          "url": "https://www.audd.digital/transparency/"
+        },
+        {
+          "label": "AUDD agreed-upon-procedures report for June 2026 (named accounts and AMAL Bare Trust)",
+          "url": "https://www.audd.digital/wp-content/uploads/2026/07/AUDC-Agreed-upon-procedures-report-Jun26_.pdf"
+        },
+        {
+          "label": "AUDD whitepaper (holder ownership and segregated reserve structure)",
+          "url": "https://www.audd.digital/wp-content/uploads/2024/05/AUDD-Whitepaper_MAY2024.pdf"
+        }
+      ],
+      "notes": "AUDC Pty Ltd is an AFSL-regulated issuer whose disclosures state that users retain beneficial ownership and that reserves are held in segregated accounts. The June 2026 agreed-upon-procedures report reconciles multi-chain token supply and verifies reserves held through Banking Circle and a Westpac account under an AMAL Bare Trust. The documented holder trust, two named reserve paths, and current itemized factual procedures support adequate claim and segregation and adequate custody continuity. The engagement expressly provides no assurance conclusion, does not verify the previously disclosed In1Bank or ZeroCap paths, and does not establish alternate-custodian succession terms.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "adequate"
+        },
+        "custodyContinuity": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "ctusd-citrea",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Citrea ctUSD documentation (MoonPay issuance and reserve assertions)",
+          "url": "https://docs.citrea.xyz/developer-documentation/citrea-usd-ctusd"
+        },
+        {
+          "label": "Citrea ctUSD launch disclosure",
+          "url": "https://www.blog.citrea.xyz/introducing-citrea-usd-ctusd-the-native-stablecoin-for-bitcoin-issued-by-moonpay-and-powered-by-m0/"
+        }
+      ],
+      "notes": "Citrea self-reports that MoonPay-issued ctUSD reserves are segregated, bankruptcy remote, and held for ctUSD holders. These official product assertions support limited claim and segregation, but they are not MoonPay governing holder terms or a reserve trust agreement. A current independent reserve report, legal enforcement terms, named custodians and allocations, anti-rehypothecation, and failure continuity were not established, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "usdq-quantoz",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Quantoz transparency disclosure (segregated bankruptcy-remote reserve assertion)",
+          "url": "https://www.quantoz.com/transparency"
+        },
+        {
+          "label": "Quantoz EURQ and USDQ product disclosure (DNB-licensed EMI and par redemption)",
+          "url": "https://www.quantoz.com/products/eurq-usdq"
+        }
+      ],
+      "notes": "Quantoz self-reports that DNB-licensed Quantoz Payments issues USDQ with at-par holder redemption and a segregated, bankruptcy-remote reserve structure containing cash and government bonds. Without a token-specific safeguarding agreement or current independent itemized report, this supports limited claim and segregation only. The reviewed current pages refer generically to Tier 1 partners but do not name actual reserve banks or custodians, allocations, anti-rehypothecation, or replacement mechanics, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "europ-schuman",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Schuman EUROP whitepaper (ACPR-authorized EMI, holder redemption, segregation, and insolvency protection)",
+          "url": "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf"
+        },
+        {
+          "label": "Schuman EUROP product disclosure",
+          "url": "https://schuman.io/europ/"
+        },
+        {
+          "label": "Schuman EUROP reserve-audits index and Q1 2026 KPMG report",
+          "url": "https://schuman.io/reserve-audits/"
+        },
+        {
+          "label": "SALVUS/KPMG Q1 2026 EUROP reserve attestation (segregated Societe Generale and Banking Circle balances)",
+          "url": "https://schuman.io/wp-content/uploads/2026/04/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_31_03_2026.pdf"
+        }
+      ],
+      "notes": "Schuman Financial is an ACPR-authorized EMI whose EUROP whitepaper grants at-par redemption, describes reserves segregated for holders, and safeguards those assets against other creditors on issuer insolvency. The direct Q1 2026 KPMG report verifies unencumbered segregated reserve accounts at Societe Generale (EUR 5.204 million) and Banking Circle (EUR 2.182 million) held on behalf of token holders. This supervised EMT structure and current itemized independent evidence support strong claim and segregation and strong custody continuity. Provider failure and replacement terms were not established.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "strong"
+        },
+        "custodyContinuity": {
+          "quality": "strong"
+        }
+      }
+    },
+    {
+      "assetId": "vchf-vnx",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "VNX FRT terms (no holder right and no contractual reserve commitment)",
+          "url": "https://vnx-terms.s3.amazonaws.com/VNX-FRT-Terms.pdf"
+        },
+        {
+          "label": "VNX exchange-operations suspension notice",
+          "url": "https://vnx.li/important-notice-upcoming-suspension-of-exchange-operations-on-the-vnx-platform/"
+        }
+      ],
+      "notes": "VNX's October 2025 FRT terms say that VNX holds equivalent reserves on users' behalf but expressly state that an FRT does not represent a right, that VNX makes no contractual commitment, and that holders cannot claim exchange into VNX Gold. This affirmative contradiction supports weak claim and segregation. VNX also stopped platform exchange operations on June 30, 2026, but that suspension is not evidence of custodian failure. The last located reserve report is stale and does not identify current banks or securities custodians, allocation, non-rehypothecation, succession, or failure recovery, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "audm-macropod",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Macropod financial-services guide and PDS (AUDM Trust, beneficial interest, and insolvency insulation)",
+          "url": "https://docs.macropod.com/legal/combined-financial-services-guide.pdf"
+        },
+        {
+          "label": "Hall Chadwick AUDM reserve verification for March 2026 (Westpac and ASL/Banking Circle trust accounts)",
+          "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a13a5241d9ac9bc9da6c97e_260401%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%2031st%20March%202026.pdf"
+        },
+        {
+          "label": "Macropod AUDM reserve report for July 1, 2026",
+          "url": "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6a4c45fc27ad45b67c2b0d4f_260701%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%201st%20July%202026.pdf"
+        }
+      ],
+      "notes": "Macropod's effective December 2025 PDS identifies AFSL 566313, defines each AUDM as a unit and beneficial interest in the AUDM Trust, and states that trust reserves are insulated from issuer insolvency. Hall Chadwick's March 2026 agreed-upon-procedures report identifies Westpac and Australian Settlements Limited/Banking Circle trust accounts and reports no encumbrances, pledges, or third-party claims; the July issuer report names the same accounts. This supports adequate claim and segregation and adequate custody continuity. The verification expressly provides no assurance conclusion or independence representation, and no substitute-custodian succession clause was established, so neither component is strong.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "adequate"
+        },
+        "custodyContinuity": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "cadc-cad-coin",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Loon CADC terms (CADC Trust, Odyssey trustee, ATB reserve account, and redemption)",
+          "url": "https://loon.finance/terms-of-service/"
+        },
+        {
+          "label": "Loon CADC transparency and May 2026 independent attestation index",
+          "url": "https://loon.finance/transparency/"
+        }
+      ],
+      "notes": "Loon's February 2026 terms make eligible holders beneficiaries of the CADC Trust, name Odyssey Trust as trustee and ATB Financial as custodian of a segregated reserve account, and provide a qualified-holder redemption route. The May 2026 independent attestation series reconciles reserves and supply, supporting adequate claim and segregation. Strong is not warranted because the reviewed sources do not show prudential supervision and the full trust indenture is not public. Custodian/trustee changes are permitted, while direct no-orphan, non-rehypothecation, and failure-recovery evidence was not established, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "eurau-allunity",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "AllUnity EURAU product disclosure",
+          "url": "https://allunity.com/eurau"
+        },
+        {
+          "label": "AllUnity EURAU whitepaper (redemption, separate accounts, and insolvency remoteness)",
+          "url": "https://framerusercontent.com/assets/OfesVRYgYGUO0B0k1xr7EqFHeOQ.pdf"
+        }
+      ],
+      "notes": "AllUnity's BaFin-licensed MiCA EMT whitepaper gives holders an Article 49 at-par redemption right and states that insolvency-remote reserves are held in separate accounts at EU CRR credit institutions. Because this is issuer and regulatory disclosure without a published itemized independent reserve report, claim and segregation is limited. The reviewed sources make generic multi-bank and diversification statements but do not name current banks, provider allocations, non-rehypothecation, or replacement and recovery mechanics, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "cadd-cad-digital",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "CAD Digital CADD terms (registered-holder redemption and reserve-limited recourse)",
+          "url": "https://tetradg.com/cadd-terms-and-conditions/"
+        },
+        {
+          "label": "Tetra Trust CADD trust indenture",
+          "url": "https://tetradg.com/tetra-trust-indenture/"
+        },
+        {
+          "label": "CADD reserve-attestation index and Baker Tilly monthly reports",
+          "url": "https://tetradg.com/cadd-reserve-attestations/"
+        }
+      ],
+      "notes": "CADD terms give registered holders a one-to-one redemption right funded only from the CADD Reserve. Tetra Trust Company administers a segregated irrevocable trust, and the indenture contemplates a successor trustee. Baker Tilly's April 2026 reasonable-assurance report identifies Tetra Trust, holder trust accounts, segregation and unencumbered status, and full cash reconciliation. This supports adequate claim and segregation and adequate custody continuity. The indenture names CAD Digital rather than token holders as trust beneficiary, the underlying depository banks are not public, and complete holder-beneficiary and bank-failure mechanics were not established, preventing stronger ratings.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "adequate"
+        },
+        "custodyContinuity": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "sofid-sofi",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "SoFi SOFID terms (denial of reserve interest, trust, bailment, and custodial relationship)",
+          "url": "https://www.sofi.com/crypto/legal/sofid-terms/"
+        },
+        {
+          "label": "SoFiUSD product disclosure",
+          "url": "https://www.sofi.com/crypto/sofiusd/"
+        }
+      ],
+      "notes": "SoFi's current SOFID terms expressly deny holders any interest or security interest in reserve assets and deny a trust, bailment, or custodial relationship; they also warn that an insolvency claim may be only a general unsecured obligation. This affirmative contrary evidence supports weak claim and segregation despite SoFi Bank's OCC oversight, Federal Reserve settlement disclosure, and monthly reserve reporting. The reviewed sources do not name external reserve custodians or establish provider allocation, non-rehypothecation, or failure continuity, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "bc3m-backed",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Backed bC3M product disclosure",
+          "url": "https://assets.backed.fi/products/bc3m"
+        },
+        {
+          "label": "Backed legal-documentation index and May 2026 prospectus",
+          "url": "https://assets.backed.fi/legal-documentation"
+        }
+      ],
+      "notes": "bC3M is an FMA-approved tracker certificate rather than an Amundi fund share. Backed's May 2026 prospectus creates a product-specific collateral lien for certificate investors through Security Agent Services AG, supporting adequate fund claim and seniority. The reviewed sources do not establish a product-specific independently administered NAV method or cadence, and the underlying index's zero-to-six-month target is not a measured portfolio maturity table, so NAV valuation and duration and liquidity remain uncurated.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "benji-franklin-templeton",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Franklin OnChain U.S. Government Money Fund prospectus",
+          "url": "https://www.franklintempleton.com/forms-literature/download-preview/9001-P"
+        },
+        {
+          "label": "Franklin OnChain U.S. Government Money Fund statement of additional information",
+          "url": "https://www.franklintempleton.com/forms-literature/download-preview/9001-SAI"
+        },
+        {
+          "label": "Franklin OnChain U.S. Government Money Fund current product page",
+          "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29386/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX"
+        }
+      ],
+      "notes": "BENJI represents actual shares of the SEC-registered Franklin OnChain U.S. Government Money Fund, and the governing prospectus provides fund-share redemption rights, supporting strong fund claim and seniority. The prospectus and SAI document hourly NAV calculation and JPMorgan fund-accounting and sub-administration duties, supporting adequate NAV valuation; the daily NAV itself is not independently attested. The effective prospectus caps weighted average maturity at 60 days and weighted average life at 120 days, while the current fund page publishes daily and weekly liquid assets, supporting adequate duration and liquidity.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "strong"
+        },
+        "navValuation": {
+          "quality": "adequate"
+        },
+        "durationAndLiquidity": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "bib01-backed",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Backed bIB01 product disclosure",
+          "url": "https://assets.backed.fi/products/bib01"
+        },
+        {
+          "label": "Backed legal-documentation index and May 2026 prospectus",
+          "url": "https://assets.backed.fi/legal-documentation"
+        }
+      ],
+      "notes": "bIB01 is a tracker certificate rather than a direct iShares ETF share. Backed's May 2026 prospectus creates a product-specific collateral lien for certificate investors through its security agent, supporting adequate fund claim and seniority. The reviewed evidence does not establish an independently administered bIB01 NAV method or cadence, and the underlying index's zero-to-one-year mandate is not a current measured portfolio maturity or liquidity table, so NAV valuation and duration and liquidity remain uncurated.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "brlv-crown",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Crown BRLV product disclosure",
+          "url": "https://www.crown-brlv.com/en/"
+        },
+        {
+          "label": "Crown BRLV transparency disclosure",
+          "url": "https://www.crown-brlv.com/transparencia/"
+        },
+        {
+          "label": "Fact Finance BRLV reserve report for May 2026",
+          "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_5_2026_79d38795ea.pdf"
+        }
+      ],
+      "notes": "Crown self-reports segregated, bankruptcy-remote federal-bond collateral pledged to an independent security agent for direct holder enforcement. The May 2026 Fact Finance report reconciles reserve assets and token supply but is not the governing security instrument and names neither the institutions nor the security agent. This supports only limited fund claim and seniority. Independent NAV administration and valuation method, current portfolio maturity or WAM, and a liquidity table were not established, so NAV valuation and duration and liquidity remain uncurated.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "cgo-comtech",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "ComTech Gold whitepaper (tokenized numbered-bar ownership claim)",
+          "url": "https://comtechgold.com/assets/cgo_whitepaper_v1.pdf"
+        },
+        {
+          "label": "ComTech Gold proof-of-gold disclosure (Transguard and Tradeflow warrants)",
+          "url": "https://comtechgold.com/proof-of-gold-audit"
+        }
+      ],
+      "notes": "ComTech's issuer whitepaper says each CGO token confirms an owner's right to gold from a numbered bar, and its current proof disclosure identifies Transguard storage, segregation, and Tradeflow warrants. Because this is issuer disclosure rather than current governing holder terms or an independently itemized claim report, claim and segregation is limited. Current provider allocation, non-rehypothecation, successor custody, and failure-recovery terms were not established, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "chfau-allunity",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "AllUnity CHF AU product disclosure",
+          "url": "https://allunity.com/chfau/"
+        },
+        {
+          "label": "AllUnity CHF AU whitepaper index",
+          "url": "https://allunity.com/whitepaper/"
+        }
+      ],
+      "notes": "AllUnity's BaFin and MiCA materials give CHF AU holders an at-par redemption right and state that reserves are held separately at EU CRR credit institutions. This issuer and regulatory disclosure supports limited claim and segregation. The reviewed sources name no actual institution or provider allocation, and the Trust Center says a reserve audit report is still forthcoming, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "dgld-gold-token-sa",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "DGLD June 2026 terms (Swiss-law co-ownership, MKS PAMP custody, segregation, and replacement)",
+          "url": "https://dgld.ch/legal/general-terms-conditions-dgld-2"
+        },
+        {
+          "label": "DGLD Gold Mapper and custody register",
+          "url": "https://explorer.dgld.ch/"
+        }
+      ],
+      "notes": "DGLD's current terms make each token proof of Swiss-law co-ownership, identify MKS PAMP as custodian, require segregated and insured custody, preserve tokenholder title, and require transfer to another custodian if the relationship terminates. These direct terms support limited claim and segregation and limited custody continuity. A current published independent itemized attestation was not located; the public Gold Mapper is operator-run, while the terms only promise periodic audits, so neither component reaches adequate.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
+        },
+        "custodyContinuity": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "eurq-quantoz",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Quantoz EURQ and USDQ product disclosure",
+          "url": "https://www.quantoz.com/products/eurq-usdq"
+        },
+        {
+          "label": "Quantoz transparency disclosure",
+          "url": "https://quantoz.com/transparency"
+        }
+      ],
+      "notes": "Quantoz's Dutch EMI and MiCA disclosures describe at-par EURQ redemption and segregated euro reserves. Without a current itemized independent reserve report or token-specific safeguarding instrument, this supports limited claim and segregation only. The reviewed transparency material does not name current reserve banks or custodians, provider allocations, or failure continuity, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "eursafo-spiko",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Spiko SICAV prospectus (CACEIS depositary and administrator; PwC auditor)",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        },
+        {
+          "label": "Spiko EUR SAFO product disclosure",
+          "url": "https://www.spiko.io/blog/spiko-amundi-safo"
+        },
+        {
+          "label": "Spiko smart-contract and NAV publication disclosure",
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        }
+      ],
+      "notes": "EUR SAFO is a Spiko fund product whose current UCITS prospectus names CACEIS as depositary and administrator and PwC as statutory auditor. CACEIS calculates the official daily NAV. These issuer and prospectus disclosures support limited fund claim and seniority and limited NAV valuation, but no current itemized independent fund-reserve attestation was established. The collateralized TRS and financial-instrument portfolio has no reviewed current maturity or WAM table, so duration and liquidity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "limited"
+        },
+        "navValuation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "eutbl-spiko",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Spiko SICAV prospectus (EUTBL fund share, CACEIS depositary/administrator, and PwC auditor)",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        },
+        {
+          "label": "Spiko smart-contract and NAV publication disclosure",
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        }
+      ],
+      "notes": "EUTBL is a share of Spiko's AMF-authorized UCITS SICAV. The current prospectus names CACEIS as depositary and administrator and PwC as auditor, and CACEIS calculates the official daily NAV. These issuer and prospectus disclosures support limited fund claim and seniority and limited NAV valuation, but no current itemized independent fund-reserve attestation was established. Duration and liquidity is omitted because the measured reserve path already supplies maturityDaysMax of 180 days and a one-day liquidity horizon.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "limited"
+        },
+        "navValuation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "gbpe-monerium",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Monerium business terms (e-money issuance/redemption, safeguarding, and insolvency priority)",
+          "url": "https://monerium.com/policies/business-terms-of-service/"
+        }
+      ],
+      "notes": "Monerium's EMI terms establish issuance and redemption, ring-fenced or separate safeguarded accounts, and e-money holders' highest-priority insolvency claim. This binding general e-money disclosure supports limited claim and segregation for GBPe, with the ceiling reflecting GBP's possible additional-agreement requirement and the absence of a current itemized independent reserve report. The actual safeguarding institutions, provider allocations, non-rehypothecation, and failure continuity were not established, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "jtrsy-anemoy",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Anemoy JTRSY fund disclosure (BVI fund share, legal claim, redemption, and bill tenor)",
+          "url": "https://www.anemoy.io/funds/jtrsy"
+        }
+      ],
+      "notes": "Anemoy self-reports that JTRSY is a BVI-regulated fund ownership share with legal claims, daily redemption, and Treasury bills below six months. This issuer-only evidence supports limited fund claim and seniority and limited duration and liquidity. The public page does not name an independent administrator or publish the NAV method and cadence, and the governing private offering documents were not public, so NAV valuation remains uncurated.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "limited"
+        },
+        "durationAndLiquidity": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "kag-kinesis",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Kinesis trust and security disclosure (legal title, off-balance-sheet allocation, ABX custody, and April 2026 audit)",
+          "url": "https://kinesis.money/trust-security/"
+        }
+      ],
+      "notes": "Kinesis self-reports that KAG holders legally own fully allocated bullion outside the Kinesis balance sheet, identifies ABX as custodian, and lists an April 2026 Bureau Veritas audit. This issuer disclosure supports limited claim and segregation and limited custody continuity. The operative trust/custody agreements, vault allocations, replacement and failure process, and reserve-wide rehypothecation prohibition were not public; Brinks and Loomis logistics references were not treated as custodians.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
+        },
+        "custodyContinuity": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "kau-kinesis",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Kinesis trust and security disclosure (legal title, off-balance-sheet allocation, ABX custody, and April 2026 audit)",
+          "url": "https://kinesis.money/trust-security/"
+        }
+      ],
+      "notes": "Kinesis self-reports that KAU holders legally own fully allocated bullion outside the Kinesis balance sheet, identifies ABX as custodian, and lists an April 2026 Bureau Veritas audit. This issuer disclosure supports limited claim and segregation and limited custody continuity. The operative trust/custody agreements, vault allocations, replacement and failure process, and reserve-wide rehypothecation prohibition were not public; Brinks and Loomis logistics references were not treated as custodians.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
+        },
+        "custodyContinuity": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "mtbill-midas",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Midas mTBILL bankruptcy-remoteness disclosure (secured claim and Ankura enforcement)",
+          "url": "https://docs.midas.app/tokens/mtbill/bankruptcy-remoteness"
+        },
+        {
+          "label": "Midas mTBILL independent-reporting disclosure",
+          "url": "https://docs.midas.app/tokens/mtbill/independent-reporting"
+        },
+        {
+          "label": "Midas mTBILL product and redemption disclosure",
+          "url": "https://docs.midas.app/tokens/mtbill"
+        }
+      ],
+      "notes": "Midas documents an FMA-approved prospectus and final terms, a secured German-law tokenholder collateral claim, bankruptcy-remote accounts, and Ankura enforcement, supporting adequate fund claim and seniority. The reserve mandate limits Treasury bills and qualifying funds to below three months, while atomic redemption and daily independent eligibility checks support adequate duration and liquidity. The independently checked reference or oracle price creates no legal entitlement and issuer redemption may differ, so it is not an independently struck fund NAV; NAV valuation remains uncurated. Current custodian allocation and rehypothecation terms were not public.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "adequate"
+        },
+        "durationAndLiquidity": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "mxnb-juno",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Juno MXNB whitepaper (exclusive holder entitlement and segregated SPE reserves)",
+          "url": "https://mxnb.mx/whitepaper.pdf"
+        },
+        {
+          "label": "BDO MXNB attestation report for Q1 2026",
+          "url": "https://assets-prod.mxnb.mx/commons/attestation-reports/2026/mxnb_attestation_q1_2026_en.pdf"
+        },
+        {
+          "label": "MXNB transparency disclosure",
+          "url": "https://mxnb.mx/en-US/transparency"
+        }
+      ],
+      "notes": "The MXNB whitepaper grants holders direct exclusive entitlement to reserves segregated in a single-purpose entity, and BDO's Q1 2026 report reconciles reserve assets and liabilities and identifies Nvio and Hey Banco for that period. This supports adequate claim and segregation. The reviewed sources do not establish current all-provider allocations, custodian failure and replacement treatment, or reserve-wide rehypothecation restrictions, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "ousg-ondo-finance",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Ondo OUSG product disclosure",
+          "url": "https://ondo.finance/ousg"
+        },
+        {
+          "label": "Ondo OUSG trust and transparency disclosure",
+          "url": "https://docs.ondo.finance/qualified-access-products/ousg/trust-and-transparency"
+        },
+        {
+          "label": "Ondo trust and security disclosure",
+          "url": "https://docs.ondo.finance/trust-and-security"
+        }
+      ],
+      "notes": "OUSG is a unitized limited-partnership interest in Ondo I LP, and NAV Consulting has direct read-only account access and provides daily financial reports. The private 3(c)(7), Regulation D fund structure supports adequate fund claim and seniority rather than the registered-fund strong tier, while the independent daily calculation supports strong NAV valuation. No current OUSG portfolio maturity or WAM table was established, so duration and liquidity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "adequate"
+        },
+        "navValuation": {
+          "quality": "strong"
+        }
+      }
+    },
+    {
+      "assetId": "paxg-paxos",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Pax Gold terms and conditions",
+          "url": "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions"
+        },
+        {
+          "label": "PAXG transparency and monthly attestation index",
+          "url": "https://www.paxos.com/paxg-transparency"
+        },
+        {
+          "label": "KPMG PAXG redemption-assets report as of May 29, 2026",
+          "url": "https://framerusercontent.com/assets/V9r8HlI6Q7XkJUWPk6VjXu844.pdf"
+        }
+      ],
+      "notes": "Current PAXG terms make holders beneficial and fractional owners of allocated London Good Delivery bars held through the federally regulated Paxos trust structure. KPMG's May 29, 2026 report independently reconciles 467,075 redeemable tokens to 467,075 fine troy ounces and names Brink's Global Services and ICBC Standard Bank as the LBMA-approved vault providers. The direct holder property rights, segregated allocated bars, regulated trust structure, named custody, and current itemized independent report support strong claim and segregation and strong custody continuity.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "strong"
+        },
+        "custodyContinuity": {
+          "quality": "strong"
+        }
+      }
+    },
+    {
+      "assetId": "tbill-openeden",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "OpenEden TBILL product structuring disclosure",
+          "url": "https://docs.openeden.com/tbill/product-structuring"
+        },
+        {
+          "label": "OpenEden TBILL trust and transparency disclosure",
+          "url": "https://docs.openeden.com/tbill/trust-and-transparency"
+        },
+        {
+          "label": "OpenEden Treasury Bills Vault introduction",
+          "url": "https://docs.openeden.com/treasury-bills-vault/introduction"
+        },
+        {
+          "label": "OpenEden TBILL risk disclosure",
+          "url": "https://docs.openeden.com/tbill/risks"
+        }
+      ],
+      "notes": "Issuer documentation describes a BVI-regulated fund, pro-rata redemption at net asset value, BNY management and custody, and Protege Fund Services administration. These direct but issuer-disclosed arrangements support limited fund claim and seniority and limited NAV valuation. No current public administrator NAV report or itemized independent reserve attestation was established, and the stated target WAM is not a current measured maturity table, so duration and liquidity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "limited"
+        },
+        "navValuation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "thbill-theo",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Theo thBILL disclosure",
+          "url": "https://docs.theo.xyz/thbill"
+        },
+        {
+          "label": "Theo tULTRA disclosure",
+          "url": "https://docs.theo.xyz/thbill/tultra"
+        }
+      ],
+      "notes": "thBILL is an iToken basket currently composed of tULTRA, itself a wrapper of ULTRA shares and USDC-reserved mints. Theo expressly states that participants have no claims over underlying assets, which is affirmative contrary evidence supporting a weak fund claim and seniority rating. Contract exchange-rate mechanics do not establish independent NAV administration, and no current attested maturity or liquidity table was established, so those components remain uncurated.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "uktbl-spiko",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Spiko SICAV prospectus",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        },
+        {
+          "label": "Spiko UKTBL key information document",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/KID_UKTBL_EN.pdf"
+        }
+      ],
+      "notes": "UKTBL is a direct tokenized UCITS fund share. The prospectus names CACEIS as depositary and administrator, PwC as statutory auditor, and documents daily NAV calculation. These direct prospectus disclosures support limited fund claim and seniority and limited NAV valuation, but no current itemized independent fund-reserve attestation was established. Duration and liquidity is omitted because the measured reserve path already supplies a 180-day maximum maturity and one-day liquidity horizon.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "limited"
+        },
+        "navValuation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "ustb-superstate",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Superstate USTB fund and holdings disclosure",
+          "url": "https://superstate.com/assets/ustb"
+        }
+      ],
+      "notes": "Superstate documents USTB as a direct Delaware statutory-trust fund interest and names BNY Mellon, NAV Fund Services, PwC, daily liquidity, and live holdings. The direct fund and service-provider disclosures support limited fund claim and seniority and limited NAV valuation. The holdings are expressly unaudited, and no current independent itemized attestation or current WAM and liquidity table was established, so duration and liquidity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "limited"
+        },
+        "navValuation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "ustbl-spiko",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Spiko SICAV prospectus",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        },
+        {
+          "label": "Spiko USTBL key information document",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/KID_USTBL_EN.pdf"
+        }
+      ],
+      "notes": "USTBL is a direct tokenized UCITS fund share. The prospectus names CACEIS as depositary and administrator, PwC as statutory auditor, and documents daily NAV calculation. These direct prospectus disclosures support limited fund claim and seniority and limited NAV valuation, but no current itemized independent fund-reserve attestation was established. Duration and liquidity is omitted because the measured reserve path already supplies a 180-day maximum maturity and one-day liquidity horizon.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "limited"
+        },
+        "navValuation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "vbill-vaneck",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "VanEck VBILL launch and service-provider disclosure",
+          "url": "https://investors.securitize.io/news/news-details/2025/VanEck-Launches-First-Tokenized-Fund-VBILL-on-Securitize-05-13-2025/default.aspx"
+        }
+      ],
+      "notes": "The launch disclosure establishes VBILL as a direct BVI fund share and names State Street as custodian and Securitize Fund Services as administrator, supporting limited fund claim and seniority. It says RedStone delivers daily NAV data but does not establish who independently strikes the official NAV or the valuation method, so NAV valuation remains uncurated. Duration and liquidity is omitted because the measured reserve path already supplies a 397-day maximum maturity and one-day liquidity horizon.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "vnxau-vnx",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "AREVA VNXAU agreed-upon-procedures report as of December 31, 2025",
+          "url": "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf"
+        }
+      ],
+      "notes": "AREVA's agreed-upon-procedures report reconciles 13,100 grams at the named Philoro account to all-chain VNXAU supply and records management's segregated-deposit assertion. The procedure provides no assurance on management's legal-title and segregation notes, so it supports only limited claim and segregation. It does not establish Philoro failure, replacement, allocation, or non-rehypothecation mechanics, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "wtgxx-wisdomtree",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "WisdomTree Government Money Market Digital Fund document gateway",
+          "url": "https://dataspanapi.wisdomtree.com/pdr/documents/WEBSITE_FUND_DETAILS/WDT/US/EN-US/WTGXX_3/"
+        }
+      ],
+      "notes": "Official fund materials establish WTGXX as an open-end 1940 Act Rule 2a-7 fund, supporting limited fund claim and seniority. The materials document a daily 4 p.m. NAV but do not identify an independent administrator or establish the valuation method, so NAV valuation remains uncurated. Rule 2a-7 maturity and liquidity constraints are mandate limits rather than a current itemized maturity attestation, so duration and liquidity also remains uncurated.",
+      "metrics": {},
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "xaum-matrixdock",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Matrixdock XAUm product disclosure",
+          "url": "https://www.matrixdock.com/xaum"
+        },
+        {
+          "label": "Matrixdock July 2025 XAUm audit announcement",
+          "url": "https://www.matrixdock.com/blog/announcements/matrixdock-publishes-its-second-independent-audit-report-on-xaum-gold"
+        },
+        {
+          "label": "Matrixdock XAUm purpose-trust disclosure",
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/token-features"
+        }
+      ],
+      "notes": "Issuer materials describe a purpose-trust structure, bankruptcy-remoteness intent, redemption, and named Brink's and Malca-Amit vaults. The public July 2025 Bureau Veritas audit covered 13,534 tokens while the current product page reports 16,331, so it is not current assurance for present supply; this supports only limited claim and segregation. No public tokenholder trust instrument or custodian failure and replacement terms were established, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "xaut-tether",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "BDO XAUT ISAE 3000R reasonable-assurance report as of March 31, 2026",
+          "url": "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_31.03.2026_RC187322026DV0089.pdf"
+        },
+        {
+          "label": "Tether Gold reports index",
+          "url": "https://gold.tether.to/reports"
+        }
+      ],
+      "notes": "BDO's March 31, 2026 ISAE 3000R reasonable-assurance report reconciles 707,747.090 XAUT to gold custody holdings, states that holders own specified bars rather than TG Commodities, and identifies the issuer as authorized under El Salvador's stablecoin regime. The supervised issuer, holder ownership, inventory and ledger reconciliation, and current reasonable-assurance conclusion support strong claim and segregation. The report does not name custodians, allocate custody, prohibit rehypothecation, or document replacement and insolvency mechanics, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "strong"
+        }
+      }
+    },
+    {
+      "assetId": "xo-exodus",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "MoonPay stablecoin terms",
+          "url": "https://www.moonpay.com/es/legal/stablecoin_terms"
+        },
+        {
+          "label": "Exodus, MoonPay, and M0 XO launch disclosure",
+          "url": "https://www.exodus.com/investors/news-events/press-releases/detail/95/exodus-moonpay-and-m0-unveil-a-new-digital-dollar-for-everyday-payments"
+        }
+      ],
+      "notes": "The XO launch disclosure identifies MoonPay as issuer and manager, and MoonPay's stablecoin terms require reserves held on holders' behalf in segregated accounts with one-to-one redemption. These binding general terms support limited claim and segregation. No XO-specific dated reserve report, named provider, custody contract, non-rehypothecation provision, or failure and replacement process was established; M0 evidence was not passed through, so custody continuity remains uncurated.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "veur-vnx",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "AREVA VNX reserve report as of December 31, 2023",
+          "url": "https://vnx.li/wp-content/uploads/2024/01/VNX-COMMODITIES-AG_Reserve-Report-31.12.2023.pdf"
+        },
+        {
+          "label": "AREVA VNX reserve report as of December 31, 2024",
+          "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
+        }
+      ],
+      "notes": "AREVA's published VEUR procedures expressly state that reserve accounts and assets belong on VNX Commodities AG's balance sheet and that issuer-bankruptcy segregation and effective contractual holder recovery are legally undefined. This affirmative contrary evidence supports weak claim and segregation and weak custody continuity; the ratings are not inferred from a missing document. The reports are point-in-time agreed-upon procedures, do not name the bank or custodian, and provide no assurance conclusion.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "weak"
+        },
+        "custodyContinuity": {
+          "quality": "weak"
         }
       }
     }
