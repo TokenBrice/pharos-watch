@@ -1,5 +1,12 @@
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
-import { groupIncidents, quarantinedCoins, structuralClass, type DdrActiveEventInput, type DdrIncident } from "@shared/lib/depeg-resolver";
+import {
+  groupIncidents,
+  quarantinedCoins,
+  structuralClass,
+  type DdrActiveEventInput,
+  type DdrIncident,
+  type DdrSafetyContextProvenance,
+} from "@shared/lib/depeg-resolver";
 import { DDR_V2_EFFECTIVE_AT } from "@shared/lib/depeg-resolver-version";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
@@ -18,6 +25,8 @@ import {
   RedemptionBackstopSnapshotUnavailableError,
 } from "../../lib/redemption-backstops-store";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { loadReportCardCache, REPORT_CARD_CACHE_MAX_AGE_MS } from "../../lib/report-card-cache";
+import { isCurrentSafetyScoreV8Identity } from "../../lib/safety-score-current-identity";
 import { loadPublishedStressSignalGeneration } from "../../lib/stress-signals-current-rows";
 import {
   CURRENT_PRICE_MAX_AGE_SEC,
@@ -45,6 +54,7 @@ export interface DdrLoadedContext {
   liqTvlChange7dByCoin: Map<string, number>;
   redemptionByCoin: Map<string, { stablecoin_id: string; immediate_capacity_ratio: number | null; route_family: string | null; updated_at: number }>;
   safetyByCoin: Map<string, { stablecoin_id: string; grade: string; score: number | null; recorded_at: number }>;
+  safetyContext: DdrSafetyContextProvenance;
   lineage: DdrLineage;
 }
 
@@ -295,16 +305,42 @@ export async function loadDdrContext(
   });
   const redemptionByCoin = new Map(redemptionResult.rows.map((r) => [r.stablecoin_id, r]));
 
-  const safetyResult = await queryRows("safety_grade_history", () => db
-    .prepare(
-      `SELECT h.stablecoin_id, h.grade, h.score, h.recorded_at FROM safety_grade_history h ` +
-        `JOIN (SELECT stablecoin_id, MAX(recorded_at) mr FROM safety_grade_history ` +
-        `WHERE stablecoin_id IN (${placeholders(activeCoinIds.length)}) GROUP BY stablecoin_id) m ` +
-        `ON h.stablecoin_id = m.stablecoin_id AND h.recorded_at = m.mr`,
-    )
-    .bind(...activeCoinIds)
-    .all<{ stablecoin_id: string; grade: string; score: number | null; recorded_at: number }>());
-  const safetyByCoin = new Map(safetyResult.rows.map((s) => [s.stablecoin_id, s]));
+  let safetyByCoin = new Map<string, { stablecoin_id: string; grade: string; score: number | null; recorded_at: number }>();
+  let safetyContext: DdrSafetyContextProvenance = {
+    status: "cache-unavailable",
+    reason: "report-card-cache-unavailable",
+    identity: null,
+  };
+  try {
+    const safetyCache = await loadReportCardCache(db, {
+      maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
+      requireCompleteness: true,
+    });
+    if (safetyCache.kind !== "ok") {
+      safetyContext = { status: "cache-unavailable", reason: safetyCache.reason, identity: null };
+    } else {
+      const identity = safetyCache.payload.safetyScoreIdentity ?? null;
+      if (!identity) {
+        safetyContext = { status: "identity-missing", reason: "report-card-cache-identity-missing", identity: null };
+      } else if (identity.model !== "v8") {
+        safetyContext = { status: "unsupported-model", reason: `safety-model-${identity.model}`, identity };
+      } else if (!isCurrentSafetyScoreV8Identity(identity)) {
+        safetyContext = { status: "identity-mismatch", reason: "v8-identity-not-current", identity };
+      } else {
+        safetyContext = { status: "v8-identified", reason: null, identity };
+        safetyByCoin = new Map(
+          activeCoinIds.flatMap((stablecoinId) => {
+            const score = safetyCache.payload.scores[stablecoinId];
+            return score
+              ? [[stablecoinId, { stablecoin_id: stablecoinId, grade: score.grade, score: score.score, recorded_at: safetyCache.payload.updatedAt }] as const]
+              : [];
+          }),
+        );
+      }
+    }
+  } catch {
+    safetyContext = { status: "cache-unavailable", reason: "report-card-cache-read-failed", identity: null };
+  }
 
   const resolverHealthFailures = [
     supplyResult.error,
@@ -312,7 +348,6 @@ export async function loadDdrContext(
     liqResult.error,
     liqHistResult.error,
     redemptionResult.error,
-    safetyResult.error,
   ].filter((reason): reason is string => reason != null);
   if (resolverHealthFailures.length > 0) {
     return { kind: "degraded", reason: resolverHealthFailures.join(","), dataAsOf: currentDeviation.dataAsOf };
@@ -332,6 +367,7 @@ export async function loadDdrContext(
       liqTvlChange7dByCoin,
       redemptionByCoin,
       safetyByCoin,
+      safetyContext,
       lineage: {
         trainingWindow: { start: windowStart, end: nowSec },
         eventCount: historical.length,

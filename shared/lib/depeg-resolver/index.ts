@@ -81,6 +81,7 @@ export function resolveDepeg(input: DdrResolveInput): DdrRow {
       liquidityScore: live.liquidityScore ?? null,
       safetyGrade: live.safetyGrade ?? null,
       safetyScore: live.safetyScore ?? null,
+      safetyContext: live.safetyContext ?? { status: "identity-missing", reason: "safety-context-not-provided", identity: null },
       supplyChange7dPct: supply.change7dPct,
       supplyChange30dPct: supply.change30dPct,
       mintSurge: supply.mintSurge,

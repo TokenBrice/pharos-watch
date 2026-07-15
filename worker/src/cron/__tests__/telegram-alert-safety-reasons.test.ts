@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addSafetyReasonLines } from "../telegram-alert-safety-reasons";
+import { addSafetyReasonLines, buildV9SafetyReason } from "../telegram-alert-safety-reasons";
 import type { SafetySnapshot } from "../telegram-alert-snapshots";
 import type { SafetyChange } from "../../lib/telegram-alerts";
 
@@ -13,6 +13,27 @@ const BASE_CHANGE: SafetyChange = {
 };
 
 describe("telegram alert safety reasons", () => {
+  it("uses native V9 cap and evidence explanations without V8 dimension projection", () => {
+    expect(buildV9SafetyReason({
+      grade: "C",
+      score: 58,
+      v9Explain: {
+        bindingCap: { reason: "Issuer discretion limits primary exit" },
+        reasons: [{ message: "ignored" }],
+        weakestPillar: { pillar: "exit", score: 41 },
+      },
+    })).toBe("Reason: Issuer discretion limits primary exit.");
+    expect(buildV9SafetyReason({
+      grade: "C",
+      score: 58,
+      v9Explain: {
+        bindingCap: null,
+        reasons: [],
+        weakestPillar: { pillar: "exit", score: 41 },
+      },
+    })).toBe("Reason: Weakest pillar is exit (41).");
+  });
+
   it("uses active-depeg cap explain data as the safety Reason line", () => {
     const current = snapshot({
       grade: "F",

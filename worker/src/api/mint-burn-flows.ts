@@ -14,7 +14,7 @@ import type { StablecoinData } from "@shared/types/market";
 import { sumMcapForTrackedChains } from "../lib/mint-burn-mcap-weighting";
 import { loadReportCardCache } from "../lib/report-card-cache";
 import {
-  buildFlightToQualityClassification,
+  buildFlightToQualityClassificationFromV8Cache,
   type FlightToQualityClassification,
 } from "../lib/flight-to-quality-classification";
 import { buildInClause } from "../lib/db";
@@ -93,7 +93,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
     });
     classification =
       reportCardCache.kind === "ok"
-        ? buildFlightToQualityClassification(reportCardCache.payload)
+        ? buildFlightToQualityClassificationFromV8Cache(reportCardCache.payload)
         : { kind: "unavailable", reason: reportCardCache.reason };
   } catch (error) {
     console.warn(
@@ -196,8 +196,9 @@ function cachedAggregateSafetyReason(
 ): string | null {
   if (reportCardCache.kind !== "ok") return reportCardCache.reason;
 
-  const classification = buildFlightToQualityClassification(reportCardCache.payload);
+  const classification = buildFlightToQualityClassificationFromV8Cache(reportCardCache.payload);
   if (classification.kind !== "ok") return classification.reason;
+  if (classification.classification.safetyScoreIdentity.model !== "v8") return "identity-mismatch";
 
   return safetyScoreV8PublicationIdentitiesMatch(cachedIdentity, classification.classification.safetyScoreIdentity)
     ? null

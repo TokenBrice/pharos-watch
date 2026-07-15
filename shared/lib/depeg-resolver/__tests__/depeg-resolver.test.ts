@@ -97,6 +97,7 @@ describe("resolveOutlook — acceptance cases", () => {
       baseSupply({ mintSurge: false, change7dPct: 1 }),
       baseLive({
         safetyScore: 92,
+        safetyContext: { status: "v8-identified", reason: null, identity: null },
         liquidityScore: 80,
         redemptionCapacityRatio: 0.2,
         redemptionRouteFamily: "collateral-redeem",
@@ -118,9 +119,26 @@ describe("resolveOutlook — acceptance cases", () => {
         collateralQuality: "rwa",
       }),
       baseSupply({ mintSurge: false, change7dPct: -2 }),
-      baseLive({ safetyScore: 80, liquidityScore: 70, blacklistSurge: false }),
+      baseLive({
+        safetyScore: 80,
+        safetyContext: { status: "v8-identified", reason: null, identity: null },
+        liquidityScore: 70,
+        blacklistSurge: false,
+      }),
     );
     expect(r.tier).not.toBe("recovery_unlikely");
+  });
+
+  it("does not project V8 numeric recovery anchors onto a V9 or mismatched safety context", () => {
+    for (const status of ["unsupported-model", "identity-mismatch"] as const) {
+      const r = resolveOutlook(
+        event(),
+        coin({ mechanismArchetype: "fiat-cash", authorityPosture: "concentrated-admin" }),
+        baseSupply(),
+        baseLive({ safetyScore: 99, safetyContext: { status, reason: "test", identity: null } }),
+      );
+      expect(r.factors.some((factor) => factor.code === "R5_proven_meanreversion")).toBe(false);
+    }
   });
 
   it("frozen issuer with an open event → recovery_unlikely", () => {

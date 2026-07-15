@@ -9,11 +9,15 @@ import {
 import { activeDepegCapScore } from "@shared/lib/report-card-active-depeg";
 import { round1, roundScore } from "@shared/lib/math";
 import type { DimensionKey, ReportCard, ReportCardGrade, SafetyAlertSourceState } from "@shared/types";
+import { ReportCardsV9ResponseSchema, type ReportCardsV9Response } from "@shared/types/report-cards-v9";
 import type { ReportCardPublicationCompleteness } from "./report-card-publication";
 import {
   SafetyScoreV8PublicationIdentitySchema,
+  SafetyScorePublicationIdentitySchema,
+  type SafetyScorePublicationIdentity,
   type SafetyScoreV8PublicationIdentity,
 } from "@shared/types/safety-score-publication";
+import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 
 export const ALERT_SAFETY_SOURCE_CACHE_KEY = "alert:safety-source-cache";
 const ALERT_SAFETY_SOURCE_SCHEMA_VERSION = "1";
@@ -81,6 +85,25 @@ export interface AlertSafetySourceRow {
   explain?: AlertSafetyExplainSnapshot;
 }
 
+/** Native V9 explanation; it deliberately does not project V9 pillars to V8 dimensions. */
+export interface AlertSafetyV9ExplainSnapshot {
+  reasons: Array<{ code: string; message: string }>;
+  bindingCap: { kind: string; limit: number; reason: string } | null;
+  weakestPillar: { pillar: string; score: number } | null;
+}
+
+export interface AlertSafetyV9SourceRow extends AlertSafetySourceRow {
+  v9Explain: AlertSafetyV9ExplainSnapshot;
+}
+
+export interface AlertSafetyV9SourceEnvelope {
+  generation: string;
+  lifecycle: "shadow";
+  safetyScoreIdentity: SafetyScoreV9PublicationIdentity;
+  publishedAt: number;
+  snapshot: Record<string, AlertSafetyV9SourceRow>;
+}
+
 export type AlertSafetySourceSnapshot = Record<string, AlertSafetySourceRow>;
 
 export interface AlertSafetySourceEnvelope {
@@ -95,7 +118,7 @@ export interface AlertSafetySourceEnvelope {
 
 export interface AlertSafetySnapshotEnvelope {
   generation: string;
-  safetyScoreIdentity?: SafetyScoreV8PublicationIdentity;
+  safetyScoreIdentity?: SafetyScorePublicationIdentity;
   snapshot: AlertSafetySourceSnapshot;
 }
 
@@ -608,6 +631,38 @@ export function buildAlertSafetySourceEnvelope(
   };
 }
 
+/**
+ * Produces an isolated V9 alert source only for an explicit shadow consumer.
+ * The dispatcher does not call this while V8 remains the active alert model.
+ */
+export function buildAlertSafetyV9SourceEnvelope(
+  snapshot: ReportCardsV9Response,
+  options: { allowShadowLifecycle: boolean },
+): AlertSafetyV9SourceEnvelope | null {
+  if (!options.allowShadowLifecycle) return null;
+  const parsed = ReportCardsV9ResponseSchema.safeParse(snapshot);
+  if (!parsed.success) return null;
+  const source = parsed.data;
+  return {
+    generation: `safety-v9-alert-source-v${ALERT_SAFETY_SOURCE_SCHEMA_VERSION}`,
+    lifecycle: "shadow",
+    safetyScoreIdentity: source.safetyScoreIdentity,
+    publishedAt: source.updatedAt,
+    snapshot: Object.fromEntries(source.cards.map((card) => [card.id, {
+      grade: card.grade,
+      score: card.score,
+      methodologyVersion: source.safetyScoreIdentity.methodologyVersion,
+      v9Explain: {
+        reasons: card.evidence.reasons.map((reason) => ({ code: reason.code, message: truncateDetail(reason.message) })),
+        bindingCap: card.bindingCap == null
+          ? null
+          : { kind: card.bindingCap.kind, limit: card.bindingCap.limit, reason: truncateDetail(card.bindingCap.reason) },
+        weakestPillar: card.weakestPillar,
+      },
+    }])),
+  };
+}
+
 function parseAlertSafetySourceEnvelope(
   cached: { value: string; updatedAt: number } | null,
 ): AlertSafetySourceEnvelope | null {
@@ -721,11 +776,11 @@ export function assessAlertSafetySourceCache(
 export function buildAlertSafetySnapshotEnvelope(
   snapshot: AlertSafetySourceSnapshot,
   generation: string,
-  safetyScoreIdentity: SafetyScoreV8PublicationIdentity,
+  safetyScoreIdentity: SafetyScorePublicationIdentity,
 ): AlertSafetySnapshotEnvelope {
   return {
     generation,
-    safetyScoreIdentity: SafetyScoreV8PublicationIdentitySchema.parse(safetyScoreIdentity),
+    safetyScoreIdentity: SafetyScorePublicationIdentitySchema.parse(safetyScoreIdentity),
     snapshot,
   };
 }
@@ -741,7 +796,7 @@ export function parseAlertSafetySnapshotEnvelope(
     const generation = typeof record.generation === "string" ? record.generation : null;
     const snapshot = parseSnapshot(record.snapshot);
     if (generation == null || snapshot == null) return null;
-    const parsedIdentity = SafetyScoreV8PublicationIdentitySchema.safeParse(record.safetyScoreIdentity);
+    const parsedIdentity = SafetyScorePublicationIdentitySchema.safeParse(record.safetyScoreIdentity);
 
     return {
       generation,
@@ -757,4 +812,21 @@ export function parseAlertSafetySnapshotEnvelope(
     generation: "",
     snapshot: legacySnapshot,
   };
+}
+
+/** Model/policy boundaries must seed a new alert baseline, never emit a synthetic movement. */
+export function alertSafetyIdentitiesAreComparable(
+  left: SafetyScorePublicationIdentity,
+  right: SafetyScorePublicationIdentity,
+): boolean {
+  if (
+    left.model !== right.model ||
+    left.schemaVersion !== right.schemaVersion ||
+    left.methodologyVersion !== right.methodologyVersion ||
+    left.evaluationBuildDigest !== right.evaluationBuildDigest
+  ) {
+    return false;
+  }
+  if (left.model === "v8") return right.model === "v8";
+  return right.model === "v9" && left.policyId === right.policyId && left.policyDigest === right.policyDigest;
 }

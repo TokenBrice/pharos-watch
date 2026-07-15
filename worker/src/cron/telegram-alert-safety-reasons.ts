@@ -60,6 +60,22 @@ export type SafetyChangeWithExplain = SafetyChange & {
   currentExplain?: DispatchSafetyExplainSnapshot;
 };
 
+/** Native V9 explanation for a model-aware caller; V8 formatting remains unchanged. */
+export function buildV9SafetyReason(
+  current: Pick<AlertSafetySourceRow, "grade" | "score"> & { v9Explain?: { reasons: Array<{ message: string }>; bindingCap: { reason: string } | null; weakestPillar: { pillar: string; score: number } | null } },
+  previous?: Pick<AlertSafetySourceRow, "grade" | "score"> & { v9Explain?: { bindingCap: { reason: string } | null } },
+): string {
+  if (current.v9Explain?.bindingCap && current.v9Explain.bindingCap.reason !== previous?.v9Explain?.bindingCap?.reason) {
+    return `Reason: ${ensureSentence(current.v9Explain.bindingCap.reason)}`;
+  }
+  const reason = current.v9Explain?.reasons[0]?.message;
+  if (reason) return `Reason: ${ensureSentence(reason)}`;
+  if (current.v9Explain?.weakestPillar) {
+    return `Reason: Weakest pillar is ${current.v9Explain.weakestPillar.pillar} (${Math.round(current.v9Explain.weakestPillar.score)}).`;
+  }
+  return `Reason: Safety Score is ${current.grade}${current.score == null ? "." : ` (${Math.round(current.score)}).`}`;
+}
+
 type Direction = "upgrade" | "downgrade" | "mixed" | "flat";
 
 export function addSafetyReasonLines(

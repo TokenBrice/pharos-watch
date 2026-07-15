@@ -170,7 +170,7 @@ The table below is representative, not exhaustive. The complete active registry 
 | apxUSD | apxusd-apyx | 18 | Extended | Transfer |
 | reUSD | reusd-re-protocol | 18 | Extended | Transfer (zero-address) |
 
-Public `/api/mint-burn-flows` and the daily digest collector now use the same **report-card-cache driven** FTQ classification. Coins with report-card score `>= 65` are treated as `safe`, scores `< 50` are treated as `risky`, and the middle band is ignored for FTQ. When `report_card_cache` is missing, stale, or malformed, FTQ classification is treated as unavailable instead of silently falling back to a hardcoded safe-haven list.
+Public `/api/mint-burn-flows` and the daily digest collector use the same **report-card-cache driven** FTQ classification. `B-` or better is `safe`; `C+`, `C`, and `C-` are neutral; grades below `C-` are `risky`. Classification requires a complete current Safety Score identity and is unavailable when the cache is missing, stale, malformed, or identity-mismatched instead of silently falling back to a hardcoded safe-haven list. The V9 classifier uses these grade classes only through an explicit model-aware source opt-in; the current public/digest path remains V8.
 
 Per-config adapter provenance is now surfaced through coin `coverage` metadata:
 - `adapterKinds` — active decoding families for the coin (`transfer-zero-address`, `custom-events`, `mixed`)
@@ -390,7 +390,7 @@ Detects simultaneous outflows from risky stablecoins and inflows to safe havens.
 
 - **Activation:** `riskyNet24h < -$100M` AND `safeNet24h > +$100M`
 - **Intensity:** `min(100, |riskyNet24h| / $1B * 100)`
-- Safe/risky cohorts come from the report-card cache: Safety Score `>=65` is safe, `<50` is risky, and `50–64` is ignored. If the report-card cache is unavailable, flight-to-quality classification is unavailable rather than falling back to hardcoded safe havens.
+- Safe/risky cohorts come from the report-card cache: `B-` or better is safe, `C+` through `C-` is neutral, and grades below `C-` are risky. If the complete identified report-card cache is unavailable, flight-to-quality classification is unavailable rather than falling back to hardcoded safe havens.
 
 ---
 
