@@ -46,23 +46,143 @@
       "chain": "ethereum",
       "address": "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c",
       "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x60b14ec49874af1ba471685cb11132101aebdf09",
+      "decimals": 18
+    },
+    {
+      "chain": "tempo",
+      "address": "0x20c000000000000000000000ab02d39df30bd17e",
+      "decimals": 6
     }
   ],
-  "deploymentModel": "single-chain",
+  "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
-    "tier": "single-chain-or-native",
-    "summary": "IUSD is tracked only on Ethereum in Pharos and reviewed infiniFi docs do not identify a material cross-chain route for the token. The metadata row is treated as single-chain/native.",
-    "reviewedAt": "2026-06-13",
+    "tier": "external-lock-mint",
+    "summary": "infiniFi publishes an Ethereum iUSD ReceiptToken, a direct LayerZero OFT on BNB Chain, and a Tempo TIP-20 iUSD with an OFT Adapter. The Tempo adapter's lock/unlock side is the weakest documented durable cross-chain route, so the profile uses external-lock-mint. The issuer-listed Plasma address is excluded because pinned on-chain metadata identifies it as iUSDT rather than iUSD.",
+    "reviewedAt": "2026-07-15",
     "reviewer": "Codex bridge route review",
     "confidence": "verified",
-    "sources": [
+    "protocols": [
       {
-        "label": "infiniFi docs",
-        "url": "https://docs.infinifi.xyz/"
+        "source": "issuer",
+        "name": "infiniFi iUSD multi-network deployment inventory",
+        "url": "https://docs.infinifi.xyz/dev-docs/contracts.md",
+        "bridgeTypes": ["native-issuance", "oft", "oft-adapter"],
+        "note": "The issuer lists the BNB iUSD OFT and Tempo TIP-20 iUSD OFT Adapter. Its Plasma label conflicts with the address's pinned iUSDT metadata, so that address is not accepted as an iUSD deployment."
       },
       {
-        "label": "infiniFi stats",
-        "url": "https://stats.infinifi.xyz/"
+        "source": "docs",
+        "name": "LayerZero OFT / OFT Adapter",
+        "slug": "layerzero",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference",
+        "bridgeTypes": ["burn-mint", "lock-mint"],
+        "note": "LayerZero documents direct OFTs as burn/mint and the default OFT Adapter as a token-locking adapter."
+      }
+    ],
+    "sources": [
+      {
+        "label": "infiniFi contract addresses",
+        "url": "https://docs.infinifi.xyz/dev-docs/contracts.md"
+      },
+      {
+        "label": "infiniFi ReceiptToken documentation",
+        "url": "https://docs.infinifi.xyz/dev-docs/tokens/receipt-token.md"
+      },
+      {
+        "label": "LayerZero OFT reference",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      },
+      {
+        "label": "LayerZero OFT Adapter source",
+        "url": "https://github.com/LayerZero-Labs/devtools/blob/main/packages/oft-evm/contracts/OFTAdapter.sol"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x48f9e38f3070ad8945dfeae3fa70987722e3d89c",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c",
+        "protocol": "infiniFi",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-15",
+        "sources": [
+          {
+            "label": "infiniFi ReceiptToken documentation",
+            "url": "https://docs.infinifi.xyz/dev-docs/tokens/receipt-token.md"
+          },
+          {
+            "label": "infiniFi contract addresses",
+            "url": "https://docs.infinifi.xyz/dev-docs/contracts.md"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x60b14ec49874af1ba471685cb11132101aebdf09",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x60b14ec49874af1ba471685cb11132101aebdf09",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": ["layerzero:oft:iusd"],
+        "observedAt": "2026-07-15",
+        "observedBlock": 110098130,
+        "sources": [
+          {
+            "label": "infiniFi contract addresses (BNB iUSD OFT)",
+            "url": "https://docs.infinifi.xyz/dev-docs/contracts.md"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "tempo:0x20c000000000000000000000ab02d39df30bd17e",
+        "destinationChain": "tempo",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x20c000000000000000000000ab02d39df30bd17e",
+        "protocol": "LayerZero OFT Adapter",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": ["layerzero:oft:iusd"],
+        "observedAt": "2026-07-15",
+        "observedBlock": 30063878,
+        "sources": [
+          {
+            "label": "infiniFi contract addresses (Tempo TIP-20 iUSD and OFT Adapter)",
+            "url": "https://docs.infinifi.xyz/dev-docs/contracts.md"
+          },
+          {
+            "label": "LayerZero OFT Adapter source",
+            "url": "https://github.com/LayerZero-Labs/devtools/blob/main/packages/oft-evm/contracts/OFTAdapter.sol"
+          },
+          {
+            "label": "Tempo RPC",
+            "url": "https://rpc.tempo.xyz"
+          }
+        ]
       }
     ]
   },
@@ -82,10 +202,6 @@
         "url": "https://bscscan.com/address/0x60B14ec49874Af1BA471685cb11132101aeBdF09"
       },
       {
-        "label": "Plasma IUSD ReceiptToken verified source",
-        "url": "https://plasmascan.to/address/0x626c23fE62F5C3a45fe0F1E79Ea577Bd7d134d54"
-      },
-      {
         "label": "Tempo TIP-20 IUSD",
         "url": "https://explore.tempo.xyz/address/0x20c000000000000000000000AB02D39df30bd17E"
       },
@@ -102,7 +218,7 @@
         "url": "https://github.com/InfiniFi-Labs/infinifi-protocol"
       }
     ],
-    "evidence": "The official deployment inventory includes Ethereum ReceiptToken 0x48f9e38f3070ad8945dfeae3fa70987722e3d89c, BNB OFT IUSD 0x60B14ec49874Af1BA471685cb11132101aeBdF09, Plasma IUSD 0x626c23fE62F5C3a45fe0F1E79Ea577Bd7d134d54, and Tempo TIP-20 IUSD 0x20c000000000000000000000AB02D39df30bd17E with OFT adapter 0xfA339b5a3AD03fd9Ff048F574636b60d0FC7538A. At Ethereum block 25534201 and Plasma block 27132766, the verified ReceiptToken deployments were unpaused and their source has no transfer hook or holder blacklist. At BNB block 110030607, verified InfiniFiOFT source exposed standard OFT/ERC-20 transfers without a pause ABI. At Tempo block 30008157, TIP-20 IUSD reported paused() = false and transferPolicyId() = 1, while its official specification permits PAUSE_ROLE, DEFAULT_ADMIN_ROLE transfer-policy changes, and BURN_BLOCKED_ROLE burns of policy-blocked balances; the OFT adapter resolved token() to TIP-20 IUSD and owner() to the infiniFi Safe. Route role membership and Tempo adapter source were not fully enumerable, so a global no-freeze/no-restriction conclusion is unsupported.",
+    "evidence": "The accepted deployment inventory includes Ethereum ReceiptToken 0x48f9e38f3070ad8945dfeae3fa70987722e3d89c, BNB OFT IUSD 0x60B14ec49874Af1BA471685cb11132101aeBdF09, and Tempo TIP-20 IUSD 0x20c000000000000000000000AB02D39df30bd17E with OFT adapter 0xfA339b5a3AD03fd9Ff048F574636b60d0FC7538A. The issuer-listed Plasma address is excluded because pinned metadata identifies it as iUSDT, not iUSD. At Ethereum block 25534201, the verified ReceiptToken deployment was unpaused and its source has no transfer hook or holder blacklist. At BNB block 110030607, verified InfiniFiOFT source exposed standard OFT/ERC-20 transfers without a pause ABI. At Tempo block 30008157, TIP-20 IUSD reported paused() = false and transferPolicyId() = 1, while its official specification permits PAUSE_ROLE, DEFAULT_ADMIN_ROLE transfer-policy changes, and BURN_BLOCKED_ROLE burns of policy-blocked balances; the OFT adapter resolved token() to TIP-20 IUSD and owner() to the infiniFi Safe. Route role membership and Tempo adapter source were not fully enumerable, so a global no-freeze/no-restriction conclusion is unsupported.",
     "reviewer": "Codex Safety Score V9 multi-deployment access review",
     "reviewedAt": "2026-07-14"
   },

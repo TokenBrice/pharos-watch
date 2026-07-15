@@ -42,6 +42,66 @@
       "chain": "ethereum",
       "address": "0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f",
       "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x67c10c397dd0ba417329543c1a40eb48aaa7cd00",
+      "decimals": 18
+    },
+    {
+      "chain": "cronos",
+      "address": "0x396c9c192dd323995346632581bef92a31ac623b",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x23b891e5c62e0955ae2bd185990103928ab817b3",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0xb6c473756050de474286bed418b77aeac39b02af",
+      "decimals": 18
+    },
+    {
+      "chain": "fantom",
+      "address": "0xed2a7edd7413021d440b09d654f3b87712abab66",
+      "decimals": 18
+    },
+    {
+      "chain": "boba",
+      "address": "0x6b4712ae9797c199edd44f897ca09bc57628a1cf",
+      "decimals": 18
+    },
+    {
+      "chain": "metis",
+      "address": "0x961318fc85475e125b99cc9215f62679ae5200ab",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x2913e812cf0dcca30fb28e6cac3d2dcff4497688",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0xcfc37a6ab183dd4aed08c204d1c2773c0b1bdf46",
+      "decimals": 18
+    },
+    {
+      "chain": "blast",
+      "address": "0x3194b0a295d87fdaa54df852c248f7a6baf6c6e0",
+      "decimals": 18
+    },
+    {
+      "chain": "aurora",
+      "address": "0x07379565cd8b0cae7c60dc78e7f601b34af2a21c",
+      "decimals": 18
+    },
+    {
+      "chain": "harmony",
+      "address": "0xed2a7edd7413021d440b09d654f3b87712abab66",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {
@@ -69,26 +129,371 @@
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
-    "summary": "NUSD is a legacy Synapse bridge-liquidity stable asset whose supply and peg mechanics depend on Synapse pool liquidity rather than issuer-native mint/redeem rails. L2BEAT's historical Synapse bridge coverage is kept as evidence, but Synapse is not present in the current Interop protocol snapshot, so Pharos scores the route through the liquidity-route tier.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex L2BEAT route review",
+    "summary": "NUSD is Synapse's legacy intermediate bridge/liquidity token, with the current Synapse token list publishing deployments across thirteen registry-supported chains. Its supply and peg depend on Synapse liquidity and bridge settlement rather than issuer-native redemption, so the liquidity-or-intent route remains the conservative tier.",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "Codex bridge route review",
     "confidence": "verified",
     "protocols": [
       {
-        "source": "l2beat",
-        "name": "Synapse",
-        "url": "https://l2beat.com/bridges/projects/synapse",
-        "note": "Legacy L2BEAT bridge page referenced by the existing mint-authority review."
+        "source": "docs",
+        "name": "Synapse Bridge",
+        "url": "https://github.com/synapsecns/sanguine",
+        "bridgeTypes": ["liquidity", "canonical-token-bridge"],
+        "note": "Synapse describes the bridge as a cross-chain liquidity and canonical token bridge, and documents nUSD as an intermediate token."
       }
     ],
     "sources": [
       {
-        "label": "Synapse on L2BEAT",
-        "url": "https://l2beat.com/bridges/projects/synapse"
+        "label": "Synapse live token list",
+        "url": "https://api.synapseprotocol.com/tokenlist"
       },
       {
-        "label": "Synapse docs",
-        "url": "https://docs.synapseprotocol.com/"
+        "label": "Synapse nUSD intermediate-token documentation",
+        "url": "https://github.com/synapsecns/sanguine/blob/master/docs/bridge/docs/06-Contracts/03-Intermediate-Tokens.md"
+      },
+      {
+        "label": "SynapseERC20 source",
+        "url": "https://github.com/synapsecns/synapse-contracts/blob/master/contracts/bridge/SynapseERC20.sol"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4f",
+        "protocol": "Synapse NexusPool",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": ["synapse:nusd-liquidity"],
+        "observedAt": "2026-07-15",
+        "sources": [
+          {
+            "label": "Synapse live token list",
+            "url": "https://api.synapseprotocol.com/tokenlist"
+          },
+          {
+            "label": "Synapse nUSD intermediate-token documentation",
+            "url": "https://github.com/synapsecns/sanguine/blob/master/docs/bridge/docs/06-Contracts/03-Intermediate-Tokens.md"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0x67c10c397dd0ba417329543c1a40eb48aaa7cd00",
+        "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x67c10c397dd0ba417329543c1a40eb48aaa7cd00",
+        "protocol": "Synapse Bridge",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": ["synapse:nusd-liquidity"],
+        "observedAt": "2026-07-15",
+        "sources": [
+          {
+            "label": "Synapse live token list",
+            "url": "https://api.synapseprotocol.com/tokenlist"
+          },
+          {
+            "label": "Synapse Bridge source overview",
+            "url": "https://github.com/synapsecns/sanguine"
+          }
+        ]
+      },
+      {
+        "id": "cronos:0x396c9c192dd323995346632581bef92a31ac623b",
+        "destinationChain": "cronos",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x396c9c192dd323995346632581bef92a31ac623b",
+        "protocol": "Synapse Bridge",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": ["synapse:nusd-liquidity"],
+        "observedAt": "2026-07-15",
+        "sources": [
+          {
+            "label": "Synapse live token list",
+            "url": "https://api.synapseprotocol.com/tokenlist"
+          },
+          {
+            "label": "Synapse Bridge source overview",
+            "url": "https://github.com/synapsecns/sanguine"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x23b891e5c62e0955ae2bd185990103928ab817b3",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x23b891e5c62e0955ae2bd185990103928ab817b3",
+        "protocol": "Synapse Bridge",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": ["synapse:nusd-liquidity"],
+        "observedAt": "2026-07-15",
+        "sources": [
+          {
+            "label": "Synapse live token list",
+            "url": "https://api.synapseprotocol.com/tokenlist"
+          },
+          {
+            "label": "Synapse Bridge source overview",
+            "url": "https://github.com/synapsecns/sanguine"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0xb6c473756050de474286bed418b77aeac39b02af",
+        "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xb6c473756050de474286bed418b77aeac39b02af",
+        "protocol": "Synapse Bridge",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": ["synapse:nusd-liquidity"],
+        "observedAt": "2026-07-15",
+        "sources": [
+          {
+            "label": "Synapse live token list",
+            "url": "https://api.synapseprotocol.com/tokenlist"
+          },
+          {
+            "label": "Synapse nUSD intermediate-token documentation",
+            "url": "https://github.com/synapsecns/sanguine/blob/master/docs/bridge/docs/06-Contracts/03-Intermediate-Tokens.md"
+          }
+        ]
+      },
+      {
+        "id": "fantom:0xed2a7edd7413021d440b09d654f3b87712abab66",
+        "destinationChain": "fantom",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xed2a7edd7413021d440b09d654f3b87712abab66",
+        "protocol": "Synapse Bridge",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": ["synapse:nusd-liquidity"],
+        "observedAt": "2026-07-15",
+        "sources": [
+          {
+            "label": "Synapse live token list",
+            "url": "https://api.synapseprotocol.com/tokenlist"
+          },
+          {
+            "label": "Synapse nUSD intermediate-token documentation",
+            "url": "https://github.com/synapsecns/sanguine/blob/master/docs/bridge/docs/06-Contracts/03-Intermediate-Tokens.md"
+          }
+        ]
+      },
+      {
+        "id": "boba:0x6b4712ae9797c199edd44f897ca09bc57628a1cf",
+        "destinationChain": "boba",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x6b4712ae9797c199edd44f897ca09bc57628a1cf",
+        "protocol": "Synapse Bridge",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": ["synapse:nusd-liquidity"],
+        "observedAt": "2026-07-15",
+        "sources": [
+          {
+            "label": "Synapse live token list",
+            "url": "https://api.synapseprotocol.com/tokenlist"
+          },
+          {
+            "label": "Synapse nUSD intermediate-token documentation",
+            "url": "https://github.com/synapsecns/sanguine/blob/master/docs/bridge/docs/06-Contracts/03-Intermediate-Tokens.md"
+          }
+        ]
+      },
+      {
+        "id": "metis:0x961318fc85475e125b99cc9215f62679ae5200ab",
+        "destinationChain": "metis",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x961318fc85475e125b99cc9215f62679ae5200ab",
+        "protocol": "Synapse Bridge",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": ["synapse:nusd-liquidity"],
+        "observedAt": "2026-07-15",
+        "sources": [
+          {
+            "label": "Synapse live token list",
+            "url": "https://api.synapseprotocol.com/tokenlist"
+          },
+          {
+            "label": "Synapse nUSD intermediate-token documentation",
+            "url": "https://github.com/synapsecns/sanguine/blob/master/docs/bridge/docs/06-Contracts/03-Intermediate-Tokens.md"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x2913e812cf0dcca30fb28e6cac3d2dcff4497688",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x2913e812cf0dcca30fb28e6cac3d2dcff4497688",
+        "protocol": "Synapse Bridge",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": ["synapse:nusd-liquidity"],
+        "observedAt": "2026-07-15",
+        "sources": [
+          {
+            "label": "Synapse live token list",
+            "url": "https://api.synapseprotocol.com/tokenlist"
+          },
+          {
+            "label": "Synapse nUSD intermediate-token documentation",
+            "url": "https://github.com/synapsecns/sanguine/blob/master/docs/bridge/docs/06-Contracts/03-Intermediate-Tokens.md"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0xcfc37a6ab183dd4aed08c204d1c2773c0b1bdf46",
+        "destinationChain": "avalanche",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xcfc37a6ab183dd4aed08c204d1c2773c0b1bdf46",
+        "protocol": "Synapse Bridge",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": ["synapse:nusd-liquidity"],
+        "observedAt": "2026-07-15",
+        "sources": [
+          {
+            "label": "Synapse live token list",
+            "url": "https://api.synapseprotocol.com/tokenlist"
+          },
+          {
+            "label": "Synapse nUSD intermediate-token documentation",
+            "url": "https://github.com/synapsecns/sanguine/blob/master/docs/bridge/docs/06-Contracts/03-Intermediate-Tokens.md"
+          }
+        ]
+      },
+      {
+        "id": "blast:0x3194b0a295d87fdaa54df852c248f7a6baf6c6e0",
+        "destinationChain": "blast",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x3194b0a295d87fdaa54df852c248f7a6baf6c6e0",
+        "protocol": "Synapse Bridge",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": ["synapse:nusd-liquidity"],
+        "observedAt": "2026-07-15",
+        "sources": [
+          {
+            "label": "Synapse live token list",
+            "url": "https://api.synapseprotocol.com/tokenlist"
+          },
+          {
+            "label": "Synapse Bridge source overview",
+            "url": "https://github.com/synapsecns/sanguine"
+          }
+        ]
+      },
+      {
+        "id": "aurora:0x07379565cd8b0cae7c60dc78e7f601b34af2a21c",
+        "destinationChain": "aurora",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x07379565cd8b0cae7c60dc78e7f601b34af2a21c",
+        "protocol": "Synapse Bridge",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": ["synapse:nusd-liquidity"],
+        "observedAt": "2026-07-15",
+        "sources": [
+          {
+            "label": "Synapse live token list",
+            "url": "https://api.synapseprotocol.com/tokenlist"
+          },
+          {
+            "label": "Synapse nUSD intermediate-token documentation",
+            "url": "https://github.com/synapsecns/sanguine/blob/master/docs/bridge/docs/06-Contracts/03-Intermediate-Tokens.md"
+          }
+        ]
+      },
+      {
+        "id": "harmony:0xed2a7edd7413021d440b09d654f3b87712abab66",
+        "destinationChain": "harmony",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xed2a7edd7413021d440b09d654f3b87712abab66",
+        "protocol": "Synapse Bridge",
+        "issuanceModel": "liquidity-settlement",
+        "routeClass": "third-party",
+        "riskTier": "liquidity-or-intent-route",
+        "semantics": "liquidity",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": ["synapse:nusd-liquidity"],
+        "observedAt": "2026-07-15",
+        "sources": [
+          {
+            "label": "Synapse live token list",
+            "url": "https://api.synapseprotocol.com/tokenlist"
+          },
+          {
+            "label": "Synapse nUSD intermediate-token documentation",
+            "url": "https://github.com/synapsecns/sanguine/blob/master/docs/bridge/docs/06-Contracts/03-Intermediate-Tokens.md"
+          }
+        ]
       }
     ]
   },
@@ -99,7 +504,7 @@
     {
       "type": "info",
       "title": "Legacy bridge-liquidity asset",
-      "message": "NUSD is included because DefiLlama still returns a live price and circulating supply, but it represents a legacy Synapse bridge liquidity stable asset rather than a standalone modern issuer token. The canonical Ethereum contract is included for symbol disambiguation; legacy per-chain bridge deployments are not exhaustively modeled."
+      "message": "NUSD is included because DefiLlama still returns a live price and circulating supply, but it represents a legacy Synapse bridge-liquidity stable asset rather than a standalone modern issuer token. The current Synapse token list documents the reviewed cross-chain deployments."
     }
   ],
   "mintAuthority": {

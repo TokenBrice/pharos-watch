@@ -57,13 +57,6 @@
   },
   "chainTier": "ethereum",
   "deploymentModel": "single-chain",
-  "reserves": [
-    {
-      "name": "Ring protocol crypto collateral and liquidity positions",
-      "pct": 100,
-      "risk": "high"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

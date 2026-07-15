@@ -26,18 +26,22 @@
   "geckoId": "a7a5",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "A7A5 is published by the issuer as a ruble-backed token available on Ethereum and Tron. No independent bridge protocol or liquidity bridge was resolved, so the reviewed multichain route is issuer-managed native issuance.",
-    "reviewedAt": "2026-06-13",
+    "summary": "A7A5's issuer publishes exact Ethereum and Tron contracts and describes issuance on both networks. No independent bridge or active CEX-based bridge was evidenced, so both routes are treated as issuer-native minting.",
+    "reviewedAt": "2026-07-15",
     "reviewer": "Codex bridge route review",
     "confidence": "probable",
     "sources": [
       {
-        "label": "A7A5 docs",
-        "url": "https://docs.a7a5.io"
+        "label": "A7A5 token contracts",
+        "url": "https://docs.a7a5.io/a7a5-token/token-contracts"
       },
       {
-        "label": "A7A5 website",
-        "url": "https://www.a7a5.io/"
+        "label": "A7A5 roadmap",
+        "url": "https://docs.a7a5.io/introduction-to-a7a5/roadmap"
+      },
+      {
+        "label": "A7A5 Ethereum verified source",
+        "url": "https://eth.blockscout.com/address/0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9?tab=contract"
       }
     ],
     "routes": [
@@ -45,31 +49,52 @@
         "id": "ethereum:0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
         "destinationChain": "ethereum",
         "contractAddress": "0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "canonicalChain": "ethereum",
+        "protocol": "A7A5 native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-15",
+        "observedBlock": 25536902,
+        "sources": [
+          {
+            "label": "A7A5 token contracts",
+            "url": "https://docs.a7a5.io/a7a5-token/token-contracts"
+          },
+          {
+            "label": "A7A5 Ethereum verified source",
+            "url": "https://eth.blockscout.com/address/0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9?tab=contract"
+          }
+        ]
       },
       {
         "id": "tron:TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ",
         "destinationChain": "tron",
         "contractAddress": "TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "canonicalChain": "ethereum",
+        "protocol": "A7A5 native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-15",
+        "sources": [
+          {
+            "label": "A7A5 token contracts",
+            "url": "https://docs.a7a5.io/a7a5-token/token-contracts"
+          },
+          {
+            "label": "A7A5 Tron verified contract code",
+            "url": "https://tronscan.org/#/contract/TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ/code"
+          }
+        ]
       }
     ]
   },

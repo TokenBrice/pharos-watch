@@ -1,0 +1,80 @@
+{
+  "id": "usdr-ring",
+  "reserves": [
+    {
+      "name": "Ring protocol backing and liquidity positions (current allocation undisclosed)",
+      "pct": 100,
+      "risk": "very-high",
+      "assetClass": "other",
+      "issuerOrObligor": "Ring Protocol governance and authorized USDR minters",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "TERRA-II reserve verification",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Ring Protocol current documentation",
+        "url": "https://docs.ring.exchange/"
+      },
+      {
+        "label": "USDR verified token source",
+        "url": "https://eth.blockscout.com/address/0x4ea40dcee961675683e0a2e1721bd49cb9bca913?tab=contract"
+      },
+      {
+        "label": "Ring Protocol Core verified source",
+        "url": "https://eth.blockscout.com/address/0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4?tab=contract"
+      }
+    ],
+    "rationale": "Ring's current documentation describes its public swap and wrapping stack but does not publish a reproducible USDR reserve inventory. The verified USDR and Core contracts establish permissioned issuance and governance surfaces, not the assets or positions supporting circulating USDR. The prior generic backing claim is therefore retained only as one fully unresolved aggregate rather than converted into invented constituent weights.",
+    "compositionBasis": "Current issuer documentation and verified deployed contracts; no current reserve allocation published",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The current reserve assets, strategy positions, allocation weights, obligors, and withdrawal liquidity are not publicly reproducible.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Ring protocol backing and liquidity positions (current allocation undisclosed)",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "Current issuer documentation and verified contracts do not disclose a reproducible reserve inventory or allocation."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Ring Protocol contracts and undisclosed reserve counterparties",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "TERRA-II reserve verification",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Ring Protocol current documentation",
+        "url": "https://docs.ring.exchange/"
+      },
+      {
+        "label": "Ring Protocol Core verified source",
+        "url": "https://eth.blockscout.com/address/0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4?tab=contract"
+      }
+    ],
+    "uncertainty": "No current public source identifies reserve custodians, provider shares, legal segregation, insolvency treatment, or rehypothecation terms.",
+    "knownUnknownExposurePct": 100
+  }
+}
