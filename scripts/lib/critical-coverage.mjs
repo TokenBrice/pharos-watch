@@ -5,6 +5,8 @@ import { collectSourceFilesUnderRoot } from "./source-files.mjs";
 
 export const CRITICAL_FILES = [
   "src/lib/api.ts",
+  "worker/src/api/safety-score-history-v2.ts",
+  "worker/src/lib/safety-score-current-identity.ts",
   "worker/src/lib/api-cache-read.ts",
   "worker/src/lib/api-freshness.ts",
   "worker/src/lib/freshness-sentinels.ts",

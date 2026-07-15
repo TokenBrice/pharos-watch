@@ -342,10 +342,21 @@ export function evaluateV9ReserveExposures(
       ...gapReasons(asset, asset.reserveStatus.gapIds, "reserve-envelope", "ceiling", "partial-reserve-review"),
     );
   }
+  // Aggregate exposure weight per upstream identity: materiality and
+  // structural ceilings must not be evadable by splitting one upstream
+  // exposure across multiple reserve rows (VER-004).
+  const upstreamAggregateWeight = new Map<string, number>();
+  for (const exposure of exposures) {
+    const identityId = upstreamByExposure.get(exposure.exposureKey)?.upstreamAssetId ?? exposure.trackedAssetId;
+    if (identityId === null) continue;
+    upstreamAggregateWeight.set(identityId, (upstreamAggregateWeight.get(identityId) ?? 0) + exposure.weight);
+  }
   for (const exposure of exposures) {
     const pathKey = `reserve:${exposure.exposureKey}`;
     const state = exposure.status.observationState;
     const upstream = upstreamByExposure.get(exposure.exposureKey);
+    const identityId = upstream?.upstreamAssetId ?? exposure.trackedAssetId;
+    const materialityWeight = identityId !== null ? (upstreamAggregateWeight.get(identityId) ?? exposure.weight) : exposure.weight;
     const requiredUnknown = exposure.status.applicability.state === "unresolved";
     let score =
       state === "known" || state === "stale"
@@ -358,7 +369,7 @@ export function evaluateV9ReserveExposures(
           code,
           pathKey,
           gapIds: [],
-          treatment: "pillar" as const,
+          treatment: resolveV9ReasonPolicy(policy, code).reason.defaultTreatment,
         })),
       );
     } else if (
@@ -366,14 +377,15 @@ export function evaluateV9ReserveExposures(
       !seriallyResolvedUpstreamAssetIds.has(exposure.trackedAssetId)
     ) {
       score = Math.min(score, backing.boundedUnknownQuality);
+      const unavailableCode =
+        materialityWeight + SCORE_EPSILON >= backing.structural.materialExposureShare
+          ? ("material-dependency-unavailable" as const)
+          : ("nonmaterial-dependency-unavailable" as const);
       unresolved.push({
-        code:
-          exposure.weight + SCORE_EPSILON >= backing.structural.materialExposureShare
-            ? "material-dependency-unavailable"
-            : "nonmaterial-dependency-unavailable",
+        code: unavailableCode,
         pathKey,
         gapIds: [],
-        treatment: "pillar",
+        treatment: resolveV9ReasonPolicy(policy, unavailableCode).reason.defaultTreatment,
       });
     }
     if (state !== "known" || requiredUnknown) {
@@ -402,12 +414,12 @@ export function evaluateV9ReserveExposures(
       upstreamAssetId: upstream?.upstreamAssetId ?? exposure.trackedAssetId,
     });
 
-    const material = exposure.weight + SCORE_EPSILON >= backing.structural.materialExposureShare;
+    const material = materialityWeight + SCORE_EPSILON >= backing.structural.materialExposureShare;
     if (material && exposure.assetClass === "private-credit") {
       structuralReasons.push(
         createV9BackingStructuralReason(policy, backing.structural.speculativeCreditSignal, {
           pathKey,
-          materialShare: exposure.weight,
+          materialShare: materialityWeight,
           evidenceRefIds: uniqueSorted(exposure.status.evidenceRefIds),
           failureDomains,
         }),
@@ -417,7 +429,7 @@ export function evaluateV9ReserveExposures(
       structuralReasons.push(
         createV9BackingStructuralReason(policy, backing.structural.unsafeExposureSignal, {
           pathKey,
-          materialShare: exposure.weight,
+          materialShare: materialityWeight,
           evidenceRefIds: uniqueSorted(exposure.status.evidenceRefIds),
           failureDomains,
         }),

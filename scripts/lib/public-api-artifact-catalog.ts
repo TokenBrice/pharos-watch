@@ -794,6 +794,19 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     },
   },
   {
+    key: "safety-score-history-v2",
+    summary: "Safety score history (identity-aware)",
+    description:
+      "Boundary-aware safety-score history with full score-model identity and transition kinds; the legacy endpoint remains the V8 compatibility projection.",
+    tags: ["Risk", "History"],
+    parameters: [REQUIRED_STABLECOIN_QUERY_PARAM, SAFETY_SCORE_HISTORY_DAYS_PARAM],
+    postman: {
+      folder: "Historical data",
+      order: 5,
+      query: { stablecoin: "{{stablecoinId}}", days: "3650" },
+    },
+  },
+  {
     key: "daily-digest",
     summary: "Daily digest",
     description: "Latest AI-generated stablecoin market digest.",

@@ -316,10 +316,12 @@ function reviewedExtension(fixedInput = exactFixedInput("alpha")): SafetyScoreV9
     referenceKey: "USD",
     failureDomains: [{ kind: "oracle-feed", key: "fixture-price" }],
   };
+  // Single-chain native with no reviewed route rows: the producer places the
+  // whole supply in the unknown bucket, conserving shares to 1 (VER-007).
   asset.supplyReview = {
     selectedBridgeRoutes: [],
     selectedRouteSupplyShare: 0,
-    unknownRouteSupplyShare: 0,
+    unknownRouteSupplyShare: 1,
     unreviewedRouteSupplyShare: 0,
     failureDomains: [],
   };
@@ -475,8 +477,10 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
       // exit-unverified ceiling instead of reason-coding NR.
       mechanismRiskReview: {
         archetype: "fiat-cash",
-        claimAndSegregation: { status: { observationState: "bounded-unknown" } },
-        custodyContinuity: { status: { observationState: "bounded-unknown" } },
+        // D1 fiat-cash overlays are active: USDC's claim/custody components are
+          // curated known (owner decision D1, 2026-07-15).
+          claimAndSegregation: { status: { observationState: "known" } },
+        custodyContinuity: { status: { observationState: "known" } },
         assuranceAndReconciliation: { status: { observationState: "known" } },
       },
       controlReview: { state: "reviewed-controls" },
@@ -515,7 +519,7 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
       policyVersion: "candidate-v2",
       completeness: { expectedCount: 1, ratedCount: 1, notRatedCount: 0, notRatedIds: [] },
     });
-    expect(result.candidate.cards[0]).toMatchObject({ id: "alpha", score: 82, grade: "A-" });
+    expect(result.candidate.cards[0]).toMatchObject({ id: "alpha", score: 81, grade: "A-" });
     expect(result.evaluatedSet.assets[0]!.trace.finalScore).toBe(result.candidate.cards[0]!.score);
   });
 });

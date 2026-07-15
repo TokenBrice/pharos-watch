@@ -21,7 +21,7 @@ function input(exit: number): V9ScoringInput {
 
 // VER-001: final-score rounding can exceed a fractional compensability ceiling
 // and raising a pillar can therefore lower the published score and grade.
-describe.skip("VERITAS finding VER-001: fractional cap rounding crosses a grade boundary", () => {
+describe("VERITAS finding VER-001: fractional cap rounding crosses a grade boundary", () => {
   it("does not publish a rounded score above the compensability ceiling", () => {
     const trace = scoreV9Input(input(65.93), V9_CANDIDATE_POLICY_V1);
     const compensabilityCap = trace.caps.find((cap) => cap.kind === "bounded-compensability");

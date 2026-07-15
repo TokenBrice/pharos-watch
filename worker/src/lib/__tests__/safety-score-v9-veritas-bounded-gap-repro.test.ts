@@ -12,7 +12,7 @@ import {
 // VER-012: ordinary missing access reviews compile with the evidence-owned
 // `missing-pillar-evidence` reason even though the facts are control-owned.
 // This is a work-queue binding defect; Access does not enter the score pillars.
-describe.skip("VERITAS finding VER-012: access gaps violate their reason owner contract", () => {
+describe("VERITAS finding VER-012: access gaps violate their reason owner contract", () => {
   it("keeps every ordinary access gap bound to a reason with the same owner", () => {
     const fixedInput = createReportCardsFixedInput(miniCapture.draft as unknown as ReportCardsFixedInputDraft);
     const metaById = new Map<string, V9ExtensionRegistryMeta>(

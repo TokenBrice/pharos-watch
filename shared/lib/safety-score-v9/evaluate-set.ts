@@ -312,13 +312,25 @@ function resolvedBackingExposures(
     dependencyInputs.basket.map((dependency) => [dependency.upstreamAssetId, dependency]),
   );
   const threshold = envelope.policy.semantic.backing.structural.materialExposureShare;
+  // Materiality is judged on the AGGREGATE exposure to one upstream asset:
+  // splitting one 12% exposure into two 6% rows must not demote the
+  // availability reason below the structural threshold (VER-004).
+  const aggregateByUpstream = new Map<string, number>();
+  for (const exposure of asset.reserveExposures) {
+    if (exposure.trackedAssetId === null) continue;
+    aggregateByUpstream.set(
+      exposure.trackedAssetId,
+      (aggregateByUpstream.get(exposure.trackedAssetId) ?? 0) + exposure.weight,
+    );
+  }
   return asset.reserveExposures.flatMap((exposure) => {
     if (exposure.trackedAssetId === null) return [];
     const dependency = basketByUpstream.get(exposure.trackedAssetId);
     if (!dependency) return [];
     const upstream = evaluatedById.get(dependency.upstreamAssetId);
+    const aggregateWeight = aggregateByUpstream.get(exposure.trackedAssetId) ?? exposure.weight;
     const unavailableCode: V9ReasonCode =
-      exposure.weight >= threshold ? "material-dependency-unavailable" : "nonmaterial-dependency-unavailable";
+      aggregateWeight >= threshold ? "material-dependency-unavailable" : "nonmaterial-dependency-unavailable";
     // An unrateable basket upstream surfaces only the availability code; its
     // own NR codes stay on the upstream trace. The exposure score is already
     // floored at the bounded-unknown quality, and the availability code's

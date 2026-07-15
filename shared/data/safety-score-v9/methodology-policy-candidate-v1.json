@@ -1420,7 +1420,9 @@
       "code": "missing-oracle-profile",
       "ownerDomain": "control",
       "archetypes": [
-        "cdp"
+        "cdp",
+        "synthetic-delta-neutral",
+        "algorithmic"
       ],
       "pathKinds": [
         "local-component"
@@ -1517,6 +1519,25 @@
       "defaultTreatment": "NR",
       "releaseSeverity": "release-blocker",
       "publicLabel": "Pillar lacks dated evidence",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "missing-access-review",
+      "ownerDomain": "control",
+      "archetypes": [
+        "*"
+      ],
+      "pathKinds": [
+        "local-component"
+      ],
+      "defaultFactClass": "missing-serial-required",
+      "boundedness": "unbounded",
+      "permittedTreatments": [
+        "NR"
+      ],
+      "defaultTreatment": "NR",
+      "releaseSeverity": "release-blocker",
+      "publicLabel": "Access review lacks dated evidence",
       "auditClassification": "missing-data"
     },
     {

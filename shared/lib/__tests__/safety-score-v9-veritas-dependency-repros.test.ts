@@ -69,7 +69,7 @@ function unavailable(
 
 // VER-003: the evaluator declares this reason diagnostic, but backing rewrites
 // it to pillar treatment and the production projection applies a global cap.
-describe.skip("VERITAS finding VER-003: nonmaterial dependency diagnostic becomes a pillar penalty", () => {
+describe("VERITAS finding VER-003: nonmaterial dependency diagnostic becomes a pillar penalty", () => {
   it("preserves diagnostic treatment for a 1% unavailable upstream", () => {
     const result = evaluateV9ReserveExposures(
       asset(
@@ -93,7 +93,7 @@ describe.skip("VERITAS finding VER-003: nonmaterial dependency diagnostic become
 
 // VER-004: materiality is assessed per reserve row instead of by the aggregate
 // exposure to one upstream, so row splitting removes a structural ceiling.
-describe.skip("VERITAS finding VER-004: split rows evade aggregate dependency materiality", () => {
+describe("VERITAS finding VER-004: split rows evade aggregate dependency materiality", () => {
   it("keeps a 12% unavailable upstream material when represented by two 6% rows", () => {
     const single = evaluateV9ReserveExposures(
       asset(

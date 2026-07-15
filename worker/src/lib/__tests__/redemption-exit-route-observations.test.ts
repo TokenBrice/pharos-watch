@@ -233,9 +233,11 @@ describe("derived supply-model route observations", () => {
     });
 
     // An asset without configured outputAssets keeps the honest unresolved kind.
+    // (usn-noon gained outputAssets in the 2026-07-15 redemption curation batch;
+    // usr-resolv has neither outputAssets nor a variantOf fallback.)
     const unresolvedEntry: RedemptionBackstopEntry = {
       ...daiEntry,
-      stablecoinId: "usn-noon",
+      stablecoinId: "usr-resolv",
     };
     expect(deriveSupplyModelExitRouteObservation(unresolvedEntry, now)?.output).toEqual({
       kind: "unresolved-asset",

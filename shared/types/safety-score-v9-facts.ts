@@ -985,9 +985,10 @@ const V9AssetFactsV2Schema = z
         });
       }
     }
+    // exitRoutes is deliberately absent: a reviewed-complete empty exit
+    // surface is representable KNOWN negative evidence (VER-006).
     for (const [field, status, count] of [
       ["reserveExposures", asset.reserveStatus, asset.reserveExposures.length],
-      ["exitRoutes", asset.exitStatus, asset.exitRoutes.length],
       ["controls", asset.controlStatus, asset.controls.length],
     ] as const) {
       if (status.applicability.state === "required" && status.observationState === "known" && count === 0) {

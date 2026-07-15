@@ -5,7 +5,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
 // VER-002: mathematically exact half scores can round down because the raw
 // binary value is more than Number.EPSILON below the decimal half boundary.
-describe.skip("VERITAS finding VER-002: exact decimal half rounds to the lower grade", () => {
+describe("VERITAS finding VER-002: exact decimal half rounds to the lower grade", () => {
   it("nearest-rounds an exact weighted score of 59.5 to 60", () => {
     const input: V9ScoringInput = {
       assetId: "veritas-half-rounding",

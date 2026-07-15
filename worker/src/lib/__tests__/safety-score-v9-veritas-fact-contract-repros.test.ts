@@ -162,7 +162,7 @@ function baselineExtension(fixedInput: ReturnType<typeof exactFixedInput>) {
 
 // VER-006: the route compiler currently returns bounded-unknown before consulting the
 // explicit complete coverage row, producing the bounded score instead of zero.
-describe.skip("VERITAS finding VER-006: zero-route completeness is compiled as missing evidence", () => {
+describe("VERITAS finding VER-006: zero-route completeness is compiled as missing evidence", () => {
   it("maps a reviewed-complete empty route surface to the no-viable-exit path", () => {
     const fixedInput = exactFixedInput();
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixedInput, baselineExtension(fixedInput));
@@ -182,7 +182,7 @@ describe.skip("VERITAS finding VER-006: zero-route completeness is compiled as m
 
 // VER-007: a non-null review currently makes positive circulating supply known even
 // though none of that supply is selected, unknown, or unreviewed.
-describe.skip("VERITAS finding VER-007: nonconserving supply review is accepted as known", () => {
+describe("VERITAS finding VER-007: nonconserving supply review is accepted as known", () => {
   it("rejects a positive-supply review whose accounting shares sum to zero", () => {
     const fixedInput = exactFixedInput();
     const extension = baselineExtension(fixedInput);
@@ -235,7 +235,7 @@ describe.skip("VERITAS finding VER-008: aggregate reserve weights above 100% pas
 
 // VER-009: oracle review is required for this archetype and the evaluator emits the
 // missing-profile reason, while the policy currently authorizes it only for CDPs.
-describe.skip("VERITAS finding VER-009: oracle reasons can escape their archetype allowlist", () => {
+describe("VERITAS finding VER-009: oracle reasons can escape their archetype allowlist", () => {
   it("keeps every emitted reason compatible with the evaluated asset archetype", () => {
     const facts: V9EconomicControlAssetFacts = {
       assetId: "veritas-synthetic",
