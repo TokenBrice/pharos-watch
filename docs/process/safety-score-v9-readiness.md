@@ -46,7 +46,7 @@ The V9 implementation establishes candidate infrastructure without changing prod
   candidate deterministically. The current policy semantic digest is
   `6b6f819eb06740634239467ed6041125d7971f8df0fbedf0e4bd836cac405053`;
   the current evaluation-build digest is
-  `38c057ef81599cb020473331f7ba12c9c70cd0c32580c3b1b1276272882ece40`.
+  `d86b48b412107d9ecd7ee634850c3d42261f2372d1f5fe99342a372727722b7f`.
 - The 2026-07-15 candidate-v2 queue-binding revision adds explicit
   `local-component` paths to seven reason allowlists already emitted as
   aggregate facts. The revision changes evidence-work-queue metadata only;
