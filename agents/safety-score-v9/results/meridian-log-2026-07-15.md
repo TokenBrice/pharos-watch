@@ -207,3 +207,14 @@ Restoration order:
   blocked by an unrelated concurrent V9 candidate expectation (expected 81/A-,
   observed 69/B-). No candidate engine, score, policy, or live grade was changed
   by Meridian II.
+
+## Coordinator amendment — activation gate (2026-07-15)
+
+The versioned endpoint shipped reachable pre-activation (review flag on
+ddc83c24c). The coordinator added an owner-gated D1 activation marker:
+`/api/report-cards/v9` returns 404 until the cache key
+`safety-score-v9:public-activation` exists. ACTIVATION RUNBOOK ADDITION:
+writing that key (any value) is now step 0 of activation; rollback deletes
+it. The C21 FTQ grade-set predicate and C20 DDR source swap in c5401b8fe are
+implementations of the owner-adopted packet decisions and ship live with the
+next release (expected FTQ classification shifts).
