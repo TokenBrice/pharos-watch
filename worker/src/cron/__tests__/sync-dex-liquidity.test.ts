@@ -127,8 +127,12 @@ import { convertToGtNewPools, extractPriceObservations } from "../../lib/dex-api
 import { buildCurveLookups, fetchDataSources, buildKnownPoolAddresses } from "../dex-liquidity/fetch-primary";
 import { fetchAerodromeData, fetchUniV3Data } from "../dex-liquidity/subgraph-source-families";
 import { fetchFluidPools } from "../dex-liquidity/fetch-fluid";
+import { fetchBalancerPools } from "../dex-liquidity/fetch-balancer";
 import { fetchRaydiumPools } from "../dex-liquidity/fetch-raydium";
+import { fetchOrcaPools } from "../dex-liquidity/fetch-orca";
+import { fetchMeteoraPools } from "../dex-liquidity/fetch-meteora";
 import { fetchPancakeSwapPools } from "../dex-liquidity/fetch-pancakeswap";
+import { fetchSlipstreamPools } from "../dex-liquidity/fetch-slipstream";
 import { computeDepthStability, computeDexPrices, computeStablecoinScores } from "../dex-liquidity/scoring";
 import { persistScores, writeHistoricalSnapshots } from "../dex-liquidity/persistence";
 import {
@@ -376,26 +380,29 @@ describe("syncDexLiquidity", () => {
     expect(metadata.sourceCoverage?.protocolCapReductions?.reducedTvlUsd).toBe(0);
   });
 
-  it("releases consumed Curve payloads before starting direct provider fetches", async () => {
-    const curvePayloads = [{ data: { poolData: [] } }];
-    vi.mocked(fetchDataSources).mockResolvedValueOnce({
-      pools: [],
-      dexProjects: new Set<string>(),
-      protocolTvlCaps: new Map<string, number>(),
-      curvePayloads,
-      graphApiKey: "graph-key",
-      dlYieldsAvailable: true,
-      dlProtocolsAvailable: true,
-    });
-    vi.mocked(fetchFluidPools).mockImplementationOnce(async () => {
-      expect(curvePayloads).toHaveLength(0);
-      return makeDirectApiResult();
+  it("finishes direct providers before loading primary sources", async () => {
+    vi.mocked(fetchDataSources).mockImplementationOnce(async () => {
+      expect(fetchFluidPools).toHaveBeenCalledOnce();
+      expect(fetchBalancerPools).toHaveBeenCalledOnce();
+      expect(fetchPancakeSwapPools).toHaveBeenCalledOnce();
+      expect(fetchMeteoraPools).toHaveBeenCalledOnce();
+      expect(fetchRaydiumPools).toHaveBeenCalledOnce();
+      expect(fetchOrcaPools).toHaveBeenCalledOnce();
+      expect(fetchSlipstreamPools).toHaveBeenCalledTimes(2);
+      return {
+        pools: [],
+        dexProjects: new Set<string>(),
+        protocolTvlCaps: new Map<string, number>(),
+        curvePayloads: [],
+        graphApiKey: "graph-key",
+        dlYieldsAvailable: true,
+        dlProtocolsAvailable: true,
+      };
     });
 
     await syncDexLiquidity(db, "graph-key");
 
-    expect(buildCurveLookups).toHaveBeenCalledOnce();
-    expect(curvePayloads).toHaveLength(0);
+    expect(fetchDataSources).toHaveBeenCalledOnce();
   });
 
   it("reports high-SLO stage metadata during source and scoring phases", async () => {
@@ -580,7 +587,6 @@ describe("syncDexLiquidity", () => {
     const uniV3PoolFees = new Map([["fee-key", 500]]);
     const uniV3ExecutionCandidates = new Map([["candidate-key", []]]);
 
-    vi.mocked(fetchDataSources).mockResolvedValueOnce(sourceData);
     vi.mocked(fetchFluidPools).mockResolvedValueOnce(directResult);
     vi.mocked(fetchPancakeSwapPools).mockResolvedValueOnce(pancakeResult);
     vi.mocked(fetchRaydiumPools).mockResolvedValueOnce({
@@ -589,6 +595,18 @@ describe("syncDexLiquidity", () => {
       degraded: false,
       errors: [],
       warnings: ["release-warning"],
+    });
+    vi.mocked(fetchDataSources).mockImplementationOnce(async () => {
+      expect(fetchFluidPools).toHaveBeenCalledOnce();
+      expect(fetchBalancerPools).toHaveBeenCalledOnce();
+      expect(fetchPancakeSwapPools).toHaveBeenCalledOnce();
+      expect(fetchMeteoraPools).toHaveBeenCalledOnce();
+      expect(fetchRaydiumPools).toHaveBeenCalledOnce();
+      expect(fetchOrcaPools).toHaveBeenCalledOnce();
+      expect(fetchSlipstreamPools).toHaveBeenCalledTimes(2);
+      expect(directResult.pools).toEqual([]);
+      expect(pancakeResult.pools).toEqual([]);
+      return sourceData;
     });
     vi.mocked(buildCurveLookups).mockResolvedValueOnce({ curvePoolMap, priceObservations: new Map() });
     vi.mocked(fetchUniV3Data).mockResolvedValueOnce({
@@ -695,34 +713,22 @@ describe("syncDexLiquidity", () => {
     expect(persistScores).toHaveBeenCalled();
   });
 
-  it("waits for subgraph enrichment before starting direct API fetches", async () => {
-    const emptyUniV3 = {
-      uniV3PoolFees: new Map(),
-      uniV3SymbolFees: new Map(),
-      uniV3PriceObs: new Map(),
-      uniV3ExecutionCandidates: new Map(),
-    };
-    const emptyAerodrome = { aerodromePriceObs: new Map(), aerodromeIsStable: new Map() };
-    const uniV3Gate = deferred<typeof emptyUniV3>();
-    const aerodromeGate = deferred<typeof emptyAerodrome>();
-
-    vi.mocked(fetchUniV3Data).mockImplementationOnce(() => uniV3Gate.promise);
-    vi.mocked(fetchAerodromeData).mockImplementationOnce(() => aerodromeGate.promise);
+  it("waits for direct API fetches before loading primary and subgraph sources", async () => {
+    const fluidGate = deferred<ReturnType<typeof makeDirectApiResult>>();
+    vi.mocked(fetchFluidPools).mockImplementationOnce(() => fluidGate.promise);
 
     const syncPromise = syncDexLiquidity(db, "graph-key");
 
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(fetchFluidPools).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(fetchFluidPools).toHaveBeenCalledOnce());
+    expect(fetchDataSources).not.toHaveBeenCalled();
+    expect(fetchUniV3Data).not.toHaveBeenCalled();
+    expect(fetchAerodromeData).not.toHaveBeenCalled();
 
-    uniV3Gate.resolve(emptyUniV3);
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(fetchFluidPools).not.toHaveBeenCalled();
-
-    aerodromeGate.resolve(emptyAerodrome);
+    fluidGate.resolve(makeDirectApiResult());
     await syncPromise;
-    expect(fetchFluidPools).toHaveBeenCalled();
+    expect(fetchDataSources).toHaveBeenCalledOnce();
+    expect(fetchUniV3Data).toHaveBeenCalledOnce();
+    expect(fetchAerodromeData).toHaveBeenCalledOnce();
   });
 
   it("passes scheduled chain RPCs into Fluid enrichment", async () => {

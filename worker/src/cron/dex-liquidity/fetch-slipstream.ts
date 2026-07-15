@@ -35,6 +35,36 @@ type SugarToken = {
   decimals: number;
 };
 
+export function projectSugarPoolPage(decoded: readonly SugarPool[]): SugarPool[] {
+  const pools: SugarPool[] = [];
+  for (const pool of decoded) {
+    if (!(Number(pool.type) > 0)) continue;
+    pools.push({
+      lp: pool.lp,
+      type: pool.type,
+      token0: pool.token0,
+      reserve0: pool.reserve0,
+      token1: pool.token1,
+      reserve1: pool.reserve1,
+      sqrt_ratio: pool.sqrt_ratio,
+      pool_fee: pool.pool_fee,
+    });
+  }
+  return pools;
+}
+
+export function projectSugarTokens(decoded: readonly SugarToken[]): Map<string, SugarToken> {
+  const tokens = new Map<string, SugarToken>();
+  for (const token of decoded) {
+    tokens.set(normalizeAddress(token.token_address), {
+      token_address: token.token_address,
+      symbol: token.symbol,
+      decimals: token.decimals,
+    });
+  }
+  return tokens;
+}
+
 const SLIPSTREAM_CONFIG: Record<SlipstreamProtocol, { chain: string; sugarAddress: string }> = {
   "aerodrome-slipstream": {
     chain: "base",
@@ -131,7 +161,7 @@ async function fetchSugarPools(
     }) as readonly SugarPool[];
 
     if (decoded.length === 0) break;
-    pools.push(...decoded);
+    pools.push(...projectSugarPoolPage(decoded));
     if (decoded.length < PAGE_SIZE) break;
     if (page === MAX_PAGES - 1) {
       throw new Error(`pagination cap reached at page ${page + 1}; resumeFromOffset=${MAX_PAGES * PAGE_SIZE}`);
@@ -168,7 +198,7 @@ async function fetchSugarTokens(
     data: result,
   }) as readonly SugarToken[];
 
-  return new Map(decoded.map((token) => [normalizeAddress(token.token_address), token]));
+  return projectSugarTokens(decoded);
 }
 
 export async function fetchSlipstreamPools(
@@ -182,8 +212,7 @@ export async function fetchSlipstreamPools(
   const config = SLIPSTREAM_CONFIG[protocol];
   const errors: string[] = [];
   try {
-    const rawPools = await fetchSugarPools(config.chain, config.sugarAddress, chainRpcs, signal);
-    const clPools = rawPools.filter((pool) => Number(pool.type) > 0);
+    const clPools = await fetchSugarPools(config.chain, config.sugarAddress, chainRpcs, signal);
     const tokenAddresses = Array.from(new Set(
       clPools.flatMap((pool) => [normalizeAddress(pool.token0), normalizeAddress(pool.token1)]),
     ));

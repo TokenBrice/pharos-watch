@@ -210,7 +210,8 @@ interface DexLiquiditySourceState {
   subgraphEnrichment: DexLiquiditySubgraphEnrichment;
   directApiPhase: DexLiquidityDirectApiPhase;
   directApiPools: DexApiPool[];
-  directApiMeasuredExecutionPools: DexApiPool[];
+  pancakeMeasuredExecutionTargets: ReturnType<typeof buildPancakeMeasuredExecutionTargets>;
+  fluidMeasuredExecutionTargets: ReturnType<typeof buildFluidMeasuredExecutionTargets>;
   primaryPoolCounts: PrimaryPoolCompactionResult;
   directApiPoolCounts: DirectApiPoolCompactionCounts;
   authoritativeConfirmation: ReturnType<typeof buildAuthoritativeStagedPoolConfirmationIndex>;
@@ -324,6 +325,82 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
 
   const validationReferences = await loadPriceValidationReferences(ctx.db);
   const { stablecoinPriceById, stablecoinMcapById } = await loadTrackedStablecoinMaps(ctx.db, ctx.syncStartSec);
+  const lookups = buildSymbolLookups();
+
+  const directApiFetchers = buildDexDirectApiFetchers({
+    db: ctx.db,
+    graphApiKey: ctx.graphApiKey,
+    chainAddressToId: lookups.chainAddressToId,
+    symbolToChainScopedIds: lookups.symbolToChainScopedIds,
+    stablecoinPriceById,
+    chainRpcs: ctx.chainRpcs,
+  });
+  await reportDexLiquidityProgress(ctx, {
+    stage: "direct-api-fetch",
+    message: "Fetching protocol-native DEX liquidity",
+    providerFamily: "protocol-native-dex",
+    itemsDone: 0,
+    itemsTotal: directApiFetchers.length,
+    metadata: {
+      providerFamilies: directApiFetchers.map((fetcher) => fetcher.normalizedProtocol),
+      countTotals: {
+        sourceFamilies: directApiFetchers.length,
+      },
+    },
+  });
+  let directApiPhase = await runDirectApiFetchPhase(ctx.db, directApiFetchers, ctx.signal, lookups);
+  const authoritativeConfirmation = buildAuthoritativeStagedPoolConfirmationIndex(directApiPhase.results);
+  const compactedDirectApi = compactDirectApiFetchPhasePools(directApiPhase, lookups);
+  directApiPhase = compactedDirectApi.phase;
+  await reportDexLiquidityProgress(ctx, {
+    stage: "direct-api-fetch-complete",
+    message: "Completed protocol-native DEX liquidity fetch",
+    providerFamily: "protocol-native-dex",
+    itemsDone: directApiPhase.results.length,
+    itemsTotal: directApiFetchers.length,
+    metadata: {
+      providerFamilies: directApiPhase.results.map((entry) => entry.normalizedProtocol),
+      failedSources: directApiPhase.failedSources,
+      fallbackSignals: directApiPhase.fallbackSignals,
+      sourceWarnings: directApiPhase.sourceWarnings,
+      countTotals: {
+        sourceFamilies: directApiFetchers.length,
+        directApiPools: compactedDirectApi.counts.rawPoolCount,
+        directApiPoolsRetained: compactedDirectApi.counts.retainedPoolCount,
+        directApiPoolsSkippedInvalidUnits: compactedDirectApi.counts.skippedInvalidUnitCount,
+        directApiPoolsSkippedUntracked: compactedDirectApi.counts.skippedUntrackedCount,
+        circuitEvents: directApiPhase.circuitEvents.length,
+      },
+    },
+  });
+
+  const pancakeMeasuredExecutionTargets = buildPancakeMeasuredExecutionTargets({
+    pools: compactedDirectApi.measuredExecutionPools,
+    chainAddressToId: lookups.chainAddressToId,
+    symbolToChainScopedIds: lookups.symbolToChainScopedIds,
+    validationReferences,
+    stablecoinPriceById,
+    capturedAt: ctx.syncStartSec,
+  });
+  const fluidMeasuredExecutionTargets = buildFluidMeasuredExecutionTargets({
+    pools: compactedDirectApi.measuredExecutionPools,
+    chainAddressToId: lookups.chainAddressToId,
+    symbolToChainScopedIds: lookups.symbolToChainScopedIds,
+    validationReferences,
+    stablecoinPriceById,
+    capturedAt: ctx.syncStartSec,
+  });
+
+  // Keep the compact direct pool list needed for preference and integration,
+  // but release provider-owned graphs before loading the larger primary sources.
+  compactedDirectApi.measuredExecutionPools.length = 0;
+  for (const entry of directApiPhase.results) {
+    entry.result.pools = [];
+    entry.authoritativeExactPoolKeys?.clear();
+    delete entry.authoritativeExactPoolKeys;
+    if (entry.poolCompaction) entry.poolCompaction.measuredExecutionPools = [];
+  }
+  directApiFetchers.length = 0;
 
   let dataSources = await fetchDataSources(ctx.graphApiKey, ctx.db, ctx.signal);
   if (!dataSources) {
@@ -357,7 +434,6 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     fallbackSignals.push("dl-protocols-unavailable");
   }
 
-  const lookups = buildSymbolLookups();
   const primaryPoolCounts = compactPrimaryPoolsForTrackedStablecoins(dataSources.pools, lookups);
   if (primaryPoolCounts.skippedUntrackedCount > 0) {
     dataSources = { ...dataSources, pools: primaryPoolCounts.pools };
@@ -376,14 +452,6 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
   // Downstream phases use only the derived maps, so release the raw response trees now.
   dataSources.curvePayloads.length = 0;
 
-  const directApiFetchers = buildDexDirectApiFetchers({
-    db: ctx.db,
-    graphApiKey: ctx.graphApiKey,
-    chainAddressToId: lookups.chainAddressToId,
-    symbolToChainScopedIds: lookups.symbolToChainScopedIds,
-    stablecoinPriceById,
-    chainRpcs: ctx.chainRpcs,
-  });
   await reportDexLiquidityProgress(ctx, {
     stage: "subgraph-enrichment",
     message: "Fetching subgraph liquidity enrichment",
@@ -421,46 +489,10 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     },
   });
 
-  await reportDexLiquidityProgress(ctx, {
-    stage: "direct-api-fetch",
-    message: "Fetching protocol-native DEX liquidity",
-    providerFamily: "protocol-native-dex",
-    itemsDone: 0,
-    itemsTotal: directApiFetchers.length,
-    metadata: {
-      providerFamilies: directApiFetchers.map((fetcher) => fetcher.normalizedProtocol),
-      countTotals: {
-        sourceFamilies: directApiFetchers.length,
-      },
-    },
-  });
-  let directApiPhase = await runDirectApiFetchPhase(ctx.db, directApiFetchers, ctx.signal, lookups);
+  // Preserve the established primary/subgraph/direct diagnostic ordering even
+  // though direct sources now execute first to bound peak memory.
   failedSources.push(...directApiPhase.failedSources);
   fallbackSignals.push(...directApiPhase.fallbackSignals);
-  const authoritativeConfirmation = buildAuthoritativeStagedPoolConfirmationIndex(directApiPhase.results);
-  const compactedDirectApi = compactDirectApiFetchPhasePools(directApiPhase, lookups);
-  directApiPhase = compactedDirectApi.phase;
-  await reportDexLiquidityProgress(ctx, {
-    stage: "direct-api-fetch-complete",
-    message: "Completed protocol-native DEX liquidity fetch",
-    providerFamily: "protocol-native-dex",
-    itemsDone: directApiPhase.results.length,
-    itemsTotal: directApiFetchers.length,
-    metadata: {
-      providerFamilies: directApiPhase.results.map((entry) => entry.normalizedProtocol),
-      failedSources: directApiPhase.failedSources,
-      fallbackSignals: directApiPhase.fallbackSignals,
-      sourceWarnings: directApiPhase.sourceWarnings,
-      countTotals: {
-        sourceFamilies: directApiFetchers.length,
-        directApiPools: compactedDirectApi.counts.rawPoolCount,
-        directApiPoolsRetained: compactedDirectApi.counts.retainedPoolCount,
-        directApiPoolsSkippedInvalidUnits: compactedDirectApi.counts.skippedInvalidUnitCount,
-        directApiPoolsSkippedUntracked: compactedDirectApi.counts.skippedUntrackedCount,
-        circuitEvents: directApiPhase.circuitEvents.length,
-      },
-    },
-  });
 
   mergeDexPriceObservationMap(priceObservations, subgraphEnrichment.uniV3PriceObs);
   mergeDexPriceObservationMap(priceObservations, subgraphEnrichment.aerodromePriceObs);
@@ -477,7 +509,8 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     subgraphEnrichment,
     directApiPhase,
     directApiPools: compactedDirectApi.pools,
-    directApiMeasuredExecutionPools: compactedDirectApi.measuredExecutionPools,
+    pancakeMeasuredExecutionTargets,
+    fluidMeasuredExecutionTargets,
     primaryPoolCounts,
     directApiPoolCounts: compactedDirectApi.counts,
     authoritativeConfirmation,
@@ -584,34 +617,8 @@ async function buildDexLiquidityPoolState(
   });
   logDirectApiSourceSummary(directApiIntegration, sourceState.directApiPhase.circuitEvents);
 
-  const pancakeMeasuredExecutionTargets = buildPancakeMeasuredExecutionTargets({
-    pools: sourceState.directApiMeasuredExecutionPools,
-    chainAddressToId: sourceState.lookups.chainAddressToId,
-    symbolToChainScopedIds: sourceState.lookups.symbolToChainScopedIds,
-    validationReferences: sourceState.validationReferences,
-    stablecoinPriceById: sourceState.stablecoinPriceById,
-    capturedAt: ctx.syncStartSec,
-  });
-  const fluidMeasuredExecutionTargets = buildFluidMeasuredExecutionTargets({
-    pools: sourceState.directApiMeasuredExecutionPools,
-    chainAddressToId: sourceState.lookups.chainAddressToId,
-    symbolToChainScopedIds: sourceState.lookups.symbolToChainScopedIds,
-    validationReferences: sourceState.validationReferences,
-    stablecoinPriceById: sourceState.stablecoinPriceById,
-    capturedAt: ctx.syncStartSec,
-  });
-
-  // Only diagnostics and the compact measured targets survive the direct phase.
-  // The flattened arrays and provider arrays share pool objects, so clear both
-  // layers before staging allocates its D1 result set.
+  // The compact direct pool list is no longer needed after integration.
   sourceState.directApiPools = [];
-  sourceState.directApiMeasuredExecutionPools = [];
-  for (const entry of sourceState.directApiPhase.results) {
-    entry.result.pools = [];
-    entry.authoritativeExactPoolKeys?.clear();
-    delete entry.authoritativeExactPoolKeys;
-    if (entry.poolCompaction) entry.poolCompaction.measuredExecutionPools = [];
-  }
   sourceState.lookups.symbolToIds = new Map();
   sourceState.lookups.symbolToChainScopedIds = new Map();
   sourceState.lookups.addressToId = new Map();
@@ -697,8 +704,8 @@ async function buildDexLiquidityPoolState(
   return {
     fallback,
     metrics,
-    pancakeMeasuredExecutionTargets,
-    fluidMeasuredExecutionTargets,
+    pancakeMeasuredExecutionTargets: sourceState.pancakeMeasuredExecutionTargets,
+    fluidMeasuredExecutionTargets: sourceState.fluidMeasuredExecutionTargets,
     stagedMergedCount: staged.mergedCount,
     stagedSkippedCount: staged.skippedCount,
     stagedSkippedByExactIdentityCount: staged.skippedByExactIdentityCount,
