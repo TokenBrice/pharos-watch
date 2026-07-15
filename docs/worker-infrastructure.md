@@ -64,7 +64,9 @@ The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `fun
 
 Operational telemetry control: set `REQUEST_SOURCE_ATTRIBUTION_DISABLED=true` on the Worker and/or Pages site-data environment to stop low-value route/source attribution writes. This disables Worker `api_request_consumer_stats` route/source writes and Pages `site_data_request_stats` writes, while preserving API-key authentication, D1-backed rate limiting, last-used metadata updates, and per-key public API load telemetry. During keyed public-API spikes, set `API_KEY_REQUEST_ATTRIBUTION_DISABLED=true` on the Worker to pause only `api_key_request_stats` writes; auth, rate limiting, and last-used metadata still run.
 
-Scheduled job attempt ledger: unset `WORKER_JOB_LEDGER_MODE` defaults to `off`, but the checked-in Worker config sets `shadow` with `WORKER_JOB_LEDGER_ALLOWLIST=sync-dex-discovery,sync-live-reserves,reserve-recovery,sync-dex-liquidity,sync-stablecoins,sync-yield-data`. Shadow mode records best-effort attempts without changing the job result. `write` makes bootstrap, heartbeat, lease-state, and terminal ledger write failures fail the owned job, so promote only after two clean observed cycles. Status reads and the raw-snapshot read-scope fingerprint follow the same mode and effective allowlist; `off` issues no attempt-health query. Rollback is `shadow` or `off`.
+Scheduled job attempt ledger: unset `WORKER_JOB_LEDGER_MODE` defaults to `off`, but the checked-in Worker config sets `shadow` with `WORKER_JOB_LEDGER_ALLOWLIST=sync-dex-discovery,sync-live-reserves,reserve-recovery,sync-cl-exit-depth,sync-dex-liquidity,sync-stablecoins,sync-yield-data`. Shadow mode records best-effort attempts without changing the job result. `write` makes bootstrap, heartbeat, lease-state, and terminal ledger write failures fail the owned job, so promote only after two clean observed cycles. Status reads and the raw-snapshot read-scope fingerprint follow the same mode and effective allowlist; `off` issues no attempt-health query. Rollback is `shadow` or `off`.
+
+Measured DEX execution has its own `0,30 * * * *` scheduled slot and `sync-cl-exit-depth` lease. The slot permits three concurrent chain lanes while serializing requests within each chain, caps work at 800 actual RPC requests and eight minutes, and records progress through the shared scheduled-runner path. Its generation-fenced D1 target and quote tables are additive: the measured lane consumes the prior scoring generation, while the `10,40` DEX-scoring lane consumes the prior measured generation and publishes the next target inventory. Uniswap V3, PancakeSwap V3, and Fluid cohorts currently capture in shadow and retain an `activation-pending` capability gate; this lane does not make them score-eligible by deployment alone.
 
 Repair debt: DDR repair-required events are dual-written into `worker_repair_tasks` while the existing DDR cache marker remains a status fallback. The daily `worker-repair-runner` compatibility job reads due/stale backlog counts without claiming or mutating rows. Producer reconciliation closes tasks that are no longer current, and retention prunes old terminal rows.
 
@@ -73,10 +75,11 @@ Data-invariant canaries: unset `WORKER_CANARY_MODE` defaults to `off`, but the c
 Reserve interruption recovery: unset `WORKER_RESERVE_RECOVERY_MODE` defaults to `off`, while the checked-in Worker config sets `shadow`. Producer checkpoints are written in every mode. The isolated recovery lane uses `off` for no scan, `shadow` for read-only eligibility/blocker telemetry, `reconcile` for generation-fenced abandonment and ready-attempt preparation without a claim, and `recover` for claim plus suffix/sidecar replay. `WORKER_RESERVE_FAULT_INJECTION_ENABLED` is a separate fail-closed test-harness gate: only a trimmed, case-normalized literal `true` enables arming and scheduled execution, disabling it neutralizes retained fault rows, and the production `worker/wrangler.toml` intentionally leaves it unset.
 
 <!-- ENV-CONTRACT:WORKER-INFRASTRUCTURE:BEGIN -->
+
 Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worker and Pages env modules derive their `required` / `optional` / `reserved` views from that manifest.
 
 | Binding | Type | Worker | Pages ops | Pages site-data | Description |
-| --- | --- | --- | --- | --- | --- |
+| ----------------------------------------------- | ----------------------- | -------- | --------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DB` | `D1Database` | required | - | required | Primary D1 binding for worker reads/writes; Pages uses it for optional site-data attribution telemetry and required atomic selector-snapshot write quotas. |
 | `CF_VERSION_METADATA` | `WorkerVersionMetadata` | required | - | - | Cloudflare version metadata binding attached to scheduled attempt and checkpoint telemetry for deployment correlation. |
 | `TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT` | `RateLimit` | required | - | - | Cloudflare pre-authentication rate limiter for Telegram webhook requests. |
@@ -158,6 +161,7 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `SELECTOR_SNAPSHOTS` | `KVNamespace` | - | - | required | KV namespace binding for the Pages-only Stablecoin Picker snapshot store at `functions/selector-snapshot/[[path]].ts`; new content-addressed `s:{sid}` entries carry server-recomputed trust metadata, while legacy entries remain client-unverified. HMAC-IP write-quota counters live in D1 for atomic reservations. |
 | `SELECTOR_SNAPSHOT_IP_HASH_SECRET` | `string` | - | - | required | Dedicated HMAC pepper for selector-snapshot IP rate-limit and daily-quota keys; raw IP addresses are never stored. |
 | `TELEGRAM_ADOPTION_IP_HASH_SECRET` | `string` | - | - | required | Dedicated HMAC pepper for PharosWatchBot CTA telemetry per-client minute quotas; raw IP addresses are never stored. |
+
 <!-- ENV-CONTRACT:WORKER-INFRASTRUCTURE:END -->
 
 ---
@@ -307,7 +311,7 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 4. **Cache-Control profiles** (centralized in `shared/lib/api-cache-profiles.ts`; set by individual API handlers, with a small number of route-local special cases):
 
 | Profile            | `Cache-Control` header                                         | Used by                                                                                                                                                                                    |
-| ------------------ | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ------------------ | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Realtime           | `public, s-maxage=60, max-age=10`                              | health, events                                                                                                                                                                             |
 | Producer-backed    | `public, s-maxage=300, max-age=60, stale-while-revalidate=300` | stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains                                                                         |
 | Per-coin           | `public, s-maxage=300, max-age=10`                             | stablecoin detail (`/api/stablecoin/:id`)                                                                                                                                                  |
@@ -473,6 +477,7 @@ Do not maintain a second schedule table in this document:
 - `npm run check:cron-sync` verifies schedule and dispatch parity; `npm run check:cron-connections` reports per-slot peak connection use.
 
 Fetch-heavy work uses isolated or offset lanes so it does not compete with the quarter-hourly core pipeline. DB-only work may share a slot when ordering is explicit. Budget-only side work is modeled even when it is not a `/api/status` job. Reserve recovery remains independent of the reserve invocation it is intended to reconcile.
+
 ### Cron Slot Capacity and Connection Pool Budget
 
 Cloudflare limits each invocation to six simultaneous outbound requests that are still waiting for response headers; a request releases that slot once headers arrive. Pharos deliberately models the stricter case as a trigger-wide **6-request budget**, so every job dispatched by one cron invocation competes inside the same static ceiling. See [Worker and API Limits](./worker-and-api-limits.md#connection-budget-operating-assumption).
@@ -750,7 +755,7 @@ CREATE TABLE IF NOT EXISTS cache (
 ```
 
 | Cache Key                                       | Writer                   | Data                                                                                                                                                                                              |
-| ----------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ---------------------------------------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `stablecoins`                                   | `syncStablecoins`        | Full DefiLlama pegged assets payload                                                                                                                                                              |
 | `stablecoins:invalid-last`                      | `syncStablecoins`        | Last schema-invalid stablecoins payload (diagnostic only, never served to clients)                                                                                                                |
 | `stablecoin-charts`                             | `syncStablecoinCharts`   | Downsampled chart points                                                                                                                                                                          |
@@ -871,13 +876,14 @@ The dedicated quarter-hour `cron-slot-sweeper` reconciles stale `cron_slot_execu
 Feature guides own producer-specific algorithms and schemas; this document owns shared scheduling, lease, timeout, circuit-breaker, and observability behavior.
 
 | Producer family | Source | Feature contract |
-| --- | --- | --- |
+| -------------------- | ---------------------------------------------- | ------------------------------------------------- |
 | Stablecoin charts | `worker/src/cron/sync-stablecoin-charts.ts` | [Data Pipeline](./data-pipeline.md) |
 | USDS state | `worker/src/cron/sync-usds-status.ts` | [Stablecoin Data](./stablecoin-data.md) |
 | Live reserves | `worker/src/cron/sync-live-reserves.ts` | [Live Reserve Sync](./live-reserves.md) |
 | Redemption backstops | `worker/src/cron/sync-redemption-backstops.ts` | [Redemption Backstops](./redemption-backstops.md) |
 | Kinesis supply | `worker/src/cron/sync-kinesis-supply.ts` | [Supply Snapshot](./supply-snapshot.md) |
 | Bluechip ratings | `worker/src/cron/sync-bluechip.ts` | [Bluechip Ratings](./bluechip-ratings.md) |
+
 ## Health & Status Endpoints
 
 ### GET /api/health

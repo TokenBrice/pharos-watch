@@ -47,7 +47,7 @@ terminal-state, status, and prune behavior.
 
 Current checked-in Worker config starts the shadow soak with:
 `WORKER_JOB_LEDGER_MODE=shadow` and
-`WORKER_JOB_LEDGER_ALLOWLIST=sync-dex-discovery,sync-live-reserves,reserve-recovery,sync-dex-liquidity,sync-stablecoins,sync-yield-data`.
+`WORKER_JOB_LEDGER_ALLOWLIST=sync-dex-discovery,sync-live-reserves,reserve-recovery,sync-cl-exit-depth,sync-dex-liquidity,sync-stablecoins,sync-yield-data`.
 
 ## Verification
 

@@ -46,7 +46,7 @@ The V9 implementation establishes candidate infrastructure without changing prod
   candidate deterministically. The current policy semantic digest is
   `6b6f819eb06740634239467ed6041125d7971f8df0fbedf0e4bd836cac405053`;
   the current evaluation-build digest is
-  `78b082388627e5478ee870f93f0d414dc2e9bd37486ceb768bfa0c68cf537f1c`.
+  `38c057ef81599cb020473331f7ba12c9c70cd0c32580c3b1b1276272882ece40`.
 - The 2026-07-15 candidate-v2 queue-binding revision adds explicit
   `local-component` paths to seven reason allowlists already emitted as
   aggregate facts. The revision changes evidence-work-queue metadata only;
@@ -83,10 +83,12 @@ The V9 implementation establishes candidate infrastructure without changing prod
   measured nulls fail schema validation. Measurement completeness describes
   controller and issuance coverage rather than health, so a fully enumerated
   shutdown or non-redeemable branch remains complete while retaining its
-  health warnings and failed mechanism facts. This is candidate-only evaluator
-  behavior and does not change active V8.17; its final identity must be carried
-  by a regenerated evaluation-build digest before replay or freeze,
-  coordinated with the release owner.
+  health warnings and failed mechanism facts. Structural N/A also requires a
+  cited rationale whose source URL is present in the measurement evidence; it
+  cannot be used as an unsourced substitute for a failed or unavailable read.
+  This is candidate-only evaluator behavior and does not change active V8.17;
+  its final identity must be carried by a regenerated evaluation-build digest
+  before replay or freeze, coordinated with the release owner.
 - The shadow extension builder now maps reviewed repository evidence into the
   strict fact set instead of clamping every fact to an unresolved state: peg
   references from the registry peg currency, chain-supply bridge materiality
@@ -103,9 +105,13 @@ The V9 implementation establishes candidate infrastructure without changing prod
   methodology `v4.18`); the extension retains the identical derivation for
   captures that predate the producer emitting it. Documented-terms route
   evidence lives on the policy's `documentedTermsMaxAgeSec` review cadence
-  instead of the producer cron cadence, and the exit portfolio only reports
-  `known` completeness when every retained DEX pool carries a score-eligible
-  exact observation, so diagnostic-only route sets stay bounded-unknown
+  instead of the producer cron cadence. Capability matrix `p4a.4` reports DEX
+  completeness only when every retained pool with a reviewed score-eligible
+  execution capability carries a score-eligible exact observation. Generic
+  shaped rows remain diagnostic and are excluded from that denominator, while
+  malformed, gated, missing, stale, or failed exact-capability rows remain in
+  it and fail coverage closed. Legacy matrices and envelopes without the
+  explicit capability count cannot be reconstructed and stay bounded-unknown
   rather than arming the reviewed-complete zero-score path. Pure NAV tokens
   (`flags.navToken`) publish a known not-applicable peg fact (the v8 pure NAV
   carve-over): they have no fixed peg by design, so the formula skips the peg
@@ -117,6 +123,13 @@ The V9 implementation establishes candidate infrastructure without changing prod
   The rateability floors are met in that research measurement, but every
   shadow day remains non-qualifying until a publication-exact capture with a
   matching registry reproduces it and the remaining activation gates pass.
+- The `sync-cl-exit-depth` producer now captures generation-fenced Uniswap V3,
+  PancakeSwap V3, and Fluid measured-depth profiles. All reviewed deployment
+  cohorts are explicitly `activation-pending`: their observations stay
+  score-ineligible until archive replay, executed-swap equivalence, independent
+  cross-checks, drift analysis, and the required prospective shadow evidence
+  are approved. Curve CryptoSwap remains a separate shadow adapter and is never
+  interpreted through the StableSwap model.
 - After a valid V8 publication commits, the Worker runs V9 in a separate
   failure domain. It retains latest candidate/diff state and one compact daily
   summary. Full replay artifacts are retained only for selected first, final,

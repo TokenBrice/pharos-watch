@@ -143,10 +143,14 @@ The implementation lives at
 caller-asserted replay status. Its result supports an operator release decision;
 it cannot authorize or switch production at runtime.
 
-The current candidate remains a hard no-go because it rates no active assets,
-has unresolved critical evidence gaps, lacks a wired and passing
-`ratified-release-coverage` proof, and has not accumulated the prospective
-window. Shipping shadow infrastructure does not advertise methodology `9.0`.
+The current candidate remains a hard no-go. A registry-drift-labeled research
+replay rates 358 of 361 assets, but no publication-exact capture has reproduced
+that result against the current registry and producer generations. Exact-route
+capture, release coverage, independent validation, freeze, and the prospective
+window remain unresolved. The `p4a.4` and measured-execution producer-capability
+changes restart that window under the rule above; shadow capture cannot count
+until the deployed generations are exact and accepted. Shipping shadow
+infrastructure does not advertise methodology `9.0`.
 
 ## Compatibility Release
 
