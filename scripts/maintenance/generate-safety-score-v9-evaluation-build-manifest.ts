@@ -51,6 +51,11 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
  * Exact-input normalization, V2 fact compilation, and stable methodology or
  * capability declarations that can change the facts presented to the pure
  * evaluator. Point-in-time registry/source data remains in the fact digest.
+ *
+ * IMPORT CLOSURE (VER-010): every score-bearing module imported by a listed
+ * producer must itself be listed — an omitted import can change fact output
+ * without changing the build identity. When adding an import to any listed
+ * file, add its score-bearing transitive sources here too.
  */
 export const V9_FACT_PRODUCER_SOURCE_PATHS = [
   "shared/lib/classification/resolve-mechanism-archetype.ts",
@@ -71,9 +76,14 @@ export const V9_FACT_PRODUCER_SOURCE_PATHS = [
   "shared/types/report-cards.ts",
   "shared/types/reserves.ts",
   "shared/types/stablecoin-taxonomy.ts",
+  "shared/lib/chains/index.ts",
+  "worker/src/lib/redemption-exit-route-observations.ts",
   "worker/src/lib/report-cards-fixed-input.ts",
   "worker/src/lib/safety-score-v9-extension.ts",
+  "worker/src/lib/safety-score-v9-extension-mechanism.ts",
   "worker/src/lib/safety-score-v9-extension-reserves.ts",
+  "worker/src/lib/safety-score-v9-extension-routes.ts",
+  "worker/src/lib/safety-score-v9-extension-supply.ts",
   "worker/src/lib/safety-score-v9-fact-set.ts",
   "worker/src/lib/safety-score-v9-fact-set-boundary.ts",
 ] as const;

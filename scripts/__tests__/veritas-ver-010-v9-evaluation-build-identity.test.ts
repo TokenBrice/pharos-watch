@@ -21,7 +21,7 @@ function fixtureRoot(): string {
 }
 
 // VER-010: an imported fact producer can change without changing the build manifest.
-describe.skip("VERITAS finding VER-010: evaluation build identity binds imported fact producers", () => {
+describe("VERITAS finding VER-010: evaluation build identity binds imported fact producers", () => {
   it("changes when the imported supply-share producer changes", () => {
     const root = fixtureRoot();
     try {

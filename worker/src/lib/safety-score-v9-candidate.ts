@@ -76,6 +76,7 @@ const SafetyScoreV9ProducerCapabilityIdentityV1Schema = z
       .object({
         dexExitRoutes: z.number().int().nonnegative(),
         redemptionExitRoutes: z.number().int().nonnegative(),
+        documentedTermsExitRoutes: z.number().int().nonnegative(),
         liveReserves: z.number().int().nonnegative().nullable(),
         chainSupply: z.number().int().nonnegative().nullable(),
         peg: z.number().int().nonnegative().nullable(),
@@ -213,6 +214,9 @@ function producerCapabilityIdentity(
     freshnessPolicySec: {
       dexExitRoutes: extension.routeFreshness.dexMaxAgeSec,
       redemptionExitRoutes: extension.routeFreshness.redemptionMaxAgeSec,
+      // Documented-terms freshness governs score-eligible redemption evidence
+      // and must be capability-bound (VER-011).
+      documentedTermsExitRoutes: extension.routeFreshness.documentedTermsMaxAgeSec,
       liveReserves: extension.sources.liveReserves.maxAgeSec,
       chainSupply: extension.sources.chainSupply.maxAgeSec,
       peg: extension.sources.peg.maxAgeSec,

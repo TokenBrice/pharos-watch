@@ -92,7 +92,7 @@ function exactFixedInput() {
 }
 
 // VER-011: documented-terms freshness can change without changing candidate capability identity.
-describe.skip("VERITAS finding VER-011: documented-terms freshness is capability-bound", () => {
+describe("VERITAS finding VER-011: documented-terms freshness is capability-bound", () => {
   it("changes producer capability and candidate identities with the freshness policy", () => {
     const fixedInput = exactFixedInput();
     const beforeExtension = buildSafetyScoreV9BaselineExtension(fixedInput, {
