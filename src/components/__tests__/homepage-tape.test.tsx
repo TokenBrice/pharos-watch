@@ -201,7 +201,7 @@ describe("HomepageTape", () => {
     expect(root?.className).toContain("border-b");
     expect(root?.className).not.toContain("-mx-3");
 
-    for (const label of ["Tracked", "Active", "Pegs", "Chains"]) {
+    for (const label of ["Core", "Variants", "Pegs", "Chains"]) {
       const chips = screen.getAllByText(label).map((node) => node.parentElement);
       expect(chips).toHaveLength(2);
       for (const chip of chips) {

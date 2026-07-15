@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { buildCoverageMatrixModel } from "@/lib/coverage-matrix-model";
 
 function resource<T>(
@@ -17,7 +17,7 @@ function resource<T>(
 
 describe("buildCoverageMatrixModel", () => {
   it("builds the pure coverage matrix model from query snapshots", () => {
-    const coin = TRACKED_META_BY_ID.get("usdc-circle");
+    const coin = CLIENT_TRACKED_META_BY_ID.get("usdc-circle");
     expect(coin).toBeDefined();
 
     const model = buildCoverageMatrixModel({
@@ -78,8 +78,8 @@ describe("buildCoverageMatrixModel", () => {
           available: true,
         },
         mintAuthority: {
-          kind: "unknown",
-          available: false,
+          kind: "issuer-or-backend-mint",
+          available: true,
         },
       },
     });
@@ -102,9 +102,9 @@ describe("buildCoverageMatrixModel", () => {
   });
 
   it("classifies dependency-map roles from live report-card graph edges", () => {
-    const usdc = TRACKED_META_BY_ID.get("usdc-circle");
-    const dai = TRACKED_META_BY_ID.get("dai-makerdao");
-    const usdt = TRACKED_META_BY_ID.get("usdt-tether");
+    const usdc = CLIENT_TRACKED_META_BY_ID.get("usdc-circle");
+    const dai = CLIENT_TRACKED_META_BY_ID.get("dai-makerdao");
+    const usdt = CLIENT_TRACKED_META_BY_ID.get("usdt-tether");
     expect(usdc).toBeDefined();
     expect(dai).toBeDefined();
     expect(usdt).toBeDefined();
@@ -146,7 +146,7 @@ describe("buildCoverageMatrixModel", () => {
   });
 
   it("passes client mint-authority summaries into coverage rows", () => {
-    const coin = TRACKED_META_BY_ID.get("usdc-circle");
+    const coin = CLIENT_TRACKED_META_BY_ID.get("usdc-circle");
     expect(coin).toBeDefined();
 
     const model = buildCoverageMatrixModel({
@@ -185,9 +185,9 @@ describe("buildCoverageMatrixModel", () => {
   });
 
   it("selects widest/narrowest/mostConcentrated features consistently with featureSummaries", () => {
-    const usdc = TRACKED_META_BY_ID.get("usdc-circle");
-    const dai = TRACKED_META_BY_ID.get("dai-makerdao");
-    const usdt = TRACKED_META_BY_ID.get("usdt-tether");
+    const usdc = CLIENT_TRACKED_META_BY_ID.get("usdc-circle");
+    const dai = CLIENT_TRACKED_META_BY_ID.get("dai-makerdao");
+    const usdt = CLIENT_TRACKED_META_BY_ID.get("usdt-tether");
     expect(usdc && dai && usdt).toBeTruthy();
 
     const model = buildCoverageMatrixModel({
@@ -229,7 +229,7 @@ describe("buildCoverageMatrixModel", () => {
   });
 
   it("marks redemption coverage as Data n/a when the redemption feed is unavailable", () => {
-    const coin = TRACKED_META_BY_ID.get("usdc-circle");
+    const coin = CLIENT_TRACKED_META_BY_ID.get("usdc-circle");
     expect(coin).toBeDefined();
     const error = new Error("redemption feed unavailable");
 
@@ -267,7 +267,7 @@ describe("buildCoverageMatrixModel", () => {
   });
 
   it("keeps impaired redemption rows out of strong coverage", () => {
-    const coin = TRACKED_META_BY_ID.get("usdc-circle");
+    const coin = CLIENT_TRACKED_META_BY_ID.get("usdc-circle");
     expect(coin).toBeDefined();
 
     const model = buildCoverageMatrixModel({

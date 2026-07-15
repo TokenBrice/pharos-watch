@@ -6,7 +6,8 @@ import {
   reconcilePaginationStateOnTotalChange,
   type TablePaginationState,
 } from "@/hooks/use-table-pagination";
-import type { DexLiquidityData, StablecoinMeta } from "@shared/types";
+import type { DexLiquidityData } from "@shared/types";
+import type { StablecoinClientMeta } from "@shared/types/stablecoin-client-meta";
 
 const PAGE_SIZE = 25;
 
@@ -16,7 +17,8 @@ function makeRow(index: number, overrides: Partial<DexLiquidityData> = {}): Liqu
       id: `coin-${index}`,
       symbol: `C${index}`,
       name: `Coin ${index}`,
-    } as StablecoinMeta,
+      listingClass: "core-stablecoin",
+    } as StablecoinClientMeta,
     liq: {
       totalTvlUsd: 1_000_000 + index,
       totalVolume24hUsd: 100_000 + index,

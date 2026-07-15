@@ -295,7 +295,7 @@ function uniqueIntegers(count: number, min: number, max: number, sum: number): n
   }
   expect(remaining).toBe(0);
   expect(values[0]).toBe(min);
-  expect(values.at(-1)).toBe(max);
+  expect(values[values.length - 1]).toBe(max);
   expect(new Set(values).size).toBe(count);
   return values;
 }

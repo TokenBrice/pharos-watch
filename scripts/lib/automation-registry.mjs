@@ -56,6 +56,7 @@ const PUBLIC_DOC_SOURCE_PATHS = [
   "docs/design-tokens.md",
   "docs/dews.md",
   "docs/dex-liquidity.md",
+  "docs/listing-policy.md",
   "docs/mint-burn-flows.md",
   "docs/pricing-pipeline.md",
   "docs/redemption-backstops.md",

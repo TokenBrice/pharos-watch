@@ -47,7 +47,7 @@ describe("fetchBinancePricesDetailed", () => {
     expect(results.has("BTC")).toBe(false);
   });
 
-  it("converts stable-quoted Binance markets through their USD quote pair", async () => {
+  it("ignores stable-quoted Binance markets that are no longer configured", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -63,9 +63,7 @@ describe("fetchBinancePricesDetailed", () => {
     );
 
     const results = (await fetchBinancePricesDetailed()).value.prices;
-    const usdtQuoted = 0.9995 * 0.9999;
-    const usdcQuoted = 0.9993 * 1.0001;
-    expect(results.get("BFUSD")).toBeCloseTo((usdtQuoted + usdcQuoted) / 2, 6);
+    expect(results.has("BFUSD")).toBe(false);
   });
 
   it("returns empty map on failure", async () => {

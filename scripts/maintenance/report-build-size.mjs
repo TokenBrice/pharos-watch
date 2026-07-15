@@ -43,11 +43,11 @@ const DEFAULT_BUDGETS = {
   // narrow post-ratchet ceiling with about 1 KiB of headroom for gzip variance.
   largestCssGzipBytes: 69_632,
   totalStaticMediaBytes: 2_000_000,
-  // API-reference schema and route-contract growth measured 2,737,491 bytes
-  // after adding the identity-aware safety-score-history contract. Retain
-  // about 12 KB of headroom while keeping future docs-heavy App Router payload
+  // API-reference schema and route-contract growth measured 2,754,850 bytes
+  // after adding listing-governance and identity-bound V9 contracts. Retain
+  // about 15 KB of headroom while keeping future docs-heavy App Router payload
   // growth reviewable.
-  largestHtmlBytes: 2_750_000,
+  largestHtmlBytes: 2_770_000,
   // Keep the homepage bootstrap/RSC payload from silently growing into the
   // mobile critical path again without constraining long-form docs pages.
   // The homepage table moved directly under the KPI band (1f76d3c36), which

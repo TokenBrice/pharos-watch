@@ -136,7 +136,7 @@ describe("StablecoinDetailSeoContent", () => {
     expect(container.querySelector("h1")?.textContent).toContain("Test Dollar (TSTD) frozen stablecoin archive");
     expect(screen.getByText(/Test Dollar is a frozen Pharos archive, not a current safety endorsement/)).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Telegram alerts" })).toBeNull();
-    expect(screen.getByText(/Frozen archives keep historical context/)).toBeTruthy();
+    expect(screen.getByText(/This record preserves static and historical context/)).toBeTruthy();
   });
 
   it("renders crawlable parent and sibling links for tracked variants", () => {

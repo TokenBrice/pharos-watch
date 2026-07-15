@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../../lib/telegram-subscription-eligibility";
 import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import {
   fetchSpy,
@@ -294,8 +294,7 @@ describe("handleTelegramWebhook", () => {
   });
 
   it("exports the maximum current subscribable registry as one copyable pw3 token", async () => {
-    const frozenIds = new Set(FROZEN_STABLECOINS.map((coin) => coin.id));
-    const subscriptions = [...TRACKED_META_BY_ID.keys()].filter((id) => !frozenIds.has(id)).map((stablecoinId) => ({
+    const subscriptions = TELEGRAM_SUBSCRIBABLE_STABLECOINS.map(({ id: stablecoinId }) => ({
       stablecoin_id: stablecoinId,
       alert_dews: 1,
       alert_depeg: 1,

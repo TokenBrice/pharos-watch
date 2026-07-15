@@ -1,7 +1,7 @@
 import {
   StablecoinChartAggregateUniverseSchema,
   type StablecoinChartPoint,
-} from "@shared/types";
+} from "@shared/types/market";
 import { sanitizeRecordValues } from "./normalizers";
 
 function coerceFiniteNumber(value: unknown): number | undefined {

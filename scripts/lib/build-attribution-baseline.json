@@ -3,12 +3,12 @@
   "groups": [
     {
       "key": "(unclassified)",
-      "totalBytes": 2567135,
-      "chunkCount": 131
+      "totalBytes": 2733799,
+      "chunkCount": 139
     },
     {
       "key": "stablecoin-client-registry",
-      "totalBytes": 691174,
+      "totalBytes": 754729,
       "chunkCount": 1
     },
     {
@@ -28,8 +28,8 @@
     },
     {
       "key": "error-boundary",
-      "totalBytes": 100853,
-      "chunkCount": 3
+      "totalBytes": 114667,
+      "chunkCount": 4
     },
     {
       "key": "zod",
@@ -38,7 +38,7 @@
     },
     {
       "key": "react-tweet",
-      "totalBytes": 29520,
+      "totalBytes": 29945,
       "chunkCount": 1
     }
   ]

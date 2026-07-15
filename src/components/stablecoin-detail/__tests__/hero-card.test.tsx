@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { HeroCard, HeroDesktopIdentityToolbar } from "@/components/stablecoin-detail/hero-card";
 import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type {
   DexLiquidityData,
   PegSummaryCoin,
@@ -481,12 +482,8 @@ describe("HeroCard", () => {
   });
 
   it("renders the tracked parent chip for variant detail pages", () => {
-    const parentCoin: StablecoinMeta = {
-      ...coin,
-      id: "usds-sky",
-      name: "Sky Dollar",
-      symbol: "USDS",
-    };
+    const parentCoin = CLIENT_TRACKED_META_BY_ID.get("usds-sky");
+    expect(parentCoin).toBeDefined();
 
     const variantCoin: StablecoinMeta = {
       ...coin,
@@ -521,7 +518,7 @@ describe("HeroCard", () => {
         yieldRanking={yieldRanking}
         stressSignal={stressSignal}
         reportCard={null}
-        variantParent={parentCoin}
+        variantParent={parentCoin!}
         variantKind="savings-passthrough"
         onOpenFeedback={() => {}}
       />,
