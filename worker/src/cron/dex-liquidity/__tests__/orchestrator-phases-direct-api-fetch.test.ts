@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { makeDexApiFetchResult, type DexApiPool } from "../../../lib/dex-api-common";
+import {
+  makeDexApiFetchResult,
+  normalizeDexApiPoolsForMerge,
+  type DexApiPool,
+} from "../../../lib/dex-api-common";
 import { getCircuitRecord } from "../../../lib/circuit-breaker";
 import type { DirectApiFetcher } from "../orchestrator-phases/direct-api";
 import {
@@ -21,6 +25,14 @@ const circuitStore = vi.hoisted(() => ({
   nowSec: 1_800_000_000,
   records: new Map<string, MockCircuitRecord>(),
 }));
+
+vi.mock("../../../lib/dex-api-common", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../lib/dex-api-common")>();
+  return {
+    ...actual,
+    normalizeDexApiPoolsForMerge: vi.fn(actual.normalizeDexApiPoolsForMerge),
+  };
+});
 
 vi.mock("../../../lib/circuit-breaker", () => {
   const defaultRecord = (): MockCircuitRecord => ({
@@ -106,6 +118,7 @@ describe("runDirectApiFetchPhase", () => {
   });
 
   it("compacts each provider before starting the next while retaining raw counts and exact-key evidence", async () => {
+    const rawPoolCount = 6_673;
     const trackedAddress = "0x1111111111111111111111111111111111111111";
     const makePool = (index: number, tracked: boolean): DexApiPool => ({
       source: "balancer",
@@ -131,7 +144,10 @@ describe("runDirectApiFetchPhase", () => {
       balances: [500_000, 500_000],
     });
     const firstResult = makeDexApiFetchResult(
-      [makePool(1, true), ...Array.from({ length: 256 }, (_, index) => makePool(index + 2, false))],
+      [
+        makePool(1, true),
+        ...Array.from({ length: rawPoolCount - 1 }, (_, index) => makePool(index + 2, false)),
+      ],
       { ok: true, degraded: false, errors: [] },
     );
     const lookups = {
@@ -153,11 +169,15 @@ describe("runDirectApiFetchPhase", () => {
     const authoritative = buildAuthoritativeStagedPoolConfirmationIndex(compacted.phase.results);
 
     expect(compacted.counts).toEqual({
-      rawPoolCount: 257,
+      rawPoolCount,
       retainedPoolCount: 1,
       skippedInvalidUnitCount: 0,
-      skippedUntrackedCount: 256,
+      skippedUntrackedCount: rawPoolCount - 1,
     });
+    expect(normalizeDexApiPoolsForMerge).toHaveBeenCalledTimes(rawPoolCount);
+    expect(
+      vi.mocked(normalizeDexApiPoolsForMerge).mock.calls.every(([pools]) => pools.length === 1),
+    ).toBe(true);
     expect(authoritative.confirmedExactKeysByProtocol.get("first")).toContain(
       "ethereum:0x0000000000000000000000000000000000000101",
     );

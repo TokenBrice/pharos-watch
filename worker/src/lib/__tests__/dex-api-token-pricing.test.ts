@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { derivePoolVolume24hUsd } from "../dex-api-token-pricing";
+import { derivePoolVolume24hUsd, getTokenReferenceUsdPrice } from "../dex-api-token-pricing";
 import type { DexApiPool, DexApiPoolToken } from "../dex-api-types";
 
 // Empty address + USD reference symbol resolves to a $1 reference price via the
@@ -47,5 +47,31 @@ describe("derivePoolVolume24hUsd", () => {
     // Averaging 3 independent estimates of the same economic flow is wrong;
     // the raw source value is kept instead.
     expect(result).toBe(120000);
+  });
+});
+
+describe("getTokenReferenceUsdPrice", () => {
+  const asUsdf = {
+    address: "0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb",
+    symbol: "asUSDF",
+    decimals: 18,
+  };
+  const addressRefs = new Map([[`bsc:${asUsdf.address}`, "asusdf-astherus"]]);
+
+  it("fails a tracked NAV token closed when no trusted live price is available", () => {
+    expect(getTokenReferenceUsdPrice(asUsdf, "bsc", addressRefs, NO_SYMBOL_REFS)).toBeNull();
+  });
+
+  it("uses a trusted live NAV price when one is available", () => {
+    expect(
+      getTokenReferenceUsdPrice(
+        asUsdf,
+        "bsc",
+        addressRefs,
+        NO_SYMBOL_REFS,
+        undefined,
+        new Map([["asusdf-astherus", 1.061756]]),
+      ),
+    ).toBe(1.061756);
   });
 });

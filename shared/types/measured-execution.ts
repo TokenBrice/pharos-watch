@@ -5,6 +5,7 @@ import { ExitRouteCapacityPointSchema } from "./exit-route";
 export const DEX_MEASURED_EXECUTION_SCHEMA_VERSION = "dex-measured-execution-v1" as const;
 export const DEX_MEASURED_TARGET_SCHEMA_VERSION = "dex-measured-target-v1" as const;
 export const DEX_MEASURED_MAX_COST_BPS = 200;
+export const DEX_MEASURED_MAX_FAVORABLE_OUTPUT_RATIO = 1.02;
 export const DEX_MEASURED_MARGINAL_NOTIONAL_USD = 1_000;
 export const DEX_MEASURED_CAPACITY_NOTIONALS_USD = [100_000, 1_000_000, 10_000_000, 25_000_000] as const;
 export const DEX_MEASURED_FRESHNESS_MAX_SEC = 2 * 30 * 60;
@@ -363,7 +364,10 @@ export function validateDexMeasuredExecutionProfile(input: {
   ) issues.add("invalid-quote-proof");
   // A marginal quote below the cost bound is valid measured zero-capacity
   // evidence. Only an implausibly favorable quote breaches the spot guard.
-  if (recomputedMarginal == null || recomputedMarginal.outputUsd / recomputedMarginal.inputUsd > 1.02) {
+  if (
+    recomputedMarginal == null ||
+    recomputedMarginal.outputUsd / recomputedMarginal.inputUsd > DEX_MEASURED_MAX_FAVORABLE_OUTPUT_RATIO
+  ) {
     issues.add("quote-price-mismatch");
   }
 

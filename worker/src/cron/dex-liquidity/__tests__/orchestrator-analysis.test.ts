@@ -73,8 +73,16 @@ function makeCronMetadata(params: {
   dlProtocolsAvailable: boolean;
   currentGlobalTvl: number;
   failedSources?: string[];
+  stagedPoolsMerged?: number;
+  stagedPoolsSkipped?: number;
+  priceObservationCoins?: number;
+  measuredBalanceCoveragePct?: number;
+  weakCoverageCoins?: number;
+  persistenceSkipped?: boolean;
 }) {
   return JSON.stringify({
+    stagedPoolsMerged: params.stagedPoolsMerged,
+    stagedPoolsSkipped: params.stagedPoolsSkipped,
     failedSources: params.failedSources ?? [],
     sourceCoverage: {
       dlYieldsAvailable: true,
@@ -87,7 +95,11 @@ function makeCronMetadata(params: {
       nearCoverageGuard: false,
       nearValueGuard: false,
       nearMajorCoverageGuard: false,
+      priceObservationCoins: params.priceObservationCoins,
+      measuredBalanceCoveragePct: params.measuredBalanceCoveragePct,
+      weakCoverageCoins: params.weakCoverageCoins,
     },
+    persistence: params.persistenceSkipped == null ? undefined : { skipped: params.persistenceSkipped },
   });
 }
 
@@ -192,6 +204,91 @@ describe("analyzeDexLiquidityPostScoring", () => {
     expect(analysis.sourceCoverage.valueBaselineSource).toBe("cron_metadata_source_complete");
     expect(analysis.sourceCoverage.valueBaselineGlobalTvl).toBe(7_025_252_002);
     expect(analysis.sourceCoverage.ignoredPersistedGlobalTvl).toBe(12_703_104_619);
+  });
+
+  it("uses the latest productive run for drift instead of a synthetic failed row", async () => {
+    const db = mockD1([
+      {
+        match: "COUNT(*) as cnt FROM dex_liquidity",
+        rows: [],
+        first: { cnt: 255 },
+      },
+      {
+        match: "SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'",
+        rows: [],
+        first: { total_tvl_usd: 6_020_380_715, updated_at: 1_784_146_228 },
+      },
+      {
+        match: "GROUP BY coverage_class",
+        rows: [],
+      },
+      {
+        match: "ORDER BY total_tvl_usd DESC",
+        rows: [],
+      },
+      {
+        match: "FROM cron_runs",
+        rows: [
+          {
+            started_at: 1_784_148_027,
+            status: "error",
+            metadata: JSON.stringify({
+              reason: "stale-slot-reconciled",
+              progressStage: "direct-api-fetch",
+            }),
+          },
+          {
+            started_at: 1_784_147_427,
+            status: "ok",
+            metadata: JSON.stringify({}),
+          },
+          {
+            started_at: 1_784_146_827,
+            status: "degraded",
+            metadata: makeCronMetadata({
+              dlProtocolsAvailable: true,
+              currentGlobalTvl: 6_020_380_715,
+              stagedPoolsMerged: 0,
+              stagedPoolsSkipped: 0,
+              priceObservationCoins: 0,
+              measuredBalanceCoveragePct: 0,
+              weakCoverageCoins: 0,
+              persistenceSkipped: true,
+            }),
+          },
+          {
+            started_at: 1_784_146_227,
+            status: "ok",
+            metadata: makeCronMetadata({
+              dlProtocolsAvailable: true,
+              currentGlobalTvl: 6_020_380_715,
+              stagedPoolsMerged: 2_614,
+              stagedPoolsSkipped: 1_850,
+              priceObservationCoins: 0,
+              measuredBalanceCoveragePct: 1,
+              weakCoverageCoins: 300,
+            }),
+          },
+        ],
+      },
+      {
+        match: "WHERE stablecoin_id IN",
+        rows: [],
+      },
+    ]);
+
+    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+      db,
+      stagedMergedCount: 2_614,
+      stagedSkippedCount: 1_850,
+      weakCoverageCoinsBeforeFallback: 301,
+      globalAgg: { ...BASE_GLOBAL_AGG, totalTvl: 6_020_380_715 },
+    }));
+
+    expect(analysis.sourceCoverage.qualityDriftMetrics.previousWeakCoverageCoins).toBe(300);
+    expect(analysis.sourceCoverage.qualityDriftMetrics.weakCoverageDelta).toBe(1);
+    expect(analysis.sourceCoverage.qualityDriftFlags).toEqual([]);
+    expect(analysis.sourceCoverage.qualityDriftSeverity).toBe("none");
   });
 
   it("keeps hard value guard behavior for source-complete table baselines", async () => {

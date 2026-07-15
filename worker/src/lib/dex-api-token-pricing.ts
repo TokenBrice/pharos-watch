@@ -1,4 +1,5 @@
 import type { PriceValidationReferences } from "./price-validation";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildPriceValidationContext, getReferencePriceForContext } from "./price-validation";
 import { isUsdReferenceSymbol, normalizeDexSymbol } from "./dex-cron-constants";
 import { resolveTrackedStablecoinId } from "../cron/dex-liquidity/token-resolution";
@@ -48,6 +49,8 @@ export function getTokenReferenceUsdPrice(
     if (trackedPrice != null && Number.isFinite(trackedPrice) && trackedPrice > 0) {
       return trackedPrice;
     }
+
+    if (TRACKED_META_BY_ID.get(resolved.stablecoinId)?.flags.navToken === true) return null;
 
     const context = buildPriceValidationContext({ stablecoinId: resolved.stablecoinId });
     return getReferencePriceForContext(context, validationReferences);
@@ -149,4 +152,3 @@ function derivePoolVolume24hUsd(
 }
 
 export { deriveTokenUsdPrice, derivePoolVolume24hUsd };
-
