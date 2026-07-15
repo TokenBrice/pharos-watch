@@ -318,7 +318,7 @@ Unless an endpoint section explicitly says `Authentication: exempt`, routes in t
 
 Generated from `public/openapi.json` (`Pharos API` v1.0.0). The OpenAPI artifact intentionally excludes Cloudflare-Access-gated admin routes, self-serve key issuance POST endpoints, feedback submission, Telegram webhook ingestion, Telegram Mini App endpoints, and dynamic OG image routes. Those endpoints are documented in the hand-written sections below.
 
-Total documented public operations: **39**.
+Total documented public operations: **40**.
 
 | Method | Path | Summary | Tags | Auth | Parameters | Status codes |
 | ------ | ---- | ------- | ---- | ---- | ---------- | ------------ |
@@ -343,6 +343,7 @@ Total documented public operations: **39**.
 | GET | `/api/public-status-history` | Public status history | Status | X-API-Key | `limit?`, `window?` | 200, 400, 401, 429, 503 |
 | GET | `/api/redemption-backstops` | Redemption backstops | Risk, Reserves | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/report-cards` | Report cards | Risk | X-API-Key | — | 200, 400, 401, 429, 503 |
+| GET | `/api/report-cards/v9` | Safety Score V9 report cards (shadow) | Risk | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/safety-score-history` | Safety score history | Risk, History | X-API-Key | `stablecoin`, `days?` | 200, 400, 401, 429, 503 |
 | GET | `/api/safety-score-history-v2` | Safety score history (identity-aware) | Risk, History | X-API-Key | `stablecoin`, `days?` | 200, 400, 401, 429, 503 |
 | GET | `/api/snapshot/{date}/stablecoin/{stablecoinId}` | Public snapshot projection for a single coin | Digest, Stablecoins, History | X-API-Key | `date`, `stablecoinId` | 200, 400, 401, 429, 503 |
@@ -2396,7 +2397,9 @@ For bridge-route handling, `rawInputs.bridgeRouteRiskTier` and `rawInputs.bridge
 
 `GET /api/report-cards` normally serves the full report-card payload from the private `report-cards:snapshot` cache envelope published by `publish-report-card-cache`. D1 stores that full snapshot inside a checksum-verified gzip/base64 envelope with bounded decompression and top-level V8 identity metadata; this keeps the private row below D1's 2,000,000-byte limit without changing the decoded public V8 JSON. The loader also accepts the legacy plain storage envelope during rolling deploys. The decoded envelope pins the expected cache generation and Safety Score methodology version; compute-on-read is used when the published snapshot is missing, malformed, oversized, generation-mismatched, methodology-mismatched, or missing the current V8 evaluation identity. Published and computed responses expose `safetyScoreIdentity`, which binds model `v8`, response schema, methodology, evaluation-build digest, exact base-input generation, and publication generation. They also expose `publication`, which proves the exact active-set identity as scored plus NR rows. The full snapshot, exact fixed input, smaller `report_card_cache` score map used by lightweight Chain Health/OG consumers, and Telegram safety source carry the same identity and are committed in one D1 batch.
 
-The unversioned `/api/report-cards` route remains a V8 contract and must never silently serve a V9 payload. A future active V9 API uses a genuinely versioned endpoint and independently versioned schema; its compatibility and deprecation dates are explicit product decisions, not runtime rollback controls.
+The unversioned `/api/report-cards` route remains a V8 contract and must never silently serve a V9 payload. The additive `GET /api/report-cards/v9` route exposes the owned V9 public wire contract while V9 remains shadow-only. It reads only the canonical `report-cards:v9-shadow` envelope, returns `503` when that envelope is absent or invalid, and never falls back to V8 or recomputes a score. Its strict response includes `model: "v9"`, `schemaVersion: 1`, `lifecycle: "shadow"`, the full V9 publication identity, methodology and policy identity, completeness, source digests, native three-pillar cards, and a serial/basket dependency graph. The candidate-only `SafetyScoreV9ResponseSchema` is not this public contract. No live page selects this endpoint before the separate activation release and reviewed consumer diffs.
+
+`GET /api/report-cards/v9` uses the standard report-card freshness profile. Consumers must keep its query/cache identity separate from `/api/report-cards`, validate the complete response, and render an explicit unavailable state on identity mismatch. The V9 response does not expose V8 base score, five dimensions, raw inputs, or V8 dependency weights.
 
 Report-card generation treats the stablecoins cache and readable redemption-backstop table as hard dependencies. The stablecoins cache is read in published-contract mode, so malformed cached objects that fail `StablecoinListResponseSchema` validation fail closed instead of being partially filtered for scoring. DEX liquidity, bluechip ratings, live-reserve inputs, and materially stale redemption rows are soft dependencies: if one of those loaders is temporarily unavailable or stale beyond its scoring freshness runway, generation continues with a degraded snapshot instead of failing closed, with stale inputs suppressed from scoring.
 

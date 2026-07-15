@@ -165,6 +165,28 @@ rollback append non-comparable boundary baselines with null previous values;
 legacy history and tape responses exclude those boundary rows rather than
 implying a continuous score series.
 
+### Bounded History Boundary Operation
+
+`executeSafetyScoreHistoryBoundaryOperation()` is the only prepared cutover
+path for V2 history. It is deliberately not routed or scheduled. An operator
+or release-only script must supply the exact approved publication identity,
+one recorded-at timestamp, and one created-at timestamp. The operation loads
+the canonical source for the requested model, rejects any full-identity
+mismatch before preparing writes, removes frozen/defunct rows, and writes a
+single non-comparable baseline for each eligible asset:
+
+- `activate-v9` writes `methodology-boundary-baseline` from the strict V9
+  publication;
+- `rollback-v8` writes `rollback-baseline` from the exact canonical V8 source;
+- `restore-v9` writes `restoration-baseline` from the newly approved V9
+  publication.
+
+Every boundary row has null previous grade/score and no V8 legacy projection.
+Replaying the same operation with the same identity and timestamps is
+idempotent; a conflicting replay fails rather than mutating history. Do not run
+this operation until the corresponding canonical publication is verified and
+alert comparison state is ready to reseed.
+
 Safety alert source and prior-snapshot identities must agree. A model or
 methodology change seeds a new baseline without emitting an organic
 upgrade/downgrade fan-out. Safety alerts fail closed while canonical safety

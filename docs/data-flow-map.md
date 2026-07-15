@@ -47,9 +47,11 @@ base generation, adds reviewed V9 facts, and writes the latest candidate/diff,
 one compact summary per UTC day, selected content-addressed replay evidence,
 and append-only movement reviews. A failed attempt can be retried later on the
 same day; routine successful runs do not retain a full artifact bundle.
-`GET /api/admin-safety-score-v9` and its review mutation are the only current
-UI/API consumers. Shadow state does not feed `GET /api/report-cards`, yield,
-Telegram, chain analytics, or public history; those remain V8 until the
+`GET /api/admin-safety-score-v9` and its review mutation remain the operator
+surface. The additive `GET /api/report-cards/v9` route now exposes a strict,
+fully identified shadow contract for dark consumer verification. Shadow state
+still does not feed `GET /api/report-cards`, the active frontend, yield,
+Telegram, chain analytics, or V8-compatible public history; those remain V8 until the
 independent validation, coverage, shadow-window, and consumer-cutover gates are
 satisfied. See [Safety Score V9 Rollout](./process/safety-score-v9-rollout.md).
 
