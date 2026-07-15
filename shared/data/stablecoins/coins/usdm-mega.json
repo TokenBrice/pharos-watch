@@ -237,26 +237,6 @@
       }
     ]
   },
-  "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "usdm-mega",
-    "display": {
-      "url": "https://docs.megaeth.com",
-      "label": "MegaETH Docs"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "megaeth",
-        "rpcMode": "public-rpc"
-      }
-    },
-    "params": {
-      "rpcUrl": "https://mainnet.megaeth.com/rpc"
-    }
-  },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
