@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReportCard, ReportCardGrade } from "@shared/types/report-cards";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockPreparedStatement } from "../../test-helpers/__shared/mock-d1";
 
 vi.mock("../../lib/safety-score-history-v2", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/safety-score-history-v2")>();
@@ -94,6 +94,14 @@ function makeV8HistoryRow(id: string, grade: ReportCardGrade, score: number | nu
     score,
     prev_grade: null,
     prev_score: null,
+  };
+}
+
+function makeNonComparableV8HistoryRow(id: string) {
+  return {
+    ...makeV8HistoryRow(id, "A", 84, 1_777_770_000),
+    history_id: `v8-prior-build-${id}`,
+    evaluation_build_digest: "c".repeat(64),
   };
 }
 
@@ -298,10 +306,61 @@ describe("snapshotSafetyGradeHistory", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(false);
   });
 
-  it("fails closed instead of comparing V8 cards with a latest V9 history row", async () => {
+  it("writes a methodology boundary baseline for a healthy non-comparable V2 identity", async () => {
     mockSnapshot([makeCard("usdt-tether", "B", 72)]);
     const db = mockD1([
       { match: "FROM safety_grade_history h", rows: [{ stablecoin_id: "usdt-tether", grade: "A", score: 84, recorded_at: 1_777_760_000 }] },
+      {
+        match: "FROM safety_score_history_v2",
+        rows: [makeNonComparableV8HistoryRow("usdt-tether")],
+      },
+    ]);
+
+    const result = await snapshotSafetyGradeHistory(db);
+
+    expect(result).toMatchObject({ itemCount: 1 });
+    expect(result.status).toBeUndefined();
+    expect(batchExecute).toHaveBeenCalledTimes(1);
+    const statements = vi.mocked(batchExecute).mock.calls[0][1] as MockPreparedStatement[];
+    expect(statements).toHaveLength(1);
+    expect(statements[0].boundValues).toMatchObject({
+      3: "v8",
+      8: DIGEST,
+      11: "methodology-boundary-baseline",
+      12: "B",
+      13: 72,
+    });
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      identityHistorySuppressed: false,
+      suppressedIdentityTransitions: 0,
+      suppressedTransitions: 0,
+      identityBoundaryBaselines: 1,
+    });
+  });
+
+  it("suppresses a non-comparable V2 boundary while report-card inputs are degraded", async () => {
+    mockSnapshot([makeCard("usdt-tether", "B", 72)], { redemptionStale: true });
+    const db = mockD1([
+      { match: "FROM safety_grade_history h", rows: [] },
+      { match: "FROM safety_score_history_v2", rows: [makeNonComparableV8HistoryRow("usdt-tether")] },
+    ]);
+
+    const result = await snapshotSafetyGradeHistory(db);
+
+    expect(result).toMatchObject({ status: "degraded", itemCount: 0 });
+    expect(batchExecute).not.toHaveBeenCalled();
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      identityHistorySuppressed: true,
+      suppressedIdentityTransitions: 1,
+      suppressedTransitions: 1,
+      identityBoundaryBaselines: 0,
+    });
+  });
+
+  it("fails closed instead of baselining a latest V9 row into V8 history", async () => {
+    mockSnapshot([makeCard("usdt-tether", "B", 72)]);
+    const db = mockD1([
+      { match: "FROM safety_grade_history h", rows: [] },
       {
         match: "FROM safety_score_history_v2",
         rows: [
@@ -334,6 +393,56 @@ describe("snapshotSafetyGradeHistory", () => {
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
       identityHistorySuppressed: true,
       suppressedIdentityTransitions: 1,
+      identityBoundaryBaselines: 0,
+    });
+  });
+
+  it("writes a healthy legacy identity boundary without reporting suppression", async () => {
+    mockSnapshot([makeCard("usdt-tether", "B", 72)]);
+    const db = mockD1([
+      {
+        match: "FROM safety_grade_history h",
+        rows: [{ stablecoin_id: "usdt-tether", grade: "A", score: 84, recorded_at: 1_777_760_000 }],
+      },
+      { match: "FROM safety_score_history_v2", rows: [] },
+    ]);
+
+    const result = await snapshotSafetyGradeHistory(db);
+
+    expect(result).toMatchObject({ itemCount: 1 });
+    expect(result.status).toBeUndefined();
+    expect(batchExecute).toHaveBeenCalledTimes(1);
+    const statements = vi.mocked(batchExecute).mock.calls[0][1] as MockPreparedStatement[];
+    expect(statements).toHaveLength(1);
+    expect(statements[0].boundValues[11]).toBe("methodology-boundary-baseline");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      identityHistorySuppressed: false,
+      suppressedIdentityTransitions: 0,
+      suppressedTransitions: 0,
+      identityBoundaryBaselines: 1,
+    });
+  });
+
+  it("fails closed and reports suppression for a malformed V2 identity", async () => {
+    mockSnapshot([makeCard("usdt-tether", "B", 72)]);
+    const malformed = {
+      ...makeV8HistoryRow("usdt-tether", "A", 84, 1_777_770_000),
+      evaluation_build_digest: "not-a-digest",
+    };
+    const db = mockD1([
+      { match: "FROM safety_grade_history h", rows: [] },
+      { match: "FROM safety_score_history_v2", rows: [malformed] },
+    ]);
+
+    const result = await snapshotSafetyGradeHistory(db);
+
+    expect(result).toMatchObject({ status: "degraded", itemCount: 0 });
+    expect(batchExecute).not.toHaveBeenCalled();
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      identityHistorySuppressed: true,
+      suppressedIdentityTransitions: 1,
+      suppressedTransitions: 0,
+      identityBoundaryBaselines: 0,
     });
   });
 
