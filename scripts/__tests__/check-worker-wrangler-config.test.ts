@@ -9,6 +9,9 @@ routes = [
   { pattern = "ops-api.pharos.watch", custom_domain = true }
 ]
 
+[vars]
+ADDRESS_PRICE_PROVIDERS_ENABLED = "dexpaprika-address,coingecko-onchain-address,alchemy-address,moralis-address"
+
 [[rules]]
 type = "Data"
 globs = ["**/*.ttf"]
@@ -83,6 +86,20 @@ fallthrough = true
     expect(report.failed).toBe(true);
     expect(report.issues).toContain(
       "Root custom domains must be exactly api.pharos.watch, ops-api.pharos.watch, site-api.pharos.watch; found none.",
+    );
+  });
+
+  it("rejects re-enabling the quota-exhausted Birdeye provider in production", () => {
+    const report = evaluateWorkerWranglerConfig(
+      VALID_CONFIG.replace(
+        "dexpaprika-address,coingecko-onchain-address,alchemy-address,moralis-address",
+        "dexpaprika-address,coingecko-onchain-address,alchemy-address,moralis-address,birdeye-address",
+      ),
+    );
+
+    expect(report.failed).toBe(true);
+    expect(report.issues).toContain(
+      "Production address-price providers must be exactly dexpaprika-address, coingecko-onchain-address, alchemy-address, moralis-address; found dexpaprika-address, coingecko-onchain-address, alchemy-address, moralis-address, birdeye-address.",
     );
   });
 });
