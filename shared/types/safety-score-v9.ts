@@ -843,6 +843,7 @@ const V9ControlPolicySchema = z
         "bounded-admin": ScoreSchema,
         "partially-bounded-admin": ScoreSchema,
         "concentrated-admin": ScoreSchema,
+        "unbounded-reconciled": ScoreSchema,
         "unbounded-or-compromised": ScoreSchema,
         unknown: ScoreSchema,
       })

@@ -295,10 +295,18 @@ describe("Safety Score v9 economic control", () => {
       supervision,
       upgrade: { state: "immutable", controlKey: null },
     });
+    const resultFor = (supervision: V9MintSupervision) =>
+      evaluateV9EconomicControl(args({ facts: facts([mintControl]), mint: reconciledMint(supervision) }));
     const severityFor = (supervision: V9MintSupervision) =>
-      evaluateV9EconomicControl(args({ facts: facts([mintControl]), mint: reconciledMint(supervision) })).structuralFailures.find(
-        (failure) => failure.kind === "centralized-mint",
-      );
+      resultFor(supervision).structuralFailures.find((failure) => failure.kind === "centralized-mint");
+
+    // The reconciled unbounded mint is its own posture, scored at 55 (not the
+    // 25 unbounded-or-compromised rung), so the ruled tier ceilings are reachable.
+    const unknownResult = resultFor("unknown");
+    expect(unknownResult.components.find((component) => component.kind === "mint")).toMatchObject({
+      posture: "unbounded-reconciled",
+      score: 55,
+    });
 
     // Inertness proof: default/unknown supervision keeps today's "high" rung and reason.
     expect(severityFor("unknown")).toMatchObject({
@@ -338,6 +346,12 @@ describe("Safety Score v9 economic control", () => {
     expect(result.structuralFailures).toContainEqual(
       expect.objectContaining({ kind: "centralized-mint", severity: "critical" }),
     );
+    // A compromised mint stays at the unbounded-or-compromised rung (score 25)
+    // even though its reconciliation is continuous and supervision prudential.
+    expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
+      posture: "unbounded-or-compromised",
+      score: 25,
+    });
   });
 
   it("bounds a stale material control with a non-critical reason instead of failing closed", () => {
