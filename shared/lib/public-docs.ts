@@ -64,6 +64,14 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     group: "methodology",
   },
   {
+    source: "listing-policy.md",
+    slug: "listing-policy",
+    title: "Stablecoin Listing Policy",
+    summary:
+      "How Pharos admits, classifies, quarantines, delists, and preserves stablecoin records while separating catalog policy from runtime pricing failures.",
+    group: "methodology",
+  },
+  {
     source: "pricing-pipeline.md",
     slug: "pricing-pipeline",
     title: "Pricing Pipeline",

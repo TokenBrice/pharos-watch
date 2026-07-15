@@ -87,13 +87,7 @@ describe("handleYieldAdapterManifest", () => {
       ).toBe(false);
     }
 
-    expect(
-      body.entries.find((entry) =>
-        entry.stablecoinId === "cetes-etherfuse" &&
-        entry.family === "protocol-api" &&
-        entry.sourceKey === "protocol-api:etherfuse-cetes-current-issuance"
-      ),
-    ).toBeTruthy();
+    expect(body.entries.some((entry) => entry.stablecoinId === "cetes-etherfuse")).toBe(false);
 
     expect(
       body.entries.find((entry) =>

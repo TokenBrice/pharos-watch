@@ -2,7 +2,7 @@
 
 ## Stablecoin Classification System
 
-Each tracked stablecoin is defined in the checked-in per-coin data assets under `shared/data/stablecoins/coins/*.json`, loaded through `shared/lib/stablecoins/registry.ts` from the prevalidated `shared/data/stablecoins/coins.prevalidated.generated.ts` snapshot (which mirrors `shared/data/stablecoins/coins.generated.json`), and validated by `shared/lib/stablecoins/schema.ts` at generation/test time. Import stablecoin helpers from their explicit submodules; use the registry module for the full catalog and active/pre-launch/frozen splits. Each entry carries these flags:
+Each tracked stablecoin is defined in the checked-in per-coin data assets under `shared/data/stablecoins/coins/*.json`, loaded through `shared/lib/stablecoins/registry.ts` from the prevalidated `shared/data/stablecoins/coins.prevalidated.generated.ts` snapshot (which mirrors `shared/data/stablecoins/coins.generated.json`), and validated by `shared/lib/stablecoins/schema.ts` at generation/test time. Import stablecoin helpers from their explicit submodules; use the registry module for the complete catalog and explicit lifecycle splits. Each entry carries these flags:
 
 ### Type (governance field internally)
 
@@ -35,6 +35,12 @@ Active Pharos taxonomy no longer exposes `algorithmic` as a standalone backing b
 - `yieldBearing` — token itself accrues yield (e.g., USDY, USDe, BUIDL)
 - `rwa` — backed by real-world assets like treasuries/bonds (distinct from `rwa-backed` which also includes plain fiat reserves)
 - `navToken` — price appreciates over time as yield accrues (USYC, USDY, TBILL, YLDS). Excluded from peg deviation metrics; table shows "NAV" instead of bps. Also used for CPI-indexed tokens (FPI) — table shows "CPI" for VAR-pegged navTokens
+
+### Listing Class And Lifecycle
+
+`shared/data/stablecoins/listing-decisions.json` assigns exactly one class to every catalog ID: `core-stablecoin`, `cash-equivalent`, `stablecoin-variant`, `stable-value-investment`, or `excluded`. The compact ledger stores only that class mapping. Class precedence is `excluded`, variant metadata, `rwa-credit-fund`, NAV/t-bill cash equivalent, then residual core stablecoin. Aggregate helpers include active core and cash-equivalent rows, exclude variants from parent-inclusive totals, and report stable-value investments separately.
+
+Lifecycle remains on the per-coin catalog row: active or omitted, `pre-launch`, `quarantined`, `delisted`, or `frozen`. Only active rows enter live producers and score recomputation. Quarantined and delisted records keep static detail pages but are excluded from the screener, compare, aggregates, alerts, and new provider refreshes. See [Stablecoin Listing Policy](./listing-policy.md) for eligibility and review rules.
 
 ### Additional Metadata
 
@@ -78,7 +84,9 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 - `tradedContracts?: ContractDeployment[]` — traded contract addresses separate from `contracts`
 - `liveReservesConfig?: LiveReservesConfig` — live reserve sync configuration (see `docs/live-reserves.md`)
 - `notices?: CoinNotice[]` — per-coin alert notices shown on detail pages
-- `status?: "pre-launch" | "active" | "frozen"` — lifecycle state; omitted rows are active
+- `status?: "pre-launch" | "active" | "quarantined" | "delisted" | "frozen"` — lifecycle state; omitted rows are active
+- `listingStatusReview?: ListingStatusReview` — dated reason and review provenance required for quarantined and delisted records; quarantined reviews also require `reviewBy`
+- `priceBasis?: "contractual-par"` / `exitMechanism?: "ordinary-redemption" | "discretionary"` — sourced delisting evidence only; CI forbids these fields on non-delisted rows
 - `frozenAt?: string` / `obituary?: StablecoinObituary` — freeze date and cemetery/detail-page obituary content required for frozen tracked coins
 - `launchDate?`, `announcedDate?`, `expectedLaunchDate?`, `launchPhase?`, `launchPhaseDetail?`, `featuredContent?`, `milestones?`, `dateHistory?` — launch/upcoming timeline metadata for pre-launch and newly launched assets
 - `mintAuthority?: MintAuthorityProfile` — reviewed mint/burn authority posture used by the Mint Authority Score and detail-page authority summaries; profiles can also carry structured upgradeability, active/resolved incident state, observation points, and reviewed common failure-domain keys

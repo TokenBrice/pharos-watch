@@ -350,6 +350,88 @@ function targetValues(input: TelegramRecapTargetInput, status: TelegramRecapTarg
   ];
 }
 
+function prepareScheduleAdvance(
+  db: D1Database,
+  input: Pick<
+    TelegramRecapTargetInput,
+    "chatId" | "localDate" | "preferenceGeneration" | "nextDueAtAfter" | "nowSec" | "expectedNextDueAt"
+  >,
+  options: {
+    consumeTargetWindow: boolean;
+    requiredTarget?: { recapKey: string; status: TelegramRecapTargetStatus };
+  },
+): D1PreparedStatement {
+  const targetStateClause = options.requiredTarget
+    ? "AND target.recap_key = ? AND target.status = ?"
+    : "AND target.status <> 'planned'";
+  const targetStateBinds = options.requiredTarget
+    ? [options.requiredTarget.recapKey, options.requiredTarget.status]
+    : [];
+  return db.prepare(`
+    UPDATE telegram_recap_preferences
+       SET next_due_at = ?,
+           last_window_end_at = CASE WHEN ? = 1
+             THEN MAX(
+               COALESCE(last_window_end_at, 0),
+               (SELECT target.window_end_at
+                  FROM telegram_recap_targets target
+                 WHERE target.chat_id = ? AND target.local_date = ?
+                   AND target.preference_generation = ?)
+             )
+             ELSE last_window_end_at END,
+           updated_at = ?
+     WHERE chat_id = ? AND chat_kind = 'private' AND enabled = 1 AND next_due_at = ?
+       AND EXISTS (
+         SELECT 1
+           FROM telegram_recap_targets target
+           JOIN telegram_subscribers subscriber ON subscriber.chat_id = target.chat_id
+          WHERE target.chat_id = ? AND target.local_date = ?
+            AND target.preference_generation = ?
+            ${targetStateClause}
+            AND subscriber.preference_generation = ?
+       )
+  `).bind(
+    input.nextDueAtAfter ?? null,
+    options.consumeTargetWindow ? 1 : 0,
+    input.chatId,
+    input.localDate,
+    input.preferenceGeneration,
+    input.nowSec,
+    input.chatId,
+    input.expectedNextDueAt,
+    input.chatId,
+    input.localDate,
+    input.preferenceGeneration,
+    ...targetStateBinds,
+    input.preferenceGeneration,
+  );
+}
+
+async function hasAdvancedScheduleProof(
+  db: D1Database,
+  input: Pick<TelegramRecapTargetInput, "chatId" | "localDate" | "preferenceGeneration" | "nextDueAtAfter">,
+): Promise<boolean> {
+  const row = await db.prepare(`
+    SELECT 1 AS advanced
+      FROM telegram_recap_preferences preference
+      JOIN telegram_subscribers subscriber ON subscriber.chat_id = preference.chat_id
+      JOIN telegram_recap_targets target ON target.chat_id = preference.chat_id
+       AND target.local_date = ?
+     WHERE preference.chat_id = ? AND preference.chat_kind = 'private'
+       AND preference.enabled = 1 AND preference.next_due_at IS ?
+       AND target.preference_generation = ?
+       AND target.status <> 'planned'
+       AND subscriber.preference_generation = ?
+  `).bind(
+    input.localDate,
+    input.chatId,
+    input.nextDueAtAfter ?? null,
+    input.preferenceGeneration,
+    input.preferenceGeneration,
+  ).first<{ advanced: number }>();
+  return Number(row?.advanced ?? 0) === 1;
+}
+
 /**
  * Atomically persist a target, exact pending payload, pending identity, and
  * next schedule. Every statement is guarded by the claimed preference state.
@@ -362,9 +444,12 @@ export async function queueTelegramRecapTarget(
   // fresh handoff. The unique key is the final defense for concurrent calls;
   // this read gives callers a useful stale result on ordinary retries.
   const existing = await db.prepare(
-    "SELECT status FROM telegram_recap_targets WHERE recap_key = ?",
-  ).bind(input.recapKey).first<{ status: TelegramRecapTargetStatus }>();
-  if (existing) return "stale";
+    "SELECT 1 AS present FROM telegram_recap_targets WHERE chat_id = ? AND local_date = ?",
+  ).bind(input.chatId, input.localDate).first<{ present: number }>();
+  if (existing) {
+    await executeAtomicBatch(db, [prepareScheduleAdvance(db, input, { consumeTargetWindow: false })]);
+    return "stale";
+  }
   const values = targetValues(input, "planned");
   const guard = `p.chat_id = ? AND p.chat_kind = 'private' AND p.enabled = 1 AND p.next_due_at = ?
                  AND s.preference_generation = ?`;
@@ -418,27 +503,10 @@ export async function queueTelegramRecapTarget(
        AND pending_id IS NULL
        AND EXISTS (SELECT 1 FROM telegram_pending_alerts WHERE dedupe_key = ?)
   `).bind(input.pendingDedupeKey, input.nowSec, input.nowSec, input.recapKey, input.pendingDedupeKey);
-  const advance = db.prepare(`
-    UPDATE telegram_recap_preferences
-       SET next_due_at = ?, updated_at = ?
-     WHERE chat_id = ? AND enabled = 1 AND next_due_at = ?
-       AND EXISTS (
-         SELECT 1
-           FROM telegram_recap_targets target
-           JOIN telegram_subscribers subscriber ON subscriber.chat_id = target.chat_id
-          WHERE target.recap_key = ? AND target.status = 'queued'
-            AND target.preference_generation = ?
-            AND subscriber.preference_generation = ?
-       )
-  `).bind(
-    input.nextDueAtAfter ?? null,
-    input.nowSec,
-    input.chatId,
-    input.expectedNextDueAt,
-    input.recapKey,
-    input.preferenceGeneration,
-    input.preferenceGeneration,
-  );
+  const advance = prepareScheduleAdvance(db, input, {
+    consumeTargetWindow: false,
+    requiredTarget: { recapKey: input.recapKey, status: "queued" },
+  });
   await executeAtomicBatch(db, [target, pending, attach, advance]);
   const row = await db.prepare(
     "SELECT status FROM telegram_recap_targets WHERE recap_key = ?",
@@ -453,6 +521,15 @@ export async function recordTelegramRecapSkip(
 ): Promise<boolean> {
   const t = input.target;
   const consumeWindow = input.consumeWindow ?? input.status !== "skipped_stale";
+  const existing = await db.prepare(
+    "SELECT 1 AS present FROM telegram_recap_targets WHERE chat_id = ? AND local_date = ?",
+  ).bind(t.chatId, t.localDate).first<{ present: number }>();
+  if (existing) {
+    // The target's original commit/projection already applied its own window
+    // policy. A replay repairs only the schedule and must not reinterpret it.
+    await executeAtomicBatch(db, [prepareScheduleAdvance(db, t, { consumeTargetWindow: false })]);
+    return hasAdvancedScheduleProof(db, t);
+  }
   const target = db.prepare(`
     INSERT INTO telegram_recap_targets (
       recap_key, chat_id, local_date, window_start_at, window_end_at,
@@ -475,34 +552,10 @@ export async function recordTelegramRecapSkip(
     input.reason ?? null, t.nowSec, t.nowSec, t.nowSec,
     t.chatId, t.expectedNextDueAt, t.preferenceGeneration, t.chatId, t.localDate,
   );
-  const advance = db.prepare(`
-    UPDATE telegram_recap_preferences
-       SET next_due_at = ?,
-           last_window_end_at = CASE WHEN ? = 1
-             THEN MAX(COALESCE(last_window_end_at, 0), ?)
-             ELSE last_window_end_at END,
-           updated_at = ?
-     WHERE chat_id = ? AND enabled = 1 AND next_due_at = ?
-       AND EXISTS (
-         SELECT 1
-           FROM telegram_recap_targets target
-           JOIN telegram_subscribers subscriber ON subscriber.chat_id = target.chat_id
-          WHERE target.recap_key = ? AND target.status = ?
-            AND target.preference_generation = ?
-            AND subscriber.preference_generation = ?
-       )
-  `).bind(
-    t.nextDueAtAfter ?? null,
-    consumeWindow ? 1 : 0,
-    t.windowEndAt,
-    t.nowSec,
-    t.chatId,
-    t.expectedNextDueAt,
-    t.recapKey,
-    input.status,
-    t.preferenceGeneration,
-    t.preferenceGeneration,
-  );
+  const advance = prepareScheduleAdvance(db, t, {
+    consumeTargetWindow: consumeWindow,
+    requiredTarget: { recapKey: t.recapKey, status: input.status },
+  });
   await executeAtomicBatch(db, [target, advance]);
   const row = await db.prepare(
     "SELECT status FROM telegram_recap_targets WHERE recap_key = ?",

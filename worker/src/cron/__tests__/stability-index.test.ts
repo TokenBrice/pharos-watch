@@ -488,6 +488,37 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(metadata.dewsLatestComputedAt).toBe(publishedAt);
   });
 
+  it("keeps variant DEWS rows monitored but outside PSI stress breadth", async () => {
+    const publishedAt = Math.floor(Date.now() / 1000) - 300;
+    const db = makeDb({
+      dewsPublishedAt: publishedAt,
+      dewsRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          score: 12,
+          band: "CALM",
+          computed_at: publishedAt,
+        },
+        {
+          stablecoin_id: "susds-sky",
+          score: 95,
+          band: "DANGER",
+          computed_at: publishedAt,
+        },
+      ],
+    });
+
+    const result = await computeAndStoreStabilityIndex(db);
+
+    expect(result.status).toBeUndefined();
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      dewsRowsRead: number;
+      dewsStressBreadth: number;
+    };
+    expect(metadata.dewsRowsRead).toBe(1);
+    expect(metadata.dewsStressBreadth).toBe(0);
+  });
+
   it("fails closed when the active depeg query is unavailable", async () => {
     const db = makeDb({ depegQueryFails: true });
 

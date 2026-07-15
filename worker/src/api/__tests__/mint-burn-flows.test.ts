@@ -266,6 +266,58 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(recentAggregateQueries.length).toBeGreaterThanOrEqual(5);
   });
 
+  it("excludes historical rows for quarantined mint/burn configs from the public aggregate", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const inactiveDb = mockD1([
+      {
+        match: "mint_burn_hourly",
+        rows: [{
+          stablecoin_id: "busd0-usual",
+          chain_id: "ethereum",
+          hour_ts: now - 3600,
+          mint_count: 1,
+          burn_count: 0,
+          mint_volume_usd: 5_000_000,
+          burn_volume_usd: 0,
+          net_flow_usd: 5_000_000,
+        }],
+      },
+      { match: "mint_burn_events", rows: [] },
+      {
+        match: "cache",
+        rows: [{
+          key: "stablecoins",
+          value: JSON.stringify({
+            peggedAssets: [{
+              id: "busd0-usual",
+              symbol: "bUSD0",
+              circulating: { peggedUSD: 100_000_000 },
+            }],
+          }),
+          updated_at: now,
+        }],
+        first: {
+          key: "stablecoins",
+          value: JSON.stringify({
+            peggedAssets: [{
+              id: "busd0-usual",
+              symbol: "bUSD0",
+              circulating: { peggedUSD: 100_000_000 },
+            }],
+          }),
+          updated_at: now,
+        },
+      },
+    ]);
+
+    const res = await handleMintBurnFlows(inactiveDb, new URL("https://x/api/mint-burn-flows"));
+    expect(res.status).toBe(200);
+    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    expect(body.coins.some((coin) => coin.stablecoinId === "busd0-usual")).toBe(false);
+    expect(body.hourly.some((row) => row.netFlowUsd === 5_000_000)).toBe(false);
+    expect(body.gauge.trackedMcapUsd).toBe(0);
+  });
+
   it("rejects out-of-range hours instead of clamping them", async () => {
     const res = await handleMintBurnFlows(db, new URL("https://x/api/mint-burn-flows?hours=9999"));
     expect(res.status).toBe(400);

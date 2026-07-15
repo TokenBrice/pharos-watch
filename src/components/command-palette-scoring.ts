@@ -79,8 +79,8 @@ export function rankCommandPaletteResults<T extends { score: number; status?: st
     const bExact = b.exactSymbol ? 1 : 0;
     if (bExact !== aExact) return bExact - aExact;
     if (b.score !== a.score) return b.score - a.score;
-    const aFrozen = a.status === "frozen" ? 1 : 0;
-    const bFrozen = b.status === "frozen" ? 1 : 0;
-    return aFrozen - bFrozen;
+    const aInactive = a.status != null && a.status !== "active" ? 1 : 0;
+    const bInactive = b.status != null && b.status !== "active" ? 1 : 0;
+    return aInactive - bInactive;
   });
 }

@@ -54,6 +54,71 @@ export interface ConsensusOptions {
   mode?: "fixed" | "nav";
 }
 
+function independentSourceFamily(source: SourcePrice): string {
+  return getPricingSourceRegistryEntry(source.source)?.depegSourceFamily ?? `source:${source.source}`;
+}
+
+function collapseRepeatedSourceQuotes(sources: readonly SourcePrice[]): SourcePrice[] {
+  const bySource = new Map<string, SourcePrice[]>();
+  for (const source of sources) {
+    const entries = bySource.get(source.source) ?? [];
+    entries.push(source);
+    bySource.set(source.source, entries);
+  }
+
+  return [...bySource.values()].map((entries) => {
+    if (entries.length === 1) return entries[0]!;
+    const observedAtValues = entries
+      .map((entry) => entry.observedAt)
+      .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+    const observedAtModes = new Set(entries.map((entry) => entry.observedAtMode ?? null));
+    const representative = entries.reduce((best, candidate) => (candidate.weight > best.weight ? candidate : best));
+    return {
+      ...representative,
+      price: median(entries.map((entry) => entry.price)) ?? representative.price,
+      weight: Math.max(...entries.map((entry) => entry.weight)),
+      observedAt: observedAtValues.length > 0 ? Math.min(...observedAtValues) : null,
+      observedAtMode: observedAtModes.size === 1 ? (entries[0]?.observedAtMode ?? null) : "unknown",
+      metadata: {
+        ...representative.metadata,
+        collapsedQuoteCount: entries.length,
+      },
+    };
+  });
+}
+
+function pickIndependentFamilyRepresentative(sources: readonly SourcePrice[], pegRef: number | null): SourcePrice {
+  return sources.reduce((best, candidate) => {
+    const candidateTrust = getSourceTrustPriority(candidate.source);
+    const bestTrust = getSourceTrustPriority(best.source);
+    if (candidateTrust !== bestTrust) return candidateTrust < bestTrust ? candidate : best;
+    if (candidate.weight !== best.weight) return candidate.weight > best.weight ? candidate : best;
+    if (pegRef != null && pegRef > 0) {
+      const candidateDistance = Math.abs(candidate.price - pegRef);
+      const bestDistance = Math.abs(best.price - pegRef);
+      if (candidateDistance !== bestDistance) return candidateDistance < bestDistance ? candidate : best;
+    }
+    return candidate.source.localeCompare(best.source) < 0 ? candidate : best;
+  });
+}
+
+export function collapsePriceSourcesByIndependentFamily(
+  sources: readonly SourcePrice[],
+  pegRef: number | null,
+): SourcePrice[] {
+  const byFamily = new Map<string, SourcePrice[]>();
+  for (const source of collapseRepeatedSourceQuotes(sources)) {
+    const family = independentSourceFamily(source);
+    const entries = byFamily.get(family) ?? [];
+    entries.push(source);
+    byFamily.set(family, entries);
+  }
+
+  return [...byFamily.values()].map((entries) =>
+    entries.length === 1 ? entries[0]! : pickIndependentFamilyRepresentative(entries, pegRef),
+  );
+}
+
 /**
  * Compute price consensus across N sources.
  *
@@ -82,15 +147,16 @@ export function computePriceConsensus(
   thresholdBps: number,
   options?: ConsensusOptions,
 ): ConsensusResult | null {
-  if (sources.length === 0) return null;
+  const independentSources = collapsePriceSourcesByIndependentFamily(sources, pegRef);
+  if (independentSources.length === 0) return null;
 
   const allPrices: Record<string, number> = {};
-  for (const s of sources) allPrices[s.source] = s.price;
-  const observedAtBySource = buildObservedAtRecord(sources);
-  const observedAtModeBySource = buildObservedAtModeRecord(sources);
+  for (const s of independentSources) allPrices[s.source] = s.price;
+  const observedAtBySource = buildObservedAtRecord(independentSources);
+  const observedAtModeBySource = buildObservedAtModeRecord(independentSources);
 
-  if (sources.length === 1) {
-    const s = sources[0];
+  if (independentSources.length === 1) {
+    const s = independentSources[0]!;
     return {
       price: s.price,
       source: s.source,
@@ -113,11 +179,11 @@ export function computePriceConsensus(
   // Agreement clusters must be fully pairwise, not just "close to the same anchor".
   // That prevents transitive chains like 1.000 / 1.004 / 1.008 from being treated as
   // one 3-source high-confidence cluster when the endpoints disagree materially.
-  const clusters = findMaximalAgreementClusters(sources, clusterThresholdBps);
+  const clusters = findMaximalAgreementClusters(independentSources, clusterThresholdBps);
   const bestCluster = pickBestCluster(clusters, pegRef);
 
   const clusterSet = new Set(bestCluster.map((s) => s.source));
-  const disagreeSources = sources.filter((s) => !clusterSet.has(s.source)).map((s) => s.source);
+  const disagreeSources = independentSources.filter((s) => !clusterSet.has(s.source)).map((s) => s.source);
 
   if (bestCluster.length >= 2) {
     const clusterRef = pegRef != null && pegRef > 0 ? pegRef : medianPrice(bestCluster);
@@ -140,8 +206,8 @@ export function computePriceConsensus(
     };
   }
 
-  const fallbackRef = pegRef != null && pegRef > 0 ? pegRef : medianPrice(sources);
-  const chosen = pickLowConfidenceSource(sources, fallbackRef);
+  const fallbackRef = pegRef != null && pegRef > 0 ? pegRef : medianPrice(independentSources);
+  const chosen = pickLowConfidenceSource(independentSources, fallbackRef);
   return {
     price: chosen.price,
     source: chosen.source,
@@ -149,7 +215,7 @@ export function computePriceConsensus(
     priceEstimator: "selected_source",
     confidence: "low",
     agreeSources: [chosen.source],
-    disagreeSources: sources.filter((s) => s !== chosen).map((s) => s.source),
+    disagreeSources: independentSources.filter((s) => s !== chosen).map((s) => s.source),
     allPrices,
     observedAt: observedAtBySource[chosen.source] ?? null,
     observedAtMode: observedAtModeBySource[chosen.source] ?? null,
@@ -172,13 +238,7 @@ function findMaximalAgreementClusters(sources: SourcePrice[], thresholdBps: numb
     neighborMap.set(i, neighbors);
   }
 
-  bronKerbosch(
-    [],
-    new Set(sources.map((_, index) => index)),
-    new Set<number>(),
-    neighborMap,
-    maximalCliques,
-  );
+  bronKerbosch([], new Set(sources.map((_, index) => index)), new Set<number>(), neighborMap, maximalCliques);
 
   if (maximalCliques.length === 0) {
     return sources.map((source) => [source]);
@@ -243,7 +303,10 @@ function intersectSets(left: Set<number>, right: Set<number>): Set<number> {
 }
 
 function buildSourceLabel(cluster: SourcePrice[]): string {
-  return cluster.map((s) => s.source).sort().join("+");
+  return cluster
+    .map((s) => s.source)
+    .sort()
+    .join("+");
 }
 
 function medianPrice(cluster: SourcePrice[]): number {

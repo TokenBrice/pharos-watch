@@ -189,6 +189,61 @@ describe("StablecoinMeta schema — frozen status", () => {
   });
 });
 
+describe("StablecoinMeta schema — listing lifecycle status", () => {
+  it("accepts a quarantined record with a dated manual review", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        status: "quarantined",
+        listingStatusReview: {
+          changedAt: "2026-07-15",
+          reason: "Runtime price and supply coverage require remediation.",
+          reviewBy: "2026-08-15",
+        },
+      }),
+    ], "fixture")).not.toThrow();
+  });
+
+  it("rejects quarantine without a review deadline", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        status: "quarantined",
+        listingStatusReview: {
+          changedAt: "2026-07-15",
+          reason: "Runtime coverage is unresolved.",
+        },
+      }),
+    ], "fixture")).toThrow(/reviewBy/);
+  });
+
+  it("accepts a delisted record with durable source evidence", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        status: "delisted",
+        listingStatusReview: {
+          changedAt: "2026-07-15",
+          reason: "The asset is outside the stablecoin listing scope.",
+          source: {
+            label: "Issuer product terms",
+            url: "https://example.com/product-terms",
+          },
+        },
+      }),
+    ], "fixture")).not.toThrow();
+  });
+
+  it("rejects lifecycle review metadata on an active row", () => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
+        status: "active",
+        listingStatusReview: {
+          changedAt: "2026-07-15",
+          reason: "Stray review metadata.",
+        },
+      }),
+    ], "fixture")).toThrow(/only allowed/);
+  });
+});
+
 describe("StablecoinMeta schema — blacklistability review", () => {
   const explicitStatuses = [true, false, "possible"] as const;
 

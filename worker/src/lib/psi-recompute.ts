@@ -7,7 +7,7 @@ import {
 } from "./psi-history-universe";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry";
-import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
+import { CORE_PSI_ELIGIBLE_IDS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
 import { deriveDepegSignal } from "./depeg-signals";
 
@@ -61,19 +61,16 @@ function computeHistoricalEventBps(
         : historicalBps;
     const eventStartDay = Math.floor(event.started_at / DAY_SECONDS) * DAY_SECONDS;
     const dayEnd = day + DAY_SECONDS;
-    const withinPeakFloorWindow =
-      day - eventStartDay < HISTORICAL_PEAK_FLOOR_WINDOW_DAYS * DAY_SECONDS;
+    const withinPeakFloorWindow = day - eventStartDay < HISTORICAL_PEAK_FLOOR_WINDOW_DAYS * DAY_SECONDS;
     const persistsMateriallyPastUtcClose =
-      event.ended_at == null
-      || event.ended_at >= dayEnd + HISTORICAL_PEAK_FLOOR_MIN_CLOSE_PERSISTENCE_SEC;
+      event.ended_at == null || event.ended_at >= dayEnd + HISTORICAL_PEAK_FLOOR_MIN_CLOSE_PERSISTENCE_SEC;
     const materiallyUnderstatesShock =
-      peakDeviationBps != null
-      && Math.abs(peakDeviationBps) - Math.abs(boundedHistoricalBps) >= thresholdBps;
+      peakDeviationBps != null && Math.abs(peakDeviationBps) - Math.abs(boundedHistoricalBps) >= thresholdBps;
     if (
-      peakDeviationBps != null
-      && withinPeakFloorWindow
-      && persistsMateriallyPastUtcClose
-      && materiallyUnderstatesShock
+      peakDeviationBps != null &&
+      withinPeakFloorWindow &&
+      persistsMateriallyPastUtcClose &&
+      materiallyUnderstatesShock
     ) {
       return {
         bps: peakDeviationBps,
@@ -129,6 +126,7 @@ export function buildStabilityInputForDay(
   let historicalPriceCoverageCount = 0;
   let peakDeviationFallbackCount = 0;
   for (const [coinId, events] of grouped) {
+    if (!CORE_PSI_ELIGIBLE_IDS.has(coinId)) continue;
     let worstBps = 0;
     let earliestStart = Infinity;
     let usedHistoricalPrice = false;
@@ -167,10 +165,7 @@ export function buildStabilityInputForDay(
   const universe7dAgo = getPsiHistoricalUniverseForDay(supplyByCoin, day - 7 * DAY_SECONDS, universeCache);
   const totalMcapUsd = universe.totalMcapUsd;
   const totalMcap7dAgo = universe7dAgo.totalMcapUsd;
-  const mcap7dChangePct =
-    totalMcap7dAgo > 0
-      ? ((totalMcapUsd - totalMcap7dAgo) / totalMcap7dAgo) * 100
-      : 0;
+  const mcap7dChangePct = totalMcap7dAgo > 0 ? ((totalMcapUsd - totalMcap7dAgo) / totalMcap7dAgo) * 100 : 0;
 
   return {
     depegs,

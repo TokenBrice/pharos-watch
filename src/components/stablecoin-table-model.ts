@@ -60,10 +60,13 @@ export function useStablecoinTableColumns({
   const scrollRef = useRef<HTMLDivElement>(null);
   const isMobileColumns = useIsMobile(isOverview ? 768 : 1024);
   const [measureViewportRef, viewportWidth] = useElementWidth<HTMLDivElement>();
-  const viewportRef = useCallback((node: HTMLDivElement | null) => {
-    scrollRef.current = node;
-    measureViewportRef(node);
-  }, [measureViewportRef]);
+  const viewportRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      scrollRef.current = node;
+      measureViewportRef(node);
+    },
+    [measureViewportRef],
+  );
   const [density, setDensity] = useTableDensity();
   const densityConfig = DENSITY_CONFIGS[density];
   const deviceDefault = useMemo<ColumnId[]>(() => {
@@ -107,18 +110,25 @@ export function useStablecoinTableColumns({
     () => getTableMinWidthPx(visibleColumns, showPinnedControls, variant),
     [showPinnedControls, variant, visibleColumns],
   );
-  const skeletonColumns = useMemo<TableSkeletonColumn[]>(() => [
-    ...(showPinnedControls ? [{
-      id: "pinned",
-      cellClassName: "w-[44px] text-center lg:w-[36px]",
-      skeletonClassName: "mx-auto h-4 w-4 rounded-full",
-    }] : []),
-    ...STABLECOIN_HEADER_DEFS.filter((column) => isVisible(column.id)).map((column) => ({
-      id: column.id,
-      cellClassName: column.className,
-      skeletonClassName: SKELETON_WIDTH_BY_COLUMN[column.id] ?? "h-4 w-16",
-    })),
-  ], [isVisible, showPinnedControls]);
+  const skeletonColumns = useMemo<TableSkeletonColumn[]>(
+    () => [
+      ...(showPinnedControls
+        ? [
+            {
+              id: "pinned",
+              cellClassName: "w-[44px] text-center lg:w-[36px]",
+              skeletonClassName: "mx-auto h-4 w-4 rounded-full",
+            },
+          ]
+        : []),
+      ...STABLECOIN_HEADER_DEFS.filter((column) => isVisible(column.id)).map((column) => ({
+        id: column.id,
+        cellClassName: column.className,
+        skeletonClassName: SKELETON_WIDTH_BY_COLUMN[column.id] ?? "h-4 w-16",
+      })),
+    ],
+    [isVisible, showPinnedControls],
+  );
   const intentOverflows = viewportWidth > 0 && intentMinWidthPx > viewportWidth;
 
   return {
@@ -148,6 +158,7 @@ export function useStablecoinTableColumns({
 export function useStablecoinTableRows({
   data,
   activeFilters,
+  eligibleIds,
   reportCards,
   searchQuery,
   sort,
@@ -164,6 +175,7 @@ export function useStablecoinTableRows({
 }: {
   data: StablecoinData[] | undefined;
   activeFilters: readonly FilterTag[];
+  eligibleIds?: ReadonlySet<string>;
   reportCards?: Record<string, ReportCard>;
   searchQuery?: string;
   sort: StablecoinTableSort;
@@ -179,17 +191,24 @@ export function useStablecoinTableRows({
   scrollRef: RefObject<HTMLDivElement | null>;
 }) {
   const effectiveSortKey = useMemo(() => resolveEffectiveSortKey(sort.key, renderedSet), [renderedSet, sort.key]);
-  const trackedIds = useMemo(() => buildTrackedIdSet(activeFilters, reportCards), [activeFilters, reportCards]);
+  const trackedIds = useMemo(
+    () => buildTrackedIdSet(activeFilters, reportCards, eligibleIds),
+    [activeFilters, eligibleIds, reportCards],
+  );
   const filtered = useMemo(() => filterStablecoins(data, trackedIds, searchQuery), [data, searchQuery, trackedIds]);
-  const sorted = useMemo(() => sortStablecoins({
-    filtered,
-    sort,
-    effectiveSortKey,
-    pegRates,
-    pegScores,
-    dexLiquidity,
-    reportCards,
-  }), [dexLiquidity, effectiveSortKey, filtered, pegRates, pegScores, reportCards, sort]);
+  const sorted = useMemo(
+    () =>
+      sortStablecoins({
+        filtered,
+        sort,
+        effectiveSortKey,
+        pegRates,
+        pegScores,
+        dexLiquidity,
+        reportCards,
+      }),
+    [dexLiquidity, effectiveSortKey, filtered, pegRates, pegScores, reportCards, sort],
+  );
   const displayed = useMemo(
     () => prioritizePinnedStablecoins(sorted, pinnedStablecoinIds),
     [pinnedStablecoinIds, sorted],
@@ -208,7 +227,7 @@ export function useStablecoinTableRows({
     ? Math.min(displayed.length, overviewPageStart + OVERVIEW_PAGE_SIZE)
     : displayed.length;
   const displayedRows = useMemo(
-    () => isOverview ? displayed.slice(overviewPageStart, overviewPageEnd) : displayed,
+    () => (isOverview ? displayed.slice(overviewPageStart, overviewPageEnd) : displayed),
     [displayed, isOverview, overviewPageEnd, overviewPageStart],
   );
   const previousRowsRef = useRef<{ rows: typeof displayed; sort: StablecoinTableSort } | null>(null);
@@ -222,15 +241,18 @@ export function useStablecoinTableRows({
     previousRowsRef.current = { rows: displayed, sort };
   }, [displayed, isOverview, scrollRef, sort]);
 
-  const virtualDensityConfig = useMemo(() => ({
-    ...densityConfig,
-    rowHeight: isOverview
-      ? OVERVIEW_ROW_HEIGHT_ESTIMATE_PX[density]
-      : isMobileColumns
-        ? Math.max(densityConfig.rowHeight, MOBILE_COLUMNS_MIN_ROW_HEIGHT_PX)
-        : Math.max(densityConfig.rowHeight, VIRTUAL_ROW_HEIGHT_ESTIMATE_PX[density]),
-    iconSize: isOverview ? OVERVIEW_ICON_SIZE_PX : densityConfig.iconSize,
-  }), [density, densityConfig, isMobileColumns, isOverview]);
+  const virtualDensityConfig = useMemo(
+    () => ({
+      ...densityConfig,
+      rowHeight: isOverview
+        ? OVERVIEW_ROW_HEIGHT_ESTIMATE_PX[density]
+        : isMobileColumns
+          ? Math.max(densityConfig.rowHeight, MOBILE_COLUMNS_MIN_ROW_HEIGHT_PX)
+          : Math.max(densityConfig.rowHeight, VIRTUAL_ROW_HEIGHT_ESTIMATE_PX[density]),
+      iconSize: isOverview ? OVERVIEW_ICON_SIZE_PX : densityConfig.iconSize,
+    }),
+    [density, densityConfig, isMobileColumns, isOverview],
+  );
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual is intentional for large datasets.
   const virtualizer = useVirtualizer({
     count: displayedRows.length,
@@ -243,10 +265,13 @@ export function useStablecoinTableRows({
   const totalHeight = virtualizer.getTotalSize();
   const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
   const paddingBottom = virtualItems.length > 0 ? totalHeight - virtualItems[virtualItems.length - 1].end : 0;
-  const measureVirtualRow = useCallback((element: HTMLTableRowElement | null) => {
-    if (!element || typeof virtualizer.measureElement !== "function") return;
-    virtualizer.measureElement(element);
-  }, [virtualizer]);
+  const measureVirtualRow = useCallback(
+    (element: HTMLTableRowElement | null) => {
+      if (!element || typeof virtualizer.measureElement !== "function") return;
+      virtualizer.measureElement(element);
+    },
+    [virtualizer],
+  );
   const handleCsvExport = useCallback(() => {
     exportStablecoinsCsv(displayed, pegScores, dexLiquidity, reportCards);
   }, [dexLiquidity, displayed, pegScores, reportCards]);

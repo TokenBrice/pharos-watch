@@ -1,5 +1,5 @@
 import { BLUECHIP_SLUG_MAP } from "@shared/lib/bluechip-slugs";
-import { excludeFrozenIds } from "./shared/exclude-frozen";
+import { includeActiveTrackedIds } from "./shared/exclude-frozen";
 import { BluechipGradeSchema } from "@shared/types/core";
 import type { BluechipRating, BluechipSmidge } from "@shared/types/market";
 import { getCache, shouldSkipFreshCache, setCacheIfNewer } from "../lib/db-cache";
@@ -108,7 +108,7 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
     return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "bluechip-circuit-open" }) };
   }
 
-  const entries = excludeFrozenIds(
+  const entries = includeActiveTrackedIds(
     Object.entries(BLUECHIP_SLUG_MAP),
     ([, pharosId]) => pharosId,
   );

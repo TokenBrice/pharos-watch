@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggregate-registry";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { handleNonUsdShare } from "../non-usd-share";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
@@ -18,12 +18,13 @@ function unix(iso: string): number {
 }
 
 const COMMODITY_PEGS = new Set(["GOLD", "SILVER"]);
-const COMMODITY_IDS = ACTIVE_STABLECOINS
-  .filter((c) => COMMODITY_PEGS.has(c.flags.pegCurrency))
-  .map((c) => c.id);
-const FIAT_NON_USD_IDS = ACTIVE_STABLECOINS
-  .filter((c) => c.flags.pegCurrency !== "USD" && !COMMODITY_PEGS.has(c.flags.pegCurrency))
-  .map((c) => c.id);
+const CORE_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.map((c) => c.id);
+const COMMODITY_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.filter((c) => COMMODITY_PEGS.has(c.flags.pegCurrency)).map(
+  (c) => c.id,
+);
+const FIAT_NON_USD_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.filter(
+  (c) => c.flags.pegCurrency !== "USD" && !COMMODITY_PEGS.has(c.flags.pegCurrency),
+).map((c) => c.id);
 
 describe("handleNonUsdShare", () => {
   afterEach(() => {
@@ -41,11 +42,13 @@ describe("handleNonUsdShare", () => {
         {
           match: "FROM cache",
           matchBinds: ["snapshot-supply:last-write"],
-          rows: [{
-            key: "snapshot-supply:last-write",
-            value: JSON.stringify({ snapshotDate: completedSnapshotDate }),
-            updated_at: Math.floor(nowMs / 1000) - 600,
-          }],
+          rows: [
+            {
+              key: "snapshot-supply:last-write",
+              value: JSON.stringify({ snapshotDate: completedSnapshotDate }),
+              updated_at: Math.floor(nowMs / 1000) - 600,
+            },
+          ],
           first: {
             key: "snapshot-supply:last-write",
             value: JSON.stringify({ snapshotDate: completedSnapshotDate }),
@@ -54,7 +57,13 @@ describe("handleNonUsdShare", () => {
         },
         {
           match: "FROM supply_history",
-          matchBinds: [JSON.stringify(COMMODITY_IDS), JSON.stringify(FIAT_NON_USD_IDS), cutoff, completedSnapshotDate],
+          matchBinds: [
+            JSON.stringify(CORE_IDS),
+            JSON.stringify(COMMODITY_IDS),
+            JSON.stringify(FIAT_NON_USD_IDS),
+            cutoff,
+            completedSnapshotDate,
+          ],
           rows: [
             {
               snapshot_date: unix("2021-04-10T00:00:00Z"),
@@ -86,7 +95,8 @@ describe("handleNonUsdShare", () => {
     expect(res.headers.get("Cache-Control")).toBeTruthy();
     expect(res.headers.get("X-Data-Age")).toBe("600");
     expect(
-      db.getHistory()
+      db
+        .getHistory()
         .filter((entry) => entry.sql.includes("FROM supply_history"))
         .every((entry) => entry.binds.length <= D1_MAX_BOUND_PARAMETERS),
     ).toBe(true);
@@ -132,11 +142,13 @@ describe("handleNonUsdShare", () => {
         {
           match: "FROM cache",
           matchBinds: ["snapshot-supply:last-write"],
-          rows: [{
-            key: "snapshot-supply:last-write",
-            value: JSON.stringify({ snapshotDate: completedSnapshotDate }),
-            updated_at: unix("2026-04-08T08:00:00Z"),
-          }],
+          rows: [
+            {
+              key: "snapshot-supply:last-write",
+              value: JSON.stringify({ snapshotDate: completedSnapshotDate }),
+              updated_at: unix("2026-04-08T08:00:00Z"),
+            },
+          ],
           first: {
             key: "snapshot-supply:last-write",
             value: JSON.stringify({ snapshotDate: completedSnapshotDate }),
@@ -145,7 +157,13 @@ describe("handleNonUsdShare", () => {
         },
         {
           match: "FROM supply_history",
-          matchBinds: [JSON.stringify(COMMODITY_IDS), JSON.stringify(FIAT_NON_USD_IDS), cutoff, completedSnapshotDate],
+          matchBinds: [
+            JSON.stringify(CORE_IDS),
+            JSON.stringify(COMMODITY_IDS),
+            JSON.stringify(FIAT_NON_USD_IDS),
+            cutoff,
+            completedSnapshotDate,
+          ],
           rows: [
             { snapshot_date: unix("2023-01-01T00:00:00Z"), total: 100, commodity: 10, fiat_non_usd: 5 },
             { snapshot_date: unix("2023-01-20T00:00:00Z"), total: 100, commodity: 11, fiat_non_usd: 5 },

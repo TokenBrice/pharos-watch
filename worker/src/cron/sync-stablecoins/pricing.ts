@@ -184,6 +184,26 @@ export function getPrimaryCandidatePricesForCurrentAsset(
   return primaryPriceResult.allPrices;
 }
 
+export function getPostEnrichmentCandidatePricesForCurrentAsset(
+  asset: PeggedAsset,
+  primaryPriceResults?: Map<string, PrimaryPriceResult>,
+): Record<string, number> | undefined {
+  const primaryPriceResult = primaryPriceResults?.get(asset.id);
+  if (
+    asset.priceConfidence === "fallback" &&
+    hasCurrentAssetPrice(asset) &&
+    asset.priceSource &&
+    primaryPriceResult?.allPrices
+  ) {
+    return {
+      ...primaryPriceResult.allPrices,
+      [asset.priceSource]: asset.price as number,
+    };
+  }
+
+  return getPrimaryCandidatePricesForCurrentAsset(asset, primaryPriceResults);
+}
+
 export function buildPreviousTrustedPriceLookup(
   previousAssetsById: Map<string, PeggedAsset>,
   nowSec: number,

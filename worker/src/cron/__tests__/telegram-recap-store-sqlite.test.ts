@@ -102,6 +102,52 @@ describe("telegram recap store on latest SQLite schema", () => {
     await expect(queueTelegramRecapTarget(db, target("42"))).resolves.toBe("stale");
   });
 
+  it("uses a sent current-generation target as idempotent schedule proof", async () => {
+    const { sqlite, db } = setup();
+    subscriber(sqlite, "42");
+    await setTelegramRecapPreference(db, preferenceInput("42"));
+    await queueTelegramRecapTarget(db, target("42"));
+    await projectTelegramRecapTerminalOutcome(db, "recap:42:2026-07-11:v1", "accepted", NOW + 1);
+
+    sqlite.prepare("UPDATE telegram_recap_preferences SET next_due_at = ? WHERE chat_id = '42'").run(NOW - 1);
+    await expect(queueTelegramRecapTarget(db, target("42"))).resolves.toBe("stale");
+    expect(sqlite.prepare("SELECT next_due_at FROM telegram_recap_preferences WHERE chat_id = '42'").get())
+      .toEqual({ next_due_at: NOW + 86400 });
+
+    sqlite.prepare("UPDATE telegram_recap_preferences SET next_due_at = ? WHERE chat_id = '42'").run(NOW - 1);
+    await expect(recordTelegramRecapSkip(db, {
+      target: target("42"),
+      status: "skipped_stale",
+    })).resolves.toBe(true);
+    expect(sqlite.prepare("SELECT next_due_at FROM telegram_recap_preferences WHERE chat_id = '42'").get())
+      .toEqual({ next_due_at: NOW + 86400 });
+    expect(sqlite.prepare("SELECT recap_key, status FROM telegram_recap_targets").all()).toEqual([
+      { recap_key: "recap:42:2026-07-11:v1", status: "sent" },
+    ]);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 1 });
+  });
+
+  it("does not use an old-generation target as schedule proof", async () => {
+    const { sqlite, db } = setup();
+    subscriber(sqlite, "42");
+    await setTelegramRecapPreference(db, preferenceInput("42"));
+    await queueTelegramRecapTarget(db, target("42"));
+    sqlite.prepare("UPDATE telegram_recap_preferences SET next_due_at = ? WHERE chat_id = '42'").run(NOW - 1);
+    sqlite.prepare("UPDATE telegram_subscribers SET preference_generation = 2 WHERE chat_id = '42'").run();
+
+    await expect(queueTelegramRecapTarget(db, target("42", 2))).resolves.toBe("stale");
+    expect(sqlite.prepare("SELECT next_due_at FROM telegram_recap_preferences WHERE chat_id = '42'").get())
+      .toEqual({ next_due_at: NOW - 1 });
+    await expect(recordTelegramRecapSkip(db, {
+      target: target("42", 2),
+      status: "skipped_stale",
+    })).resolves.toBe(false);
+    expect(sqlite.prepare("SELECT next_due_at FROM telegram_recap_preferences WHERE chat_id = '42'").get())
+      .toEqual({ next_due_at: NOW - 1 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_targets").get()).toEqual({ count: 1 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 1 });
+  });
+
   it("atomically cancels only queued personalized recap work for the off rollout", async () => {
     const { sqlite, db } = setup();
     for (const chatId of ["42", "43"]) {

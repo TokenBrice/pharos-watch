@@ -22,13 +22,11 @@ import {
   TEAM_MEMBERS,
   type AboutFeatureItem,
 } from "./content";
+import { PRINCIPLES_AI_POLICY, PRINCIPLES_AXIOMS, PRINCIPLES_CORRECTIONS } from "./principles/content";
 import {
-  PRINCIPLES_AI_POLICY,
-  PRINCIPLES_AXIOMS,
-  PRINCIPLES_CORRECTIONS,
-} from "./principles/content";
-import {
-  ACTIVE_STABLECOIN_COUNT,
+  ACTIVE_STABLE_VALUE_INVESTMENT_COUNT,
+  ACTIVE_VARIANT_STABLECOIN_COUNT,
+  CORE_AGGREGATE_STABLECOIN_COUNT,
   DEAD_STABLECOIN_COUNT,
   PRE_LAUNCH_STABLECOIN_COUNT,
   TRACKED_STABLECOIN_COUNT,
@@ -229,18 +227,18 @@ export const metadata: Metadata = buildPageMetadata({
 
 export default function AboutPage() {
   const trackedFeatures = getTrackedFeatures({
-    activeStablecoins: ACTIVE_STABLECOIN_COUNT,
+    activeStablecoins: CORE_AGGREGATE_STABLECOIN_COUNT,
     deadStablecoins: DEAD_STABLECOIN_COUNT,
     preLaunchStablecoins: PRE_LAUNCH_STABLECOIN_COUNT,
   });
   const faqItems = getAboutFaqItems({
-    activeStablecoins: ACTIVE_STABLECOIN_COUNT,
+    activeStablecoins: CORE_AGGREGATE_STABLECOIN_COUNT,
     deadStablecoins: DEAD_STABLECOIN_COUNT,
   });
-  const leadParagraphs = getAboutLeadParagraphs({ activeStablecoins: ACTIVE_STABLECOIN_COUNT });
+  const leadParagraphs = getAboutLeadParagraphs({ activeStablecoins: CORE_AGGREGATE_STABLECOIN_COUNT });
   const heroStats: readonly { label: string; value: string | number }[] = [
-    { label: "Active", value: ACTIVE_STABLECOIN_COUNT },
-    { label: "Retired", value: DEAD_STABLECOIN_COUNT },
+    { label: "Core", value: CORE_AGGREGATE_STABLECOIN_COUNT },
+    { label: "Variants", value: ACTIVE_VARIANT_STABLECOIN_COUNT },
     { label: "Pre-launch", value: PRE_LAUNCH_STABLECOIN_COUNT },
     { label: "Sources", value: "50+" },
   ];
@@ -288,10 +286,11 @@ export default function AboutPage() {
                 id="about-lede"
                 className="w-full max-w-none text-xl font-semibold leading-[1.18] tracking-tight text-foreground/95 [text-wrap:balance] sm:text-2xl"
               >
-                Every stablecoin makes two promises at once: that it will redeem at par, and that it can be redeemed
-                at all. Pharos watches both across {ACTIVE_STABLECOIN_COUNT}{" "}live tokens and the chains
-                and reserves beneath them so that desks, treasuries, and researchers can read the peg the way
-                navigators read weather.
+                Every stablecoin makes two promises at once: that it will redeem at par, and that it can be redeemed at
+                all. Pharos watches both across {CORE_AGGREGATE_STABLECOIN_COUNT} core assets and{" "}
+                {ACTIVE_VARIANT_STABLECOIN_COUNT} tracked variants, plus {ACTIVE_STABLE_VALUE_INVESTMENT_COUNT}{" "}
+                stable-value investments, and the chains and reserves beneath them so that desks, treasuries, and
+                researchers can read the peg the way navigators read weather.
               </p>
               <p className="font-mono text-xs text-muted-foreground/80">
                 Edited by TokenBrice &middot; Engineered with Claude &amp; Codex &middot; MIT
@@ -305,9 +304,7 @@ export default function AboutPage() {
             {heroStats.map((stat) => (
               <div key={stat.label} className="space-y-1">
                 <dt className="pharos-kicker">{stat.label}</dt>
-                <dd className="pharos-numeric text-lg font-semibold text-foreground sm:text-xl">
-                  {stat.value}
-                </dd>
+                <dd className="pharos-numeric text-lg font-semibold text-foreground sm:text-xl">{stat.value}</dd>
               </div>
             ))}
           </dl>
@@ -321,28 +318,29 @@ export default function AboutPage() {
           <p>
             The data needed to evaluate stablecoins is scattered, inconsistent, or buried behind paywalls. Worse,
             marketing claims rarely match reality: a &quot;decentralized&quot; stablecoin may rely entirely on
-            centralized collateral, an issuer can freeze balances without warning, and a major stablecoin&apos;s
-            failure transmits stress to dozens of derivatives that looked safe in isolation.
+            centralized collateral, an issuer can freeze balances without warning, and a major stablecoin&apos;s failure
+            transmits stress to dozens of derivatives that looked safe in isolation.
           </p>
           <p>
-            Pharos tracks {ACTIVE_STABLECOIN_COUNT} live stablecoins, {PRE_LAUNCH_STABLECOIN_COUNT} upcoming
-            launches, and {DEAD_STABLECOIN_COUNT} dead ones, then scores the live universe with honest
-            governance classification, transitive dependency scoring, and live reserve composition where
-            available. Real-time depeg detection, freeze monitoring across 35 stablecoins, and a 30-minute
+            Pharos tracks {CORE_AGGREGATE_STABLECOIN_COUNT} core stablecoins and cash equivalents, plus{" "}
+            {ACTIVE_VARIANT_STABLECOIN_COUNT} variants, {ACTIVE_STABLE_VALUE_INVESTMENT_COUNT} stable-value investments,{" "}
+            {PRE_LAUNCH_STABLECOIN_COUNT} upcoming launches, and {DEAD_STABLECOIN_COUNT} dead ones, then scores the core
+            universe with honest governance classification, transitive dependency scoring, and live reserve composition
+            where available. Real-time depeg detection, freeze monitoring across 35 stablecoins, and a 30-minute
             ecosystem-wide stability index give you the full picture before a crisis makes the headlines.
           </p>
           <p>
             When a tracked stablecoin effectively dies &mdash; issuer abandonment, supply trending to zero,
-            irrecoverable depeg, regulatory shutdown &mdash; Pharos freezes it rather than deletes it, and
-            surfaces it in the{" "}
+            irrecoverable depeg, regulatory shutdown &mdash; Pharos freezes it rather than deletes it, and surfaces it
+            in the{" "}
             <Link href="/cemetery/" className={INLINE_EXTERNAL_LINK_CLASS}>
               cemetery
             </Link>{" "}
             with an obituary and an archived detail page.
           </p>
           <p>
-            Pharos is a public good. The dashboard stays free, the code is open source, and sustainability comes
-            from community support plus future paid API access for heavy programmatic usage.{" "}
+            Pharos is a public good. The dashboard stays free, the code is open source, and sustainability comes from
+            community support plus future paid API access for heavy programmatic usage.{" "}
             <Link href="/funding/" className={INLINE_EXTERNAL_LINK_CLASS}>
               See the funding ledger
             </Link>{" "}
@@ -353,7 +351,11 @@ export default function AboutPage() {
             and make the most of it.
           </p>
           <p>
-            For architecture, methodology, and design references, use the{" "}
+            For asset eligibility and lifecycle decisions, read the{" "}
+            <Link href="/docs/listing-policy/" className={INLINE_EXTERNAL_LINK_CLASS}>
+              listing policy
+            </Link>
+            . For architecture, methodology, and design references, use the{" "}
             <Link href="/docs/" className={INLINE_EXTERNAL_LINK_CLASS}>
               documentation archive
             </Link>
@@ -379,18 +381,14 @@ export default function AboutPage() {
             id="editorial-ai-policy"
             className="scroll-mt-24 rounded-xl border border-border/60 bg-muted/20 px-4 py-3"
           >
-            <h3 className="text-sm font-semibold tracking-tight text-foreground">
-              {PRINCIPLES_AI_POLICY.title}
-            </h3>
+            <h3 className="text-sm font-semibold tracking-tight text-foreground">{PRINCIPLES_AI_POLICY.title}</h3>
             <p className="mt-1">{PRINCIPLES_AI_POLICY.body}</p>
           </div>
           <div
             id="corrections-policy"
             className="scroll-mt-24 rounded-xl border border-border/60 bg-muted/20 px-4 py-3"
           >
-            <h3 className="text-sm font-semibold tracking-tight text-foreground">
-              {PRINCIPLES_CORRECTIONS.title}
-            </h3>
+            <h3 className="text-sm font-semibold tracking-tight text-foreground">{PRINCIPLES_CORRECTIONS.title}</h3>
             <p className="mt-1">
               {PRINCIPLES_CORRECTIONS.body}{" "}
               <Link href="/funding/" className={INLINE_EXTERNAL_LINK_CLASS}>
@@ -478,8 +476,8 @@ export default function AboutPage() {
           <Radio className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
           <div className="space-y-3">
             <p>
-              TokenBrice walked through Pharos live on Leviathan News &mdash; the motivation behind the project,
-              the data pipeline, and how the main risk signals should be read in practice.
+              TokenBrice walked through Pharos live on Leviathan News &mdash; the motivation behind the project, the
+              data pipeline, and how the main risk signals should be read in practice.
             </p>
             <Button asChild variant="outline" className={CTA_BUTTON_CLASS}>
               <a href="https://x.com/i/broadcasts/1qxvvkeMlyAxB" target="_blank" rel="noopener noreferrer">
@@ -537,8 +535,7 @@ export default function AboutPage() {
             <Link href="/learn/mechanisms/" className={INLINE_EXTERNAL_LINK_CLASS}>
               mechanisms
             </Link>
-            ), and{" "}
-            <span className="font-medium text-foreground">DeFi</span> (fully on-chain, no centralized custody
+            ), and <span className="font-medium text-foreground">DeFi</span> (fully on-chain, no centralized custody
             dependency). The classification reflects actual infrastructure dependency, not marketing claims.
           </p>
         </AboutSection>
@@ -586,8 +583,8 @@ export default function AboutPage() {
         >
           <p>
             Pharos grades every stablecoin across four weighted base dimensions, with peg stability acting as a
-            multiplier on top. The methodology page covers the full grading formula, peg score computation, DEX liquidity scoring, and
-            contagion stress-test design.
+            multiplier on top. The methodology page covers the full grading formula, peg score computation, DEX
+            liquidity scoring, and contagion stress-test design.
           </p>
           <Button asChild variant="outline" className={CTA_BUTTON_CLASS}>
             <Link href="/methodology/">

@@ -24,7 +24,6 @@ import type { UrlStateSchema } from "@/lib/url-state";
 import {
   GOVERNANCE_TYPE_VALUES,
   MECHANISM_ARCHETYPE_VALUES,
-  STABLECOIN_STATUS_VALUES,
 } from "@shared/types/stablecoin-taxonomy";
 import { PEG_METADATA } from "@shared/lib/classification";
 import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
@@ -48,6 +47,9 @@ export const SAFETY_GRADE_VALUES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C",
  */
 export const BLACKLISTABLE_VALUES = ["yes", "no", "possible"] as const;
 export type BlacklistableValue = (typeof BLACKLISTABLE_VALUES)[number];
+
+/** Lifecycle rows published in the screener; policy-withheld records stay detail-only. */
+export const SCREENER_LIFECYCLE_VALUES = ["active", "pre-launch", "frozen"] as const satisfies readonly StablecoinStatus[];
 
 export interface ScreenerFilters {
   dewsMin: number;
@@ -172,7 +174,7 @@ export const SCREENER_URL_SCHEMA: UrlStateSchema<ScreenerFilters> = {
   lifecycle: {
     kind: "enumList",
     defaultValue: SCREENER_FILTER_DEFAULTS.lifecycle,
-    allowedValues: STABLECOIN_STATUS_VALUES,
+    allowedValues: SCREENER_LIFECYCLE_VALUES,
   },
   blacklistable: {
     kind: "enumList",

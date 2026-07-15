@@ -16,7 +16,13 @@ import {
 import { PegBrowseStrip } from "@/components/peg-distribution-grid";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ACTIVE_PEGS, pegCoinCount } from "@/lib/peg-landing";
+import { CLIENT_ACTIVE_IDS } from "@shared/lib/stablecoins/client-registry";
+import {
+  CLIENT_ACTIVE_VARIANT_IDS,
+  CLIENT_CORE_AGGREGATE_ACTIVE_IDS,
+} from "@shared/lib/stablecoins/aggregate-client-registry";
 import type { ColumnId } from "@/lib/column-visibility";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 
@@ -69,6 +75,12 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
   const { data: reportCardsData } = reportCardsQuery;
   const { data: stressData } = stressSignalsQuery;
   const pinned = usePinnedStablecoins();
+  const eligibleIds =
+    filters.activeUniverse === "core"
+      ? CLIENT_CORE_AGGREGATE_ACTIVE_IDS
+      : filters.activeUniverse === "variants"
+        ? CLIENT_ACTIVE_VARIANT_IDS
+        : CLIENT_ACTIVE_IDS;
 
   const { reportCardMap } = useMemo(
     () => buildHomepageOptionalViewModel({ reportCardsData, stressData }),
@@ -80,9 +92,10 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
         stablecoinsData,
         pegSummaryData,
         reportCardMap,
+        eligibleIds,
         filters: { activeFilters: filters.activeFilters, searchQuery },
       }),
-    [stablecoinsData, pegSummaryData, reportCardMap, filters.activeFilters, searchQuery],
+    [stablecoinsData, pegSummaryData, reportCardMap, eligibleIds, filters.activeFilters, searchQuery],
   );
   const stablecoinsState = resolveQueryViewState({
     hasData: stablecoinsData !== undefined,
@@ -108,25 +121,48 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
 
   return (
     <div className="space-y-5">
-      <header className="space-y-1.5">
-        <h2 id={titleId} className="pharos-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-          Stablecoin Overview
-        </h2>
-        {stablecoinsState === "unavailable" ? (
-          <p className="text-sm text-muted-foreground">Stablecoin rankings are temporarily unavailable.</p>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Showing <span className="pharos-numeric text-foreground">{filteredRowCount.toLocaleString("en-US")}</span>{" "}
-            active stablecoins with live market data — pre-launch and frozen excluded,{" "}
-            <Link
-              href="/screener/"
-              className="pharos-focus-ring rounded-sm underline decoration-dotted underline-offset-4 transition-colors hover:text-foreground"
-            >
-              see Screener
-            </Link>
-            .
-          </p>
-        )}
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div className="space-y-1.5">
+          <h2 id={titleId} className="pharos-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            Stablecoin Overview
+          </h2>
+          {stablecoinsState === "unavailable" ? (
+            <p className="text-sm text-muted-foreground">Stablecoin rankings are temporarily unavailable.</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Showing <span className="pharos-numeric text-foreground">{filteredRowCount.toLocaleString("en-US")}</span>{" "}
+              {filters.activeUniverse === "core"
+                ? "core stablecoins and cash equivalents"
+                : filters.activeUniverse === "variants"
+                  ? "tracked variants, excluded from core market aggregates"
+                  : "active catalog listings, with variants tracked separately"}{" "}
+              with live market data — inactive lifecycle states excluded,{" "}
+              <Link
+                href="/screener/"
+                className="pharos-focus-ring rounded-sm underline decoration-dotted underline-offset-4 transition-colors hover:text-foreground"
+              >
+                see Screener
+              </Link>
+              .
+            </p>
+          )}
+        </div>
+        <ToggleGroup
+          type="single"
+          value={filters.activeUniverse}
+          onValueChange={(value) => {
+            if (value === "core" || value === "variants" || value === "catalog") {
+              filters.setActiveUniverse(value);
+            }
+          }}
+          variant="outline"
+          size="sm"
+          aria-label="Select stablecoin listing universe"
+        >
+          <ToggleGroupItem value="core">Core</ToggleGroupItem>
+          <ToggleGroupItem value="variants">Variants</ToggleGroupItem>
+          <ToggleGroupItem value="catalog">All</ToggleGroupItem>
+        </ToggleGroup>
       </header>
       {failedQueries.length > 0 ? (
         <QueryStateNotice
@@ -141,6 +177,7 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
           data={stablecoinsData?.peggedAssets}
           isLoading={isLoading}
           activeFilters={filters.activeFilters}
+          eligibleIds={eligibleIds}
           logos={logos}
           pegRates={pegRates}
           pegScores={pegScores}

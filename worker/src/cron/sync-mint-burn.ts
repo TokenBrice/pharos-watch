@@ -29,7 +29,7 @@ import {
   resolveRotatedConfigs,
   updateMintBurnAttemptState,
 } from "./mint-burn/run-state";
-import { excludeFrozenIds } from "./shared/exclude-frozen";
+import { includeActiveTrackedIds } from "./shared/exclude-frozen";
 import { throwIfAborted } from "../lib/abort";
 
 const MAX_SCAN_RANGE = 50_000;
@@ -81,7 +81,7 @@ export async function syncMintBurn(
   const disabledConfigIds = normalizeDisabledConfigIdSet(options.disabledConfigIds);
   const disabledSymbols = normalizeDisabledSymbolSet(options.disabledSymbols);
 
-  const allTrackableConfigs = excludeFrozenIds(
+  const allTrackableConfigs = includeActiveTrackedIds(
     MINT_BURN_CONFIGS.filter((config) => laneIncludesConfig(lane, config)),
     (config) => config.stablecoinId,
   );

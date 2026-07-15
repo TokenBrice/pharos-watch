@@ -211,6 +211,21 @@ function setupTelegramPendingSqlite(): { sqlite: DatabaseSync; db: D1Database } 
       final_delivery_error TEXT
     );
 
+    CREATE TABLE telegram_alert_jobs (
+      job_id TEXT PRIMARY KEY,
+      status TEXT NOT NULL DEFAULT 'discovered',
+      target_count INTEGER NOT NULL DEFAULT 0,
+      planned_count INTEGER NOT NULL DEFAULT 0,
+      accepted_count INTEGER NOT NULL DEFAULT 0,
+      sent_count INTEGER NOT NULL DEFAULT 0,
+      enqueued_count INTEGER NOT NULL DEFAULT 0,
+      failed_count INTEGER NOT NULL DEFAULT 0,
+      cancelled_count INTEGER NOT NULL DEFAULT 0,
+      expired_count INTEGER NOT NULL DEFAULT 0,
+      execution_unknown_count INTEGER NOT NULL DEFAULT 0,
+      metadata TEXT
+    );
+
     CREATE TABLE telegram_recap_preferences (
       chat_id TEXT PRIMARY KEY,
       chat_kind TEXT NOT NULL DEFAULT 'private',
@@ -851,6 +866,139 @@ describe("drainPendingQueue", () => {
     sqlite.close();
   });
 
+  it("checkpoints a completed wave before the next wave can become execution-unknown", async () => {
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    const initialNow = Math.floor(Date.now() / 1000);
+    const sourceEventId = "source-wave-checkpoint";
+    const jobId = "job-wave-checkpoint";
+    const okResult = {
+      ok: true,
+      blocked: false,
+      retryable: false,
+      permanentFailure: false,
+      statusCode: 200,
+      errorClass: null,
+      delivery: "sent" as const,
+      retryAfterSec: null,
+    };
+    let sendCalls = 0;
+    let resolveInFlight: (() => void) | undefined;
+
+    sqlite.prepare(
+      `INSERT INTO telegram_alert_jobs (
+         job_id, status, target_count, enqueued_count, metadata
+       ) VALUES (?, 'queued', 5, 5, '{}')`,
+    ).run(jobId);
+    for (let index = 0; index < 5; index++) {
+      const chatId = `wave-chat-${index}`;
+      const dedupeKey = `wave-dedupe-${index}`;
+      sqlite.prepare(
+        `INSERT INTO telegram_subscribers (chat_id, preference_generation, global_alert_dews)
+         VALUES (?, 1, 1)`,
+      ).run(chatId);
+      insertPendingSqlite(sqlite, {
+        id: 820 + index,
+        chatId,
+        html: `<b>Wave ${index}</b>`,
+        createdAt: initialNow - 100 + index,
+        expiresAt: initialNow + 3_600,
+        priority: TELEGRAM_PENDING_PRIORITY.dews,
+        sourceType: "risk_alert",
+        alertType: "dews",
+        dedupeKey,
+        sourceEventId,
+        alertScopeJson: serializePendingAlertScope([{ stablecoinId: "usdc-circle", family: "dews" }]),
+        preferenceGeneration: 1,
+        markupPolicyJson: serializePendingMarkupPolicy({}),
+      });
+      sqlite.prepare(
+        `INSERT INTO telegram_alert_job_targets (
+           job_id, target_key, pending_dedupe_key, source_event_id,
+           plan_generation, status, created_at
+         ) VALUES (?, ?, ?, ?, 1, 'queued', ?)`,
+      ).run(jobId, dedupeKey, dedupeKey, sourceEventId, initialNow);
+    }
+
+    mockSendToChat.mockImplementation(() => {
+      sendCalls += 1;
+      if (sendCalls === SEND_BATCH_SIZE) {
+        vi.setSystemTime(new Date((initialNow + 60) * 1_000));
+      }
+      if (sendCalls <= SEND_BATCH_SIZE) return Promise.resolve(okResult);
+      return new Promise((resolve) => {
+        resolveInFlight = () => resolve(okResult);
+      });
+    });
+
+    const drainPromise = drainPendingQueue(db, "bot-token", 5);
+    await vi.waitFor(() => expect(mockSendToChat).toHaveBeenCalledTimes(5));
+
+    expect(
+      sqlite.prepare(
+        `SELECT id, delivery_state, delivery_started_at, delivery_completed_at
+           FROM telegram_pending_alerts ORDER BY id`,
+      ).all(),
+    ).toEqual([
+      { id: 820, delivery_state: "sent", delivery_started_at: initialNow, delivery_completed_at: initialNow + 60 },
+      { id: 821, delivery_state: "sent", delivery_started_at: initialNow, delivery_completed_at: initialNow + 60 },
+      { id: 822, delivery_state: "sent", delivery_started_at: initialNow, delivery_completed_at: initialNow + 60 },
+      { id: 823, delivery_state: "sent", delivery_started_at: initialNow, delivery_completed_at: initialNow + 60 },
+      { id: 824, delivery_state: "sending", delivery_started_at: initialNow + 60, delivery_completed_at: null },
+    ]);
+    expect(
+      sqlite.prepare(
+        `SELECT final_delivery_state, COUNT(*) AS count
+           FROM telegram_alert_job_targets
+          GROUP BY final_delivery_state
+          ORDER BY final_delivery_state`,
+      ).all(),
+    ).toEqual([
+      { final_delivery_state: null, count: 1 },
+      { final_delivery_state: "accepted", count: 4 },
+    ]);
+    expect(
+      sqlite.prepare(
+        `SELECT status, accepted_count, enqueued_count, execution_unknown_count
+           FROM telegram_alert_jobs WHERE job_id = ?`,
+      ).get(jobId),
+    ).toEqual({ status: "queued", accepted_count: 4, enqueued_count: 1, execution_unknown_count: 0 });
+
+    const staleAt = initialNow + 60 + PENDING_CLAIM_TTL_SEC + 1;
+    await expect(reconcileStalePendingSending(db, staleAt)).resolves.toBe(1);
+    expect(
+      sqlite.prepare(
+        `SELECT final_delivery_state, COUNT(*) AS count
+           FROM telegram_alert_job_targets
+          GROUP BY final_delivery_state
+          ORDER BY final_delivery_state`,
+      ).all(),
+    ).toEqual([
+      { final_delivery_state: "accepted", count: 4 },
+      { final_delivery_state: "execution_unknown", count: 1 },
+    ]);
+    expect(
+      sqlite.prepare(
+        `SELECT status, accepted_count, enqueued_count, execution_unknown_count
+           FROM telegram_alert_jobs WHERE job_id = ?`,
+      ).get(jobId),
+    ).toEqual({ status: "degraded", accepted_count: 4, enqueued_count: 0, execution_unknown_count: 1 });
+
+    resolveInFlight?.();
+    await expect(drainPromise).rejects.toThrow("sent-state persistence was not confirmed");
+    expect(
+      sqlite.prepare(
+        `SELECT final_delivery_state, COUNT(*) AS count
+           FROM telegram_alert_job_targets
+          GROUP BY final_delivery_state
+          ORDER BY final_delivery_state`,
+      ).all(),
+    ).toEqual([
+      { final_delivery_state: "accepted", count: 4 },
+      { final_delivery_state: "execution_unknown", count: 1 },
+    ]);
+    sqlite.close();
+  });
+
   it("reports blocked cleanup failures while reconciling results after an abort", async () => {
     const now = Math.floor(Date.now() / 1000);
     const controller = new AbortController();
@@ -1062,6 +1210,10 @@ describe("drainPendingQueue", () => {
       markupPolicyJson: serializePendingMarkupPolicy({}),
     });
     sqlite.prepare(
+      `INSERT INTO telegram_alert_jobs (job_id, status, target_count, enqueued_count, metadata)
+       VALUES ('stale-sending-job', 'queued', 1, 1, '{}')`,
+    ).run();
+    sqlite.prepare(
       `INSERT INTO telegram_alert_job_targets (
          job_id, target_key, pending_dedupe_key, source_event_id, plan_generation, status, effect_state
        ) VALUES ('stale-sending-job', 'stale-sending-target', 'stale-sending-key',
@@ -1256,6 +1408,10 @@ describe("drainPendingQueue", () => {
       markupPolicyJson: serializePendingMarkupPolicy({}),
     });
     sqlite.prepare(
+      `INSERT INTO telegram_alert_jobs (job_id, status, target_count, enqueued_count, metadata)
+       VALUES ('timeout-job', 'queued', 1, 1, '{}')`,
+    ).run();
+    sqlite.prepare(
       `INSERT INTO telegram_alert_job_targets (
          job_id, target_key, pending_dedupe_key, source_event_id, status, effect_state
        ) VALUES ('timeout-job', 'timeout-target', 'timeout-ambiguity-key', 'timeout-source', 'queued', 'complete')`,
@@ -1317,6 +1473,10 @@ describe("drainPendingQueue", () => {
       preferenceGeneration: 1,
       markupPolicyJson: serializePendingMarkupPolicy({}),
     });
+    sqlite.prepare(
+      `INSERT INTO telegram_alert_jobs (job_id, status, target_count, enqueued_count, metadata)
+       VALUES ('timeout-race-job', 'queued', 1, 1, '{}')`,
+    ).run();
     sqlite.prepare(
       `INSERT INTO telegram_alert_job_targets (
          job_id, target_key, pending_dedupe_key, source_event_id, status, effect_state

@@ -51,7 +51,7 @@ import {
 import {
   applyAcceptedPriceCandidate,
   applyProtocolPriceOverrides,
-  getPrimaryCandidatePricesForCurrentAsset,
+  getPostEnrichmentCandidatePricesForCurrentAsset,
   type ProtocolPriceOverride,
 } from "./pricing";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
@@ -276,7 +276,7 @@ export async function runPostEnrichmentPricePipeline(
     const decision = validatePublishedAssetPrice({
       asset: {
         ...asset,
-        candidatePrices: getPrimaryCandidatePricesForCurrentAsset(asset, input.primaryPriceResults),
+        candidatePrices: getPostEnrichmentCandidatePricesForCurrentAsset(asset, input.primaryPriceResults),
       },
       validationContext: validationContexts.get(asset),
       validationReferences,
@@ -379,13 +379,29 @@ export async function runSharedPriceCompletion(
 ): Promise<SharedPriceCompletionResult | CronResult> {
   const authoritativeOverrideStats =
     input.authoritativeOverrideStats ?? createAuthoritativeLivePriceOverrideStats();
-  const authoritativeOverrides =
+  const authoritativeOverrides = new Map(
     input.authoritativeOverrides ?? await fetchAuthoritativeLivePriceOverrides(
       input.assets,
       input.signal,
       input.validationReferences,
       { db: input.db, stats: authoritativeOverrideStats },
+    ),
+  );
+  if (input.authoritativeOverrides) {
+    const postFallbackLocalOverrides = await fetchAuthoritativeLivePriceOverrides(
+      input.assets,
+      input.signal,
+      input.validationReferences,
+      {
+        db: input.db,
+        stats: authoritativeOverrideStats,
+        maxProviderLivePriority: 0,
+      },
     );
+    for (const [assetId, override] of postFallbackLocalOverrides) {
+      authoritativeOverrides.set(assetId, override);
+    }
+  }
   const authoritativeOverrideCount = applyProtocolPriceOverrides({
     assets: input.assets,
     overrides: authoritativeOverrides,

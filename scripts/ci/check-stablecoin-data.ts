@@ -4,9 +4,16 @@ import { DEAD_STABLECOINS } from "../../shared/lib/dead-stablecoins";
 import { CHAIN_META } from "../../shared/lib/chains";
 import { hasRuntimeOnchainSupplyPath } from "../../shared/lib/onchain-supply-probe";
 import { CanonicalOrderAssetSchema } from "../../shared/lib/stablecoins/schema";
+import {
+  ListingDecisionRegistrySchema,
+  ListingExclusionRegistrySchema,
+} from "../../shared/lib/stablecoins/listing-governance-schemas";
+import { isActiveStablecoinMeta, isReadableStablecoinMeta } from "../../shared/lib/stablecoins/status";
 import { validateVariantRelationships } from "../../shared/lib/stablecoins/validate-variants";
 import { classifyPegClass, normalizePegTypeFromCurrency } from "../../shared/lib/peg-price-bounds";
 import type { DeadStablecoin, StablecoinMeta } from "../../shared/types";
+import listingDecisionsAsset from "../../shared/data/stablecoins/listing-decisions.json";
+import listingExclusionsAsset from "../../shared/data/stablecoins/listing-exclusions.json";
 import { RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT, validateReserveCompositionTotal } from "../../shared/types/reserves";
 import { findBlacklistabilityReviewIssues } from "../lib/blacklistability-review";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -70,7 +77,7 @@ function readCanonicalOrder(): string[] {
 }
 
 function getRuntimeAdmissionIssue(coin: StablecoinMeta): string | null {
-  if (coin.status === "pre-launch") return null;
+  if (!isActiveStablecoinMeta(coin)) return null;
   if (coin.llamaId) return null;
 
   const isCommodity = coin.flags.pegCurrency === "GOLD" || coin.flags.pegCurrency === "SILVER";
@@ -101,7 +108,7 @@ function getRuntimeAdmissionIssue(coin: StablecoinMeta): string | null {
 }
 
 function getCommodityOuncesIssue(coin: StablecoinMeta): string | null {
-  if (coin.status === "pre-launch") return null;
+  if (!isActiveStablecoinMeta(coin)) return null;
   if (coin.flags.pegCurrency !== "GOLD" && coin.flags.pegCurrency !== "SILVER") return null;
   if (coin.commodityOunces != null && coin.commodityOunces > 0) return null;
 
@@ -113,7 +120,7 @@ function getCommodityOuncesIssue(coin: StablecoinMeta): string | null {
 }
 
 function getPegRuntimeSupportIssue(coin: StablecoinMeta): string | null {
-  if (coin.status === "pre-launch") return null;
+  if (!isActiveStablecoinMeta(coin)) return null;
 
   const pegCurrency = coin.flags.pegCurrency;
   const pegType = normalizePegTypeFromCurrency(pegCurrency);
@@ -244,7 +251,129 @@ function getContractDeploymentIssues(coin: StablecoinMeta): string[] {
 }
 
 function isTrackedRuntimeCoin(coin: StablecoinMeta): boolean {
-  return coin.status !== "pre-launch";
+  return isReadableStablecoinMeta(coin);
+}
+
+function normalizeContractKey(chain: string, address: string): string {
+  return `${chain.trim().toLowerCase()}:${address.trim().toLowerCase()}`;
+}
+
+function getListingGovernanceIssues(coins: readonly StablecoinMeta[]): string[] {
+  const issues: string[] = [];
+  const decisionsResult = ListingDecisionRegistrySchema.safeParse(listingDecisionsAsset);
+  const exclusionsResult = ListingExclusionRegistrySchema.safeParse(listingExclusionsAsset);
+  if (!decisionsResult.success) {
+    return decisionsResult.error.issues.map((issue) =>
+      `listing-decisions.json[${issue.path.join(".")}]: ${issue.message}`
+    );
+  }
+  if (!exclusionsResult.success) {
+    return exclusionsResult.error.issues.map((issue) =>
+      `listing-exclusions.json[${issue.path.join(".")}]: ${issue.message}`
+    );
+  }
+
+  const coinById = new Map(coins.map((coin) => [coin.id, coin]));
+  const listingClassById = new Map(Object.entries(decisionsResult.data.listingClassById));
+  for (const id of listingClassById.keys()) {
+    if (!coinById.has(id)) {
+      issues.push(`listing-decisions.json references unknown catalog ID "${id}"`);
+    }
+  }
+
+  const exclusionById = new Map<string, (typeof exclusionsResult.data.exclusions)[number]>();
+  const excludedProviderIds = new Set<string>();
+  const excludedContracts = new Set<string>();
+  for (const exclusion of exclusionsResult.data.exclusions) {
+    if (exclusionById.has(exclusion.catalogId)) {
+      issues.push(`listing-exclusions.json duplicates catalog ID "${exclusion.catalogId}"`);
+    }
+    exclusionById.set(exclusion.catalogId, exclusion);
+    for (const providerId of exclusion.providerIds.coingecko ?? []) {
+      const key = `coingecko:${providerId}`;
+      if (excludedProviderIds.has(key)) issues.push(`listing-exclusions.json duplicates provider ID "${key}"`);
+      excludedProviderIds.add(key);
+    }
+    for (const providerId of exclusion.providerIds.defillama ?? []) {
+      const key = `defillama:${providerId}`;
+      if (excludedProviderIds.has(key)) issues.push(`listing-exclusions.json duplicates provider ID "${key}"`);
+      excludedProviderIds.add(key);
+    }
+    for (const contract of exclusion.contracts) {
+      const key = normalizeContractKey(contract.chain, contract.address);
+      if (excludedContracts.has(key)) issues.push(`listing-exclusions.json duplicates contract "${key}"`);
+      excludedContracts.add(key);
+    }
+  }
+
+  for (const coin of coins) {
+    const listingClass = listingClassById.get(coin.id);
+    if (!listingClass) {
+      issues.push(`listing-decisions.json is missing catalog ID "${coin.id}"`);
+      continue;
+    }
+
+    const expectedListingClass = coin.status === "delisted"
+      ? "excluded"
+      : coin.variantOf
+        ? "stablecoin-variant"
+        : coin.mechanismArchetype === "rwa-credit-fund"
+          ? "stable-value-investment"
+          : coin.flags.navToken === true || coin.mechanismArchetype === "tbill"
+            ? "cash-equivalent"
+            : "core-stablecoin";
+    if (listingClass !== expectedListingClass) {
+      issues.push(
+        `listing-decisions.json class for "${coin.id}" is ${listingClass}; expected ${expectedListingClass}`,
+      );
+    }
+
+    if (coin.status === "delisted") {
+      if (listingClass !== "excluded") {
+        issues.push(`listing-decisions.json must classify delisted "${coin.id}" as excluded`);
+      }
+      const exclusion = exclusionById.get(coin.id);
+      if (!exclusion) {
+        issues.push(`listing-exclusions.json is missing delisted catalog ID "${coin.id}"`);
+      } else {
+        if (coin.geckoId && !(exclusion.providerIds.coingecko ?? []).includes(coin.geckoId)) {
+          issues.push(`listing-exclusions.json must preserve CoinGecko ID "${coin.geckoId}" for "${coin.id}"`);
+        }
+        if (coin.llamaId && !(exclusion.providerIds.defillama ?? []).includes(coin.llamaId)) {
+          issues.push(`listing-exclusions.json must preserve DefiLlama ID "${coin.llamaId}" for "${coin.id}"`);
+        }
+        for (const contract of coin.contracts ?? []) {
+          const key = normalizeContractKey(contract.chain, contract.address);
+          if (!exclusion.contracts.some((entry) => normalizeContractKey(entry.chain, entry.address) === key)) {
+            issues.push(`listing-exclusions.json must preserve contract "${key}" for "${coin.id}"`);
+          }
+        }
+      }
+    } else if (listingClass === "excluded") {
+      issues.push(`listing-decisions.json marks non-delisted "${coin.id}" as excluded`);
+    } else {
+      if (coin.priceBasis != null) {
+        issues.push(`priceBasis is reserved for sourced delisting records; remove it from "${coin.id}"`);
+      }
+      if (coin.exitMechanism != null) {
+        issues.push(`exitMechanism is reserved for sourced delisting records; remove it from "${coin.id}"`);
+      }
+    }
+  }
+
+  for (const exclusion of exclusionsResult.data.exclusions) {
+    if (coinById.get(exclusion.catalogId)?.status !== "delisted") {
+      issues.push(`listing-exclusions.json entry "${exclusion.catalogId}" must reference a delisted catalog row`);
+    }
+    const fingerprintCount = (exclusion.providerIds.coingecko?.length ?? 0)
+      + (exclusion.providerIds.defillama?.length ?? 0)
+      + exclusion.contracts.length;
+    if (fingerprintCount === 0) {
+      issues.push(`listing-exclusions.json entry "${exclusion.catalogId}" needs a provider ID or contract fingerprint`);
+    }
+  }
+
+  return issues;
 }
 
 function getDeadStablecoinRegistryIssues(deadCoins: readonly DeadStablecoin[]): string[] {
@@ -391,6 +520,10 @@ function runStablecoinDataCheck(): void {
 
     for (const issue of getLogoRegistryIssues()) {
       reportError(issue);
+    }
+
+    for (const issue of getListingGovernanceIssues(allEntries.map((entry) => entry.coin))) {
+      reportError(`${STABLECOIN_DATA_DIR}: ${issue}`);
     }
 
     const canonicalIssues = findCanonicalOrderIssues(canonicalOrder, allEntries);

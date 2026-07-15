@@ -1,12 +1,7 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggregate-registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import {
-  addFreshnessHeaders,
-  jsonResponse,
-  parseClampedIntegerParam,
-  withErrorHandler,
-} from "../lib/api-utils";
+import { addFreshnessHeaders, jsonResponse, parseClampedIntegerParam, withErrorHandler } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getCompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
 
@@ -16,14 +11,16 @@ const MIN_DAYS = 30;
 const MAX_DAYS = 5000;
 
 /** IDs of commodity-pegged stablecoins (gold, silver). */
-const COMMODITY_IDS = ACTIVE_STABLECOINS
-  .filter((c) => COMMODITY_PEGS.has(c.flags.pegCurrency))
-  .map((c) => c.id);
+const CORE_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.map((c) => c.id);
+
+const COMMODITY_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.filter((c) => COMMODITY_PEGS.has(c.flags.pegCurrency)).map(
+  (c) => c.id,
+);
 
 /** IDs of fiat non-USD stablecoins (EUR, GBP, BRL, VAR, etc.). */
-const FIAT_NON_USD_IDS = ACTIVE_STABLECOINS
-  .filter((c) => c.flags.pegCurrency !== "USD" && !COMMODITY_PEGS.has(c.flags.pegCurrency))
-  .map((c) => c.id);
+const FIAT_NON_USD_IDS = CORE_AGGREGATE_ACTIVE_STABLECOINS.filter(
+  (c) => c.flags.pegCurrency !== "USD" && !COMMODITY_PEGS.has(c.flags.pegCurrency),
+).map((c) => c.id);
 
 interface AggRow {
   snapshot_date: number;
@@ -41,6 +38,7 @@ async function readRows(
   const result = await db
     .prepare(
       `WITH
+         core_ids(id) AS (SELECT value FROM json_each(?)),
          commodity_ids(id) AS (SELECT value FROM json_each(?)),
          fiat_non_usd_ids(id) AS (SELECT value FROM json_each(?))
        SELECT
@@ -49,11 +47,18 @@ async function readRows(
          ROUND(SUM(CASE WHEN stablecoin_id IN (SELECT id FROM commodity_ids) THEN circulating_usd ELSE 0 END), 2) AS commodity,
          ROUND(SUM(CASE WHEN stablecoin_id IN (SELECT id FROM fiat_non_usd_ids) THEN circulating_usd ELSE 0 END), 2) AS fiat_non_usd
        FROM supply_history
-       WHERE snapshot_date >= ?${latestSnapshotFilter}
+       WHERE stablecoin_id IN (SELECT id FROM core_ids)
+         AND snapshot_date >= ?${latestSnapshotFilter}
        GROUP BY snapshot_date
        ORDER BY snapshot_date ASC`,
     )
-    .bind(JSON.stringify(COMMODITY_IDS), JSON.stringify(FIAT_NON_USD_IDS), cutoff, ...latestSnapshotBinds)
+    .bind(
+      JSON.stringify(CORE_IDS),
+      JSON.stringify(COMMODITY_IDS),
+      JSON.stringify(FIAT_NON_USD_IDS),
+      cutoff,
+      ...latestSnapshotBinds,
+    )
     .all<AggRow>();
 
   return result.results ?? [];
@@ -103,8 +108,8 @@ export const handleNonUsdShare = withErrorHandler(
       if (row.snapshot_date - lastKeptDate >= interval) {
         points.push({
           date: row.snapshot_date,
-          commodityShare: Math.round(((row.commodity / row.total) * 100) * 10000) / 10000,
-          fiatNonUsdShare: Math.round(((row.fiat_non_usd / row.total) * 100) * 10000) / 10000,
+          commodityShare: Math.round((row.commodity / row.total) * 100 * 10000) / 10000,
+          fiatNonUsdShare: Math.round((row.fiat_non_usd / row.total) * 100 * 10000) / 10000,
           commodity: row.commodity,
           fiatNonUsd: row.fiat_non_usd,
           total: row.total,
@@ -114,17 +119,18 @@ export const handleNonUsdShare = withErrorHandler(
     }
 
     const latestPointDate = points.reduce<number | null>(
-      (latest, point) => latest == null ? point.date : Math.max(latest, point.date),
+      (latest, point) => (latest == null ? point.date : Math.max(latest, point.date)),
       null,
     );
     const updatedAt = completedSnapshot?.updatedAt ?? latestPointDate;
-    const headers = updatedAt == null
-      ? { "Cache-Control": CACHE_PROFILES.slow }
-      : addFreshnessHeaders(
-        { "Cache-Control": CACHE_PROFILES.slow },
-        updatedAt,
-        API_FRESHNESS_MAX_AGE_SEC.nonUsdShare,
-      );
+    const headers =
+      updatedAt == null
+        ? { "Cache-Control": CACHE_PROFILES.slow }
+        : addFreshnessHeaders(
+            { "Cache-Control": CACHE_PROFILES.slow },
+            updatedAt,
+            API_FRESHNESS_MAX_AGE_SEC.nonUsdShare,
+          );
 
     return jsonResponse(points, headers);
   },

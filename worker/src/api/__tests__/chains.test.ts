@@ -32,6 +32,12 @@ vi.mock("@shared/lib/stablecoins/registry", () => ({
   ]),
 }));
 
+vi.mock("@shared/lib/stablecoins/aggregate-registry", () => ({
+  CORE_AGGREGATE_ACTIVE_IDS: new Set(["usdt-tether", "usdc-circle", "dai-makerdao"]),
+  CORE_AGGREGATE_ACTIVE_STABLECOINS: [],
+  CORE_AGGREGATE_ACTIVE_META_BY_ID: new Map(),
+}));
+
 import { handleChains } from "../chains";
 
 function withPublishedStablecoinDefaults(payload: unknown): unknown {

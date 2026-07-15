@@ -26,8 +26,8 @@ export const LIFECYCLE_PHASES_SECTION_CONTENT = defineMethodologySectionContent(
   id: "lifecycle-phases-methodology",
   title: "Stablecoin Lifecycle Phases",
   markdownParagraphs: [
-    "Every tracked stablecoin sits in one of three lifecycle phases: active, pre-launch, or frozen. The phase controls which surfaces ingest, score, and display the coin. It is a data-collection lifecycle policy, not a scoring methodology — per-domain version constants (Safety Scores, Liquidity, PegScore + DEWS, PSI, Yield, Mint/Burn Flow, Pricing Pipeline, Blacklist Tracker, Chain Health) are unaffected when a coin transitions between phases.",
-    "Active coins receive full data collection and contribute to every aggregate. Pre-launch coins are listed for context on the upcoming page and get a dedicated pre-launch detail page, but they have no live data yet. Frozen coins are archived: their historical data and detail page are preserved, but no new data is collected, and they are excluded from live aggregates and new score computations.",
+    "Every tracked stablecoin sits in one of five lifecycle phases: active, pre-launch, quarantined, delisted, or frozen. The phase controls which surfaces ingest, score, and display the coin. It is a data-collection lifecycle policy, not a scoring methodology — per-domain version constants (Safety Scores, Liquidity, PegScore + DEWS, PSI, Yield, Mint/Burn Flow, Pricing Pipeline, Blacklist Tracker, Chain Health) are unaffected when a coin transitions between phases.",
+    "Active coins receive full data collection and contribute according to listing class. Pre-launch coins have dedicated upcoming profiles but no live data. Quarantined records are temporarily withheld after a reviewed lack of positive supply or market-cap coverage; delisted records failed listing scope. Both retain static profiles without new provider collection. Frozen coins retain historical archive data in the cemetery. Missing price coverage and genuine depegs remain active monitoring problems rather than reasons to hide an asset through lifecycle state.",
   ],
 });
 
@@ -46,7 +46,7 @@ export const STABILITY_INDEX_SECTION_CONTENT = defineMethodologySectionContent({
   id: "stability-index-methodology",
   title: "Stability Index Methodology",
   markdownParagraphs: [
-    "The Pharos Stability Index (PSI) compresses market-wide stablecoin stress into a 0-100 condition score. It starts at 100, subtracts penalties for severity, breadth, and stress breadth, then adds a clamped trend term before mapping the result into condition bands from BEDROCK to MELTDOWN.",
+    "The Pharos Stability Index (PSI) compresses stress across active core stablecoins and cash equivalents into a 0-100 condition score. Tracked variants and stable-value investments stay browsable but are excluded from the monetary aggregate. PSI starts at 100, subtracts penalties for severity, breadth, and stress breadth, then adds a clamped trend term before mapping the result into condition bands from BEDROCK to MELTDOWN.",
     "Severity captures how bad current deviations are. Breadth captures how many assets are involved. Stress breadth captures how many stablecoins are elevated in DEWS. Trend captures whether the system is getting better or worse over the current window: negative trend reduces the score, while positive trend can offset part of the penalty.",
     "PSI is deliberately conservative: one small depeg should not move the entire market condition, but simultaneous broad stress should pull the index down even if no single coin dominates the tape.",
   ],

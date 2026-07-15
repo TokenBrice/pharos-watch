@@ -6,6 +6,11 @@ import {
   PRE_LAUNCH_STABLECOINS,
   TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/registry";
+import {
+  ACTIVE_STABLE_VALUE_INVESTMENTS,
+  ACTIVE_VARIANT_STABLECOINS,
+  CORE_AGGREGATE_ACTIVE_STABLECOINS,
+} from "@shared/lib/stablecoins/aggregate-registry";
 import { COMMAND_PALETTE_STABLECOINS } from "@/lib/command-palette-search-data";
 import {
   ACTIVE_PEG_CURRENCIES,
@@ -13,9 +18,13 @@ import {
   ACTIVE_PEG_CURRENCY_COUNTS,
   ACTIVE_STABLECOIN_IDS,
   ACTIVE_STABLECOIN_COUNT,
+  ACTIVE_STABLE_VALUE_INVESTMENT_COUNT,
+  ACTIVE_VARIANT_STABLECOIN_COUNT,
+  CORE_AGGREGATE_STABLECOIN_COUNT,
   DEAD_STABLECOIN_COUNT,
   FROZEN_STABLECOIN_COUNT,
   HOMEPAGE_TOP_ACTIVE_STABLECOINS,
+  HOMEPAGE_TOP_CORE_STABLECOINS,
   PRE_LAUNCH_STABLECOIN_COUNT,
   TRACKED_STABLECOIN_COUNT,
   TRACKED_STABLECOIN_IDS,
@@ -59,6 +68,9 @@ describe("static stablecoin projections", () => {
   it("keeps count constants synced with the validated registries", () => {
     expect(TRACKED_STABLECOIN_COUNT).toBe(TRACKED_STABLECOINS.length);
     expect(ACTIVE_STABLECOIN_COUNT).toBe(ACTIVE_STABLECOINS.length);
+    expect(CORE_AGGREGATE_STABLECOIN_COUNT).toBe(CORE_AGGREGATE_ACTIVE_STABLECOINS.length);
+    expect(ACTIVE_VARIANT_STABLECOIN_COUNT).toBe(ACTIVE_VARIANT_STABLECOINS.length);
+    expect(ACTIVE_STABLE_VALUE_INVESTMENT_COUNT).toBe(ACTIVE_STABLE_VALUE_INVESTMENTS.length);
     expect(PRE_LAUNCH_STABLECOIN_COUNT).toBe(PRE_LAUNCH_STABLECOINS.length);
     expect(FROZEN_STABLECOIN_COUNT).toBe(FROZEN_STABLECOINS.length);
     expect(DEAD_STABLECOIN_COUNT).toBe(DEAD_STABLECOINS.length);
@@ -86,12 +98,19 @@ describe("static stablecoin projections", () => {
         symbol: coin.symbol,
       })),
     );
+    expect(HOMEPAGE_TOP_CORE_STABLECOINS).toEqual(
+      CORE_AGGREGATE_ACTIVE_STABLECOINS.slice(0, 20).map((coin) => ({
+        id: coin.id,
+        name: coin.name,
+        symbol: coin.symbol,
+      })),
+    );
   });
 
   it("keeps command-palette search rows synced with tracked metadata", () => {
     const expected = TRACKED_STABLECOINS.map((coin) => {
       const row = [coin.id, coin.name, coin.symbol];
-      if (coin.status === "pre-launch" || coin.status === "frozen") {
+      if (coin.status != null && coin.status !== "active") {
         row.push(coin.status);
       }
       if (coin.status === "frozen" && coin.frozenAt) {

@@ -19,7 +19,7 @@ Fallback enrichment is bounded. CoinMarketCap, Jupiter, DexScreener, exact-addre
 
 ## Stability Index Methodology
 
-The Pharos Stability Index (PSI) compresses market-wide stablecoin stress into a 0-100 condition score. It starts at 100, subtracts penalties for severity, breadth, and stress breadth, then adds a clamped trend term before mapping the result into condition bands from BEDROCK to MELTDOWN.
+The Pharos Stability Index (PSI) compresses stress across active core stablecoins and cash equivalents into a 0-100 condition score. Tracked variants and stable-value investments stay browsable but are excluded from the monetary aggregate. PSI starts at 100, subtracts penalties for severity, breadth, and stress breadth, then adds a clamped trend term before mapping the result into condition bands from BEDROCK to MELTDOWN.
 
 Severity captures how bad current deviations are. Breadth captures how many assets are involved. Stress breadth captures how many stablecoins are elevated in DEWS. Trend captures whether the system is getting better or worse over the current window: negative trend reduces the score, while positive trend can offset part of the penalty.
 

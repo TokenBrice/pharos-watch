@@ -1,4 +1,7 @@
-import { CLIENT_READABLE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import {
+  CLIENT_ACTIVE_IDS,
+  CLIENT_TRACKED_STABLECOINS,
+} from "@shared/lib/stablecoins/client-registry";
 import type { CoinOption, ComparePreset } from "@/lib/compare-types";
 import { decodeStablecoinUrlToken } from "@/lib/stablecoin-url-codec";
 import { readWatchlistSnapshot } from "@/hooks/use-watchlist";
@@ -6,7 +9,11 @@ import { readWatchlistSnapshot } from "@/hooks/use-watchlist";
 export const MAX_COMPARE_COINS = 5;
 export const COMPARE_COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"] as const;
 
-export const COMPARE_COIN_OPTIONS: CoinOption[] = CLIENT_READABLE_STABLECOINS.map((c) => ({
+const CLIENT_COMPARABLE_STABLECOINS = CLIENT_TRACKED_STABLECOINS.filter(
+  (coin) => CLIENT_ACTIVE_IDS.has(coin.id) || coin.status === "frozen",
+);
+
+export const COMPARE_COIN_OPTIONS: CoinOption[] = CLIENT_COMPARABLE_STABLECOINS.map((c) => ({
   id: c.id,
   name: c.name,
   symbol: c.symbol,
@@ -59,7 +66,7 @@ export const COMPARISON_PRESETS: readonly ComparePreset[] = [
   {
     title: "Tokenized Treasuries",
     description: "NAV-priced tokens backed by U.S. Treasury bills",
-    coins: ["usyc-hashnote", "usdy-ondo-finance", "tbill-openeden", "buidl-blackrock"],
+    coins: ["usyc-hashnote", "usdy-ondo-finance", "ustb-superstate", "buidl-blackrock"],
   },
   {
     title: "Protocol Stablecoins",

@@ -192,5 +192,11 @@
       ]
     }
   },
-  "launchDate": "2023-09-15"
+  "launchDate": "2023-09-15",
+  "status": "quarantined",
+  "listingStatusReview": {
+    "changedAt": "2026-07-15",
+    "reviewBy": "2026-08-15",
+    "reason": "Temporarily withheld because permitted runtime sources do not provide a positive circulating supply or market cap."
+  }
 }

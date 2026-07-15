@@ -363,6 +363,85 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
     },
   );
 
+  it("suppresses exact terminal content when only disable_notification changed and continues the handoff page", async () => {
+    const { sqlite, db } = setupLatestSchema();
+    const priorSourceEventId = "telegram-source:test:v1:prior-silent";
+    const currentSourceEventId = "telegram-source:test:v1:current-audible";
+    insertSubscriber(sqlite, "42");
+    insertSubscriber(sqlite, "43");
+
+    insertSource(sqlite, priorSourceEventId);
+    await openDeliveryForRoutes(
+      db,
+      priorSourceEventId,
+      new Map([
+        ["42", [{ ...routed("42", priorSourceEventId, 1), disableNotification: true }]],
+        ["43", []],
+      ]),
+    );
+    await enqueueTelegramAuthoritativeTargets(db, priorSourceEventId, 1, NOW);
+    sqlite
+      .prepare(
+        `UPDATE telegram_pending_alerts
+            SET delivery_state = 'sent', delivery_completed_at = ?
+          WHERE source_event_id = ?`,
+      )
+      .run(NOW + 1, priorSourceEventId);
+    await reconcileTelegramJobTargetFinalDeliveryFromPending(db, NOW + 1);
+
+    insertSource(sqlite, currentSourceEventId);
+    await openDeliveryForRoutes(
+      db,
+      currentSourceEventId,
+      new Map([
+        ["42", [routed("42", currentSourceEventId, 1)]],
+        ["43", [routed("43", currentSourceEventId, 1, "-unique")]],
+      ]),
+    );
+    expect(
+      sqlite
+        .prepare(
+          `SELECT pending.disable_notification AS prior_disable_notification,
+                  target.disable_notification AS current_disable_notification
+             FROM telegram_pending_alerts pending
+             JOIN telegram_alert_job_targets target ON target.chat_id = pending.chat_id
+            WHERE pending.source_event_id = ? AND target.source_event_id = ?`,
+        )
+        .get(priorSourceEventId, currentSourceEventId),
+    ).toEqual({ prior_disable_notification: 1, current_disable_notification: 0 });
+
+    const handoff = await enqueueTelegramAuthoritativeTargets(db, currentSourceEventId, 1, NOW + 2);
+
+    expect(handoff).toMatchObject({ enqueued: 1, processed: 2, remaining: 0 });
+    expect(
+      sqlite
+        .prepare(
+          `SELECT chat_id, status, final_delivery_state, cancellation_reason
+             FROM telegram_alert_job_targets
+            WHERE source_event_id = ? ORDER BY chat_id`,
+        )
+        .all(currentSourceEventId),
+    ).toEqual([
+      {
+        chat_id: "42",
+        status: "expired",
+        final_delivery_state: "cancelled",
+        cancellation_reason: "duplicate_prior_delivery",
+      },
+      {
+        chat_id: "43",
+        status: "queued",
+        final_delivery_state: null,
+        cancellation_reason: null,
+      },
+    ]);
+    expect(
+      sqlite
+        .prepare("SELECT target_plan_state, last_error_class FROM telegram_alert_source_events WHERE source_event_id = ?")
+        .get(currentSourceEventId),
+    ).toEqual({ target_plan_state: "delivery_open", last_error_class: null });
+  });
+
   it("does not suppress a different payload that only collides on the persisted dedupe hash", async () => {
     const { sqlite, db } = setupLatestSchema();
     const priorSourceEventId = "telegram-source:test:v1:prior-hash-collision";
@@ -1114,21 +1193,35 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
       final_delivery_state: "execution_unknown",
       final_delivery_at: NOW + 1,
     });
-
-    sqlite.exec(`UPDATE telegram_alert_job_targets SET final_delivery_state = NULL,
-      final_delivery_at = NULL, final_delivery_error = NULL;
-      UPDATE telegram_pending_alerts SET delivery_state = 'execution_unknown',
-      delivery_completed_at = ${NOW + 2}, last_error_class = 'network';`);
-    await expect(reconcileTelegramJobTargetFinalDeliveryFromPending(db, NOW + 3)).resolves.toBe(1);
-    await reconcileTelegramAlertJobCounters(db, [`telegram:${sourceEventId}:dews`], NOW + 3);
     expect(
       sqlite
         .prepare(
-          `SELECT execution_unknown_count, expired_count, failed_count
+          `SELECT status, execution_unknown_count, expired_count, failed_count
          FROM telegram_alert_jobs WHERE source_event_id = ?`,
         )
         .get(sourceEventId),
     ).toEqual({
+      status: "degraded",
+      execution_unknown_count: 1,
+      expired_count: 0,
+      failed_count: 0,
+    });
+
+    sqlite.exec(`UPDATE telegram_alert_job_targets SET final_delivery_state = NULL,
+      final_delivery_at = NULL, final_delivery_error = NULL;
+      UPDATE telegram_pending_alerts SET delivery_state = 'execution_unknown',
+      delivery_completed_at = ${NOW + 2}, last_error_class = 'network';
+      UPDATE telegram_alert_jobs SET status = 'queued', execution_unknown_count = 0;`);
+    await expect(reconcileTelegramJobTargetFinalDeliveryFromPending(db, NOW + 3)).resolves.toBe(1);
+    expect(
+      sqlite
+        .prepare(
+          `SELECT status, execution_unknown_count, expired_count, failed_count
+         FROM telegram_alert_jobs WHERE source_event_id = ?`,
+        )
+        .get(sourceEventId),
+    ).toEqual({
+      status: "degraded",
       execution_unknown_count: 1,
       expired_count: 0,
       failed_count: 0,

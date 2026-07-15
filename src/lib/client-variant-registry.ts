@@ -5,11 +5,12 @@ import {
 } from "@shared/lib/stablecoins/client-registry";
 import { createVariantRelationshipHelpers } from "@shared/lib/stablecoins/variant-relationships";
 import type { VariantKind } from "@shared/types";
+import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 
 function hasTrackedVariantMeta(
   meta: StablecoinClientMeta | undefined,
 ): meta is StablecoinClientMeta & { variantOf: string; variantKind: VariantKind } {
-  return meta?.variantOf != null && meta.variantKind != null && meta.status !== "pre-launch" && meta.status !== "frozen";
+  return meta?.variantOf != null && meta.variantKind != null && isActiveStablecoinMeta(meta);
 }
 
 const clientVariantHelpers = createVariantRelationshipHelpers({

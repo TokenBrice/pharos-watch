@@ -132,6 +132,8 @@ const StablecoinMetaAssetSchemaShape = {
   llamaId: z.string().optional(),
   detailProvider: DetailProviderSchema.optional(),
   marketAvailability: StablecoinMetaEnumSchemas.marketAvailability.optional(),
+  priceBasis: StablecoinMetaEnumSchemas.priceBasis.optional(),
+  exitMechanism: StablecoinMetaEnumSchemas.exitMechanism.optional(),
   name: z.string(),
   symbol: z.string(),
   oneLiner: z.string().max(160).optional(),
@@ -181,6 +183,15 @@ const StablecoinMetaAssetSchemaShape = {
   tags: z.array(z.string()).optional(),
   yieldConfig: YieldConfigSchema.optional(),
   status: StablecoinMetaEnumSchemas.status.optional(),
+  listingStatusReview: z
+    .object({
+      changedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      reason: z.string().trim().min(1).max(280),
+      reviewBy: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      source: StablecoinLinkSchema.optional(),
+    })
+    .strict()
+    .optional(),
   frozenAt: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -612,6 +623,36 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMe
     }
   })
   .superRefine((meta, ctx) => {
+    const listingStatus = meta.status === "quarantined" || meta.status === "delisted";
+    if (listingStatus && !meta.listingStatusReview) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `${meta.status} coins require listingStatusReview`,
+        path: ["listingStatusReview"],
+      });
+    } else if (!listingStatus && meta.listingStatusReview) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "listingStatusReview is only allowed when status is quarantined or delisted",
+        path: ["listingStatusReview"],
+      });
+    }
+    if (meta.status === "quarantined" && !meta.listingStatusReview?.reviewBy) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "quarantined coins require listingStatusReview.reviewBy",
+        path: ["listingStatusReview", "reviewBy"],
+      });
+    }
+    if (meta.status === "delisted" && !meta.listingStatusReview?.source) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "delisted coins require listingStatusReview.source",
+        path: ["listingStatusReview", "source"],
+      });
+    }
+  })
+  .superRefine((meta, ctx) => {
     if (meta.status === "frozen") {
       if (!meta.frozenAt) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "frozen coins require frozenAt", path: ["frozenAt"] });
@@ -662,7 +703,7 @@ function refineMintAuthorityCatalog(stablecoins: StablecoinMeta[], ctx: z.Refine
       if ((parent == null && hasCatalogContext) || (parent != null && !isReadableStablecoinMeta(parent))) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "mintAuthority.inheritedFrom must reference an active or frozen tracked stablecoin",
+          message: "mintAuthority.inheritedFrom must reference a readable post-launch tracked stablecoin",
           path: [index, "mintAuthority", "inheritedFrom"],
         });
       }

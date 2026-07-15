@@ -59,7 +59,7 @@ export function getAboutLeadParagraphs({
 }: Pick<AboutStablecoinCounts, "activeStablecoins">): string[] {
   return [
     "Most trackers show price. Pharos shows risk.",
-    `We monitor ${activeStablecoins} stablecoins with honest classification, live reserve feeds, forward-looking depeg warnings, and the only public blacklist tracker covering 35 coins across 9 chains — because knowing what a stablecoin is worth means knowing what could make it fail.`,
+    `We monitor a ${activeStablecoins}-asset core stablecoin and cash-equivalent universe, while keeping tracked variants visible but separate from market aggregates. Live reserve feeds, forward-looking depeg warnings, and public blacklist monitoring show what could make a stable asset fail.`,
   ];
 }
 
@@ -139,7 +139,7 @@ export const COMPUTED_FEATURES: readonly AboutFeatureItem[] = [
   {
     title: "Pharos Stability Index (PSI)",
     description:
-      "A 30-minute ecosystem health score that combines active-depeg severity, market-cap breadth, DEWS stress breadth, and 7-day market-cap trend into a 0-100 signal.",
+      "A 30-minute ecosystem health score that combines active-depeg severity, market-cap breadth, DEWS stress breadth, and 7-day market-cap trend across core stablecoins and cash equivalents, without double-counting tracked variants.",
     icon: Gauge,
     href: "/stability-index/",
     linkLabel: "Open stability index",
@@ -210,8 +210,9 @@ export function getTrackedFeatures({
 }: AboutStablecoinCounts): AboutFeatureItem[] {
   return [
     {
-      title: `${activeStablecoins} stablecoins`,
-      description: "Coverage across supported chains, classified by governance, backing, and peg currency.",
+      title: `${activeStablecoins} core stable assets`,
+      description:
+        "Core stablecoins and cash equivalents across supported chains, with variants classified and browsable separately.",
       icon: BarChart3,
     },
     {
@@ -300,7 +301,7 @@ export function getAboutFaqItems({
     },
     {
       question: "What does Pharos track?",
-      answer: `Pharos tracks ${activeStablecoins} active stablecoins across supported chains, classified by governance, backing, and peg currency. It documents ${deadStablecoins} dead stablecoins in the cemetery, monitors issuer freeze and blacklist events on-chain for supported centralized stablecoins, provides composite peg scores with depeg detection and heatmaps, integrates independent Bluechip SMIDGE safety ratings, scores DEX liquidity depth 0-100 across decentralized exchanges, computes a 30-minute Pharos Stability Index for ecosystem health, and issues report cards from four weighted base dimensions plus a peg-stability multiplier, including an exit-liquidity input that blends DEX liquidity with protocol or issuer redemption backstops when a direct exit path exists.`,
+      answer: `Pharos uses ${activeStablecoins} core stablecoins and cash equivalents for ecosystem market aggregates, while keeping tracked variants and stable-value investments visible as separate listing classes. It documents ${deadStablecoins} dead stablecoins in the cemetery, monitors issuer freeze and blacklist events on-chain, provides peg scores and depeg heatmaps, scores DEX liquidity, computes a 30-minute Pharos Stability Index, and publishes risk report cards.`,
     },
     {
       question: "How does Pharos classify stablecoins?",

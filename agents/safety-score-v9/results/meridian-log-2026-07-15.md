@@ -241,6 +241,27 @@ approved identity), and the strict V9 response still emits
 `lifecycle: "shadow"` post-marker; both need an owner ruling during
 activation, not before.
 
+## Coordinator amendment — both marker items RULED (owner, 2026-07-15)
+
+Owner rulings: the marker is IDENTITY-BOUND, and the served response flips to
+`lifecycle: "active"`. Implemented and dark-tested same day:
+
+- The marker value must be JSON `{ policyId, policyDigest,
+  evaluationBuildDigest, methodologyVersion }` (ActivationMarkerSchema in
+  worker/src/api/report-cards-v9.ts). The endpoint serves only while the
+  canonical snapshot matches all four fields; missing, malformed, or
+  mismatched markers keep it dark (404, fail-closed). Rotating per-publication
+  fields (base-input / publication generation IDs) are deliberately unbound so
+  routine shadow refreshes of the approved identity keep serving.
+- The runbook's marker-write step now writes that JSON with the approved
+  identity from the activation packet; rollback still deletes the key.
+- Served responses emit `lifecycle: "active"` (schema now shadow|active); the
+  stored shadow projection is unchanged.
+- FOLLOW-UP (pre-push): the hand-written V9 section in docs/api-reference.md
+  (~line 2407) still describes the existence-only marker and
+  `lifecycle: "shadow"`; the file is currently dirty from a concurrent lane
+  and must be updated when it is clean.
+
 ## Meridian III — VERITAS II Consumer Fixes (2026-07-15)
 
 - **VER2-005:** Confirmed that degraded yield hydration cleared row-level

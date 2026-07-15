@@ -94,6 +94,8 @@ import {
   CUSTODY_BANKRUPTCY_REMOTENESS_VALUES,
   CUSTODY_REHYPOTHECATION_VALUES,
   STABLECOIN_STATUS_VALUES,
+  STABLECOIN_EXIT_MECHANISM_VALUES,
+  STABLECOIN_PRICE_BASIS_VALUES,
   VARIANT_KIND_VALUES,
   YIELD_TYPE_VALUES,
 } from "./core";
@@ -1271,6 +1273,8 @@ export const StablecoinMetaEnumSchemas = {
   variantKind: z.enum(VARIANT_KIND_VALUES),
   launchPhase: z.enum(LAUNCH_PHASE_VALUES),
   marketAvailability: z.enum(MARKET_AVAILABILITY_VALUES),
+  priceBasis: z.enum(STABLECOIN_PRICE_BASIS_VALUES),
+  exitMechanism: z.enum(STABLECOIN_EXIT_MECHANISM_VALUES),
   status: z.enum(STABLECOIN_STATUS_VALUES),
   mechanismArchetype: z.enum(MECHANISM_ARCHETYPE_VALUES),
 } as const;

@@ -116,6 +116,17 @@ export function buildStablecoinDatasetJsonLd(
           measurementTechnique:
             "Checked-in stablecoin metadata, archived Pharos observations, and historical source references preserved for now-defunct assets.",
         }
+      : coin.status === "quarantined" || coin.status === "delisted"
+        ? {
+            name: `${coin.name} Inactive Listing Record`,
+            description: `Static catalog record for ${coin.name} (${coin.symbol}). This asset is outside Pharos's active monitoring universe. ${coin.listingStatusReview?.reason ?? "The lifecycle record is retained for historical reference."}`,
+            keywords: ["stablecoin catalog", "inactive listing", "historical reference"],
+            variableMeasured: [
+              { "@type": "PropertyValue", name: "listingStatus", value: coin.status },
+              { "@type": "PropertyValue", name: "staticProfile" },
+            ],
+            measurementTechnique: "Checked-in catalog metadata and reviewed listing-policy decisions.",
+          }
       : {
           name: `${coin.name} Stablecoin Analytics`,
           description: `Live analytics for ${coin.name} (${coin.symbol}). ${governanceLabel} stablecoin, ${backingLabel}, pegged to ${pegLabel}. Price, market cap, supply trends, chain distribution, peg score, redemption backstop coverage, and depeg history.`,

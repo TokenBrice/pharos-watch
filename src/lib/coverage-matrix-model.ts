@@ -11,7 +11,6 @@ import type {
   RedemptionBackstopsResponse,
   ReportCardsResponse,
   StablecoinListResponse,
-  StablecoinMeta,
   YieldRankingsResponse,
 } from "@shared/types";
 import type { ApiMeta } from "@/lib/api";
@@ -122,7 +121,7 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
   const flowById = new Map((input.mintBurnFlows.data?.coins ?? []).map((row) => [row.stablecoinId, row]));
   const reportCardById = new Map((input.reportCards.data?.cards ?? []).map((card) => [card.id, card]));
   const dependencyFacts = input.reportCards.data
-    ? buildDependencyCoverageFacts(activeStablecoins as StablecoinMeta[], input.reportCards.data)
+    ? buildDependencyCoverageFacts(activeStablecoins, input.reportCards.data)
     : new Map();
 
   const rows = activeStablecoins.map((coin) => {

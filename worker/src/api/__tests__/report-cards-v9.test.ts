@@ -60,13 +60,23 @@ describe("handleReportCardsV9", () => {
     mockBuildReportCardsSnapshot.mockReset();
   });
 
-  const activatedDb = () =>
+  const approvedMarker = () => {
+    const identity = snapshot().safetyScoreIdentity;
+    return JSON.stringify({
+      policyId: identity.policyId,
+      policyDigest: identity.policyDigest,
+      evaluationBuildDigest: identity.evaluationBuildDigest,
+      methodologyVersion: identity.methodologyVersion,
+    });
+  };
+
+  const markerDb = (value: string) =>
     mockD1([
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["safety-score-v9:public-activation"],
-        rows: [{ value: "activated", updated_at: 1700000000 }],
-        first: { value: "activated", updated_at: 1700000000 },
+        rows: [{ value, updated_at: 1700000000 }],
+        first: { value, updated_at: 1700000000 },
       },
     ]);
 
@@ -79,17 +89,37 @@ describe("handleReportCardsV9", () => {
     expect(mockLoadPublishedReportCardsV9Snapshot).not.toHaveBeenCalled();
   });
 
-  it("is registered at the versioned endpoint and returns the strict V9 shadow contract", async () => {
+  it("stays dark (404) when the marker is not an identity binding, without loading the snapshot", async () => {
     mockLoadPublishedReportCardsV9Snapshot.mockResolvedValue(snapshot());
 
-    const response = await handleReportCardsV9(activatedDb());
+    for (const invalid of ["activated", "{}", JSON.stringify({ policyId: "safety-score-v9-handler-test" })]) {
+      const response = await handleReportCardsV9(markerDb(invalid));
+      expect(response.status).toBe(404);
+    }
+    expect(mockLoadPublishedReportCardsV9Snapshot).not.toHaveBeenCalled();
+  });
+
+  it("stays dark (404) when the marker identity does not match the canonical snapshot", async () => {
+    mockLoadPublishedReportCardsV9Snapshot.mockResolvedValue(snapshot());
+    const mismatched = { ...JSON.parse(approvedMarker()), policyDigest: digest("f") };
+
+    const response = await handleReportCardsV9(markerDb(JSON.stringify(mismatched)));
+
+    expect(response.status).toBe(404);
+    expect(mockLoadPublishedReportCardsV9Snapshot).toHaveBeenCalledTimes(1);
+  });
+
+  it("is registered at the versioned endpoint and serves the matched identity with lifecycle active", async () => {
+    mockLoadPublishedReportCardsV9Snapshot.mockResolvedValue(snapshot());
+
+    const response = await handleReportCardsV9(markerDb(approvedMarker()));
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body).toMatchObject({
       model: "v9",
       schemaVersion: 1,
-      lifecycle: "shadow",
+      lifecycle: "active",
       safetyScoreIdentity: snapshot().safetyScoreIdentity,
     });
     expect(getRouteMatch("/api/report-cards/v9")?.endpoint?.key).toBe("report-cards-v9");
@@ -100,7 +130,7 @@ describe("handleReportCardsV9", () => {
       new MockV9UnavailableError("Canonical Safety Score V9 shadow cache is unavailable"),
     );
 
-    const response = await handleReportCardsV9(activatedDb());
+    const response = await handleReportCardsV9(markerDb(approvedMarker()));
 
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toEqual({ error: "Canonical Safety Score V9 shadow cache is unavailable" });

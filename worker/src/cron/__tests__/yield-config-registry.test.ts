@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PRE_LAUNCH_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { isActiveStablecoinMeta, isPreLaunchStablecoinMeta } from "@shared/lib/stablecoins/status";
 import {
   EXPLICIT_YIELD_SOURCE_POOL_MAP,
   AUTO_LENDING_POOL_MAP,
@@ -71,7 +72,7 @@ function hasRuntimeYieldStrategy(stablecoinId: string, navToken: boolean) {
 
 describe("yield config registry", () => {
   const activeYieldCoins = TRACKED_STABLECOINS.filter(
-    (coin) => coin.flags.yieldBearing && coin.status !== "pre-launch" && coin.status !== "frozen",
+    (coin) => coin.flags.yieldBearing && isActiveStablecoinMeta(coin),
   );
 
   it("gives every active yield-bearing coin a runtime strategy", () => {
@@ -138,8 +139,7 @@ describe("yield config registry", () => {
     const unsupportedLocalTargets = WAVE_1_DETERMINISTIC_PROMOTION_IDS.filter((stablecoinId) => {
       const coin = trackedCoinsById.get(stablecoinId);
       return !coin
-        || coin.status === "pre-launch"
-        || coin.status === "frozen"
+        || !isActiveStablecoinMeta(coin)
         || !coin.flags.yieldBearing
         || !coin.flags.navToken
         || !coin.yieldConfig
@@ -228,7 +228,10 @@ describe("yield config registry", () => {
     const manifestIds = new Set(YIELD_ADAPTER_MANIFEST.map((entry) => entry.stablecoinId));
     const yieldBearingIds = new Set(
       TRACKED_STABLECOINS
-        .filter((coin) => coin.flags.yieldBearing && coin.status !== "frozen")
+        .filter(
+          (coin) => coin.flags.yieldBearing
+            && (isActiveStablecoinMeta(coin) || isPreLaunchStablecoinMeta(coin)),
+        )
         .map((coin) => coin.id),
     );
 

@@ -3,6 +3,10 @@ import type { StablecoinVerdict, StablecoinVerdictArchetype } from "@shared/lib/
 const ARCHETYPE_TONE: Record<StablecoinVerdictArchetype, string | null> = {
   "pre-launch":
     "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+  "quarantined-record":
+    "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  "delisted-record":
+    "border-border/60 bg-muted/60 text-muted-foreground",
   "frozen-archive":
     "border-border/60 bg-muted/60 text-muted-foreground",
   distressed:

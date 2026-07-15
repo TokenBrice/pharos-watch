@@ -58,7 +58,8 @@ export function resolveCoinIdFromToken(token: string): string | null {
   let prefixName: string | null = null;
 
   for (const coin of COMMAND_PALETTE_STABLECOINS) {
-    const [id, name, symbol] = coin;
+    const [id, name, symbol, status] = coin;
+    if (status === "quarantined" || status === "delisted" || status === "frozen") continue;
     const idLc = id.toLowerCase();
     const symbolLc = symbol.toLowerCase();
     const nameLc = name.toLowerCase();

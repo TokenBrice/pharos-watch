@@ -2,6 +2,7 @@ import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shar
 import { CIRCUIT_SOURCE } from "../constants";
 import {
   buildParentDerivedLiveOverride,
+  defineRegistryErc4626NavVault,
   ETHEREUM_CHAIN,
   fetchVaultAssetsPerShareViaSelector,
   PROTOCOL_REDEEM_SOURCE,
@@ -22,10 +23,16 @@ const GHO_AAVE_ID = "gho-aave";
 const USN_NOON_ID = "usn-noon";
 const YZUSD_YUZU_ID = "yzusd-yuzu";
 const YUSD_AEGIS_ID = "yusd-aegis";
+const AID_GAIB_ID = "aid-gaib";
 
 // ERC-4626 vaults that should be priced from `convertToAssets(1 share)` * parent.price.
 // Each entry must have a single tracked parent that already prices through normal consensus.
 const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
+  defineRegistryErc4626NavVault({
+    id: "said-gaib",
+    parentId: AID_GAIB_ID,
+    chain: ETHEREUM_CHAIN,
+  }),
   {
     id: "susdt-spark",
     parentId: USDT_TETHER_ID,

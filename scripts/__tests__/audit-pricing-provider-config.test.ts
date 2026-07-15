@@ -20,15 +20,13 @@ describe("audit-pricing-provider-config", () => {
       symbols: [
         { symbol: "USDTUSD", status: "TRADING" },
         { symbol: "USDCUSD", status: "TRADING" },
-        { symbol: "BFUSDUSDT", status: "TRADING" },
-        { symbol: "BFUSDUSDC", status: "TRADING" },
       ],
     }));
 
     await expect(auditBinance(fetchImpl as typeof fetch)).resolves.toMatchObject({
       provider: "binance",
       ok: true,
-      checked: 4,
+      checked: 2,
       missing: [],
     });
   });

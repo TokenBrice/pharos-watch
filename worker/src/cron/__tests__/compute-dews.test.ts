@@ -423,6 +423,58 @@ describe("computeAndStoreDEWS", () => {
     );
   });
 
+  it("excludes delisted and quarantined cache rows from DEWS coverage", async () => {
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dews:bootstrap-complete" || key === "dews:published-generation") return null;
+      return {
+        value: JSON.stringify({
+          peggedAssets: [
+            {
+              id: "usdt-tether",
+              symbol: "USDT",
+              pegType: "peggedUSD",
+              price: 1,
+              priceConfidence: "high",
+              circulating: { peggedUSD: 100_000_000 },
+              circulatingPrevDay: { peggedUSD: 99_000_000 },
+              circulatingPrevWeek: { peggedUSD: 98_000_000 },
+            },
+            {
+              id: "bfusd-binance",
+              symbol: "BFUSD",
+              pegType: "peggedUSD",
+              price: 1,
+              priceConfidence: "high",
+              circulating: { peggedUSD: 1_000_000 },
+              circulatingPrevDay: { peggedUSD: 1_000_000 },
+              circulatingPrevWeek: { peggedUSD: 1_000_000 },
+            },
+            {
+              id: "benji-franklin-templeton",
+              symbol: "BENJI",
+              pegType: "peggedUSD",
+              price: 1,
+              priceConfidence: "high",
+              circulating: { peggedUSD: 1_000_000 },
+              circulatingPrevDay: { peggedUSD: 1_000_000 },
+              circulatingPrevWeek: { peggedUSD: 1_000_000 },
+            },
+          ],
+          fxFallbackRates: { peggedEUR: 1.08 },
+        }),
+        updatedAt: Math.floor(Date.now() / 1000),
+      } as never;
+    });
+
+    const result = await computeAndStoreDEWS(makeDb([]));
+    const metadata = JSON.parse(result.metadata ?? "{}") as { sourceCoverage: Record<string, number> };
+    const derivePegRateCalls = vi.mocked(derivePegRates).mock.calls;
+    const pegAssets = derivePegRateCalls[derivePegRateCalls.length - 1]?.[0] ?? [];
+
+    expect(pegAssets.map((asset) => asset.id)).toEqual(["usdt-tether"]);
+    expect(metadata.sourceCoverage.stablecoins).toBe(1);
+  });
+
   it("publishes the DEWS freshness sentinel after healthy non-empty persistence", async () => {
     const sqlSeen: string[] = [];
     const db = makeDb(sqlSeen);

@@ -1,6 +1,7 @@
 import { PEG_CHART_COLORS } from "@shared/lib/classification";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { CLIENT_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { CLIENT_CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-client-registry";
 import type { PegCurrency, StablecoinData } from "@shared/types";
 import { PEG_ANCHORS } from "@/lib/alt-peg-emblems";
 import { arrangeClusterCoins, resolvePackedCoinOverlaps, type PackingInput } from "@/lib/alt-peg-packing";
@@ -161,6 +162,7 @@ export function buildPegDiversityHero(peggedAssets: readonly StablecoinData[] | 
 
   const byPeg = new Map<PegCurrency, HeroCoin[]>();
   for (const raw of peggedAssets) {
+    if (!CLIENT_CORE_AGGREGATE_ACTIVE_IDS.has(raw.id)) continue;
     const meta = ACTIVE_META_BY_ID.get(raw.id);
     if (!meta) continue;
     const peg = meta.flags.pegCurrency;

@@ -24,6 +24,7 @@ interface StablecoinTableProps {
   data: StablecoinData[] | undefined;
   isLoading: boolean;
   activeFilters: readonly FilterTag[];
+  eligibleIds?: ReadonlySet<string>;
   toolbarActions?: ReactNode;
   filterPanel?: ReactNode;
   logos?: Record<string, string>;
@@ -52,6 +53,7 @@ export function StablecoinTable({
   data,
   isLoading,
   activeFilters,
+  eligibleIds,
   toolbarActions,
   filterPanel,
   logos,
@@ -101,6 +103,7 @@ export function StablecoinTable({
   const rows = useStablecoinTableRows({
     data,
     activeFilters,
+    eligibleIds,
     reportCards,
     searchQuery,
     sort,

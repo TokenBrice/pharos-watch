@@ -9,8 +9,10 @@ import { REDEMPTION_BACKSTOP_CONFIGS } from "../../shared/lib/redemption-backsto
 import type { RedemptionBackstopConfig } from "../../shared/lib/redemption-backstop-configs/shared";
 import {
   ACTIVE_STABLECOINS,
+  DELISTED_STABLECOINS,
   FROZEN_STABLECOINS,
   PRE_LAUNCH_STABLECOINS,
+  QUARANTINED_STABLECOINS,
   TRACKED_STABLECOINS,
 } from "../../shared/lib/stablecoins/registry";
 import { writeOutputFile } from "../lib/coverage-audit-cli";
@@ -25,7 +27,7 @@ import {
 
 export type { RedemptionCoverageDisposition, RedemptionCoverageReasonCode };
 
-export type RedemptionCoverageLifecycle = "active" | "pre-launch" | "frozen";
+export type RedemptionCoverageLifecycle = "active" | "pre-launch" | "quarantined" | "delisted" | "frozen";
 export type RedemptionCoverageClassificationSource = "reviewed-registry" | "lifecycle-default";
 
 type AuditCoin = Pick<
@@ -35,7 +37,7 @@ type AuditCoin = Pick<
 
 export interface CoverageClassification {
   disposition: RedemptionCoverageDisposition;
-  reasonCode: RedemptionCoverageReasonCode | "frozen" | "pre-launch";
+  reasonCode: RedemptionCoverageReasonCode | "frozen" | "pre-launch" | "quarantined" | "delisted";
   classificationSource: RedemptionCoverageClassificationSource;
   blocker: string;
   rationale: string;
@@ -72,6 +74,8 @@ export interface RedemptionCoverageAudit {
     activeConfigured: number;
     activeUnconfigured: number;
     preLaunchUnconfigured: number;
+    quarantinedUnconfigured: number;
+    delistedUnconfigured: number;
     frozenUnconfigured: number;
     activeUnclassified: number;
     activeDefaultClassified: number;
@@ -102,7 +106,12 @@ export interface RedemptionCoverageAuditCheckFinding {
 const CHECK_BASELINE_PATH = "scripts/lib/redemption-coverage-audit-baseline.json";
 
 function lifecycleForCoin(coin: AuditCoin): RedemptionCoverageLifecycle {
-  if (coin.status === "pre-launch" || coin.status === "frozen") return coin.status;
+  if (
+    coin.status === "pre-launch"
+    || coin.status === "quarantined"
+    || coin.status === "delisted"
+    || coin.status === "frozen"
+  ) return coin.status;
   return "active";
 }
 
@@ -123,7 +132,7 @@ function toReviewedClassification(row: ReviewedRedemptionCoverageDisposition): C
 
 function classifyLifecycleExcludedCoin(
   coin: AuditCoin,
-  lifecycle: Extract<RedemptionCoverageLifecycle, "pre-launch" | "frozen">,
+  lifecycle: Exclude<RedemptionCoverageLifecycle, "active">,
 ): CoverageClassification {
   if (lifecycle === "pre-launch") {
     return {
@@ -133,6 +142,36 @@ function classifyLifecycleExcludedCoin(
       blocker: "Pre-launch assets are excluded from active route count targets.",
       rationale: "Redemption coverage becomes mandatory only when the asset enters the active lifecycle.",
       evidenceNeeded: "Lifecycle must change to active before source-reviewed route config work.",
+      allowedRouteFamilyIfProven: null,
+      evidenceUrls: coin.links?.[0]?.url ? [coin.links[0].url] : [],
+      reviewer: null,
+      reviewedDate: null,
+    };
+  }
+
+  if (lifecycle === "quarantined") {
+    return {
+      disposition: "defer",
+      reasonCode: "quarantined",
+      classificationSource: "lifecycle-default",
+      blocker: "Quarantined assets are withheld from active route coverage pending an explicit manual review.",
+      rationale: "A quarantined record cannot satisfy active publication or scoring targets.",
+      evidenceNeeded: "Resolve the listing review and pass the normal active runtime price and supply gate before reactivation.",
+      allowedRouteFamilyIfProven: null,
+      evidenceUrls: coin.links?.[0]?.url ? [coin.links[0].url] : [],
+      reviewer: null,
+      reviewedDate: null,
+    };
+  }
+
+  if (lifecycle === "delisted") {
+    return {
+      disposition: "hard-reject",
+      reasonCode: "delisted",
+      classificationSource: "lifecycle-default",
+      blocker: "Delisted assets are outside the Pharos listing scope.",
+      rationale: "Historical identity is retained without active redemption-route coverage.",
+      evidenceNeeded: "A new listing-policy scope decision would be required before readmission.",
       allowedRouteFamilyIfProven: null,
       evidenceUrls: coin.links?.[0]?.url ? [coin.links[0].url] : [],
       reviewer: null,
@@ -262,6 +301,8 @@ export function generateRedemptionCoverageAudit(
     trackedCoins?: readonly AuditCoin[];
     activeCoins?: readonly AuditCoin[];
     preLaunchCoins?: readonly AuditCoin[];
+    quarantinedCoins?: readonly AuditCoin[];
+    delistedCoins?: readonly AuditCoin[];
     frozenCoins?: readonly AuditCoin[];
     configs?: Record<string, RedemptionBackstopConfig>;
     reviewedDispositions?: readonly ReviewedRedemptionCoverageDisposition[];
@@ -271,6 +312,10 @@ export function generateRedemptionCoverageAudit(
   const trackedCoins = input.trackedCoins ?? TRACKED_STABLECOINS;
   const activeCoins = input.activeCoins ?? ACTIVE_STABLECOINS;
   const preLaunchCoins = input.preLaunchCoins ?? PRE_LAUNCH_STABLECOINS;
+  const quarantinedCoins = input.quarantinedCoins
+    ?? (input.trackedCoins ? trackedCoins.filter((coin) => coin.status === "quarantined") : QUARANTINED_STABLECOINS);
+  const delistedCoins = input.delistedCoins
+    ?? (input.trackedCoins ? trackedCoins.filter((coin) => coin.status === "delisted") : DELISTED_STABLECOINS);
   const frozenCoins = input.frozenCoins ?? FROZEN_STABLECOINS;
   const configs = input.configs ?? REDEMPTION_BACKSTOP_CONFIGS;
   const configuredIds = new Set(Object.keys(configs));
@@ -315,6 +360,26 @@ export function generateRedemptionCoverageAudit(
           "frozen",
         ),
       ),
+    ...quarantinedCoins
+      .filter((coin) => !configuredIds.has(coin.id))
+      .map((coin) =>
+        toAuditRow(
+          coin,
+          classifyLifecycleExcludedCoin(coin, "quarantined"),
+          trackedRankById.get(coin.id) ?? Number.MAX_SAFE_INTEGER,
+          "quarantined",
+        ),
+      ),
+    ...delistedCoins
+      .filter((coin) => !configuredIds.has(coin.id))
+      .map((coin) =>
+        toAuditRow(
+          coin,
+          classifyLifecycleExcludedCoin(coin, "delisted"),
+          trackedRankById.get(coin.id) ?? Number.MAX_SAFE_INTEGER,
+          "delisted",
+        ),
+      ),
   ]);
 
   const heuristicConfiguredRoutes = sortById(
@@ -349,6 +414,8 @@ export function generateRedemptionCoverageAudit(
       activeConfigured: activeCoins.filter((coin) => configuredIds.has(coin.id)).length,
       activeUnconfigured: activeUnconfigured.length,
       preLaunchUnconfigured: preLaunchCoins.filter((coin) => !configuredIds.has(coin.id)).length,
+      quarantinedUnconfigured: quarantinedCoins.filter((coin) => !configuredIds.has(coin.id)).length,
+      delistedUnconfigured: delistedCoins.filter((coin) => !configuredIds.has(coin.id)).length,
       frozenUnconfigured: frozenCoins.filter((coin) => !configuredIds.has(coin.id)).length,
       activeUnclassified: activeUnconfigured.filter((row) => !row.disposition || !row.reasonCode).length,
       activeDefaultClassified: activeUnconfigured.filter((row) => row.classificationSource !== "reviewed-registry")
@@ -411,6 +478,8 @@ export function renderRedemptionCoverageAuditMarkdown(audit: RedemptionCoverageA
     `- Active unclassified gaps: ${audit.summary.activeUnclassified}`,
     `- Active default-classified gaps: ${audit.summary.activeDefaultClassified}`,
     `- Pre-launch unconfigured exclusions: ${audit.summary.preLaunchUnconfigured}`,
+    `- Quarantined unconfigured exclusions: ${audit.summary.quarantinedUnconfigured}`,
+    `- Delisted unconfigured exclusions: ${audit.summary.delistedUnconfigured}`,
     `- Frozen unconfigured exclusions: ${audit.summary.frozenUnconfigured}`,
     `- Heuristic configured routes for V4-43: ${audit.summary.heuristicConfiguredRoutes}`,
     "",
@@ -418,7 +487,7 @@ export function renderRedemptionCoverageAuditMarkdown(audit: RedemptionCoverageA
     "",
     ...renderCoverageRows(audit.activeUnconfigured),
     "",
-    "## Pre-launch And Frozen Exclusions",
+    "## Lifecycle Exclusions",
     "",
     ...renderCoverageRows(audit.lifecycleExcludedUnconfigured),
     "",

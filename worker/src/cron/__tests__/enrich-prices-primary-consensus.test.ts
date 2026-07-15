@@ -175,9 +175,9 @@ describe("fetchPrimaryPrices", () => {
   it("withholds dex-promoted aggregate when a corroborated Uniswap protocol lane is accepted", async () => {
     const assets: PeggedAsset[] = [
       {
-        id: "bfusd-binance",
-        name: "Binance BFUSD",
-        symbol: "BFUSD",
+        id: "usdt-tether",
+        name: "Tether",
+        symbol: "USDT",
         pegType: "peggedUSD",
         circulating: {},
       },
@@ -190,7 +190,6 @@ describe("fetchPrimaryPrices", () => {
           return new Response(
             JSON.stringify([
               { symbol: "USDTUSD", price: "1.0000" },
-              { symbol: "BFUSDUSDT", price: "1.0000" },
             ]),
             { status: 200 },
           );
@@ -203,7 +202,7 @@ describe("fetchPrimaryPrices", () => {
     const db = makeDexBridgeDb({
       dexRows: [
         {
-          stablecoin_id: "bfusd-binance",
+          stablecoin_id: "usdt-tether",
           dex_price_usd: 1.0001,
           deviation_from_primary_bps: null,
           source_pool_count: 2,
@@ -213,7 +212,7 @@ describe("fetchPrimaryPrices", () => {
       ],
       poolSources: [
         {
-          stablecoin_id: "bfusd-binance",
+          stablecoin_id: "usdt-tether",
           price_sources_json: JSON.stringify([
             { protocol: "uniswap-v3", chain: "ethereum", price: 1.0001, tvl: 3_000_000 },
           ]),
@@ -224,7 +223,7 @@ describe("fetchPrimaryPrices", () => {
 
     const { results } = await fixtureFetchPrimaryPrices(assets, db);
 
-    const result = results.get("bfusd-binance");
+    const result = results.get("usdt-tether");
     expect(result).toBeDefined();
     expect(result!.candidateSources).toEqual(["binance", "uniswap-v3-dex"]);
     expect(result!.candidateSources).not.toContain("dex-promoted");

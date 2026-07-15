@@ -7,7 +7,7 @@ import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { getReferencePriceForContext, isSevereFixedPegDownside, validatePriceCandidate, type PriceValidationContext, type PriceValidationDecision, type PriceValidationReferences } from "./price-validation";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 
-const WEAK_FIXED_PEG_JUMP_QUARANTINE_BPS = 2_000;
+const WEAK_FIXED_PEG_JUMP_WITHHOLD_BPS = 2_000;
 const WEAK_FALLBACK_FIXED_PEG_DEPEG_BPS = 500;
 
 export interface TrustedPriceReference {
@@ -125,6 +125,26 @@ function hasIndependentSevereSourceFamilyCorroboration(sources: string[]): boole
   return independentFamilyCount >= 2 && !allListAggregators;
 }
 
+function hasIndependentSevereCandidateCorroboration(input: PublishablePriceInput): boolean {
+  if (!input.candidatePrices) return false;
+
+  const severeSources = Object.entries(input.candidatePrices)
+    .filter(([, price]) => (
+      typeof price === "number" &&
+      Number.isFinite(price) &&
+      price > 0 &&
+      isSevereFixedPegDownside(
+        price,
+        input.validationContext,
+        input.validationReferences,
+        FIXED_PEG_SEVERE_DOWNSIDE_RATIO,
+      )
+    ))
+    .map(([source]) => source);
+
+  return hasIndependentSevereSourceFamilyCorroboration(severeSources);
+}
+
 function hasSevereDownsidePublicationCorroboration(input: PublishablePriceInput): boolean {
   if (!isSevereFixedPegDownside(input.price, input.validationContext, input.validationReferences, FIXED_PEG_SEVERE_DOWNSIDE_RATIO)) {
     return false;
@@ -159,17 +179,7 @@ function hasSevereDownsidePublicationCorroboration(input: PublishablePriceInput)
 
   // Directional corroboration: if 2+ independent candidate sources independently
   // confirm severe downside, the depeg is real even without a tight-cluster consensus.
-  if (input.candidatePrices) {
-    const severeSources = Object.entries(input.candidatePrices)
-      .filter(([, p]) => (
-        typeof p === "number" &&
-        Number.isFinite(p) &&
-        p > 0 &&
-        isSevereFixedPegDownside(p, input.validationContext, input.validationReferences, FIXED_PEG_SEVERE_DOWNSIDE_RATIO)
-      ))
-      .map(([source]) => source);
-    if (hasIndependentSevereSourceFamilyCorroboration(severeSources)) return true;
-  }
+  if (hasIndependentSevereCandidateCorroboration(input)) return true;
 
   return false;
 }
@@ -186,12 +196,23 @@ function allowsWeakFallbackFixedPegDepegPublication(input: PublishablePriceInput
   if (!isFallbackSearchOnlySource(input.source)) return true;
   if (isPricingSourceSoftGuardrailExempt(input.source)) return true;
   if (hasDepegAuthoritativeSource(input.agreeSources ?? sourceParts(input.source))) return true;
+  if (
+    isSevereFixedPegDownside(
+      input.price,
+      input.validationContext,
+      input.validationReferences,
+      FIXED_PEG_SEVERE_DOWNSIDE_RATIO,
+    ) &&
+    hasIndependentSevereCandidateCorroboration(input)
+  ) {
+    return true;
+  }
 
   const deviationBps = fixedPegDeviationBps(input);
   return deviationBps == null || deviationBps < WEAK_FALLBACK_FIXED_PEG_DEPEG_BPS;
 }
 
-export function shouldQuarantineTemporalJump(input: PublishablePriceInput): boolean {
+export function shouldWithholdTemporalJump(input: PublishablePriceInput): boolean {
   if (!isFixedPegValidationContext(input.validationContext)) return false;
   const previousTrustedPrice = input.previousTrustedPrice?.price;
   if (previousTrustedPrice == null || !Number.isFinite(previousTrustedPrice) || previousTrustedPrice <= 0) {
@@ -220,7 +241,7 @@ export function shouldQuarantineTemporalJump(input: PublishablePriceInput): bool
   const mid = (input.price + previousTrustedPrice) / 2;
   if (mid <= 0) return false;
   const moveBps = Math.abs(input.price - previousTrustedPrice) / mid * 10_000;
-  return moveBps >= WEAK_FIXED_PEG_JUMP_QUARANTINE_BPS;
+  return moveBps >= WEAK_FIXED_PEG_JUMP_WITHHOLD_BPS;
 }
 
 function evaluatePriceForPublication(input: PublishablePriceInput): PricePublicationDecision {
@@ -248,7 +269,7 @@ function evaluatePriceForPublication(input: PublishablePriceInput): PricePublica
     return { ...base, accepted: false, reason: "weak_fallback_depeg_requires_corroboration", gates: ["price-validation", "fallback-depeg-corroboration"] };
   }
 
-  if (shouldQuarantineTemporalJump(input)) {
+  if (shouldWithholdTemporalJump(input)) {
     return { ...base, accepted: false, reason: "temporal_jump_requires_corroboration", gates: ["price-validation", "temporal-jump-corroboration"] };
   }
 

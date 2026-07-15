@@ -192,6 +192,14 @@ const STABLECOIN_BY_ID = new Map<string, (typeof COMMAND_PALETTE_STABLECOINS)[nu
   COMMAND_PALETTE_STABLECOINS.map((coin) => [coin[0], coin]),
 );
 
+function stablecoinLifecycleLabel(status: string | undefined, frozenAt?: string): string | null {
+  if (status === "pre-launch") return "Pre-launch";
+  if (status === "quarantined") return "Quarantined";
+  if (status === "delisted") return "Delisted";
+  if (status === "frozen") return `Frozen${frozenAt ? ` ${frozenAt}` : ""}`;
+  return null;
+}
+
 function projectStablecoinLiveMetadata(
   stablecoinId: string,
   liveMetadata?: ReadonlyMap<string, CommandPaletteStablecoinLiveMetadata>,
@@ -219,13 +227,11 @@ export function buildPopularStablecoinDescriptors(
     if (!coin) continue;
     const [coinId, name, symbol, status, frozenAt] = coin;
     const href = buildStablecoinUrl(coinId);
+    const lifecycleLabel = stablecoinLifecycleLabel(status, frozenAt);
     out.push({
       id: `popular-${coinId}`,
       label: name,
-      sublabel:
-        status === "frozen"
-          ? `${symbol} · Frozen${frozenAt ? ` ${frozenAt}` : ""}`
-          : symbol,
+      sublabel: lifecycleLabel ? `${symbol} · ${lifecycleLabel}` : symbol,
       section: "Popular",
       kind: "stablecoin",
       logoId: coinId,
@@ -369,15 +375,11 @@ export function buildCommandPaletteResultDescriptors({
     for (const { coin } of rankCommandPaletteResults(matched)) {
       const [id, name, symbol, status, frozenAt] = coin;
       const href = buildStablecoinUrl(id);
+      const lifecycleLabel = stablecoinLifecycleLabel(status, frozenAt);
       items.push({
         id: `coin-${id}`,
         label: name,
-        sublabel:
-          status === "pre-launch"
-            ? `${symbol} · Pre-launch`
-            : status === "frozen"
-              ? `${symbol} · Frozen${frozenAt ? ` ${frozenAt}` : ""}`
-              : symbol,
+        sublabel: lifecycleLabel ? `${symbol} · ${lifecycleLabel}` : symbol,
         section: "Stablecoins",
         kind: "stablecoin",
         logoId: id,

@@ -1,6 +1,26 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
+  {
+    version: "6.192",
+    title: "Independent-source consensus and missing-price scheduling",
+    date: "2026-07-15",
+    effectiveAt: 1784073600,
+    summary:
+      "Pricing now counts independent provider families once, gives missing assets fair access to bounded recovery lanes, and re-resolves local dependency chains after fallback enrichment.",
+    impact: [
+      "Repeated chain or contract quotes from one provider are collapsed before consensus, and correlated source labels sharing one registered family contribute only one independent voice",
+      "Authoritative live candidates prioritize missing prices globally and round-robin provider families so one large ERC-4626 cohort cannot consume the full shared wall-clock budget",
+      "Registry-derived sGHO and sAID vault configs recover current ERC-4626 NAV prices without duplicating contract addresses in pricing code",
+      "A cheap local-only post-fallback authoritative pass lets dependent assets such as Noble USDN inherit a parent repaired during the same sync without repeating RPC-backed probes",
+      "DexScreener exact fallback rotates candidates and deployments while attempting one deployment per asset before second deployments, and unusable final prices publish only explicit `missing` provenance",
+      "Status diagnostics warn when DEX observations cross the 35-minute pricing-admission limit even if the longer-lived public DEX cache remains display-healthy",
+      "Post-enrichment validation retains same-run primary quote evidence when fallback recovery replaces the selected price, so independently corroborated severe depegs publish while single-source and list-only evidence remains withheld",
+      "Live CEX provider rosters follow active listing eligibility, removing delisted BFUSD from Binance collection and depeg confirmation while retaining the generic stable-quote conversion contract",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
     {
       version: "6.191",
       title: "Missing-price recovery for audited low-volume and NAV assets",
@@ -171,7 +191,7 @@ export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
     },
     {
       version: "6.09",
-      title: "Weak address-provider depeg quarantine",
+    title: "Weak address-provider depeg withholding",
       date: "2026-05-24",
       effectiveAt: 1779645688,
       summary:

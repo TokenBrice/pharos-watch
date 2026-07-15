@@ -968,10 +968,18 @@ export const StressSignalDetailResponseSchema = z.object({
 
 export type StressSignalDetailResponse = z.infer<typeof StressSignalDetailResponseSchema>;
 
+export const STABLECOIN_CHART_LEGACY_AGGREGATE_UNIVERSE = "legacy-provider-all-stablecoins-v1" as const;
+export const StablecoinChartAggregateUniverseSchema = z.enum([
+  STABLECOIN_CHART_LEGACY_AGGREGATE_UNIVERSE,
+  "core-stablecoins-v1",
+]);
+
 export const StablecoinChartResponseSchema = z.array(
   z.object({
     date: z.number(),
     totalCirculatingUSD: z.record(z.string(), z.number()),
+    aggregateUniverse: StablecoinChartAggregateUniverseSchema.optional(),
   }),
 );
+export type StablecoinChartAggregateUniverse = z.infer<typeof StablecoinChartAggregateUniverseSchema>;
 export type StablecoinChartPoint = z.infer<typeof StablecoinChartResponseSchema>[number];

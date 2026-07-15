@@ -1,5 +1,5 @@
 import type { StablecoinMeta } from "../../types";
-import { isActiveStablecoinMeta } from "./status";
+import { isActiveStablecoinMeta, isReadableStablecoinMeta } from "./status";
 
 function hasVariantFields(meta: StablecoinMeta): boolean {
   return meta.variantOf != null || meta.variantKind != null;
@@ -51,6 +51,7 @@ export function validateVariantRelationships(tracked: StablecoinMeta[]): string[
   const errors: string[] = [];
   const metaById = new Map(tracked.map((meta) => [meta.id, meta]));
   const activeIds = new Set(tracked.filter(isActiveStablecoinMeta).map((meta) => meta.id));
+  const readableIds = new Set(tracked.filter(isReadableStablecoinMeta).map((meta) => meta.id));
 
   for (const meta of tracked) {
     if (
@@ -84,8 +85,8 @@ export function validateVariantRelationships(tracked: StablecoinMeta[]): string[
       continue;
     }
 
-    if (!isActiveStablecoinMeta(meta)) {
-      errors.push(`${meta.id}: only active assets may declare variantOf / variantKind`);
+    if (!isReadableStablecoinMeta(meta)) {
+      errors.push(`${meta.id}: only post-launch readable assets may declare variantOf / variantKind`);
     }
 
     if (meta.variantOf === meta.id) {
@@ -104,8 +105,11 @@ export function validateVariantRelationships(tracked: StablecoinMeta[]): string[
       );
       continue;
     }
-    if (!activeIds.has(meta.variantOf)) {
-      errors.push(`${meta.id}: variantOf must point to an active tracked stablecoin`);
+    const parentIds = isActiveStablecoinMeta(meta) ? activeIds : readableIds;
+    if (!parentIds.has(meta.variantOf)) {
+      errors.push(
+        `${meta.id}: variantOf must point to ${isActiveStablecoinMeta(meta) ? "an active" : "a readable post-launch"} tracked stablecoin`,
+      );
       continue;
     }
 

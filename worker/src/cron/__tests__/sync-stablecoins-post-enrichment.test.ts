@@ -3,12 +3,16 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@shared/lib/stablecoins/registry")>();
+  const eurc = actual.TRACKED_META_BY_ID.get("eurc-circle");
+  if (!eurc) throw new Error("missing EURC test metadata");
   return {
     ...actual,
     TRACKED_META_BY_ID: new Map([
+      ...actual.TRACKED_META_BY_ID,
       ["eurc-circle", {
+        ...eurc,
         geckoId: "euro-coin",
-        flags: { pegCurrency: "EUR", navToken: false },
+        flags: { ...eurc.flags, pegCurrency: "EUR", navToken: false },
       }],
     ]),
   };
@@ -26,6 +30,7 @@ vi.mock("../../lib/native-peg-implied-prices", async () => {
 
 import type { PeggedAsset } from "../sync-stablecoins/enrich-prices";
 import { isAbortResult, runPostEnrichmentPricePipeline } from "../sync-stablecoins/post-enrichment";
+import type { PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
 import { buildPriceValidationContext, type PriceValidationContext } from "../../lib/price-validation";
 
 function makeValidationContext(asset: PeggedAsset): PriceValidationContext {
@@ -308,5 +313,55 @@ describe("runPostEnrichmentPricePipeline", () => {
       consensusSources: ["coingecko"],
     }]);
     expect(db.getHistory().some((entry) => entry.sql.includes("price_cache") && entry.sql.includes("INSERT"))).toBe(false);
+  });
+
+  it("keeps a severe USX fallback when same-run CoinGecko and DexScreener quotes corroborate it", async () => {
+    const asset = makeAsset({
+      id: "usx-dforce",
+      name: "dForce USD",
+      symbol: "USX",
+      geckoId: "token-dforce-usd",
+      pegType: "peggedUSD",
+      price: 0.3904,
+      priceSource: "dexscreener-exact",
+      priceConfidence: "fallback",
+      consensusSources: ["dexscreener-exact"],
+      agreeSources: ["dexscreener-exact"],
+    });
+    const primaryPriceResults = new Map<string, PrimaryPriceResult>([
+      ["usx-dforce", {
+        price: 0.390247,
+        source: "coingecko",
+        selectedSource: "coingecko",
+        confidence: "single-source",
+        dlPrice: null,
+        cgPrice: 0.390247,
+        candidateSources: ["coingecko"],
+        agreeSources: ["coingecko"],
+        allPrices: { coingecko: 0.390247 },
+        observedAt: 1_700_000_000,
+        observedAtMode: "upstream",
+      }],
+    ]);
+
+    const result = await runPostEnrichmentPricePipeline({
+      assets: [asset],
+      missingBefore: new Set(["usx-dforce"]),
+      db: mockD1(),
+      syncStartSec: 1_700_000_050,
+      validationContexts: { get: makeValidationContext },
+      primaryPriceResults,
+      previousTrustedPrices: new Map(),
+      returnIfAborted: () => null,
+      abortResult: () => ({ status: "error", metadata: "{}" }),
+    }, "");
+
+    expect(isAbortResult(result)).toBe(false);
+    if (isAbortResult(result)) {
+      throw new Error("unexpected abort result");
+    }
+    expect(result.rejectedCount).toBe(0);
+    expect(asset.price).toBe(0.3904);
+    expect(asset.priceSource).toBe("dexscreener-exact");
   });
 });

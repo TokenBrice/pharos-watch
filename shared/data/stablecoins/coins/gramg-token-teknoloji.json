@@ -233,5 +233,11 @@
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
-  "launchDate": "2022-11-01"
+  "launchDate": "2022-11-01",
+  "status": "quarantined",
+  "listingStatusReview": {
+    "changedAt": "2026-07-15",
+    "reviewBy": "2026-08-15",
+    "reason": "Temporarily withheld because permitted runtime sources do not provide a positive circulating supply or market cap."
+  }
 }

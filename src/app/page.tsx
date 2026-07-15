@@ -9,8 +9,8 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { logosById } from "@/lib/logos";
 import { getHomepageHeroSnapshot } from "@/lib/homepage-static-snapshot";
 import {
-  ACTIVE_STABLECOIN_COUNT,
-  HOMEPAGE_TOP_ACTIVE_STABLECOINS,
+  CORE_AGGREGATE_STABLECOIN_COUNT,
+  HOMEPAGE_TOP_CORE_STABLECOINS,
   TRACKED_STABLECOIN_COUNT,
 } from "@/lib/stablecoin-static-data";
 
@@ -44,11 +44,11 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  const total = ACTIVE_STABLECOIN_COUNT;
+  const total = CORE_AGGREGATE_STABLECOIN_COUNT;
   const heroSnapshot = getHomepageHeroSnapshot();
 
   // Top 20 stablecoins for ItemList schema
-  const itemListElements = HOMEPAGE_TOP_ACTIVE_STABLECOINS.map((coin, i) => {
+  const itemListElements = HOMEPAGE_TOP_CORE_STABLECOINS.map((coin, i) => {
     const logo = logosById[coin.id];
     const url = `${SITE_URL}${buildStablecoinUrl(coin.id)}`;
 
@@ -78,7 +78,7 @@ export default function HomePage() {
               "@type": "CollectionPage",
               "@id": `${SITE_URL}/#collection`,
               name: "Pharos - Stablecoin Analytics Dashboard",
-              description: `${total} active stablecoins tracked by Pharos across supported chains.`,
+              description: `${total} core stablecoins and cash equivalents tracked by Pharos across supported chains.`,
               url: SITE_URL,
               mainEntity: { "@id": `${SITE_URL}/#homepage-itemlist` },
               isPartOf: { "@id": `${SITE_URL}#website` },
@@ -88,7 +88,7 @@ export default function HomePage() {
               "@type": "ItemList",
               "@id": `${SITE_URL}/#homepage-itemlist`,
               name: "Top 20 Stablecoins by Market Cap",
-              description: `Top 20 of ${total} active stablecoins tracked by Pharos.`,
+              description: `Top 20 of ${total} core stablecoins and cash equivalents tracked by Pharos.`,
               numberOfItems: itemListCount,
               itemListElement: itemListElements,
             },

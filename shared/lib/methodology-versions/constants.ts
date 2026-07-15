@@ -32,7 +32,7 @@ export const MINT_BURN_FLOW_METHODOLOGY_VERSION = "6.17";
 export const MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL = methodologyLabel(MINT_BURN_FLOW_METHODOLOGY_VERSION);
 export const MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH = "/methodology/mint-burn-flow-changelog/";
 
-export const PRICING_PIPELINE_METHODOLOGY_VERSION = "6.191";
+export const PRICING_PIPELINE_METHODOLOGY_VERSION = "6.192";
 export const PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL = methodologyLabel(PRICING_PIPELINE_METHODOLOGY_VERSION);
 export const PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH = "/methodology/pricing-pipeline-changelog/";
 
@@ -44,7 +44,7 @@ export const SAFETY_SCORE_METHODOLOGY_VERSION = currentSafetyScoreVersion.curren
 export const SAFETY_SCORE_METHODOLOGY_VERSION_LABEL = methodologyLabel(SAFETY_SCORE_METHODOLOGY_VERSION);
 export const SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH = "/methodology/scoring-changelog/";
 
-export const PSI_METHODOLOGY_VERSION = "3.5";
+export const PSI_METHODOLOGY_VERSION = "3.6";
 export const PSI_METHODOLOGY_VERSION_LABEL = methodologyLabel(PSI_METHODOLOGY_VERSION);
 export const PSI_METHODOLOGY_CHANGELOG_PATH = "/methodology/stability-index-changelog/";
 

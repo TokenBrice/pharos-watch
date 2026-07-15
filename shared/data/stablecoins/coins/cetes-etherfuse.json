@@ -276,5 +276,11 @@
     "yieldType": "nav-appreciation"
   },
   "chainTier": "mature-alt-l1",
-  "launchDate": "2024-04-12"
+  "launchDate": "2024-04-12",
+  "status": "quarantined",
+  "listingStatusReview": {
+    "changedAt": "2026-07-15",
+    "reviewBy": "2026-08-15",
+    "reason": "Temporarily withheld because permitted runtime sources do not provide a positive circulating supply or market cap."
+  }
 }

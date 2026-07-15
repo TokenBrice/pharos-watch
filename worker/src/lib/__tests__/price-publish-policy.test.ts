@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validatePrimaryPriceCandidate } from "../price-publish-policy";
+import { validateFallbackPriceCandidate, validatePrimaryPriceCandidate } from "../price-publish-policy";
 import type { PriceValidationContext } from "../price-validation";
 
 const USD_CONTEXT: PriceValidationContext = {
@@ -189,5 +189,57 @@ describe("validatePrimaryPriceCandidate — weak fallback fixed-peg depegs", () 
     });
 
     expect(decision.accepted).toBe(true);
+  });
+
+  it("accepts a severe exact-address fallback corroborated by a same-run independent quote", () => {
+    const decision = validateFallbackPriceCandidate({
+      price: 0.3904,
+      source: "dexscreener-exact",
+      confidence: "fallback",
+      agreeSources: ["dexscreener-exact"],
+      candidatePrices: {
+        coingecko: 0.390247,
+        "dexscreener-exact": 0.3904,
+      },
+      validationContext: USD_CONTEXT,
+    });
+
+    expect(decision.accepted).toBe(true);
+  });
+
+  it("still rejects severe fallback evidence from list aggregators only", () => {
+    const decision = validateFallbackPriceCandidate({
+      price: 0.3904,
+      source: "coinmarketcap",
+      confidence: "fallback",
+      agreeSources: ["coinmarketcap"],
+      candidatePrices: {
+        coingecko: 0.390247,
+        "defillama-list": 0.3903,
+        coinmarketcap: 0.3904,
+      },
+      validationContext: USD_CONTEXT,
+    });
+
+    expect(decision.accepted).toBe(false);
+    expect(decision.reason).toBe("severe_downside_requires_corroboration");
+  });
+
+  it("does not use severe candidate evidence to admit a non-severe fallback quote", () => {
+    const decision = validateFallbackPriceCandidate({
+      price: 0.94,
+      source: "dexscreener-exact",
+      confidence: "fallback",
+      agreeSources: ["dexscreener-exact"],
+      candidatePrices: {
+        coingecko: 0.390247,
+        pyth: 0.3904,
+        "dexscreener-exact": 0.94,
+      },
+      validationContext: USD_CONTEXT,
+    });
+
+    expect(decision.accepted).toBe(false);
+    expect(decision.reason).toBe("weak_fallback_depeg_requires_corroboration");
   });
 });

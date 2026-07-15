@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { shouldQuarantineTemporalJump } from "../price-publish-policy";
+import { shouldWithholdTemporalJump } from "../price-publish-policy";
 import type { PriceValidationContext } from "../price-validation";
 
 const USD_CONTEXT: PriceValidationContext = {
@@ -9,11 +9,11 @@ const USD_CONTEXT: PriceValidationContext = {
   tracked: true,
 };
 
-describe("shouldQuarantineTemporalJump", () => {
+describe("shouldWithholdTemporalJump", () => {
   it("returns false when confidence=high with an authoritative agreement source", () => {
     // pyth is hardOracle → canBeDepegAuthoritative=true; confidence high bypasses
-    // quarantine despite a large 2100 bps move.
-    const quarantined = shouldQuarantineTemporalJump({
+    // withholding despite a large 2100 bps move.
+    const withheld = shouldWithholdTemporalJump({
       price: 0.79,
       source: "pyth",
       confidence: "high",
@@ -28,11 +28,11 @@ describe("shouldQuarantineTemporalJump", () => {
         agreeSources: ["pyth"],
       },
     });
-    expect(quarantined).toBe(false);
+    expect(withheld).toBe(false);
   });
 
   it("returns false for soft-guardrail-exempt sources (pool-tvl-weighted)", () => {
-    const quarantined = shouldQuarantineTemporalJump({
+    const withheld = shouldWithholdTemporalJump({
       price: 0.60,
       source: "pool-tvl-weighted",
       confidence: "low",
@@ -47,11 +47,11 @@ describe("shouldQuarantineTemporalJump", () => {
         agreeSources: ["pyth"],
       },
     });
-    expect(quarantined).toBe(false);
+    expect(withheld).toBe(false);
   });
 
   it("returns false for corroborated severe-downside (2+ candidate sources confirm)", () => {
-    const quarantined = shouldQuarantineTemporalJump({
+    const withheld = shouldWithholdTemporalJump({
       price: 0.38,
       source: "coingecko+pyth",
       confidence: "low",
@@ -68,12 +68,12 @@ describe("shouldQuarantineTemporalJump", () => {
       },
     });
     // Both 0.38 and 0.39 are < 0.50 (severe) and come from independent families.
-    expect(quarantined).toBe(false);
+    expect(withheld).toBe(false);
   });
 
   it("returns false when mid (price + previousTrustedPrice)/2 <= 0", () => {
     // Negative candidate price makes mid <= 0 (defensive branch).
-    const quarantined = shouldQuarantineTemporalJump({
+    const withheld = shouldWithholdTemporalJump({
       price: -2.0,
       source: "coingecko",
       confidence: "low",
@@ -88,12 +88,12 @@ describe("shouldQuarantineTemporalJump", () => {
         agreeSources: ["coingecko"],
       },
     });
-    expect(quarantined).toBe(false);
+    expect(withheld).toBe(false);
   });
 
   it("returns false when moveBps is below the 2000 bps threshold", () => {
     // 1.0 → 0.9 = ~1053 bps, below 2000 threshold
-    const quarantined = shouldQuarantineTemporalJump({
+    const withheld = shouldWithholdTemporalJump({
       price: 0.9,
       source: "coingecko",
       confidence: "low",
@@ -108,14 +108,14 @@ describe("shouldQuarantineTemporalJump", () => {
         agreeSources: ["coingecko"],
       },
     });
-    expect(quarantined).toBe(false);
+    expect(withheld).toBe(false);
   });
 
   it("returns true when moveBps is at/above the 2000 bps threshold and no bypass applies", () => {
     // 1.0 → 0.78 = ~2472 bps, above 2000 threshold.
     // Source is softAggregator (not authoritative), not guardrail-exempt, and 0.78 > 0.50
     // (NOT severe downside), so no bypass should apply.
-    const quarantined = shouldQuarantineTemporalJump({
+    const withheld = shouldWithholdTemporalJump({
       price: 0.78,
       source: "coingecko",
       confidence: "low",
@@ -130,6 +130,6 @@ describe("shouldQuarantineTemporalJump", () => {
         agreeSources: ["coingecko"],
       },
     });
-    expect(quarantined).toBe(true);
+    expect(withheld).toBe(true);
   });
 });

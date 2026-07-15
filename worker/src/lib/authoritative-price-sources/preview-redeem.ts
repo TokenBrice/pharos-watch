@@ -2,6 +2,7 @@ import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shar
 import { CIRCUIT_SOURCE } from "../constants";
 import {
   buildParentDerivedLiveOverride,
+  defineRegistryErc4626NavVault,
   ETHEREUM_CHAIN,
   fetchVaultAssetsPerShareViaSelector,
   PROTOCOL_REDEEM_SOURCE,
@@ -17,14 +18,11 @@ const PREVIEW_REDEEM_SELECTOR = "0x4cdad506"; // previewRedeem(uint256)
 const GHO_AAVE_ID = "gho-aave";
 
 const PREVIEW_REDEEM_VAULTS: readonly Erc4626NavVaultConfig[] = [
-  {
+  defineRegistryErc4626NavVault({
     id: "sgho-aave",
     parentId: GHO_AAVE_ID,
     chain: ETHEREUM_CHAIN,
-    vault: "0x1a88df1cfe15af22b3c4c783d4e6f7f9e0c1885d",
-    vaultDecimals: 18,
-    assetDecimals: 18,
-  },
+  }),
 ];
 
 const PREVIEW_REDEEM_VAULTS_BY_ID = new Map<string, Erc4626NavVaultConfig>(

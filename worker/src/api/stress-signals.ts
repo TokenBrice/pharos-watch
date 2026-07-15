@@ -22,7 +22,7 @@ import {
   getDepegDewsMethodologyVersionAt,
 } from "@shared/lib/depeg-dews-version";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
-import { READABLE_IDS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, READABLE_IDS } from "@shared/lib/stablecoins/registry";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
 
 type StressSignalAgeClassification = "fresh" | "lagging" | "stale" | "retainedLastValid";
@@ -245,7 +245,7 @@ export const handleStressSignals = withErrorHandler(
       methodologyVersion: string;
     }> = [];
     for (const row of rows.results) {
-      if (!READABLE_IDS.has(row.stablecoin_id)) {
+      if (!ACTIVE_IDS.has(row.stablecoin_id)) {
         continue;
       }
       readableRows.add(row.stablecoin_id);
@@ -287,7 +287,7 @@ export const handleStressSignals = withErrorHandler(
       };
     }
 
-    const eligibleCount = READABLE_IDS.size;
+    const eligibleCount = ACTIVE_IDS.size;
     const computedCount = validRows.length;
     const missingCount = Math.max(0, eligibleCount - readableRows.size);
     const coverageRatio = eligibleCount > 0 ? Number((computedCount / eligibleCount).toFixed(4)) : 0;

@@ -444,5 +444,11 @@
       "message": "WTGXX is the digital share token of WisdomTree's '40 Act government money market fund, deployed across Arbitrum, Avalanche, Base, Ethereum, Optimism, Plume, and Stellar via WisdomTree Connect. Pharos tracks the verified contract set; live reserves use Chainlink's WTGXX NAV feed for score-grade reserve freshness."
     }
   ],
-  "launchDate": "2023-11-07"
+  "launchDate": "2023-11-07",
+  "status": "quarantined",
+  "listingStatusReview": {
+    "changedAt": "2026-07-15",
+    "reviewBy": "2026-08-15",
+    "reason": "Temporarily withheld because permitted runtime sources do not provide a positive circulating supply or market cap."
+  }
 }

@@ -419,7 +419,7 @@ function writeOutputs(
     `Generated ${today} by \`npm run candidates:ai-summaries\`.`,
     `Source: ${FIXTURES_DIR ? `fixtures ${FIXTURES_DIR}` : API_BASE}`,
     "",
-    `Audited ${meta.total} summaries; ${meta.unmatched} have no live report card (pre-launch/frozen) and were skipped.`,
+    `Audited ${meta.total} summaries; ${meta.unmatched} have no live report card (non-active lifecycle) and were skipped.`,
     `Stale: ${candidates.length} — high ${meta.counts.high}, medium ${meta.counts.medium}, low ${meta.counts.low}.`,
     "",
     "Severity: **high** = visible hero contradiction (overall grade or DEWS band changed); ",

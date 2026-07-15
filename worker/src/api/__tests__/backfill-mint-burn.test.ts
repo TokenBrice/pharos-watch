@@ -11,7 +11,7 @@ vi.mock("../../lib/alchemy-logs", () => ({
   resolveBlockTimestamps: vi.fn(async () => new Map()),
 }));
 
-import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { handleBackfillMintBurn } from "../backfill-mint-burn";
 import {
   fetchAlchemyLogs,
@@ -19,7 +19,7 @@ import {
   resolveBlockTimestamps,
 } from "../../lib/alchemy-logs";
 
-const mutableFrozenIds = FROZEN_IDS as Set<string>;
+const mutableActiveIds = ACTIVE_IDS as Set<string>;
 
 function makeDb(): D1Database {
   const stmt = (sql: string) => ({
@@ -47,12 +47,12 @@ function makeDb(): D1Database {
 }
 
 describe("handleBackfillMintBurn", () => {
-  const originalFrozenIds = new Set(FROZEN_IDS);
+  const originalActiveIds = new Set(ACTIVE_IDS);
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mutableFrozenIds.clear();
-    for (const id of originalFrozenIds) mutableFrozenIds.add(id);
+    mutableActiveIds.clear();
+    for (const id of originalActiveIds) mutableActiveIds.add(id);
   });
 
   it("requires admin auth", async () => {
@@ -94,8 +94,8 @@ describe("handleBackfillMintBurn", () => {
     expect(body.autoSelectedReason).toBe("critical-first-most-behind");
   });
 
-  it("skips frozen configs during automatic selection", async () => {
-    mutableFrozenIds.add("usdt-tether");
+  it("skips inactive configs during automatic selection", async () => {
+    mutableActiveIds.delete("usdt-tether");
 
     const response = await handleBackfillMintBurn(
       makeDb(),

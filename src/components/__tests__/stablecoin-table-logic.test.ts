@@ -18,11 +18,7 @@ import type { StablecoinData } from "@shared/types";
 import type { ColumnId } from "@/hooks/use-preferences";
 
 // Minimal StablecoinData factory
-function makeCoin(
-  id: string,
-  name: string,
-  overrides: Partial<StablecoinData> = {},
-): StablecoinData {
+function makeCoin(id: string, name: string, overrides: Partial<StablecoinData> = {}): StablecoinData {
   return {
     id,
     name,
@@ -82,6 +78,13 @@ describe("filterStablecoins", () => {
 });
 
 describe("buildTrackedIdSet", () => {
+  it("intersects metadata filters with an explicit listing universe", () => {
+    const eligible = new Set(["susds-sky", "usdt-tether"]);
+
+    expect(buildTrackedIdSet([], undefined, eligible)).toBe(eligible);
+    expect(buildTrackedIdSet(["variant-tracked"], undefined, eligible)).toEqual(new Set(["susds-sky"]));
+  });
+
   it("treats GBP and CHF pegs as part of the shared other-peg taxonomy", () => {
     expect(OTHER_PEG_TAGS).toContain("gbp-peg");
     expect(OTHER_PEG_TAGS).toContain("chf-peg");
@@ -89,9 +92,9 @@ describe("buildTrackedIdSet", () => {
 
   it("returns active long-tail peg assets when filtering by other-peg", () => {
     const trackedIds = buildTrackedIdSet(["other-peg"]);
-    const activeOtherPegIds = ACTIVE_STABLECOINS
-      .filter((coin) => getFilterTags(coin).some((tag) => OTHER_PEG_TAGS.includes(tag)))
-      .map((coin) => coin.id);
+    const activeOtherPegIds = ACTIVE_STABLECOINS.filter((coin) =>
+      getFilterTags(coin).some((tag) => OTHER_PEG_TAGS.includes(tag)),
+    ).map((coin) => coin.id);
 
     expect(activeOtherPegIds.length).toBeGreaterThan(0);
     expect(activeOtherPegIds.every((id) => trackedIds.has(id))).toBe(true);
@@ -99,9 +102,9 @@ describe("buildTrackedIdSet", () => {
 
   it("returns active gold and silver assets when filtering by commodity-peg", () => {
     const trackedIds = buildTrackedIdSet(["commodity-peg"]);
-    const activeCommodityIds = ACTIVE_STABLECOINS
-      .filter((coin) => getFilterTags(coin).some((tag) => COMMODITY_PEG_TAGS.includes(tag)))
-      .map((coin) => coin.id);
+    const activeCommodityIds = ACTIVE_STABLECOINS.filter((coin) =>
+      getFilterTags(coin).some((tag) => COMMODITY_PEG_TAGS.includes(tag)),
+    ).map((coin) => coin.id);
 
     expect(activeCommodityIds.length).toBeGreaterThan(0);
     expect(activeCommodityIds.every((id) => trackedIds.has(id))).toBe(true);
@@ -109,9 +112,9 @@ describe("buildTrackedIdSet", () => {
 
   it("returns active non-USD non-commodity assets when filtering by fiat-non-usd-peg", () => {
     const trackedIds = buildTrackedIdSet(["fiat-non-usd-peg"]);
-    const activeFiatNonUsdIds = ACTIVE_STABLECOINS
-      .filter((coin) => getFilterTags(coin).some((tag) => NON_USD_NON_COMMODITY_PEG_TAGS.includes(tag)))
-      .map((coin) => coin.id);
+    const activeFiatNonUsdIds = ACTIVE_STABLECOINS.filter((coin) =>
+      getFilterTags(coin).some((tag) => NON_USD_NON_COMMODITY_PEG_TAGS.includes(tag)),
+    ).map((coin) => coin.id);
 
     expect(activeFiatNonUsdIds.length).toBeGreaterThan(0);
     expect(activeFiatNonUsdIds.every((id) => trackedIds.has(id))).toBe(true);
@@ -157,46 +160,50 @@ describe("buildTrackedIdSet", () => {
     expect(allVariants.has("susds-sky")).toBe(true);
     expect(allVariants.has("susdai-usd-ai")).toBe(true);
     expect(allVariants.has("stusds-sky")).toBe(true);
-    expect(allVariants.has("busd0-usual")).toBe(true);
+    expect(allVariants.has("busd0-usual")).toBe(false);
     expect(allVariants.has("srusd-reservoir")).toBe(true);
     expect(allVariants.has("usds-sky")).toBe(false);
-    expect(allVariants.size).toBe(48);
+    expect(allVariants.size).toBe(47);
 
     const strategy = buildTrackedIdSet(["variant-strategy-vault"]);
-    expect(strategy).toEqual(new Set([
-      "aa-falconx-mev-capital",
-      "autousd-auto-finance",
-      "apyusd-apyx",
-      "bbqusdc-steakhouse",
-      "eearn-ember",
-      "fxsave-f-x-protocol",
-      "gtusdc-gauntlet",
-      "gtusdcp-gauntlet",
-      "hbusdt-hyperbeat",
-      "susd1plus-lorenzo",
-      "savusd-avant",
-      "susdai-usd-ai",
-      "steakusdc-steakhouse",
-      "steakusdt-steakhouse",
-      "stcusd-cap",
-      "syrupusdc-maple",
-      "syrupusdt-maple",
-      "yousd-yield-optimizer",
-      "syzusd-yuzu",
-      "said-gaib",
-      "sdusd-dtrinity",
-      "stusd-stoneyield",
-      "usd3-3jane",
-      "yvusdc-yearn",
-      "ybold-yearn",
-      "yusd-yieldfi",
-    ]));
+    expect(strategy).toEqual(
+      new Set([
+        "aa-falconx-mev-capital",
+        "autousd-auto-finance",
+        "apyusd-apyx",
+        "bbqusdc-steakhouse",
+        "eearn-ember",
+        "fxsave-f-x-protocol",
+        "gtusdc-gauntlet",
+        "gtusdcp-gauntlet",
+        "hbusdt-hyperbeat",
+        "susd1plus-lorenzo",
+        "savusd-avant",
+        "susdai-usd-ai",
+        "steakusdc-steakhouse",
+        "steakusdt-steakhouse",
+        "stcusd-cap",
+        "syrupusdc-maple",
+        "syrupusdt-maple",
+        "yousd-yield-optimizer",
+        "syzusd-yuzu",
+        "said-gaib",
+        "sdusd-dtrinity",
+        "stusd-stoneyield",
+        "usd3-3jane",
+        "yvusdc-yearn",
+        "ybold-yearn",
+        "yusd-yieldfi",
+      ]),
+    );
 
     const riskAbsorption = buildTrackedIdSet(["variant-risk-absorption"]);
-    expect(riskAbsorption).toEqual(new Set(["srusde-strata", "stusds-sky", "stkgho-umbrella-aave", "sbold-k3-capital"]));
+    expect(riskAbsorption).toEqual(
+      new Set(["srusde-strata", "stusds-sky", "stkgho-umbrella-aave", "sbold-k3-capital"]),
+    );
 
     const bond = buildTrackedIdSet(["variant-bond-maturity"]);
-    expect(bond).toEqual(new Set(["busd0-usual"]));
+    expect(bond).toEqual(new Set());
   });
 });
 
@@ -214,11 +221,7 @@ describe("resolveEffectiveSortKey", () => {
 
 describe("prioritizePinnedStablecoins", () => {
   it("moves pinned rows to the top in pinned order", () => {
-    const rows = [
-      makeCoin("usdt-tether", "Tether"),
-      makeCoin("usdc-circle", "USD Coin"),
-      makeCoin("dai-maker", "Dai"),
-    ];
+    const rows = [makeCoin("usdt-tether", "Tether"), makeCoin("usdc-circle", "USD Coin"), makeCoin("dai-maker", "Dai")];
 
     const result = prioritizePinnedStablecoins(rows, ["dai-maker", "usdc-circle"]);
 
@@ -260,10 +263,7 @@ describe("sortStablecoins — name", () => {
 
 describe("sortStablecoins — price", () => {
   it("sorts by price ascending", () => {
-    const coins = [
-      makeCoin("a", "A", { price: 1.05 }),
-      makeCoin("b", "B", { price: 0.98 }),
-    ];
+    const coins = [makeCoin("a", "A", { price: 1.05 }), makeCoin("b", "B", { price: 0.98 })];
     const result = sortStablecoins({
       filtered: coins,
       sort: sortAsc("price"),
@@ -275,10 +275,7 @@ describe("sortStablecoins — price", () => {
   });
 
   it("treats null price as 0", () => {
-    const coins = [
-      makeCoin("a", "A", { price: null }),
-      makeCoin("b", "B", { price: 1.0 }),
-    ];
+    const coins = [makeCoin("a", "A", { price: null }), makeCoin("b", "B", { price: 1.0 })];
     const result = sortStablecoins({
       filtered: coins,
       sort: sortDesc("price"),
@@ -353,8 +350,24 @@ describe("sortStablecoins — stability (pegScore)", () => {
   it("sorts by peg score descending", () => {
     const coins = [makeCoin("a", "A"), makeCoin("b", "B")];
     const pegScores = new Map([
-      ["a", { pegScore: 95, id: "a", symbol: "A" } as Parameters<typeof sortStablecoins>[0]["pegScores"] extends Map<string, infer V> ? V : never],
-      ["b", { pegScore: 70, id: "b", symbol: "B" } as Parameters<typeof sortStablecoins>[0]["pegScores"] extends Map<string, infer V> ? V : never],
+      [
+        "a",
+        { pegScore: 95, id: "a", symbol: "A" } as Parameters<typeof sortStablecoins>[0]["pegScores"] extends Map<
+          string,
+          infer V
+        >
+          ? V
+          : never,
+      ],
+      [
+        "b",
+        { pegScore: 70, id: "b", symbol: "B" } as Parameters<typeof sortStablecoins>[0]["pegScores"] extends Map<
+          string,
+          infer V
+        >
+          ? V
+          : never,
+      ],
     ]);
     const result = sortStablecoins({
       filtered: coins,
@@ -369,7 +382,15 @@ describe("sortStablecoins — stability (pegScore)", () => {
   it("places coins with null pegScore after coins with scores", () => {
     const coins = [makeCoin("noScore", "No Score"), makeCoin("hasScore", "Has Score")];
     const pegScores = new Map([
-      ["hasScore", { pegScore: 80, id: "hasScore", symbol: "H" } as Parameters<typeof sortStablecoins>[0]["pegScores"] extends Map<string, infer V> ? V : never],
+      [
+        "hasScore",
+        { pegScore: 80, id: "hasScore", symbol: "H" } as Parameters<typeof sortStablecoins>[0]["pegScores"] extends Map<
+          string,
+          infer V
+        >
+          ? V
+          : never,
+      ],
     ]);
     const result = sortStablecoins({
       filtered: coins,
@@ -387,8 +408,18 @@ describe("sortStablecoins — liquidity (dexLiquidity)", () => {
   it("sorts by liquidity score descending", () => {
     const coins = [makeCoin("low", "Low"), makeCoin("high", "High")];
     const dexLiquidity = {
-      low: { liquidityScore: 20 } as Parameters<typeof sortStablecoins>[0]["dexLiquidity"] extends Record<string, infer V> ? V : never,
-      high: { liquidityScore: 90 } as Parameters<typeof sortStablecoins>[0]["dexLiquidity"] extends Record<string, infer V> ? V : never,
+      low: { liquidityScore: 20 } as Parameters<typeof sortStablecoins>[0]["dexLiquidity"] extends Record<
+        string,
+        infer V
+      >
+        ? V
+        : never,
+      high: { liquidityScore: 90 } as Parameters<typeof sortStablecoins>[0]["dexLiquidity"] extends Record<
+        string,
+        infer V
+      >
+        ? V
+        : never,
     };
     const result = sortStablecoins({
       filtered: coins,
@@ -403,7 +434,12 @@ describe("sortStablecoins — liquidity (dexLiquidity)", () => {
   it("places coins with null liquidity after coins with scores", () => {
     const coins = [makeCoin("noLiq", "No Liq"), makeCoin("hasLiq", "Has Liq")];
     const dexLiquidity = {
-      hasLiq: { liquidityScore: 50 } as Parameters<typeof sortStablecoins>[0]["dexLiquidity"] extends Record<string, infer V> ? V : never,
+      hasLiq: { liquidityScore: 50 } as Parameters<typeof sortStablecoins>[0]["dexLiquidity"] extends Record<
+        string,
+        infer V
+      >
+        ? V
+        : never,
     };
     const result = sortStablecoins({
       filtered: coins,
@@ -421,8 +457,12 @@ describe("sortStablecoins — grade (reportCards)", () => {
   it("sorts by overall score descending", () => {
     const coins = [makeCoin("b", "B"), makeCoin("a", "A")];
     const reportCards = {
-      a: { overallScore: 85 } as Parameters<typeof sortStablecoins>[0]["reportCards"] extends Record<string, infer V> ? V : never,
-      b: { overallScore: 60 } as Parameters<typeof sortStablecoins>[0]["reportCards"] extends Record<string, infer V> ? V : never,
+      a: { overallScore: 85 } as Parameters<typeof sortStablecoins>[0]["reportCards"] extends Record<string, infer V>
+        ? V
+        : never,
+      b: { overallScore: 60 } as Parameters<typeof sortStablecoins>[0]["reportCards"] extends Record<string, infer V>
+        ? V
+        : never,
     };
     const result = sortStablecoins({
       filtered: coins,
@@ -437,7 +477,12 @@ describe("sortStablecoins — grade (reportCards)", () => {
   it("places coins with null overallScore after coins with scores", () => {
     const coins = [makeCoin("noGrade", "No Grade"), makeCoin("hasGrade", "Has Grade")];
     const reportCards = {
-      hasGrade: { overallScore: 70 } as Parameters<typeof sortStablecoins>[0]["reportCards"] extends Record<string, infer V> ? V : never,
+      hasGrade: { overallScore: 70 } as Parameters<typeof sortStablecoins>[0]["reportCards"] extends Record<
+        string,
+        infer V
+      >
+        ? V
+        : never,
     };
     const result = sortStablecoins({
       filtered: coins,

@@ -126,7 +126,7 @@ function DefaultFooter({ count }: { count: number }) {
     <div className="flex flex-col gap-1 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
       <span className="text-sm text-muted-foreground">
         Showing <span className="font-mono tabular-nums text-foreground">{count.toLocaleString("en-US")}</span>{" "}
-        active stablecoins — pre-launch and frozen excluded,{" "}
+        active stablecoins — all inactive lifecycle states excluded,{" "}
         <Link
           href="/screener/"
           className="pharos-focus-ring rounded-sm underline decoration-dotted underline-offset-4 transition-colors hover:text-foreground"

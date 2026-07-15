@@ -1,4 +1,7 @@
-import type { StablecoinChartPoint } from "@shared/types";
+import {
+  StablecoinChartAggregateUniverseSchema,
+  type StablecoinChartPoint,
+} from "@shared/types/market";
 import { sanitizeRecordValues } from "./normalizers";
 
 function coerceFiniteNumber(value: unknown): number | undefined {
@@ -41,9 +44,16 @@ export function normalizeStablecoinChartPoints(payload: unknown): StablecoinChar
       return null;
     }
 
+    const aggregateUniverseValue = (entry as { aggregateUniverse?: unknown }).aggregateUniverse;
+    const aggregateUniverse = aggregateUniverseValue === undefined
+      ? undefined
+      : StablecoinChartAggregateUniverseSchema.safeParse(aggregateUniverseValue);
+    if (aggregateUniverse && !aggregateUniverse.success) return null;
+
     points.push({
       date,
       totalCirculatingUSD,
+      ...(aggregateUniverse?.success ? { aggregateUniverse: aggregateUniverse.data } : {}),
     });
   }
 

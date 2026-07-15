@@ -332,7 +332,7 @@
       ]
     }
   },
-  "status": "active",
+  "status": "quarantined",
   "announcedDate": "2025-12",
   "launchDate": "2025-12-18",
   "notices": [
@@ -402,5 +402,10 @@
     "attestorTier": "big4",
     "cadence": "monthly",
     "attestorJurisdiction": "United States"
+  },
+  "listingStatusReview": {
+    "changedAt": "2026-07-15",
+    "reviewBy": "2026-08-15",
+    "reason": "Temporarily withheld because permitted runtime sources do not provide a positive circulating supply or market cap."
   }
 }

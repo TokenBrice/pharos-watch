@@ -4,14 +4,14 @@ import { SHADOW_STABLECOINS } from "./shadow-stablecoins";
 import { READABLE_META_BY_ID, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "./stablecoins/registry";
 import type { StablecoinMeta } from "../types";
 
-/** Cross-provider live metadata seed: tracked active/frozen/pre-launch assets plus PSI-only shadow assets. Excludes dead assets. */
+/** Cross-provider metadata seed: every tracked lifecycle plus PSI-only shadow assets. Excludes dead assets. */
 export const ALL_LIVE_COINS: readonly StablecoinMeta[] = [...TRACKED_STABLECOINS, ...SHADOW_STABLECOINS];
 
 /** Lookup of every live coin (tracked + shadow) by canonical id. Includes shadow assets that are NOT in the public readback. */
 const registryById = new Map<string, StablecoinMeta>();
-/** Tracked-only registry: active + frozen + pre-launch, no shadow assets. */
+/** Tracked-only registry: every catalog lifecycle, no shadow assets. */
 export const TRACKED_REGISTRY_BY_ID: ReadonlyMap<string, StablecoinMeta> = TRACKED_META_BY_ID;
-/** Public-readback registry: active + frozen tracked coins. Excludes pre-launch and shadow-only ids. */
+/** Public-readback registry: all post-launch tracked records. Excludes pre-launch and shadow-only ids. */
 export const READABLE_REGISTRY_BY_ID: ReadonlyMap<string, StablecoinMeta> = READABLE_META_BY_ID;
 /** PSI universe: active tracked coins plus PSI-only shadow assets (used for systemic-importance calculations). */
 export const PSI_INCLUSIVE_REGISTRY_BY_ID: ReadonlyMap<string, StablecoinMeta> = PSI_ELIGIBLE_META_BY_ID;
@@ -110,12 +110,12 @@ function resolveFromRegistry(
   return null;
 }
 
-/** Resolve any tracked canonical stablecoin ID, including pre-launch and frozen IDs. */
+/** Resolve any tracked canonical stablecoin ID across every lifecycle state. */
 export function resolveTrackedStablecoinId(input: string): StablecoinIdResolution | null {
   return resolveFromRegistry(TRACKED_REGISTRY_BY_ID, input);
 }
 
-/** Resolve public readback IDs: active + frozen tracked coins, excluding pre-launch and shadow-only IDs. */
+/** Resolve public readback IDs: all post-launch tracked records, excluding pre-launch and shadow-only IDs. */
 export function resolveReadableStablecoinId(input: string): StablecoinIdResolution | null {
   return resolveFromRegistry(READABLE_REGISTRY_BY_ID, input);
 }

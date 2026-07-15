@@ -16,7 +16,11 @@ import * as featureFlags from "@/lib/feature-flags";
 
 describe("severity-colors", () => {
   it("maps deviation thresholds to classes, hex values, and icons", () => {
-    expect(deviationColorClass(49)).toBe("text-green-700 dark:text-green-400");
+    expect(deviationColorClass(49)).toBe(
+      featureFlags.FEATURE_FLAGS.quietDeviations
+        ? "text-muted-foreground"
+        : "text-green-700 dark:text-green-400",
+    );
     expect(deviationBgClass(49)).toBe("bg-green-500");
     expect(deviationColorHex(49)).toBe("#22c55e");
     expect(deviationIconName(49)).toBe("CircleCheck");

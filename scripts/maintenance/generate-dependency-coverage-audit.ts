@@ -147,6 +147,8 @@ export type TargetScoreability =
   | "scoreable"
   | "active-nr"
   | "pre-launch"
+  | "quarantined"
+  | "delisted"
   | "frozen"
   | "unknown-target"
   | "not-evaluated";
@@ -517,6 +519,8 @@ function parseReportCardInput(payload: unknown): ParsedReportCardInput {
 function lifecycleForMeta(meta: StablecoinMeta | undefined): DependencyTargetLifecycle | "unknown" {
   if (!meta) return "unknown";
   if (meta.status === "pre-launch") return "pre-launch";
+  if (meta.status === "quarantined") return "quarantined";
+  if (meta.status === "delisted") return "delisted";
   if (meta.status === "frozen") return "frozen";
   return "active";
 }
@@ -954,6 +958,8 @@ function classifyTargetScoreability(input: {
 }): TargetScoreability {
   if (input.lifecycle === "unknown") return "unknown-target";
   if (input.lifecycle === "pre-launch") return "pre-launch";
+  if (input.lifecycle === "quarantined") return "quarantined";
+  if (input.lifecycle === "delisted") return "delisted";
   if (input.lifecycle === "frozen") return "frozen";
   if (!input.hasReportCards) return "not-evaluated";
   const edgeAvailability = input.contributionAvailability.get(

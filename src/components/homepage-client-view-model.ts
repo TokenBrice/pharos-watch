@@ -20,13 +20,14 @@ export function buildHomepageCriticalViewModel(args: {
   pegSummaryData?: PegSummaryResponse;
   filters: HomepageFiltersState;
   reportCardMap?: ReturnType<typeof buildReportCardMap>;
+  eligibleIds?: ReadonlySet<string>;
 }) {
   const tableInputs = buildStablecoinTableInputs({
     stablecoins: args.stablecoinsData?.peggedAssets,
     fxFallbackRates: args.stablecoinsData?.fxFallbackRates,
     pegSummaryCoins: args.pegSummaryData?.coins,
   });
-  const trackedIds = buildTrackedIdSet(args.filters.activeFilters, args.reportCardMap);
+  const trackedIds = buildTrackedIdSet(args.filters.activeFilters, args.reportCardMap, args.eligibleIds);
   const filteredRowCount = filterStablecoins(
     args.stablecoinsData?.peggedAssets,
     trackedIds,
@@ -50,7 +51,9 @@ export function buildHomepageOptionalViewModel(args: {
     reportCardMap,
     dewsRiskLevel: getDewsRiskLevel(
       args.stressData?.signals
-        ? Object.values(args.stressData.signals).map((signal) => signal.band).filter(isThreatBand)
+        ? Object.values(args.stressData.signals)
+            .map((signal) => signal.band)
+            .filter(isThreatBand)
         : [],
     ),
   };

@@ -14,6 +14,9 @@ export interface CanonicalSafetyGradeRow {
 export interface CollectorContext {
   db: D1Database;
   trackedStablecoinAssets: StablecoinData[];
+  trackedStablecoinIds: ReadonlySet<string>;
+  coreAggregateStablecoinAssets: StablecoinData[];
+  coreAggregateStablecoinIds: ReadonlySet<string>;
   stablecoinAssetById: Map<string, StablecoinData>;
   mcapById: Map<string, number>;
   nowSec: number;
@@ -109,15 +112,17 @@ function depegSignalKey(
  * implementation.
  */
 export function rollupDigestInputs(inputs: DigestInputData[]): RollupSummary {
-  const psiScores = inputs.map((d) => d.stabilityIndex?.score).filter((s): s is number => s != null);
-  const mcaps = inputs.map((d) => d.totalMcapUsd);
-  const psiBands = inputs.map((d) => d.stabilityIndex?.band).filter((b): b is string => b != null);
+  const coreInputs = inputs.filter((input) => input.aggregateUniverse === "core-stablecoins-v1");
+  const aggregateInputs = coreInputs.length > 0 ? coreInputs : inputs;
+  const psiScores = aggregateInputs.map((d) => d.stabilityIndex?.score).filter((s): s is number => s != null);
+  const mcaps = aggregateInputs.map((d) => d.totalMcapUsd);
+  const psiBands = aggregateInputs.map((d) => d.stabilityIndex?.band).filter((b): b is string => b != null);
   const bandFreq = new Map<string, number>();
   for (const b of psiBands) bandFreq.set(b, (bandFreq.get(b) ?? 0) + 1);
   const psiDominantBand = [...bandFreq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "BEDROCK";
-  const gauges = inputs.map((d) => d.mintBurnFlows?.gaugeScore).filter((g): g is number => g != null);
+  const gauges = aggregateInputs.map((d) => d.mintBurnFlows?.gaugeScore).filter((g): g is number => g != null);
   const depegKeys = new Set<string>();
-  for (const input of inputs) {
+  for (const input of aggregateInputs) {
     for (const depeg of input.topDepegs ?? []) {
       depegKeys.add(depegSignalKey(depeg, "active"));
     }
@@ -129,12 +134,12 @@ export function rollupDigestInputs(inputs: DigestInputData[]): RollupSummary {
     mcapEnd: mcaps[mcaps.length - 1] ?? 0,
     psiMid: psiScores.length > 0 ? psiScores.reduce((s, v) => s + v, 0) / psiScores.length : 0,
     psiDominantBand,
-    activeDepegObs: inputs.reduce((sum, d) => sum + d.activeDepegCount, 0),
+    activeDepegObs: aggregateInputs.reduce((sum, d) => sum + d.activeDepegCount, 0),
     uniqueDepegSignals: depegKeys.size,
-    blacklistEvents: inputs.reduce((s, d) => s + (d.blacklistActivity?.eventCount ?? 0), 0),
-    blacklistUsd: inputs.reduce((s, d) => s + (d.blacklistActivity?.totalAmountUsd ?? 0), 0),
-    gradeTransitions: inputs.reduce((s, d) => s + (d.gradeTransitions?.length ?? 0), 0),
+    blacklistEvents: aggregateInputs.reduce((s, d) => s + (d.blacklistActivity?.eventCount ?? 0), 0),
+    blacklistUsd: aggregateInputs.reduce((s, d) => s + (d.blacklistActivity?.totalAmountUsd ?? 0), 0),
+    gradeTransitions: aggregateInputs.reduce((s, d) => s + (d.gradeTransitions?.length ?? 0), 0),
     gaugeMid: gauges.length >= 3 ? gauges.reduce((s, v) => s + v, 0) / gauges.length : null,
-    days: inputs.length,
+    days: aggregateInputs.length,
   };
 }

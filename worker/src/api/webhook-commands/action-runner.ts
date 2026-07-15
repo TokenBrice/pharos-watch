@@ -15,7 +15,7 @@ import {
   resolveTelegramPresetTargets,
   type TelegramPresetId,
 } from "../../lib/telegram-presets";
-import { TRACKED_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
+import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../../lib/telegram-subscription-eligibility";
 import {
   buildPresetSubscriptionSummaryMessage,
   buildPresetUnsubscribeSummaryMessage,
@@ -94,7 +94,7 @@ export type ActionPayloadMap = {
   set: ParsedSetCommand;
 };
 
-const SUBSCRIBABLE_COIN_COUNT = TRACKED_STABLECOINS.filter((coin) => !FROZEN_IDS.has(coin.id)).length;
+const SUBSCRIBABLE_COIN_COUNT = TELEGRAM_SUBSCRIBABLE_STABLECOINS.length;
 
 export function subscribableCoinCount(): number {
   return SUBSCRIBABLE_COIN_COUNT;

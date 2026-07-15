@@ -70,7 +70,6 @@ async function suppressPriorTerminalDedupeCollision(
                      AND pending.source_event_id IS NOT telegram_alert_job_targets.source_event_id
                      AND pending.chat_id = telegram_alert_job_targets.chat_id
                      AND pending.message_html = telegram_alert_job_targets.message_html
-                     AND pending.disable_notification = telegram_alert_job_targets.disable_notification
                      AND COALESCE(pending.chunk_index, 0) = telegram_alert_job_targets.chunk_index
                      AND COALESCE(pending.alert_type, '') = telegram_alert_job_targets.alert_type
                      AND COALESCE(pending.markup_policy_json, '') = telegram_alert_job_targets.markup_policy_json
@@ -92,7 +91,6 @@ async function suppressPriorTerminalDedupeCollision(
                      AND pending.source_event_id IS NOT telegram_alert_job_targets.source_event_id
                      AND pending.chat_id = telegram_alert_job_targets.chat_id
                      AND pending.message_html = telegram_alert_job_targets.message_html
-                     AND pending.disable_notification = telegram_alert_job_targets.disable_notification
                      AND COALESCE(pending.chunk_index, 0) = telegram_alert_job_targets.chunk_index
                      AND COALESCE(pending.alert_type, '') = telegram_alert_job_targets.alert_type
                      AND COALESCE(pending.markup_policy_json, '') = telegram_alert_job_targets.markup_policy_json
@@ -112,7 +110,6 @@ async function suppressPriorTerminalDedupeCollision(
                      AND pending.source_event_id IS NOT telegram_alert_job_targets.source_event_id
                      AND pending.chat_id = telegram_alert_job_targets.chat_id
                      AND pending.message_html = telegram_alert_job_targets.message_html
-                     AND pending.disable_notification = telegram_alert_job_targets.disable_notification
                      AND COALESCE(pending.chunk_index, 0) = telegram_alert_job_targets.chunk_index
                      AND COALESCE(pending.alert_type, '') = telegram_alert_job_targets.alert_type
                      AND COALESCE(pending.markup_policy_json, '') = telegram_alert_job_targets.markup_policy_json
@@ -132,7 +129,6 @@ async function suppressPriorTerminalDedupeCollision(
                AND pending.source_event_id IS NOT telegram_alert_job_targets.source_event_id
                AND pending.chat_id = telegram_alert_job_targets.chat_id
                AND pending.message_html = telegram_alert_job_targets.message_html
-               AND pending.disable_notification = telegram_alert_job_targets.disable_notification
                AND COALESCE(pending.chunk_index, 0) = telegram_alert_job_targets.chunk_index
                AND COALESCE(pending.alert_type, '') = telegram_alert_job_targets.alert_type
                AND COALESCE(pending.markup_policy_json, '') = telegram_alert_job_targets.markup_policy_json

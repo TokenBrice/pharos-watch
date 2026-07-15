@@ -194,7 +194,7 @@ describe("sync-stablecoins stage helpers", () => {
     });
 
     expect("authoritativeOverrideCount" in result ? result.authoritativeOverrideCount : null).toBe(1);
-    expect(pricingStageMocks.fetchAuthoritativeLivePriceOverrides).toHaveBeenCalledTimes(1);
+    expect(pricingStageMocks.fetchAuthoritativeLivePriceOverrides).toHaveBeenCalledTimes(2);
     expect(assets[0]).toMatchObject({
       price: 0.998,
       priceSource: "protocol-redeem",

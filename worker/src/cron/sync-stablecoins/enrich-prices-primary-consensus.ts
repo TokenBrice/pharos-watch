@@ -117,7 +117,7 @@ export function buildPrimaryConsensusResults(params: {
       confidence: consensus.confidence,
       dlPrice: params.resolveDlListQuote(asset.id)?.price ?? null,
       cgPrice,
-      candidateSources: sources.map((source) => source.source),
+      candidateSources: Object.keys(consensus.allPrices),
       agreeSources: consensus.agreeSources,
       disagreeSources: consensus.disagreeSources,
       allPrices: consensus.allPrices,

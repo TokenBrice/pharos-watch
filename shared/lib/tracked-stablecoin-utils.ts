@@ -4,9 +4,12 @@ import {
   TRACKED_META_BY_ID,
   TRACKED_STABLECOINS,
 } from "./stablecoins/registry";
+import { isActiveStablecoinMeta, isPreLaunchStablecoinMeta } from "./stablecoins/status";
 
 export const YIELD_BEARING_STABLECOINS = TRACKED_STABLECOINS.filter(
-  (stablecoin) => stablecoin.flags.yieldBearing && stablecoin.status !== "frozen",
+  (stablecoin) =>
+    stablecoin.flags.yieldBearing
+    && (isActiveStablecoinMeta(stablecoin) || isPreLaunchStablecoinMeta(stablecoin)),
 );
 
 export const ACTIVE_YIELD_BEARING_STABLECOINS = ACTIVE_STABLECOINS.filter(

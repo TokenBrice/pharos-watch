@@ -1,4 +1,4 @@
-import { PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
+import { CORE_PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
 import { SHADOW_IDS } from "@shared/lib/shadow-stablecoins";
 import { binarySearchNearest } from "./binary-search";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -37,14 +37,12 @@ export function buildPsiHistoricalSupplySnapshotMap(
   const supplyByCoin: SupplySnapshotMap = new Map();
 
   for (const row of rows) {
-    if (!PSI_ELIGIBLE_IDS.has(row.stablecoin_id)) continue;
+    if (!CORE_PSI_ELIGIBLE_IDS.has(row.stablecoin_id)) continue;
     const list = supplyByCoin.get(row.stablecoin_id) ?? [];
     list.push({
       date: row.snapshot_date,
       mcap: row.circulating_usd,
-      ...(typeof row.price === "number" && Number.isFinite(row.price) && row.price > 0
-        ? { price: row.price }
-        : {}),
+      ...(typeof row.price === "number" && Number.isFinite(row.price) && row.price > 0 ? { price: row.price } : {}),
     });
     supplyByCoin.set(row.stablecoin_id, list);
   }
@@ -56,16 +54,13 @@ export function buildPsiHistoricalSupplySnapshotMap(
   return supplyByCoin;
 }
 
-export function buildPsiHistoricalUniverseForDay(
-  supplyByCoin: SupplySnapshotMap,
-  day: number,
-): PsiHistoricalUniverse {
+export function buildPsiHistoricalUniverseForDay(supplyByCoin: SupplySnapshotMap, day: number): PsiHistoricalUniverse {
   const mcapById = new Map<string, number>();
   let totalMcapUsd = 0;
   let coveredUniverseCount = 0;
   let shadowCoverageCount = 0;
 
-  for (const coinId of PSI_ELIGIBLE_IDS) {
+  for (const coinId of CORE_PSI_ELIGIBLE_IDS) {
     const nearest = findNearestSupplySnapshot(supplyByCoin.get(coinId), day);
     if (!nearest) continue;
 
@@ -80,7 +75,7 @@ export function buildPsiHistoricalUniverseForDay(
   return {
     totalMcapUsd,
     mcapById,
-    eligibleUniverseCount: PSI_ELIGIBLE_IDS.size,
+    eligibleUniverseCount: CORE_PSI_ELIGIBLE_IDS.size,
     coveredUniverseCount,
     shadowCoverageCount,
   };

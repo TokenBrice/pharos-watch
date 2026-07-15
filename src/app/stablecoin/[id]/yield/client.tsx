@@ -370,6 +370,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
   const coin = TRACKED_META_BY_ID.get(id);
   const isPreLaunch = coin?.status === "pre-launch";
   const isFrozen = coin?.status === "frozen";
+  const isInactiveListing = coin?.status === "quarantined" || coin?.status === "delisted";
   const shouldHaveYieldData = coin?.flags.yieldBearing ?? false;
 
   const ranking = useMemo(
@@ -491,6 +492,25 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         <EmptyStateCard
           title="Pre-launch — no yield data yet"
           message={`${staticCoin.name} is in pre-launch tracking. Yield history will appear here once the stablecoin is live and the cron has observed source data.`}
+        />
+      </div>
+    );
+  }
+
+  if (isInactiveListing) {
+    return (
+      <div className="space-y-6">
+        {backLink}
+        <StablecoinYieldDetailHeader
+          staticCoin={staticCoin}
+          logoSrc={logoSrc}
+          ranking={null}
+          sourceRiskDrivers={[]}
+          scalingFactor={null}
+        />
+        <EmptyStateCard
+          title="Yield tracking inactive"
+          message={coin?.listingStatusReview?.reason ?? "This asset is outside Pharos's active monitoring universe."}
         />
       </div>
     );

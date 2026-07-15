@@ -1,6 +1,7 @@
 import { PEG_CHART_COLORS } from "@shared/lib/classification";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { CLIENT_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { CLIENT_CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-client-registry";
 import type { PegCurrency, StablecoinData } from "@shared/types";
 import { PEG_TAXONOMY_PAGES } from "@/lib/peg-taxonomy";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -11,9 +12,7 @@ const OTHER_PEGS = new Set<PegCurrency>(["VAR", "OTHER"]);
 type AltPegGroup = "Fiat" | "Commodity" | "Other";
 export type AltPegRegion = "Europe" | "Asia" | "Americas" | "Africa" | "Oceania" | "Other";
 
-const PEG_TAXONOMY_BY_VALUE = new Map(
-  PEG_TAXONOMY_PAGES.map((page) => [page.value, page]),
-);
+const PEG_TAXONOMY_BY_VALUE = new Map(PEG_TAXONOMY_PAGES.map((page) => [page.value, page]));
 
 export interface AltPegDistributionRow {
   peg: PegCurrency;
@@ -149,16 +148,20 @@ export function buildAltPegSnapshot(peggedAssets?: StablecoinData[]): AltPegSnap
   let commodityMarketCap = 0;
   const altPegIds = new Set<string>();
   const altPegs = new Set<PegCurrency>();
-  const distributionMap = new Map<PegCurrency, {
-    marketCap: number;
-    coinCount: number;
-    leaderId: string;
-    leaderName: string;
-    leaderSymbol: string;
-    leaderMcap: number;
-  }>();
+  const distributionMap = new Map<
+    PegCurrency,
+    {
+      marketCap: number;
+      coinCount: number;
+      leaderId: string;
+      leaderName: string;
+      leaderSymbol: string;
+      leaderMcap: number;
+    }
+  >();
 
   for (const coin of peggedAssets) {
+    if (!CLIENT_CORE_AGGREGATE_ACTIVE_IDS.has(coin.id)) continue;
     const marketCap = getCirculatingRaw(coin);
     totalMarketCap += marketCap;
 
@@ -272,7 +275,10 @@ export function buildAltPegLinkHubGroups(): AltPegLinkHubGroup[] {
       label: page.shortLabel,
       href: page.href,
       coinCount: page.coins.length,
-      symbolPreview: page.coins.slice(0, 3).map((coin) => coin.symbol).join(" · "),
+      symbolPreview: page.coins
+        .slice(0, 3)
+        .map((coin) => coin.symbol)
+        .join(" · "),
       group,
       region: group === "Fiat" ? getFiatPegRegion(page.value) : "Other",
       colorHex: pegMeta.hex,

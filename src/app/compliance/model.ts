@@ -1,6 +1,7 @@
 import { GENIUS_REGIME_STATE, isGeniusRegimeEffective } from "@shared/lib/compliance-regime-state";
 import { GENIUS_COMPLIANCE_PROFILE_BY_ID } from "@shared/lib/stablecoins/genius-compliance-registry";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import {
   GENIUS_AUTHORIZATION_STATUS_VALUES,
   MICA_STATUS_VALUES,
@@ -171,10 +172,6 @@ export function normalizeMicaTokenTypeFilter(value: string): MicaTokenType | "al
     : "all";
 }
 
-function isLifecycleExcludedFromMainTable(status: string | undefined): boolean {
-  return status === "frozen" || status === "pre-launch";
-}
-
 function buildMicaRow(meta: (typeof CLIENT_TRACKED_STABLECOINS)[number], mica: MicaProfile): MicaComplianceRow {
   return {
     regime: "mica",
@@ -260,14 +257,14 @@ function buildAllComplianceRows(): { rows: ComplianceRow[]; watchRows: Complianc
   const geniusEffective = isGeniusRegimeEffective(GENIUS_REGIME_STATE);
 
   for (const meta of CLIENT_TRACKED_STABLECOINS) {
-    if (!isLifecycleExcludedFromMainTable(meta.status) && meta.mica) {
+    if (isActiveStablecoinMeta(meta) && meta.mica) {
       rows.push(buildMicaRow(meta, meta.mica));
     }
 
     const genius = GENIUS_COMPLIANCE_PROFILE_BY_ID.get(meta.id);
-    if (!genius || meta.status === "frozen") continue;
+    if (!genius || (meta.status !== "pre-launch" && !isActiveStablecoinMeta(meta))) continue;
     const geniusRow = buildGeniusRow(meta, genius);
-    if (geniusEffective && meta.status !== "pre-launch") {
+    if (geniusEffective && isActiveStablecoinMeta(meta)) {
       rows.push(geniusRow);
     } else {
       watchRows.push(geniusRow);

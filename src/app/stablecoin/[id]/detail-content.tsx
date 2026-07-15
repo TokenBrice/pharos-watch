@@ -14,6 +14,7 @@ import { FrozenStateBanner } from "@/components/stablecoin-detail/frozen-state-b
 import { HeroCard, HeroDesktopIdentityToolbar } from "@/components/stablecoin-detail/hero-card";
 import { MobileRiskSnapshot } from "@/components/stablecoin-detail/mobile-risk-snapshot";
 import { MobileStickySummary } from "@/components/stablecoin-detail/mobile-sticky-summary";
+import { ListingStateBanner } from "@/components/stablecoin-detail/listing-state-banner";
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
 import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
 import { RailSafetySummary } from "@/components/stablecoin-detail/rail-safety-summary";
@@ -74,7 +75,11 @@ function DetailIdentity({
       <h1 className="sr-only">
         {viewModel.coin.status === "frozen"
           ? `${viewModel.coin.name} (${viewModel.coin.symbol}) frozen stablecoin archive`
-          : `${viewModel.coin.name} (${viewModel.coin.symbol}) stablecoin analytics`}
+          : viewModel.coin.status === "delisted"
+            ? `${viewModel.coin.name} (${viewModel.coin.symbol}) delisted stablecoin record`
+            : viewModel.coin.status === "quarantined"
+              ? `${viewModel.coin.name} (${viewModel.coin.symbol}) quarantined stablecoin record`
+              : `${viewModel.coin.name} (${viewModel.coin.symbol}) stablecoin analytics`}
       </h1>
       <BackToSource className="mb-2" />
       <QueryFreshnessNotices
@@ -240,6 +245,7 @@ export function DetailContent({
           <div ref={heroRef} className="space-y-4">
             <HeroCard model={heroModel} onOpenFeedback={() => onFeedbackOpenChange(true)} />
             <ExploitNoticeBanner notices={viewModel.coin.notices} />
+            <ListingStateBanner coin={viewModel.coin} />
             {viewModel.coin.status === "frozen" && viewModel.coin.obituary && viewModel.coin.frozenAt ? (
               <FrozenStateBanner
                 symbol={viewModel.coin.symbol}

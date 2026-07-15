@@ -553,7 +553,7 @@ Browser surfaces on `pharos.watch` and `ops.pharos.watch` should reach this rout
 
 ### `GET /api/non-usd-share`
 
-Returns historical non-USD stablecoin market share data from `supply_history`, split into commodity-pegged (gold/silver) and non-commodity non-USD buckets. The response keeps the legacy `fiatNonUsd*` field names for wire compatibility, but those fields include currency-linked plus other non-commodity non-USD pegs. Data is downsampled: daily for the last 90 days, weekly for the last 2 years, monthly beyond that.
+Returns historical non-USD stablecoin market share data from `supply_history`, split into commodity-pegged (gold/silver) and non-commodity non-USD buckets. The denominator and both numerator buckets include only core stablecoins and cash equivalents; tracked variants and stable-value investments are excluded. The response keeps the legacy `fiatNonUsd*` field names for wire compatibility, but those fields include currency-linked plus other non-commodity non-USD pegs. Data is downsampled: daily for the last 90 days, weekly for the last 2 years, monthly beyond that.
 
 **Cache:** slow — `public, s-maxage=3600, max-age=300`
 
@@ -574,13 +574,13 @@ Unlike most numeric-query handlers, this endpoint defaults missing or malformed 
 | `fiatNonUsdShare` | `number` | Non-commodity non-USD share as % of total supply, using the legacy field name |
 | `commodity`       | `number` | Commodity-pegged circulating USD                                              |
 | `fiatNonUsd`      | `number` | Non-commodity non-USD circulating USD, using the legacy field name            |
-| `total`           | `number` | Total circulating USD across all tracked coins                                |
+| `total`           | `number` | Total circulating USD across core stablecoins and cash equivalents            |
 
 ---
 
 ### `GET /api/chains`
 
-Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-the-fly from the stablecoins cache and report-card cache (two D1 reads) — no dedicated chain table is required for the live leaderboard. The response body also carries `_meta`, so the frontend can distinguish fresh, degraded, and missing-dependency states without inferring freshness from fetch timing alone.
+Returns chain-level core stablecoin and cash-equivalent aggregates with Chain Health Scores. Tracked variants and stable-value investments are excluded from supply, count, dominance, and quality totals. Results are computed on-the-fly from the stablecoins cache and report-card cache (two D1 reads); `chain_supply_history` stores the matching forward daily aggregate. The response body also carries `_meta`, so the frontend can distinguish fresh, degraded, and missing-dependency states without inferring freshness from fetch timing alone.
 
 **Cache:** producer-backed — `public, s-maxage=300, max-age=60, stale-while-revalidate=300`
 
@@ -624,7 +624,7 @@ Returns chain-level stablecoin aggregates with Chain Health Scores. Computed on-
 | Field                      | Type             | Description                                                                              |
 | -------------------------- | ---------------- | ---------------------------------------------------------------------------------------- |
 | `chains`                   | `ChainSummary[]` | Chains sorted by `totalUsd` descending                                                   |
-| `globalTotalUsd`           | `number`         | Total tracked stablecoin supply in USD, matching `GET /api/stablecoins` aggregate supply |
+| `globalTotalUsd`           | `number`         | Total core stablecoin and cash-equivalent supply in USD                                   |
 | `chainAttributedTotalUsd`  | `number`         | Chain-attributed USD supply, capped at `globalTotalUsd`                                  |
 | `unattributedTotalUsd`     | `number`         | Positive residual between tracked supply and chain-attributed supply in USD              |
 | `globalChange24hPct`       | `number`         | 24h change for total tracked stablecoin supply as a decimal share                        |
@@ -742,7 +742,7 @@ When present, `provenance` has:
 
 ### `GET /api/stablecoin-charts`
 
-Aggregate historical supply chart data across the live homepage market-cap universe, broken down by peg type. The hourly `stablecoin-charts` cache still starts from DefiLlama's aggregate chart history, but the worker now reconciles structurally supplemental tracked assets (for example wrapper NAV tokens and commodity tokens that are not present in DefiLlama's aggregate chart feed) from D1 `supply_history` before publishing the cache. At read time the handler also appends or replaces the latest point with a live snapshot derived from the current `stablecoins` cache so the endpoint's trailing point matches the homepage KPI card. `sync-stablecoin-charts` is triggered every 30 minutes; scheduled deliveries share an hourly generation-fenced cadence bucket, and a failed first delivery remains retryable at the second delivery. `/api/health` treats the cache as healthy for up to 1 hour.
+Aggregate historical supply chart data broken down by peg type. Existing DefiLlama history remains a legacy provider-wide aggregate and each response point is marked `aggregateUniverse: "legacy-provider-all-stablecoins-v1"`. The API deliberately does not append the core-only live point to that series: joining different classification universes would render the 2026-07-15 policy cutover as a false market-cap drop. Live homepage monetary KPIs use `core-stablecoins-v1`; a live chart tail can resume once historical chart rows are rebuilt under that same marker. Structural supplemental overlays are already limited to core stablecoins and cash equivalents. `sync-stablecoin-charts` is triggered every 30 minutes; scheduled deliveries share an hourly generation-fenced cadence bucket, and a failed first delivery remains retryable at the second delivery. `/api/health` treats the cache as healthy for up to 1 hour.
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included. This array response gets freshness headers only; it does not receive a response-body `_meta` envelope.
 
@@ -752,6 +752,7 @@ Aggregate historical supply chart data across the live homepage market-cap unive
 [
   {
     "date": 1511913600,
+    "aggregateUniverse": "legacy-provider-all-stablecoins-v1",
     "totalCirculatingUSD": {
       "peggedUSD": 110105,
       "peggedEUR": 14967600
@@ -760,10 +761,11 @@ Aggregate historical supply chart data across the live homepage market-cap unive
 ]
 ```
 
-| Field                 | Type                     | Description                                                                                                                                          |
-| --------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `date`                | `number`                 | Unix timestamp (seconds). Historical points are downsampled cache entries; the trailing point may be a fresher live `stablecoins` snapshot timestamp |
-| `totalCirculatingUSD` | `Record<string, number>` | Aggregate supply in USD per peg type                                                                                                                 |
+| Field                 | Type                     | Description                                                                                                                      |
+| --------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `date`                | `number`                 | Unix timestamp (seconds) for the downsampled cache entry                                                                          |
+| `aggregateUniverse`   | `string \| undefined`   | Classification universe for the point. Current legacy provider history uses `"legacy-provider-all-stablecoins-v1"`             |
+| `totalCirculatingUSD` | `Record<string, number>` | Aggregate supply in USD per peg type                                                                                              |
 
 ---
 
@@ -1752,7 +1754,7 @@ Contextual data snapshot for a specific digest date — includes the digest's in
 ```text
 {
   "date": "2026-02-27",
-  "inputData": { "totalMcapUsd": 230000000000, "mcap7dDelta": 0.012, ... },
+  "inputData": { "aggregateUniverse": "core-stablecoins-v1", "totalMcapUsd": 230000000000, "mcap7dDelta": 0.012, ... },
   "prevInputData": { ... },
   "depegEvents": [{ "stablecoinId": "usdt-tether", "symbol": "USDT", "direction": "below", "peakDeviationBps": -150, ... }],
   "blacklistEvents": [{ "stablecoin": "USDT", "chainName": "Ethereum", "eventType": "blacklist", ... }]
@@ -1762,7 +1764,7 @@ Contextual data snapshot for a specific digest date — includes the digest's in
 | Field             | Type             | Description                                                                                     |
 | ----------------- | ---------------- | ----------------------------------------------------------------------------------------------- |
 | `date`            | `string`         | The requested date                                                                              |
-| `inputData`       | `object \| null` | Digest input data (mcap, depegs, supply changes, PSI, digest intelligence fields) for this date |
+| `inputData`       | `object \| null` | Digest input data for this date. Current rows include `aggregateUniverse: "core-stablecoins-v1"`; legacy rows may omit it |
 | `prevInputData`   | `object \| null` | Previous day's input data for delta computation                                                 |
 | `depegEvents`     | `array`          | Up to 20 depeg events active on that date, ordered by severity                                  |
 | `blacklistEvents` | `array`          | Up to 50 blacklist events on that date                                                          |
@@ -2248,7 +2250,7 @@ Low-cardinality privacy rule: nonzero values below `privacy.lowCardinalityThresh
 
 ### `GET /api/stability-index`
 
-Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a composite ecosystem health score (0–100) computed from active depeg severity, affected-market breadth, DEWS stress breadth, and 7-day ecosystem trend across the PSI-eligible universe (tracked coins plus shadow assets used for historical continuity). If a dependency failure prevents a safe fresh sample, the endpoint continues serving the last healthy stored PSI sample instead of publishing a degraded substitute.
+Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a composite ecosystem health score (0–100) computed from active depeg severity, affected-market breadth, DEWS stress breadth, and 7-day ecosystem trend across core stablecoins, cash equivalents, and configured shadow assets used for historical continuity. Tracked variants and stable-value investments remain readable but do not enter this monetary aggregate. If a dependency failure prevents a safe fresh sample, the endpoint continues serving the last healthy stored PSI sample instead of publishing a degraded substitute.
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included after at least one PSI sample/history row exists. Before bootstrap, the empty response carries `Cache-Control` only and contains `{ current: null, history: [], methodology: ... }` without `malformedRows`.
 
@@ -2268,15 +2270,16 @@ Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a comp
     "score": 81.1,
     "band": "STEADY",
     "components": { "severity": 4.59, "breadth": 15, "stressBreadth": 1.8, "trend": 0.65 },
+    "aggregateUniverse": "core-stablecoins-v1",
     "computedAt": 1771977600,
-    "methodologyVersion": "3.5"
+    "methodologyVersion": "3.6"
   },
   "history": [{ "date": 1771891200, "score": 81.0, "band": "STEADY", "methodologyVersion": "2.1" }],
   "methodology": {
-    "version": "3.5",
-    "versionLabel": "v3.5",
-    "currentVersion": "3.5",
-    "currentVersionLabel": "v3.5",
+    "version": "3.6",
+    "versionLabel": "v3.6",
+    "currentVersion": "3.6",
+    "currentVersionLabel": "v3.6",
     "changelogPath": "/methodology/stability-index-changelog/",
     "asOf": 1771977600,
     "isCurrent": true
@@ -2292,9 +2295,10 @@ Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a comp
 | `current.avg24h`               | `number \| undefined` | Rolling 24 h average PSI score                                                                                                                            |
 | `current.avg24hBand`           | `string \| undefined` | Condition band for `avg24h`                                                                                                                               |
 | `current.components`           | `object`              | Component breakdown: `severity`, `breadth`, `stressBreadth`, `trend`                                                                                      |
+| `current.aggregateUniverse`    | `string \| undefined` | Aggregate-universe marker. Current v3.6 samples use `"core-stablecoins-v1"`; older stored samples may omit it                                            |
 | `current.contributors`         | `array`               | Top per-coin contributors from `input_snapshot.contributors` (empty when unavailable)                                                                     |
 | `current.inputDegradation`     | `object \| undefined` | Dependency-loss metadata carried by the served sample when the stored input snapshot recorded degraded upstream inputs                                    |
-| `current.totalMcapUsd`         | `number`              | Total ecosystem market cap from the latest input snapshot (`0` when unavailable)                                                                          |
+| `current.totalMcapUsd`         | `number`              | Core stablecoin, cash-equivalent, and shadow-asset market cap from the latest input snapshot (`0` when unavailable)                                       |
 | `current.computedAt`           | `number`              | Unix seconds of computation                                                                                                                               |
 | `current.methodologyVersion`   | `string`              | Methodology version used to compute the current score                                                                                                     |
 | `history`                      | `array`               | Historical scores, newest first. With `detail=true`, persisted rows include `components`; the synthesized current-day running-average point may omit them |
@@ -2400,9 +2404,9 @@ For bridge-route handling, `rawInputs.bridgeRouteRiskTier` and `rawInputs.bridge
 
 `GET /api/report-cards` normally serves the full report-card payload from the private `report-cards:snapshot` cache envelope published by `publish-report-card-cache`. D1 stores that full snapshot inside a checksum-verified gzip/base64 envelope with bounded decompression and top-level V8 identity metadata; this keeps the private row below D1's 2,000,000-byte limit without changing the decoded public V8 JSON. The loader also accepts the legacy plain storage envelope during rolling deploys. The decoded envelope pins the expected cache generation and Safety Score methodology version; compute-on-read is used when the published snapshot is missing, malformed, oversized, generation-mismatched, methodology-mismatched, or missing the current V8 evaluation identity. Published and computed responses expose `safetyScoreIdentity`, which binds model `v8`, response schema, methodology, evaluation-build digest, exact base-input generation, and publication generation. They also expose `publication`, which proves the exact active-set identity as scored plus NR rows. The full snapshot, exact fixed input, smaller `report_card_cache` score map used by lightweight Chain Health/OG consumers, and Telegram safety source carry the same identity and are committed in one D1 batch.
 
-The unversioned `/api/report-cards` route remains a V8 contract and must never silently serve a V9 payload. The additive `GET /api/report-cards/v9` route exposes the owned V9 public wire contract while V9 remains shadow-only. It reads only the canonical `report-cards:v9-shadow` envelope, returns `503` when that envelope is absent or invalid, and never falls back to V8 or recomputes a score. Its strict response includes `model: "v9"`, `schemaVersion: 1`, `lifecycle: "shadow"`, the full V9 publication identity, methodology and policy identity, completeness, source digests, native three-pillar cards, and a serial/basket dependency graph. The candidate-only `SafetyScoreV9ResponseSchema` is not this public contract. No live page selects this endpoint before the separate activation release and reviewed consumer diffs.
+The unversioned `/api/report-cards` route remains a V8 contract and must never silently serve a V9 payload. The additive `GET /api/report-cards/v9` route exposes the owned V9 public wire contract and is DARK by default: it returns `404` until the owner-gated activation marker (`safety-score-v9:public-activation`) exists. The marker is identity-bound — its value must be JSON carrying the approved scoring identity (`policyId`, `policyDigest`, `evaluationBuildDigest`, `methodologyVersion`), and the route serves only while the canonical snapshot matches all four fields; a missing, malformed, or mismatched marker keeps it dark (`404`, fail-closed). Rotating per-publication fields (base-input and publication generation IDs) are deliberately not bound, so routine refreshes of the approved identity keep serving. Behind a matched gate the route reads only the canonical `report-cards:v9-shadow` envelope, returns `503` when that envelope is absent or invalid, and never falls back to V8 or recomputes a score. Its strict response includes `model: "v9"`, `schemaVersion: 1`, `lifecycle: "active"` (the stored shadow projection carries `"shadow"`; the schema admits both), the full V9 publication identity, methodology and policy identity, completeness, source digests, native three-pillar cards, and a serial/basket dependency graph. The candidate-only `SafetyScoreV9ResponseSchema` is not this public contract. No live page selects this endpoint before the separate activation release and reviewed consumer diffs.
 
-`GET /api/report-cards/v9` uses the standard report-card freshness profile. Consumers must keep its query/cache identity separate from `/api/report-cards`, validate the complete response, and render an explicit unavailable state on identity mismatch. The V9 response does not expose V8 base score, five dimensions, raw inputs, or V8 dependency weights.
+`GET /api/report-cards/v9` uses the standard report-card freshness profile. Consumers must keep its query/cache identity separate from `/api/report-cards`, validate the complete response, treat `404` as "not activated" rather than an error state, and render an explicit unavailable state on identity mismatch. The V9 response does not expose V8 base score, five dimensions, raw inputs, or V8 dependency weights.
 
 Report-card generation treats the stablecoins cache and readable redemption-backstop table as hard dependencies. The stablecoins cache is read in published-contract mode, so malformed cached objects that fail `StablecoinListResponseSchema` validation fail closed instead of being partially filtered for scoring. DEX liquidity, bluechip ratings, live-reserve inputs, and materially stale redemption rows are soft dependencies: if one of those loaders is temporarily unavailable or stale beyond its scoring freshness runway, generation continues with a degraded snapshot instead of failing closed, with stale inputs suppressed from scoring.
 
@@ -4660,7 +4664,7 @@ Commodity and CoinGecko-only total-supply fallback replays historical EVM `total
 
 Backfills historical stability index scores from stored depeg events and supply data.
 
-The rebuild now stops at the last completed UTC day; it does not write a `stability_index` row for the current UTC day. Historical market-cap denominators in this replay path are bounded to the PSI-eligible universe (tracked coins plus configured shadow assets). Historical replay treats a depeg as active for any UTC day whose window overlaps the event interval. When a usable same-day `supply_history.price` exists, the replay derives day severity from that price, but on the UTC day the depeg begins it keeps `peak_deviation_bps` as a floor only when the event materially persisted past that UTC close and the daily snapshot undercaptures the shock by at least the configured depeg threshold. Same-day recovered wicks, near-midnight bleed-throughs, and moderate follow-on moves that the restored day price already captures use the daily historical price instead, and replay days whose restored daily price is back inside the configured depeg threshold are dropped instead of still contributing breadth. Later days fall back to `peak_deviation_bps` only for missing/invalid historical prices. The historical restore path is expected to repair replay-critical `supply_history.price` coverage, including PSI-only shadow assets, before rerunning this rebuild. For methodology `v3.0+`, the replay also derives daily `stressBreadth` from `stress_signal_history` rows in `ALERT`, `WARNING`, or `DANGER` bands. If a rebuild day cannot be replayed because archival inputs are unavailable, the endpoint preserves the existing stored row instead of deleting that day. The response includes the evaluated `startDay`/`endDay` so operators can confirm the rebuild window.
+The rebuild now stops at the last completed UTC day; it does not write a `stability_index` row for the current UTC day. Historical market-cap denominators in this replay path are bounded to core stablecoins, cash equivalents, and configured shadow assets. Variants and stable-value investments retain their depeg and supply histories but do not contribute to replayed PSI. Historical replay treats a core-universe depeg as active for any UTC day whose window overlaps the event interval. When a usable same-day `supply_history.price` exists, the replay derives day severity from that price, but on the UTC day the depeg begins it keeps `peak_deviation_bps` as a floor only when the event materially persisted past that UTC close and the daily snapshot undercaptures the shock by at least the configured depeg threshold. Same-day recovered wicks, near-midnight bleed-throughs, and moderate follow-on moves that the restored day price already captures use the daily historical price instead, and replay days whose restored daily price is back inside the configured depeg threshold are dropped instead of still contributing breadth. Later days fall back to `peak_deviation_bps` only for missing/invalid historical prices. The historical restore path is expected to repair replay-critical `supply_history.price` coverage, including PSI-only shadow assets, before rerunning this rebuild. For methodology `v3.0+`, the replay also derives daily `stressBreadth` from core-universe `stress_signal_history` rows in `ALERT`, `WARNING`, or `DANGER` bands. If a rebuild day cannot be replayed because archival inputs are unavailable, the endpoint preserves the existing stored row instead of deleting that day. The response includes the evaluated `startDay`/`endDay` so operators can confirm the rebuild window.
 
 **Query parameters**
 

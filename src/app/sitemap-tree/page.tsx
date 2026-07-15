@@ -189,7 +189,11 @@ const STABLECOIN_PROFILE_ROWS: readonly RouteRow[] = TRACKED_STABLECOINS.map((co
       ? "Pre-launch stablecoin profile"
       : coin.status === "frozen"
         ? "Frozen stablecoin archive"
-        : "Stablecoin risk, peg, liquidity, and dependency profile",
+        : coin.status === "quarantined"
+          ? "Quarantined stablecoin research record"
+          : coin.status === "delisted"
+            ? "Delisted asset research record"
+            : "Stablecoin risk, peg, liquidity, and dependency profile",
 }));
 
 const TIERS: readonly TierColumn[] = [

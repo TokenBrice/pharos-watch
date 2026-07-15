@@ -1,8 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DexApiPool } from "../../../lib/dex-api-common";
-import { integrateDirectApiLiquidityPhase } from "../orchestrator-phases/direct-api";
+import {
+  compactDirectApiFetchPhasePools,
+  integrateDirectApiLiquidityPhase,
+} from "../orchestrator-phases/direct-api";
+import { buildAuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-phases/authoritative";
 import { createKnownPoolIdentityIndex } from "../pool-identity";
 import { initMetrics } from "../pool-helpers";
+import { buildChainAddressKey } from "../token-resolution";
 
 describe("integrateDirectApiLiquidityPhase", () => {
   afterEach(() => {
@@ -87,6 +92,139 @@ describe("integrateDirectApiLiquidityPhase", () => {
     expect(result.directApiSkippedUntracked).toBe(1);
     expect(result.directApiDedupSkippedByAddress).toBe(0);
     expect(result.excludedByReason).toEqual({ untracked_token: 1 });
+  });
+
+  it("compacts production-scale direct results before identity work without losing raw source evidence", () => {
+    const rawPoolCount = 6_673;
+    const retainedPoolCount = 1_442;
+    const trackedAddress = "0x1111111111111111111111111111111111111111";
+    const makePool = (index: number, tracked: boolean): DexApiPool => ({
+      source: "balancer",
+      chain: "ethereum",
+      poolAddress: `0x${(tracked ? index : index + retainedPoolCount).toString(16).padStart(40, "0")}`,
+      poolType: "balancer-stable",
+      tokens: [
+        {
+          address: tracked
+            ? trackedAddress
+            : `0x${(index + rawPoolCount).toString(16).padStart(40, "0")}`,
+          symbol: tracked ? "TRACKED" : "UNKNOWN",
+          decimals: 6,
+        },
+        {
+          address: `0x${(index + rawPoolCount * 2).toString(16).padStart(40, "0")}`,
+          symbol: "QUOTE",
+          decimals: 6,
+        },
+      ],
+      price: 1,
+      tvlUsd: 1_000_000,
+      volume24hUsd: 50_000,
+      feeRate: null,
+      balances: [500_000, 500_000],
+    });
+    const rawPools = [
+      ...Array.from({ length: retainedPoolCount }, (_, index) => makePool(index, true)),
+      ...Array.from({ length: rawPoolCount - retainedPoolCount }, (_, index) => makePool(index, false)),
+    ];
+    const rawPhase = {
+      results: [
+        {
+          name: "Balancer",
+          circuitKey: "balancer-api",
+          normalizedProtocol: "balancer",
+          supportedChains: ["ethereum"],
+          result: {
+            pools: rawPools,
+            ok: true,
+            degraded: false,
+            errors: [],
+            warnings: [],
+            pagination: {
+              state: "partial" as const,
+              headRefreshed: true,
+              pagesFetched: 50,
+              cursor: "next-page",
+              cycleCompleted: false,
+            },
+          },
+        },
+      ],
+      failedSources: [],
+      fallbackSignals: [],
+      sourceWarnings: ["balancer-api: bounded-tail"],
+      circuitEvents: [],
+    };
+
+    const authoritativeConfirmation = buildAuthoritativeStagedPoolConfirmationIndex(rawPhase.results);
+    const compacted = compactDirectApiFetchPhasePools(rawPhase, {
+      chainAddressToId: new Map([
+        [buildChainAddressKey("ethereum", trackedAddress), "tracked-stablecoin"],
+      ]),
+      symbolToChainScopedIds: new Map(),
+    });
+
+    expect(compacted.counts).toEqual({
+      rawPoolCount,
+      retainedPoolCount,
+      skippedInvalidUnitCount: 0,
+      skippedUntrackedCount: 5_231,
+    });
+    expect(compacted.pools).toHaveLength(retainedPoolCount);
+    expect(compacted.phase.results[0]?.result.pools).toHaveLength(retainedPoolCount);
+    expect(compacted.phase.results[0]?.result.pagination).toEqual(rawPhase.results[0]?.result.pagination);
+    expect(compacted.phase.sourceWarnings).toEqual(rawPhase.sourceWarnings);
+    expect(authoritativeConfirmation.confirmedExactKeysByProtocol.get("balancer")).toContain(
+      `ethereum:0x${(rawPoolCount - 1).toString(16).padStart(40, "0")}`,
+    );
+  });
+
+  it("reports pre-compaction exclusion counts after receiving only retained direct pools", async () => {
+    const trackedPool: DexApiPool = {
+      source: "raydium",
+      chain: "solana",
+      poolAddress: "pool-tracked",
+      poolType: "raydium-amm",
+      tokens: [
+        { address: "tracked-mint", symbol: "TRACKED", decimals: 6 },
+        { address: "quote-mint", symbol: "QUOTE", decimals: 6 },
+      ],
+      price: 1,
+      tvlUsd: 9_999,
+      volume24hUsd: 500,
+      feeRate: null,
+      balances: [5_000, 5_000],
+    };
+
+    const result = await integrateDirectApiLiquidityPhase({
+      directApiPools: [trackedPool],
+      preprocessedPoolCounts: {
+        rawPoolCount: 5_233,
+        retainedPoolCount: 1,
+        skippedInvalidUnitCount: 1,
+        skippedUntrackedCount: 5_231,
+      },
+      knownPoolIndex: createKnownPoolIdentityIndex(),
+      contractMetaByChainAddress: new Map(),
+      metrics: new Map(),
+      priceObservations: new Map(),
+      chainAddressToId: new Map([
+        [buildChainAddressKey("solana", "tracked-mint"), "tracked-stablecoin"],
+      ]),
+      symbolToChainScopedIds: new Map(),
+      symbolToIds: new Map(),
+      validationReferences: {} as never,
+      stablecoinPriceById: new Map(),
+    });
+
+    expect(result.directApiSkippedInvalidUnits).toBe(1);
+    expect(result.directApiSkippedUntracked).toBe(5_231);
+    expect(result.directApiSkippedBelowTvlThreshold).toBe(1);
+    expect(result.excludedByReason).toEqual({
+      invalid_units: 1,
+      untracked_token: 5_231,
+      below_tvl_threshold: 1,
+    });
   });
 
   it("counts invalid direct API units before tracking and identity processing", async () => {

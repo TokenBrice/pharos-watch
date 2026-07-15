@@ -7,7 +7,8 @@ import {
 } from "../lib/report-card-cache";
 import { aggregateChains } from "@shared/lib/chain-aggregator";
 import { derivePegRates } from "@shared/lib/peg-rates";
-import { ACTIVE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
 import { errorResponse, jsonResponse, withErrorHandler } from "../lib/api-utils";
@@ -73,9 +74,7 @@ function buildReportCardDependencyMeta(
   }
 
   const ageSeconds = getDependencyAgeSeconds(reportCardResult.updatedAt, nowSec);
-  const status: ChainsDependencyStatus = reportCardResult.reason === "stale-cache"
-    ? "stale"
-    : "unavailable";
+  const status: ChainsDependencyStatus = reportCardResult.reason === "stale-cache" ? "stale" : "unavailable";
 
   return {
     updatedAt: reportCardResult.updatedAt,
@@ -85,11 +84,18 @@ function buildReportCardDependencyMeta(
   };
 }
 
-export function isActiveChainAggregateAsset(asset: { id: string; frozen?: boolean; isDefunct?: boolean; defunct?: boolean }): boolean {
-  return ACTIVE_IDS.has(asset.id)
-    && asset.frozen !== true
-    && asset.isDefunct !== true
-    && asset.defunct !== true;
+export function isActiveChainAggregateAsset(asset: {
+  id: string;
+  frozen?: boolean;
+  isDefunct?: boolean;
+  defunct?: boolean;
+}): boolean {
+  return (
+    CORE_AGGREGATE_ACTIVE_IDS.has(asset.id) &&
+    asset.frozen !== true &&
+    asset.isDefunct !== true &&
+    asset.defunct !== true
+  );
 }
 
 function buildChainsFreshnessMeta(
@@ -138,9 +144,8 @@ function buildChainsFreshnessMeta(
       dependencies: {
         reportCards,
       },
-      safetyScoreIdentity: reportCardResult.kind === "ok"
-        ? reportCardResult.payload.safetyScoreIdentity ?? null
-        : null,
+      safetyScoreIdentity:
+        reportCardResult.kind === "ok" ? (reportCardResult.payload.safetyScoreIdentity ?? null) : null,
       ...(warning ? { warning } : {}),
     },
   };
@@ -168,10 +173,11 @@ export const handleChains = withErrorHandler("chains", async (db: D1Database): P
     maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
     requireCompleteness: true,
   });
-  const reportCardResult: ReportCardCacheLoadResult = loadedReportCardResult.kind === "ok"
-    && !isCurrentSafetyScoreV8Identity(loadedReportCardResult.payload.safetyScoreIdentity)
-    ? { kind: "error", reason: "identity-mismatch", updatedAt: loadedReportCardResult.updatedAt }
-    : loadedReportCardResult;
+  const reportCardResult: ReportCardCacheLoadResult =
+    loadedReportCardResult.kind === "ok" &&
+    !isCurrentSafetyScoreV8Identity(loadedReportCardResult.payload.safetyScoreIdentity)
+      ? { kind: "error", reason: "identity-mismatch", updatedAt: loadedReportCardResult.updatedAt }
+      : loadedReportCardResult;
   if (reportCardResult.kind === "ok") {
     for (const [id, entry] of Object.entries(reportCardResult.payload.scores)) {
       safetyScores[id] = entry.score;
@@ -190,9 +196,7 @@ export const handleChains = withErrorHandler("chains", async (db: D1Database): P
     {
       ...response,
       updatedAt: stablecoinsResult.updatedAt,
-      safetyScoreIdentity: reportCardResult.kind === "ok"
-        ? reportCardResult.payload.safetyScoreIdentity
-        : null,
+      safetyScoreIdentity: reportCardResult.kind === "ok" ? reportCardResult.payload.safetyScoreIdentity : null,
       _meta: freshness.meta,
     },
     freshness.headers,

@@ -248,7 +248,7 @@ Age checks:
 
 **CEX ticker check:**
 
-- Fetches the configured Binance market batch (currently `USDTUSD`, `USDCUSD`, `BFUSDUSDT`, and `BFUSDUSDC`) as an additional secondary confirmation source, then looks up the pending coin by symbol
+- Fetches the active configured Binance market batch (currently `USDTUSD` and `USDCUSD`) as an additional secondary confirmation source, then looks up the pending coin by symbol
 - Only attempted for symbols present in the configured Binance market set
 - Counts as confirmation only when deviation >= `secondaryBar` and points in the same direction as the pending incident
 - Non-fatal: if the Binance fetch fails, the CEX agreement remains `null`

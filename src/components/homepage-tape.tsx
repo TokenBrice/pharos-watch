@@ -11,8 +11,8 @@ import { formatRelativeTimeMs } from "@shared/lib/relative-time";
 import { CHAIN_META } from "@shared/lib/chains";
 import {
   ACTIVE_PEG_CURRENCY_COUNT,
-  ACTIVE_STABLECOIN_COUNT,
-  TRACKED_STABLECOIN_COUNT,
+  ACTIVE_VARIANT_STABLECOIN_COUNT,
+  CORE_AGGREGATE_STABLECOIN_COUNT,
 } from "@/lib/stablecoin-static-data";
 import { SEVERITY_DOT_CLASS, SEVERITY_LABEL } from "@shared/types/tape-event-constants";
 import type { TapeEvent } from "@shared/types/tape-event";
@@ -64,8 +64,8 @@ type HomepageTapePlacement = "inline" | "top";
 // The "top" chrome strip leads with the global registry counts (replacing the
 // retired masthead), then the live events ticker flows to the right.
 const TAPE_STATS: ReadonlyArray<{ label: string; value: number }> = [
-  { label: "Tracked", value: TRACKED_STABLECOIN_COUNT },
-  { label: "Active", value: ACTIVE_STABLECOIN_COUNT },
+  { label: "Core", value: CORE_AGGREGATE_STABLECOIN_COUNT },
+  { label: "Variants", value: ACTIVE_VARIANT_STABLECOIN_COUNT },
   { label: "Pegs", value: ACTIVE_PEG_CURRENCY_COUNT },
   { label: "Chains", value: Object.keys(CHAIN_META).length },
 ];

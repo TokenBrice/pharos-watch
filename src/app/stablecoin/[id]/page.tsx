@@ -186,6 +186,30 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
     );
   }
 
+  if (coin.status === "quarantined" || coin.status === "delisted") {
+    const faqItems = buildStablecoinFaqItems(coin);
+    return (
+      <>
+        <div className="space-y-6">
+          <StablecoinDetailSeoContent coin={coin} summary={summary} />
+          <FaqSection items={faqItems} title={`${coin.symbol} quick answers`} includeJsonLd />
+        </div>
+        <BreadcrumbJsonLd
+          items={[
+            { name: "Home", url: "/" },
+            { name: `${coin.name} (${coin.symbol})`, url: buildStablecoinUrl(id) },
+          ]}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: safeJsonLd(buildStablecoinDatasetJsonLd(coin, { dateModified: summary?.updatedAt })),
+          }}
+        />
+      </>
+    );
+  }
+
   const related = getRelatedStablecoins(coin, { candidates: ACTIVE_STABLECOINS });
   const staticComparisonPages = getStaticComparisonPagesForCoin(id);
   const collateralUsageEntries = buildCollateralUsageEntries(id);

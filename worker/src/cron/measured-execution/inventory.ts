@@ -7,20 +7,13 @@ import {
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexApiPool } from "../../lib/dex-api-types";
 import { getTokenReferenceUsdPrice } from "../../lib/dex-api-token-pricing";
-import { buildChainAddressKey } from "../dex-liquidity/token-resolution";
+// Alias the canonical key builder locally instead of importing token-resolution's
+// wrapper: that import closed a module cycle (dex-liquidity/types -> inventory ->
+// token-resolution -> types) flagged by check:shared-cycles.
+const buildChainAddressKey = canonicalExitRouteAssetKey;
 
-export interface UniV3ExecutionCandidate {
-  chain: string;
-  poolAddress: string;
-  feePips: number;
-  tvlUsd: number;
-  token0Price: number;
-  token1Price: number;
-  tokens: readonly [
-    { address: string; symbol: string; decimals: number },
-    { address: string; symbol: string; decimals: number },
-  ];
-}
+export type { UniV3ExecutionCandidate } from "./candidate-types";
+import type { UniV3ExecutionCandidate } from "./candidate-types";
 
 function canonicalEvmAddress(value: string): `0x${string}` | null {
   const normalized = value.trim().toLowerCase();

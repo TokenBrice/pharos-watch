@@ -94,9 +94,10 @@ export async function computeAndStoreDEWS(
   }
 
   const { peggedAssets: assets, fxFallbackRates } = stablecoinsCache.payload;
-  sourceCoverage.stablecoins = assets.length;
-  await reportDewsProgress(reportProgress, "stablecoins-cache-loaded", { rowsComputed: assets.length, validationFailures });
-  const assetById = new Map(assets.map((a) => [a.id, a]));
+  const eligibleAssets = assets.filter((asset) => PSI_ELIGIBLE_META_BY_ID.has(asset.id));
+  sourceCoverage.stablecoins = eligibleAssets.length;
+  await reportDewsProgress(reportProgress, "stablecoins-cache-loaded", { rowsComputed: eligibleAssets.length, validationFailures });
+  const assetById = new Map(eligibleAssets.map((a) => [a.id, a]));
   const bootstrapPending = (await runWithAbort(signal, () => getCache(db, DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY))) == null;
 
   const registerSourceFailure = (
@@ -150,7 +151,7 @@ export async function computeAndStoreDEWS(
     rates: pegRates,
     sources: pegRateSources,
     counts: pegRateContributorCounts,
-  } = derivePegRates(assets, PSI_ELIGIBLE_META_BY_ID, fxFallbackRates);
+  } = derivePegRates(eligibleAssets, PSI_ELIGIBLE_META_BY_ID, fxFallbackRates);
 
   await reportDewsProgress(reportProgress, "source-hydration", { validationFailures });
   const sourceState = await runWithAbort(signal, () =>

@@ -8,6 +8,7 @@ import {
   BLACKLISTABLE_VALUES,
   PEG_VALUES,
   SAFETY_GRADE_VALUES,
+  SCREENER_LIFECYCLE_VALUES,
   SCREENER_FILTER_DEFAULTS,
   hasActiveFilters,
   type BlacklistableValue,
@@ -26,12 +27,14 @@ import {
   MECHANISM_ARCHETYPE_LABELS,
   PEG_METADATA,
 } from "@shared/lib/classification";
-import { GOVERNANCE_TYPE_VALUES, MECHANISM_ARCHETYPE_VALUES, STABLECOIN_STATUS_VALUES } from "@shared/types/core";
+import { GOVERNANCE_TYPE_VALUES, MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import type { GovernanceType, MechanismArchetype, PegCurrency, StablecoinStatus } from "@shared/types";
 
 const LIFECYCLE_LABELS: Record<StablecoinStatus, string> = {
   active: "Active",
   "pre-launch": "Pre-launch",
+  quarantined: "Quarantined",
+  delisted: "Delisted",
   frozen: "Frozen",
 };
 
@@ -51,7 +54,7 @@ const MECHANISM_OPTIONS: readonly FilterPillOption<MechanismArchetype>[] =
 const BLACKLISTABLE_OPTIONS: readonly FilterPillOption<BlacklistableValue>[] =
   BLACKLISTABLE_VALUES.map((value) => ({ value, label: BLACKLISTABLE_LABELS[value] }));
 const LIFECYCLE_OPTIONS: readonly FilterPillOption<StablecoinStatus>[] =
-  STABLECOIN_STATUS_VALUES.map((value) => ({ value, label: LIFECYCLE_LABELS[value] }));
+  SCREENER_LIFECYCLE_VALUES.map((value) => ({ value, label: LIFECYCLE_LABELS[value] }));
 const MINT_AUTHORITY_OPTIONS: readonly FilterPillOption<MintAuthorityStatusKind>[] =
   MINT_AUTHORITY_FILTER_VALUES.map((value) => ({
     value,

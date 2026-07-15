@@ -1,4 +1,5 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import {
   getNetFlowDirection24h,
   getPressureShiftState,
@@ -35,7 +36,8 @@ import {
   selectLargestEvents,
 } from "../mint-burn-flows-shared";
 
-export const TRACKED_IDS = new Set(MINT_BURN_CONFIGS.map((c) => c.stablecoinId));
+export const ACTIVE_MINT_BURN_CONFIGS = MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId));
+export const TRACKED_IDS = new Set(ACTIVE_MINT_BURN_CONFIGS.map((config) => config.stablecoinId));
 export const REPORT_CARD_MAX_AGE_MS = 2 * 60 * 60 * 1000;
 
 export interface CoinFlowSummary {
@@ -157,13 +159,13 @@ export async function fetchAggregateData(
   db: D1Database,
   params: AggregateQueryParams,
 ): Promise<AggregateData> {
-  const trackedPairs = getMintBurnTrackedPairs();
-  const trackedChainIds = [...new Set(MINT_BURN_CONFIGS.map((config) => config.chain.chainId))];
+  const trackedPairs = getMintBurnTrackedPairs(ACTIVE_MINT_BURN_CONFIGS);
+  const trackedChainIds = [...new Set(ACTIVE_MINT_BURN_CONFIGS.map((config) => config.chain.chainId))];
   const chainInClause = buildInClause(trackedChainIds);
   const hourlyScanStart = Math.min(params.windowStart, params.window24h);
   const firstHourSeekStatements = buildMintBurnFirstHourSeekStatements(
     db,
-    MINT_BURN_CONFIGS.map((config) => ({
+    ACTIVE_MINT_BURN_CONFIGS.map((config) => ({
       stablecoinId: config.stablecoinId,
       chainId: config.chain.chainId,
     })),
@@ -240,7 +242,7 @@ export async function fetchAggregateData(
         .bind(...chainInClause.binds, params.window24h),
     ]),
     Promise.all([
-      readMintBurnSyncStateBatch(db, MINT_BURN_CONFIGS),
+      readMintBurnSyncStateBatch(db, ACTIVE_MINT_BURN_CONFIGS),
       readMintBurnCronSnapshot(db),
     ]),
   ]);
@@ -297,7 +299,7 @@ export function buildCoinSummaries(
   let trackedMcapUsd = 0;
 
   const seenCoinIds = new Set<string>();
-  for (const config of MINT_BURN_CONFIGS) {
+  for (const config of ACTIVE_MINT_BURN_CONFIGS) {
     const id = config.stablecoinId;
     if (seenCoinIds.has(id)) continue;
     seenCoinIds.add(id);
@@ -374,5 +376,5 @@ export function buildCoinSummaries(
 }
 
 export function buildAggregateScope() {
-  return buildMintBurnScope(MINT_BURN_CONFIGS);
+  return buildMintBurnScope(ACTIVE_MINT_BURN_CONFIGS);
 }

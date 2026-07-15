@@ -111,13 +111,18 @@ vi.mock("../../lib/cex-orderbooks", () => ({
 import { syncDexLiquidity } from "../dex-liquidity/orchestrator";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { convertToGtNewPools, extractPriceObservations } from "../../lib/dex-api-common";
-import { fetchDataSources } from "../dex-liquidity/fetch-primary";
+import { fetchDataSources, buildKnownPoolAddresses } from "../dex-liquidity/fetch-primary";
 import { fetchAerodromeData, fetchUniV3Data } from "../dex-liquidity/subgraph-source-families";
 import { fetchFluidPools } from "../dex-liquidity/fetch-fluid";
 import { fetchRaydiumPools } from "../dex-liquidity/fetch-raydium";
 import { computeDepthStability, computeDexPrices, computeStablecoinScores } from "../dex-liquidity/scoring";
 import { persistScores, writeHistoricalSnapshots } from "../dex-liquidity/persistence";
-import { filterPrimaryPoolsPreferDirectApi } from "../dex-liquidity/orchestrator";
+import {
+  compactPrimaryPoolsForTrackedStablecoins,
+  filterPrimaryPoolsPreferDirectApi,
+} from "../dex-liquidity/orchestrator";
+import { buildSymbolLookups } from "../dex-liquidity/pool-helpers";
+import { processPoolMetrics } from "../dex-liquidity/process-pools";
 
 const db = {
   prepare: () => ({
@@ -385,6 +390,85 @@ describe("syncDexLiquidity", () => {
           scoreRows: expect.any(Number),
         },
       },
+    });
+  });
+
+  it("discards irrelevant production-scale primary rows before identity and metric processing while reporting raw counts", async () => {
+    const rawPoolCount = 15_430;
+    const lookups = buildSymbolLookups();
+    const [trackedKey] = lookups.chainAddressToId.keys();
+    expect(trackedKey).toBeDefined();
+    const separator = trackedKey!.indexOf(":");
+    const trackedChain = trackedKey!.slice(0, separator);
+    const trackedAddress = trackedKey!.slice(separator + 1);
+    const trackedPool: LlamaPool = {
+      pool: "tracked-pool",
+      chain: trackedChain,
+      project: "scale-dex",
+      symbol: "TRACKED-QUOTE",
+      tvlUsd: 1_000_000,
+      volumeUsd1d: 50_000,
+      volumeUsd7d: 300_000,
+      stablecoin: false,
+      underlyingTokens: [trackedAddress, "unknown-quote"],
+      apyBase: null,
+      apyReward: null,
+      apy: 0,
+      sigma: 0,
+      exposure: "multi",
+      count: 20,
+    };
+    const irrelevantPools = Array.from({ length: rawPoolCount - 1 }, (_, index): LlamaPool => ({
+      ...trackedPool,
+      pool: `irrelevant-pool-${index}`,
+      symbol: "UNKNOWN-QUOTE",
+      underlyingTokens: [`unknown-token-${index}`, `unknown-quote-${index}`],
+    }));
+    vi.mocked(fetchDataSources).mockResolvedValueOnce({
+      pools: [trackedPool, ...irrelevantPools],
+      dexProjects: new Set(["scale-dex"]),
+      protocolTvlCaps: new Map(),
+      curvePayloads: [],
+      graphApiKey: "graph-key",
+      dlYieldsAvailable: true,
+      dlProtocolsAvailable: true,
+    });
+    const progressUpdates: CronProgressUpdate[] = [];
+
+    const result = await syncDexLiquidity(
+      db,
+      "graph-key",
+      undefined,
+      undefined,
+      undefined,
+      async (update) => {
+        progressUpdates.push(update);
+      },
+    );
+
+    const knownPoolCalls = vi.mocked(buildKnownPoolAddresses).mock.calls;
+    const processPoolCalls = vi.mocked(processPoolMetrics).mock.calls;
+    expect(knownPoolCalls[knownPoolCalls.length - 1]?.[0]).toEqual([trackedPool]);
+    expect(processPoolCalls[processPoolCalls.length - 1]?.[0]).toEqual([trackedPool]);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ rowsRead: rawPoolCount });
+    expect(progressUpdates.find((update) => update.stage === "primary-sources-loaded")).toMatchObject({
+      metadata: { countTotals: { defillamaPools: rawPoolCount } },
+    });
+    expect(progressUpdates.find((update) => update.stage === "pool-processing")).toMatchObject({
+      itemsTotal: rawPoolCount,
+      metadata: {
+        countTotals: {
+          primaryPools: rawPoolCount,
+          primaryPoolsRetained: 1,
+        },
+      },
+    });
+
+    const compacted = compactPrimaryPoolsForTrackedStablecoins([trackedPool, ...irrelevantPools], lookups);
+    expect(compacted).toMatchObject({
+      rawPoolCount,
+      retainedPoolCount: 1,
+      skippedUntrackedCount: rawPoolCount - 1,
     });
   });
 

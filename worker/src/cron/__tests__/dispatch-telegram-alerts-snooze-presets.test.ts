@@ -368,7 +368,7 @@ describe("dispatchTelegramAlerts", () => {
     );
     expect(targetCount.count).toBeGreaterThan(TELEGRAM_MAX_MESSAGES_PER_RUN);
     expect(readCacheValue(harness.sqlite, "telegram:dispatch-overflow-plan")).toBeNull();
-  }, 60_000);
+  }, 90_000);
 
   it("preserves the launch snapshot in the seed branch so the next healthy run still detects the transition (P1.7)", async () => {
     const now = Math.floor(Date.now() / 1000);

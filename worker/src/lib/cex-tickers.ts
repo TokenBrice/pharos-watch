@@ -260,7 +260,7 @@ async function fetchBinanceTickerUrl(
         const price = parseCexPrice(ticker.price);
         if (!market || price == null) continue;
 
-        if ("quoteSymbol" in market) {
+        if (market.quoteSymbol) {
           pendingStableQuoted.push({
             symbol: market.symbol,
             quoteSymbol: market.quoteSymbol,

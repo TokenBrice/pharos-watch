@@ -114,7 +114,7 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/core.ts",
-      "sha256": "ae55d0e5861c609d850899e3b3ade7400ffd91f7b2db30a6b3e64d608e6181c2"
+      "sha256": "ee6fcceaeece3ceaf997621aa93ac6299eca336d99559a41ba7042aa0d127298"
     },
     {
       "path": "shared/types/dependency-types.ts",
@@ -126,7 +126,7 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/market.ts",
-      "sha256": "4de4b4cb3e59e913d90d72face7309abc6fca105f7a982deed85008df99e219b"
+      "sha256": "3a1b44c662fcf2addd5ff2dc685aa7a8b21d2cd054ff69375c61aa6574477690"
     },
     {
       "path": "shared/types/redemption.ts",
@@ -142,14 +142,14 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/stablecoin-taxonomy.ts",
-      "sha256": "83ccb0365cbad6697a216a106eab975f68f5e381f17e041ab4ec5a24731f1c7e"
+      "sha256": "839d436006a9467140684be9de6f2e839f00d1530c70975d0c78ea9ad31b4d58"
     },
     {
       "path": "worker/src/lib/report-cards-snapshot-card.ts",
       "sha256": "e70bfddf6d253f0d37ed74449dff45e9af02858d80c0ca0931579796c080b85e"
     }
   ],
-  "digest": "15979c9db646e1cf6826ba4e1864ef8644f7d1489d6919c2db1decc69f47e0eb"
+  "digest": "cbced4737fc69b02585ba21f71d07f1738a682f7fecffb799ac862888c1c0a2d"
 } as const;
 
 export const SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST =

@@ -1,5 +1,9 @@
 import { normalizeLegacyPegType, normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggregate-registry";
+import {
+  CORE_STABLECOIN_AGGREGATE_UNIVERSE,
+  isCoreAggregateStablecoinId,
+} from "@shared/lib/stablecoins/aggregate-universe";
 import type { StablecoinChartPoint, StablecoinData } from "@shared/types";
 
 interface StructuralSupplementalChartConfig {
@@ -27,7 +31,7 @@ function pegTypeFromCurrency(pegCurrency: string): string | null {
 }
 
 export const STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS: StructuralSupplementalChartConfig[] =
-  ACTIVE_STABLECOINS
+  CORE_AGGREGATE_ACTIVE_STABLECOINS
     .filter((meta) =>
       meta.detailProvider
       && meta.detailProvider !== "defillama"
@@ -117,6 +121,7 @@ export function buildCurrentStablecoinChartsPoint(
   const totals: Record<string, number> = {};
 
   for (const asset of assets) {
+    if (!isCoreAggregateStablecoinId(asset.id)) continue;
     const circulating = asset.circulating;
     if (!circulating || typeof circulating !== "object") continue;
 
@@ -131,6 +136,7 @@ export function buildCurrentStablecoinChartsPoint(
   return {
     date: updatedAtSec,
     totalCirculatingUSD: totals,
+    aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
   };
 }
 
@@ -144,6 +150,13 @@ export function appendOrReplaceCurrentStablecoinChartsPoint(
   const next = [...points].sort((left, right) => left.date - right.date);
   const lastPoint = next[next.length - 1];
   if (!lastPoint) return [currentPoint];
+
+  // Joining different aggregate universes would render a classification change
+  // as a market-cap move. Keep the existing series intact until its history has
+  // been rebuilt under the same universe as the live point.
+  if (lastPoint.aggregateUniverse !== currentPoint.aggregateUniverse) {
+    return next;
+  }
 
   if (currentPoint.date === lastPoint.date) {
     next[next.length - 1] = {

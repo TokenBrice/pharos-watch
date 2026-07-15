@@ -59,7 +59,7 @@ The page is organized into these sections, in order:
 - `Peg Tracker` must link to `/depeg/`, because the dedicated depeg route owns the heatmap and depeg-history surface
 - `Contagion Map` must link to `/dependency-map/`
 - `Systemic Risk Scoreboard` remains linked to `/safety-scores/` because the stress-panel scoreboard lives on that route
-- `Methodology`, broadcast, Telegram, GitHub, and profile links are explicit CTAs; `Funding` is an inline prose link.
+- `Methodology`, broadcast, Telegram, GitHub, and profile links are explicit CTAs; `Funding` and the public `/docs/listing-policy/` reference are inline prose links.
 - Trust-policy links use `/about/#principles`, `/about/#editorial-ai-policy`, and `/about/#corrections-policy`.
 
 ## Content Notes
@@ -76,4 +76,4 @@ The page is organized into these sections, in order:
 - The DEX source roster includes pinned Uniswap V3 and PancakeSwap V3 QuoterV2/factory RPC reads as a shadow measured-depth producer. Listing the source does not imply score eligibility: deployment cohorts remain activation-pending until their replay, equivalence, drift, and shadow evidence is approved.
 - The visible reference-source roster currently includes New York Fed EFFR, FRED DFF fallback, FRED and ALFRED `IUDZOS2` SONIA Compounded Index mirrors (with Bank of England IADB `IUDZOS2` fallback), CBR DailyInfo `KeyRateXML`, CBRT EVDS BIST TLREF `TP.BISTTLREF.ORAN`, and Midas NAV-oracle coverage for Yield Intelligence; keep those aligned with `docs/yield-intelligence.md` when benchmark or yield-oracle sources change.
 - L2BEAT is disclosed as a static Chain Health chain-risk snapshot and Safety Score bridge-route review source, not as a live worker fetch.
-- PSI copy should describe the current 30-minute cadence and the live formula inputs: active-depeg severity, market-cap breadth, DEWS stress breadth, and 7-day market-cap trend.
+- PSI copy should describe the current 30-minute cadence and the live formula inputs: active-depeg severity, market-cap breadth, DEWS stress breadth, and 7-day market-cap trend. It must also state that the monetary aggregate includes core stablecoins and cash equivalents while excluding tracked variants and stable-value investment products.

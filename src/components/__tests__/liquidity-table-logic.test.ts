@@ -4,12 +4,18 @@ import {
   type LiquidityRow,
   type LiquiditySortKey,
 } from "@/components/liquidity-table-logic";
-import type { DexLiquidityData, StablecoinMeta } from "@shared/types";
+import type { DexLiquidityData } from "@shared/types";
+import type { StablecoinClientMeta } from "@shared/types/stablecoin-client-meta";
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 
 function makeRow(overrides: Partial<DexLiquidityData> = {}): LiquidityRow {
   return {
-    meta: { id: "usdc", symbol: "USDC", name: "USD Coin" } as StablecoinMeta,
+    meta: {
+      id: "usdc",
+      symbol: "USDC",
+      name: "USD Coin",
+      listingClass: "core-stablecoin",
+    } as StablecoinClientMeta,
     liq: {
       totalTvlUsd: 1_000_000,
       totalVolume24hUsd: 100_000,

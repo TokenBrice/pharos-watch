@@ -37,6 +37,15 @@ describe("deriveStablecoinVerdict — rule precedence", () => {
     expect(verdict.label).toBe("Frozen Archive");
   });
 
+  it.each([
+    ["quarantined", "quarantined-record", "Quarantined Record"],
+    ["delisted", "delisted-record", "Delisted Record"],
+  ] as const)("returns an inactive record verdict for %s", (status, archetype, label) => {
+    const verdict = deriveStablecoinVerdict(inputs({ status, activeDepeg: true }));
+    expect(verdict.archetype).toBe(archetype);
+    expect(verdict.label).toBe(label);
+  });
+
   it("pre-launch beats every other rule", () => {
     // Centralized fiat-cash A+ would otherwise be institutional-default; here pre-launch wins.
     const archetype = archetypeOf({
