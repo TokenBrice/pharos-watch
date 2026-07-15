@@ -44,17 +44,20 @@ The V9 implementation establishes candidate infrastructure without changing prod
 - `worker/src/lib/safety-score-v9-candidate.ts` and
   `worker/scripts/replay-safety-score-v9.ts` compile and evaluate the exact
   candidate deterministically. The current policy semantic digest is
-  `70a157b370c46380c8cf4eb660270276135080f906d3927a6964ab9f25f23d52`;
+  `9913d3dc3f4d4f00842c99be47a8ee5ac608b589867329ef18f7ad9c63e94ded`;
   the current evaluation-build digest is
-  `75f349a21500c3ab68140f470d7cbb7dd8440ed533503f2b2b867ebd7d3210ca`.
+  `40d569f8b52de4e1d4a8db9583f06e30b7f849ca14994d557da589b7fef357d1`.
 - The 2026-07-15 Batch 3 calibration revision (owner rulings 2026-07-15)
-  applies the two ruled cap changes and nothing else. (1) The centralized-mint
-  severity gains a third rung: a reconciled-but-unbounded mint that carries a
-  reviewed prudential-supervision fact (`economicControlReview.mint.supervision`
-  = `prudential`) graduates from `high` to `moderate` (centralized-mint
-  `moderate` = 74). Supervision defaults to `unknown` everywhere, so the rung is
-  inert until per-coin evidence is curated; compromise and unreconciled minting
-  stay `critical`. (2) Common-mode dependency severity is now conditioned on
+  applies the two ruled cap changes and nothing else. (1) The mint posture gains
+  a distinct `unbounded-reconciled` rung (`mintPostureQuality` = 55) for an
+  economically unbounded mint whose supply is reconciled against reserves; only
+  compromise or an unreconciled/unknown mint stays `unbounded-or-compromised`
+  (25). Its centralized-mint severity is `high`, graduating to `moderate`
+  (centralized-mint `moderate` = 74) when the reviewed
+  `economicControlReview.mint.supervision` fact is `prudential`. Supervision
+  defaults to `unknown` everywhere and the rung requires reconciliation
+  evidence, so the graduation stays inert for top attested issuers; compromise
+  and unreconciled minting stay `critical`. (2) Common-mode dependency severity is now conditioned on
   chain maturity: a shared chain-kind failure domain in the reviewed
   `materiality.matureChains` set grades at `moderate` (critical-dependency
   `moderate` = 79, top of B+); any fragile, unreviewed, or non-chain domain
