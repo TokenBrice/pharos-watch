@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { PAUSE_SENTINEL_TS } from "../../lib/telegram-constants";
 import { planTelegramPersonalizedRecaps } from "../telegram-recap-planner";
+import { buildTelegramRecapDedupeKey } from "../telegram-recap-store";
 
 const NOW = 1_800_000_000;
 const databases: DatabaseSync[] = [];
@@ -184,6 +185,51 @@ describe("telegram personalized recap planner", () => {
     });
     expect(sqlite.prepare("SELECT next_due_at FROM telegram_recap_preferences WHERE chat_id = 'late-recap'").get())
       .toEqual({ next_due_at: nextLocalDelivery });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
+  });
+
+  it("advances past a sent local-date target instead of rereading a stale due page", async () => {
+    const { sqlite, db } = setup();
+    const localDate = "2027-01-15";
+    const sentAt = Math.floor(Date.parse("2027-01-15T08:00:00Z") / 1_000);
+    const scheduledAt = Math.floor(Date.parse("2027-01-15T09:00:00Z") / 1_000);
+    const lateNow = Math.floor(Date.parse("2027-01-15T13:30:00Z") / 1_000);
+    const nextLocalDelivery = Math.floor(Date.parse("2027-01-16T14:00:00Z") / 1_000);
+    const recapKey = buildTelegramRecapDedupeKey("prod-deadlock", localDate);
+    insertSubscriber(sqlite, "prod-deadlock");
+    sqlite.prepare(`UPDATE telegram_recap_preferences
+      SET delivery_hour_local = 15, next_due_at = ?, last_window_end_at = ?,
+          last_delivered_local_date = ?
+      WHERE chat_id = 'prod-deadlock'`).run(scheduledAt, sentAt, localDate);
+    sqlite.prepare(`INSERT INTO telegram_recap_targets
+      (recap_key, chat_id, local_date, window_start_at, window_end_at,
+       preference_generation, watchlist_fingerprint, status,
+       created_at, completed_at, updated_at)
+      VALUES (?, 'prod-deadlock', ?, ?, ?, 0, 'sent:v1', 'sent', ?, ?, ?)`)
+      .run(recapKey, localDate, sentAt - 3600, sentAt, sentAt, sentAt, sentAt);
+    markTapeFresh(sqlite, lateNow - 1);
+
+    const result = await planTelegramPersonalizedRecaps(db, undefined, { nowSec: lateNow });
+
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata)).toMatchObject({
+      pagesAttempted: 1,
+      pagesCompleted: 1,
+      due: 1,
+      stale: 1,
+      deferred: 0,
+      queued: 0,
+      factsLoaded: 0,
+    });
+    expect(sqlite.prepare(`SELECT next_due_at, last_window_end_at, last_delivered_local_date
+      FROM telegram_recap_preferences WHERE chat_id = 'prod-deadlock'`).get()).toEqual({
+      next_due_at: nextLocalDelivery,
+      last_window_end_at: sentAt,
+      last_delivered_local_date: localDate,
+    });
+    expect(sqlite.prepare("SELECT recap_key, status FROM telegram_recap_targets").all()).toEqual([
+      { recap_key: recapKey, status: "sent" },
+    ]);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
   });
 

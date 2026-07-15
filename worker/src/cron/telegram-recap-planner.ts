@@ -132,9 +132,25 @@ function isPaused(row: SubscriberRecapRow): boolean {
   return isPausedSentinel(row.alert_snooze_until_ts);
 }
 
-function nextDueAtSec(nowSec: number, timezone: string, deliveryHourLocal: number): number | null {
-  const dueAtMs = nextIanaLocalHourDueAt(nowSec * 1000, timezone, deliveryHourLocal);
-  return dueAtMs == null ? null : Math.floor(dueAtMs / 1000);
+function nextDueAtAfterLocalDateSec(
+  nowSec: number,
+  timezone: string,
+  deliveryHourLocal: number,
+  localDate: string,
+): number | null {
+  let cursorSec = nowSec;
+  // A claimed due row can be inconsistent with the current local hour after a
+  // recovery or preference repair. Skip a same-date candidate so this target
+  // can never make the same immutable local date due again.
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const dueAtMs = nextIanaLocalHourDueAt(cursorSec * 1000, timezone, deliveryHourLocal);
+    if (dueAtMs == null) return null;
+    const dueLocalDate = localDateInIanaTimezone(dueAtMs, timezone);
+    if (!dueLocalDate) return null;
+    if (dueLocalDate > localDate) return Math.floor(dueAtMs / 1000);
+    cursorSec = Math.floor(dueAtMs / 1000);
+  }
+  return null;
 }
 
 function recapWindow(preference: DueTelegramRecapPreference, nowSec: number): { startSec: number; endSec: number } {
@@ -286,8 +302,14 @@ async function recordStalePage(
     const timezone = subscriber?.timezone;
     if (!timezone) continue;
     const localDate = localDateInIanaTimezone(preference.expectedNextDueAt * 1000, timezone);
-    const nextDueAt = nextDueAtSec(nowSec, timezone, preference.deliveryHourLocal);
-    if (!localDate || nextDueAt == null) continue;
+    if (!localDate) continue;
+    const nextDueAt = nextDueAtAfterLocalDateSec(
+      nowSec,
+      timezone,
+      preference.deliveryHourLocal,
+      localDate,
+    );
+    if (nextDueAt == null) continue;
     const window = recapWindow(preference, nowSec);
     const recapKey = buildTelegramRecapDedupeKey(preference.chatId, localDate);
     const didRecord = await recordTelegramRecapSkip(db, {
@@ -476,8 +498,18 @@ export async function planTelegramPersonalizedRecaps(
         continue;
       }
       const localDate = localDateInIanaTimezone(nowSec * 1000, timezone);
-      const nextDueAt = nextDueAtSec(nowSec, timezone, preference.deliveryHourLocal);
-      if (!localDate || nextDueAt == null) {
+      if (!localDate) {
+        counts.invalidTimezone += 1;
+        counts.deferred += 1;
+        continue;
+      }
+      const nextDueAt = nextDueAtAfterLocalDateSec(
+        nowSec,
+        timezone,
+        preference.deliveryHourLocal,
+        localDate,
+      );
+      if (nextDueAt == null) {
         counts.invalidTimezone += 1;
         counts.deferred += 1;
         continue;

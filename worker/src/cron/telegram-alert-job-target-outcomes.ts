@@ -1,4 +1,4 @@
-import { batchExecute } from "../lib/db";
+import { batchExecute, executeAtomicBatch } from "../lib/db";
 
 export type TelegramTargetFinalDeliveryState =
   | "accepted"
@@ -202,8 +202,15 @@ export async function recordTelegramJobTargetFinalDelivery(
 ): Promise<boolean> {
   const identity = await resolveTelegramJobTargetIdentityForPending(db, pendingIdentity);
   if (!identity) return false;
-  const result = await prepareTelegramJobTargetFinalDeliveryProjection(db, identity, outcome).run();
-  if (Number(result.meta?.changes ?? 0) !== 1) {
+  const statements = [
+    prepareTelegramJobTargetFinalDeliveryProjection(db, identity, outcome),
+    prepareTelegramAlertJobCounterReconciliation(db, identity.jobId, outcome.at, {
+      targetKey: identity.targetKey,
+      finalDeliveryState: outcome.state,
+    }),
+  ];
+  const changed = await executeAtomicBatch(db, statements);
+  if (changed !== statements.length) {
     throw new Error("Telegram target final delivery projection was not confirmed");
   }
   return true;
@@ -247,43 +254,54 @@ export async function reconcileTelegramJobTargetFinalDeliveryFromPending(
   for (const row of candidates) {
     if (!row.source_event_id) continue;
     const state = row.delivery_state === "sent" ? "accepted" : "execution_unknown";
-    const result = await prepareTelegramJobTargetFinalDeliveryProjection(
-      db,
-      {
-        jobId: row.job_id,
-        targetKey: row.target_key,
-        pendingDedupeKey: row.pending_dedupe_key,
-        sourceEventId: row.source_event_id,
-      },
-      {
-        state,
-        at: row.delivery_completed_at ?? nowSec,
-        error: row.last_error_class,
-      },
-      {
-        pendingGuard: {
-          sql: `EXISTS (
-            SELECT 1
-              FROM telegram_pending_alerts pending
-             WHERE pending.id = ?
-               AND pending.dedupe_key = ?
-               AND pending.source_event_id = ?
-               AND pending.delivery_state = ?
-               AND pending.delivery_owner IS ?
-               AND pending.delivery_generation = ?
-          )`,
-          binds: [
-            row.pending_id,
-            row.pending_dedupe_key,
-            row.source_event_id,
-            row.delivery_state,
-            row.delivery_owner,
-            row.delivery_generation,
-          ],
+    const completedAt = row.delivery_completed_at ?? nowSec;
+    const statements = [
+      prepareTelegramJobTargetFinalDeliveryProjection(
+        db,
+        {
+          jobId: row.job_id,
+          targetKey: row.target_key,
+          pendingDedupeKey: row.pending_dedupe_key,
+          sourceEventId: row.source_event_id,
         },
-      },
-    ).run();
-    projected += Number(result.meta?.changes ?? 0);
+        {
+          state,
+          at: completedAt,
+          error: row.last_error_class,
+        },
+        {
+          pendingGuard: {
+            sql: `EXISTS (
+              SELECT 1
+                FROM telegram_pending_alerts pending
+               WHERE pending.id = ?
+                 AND pending.dedupe_key = ?
+                 AND pending.source_event_id = ?
+                 AND pending.delivery_state = ?
+                 AND pending.delivery_owner IS ?
+                 AND pending.delivery_generation = ?
+            )`,
+            binds: [
+              row.pending_id,
+              row.pending_dedupe_key,
+              row.source_event_id,
+              row.delivery_state,
+              row.delivery_owner,
+              row.delivery_generation,
+            ],
+          },
+        },
+      ),
+      prepareTelegramAlertJobCounterReconciliation(db, row.job_id, completedAt, {
+        targetKey: row.target_key,
+        finalDeliveryState: state,
+      }),
+    ];
+    const changed = await executeAtomicBatch(db, statements);
+    if (changed !== statements.length) {
+      throw new Error("Telegram pending target repair was not confirmed");
+    }
+    projected += 1;
   }
   return projected;
 }
@@ -299,6 +317,79 @@ const TARGET_BUCKET_SQL = `CASE
   ELSE 'planned'
 END`;
 
+export function prepareTelegramAlertJobCounterReconciliation(
+  db: D1Database,
+  jobId: string,
+  nowSec: number,
+  projectionGuard?: {
+    targetKey: string;
+    finalDeliveryState: TelegramTargetFinalDeliveryState;
+  },
+): D1PreparedStatement {
+  const projectionGuardSql = projectionGuard
+    ? ` AND EXISTS (
+          SELECT 1
+            FROM telegram_alert_job_targets projected_target
+           WHERE projected_target.job_id = telegram_alert_jobs.job_id
+             AND projected_target.target_key = ?
+             AND projected_target.final_delivery_state = ?
+        )`
+    : "";
+  const projectionGuardBinds = projectionGuard
+    ? [projectionGuard.targetKey, projectionGuard.finalDeliveryState]
+    : [];
+  return db
+    .prepare(
+      `WITH target_buckets AS (
+         SELECT ${TARGET_BUCKET_SQL} AS bucket
+           FROM telegram_alert_job_targets target
+          WHERE target.job_id = ?
+       ), counts AS (
+         SELECT COUNT(*) AS target_count,
+                SUM(CASE WHEN bucket = 'planned' THEN 1 ELSE 0 END) AS planned_count,
+                SUM(CASE WHEN bucket = 'accepted' THEN 1 ELSE 0 END) AS accepted_count,
+                SUM(CASE WHEN bucket = 'enqueued' THEN 1 ELSE 0 END) AS enqueued_count,
+                SUM(CASE WHEN bucket = 'failed' THEN 1 ELSE 0 END) AS failed_count,
+                SUM(CASE WHEN bucket = 'cancelled' THEN 1 ELSE 0 END) AS cancelled_count,
+                SUM(CASE WHEN bucket = 'expired' THEN 1 ELSE 0 END) AS expired_count,
+                SUM(CASE WHEN bucket = 'execution_unknown' THEN 1 ELSE 0 END) AS execution_unknown_count
+           FROM target_buckets
+       )
+       UPDATE telegram_alert_jobs
+          SET target_count = COALESCE((SELECT target_count FROM counts), 0),
+              planned_count = COALESCE((SELECT planned_count FROM counts), 0),
+              accepted_count = COALESCE((SELECT accepted_count FROM counts), 0),
+              sent_count = COALESCE((SELECT accepted_count FROM counts), 0),
+              enqueued_count = COALESCE((SELECT enqueued_count FROM counts), 0),
+              failed_count = COALESCE((SELECT failed_count FROM counts), 0),
+              cancelled_count = COALESCE((SELECT cancelled_count FROM counts), 0),
+              expired_count = COALESCE((SELECT expired_count FROM counts), 0),
+              execution_unknown_count = COALESCE((SELECT execution_unknown_count FROM counts), 0),
+              status = CASE
+                WHEN COALESCE((SELECT target_count FROM counts), 0) = 0 THEN 'discovered'
+                WHEN COALESCE((SELECT failed_count + expired_count + execution_unknown_count FROM counts), 0) > 0
+                  THEN 'degraded'
+                WHEN COALESCE((SELECT planned_count FROM counts), 0) > 0 THEN 'discovered'
+                WHEN COALESCE((SELECT enqueued_count FROM counts), 0) > 0 THEN 'queued'
+                ELSE 'sent'
+              END,
+              metadata = CASE
+                WHEN json_valid(metadata) THEN json_set(
+                  metadata,
+                  '$.countersSource', 'authoritative-target-rows',
+                  '$.reconciledAt', ?
+                )
+                ELSE json_object(
+                  'countersSource', 'authoritative-target-rows',
+                  'reconciledAt', ?
+                )
+              END
+        WHERE job_id = ?
+          ${projectionGuardSql}`,
+    )
+    .bind(jobId, nowSec, nowSec, jobId, ...projectionGuardBinds);
+}
+
 export async function reconcileTelegramAlertJobCounters(
   db: D1Database,
   jobIds: readonly string[],
@@ -306,55 +397,8 @@ export async function reconcileTelegramAlertJobCounters(
 ): Promise<void> {
   const uniqueJobIds = [...new Set(jobIds)];
   if (uniqueJobIds.length === 0) return;
-  await batchExecute(db, uniqueJobIds.map((jobId) => {
-    return db
-      .prepare(
-        `WITH target_buckets AS (
-           SELECT ${TARGET_BUCKET_SQL} AS bucket
-             FROM telegram_alert_job_targets target
-            WHERE target.job_id = ?
-         ), counts AS (
-           SELECT COUNT(*) AS target_count,
-                  SUM(CASE WHEN bucket = 'planned' THEN 1 ELSE 0 END) AS planned_count,
-                  SUM(CASE WHEN bucket = 'accepted' THEN 1 ELSE 0 END) AS accepted_count,
-                  SUM(CASE WHEN bucket = 'enqueued' THEN 1 ELSE 0 END) AS enqueued_count,
-                  SUM(CASE WHEN bucket = 'failed' THEN 1 ELSE 0 END) AS failed_count,
-                  SUM(CASE WHEN bucket = 'cancelled' THEN 1 ELSE 0 END) AS cancelled_count,
-                  SUM(CASE WHEN bucket = 'expired' THEN 1 ELSE 0 END) AS expired_count,
-                  SUM(CASE WHEN bucket = 'execution_unknown' THEN 1 ELSE 0 END) AS execution_unknown_count
-             FROM target_buckets
-         )
-         UPDATE telegram_alert_jobs
-            SET target_count = COALESCE((SELECT target_count FROM counts), 0),
-                planned_count = COALESCE((SELECT planned_count FROM counts), 0),
-                accepted_count = COALESCE((SELECT accepted_count FROM counts), 0),
-                sent_count = COALESCE((SELECT accepted_count FROM counts), 0),
-                enqueued_count = COALESCE((SELECT enqueued_count FROM counts), 0),
-                failed_count = COALESCE((SELECT failed_count FROM counts), 0),
-                cancelled_count = COALESCE((SELECT cancelled_count FROM counts), 0),
-                expired_count = COALESCE((SELECT expired_count FROM counts), 0),
-                execution_unknown_count = COALESCE((SELECT execution_unknown_count FROM counts), 0),
-                status = CASE
-                  WHEN COALESCE((SELECT target_count FROM counts), 0) = 0 THEN 'discovered'
-                  WHEN COALESCE((SELECT failed_count + expired_count + execution_unknown_count FROM counts), 0) > 0
-                    THEN 'degraded'
-                  WHEN COALESCE((SELECT planned_count FROM counts), 0) > 0 THEN 'discovered'
-                  WHEN COALESCE((SELECT enqueued_count FROM counts), 0) > 0 THEN 'queued'
-                  ELSE 'sent'
-                END,
-                metadata = CASE
-                  WHEN json_valid(metadata) THEN json_set(
-                    metadata,
-                    '$.countersSource', 'authoritative-target-rows',
-                    '$.reconciledAt', ?
-                  )
-                  ELSE json_object(
-                    'countersSource', 'authoritative-target-rows',
-                    'reconciledAt', ?
-                  )
-                END
-          WHERE job_id = ?`,
-      )
-      .bind(jobId, nowSec, nowSec, jobId);
-  }));
+  await batchExecute(
+    db,
+    uniqueJobIds.map((jobId) => prepareTelegramAlertJobCounterReconciliation(db, jobId, nowSec)),
+  );
 }
