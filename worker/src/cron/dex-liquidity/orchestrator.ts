@@ -7,7 +7,12 @@ import { throwIfAborted } from "../../lib/abort";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
 import { buildSymbolLookups, classifyPoolType } from "./pool-helpers";
 import { buildChainAddressKey } from "./token-resolution";
-import { fetchDataSources, buildCurveLookups, buildKnownPoolAddresses } from "./fetch-primary";
+import {
+  fetchDataSources,
+  buildCurveLookups,
+  buildKnownPoolAddresses,
+  type PrimaryPoolCompactionResult,
+} from "./fetch-primary";
 import { publishDexPriceChallengerSnapshots } from "./challenger-persistence";
 import { processPoolMetrics } from "./process-pools";
 import { mergeStagedPools } from "./staging-merge";
@@ -45,35 +50,8 @@ import {
   buildFluidMeasuredExecutionTargets,
   buildPancakeMeasuredExecutionTargets,
 } from "../measured-execution/inventory";
-import { resolveLlamaPoolStablecoinMatches } from "./pool-match-resolution";
 
 const DEX_LIQUIDITY_PERSISTENCE_BLOCKING_FAILURES = new Set(["defillama-yields", "defillama-protocols"]);
-
-export interface PrimaryPoolCompactionResult {
-  pools: LlamaPool[];
-  rawPoolCount: number;
-  retainedPoolCount: number;
-  skippedUntrackedCount: number;
-}
-
-export function compactPrimaryPoolsForTrackedStablecoins(
-  pools: LlamaPool[],
-  lookups: Pick<DexLiquidityLookups, "chainAddressToId" | "symbolToChainScopedIds">,
-): PrimaryPoolCompactionResult {
-  const retainedPools: LlamaPool[] = [];
-  for (const pool of pools) {
-    if (resolveLlamaPoolStablecoinMatches(pool, lookups).matchedIds.size > 0) {
-      retainedPools.push(pool);
-    }
-  }
-
-  return {
-    pools: retainedPools,
-    rawPoolCount: pools.length,
-    retainedPoolCount: retainedPools.length,
-    skippedUntrackedCount: pools.length - retainedPools.length,
-  };
-}
 
 export function filterPrimaryPoolsPreferDirectApi(
   pools: LlamaPool[],
@@ -402,7 +380,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
   }
   directApiFetchers.length = 0;
 
-  let dataSources = await fetchDataSources(ctx.graphApiKey, ctx.db, ctx.signal);
+  const dataSources = await fetchDataSources(ctx.graphApiKey, ctx.db, lookups, ctx.signal);
   if (!dataSources) {
     throw new Error("dex-liquidity: catastrophic source failure (DL yields + Curve unavailable)");
   }
@@ -410,11 +388,11 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     stage: "primary-sources-loaded",
     message: "Loaded DefiLlama and Curve liquidity sources",
     providerFamily: "defillama",
-    itemsDone: dataSources.pools.length,
-    itemsTotal: Math.max(dataSources.pools.length, ACTIVE_STABLECOINS.length),
+    itemsDone: dataSources.rawPoolCount,
+    itemsTotal: Math.max(dataSources.rawPoolCount, ACTIVE_STABLECOINS.length),
     metadata: {
       countTotals: {
-        defillamaPools: dataSources.pools.length,
+        defillamaPools: dataSources.rawPoolCount,
         curvePayloads: dataSources.curvePayloads.filter((payload) => payload != null).length,
         dexProjects: dataSources.dexProjects.size,
       },
@@ -434,14 +412,12 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     fallbackSignals.push("dl-protocols-unavailable");
   }
 
-  const primaryPoolCounts = compactPrimaryPoolsForTrackedStablecoins(dataSources.pools, lookups);
-  if (primaryPoolCounts.skippedUntrackedCount > 0) {
-    dataSources = { ...dataSources, pools: primaryPoolCounts.pools };
-    console.log(
-      `[dex-liquidity] Retained ${primaryPoolCounts.retainedPoolCount} DeFiLlama pools with tracked tokens ` +
-        `(skipped ${primaryPoolCounts.skippedUntrackedCount} before identity processing)`,
-    );
-  }
+  const primaryPoolCounts: PrimaryPoolCompactionResult = {
+    pools: dataSources.pools,
+    rawPoolCount: dataSources.rawPoolCount,
+    retainedPoolCount: dataSources.pools.length,
+    skippedUntrackedCount: dataSources.rawPoolCount - dataSources.pools.length,
+  };
   const { curvePoolMap, priceObservations } = await buildCurveLookups(
     dataSources.curvePayloads,
     lookups.symbolToIds,
