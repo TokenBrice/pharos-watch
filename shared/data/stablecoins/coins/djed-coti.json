@@ -95,6 +95,21 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "DJED is minted and burned permissionlessly against a shared ADA reserve pool by a formally verified autonomous smart-contract bank, with SHEN reserve-coin holders absorbing volatility; minting is gated by the 400%-800% reserve-ratio band rather than a per-user CDP, and COTI/IOG operate the oracle. The minting policy (Plutus V1) is immutable on Cardano — the reserve-ratio enforcement cannot be bypassed; COTI only controls the oracle price feed.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Djed mainnet announcement (COTI)",
+          "url": "https://cotinetwork.medium.com/djed-is-now-available-on-mainnet-9a2ac66daea4"
+        },
+        {
+          "label": "Koios script_info — Djed minting policy plutusV1",
+          "url": "https://api.koios.rest/api/v1/script_info"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Djed autonomous bank contract (reserve mint/burn)",
@@ -119,6 +134,7 @@
       "evidence": "Koios API confirmed the DJED minting policy (8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61) is a Plutus V1 smart contract — immutable, created at genesis tx. The reserve-ratio enforcement (400%-800% band) is encoded in the script and cannot be overridden or upgraded. COTI's administrative surface is limited to the off-chain oracle price feed; it cannot bypass or change the Plutus V1 mint rules. No upgrade path exists for Cardano Plutus V1 minting policies.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Djed mainnet announcement (COTI)",

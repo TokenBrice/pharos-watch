@@ -173,25 +173,30 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "DOLA verified Ethereum contract",
-        "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
+        "label": "Fantom DOLA contract",
+        "url": "https://ftmscan.com/address/0x3129662808bec728a27ab6a6b9afd3cbaca8a43c#code"
       },
       {
-        "label": "Inverse DOLA documentation",
-        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola"
+        "label": "BSC DOLA contract",
+        "url": "https://bscscan.com/address/0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840#code"
       },
       {
-        "label": "Inverse governance overview",
-        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/governance/overview"
+        "label": "Fantom public RPC",
+        "url": "https://rpcapi.fantom.network"
+      },
+      {
+        "label": "BSC public RPC",
+        "url": "https://bsc-dataseed.binance.org"
       }
     ],
-    "evidence": "The verified Ethereum DOLA source exposes operator-controlled mint and burn plus standard ERC-20 transfer methods, but no holder blacklist, freeze, seizure, or global pause path. The operator is the INV GovernorBravo-controlled Compound Timelock with a 48-hour delay, so governance controls supply rather than arbitrary holder transfers. sUSDe and sUSDS collateral create upstream impairment exposure but do not give their issuers direct control over DOLA balances.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At Fantom block 122527611 on 2026-07-15, tracked DOLA 0x3129662808bec728a27ab6a6b9afd3cbaca8a43c returned owner() and getAllMinters() = 0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE with delayMinter() = 0; eth_call of burn(0x0000000000000000000000000000000000000001, 0) from that address succeeded. At BSC block 110192504, tracked DOLA 0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840 returned owner() = 0xF7Da4bC9B7A6bB3653221aE333a9d2a2C2d5BdA7, getAllMinters() = 0x58892974758A4013377A45fad698D2FF1F08d98E, and delayMinter() = 0; burn of an unrelated holder from that minter and setMinter of an unrelated address from the owner both succeeded in eth_call. These material tracked deployments have direct arbitrary holder-burn control with no observed minter delay.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

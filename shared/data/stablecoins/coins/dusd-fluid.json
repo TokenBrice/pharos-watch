@@ -58,13 +58,17 @@
     "reviewedStatus": "possible",
     "sources": [
       {
-        "label": "Website",
-        "url": "https://fluid.ch/"
+        "label": "Arbitrum Blockscout - DUSD implementation",
+        "url": "https://arbitrum.blockscout.com/address/0xe825f4f14b93a329fbae230ef6b222f26cca4028?tab=contract"
+      },
+      {
+        "label": "Arbitrum PublicNode RPC",
+        "url": "https://arbitrum-one.publicnode.com"
       }
     ],
-    "evidence": "Current review remains Possible: the reviewed Fluid product route was unavailable during this pass and the available public metadata does not prove whether an active holder-balance blacklist path exists. DUSD is therefore not upgraded to Yes or No.",
-    "reviewer": "SONG-1 access evidence review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At Arbitrum block 484220930, the DUSD proxy resolves to verified RealWorldAssetTether implementation 0xe825f4f14b93a329fbae230ef6b222f26cca4028. Its blacklist mapping and removeFromWhitelist() prevent re-whitelisting and thereby mint/redeem eligibility, while pause() gates mint, redeem, and releasePendingRedeem. The verified implementation does not override ERC-20 transfer or transferFrom and contains no blacklist or pause hook on holder-to-holder transfers. Possible is retained because the current V9 status vocabulary cannot separately encode eligibility censorship without asserting a holder-transfer freeze.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "chainTier": "stage1-l2",
   "deploymentModel": "single-chain",
@@ -110,45 +114,271 @@
     }
   ],
   "mintAuthority": {
-    "mintPath": "unknown",
-    "authorityPosture": "unknown",
-    "confidence": "unknown",
-    "summary": "The DUSD TransparentUpgradeableProxy has an EOA proxy admin that can change mint logic. The implementation is unverified, so the current direct minter, reserve-cap mechanism, issuer backend, and redemption operation remain unresolved; the 2021 issuer design is not treated as current evidence.",
+    "mintPath": "offchain-attested-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "DUSD's verified Arbitrum implementation permits only OffchainTreasuryOracle to call mint. That oracle needs an ORACLE_UPDATER_ROLE caller and a current off-chain signer attestation, while the token enforces a mutable off-chain treasury-balance ceiling. Three token DEFAULT_ADMIN_ROLE holders, the oracle administrator, and the transparent-proxy admin can alter the mint path or mint logic.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": ["0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709"],
+      "implementationAddresses": ["0xe825f4f14b93a329fbae230ef6b222f26cca4028"],
+      "adminAddresses": ["0xdeab81c9ff7528de932890058579c0c2341f7223"],
+      "canChangeMintLogic": true,
+      "controlRef": "DUSD transparent proxy admin",
+      "observedAt": "2026-07-15",
+      "observedBlock": 484220930,
+      "sources": [
+        {
+          "label": "Arbitrum Blockscout - DUSD proxy",
+          "url": "https://arbitrum.blockscout.com/address/0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709?tab=contract"
+        },
+        {
+          "label": "Arbitrum Blockscout - DUSD implementation",
+          "url": "https://arbitrum.blockscout.com/address/0xe825f4f14b93a329fbae230ef6b222f26cca4028?tab=contract"
+        },
+        {
+          "label": "Arbitrum PublicNode RPC",
+          "url": "https://arbitrum-one.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
-        "label": "TransparentUpgradeableProxy admin EOA",
-        "role": "proxy-admin",
-        "authorityType": "eoa",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
+        "chain": "arbitrum",
+        "address": "0xb18727bee9e66a3d780589c7648fd7185a44f220",
+        "label": "Fluid OffchainTreasuryOracle",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": true,
+        "capDescription": "DUSD mint checks totalSupply plus totalPendingRedeems against getLatestAnswer() on this oracle; its updater, signer, and administrator controls can raise that mutable off-chain treasury balance.",
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "At Arbitrum block 472412309, EIP-1967 proxy admin slot (0xb531…) of 0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709 returned 0xdeab81c9ff7528de932890058579c0c2341f7223; eth_getCode on that address returned no bytecode (EOA). Implementation at 0xe825f4f14b93a329fbae230ef6b222f26cca4028 is deployed but unverified; the token's mint owner could not be read because owner() reverts through the transparent proxy for admin callers and the impl ABI is not published.",
+        "observedAt": "2026-07-15",
+        "observedBlock": 484220930,
         "sources": [
           {
-            "label": "DUSD contract on Arbiscan",
-            "url": "https://arbiscan.io/address/0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709"
+            "label": "Arbitrum Blockscout - DUSD implementation",
+            "url": "https://arbitrum.blockscout.com/address/0xe825f4f14b93a329fbae230ef6b222f26cca4028?tab=contract"
+          },
+          {
+            "label": "Arbitrum Blockscout - OffchainTreasuryOracle",
+            "url": "https://arbitrum.blockscout.com/address/0xb18727bee9e66a3d780589c7648fd7185a44f220?tab=contract"
+          },
+          {
+            "label": "Arbitrum PublicNode RPC",
+            "url": "https://arbitrum-one.publicnode.com"
           }
-        ]
+        ],
+        "evidence": "At Arbitrum block 484220930, offchainTreasuryOracle() on DUSD returned this verified oracle. The token accepts mint only from that address and requires totalSupply plus totalPendingRedeems not exceed the oracle's getLatestAnswer(). The oracle update() path verifies the current offchainSigner before calling token mint."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x96166e8cc4c3519c6cf4af79aae82f8094518f3",
+        "label": "DUSD DEFAULT_ADMIN_ROLE EOA 0x96166e8c",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-15",
+        "observedBlock": 484220930,
+        "sources": [
+          {
+            "label": "Arbitrum Blockscout - DUSD implementation",
+            "url": "https://arbitrum.blockscout.com/address/0xe825f4f14b93a329fbae230ef6b222f26cca4028?tab=contract"
+          },
+          {
+            "label": "Arbitrum PublicNode RPC",
+            "url": "https://arbitrum-one.publicnode.com"
+          }
+        ],
+        "evidence": "At Arbitrum block 484220930, AccessControlEnumerable getRoleMember(DEFAULT_ADMIN_ROLE, 0) returned this EOA. Every privileged token role has DEFAULT_ADMIN_ROLE as its role admin, so this address can grant an ORACLE_UPDATER_ROLE path that can replace the trusted treasury oracle and change the effective mint path."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x1c31c09010d8aea22276e526c62fbe7ccbe493ba",
+        "label": "DUSD DEFAULT_ADMIN_ROLE Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x1d693a4425bf7ed10fe7775e2b65b072019ffceb",
+            "0xe22ea36f4cd7ebd0e1b0a84522fb471fc942ff8f",
+            "0x11603da5262dc4a5995d7afa0617beaec582293b",
+            "0x68e5caff0104110f964149c2c040a66e9af0c4a8",
+            "0x5a299e2305797ecacfb589803eb20d390fae5145",
+            "0x8bd7735d89050b441bd4385379542f84327c8bfe",
+            "0xde8acc2be6732a999ed1a8a48031af09f8f8aa65"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 484220224,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-15",
+        "observedBlock": 484220224,
+        "sources": [
+          {
+            "label": "Arbitrum PublicNode RPC",
+            "url": "https://arbitrum-one.publicnode.com"
+          },
+          {
+            "label": "Safe Transaction Service - DUSD admin Safe",
+            "url": "https://safe-transaction-arbitrum.safe.global/api/v1/safes/0x1c31c09010d8aeA22276E526C62Fbe7Ccbe493BA/"
+          }
+        ],
+        "evidence": "At Arbitrum block 484220224, getOwners() returned seven owners, getThreshold() returned two, and getModulesPaginated() returned an empty array. The Safe Transaction Service reported a zero guard. This 2-of-7 Safe is token DEFAULT_ADMIN_ROLE member 1 and can grant privileged token roles, including the path that replaces the trusted treasury oracle."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x7ef842673909c1bbc877ae746250f033434ee58d",
+        "label": "DUSD DEFAULT_ADMIN_ROLE EOA 0x7ef84267",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-15",
+        "observedBlock": 484220930,
+        "sources": [
+          {
+            "label": "Arbitrum Blockscout - DUSD implementation",
+            "url": "https://arbitrum.blockscout.com/address/0xe825f4f14b93a329fbae230ef6b222f26cca4028?tab=contract"
+          },
+          {
+            "label": "Arbitrum PublicNode RPC",
+            "url": "https://arbitrum-one.publicnode.com"
+          }
+        ],
+        "evidence": "At Arbitrum block 484220930, AccessControlEnumerable getRoleMember(DEFAULT_ADMIN_ROLE, 2) returned this EOA. Every privileged token role has DEFAULT_ADMIN_ROLE as its role admin, allowing this address to authorize an ORACLE_UPDATER_ROLE path that can replace the trusted treasury oracle and change the effective mint path."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xa2438524d704232d610af0aeb27a790ce59f86ea",
+        "label": "OffchainTreasuryOracle administrator EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-15",
+        "observedBlock": 484220930,
+        "sources": [
+          {
+            "label": "Arbitrum Blockscout - OffchainTreasuryOracle",
+            "url": "https://arbitrum.blockscout.com/address/0xb18727bee9e66a3d780589c7648fd7185a44f220?tab=contract"
+          },
+          {
+            "label": "Arbitrum Blockscout - oracle role events",
+            "url": "https://arbitrum.blockscout.com/api?module=logs&action=getLogs&fromBlock=4444960&toBlock=latest&address=0xb18727bee9e66a3d780589c7648fd7185a44f220&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          },
+          {
+            "label": "Arbitrum PublicNode RPC",
+            "url": "https://arbitrum-one.publicnode.com"
+          }
+        ],
+        "evidence": "At Arbitrum block 484220930, this EOA had DEFAULT_ADMIN_ROLE, ORACLE_ADMIN_ROLE, and ORACLE_UPDATER_ROLE on the verified oracle. The full queried RoleGranted history from block 4444960 contains its three initial grants, and no RoleRevoked event was returned. It can replace the off-chain signer or token address, grant updaters, and submit signed updates that call token mint."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xee26af8b256649c1f3b8e03cf6483e9bcf188108",
+        "label": "OffchainTreasuryOracle updater EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "capDescription": "This updater can submit oracle update transactions only with a valid signature from the current off-chain signer; mint remains bounded by the oracle balance, whose signer/admin path can raise it.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-15",
+        "observedBlock": 484220930,
+        "sources": [
+          {
+            "label": "Arbitrum Blockscout - OffchainTreasuryOracle",
+            "url": "https://arbitrum.blockscout.com/address/0xb18727bee9e66a3d780589c7648fd7185a44f220?tab=contract"
+          },
+          {
+            "label": "Arbitrum Blockscout - oracle role events",
+            "url": "https://arbitrum.blockscout.com/api?module=logs&action=getLogs&fromBlock=4444960&toBlock=latest&address=0xb18727bee9e66a3d780589c7648fd7185a44f220&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          },
+          {
+            "label": "Arbitrum PublicNode RPC",
+            "url": "https://arbitrum-one.publicnode.com"
+          }
+        ],
+        "evidence": "At Arbitrum block 484220930, hasRole(ORACLE_UPDATER_ROLE) returned true for this EOA. The complete queried oracle role-event history from block 4444960 shows its updater grant at block 4445336 and no RoleRevoked event. It can call update(), which verifies the current offchainSigner before invoking token mint."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x829fbb7071c6518c7964e80a2662744f19ddfef6",
+        "label": "OffchainTreasuryOracle off-chain signer",
+        "role": "backend-signer",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-15",
+        "observedBlock": 484220930,
+        "sources": [
+          {
+            "label": "Arbitrum Blockscout - OffchainTreasuryOracle",
+            "url": "https://arbitrum.blockscout.com/address/0xb18727bee9e66a3d780589c7648fd7185a44f220?tab=contract"
+          },
+          {
+            "label": "Arbitrum PublicNode RPC",
+            "url": "https://arbitrum-one.publicnode.com"
+          }
+        ],
+        "evidence": "At Arbitrum block 484220930, offchainSigner() on the verified oracle returned this EOA. Oracle update() accepts a mint only when its payload is signed by that address, then increases the oracle balance and calls token mint through the trusted oracle."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xdeab81c9ff7528de932890058579c0c2341f7223",
+        "label": "DUSD transparent proxy admin",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-15",
+        "observedBlock": 484220930,
+        "sources": [
+          {
+            "label": "Arbitrum Blockscout - DUSD proxy",
+            "url": "https://arbitrum.blockscout.com/address/0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709?tab=contract"
+          },
+          {
+            "label": "Arbitrum PublicNode RPC",
+            "url": "https://arbitrum-one.publicnode.com"
+          }
+        ],
+        "evidence": "At Arbitrum block 484220930, the EIP-1967 admin slot on the DUSD proxy resolved to this address and eth_getCode returned no bytecode. The proxy resolves to verified RealWorldAssetTether implementation 0xe825f4f14b93a329fbae230ef6b222f26cca4028, so this EOA can replace mint-critical logic through the transparent-proxy admin path."
       }
     ],
     "review": {
-      "evidence": "At Arbitrum block 472412309, the DUSD TransparentUpgradeableProxy admin slot resolved EOA 0xdeab81c9ff7528de932890058579c0c2341f7223. The implementation at 0xe825f4f14b93a329fbae230ef6b222f26cca4028 is unverified, so its internal minter, any current reserve-balance cap, and the issuer redemption backend cannot be established from public code. The 2021 FAQ is retained only as historical design context.",
-      "reviewer": "SONG-1 mint-control evidence review",
-      "reviewedAt": "2026-07-14",
-      "disposition": "unresolved",
+      "evidence": "At Arbitrum block 484220930, DUSD resolves from the EIP-1967 proxy to verified RealWorldAssetTether implementation 0xe825f4f14b93a329fbae230ef6b222f26cca4028. The token names OffchainTreasuryOracle 0xb18727bee9e66a3d780589c7648fd7185a44f220 as its only mint caller and bounds supply plus pending redeems by that oracle's balance. Token AccessControlEnumerable reports three current DEFAULT_ADMIN_ROLE members: EOAs 0x96166e8cc4c3519c6cf4af79aae82f8094518f3 and 0x7ef842673909c1bbc877ae746250f033434ee58d, plus 2-of-7 Safe 0x1c31c09010d8aea22276e526c62fbe7ccbe493ba. Full oracle role-event history queried from block 4444960 found the current administrator/updater EOA 0xa2438524d704232d610af0aeb27a790ce59f86ea and second updater 0xee26af8b256649c1f3b8e03cf6483e9bcf188108, with no RoleRevoked event; current role calls confirm the first also has DEFAULT_ADMIN_ROLE and ORACLE_ADMIN_ROLE. The current oracle signer is 0x829fbb7071c6518c7964e80a2662744f19ddfef6. The transparent-proxy admin is EOA 0xdeab81c9ff7528de932890058579c0c2341f7223.",
+      "reviewer": "Codex Safety Score V9 mint-control review",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable",
       "sources": [
         {
-          "label": "Fluid Finance DUSD reserve FAQ (December 2021)",
-          "url": "https://medium.com/fluidfi/faq-fluidfis-frequently-asked-questions-22bacb12e3f8"
+          "label": "Arbitrum Blockscout - DUSD implementation",
+          "url": "https://arbitrum.blockscout.com/address/0xe825f4f14b93a329fbae230ef6b222f26cca4028?tab=contract"
         },
         {
-          "label": "DUSD contract on Arbiscan",
-          "url": "https://arbiscan.io/address/0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709"
+          "label": "Arbitrum Blockscout - OffchainTreasuryOracle",
+          "url": "https://arbitrum.blockscout.com/address/0xb18727bee9e66a3d780589c7648fd7185a44f220?tab=contract"
+        },
+        {
+          "label": "Arbitrum PublicNode RPC",
+          "url": "https://arbitrum-one.publicnode.com"
         }
-      ],
-      "unresolvedQuestions": [
-        "Verify or obtain the implementation ABI and current issuer documentation to identify the direct minter, determine whether a reserve-balance cap still operates, and establish current redemption and banking-provider status.",
-        "The current implementation, proxy-admin operating posture, and any pause or upgrade authority remain unresolved despite the historical Arbitrum slot observation."
       ]
     }
   }

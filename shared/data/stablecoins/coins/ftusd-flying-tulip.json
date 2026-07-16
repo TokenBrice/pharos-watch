@@ -14,8 +14,9 @@
   "collateral": "USDC and USDT supplied to Aave for low-risk interest; this stablecoin lending is the only on-chain strategy currently live, with the delta-neutral leg (borrow a native asset such as Sonic S against the deposits and stake it for carry) documented as a staged roadmap item; distributed strategy yield routes to sftUSD stakers while unstaked ftUSD proceeds accrue to the protocol treasury",
   "pegMechanism": "Mint and redeem 1:1 against USDC or USDT through on-chain MintAndRedeem contracts; deposits are currently supplied to Aave for low-risk carry, with a delta-neutral leg (borrow a native asset against the collateral and stake it) documented as a staged roadmap item targeting net market exposure near zero; ftUSD circuit-breaker contracts enforce position caps, rebalancing bands, and withdrawal rate limits",
   "mechanismArchetype": "synthetic-delta-neutral",
-  "detailProvider": "coingecko",
+  "detailProvider": "defillama",
   "geckoId": "flying-tulip-usd",
+  "llamaId": "421",
   "oracleRisk": {
     "tier": "oracleless-or-internal",
     "summary": "Flying Tulip documents ftUSD as an on-chain dollar designed around delta-neutral strategies and explicitly states that ftUSD and sftUSD use no oracles or centralized systems. Strategy venues and risk controls can change, but the token itself is not a borrower-owned collateral market with an oracle-triggered liquidation branch.",

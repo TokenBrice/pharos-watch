@@ -14,8 +14,9 @@
   "collateral": "Canadian dollars held 1:1 in regulated Canadian financial institutions under the QCAD Digital Trust reserve framework",
   "pegMechanism": "Qualified holders can mint and redeem QCAD at 1 CAD through Stablecorp or authorized partners; issuer APIs publish live supply and fiat reserve totals.",
   "mechanismArchetype": "fiat-cash",
-  "detailProvider": "coingecko",
+  "detailProvider": "defillama",
   "geckoId": "stablecorp-qcad",
+  "llamaId": "424",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json",

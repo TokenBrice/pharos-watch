@@ -73,26 +73,26 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "Explorer",
-        "url": "https://rootstock.blockscout.com/token/0xc1411567d2670e24d9c4daaa7cda95686e1250aa"
+        "label": "Rootstock Blockscout: verified DLLR MetaAssetToken source and ABI",
+        "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0xc1411567d2670e24d9c4daaa7cda95686e1250aa"
       },
       {
-        "label": "Mynt docs",
-        "url": "https://build.sovryn.com/builder-portal/smart-contracts/mynt"
+        "label": "Rootstock Blockscout: Mynt MassetManager proxy",
+        "url": "https://rootstock.blockscout.com/api/v2/smart-contracts/0x5f777270259e32f79589fe82269db6209f7b7582"
       },
       {
-        "label": "Sovryn Dollar",
-        "url": "https://sovryn.com/sovryn-dollar"
+        "label": "Rootstock public RPC",
+        "url": "https://public-node.rsk.co"
       }
     ],
-    "evidence": "Verified DLLR source exposes no blacklist, freeze, or pause function, but it has manager-gated burn(address,uint256) and an owner-settable MassetManager proxy. Treat as possible holder-balance intervention risk rather than confirmed direct blacklist.",
-    "reviewer": "Codex FreezeWatch audit",
-    "reviewedAt": "2026-05-25"
+    "evidence": "At Rootstock block 9055762 on 2026-07-15, verified DLLR MetaAssetToken source and RPC state show owner() = the Sovryn Timelock 0x967c84b731679e36a344002b8e3ce50620a7f69f and massetManagerProxy() = 0x5f777270259e32f79589fe82269db6209f7b7582. The token gates burn(account, amount) only by equality to massetManagerProxy, allowing the appointed manager to burn an arbitrary holder balance. setMassetManagerProxy(address) is onlyOwner and rejects only the zero address, so the owner can appoint an arbitrary address as manager. On-chain eth_call confirmed the owner setter succeeds and the current manager can call burn. This is direct individual holder-balance control; failure domains are the owner/timelock and an owner-appointed MassetManager.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

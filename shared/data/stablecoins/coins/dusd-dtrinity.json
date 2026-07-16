@@ -13,7 +13,8 @@
   },
   "collateral": "Ethereum: USDT0/USDC0-style whitelisted stablecoin and yield-bearing collateral in isolated dUSD reserves. Fraxtal: frxUSD/sfrxUSD and other Frax-aligned USD collateral in isolated reserves. Katana: whitelisted USD stablecoins and yieldcoins in isolated reserves. Sonic: whitelisted USD stablecoins/yieldcoins such as frxUSD/sfrxUSD in isolated reserves. Each network deployment maintains fully isolated reserves with no cross-chain collateral sharing.",
   "pegMechanism": "Atomic 1:1 mint (no fee) and redemption (up to 50 bps fee) against whitelisted reserve stablecoins; Algorithmic Market Operations (AMO) pre-mint dUSD into Curve liquidity pools to programmatically support the peg; Stability Market Operations (SMO) buy back and burn dUSD from Curve when it trades at a significant discount; dUSD price is hard-coded at $1 in all protocol-internal operations to prevent oracle manipulation.",
-  "detailProvider": "coingecko",
+  "detailProvider": "defillama",
+  "llamaId": "224",
   "geckoId": "dtrinity-usd",
   "oracleRisk": {
     "tier": "standard-external",

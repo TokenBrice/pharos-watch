@@ -103,6 +103,28 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "BRZ Ethereum owner and masterMinter are both a 2-of-3 Gnosis Safe (0xaf24/0x2c64, proxy to singleton 0xd9db). Proxy admin (0x478e) is also owned by the same Safe. Non-Ethereum chain owners are issuer-context EOAs or 2-of-3 Safes. Solana mint authority is a system-program wallet. All controls corroborate Transfero centralized issuance.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x01d33fd36ec67c6ada32cf36b31e88ee190b1839"
+      ],
+      "implementationAddresses": [
+        "0x2c4a809e8d86b1688b65581b6c7f50bd670d1b77"
+      ],
+      "adminAddresses": [
+        "0x478e84519f99811be4f9e3960f7489781501542d"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "BRZ Ethereum owner — 2-of-3 Gnosis Safe",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25294823,
+      "sources": [
+        {
+          "label": "Ethereum: BRZ token contract",
+          "url": "https://eth.blockscout.com/address/0x01d33fd36ec67c6ada32cf36b31e88ee190b1839"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "BRZ Ethereum owner — 2-of-3 Gnosis Safe",
@@ -182,7 +204,8 @@
       ],
       "evidence": "Ethereum at block 25294823: owner() = 0xaf24 (2-of-3 GnosisSafe proxy, masterCopy=0xd9db GnosisSafe 1.3.0 singleton). Safe storage: ownerCount=3, threshold=2, nonce=5. Three EOA owners confirmed via linked-list traversal. Modules sentinel = 0x1 (no modules). masterMinter 0x2c64 is an identical 2-of-3 Safe (nonce=15). ProxyAdmin 0x478e owned by same Safe. BSC owner is EOA 0x01455c. Solana mint authority ACvei6 is a system-program wallet. Polygon and Base owners are also 2-of-3 Safes (threshold=2, ownerCount=3).",
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "reviewedAt": "2026-06-11",
+      "disposition": "scoreable"
     }
   },
   "deploymentModel": "native-multichain",

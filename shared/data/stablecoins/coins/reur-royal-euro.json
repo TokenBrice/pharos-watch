@@ -36,8 +36,9 @@
     }
   },
   "mechanismArchetype": "fiat-cash",
-  "detailProvider": "coingecko",
+  "detailProvider": "defillama",
   "geckoId": "royal-euro",
+  "llamaId": "414",
   "links": [
     {
       "label": "Website",

@@ -84,7 +84,7 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Balanced stablecoin page",
@@ -97,40 +97,128 @@
       {
         "label": "Balanced v1 transition guide",
         "url": "https://docs.balanced.network/"
+      },
+      {
+        "label": "ICON public RPC",
+        "url": "https://ctz.solidwallet.io/api/v3"
+      },
+      {
+        "label": "ICON bnUSD v1.1.2 deployment transaction",
+        "url": "https://tracker.icon.community/transaction/0x807cd811b5add6bc32044f500c0833843f8c0cf2bd2433814cfe80fddf387db3"
+      },
+      {
+        "label": "ICON Governance v1.0.3 deployment transaction",
+        "url": "https://tracker.icon.community/transaction/0x6256edc11641f0d94e74acaa8bcdfc8ec9e466eff2b545710b3e47fccc101546"
       }
     ],
-    "evidence": "No direct bnUSD holder blacklist was identified in the reviewed Balanced materials. The Stability Fund's documented USDC and USDT collateral creates upstream freeze exposure under the any-reserve policy. Balanced's current documentation now says the original v1 app is no longer supported, so no current v2 holder-control inventory is asserted for this tracked v1 record.",
-    "reviewer": "SONG-1 Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At ICON block 115645618, the canonical bnUSD SCORE was active and registered Balanced Governance as its owner. The exact v1.1.2 deployed archive exposes govTransfer, which only Governance may use to move bnUSD from an arbitrary source address, and calls checkStatus before ordinary transfers. The exact v1.0.3 Governance archive has owner-only control paths, and its active owner is a single EOA. This is a direct canonical holder-control surface; upstream reserve exposure remains separate.",
+    "reviewer": "TERRA-III Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "bnUSD is minted on ICON when users borrow against overcollateralized sICX (and bridged Hub) collateral through the Balanced Loans contract; the Balanced DAO governs collateral ratios, fees, and accepted collateral, with cross-chain balances circulating via xCall.",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "bnUSD minting is limited on ICON to the registered Balanced Loans and Peg Stability SCOREs, subject to the token debt ceiling; the current owner of the Governance SCORE is a single EOA that can raise that ceiling and upgrade mint-critical SCORE logic.",
+    "upgradeability": {
+      "model": "custom",
+      "adminAddresses": [
+        "hx80e312d8e68ee2db8fb95e6e7daae2e770d0e368"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Balanced Governance owner",
+      "observedAt": "2026-07-15",
+      "observedBlock": 115645618,
+      "sources": [
+        {
+          "label": "ICON public RPC",
+          "url": "https://ctz.solidwallet.io/api/v3"
+        },
+        {
+          "label": "ICON Governance v1.0.3 deployment transaction",
+          "url": "https://tracker.icon.community/transaction/0x6256edc11641f0d94e74acaa8bcdfc8ec9e466eff2b545710b3e47fccc101546"
+        }
+      ]
+    },
     "controls": [
       {
-        "label": "Balanced Loans contract (CDP mint)",
+        "chain": "icon",
+        "address": "cx66d4d90f5f113eba575bf793570135f9b10cece1",
+        "label": "Balanced Loans SCORE",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "capDescription": "Mint bounded by the per-position collateral ratio against sICX/Hub collateral; 0.2% origination fee and 2% annualized interest.",
-        "canRaiseCap": "unknown",
-        "evidence": "Users borrow bnUSD against eligible collateral on the ICON Hub via the Balanced Loans contract, with liquidation enforced below the protocol collateral ratio."
+        "capDescription": "At ICON block 115645618, the bnUSD SCORE debt ceiling was 8,000,000 bnUSD; only the registered Loans or Peg Stability SCORE may call mintTo, while Governance can raise the ceiling.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-15",
+        "observedBlock": 115645618,
+        "sources": [
+          {
+            "label": "ICON public RPC",
+            "url": "https://ctz.solidwallet.io/api/v3"
+          },
+          {
+            "label": "ICON bnUSD v1.1.2 deployment transaction",
+            "url": "https://tracker.icon.community/transaction/0x807cd811b5add6bc32044f500c0833843f8c0cf2bd2433814cfe80fddf387db3"
+          }
+        ],
+        "evidence": "The active bnUSD SCORE returned this registered Loans address. Its exact v1.1.2 deployed archive permits mintTo only from getLoans() or getStabilityFund(), and its mint implementation rejects supply above the configured debt ceiling."
       },
       {
-        "label": "Balanced DAO governance",
+        "chain": "icon",
+        "address": "cxa09dbb60dcb62fffbd232b6eae132d730a2aafa6",
+        "label": "Balanced Peg Stability SCORE",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "At ICON block 115645618, the bnUSD SCORE debt ceiling was 8,000,000 bnUSD; only the registered Loans or Peg Stability SCORE may call mintTo, while Governance can raise the ceiling.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-15",
+        "observedBlock": 115645618,
+        "sources": [
+          {
+            "label": "ICON public RPC",
+            "url": "https://ctz.solidwallet.io/api/v3"
+          },
+          {
+            "label": "ICON bnUSD v1.1.2 deployment transaction",
+            "url": "https://tracker.icon.community/transaction/0x807cd811b5add6bc32044f500c0833843f8c0cf2bd2433814cfe80fddf387db3"
+          }
+        ],
+        "evidence": "The active bnUSD SCORE returned this registered Peg Stability address. Its exact v1.1.2 deployed archive permits mintTo only from getLoans() or getStabilityFund(), and its mint implementation rejects supply above the configured debt ceiling."
+      },
+      {
+        "chain": "icon",
+        "address": "hx80e312d8e68ee2db8fb95e6e7daae2e770d0e368",
+        "label": "Balanced Governance owner",
         "role": "governor",
-        "authorityType": "dao-governor",
-        "directMintAbility": "parameter-only",
-        "canRaiseCap": "unknown",
-        "evidence": "Balanced DAO governs collateral ratios, fees, accepted collateral, and xCall connections; it tunes parameters rather than minting directly."
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "capDescription": "The Governance SCORE owns bnUSD and its single current EOA owner can execute Governance calls that raise the debt ceiling or deploy replacement mint-critical SCORE code without an on-chain vote delay.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-15",
+        "observedBlock": 115645618,
+        "sources": [
+          {
+            "label": "ICON public RPC",
+            "url": "https://ctz.solidwallet.io/api/v3"
+          },
+          {
+            "label": "ICON Governance v1.0.3 deployment transaction",
+            "url": "https://tracker.icon.community/transaction/0x6256edc11641f0d94e74acaa8bcdfc8ec9e466eff2b545710b3e47fccc101546"
+          }
+        ],
+        "evidence": "At block 115645618, the active Governance SCORE owner was this hx account and the bnUSD SCORE owner was the Governance SCORE. The exact v1.0.3 deployed archive gates execute() and deployTo() to that SCORE owner, allowing it to change bnUSD's debt ceiling or mint-critical SCORE code."
       }
     ],
     "review": {
-      "evidence": "Historical Balanced materials describe a DAO-governed overcollateralized CDP on ICON where the Loans contract mints bnUSD against sICX and bridged Hub collateral. The current Balanced documentation says v2 launched on April 7, 2026 and the original v1 app is no longer supported; the tracked ICON Loans authority and any active v2 mint path therefore remain unresolved.",
-      "reviewer": "SONG-1 Safety Score V9 control review",
-      "reviewedAt": "2026-07-14",
+      "evidence": "The historical documentation describes a collateralized bnUSD CDP. At ICON block 115645618, the tracked canonical bnUSD SCORE was active (v1.1.2), had an 8,000,000 bnUSD debt ceiling, and registered the Loans and Peg Stability SCOREs as its only direct minters. The exact deployed v1.1.2 archive enforces those checks. The SCORE is owned by Balanced Governance, whose current owner is the single hx account above; the exact deployed v1.0.3 Governance archive exposes owner-only execute() and deployTo() paths. This establishes a scoreable concentrated-admin mint and upgrade authority rather than the earlier no-RPC uncertainty.",
+      "reviewer": "TERRA-III Safety Score V9 control review",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Balanced v1 transition guide",
@@ -139,12 +227,19 @@
         {
           "label": "Balanced stablecoin page",
           "url": "https://balanced.network/stablecoin/"
+        },
+        {
+          "label": "ICON public RPC",
+          "url": "https://ctz.solidwallet.io/api/v3"
+        },
+        {
+          "label": "ICON bnUSD v1.1.2 deployment transaction",
+          "url": "https://tracker.icon.community/transaction/0x807cd811b5add6bc32044f500c0833843f8c0cf2bd2433814cfe80fddf387db3"
+        },
+        {
+          "label": "ICON Governance v1.0.3 deployment transaction",
+          "url": "https://tracker.icon.community/transaction/0x6256edc11641f0d94e74acaa8bcdfc8ec9e466eff2b545710b3e47fccc101546"
         }
-      ],
-      "sourceFreeRationale": "Historical CDP mechanism and DAO governance are documented, but the current Balanced v1 transition leaves the active mint boundary unresolved. ICON-native contract state and the v2 replacement authority were not available through the reviewed public sources.",
-      "unresolvedQuestions": [
-        "ICON chain has no publicly accessible keyless RPC for contract reads; cannot verify the Balanced Loans contract admin/owner on-chain. Requires ICON-native tooling (e.g. ICON node API or tracker API) to enumerate the cx88fd7df7ddff82f7cc735c871dc519838cb235bb contract admin and DAO governance execution path.",
-        "Balanced's current docs state the v1 app is no longer supported after the April 2026 v2 launch; the reviewed sources do not identify the active v2 bnUSD mint contract or authority for this tracked record."
       ]
     }
   },

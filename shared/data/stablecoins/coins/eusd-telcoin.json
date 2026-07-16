@@ -14,8 +14,9 @@
   "collateral": "Cash and high-quality liquid dollar reserves managed by Telcoin Digital Asset Bank for the eUSD issued token",
   "pegMechanism": "Bank-issued dollar token with KYC-gated mint and redemption through Telcoin banking rails",
   "mechanismArchetype": "fiat-cash",
-  "detailProvider": "coingecko",
+  "detailProvider": "defillama",
   "geckoId": "eusd-2",
+  "llamaId": "416",
   "cmcSlug": "eusd-telcoindab",
   "protocolSlug": "telcoin-bank",
   "links": [

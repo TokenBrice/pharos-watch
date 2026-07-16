@@ -110,8 +110,8 @@
           "caps": "The pool can mint only through the verified BridgedApyxToken mint path, which enforces the stored supply cap; it cannot change the cap or upgrade the token.",
           "pausersAdminsUpgraders": "The verified BridgedApyxToken source gates mint(), burn(), and burnFrom() to the stored CCIP pool; AccessManager separately controls administrative functions and upgrades."
         },
-        "observedAt": "2026-07-14",
-        "observedBlock": 48620556,
+        "observedAt": "2026-07-15",
+        "observedBlock": 48676161,
         "sources": [
           {
             "label": "Base apyUSD wrapper",
@@ -120,9 +120,17 @@
           {
             "label": "Apyx bridged-token source",
             "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/bridge/BridgedApyxToken.sol"
+          },
+          {
+            "label": "Apyx BridgedApyxToken source (pinned 420e6873)",
+            "url": "https://github.com/apyx-labs/evm-contracts/blob/420e6873c2dc934048d8b2690e9329d3be7843d2/src/bridge/BridgedApyxToken.sol"
+          },
+          {
+            "label": "Base PublicNode fixed-block RPC",
+            "url": "https://base-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Base block 48620556, getCCIPPool() returned 0xEd23Fc184a3FE5d12cA92ca4f5CeFa640DECf21d and authority() returned AccessManager 0x8afde6a90d2396a64eb97e8e69e7548289f78a1d."
+        "evidence": "At Base block 48676161 on 2026-07-15, getCCIPPool() returned 0xEd23Fc184a3FE5d12cA92ca4f5CeFa640DECf21d, authority() returned AccessManager 0x8afde6a90d2396a64eb97e8e69e7548289f78a1d, supplyCap() returned 100000000000000000000000000, and paused() returned false. The pool has deployed code; getToken() returned this wrapper and owner() returned the reviewed 3/6 Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2. The pinned Apyx source identifies it as the CCIP-gated contract caller of mint/burn, while AccessManager retains administrative and upgrade functions."
       },
       {
         "chain": "ethereum",
