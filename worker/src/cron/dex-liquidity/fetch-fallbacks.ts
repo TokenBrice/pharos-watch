@@ -193,7 +193,11 @@ export async function fetchDsFallbackPools(
 
   const recordFallbackOutcome = async () => {
     if (requests > 0) {
-      await recordOutcome(db, DEXSCREENER_LIQUIDITY_CIRCUIT, successfulRequests > 0);
+      try {
+        await recordOutcome(db, DEXSCREENER_LIQUIDITY_CIRCUIT, successfulRequests > 0);
+      } catch (err) {
+        console.warn("[dex-liquidity] DexScreener fallback circuit telemetry failed (non-fatal):", err);
+      }
     }
   };
 

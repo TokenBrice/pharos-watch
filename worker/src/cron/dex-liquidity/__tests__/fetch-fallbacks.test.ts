@@ -69,6 +69,7 @@ import { buildPoolIdentity, createKnownPoolIdentityIndex, registerKnownPoolIdent
 import type { CgTicker, DexPriceObs, LiquidityMetrics } from "../types";
 import { fetchJsonWithRetry } from "../../../lib/fetch-retry";
 import { fetchDsTokenPoolsWithStatus } from "../../../lib/dexscreener";
+import { recordOutcome } from "../../../lib/circuit-breaker";
 
 function createMockDb(): D1Database {
   return {
@@ -143,6 +144,8 @@ function makeObservation(overrides: Partial<DexPriceObs> = {}): DexPriceObs {
 beforeEach(() => {
   vi.mocked(fetchJsonWithRetry).mockReset();
   vi.mocked(fetchDsTokenPoolsWithStatus).mockReset();
+  vi.mocked(recordOutcome).mockReset();
+  vi.mocked(recordOutcome).mockResolvedValue({} as Awaited<ReturnType<typeof recordOutcome>>);
 });
 
 describe("DexScreener fallback identity", () => {
@@ -260,6 +263,40 @@ describe("DexScreener fallback identity", () => {
     } finally {
       contracts.pop();
       nowSpy.mockRestore();
+    }
+  });
+
+  it("keeps finalized pools when circuit-breaker telemetry fails", async () => {
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({
+      ok: true,
+      pairs: [
+        {
+          chainId: "solana",
+          dexId: "raydium",
+          pairAddress: "11111111111111111111111111111111",
+          baseToken: { address: "MintCase", name: "USD Coin", symbol: "USDC" },
+          quoteToken: { address: "QuoteCase", name: "Tether", symbol: "USDT" },
+          priceUsd: "1",
+          priceNative: "1",
+          volume: { h24: 20_000, h6: 0, h1: 0, m5: 0 },
+          liquidity: { usd: 100_000, base: 0, quote: 0 },
+          pairCreatedAt: null,
+        },
+      ],
+    });
+    vi.mocked(recordOutcome).mockRejectedValueOnce(new Error("D1 unavailable"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      const result = await fetchDsFallbackPools(createMockDb(), new Map(), new Map(), createKnownPoolIdentityIndex());
+
+      expect(result.newPools.get("usdc-circle")).toHaveLength(1);
+      expect(warn).toHaveBeenCalledWith(
+        "[dex-liquidity] DexScreener fallback circuit telemetry failed (non-fatal):",
+        expect.any(Error),
+      );
+    } finally {
+      warn.mockRestore();
     }
   });
 });
