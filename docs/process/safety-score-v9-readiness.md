@@ -44,9 +44,9 @@ The V9 implementation establishes candidate infrastructure without changing prod
 - `worker/src/lib/safety-score-v9-candidate.ts` and
   `worker/scripts/replay-safety-score-v9.ts` compile and evaluate the exact
   candidate deterministically. The current policy semantic digest is
-  `6b35e0543f60e787e9b1c2e2544cc4c4aa25186736c22cf0537cdb8cd4f2b8e2`;
+  `5f4f92eec713b65b30d60e3cd8d05a613ab86b4512db4dead699c9b85c30f15e`;
   the current evaluation-build digest is
-  `f17900061949f36ac7075dff190a0eb97ad94312704360c306c71553fd973377`.
+  `ad5870b23bd1e09b586edb123c504aa0729e0d5d9b3b5201c6830b6d7f336dff`.
 - The 2026-07-15 Batch 3 calibration revision (owner rulings 2026-07-15)
   applies the two ruled cap changes and nothing else. (1) The mint posture gains
   a distinct `unbounded-reconciled` rung (`mintPostureQuality` = 55) for an
@@ -86,6 +86,22 @@ The V9 implementation establishes candidate infrastructure without changing prod
   the flagship fiat coins are co-bound by non-chain common-mode (shared DEX
   venues, bridges, reserves); see the measurement record for the per-coin binding
   constraints.
+- The 2026-07-16 Batch 5 calibration revision (owner ruling Batch 5) extends the
+  common-mode severity decision per domain KIND, keyed off reviewed evidence.
+  `dex-protocol` liquidity concentration on a reviewed `materiality.matureVenues`
+  venue (curve/uniswap/balancer) is not a capping signal (diagnostic-only `low`,
+  which maps to a null critical-dependency limit and stays visible in the trace);
+  any other venue stays `high`. `bridge-route` concentration keys off the reviewed
+  bridge tier joined from `economicControlReview.bridge.routes`: a
+  `materiality.lowRiskBridgeTiers` tier (CCIP-class `external-validated-network`
+  and safer) grades `moderate`, any other or unreviewed tier stays fail-closed at
+  `high`. `reserve-issuer` concentration is excluded from the cap path (diagnostic
+  `low`) because backing concentration already prices single-obligor exposure;
+  `mint-control` and other kinds are unchanged. Same-input replay over the
+  2026-07-16 capture lifts BOLD and FXUSD from C+ (64) to B- (69) as their
+  mature-venue/CCIP-class non-chain caps clear; GHO holds on mint-control, USDC on
+  its unattributed-supply chain hold (queued for data curation), USDS on an
+  `external-lock-mint` bridge, and USDT stays 59/C.
 - The 2026-07-15 candidate-v2 queue-binding revision adds explicit
   `local-component` paths to seven reason allowlists already emitted as
   aggregate facts. The revision changes evidence-work-queue metadata only;

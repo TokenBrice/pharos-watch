@@ -26,7 +26,7 @@ describe("Safety Score v9 methodology policy", () => {
     expect(V9_CANDIDATE_POLICY_V1.policy.lifecycle).toBe("candidate");
     expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBeNull();
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "6b35e0543f60e787e9b1c2e2544cc4c4aa25186736c22cf0537cdb8cd4f2b8e2",
+      "5f4f92eec713b65b30d60e3cd8d05a613ab86b4512db4dead699c9b85c30f15e",
     );
     expect(Object.isFrozen(V9_CANDIDATE_POLICY_V1.policy.semantic.formula)).toBe(true);
   });
