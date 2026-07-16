@@ -5,6 +5,7 @@ import {
   RATE_DERIVED_STALE_THRESHOLD_MS,
   STALE_THRESHOLD_MS,
   SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
+  SLOW_NAV_SOURCE_STALE_THRESHOLD_MS,
   COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
   LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
   DETERMINISTIC_APY_SANITY_MAX,
@@ -54,6 +55,17 @@ describe("getRankingStaleThresholdMs", () => {
     expect(getRankingStaleThresholdMs("protocol-api", "protocol-api:pendle:ethereum:0xpool")).toBe(
       SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
     );
+  });
+
+  it("matches slow protocol-native NAV sources to their adapter freshness window", () => {
+    expect(getRankingStaleThresholdMs("protocol-api", "protocol-api:hashnote-usyc")).toBe(
+      SLOW_NAV_SOURCE_STALE_THRESHOLD_MS,
+    );
+    expect(getRankingStaleThresholdMs("protocol-api", "protocol-api:midas-mmev-nav-oracle")).toBe(
+      SLOW_NAV_SOURCE_STALE_THRESHOLD_MS,
+    );
+    expect(getRankingStaleThresholdMs("defillama", "protocol-api:hashnote-usyc")).toBe(STALE_THRESHOLD_MS);
+    expect(SLOW_NAV_SOURCE_STALE_THRESHOLD_MS).toBe(3 * 24 * 60 * 60 * 1000);
   });
 
   it("uses the supplemental threshold for optional onchain source keys", () => {

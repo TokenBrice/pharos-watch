@@ -8,7 +8,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.34`
+- **Current methodology version:** `v8.35`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -75,7 +75,7 @@ interface OnChainRateConfig {
 }
 ```
 
-Currently configured for 23 generic vaults (all use selector `0x07a2d13a` — `convertToAssets(uint256)`):
+Currently configured for 22 generic vaults (all use selector `0x07a2d13a` — `convertToAssets(uint256)`):
 
 | Coin ID                 | Wrapper   | Contract              | Chain     |
 | ----------------------- | --------- | --------------------- | --------- |
@@ -88,7 +88,6 @@ Currently configured for 23 generic vaults (all use selector `0x07a2d13a` — `c
 | `bold-liquity`          | yBOLD     | `0x9F43...a3d8`       | Ethereum  |
 | `usdf-falcon`           | sUSDf     | `0xc8cf...4b0`        | Ethereum  |
 | `susn-noon`             | sUSN      | `0xE24a...B91D`       | Ethereum  |
-| `ustb-superstate`       | USTB      | ERC-4626 (6 decimals) | Ethereum  |
 | `thbill-theo`           | thBILL    | ERC-4626 (6 decimals) | Ethereum  |
 | `susdc-spark`           | spUSDC    | `0x28b3...a43d`       | Ethereum  |
 | `susdt-spark`           | spUSDT    | `0xe2e7...c372`       | Ethereum  |
@@ -103,9 +102,9 @@ Currently configured for 23 generic vaults (all use selector `0x07a2d13a` — `c
 | `savusd-avant`          | savUSD    | `0x06d4...219e`       | Avalanche |
 | `yousd-yield-optimizer` | yoUSD     | `0x0000...8a65`       | Base      |
 
-`scrvusd-curve` is intentionally quarantined from this generic Tier 1 reader because its trailing 7-day `convertToAssets(1e18)` delta understated Curve's current scrvUSD savings APY. It uses the scrvUSD special-case estimator below instead. `reusd-re-protocol` is also quarantined from the generic reader for now because its current `convertToAssets(1e18)` probe does not return a usable value, so it continues to rely on non-deterministic source paths until a protocol-specific deterministic adapter is added.
+`scrvusd-curve` is intentionally quarantined from this generic Tier 1 reader because its trailing 7-day `convertToAssets(1e18)` delta understated Curve's current scrvUSD savings APY. It uses the scrvUSD special-case estimator below instead. `reusd-re-protocol` is also quarantined from the generic reader for now because its current `convertToAssets(1e18)` probe does not return a usable value. `ustb-superstate` is quarantined because the tracked USTB token is not an ERC-4626 vault; restoring deterministic USTB coverage requires a dedicated Superstate NAV-oracle adapter, not another generic `convertToAssets` attempt.
 
-The monthly yield coverage audit re-probes explicit generic `convertToAssets` quarantines when monthly `chainRpcs` are available. `reusd-re-protocol` has an inactive probe config for this audit lane, but it is not part of hourly `ON_CHAIN_RATE_CONFIGS`. Successful nonzero probe rates inside the `<=300%` exchange-rate envelope produce `quarantineReadyToRestore`, `quarantineProbeSummary`, and an operator queue candidate with kind `quarantine-ready-to-restore`; restoration remains manual and requires an operator to move the adapter back into hourly coverage. `scrvusd-curve` remains quarantined from the generic reader because its dedicated current-rate reader is the intended source. After the 2026-07-09 lifecycle review, `reusd-re-protocol` carries `nextReviewAt: 2026-08-09` for the next monthly probe check, and `scrvusd-curve` carries `nextReviewAt: 2026-10-09` while the dedicated reader remains canonical.
+The monthly yield coverage audit re-probes explicit generic `convertToAssets` quarantines when monthly `chainRpcs` are available. `reusd-re-protocol` has an inactive probe config for this audit lane, but it is not part of hourly `ON_CHAIN_RATE_CONFIGS`. Successful nonzero probe rates inside the `<=300%` exchange-rate envelope produce `quarantineReadyToRestore`, `quarantineProbeSummary`, and an operator queue candidate with kind `quarantine-ready-to-restore`; restoration remains manual and requires an operator to move the adapter back into hourly coverage. `scrvusd-curve` remains quarantined because its dedicated current-rate reader is canonical, while USTB is not re-probed because its interface mismatch is structural. Lifecycle review dates remain recorded in the typed registry.
 
 **APY formula:**
 
@@ -173,7 +172,7 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 
 **Layer 1 — Static map:** `YIELD_POOL_MAP` maps Pharos ID to a DL pool UUID. Filters for `exposure === "single"`. Finds the native/primary yield source. If a mapped UUID is missing from the DL payload, the sync logs `[yield-sync] Pool UUID ... not found in DL response, falling through` and continues to Layer 2/3 fallback matching.
 
-2026-05-22 source corrections: `usdn-smardex` now uses the exact SMARDEX USDN DeFiLlama single-exposure pool after its `navToken` flag was corrected to false. `a7a5-old-vector` was initially represented as an intentional yield gap, then gained RUB key-rate-derived coverage in v8.291.
+2026-05-22 source corrections: `usdn-smardex` now uses the exact SMARDEX USDN DeFiLlama single-exposure pool after its `navToken` flag was corrected to false. `a7a5-old-vector` was initially represented as an intentional yield gap, then gained RUB key-rate-derived coverage in v8.291. On 2026-07-15, base AZND was corrected to a fixed-peg non-NAV token and its configured yield type was moved to the exact loAZND wrapper path, preventing base-token market prices from being annualized as vault yield.
 
 **Layer 2 — Variant map:** `YIELD_VARIANT_MAP` maps to a wrapper/savings pool symbol and can also pin the wrapper chain, address, and preferred DeFiLlama project. Resolution prefers `(chain, address, project)` when configured, then `(chain, address)`, and only falls back to symbol on an unambiguous chain-scoped match. Filters for `exposure === "single"` only (stablecoin flag intentionally relaxed, since savings wrappers like fxSAVE are not flagged `stablecoin = true` in DeFiLlama).
 
@@ -315,7 +314,7 @@ Uses the structured benchmark cache refreshed daily by `fetch-tbill-rate`. USD d
 | wiTRY    | 0            | Brix TRY yield product, BIST TLREF overnight proxy using `TRY`                       |
 | A7A5     | 100          | Old Vector A7A5, CBR key-rate reserve-yield proxy using `RUB` net of 1.00pp          |
 
-Note: USTB and thBILL were previously rate-derived but have been promoted to Tier 1 `ON_CHAIN_RATE_CONFIGS` (ERC-4626 `convertToAssets`).
+Note: thBILL was previously rate-derived and remains in Tier 1 `ON_CHAIN_RATE_CONFIGS`. USTB's former generic entry is quarantined because the tracked token is not ERC-4626; its current DeFiLlama source remains available while a dedicated Superstate NAV-oracle adapter is deferred.
 VBILL is intentionally not rate-derived in v8.23; its coin metadata documents an on-chain NAVLink-style NAV feed, so it belongs to a future NAV-oracle source lane rather than this benchmark-proxy roster.
 
 Rate-derived runs after Tier 3 in the resolution loop and participates in the `is_best` selection like any other source. For tokens that also have price-derived or DL sources, the highest-APY source wins.
@@ -520,11 +519,11 @@ https://alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2
 | `reward-heavy`     | `apyReward / apy > 0.8`                                                                                                                                                                                                                                                                                            | 80%+ from incentives, not base yield                                                |
 | `tvl-outflow`      | TVL dropped > 20% from prev week                                                                                                                                                                                                                                                                                   | Capital leaving the protocol                                                        |
 | `zero-yield`       | `currentApy === 0 AND apy30d > 0.5%`                                                                                                                                                                                                                                                                               | Yield dropped to zero but had recent activity                                       |
-| `data-stale`       | Hourly source families are older than 3 `sync-yield-data` intervals (currently 180 min); supplemental Aave/Compound + protocol-API rows are older than 6 hours; `price-derived` rows are older than 36 hours; `rate-derived` rows are older than 48 hours; ordinary comparison anchors are older than 14 days; price-derived and Midas/Ondo NAV anchors are older than 45 days | Yield data or its APY comparison anchor is older than the source's expected cadence/window |
+| `data-stale`       | Hourly source families are older than 3 `sync-yield-data` intervals (currently 180 min); supplemental Aave/Compound + protocol-API rows are older than 6 hours, except Hashnote USYC and Midas mMEV observations accepted through 72 hours; `price-derived` rows are older than 36 hours; `rate-derived` rows are older than 48 hours; ordinary comparison anchors are older than 14 days; price-derived and Midas/Ondo NAV anchors are older than 45 days | Yield data or its APY comparison anchor is older than the source's expected cadence/window |
 
 All frontend surfaces (leaderboard, detail section, history chart) format warning signals via the shared `formatYieldWarningSignal()` function in `src/lib/yield-constants.ts`, which maps known signal keys to human-readable labels and falls back to hyphen-to-space conversion for unknown signals.
 
-At rankings cache-build time, `sync-yield-data` decorates rows with the read-time-only `data-stale` signal when the resolved source observation or its comparison anchor exceeds the source-aware window. Hourly publication families use the shared three-interval threshold (currently 180 minutes; `STALE_THRESHOLD_MS`), supplemental protocol-API and optional Aave/Compound rows use 6 hours (`SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS`), price-derived source observations use 36 hours (`PRICE_DERIVED_STALE_THRESHOLD_MS`), and rate-derived rows use 48 hours (`RATE_DERIVED_STALE_THRESHOLD_MS`) because the benchmark producer is daily. Ordinary exchange-rate comparison anchors use 14 days (`COMPARISON_ANCHOR_STALE_THRESHOLD_MS`); price-derived plus the Midas mMEV and Ondo USDY NAV-oracle rows use 45 days (`LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS`) because those adapters deliberately choose anchors from a 7-45 day window. The signal is included in cached rankings responses but is not written back to `yield_data`.
+At rankings cache-build time, `sync-yield-data` decorates rows with the read-time-only `data-stale` signal when the resolved source observation or its comparison anchor exceeds the source-aware window. Hourly publication families use the shared three-interval threshold (currently 180 minutes; `STALE_THRESHOLD_MS`), supplemental protocol-API and optional Aave/Compound rows use 6 hours (`SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS`), and the exact Hashnote USYC and Midas mMEV NAV source keys use the same 72-hour acceptance window enforced by their adapters (`SLOW_NAV_SOURCE_STALE_THRESHOLD_MS`). Price-derived source observations use 36 hours (`PRICE_DERIVED_STALE_THRESHOLD_MS`), and rate-derived rows use 48 hours (`RATE_DERIVED_STALE_THRESHOLD_MS`) because the benchmark producer is daily. Ordinary exchange-rate comparison anchors use 14 days (`COMPARISON_ANCHOR_STALE_THRESHOLD_MS`); price-derived plus the Midas mMEV and Ondo USDY NAV-oracle rows use 45 days (`LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS`) because those adapters deliberately choose anchors from a 7-45 day window. The signal is included in cached rankings responses but is not written back to `yield_data`.
 
 The sync also records comparison-anchor freshness under `sourceCoverage.comparisonAnchorFreshness`. The summary includes the anchored row count, stale anchor count, oldest stale anchor age/source, bounded stale examples with each source's `maxAgeSeconds`, and a truncation flag. Publication metadata additionally records `sourceCoverage.previousPublishedRankingCount` and `sourceCoverage.publishedRankingCountDelta`; severe coverage-regression guards emit the same ranking-count fields at top level before normal source coverage is assembled. `/api/status` exposes both shapes as `yieldHealth.previousRankingCount` and `yieldHealth.rankingCountDelta` so operators can see coverage growth or shrinkage without manually comparing payloads. These summaries are observability-only: stale-anchor warnings still follow the read-time `data-stale` rules above, and the freshness/ranking-delta metadata does not change source arbitration or scoring.
 

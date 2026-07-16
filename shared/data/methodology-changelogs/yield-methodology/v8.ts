@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.35",
+    title: "Source-Cadence and Wrapper Corrections",
+    date: "2026-07-16",
+    effectiveAt: 1784160000,
+    summary:
+      "Yield freshness now follows the accepted cadence of two slow protocol-native NAV sources, AZND yield stays attached to its loAZND wrapper instead of base-token prices, and the incompatible generic USTB reader is quarantined.",
+    impact: [
+      "Hashnote USYC and Midas mMEV observations remain score-eligible through the same 72-hour source-age limit enforced by their adapters; every other protocol-API row keeps the existing six-hour threshold",
+      "Base AZND is no longer treated as a NAV-appreciating token, so supply-history market prices cannot be annualized as holder yield; its exact Monad loAZND wrapper pool remains the configured lending-vault source",
+      "USTB leaves the generic ERC-4626 reader because the tracked token does not implement `convertToAssets`; its valid DeFiLlama source remains available and deterministic replacement requires a dedicated Superstate NAV-oracle adapter",
+      "PYS formula weights, source-risk penalties, comparison-anchor windows, benchmark rules, and source arbitration order are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.34",
     title: "Estimated Scores for Incomplete Evidence",
     date: "2026-07-11",
