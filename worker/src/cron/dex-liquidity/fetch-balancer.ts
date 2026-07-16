@@ -8,7 +8,7 @@ import {
 } from "./direct-api-policy";
 import { toErrorMessage } from "../../lib/error-utils";
 import { logWorkerEvent } from "../../lib/structured-log";
-import { rethrowIfAborted } from "../../lib/abort";
+import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 
 const BALANCER_API = "https://api-v3.balancer.fi/";
 
@@ -1092,6 +1092,7 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
 
   let reviewedRouteCount = 0;
   for (const route of REVIEWED_BALANCER_ROUTES) {
+    throwIfAborted(signal);
     const reviewed = await fetchReviewedBalancerRoute(route, warnings, signal);
     if (!reviewed) continue;
 

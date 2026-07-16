@@ -2,6 +2,7 @@ import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shar
 import { keccak256 } from "viem/utils";
 import { z } from "zod";
 import { CIRCUIT_SOURCE, USER_AGENT } from "../constants";
+import { throwIfAborted } from "../abort";
 import { encodeAddress, encodeUint256 } from "../evm-selectors";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import {
@@ -369,6 +370,7 @@ export const jusdStablecoinBridgeProvider: PriceSourceProvider = {
     if (!head) return null;
 
     for (const { route, parent } of trustedRoutes) {
+      throwIfAborted(signal);
       const bridgeState = await fetchValidatedBridgeState(route, head, signal);
       if (!bridgeState) continue;
 
