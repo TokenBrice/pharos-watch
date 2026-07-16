@@ -647,18 +647,14 @@ async function buildDexLiquidityPoolState(
   });
 
   const fallback = await runFallbackCrawlerPhase({
-    db: ctx.db,
     metrics,
     priceObservations: sourceState.priceObservations,
-    knownPoolIndex,
     signal: ctx.signal,
-    validationReferences: sourceState.validationReferences,
     failedSources: sourceState.failedSources,
-    coingeckoApiKey: ctx.coingeckoApiKey,
   });
   await reportDexLiquidityProgress(ctx, {
     stage: "pool-processing-complete",
-    message: "Completed pool merge and fallback crawl",
+    message: "Completed pool merge and bounded market telemetry",
     providerFamily: "dex-liquidity",
     itemsDone: metrics.size,
     itemsTotal: ACTIVE_STABLECOINS.length,

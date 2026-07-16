@@ -139,6 +139,7 @@ import { filterPrimaryPoolsPreferDirectApi } from "../dex-liquidity/orchestrator
 import { buildSymbolLookups } from "../dex-liquidity/pool-helpers";
 import { processPoolMetrics } from "../dex-liquidity/process-pools";
 import { mergeStagedPools } from "../dex-liquidity/staging-merge";
+import { fetchCgTickersFallback, fetchDsFallbackPools } from "../dex-liquidity/fetch-fallbacks";
 
 const db = {
   prepare: () => ({
@@ -379,6 +380,8 @@ describe("syncDexLiquidity", () => {
     expect(metadata.sourceCoverage?.qualityDriftFlags).toEqual([]);
     expect(metadata.sourceCoverage?.coinsWithoutMeasuredBalances).toBe(0);
     expect(metadata.sourceCoverage?.protocolCapReductions?.reducedTvlUsd).toBe(0);
+    expect(fetchDsFallbackPools).not.toHaveBeenCalled();
+    expect(fetchCgTickersFallback).not.toHaveBeenCalled();
   });
 
   it("finishes direct providers before loading primary sources", async () => {
