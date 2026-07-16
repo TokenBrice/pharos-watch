@@ -4,7 +4,7 @@ import {
   buildV9DependencyEvaluationPlan,
   resolveV9DependencyInputs,
 } from "../safety-score-v9/dependencies";
-import { commonModeSignalSeverity } from "../safety-score-v9/evaluate-set";
+import { commonModeSignalSeverity, type V9SupplyChainExposure } from "../safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
 const domain = (kind: "reserve-custodian" | "mint-control", key: string) => ({ kind, key } as const);
@@ -136,44 +136,76 @@ describe("buildV9DependencyEvaluationPlan", () => {
   });
 });
 
-describe("commonModeSignalSeverity (owner ruling 2026-07-15 Batch 3.3)", () => {
+describe("commonModeSignalSeverity (owner rulings Batch 3.3 + Batch 4 (option A))", () => {
   const materiality = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality;
+  const exposure = (shareBySlug: Record<string, number> = {}, unattributedShare = 0): V9SupplyChainExposure => ({
+    shareBySlug: new Map(Object.entries(shareBySlug)),
+    unattributedShare,
+  });
+  // A fully fail-closed exposure: no attributed share, whole base unattributed.
+  const failClosed = exposure({}, 1);
 
-  it("graduates a common-mode group on a single reviewed mature chain to moderate", () => {
+  it("grades a reviewed mature chain moderate regardless of exposure", () => {
     for (const chain of materiality.matureChains) {
-      expect(commonModeSignalSeverity({ kind: "chain", key: chain }, materiality)).toBe("moderate");
+      expect(commonModeSignalSeverity({ kind: "chain", key: chain }, failClosed, materiality)).toBe("moderate");
     }
   });
 
   it("normalizes DefiLlama display-name chain keys to their canonical slug before matching", () => {
-    // Supply facts key chain domains by display name; they must tier identically
-    // to the slug form (coordinator namespace-fidelity ruling 2026-07-15).
     for (const [displayName, slug] of [
       ["Ethereum", "ethereum"],
       ["BSC", "bsc"],
       ["OP Mainnet", "optimism"],
-      ["Arbitrum", "arbitrum"],
-      ["Avalanche", "avalanche"],
-      ["Polygon", "polygon"],
-      ["Base", "base"],
       ["Solana", "solana"],
     ] as const) {
       expect(materiality.matureChains).toContain(slug);
-      expect(commonModeSignalSeverity({ kind: "chain", key: displayName }, materiality)).toBe("moderate");
+      expect(commonModeSignalSeverity({ kind: "chain", key: displayName }, failClosed, materiality)).toBe("moderate");
     }
   });
 
-  it("keeps a fragile, unreviewed, or unresolvable chain concentration at the default high severity", () => {
+  it("keeps a non-mature chain with a material supply share at high", () => {
     expect(materiality.commonModeSignal.severity).toBe("high");
-    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, materiality)).toBe("high");
-    expect(commonModeSignalSeverity({ kind: "chain", key: "Fantom" }, materiality)).toBe("high");
-    expect(commonModeSignalSeverity({ kind: "chain", key: "unknown-l2" }, materiality)).toBe("high");
-    expect(commonModeSignalSeverity({ kind: "chain", key: "chain:ethereum" }, materiality)).toBe("high");
+    expect(materiality.matureChainShareThreshold).toBe(0.05);
+    // fantom holds 10% of supply -> material non-mature -> high.
+    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, exposure({ fantom: 0.1 }), materiality)).toBe(
+      "high",
+    );
+    // The display-name form resolves to the same non-mature slug and stays high.
+    expect(commonModeSignalSeverity({ kind: "chain", key: "Fantom" }, exposure({ fantom: 0.1 }), materiality)).toBe(
+      "high",
+    );
   });
 
-  it("keeps non-chain failure domains fail-closed at high", () => {
-    expect(commonModeSignalSeverity({ kind: "reserve-custodian", key: "custodian:a" }, materiality)).toBe("high");
-    expect(commonModeSignalSeverity({ kind: "mint-control", key: "mechanism:x" }, materiality)).toBe("high");
+  it("graduates a non-mature chain whose supply share is immaterial to moderate (the Batch 4 case)", () => {
+    // fantom is non-mature but holds only 1% of supply, dominated by mature chains.
+    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, exposure({ fantom: 0.01 }), materiality)).toBe(
+      "moderate",
+    );
+    // A non-mature chain with no selected route, bounded by immaterial unattributed supply.
+    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, exposure({}, 0.01), materiality)).toBe("moderate");
+  });
+
+  it("fails closed to high when the non-mature chain's share is unknown or unattributable", () => {
+    // No route for fantom and a material unattributed remainder -> cannot rule out material -> high.
+    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, exposure({}, 0.36), materiality)).toBe("high");
+    // Unresolvable chain name -> uses the unattributed bound.
+    expect(commonModeSignalSeverity({ kind: "chain", key: "unknown-l2" }, exposure({}, 0.36), materiality)).toBe("high");
+  });
+
+  it("treats exactly the threshold share as material (epsilon predicate)", () => {
+    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, exposure({ fantom: 0.05 }), materiality)).toBe(
+      "high",
+    );
+    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, exposure({ fantom: 0.0499 }), materiality)).toBe(
+      "moderate",
+    );
+  });
+
+  it("keeps non-chain failure domains at the default high severity", () => {
+    expect(commonModeSignalSeverity({ kind: "reserve-custodian", key: "custodian:a" }, failClosed, materiality)).toBe(
+      "high",
+    );
+    expect(commonModeSignalSeverity({ kind: "mint-control", key: "mechanism:x" }, failClosed, materiality)).toBe("high");
   });
 
   it("prices the graduated and default severities inside their locked grade bands", () => {

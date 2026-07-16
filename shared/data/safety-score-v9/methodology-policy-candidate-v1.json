@@ -232,7 +232,8 @@
         "optimism",
         "polygon",
         "solana"
-      ]
+      ],
+      "matureChainShareThreshold": 0.05
     },
     "backing": {
       "componentQuality": {

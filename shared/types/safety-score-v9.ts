@@ -997,6 +997,10 @@ const V9MaterialityPolicySchema = z
     // at the lower "moderate" severity. A group touching any chain outside this
     // set (or an unknown/non-chain failure domain) keeps the "high" severity.
     matureChains: z.array(z.string().min(1)),
+    // Supply share below which a non-mature chain's common-mode concentration is
+    // immaterial and does not raise the severity. A non-mature chain carrying a
+    // material (>= threshold) or unattributable share stays fail-closed at "high".
+    matureChainShareThreshold: z.number().finite().min(0).max(1),
   })
   .strict();
 
