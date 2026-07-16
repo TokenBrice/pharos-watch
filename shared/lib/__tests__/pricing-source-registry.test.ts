@@ -42,6 +42,7 @@ describe("pricing source registry", () => {
       "fluid-dex",
       "balancer-dex",
       "curve-dex",
+      "curve-thin-onchain",
       "uniswap-v3-dex",
       "uniswap-v4-dex",
       "raydium-dex",

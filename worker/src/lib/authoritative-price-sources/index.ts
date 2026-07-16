@@ -3,6 +3,7 @@ import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shar
 import { rethrowIfAborted } from "../abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../circuit-breaker";
 import type { PriceValidationReferences } from "../price-validation";
+import { azndCurvePoolProvider } from "./aznd-curve-pool";
 import { capCusdProvider } from "./cap-cusd";
 import { erc4626NavProvider } from "./erc4626-nav";
 import {
@@ -34,6 +35,7 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   iusdInfinifiProvider,
   inheritedTrackedPriceProvider,
   protocolParProvider,
+  azndCurvePoolProvider,
   mentoPhpmProvider,
   usxStablePoolProvider,
   kavaUsdxPricefeedProvider,
