@@ -486,7 +486,7 @@ async function main() {
     table: "surface_publication_generations",
     optionalMissing: true,
     sql: `
-    SELECT surface, generation_id, state, started_at, validated_at, published_at, failed_at,
+    SELECT surface, generation_id, state, started_at, validated_at, published_at, NULL AS failed_at,
            candidate_rows, published_rows, expected_rows, failure_reason,
            artifact_cache_key, previous_generation_id,
            length(input_watermarks_json) AS input_watermarks_bytes,
