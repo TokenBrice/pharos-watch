@@ -233,7 +233,19 @@
         "polygon",
         "solana"
       ],
-      "matureChainShareThreshold": 0.05
+      "matureChainShareThreshold": 0.05,
+      "matureVenues": [
+        "balancer",
+        "curve",
+        "uniswap"
+      ],
+      "lowRiskBridgeTiers": [
+        "canonical-rollup-bridge",
+        "external-validated-network",
+        "issuer-native-burn-mint",
+        "issuer-native-lock-mint",
+        "single-chain-or-native"
+      ]
     },
     "backing": {
       "componentQuality": {

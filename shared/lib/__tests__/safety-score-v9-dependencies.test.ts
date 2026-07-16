@@ -4,7 +4,7 @@ import {
   buildV9DependencyEvaluationPlan,
   resolveV9DependencyInputs,
 } from "../safety-score-v9/dependencies";
-import { commonModeSignalSeverity, type V9SupplyChainExposure } from "../safety-score-v9/evaluate-set";
+import { commonModeSignalSeverity, type V9CommonModeContext } from "../safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
 const domain = (kind: "reserve-custodian" | "mint-control", key: string) => ({ kind, key } as const);
@@ -136,14 +136,18 @@ describe("buildV9DependencyEvaluationPlan", () => {
   });
 });
 
-describe("commonModeSignalSeverity (owner rulings Batch 3.3 + Batch 4 (option A))", () => {
+describe("commonModeSignalSeverity (owner rulings Batch 3.3 + Batch 4 (option A) + Batch 5)", () => {
   const materiality = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality;
-  const exposure = (shareBySlug: Record<string, number> = {}, unattributedShare = 0): V9SupplyChainExposure => ({
-    shareBySlug: new Map(Object.entries(shareBySlug)),
-    unattributedShare,
+  const context = (
+    shareBySlug: Record<string, number> = {},
+    unattributedShare = 0,
+    bridgeTierByDomain: Record<string, string> = {},
+  ): V9CommonModeContext => ({
+    supplyExposure: { shareBySlug: new Map(Object.entries(shareBySlug)), unattributedShare },
+    bridgeTierByDomain: new Map(Object.entries(bridgeTierByDomain)) as V9CommonModeContext["bridgeTierByDomain"],
   });
-  // A fully fail-closed exposure: no attributed share, whole base unattributed.
-  const failClosed = exposure({}, 1);
+  // A fully fail-closed context: no attributed share, no reviewed bridge tiers.
+  const failClosed = context({}, 1);
 
   it("grades a reviewed mature chain moderate regardless of exposure", () => {
     for (const chain of materiality.matureChains) {
@@ -154,7 +158,6 @@ describe("commonModeSignalSeverity (owner rulings Batch 3.3 + Batch 4 (option A)
   it("normalizes DefiLlama display-name chain keys to their canonical slug before matching", () => {
     for (const [displayName, slug] of [
       ["Ethereum", "ethereum"],
-      ["BSC", "bsc"],
       ["OP Mainnet", "optimism"],
       ["Solana", "solana"],
     ] as const) {
@@ -163,53 +166,62 @@ describe("commonModeSignalSeverity (owner rulings Batch 3.3 + Batch 4 (option A)
     }
   });
 
-  it("keeps a non-mature chain with a material supply share at high", () => {
+  it("grades chain concentration by material exposure (Batch 4)", () => {
     expect(materiality.commonModeSignal.severity).toBe("high");
     expect(materiality.matureChainShareThreshold).toBe(0.05);
-    // fantom holds 10% of supply -> material non-mature -> high.
-    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, exposure({ fantom: 0.1 }), materiality)).toBe(
-      "high",
-    );
-    // The display-name form resolves to the same non-mature slug and stays high.
-    expect(commonModeSignalSeverity({ kind: "chain", key: "Fantom" }, exposure({ fantom: 0.1 }), materiality)).toBe(
-      "high",
-    );
+    // Material non-mature share -> high; the display-name form resolves the same.
+    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, context({ fantom: 0.1 }), materiality)).toBe("high");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "Fantom" }, context({ fantom: 0.1 }), materiality)).toBe("high");
+    // Immaterial non-mature share -> moderate; no route bounded by immaterial remainder -> moderate.
+    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, context({ fantom: 0.01 }), materiality)).toBe("moderate");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, context({}, 0.01), materiality)).toBe("moderate");
+    // Unknown/unattributable share -> fail-closed high; threshold exactly = material.
+    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, context({}, 0.36), materiality)).toBe("high");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "unknown-l2" }, context({}, 0.36), materiality)).toBe("high");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, context({ fantom: 0.05 }), materiality)).toBe("high");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, context({ fantom: 0.0499 }), materiality)).toBe("moderate");
   });
 
-  it("graduates a non-mature chain whose supply share is immaterial to moderate (the Batch 4 case)", () => {
-    // fantom is non-mature but holds only 1% of supply, dominated by mature chains.
-    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, exposure({ fantom: 0.01 }), materiality)).toBe(
+  it("makes a reviewed mature venue non-capping and any other venue high (Batch 5 dex-protocol)", () => {
+    expect(materiality.matureVenues).toEqual(expect.arrayContaining(["curve", "balancer", "uniswap"]));
+    for (const venue of ["curve", "balancer", "uniswap", "Curve", "UNISWAP"]) {
+      expect(commonModeSignalSeverity({ kind: "dex-protocol", key: venue }, failClosed, materiality)).toBe("low");
+    }
+    expect(commonModeSignalSeverity({ kind: "dex-protocol", key: "raydium" }, failClosed, materiality)).toBe("high");
+    expect(commonModeSignalSeverity({ kind: "dex-protocol", key: "unknown-dex" }, failClosed, materiality)).toBe("high");
+  });
+
+  it("keys bridge-route severity off the reviewed bridge tier (Batch 5)", () => {
+    const domainKey = "bridge-route:protocol:chainlink-ccip";
+    // CCIP-class (external-validated-network) reviewed low-risk tier -> moderate.
+    const lowRisk = context({}, 0, { [domainKey]: "external-validated-network" });
+    expect(commonModeSignalSeverity({ kind: "bridge-route", key: "protocol:chainlink-ccip" }, lowRisk, materiality)).toBe(
       "moderate",
     );
-    // A non-mature chain with no selected route, bounded by immaterial unattributed supply.
-    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, exposure({}, 0.01), materiality)).toBe("moderate");
-  });
-
-  it("fails closed to high when the non-mature chain's share is unknown or unattributable", () => {
-    // No route for fantom and a material unattributed remainder -> cannot rule out material -> high.
-    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, exposure({}, 0.36), materiality)).toBe("high");
-    // Unresolvable chain name -> uses the unattributed bound.
-    expect(commonModeSignalSeverity({ kind: "chain", key: "unknown-l2" }, exposure({}, 0.36), materiality)).toBe("high");
-  });
-
-  it("treats exactly the threshold share as material (epsilon predicate)", () => {
-    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, exposure({ fantom: 0.05 }), materiality)).toBe(
+    // A higher-risk reviewed tier -> high.
+    const highRisk = context({}, 0, { [domainKey]: "opaque-or-unknown" });
+    expect(commonModeSignalSeverity({ kind: "bridge-route", key: "protocol:chainlink-ccip" }, highRisk, materiality)).toBe(
       "high",
     );
-    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, exposure({ fantom: 0.0499 }), materiality)).toBe(
-      "moderate",
+    // Unreviewed / tier not reachable -> fail-closed high.
+    expect(commonModeSignalSeverity({ kind: "bridge-route", key: "protocol:chainlink-ccip" }, failClosed, materiality)).toBe(
+      "high",
     );
   });
 
-  it("keeps non-chain failure domains at the default high severity", () => {
-    expect(commonModeSignalSeverity({ kind: "reserve-custodian", key: "custodian:a" }, failClosed, materiality)).toBe(
-      "high",
+  it("makes reserve-issuer diagnostic and other domains high (Batch 5)", () => {
+    // reserve-issuer is excluded from the cap path (backing prices it) -> low.
+    expect(commonModeSignalSeverity({ kind: "reserve-issuer", key: "United States Treasury" }, failClosed, materiality)).toBe(
+      "low",
     );
+    // mint-control and other kinds keep the default high.
     expect(commonModeSignalSeverity({ kind: "mint-control", key: "mechanism:x" }, failClosed, materiality)).toBe("high");
+    expect(commonModeSignalSeverity({ kind: "reserve-custodian", key: "custodian:a" }, failClosed, materiality)).toBe("high");
   });
 
-  it("prices the graduated and default severities inside their locked grade bands", () => {
+  it("prices the graduated severities inside their locked grade bands with low non-capping", () => {
     const limits = V9_CANDIDATE_POLICY_V1.policy.semantic.structural.signalLimits["critical-dependency"];
+    expect(limits.low).toBeNull(); // "low" is diagnostic-only (no cap)
     expect(limits.moderate).toBe(79); // top of B+ (75-79)
     expect(limits.high).toBe(64);
   });
