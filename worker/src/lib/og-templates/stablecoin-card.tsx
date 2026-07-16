@@ -171,13 +171,13 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
               alignSelf: "flex-start",
               marginBottom: 18,
               borderRadius: 6,
-              border: "1px solid rgba(113, 113, 122, 0.4)",
+              border: "1px solid #d4d4d8",
               padding: "4px 12px",
               fontFamily: "Geist Mono",
               fontSize: 16,
-              letterSpacing: "0.08em",
+              letterSpacing: "0",
               textTransform: "uppercase",
-              color: "rgb(212, 212, 216)",
+              color: "#52525b",
             }}
           >
             Frozen archive
@@ -190,7 +190,7 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
               marginBottom: 18,
               fontFamily: "Geist Mono",
               fontSize: 16,
-              letterSpacing: "0.08em",
+              letterSpacing: "0",
               color: TEXT_SECONDARY,
               textTransform: "uppercase",
             }}

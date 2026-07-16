@@ -37,7 +37,7 @@ function PerformerList({
         style={{
           fontSize: 13,
           color: accentColor,
-          letterSpacing: "0.06em",
+          letterSpacing: "0",
           fontWeight: 600,
         }}
       >

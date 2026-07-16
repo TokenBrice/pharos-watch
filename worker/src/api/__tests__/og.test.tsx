@@ -88,6 +88,8 @@ describe("stablecoin OG card data", () => {
     expect(markup).toContain("BACKING");
     expect(markup).toContain("RWA");
     expect(markup).toContain("CeFi");
+    expect(markup).toContain("background-color:#f8f8fa");
+    expect(markup).not.toContain("background-color:#0a0f1e");
   });
 
   describe("peg-analytics cache hits", () => {

@@ -81,7 +81,7 @@ mkdirSync(PUBLIC, { recursive: true });
 mkdirSync(dirname(SIGNATURE_PATH), { recursive: true });
 
 const OUTCOME_LABEL: Record<string, string> = { survived: "Survived", wounded: "Wounded", died: "Died" };
-const OUTCOME_COLOR: Record<string, string> = { survived: "#34d399", wounded: "#fbbf24", died: "#fb7185" };
+const OUTCOME_COLOR: Record<string, string> = { survived: "#15803d", wounded: "#a16207", died: "#dc2626" };
 
 const CARDS = CASE_STUDY_LIST.map((study) => ({
   slug: study.slug,
@@ -175,41 +175,42 @@ function buildSvg({
     .join("");
 
   const outcomeLabel = OUTCOME_LABEL[outcome] ?? null;
-  const outcomeColor = OUTCOME_COLOR[outcome] ?? "#8b8fa3";
+  const outcomeColor = OUTCOME_COLOR[outcome] ?? "#5f6570";
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 628" width="1200" height="628">
   <defs><style>text { font-kerning: normal; }</style></defs>
 
   <defs><clipPath id="logoClip"><circle cx="1100" cy="40" r="22"/></clipPath></defs>
 
-  <rect width="1200" height="628" fill="#0a0f1e"/>
-  <line x1="64" y1="64" x2="1136" y2="64" stroke="#E8DCC4" stroke-opacity="0.16" stroke-width="1"/>
+  <rect width="1200" height="628" fill="#f8f8fa"/>
+  <rect width="1200" height="4" fill="#22c55e"/>
+  <line x1="64" y1="64" x2="1136" y2="64" stroke="#d9dce1" stroke-width="1"/>
 
-  <text x="64" y="50" font-family="'GeistMono', ui-monospace, monospace" font-size="22" font-weight="600" fill="#E8DCC4" letter-spacing="0.16em">PHAROS</text>
+  <text x="64" y="50" font-family="'GeistMono', ui-monospace, monospace" font-size="22" font-weight="600" fill="#171719" letter-spacing="0">Pharos</text>
   ${
     logoHref
-      ? `<text x="1052" y="46" font-family="'GeistMono', ui-monospace, monospace" font-size="16" font-weight="400" fill="#8b8fa3" letter-spacing="0.06em" text-anchor="end">Case Study</text>
-  <circle cx="1100" cy="40" r="23" fill="#0a0f1e" stroke="#E8DCC4" stroke-opacity="0.18" stroke-width="1"/>
+      ? `<text x="1052" y="46" font-family="'GeistMono', ui-monospace, monospace" font-size="16" font-weight="400" fill="#5f6570" letter-spacing="0" text-anchor="end">Case Study</text>
+  <circle cx="1100" cy="40" r="23" fill="#ffffff" stroke="#d9dce1" stroke-width="1"/>
   <image href="${escapeXml(logoHref)}" x="1078" y="18" width="44" height="44" clip-path="url(#logoClip)" preserveAspectRatio="xMidYMid slice"/>`
-      : `<text x="1136" y="50" font-family="'GeistMono', ui-monospace, monospace" font-size="16" font-weight="400" fill="#8b8fa3" letter-spacing="0.06em" text-anchor="end">Case Study</text>`
+      : `<text x="1136" y="50" font-family="'GeistMono', ui-monospace, monospace" font-size="16" font-weight="400" fill="#5f6570" letter-spacing="0" text-anchor="end">Case Study</text>`
   }
 
-  <text x="64" y="200" font-family="'GeistMono', ui-monospace, monospace" font-size="20" font-weight="500" fill="#5ba3d9" letter-spacing="0.24em">${escapeXml(
+  <text x="64" y="200" font-family="'GeistMono', ui-monospace, monospace" font-size="20" font-weight="500" fill="#0e7490" letter-spacing="0">${escapeXml(
     (kicker ?? "Case Study").toUpperCase(),
   )}</text>
-  <line x1="64" y1="224" x2="1136" y2="224" stroke="#E8DCC4" stroke-opacity="0.10" stroke-width="1"/>
+  <line x1="64" y1="224" x2="1136" y2="224" stroke="#e4e7eb" stroke-width="1"/>
 
-  <text x="64" y="${startY}" font-family="'Newsreader', Georgia, serif" font-size="${chosen.size}" font-weight="500" fill="#F5F0E6" letter-spacing="-0.015em">${titleTspans}</text>
+  <text x="64" y="${startY}" font-family="'Newsreader', Georgia, serif" font-size="${chosen.size}" font-weight="500" fill="#171719" letter-spacing="0">${titleTspans}</text>
 
-  <line x1="64" y1="540" x2="1136" y2="540" stroke="#E8DCC4" stroke-opacity="0.16" stroke-width="1"/>
+  <line x1="64" y1="540" x2="1136" y2="540" stroke="#d9dce1" stroke-width="1"/>
   ${
     outcomeLabel
-      ? `<text x="64" y="580" font-family="'GeistMono', ui-monospace, monospace" font-size="18" font-weight="500" fill="${outcomeColor}" letter-spacing="0.12em">${escapeXml(
+      ? `<text x="64" y="580" font-family="'GeistMono', ui-monospace, monospace" font-size="18" font-weight="500" fill="${outcomeColor}" letter-spacing="0">${escapeXml(
           outcomeLabel.toUpperCase(),
         )}</text>`
       : ""
   }
-  <text x="1136" y="580" font-family="'GeistMono', ui-monospace, monospace" font-size="16" font-weight="400" fill="#8b8fa3" letter-spacing="0.04em" text-anchor="end">pharos.watch</text>
+  <text x="1136" y="580" font-family="'GeistMono', ui-monospace, monospace" font-size="16" font-weight="400" fill="#5f6570" letter-spacing="0" text-anchor="end">pharos.watch</text>
 </svg>
 `;
 }
@@ -220,7 +221,7 @@ function buildHtml(svg: string) {
   return `<!doctype html><html><head><meta charset="utf-8"/><style>
   @font-face { font-family: 'Newsreader'; font-style: normal; font-weight: 200 800; src: url('${newsreaderUrl}') format('woff2'); font-display: block; }
   @font-face { font-family: 'GeistMono'; font-style: normal; font-weight: 400 700; src: url('${geistMonoUrl}') format('woff2'); font-display: block; }
-  html, body { margin: 0; padding: 0; background: #0a0f1e; } svg { display: block; }
+  html, body { margin: 0; padding: 0; background: #f8f8fa; } svg { display: block; }
 </style></head><body>${svg}</body></html>`;
 }
 
