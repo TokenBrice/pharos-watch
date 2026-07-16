@@ -246,6 +246,29 @@ function compareAddressPriceTargets(left: AddressPriceTarget, right: AddressPric
   return `${left.stablecoinId}:${left.chain}:${left.address}`.localeCompare(`${right.stablecoinId}:${right.chain}:${right.address}`);
 }
 
+function getAddressPriceTargetPriority(target: AddressPriceTarget): number {
+  if (target.missingPrice) return 0;
+  if (target.previousSourceDepth <= 2) return 1;
+  return 2;
+}
+
+export function rotateAddressPriceTargets(
+  targets: readonly AddressPriceTarget[],
+  cursor: number,
+): AddressPriceTarget[] {
+  const cohorts = new Map<number, AddressPriceTarget[]>();
+  for (const target of targets) {
+    const priority = getAddressPriceTargetPriority(target);
+    const cohort = cohorts.get(priority) ?? [];
+    cohort.push(target);
+    cohorts.set(priority, cohort);
+  }
+
+  return [...cohorts.entries()]
+    .sort(([left], [right]) => left - right)
+    .flatMap(([, cohort]) => rotateTargets(cohort, cursor));
+}
+
 export function buildAddressPriceTargetsByProvider(params: {
   assets: AddressPriceAssetLike[];
   previousAssetsById?: Map<string, AddressPriceAssetLike>;
@@ -352,7 +375,7 @@ export async function collectAddressPriceProviderQuotes(params: {
       `address-targets:${provider}`,
       Math.floor(params.nowSec / 900),
     );
-    const targets = rotateTargets(unrotatedTargets, targetCursor);
+    const targets = rotateAddressPriceTargets(unrotatedTargets, targetCursor);
     if (targets.length === 0) {
       providerOutcomes.set(provider, "success");
       diagnostics.push(buildNoCandidatesDiagnostic({

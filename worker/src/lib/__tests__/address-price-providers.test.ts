@@ -4,6 +4,7 @@ import {
   collectAddressPriceProviderQuotes,
   resolveEnabledAddressPriceProviders,
   resolveFallbackChain,
+  rotateAddressPriceTargets,
 } from "../address-price-providers";
 import { runAlchemyAddressProvider } from "../address-price-providers/alchemy";
 import { runBirdeyeAddressProvider } from "../address-price-providers/birdeye";
@@ -155,6 +156,22 @@ describe("address price providers", () => {
       "missing",
       "low-depth-large",
       "low-depth-small",
+    ]);
+  });
+
+  it("rotates targets within priority cohorts without moving priced rows ahead of missing assets", () => {
+    const targets = [
+      makeDexScreenerTarget(1, { stablecoinId: "missing-large", missingPrice: true }),
+      makeDexScreenerTarget(2, { stablecoinId: "missing-small", missingPrice: true }),
+      makeDexScreenerTarget(3, { stablecoinId: "priced-low-depth", previousSourceDepth: 1 }),
+      makeDexScreenerTarget(4, { stablecoinId: "priced-covered", previousSourceDepth: 3 }),
+    ];
+
+    expect(rotateAddressPriceTargets(targets, 3).map((target) => target.stablecoinId)).toEqual([
+      "missing-small",
+      "missing-large",
+      "priced-low-depth",
+      "priced-covered",
     ]);
   });
 
