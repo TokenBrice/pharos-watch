@@ -94,15 +94,6 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
       "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
   },
   {
-    stablecoinId: "ustb-superstate",
-    chain: "ethereum",
-    contract: "0x43415eB6ff9DB7E26A15b704e7A3eDCe97d31C4e",
-    selector: "0x07a2d13a",
-    decimals: 6,
-    inputAmount:
-      "0x00000000000000000000000000000000000000000000000000000000000f4240",
-  },
-  {
     stablecoinId: "thbill-theo",
     chain: "ethereum",
     contract: "0x5FA487BCa6158c64046B2813623e20755091DA0b",
@@ -258,6 +249,7 @@ export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
  * - scrvusd-curve: uses a dedicated scrvUSD profit-unlock current-rate reader;
  *   generic 7-day convertToAssets deltas understate Curve's current savings APY
  * - reusd-re-protocol: current convertToAssets probe returns empty data
+ * - ustb-superstate: the tracked USTB token is not an ERC-4626 vault
  */
 const QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED: Record<string, YieldAdapterLifecycleReason> = {
   "scrvusd-curve": {
@@ -271,6 +263,12 @@ const QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED: Record<string, YieldAdapterLifec
     since: "2026-03-15",
     nextReviewAt: "2026-08-09",
     note: "2026-07-09 review: keep quarantined pending a successful monthly probe or protocol-specific deterministic reader; generic convertToAssets probe returns empty data",
+  },
+  "ustb-superstate": {
+    code: "token-not-erc4626",
+    since: "2026-07-15",
+    nextReviewAt: "2026-10-15",
+    note: "The tracked USTB token does not implement ERC-4626 convertToAssets; keep the generic reader disabled until a dedicated Superstate NAV-oracle adapter is implemented",
   },
 };
 

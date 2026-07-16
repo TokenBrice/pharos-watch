@@ -24,6 +24,13 @@ export const STALE_THRESHOLD_MS = CRON_INTERVALS["sync-yield-data"] * YIELD_STAL
 const SUPPLEMENTAL_STALE_THRESHOLD_CYCLES = 1.5;
 export const SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS =
   CRON_INTERVALS["sync-yield-supplemental"] * SUPPLEMENTAL_STALE_THRESHOLD_CYCLES * 1000;
+// These protocol-native NAV sources publish less frequently and already reject
+// observations older than three days in their adapters.
+export const SLOW_NAV_SOURCE_STALE_THRESHOLD_MS = 3 * 24 * 60 * 60 * 1000;
+const SLOW_NAV_SOURCE_KEYS = new Set([
+  "protocol-api:hashnote-usyc",
+  "protocol-api:midas-mmev-nav-oracle",
+]);
 // Price-derived rows are backed by daily supply-history snapshots, so allow one missed daily write plus buffer.
 export const PRICE_DERIVED_STALE_THRESHOLD_MS = 36 * 60 * 60 * 1000;
 // Rate-derived rows inherit daily benchmark observations rather than the hourly
@@ -176,6 +183,9 @@ export function getRankingStaleThresholdMs(dataSource: string, sourceKey?: strin
   }
   if (dataSource === "rate-derived") {
     return RATE_DERIVED_STALE_THRESHOLD_MS;
+  }
+  if (dataSource === "protocol-api" && sourceKey != null && SLOW_NAV_SOURCE_KEYS.has(sourceKey)) {
+    return SLOW_NAV_SOURCE_STALE_THRESHOLD_MS;
   }
   if (dataSource === "protocol-api" || (dataSource === "onchain" && isSupplementalOnchainSource(sourceKey))) {
     return SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS;

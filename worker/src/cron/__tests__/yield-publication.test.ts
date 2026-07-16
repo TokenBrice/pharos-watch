@@ -15,6 +15,7 @@ import {
   PRICE_DERIVED_STALE_THRESHOLD_MS,
   STALE_THRESHOLD_MS,
   SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
+  SLOW_NAV_SOURCE_STALE_THRESHOLD_MS,
   COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
   LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
 } from "../yield-helpers";
@@ -277,6 +278,21 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
     });
 
     expect(payload.rankings[0]?.warningSignals).toContain("data-stale");
+  });
+
+  it("keeps accepted slow NAV observations fresh through their three-day window", () => {
+    const thresholdSec = SLOW_NAV_SOURCE_STALE_THRESHOLD_MS / 1000;
+    const beforeBoundary = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec, {
+      dataSource: "protocol-api",
+      sourceKey: "protocol-api:hashnote-usyc",
+    });
+    const afterBoundary = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000) - thresholdSec - 1, {
+      dataSource: "protocol-api",
+      sourceKey: "protocol-api:hashnote-usyc",
+    });
+
+    expect(beforeBoundary.rankings[0]?.warningSignals).not.toContain("data-stale");
+    expect(afterBoundary.rankings[0]?.warningSignals).toContain("data-stale");
   });
 
   it("does not add data-stale for a fresh comparison anchor", () => {
