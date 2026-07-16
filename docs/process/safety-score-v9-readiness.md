@@ -277,11 +277,16 @@ Missing critical facts produce their exact reason-coded `NR`. Bounded facts with
 ## 2026-07-16 Real-A Calibration Result
 
 The latest calibration projection uses registry fingerprint
-`9f806506d925a51ae64d862324f17319e5e149f2006344426a53b2b1e1022161`
+`b7c6f74a5eb4183571a50a4b5b41ee3fdedf8cf5d97b8830e9192b3867e50fb6`
 and the candidate identities pinned in Implementation Status. It remains a
 local reviewed-registry projection rather than activation evidence: the three
 production inputs were captured before that registry evidence was deployed and
 were rekeyed locally. V8.17 remains the public methodology.
+
+Release review corrected four feUSD debt-cap controls that an administrator can
+raise and restored USDKG physical bullion to the active V8 reserve-risk rubric.
+Rekeying all three captures changed their registry, base-input, fact-set, and
+result identities but did not change any V9 score, grade, or histogram count.
 
 The retained engine-only replay and the reviewed evidence batch establish the
 following distribution:
@@ -300,19 +305,31 @@ rated. The fresh captures reduce the largest exact pillar tuple to 61/342
 gates pass. The retained reviewed-registry projection has 65/342 (19.0%) at the
 largest tuple and 52/342 (15.2%) in the largest score bucket.
 
-BOLD is a real production-path A: backing 78.05, exit 90.74, control 90,
-uncapped quality 85.48, and final 84/A under the unchanged less-than-24-month
-track-record cap. It has positive supply, strong current pillar evidence, an
-included executable DEX route, and no unresolved asset-wide control. FXUSD is
-70/B. Reviewed PUSD mint and upgrade evidence adds a third B-range asset at
-68/B-. The production-shaped composite remains 88/A+ without an injected
-score, cap, whitelist, or asset exception.
+BOLD produces a normal production-path 84/A: backing 78.05, exit 90.74,
+control 90, uncapped quality 85.48, and the unchanged less-than-24-month
+track-record cap. The hardened judge does not qualify that output as the
+contract's defensible real A. Of its 34 score-bearing evidence references, 15
+have `not-assessed` freshness: three bridge reviews, five mint-authority
+reviews, two oracle reviews, four DEX route valuations, and one redemption
+route valuation. BOLD has positive supply, an executable DEX route, strong
+pillar classifications, and resolved asset-wide controls, but its
+evidence-freshness gate therefore fails. FXUSD is 70/B. Reviewed PUSD mint and
+upgrade evidence adds a third B-range asset at 68/B-.
+
+The production-shaped composite fixture still produces 88/A+ without an
+injected score, cap, whitelist, or asset exception. No standalone composite
+replay or bound causal-attribution artifact was supplied to the hardened Friday
+judge, so both of those evidence gates fail closed rather than inheriting the
+fixture assertion.
 
 Three distinct schema-v3 exact inputs were captured at 17:49, 18:04, and 18:19
-UTC. Their source generations and base-input generations are distinct. All
-three reproduce BOLD 84/A, the same histogram, the same B-range set, and zero
-top-30 score movement. Outside the top 30, Last USD moves by one point with its
-peg input; other observed changes do not cross a grade.
+UTC. Trusted production rebuilds confirm distinct source and base-input
+generations, matching identities and asset sets, fresh inputs, the same
+histogram and B-range set, and no movement greater than three points. All three
+reproduce the numerical BOLD 84/A output, but none qualifies it as a real A
+while those 15 score-bearing references remain freshness-unassessed. Outside
+the top 30, Last USD moves by one point with its peg input; other observed
+changes do not cross a grade.
 
 The adverse-control gate does not pass. On the retained input, USDD moves from
 31/F to 39/F because its documented redemption route had been double-discounted:
@@ -324,25 +341,30 @@ envelope; the snapshot still records an undisclosed mixed basket, unsafe
 backing signals, and control 25. Neither movement is counted as calibration
 success.
 
-| Friday gate                                 | Result                                |
-| ------------------------------------------- | ------------------------------------- |
-| Coverage 342/344 and at least 99.99% supply | Pass                                  |
-| Existing live asset at 83-86/A              | Pass: BOLD 84/A                       |
-| A+ composite at least 87                    | Pass: 88/A+                           |
-| F at most 180                               | Fail: 186 retained, 182 fresh         |
-| C- or better at least 35                    | Fail: 33                              |
-| B- or better at least 5                     | Fail: 3                               |
-| Largest pillar tuple at most 20%            | Pass                                  |
-| Largest score bucket at most 15%            | Pass fresh; fail retained at 15.2%    |
-| Score IQR at least 12                       | Fail: 9                               |
-| Adverse controls unchanged                  | Fail: USDD retained; U on fresh input |
+| Friday gate                                 | Result                                                                          |
+| ------------------------------------------- | ------------------------------------------------------------------------------- |
+| Coverage 342/344 and at least 99.99% supply | Pass                                                                            |
+| Existing live asset at 83-86/A              | Fail: BOLD is 84/A, but 15/34 score-bearing references are freshness-unassessed |
+| A+ composite at least 87                    | Fail closed: 88/A+ fixture exists, but no trusted composite replay was supplied |
+| Three fresh, stable captures                | Pass: distinct, fresh, matching, and no movement over 3 points                  |
+| Same qualifying real A across captures      | Fail: BOLD does not pass evidence freshness                                     |
+| Causal attribution for every improvement    | Fail closed: no bound attribution artifact was supplied                         |
+| F at most 180                               | Fail: 186 retained, 182 fresh                                                   |
+| C- or better at least 35                    | Fail: 33                                                                        |
+| B- or better at least 5                     | Fail: 3                                                                         |
+| Largest pillar tuple at most 20%            | Pass                                                                            |
+| Largest score bucket at most 15%            | Pass fresh; fail retained at 15.2%                                              |
+| Score IQR at least 12                       | Fail: 9                                                                         |
+| Adverse controls unchanged                  | Fail: USDD retained; U on fresh input                                           |
 
 **Latest ruling: not calibration-ready.** The batch proves that V9 can produce
-a defensible A for an existing live stablecoin without moving grade bands,
-weights, floors, or known-risk caps. It also materially reduces evidence
-compression. It does not satisfy the complete readiness contract, so V9 stays
-shadow-only, qualifying days remain zero, and no activation or public cutover
-is authorized.
+an A-range numerical output for an existing live stablecoin without moving
+grade bands, weights, floors, or known-risk caps. It does not yet prove a
+defensible real A under the written evidence-freshness contract. It also
+materially reduces evidence compression, but the distribution gate and the
+adverse-control gate fail while the composite-replay and causal-attribution
+gates remain incomplete. V9 stays shadow-only, qualifying days remain zero, and
+no activation or public cutover is authorized.
 
 ## Prior 2026-07-16 Calibration Sprint Result
 

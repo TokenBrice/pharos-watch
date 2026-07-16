@@ -31,11 +31,17 @@ the weakest material failure path, structural ceilings, evidence sufficiency,
 dependencies, peg behavior, and stress propagation. Candidate failures cannot
 affect V8 publication; exact candidate state is available only to the admin
 workspace. The 2026-07-16 real-A calibration rates 342 of 344 assets and
-produces BOLD at 84/A through the normal compiler and evaluator. Three distinct
-exact production inputs reproduce that A and the same grade distribution after
-local projection onto the reviewed registry; the production-shaped composite
-remains 88/A+. The candidate is still not calibration-ready: F-count,
-upper-cohort breadth, IQR, and adverse-control gates fail. The captures were
+produces a numerical BOLD 84/A through the normal compiler and evaluator. The
+hardened judge does not qualify it as a defensible real A because 15 of its 34
+score-bearing evidence references have `not-assessed` freshness. Three
+distinct exact production inputs reproduce the numerical output and the same
+grade distribution after local projection onto the reviewed registry, but the
+repeated-real-A gate therefore fails. The production-shaped composite fixture
+remains 88/A+; no standalone composite replay or bound causal-attribution
+artifact was supplied to the Friday judge, so those evidence gates fail
+closed. The candidate is still not calibration-ready: real-A evidence
+freshness, F-count, upper-cohort breadth, IQR, adverse-control, composite-replay,
+and causal-attribution gates fail or remain incomplete. The captures were
 locally rekeyed and therefore are calibration evidence, not activation-window
 evidence. Independent holdout validation, release-cohort coverage, a later
 owner-frozen release candidate, and at least 14 consecutive verified shadow
