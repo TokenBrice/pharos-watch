@@ -248,7 +248,6 @@ export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
  * from the generic ERC-4626 reader until they have protocol-specific adapters:
  * - scrvusd-curve: uses a dedicated scrvUSD profit-unlock current-rate reader;
  *   generic 7-day convertToAssets deltas understate Curve's current savings APY
- * - reusd-re-protocol: current convertToAssets probe returns empty data
  * - ustb-superstate: the tracked USTB token is not an ERC-4626 vault
  */
 const QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED: Record<string, YieldAdapterLifecycleReason> = {
@@ -258,12 +257,6 @@ const QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED: Record<string, YieldAdapterLifec
     nextReviewAt: "2026-10-09",
     note: "2026-07-09 review: keep quarantined because the dedicated current-rate reader remains canonical; generic 7-day convertToAssets delta understates Curve's scrvUSD current profit-unlock APY",
   },
-  "reusd-re-protocol": {
-    code: "convert-to-assets-empty",
-    since: "2026-03-15",
-    nextReviewAt: "2026-08-09",
-    note: "2026-07-09 review: keep quarantined pending a successful monthly probe or protocol-specific deterministic reader; generic convertToAssets probe returns empty data",
-  },
   "ustb-superstate": {
     code: "token-not-erc4626",
     since: "2026-07-15",
@@ -272,17 +265,7 @@ const QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED: Record<string, YieldAdapterLifec
   },
 };
 
-export const QUARANTINED_DETERMINISTIC_PROBE_CONFIGS: OnChainRateConfig[] = [
-  {
-    stablecoinId: "reusd-re-protocol",
-    chain: "ethereum",
-    contract: "0x1202f5c7B4b9E47a1A9837B26881B7C20112BD51",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-  },
-];
+export const QUARANTINED_DETERMINISTIC_PROBE_CONFIGS: OnChainRateConfig[] = [];
 
 /**
  * Legacy free-form rationale map kept for backward compatibility with
@@ -302,6 +285,7 @@ export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
   "usyc-hashnote": "Hashnote NAV feed",
   "mmev-midas": "Midas mMEV NAV oracle",
   "usdy-ondo-finance": "Ondo USDY oracle",
+  "reusd-re-protocol": "Re Protocol Insurance Alpha (reUSDe)",
   "zys-zephyr-protocol": "Zephyr Scanner ZYS returns",
 };
 
@@ -313,6 +297,7 @@ export const DIRECT_PROTOCOL_API_SOURCE_KEYS: Record<string, string> = {
   "usyc-hashnote": "protocol-api:hashnote-usyc",
   "mmev-midas": "protocol-api:midas-mmev-nav-oracle",
   "usdy-ondo-finance": "protocol-api:ondo-usdy-oracle",
+  "reusd-re-protocol": "protocol-api:re-protocol-reusde",
   "zys-zephyr-protocol": "protocol-api:zys-zephyr-protocol",
 };
 

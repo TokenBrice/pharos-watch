@@ -7,6 +7,7 @@ export {
   fetchEtherfuseCetesSource,
   fetchHashnoteUsycSource,
   fetchOndoUsdyOracleSource,
+  fetchReProtocolReusdeSource,
   fetchZephyrZysSource,
 } from "./sources-optional-protocols-protocol-api";
 export {
