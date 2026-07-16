@@ -580,12 +580,20 @@ describe("fetchBalancerPools", () => {
 
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify({ data: { poolGetPools: page1 } })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { poolGetPools: page2 } })));
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: { poolGetPools: page2 } })))
+      .mockResolvedValueOnce(new Response(null, { status: 404 }));
 
     const pools = await fetchBalancerPools();
     expect(pools.pools.length).toBe(1001);
-    // Missing pause/swap state fails closed before the supplemental capability sweep.
-    expect(mockFetch).toHaveBeenCalledTimes(2);
+    // Pagination uses two list requests; the reviewed USP route adds one pool
+    // admission request and fails closed before its quote requests on non-OK.
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+    const reviewedPoolRequest = JSON.parse(String(mockFetch.mock.calls[2]?.[1]?.body));
+    expect(reviewedPoolRequest.query).toContain("poolGetPool");
+    expect(reviewedPoolRequest.variables).toEqual({
+      id: "0x114907c2a07978c38ebb9f9f6a5261a846b79521",
+      chain: "MAINNET",
+    });
   });
 
   it("skips pools with unknown chain", async () => {
