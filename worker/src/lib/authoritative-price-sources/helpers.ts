@@ -196,6 +196,17 @@ export interface LivePriceContext {
   validationReferences?: PriceValidationReferences;
 }
 
+export interface LivePriceDiagnosticTarget {
+  chain: string;
+  target: string;
+}
+
+export function getRegistryLivePriceDiagnosticTarget(stablecoinId: string): LivePriceDiagnosticTarget | null {
+  const deployment = TRACKED_META_BY_ID.get(stablecoinId)?.contracts?.[0];
+  if (!deployment) return null;
+  return { chain: deployment.chain, target: deployment.address };
+}
+
 export interface PriceSourceProvider {
   source: string;
   /**
@@ -203,6 +214,8 @@ export interface PriceSourceProvider {
    * or cache-only providers so slow RPC probes cannot starve cheap repairs.
    */
   livePriority?: number;
+  /** Run this fallback only when the asset entered the authoritative stage without a usable price. */
+  liveMissingOnly?: boolean;
   liveCircuitSource?: string;
   recordNullLiveResultAsCircuitFailure?: boolean;
   matches(stablecoinId: string): boolean;

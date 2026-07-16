@@ -184,6 +184,7 @@ export const CIRCUIT_SOURCE = {
   JUSD_CITREA_BRIDGE: "jusd-citrea-bridge",
   USX_STABLE_POOLS: "usx-stable-pools",
   AZND_CURVE_POOL: "aznd-curve-pool",
+  MENTO_BROKER: "mento-broker",
   PROTOCOL_REDEEM: "protocol-redeem",
   CURVE_ONCHAIN: "curve-onchain",
   CURVE_ORACLE: "curve-oracle",

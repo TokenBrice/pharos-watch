@@ -137,6 +137,7 @@ export async function fetchAzndCurvePoolPrice(
 
 export const azndCurvePoolProvider: PriceSourceProvider = {
   source: AZND_CURVE_SOURCE,
+  liveMissingOnly: true,
   liveCircuitSource: CIRCUIT_SOURCE.AZND_CURVE_POOL,
   livePriority: 1,
   recordNullLiveResultAsCircuitFailure: true,
@@ -144,10 +145,13 @@ export const azndCurvePoolProvider: PriceSourceProvider = {
     return stablecoinId === AZND_ID;
   },
   async fetchLivePrice(
-    _asset: PeggedAsset,
+    asset: PeggedAsset,
     context: LivePriceContext,
     signal?: AbortSignal,
   ): Promise<CurrentPriceOverride | null> {
+    if (typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0) {
+      return null;
+    }
     return fetchAzndCurvePoolPrice(context, signal);
   },
 };

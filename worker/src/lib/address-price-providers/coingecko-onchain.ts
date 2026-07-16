@@ -5,9 +5,11 @@ import { applyInvalidShapeDiagnostic, buildCapSkipDiagnostic } from "../pricing-
 import type { AddressPriceProviderRunResult, AddressPriceTarget } from "./types";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
+  buildSkippedAddressPriceAttempts,
   chunk,
   createProviderRunState,
   fetchProviderJson,
+  finalizeAddressPriceDiagnosticAttempts,
   groupTargetsByProviderChain,
   incrementReason,
   isRecord,
@@ -28,6 +30,7 @@ export async function runCoingeckoOnchainAddressProvider(
   const { diagnostics, quotes, rejectedTargets } = state;
   let { successfulRequests, attemptedRequests } = state;
   let processedCount = 0;
+  const processedTargets = new Set<AddressPriceTarget>();
 
   const grouped = groupTargetsByProviderChain(targets);
   for (const [providerChainId, chainTargets] of grouped) {
@@ -46,6 +49,7 @@ export async function runCoingeckoOnchainAddressProvider(
         provider: "coingecko-onchain-address",
         url,
         candidateCount: batch.length,
+        targets: batch,
         signal,
         init: { headers: cgHeaders({}, apiKey) },
       });
@@ -98,13 +102,23 @@ export async function runCoingeckoOnchainAddressProvider(
         diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected CoinGecko onchain tokens/multi payload");
       }
       processedCount += batch.length;
-      diagnostics.push(diagnostic);
+      for (const target of batch) processedTargets.add(target);
+      diagnostics.push(finalizeAddressPriceDiagnosticAttempts(diagnostic, quotes));
     }
   }
 
   const cappedTargets = Math.max(0, targets.length - processedCount);
   if (cappedTargets > 0) {
-    diagnostics.push(buildCapSkipDiagnostic({ source: "coingecko-onchain-address", label: "CoinGecko onchain" }, cappedTargets));
+    const skippedTargets = targets.filter((target) => !processedTargets.has(target));
+    const diagnostic = buildCapSkipDiagnostic({ source: "coingecko-onchain-address", label: "CoinGecko onchain" }, cappedTargets);
+    const deadlineReached = Date.now() >= deadlineMs;
+    diagnostic.assetAttempts = buildSkippedAddressPriceAttempts(
+      "coingecko-onchain-address",
+      skippedTargets,
+      deadlineReached ? "deadline" : "request-cap",
+      deadlineReached ? "timeout" : "cap",
+    );
+    diagnostics.push(diagnostic);
   }
 
   return {

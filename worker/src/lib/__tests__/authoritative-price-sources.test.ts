@@ -158,6 +158,22 @@ describe("authoritative-price-sources", () => {
     fetchMarketBackfillPriceSeriesMock.mockReset();
   });
 
+  it("does not enqueue a missing-only AZND fallback over a usable incumbent price", async () => {
+    const stats = createAuthoritativeLivePriceOverrideStats();
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [{ id: "aznd-mu-digital", price: 0.31 } as PeggedAsset],
+      undefined,
+      undefined,
+      { stats },
+    );
+
+    expect(overrides.size).toBe(0);
+    expect(stats.candidateCount).toBe(0);
+    expect(stats.attemptedCount).toBe(0);
+    expect(stats.assetAttempts).toEqual([]);
+    expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+  });
+
   describe("fetchVaultAssetsPerShareViaSelector", () => {
     const vaultConfig = {
       id: "test-vault",
@@ -219,21 +235,27 @@ describe("authoritative-price-sources", () => {
 
   it("returns a live cUSD override from the authoritative redemption quote", async () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValue(QUOTE_HEX);
+    const stats = createAuthoritativeLivePriceOverrideStats();
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "cusd-cap",
-        name: "Cap cUSD",
-        symbol: "CUSD",
-        circulating: { peggedUSD: 114_000_000 },
-      },
-      {
-        id: "usdt-tether",
-        name: "Tether",
-        symbol: "USDT",
-        circulating: { peggedUSD: 100_000_000_000 },
-      },
-    ]);
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [
+        {
+          id: "cusd-cap",
+          name: "Cap cUSD",
+          symbol: "CUSD",
+          circulating: { peggedUSD: 114_000_000 },
+        },
+        {
+          id: "usdt-tether",
+          name: "Tether",
+          symbol: "USDT",
+          circulating: { peggedUSD: 100_000_000_000 },
+        },
+      ],
+      undefined,
+      undefined,
+      { stats },
+    );
 
     expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledTimes(1);
     expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledWith(
@@ -252,6 +274,18 @@ describe("authoritative-price-sources", () => {
       confidence: "high",
     });
     expect(overrides.has("usdt-tether")).toBe(false);
+    expect(stats.assetAttempts).toEqual([
+      expect.objectContaining({
+        assetId: "cusd-cap",
+        adapter: "protocol-redeem",
+        source: "protocol-redeem",
+        chain: "ethereum",
+        target: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+        state: "attempted",
+        result: "resolved",
+        replaySafe: true,
+      }),
+    ]);
   });
 
   it("skips live RPC protocol-redeem overrides while the grouped circuit is open", async () => {
@@ -297,6 +331,14 @@ describe("authoritative-price-sources", () => {
       attemptedCount: 0,
       skippedCircuitOpen: 1,
     });
+    expect(stats.assetAttempts).toEqual([
+      expect.objectContaining({
+        assetId: "cusd-cap",
+        state: "skipped",
+        skipReason: "circuit-open",
+        rejectionClass: "blocked",
+      }),
+    ]);
   });
 
   it("reuses an open grouped circuit decision within one live override run", async () => {
@@ -587,6 +629,14 @@ describe("authoritative-price-sources", () => {
       failedCount: 0,
       timedOut: true,
     });
+    expect(stats.assetAttempts).toEqual([
+      expect.objectContaining({
+        assetId: "cusd-cap",
+        state: "attempted",
+        result: "failed",
+        rejectionClass: "timeout",
+      }),
+    ]);
   });
 
   it("replays historical cUSD prices through the same authoritative provider", async () => {

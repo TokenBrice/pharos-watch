@@ -11,7 +11,10 @@ vi.mock("../evm-rpc", () => ({
   fetchEvmCallHexAtBlock: (...args: unknown[]) => fetchEvmCallHexAtBlockMock(...args),
 }));
 
-import { fetchAzndCurvePoolPrice } from "../authoritative-price-sources/aznd-curve-pool";
+import {
+  azndCurvePoolProvider,
+  fetchAzndCurvePoolPrice,
+} from "../authoritative-price-sources/aznd-curve-pool";
 
 const AZND = "0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0";
 const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
@@ -94,5 +97,17 @@ describe("AZND exact Curve pool price", () => {
       assetsById: new Map([["usdc-circle", trustedUsdc()]]),
     })).resolves.toBeNull();
     expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+  });
+
+  it("does not replace an existing usable market price with the thin fallback", async () => {
+    const asset = { id: "aznd-mu-digital", symbol: "AZND", price: 0.31 } as PeggedAsset;
+
+    await expect(azndCurvePoolProvider.fetchLivePrice?.(asset, {
+      assetsById: new Map([
+        [asset.id, asset],
+        ["usdc-circle", trustedUsdc()],
+      ]),
+    })).resolves.toBeNull();
+    expect(fetchEvmBlockNumberMock).not.toHaveBeenCalled();
   });
 });

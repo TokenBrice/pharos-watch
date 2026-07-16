@@ -28,6 +28,7 @@ function makeDexScreenerTarget(index: number, overrides: Partial<AddressPriceTar
     origin: "contracts",
     previousSourceDepth: 1,
     missingPrice: false,
+    expiresBeforeNextGeneration: false,
     circulatingUsd: 1_000_000 - index,
     ...overrides,
   };
@@ -159,17 +160,59 @@ describe("address price providers", () => {
     ]);
   });
 
+  it("prioritizes a trusted price expiring before the next generation ahead of low-depth rows", () => {
+    const nowSec = 1_800_000_000;
+    const targets = buildAddressPriceTargetsByProvider({
+      providers: ["dexpaprika-address"],
+      nowSec,
+      previousAssetsById: new Map([
+        ["expiring", {
+          id: "expiring",
+          symbol: "EXP",
+          consensusSources: ["coingecko", "defillama-list", "coinbase"],
+          priceSource: "coingecko",
+          priceObservedAt: nowSec,
+        }],
+        ["low-depth", { id: "low-depth", symbol: "LOW", consensusSources: ["coingecko"] }],
+      ]),
+      assets: [
+        {
+          id: "low-depth",
+          symbol: "LOW",
+          address: "base:0x0000000000000000000000000000000000000001",
+          price: 1,
+        },
+        {
+          id: "expiring",
+          symbol: "EXP",
+          address: "base:0x0000000000000000000000000000000000000002",
+          price: 1,
+        },
+      ],
+    });
+
+    expect(targets.get("dexpaprika-address")?.map((target) => ({
+      id: target.stablecoinId,
+      expiring: target.expiresBeforeNextGeneration,
+    }))).toEqual([
+      { id: "expiring", expiring: true },
+      { id: "low-depth", expiring: false },
+    ]);
+  });
+
   it("rotates targets within priority cohorts without moving priced rows ahead of missing assets", () => {
     const targets = [
       makeDexScreenerTarget(1, { stablecoinId: "missing-large", missingPrice: true }),
       makeDexScreenerTarget(2, { stablecoinId: "missing-small", missingPrice: true }),
-      makeDexScreenerTarget(3, { stablecoinId: "priced-low-depth", previousSourceDepth: 1 }),
-      makeDexScreenerTarget(4, { stablecoinId: "priced-covered", previousSourceDepth: 3 }),
+      makeDexScreenerTarget(3, { stablecoinId: "expiring", expiresBeforeNextGeneration: true, previousSourceDepth: 3 }),
+      makeDexScreenerTarget(4, { stablecoinId: "priced-low-depth", previousSourceDepth: 1 }),
+      makeDexScreenerTarget(5, { stablecoinId: "priced-covered", previousSourceDepth: 3 }),
     ];
 
     expect(rotateAddressPriceTargets(targets, 3).map((target) => target.stablecoinId)).toEqual([
       "missing-small",
       "missing-large",
+      "expiring",
       "priced-low-depth",
       "priced-covered",
     ]);

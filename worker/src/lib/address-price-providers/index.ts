@@ -8,9 +8,12 @@ import {
   resolveChainId,
 } from "@shared/lib/chains";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { CIRCUIT_SOURCE } from "../constants";
 import { throwIfAborted } from "../abort";
 import type { PricingProviderDiagnosticSource } from "../pricing-provider-diagnostics";
+import { createPricingAssetAttempt } from "../pricing-provider-diagnostics";
 import {
   buildBlockedProviderDiagnostic,
   buildNoCandidatesDiagnostic,
@@ -64,6 +67,8 @@ const ALL_ADDRESS_PROVIDERS: readonly AddressPriceProviderKey[] = [
 const NO_KEY_ADDRESS_PROVIDERS = new Set<AddressPriceProviderKey>([
   "dexpaprika-address",
 ]);
+
+const NEXT_PRICE_GENERATION_SEC = 15 * 60;
 
 export const ADDRESS_PROVIDER_CIRCUIT_SOURCE: Record<AddressPriceProviderKey, string> = {
   "alchemy-address": CIRCUIT_SOURCE.ALCHEMY_PRICES,
@@ -138,13 +143,28 @@ function sumCirculatingUsd(asset: AddressPriceAssetLike): number {
 }
 
 function readStringHint(asset: AddressPriceAssetLike | undefined, key: "priceConfidence" | "priceSource"): string | null {
-  if (!asset) return null;
-  const value = (asset as unknown as Record<string, unknown>)[key];
+  const value = asset?.[key];
   return typeof value === "string" ? value : null;
 }
 
-function shouldTargetAsset(asset: AddressPriceAssetLike, previousAssetsById?: Map<string, AddressPriceAssetLike>): {
+function expiresBeforeNextGeneration(asset: AddressPriceAssetLike | undefined, nowSec: number): boolean {
+  if (!asset?.priceSource) return false;
+  const observedAt = asset.priceObservedAt ?? asset.priceUpdatedAt;
+  if (typeof observedAt !== "number" || !Number.isFinite(observedAt) || observedAt <= 0) return false;
+  const entries = normalizePricingSourceKeys(asset.priceSource)
+    .map((source) => getPricingSourceRegistryEntry(source));
+  if (entries.length === 0 || entries.some((entry) => entry == null)) return false;
+  const maxAges = entries
+    .map((entry) => entry?.maxTrustedAgeSec)
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value) && value > 0);
+  if (maxAges.length !== entries.length) return false;
+  const expiresAt = Math.floor(observedAt) + Math.min(...maxAges);
+  return expiresAt > nowSec && expiresAt <= nowSec + NEXT_PRICE_GENERATION_SEC;
+}
+
+function shouldTargetAsset(asset: AddressPriceAssetLike, previousAssetsById: Map<string, AddressPriceAssetLike> | undefined, nowSec: number): {
   previousSourceDepth: number;
+  expiresBeforeNextGeneration: boolean;
   lowConfidencePrice: boolean;
   missingPrice: boolean;
   include: boolean;
@@ -159,11 +179,13 @@ function shouldTargetAsset(asset: AddressPriceAssetLike, previousAssetsById?: Ma
     priceConfidence === "low" ||
     priceSource === "cached" ||
     priceSource === "coingecko-low-volume";
+  const expiring = expiresBeforeNextGeneration(previous ?? asset, nowSec);
   return {
     previousSourceDepth,
+    expiresBeforeNextGeneration: expiring,
     lowConfidencePrice,
     missingPrice,
-    include: !previousAssetsById || previousSourceDepth < 3 || missingPrice || lowConfidencePrice,
+    include: !previousAssetsById || previousSourceDepth < 3 || missingPrice || lowConfidencePrice || expiring,
   };
 }
 
@@ -236,6 +258,9 @@ function buildAssetDeployments(asset: AddressPriceAssetLike): Array<{
 
 function compareAddressPriceTargets(left: AddressPriceTarget, right: AddressPriceTarget): number {
   if (left.missingPrice !== right.missingPrice) return left.missingPrice ? -1 : 1;
+  if (left.expiresBeforeNextGeneration !== right.expiresBeforeNextGeneration) {
+    return left.expiresBeforeNextGeneration ? -1 : 1;
+  }
   const leftLowDepth = left.previousSourceDepth <= 2;
   const rightLowDepth = right.previousSourceDepth <= 2;
   if (leftLowDepth !== rightLowDepth) return leftLowDepth ? -1 : 1;
@@ -248,8 +273,9 @@ function compareAddressPriceTargets(left: AddressPriceTarget, right: AddressPric
 
 function getAddressPriceTargetPriority(target: AddressPriceTarget): number {
   if (target.missingPrice) return 0;
-  if (target.previousSourceDepth <= 2) return 1;
-  return 2;
+  if (target.expiresBeforeNextGeneration) return 1;
+  if (target.previousSourceDepth <= 2) return 2;
+  return 3;
 }
 
 export function rotateAddressPriceTargets(
@@ -273,6 +299,7 @@ export function buildAddressPriceTargetsByProvider(params: {
   assets: AddressPriceAssetLike[];
   previousAssetsById?: Map<string, AddressPriceAssetLike>;
   providers: readonly AddressPriceProviderKey[];
+  nowSec?: number;
 }): Map<AddressPriceProviderKey, AddressPriceTarget[]> {
   const result = new Map<AddressPriceProviderKey, AddressPriceTarget[]>();
   const enabledProviders = new Set(params.providers);
@@ -282,7 +309,7 @@ export function buildAddressPriceTargetsByProvider(params: {
     const seen = new Set<string>();
 
     for (const asset of params.assets) {
-      const targeting = shouldTargetAsset(asset, params.previousAssetsById);
+      const targeting = shouldTargetAsset(asset, params.previousAssetsById, params.nowSec ?? Math.floor(Date.now() / 1000));
       if (!targeting.include) continue;
 
       for (const deployment of buildAssetDeployments(asset)) {
@@ -306,6 +333,7 @@ export function buildAddressPriceTargetsByProvider(params: {
           origin: deployment.origin,
           previousSourceDepth: targeting.previousSourceDepth,
           missingPrice: targeting.missingPrice,
+          expiresBeforeNextGeneration: targeting.expiresBeforeNextGeneration,
           circulatingUsd: sumCirculatingUsd(asset),
         });
       }
@@ -388,18 +416,29 @@ export async function collectAddressPriceProviderQuotes(params: {
 
     if (!params.sourceAllowed[provider]) {
       providerOutcomes.set(provider, "neutral");
-      diagnostics.push(buildBlockedProviderDiagnostic({
+      const diagnostic = buildBlockedProviderDiagnostic({
         source: provider as PricingProviderDiagnosticSource,
         stage: "primary",
         endpoint: provider,
         candidateCount: targets.length,
-      }, `${provider} circuit open`));
+      }, `${provider} circuit open`);
+      diagnostic.assetAttempts = targets.slice(0, 100).map((target) => createPricingAssetAttempt({
+        assetId: target.stablecoinId,
+        adapter: provider,
+        chain: target.chain,
+        target: target.address,
+        state: "skipped",
+        skipReason: "circuit-open",
+        rejectionClass: "blocked",
+        candidateAt: params.nowSec,
+      }));
+      diagnostics.push(diagnostic);
       continue;
     }
 
     if (Date.now() >= deadlineMs) {
       providerOutcomes.set(provider, "neutral");
-      diagnostics.push(buildPricingProviderDiagnostic({
+      const diagnostic = buildPricingProviderDiagnostic({
         source: provider as PricingProviderDiagnosticSource,
         stage: "primary",
         endpoint: provider,
@@ -408,7 +447,18 @@ export async function collectAddressPriceProviderQuotes(params: {
         errorClass: "timeout",
         errorMessage: "Address provider group budget exhausted",
         rejectionReasonCounts: { timeout: 1 },
+      });
+      diagnostic.assetAttempts = targets.slice(0, 100).map((target) => createPricingAssetAttempt({
+        assetId: target.stablecoinId,
+        adapter: provider,
+        chain: target.chain,
+        target: target.address,
+        state: "skipped",
+        skipReason: "budget",
+        rejectionClass: "timeout",
+        candidateAt: params.nowSec,
       }));
+      diagnostics.push(diagnostic);
       continue;
     }
 

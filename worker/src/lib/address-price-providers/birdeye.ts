@@ -4,9 +4,11 @@ import { numberValue } from "@shared/lib/type-guards";
 import type { AddressPriceProviderRuntimeConfig, AddressPriceProviderRunResult, AddressPriceTarget } from "./types";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
+  buildSkippedAddressPriceAttempts,
   createProviderRunState,
   emptyProviderResult,
   fetchProviderJson,
+  finalizeAddressPriceDiagnosticAttempts,
   incrementReason,
   isRecord,
   narrowMetadata,
@@ -49,11 +51,12 @@ export async function runBirdeyeAddressProvider(
   deadlineMs: number,
 ): Promise<AddressPriceProviderRunResult> {
   const apiKey = config.birdeyeApiKey?.trim();
-  if (!apiKey) return emptyProviderResult("birdeye-address", targets.length, "missing-provider");
+  if (!apiKey) return emptyProviderResult("birdeye-address", targets, "missing-provider");
   const state = createProviderRunState();
   const { diagnostics, quotes, rejectedTargets } = state;
   let { successfulRequests, attemptedRequests } = state;
   let processedTargets = 0;
+  let quotaExhausted = false;
 
   // targets are pre-filtered to solana-only by buildAddressPriceTargetsByProvider (index.ts).
   for (const target of targets.slice(0, BIRDEYE_ADDRESS_MAX_REQUESTS)) {
@@ -77,6 +80,7 @@ export async function runBirdeyeAddressProvider(
         },
       },
       candidateCount: 1,
+      targets: [target],
       signal,
     });
     let diagnostic = rawDiagnostic;
@@ -121,8 +125,8 @@ export async function runBirdeyeAddressProvider(
     } else if (json != null) {
       diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected Birdeye price data object");
     }
-    const quotaExhausted = isBirdeyeProviderQuotaExhausted(json, diagnostic);
-    if (quotaExhausted) {
+    const requestQuotaExhausted = isBirdeyeProviderQuotaExhausted(json, diagnostic);
+    if (requestQuotaExhausted) {
       diagnostic = {
         ...diagnostic,
         success: false,
@@ -131,13 +135,25 @@ export async function runBirdeyeAddressProvider(
       };
     }
     processedTargets += 1;
-    diagnostics.push(diagnostic);
-    if (quotaExhausted) break;
+    diagnostics.push(finalizeAddressPriceDiagnosticAttempts(diagnostic, quotes));
+    if (requestQuotaExhausted) {
+      quotaExhausted = true;
+      break;
+    }
   }
 
   const cappedTargets = Math.max(0, targets.length - processedTargets);
   if (cappedTargets > 0) {
-    diagnostics.push(buildCapSkipDiagnostic({ source: "birdeye-address", label: "Birdeye" }, cappedTargets));
+    const skippedTargets = targets.slice(processedTargets);
+    const diagnostic = buildCapSkipDiagnostic({ source: "birdeye-address", label: "Birdeye" }, cappedTargets);
+    const deadlineReached = Date.now() >= deadlineMs;
+    diagnostic.assetAttempts = buildSkippedAddressPriceAttempts(
+      "birdeye-address",
+      skippedTargets,
+      deadlineReached ? "deadline" : quotaExhausted ? "budget" : "request-cap",
+      deadlineReached ? "timeout" : quotaExhausted ? "quota-exhausted" : "cap",
+    );
+    diagnostics.push(diagnostic);
   }
 
   return {

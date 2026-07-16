@@ -3,8 +3,10 @@ import { throwIfAborted } from "../abort";
 import { applyInvalidShapeDiagnostic, buildCapSkipDiagnostic } from "../pricing-provider-lifecycle";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
+  buildSkippedAddressPriceAttempts,
   createProviderRunState,
   fetchProviderJson,
+  finalizeAddressPriceDiagnosticAttempts,
   getTokenAddressFromRecord,
   incrementReason,
   isRecord,
@@ -57,6 +59,12 @@ export async function runDexPaprikaAddressProvider(
         errorClass: "rate-limited",
         errorMessage: `Provider probe deferred until ${availability.nextProbeAt ?? "unknown"}`,
         rejectionReasonCounts: { blocked: targets.length },
+        assetAttempts: buildSkippedAddressPriceAttempts(
+          "dexpaprika-address",
+          targets,
+          "provider-suppressed",
+          "rate-limited",
+        ),
       }],
       rejectedTargets: { blocked: targets.length },
       successfulRequests: 0,
@@ -68,8 +76,9 @@ export async function runDexPaprikaAddressProvider(
   const activeTargets = targets.filter((target) => !negativeCache.has(targetCacheKey(target)));
   const cachedTargets = targets.length - activeTargets.length;
   const requestLimit = availability.probeOnly ? 1 : DEXPAPRIKA_MAX_REQUESTS;
-  const cappedTargets = Math.max(0, activeTargets.length - requestLimit);
+  const processedTargets = new Set<AddressPriceTarget>();
   if (cachedTargets > 0) {
+    const negativeCachedTargets = targets.filter((target) => negativeCache.has(targetCacheKey(target)));
     rejectedTargets.blocked = cachedTargets;
     diagnostics.push({
       source: "dexpaprika-address",
@@ -81,6 +90,12 @@ export async function runDexPaprikaAddressProvider(
       candidateCount: cachedTargets,
       errorClass: "negative-cache",
       rejectionReasonCounts: { blocked: cachedTargets },
+      assetAttempts: buildSkippedAddressPriceAttempts(
+        "dexpaprika-address",
+        negativeCachedTargets,
+        "negative-cache",
+        "negative-cache",
+      ),
     });
   }
 
@@ -88,12 +103,14 @@ export async function runDexPaprikaAddressProvider(
     throwIfAborted(signal);
     if (Date.now() >= deadlineMs) break;
     if (negativeCache.has(targetCacheKey(target))) continue;
+    processedTargets.add(target);
     attemptedRequests += 1;
     const url = `https://api.dexpaprika.com/networks/${target.providerChainId}/tokens/${target.address}`;
     const { json, diagnostic: rawDiagnostic } = await fetchProviderJson({
       provider: "dexpaprika-address",
       url,
       candidateCount: 1,
+      targets: [target],
       signal,
     });
     let diagnostic = rawDiagnostic;
@@ -136,7 +153,7 @@ export async function runDexPaprikaAddressProvider(
     } else if (json != null) {
       diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected DexPaprika token detail object");
     }
-    diagnostics.push(diagnostic);
+    diagnostics.push(finalizeAddressPriceDiagnosticAttempts(diagnostic, quotes));
     if (diagnostic.status === 404) {
       // A deterministic token miss still proves that the provider is reachable.
       successfulRequests += 1;
@@ -173,8 +190,17 @@ export async function runDexPaprikaAddressProvider(
     await recordProviderEnvironmentAvailable(runtime.db, "dexpaprika-address", nowSec);
   }
 
-  if (cappedTargets > 0) {
-    diagnostics.push(buildCapSkipDiagnostic({ source: "dexpaprika-address", label: "DexPaprika" }, cappedTargets));
+  const skippedTargets = activeTargets.filter((target) => !processedTargets.has(target));
+  if (skippedTargets.length > 0) {
+    const diagnostic = buildCapSkipDiagnostic({ source: "dexpaprika-address", label: "DexPaprika" }, skippedTargets.length);
+    const deadlineReached = Date.now() >= deadlineMs;
+    diagnostic.assetAttempts = buildSkippedAddressPriceAttempts(
+      "dexpaprika-address",
+      skippedTargets,
+      deadlineReached ? "deadline" : rateLimited ? "budget" : "request-cap",
+      deadlineReached ? "timeout" : rateLimited ? "rate-limited" : "cap",
+    );
+    diagnostics.push(diagnostic);
   }
 
   return {

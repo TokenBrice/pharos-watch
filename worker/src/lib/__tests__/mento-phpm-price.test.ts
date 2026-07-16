@@ -11,7 +11,8 @@ vi.mock("../evm-rpc", () => ({
   fetchEvmBlockTimestamp: (...args: unknown[]) => fetchEvmBlockTimestampMock(...args),
 }));
 
-import { fetchMentoPhpmPrice } from "../authoritative-price-sources/mento-phpm";
+import { fetchMentoPhpmPrice, mentoPhpmProvider } from "../authoritative-price-sources/mento-phpm";
+import { CIRCUIT_SOURCE } from "../constants";
 
 const word = (value: bigint) => value.toString(16).padStart(64, "0");
 const addressWord = (address: string) => address.slice(2).toLowerCase().padStart(64, "0");
@@ -49,6 +50,10 @@ function trustedUsdM(): PeggedAsset {
 }
 
 describe("Mento PHPm protocol price", () => {
+  it("uses a dedicated circuit for failed broker-pool reads", () => {
+    expect(mentoPhpmProvider.liveCircuitSource).toBe(CIRCUIT_SOURCE.MENTO_BROKER);
+    expect(mentoPhpmProvider.recordNullLiveResultAsCircuitFailure).toBe(true);
+  });
   beforeEach(() => {
     fetchEvmCallHexAtBlockMock.mockReset();
     fetchEvmBlockNumberMock.mockReset().mockResolvedValue(33_333_333);

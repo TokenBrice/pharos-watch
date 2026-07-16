@@ -11,7 +11,10 @@ import {
   splitCompositePriceSource,
 } from "@shared/lib/pricing-sources";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
-import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
+import type {
+  PricingAssetAttemptRecord,
+  PricingProviderAttemptDiagnostic,
+} from "../../lib/pricing-provider-diagnostics";
 import type { AuthoritativeLivePriceOverrideStats } from "../../lib/authoritative-price-sources";
 import {
   compactStablecoinActivePriceCoverage,
@@ -28,6 +31,70 @@ const MAX_DIAGNOSTIC_OBJECT_KEYS = 40;
 const MAX_DIAGNOSTIC_STRING_CHARS = 500;
 const MAX_DIAGNOSTIC_DEPTH = 4;
 const MAX_STABLECOINS_CRON_METADATA_BYTES = 64 * 1024;
+const MAX_PRICE_SOURCE_ATTEMPT_LEDGER_RECORDS = 100;
+
+interface PriceSourceAttemptLedger {
+  version: 1;
+  missingActiveIds: string[];
+  recordCount: number;
+  truncated: number;
+  records: PricingAssetAttemptRecord[];
+}
+
+type CompactPriceSourceAttempt = readonly [
+  assetId: string,
+  adapter: string,
+  source: string,
+  chain: string | null,
+  target: string | null,
+  outcome: string,
+  rejectionClass: string | null,
+  candidateAt: number | null,
+  observedAt: number | null,
+  replaySafe: boolean,
+];
+
+function buildPriceSourceAttemptLedger(input: {
+  missingActiveIds: readonly string[];
+  providerDiagnostics: readonly PricingProviderAttemptDiagnostic[];
+  authoritativeOverrideStats?: AuthoritativeLivePriceOverrideStats;
+}): PriceSourceAttemptLedger {
+  const missingIds = new Set(input.missingActiveIds);
+  const allAttempts = [
+    ...(input.authoritativeOverrideStats?.assetAttempts ?? []),
+    ...input.providerDiagnostics.flatMap((diagnostic) => diagnostic.assetAttempts ?? []),
+  ].filter((attempt) => missingIds.has(attempt.assetId));
+  const records = allAttempts.slice(0, MAX_PRICE_SOURCE_ATTEMPT_LEDGER_RECORDS);
+  return {
+    version: 1,
+    missingActiveIds: [...input.missingActiveIds],
+    recordCount: allAttempts.length,
+    truncated: Math.max(0, allAttempts.length - records.length),
+    records,
+  };
+}
+
+function compactPriceSourceAttemptLedger(ledger: PriceSourceAttemptLedger): Omit<PriceSourceAttemptLedger, "records"> & {
+  records: CompactPriceSourceAttempt[];
+} {
+  return {
+    ...ledger,
+    records: ledger.records.map((attempt) => [
+      attempt.assetId,
+      attempt.adapter,
+      attempt.source,
+      attempt.chain ?? null,
+      attempt.target ?? null,
+      attempt.state === "skipped"
+        ? `skipped:${attempt.skipReason ?? "unknown"}`
+        : attempt.result ?? "attempted",
+      attempt.rejectionClass ?? null,
+      attempt.candidateAt ?? null,
+      attempt.observedAt ?? null,
+      attempt.replaySafe,
+    ]),
+  };
+}
 
 function compactDiagnosticValue(value: unknown, depth = 0): unknown {
   if (value == null || typeof value === "number" || typeof value === "boolean") return value;
@@ -243,6 +310,11 @@ export function buildStablecoinsSyncResult(input: {
       previousCoverage: input.previousActivePriceCoverage,
       previousAcceptedAssetsById: input.previousAcceptedAssetsById,
     });
+  const priceSourceAttemptLedger = buildPriceSourceAttemptLedger({
+    missingActiveIds: activePriceCoverage.missingActiveIds,
+    providerDiagnostics: input.providerDiagnostics ?? [],
+    authoritativeOverrideStats: input.authoritativeOverrideStats,
+  });
   const status: CronResult["status"] =
     input.depegErrorCount > 0
       || input.stalenessCheckFailed
@@ -290,6 +362,7 @@ export function buildStablecoinsSyncResult(input: {
     activePublicationCoverage: publicationCoverage,
     activePriceCoverage,
     activePriceCoverageAlert: input.activePriceCoverageAlert,
+    priceSourceAttemptLedger,
     upstreamFetchOk: input.upstreamFetchOk ?? true,
     payloadAccepted: input.payloadAccepted ?? true,
     cacheWriteSucceeded: input.cacheWriteSucceeded ?? true,
@@ -345,6 +418,7 @@ export function buildStablecoinsSyncResult(input: {
       missingPrices: finalMissing,
       activePublicationCoverage: publicationCoverage,
       activePriceCoverage: compactedActivePriceCoverage,
+      priceSourceAttemptLedger: compactPriceSourceAttemptLedger(priceSourceAttemptLedger),
       canonicalDeduplication: metadata.canonicalDeduplication,
       rejectedPrices: input.rejectedCount,
       nativePegCorrections: input.nativePegCorrectionCount ?? 0,

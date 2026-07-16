@@ -265,4 +265,80 @@ describe("stablecoins pricing metadata", () => {
     expect(metadata.activePriceCoverage.missingActiveAssetsTruncated).toBe(ACTIVE_STABLECOINS.length - 20);
     expect(metadata.activePriceCoverage.missingActiveState).toHaveLength(ACTIVE_STABLECOINS.length);
   });
+
+  it("retains missing-asset source attempts when the metadata size guard compacts diagnostics", () => {
+    const missingId = ACTIVE_STABLECOINS[0]!.id;
+    const assets = ACTIVE_STABLECOINS.map((stablecoin) => ({
+      id: stablecoin.id,
+      name: stablecoin.name,
+      symbol: stablecoin.symbol,
+      price: null,
+      circulating: { peggedUSD: 1 },
+    })) as PeggedAsset[];
+    const result = buildStablecoinsSyncResult({
+      assets,
+      rawAssetCount: assets.length,
+      droppedMalformedAssets: 0,
+      canonicalDeduplication: { dedupedAssets: assets, duplicateRows: 0, affectedIds: [] },
+      enrichStats: {},
+      priceValidationStats: {},
+      providerDiagnostics: [{
+        source: "coinmarketcap",
+        stage: "fallback",
+        endpoint: "pro-api.coinmarketcap.com/v3/cryptocurrency/quotes/latest",
+        status: 200,
+        ok: true,
+        success: false,
+        assetAttempts: [{
+          assetId: missingId,
+          adapter: "coinmarketcap",
+          source: "coinmarketcap",
+          target: "slug:missing",
+          state: "attempted",
+          result: "rejected",
+          rejectionClass: "stale",
+          candidateAt: 1_777_000_000,
+          observedAt: 1_776_900_000,
+          replaySafe: false,
+        }],
+      }],
+      rejectedCount: 0,
+      stalenessWarning: false,
+      stalenessCheckFailed: false,
+      gtProbe: { updatedCount: 0, stats: {} as never },
+      depegErrorCount: 0,
+      depegErrors: [],
+      syncStartSec: 1_777_000_000,
+      previousAcceptedAssetsById: new Map(assets.map((asset) => [
+        asset.id,
+        {
+          id: asset.id,
+          symbol: asset.symbol,
+          price: 1,
+          priceSource: "intentionally-overlong-source-".repeat(20),
+          priceObservedAt: 1_776_999_000,
+        },
+      ])),
+    });
+
+    expect(new TextEncoder().encode(result.metadata ?? "").byteLength).toBeLessThan(64 * 1024);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      metadataCompactedBySizeGuard: boolean;
+      priceSourceAttemptLedger: { missingActiveIds: string[]; records: unknown[][] };
+    };
+    expect(metadata.metadataCompactedBySizeGuard).toBe(true);
+    expect(metadata.priceSourceAttemptLedger.missingActiveIds).toContain(missingId);
+    expect(metadata.priceSourceAttemptLedger.records).toContainEqual([
+      missingId,
+      "coinmarketcap",
+      "coinmarketcap",
+      null,
+      "slug:missing",
+      "rejected",
+      "stale",
+      1_777_000_000,
+      1_776_900_000,
+      false,
+    ]);
+  });
 });

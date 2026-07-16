@@ -4,9 +4,11 @@ import { applyInvalidShapeDiagnostic, buildCapSkipDiagnostic } from "../pricing-
 import { median } from "@shared/lib/stats";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
+  buildSkippedAddressPriceAttempts,
   chunk,
   createProviderRunState,
   fetchProviderJson,
+  finalizeAddressPriceDiagnosticAttempts,
   groupTargetsByProviderChain,
   incrementReason,
   isRecord,
@@ -97,6 +99,7 @@ export async function runDexScreenerAddressProvider(
   const { diagnostics, quotes, rejectedTargets } = state;
   let { successfulRequests, attemptedRequests } = state;
   let processedCount = 0;
+  const processedTargets = new Set<AddressPriceTarget>();
 
   const grouped = groupTargetsByProviderChain(targets);
   for (const [providerChainId, chainTargets] of grouped) {
@@ -110,6 +113,7 @@ export async function runDexScreenerAddressProvider(
         provider: "dexscreener-address",
         url,
         candidateCount: batch.length,
+        targets: batch,
         signal,
       });
       let diagnostic = rawDiagnostic;
@@ -128,7 +132,8 @@ export async function runDexScreenerAddressProvider(
         diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected DexScreener token-address response array");
       }
       processedCount += batch.length;
-      diagnostics.push(diagnostic);
+      for (const target of batch) processedTargets.add(target);
+      diagnostics.push(finalizeAddressPriceDiagnosticAttempts(diagnostic, quotes));
       if (!diagnostic.success) {
         break;
       }
@@ -138,7 +143,16 @@ export async function runDexScreenerAddressProvider(
 
   const cappedTargets = Math.max(0, targets.length - processedCount);
   if (cappedTargets > 0) {
-    diagnostics.push(buildCapSkipDiagnostic({ source: "dexscreener-address", label: "DexScreener" }, cappedTargets));
+    const skippedTargets = targets.filter((target) => !processedTargets.has(target));
+    const diagnostic = buildCapSkipDiagnostic({ source: "dexscreener-address", label: "DexScreener" }, cappedTargets);
+    const deadlineReached = Date.now() >= deadlineMs;
+    diagnostic.assetAttempts = buildSkippedAddressPriceAttempts(
+      "dexscreener-address",
+      skippedTargets,
+      deadlineReached ? "deadline" : "request-cap",
+      deadlineReached ? "timeout" : "cap",
+    );
+    diagnostics.push(diagnostic);
   }
 
   return {

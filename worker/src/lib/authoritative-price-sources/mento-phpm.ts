@@ -1,4 +1,5 @@
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
+import { CIRCUIT_SOURCE } from "../constants";
 import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmCallHexAtBlock } from "../evm-rpc";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import {
@@ -131,6 +132,8 @@ export async function fetchMentoPhpmPrice(
 export const mentoPhpmProvider: PriceSourceProvider = {
   source: PROTOCOL_REDEEM_SOURCE,
   livePriority: 1,
+  liveCircuitSource: CIRCUIT_SOURCE.MENTO_BROKER,
+  recordNullLiveResultAsCircuitFailure: true,
   matches(stablecoinId: string): boolean {
     return stablecoinId === PHPM_ID;
   },

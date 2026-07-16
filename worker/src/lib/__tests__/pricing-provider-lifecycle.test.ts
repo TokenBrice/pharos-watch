@@ -5,8 +5,37 @@ import {
   buildNoCandidatesDiagnostic,
   buildPricingProviderDiagnostic,
 } from "../pricing-provider-lifecycle";
+import {
+  appendPricingAssetAttempts,
+  createPricingAssetAttempt,
+  MAX_ASSET_ATTEMPTS_PER_DIAGNOSTIC,
+} from "../pricing-provider-diagnostics";
 
 describe("pricing provider lifecycle helpers", () => {
+  it("bounds and sanitizes asset-attributable pricing attempts", () => {
+    const attempts = Array.from({ length: MAX_ASSET_ATTEMPTS_PER_DIAGNOSTIC + 5 }, (_, index) => (
+      createPricingAssetAttempt({
+        assetId: `asset-${index}\nsecret`,
+        adapter: "coinmarketcap\tadapter",
+        target: `slug:asset-${index}`,
+        state: "attempted",
+        result: "unresolved",
+        candidateAt: 1_800_000_000.9,
+      })
+    ));
+    const bounded: typeof attempts = [];
+
+    appendPricingAssetAttempts(bounded, attempts);
+
+    expect(bounded).toHaveLength(MAX_ASSET_ATTEMPTS_PER_DIAGNOSTIC);
+    expect(bounded[0]).toMatchObject({
+      assetId: "asset-0secret",
+      adapter: "coinmarketcapadapter",
+      candidateAt: 1_800_000_000,
+      replaySafe: false,
+    });
+  });
+
   it("builds no-candidate diagnostics with the recovery shape", () => {
     expect(buildNoCandidatesDiagnostic({
       source: "jupiter",
