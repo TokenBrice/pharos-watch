@@ -1,5 +1,5 @@
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
-import { fetchEvmCallHexAtBlock } from "../evm-rpc";
+import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmCallHexAtBlock } from "../evm-rpc";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import {
   decodeUint256WordBigInt,
@@ -25,6 +25,8 @@ const BROKER_GET_AMOUNT_OUT_SELECTOR = "0xa20f2305";
 const QUOTE_NOTIONAL_TOKENS = 1_000;
 const TOKEN_DECIMALS = 18;
 const MIN_COUNTER_CAPACITY = 1_000_000;
+const MAX_BLOCK_AGE_SEC = 5 * 60;
+const MAX_BLOCK_FUTURE_SKEW_SEC = 60;
 
 function decodeAddressWord(value: `0x${string}`, wordIndex: number): string | null {
   const start = 2 + wordIndex * 64;
@@ -69,19 +71,29 @@ export async function fetchMentoPhpmPrice(
     signal,
     extraRpcUrls: getPublicFallbackRpcUrls(CELO_CHAIN),
   };
+  const blockNumber = await fetchEvmBlockNumber(CELO_CHAIN, options);
+  if (blockNumber == null) return null;
+  const blockTimestamp = await fetchEvmBlockTimestamp(CELO_CHAIN, blockNumber, options);
+  const nowSec = Math.floor(Date.now() / 1_000);
+  if (
+    blockTimestamp == null ||
+    blockTimestamp > nowSec + MAX_BLOCK_FUTURE_SKEW_SEC ||
+    nowSec - blockTimestamp > MAX_BLOCK_AGE_SEC
+  ) return null;
+
   const [poolRaw, quoteRaw] = await Promise.all([
     fetchEvmCallHexAtBlock(
       CELO_CHAIN,
       MENTO_BIPOOL_MANAGER,
       `${GET_POOL_EXCHANGE_SELECTOR}${PHPM_USDM_EXCHANGE_ID}`,
-      "latest",
+      blockNumber,
       options,
     ),
     fetchEvmCallHexAtBlock(
       CELO_CHAIN,
       MENTO_BROKER,
       buildBrokerQuoteCall(inputRaw),
-      "latest",
+      blockNumber,
       options,
     ),
   ]);
@@ -111,8 +123,8 @@ export async function fetchMentoPhpmPrice(
     price,
     source: PROTOCOL_REDEEM_SOURCE,
     confidence: "high",
-    observedAt: Math.floor(Date.now() / 1000),
-    observedAtMode: "local_fetch",
+    observedAt: blockTimestamp,
+    observedAtMode: "upstream",
   };
 }
 

@@ -2,9 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 
 const fetchEvmCallHexAtBlockMock = vi.fn();
+const fetchEvmBlockNumberMock = vi.fn();
+const fetchEvmBlockTimestampMock = vi.fn();
 
 vi.mock("../evm-rpc", () => ({
   fetchEvmCallHexAtBlock: (...args: unknown[]) => fetchEvmCallHexAtBlockMock(...args),
+  fetchEvmBlockNumber: (...args: unknown[]) => fetchEvmBlockNumberMock(...args),
+  fetchEvmBlockTimestamp: (...args: unknown[]) => fetchEvmBlockTimestampMock(...args),
 }));
 
 import { fetchMentoPhpmPrice } from "../authoritative-price-sources/mento-phpm";
@@ -47,6 +51,8 @@ function trustedUsdM(): PeggedAsset {
 describe("Mento PHPm protocol price", () => {
   beforeEach(() => {
     fetchEvmCallHexAtBlockMock.mockReset();
+    fetchEvmBlockNumberMock.mockReset().mockResolvedValue(33_333_333);
+    fetchEvmBlockTimestampMock.mockReset().mockImplementation(async () => Math.floor(Date.now() / 1_000) - 30);
   });
 
   it("prices PHPm from the exact funded Broker exchange", async () => {
@@ -62,8 +68,9 @@ describe("Mento PHPm protocol price", () => {
       price: 0.01617468992,
       source: "protocol-redeem",
       confidence: "high",
-      observedAtMode: "local_fetch",
+      observedAtMode: "upstream",
     });
+    expect(fetchEvmCallHexAtBlockMock.mock.calls.every((call) => call[3] === 33_333_333)).toBe(true);
   });
 
   it("fails closed when the exact exchange token identity changes", async () => {
@@ -93,6 +100,15 @@ describe("Mento PHPm protocol price", () => {
 
     await expect(fetchMentoPhpmPrice({
       assetsById: new Map([["cusd-celo", usdM]]),
+    })).resolves.toBeNull();
+    expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+  });
+
+  it("fails closed on a stale Celo block before reading exchange state", async () => {
+    fetchEvmBlockTimestampMock.mockResolvedValue(Math.floor(Date.now() / 1_000) - 301);
+
+    await expect(fetchMentoPhpmPrice({
+      assetsById: new Map([["cusd-celo", trustedUsdM()]]),
     })).resolves.toBeNull();
     expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
   });
