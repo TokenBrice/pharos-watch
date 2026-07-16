@@ -1,4 +1,6 @@
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
+import { computeDexLiquidityPayloadFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import { loadV9MethodologyPolicy, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
@@ -347,6 +349,15 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
     expect(SafetyScoreV9ResponseSchema.parse(left.candidate)).toEqual(left.candidate);
     expect(left.candidate.resultDigest).toBe(left.evaluatedSet.scoreResultDigest);
     expect(left.candidate.factSetDigest).toBe(left.compiledFacts.v9FactSetDigest);
+    expect(left.compilerFactSchemaIdentity.compiledFactSchemaCapabilities).toEqual([
+      "canonical-chain-supply-distribution.v1",
+    ]);
+    expect(left.producerCapabilityIdentity.sourceAdapters.chainSupply).toBe("fixed-input.usd-circulating-supply.v2");
+    expect(
+      left.compiledFacts.assets.every((asset) =>
+        Object.prototype.hasOwnProperty.call(asset.supply, "chainDistribution"),
+      ),
+    ).toBe(true);
     expect(left.compilerFactSchemaDigest).toMatch(/^[a-f0-9]{64}$/);
     expect(left.producerCapabilityDigest).toBe(
       computeSafetyScoreV9ProducerCapabilityDigest(left.producerCapabilityIdentity),
@@ -480,8 +491,8 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
       mechanismRiskReview: {
         archetype: "fiat-cash",
         // D1 fiat-cash overlays are active: USDC's claim/custody components are
-          // curated known (owner decision D1, 2026-07-15).
-          claimAndSegregation: { status: { observationState: "known" } },
+        // curated known (owner decision D1, 2026-07-15).
+        claimAndSegregation: { status: { observationState: "known" } },
         custodyContinuity: { status: { observationState: "known" } },
         assuranceAndReconciliation: { status: { observationState: "known" } },
       },
@@ -505,6 +516,50 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
       notRatedCount: 0,
       notRatedIds: [],
     });
+  });
+
+  it("reaches A+ through the normal candidate compiler and evaluator from ideal reviewed facts", () => {
+    const fixedInput = exactFixedInput("alpha");
+    const stressGrid = V9_CANDIDATE_POLICY_V1.policy.semantic.exit.stressRequest.notionalGridUsd;
+    const peg = fixedInput.pegDataById.alpha!;
+    peg.currentDeviationBps = 0;
+    peg.pegScore = 100;
+    peg.pegPct = 100;
+    peg.worstDeviationBps = 0;
+    const observation = fixedInput.dexLiqMap.alpha!.exitRouteObservations![0]!;
+    observation.executableUsd = observation.requestedNotionalUsd;
+    observation.completionRatio = 1;
+    observation.capacityCurve = stressGrid.map((requestedNotionalUsd) => ({
+      requestedNotionalUsd,
+      maxCostBps: observation.maxCostBps,
+      executableUsd: requestedNotionalUsd,
+      completionRatio: 1,
+    }));
+    fixedInput.dexPayloadFingerprint = computeDexLiquidityPayloadFingerprint(
+      fixedInput.dexLiqMap,
+      fixedInput.dexGenerationId,
+    );
+    fixedInput.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixedInput);
+
+    const extension = reviewedExtension(fixedInput);
+    const asset = extension.assets[0]!;
+    asset.routeReviews[0]!.executionModel = "atomic";
+    asset.routeReviews[0]!.executionCertainty = "guaranteed";
+    asset.routeReviews[0]!.executionCosts = stressGrid.map((requestedNotionalUsd) => ({
+      requestedNotionalUsd,
+      maxCostBps: observation.maxCostBps,
+      executionCostBps: 0,
+    }));
+
+    const result = buildSafetyScoreV9Candidate({
+      fixedInput,
+      extension,
+      publishedAtSec: PUBLISHED_AT_SEC,
+    });
+    expect(SafetyScoreV9ResponseSchema.parse(result.candidate)).toEqual(result.candidate);
+    expect(result.candidate.cards[0]).toMatchObject({ id: "alpha", grade: "A+" });
+    expect(result.candidate.cards[0]!.score).toBeGreaterThanOrEqual(87);
+    expect(result.evaluatedSet.assets[0]!.trace.bindingCap).toBeNull();
   });
 
   it("publishes a strict rated candidate from a supplied reviewed extension", () => {

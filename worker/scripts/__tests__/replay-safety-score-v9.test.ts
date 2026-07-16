@@ -103,7 +103,8 @@ describe("Safety Score v9 deterministic replay CLI", () => {
       fixedInput: exactFixedInput(),
       publishedAtSec: PUBLISHED_AT_SEC,
     };
-    const left = serializeSafetyScoreV9ReplayArtifact(buildSafetyScoreV9ReplayArtifact(args));
+    const artifact = buildSafetyScoreV9ReplayArtifact(args);
+    const left = serializeSafetyScoreV9ReplayArtifact(artifact);
     const right = serializeSafetyScoreV9ReplayArtifact(buildSafetyScoreV9ReplayArtifact(structuredClone(args)));
     const parsed = JSON.parse(left) as {
       schemaVersion: number;
@@ -127,6 +128,16 @@ describe("Safety Score v9 deterministic replay CLI", () => {
         },
       },
     });
+    const compiledUsdc = artifact.pipeline.compiledFacts.assets[0]!;
+    const incompleteControls = compiledUsdc.controls.filter(
+      (control) =>
+        control.capSemantics.kind === "unknown" ||
+        control.claimImpairment === "unknown" ||
+        control.economicLossScope === "unknown",
+    );
+    expect(compiledUsdc.controlStatus.observationState).toBe("known");
+    expect(incompleteControls.length).toBeGreaterThan(0);
+    expect(incompleteControls.every((control) => control.status.observationState === "bounded-unknown")).toBe(true);
   });
 
   it("writes identical canonical output for raw JSON and a cache envelope", async () => {

@@ -1,22 +1,12 @@
-import type {
-  V9ReasonCode,
-  V9ValidatedPolicyEnvelope,
-} from "../../types/safety-score-v9";
-import type {
-  V9AssetFactsV2,
-  V9ExitRouteFactV2,
-} from "../../types/safety-score-v9-facts";
+import type { V9ReasonCode, V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
+import type { V9AssetFactsV2, V9ExitRouteFactV2 } from "../../types/safety-score-v9-facts";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
 
 export type V9ExitAccess = "permissionless-onchain" | "whitelisted-onchain" | "issuer-api" | "manual";
 export type V9ExitSettlement = "atomic" | "immediate" | "same-day" | "days" | "queued";
 export type V9ExitExecution = "deterministic-onchain" | "deterministic-basket" | "rules-based-nav" | "opaque";
 export type V9ExitOutputQuality =
-  | "stable-single"
-  | "stable-basket"
-  | "bluechip-collateral"
-  | "mixed-collateral"
-  | "nav";
+  "stable-single" | "stable-basket" | "bluechip-collateral" | "mixed-collateral" | "nav";
 export type V9ExitHolderEligibility =
   | "any-holder"
   | "verified-customer"
@@ -112,10 +102,7 @@ export function selectV9ExitStressRequest(
   assertV9ValidatedPolicyEnvelope(envelope);
   if (circulatingUsd === null || !Number.isFinite(circulatingUsd) || circulatingUsd <= 0) return null;
   const policy = envelope.policy.semantic.exit.stressRequest;
-  const rawSupplyRequestUsd = Math.min(
-    policy.capUsd,
-    Math.max(policy.floorUsd, circulatingUsd * policy.supplyRatio),
-  );
+  const rawSupplyRequestUsd = Math.min(policy.capUsd, Math.max(policy.floorUsd, circulatingUsd * policy.supplyRatio));
   const grid = [...policy.notionalGridUsd].sort((left, right) => left - right);
   const requestedNotionalUsd = grid.find((notional) => notional >= rawSupplyRequestUsd) ?? grid[grid.length - 1]!;
   return {
@@ -152,10 +139,10 @@ function curveIssue(points: readonly V9ExitCapacityPoint[]): string | null {
       !Number.isFinite(point.executableUsd) ||
       point.executableUsd < 0 ||
       point.executableUsd > point.requestedNotionalUsd + 0.01 ||
-      Math.abs(point.completionRatio - point.executableUsd / point.requestedNotionalUsd) > 0.00001
-      || !Number.isFinite(point.executionCostBps)
-      || point.executionCostBps < 0
-      || (point.executableUsd > 0 && point.executionCostBps > point.maxCostBps)
+      Math.abs(point.completionRatio - point.executableUsd / point.requestedNotionalUsd) > 0.00001 ||
+      !Number.isFinite(point.executionCostBps) ||
+      point.executionCostBps < 0 ||
+      (point.executableUsd > 0 && point.executionCostBps > point.maxCostBps)
     ) {
       return "invalid-capacity-point";
     }
@@ -189,9 +176,7 @@ function capacityAtRequest(
       .filter((point) => point.maxCostBps === maxCostBps)
       .sort((left, right) => left.requestedNotionalUsd - right.requestedNotionalUsd);
     const exact = costPoints.find((point) => point.requestedNotionalUsd === request.requestedNotionalUsd);
-    const lower = [...costPoints]
-      .reverse()
-      .find((point) => point.requestedNotionalUsd < request.requestedNotionalUsd);
+    const lower = [...costPoints].reverse().find((point) => point.requestedNotionalUsd < request.requestedNotionalUsd);
     const first = costPoints[0];
     const executableUsd = Math.min(
       request.requestedNotionalUsd,
@@ -222,10 +207,7 @@ function settlementDelayMultiplier(
   return bands.find((band) => band.maxSec === null || delaySec <= band.maxSec)?.multiplier ?? 0;
 }
 
-function routeExclusionReason(
-  route: V9ExitEvaluationRoute,
-  envelope: V9ValidatedPolicyEnvelope,
-): V9ReasonCode | null {
+function routeExclusionReason(route: V9ExitEvaluationRoute, envelope: V9ValidatedPolicyEnvelope): V9ReasonCode | null {
   if (route.applicability === "not-applicable") return null;
   if (route.applicability === "unresolved") return "missing-same-notional-route";
   if (route.outputResolved === false) return "unresolved-exit-output";
@@ -235,45 +217,30 @@ function routeExclusionReason(
   if (route.observationState !== "known") return "unsupported-same-notional-route";
   if (!route.scoreEligible || route.coverageClass === "diagnostic") return "unsupported-same-notional-route";
   if (route.routeFamily === "eventual-redemption") return "unsupported-same-notional-route";
-  const scoreable = route.lane === "dex"
-    ? envelope.policy.semantic.exit.scoreableEvidenceKinds.dex
-    : envelope.policy.semantic.exit.scoreableEvidenceKinds.redemption;
+  const scoreable =
+    route.lane === "dex"
+      ? envelope.policy.semantic.exit.scoreableEvidenceKinds.dex
+      : envelope.policy.semantic.exit.scoreableEvidenceKinds.redemption;
   if (!scoreable.includes(route.evidenceKind)) return "unsupported-same-notional-route";
   if (route.failureDomains.length === 0) return "unsupported-same-notional-route";
   return null;
 }
 
-function evaluateRoute(
+function resolveIncludedRouteCapacity(
   route: V9ExitEvaluationRoute,
   request: V9ExitStressRequest,
   envelope: V9ValidatedPolicyEnvelope,
-): V9ExitRouteTrace {
+):
+  | { state: "included"; capacityPoint: V9ExitCapacityPoint; valuedExecutableUsd: number }
+  | { state: "excluded"; exclusionReason: V9ReasonCode | null }
+  | { state: "incomparable" }
+  | { state: "unsupported" } {
   const exclusionReason = routeExclusionReason(route, envelope);
   if (exclusionReason !== null || route.applicability === "not-applicable") {
-    return {
-      routeKey: route.routeKey,
-      score: null,
-      included: false,
-      exclusionReason,
-      capacityPoint: null,
-      components: null,
-      confidenceFactor: null,
-      capsApplied: [],
-    };
+    return { state: "excluded", exclusionReason };
   }
   const capacityPoint = capacityAtRequest(route.capacityCurve, request);
-  if (capacityPoint === null) {
-    return {
-      routeKey: route.routeKey,
-      score: null,
-      included: false,
-      exclusionReason: "incomparable-route-requests",
-      capacityPoint: null,
-      components: null,
-      confidenceFactor: null,
-      capsApplied: [],
-    };
-  }
+  if (capacityPoint === null) return { state: "incomparable" };
   if (
     !Number.isFinite(route.outputValueRetention) ||
     route.outputValueRetention < 0 ||
@@ -281,20 +248,103 @@ function evaluateRoute(
     !Number.isFinite(route.settlementDelaySec) ||
     route.settlementDelaySec < 0
   ) {
+    return { state: "unsupported" };
+  }
+  return {
+    state: "included",
+    capacityPoint,
+    valuedExecutableUsd: capacityPoint.executableUsd * route.outputValueRetention,
+  };
+}
+
+export interface V9DistinctExitCapacity {
+  includedRouteKeys: readonly string[];
+  valuedExecutableUsd: number;
+}
+
+/** Resolve distinct physical-resource capacity at an explicit stress request. */
+export function resolveV9DistinctExitCapacity(
+  routes: readonly V9ExitEvaluationRoute[],
+  request: V9ExitStressRequest,
+  envelope: V9ValidatedPolicyEnvelope,
+): V9DistinctExitCapacity {
+  assertV9ValidatedPolicyEnvelope(envelope);
+  const included = routes.flatMap((route) => {
+    const resolved = resolveIncludedRouteCapacity(route, request, envelope);
+    return resolved.state !== "included"
+      ? []
+      : [
+          {
+            routeKey: route.routeKey,
+            physicalResourceKeys: route.physicalResourceKeys,
+            valuedExecutableUsd: resolved.valuedExecutableUsd,
+          },
+        ];
+  });
+  const groups: { physicalResourceKeys: Set<string>; valuedExecutableUsd: number }[] = [];
+  for (const route of [...included].sort((left, right) => left.routeKey.localeCompare(right.routeKey))) {
+    const overlapping = groups.filter((group) =>
+      route.physicalResourceKeys.some((key) => group.physicalResourceKeys.has(key)),
+    );
+    if (overlapping.length === 0) {
+      groups.push({
+        physicalResourceKeys: new Set(route.physicalResourceKeys),
+        valuedExecutableUsd: route.valuedExecutableUsd,
+      });
+      continue;
+    }
+    const merged = {
+      physicalResourceKeys: new Set([
+        ...route.physicalResourceKeys,
+        ...overlapping.flatMap((group) => [...group.physicalResourceKeys]),
+      ]),
+      valuedExecutableUsd: Math.max(
+        route.valuedExecutableUsd,
+        ...overlapping.map((group) => group.valuedExecutableUsd),
+      ),
+    };
+    for (const group of overlapping) groups.splice(groups.indexOf(group), 1);
+    groups.push(merged);
+  }
+  return {
+    includedRouteKeys: included.map((route) => route.routeKey).sort(),
+    valuedExecutableUsd: groups.reduce((sum, group) => sum + group.valuedExecutableUsd, 0),
+  };
+}
+
+function evaluateRoute(
+  route: V9ExitEvaluationRoute,
+  request: V9ExitStressRequest,
+  envelope: V9ValidatedPolicyEnvelope,
+): V9ExitRouteTrace {
+  const resolvedCapacity = resolveIncludedRouteCapacity(route, request, envelope);
+  if (resolvedCapacity.state === "excluded") {
     return {
       routeKey: route.routeKey,
       score: null,
       included: false,
-      exclusionReason: "unsupported-same-notional-route",
+      exclusionReason: resolvedCapacity.exclusionReason,
       capacityPoint: null,
       components: null,
       confidenceFactor: null,
       capsApplied: [],
     };
   }
-
+  if (resolvedCapacity.state !== "included") {
+    return {
+      routeKey: route.routeKey,
+      score: null,
+      included: false,
+      exclusionReason:
+        resolvedCapacity.state === "incomparable" ? "incomparable-route-requests" : "unsupported-same-notional-route",
+      capacityPoint: null,
+      components: null,
+      confidenceFactor: null,
+      capsApplied: [],
+    };
+  }
+  const { capacityPoint, valuedExecutableUsd } = resolvedCapacity;
   const policy = envelope.policy.semantic.exit;
-  const valuedExecutableUsd = capacityPoint.executableUsd * route.outputValueRetention;
   const completionRatio = valuedExecutableUsd / request.requestedNotionalUsd;
   const coverageScore = interpolateScore(completionRatio, policy.coverageRatioBreakpoints);
   const absoluteScore = interpolateScore(valuedExecutableUsd, policy.absoluteCapacityBreakpoints);
@@ -329,11 +379,12 @@ function evaluateRoute(
   );
   score *= confidenceFactor * policy.holderEligibilityMultipliers[route.holderEligibility];
   const capsApplied: string[] = [];
-  const routeCap = route.routeScoreCap === "queue-redeem"
-    ? policy.routeFamilyCaps.queueRedeem
-    : route.routeScoreCap === "offchain-issuer"
-      ? policy.routeFamilyCaps.offchainIssuer
-      : null;
+  const routeCap =
+    route.routeScoreCap === "queue-redeem"
+      ? policy.routeFamilyCaps.queueRedeem
+      : route.routeScoreCap === "offchain-issuer"
+        ? policy.routeFamilyCaps.offchainIssuer
+        : null;
   if (routeCap !== null && score > routeCap) {
     score = routeCap;
     capsApplied.push(`route-family:${route.routeScoreCap}`);
@@ -549,7 +600,8 @@ export function evaluateV9Exit(
 
   const primary = evaluated[0]!;
   const independent = evaluated.find(
-    (candidate) => candidate.route.routeKey !== primary.route.routeKey && routesAreIndependent(primary.route, candidate.route),
+    (candidate) =>
+      candidate.route.routeKey !== primary.route.routeKey && routesAreIndependent(primary.route, candidate.route),
   );
   const diversificationBonus = independent
     ? Math.min(100 - primary.score, independent.score * envelope.policy.semantic.exit.independentRouteBenefitLimit)

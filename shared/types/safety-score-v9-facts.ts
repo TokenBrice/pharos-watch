@@ -20,9 +20,7 @@ export const V9ResolvedMechanismArchetypeSchema = z.union([
 ]);
 export type V9ResolvedMechanismArchetype = z.infer<typeof V9ResolvedMechanismArchetypeSchema>;
 
-export {
-  V9FactStatusV2Schema,
-};
+export { V9FactStatusV2Schema };
 export type { V9FactApplicability, V9FactStatusV2, V9FailureDomainKind, V9FailureDomainRef, V9ObservationState };
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
@@ -35,6 +33,10 @@ const CanonicalTextSchema = z
   .string()
   .min(1)
   .refine((value) => value.trim() === value, "Value must not have leading or trailing whitespace");
+const CanonicalChainIdSchema = CanonicalTextSchema.refine(
+  (value) => /^[a-z0-9][a-z0-9._:-]*$/.test(value),
+  "Chain ID must be a canonical lowercase identifier",
+);
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -869,8 +871,47 @@ const V9BridgeSupplyRouteV2Schema = z
     supplyUsd: NonNegativeUsdSchema,
     supplyShare: FractionSchema,
     reviewState: z.enum(["selected-reviewed", "selected-unresolved", "unmatched"]),
+    // Retained V2 facts predate this discriminator. Missing remains parseable
+    // but cannot prove a reviewed route native during evaluation.
+    reviewedRouteKind: z.enum(["native", "controlled"]).optional(),
+  })
+  .strict()
+  .superRefine((route, ctx) => {
+    if (route.reviewState !== "selected-reviewed" && route.reviewedRouteKind !== undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["reviewedRouteKind"],
+        message: "Only selected-reviewed supply rows carry a reviewed route kind",
+      });
+    }
+  });
+
+const V9ChainSupplyDistributionRowV2Schema = z
+  .object({
+    chainId: CanonicalChainIdSchema,
+    supplyUsd: NonNegativeUsdSchema,
+    supplyShare: FractionSchema,
   })
   .strict();
+
+const V9ChainSupplyDistributionV2Schema = z
+  .object({
+    chains: canonicalArrayBy(V9ChainSupplyDistributionRowV2Schema, (row) => row.chainId),
+    unattributedSupplyUsd: NonNegativeUsdSchema,
+    unattributedSupplyShare: FractionSchema,
+  })
+  .strict();
+
+const SUPPLY_USD_RECONCILIATION_TOLERANCE = 0.01;
+const SUPPLY_SHARE_RECONCILIATION_TOLERANCE = 0.000000001;
+
+function supplyUsdValuesReconcile(left: number, right: number): boolean {
+  return Math.abs(left - right) <= SUPPLY_USD_RECONCILIATION_TOLERANCE;
+}
+
+function supplyShareValuesReconcile(left: number, right: number): boolean {
+  return Math.abs(left - right) <= SUPPLY_SHARE_RECONCILIATION_TOLERANCE;
+}
 
 const V9SupplyFactV2Schema = z
   .object({
@@ -880,6 +921,10 @@ const V9SupplyFactV2Schema = z
     circulatingUnits: z.number().finite().nonnegative().nullable(),
     referencePriceUsd: z.number().finite().nonnegative().nullable(),
     circulatingUsd: NonNegativeUsdSchema.nullable(),
+    // Retained V2 artifacts predate this additive field. Keep it optional
+    // without a default so parsing them preserves their exact digest payload;
+    // the current compiler always emits either a distribution or explicit null.
+    chainDistribution: V9ChainSupplyDistributionV2Schema.nullable().optional(),
     selectedBridgeRoutes: canonicalArrayBy(V9BridgeSupplyRouteV2Schema, (route) => route.deploymentRouteKey),
     selectedRouteSupplyShare: FractionSchema.nullable(),
     unknownRouteSupplyShare: FractionSchema.nullable(),
@@ -902,6 +947,56 @@ const V9SupplyFactV2Schema = z
         path: ["referencePriceUsd"],
         message: "USD-denominated circulating supply must not be multiplied by price",
       });
+    }
+    if (supply.chainDistribution !== null && supply.chainDistribution !== undefined) {
+      if (supply.circulatingUsd === null) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["chainDistribution"],
+          message: "Chain supply distribution requires circulating USD",
+        });
+      } else {
+        const distributedUsd =
+          supply.chainDistribution.chains.reduce((sum, row) => sum + row.supplyUsd, 0) +
+          supply.chainDistribution.unattributedSupplyUsd;
+        const distributedShare =
+          supply.chainDistribution.chains.reduce((sum, row) => sum + row.supplyShare, 0) +
+          supply.chainDistribution.unattributedSupplyShare;
+        if (!supplyUsdValuesReconcile(distributedUsd, supply.circulatingUsd)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["chainDistribution"],
+            message: "Chain supply USD must reconcile to circulating USD",
+          });
+        }
+        const expectedShareTotal = supply.circulatingUsd > 0 ? 1 : 0;
+        if (!supplyShareValuesReconcile(distributedShare, expectedShareTotal)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["chainDistribution"],
+            message: "Chain supply shares must reconcile to the circulating base",
+          });
+        }
+        for (const [index, row] of supply.chainDistribution.chains.entries()) {
+          const expectedShare = supply.circulatingUsd > 0 ? row.supplyUsd / supply.circulatingUsd : 0;
+          if (!supplyShareValuesReconcile(row.supplyShare, expectedShare)) {
+            ctx.addIssue({
+              code: "custom",
+              path: ["chainDistribution", index, "supplyShare"],
+              message: "Chain supply share must match its USD share of circulating supply",
+            });
+          }
+        }
+        const expectedUnattributedShare =
+          supply.circulatingUsd > 0 ? supply.chainDistribution.unattributedSupplyUsd / supply.circulatingUsd : 0;
+        if (!supplyShareValuesReconcile(supply.chainDistribution.unattributedSupplyShare, expectedUnattributedShare)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["chainDistribution", "unattributedSupplyShare"],
+            message: "Unattributed chain supply share must match its USD share of circulating supply",
+          });
+        }
+      }
     }
     const shares = [supply.selectedRouteSupplyShare, supply.unknownRouteSupplyShare, supply.unreviewedRouteSupplyShare];
     if (shares.every((share) => share !== null) && shares.reduce((sum, share) => sum + share!, 0) > 1.000001) {

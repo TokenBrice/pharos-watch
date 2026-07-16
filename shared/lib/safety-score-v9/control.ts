@@ -229,7 +229,93 @@ function controlCanRepresent(control: V9DeploymentControlFactV2, kind: "mint" | 
 function bindingByMateriality(control: V9DeploymentControlFactV2, materialShareThreshold: number): boolean {
   if (control.economicLossScope === "global-claim" || control.economicLossScope === "reserve-claim") return true;
   if (control.economicLossScope === "access-only") return false;
-  return control.materialSupplyShare !== null && control.materialSupplyShare >= materialShareThreshold;
+  // A missing deployment share is not evidence of immateriality. Keep it
+  // fail-closed until the producer supplies an exact below-threshold share.
+  return control.materialSupplyShare === null || control.materialSupplyShare >= materialShareThreshold;
+}
+
+function bridgeSharesReconcile(left: number, right: number): boolean {
+  return Math.abs(left - right) <= 0.000001;
+}
+
+function hasCompleteSubthresholdUnresolvedBridgeJoins(
+  facts: V9EconomicControlAssetFacts,
+  controls: readonly V9DeploymentControlFactV2[],
+  bridgeRoutes: readonly V9BridgeRouteControlReview[],
+  materialShareThreshold: number,
+): boolean {
+  if (!isKnownRequired(facts.supply.status)) return false;
+  const { selectedRouteSupplyShare, unreviewedRouteSupplyShare, unknownRouteSupplyShare } = facts.supply;
+  if (selectedRouteSupplyShare === null || unreviewedRouteSupplyShare === null || unknownRouteSupplyShare === null) {
+    return false;
+  }
+  const rows = facts.supply.selectedBridgeRoutes;
+  const reviewedShare = rows.reduce(
+    (sum, route) => sum + (route.reviewState === "selected-reviewed" ? route.supplyShare : 0),
+    0,
+  );
+  const unresolvedShare = rows.reduce(
+    (sum, route) => sum + (route.reviewState === "selected-unresolved" ? route.supplyShare : 0),
+    0,
+  );
+  const unmatchedShare = rows.reduce(
+    (sum, route) => sum + (route.reviewState === "unmatched" ? route.supplyShare : 0),
+    0,
+  );
+  if (
+    !bridgeSharesReconcile(reviewedShare, selectedRouteSupplyShare) ||
+    !bridgeSharesReconcile(unresolvedShare, unreviewedRouteSupplyShare) ||
+    !bridgeSharesReconcile(unmatchedShare, unknownRouteSupplyShare) ||
+    !bridgeSharesReconcile(reviewedShare + unresolvedShare + unmatchedShare, 1)
+  ) {
+    return false;
+  }
+
+  const bridgeControlsByDeployment = new Map<string, V9DeploymentControlFactV2[]>();
+  for (const control of controls) {
+    if (control.controlKind !== "bridge") continue;
+    bridgeControlsByDeployment.set(control.deploymentKey, [
+      ...(bridgeControlsByDeployment.get(control.deploymentKey) ?? []),
+      control,
+    ]);
+  }
+  const bridgeRouteCounts = new Map<string, number>();
+  for (const route of bridgeRoutes) {
+    bridgeRouteCounts.set(route.controlKey, (bridgeRouteCounts.get(route.controlKey) ?? 0) + 1);
+  }
+  if ([...bridgeRouteCounts.values()].some((count) => count !== 1)) return false;
+  return rows.every((route) => {
+    const joined = bridgeControlsByDeployment.get(route.deploymentRouteKey) ?? [];
+    if (route.reviewState === "selected-reviewed") {
+      if (route.reviewedRouteKind === "native") return joined.length === 0;
+      if (route.reviewedRouteKind !== "controlled") return false;
+      if (joined.length !== 1) return false;
+      const control = joined[0]!;
+      return (
+        controlCanRepresent(control, "bridge") &&
+        isKnownRequired(control.status) &&
+        control.materialSupplyShare !== null &&
+        bridgeSharesReconcile(control.materialSupplyShare, route.supplyShare) &&
+        bridgeRouteCounts.get(control.controlKey) === 1
+      );
+    }
+    if (joined.length !== 1) return false;
+    const control = joined[0]!;
+    return (
+      control.scope === "deployment" &&
+      control.economicLossScope === "deployment" &&
+      control.materialSupplyShare !== null &&
+      bridgeSharesReconcile(control.materialSupplyShare, route.supplyShare) &&
+      control.materialSupplyShare < materialShareThreshold
+    );
+  });
+}
+
+function controlFallbackKind(control: V9DeploymentControlFactV2): "mint" | "oracle" | "bridge" | null {
+  if (controlCanRepresent(control, "bridge")) return "bridge";
+  if (controlCanRepresent(control, "oracle")) return "oracle";
+  if (controlCanRepresent(control, "mint") || controlCanRepresent(control, "upgrade")) return "mint";
+  return null;
 }
 
 /**
@@ -339,20 +425,21 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     const pathKind = control.controlKind === "bridge" ? "deployment-control" : "local-component";
     const path = `control:${control.controlKey}`;
     if (control.status.applicability.state === "unresolved" || control.status.observationState !== "known") {
-      addReason(mappedControlStatusReason(control), pathKind, path, control.controlKey);
+      if (binding) addReason(mappedControlStatusReason(control), pathKind, path, control.controlKey);
       continue;
     }
-    if (control.authority === null || control.authority.model === "unknown") {
+    if (binding && (control.authority === null || control.authority.model === "unknown")) {
       addReason("unresolved-control-identity", "local-component", path, control.controlKey);
     }
     if (
-      control.capSemantics.kind === "unknown" ||
-      control.claimImpairment === "unknown" ||
-      control.economicLossScope === "unknown"
+      binding &&
+      (control.capSemantics.kind === "unknown" ||
+        control.claimImpairment === "unknown" ||
+        control.economicLossScope === "unknown")
     ) {
       addReason("unresolved-control-identity", "local-component", `${path}:economic-semantics`, control.controlKey);
     }
-    if (control.incidentState === "unknown") {
+    if (binding && control.incidentState === "unknown") {
       addReason("unresolved-control-identity", "local-component", `${path}:incident`, control.controlKey);
     } else if (control.incidentState === "active") {
       addStructuralFailure({
@@ -643,7 +730,25 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       "bridge",
     );
   } else {
-    if (bridge.routes.length === 0) addReason("missing-bridge-route-rows", "deployment-control", "bridge:routes");
+    const completeSubthresholdUnresolvedJoins = hasCompleteSubthresholdUnresolvedBridgeJoins(
+      args.facts,
+      controls,
+      bridge.routes,
+      materialShareThreshold,
+    );
+    const unresolvedBridgeShare =
+      args.facts.supply.unknownRouteSupplyShare === null || args.facts.supply.unreviewedRouteSupplyShare === null
+        ? null
+        : Math.min(1, args.facts.supply.unknownRouteSupplyShare + args.facts.supply.unreviewedRouteSupplyShare);
+    const unresolvedBridgeResidueBinds =
+      unresolvedBridgeShare === null ||
+      (unresolvedBridgeShare > 0 && !completeSubthresholdUnresolvedJoins);
+    const hasUnresolvedSupplyRows = args.facts.supply.selectedBridgeRoutes.some(
+      (route) => route.reviewState !== "selected-reviewed",
+    );
+    if (bridge.routes.length === 0 && (unresolvedBridgeResidueBinds || !hasUnresolvedSupplyRows)) {
+      addReason("missing-bridge-route-rows", "deployment-control", "bridge:routes");
+    }
     const seenBridgeControls = new Set<string>();
     for (const route of [...bridge.routes].sort((left, right) => compareText(left.controlKey, right.controlKey))) {
       if (seenBridgeControls.has(route.controlKey)) throw new Error(`Duplicate v9 bridge control ${route.controlKey}`);
@@ -654,11 +759,13 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         continue;
       }
       if (!isControlEconomicallyRelevant(control)) continue;
+      const binding = bindingByMateriality(control, materialShareThreshold);
       if (!isKnownRequired(control.status)) {
-        addReason("selected-bridge-route-unresolved", "deployment-control", "bridge:route", route.controlKey);
+        if (binding) {
+          addReason("selected-bridge-route-unresolved", "deployment-control", "bridge:route", route.controlKey);
+        }
         continue;
       }
-      const binding = bindingByMateriality(control, materialShareThreshold);
       if (control.economicLossScope === "deployment" && control.materialSupplyShare === null) {
         addReason(
           "runtime-bridge-materiality-unavailable",
@@ -703,11 +810,11 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         });
       }
     }
-    const unknownBridgeShare = Math.max(
-      args.facts.supply.unknownRouteSupplyShare ?? 0,
-      args.facts.supply.unreviewedRouteSupplyShare ?? 0,
+    const unknownBridgeShare = Math.min(
+      1,
+      (args.facts.supply.unknownRouteSupplyShare ?? 0) + (args.facts.supply.unreviewedRouteSupplyShare ?? 0),
     );
-    if (unknownBridgeShare >= materialShareThreshold) {
+    if (unknownBridgeShare > 0 && !completeSubthresholdUnresolvedJoins) {
       addReason("material-bridge-supply-unmatched", "deployment-control", "bridge:supply");
     }
   }
@@ -724,6 +831,15 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   ] as const;
   for (const fallback of boundedFallbacks) {
     if (components.some((component) => component.kind === fallback.kind)) continue;
+    // Aggregate inventory reasons are section-neutral. A control-specific
+    // reason may authorize only the section that control can represent.
+    const hasBindingGap = [...reasons.values()].some((reason) => {
+      if (reason.path === fallback.kind || reason.path.startsWith(`${fallback.kind}:`)) return true;
+      if (reason.controlKey === null) return false;
+      const reasonControl = controlsByKey.get(reason.controlKey);
+      return reasonControl !== undefined && controlFallbackKind(reasonControl) === fallback.kind;
+    });
+    if (!hasBindingGap) continue;
     components.push({
       componentKey: fallback.componentKey,
       kind: fallback.kind,

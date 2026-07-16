@@ -1,5 +1,6 @@
 import type { DependencyType } from "../../types/dependency-types";
 import type { V9FailureDomainRef } from "../../types/safety-score-v9-facts";
+import { resolveChainId } from "../chains";
 import { orderDependencyGraphNodes, type DependencyGraphEdge } from "../dependency-graph";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
@@ -92,8 +93,25 @@ export interface V9ResolvedDependencyInputs {
   cycleBlocked: boolean;
 }
 
+function canonicalPlanningDomain(domain: V9FailureDomainRef): V9FailureDomainRef {
+  if (domain.kind !== "chain") return domain;
+  return { kind: "chain", key: resolveChainId(domain.key) ?? domain.key.toLowerCase() };
+}
+
 function domainKey(domain: V9FailureDomainRef): string {
-  return `${domain.kind}:${domain.key}`;
+  const canonical = canonicalPlanningDomain(domain);
+  return `${canonical.kind}:${canonical.key}`;
+}
+
+function canonicalPlanningDomains(domains: readonly V9FailureDomainRef[]): V9FailureDomainRef[] {
+  return [
+    ...new Map(
+      domains.map((domain) => {
+        const canonical = canonicalPlanningDomain(domain);
+        return [domainKey(canonical), canonical];
+      }),
+    ).values(),
+  ].sort((left, right) => domainKey(left).localeCompare(domainKey(right)));
 }
 
 function pathSortKey(path: V9DependencyPathPlan): string {
@@ -138,7 +156,7 @@ function selectDependencyRoles(assets: readonly V9DependencyPlanningAsset[]): {
         dependencyType: selected.dependencyType,
         role: selected.pathKind === "serial-dependency" ? "serial-claim" : "basket-exposure",
         weight: selected.weight,
-        failureDomains: [...selected.failureDomains].sort((left, right) => domainKey(left).localeCompare(domainKey(right))),
+        failureDomains: canonicalPlanningDomains(selected.failureDomains),
       });
       for (const edge of edges.slice(1)) {
         suppressed.push({
@@ -160,8 +178,9 @@ function selectDependencyRoles(assets: readonly V9DependencyPlanningAsset[]): {
 function collectCommonModes(assets: readonly V9DependencyPlanningAsset[]): V9CommonModeGroup[] {
   const groups = new Map<string, { failureDomain: V9FailureDomainRef; members: V9CommonModeMember[] }>();
   const add = (domain: V9FailureDomainRef, member: V9CommonModeMember) => {
-    const key = domainKey(domain);
-    const group = groups.get(key) ?? { failureDomain: domain, members: [] };
+    const canonical = canonicalPlanningDomain(domain);
+    const key = domainKey(canonical);
+    const group = groups.get(key) ?? { failureDomain: canonical, members: [] };
     if (!group.members.some((candidate) => stableJsonStringifyV1(candidate) === stableJsonStringifyV1(member))) {
       group.members.push(member);
     }

@@ -559,7 +559,7 @@
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "fxUSD crosses from its Ethereum home chain to Base via a LayerZero V2 OFT Adapter: the FxUSDOFTAdaptor lockbox (0xA07d8cc4...) locks canonical fxUSD ERC-20 on Ethereum while the Base deployment is a native LayerZero OFT that mints/burns 1:1. The durable cross-chain supply path is thus an external lock/mint bridge with a LayerZero control surface.",
-    "reviewedAt": "2026-06-21",
+    "reviewedAt": "2026-07-14",
     "reviewer": "Pharos bridge-route re-verification",
     "confidence": "verified",
     "protocols": [
@@ -621,32 +621,85 @@
       {
         "id": "ethereum:0x085780639cc2cacd35e474e71f4d000e2405d8f6",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "f(x) Protocol",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-14",
+        "observedBlock": 25294712,
+        "sources": [
+          {
+            "label": "fxUSD token on Etherscan",
+            "url": "https://etherscan.io/address/0x085780639cc2cacd35e474e71f4d000e2405d8f6"
+          },
+          {
+            "label": "AladdinDAO deployment registry",
+            "url": "https://github.com/aladdindao/deployments/blob/main/deployments.mainnet.md"
+          }
+        ]
       },
       {
         "id": "base:0x55380fe7a1910dff29a47b622057ab4139da42c5",
+        "sourceChain": "ethereum",
         "destinationChain": "base",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x55380fe7a1910dff29a47b622057ab4139da42c5",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero V2 OFT Adapter route",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Ethereum block 25,294,712, FxUSDOFTAdaptor 0xA07d8cc424421cC2bce0544a65481376f010A438 returned canonical fxUSD 0x085780639cc2cacd35e474e71f4d000e2405d8f6 from token() and the existing 6-of-9 Safe 0x26B2ec4E02ebe2F54583af25b647b1D619e67BbF from owner(). That Ethereum adapter owner is distinct from Base OFT controller Safe 0x44e4158d93accf19f7b97a28b88a26dff3c3d6d2, observed separately at Base block 48,621,538.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "controllerChain": "base",
+        "controllerAddress": "0x44e4158d93accf19f7b97a28b88a26dff3c3d6d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0xa07d8cc424421cc2bce0544a65481376f010a438",
+          "contract:base:0x55380fe7a1910dff29a47b622057ab4139da42c5",
+          "safe:ethereum:0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf",
+          "safe:base:0x44e4158d93accf19f7b97a28b88a26dff3c3d6d2"
+        ],
+        "observedAt": "2026-07-14",
+        "observedBlock": 48621538,
+        "sources": [
+          {
+            "label": "FxUSDOFTAdaptor (LayerZero OFT Adapter, lockbox) on Etherscan",
+            "url": "https://etherscan.io/address/0xA07d8cc424421cC2bce0544a65481376f010A438"
+          },
+          {
+            "label": "fxUSD token on Etherscan",
+            "url": "https://etherscan.io/address/0x085780639cc2cacd35e474e71f4d000e2405d8f6"
+          },
+          {
+            "label": "f(x) Protocol governance multisig on Etherscan",
+            "url": "https://etherscan.io/address/0x26B2ec4E02ebe2F54583af25b647b1D619e67BbF"
+          },
+          {
+            "label": "fxUSD LayerZero OFT on BaseScan",
+            "url": "https://basescan.org/address/0x55380fe7a1910dff29a47b622057ab4139da42c5"
+          },
+          {
+            "label": "fxUSD Base owner Safe",
+            "url": "https://basescan.org/address/0x44e4158d93accf19f7b97a28b88a26dff3c3d6d2#code"
+          },
+          {
+            "label": "AladdinDAO deployments.mainnet.md (fxUSD OFTAdapter for Base/Tempo)",
+            "url": "https://github.com/aladdindao/deployments/blob/main/deployments.mainnet.md"
+          },
+          {
+            "label": "LayerZero OFT technical reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
       }
     ]
   }

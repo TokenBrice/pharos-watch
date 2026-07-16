@@ -990,17 +990,15 @@ const V9MaterialityPolicySchema = z
     commonModeOracleMinBranches: z.number().int().positive(),
     commonControlMinAssets: z.number().int().positive(),
     commonControlMinPaths: z.number().int().positive(),
-    commonModeSignal: z
-      .object({ kind: z.literal("critical-dependency"), severity: V9SeveritySchema })
-      .strict(),
+    commonModeSignal: z.object({ kind: z.literal("critical-dependency"), severity: V9SeveritySchema }).strict(),
     // Reviewed mature chains whose shared common-mode concentration is graded
     // at the lower "moderate" severity. A group touching any chain outside this
     // set (or an unknown/non-chain failure domain) keeps the "high" severity.
     matureChains: z.array(z.string().min(1)),
-    // Supply share below which a non-mature chain's common-mode concentration is
-    // immaterial and does not raise the severity. A non-mature chain carrying a
-    // material (>= threshold) or unattributable share stays fail-closed at "high".
-    matureChainShareThreshold: z.number().finite().min(0).max(1),
+    // Conservative share bound below which a common-mode concentration is
+    // immaterial. Material (>= threshold), overlapping, or unknown bounds stay
+    // fail-closed unless kind-specific reviewed evidence lowers the severity.
+    commonModeShareThreshold: z.number().finite().min(0).max(1),
     // Reviewed liquidity venues (dex-protocol common-mode) whose concentration is
     // not a capping signal — it graduates to the non-capping "low" severity. A
     // concentration on any other (or unknown) venue stays fail-closed at "high".

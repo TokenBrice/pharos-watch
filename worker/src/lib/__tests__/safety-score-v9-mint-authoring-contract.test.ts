@@ -1,6 +1,7 @@
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { MintAuthorityProfile } from "@shared/types/core";
 import { MintAuthorityProfileSchema } from "@shared/types/stablecoin-meta-schemas";
 import { describe, expect, it } from "vitest";
@@ -35,7 +36,8 @@ export const AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE: MintAuthorityProfile = {
   mintPath: "offchain-attested-minter",
   authorityPosture: "concentrated-admin",
   confidence: "verified",
-  summary: "Issuer-operated mint with a self-controlled raise-authority cap, periodic reserve attestation, and a prudential supervisor.",
+  summary:
+    "Issuer-operated mint with a self-controlled raise-authority cap, periodic reserve attestation, and a prudential supervisor.",
   controls: [
     {
       label: "Issuer mint controller",
@@ -216,5 +218,44 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     expect(asset.control.structuralFailures).toContainEqual(
       expect.objectContaining({ kind: "centralized-mint", severity: "moderate" }),
     );
+  });
+
+  it("compiles LUSD's reviewed immutable mint logic without an unresolved mint-authority reason", () => {
+    const lusd = ACTIVE_META_BY_ID.get("lusd-liquity");
+    if (!lusd?.mintAuthority) throw new Error("expected the LUSD mint-authority review");
+    expect(lusd.mintAuthority.upgradeability).toMatchObject({
+      model: "immutable",
+      canChangeMintLogic: false,
+    });
+
+    // The authoring fixture clock predates the registry review. Rebind only
+    // its observation dates so this test isolates compilation semantics.
+    const mintAuthority = structuredClone(lusd.mintAuthority);
+    mintAuthority.review.reviewedAt = "1970-01-01";
+    if (mintAuthority.upgradeability) mintAuthority.upgradeability.observedAt = "1970-01-01";
+    const input = fixedInput();
+    const extension = buildSafetyScoreV9BaselineExtension(input, {
+      metaById: new Map([
+        [
+          ASSET_ID,
+          {
+            id: ASSET_ID,
+            mechanismArchetype: "cdp" as const,
+            mintAuthority,
+          },
+        ],
+      ]),
+    });
+    const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
+    const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
+
+    expect(extension.assets[0]!.economicControlReview?.mint).toMatchObject({
+      status: { observationState: "known" },
+      controlKey: null,
+      reconciliation: "not-applicable",
+      upgrade: { state: "immutable", controlKey: null },
+    });
+    expect(compiled.assets[0]!.controlStatus.observationState).toBe("known");
+    expect(evaluated.control.reasons.map((reason) => reason.code)).not.toContain("unresolved-mint-authority");
   });
 });

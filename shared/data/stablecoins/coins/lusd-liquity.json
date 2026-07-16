@@ -188,6 +188,21 @@
     "authorityPosture": "none-resolved",
     "confidence": "verified",
     "summary": "LUSD minting is limited to user-opened ETH Troves in immutable Liquity v1 contracts; no privileged durable mint path is resolved.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "Liquity v1 resources",
+          "url": "https://docs.liquity.org/liquity-v1/documentation/resources"
+        },
+        {
+          "label": "LUSD token contract",
+          "url": "https://etherscan.io/address/0x5f98805A4E8be255a32880FDeC7F6728C6568bA0#code"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",

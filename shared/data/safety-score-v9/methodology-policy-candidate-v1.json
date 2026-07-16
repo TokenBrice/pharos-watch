@@ -233,7 +233,7 @@
         "polygon",
         "solana"
       ],
-      "matureChainShareThreshold": 0.05,
+      "commonModeShareThreshold": 0.05,
       "matureVenues": [
         "balancer",
         "curve",
