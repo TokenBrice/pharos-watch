@@ -69,12 +69,32 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "Nereus reports DAI as part of a broader overcollateralized crypto collateral set, so a single DAI coinId would overstate the reserve dependency.",
   ],
   [
-    "frax-frax::FRAX held on the Frax balance sheet::FRAX",
+    "frax-frax::FRAX::FRAX",
     "FRAX held on its own balance sheet is subject self exposure, not an upstream dependency edge.",
   ],
   [
     "frax-frax::sFRAX::FRAX",
     "sFRAX is a staked claim on FRAX and remains subject self exposure rather than an upstream dependency edge.",
+  ],
+  [
+    "frax-frax::LFRAX::FRAX",
+    "LFRAX is a Frax-ecosystem legacy/locked FRAX claim and remains subject self exposure rather than an upstream dependency edge.",
+  ],
+  [
+    "frax-frax::Unmapped Frax balance-sheet assets::FRAX",
+    "The unmapped balance-sheet basket combines several sub-display-threshold tokens; its name matches the FRAX substring but it carries no single tracked stablecoin whose coinId would be representative.",
+  ],
+  [
+    "fpi-frax::stkcvxFPIFRAX (staked Convex FPI/FRAX LP)::FRAX",
+    "The staked Convex FPI/FRAX LP is an identified protocol position, not an isolable upstream FRAX reserve slice, so no single coinId is representative.",
+  ],
+  [
+    "fpi-frax::Fraxswap V2 FRAX/FPIS::FRAX",
+    "The Fraxswap V2 FRAX/FPIS LP is an identified protocol position, not an isolable upstream FRAX reserve slice, so no single coinId is representative.",
+  ],
+  [
+    "yousd-yield-optimizer::USDC-denominated Yield Optimizer strategies::USDC",
+    "The reviewed yoUSD reserve is a dynamic USDC-denominated strategy envelope without a durable fixed USDC reserve slice, so the strategy label does not establish a single representative coinId.",
   ],
   [
     "susdt-spark::USDT deposited in Spark Savings vault::USDT",
@@ -109,8 +129,8 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "USDT funds the strategy, but Aster does not publish the retained-USDT and deployed-position weights.",
   ],
   [
-    "reusd-re-protocol::Onchain sUSDe-centered liquidity and offchain Regulation 114 trust collateral::USDe",
-    "Re documents sUSDe-centered liquidity and trust collateral without a current reconciled split.",
+    "reusd-re-protocol::reUSD / sUSDe LP position::USDe",
+    "Re documents a reUSD/sUSDe LP position; the sUSDe leg is a mixed LP claim without a current reconciled per-asset split.",
   ],
   [
     "usdu-usdu-finance::USDU constituent of Curve USDU/USDC LP backing::USDC",
@@ -123,26 +143,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
     "xmd-metal-dollar::USDC, PYUSD, and XPAX stablecoin reserve basket::USDC",
     "Metal Dollar discloses the basket constituents but not current constituent weights.",
-  ],
-  [
-    "usde-ethena::Liquid Stables (USDtb / USDC / USDT)::USDC",
-    "Ethena's public collateral API exposes this as one Liquid Cash bucket rather than stablecoin-level weights, so no single tracked coinId is representative.",
-  ],
-  [
-    "usde-ethena::Liquid Stables (USDtb / USDC / USDT)::USDT",
-    "Ethena's public collateral API exposes this as one Liquid Cash bucket rather than stablecoin-level weights, so no single tracked coinId is representative.",
-  ],
-  [
-    "usde-ethena::Liquid Stables (USDtb / USDC / USDT)::USDtb",
-    "Ethena's public collateral API exposes this as one Liquid Cash bucket rather than stablecoin-level weights, so no single tracked coinId is representative.",
-  ],
-  [
-    "usdf-falcon::Stablecoins (USDC/USDT)::USDC",
-    "The static Falcon reserve mix is a coarse fallback bucket; the live adapter preserves exact asset-level USDC/USDT coinIds when the protocol API is available.",
-  ],
-  [
-    "usdf-falcon::Stablecoins (USDC/USDT)::USDT",
-    "The static Falcon reserve mix is a coarse fallback bucket; the live adapter preserves exact asset-level USDC/USDT coinIds when the protocol API is available.",
   ],
   [
     "usg-tangent::Productive DeFi collateral (Curve LP tokens, Pendle PTs, and related LP/yield positions, including material USDC-paired LP exposure)::USDC",
@@ -163,10 +163,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
     "weusd-picwe::PicWe WEUSD backing (current 100% USDC claim; legacy basket conflict)::USDC",
     "WEUSD's current USDC claim conflicts with older basket evidence and lacks a reconciled reserve inventory.",
-  ],
-  [
-    "hyusd-hylo::Unresolved Hylo production collateral envelope (V1 SOL-LST pool and documented V2 SOL/BTC/USDC pools)::USDC",
-    "Hylo's reviewed reserve envelope does not reconcile the observable V1 deployment with the documented V2 pools or publish production weights, so linking USDC alone would overstate the dependency.",
   ],
   [
     "hbusdt-hyperbeat::Dynamic Hyperbeat hbUSDT strategy portfolio::USDT",
