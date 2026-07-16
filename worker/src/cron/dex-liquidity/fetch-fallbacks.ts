@@ -185,6 +185,10 @@ export async function fetchDsFallbackPools(
       poolsFound++;
     }
     candidates.length = 0;
+    candidateExactKeys.clear();
+    candidateIdentityCounts.derived.clear();
+    candidateIdentityCounts.wildcard.clear();
+    priceObservationExactKeys.clear();
   };
 
   const recordFallbackOutcome = async () => {
@@ -196,6 +200,7 @@ export async function fetchDsFallbackPools(
   for (const meta of targetCoins) {
     throwIfAborted(signal);
     if (deadlineMs && Date.now() >= deadlineMs) {
+      finalizeCandidates();
       await logCronEvent(db, {
         job: "sync-dex-liquidity",
         eventType: "dexscreener-fallback-budget-exhausted",
@@ -204,7 +209,6 @@ export async function fetchDsFallbackPools(
         metadata: { requests, phase: "between-coins" },
       });
       await recordFallbackOutcome();
-      finalizeCandidates();
       return { newPools, priceObs };
     }
 
@@ -213,6 +217,7 @@ export async function fetchDsFallbackPools(
     for (const contract of getTrackedContracts(meta)) {
       if (!DS_CHAIN_MAP[contract.chain]) continue;
       if (deadlineMs && Date.now() >= deadlineMs) {
+        finalizeCandidates();
         await logCronEvent(db, {
           job: "sync-dex-liquidity",
           eventType: "dexscreener-fallback-budget-exhausted",
@@ -221,7 +226,6 @@ export async function fetchDsFallbackPools(
           metadata: { requests, phase: "mid-coin" },
         });
         await recordFallbackOutcome();
-        finalizeCandidates();
         return { newPools, priceObs };
       }
 
@@ -414,8 +418,8 @@ export async function fetchDsFallbackPools(
     }
   }
 
-  await recordFallbackOutcome();
   finalizeCandidates();
+  await recordFallbackOutcome();
 
   await logCronEvent(db, {
     job: "sync-dex-liquidity",
