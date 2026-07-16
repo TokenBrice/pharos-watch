@@ -43,17 +43,20 @@ The V9 implementation establishes candidate infrastructure without changing prod
   history, bridge materiality, or numeric mint caps.
 - `worker/src/lib/safety-score-v9-candidate.ts` and
   `worker/scripts/replay-safety-score-v9.ts` compile and evaluate the exact
-  candidate deterministically. The current policy semantic digest is
+  candidate deterministically. The deployed Batch 5 policy semantic digest is
   `5f4f92eec713b65b30d60e3cd8d05a613ab86b4512db4dead699c9b85c30f15e`;
-  the current evaluation-build digest is
+  its evaluation-build digest is
   `ad5870b23bd1e09b586edb123c504aa0729e0d5d9b3b5201c6830b6d7f336dff`.
-- **IDENTITY FREEZE (owner-ruled 2026-07-16, option A of the freeze decision
-  packet):** the two digests above are FROZEN. The qualifying shadow window
-  accumulates on this identity from its production deployment onward. No
-  engine, policy, or manifest-bound producer change may land before activation;
-  any new finding — audit, calibration, or capability — queues as post-activation
-  v9.1. Data and curation changes remain allowed (the freeze pins identity, not
-  inputs). Owner ruling record: Batches 3–5 in the coordinator decision log.
+- **IDENTITY FREEZE RESCINDED BY OWNER RULING 2026-07-16; CALIBRATION SPRINT IN
+  EFFECT:** deployed Batch 5 remains policy `5f4f92eec713b65b30d60e3cd8d05a613ab86b4512db4dead699c9b85c30f15e`
+  and build `ad5870b23bd1e09b586edb123c504aa0729e0d5d9b3b5201c6830b6d7f336dff`;
+  it no longer accrues activation days. The owner reopened the identity after
+  confirming that the shipped evaluator applies the 5% material-share gate only
+  to chain common mode, while the Batch 5 ruling requires it across domain kinds.
+  Identity-bound changes to policy, engine, schema, or producer capability may
+  proceed only through retained same-input calibration replays. A later explicit
+  owner re-freeze of a deployed identity is required before any prospective
+  qualifying window can begin.
 - The 2026-07-15 Batch 3 calibration revision (owner rulings 2026-07-15)
   applies the two ruled cap changes and nothing else. (1) The mint posture gains
   a distinct `unbounded-reconciled` rung (`mintPostureQuality` = 55) for an
