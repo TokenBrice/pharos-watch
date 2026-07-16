@@ -41,6 +41,7 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     depegSourceFamily: "dex:curve",
     maxTrustedAgeSec: 5 * 60,
     defaultWeight: 1,
+    isReplaySafe: false,
     freshnessKind: "upstream",
     supportsUpstreamObservedAt: true,
     defaultObservedAtMode: "upstream",

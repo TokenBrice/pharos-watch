@@ -157,11 +157,14 @@ async function fetchTargetedCmcQuotes(params: {
       continue;
     }
     const providerAddress = normalizedContractAddress(quote.platform?.token_address);
+    const requiresContractIdentity = (candidate.asset.contracts?.length ?? 0) > 0;
     if (
       quote.slug.toLowerCase() !== expectedSlug ||
       quote.symbol.toUpperCase() !== candidate.asset.symbol.toUpperCase() ||
       quote.is_active === 0 ||
-      (providerAddress != null && !matchesConfiguredContract(candidate.asset, providerAddress))
+      (requiresContractIdentity && (
+        providerAddress == null || !matchesConfiguredContract(candidate.asset, providerAddress)
+      ))
     ) {
       reject("unsupported-quote");
       continue;

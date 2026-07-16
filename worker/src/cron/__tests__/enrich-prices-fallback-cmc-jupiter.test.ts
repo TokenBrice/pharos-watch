@@ -884,6 +884,7 @@ describe("enrichMissingPrices", () => {
 
   it.each([
     ["wrong contract", "MNEE", "0x0000000000000000000000000000000000000001", undefined, 1],
+    ["missing contract", "MNEE", null, undefined, 1],
     ["symbol collision", "MNEE2", "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf", undefined, 1],
     ["stale quote", "MNEE", "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf", staleIsoTimestamp(), 1],
     ["inactive quote", "MNEE", "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf", undefined, 0],
@@ -911,7 +912,7 @@ describe("enrichMissingPrices", () => {
           slug: "mnee",
           symbol,
           is_active: isActive,
-          platform: { slug: "ethereum", token_address: tokenAddress },
+          platform: tokenAddress == null ? null : { slug: "ethereum", token_address: tokenAddress },
           quote: { USD: { ...cmcUsdQuote(0.9998, lastUpdated), volume_24h: 143_000 } },
         }] },
       },
