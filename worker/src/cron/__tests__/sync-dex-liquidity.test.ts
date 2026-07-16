@@ -135,10 +135,7 @@ import { fetchPancakeSwapPools } from "../dex-liquidity/fetch-pancakeswap";
 import { fetchSlipstreamPools } from "../dex-liquidity/fetch-slipstream";
 import { computeDepthStability, computeDexPrices, computeStablecoinScores } from "../dex-liquidity/scoring";
 import { persistScores, writeHistoricalSnapshots } from "../dex-liquidity/persistence";
-import {
-  compactPrimaryPoolsForTrackedStablecoins,
-  filterPrimaryPoolsPreferDirectApi,
-} from "../dex-liquidity/orchestrator";
+import { filterPrimaryPoolsPreferDirectApi } from "../dex-liquidity/orchestrator";
 import { buildSymbolLookups } from "../dex-liquidity/pool-helpers";
 import { processPoolMetrics } from "../dex-liquidity/process-pools";
 import { mergeStagedPools } from "../dex-liquidity/staging-merge";
@@ -192,6 +189,7 @@ describe("syncDexLiquidity", () => {
     vi.clearAllMocks();
     vi.mocked(fetchDataSources).mockResolvedValue({
       pools: [],
+      rawPoolCount: 0,
       dexProjects: new Set<string>(),
       protocolTvlCaps: new Map<string, number>(),
       curvePayloads: [],
@@ -216,6 +214,7 @@ describe("syncDexLiquidity", () => {
   it("returns degraded when non-catastrophic critical source family fails", async () => {
     vi.mocked(fetchDataSources).mockResolvedValueOnce({
       pools: [],
+      rawPoolCount: 0,
       dexProjects: new Set<string>(),
       protocolTvlCaps: new Map<string, number>(),
       curvePayloads: [],
@@ -250,6 +249,7 @@ describe("syncDexLiquidity", () => {
   it("returns degraded when DL fails but Curve succeeds", async () => {
     vi.mocked(fetchDataSources).mockResolvedValueOnce({
       pools: [],
+      rawPoolCount: 0,
       dexProjects: new Set<string>(),
       protocolTvlCaps: new Map<string, number>(),
       curvePayloads: [{ data: { poolData: [] } }],
@@ -271,6 +271,7 @@ describe("syncDexLiquidity", () => {
   it("degrades and skips persistence instead of tripping hard value guard when DL yields is unavailable", async () => {
     vi.mocked(fetchDataSources).mockResolvedValueOnce({
       pools: [],
+      rawPoolCount: 0,
       dexProjects: new Set<string>(["curve"]),
       protocolTvlCaps: new Map<string, number>(),
       curvePayloads: [{ data: { poolData: [] } }],
@@ -391,6 +392,7 @@ describe("syncDexLiquidity", () => {
       expect(fetchSlipstreamPools).toHaveBeenCalledTimes(2);
       return {
         pools: [],
+        rawPoolCount: 0,
         dexProjects: new Set<string>(),
         protocolTvlCaps: new Map<string, number>(),
         curvePayloads: [],
@@ -437,7 +439,7 @@ describe("syncDexLiquidity", () => {
     });
   });
 
-  it("discards irrelevant production-scale primary rows before identity and metric processing while reporting raw counts", async () => {
+  it("accepts compacted production-scale primary rows while reporting raw counts", async () => {
     const rawPoolCount = 15_430;
     const lookups = buildSymbolLookups();
     const [trackedKey] = lookups.chainAddressToId.keys();
@@ -462,14 +464,9 @@ describe("syncDexLiquidity", () => {
       exposure: "multi",
       count: 20,
     };
-    const irrelevantPools = Array.from({ length: rawPoolCount - 1 }, (_, index): LlamaPool => ({
-      ...trackedPool,
-      pool: `irrelevant-pool-${index}`,
-      symbol: "UNKNOWN-QUOTE",
-      underlyingTokens: [`unknown-token-${index}`, `unknown-quote-${index}`],
-    }));
     vi.mocked(fetchDataSources).mockResolvedValueOnce({
-      pools: [trackedPool, ...irrelevantPools],
+      pools: [trackedPool],
+      rawPoolCount,
       dexProjects: new Set(["scale-dex"]),
       protocolTvlCaps: new Map(),
       curvePayloads: [],
@@ -499,13 +496,6 @@ describe("syncDexLiquidity", () => {
           primaryPoolsRetained: 1,
         },
       },
-    });
-
-    const compacted = compactPrimaryPoolsForTrackedStablecoins([trackedPool, ...irrelevantPools], lookups);
-    expect(compacted).toMatchObject({
-      rawPoolCount,
-      retainedPoolCount: 1,
-      skippedUntrackedCount: rawPoolCount - 1,
     });
   });
 
@@ -541,6 +531,7 @@ describe("syncDexLiquidity", () => {
     };
     const sourceData = {
       pools: [primaryPool],
+      rawPoolCount: 1,
       dexProjects: new Set(["memory-dex"]),
       protocolTvlCaps: new Map<string, number>(),
       curvePayloads: [],
@@ -809,6 +800,7 @@ describe("syncDexLiquidity", () => {
   it("records drift and evidence telemetry when previous run metadata exists", async () => {
     vi.mocked(fetchDataSources).mockResolvedValueOnce({
       pools: [],
+      rawPoolCount: 0,
       dexProjects: new Set<string>(),
       protocolTvlCaps: new Map<string, number>([["curve", 50]]),
       curvePayloads: [],
