@@ -47,6 +47,13 @@ The V9 implementation establishes candidate infrastructure without changing prod
   `5f4f92eec713b65b30d60e3cd8d05a613ab86b4512db4dead699c9b85c30f15e`;
   the current evaluation-build digest is
   `ad5870b23bd1e09b586edb123c504aa0729e0d5d9b3b5201c6830b6d7f336dff`.
+- **IDENTITY FREEZE (owner-ruled 2026-07-16, option A of the freeze decision
+  packet):** the two digests above are FROZEN. The qualifying shadow window
+  accumulates on this identity from its production deployment onward. No
+  engine, policy, or manifest-bound producer change may land before activation;
+  any new finding — audit, calibration, or capability — queues as post-activation
+  v9.1. Data and curation changes remain allowed (the freeze pins identity, not
+  inputs). Owner ruling record: Batches 3–5 in the coordinator decision log.
 - The 2026-07-15 Batch 3 calibration revision (owner rulings 2026-07-15)
   applies the two ruled cap changes and nothing else. (1) The mint posture gains
   a distinct `unbounded-reconciled` rung (`mintPostureQuality` = 55) for an
