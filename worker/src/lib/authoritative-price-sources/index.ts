@@ -16,6 +16,7 @@ import {
 import { idleCdoTrancheProvider } from "./idle-cdo-tranche";
 import { inheritedTrackedPriceProvider } from "./inherited-tracked";
 import { iusdInfinifiProvider } from "./infinifi-iusd";
+import { jusdStablecoinBridgeProvider } from "./jusd-stablecoin-bridge";
 import { kavaUsdxPricefeedProvider } from "./kava-pricefeed";
 import { mentoPhpmProvider } from "./mento-phpm";
 import { previewRedeemProvider } from "./preview-redeem";
@@ -39,6 +40,7 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   mentoPhpmProvider,
   usxStablePoolProvider,
   kavaUsdxPricefeedProvider,
+  jusdStablecoinBridgeProvider,
   erc4626NavProvider,
   previewRedeemProvider,
   idleCdoTrancheProvider,

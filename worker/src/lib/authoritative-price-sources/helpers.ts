@@ -30,6 +30,7 @@ export interface Erc4626NavVaultConfig {
   assetDecimals: number;
   rpcUrls?: readonly string[];
   allowFreshNonReplaySafeParent?: boolean;
+  allowFreshReplaySafeSingleSourceParent?: boolean;
 }
 
 export function defineRegistryErc4626NavVault(input: {
@@ -37,6 +38,7 @@ export function defineRegistryErc4626NavVault(input: {
   parentId: string;
   chain: string;
   allowFreshNonReplaySafeParent?: boolean;
+  allowFreshReplaySafeSingleSourceParent?: boolean;
 }): Erc4626NavVaultConfig {
   const vaultDeployment = TRACKED_META_BY_ID.get(input.id)?.contracts?.find(
     (deployment) => deployment.chain === input.chain,
@@ -58,6 +60,7 @@ export function defineRegistryErc4626NavVault(input: {
     vaultDecimals: vaultDeployment.decimals,
     assetDecimals: assetDeployment.decimals,
     ...(input.allowFreshNonReplaySafeParent === true ? { allowFreshNonReplaySafeParent: true } : {}),
+    ...(input.allowFreshReplaySafeSingleSourceParent === true ? { allowFreshReplaySafeSingleSourceParent: true } : {}),
   };
 }
 
@@ -152,6 +155,15 @@ export interface CurrentPriceOverride {
       activeOracleCount: number;
       newestExpiry: number;
       dispersionBps: number;
+    };
+    juiceDollarBridge?: {
+      chain: "citrea";
+      bridge: string;
+      quoteToken: string;
+      quoteParentId: string;
+      blockNumber: number;
+      redeemableJusd: number;
+      simulatedJusd: number;
     };
   };
 }

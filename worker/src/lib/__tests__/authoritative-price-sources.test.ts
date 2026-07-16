@@ -2032,6 +2032,50 @@ describe("authoritative-price-sources", () => {
     expect(overrides.get("sbold-k3-capital")?.price).toBeCloseTo(1.062 * 1.0001, 6);
   });
 
+  it("prices sYUSD before GT hardening from a fresh replay-safe single-source YUSD parent", async () => {
+    const assetsPerShareRaw = 1_044_572_348_140_406_493n.toString(16).padStart(64, "0");
+    fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${assetsPerShareRaw}`);
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "syusd-aegis",
+        name: "Aegis Staked YUSD",
+        symbol: "sYUSD",
+        price: null,
+      },
+      {
+        id: "yusd-aegis",
+        name: "Aegis YUSD",
+        symbol: "YUSD",
+        price: 0.99896,
+        priceSource: "coingecko",
+        priceConfidence: "single-source",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "upstream",
+      },
+    ]);
+
+    expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledWith(
+      "ethereum",
+      "0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
+      expect.stringMatching(/^0x07a2d13a/),
+      "latest",
+      expect.any(Object),
+    );
+    expect(overrides.get("syusd-aegis")).toMatchObject({
+      price: expect.closeTo(1.043486, 6),
+      source: "coingecko",
+      confidence: "single-source",
+      metadata: {
+        inheritedFrom: "yusd-aegis",
+        parentSource: "coingecko",
+        parentConfidence: "single-source",
+        parentReplaySafe: true,
+      },
+    });
+  });
+
   it("prices Aave sGHO from the registry vault previewRedeem() x tracked GHO price", async () => {
     const oneGhoRaw = 1_000_000_000_000_000_000n.toString(16).padStart(64, "0");
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${oneGhoRaw}`);
