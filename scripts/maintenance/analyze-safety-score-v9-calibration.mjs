@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
+import { compileV9FactSetV2 } from "../../shared/lib/safety-score-v9/compile.ts";
+import { evaluateV9FactSet } from "../../shared/lib/safety-score-v9/evaluate-set.ts";
+import { V9_CANDIDATE_POLICY_V1 } from "../../shared/lib/safety-score-v9/policy.ts";
+import { buildSafetyScoreV9Candidate } from "../../worker/src/lib/safety-score-v9-candidate.ts";
 
 const GRADE_ORDER = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "NR"];
 const GRADE_BOUNDARIES = [40, 50, 55, 60, 65, 70, 75, 80, 83, 87, 100];
@@ -58,20 +62,8 @@ const EXPECTED_BASELINE_BINDINGS = {
   factSetDigest: "defb600329157e4b4413c4e1d6e5202ddc0b338d58034ebb4a786060e9309b11",
   resultDigest: "0f6623acdcfb427a5ab36a0be9fa88ec5b8e83e97dd0a5141d2567db251cb426",
 };
-const ASSET_WIDE_CONTROL_GAPS = new Set([
-  "missing-bridge-routes",
-  "missing-custody-review",
-  "missing-mint-authority",
-  "missing-oracle-review",
-  "missing-upgradeability-review",
-  "selected-bridge-route-unresolved",
-  "unknown-control-cap-authority",
-  "unknown-upgrade-authority",
-  "unresolved-control-identity",
-  "unresolved-mint-authority",
-]);
-
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
+const MAX_UNEXPLAINED_CAPTURE_MOVEMENT = 3;
 
 function stableStringify(value) {
   if (value === null) return "null";
@@ -438,6 +430,42 @@ function nextBoundary(score) {
   return GRADE_BOUNDARIES.find((boundary) => boundary > score) ?? 100;
 }
 
+function uniqueAssetIds(values, label) {
+  if (!Array.isArray(values) || values.some((value) => typeof value !== "string" || value.length === 0)) {
+    throw new Error(`${label} must contain nonempty asset IDs`);
+  }
+  if (new Set(values).size !== values.length) throw new Error(`${label} must contain unique asset IDs`);
+  return [...values].sort(compareText);
+}
+
+function rowAssetIds(rows, key, label) {
+  if (!Array.isArray(rows)) throw new Error(`${label} must be an array`);
+  return uniqueAssetIds(
+    rows.map((row) => row?.[key]),
+    label,
+  );
+}
+
+function assertExactReplayAssetSets(pipeline, label) {
+  const sets = [
+    ["fixedInput.activeAssetIds", uniqueAssetIds(pipeline.fixedInput?.activeAssetIds, `${label} fixed-input assets`)],
+    [
+      "compiledFacts.activeAssetIds",
+      uniqueAssetIds(pipeline.compiledFacts?.activeAssetIds, `${label} compiled active assets`),
+    ],
+    ["compiledFacts.assets", rowAssetIds(pipeline.compiledFacts?.assets, "assetId", `${label} compiled rows`)],
+    ["evaluatedSet.assets", rowAssetIds(pipeline.evaluatedSet?.assets, "assetId", `${label} evaluated rows`)],
+    ["candidate.cards", rowAssetIds(pipeline.candidate?.cards, "id", `${label} candidate cards`)],
+  ];
+  const expected = sets[0][1];
+  for (const [source, ids] of sets.slice(1)) {
+    if (stableStringify(ids) !== stableStringify(expected)) {
+      throw new Error(`${label} asset set mismatch between fixedInput.activeAssetIds and ${source}`);
+    }
+  }
+  return expected;
+}
+
 function assertReplay(replay, label) {
   if (!Array.isArray(replay?.pipeline?.candidate?.cards)) {
     throw new Error(`${label} does not contain pipeline.candidate.cards`);
@@ -448,6 +476,7 @@ function assertReplay(replay, label) {
   if (!Array.isArray(replay?.pipeline?.compiledFacts?.assets)) {
     throw new Error(`${label} does not contain pipeline.compiledFacts.assets`);
   }
+  assertExactReplayAssetSets(replay.pipeline, label);
   const fixedBaseId = replay?.pipeline?.fixedInput?.baseInputGenerationId;
   const candidateBaseId = replay?.pipeline?.candidate?.baseInputGenerationId;
   if (typeof fixedBaseId !== "string" || fixedBaseId !== candidateBaseId) {
@@ -543,15 +572,6 @@ function assertReplay(replay, label) {
   }
 
   const evaluatedById = new Map(pipeline.evaluatedSet.assets.map((asset) => [asset.assetId, asset]));
-  const factIds = pipeline.compiledFacts.assets.map((asset) => asset.assetId).sort(compareText);
-  const evaluatedIds = [...evaluatedById.keys()].sort(compareText);
-  const cardIds = pipeline.candidate.cards.map((card) => card.id).sort(compareText);
-  if (
-    stableStringify(factIds) !== stableStringify(evaluatedIds) ||
-    stableStringify(cardIds) !== stableStringify(evaluatedIds)
-  ) {
-    throw new Error(`${label} compiled, evaluated, and candidate asset sets do not match`);
-  }
   for (const card of pipeline.candidate.cards) {
     const asset = evaluatedById.get(card.id);
     if (!asset) throw new Error(`${label} candidate card ${card.id} has no evaluated asset`);
@@ -577,6 +597,26 @@ function assertReplay(replay, label) {
   }
 }
 
+function reproduceCandidateReplay(replay, label) {
+  const publishedAtSec = replay?.pipeline?.candidate?.publishedAtSec;
+  if (!Number.isInteger(publishedAtSec) || publishedAtSec < 0) {
+    throw new Error(`${label} candidate must bind a nonnegative integer publishedAtSec`);
+  }
+  const candidateId = replay.pipeline.candidate.candidateId;
+  const rebuilt = buildSafetyScoreV9Candidate({
+    fixedInput: replay.pipeline.fixedInput,
+    extension: replay.pipeline.extension,
+    publishedAtSec,
+    ...(typeof candidateId === "string" && /^v9-rc-[1-9][0-9]*$/.test(candidateId)
+      ? { releaseCandidateId: candidateId }
+      : {}),
+  });
+  if (stableStringify(rebuilt) !== stableStringify(replay.pipeline)) {
+    throw new Error(`${label} does not reproduce through the trusted production compiler and evaluator`);
+  }
+  return rebuilt;
+}
+
 function baselineMatchesContract(distribution, cards, replay) {
   const bold = cards.find((card) => card.id === "bold-liquity");
   return (
@@ -600,20 +640,116 @@ function baselineMatchesContract(distribution, cards, replay) {
   );
 }
 
-function realACandidateChecks(card, evaluated, facts) {
+function addEvidenceRefs(value, refs) {
+  if (Array.isArray(value)) {
+    for (const entry of value) addEvidenceRefs(entry, refs);
+    return;
+  }
+  if (value === null || typeof value !== "object") return;
+  if (Array.isArray(value.evidenceRefIds)) {
+    for (const evidenceId of value.evidenceRefIds) refs.add(evidenceId);
+  }
+  for (const child of Object.values(value)) addEvidenceRefs(child, refs);
+}
+
+function scoreBearingEvidenceFreshness(evaluated, facts) {
+  const refs = new Set(evaluated?.backing?.evidenceRefIds ?? []);
+  for (const value of [facts?.implementation, facts?.dependencies, facts?.supply, facts?.peg]) {
+    addEvidenceRefs(value, refs);
+  }
+  const routesByKey = new Map((facts?.exitRoutes ?? []).map((route) => [route.routeKey, route]));
+  for (const route of evaluated?.exit?.routes ?? []) {
+    if (route.included) addEvidenceRefs(routesByKey.get(route.routeKey), refs);
+  }
+  addEvidenceRefs(facts?.controlStatus, refs);
+  addEvidenceRefs(facts?.economicControlReview, refs);
+  const controlsByKey = new Map((facts?.controls ?? []).map((control) => [control.controlKey, control]));
+  for (const component of evaluated?.control?.components ?? []) {
+    for (const controlKey of component.controlKeys ?? []) addEvidenceRefs(controlsByKey.get(controlKey), refs);
+  }
+  const scoreReasonCodes = new Set([
+    ...Object.values(evaluated?.scoreInput?.pillars ?? {}).flatMap((pillar) =>
+      (pillar?.reasons ?? []).map((reason) => reason.code),
+    ),
+    ...(evaluated?.scoreInput?.peg?.reasons ?? []).map((reason) => reason.code),
+    ...(evaluated?.scoreInput?.dependencyReasons ?? []).map((reason) => reason.code),
+    ...(evaluated?.scoreInput?.methodologyReasons ?? []).map((reason) => reason.code),
+  ]);
+  for (const gap of facts?.gaps ?? []) {
+    if (scoreReasonCodes.has(gap.reasonCode)) addEvidenceRefs(gap, refs);
+  }
+
+  const evidenceById = new Map((facts?.evidence ?? []).map((reference) => [reference.evidenceId, reference]));
+  const missingIds = [...refs].filter((evidenceId) => !evidenceById.has(evidenceId)).sort(compareText);
+  const noncurrentIds = [...refs]
+    .filter((evidenceId) => {
+      const reference = evidenceById.get(evidenceId);
+      return reference && (reference.disposition === "rejected" || reference.freshness?.state !== "current");
+    })
+    .sort(compareText);
+  return {
+    referencedCount: refs.size,
+    missingIds,
+    noncurrentIds,
+    passed: refs.size > 0 && missingIds.length === 0 && noncurrentIds.length === 0,
+  };
+}
+
+function resolvedStatus(status) {
+  return (
+    status !== null &&
+    typeof status === "object" &&
+    status.observationState === "known" &&
+    status.applicability?.state !== "unresolved"
+  );
+}
+
+function custodyStatuses(review) {
+  if (review === null || typeof review !== "object") return [];
+  return Object.entries(review).flatMap(([key, value]) =>
+    /custod/i.test(key) && value !== null && typeof value === "object" && "status" in value ? [value.status] : [],
+  );
+}
+
+function isAssetWideControlReason(reason, facts) {
+  if (reason?.pathKind === "local-component" || reason?.controlKey == null) return true;
+  const control = (facts?.controls ?? []).find((entry) => entry.controlKey === reason.controlKey);
+  return control === undefined || control.scope === "global";
+}
+
+function assetWideControlsResolved(evaluated, facts) {
+  const economic = facts?.economicControlReview;
+  const typedStatuses = [
+    facts?.controlStatus,
+    economic?.mint?.status,
+    economic?.oracle?.status,
+    ...(economic?.oracle?.branches ?? []).map((branch) => branch.status),
+    economic?.bridge?.status,
+    ...custodyStatuses(facts?.mechanismRiskReview?.review),
+  ].filter((status) => status !== undefined);
+  const typedStatusesResolved = typedStatuses.length > 0 && typedStatuses.every(resolvedStatus);
+  const upgradeResolved = economic?.mint?.upgrade?.state !== "unknown";
+  const unresolvedReasons = (evaluated?.control?.reasons ?? []).filter((reason) =>
+    isAssetWideControlReason(reason, facts),
+  );
+  const profileGaps = (facts?.gaps ?? []).filter(
+    (gap) => gap.reasonCode === "missing-custody-profile" || gap.reasonCode === "missing-oracle-profile",
+  );
+  return {
+    unresolvedReasonCodes: [...new Set(unresolvedReasons.map((reason) => reason.code))].sort(compareText),
+    unresolvedProfileGapCodes: [...new Set(profileGaps.map((gap) => gap.reasonCode))].sort(compareText),
+    passed: typedStatusesResolved && upgradeResolved && unresolvedReasons.length === 0 && profileGaps.length === 0,
+  };
+}
+
+export function evaluateRealACandidateChecks(card, evaluated, facts) {
   const supply = evaluated?.stressState?.exitPortfolio?.circulatingUsd ?? 0;
   const hasExecutableDexRoute =
     evaluated?.exit?.routes?.some(
       (route) => route.included && route.routeKey.startsWith("dex:") && (route.capacityPoint?.executableUsd ?? 0) > 0,
     ) ?? false;
-  const hasStaleEvidence = facts?.gaps?.some((gap) => gap.observationState === "stale") ?? true;
-  const unresolvedAssetWideControl =
-    facts?.gaps?.some(
-      (gap) =>
-        gap.ownerDomain === "control" &&
-        ASSET_WIDE_CONTROL_GAPS.has(gap.reasonCode) &&
-        gap.path?.kind !== "deployment-control",
-    ) ?? true;
+  const evidenceFreshness = scoreBearingEvidenceFreshness(evaluated, facts);
+  const controls = assetWideControlsResolved(evaluated, facts);
   const checks = {
     gradeAndRange: card.grade === "A" && card.score >= 83 && card.score <= 86,
     positiveSupply: supply > 0,
@@ -621,10 +757,10 @@ function realACandidateChecks(card, evaluated, facts) {
     strongEvidence:
       evaluated?.scoreInput?.pillars !== undefined &&
       Object.values(evaluated.scoreInput.pillars).every((pillar) => pillar.evidenceLevel === "strong"),
-    currentEvidence: !hasStaleEvidence,
-    assetWideControlsResolved: !unresolvedAssetWideControl,
+    currentEvidence: evidenceFreshness.passed,
+    assetWideControlsResolved: controls.passed,
   };
-  return { checks, passed: Object.values(checks).every(Boolean) };
+  return { checks, evidenceFreshness, controls, passed: Object.values(checks).every(Boolean) };
 }
 
 function summarizeDistribution(replay) {
@@ -764,23 +900,357 @@ function changesFromBaseline(baseline, candidate) {
     .sort((left, right) => compareText(left.assetId, right.assetId));
 }
 
-export function analyzeV9Calibration(baseline, candidate) {
-  assertReplay(baseline, "baseline");
-  assertReplay(candidate, "candidate");
-  const baselineDistribution = summarizeDistribution(baseline);
-  const distribution = summarizeDistribution(candidate);
-  const candidateById = new Map(candidate.pipeline.candidate.cards.map((card) => [card.id, card]));
-  const baselineById = new Map(baseline.pipeline.candidate.cards.map((card) => [card.id, card]));
-  const evaluatedById = new Map(candidate.pipeline.evaluatedSet.assets.map((asset) => [asset.assetId, asset]));
-  const factsById = new Map(candidate.pipeline.compiledFacts.assets.map((asset) => [asset.assetId, asset]));
-  const realACandidates = candidate.pipeline.candidate.cards
+function realACandidatesForReplay(replay) {
+  const evaluatedById = new Map(replay.pipeline.evaluatedSet.assets.map((asset) => [asset.assetId, asset]));
+  const factsById = new Map(replay.pipeline.compiledFacts.assets.map((asset) => [asset.assetId, asset]));
+  return replay.pipeline.candidate.cards
     .filter((card) => card.grade === "A" || (card.score >= 83 && card.score <= 86))
     .map((card) => ({
       assetId: card.id,
       score: card.score,
       grade: card.grade,
-      ...realACandidateChecks(card, evaluatedById.get(card.id), factsById.get(card.id)),
+      ...evaluateRealACandidateChecks(card, evaluatedById.get(card.id), factsById.get(card.id)),
     }));
+}
+
+function captureInputIsFresh(replay) {
+  const input = replay.pipeline.fixedInput;
+  return (
+    input.captureKind === "exact-publication-inputs" &&
+    input.liquidityStale === false &&
+    input.redemptionStale === false &&
+    Object.values(input.inputFreshness ?? {}).every((freshness) => freshness?.stale !== true)
+  );
+}
+
+export function captureMovements(captures) {
+  const movements = [];
+  for (let index = 1; index < captures.length; index += 1) {
+    const before = captures[index - 1];
+    const after = captures[index];
+    const beforeById = new Map(before.pipeline.candidate.cards.map((card) => [card.id, card]));
+    const beforeEvaluated = new Map(before.pipeline.evaluatedSet.assets.map((asset) => [asset.assetId, asset]));
+    const afterEvaluated = new Map(after.pipeline.evaluatedSet.assets.map((asset) => [asset.assetId, asset]));
+    for (const card of after.pipeline.candidate.cards) {
+      const previous = beforeById.get(card.id);
+      if (!previous) continue;
+      const delta = card.score - previous.score;
+      if (Math.abs(delta) <= MAX_UNEXPLAINED_CAPTURE_MOVEMENT) continue;
+      movements.push({
+        assetId: card.id,
+        fromResultDigest: before.pipeline.candidate.resultDigest,
+        toResultDigest: after.pipeline.candidate.resultDigest,
+        fromScore: previous.score,
+        toScore: card.score,
+        delta,
+        scoreBearingInputChanged: compareScoreBearingInputs(beforeEvaluated.get(card.id), afterEvaluated.get(card.id))
+          .changed,
+      });
+    }
+  }
+  return movements.sort(
+    (left, right) =>
+      compareText(left.fromResultDigest, right.fromResultDigest) || compareText(left.assetId, right.assetId),
+  );
+}
+
+export function repeatedRealAAssetIds(candidateRealAIds, qualifyingByCapture) {
+  if (qualifyingByCapture.length !== 3) return [];
+  return [...candidateRealAIds]
+    .filter((assetId) => qualifyingByCapture.every((assetIds) => assetIds.includes(assetId)))
+    .sort(compareText);
+}
+
+function validateFreshCaptureSeries(values, candidateRealAIds) {
+  const captures = Array.isArray(values) ? values : [];
+  for (const [index, capture] of captures.entries()) {
+    assertReplay(capture, `fresh capture ${index + 1}`);
+    reproduceCandidateReplay(capture, `fresh capture ${index + 1}`);
+  }
+  const ordered = [...captures].sort(
+    (left, right) => left.pipeline.fixedInput.clockSec - right.pipeline.fixedInput.clockSec,
+  );
+  const baseIds = ordered.map((capture) => capture.pipeline.fixedInput.baseInputGenerationId);
+  const sourceGenerations = ordered.map((capture) => capture.pipeline.fixedInput.sourceGeneration);
+  const clocks = ordered.map((capture) => capture.pipeline.fixedInput.clockSec);
+  const identitiesMatch =
+    ordered.length > 0 &&
+    ordered.every(
+      (capture) =>
+        stableStringify(capture.pipeline.candidateIdentity) === stableStringify(ordered[0].pipeline.candidateIdentity),
+    );
+  const assetSetsMatch =
+    ordered.length > 0 &&
+    ordered.every(
+      (capture) =>
+        stableStringify([...capture.pipeline.fixedInput.activeAssetIds].sort(compareText)) ===
+        stableStringify([...ordered[0].pipeline.fixedInput.activeAssetIds].sort(compareText)),
+    );
+  const distinctAndOrdered =
+    new Set(baseIds).size === 3 &&
+    new Set(sourceGenerations).size === 3 &&
+    new Set(clocks).size === 3 &&
+    clocks.every((clock, index) => index === 0 || clocks[index - 1] < clock);
+  const qualifyingByCapture = ordered.map((capture) =>
+    realACandidatesForReplay(capture)
+      .filter((entry) => entry.passed)
+      .map((entry) => entry.assetId),
+  );
+  const repeatedRealAIds = repeatedRealAAssetIds(candidateRealAIds, qualifyingByCapture);
+  return {
+    providedCount: captures.length,
+    ordered,
+    baseInputGenerationIds: baseIds,
+    resultDigests: ordered.map((capture) => capture.pipeline.candidate.resultDigest),
+    distinctAndOrdered,
+    identitiesMatch,
+    assetSetsMatch,
+    allInputsFresh: ordered.length === 3 && ordered.every(captureInputIsFresh),
+    repeatedRealAIds,
+    movementsOverThree: captureMovements(ordered),
+  };
+}
+
+export function qualifyingCompositeCards(cards) {
+  if (!Array.isArray(cards)) throw new Error("composite cards must be an array");
+  return cards
+    .filter((card) => card.grade === "A+" && card.score >= 87)
+    .map((card) => ({ assetId: card.id, score: card.score, grade: card.grade }));
+}
+
+function evaluateCompositeReplay(replay) {
+  if (replay === undefined) return { provided: false, qualifyingCards: [], passed: false };
+  assertReplay(replay, "composite");
+  reproduceCandidateReplay(replay, "composite");
+  const qualifyingCards = qualifyingCompositeCards(replay.pipeline.candidate.cards);
+  return { provided: true, qualifyingCards, passed: qualifyingCards.length > 0 };
+}
+
+function currentSemanticsCounterfactual(baseline) {
+  const { v9FactSetDigest: _historicalDigest, ...core } = baseline.pipeline.compiledFacts;
+  const compiled = compileV9FactSetV2(core);
+  return evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1);
+}
+
+function projectedStructuralSignal(signal) {
+  return {
+    kind: signal.kind,
+    severity: signal.severity,
+    materialSharePct: signal.materialSharePct ?? null,
+    failureDomainKeys: [...new Set(signal.failureDomainKeys ?? [])].sort(compareText),
+  };
+}
+
+/**
+ * Project the exact semantic input consumed by the score formula. Global trace
+ * identity and explanatory prose are deliberately excluded: either can change
+ * when an unrelated asset changes without changing this asset's score.
+ */
+export function projectScoreBearingCalibrationInput(evaluatedAsset) {
+  const scoreInput = requireRecord(evaluatedAsset?.scoreInput, "evaluated asset score input");
+  const pillars = requireRecord(scoreInput.pillars, "evaluated asset pillars");
+  const peg = requireRecord(scoreInput.peg, "evaluated asset peg input");
+  const parent = requireRecord(scoreInput.parent, "evaluated asset parent input");
+  const evidenceRank = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.rank;
+  const evidenceLevel = ["backing", "exit", "control"]
+    .map((pillar) => requireRecord(pillars[pillar], `${pillar} pillar`).evidenceLevel)
+    .sort((left, right) => evidenceRank[right] - evidenceRank[left])[0];
+  const reasonCodes = [
+    ...["backing", "exit", "control"].flatMap(
+      (pillar) => requireRecord(pillars[pillar], `${pillar} pillar`).reasons ?? [],
+    ),
+    ...(peg.reasons ?? []),
+    ...(scoreInput.dependencyReasons ?? []),
+    ...(scoreInput.methodologyReasons ?? []),
+  ].map((reason) => reason.code);
+  const structuralSignals = [
+    ...["backing", "exit", "control"].flatMap(
+      (pillar) => requireRecord(pillars[pillar], `${pillar} pillar`).structuralSignals ?? [],
+    ),
+    ...(scoreInput.dependencyStructuralSignals ?? []),
+  ]
+    .map(projectedStructuralSignal)
+    .sort((left, right) => compareText(stableStringify(left), stableStringify(right)));
+  return {
+    pillars: Object.fromEntries(
+      ["backing", "exit", "control"].map((pillar) => [
+        pillar,
+        requireRecord(pillars[pillar], `${pillar} pillar`).score,
+      ]),
+    ),
+    pegApplicable: peg.applicable,
+    pegScore: peg.score,
+    activeDepegBps: peg.activeDepegBps,
+    evidenceLevel,
+    trackRecordMonths: scoreInput.trackRecordMonths,
+    parentRequired: parent.required,
+    parentScore: parent.score,
+    structuralSignals,
+    unresolvedReasonCodes: [...new Set(reasonCodes)].sort(compareText),
+  };
+}
+
+function compareScoreBearingInputs(before, after) {
+  const baseline = projectScoreBearingCalibrationInput(before);
+  const candidate = projectScoreBearingCalibrationInput(after);
+  const changedFields = [...new Set([...Object.keys(baseline), ...Object.keys(candidate)])]
+    .filter((field) => stableStringify(baseline[field]) !== stableStringify(candidate[field]))
+    .sort(compareText);
+  return {
+    changed: changedFields.length > 0,
+    changedFields,
+    baselineDigest: domainDigest("safety-score-v9.calibration-score-input.v1", baseline),
+    candidateDigest: domainDigest("safety-score-v9.calibration-score-input.v1", candidate),
+  };
+}
+
+function causalDecomposition(baseline, candidate, changes) {
+  try {
+    const counterfactual = currentSemanticsCounterfactual(baseline);
+    const counterfactualById = new Map(counterfactual.assets.map((asset) => [asset.assetId, asset]));
+    const candidateById = new Map(candidate.pipeline.evaluatedSet.assets.map((asset) => [asset.assetId, asset]));
+    const semanticIdentityChanged =
+      baseline.pipeline.candidateIdentity.policyDigest !== candidate.pipeline.candidateIdentity.policyDigest ||
+      baseline.pipeline.candidateIdentity.evaluationBuildDigest !==
+        candidate.pipeline.candidateIdentity.evaluationBuildDigest;
+    const globalFactSetChanged =
+      baseline.pipeline.compiledFacts.v9FactSetDigest !== candidate.pipeline.compiledFacts.v9FactSetDigest;
+    const improvements = changes
+      .filter((change) => change.score.delta > 0)
+      .map((change) => {
+        const counterfactualAsset = counterfactualById.get(change.assetId);
+        const candidateAsset = candidateById.get(change.assetId);
+        const counterfactualScore = counterfactualAsset?.trace.finalScore;
+        const semanticDelta = counterfactualScore === undefined ? null : counterfactualScore - change.score.from;
+        const factDelta = counterfactualScore === undefined ? null : change.score.to - counterfactualScore;
+        const scoreBearingInput =
+          counterfactualAsset && candidateAsset
+            ? compareScoreBearingInputs(counterfactualAsset, candidateAsset)
+            : {
+                changed: false,
+                changedFields: [],
+                baselineDigest: null,
+                candidateDigest: null,
+              };
+        const causes = [
+          ...(semanticDelta !== null && semanticDelta > 0 && semanticIdentityChanged
+            ? ["cohort-wide-semantic-correction"]
+            : []),
+          ...(factDelta !== null && factDelta > 0 && scoreBearingInput.changed ? ["new-score-bearing-fact"] : []),
+        ];
+        return {
+          assetId: change.assetId,
+          baselineScore: change.score.from,
+          currentSemanticsOnBaselineFacts: counterfactualScore ?? null,
+          candidateScore: change.score.to,
+          semanticDelta,
+          factDelta,
+          scoreBearingInput,
+          causes,
+          valid:
+            counterfactualScore !== undefined && semanticDelta + factDelta === change.score.delta && causes.length > 0,
+        };
+      });
+    return {
+      available: true,
+      semanticIdentityChanged,
+      globalFactSetChanged,
+      improvements,
+      passed: improvements.length > 0 && improvements.every((entry) => entry.valid),
+    };
+  } catch (error) {
+    return {
+      available: false,
+      error: error instanceof Error ? error.message : String(error),
+      semanticIdentityChanged: false,
+      globalFactSetChanged: false,
+      improvements: [],
+      passed: false,
+    };
+  }
+}
+
+function requireEvidenceRefs(value, label) {
+  if (!Array.isArray(value) || value.length === 0) throw new Error(`${label} evidenceRefs must be nonempty`);
+  return uniqueAssetIds(value, `${label} evidenceRefs`);
+}
+
+function validateCausalAttribution(input, baseline, candidate, decomposition, movements) {
+  if (input === undefined) return { provided: false, explainedMovementKeys: new Set(), passed: false };
+  const value = requireExactKeys(
+    input,
+    ["schemaVersion", "kind", "baselineResultDigest", "candidateResultDigest", "improvements", "captureMovements"],
+    "causal attribution",
+  );
+  if (value.schemaVersion !== 1 || value.kind !== "safety-score-v9-friday-causal-attribution") {
+    throw new Error("causal attribution has an unsupported schema or kind");
+  }
+  if (
+    value.baselineResultDigest !== baseline.pipeline.candidate.resultDigest ||
+    value.candidateResultDigest !== candidate.pipeline.candidate.resultDigest
+  ) {
+    throw new Error("causal attribution does not bind the analyzed baseline and candidate results");
+  }
+  if (!Array.isArray(value.improvements) || !Array.isArray(value.captureMovements)) {
+    throw new Error("causal attribution rows must be arrays");
+  }
+  const expectedById = new Map(decomposition.improvements.map((entry) => [entry.assetId, entry]));
+  const seenImprovementIds = new Set();
+  let improvementsValid = value.improvements.length === expectedById.size;
+  for (const raw of value.improvements) {
+    const row = requireExactKeys(raw, ["assetId", "cause", "summary", "evidenceRefs"], "improvement attribution");
+    if (typeof row.assetId !== "string" || seenImprovementIds.has(row.assetId)) {
+      throw new Error("improvement attribution asset IDs must be unique strings");
+    }
+    seenImprovementIds.add(row.assetId);
+    if (typeof row.summary !== "string" || row.summary.trim().length === 0) {
+      throw new Error(`improvement attribution ${row.assetId} requires a summary`);
+    }
+    requireEvidenceRefs(row.evidenceRefs, `improvement attribution ${row.assetId}`);
+    const expected = expectedById.get(row.assetId);
+    const expectedCause = expected?.causes.length === 2 ? "both" : expected?.causes[0];
+    if (!expected?.valid || row.cause !== expectedCause) improvementsValid = false;
+  }
+  if ([...expectedById.keys()].some((assetId) => !seenImprovementIds.has(assetId))) improvementsValid = false;
+
+  const movementKey = (row) => `${row.fromResultDigest}\u0000${row.toResultDigest}\u0000${row.assetId}`;
+  const expectedMovements = new Map(movements.map((entry) => [movementKey(entry), entry]));
+  const explainedMovementKeys = new Set();
+  let movementsValid = value.captureMovements.length === expectedMovements.size;
+  for (const raw of value.captureMovements) {
+    const row = requireExactKeys(
+      raw,
+      ["assetId", "fromResultDigest", "toResultDigest", "summary", "evidenceRefs"],
+      "capture movement attribution",
+    );
+    if (typeof row.summary !== "string" || row.summary.trim().length === 0) {
+      throw new Error(`capture movement attribution ${row.assetId} requires a summary`);
+    }
+    requireEvidenceRefs(row.evidenceRefs, `capture movement attribution ${row.assetId}`);
+    const key = movementKey(row);
+    if (explainedMovementKeys.has(key)) throw new Error("capture movement attributions must be unique");
+    explainedMovementKeys.add(key);
+    if (!expectedMovements.get(key)?.scoreBearingInputChanged) movementsValid = false;
+  }
+  if ([...expectedMovements.keys()].some((key) => !explainedMovementKeys.has(key))) movementsValid = false;
+  return {
+    provided: true,
+    improvementRows: value.improvements.length,
+    captureMovementRows: value.captureMovements.length,
+    explainedMovementKeys,
+    passed: decomposition.passed && improvementsValid && movementsValid,
+  };
+}
+
+export function analyzeV9Calibration(baseline, candidate, fridayEvidence = {}) {
+  assertReplay(baseline, "baseline");
+  assertReplay(candidate, "candidate");
+  reproduceCandidateReplay(candidate, "candidate");
+  const baselineDistribution = summarizeDistribution(baseline);
+  const distribution = summarizeDistribution(candidate);
+  const candidateById = new Map(candidate.pipeline.candidate.cards.map((card) => [card.id, card]));
+  const baselineById = new Map(baseline.pipeline.candidate.cards.map((card) => [card.id, card]));
+  const realACandidates = realACandidatesForReplay(candidate);
   const realA = realACandidates.filter((candidate) => candidate.passed);
   const adverseControls = ADVERSE_IDS.map((assetId) => {
     const before = baselineById.get(assetId);
@@ -802,7 +1272,32 @@ export function analyzeV9Calibration(baseline, candidate) {
     baseline.pipeline.fixedInput.baseInputGenerationId === candidate.pipeline.fixedInput.baseInputGenerationId &&
     baseline.pipeline.fixedInput.sourceGeneration === candidate.pipeline.fixedInput.sourceGeneration &&
     baseline.pipeline.fixedInput.registryFingerprint === candidate.pipeline.fixedInput.registryFingerprint;
+  const changes = changesFromBaseline(baseline, candidate);
+  const captureSeries = validateFreshCaptureSeries(
+    fridayEvidence.freshCaptures,
+    realA.map((entry) => entry.assetId),
+  );
+  const composite = evaluateCompositeReplay(fridayEvidence.composite);
+  const decomposition = causalDecomposition(baseline, candidate, changes);
+  const attribution = validateCausalAttribution(
+    fridayEvidence.causalAttribution,
+    baseline,
+    candidate,
+    decomposition,
+    captureSeries.movementsOverThree,
+  );
+  const movementKey = (row) => `${row.fromResultDigest}\u0000${row.toResultDigest}\u0000${row.assetId}`;
+  const unexplainedMovements = captureSeries.movementsOverThree.filter(
+    (movement) => !attribution.explainedMovementKeys.has(movementKey(movement)),
+  );
+  const threeFreshCaptures =
+    captureSeries.providedCount === 3 &&
+    captureSeries.distinctAndOrdered &&
+    captureSeries.identitiesMatch &&
+    captureSeries.assetSetsMatch &&
+    captureSeries.allInputsFresh;
   const gates = {
+    candidateReproduced: true,
     baselineLocked:
       baselineMatchesContract(baselineDistribution, baseline.pipeline.candidate.cards, baseline) &&
       adverseControls.every((control) => control.baselineLocked),
@@ -823,6 +1318,11 @@ export function analyzeV9Calibration(baseline, candidate) {
       distribution.largestScoreBucketShare !== null && distribution.largestScoreBucketShare <= 0.15,
     scoreIqrAtLeast12: distribution.scoreQuartiles.iqr !== null && distribution.scoreQuartiles.iqr >= 12,
     adverseControlsUnchanged: adverseControls.every((control) => !control.lifted),
+    compositeAPlus: composite.passed,
+    threeFreshCaptures,
+    repeatedRealA: threeFreshCaptures && captureSeries.repeatedRealAIds.length > 0,
+    captureStability: threeFreshCaptures && unexplainedMovements.length === 0,
+    causalAttribution: attribution.passed,
   };
   return {
     schemaVersion: 1,
@@ -837,29 +1337,74 @@ export function analyzeV9Calibration(baseline, candidate) {
     realA: realA.map(({ assetId, score, grade }) => ({ assetId, score, grade })),
     realACandidates,
     adverseControls,
-    changes: changesFromBaseline(baseline, candidate),
+    changes,
+    fridayEvidence: {
+      composite,
+      freshCaptures: {
+        providedCount: captureSeries.providedCount,
+        baseInputGenerationIds: captureSeries.baseInputGenerationIds,
+        resultDigests: captureSeries.resultDigests,
+        distinctAndOrdered: captureSeries.distinctAndOrdered,
+        identitiesMatch: captureSeries.identitiesMatch,
+        assetSetsMatch: captureSeries.assetSetsMatch,
+        allInputsFresh: captureSeries.allInputsFresh,
+        repeatedRealAIds: captureSeries.repeatedRealAIds,
+        movementsOverThree: captureSeries.movementsOverThree,
+        unexplainedMovements,
+      },
+      causalAttribution: {
+        provided: attribution.provided,
+        improvementRows: attribution.improvementRows ?? 0,
+        captureMovementRows: attribution.captureMovementRows ?? 0,
+        passed: attribution.passed,
+        decomposition,
+      },
+    },
     uncertaintyLedger: uncertaintyLedger(candidate),
   };
 }
 
 function parseArgs(argv) {
-  const value = (name) => {
-    const index = argv.indexOf(name);
-    return index < 0 ? null : argv[index + 1];
-  };
-  const baseline = value("--baseline");
-  const candidate = value("--candidate");
-  const output = value("--output");
-  if (!baseline || !candidate || argv.includes("--help")) {
-    const usage =
-      "Usage: node scripts/maintenance/analyze-safety-score-v9-calibration.mjs --baseline <replay> --candidate <replay> [--output <json>]";
-    if (argv.includes("--help")) {
-      process.stdout.write(`${usage}\n`);
-      return null;
-    }
-    throw new Error(usage);
+  const usage =
+    "Usage: npm run safety-score-v9:calibration-analysis -- --baseline <replay> --candidate <replay> " +
+    "[--composite <replay>] [--fresh-capture <replay> ... exactly 3] [--attribution <json>] [--output <json>]";
+  if (argv.includes("--help")) {
+    process.stdout.write(`${usage}\n`);
+    return null;
   }
-  return { baseline, candidate, output };
+  const parsed = {
+    baseline: null,
+    candidate: null,
+    composite: null,
+    attribution: null,
+    output: null,
+    freshCaptures: [],
+  };
+  const keys = new Map([
+    ["--baseline", "baseline"],
+    ["--candidate", "candidate"],
+    ["--composite", "composite"],
+    ["--attribution", "attribution"],
+    ["--output", "output"],
+  ]);
+  for (let index = 0; index < argv.length; index += 1) {
+    const option = argv[index];
+    const next = argv[index + 1];
+    if (option === "--fresh-capture") {
+      if (!next || next.startsWith("--")) throw new Error(`${option} requires a path\n${usage}`);
+      parsed.freshCaptures.push(next);
+      index += 1;
+      continue;
+    }
+    const key = keys.get(option);
+    if (!key) throw new Error(`Unknown option ${option}\n${usage}`);
+    if (!next || next.startsWith("--")) throw new Error(`${option} requires a path\n${usage}`);
+    if (parsed[key] !== null) throw new Error(`${option} may be supplied only once\n${usage}`);
+    parsed[key] = next;
+    index += 1;
+  }
+  if (!parsed.baseline || !parsed.candidate) throw new Error(usage);
+  return parsed;
 }
 
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
@@ -868,6 +1413,13 @@ if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) 
     const report = analyzeV9Calibration(
       JSON.parse(readFileSync(args.baseline, "utf8")),
       JSON.parse(readFileSync(args.candidate, "utf8")),
+      {
+        ...(args.composite ? { composite: JSON.parse(readFileSync(args.composite, "utf8")) } : {}),
+        ...(args.freshCaptures.length > 0
+          ? { freshCaptures: args.freshCaptures.map((path) => JSON.parse(readFileSync(path, "utf8"))) }
+          : {}),
+        ...(args.attribution ? { causalAttribution: JSON.parse(readFileSync(args.attribution, "utf8")) } : {}),
+      },
     );
     const serialized = `${JSON.stringify(report, null, 2)}\n`;
     if (args.output) writeFileSync(args.output, serialized, "utf8");

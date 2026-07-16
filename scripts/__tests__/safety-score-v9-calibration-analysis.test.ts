@@ -1,406 +1,437 @@
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { describe, expect, it } from "vitest";
+import { createReportCardsFixedInput } from "../../worker/src/lib/report-cards-fixed-input";
+import { buildSafetyScoreV9Candidate } from "../../worker/src/lib/safety-score-v9-candidate";
 import {
   analyzeV9Calibration,
-  computeCalibrationBaseInputGenerationId,
-  computeCalibrationCandidateId,
-  computeCalibrationFactSetDigest,
-  computeCalibrationIdentityDigest,
+  captureMovements,
   computeCalibrationResultDigest,
+  evaluateRealACandidateChecks,
+  projectScoreBearingCalibrationInput,
+  qualifyingCompositeCards,
+  repeatedRealAAssetIds,
 } from "../maintenance/analyze-safety-score-v9-calibration.mjs";
 
-const ADVERSE = [
-  ["usdd-tron-dao-reserve", 31, "F"],
-  ["u-united-stables", 31, "F"],
-  ["usdai-usd-ai", 39, "F"],
-  ["tusd-trueusd", 53, "C-"],
-  ["eurs-stasis", 20, "F"],
-  ["mim-abracadabra", 0, "F"],
-] as const;
+const BASE_CLOCK_SEC = 2_000_000_000;
 
-function card(id: string, score: number, grade: string) {
+// The adversarial tests need to mutate a JSON replay after the production
+// builder freezes it. JSON round-tripping gives the test a deliberately mutable
+// artifact with the same shape an operator supplies to the CLI.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type MutableReplay = { pipeline: any };
+
+interface ProductionReplayOptions {
+  activeAssetIds?: string[];
+  supplyById?: Record<string, number>;
+}
+
+function dexLiquidityRow(observedAtSec: number) {
   return {
-    id,
-    score,
-    grade,
-    evidence: { level: "strong", freshness: "current", reasons: [] },
-    pillars: {
-      backing: { score, evidenceLevel: "strong", reasons: [], components: [] },
-      exit: { score, evidenceLevel: "strong", reasons: [], components: [] },
-      control: { score, evidenceLevel: "strong", reasons: [], components: [] },
-    },
-    caps: [],
-    bindingCap: null,
+    liquidityScore: 90,
+    concentrationHhi: 0.5,
+    poolCount: 1,
+    chainCount: 1,
+    coverageClass: "primary" as const,
+    coverageConfidence: 1,
+    liquidityEvidenceClass: "measured" as const,
+    hasMeasuredLiquidityEvidence: true,
+    effectiveTvlUsd: 1_000_000,
+    balanceMeasuredTvlUsd: 1_000_000,
+    organicMeasuredTvlUsd: 1_000_000,
+    methodologyVersion: "dex:fixture-v1",
+    updatedAt: observedAtSec,
   };
 }
 
-const POLICY_ID = "safety-score-v9-candidate-v2";
-const POLICY_DIGEST = "1".repeat(64);
-const BUILD_DIGEST = "2".repeat(64);
+function chainSupply(current: number) {
+  return {
+    ethereum: {
+      current,
+      circulatingPrevDay: current,
+      circulatingPrevWeek: current,
+      circulatingPrevMonth: current,
+    },
+  };
+}
 
-function replay(boldScore: number, boldGrade: string) {
-  const cards = [
-    card("bold-liquity", boldScore, boldGrade),
-    ...ADVERSE.map(([id, score, grade]) => card(id, score, grade)),
-  ];
-  const activeAssetIds = cards.map((entry) => entry.id);
-  const fixedInput = {
-    schemaVersion: 3,
+function productionReplay(clockSec = BASE_CLOCK_SEC, options: ProductionReplayOptions = {}): MutableReplay {
+  const observedAtSec = clockSec - 100;
+  const activeAssetIds = options.activeAssetIds ?? ["usdc-circle"];
+  const fixedInput = createReportCardsFixedInput({
     captureKind: "exact-publication-inputs",
-    clockSec: 1_700_000_000,
-    updatedAt: 1_700_000_000,
     activeAssetIds,
-    registryFingerprint: "3".repeat(64),
-    dexGenerationId: "dex-fixture",
-    redemptionGenerationId: "redemption-fixture",
-    dexPayloadFingerprint: "4".repeat(64),
-    redemptionPayloadFingerprint: "5".repeat(64),
-    inputMethodologyVersions: {
-      safetyScore: "8.17",
-      dexLiquidity: ["4.12"],
-      pegScore: ["3.1"],
-      redemptionBackstop: ["4.18"],
+    capturedAt: new Date(clockSec * 1_000).toISOString(),
+    sourceGeneration: `report-cards:fixture:${clockSec}`,
+    dexGenerationId: `dex-liquidity-${observedAtSec}`,
+    redemptionGenerationId: "redemption-backstops-unavailable",
+    registryRevision: "registry:calibration-analysis-fixture",
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+    clockSec,
+    updatedAt: clockSec,
+    liquidityStale: false,
+    redemptionStale: true,
+    inputFreshness: {
+      dexLiquidity: { updatedAt: observedAtSec, ageSeconds: 100, stale: false },
+      redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
     },
     pegDataById: {},
     activeDepegPeakBpsById: {},
-    dexLiqMap: {},
+    dexLiqMap: Object.fromEntries(activeAssetIds.map((assetId) => [assetId, dexLiquidityRow(observedAtSec)])),
     redemptionBackstopMap: {},
     bluechipMap: {},
-    resolvedBlacklistStatuses: {},
+    resolvedBlacklistStatuses: Object.fromEntries(activeAssetIds.map((assetId) => [assetId, false])),
     liveReserveMap: {},
     liveReserveProvenanceMap: {},
-    chainCirculatingById: {},
+    chainCirculatingById: Object.fromEntries(
+      activeAssetIds.map((assetId) => [assetId, chainSupply(options.supplyById?.[assetId] ?? 10_000_000)]),
+    ),
     dexDeploymentSupplyCoverageById: {},
-    liquidityStale: false,
-    redemptionStale: false,
-    inputFreshness: {},
-    sourceGeneration: "source",
-    baseInputGenerationId: "",
-  };
-  fixedInput.baseInputGenerationId = computeCalibrationBaseInputGenerationId(fixedInput);
+    collateralDriftCoins: [],
+    liveToFallbackCoins: [],
+  });
+  const pipeline = buildSafetyScoreV9Candidate({
+    fixedInput,
+    publishedAtSec: clockSec + 10,
+  });
+  return JSON.parse(JSON.stringify({ pipeline })) as MutableReplay;
+}
 
-  const compiledFacts = {
-    schemaVersion: 2,
-    baseInputGenerationId: fixedInput.baseInputGenerationId,
-    asOfSec: fixedInput.clockSec,
-    sourceFingerprints: {},
-    activeAssetIds,
-    assets: cards.map((entry) => ({
-      assetId: entry.id,
-      gaps: [] as Array<{
-        ownerDomain: string;
-        reasonCode: string;
-        observationState: string;
-        path: { kind: string };
-      }>,
-    })),
-    v9FactSetDigest: "",
-  };
-  compiledFacts.v9FactSetDigest = computeCalibrationFactSetDigest(compiledFacts);
+function resealResult(replay: MutableReplay): void {
+  const resultDigest = computeCalibrationResultDigest(replay.pipeline.evaluatedSet);
+  replay.pipeline.evaluatedSet.scoreResultDigest = resultDigest;
+  replay.pipeline.candidate.resultDigest = resultDigest;
+}
 
-  const evaluatedAssets = cards.map((entry) => ({
-    assetId: entry.id,
-    stressState: { exitPortfolio: { circulatingUsd: 1_000_000 } },
-    backing: { contributions: [] },
+function resealScoreTamper(replay: MutableReplay): void {
+  const card = replay.pipeline.candidate.cards[0];
+  const evaluated = replay.pipeline.evaluatedSet.assets[0];
+  card.score += 1;
+  for (const pillar of Object.values(card.pillars) as Array<{ score: number | null }>) {
+    if (pillar.score !== null) pillar.score += 1;
+  }
+  evaluated.trace.finalScore += 1;
+  for (const contribution of evaluated.trace.pillarContributions) contribution.score += 1;
+  for (const pillar of Object.values(evaluated.scoreInput.pillars) as Array<{ score: number | null }>) {
+    if (pillar.score !== null) pillar.score += 1;
+  }
+  resealResult(replay);
+}
+
+function knownStatus(evidenceRefIds = ["score-evidence"]) {
+  return {
+    applicability: { state: "required", policyRuleId: "fixture.rule", rationale: null, gapId: null },
+    observationState: "known",
+    evidenceRefIds,
+    gapIds: [],
+  };
+}
+
+function realAFixture(freshnessState: "current" | "stale" | "not-assessed" = "current") {
+  const status = knownStatus();
+  const card = { id: "real-a", score: 84, grade: "A" };
+  const evaluated = {
+    stressState: { exitPortfolio: { circulatingUsd: 10_000_000 } },
+    backing: { evidenceRefIds: ["score-evidence"] },
     exit: {
-      routes:
-        entry.id === "bold-liquity"
-          ? [
-              {
-                routeKey: "dex:fixture:bold",
-                included: true,
-                score: 90,
-                capacityPoint: { executableUsd: 1_000_000 },
-              },
-            ]
-          : [],
+      routes: [
+        {
+          routeKey: "dex:real-a",
+          included: true,
+          capacityPoint: { executableUsd: 1_000_000 },
+        },
+      ],
     },
-    control: { components: [] },
+    control: { components: [], reasons: [] },
     scoreInput: {
       pillars: {
-        backing: { score: entry.score, evidenceLevel: "strong" },
-        exit: { score: entry.score, evidenceLevel: "strong" },
-        control: { score: entry.score, evidenceLevel: "strong" },
+        backing: { evidenceLevel: "strong", reasons: [] },
+        exit: { evidenceLevel: "strong", reasons: [] },
+        control: { evidenceLevel: "strong", reasons: [] },
       },
-    },
-    trace: {
-      assetId: entry.id,
-      finalScore: entry.score,
-      finalGrade: entry.grade,
-      pillarContributions: [
-        { pillar: "backing", score: entry.score },
-        { pillar: "exit", score: entry.score },
-        { pillar: "control", score: entry.score },
-      ],
-      weakestPillar: { pillar: "backing", score: entry.score },
-      bindingCap: null,
-      nrReasons: [],
-      factSetDigest: compiledFacts.v9FactSetDigest,
-      baseInputGenerationId: fixedInput.baseInputGenerationId,
-      policyId: POLICY_ID,
-      policyDigest: POLICY_DIGEST,
-      evaluationBuildDigest: BUILD_DIGEST,
-      asOfSec: fixedInput.clockSec,
-    },
-  }));
-  const evaluatedSet = {
-    factSetDigest: compiledFacts.v9FactSetDigest,
-    policyId: POLICY_ID,
-    policyDigest: POLICY_DIGEST,
-    evaluationBuildDigest: BUILD_DIGEST,
-    assets: evaluatedAssets,
-    scoreResultDigest: "",
-  };
-  evaluatedSet.scoreResultDigest = computeCalibrationResultDigest(evaluatedSet);
-
-  const compilerFactSchemaIdentity = {
-    schemaVersion: 1,
-    fixedInputSchemaVersion: 3,
-    factExtensionSchemaVersion: 2,
-    compiledFactSchemaVersion: 2,
-    compiledFactSchemaCapabilities: ["canonical-chain-supply-distribution.v1", "exit-route-modeled-confidence.v1"],
-    compilerAdapter: "exact-fixed-input-to-v9-facts.v1",
-    evaluationBuildDigest: BUILD_DIGEST,
-  };
-  const producerCapabilityIdentity = {
-    schemaVersion: 1,
-    inputContractVersions: { fixedInput: 3, factExtension: 2 },
-    sourceAdapters: {
-      registry: "fixed-input.registry.v1",
-      dexExitRoutes: "fixed-input.dex-exit-observations.v2",
-      redemptionExitRoutes: "fixed-input.redemption-exit-observations.v2",
-      liveReserves: "fixed-input.live-reserves.v1",
-      chainSupply: "fixed-input.usd-circulating-supply.v2",
-      peg: "fixed-input.peg-summary.v1",
-      researchOverlays: "v9-fact-extension.review-overlays.v2",
-    },
-    scoreBearingMethodologyVersions: {
-      dexExitRoutes: ["4.12"],
-      redemptionExitRoutes: ["4.18"],
-      peg: ["3.1"],
-    },
-    dexRouteCapabilityMatrixVersions: [`declared-source-capabilities:v1:${"6".repeat(64)}`],
-    freshnessPolicySec: {
-      dexExitRoutes: 3_600,
-      redemptionExitRoutes: 28_800,
-      documentedTermsExitRoutes: 31_536_000,
-      liveReserves: 28_800,
-      chainSupply: 1_800,
-      peg: 1_800,
-      researchOverlays: 31_536_000,
+      peg: { reasons: [] },
+      dependencyReasons: [],
+      methodologyReasons: [],
     },
   };
-  const compilerFactSchemaDigest = computeCalibrationIdentityDigest(
-    "safety-score-v9.compiler-fact-schema.v1",
-    compilerFactSchemaIdentity,
-  );
-  const producerCapabilityDigest = computeCalibrationIdentityDigest(
-    "safety-score-v9.producer-capability-build.v1",
-    producerCapabilityIdentity,
-  );
-  const candidateIdentity = {
-    schemaVersion: 1,
-    policyId: POLICY_ID,
-    policyDigest: POLICY_DIGEST,
-    evaluationBuildDigest: BUILD_DIGEST,
-    compilerFactSchemaDigest,
-    producerCapabilityDigest,
-  };
-  return {
-    pipeline: {
-      candidateIdentity,
-      compilerFactSchemaIdentity,
-      compilerFactSchemaDigest,
-      producerCapabilityIdentity,
-      producerCapabilityDigest,
-      fixedInput,
-      extension: {
-        schemaVersion: 2,
-        routeFreshness: {
-          dexMaxAgeSec: 3_600,
-          redemptionMaxAgeSec: 28_800,
-          documentedTermsMaxAgeSec: 31_536_000,
-        },
-        sources: {
-          liveReserves: { maxAgeSec: 28_800 },
-          chainSupply: { maxAgeSec: 1_800 },
-          peg: { maxAgeSec: 1_800 },
-          researchOverlays: { maxAgeSec: 31_536_000 },
+  const facts = {
+    evidence: [
+      {
+        evidenceId: "score-evidence",
+        disposition: "observed",
+        freshness: {
+          state: freshnessState,
+          ageSec: freshnessState === "stale" ? 101 : 1,
+          maxAgeSec: freshnessState === "not-assessed" ? null : 100,
         },
       },
-      candidate: {
-        candidateId: computeCalibrationCandidateId(candidateIdentity),
-        baseInputGenerationId: fixedInput.baseInputGenerationId,
-        factSetDigest: compiledFacts.v9FactSetDigest,
-        resultDigest: evaluatedSet.scoreResultDigest,
-        cards,
+    ],
+    gaps: [],
+    implementation: { status },
+    dependencies: { status, edges: [] },
+    supply: { status },
+    peg: { status },
+    exitRoutes: [
+      {
+        routeKey: "dex:real-a",
+        status,
+        settlementEvidenceRefIds: ["score-evidence"],
+        output: { status, valuation: null },
       },
-      evaluatedSet,
-      compiledFacts,
+    ],
+    controlStatus: status,
+    controls: [],
+    economicControlReview: {
+      mint: { status, upgrade: { state: "immutable" } },
+      oracle: { status, branches: [] },
+      bridge: { status, routes: [] },
     },
+    mechanismRiskReview: { review: null },
   };
+  return { card, evaluated, facts };
 }
 
-type ReplayFixture = ReturnType<typeof replay>;
+describe("Safety Score V9 calibration analysis", { timeout: 30_000 }, () => {
+  it("accepts an untampered candidate only after a trusted production rerun", () => {
+    const replay = productionReplay();
+    const report = analyzeV9Calibration(structuredClone(replay), replay);
 
-function resealResult(artifact: ReplayFixture): void {
-  artifact.pipeline.evaluatedSet.scoreResultDigest = computeCalibrationResultDigest(artifact.pipeline.evaluatedSet);
-  artifact.pipeline.candidate.resultDigest = artifact.pipeline.evaluatedSet.scoreResultDigest;
-}
+    expect(report.gates.candidateReproduced).toBe(true);
+  });
 
-function setScore(artifact: ReplayFixture, assetId: string, score: number, grade: string): void {
-  const card = artifact.pipeline.candidate.cards.find((entry) => entry.id === assetId)!;
-  card.score = score;
-  card.grade = grade;
-  for (const pillar of Object.values(card.pillars) as Array<{ score: number }>) pillar.score = score;
-  const evaluated = artifact.pipeline.evaluatedSet.assets.find((entry) => entry.assetId === assetId)!;
-  evaluated.trace.finalScore = score;
-  evaluated.trace.finalGrade = grade;
-  for (const contribution of evaluated.trace.pillarContributions) contribution.score = score;
-  for (const pillar of Object.values(evaluated.scoreInput.pillars) as Array<{ score: number }>) pillar.score = score;
-  resealResult(artifact);
-}
+  it("rejects a coherently resealed score tamper", () => {
+    const baseline = productionReplay();
+    const candidate = productionReplay();
+    resealScoreTamper(candidate);
 
-function resealFactSet(artifact: ReplayFixture): void {
-  const digest = computeCalibrationFactSetDigest(artifact.pipeline.compiledFacts);
-  artifact.pipeline.compiledFacts.v9FactSetDigest = digest;
-  artifact.pipeline.evaluatedSet.factSetDigest = digest;
-  artifact.pipeline.candidate.factSetDigest = digest;
-  for (const asset of artifact.pipeline.evaluatedSet.assets) asset.trace.factSetDigest = digest;
-  resealResult(artifact);
-}
+    expect(() => analyzeV9Calibration(baseline, candidate)).toThrow("trusted production compiler and evaluator");
+  });
 
-describe("Safety Score V9 calibration analysis", () => {
-  it("detects a real A, unchanged adverse controls, and causal score movement", () => {
-    const report = analyzeV9Calibration(replay(79, "B+"), replay(84, "A"));
+  it.each([
+    {
+      name: "duplicate fixed-input IDs",
+      mutate: (replay: MutableReplay) => replay.pipeline.fixedInput.activeAssetIds.push("usdc-circle"),
+      message: "fixed-input assets must contain unique asset IDs",
+    },
+    {
+      name: "mismatched compiled active IDs",
+      mutate: (replay: MutableReplay) => {
+        replay.pipeline.compiledFacts.activeAssetIds = ["other-asset"];
+      },
+      message: "asset set mismatch",
+    },
+    {
+      name: "duplicate compiled rows",
+      mutate: (replay: MutableReplay) => {
+        replay.pipeline.compiledFacts.assets.push(structuredClone(replay.pipeline.compiledFacts.assets[0]));
+      },
+      message: "compiled rows must contain unique asset IDs",
+    },
+    {
+      name: "duplicate evaluated rows",
+      mutate: (replay: MutableReplay) => {
+        replay.pipeline.evaluatedSet.assets.push(structuredClone(replay.pipeline.evaluatedSet.assets[0]));
+      },
+      message: "evaluated rows must contain unique asset IDs",
+    },
+    {
+      name: "mismatched cards",
+      mutate: (replay: MutableReplay) => {
+        replay.pipeline.candidate.cards[0].id = "other-asset";
+      },
+      message: "asset set mismatch",
+    },
+  ])("rejects $name before constructing replay maps", ({ mutate, message }) => {
+    const replay = productionReplay();
+    mutate(replay);
 
-    expect(report.realA).toEqual([{ assetId: "bold-liquity", score: 84, grade: "A" }]);
-    expect(report.gates.realA).toBe(true);
-    expect(report.realACandidates[0]?.checks).toEqual({
-      gradeAndRange: true,
-      positiveSupply: true,
-      executableDexRoute: true,
-      strongEvidence: true,
-      currentEvidence: true,
-      assetWideControlsResolved: true,
+    expect(() => analyzeV9Calibration(productionReplay(), replay)).toThrow(message);
+  });
+
+  it.each(["stale", "not-assessed"] as const)(
+    "rejects %s score-bearing evidence even when there is no stale gap",
+    (freshnessState) => {
+      const fixture = realAFixture(freshnessState);
+      const result = evaluateRealACandidateChecks(fixture.card, fixture.evaluated, fixture.facts);
+
+      expect(fixture.facts.gaps).toEqual([]);
+      expect(result.checks.currentEvidence).toBe(false);
+      expect(result.evidenceFreshness.noncurrentIds).toEqual(["score-evidence"]);
+      expect(result.passed).toBe(false);
+    },
+  );
+
+  it("rejects rejected score-bearing evidence", () => {
+    const fixture = realAFixture();
+    fixture.facts.evidence[0].disposition = "rejected";
+    const result = evaluateRealACandidateChecks(fixture.card, fixture.evaluated, fixture.facts);
+
+    expect(result.checks.currentEvidence).toBe(false);
+    expect(result.evidenceFreshness.noncurrentIds).toEqual(["score-evidence"]);
+  });
+
+  it("rejects the actual custody and oracle profile gap types", () => {
+    const custody = realAFixture();
+    custody.facts.gaps.push({ reasonCode: "missing-custody-profile" } as never);
+    const custodyResult = evaluateRealACandidateChecks(custody.card, custody.evaluated, custody.facts);
+    expect(custodyResult.checks.assetWideControlsResolved).toBe(false);
+    expect(custodyResult.controls.unresolvedProfileGapCodes).toEqual(["missing-custody-profile"]);
+
+    const oracle = realAFixture();
+    oracle.evaluated.control.reasons.push({
+      code: "missing-oracle-profile",
+      pathKind: "local-component",
+      path: "oracle",
+      controlKey: null,
+    } as never);
+    const oracleResult = evaluateRealACandidateChecks(oracle.card, oracle.evaluated, oracle.facts);
+    expect(oracleResult.checks.assetWideControlsResolved).toBe(false);
+    expect(oracleResult.controls.unresolvedReasonCodes).toEqual(["missing-oracle-profile"]);
+  });
+
+  it("treats null-key aggregate bridge reasons as asset-wide", () => {
+    const fixture = realAFixture();
+    fixture.evaluated.control.reasons.push({
+      code: "bridge-unverified",
+      pathKind: "aggregate",
+      path: "bridge",
+      controlKey: null,
+    } as never);
+    const result = evaluateRealACandidateChecks(fixture.card, fixture.evaluated, fixture.facts);
+
+    expect(result.checks.assetWideControlsResolved).toBe(false);
+    expect(result.controls.unresolvedReasonCodes).toEqual(["bridge-unverified"]);
+  });
+
+  it("treats deployment reasons backed by global controls as asset-wide", () => {
+    const fixture = realAFixture();
+    fixture.facts.controls.push({ controlKey: "bridge:global", scope: "global" } as never);
+    fixture.evaluated.control.reasons.push({
+      code: "bridge-unverified",
+      pathKind: "deployment",
+      path: "bridge:ethereum",
+      controlKey: "bridge:global",
+    } as never);
+    const result = evaluateRealACandidateChecks(fixture.card, fixture.evaluated, fixture.facts);
+
+    expect(result.checks.assetWideControlsResolved).toBe(false);
+    expect(result.controls.unresolvedReasonCodes).toEqual(["bridge-unverified"]);
+  });
+
+  it("does not let omitted Friday evidence produce a full-contract pass", () => {
+    const replay = productionReplay();
+    const report = analyzeV9Calibration(structuredClone(replay), replay);
+
+    expect(report.gates).toMatchObject({
+      compositeAPlus: false,
+      threeFreshCaptures: false,
+      repeatedRealA: false,
+      captureStability: false,
+      causalAttribution: false,
+      allPassed: false,
     });
-    expect(report.gates.adverseControlsUnchanged).toBe(true);
-    expect(report.changes).toEqual([
-      expect.objectContaining({
-        assetId: "bold-liquity",
-        score: { from: 79, to: 84, delta: 5 },
-        grade: { from: "B+", to: "A" },
-      }),
+    expect(report.fridayEvidence).toMatchObject({
+      composite: { provided: false },
+      freshCaptures: { providedCount: 0 },
+      causalAttribution: { provided: false },
+    });
+  });
+
+  it("rejects duplicate capture generations", () => {
+    const replay = productionReplay();
+    const report = analyzeV9Calibration(structuredClone(replay), replay, {
+      freshCaptures: [replay, structuredClone(replay), structuredClone(replay)],
+    });
+
+    expect(report.fridayEvidence.freshCaptures).toMatchObject({
+      providedCount: 3,
+      distinctAndOrdered: false,
+    });
+    expect(report.gates.threeFreshCaptures).toBe(false);
+  });
+
+  it("rejects a stale capture even when all three generations are distinct", () => {
+    const replay = productionReplay();
+    const captures = [0, 100, 200].map((offset) => productionReplay(BASE_CLOCK_SEC + offset));
+    const report = analyzeV9Calibration(structuredClone(replay), replay, { freshCaptures: captures });
+
+    expect(report.fridayEvidence.freshCaptures).toMatchObject({
+      providedCount: 3,
+      distinctAndOrdered: true,
+      identitiesMatch: true,
+      allInputsFresh: false,
+    });
+    expect(report.gates.threeFreshCaptures).toBe(false);
+  });
+
+  it("does not treat a switched A identity as repeated real-A evidence", () => {
+    expect(repeatedRealAAssetIds(["asset-a"], [["asset-a"], ["asset-b"], ["asset-a"]])).toEqual([]);
+    expect(repeatedRealAAssetIds(["asset-a"], [["asset-a"], ["asset-a"], ["asset-a"]])).toEqual(["asset-a"]);
+  });
+
+  it("requires the composite A+ score to be at least 87", () => {
+    expect(
+      qualifyingCompositeCards([
+        { id: "qualified", score: 87, grade: "A+" },
+        { id: "too-low", score: 86, grade: "A+" },
+        { id: "wrong-grade", score: 90, grade: "A" },
+      ]),
+    ).toEqual([{ assetId: "qualified", score: 87, grade: "A+" }]);
+  });
+
+  it("flags only score movements greater than three points", () => {
+    const capture = (digest: string, score: number, factRevision: number) => ({
+      pipeline: {
+        candidate: { resultDigest: digest, cards: [{ id: "asset-a", score }] },
+        evaluatedSet: {
+          assets: [
+            {
+              assetId: "asset-a",
+              scoreInput: {
+                pillars: Object.fromEntries(
+                  ["backing", "exit", "control"].map((pillar) => [
+                    pillar,
+                    {
+                      score: pillar === "backing" ? factRevision : 80,
+                      evidenceLevel: "strong",
+                      reasons: [],
+                      structuralSignals: [],
+                    },
+                  ]),
+                ),
+                peg: { applicable: true, score: 100, activeDepegBps: null, reasons: [] },
+                trackRecordMonths: 24,
+                parent: { required: false, score: null, propagatedReasons: [] },
+                dependencyReasons: [],
+                dependencyStructuralSignals: [],
+              },
+            },
+          ],
+        },
+      },
+    });
+
+    expect(captureMovements([capture("first", 80, 1), capture("second", 83, 2)])).toEqual([]);
+    expect(captureMovements([capture("first", 80, 1), capture("second", 84, 2)])).toEqual([
+      expect.objectContaining({ assetId: "asset-a", delta: 4, scoreBearingInputChanged: true }),
     ]);
-    expect(report.uncertaintyLedger.top80BySupply).toHaveLength(7);
   });
 
-  it("fails the adverse gate on any same-input lift", () => {
-    const baseline = replay(79, "B+");
-    const candidate = replay(84, "A");
-    setScore(candidate, "usdd-tron-dao-reserve", 32, "F");
+  it("does not attribute an unrelated asset fact-set change to the target", () => {
+    const activeAssetIds = ["usdc-circle", "usdt-tether"];
+    const baseline = productionReplay(BASE_CLOCK_SEC, {
+      activeAssetIds,
+      supplyById: { "usdc-circle": 10_000_000, "usdt-tether": 20_000_000 },
+    });
+    const candidate = productionReplay(BASE_CLOCK_SEC, {
+      activeAssetIds,
+      supplyById: { "usdc-circle": 10_000_000, "usdt-tether": 30_000_000 },
+    });
+    const target = (replay: MutableReplay) =>
+      replay.pipeline.evaluatedSet.assets.find((asset: { assetId: string }) => asset.assetId === "usdc-circle");
 
-    const report = analyzeV9Calibration(baseline, candidate);
-    expect(report.gates.adverseControlsUnchanged).toBe(false);
-    expect(report.adverseControls.find((entry) => entry.assetId === "usdd-tron-dao-reserve")?.lifted).toBe(true);
-  });
-
-  it("binds same-input counterfactuals by base input rather than the derived fact set", () => {
-    const baseline = replay(79, "B+");
-    const candidate = replay(84, "A");
-    Object.assign(candidate.pipeline.compiledFacts.assets[0], { compilerCorrection: true });
-    resealFactSet(candidate);
-
-    expect(analyzeV9Calibration(baseline, candidate).gates.sameInput).toBe(true);
-
-    candidate.pipeline.evaluatedSet.factSetDigest = "6".repeat(64);
-    expect(() => analyzeV9Calibration(baseline, candidate)).toThrow("fact-set digest");
-    candidate.pipeline.evaluatedSet.factSetDigest = candidate.pipeline.compiledFacts.v9FactSetDigest;
-
-    candidate.pipeline.candidate.baseInputGenerationId = "different-input";
-    expect(() => analyzeV9Calibration(baseline, candidate)).toThrow("candidate and fixed-input generations");
-  });
-
-  it("rejects payload, result, and candidate identity tampering", () => {
-    const baseline = replay(79, "B+");
-
-    const payloadTamper = replay(84, "A");
-    Object.assign(payloadTamper.pipeline.fixedInput.pegDataById, { injected: { score: 100 } });
-    expect(() => analyzeV9Calibration(baseline, payloadTamper)).toThrow("score-bearing payload");
-
-    const resultTamper = replay(84, "A");
-    resultTamper.pipeline.candidate.cards[0].score = 85;
-    expect(() => analyzeV9Calibration(baseline, resultTamper)).toThrow("evaluated trace");
-
-    const identityTamper = replay(84, "A");
-    identityTamper.pipeline.candidate.candidateId = `safety-score-v9-candidate:v1:${"7".repeat(64)}`;
-    expect(() => analyzeV9Calibration(baseline, identityTamper)).toThrow("candidate ID");
-
-    const compilerBuildTamper = replay(84, "A");
-    compilerBuildTamper.pipeline.compilerFactSchemaIdentity.evaluationBuildDigest = "8".repeat(64);
-    compilerBuildTamper.pipeline.compilerFactSchemaDigest = computeCalibrationIdentityDigest(
-      "safety-score-v9.compiler-fact-schema.v1",
-      compilerBuildTamper.pipeline.compilerFactSchemaIdentity,
+    expect(candidate.pipeline.compiledFacts.v9FactSetDigest).not.toBe(baseline.pipeline.compiledFacts.v9FactSetDigest);
+    expect(projectScoreBearingCalibrationInput(target(candidate))).toEqual(
+      projectScoreBearingCalibrationInput(target(baseline)),
     );
-    compilerBuildTamper.pipeline.candidateIdentity.compilerFactSchemaDigest =
-      compilerBuildTamper.pipeline.compilerFactSchemaDigest;
-    compilerBuildTamper.pipeline.candidate.candidateId = computeCalibrationCandidateId(
-      compilerBuildTamper.pipeline.candidateIdentity,
-    );
-    expect(() => analyzeV9Calibration(baseline, compilerBuildTamper)).toThrow("compiler schema/build identity");
-
-    const compilerAdapterTamper = replay(84, "A");
-    compilerAdapterTamper.pipeline.compilerFactSchemaIdentity.compilerAdapter = "tampered-compiler-adapter";
-    compilerAdapterTamper.pipeline.compilerFactSchemaDigest = computeCalibrationIdentityDigest(
-      "safety-score-v9.compiler-fact-schema.v1",
-      compilerAdapterTamper.pipeline.compilerFactSchemaIdentity,
-    );
-    compilerAdapterTamper.pipeline.candidateIdentity.compilerFactSchemaDigest =
-      compilerAdapterTamper.pipeline.compilerFactSchemaDigest;
-    compilerAdapterTamper.pipeline.candidate.candidateId = computeCalibrationCandidateId(
-      compilerAdapterTamper.pipeline.candidateIdentity,
-    );
-    expect(() => analyzeV9Calibration(baseline, compilerAdapterTamper)).toThrow("compiler identity");
-
-    const producerContractTamper = replay(84, "A");
-    producerContractTamper.pipeline.producerCapabilityIdentity.inputContractVersions.fixedInput = 2;
-    producerContractTamper.pipeline.producerCapabilityDigest = computeCalibrationIdentityDigest(
-      "safety-score-v9.producer-capability-build.v1",
-      producerContractTamper.pipeline.producerCapabilityIdentity,
-    );
-    producerContractTamper.pipeline.candidateIdentity.producerCapabilityDigest =
-      producerContractTamper.pipeline.producerCapabilityDigest;
-    producerContractTamper.pipeline.candidate.candidateId = computeCalibrationCandidateId(
-      producerContractTamper.pipeline.candidateIdentity,
-    );
-    expect(() => analyzeV9Calibration(baseline, producerContractTamper)).toThrow("producer identity");
-  });
-
-  it("rejects an A without executable trading evidence or with an asset-wide control gap", () => {
-    const baseline = replay(79, "B+");
-    const candidate = replay(84, "A");
-    const bold = candidate.pipeline.evaluatedSet.assets.find((entry) => entry.assetId === "bold-liquity")!;
-    bold.exit.routes = [];
-
-    expect(analyzeV9Calibration(baseline, candidate).gates.realA).toBe(false);
-
-    bold.exit.routes = [
-      {
-        routeKey: "dex:fixture:bold",
-        included: true,
-        score: 90,
-        capacityPoint: { executableUsd: 1_000_000 },
-      },
-    ];
-    candidate.pipeline.compiledFacts.assets.find((entry) => entry.assetId === "bold-liquity")!.gaps = [
-      {
-        ownerDomain: "control",
-        reasonCode: "unresolved-control-identity",
-        observationState: "bounded-unknown",
-        path: { kind: "local-component" },
-      },
-    ];
-    resealFactSet(candidate);
-
-    expect(analyzeV9Calibration(baseline, candidate).gates.realA).toBe(false);
   });
 });
