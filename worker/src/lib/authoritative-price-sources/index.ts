@@ -15,6 +15,7 @@ import {
 import { idleCdoTrancheProvider } from "./idle-cdo-tranche";
 import { inheritedTrackedPriceProvider } from "./inherited-tracked";
 import { iusdInfinifiProvider } from "./infinifi-iusd";
+import { kavaUsdxPricefeedProvider } from "./kava-pricefeed";
 import { previewRedeemProvider } from "./preview-redeem";
 import { protocolParProvider } from "./protocol-par";
 
@@ -31,6 +32,7 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   iusdInfinifiProvider,
   inheritedTrackedPriceProvider,
   protocolParProvider,
+  kavaUsdxPricefeedProvider,
   erc4626NavProvider,
   previewRedeemProvider,
   idleCdoTrancheProvider,

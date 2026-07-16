@@ -86,6 +86,7 @@ export const PRICING_SOURCE_CIRCUIT_METADATA: Record<string, PricingCircuitMetad
   bitstamp: direct(CIRCUIT_SOURCE.BITSTAMP_PRICES, "Bitstamp ticker fetch is directly circuit-gated."),
   coinbase: direct(CIRCUIT_SOURCE.COINBASE_PRICES, "Coinbase ticker fetches are directly circuit-gated."),
   redstone: direct(CIRCUIT_SOURCE.REDSTONE_PRICES, "RedStone fetch is directly circuit-gated."),
+  "kava-pricefeed": direct(CIRCUIT_SOURCE.KAVA_PRICEFEED, "Kava Pricefeed REST queries are directly circuit-gated."),
   "curve-onchain": direct(CIRCUIT_SOURCE.CURVE_ONCHAIN, "Curve on-chain quote path is circuit-gated."),
   "curve-oracle": direct(CIRCUIT_SOURCE.CURVE_ORACLE, "Curve oracle quote path is circuit-gated."),
   "chainlink-nav": synthesized(

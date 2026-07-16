@@ -146,6 +146,13 @@ export interface CurrentPriceOverride {
     parentObservedAt?: number | null;
     parentObservedAtMode?: PriceObservedAtMode | null;
     parentReplaySafe?: boolean;
+    kavaPricefeed?: {
+      marketId: string;
+      blockHeight: number;
+      activeOracleCount: number;
+      newestExpiry: number;
+      dispersionBps: number;
+    };
   };
 }
 

@@ -2110,6 +2110,87 @@ describe("authoritative-price-sources", () => {
     });
   });
 
+  it("allows sAID to use a fresh high-confidence non-replay-safe AID parent in the same run", async () => {
+    const assetsPerShareRaw = 1_059_200_000_000_000_000n.toString(16).padStart(64, "0");
+    fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${assetsPerShareRaw}`);
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "said-gaib",
+        name: "GAIB sAID",
+        symbol: "sAID",
+        price: null,
+      },
+      {
+        id: "aid-gaib",
+        name: "GAIB AID",
+        symbol: "AID",
+        price: 0.9998,
+        priceSource: "alchemy-address+coingecko+moralis-address",
+        priceConfidence: "high",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "local_fetch",
+        priceSyncedAt: nowSec - 30,
+      },
+    ]);
+
+    expect(overrides.get("said-gaib")).toMatchObject({
+      price: 1.05898816,
+      source: "protocol-redeem",
+      confidence: "high",
+      metadata: {
+        inheritedFrom: "aid-gaib",
+        parentReplaySafe: false,
+      },
+    });
+    expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("still rejects cached, stale, or low-confidence non-replay-safe AID parents for sAID", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const parentCases = [
+      {
+        priceSource: "cached+alchemy-address+moralis-address",
+        priceConfidence: "high" as const,
+        priceObservedAt: nowSec - 60,
+      },
+      {
+        priceSource: "alchemy-address+coingecko+moralis-address",
+        priceConfidence: "high" as const,
+        priceObservedAt: nowSec - 20 * 60,
+      },
+      {
+        priceSource: "alchemy-address+coingecko+moralis-address",
+        priceConfidence: "low" as const,
+        priceObservedAt: nowSec - 60,
+      },
+    ];
+
+    for (const parentCase of parentCases) {
+      const overrides = await fetchAuthoritativeLivePriceOverrides([
+        {
+          id: "said-gaib",
+          name: "GAIB sAID",
+          symbol: "sAID",
+          price: null,
+        },
+        {
+          id: "aid-gaib",
+          name: "GAIB AID",
+          symbol: "AID",
+          price: 0.9998,
+          priceObservedAtMode: "local_fetch",
+          ...parentCase,
+        },
+      ]);
+
+      expect(overrides.has("said-gaib")).toBe(false);
+    }
+    expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+  });
+
   it("skips ERC-4626 NAV override when parent price is stale or untrusted", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const nowSec = Math.floor(Date.now() / 1000);

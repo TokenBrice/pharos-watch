@@ -1,0 +1,44 @@
+{
+  "block": {
+    "block": {
+      "header": {
+        "chain_id": "kava_2222-10",
+        "height": "21658182",
+        "time": "2026-07-16T06:21:47.265186690Z"
+      }
+    }
+  },
+  "markets": {
+    "markets": [
+      {
+        "market_id": "usdx:usd",
+        "base_asset": "usdx",
+        "quote_asset": "usd",
+        "oracles": ["kava19rjk5qmmwywnzfccwzyn02jywgpwjqf60afj92", "kava1ujfrlcd0ted58mzplnyxzklsw0sqevlgxndanp"],
+        "active": true
+      }
+    ]
+  },
+  "aggregate": {
+    "price": {
+      "market_id": "usdx:usd",
+      "price": "0.660000000000000000"
+    }
+  },
+  "raw": {
+    "raw_prices": [
+      {
+        "market_id": "usdx:usd",
+        "oracle_address": "kava19rjk5qmmwywnzfccwzyn02jywgpwjqf60afj92",
+        "price": "0.660000000000000000",
+        "expiry": "2026-07-16T17:20:26.429Z"
+      },
+      {
+        "market_id": "usdx:usd",
+        "oracle_address": "kava1ujfrlcd0ted58mzplnyxzklsw0sqevlgxndanp",
+        "price": "0.695699999999999985",
+        "expiry": "2026-07-07T17:00:16.657Z"
+      }
+    ]
+  }
+}

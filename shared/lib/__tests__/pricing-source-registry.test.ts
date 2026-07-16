@@ -31,6 +31,7 @@ describe("pricing source registry", () => {
       "bitstamp",
       "coinbase",
       "redstone",
+      "kava-pricefeed",
       "curve-onchain",
       "curve-oracle",
       "chainlink-nav",
@@ -93,6 +94,19 @@ describe("pricing source registry", () => {
       depegSourceFamily: "protocol:redeem",
       bypassesSoftValidationGuardrails: true,
       defaultObservedAtMode: "local_fetch",
+    });
+
+    expect(getPricingSourceRegistryEntry("kava-pricefeed")).toMatchObject({
+      key: "kava-pricefeed",
+      trustTier: "hard_oracle",
+      freshnessKind: "upstream",
+      maxTrustedAgeSec: 30 * 60,
+      isReplaySafe: true,
+      canBeDepegAuthoritative: true,
+      canSingleSourceDepegAuthoritative: true,
+      isProtocolOverride: true,
+      depegSourceFamily: "oracle:kava-pricefeed",
+      defaultObservedAtMode: "upstream",
     });
 
     expect(getPricingSourceRegistryEntry("chainlink-nav")).toMatchObject({
