@@ -275,8 +275,23 @@
         "evidence": "At finalized Solana slot 432721335, the official Token-2022 mint reports this address as both mintAuthority and permanentDelegate. At slot 432721398 the authority account was system-program-owned, non-executable, and zero-data, confirming an externally controlled wallet. No mint cap is encoded."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
       "sources": [
+        {
+          "label": "Anchorage USDtb reserve-attestation archive",
+          "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations"
+        },
+        {
+          "label": "Deloitte USDtb reserve examination, May 2026",
+          "url": "https://learn.anchorage.com/05.31.26_USDtb_Stablecoin_Attestation_Report_signed.pdf"
+        },
+        {
+          "label": "OCC active national banks by name",
+          "url": "https://occ.gov/topics/charters-and-licensing/financial-institution-lists/national-by-name.pdf"
+        },
         {
           "label": "USDtb introduction",
           "url": "https://docs.usdtb.money/introduction"
@@ -295,8 +310,8 @@
         }
       ],
       "evidence": "Ethereum reads at block 25526176 resolve the active MINTER_BURNER_ROLE holder, DEFAULT_ADMIN_ROLE holder, transparent-proxy implementation, ProxyAdmin, and immediate ProxyAdmin owner. Anchorage's March 2026 attestation identifies Ethereum and Solana as native USDtb deployments; finalized Solana reads at slot 432721335 resolve the mint and permanent-delegate authority to an externally controlled wallet. LayerZero OFT ownership is handled by the separate bridge-route review.",
-      "reviewer": "Codex mint-authority review",
-      "reviewedAt": "2026-07-13"
+      "reviewer": "Codex mint-authority review / SOL-IV calibration",
+      "reviewedAt": "2026-07-15"
     }
   },
   "deploymentModel": "third-party-bridge",

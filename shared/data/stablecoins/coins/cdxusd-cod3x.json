@@ -16,6 +16,7 @@
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "cod3x-usd",
+  "llamaId": "418",
   "protocolSlug": "cod3x",
   "oracleRisk": {
     "tier": "opaque-or-unknown",

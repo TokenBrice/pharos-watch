@@ -315,6 +315,8 @@
         "evidence": "At Ethereum block 25294712, owner() returned this Safe; Safe API returned threshold 3, five owners, no enabled modules, zero guard, masterCopy 0x41675C…. owner() also confirmed matching Safe on Polygon and Avalanche."
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "prudential",
     "review": {
       "sources": [
         {
@@ -332,11 +334,19 @@
         {
           "label": "Safe Transaction Service (minterAdmin owner)",
           "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5BA1b9aAf56Af1B761519F924079681D8d061F94/"
+        },
+        {
+          "label": "JPYC funds-transfer registration announcement",
+          "url": "https://corporate.jpyc.co.jp/news/posts/first-yen-stablecoin-jpyc"
+        },
+        {
+          "label": "FSA registered funds transfer service providers",
+          "url": "https://www.fsa.go.jp/menkyo/menkyoj/shikin_idou.pdf"
         }
       ],
-      "evidence": "At Ethereum block 25294712: Blockscout MinterConfigured scan shows one ever-configured minter (0x11f14c2b…) with zero current allowance on all chains; minterAdmin() returns 0x029ba134… on all three chains; minterAdmin.owner() returns 2/3 Safe 0x5BA1b9aAf…; token owner() returns 3/5 Safe 0x8E4CddC4… on all three chains. Current EIP-1967 and owner() reads on Ethereum, Polygon, Avalanche, and Kaia on 2026-07-14 matched the structured upgrade review. All Safe snapshots confirmed via Safe API with no enabled modules and zero guard.",
-      "reviewer": "Codex CTRL batch 11",
-      "reviewedAt": "2026-07-14"
+      "evidence": "At Ethereum block 25294712: Blockscout MinterConfigured scan shows one ever-configured minter (0x11f14c2b…) with zero current allowance on all chains; minterAdmin() returns 0x029ba134… on all three chains; minterAdmin.owner() returns 2/3 Safe 0x5BA1b9aAf…; token owner() returns 3/5 Safe 0x8E4CddC4… on all three chains. Current EIP-1967 and owner() reads on Ethereum, Polygon, Avalanche, and Kaia on 2026-07-14 matched the structured upgrade review. All Safe snapshots confirmed via Safe API with no enabled modules and zero guard. Challenge searches of JPYC's corporate, legal, transparency, audit, and attestation materials found no recurring independent JPYC supply-to-reserve report, so no attestor, cadence, or latest qualifying report date is available and reconciliation is unknown. The FSA registry matches JPYC Co., Ltd. as Kanto Local Finance Bureau registration 00099, a Type II Funds Transfer Service Provider subject to statutory funds-preservation supervision, supporting prudential supervision of the issuer.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
+      "reviewedAt": "2026-07-15"
     }
   },
   "custodyModel": "institutional-regulated",

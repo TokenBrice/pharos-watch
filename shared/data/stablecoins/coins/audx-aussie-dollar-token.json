@@ -403,9 +403,11 @@
         ]
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "AUDX issuer materials describe a single-entity issuer-managed mint and redemption path against fully backed AUD reserves. Exact-block reads confirm four UUPS deployment controls: Ethereum (25534481), Polygon (90246996), Conflux eSpace (152097341), and XDC (104935021) resolve through the canonical EIP-1967 implementation slot with a zero proxy-admin slot and UPGRADE_INTERFACE_VERSION 5.0.0. Ethereum, Polygon, and XDC use EOA 0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28; Conflux uses EOA 0x1274d87337eb9091e22b9686ae34ad54c989c883. Each EOA holds DEFAULT_ADMIN_ROLE, MINTER_ROLE, and UPGRADER_ROLE on its deployment. Verified Ethereum and Polygon implementation source gates _authorizeUpgrade with onlyRole(UPGRADER_ROLE); same-implementation upgradeToAndCall eth_call succeeded for Ethereum, Conflux, and XDC. No contract-enforced timelock was observed.",
-      "reviewer": "Codex Safety Score V9 deployment-control review",
+      "evidence": "AUDX issuer materials describe a single-entity issuer-managed mint and redemption path against fully backed AUD reserves. Exact-block reads confirm four UUPS deployment controls: Ethereum (25534481), Polygon (90246996), Conflux eSpace (152097341), and XDC (104935021) resolve through the canonical EIP-1967 implementation slot with a zero proxy-admin slot and UPGRADE_INTERFACE_VERSION 5.0.0. Ethereum, Polygon, and XDC use EOA 0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28; Conflux uses EOA 0x1274d87337eb9091e22b9686ae34ad54c989c883. Each EOA holds DEFAULT_ADMIN_ROLE, MINTER_ROLE, and UPGRADER_ROLE on its deployment. Verified Ethereum and Polygon implementation source gates _authorizeUpgrade with onlyRole(UPGRADER_ROLE); same-implementation upgradeToAndCall eth_call succeeded for Ethereum, Conflux, and XDC. No contract-enforced timelock was observed. Mint-tier review (2026-07-15): Aura Partners performs monthly independent limited-assurance reconciliation; the latest report covers 2026-05-31 and was signed 2026-06-09. AUSTRAC records match TAU Pty Ltd, but AUSTRAC enrollment is AML registration rather than prudential stablecoin-issuer supervision.",
+      "reviewer": "Codex SOL-V mint-tier research",
       "reviewedAt": "2026-07-15",
       "sources": [
         {
@@ -435,6 +437,14 @@
         {
           "label": "XDC Scan AUDX verified proxy",
           "url": "https://xdcscan.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+        },
+        {
+          "label": "Aura Partners AUDX May 2026 report",
+          "url": "https://www.audxtoken.com/_files/ugd/539754_4d37414d003148f582f99d625f903ef6.pdf"
+        },
+        {
+          "label": "AUSTRAC remittance sector register",
+          "url": "https://online.austrac.gov.au/ao/public/rsregister.seam"
         }
       ]
     }

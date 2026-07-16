@@ -26,7 +26,22 @@
     "attestorTier": "big4",
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
-    "attestorLicense": "PCAOB-registered"
+    "attestorLicense": "PCAOB-registered",
+    "latestReport": {
+      "periodEnd": "2026-05-29",
+      "publishedAt": "2026-06-29",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Deloitte EURC examination report - May 2026",
+          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20May%2026.pdf"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -626,6 +641,9 @@
         "evidence": "At the exact cutoff, custom implementation/admin slots were Ethereum 0x43506849d7c04f9138d1a2050bbf3a0c054402dd / 0x9ed85723c5c55b746eb2c4b7e2a359b2091b8fe7, Base 0x2ce6311ddae708829bc0784c967b7d77d19fd779 / 0x4fa3c7461ba47ff34d4033ebaa30525c939991e1, Avalanche 0x30dfe0469803bce76f8f62ac24b18d33d3d6ffe6 / 0x625c3d1e1cd9f515f90c3b472653f28d32765c22, World Chain 0x8378ae07072d24fc8f572fbce35700352d0aae6a / 0xf40086691722eec331624cd15f82c89b87b65e36, and Cronos 0x007f588ca3ffe53f20cb03553ca38bb13542ff89 / 0xbd13d015904514a5da1e2ee493a6fe15d0260785. EIP-1967 implementation, admin, and beacon slots were zero on all five. Every custom admin was code-empty and could upgrade with one signature and no delay."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
       "sources": [
         {
@@ -663,11 +681,19 @@
         {
           "label": "Stellar EURC issuer",
           "url": "https://horizon.stellar.org/accounts/GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2"
+        },
+        {
+          "label": "Circle EURC transparency (Deloitte monthly attestations)",
+          "url": "https://www.circle.com/transparency"
+        },
+        {
+          "label": "ESMA interim MiCA EMT issuer register (EMTWP.csv)",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
         }
       ],
-      "evidence": "Exact-cutoff state at 2026-07-13T20:34:40Z was reconstructed from Ethereum block 25526129, Base block 48592766, Avalanche block 90233120, World Chain block 32319620, Cronos block 82569750, finalized Solana slot 432714278, and Stellar ledger 63463325. EVM token roles, MasterMinter managers and owners, custom implementation/admin slots, EIP-1967 and beacon slots, and code status were checked. The Ethereum storage-slot-1 value previously labeled as proxy admin was disproved: 0x2c576cfc9612541eb827b5c52479f364ddfafeb7 was the live pauser, while the custom proxy-admin slot held 0x9ed85723c5c55b746eb2c4b7e2a359b2091b8fe7. Solana mint-authority history was exhaustively checked after the cutoff, and the Stellar issuer state predates it. All seven native issuance deployments and every mint-critical code-replacement path are represented; off-chain custody behind code-empty/system accounts remains unknown.",
-      "reviewer": "Codex EURC exact-envelope audit",
-      "reviewedAt": "2026-07-13"
+      "evidence": "Exact-cutoff state at 2026-07-13T20:34:40Z was reconstructed from Ethereum block 25526129, Base block 48592766, Avalanche block 90233120, World Chain block 32319620, Cronos block 82569750, finalized Solana slot 432714278, and Stellar ledger 63463325. EVM token roles, MasterMinter managers and owners, custom implementation/admin slots, EIP-1967 and beacon slots, and code status were checked. The Ethereum storage-slot-1 value previously labeled as proxy admin was disproved: 0x2c576cfc9612541eb827b5c52479f364ddfafeb7 was the live pauser, while the custom proxy-admin slot held 0x9ed85723c5c55b746eb2c4b7e2a359b2091b8fe7. Solana mint-authority history was exhaustively checked after the cutoff, and the Stellar issuer state predates it. All seven native issuance deployments and every mint-critical code-replacement path are represented; off-chain custody behind code-empty/system accounts remains unknown. Circle Internet Financial Europe SAS is an ACPR-authorised Electronic Money Institution issuing EURC as a MiCA electronic-money token (ESMA EMT register, authorised 2024-07-01), and Deloitte publishes monthly examination-level attestations reconciling EURC reserves to circulating supply. As with USDC, Circle's self-controlled no-timelock raise authority is economically unbounded rather than a genuine on-chain cap, so economic cap semantics are authored unbounded; reconciled monthly and prudentially supervised places EURC in the moderate tier.",
+      "reviewer": "Codex EURC exact-envelope audit; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16"
     },
     "upgradeability": {
       "model": "custom",

@@ -15,6 +15,7 @@
   "pegMechanism": "Direct 1:1 redemption for AUD through Forte Securities Australia Pty Ltd for eligible account holders to approved bank accounts, with monthly independent reserve audits and daily reserve monitoring",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
+  "llamaId": "422",
   "geckoId": "forte-aud",
   "blacklistabilityReview": {
     "reviewedStatus": true,

@@ -398,13 +398,117 @@
   },
   "reserves": [
     {
-      "name": "FRAX stablecoin reserves",
-      "pct": 100,
+      "name": "FRAX",
+      "pct": 81.7,
       "risk": "low",
       "coinId": "frax-frax",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Frax Finance and the FRAX protocol",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "market",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "stkcvxFPIFRAX (staked Convex FPI/FRAX LP)",
+      "pct": 10.7,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Convex, Curve FPI/FRAX liquidity pool, and Frax Finance",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "market",
+        "basis",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "FXS",
+      "pct": 6.2,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Frax Share token and market liquidity",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Fraxswap V2 FRAX/FPIS",
+      "pct": 1.4,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Fraxswap V2 FRAX/FPIS liquidity pool",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "market",
+        "basis",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Frax FPI collateral API",
+        "url": "https://api.frax.finance/v2/fpifpis/fpi-collateral"
+      },
+      {
+        "label": "Frax FPI documentation",
+        "url": "https://docs.frax.finance/frax-price-index/overview-cpi-peg-and-mechanics"
+      },
+      {
+        "label": "Frax transparency dashboard",
+        "url": "https://frax.com/transparency"
+      }
+    ],
+    "rationale": "The first-party FPI collateral endpoint reports the current FRAX, staked Convex FPI/FRAX LP, FXS, and Fraxswap FRAX/FPIS positions. The exact fixed capture was normalized into four rows, with each LP, governance-token, market, and upstream-stablecoin failure domain retained rather than folding the portfolio into a single FRAX claim.",
+    "compositionBasis": "Frax FPI collateral API snapshot captured on 2026-07-15",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All positive positions returned by the current first-party endpoint are identified; pool composition, unwind depth, and governance-token market risks remain structured within the classified exposures.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "stkcvxFPIFRAX (staked Convex FPI/FRAX LP)",
+        "pct": 10.7,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The staked Convex LP is an identified protocol position rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "FXS",
+        "pct": 6.2,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "FXS is governance-token collateral rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "Fraxswap V2 FRAX/FPIS",
+        "pct": 1.4,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The Fraxswap LP is an identified protocol position rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
   "yieldConfig": {
     "yieldSource": "FPI CPI redemption price",
     "yieldType": "nav-appreciation"

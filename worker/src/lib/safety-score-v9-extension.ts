@@ -13,6 +13,7 @@ import type {
   DependencyReview,
   DependencyWeight,
   MintAuthorityControl,
+  MintAuthorityEconomicCapSemantics,
   MintAuthorityProfile,
   OracleRiskBranch,
   OracleRiskProfile,
@@ -404,13 +405,28 @@ function adaptMintControl(
   reviewComplete: boolean,
   upgradeCapable: boolean,
   hasSeparateCapRaiser: boolean,
+  reviewedEconomicCapSemantics: MintAuthorityEconomicCapSemantics | undefined,
 ): ControlOverlay {
   const controlKind = mintControlKind(control);
   const capabilities = mintCapabilities(control, upgradeCapable);
   const hasMint = capabilities.includes("mint");
   const capped = control.directMintAbility === "cap-limited" || control.canRaiseCap === true;
+  // A reviewed economic cap supersedes the contract-encoding cap for a
+  // mint-capable control (owner USDC verdict): economic reality overrides the
+  // on-chain cap without falsifying directMintAbility. It only applies where the
+  // control actually mints and the reviewed value is decided.
+  const reviewedCap =
+    hasMint && reviewedEconomicCapSemantics && reviewedEconomicCapSemantics !== "unknown"
+      ? reviewedEconomicCapSemantics
+      : null;
   const capSemantics: ControlOverlay["capSemantics"] = (() => {
     if (!hasMint) return { kind: "not-applicable", bound: null };
+    // "bounded" carries no authored numeric ceiling, so it uses the maximal
+    // schema-valid supply-fraction marker; scoring keys off the kind, not the
+    // bound value.
+    if (reviewedCap === "unbounded") return { kind: "unbounded", bound: null };
+    if (reviewedCap === "raiseable") return { kind: "raiseable", bound: null };
+    if (reviewedCap === "bounded") return { kind: "bounded", bound: { amount: 1, unit: "supply-fraction" } };
     if (control.directMintAbility === "direct") return { kind: "unbounded", bound: null };
     if (capped) {
       // Reviewed caps exist but the campaign records raise authority, not the
@@ -424,7 +440,11 @@ function adaptMintControl(
       : { kind: "unknown", bound: null };
   })();
   const claimImpairment: ControlOverlay["claimImpairment"] = (() => {
-    if (hasMint) return capped ? "bounded" : "unbounded";
+    if (hasMint) {
+      if (reviewedCap === "unbounded") return "unbounded";
+      if (reviewedCap === "raiseable" || reviewedCap === "bounded") return "bounded";
+      return capped ? "bounded" : "unbounded";
+    }
     if (capabilities.includes("upgrade") || capabilities.includes("bridge-mint")) return "unbounded";
     if (capabilities.includes("parameter-change")) return "bounded";
     return "none";
@@ -924,6 +944,7 @@ function adaptMintReview(
         status: requiredStatus("v9.control.mint-review", "missing", `mint:${meta.id}`),
         controlKey: null,
         reconciliation: "unknown",
+        supervision: "unknown",
         upgrade: { state: "unknown", controlKey: null },
       },
       controls: [],
@@ -962,6 +983,7 @@ function adaptMintReview(
                   candidate.chain === control.chain &&
                   candidate.canRaiseCap === true,
               ),
+            profile.economicCapSemantics,
           ),
         );
   const mintControl = controls.find((control) => control.capabilities.includes("mint")) ?? null;
@@ -981,7 +1003,7 @@ function adaptMintReview(
         ? { state: "reviewed" as const, controlKey: reviewedUpgradeControl.controlKey }
         : { state: "unknown" as const, controlKey: null };
   const issuerBackendMint = mintControl?.authority?.model === "issuer-backend";
-  const reconciliation: NonNullable<ExtensionAsset["economicControlReview"]>["mint"]["reconciliation"] =
+  const inferredReconciliation: NonNullable<ExtensionAsset["economicControlReview"]>["mint"]["reconciliation"] =
     mintControl === null
       ? upgrade.state === "immutable"
         ? "not-applicable"
@@ -991,6 +1013,12 @@ function adaptMintReview(
           ? "periodic"
           : "unknown"
         : "not-applicable";
+  // A reviewed reconciliation cadence supersedes the inferred one; absent or
+  // "unknown" keeps the inference (fail-closed inertness).
+  const reconciliation =
+    profile.reconciliation && profile.reconciliation !== "unknown"
+      ? profile.reconciliation
+      : inferredReconciliation;
   const immutableWithoutMint = mintControl === null && upgrade.state === "immutable";
   const state = !reviewComplete
     ? profile.review.disposition === "unresolved" || reviewedObservationState(confidence) === "missing"
@@ -1009,6 +1037,9 @@ function adaptMintReview(
       ),
       controlKey: mintControl?.controlKey ?? null,
       reconciliation,
+      // A reviewed prudential-supervision fact graduates the reconciled mint
+      // rung; absent or "unknown" stays fail-closed at "unknown".
+      supervision: profile.supervision && profile.supervision !== "unknown" ? profile.supervision : "unknown",
       upgrade,
     },
     controls,

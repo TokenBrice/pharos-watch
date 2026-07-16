@@ -44,9 +44,36 @@ The V9 implementation establishes candidate infrastructure without changing prod
 - `worker/src/lib/safety-score-v9-candidate.ts` and
   `worker/scripts/replay-safety-score-v9.ts` compile and evaluate the exact
   candidate deterministically. The current policy semantic digest is
-  `6b6f819eb06740634239467ed6041125d7971f8df0fbedf0e4bd836cac405053`;
+  `9913d3dc3f4d4f00842c99be47a8ee5ac608b589867329ef18f7ad9c63e94ded`;
   the current evaluation-build digest is
-  `d86b48b412107d9ecd7ee634850c3d42261f2372d1f5fe99342a372727722b7f`.
+  `03630cd7bf76cd8fa4e6377113e22b05ca876d60f2692997f32222b3f23c599c`.
+- The 2026-07-15 Batch 3 calibration revision (owner rulings 2026-07-15)
+  applies the two ruled cap changes and nothing else. (1) The mint posture gains
+  a distinct `unbounded-reconciled` rung (`mintPostureQuality` = 55) for an
+  economically unbounded mint whose supply is reconciled against reserves; only
+  compromise or an unreconciled/unknown mint stays `unbounded-or-compromised`
+  (25). Its centralized-mint severity is `high`, graduating to `moderate`
+  (centralized-mint `moderate` = 74) when the reviewed
+  `economicControlReview.mint.supervision` fact is `prudential`. Supervision
+  defaults to `unknown` everywhere and the rung requires reconciliation
+  evidence, so the graduation stays inert for top attested issuers; compromise
+  and unreconciled minting stay `critical`. (2) Common-mode dependency severity is now conditioned on
+  chain maturity: a shared chain-kind failure domain in the reviewed
+  `materiality.matureChains` set grades at `moderate` (critical-dependency
+  `moderate` = 79, top of B+); any fragile, unreviewed, or non-chain domain
+  stays fail-closed at `high` (64). The ruling is on chains rather than string
+  encodings, so the failure-domain key is normalized to its canonical slug via
+  `resolveChainId` before the `matureChains` match — exit-route facts key by slug
+  (`ethereum`) while supply facts key by DefiLlama display name (`Ethereum`,
+  `OP Mainnet`), and both now tier identically; an unresolvable name stays
+  fail-closed at `high`. Dials, bands, and every other cap are untouched;
+  full-distribution confirmation follows the post-DEX-fix measurement. The
+  data-side authoring contract for the mint rung lives on the strict
+  `MintAuthorityProfile`: optional reviewed `economicCapSemantics` (supersedes the
+  encoding-derived cap), `reconciliation` (supersedes the proof-of-reserves
+  inference), and `supervision` (graduates the reconciled rung). Absent fields
+  reproduce today's behavior exactly; the reference shape and precedence are
+  pinned by `worker/src/lib/__tests__/safety-score-v9-mint-authoring-contract.test.ts`.
 - The 2026-07-15 candidate-v2 queue-binding revision adds explicit
   `local-component` paths to seven reason allowlists already emitted as
   aggregate facts. The revision changes evidence-work-queue metadata only;

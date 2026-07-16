@@ -369,6 +369,9 @@
         "evidence": "At Ethereum block 25530324, Safe calls returned threshold 3 and five owners; Safe Transaction Service reported version 1.4.1, no modules, and zero guard. Timelock hasRole() returned true for this Safe as the sole PROPOSER_ROLE, EXECUTOR_ROLE, and CANCELLER_ROLE holder."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -386,11 +389,15 @@
         {
           "label": "reUSD Sourcify source",
           "url": "https://sourcify.dev/server/v2/contract/1/0x5086bf358635b81d8c47c66d1c8b9e567db70c72?fields=sources,abi"
+        },
+        {
+          "label": "The Network Firm proof-of-reserves",
+          "url": "https://www.thenetworkfirm.com/proof-of-reserves"
         }
       ],
-      "evidence": "A complete Blockscout RoleGranted/RoleRevoked event replay through Ethereum block 25530324, followed by direct hasRole() checks, found three live MINTER_ROLE holders, one DEFAULT_ADMIN_ROLE holder, and one UPGRADER_ROLE holder. Verified implementations establish the callable behavior of each minter. The admin/upgrader is a 172800-second TimelockController governed by a 3-of-5 Safe with no modules or guard.",
-      "reviewer": "Codex Safety Score V9 CTRL curation",
-      "reviewedAt": "2026-07-14",
+      "evidence": "A complete Blockscout RoleGranted/RoleRevoked event replay through Ethereum block 25530324, followed by direct hasRole() checks, found three live MINTER_ROLE holders, one DEFAULT_ADMIN_ROLE holder, and one UPGRADER_ROLE holder. Verified implementations establish the callable behavior of each minter. The admin/upgrader is a 172800-second TimelockController governed by a 3-of-5 Safe with no modules or guard. reUSD is issued by the Resilience Foundation (Cayman exempted foundation company); The Network Firm attests the off-chain Regulation-114 trust/reinsurance balances daily and publishes the result to a live Chainlink proof-of-reserve feed, so supply is continuously reconciled. The reinsurer Cover Re SPC is CIMA-licensed, but the reUSD token issuer itself is an unregulated foundation, so supervision is attestation-only. The permissioned minter's encoding-derived cap does not bound issuance against reserves, so economic cap semantics are authored unbounded; reconciled continuously without a prudential supervisor places reUSD in the high tier.",
+      "reviewer": "Codex Safety Score V9 CTRL curation; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16",
       "disposition": "scoreable"
     }
   },
@@ -413,55 +420,112 @@
     }
   },
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "owner-triage",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Re Protocol About reUSD",
-        "url": "https://docs.re.xyz/products/about-reusd.md"
+        "label": "Re Protocol live metrics",
+        "url": "https://app.re.xyz/metrics"
       },
       {
-        "label": "Re Protocol complete documentation",
-        "url": "https://docs.re.xyz/llms-full.txt"
+        "label": "Re Protocol reUSD capital and redemption design",
+        "url": "https://docs.re.xyz/insurance-capital-layers/what-is-reusd"
+      },
+      {
+        "label": "Re Protocol Insurance Capital Layer design",
+        "url": "https://docs.re.xyz/insurance-capital-layer-overview"
       }
     ],
-    "rationale": "Current Re documentation establishes an architecture-level allocation: at least 50% of high-water-mark deposits remains onchain, primarily as sUSDe, while up to 50% may be moved into Regulation 114 trust accounts supporting reinsurance. It does not establish a current point-in-time split or support the prior 25/25/30/20 weights.",
-    "compositionBasis": "Current Re architecture disclosure; no point-in-time portfolio allocation was published in the reviewed sources",
+    "rationale": "The live Re Metrics payload identifies six current reserve categories and their values. This review mirrors the adapter's exact normalized names and one-decimal weights; the off-chain capital row remains a single unresolved basket because the live source does not enumerate trust assets, partner reinsurers, or counterparty weights.",
+    "compositionBasis": "Re Metrics embedded portfolio snapshot normalized by the live re-metrics adapter",
+    "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "The onchain and offchain reserve categories are identified, but their current weights, temporary onchain asset mix, trust-account assets, banking partners, and reinsurance exposures are not fully enumerated.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "The 87.7% off-chain insurance and reinsurance capital row is current and measured, but its trust assets, partner reinsurers, banking counterparties, and internal weights are not enumerated.",
+    "knownUnknownExposurePct": 87.7,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Onchain sUSDe-centered liquidity and offchain Regulation 114 trust collateral",
-        "pct": 100,
+        "reserveName": "Off-chain insurance / reinsurance capital",
+        "pct": 87.7,
         "disposition": "basket-needs-split",
-        "rationale": "The documentation identifies sUSDe as the primary onchain asset and Regulation 114 trust collateral as the offchain component, but does not publish a current reconciled allocation suitable for separate dependency weights.",
-        "candidateCoinIds": [
-          "susde-ethena"
-        ]
+        "rationale": "The live source measures off-chain capital in aggregate but does not publish a current split by trust asset, reinsurer, bank, or surplus note."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "reUSD / sUSDe LP position",
+        "pct": 0.7,
+        "disposition": "not-applicable",
+        "rationale": "The LP is a protocol liquidity position rather than a separate tracked stablecoin reserve claim."
       }
     ]
   },
   "reserves": [
     {
-      "name": "Onchain sUSDe-centered liquidity and offchain Regulation 114 trust collateral",
-      "pct": 100,
-      "risk": "high",
-      "assetClass": "other",
-      "issuerOrObligor": "Ethena and Re Protocol's partner reinsurers, trust accounts, custodians, and banking counterparties",
+      "name": "Off-chain insurance / reinsurance capital",
+      "pct": 87.7,
+      "risk": "medium",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Re Protocol partner reinsurers and Regulation 114 trust counterparties",
       "riskFactors": [
         "credit",
         "liquidity",
         "custody",
         "counterparty",
-        "smart-contract",
-        "market",
         "legal",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "sUSDe (delta-neutral ETH basis)",
+      "pct": 7.3,
+      "risk": "high",
+      "coinId": "susde-ethena",
+      "depType": "collateral",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Ethena Labs and hedge counterparties",
+      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity", "smart-contract"],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "USDC reserves",
+      "pct": 4,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial",
+      "riskFactors": ["counterparty", "custody", "liquidity"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "reUSD / sUSDe LP position",
+      "pct": 0.7,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Re Protocol and Ethena liquidity contracts",
+      "riskFactors": ["market", "basis", "counterparty", "liquidity", "smart-contract"],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "USDT reserves",
+      "pct": 0.2,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether Holdings",
+      "riskFactors": ["counterparty", "custody", "liquidity"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDe (delta-neutral ETH basis)",
+      "pct": 0.1,
+      "risk": "high",
+      "coinId": "usde-ethena",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Ethena Labs and hedge counterparties",
+      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity", "smart-contract"],
+      "liquidityHorizon": "one-day"
     }
   ],
   "yieldConfig": {

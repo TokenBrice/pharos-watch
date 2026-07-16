@@ -328,8 +328,19 @@
         "evidence": "The live Token-2022 transfer-fee configuration named this system-owned, on-curve address as the withheld-fee withdrawal authority; it cannot mint."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
       "sources": [
+        {
+          "label": "Deloitte USDGO reserve examination, May 2026",
+          "url": "https://learn.anchorage.com/05.31.26_USDGO_Stablecoin_Attestation_Report_signed.pdf"
+        },
+        {
+          "label": "OCC active national banks by name",
+          "url": "https://occ.gov/topics/charters-and-licensing/financial-institution-lists/national-by-name.pdf"
+        },
         {
           "label": "USDGO website",
           "url": "https://www.usdgo.com/"
@@ -360,8 +371,8 @@
         }
       ],
       "evidence": "At finalized slot 432729217, Solana Token-2022 account decoding identified the exact mint/permanent-delegate, configuration, pause, freeze, and fee-withdrawal authorities. A successful mintToChecked transaction at slot 432714040 proved the mint authority was the transaction's only signer. Token-2022 ProgramData resolved the shared program upgrade authority to a 4/6 Squads V3 multisig; the latest upgrade executed with four approvals and no enforced timelock. Off-chain MPC/HSM custody remains unclaimed because no address-bound attestation was found.",
-      "reviewer": "Codex Safety Score V9 data research",
-      "reviewedAt": "2026-07-13",
+      "reviewer": "Codex Safety Score V9 data research / SOL-IV calibration",
+      "reviewedAt": "2026-07-15",
       "disposition": "scoreable"
     }
   },

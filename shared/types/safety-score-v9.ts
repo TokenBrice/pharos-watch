@@ -843,6 +843,7 @@ const V9ControlPolicySchema = z
         "bounded-admin": ScoreSchema,
         "partially-bounded-admin": ScoreSchema,
         "concentrated-admin": ScoreSchema,
+        "unbounded-reconciled": ScoreSchema,
         "unbounded-or-compromised": ScoreSchema,
         unknown: ScoreSchema,
       })
@@ -992,6 +993,10 @@ const V9MaterialityPolicySchema = z
     commonModeSignal: z
       .object({ kind: z.literal("critical-dependency"), severity: V9SeveritySchema })
       .strict(),
+    // Reviewed mature chains whose shared common-mode concentration is graded
+    // at the lower "moderate" severity. A group touching any chain outside this
+    // set (or an unknown/non-chain failure domain) keeps the "high" severity.
+    matureChains: z.array(z.string().min(1)),
   })
   .strict();
 

@@ -327,10 +327,12 @@
         "evidence": "At Linea block 31369755, the legacy ZeppelinOS admin slot on CADC resolved directly to 0xa0f5c8e8bcbdf066643c2ea8484cba7a3aff01f9 and eth_getCode returned 0x. This single EOA can replace the implementation immediately and is therefore the weakest deployment-wide upgrade authority."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "Sourcify verifies all five EVM deployments as FiatTokenProxy/ZeppelinOSProxy contracts whose AdminUpgradeabilityProxy path exposes upgradeTo and upgradeToAndCall. At Ethereum block 25531348, Polygon block 90221803, Arbitrum block 483787112, Base block 48624176, and Linea block 31369755, the legacy implementation slot resolved in contract order to 0x0c9b0169..., 0x82d095da..., 0x30828472..., 0xdd022586..., and 0x8056da37.... The legacy admin slot resolved to 0x616c8314... on the first four chains and 0xa0f5c8e8... on Linea. The shared-address admin is a 1-of-1 Safe on each of the first four chains with sole owner 0x568b35d8..., no modules, and no guard; the Linea admin is an EOA. The previously reviewed logic-level owner/masterMinter Safes remain separate controls. Solana mint 9ewjJpmD... remains owned by the SPL Token program with its distinct mint and freeze authorities and is not included in the EVM proxy arrays.",
-      "reviewer": "owner-triage",
-      "reviewedAt": "2026-07-14",
+      "evidence": "Sourcify verifies all five EVM deployments as FiatTokenProxy/ZeppelinOSProxy contracts whose AdminUpgradeabilityProxy path exposes upgradeTo and upgradeToAndCall. At Ethereum block 25531348, Polygon block 90221803, Arbitrum block 483787112, Base block 48624176, and Linea block 31369755, the legacy implementation slot resolved in contract order to 0x0c9b0169..., 0x82d095da..., 0x30828472..., 0xdd022586..., and 0x8056da37.... The legacy admin slot resolved to 0x616c8314... on the first four chains and 0xa0f5c8e8... on Linea. The shared-address admin is a 1-of-1 Safe on each of the first four chains with sole owner 0x568b35d8..., no modules, and no guard; the Linea admin is an EOA. The previously reviewed logic-level owner/masterMinter Safes remain separate controls. Solana mint 9ewjJpmD... remains owned by the SPL Token program with its distinct mint and freeze authorities and is not included in the EVM proxy arrays. Mint-tier review (2026-07-15): HDCPA Professional Corporation independently attests CADC reserves monthly; the latest archive entry covers June 2026 and was uploaded 2026-07-06, reconciling CADC supply to CAD held at ATB Financial. FINTRAC's registry match for Loon Finance Inc. is an AML/MSB registration, not prudential stablecoin-issuer supervision.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
           "label": "Loon Finance",
@@ -367,6 +369,18 @@
         {
           "label": "Solana mainnet RPC",
           "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Loon CADC transparency archive",
+          "url": "https://loon.finance/transparency/"
+        },
+        {
+          "label": "Loon CADC attestation API",
+          "url": "https://loon.finance/api/attestations"
+        },
+        {
+          "label": "FINTRAC MSB registry search",
+          "url": "https://fintrac-canafe.canada.ca/msb-esm/public/msb-search/search-by-name/"
         }
       ]
     }

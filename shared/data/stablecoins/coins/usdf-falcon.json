@@ -724,35 +724,88 @@
   "collateralQuality": "exotic",
   "reserves": [
     {
-      "name": "BTC (delta-neutral)",
-      "pct": 45,
-      "risk": "medium"
+      "name": "BTC collateral",
+      "pct": 92.6,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Bitcoin network, BTC wrapper issuers, and Falcon custodians",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
-      "name": "Stablecoins (USDC/USDT)",
-      "pct": 30,
-      "risk": "low"
+      "name": "Other crypto / tokenized assets",
+      "pct": 2.8,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Multiple token networks, issuers, and Falcon custodians",
+      "riskFactors": [
+        "credit",
+        "market",
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
-      "name": "Altcoins (DOGE, FET, TRX, TON)",
-      "pct": 15,
-      "risk": "high"
+      "name": "USDT cash-equivalent assets",
+      "pct": 2,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "riskFactors": ["counterparty", "custody", "smart-contract", "concentration"],
+      "liquidityHorizon": "immediate"
     },
     {
-      "name": "ETH (delta-neutral)",
-      "pct": 5,
-      "risk": "medium"
+      "name": "USDC cash-equivalent assets",
+      "pct": 1.7,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "riskFactors": ["counterparty", "custody", "smart-contract", "concentration"],
+      "liquidityHorizon": "immediate"
     },
     {
-      "name": "Tokenized Treasuries (USTB)",
-      "pct": 5,
-      "risk": "low"
+      "name": "Insurance fund",
+      "pct": 0.7,
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "Falcon Finance insurance fund custody accounts",
+      "riskFactors": ["counterparty", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "ETH / liquid staking collateral",
+      "pct": 0.2,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum network, liquid-staking issuers, and Falcon custodians",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex Safety Score V9 dependency review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Falcon transparency dashboard",
@@ -763,36 +816,48 @@
         "url": "https://api.falcon.finance/api/v1/transparency"
       },
       {
+        "label": "HT Digital weekly USDf reserve report - 13 July 2026",
+        "url": "https://falcon.finance/api/media/file/Falcon%20Letter%20-%2013%20July%202026.pdf?prefix=media"
+      },
+      {
         "label": "Falcon supported collateral documentation",
         "url": "https://docs.falcon.finance/supported-assets"
       }
     ],
-    "rationale": "The static fallback combines USDC and USDT and contains a legacy USTB category, but it is not a dated current constituent-weight statement. Live transparency rows may link individual assets only when the API provides their current weights.",
-    "compositionBasis": "Curated fallback aligned to Falcon transparency categories",
-    "scope": "selected-slices",
-    "knownUnknownExposure": "The fallback stablecoin basket lacks constituent percentages, and its legacy USTB category is not sufficient evidence of a current 5% USTB exposure.",
-    "knownUnknownExposurePct": 35,
+    "rationale": "The exact Falcon adapter output from the timestamped July 15 issuer API replaces the undated legacy fallback. The current envelope is dominated by the adapter's aggregate BTC bucket, separately links the reported USDT and USDC rows, retains the insurance fund as protocol protection capital, and preserves the Other crypto / tokenized assets residual without inventing constituent links. HT Digital's July 13 reserve report independently corroborates the reserve categories and the large BTC and wrapped-BTC concentration.",
+    "compositionBasis": "Exact Falcon live-reserve adapter identities and rounded weights from the timestamped issuer API, corroborated by the latest HT Digital weekly reserve report",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The 2.8% Other crypto / tokenized assets adapter row aggregates multiple token networks, issuers, and custody failure domains without a source-native constituent split that can be linked as one reviewed exposure.",
+    "knownUnknownExposurePct": 2.8,
     "nonLinkDispositions": [
       {
+        "reserveIndex": 0,
+        "reserveName": "BTC collateral",
+        "pct": 92.6,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The adapter's BTC, wrapped-BTC, mBTC, and enzoBTC bucket is external crypto backing rather than a tracked stablecoin dependency."
+      },
+      {
         "reserveIndex": 1,
-        "reserveName": "Stablecoins (USDC/USDT)",
-        "pct": 30,
+        "reserveName": "Other crypto / tokenized assets",
+        "pct": 2.8,
         "disposition": "basket-needs-split",
-        "rationale": "USDC and USDT are tracked, but the fallback composition provides only their combined weight.",
-        "candidateCoinIds": [
-          "usdc-circle",
-          "usdt-tether"
-        ]
+        "rationale": "The adapter intentionally aggregates multiple altcoins and tokenized assets; the reviewed envelope preserves that residual rather than claiming one issuer or tracked-asset link."
       },
       {
         "reserveIndex": 4,
-        "reserveName": "Tokenized Treasuries (USTB)",
-        "pct": 5,
-        "disposition": "insufficient-evidence",
-        "rationale": "Falcon supports USTB and reports it in live transparency data, but the static fallback does not establish a dated current 5% constituent weight.",
-        "candidateCoinIds": [
-          "ustb-superstate"
-        ]
+        "reserveName": "Insurance fund",
+        "pct": 0.7,
+        "disposition": "not-applicable",
+        "rationale": "The issuer-reported insurance fund is protocol protection capital, not a tracked stablecoin reserve dependency."
+      },
+      {
+        "reserveIndex": 5,
+        "reserveName": "ETH / liquid staking collateral",
+        "pct": 0.2,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "ETH and liquid-staking collateral are external crypto backing rather than tracked stablecoin dependencies."
       }
     ]
   },

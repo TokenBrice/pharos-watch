@@ -369,10 +369,12 @@
         ]
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "At Ethereum block 25294993: TRYB ETH is a FiatTokenProxy (0x2c537e5624e4af88a7ae4060c022609376c8d0eb, source verified as FiatTokenProxy on Blockscout). owner() = Safe 0xb9fda3c... (3 owners, 2/3, Gnosis 1.3.0, no modules). masterMinter() = Safe 0x68193b... (6 owners, 3/6, Gnosis 1.3.0, no modules). Both confirmed via getOwners(), getThreshold(), slot 0 masterCopy, and getModulesPaginated. EIP-1967 impl and admin slots are 0x0 (FiatTokenProxy uses custom storage). BSC chain: owner and masterMinter share a single EOA address (0x07913270..., confirmed code=0 on BSC). Ethereum mint surface fully resolved.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25294993: TRYB ETH is a FiatTokenProxy (0x2c537e5624e4af88a7ae4060c022609376c8d0eb, source verified as FiatTokenProxy on Blockscout). owner() = Safe 0xb9fda3c... (3 owners, 2/3, Gnosis 1.3.0, no modules). masterMinter() = Safe 0x68193b... (6 owners, 3/6, Gnosis 1.3.0, no modules). Both confirmed via getOwners(), getThreshold(), slot 0 masterCopy, and getModulesPaginated. EIP-1967 impl and admin slots are 0x0 (FiatTokenProxy uses custom storage). BSC chain: owner and masterMinter share a single EOA address (0x07913270..., confirmed code=0 on BSC). Ethereum mint surface fully resolved. Corpus Denetim ve Yeminli Mali Musavirlik A.S. performs recurring quarterly independent examinations; the latest reviewed report is dated May 21, 2026 and fully reconciles TRYB liabilities to reserve assets. Turkey's Capital Markets Board temporary operating list matches the BiLira platform but expressly says inclusion is not authorization, and BiLira was not matched in the Central Bank's authorized EMI register. Supervision is therefore attestation-only.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
           "label": "BiLira audit reports",
@@ -385,6 +387,14 @@
         {
           "label": "TRYB ETH contract on Blockscout",
           "url": "https://eth.blockscout.com/address/0x2c537e5624e4af88a7ae4060c022609376c8d0eb"
+        },
+        {
+          "label": "Corpus independent TRYB assurance report - May 21, 2026",
+          "url": "https://cdn.prod.website-files.com/65155e6286e1f178882ebc7e/6a325f5892dd1853f5b372cf_Bilira_Guvence_Raporu_May%C4%B1s_2026_ENG.pdf"
+        },
+        {
+          "label": "Turkey CMB crypto service provider temporary list",
+          "url": "https://spk.gov.tr/kurumlar/kripto-varlik-hizmet-saglayicilar/faaliyette-bulunanlar-listesi"
         }
       ]
     }

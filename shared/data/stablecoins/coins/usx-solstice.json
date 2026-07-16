@@ -110,8 +110,19 @@
         "evidence": "At Solana slot 425778559, getAccountInfo for BzMuMbtah9bqN4HERkPo2PsVoaQKD2xfvYq1xfDCFwEb returned owner: 11111111111111111111111111111111 (System Program), executable: false, lamports: 8097020. This is a funded EOA (Solstice backend/dev wallet, not a multisig or program). It holds the BPF upgrade authority for program USXyiSTsPEWz55pSK7sZoUL79ntoVGQbaTDT57tH6bx."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
+        {
+          "label": "Accountable USX reserve-attestation dashboard",
+          "url": "https://attestation.solstice.finance/"
+        },
+        {
+          "label": "Accountable USX reserve-versus-supply feed",
+          "url": "https://attestation-api.solstice.finance/dashboard"
+        },
         {
           "label": "Solstice USX",
           "url": "https://solstice.finance/usx"
@@ -130,8 +141,8 @@
         }
       ],
       "evidence": "At Solana slot 425778559: mint authority Ze3CQhTMi6KMU3nWZQUegA2JpeFd2eMx1Y2Gswqnto4 (program-owned account) confirmed as direct-minter; program upgrade authority BzMuMbtah9bqN4HERkPo2PsVoaQKD2xfvYq1xfDCFwEb confirmed as funded EOA (owner: System Program, not executable, 8M lamports). All mint-capable controls are issuer-operated EOA/program-owned — consistent with centralized-dependent permissioned-minter model.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "reviewer": "Claude Phase 0c continuation / SOL-IV calibration",
+      "reviewedAt": "2026-07-15"
     },
     "upgradeability": {
       "model": "custom",

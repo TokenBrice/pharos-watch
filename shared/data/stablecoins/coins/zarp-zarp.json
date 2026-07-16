@@ -245,6 +245,8 @@
         "evidence": "Solana getAccountInfo on both ZARP SPL mints (dngKhBQ... and 8v8aBHR...) returned mintAuthority = 797qLH2ZBvMrroZwxsLiWxgvDeLfUeJaHL1xWjfC7J4j. Account owner_program = 11111111111111111111111111111111 (System Program) = EOA-equivalent wallet, not a program."
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -258,11 +260,19 @@
         {
           "label": "ZARP Ethereum RoleGranted logs",
           "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xb755506531786c8ac63b756bab1ac387bacb0c04&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        },
+        {
+          "label": "Kempen ZARP February 2026 report",
+          "url": "https://kempengroup.co.za/wp-content/uploads/2026/03/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-02-27-1773397665324.pdf"
+        },
+        {
+          "label": "FSCA crypto-asset service providers",
+          "url": "https://www.fsca.co.za/Regulated%20Entities/Pages/Crypto-Assets-Service-Providers.aspx"
         }
       ],
-      "evidence": "Role enumeration via Blockscout RoleGranted/RoleRevoked events plus hasRole confirmation at block 25295023. MINTER_ROLE = one EOA (0x37b1af), DEFAULT_ADMIN = one EOA (0xf50064), UPGRADER_ROLE = nobody currently (prior holder 0xfa4eb9 had all roles revoked). Same MINTER and ADMIN confirmed on Base and Polygon. Solana both SPL mints share one system-wallet mintAuthority. All addressable controls confirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "Role enumeration via Blockscout RoleGranted/RoleRevoked events plus hasRole confirmation at block 25295023. MINTER_ROLE = one EOA (0x37b1af), DEFAULT_ADMIN = one EOA (0xf50064), UPGRADER_ROLE = nobody currently (prior holder 0xfa4eb9 had all roles revoked). Same MINTER and ADMIN confirmed on Base and Polygon. Solana both SPL mints share one system-wallet mintAuthority. All addressable controls confirmed. Mint-tier review (2026-07-15): Kempen Audit issued quarterly agreed-upon-procedures reports through 2026-02-27, published 2026-03-03, but the next expected quarterly report is overdue as of 2026-07-15; current recurring reconciliation is therefore not established. No exact prudential issuer authorization for ZARP Stablecoin (Pty) Ltd was established in FSCA's crypto-asset provider records.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15"
     }
   },
   "collateralQuality": "rwa",

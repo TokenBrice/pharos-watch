@@ -482,10 +482,13 @@
         "evidence": "At Ethereum block 25527148 and Etherlink block 48212139, all listed EVM proxies resolved through ProxyAdmin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac to chain-local timelocks with getMinDelay() = 172800; their sole proposer/executor/canceller authorities were the chain-local 1-of-3 Safes. At Starknet block 11819111, mRe7YIELD used class 0x05ffbcfeb50d200a0677c48a129a11245a3fc519d1d98d76882d1c9a1b19c6ed, exposed replace_to(), and returned get_upgrade_delay() = 0. Governance account 0x04758595201d9d01be9f8bd232fe3a1c0b5c7b953219c9faa35779b3e73c214c had governance-admin authority and was a single-key OpenZeppelin account."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "Deployment-complete audit at Ethereum block 25527148, Etherlink block 48212139, and Starknet block 11819111. Ethereum M_RE7_MINT_OPERATOR_ROLE holders are EOAs 0x11e58b044b04eca3230c67217c482f24bdb90a72 and 0xb755ff07fd80b38265ae35639568cfcdc874f21d plus vault proxy 0xce0a2953a5d46400af601a9857235312d1924ac7. Etherlink holders are shared EOA 0xb755ff07fd80b38265ae35639568cfcdc874f21d and vault proxy 0xbef85e71ecd0517d0c1446751667891b04860753. Both EVM access-control deployments retain EOA 0xd4195cf4 plus a chain-local 1-of-3 Safe as DEFAULT_ADMIN_ROLE. EVM proxy upgrades require two days, while the Starknet token class is immediately replaceable by its single-key governance domain, setting the effective upgrade delay to zero.",
+      "evidence": "Deployment-complete audit at Ethereum block 25527148, Etherlink block 48212139, and Starknet block 11819111. Ethereum M_RE7_MINT_OPERATOR_ROLE holders are EOAs 0x11e58b044b04eca3230c67217c482f24bdb90a72 and 0xb755ff07fd80b38265ae35639568cfcdc874f21d plus vault proxy 0xce0a2953a5d46400af601a9857235312d1924ac7. Etherlink holders are shared EOA 0xb755ff07fd80b38265ae35639568cfcdc874f21d and vault proxy 0xbef85e71ecd0517d0c1446751667891b04860753. Both EVM access-control deployments retain EOA 0xd4195cf4 plus a chain-local 1-of-3 Safe as DEFAULT_ADMIN_ROLE. EVM proxy upgrades require two days, while the Starknet token class is immediately replaceable by its single-key governance domain, setting the effective upgrade delay to zero. Economic-control evidence reviewed 2026-07-15: Midas publishes recurring NAV and reserve checkpoints through its Attestation Engine, with source notarization and independent LlamaRisk or Canary verification; this product retains its documented weekly reporting cadence. FMA prospectus approval is not issuer prudential licensing.",
       "reviewer": "Codex Safety Score V9 Midas multichain audit",
-      "reviewedAt": "2026-07-13",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Midas mRe7YIELD docs",
@@ -506,6 +509,14 @@
         {
           "label": "Starknet mRe7YIELD token",
           "url": "https://starkscan.co/contract/0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc"
+        },
+        {
+          "label": "Midas Attestation Engine",
+          "url": "https://blog.midas.app/introducing-the-midas-attestation-engine/"
+        },
+        {
+          "label": "Midas transparency dashboard",
+          "url": "https://midas.app/transparency"
         }
       ]
     }

@@ -9,6 +9,7 @@ import {
   type V9EconomicControlAssetFacts,
   type V9EconomicControlReviewExtension,
   type V9MintMechanismReview,
+  type V9MintSupervision,
   type V9OracleControlReview,
 } from "../safety-score-v9/control";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
@@ -120,6 +121,7 @@ function noMint(): V9MintMechanismReview {
     status: notApplicable("mint"),
     controlKey: null,
     reconciliation: "not-applicable",
+    supervision: "unknown",
     upgrade: { state: "not-applicable", controlKey: null },
   };
 }
@@ -129,6 +131,7 @@ function boundedMint(controlKey = "mint:primary"): V9MintMechanismReview {
     status: requiredKnown("mint"),
     controlKey,
     reconciliation: "not-applicable",
+    supervision: "unknown",
     upgrade: { state: "immutable", controlKey: null },
   };
 }
@@ -279,6 +282,78 @@ describe("Safety Score v9 economic control", () => {
     );
   });
 
+  it("graduates a reconciled unbounded mint by prudential-supervision evidence", () => {
+    const mintControl = control("mint:hot-wallet", "mint", {
+      authority: { authorityKey: "authority:issuer", model: "eoa", threshold: null },
+      capSemantics: { kind: "unbounded", bound: null },
+      claimImpairment: "unbounded",
+    });
+    const reconciledMint = (supervision: V9MintSupervision): V9MintMechanismReview => ({
+      status: requiredKnown("mint"),
+      controlKey: mintControl.controlKey,
+      reconciliation: "periodic",
+      supervision,
+      upgrade: { state: "immutable", controlKey: null },
+    });
+    const resultFor = (supervision: V9MintSupervision) =>
+      evaluateV9EconomicControl(args({ facts: facts([mintControl]), mint: reconciledMint(supervision) }));
+    const severityFor = (supervision: V9MintSupervision) =>
+      resultFor(supervision).structuralFailures.find((failure) => failure.kind === "centralized-mint");
+
+    // The reconciled unbounded mint is its own posture, scored at 55 (not the
+    // 25 unbounded-or-compromised rung), so the ruled tier ceilings are reachable.
+    const unknownResult = resultFor("unknown");
+    expect(unknownResult.components.find((component) => component.kind === "mint")).toMatchObject({
+      posture: "unbounded-reconciled",
+      score: 55,
+    });
+
+    // Inertness proof: default/unknown supervision keeps today's "high" rung and reason.
+    expect(severityFor("unknown")).toMatchObject({
+      severity: "high",
+      reason: "Minting is economically unbounded but supply is reconciled against reserves.",
+    });
+    expect(severityFor("attestation-only")).toMatchObject({ severity: "high" });
+    expect(severityFor("none")).toMatchObject({ severity: "high" });
+
+    // A reviewed prudential-supervision fact graduates one further rung to moderate.
+    expect(severityFor("prudential")).toMatchObject({
+      severity: "moderate",
+      reason: "Minting is economically unbounded but reconciled and prudentially supervised.",
+    });
+  });
+
+  it("keeps a compromised mint critical regardless of prudential supervision", () => {
+    const mintControl = control("mint:compromised", "mint", {
+      authority: { authorityKey: "authority:issuer", model: "eoa", threshold: null },
+      capSemantics: { kind: "unbounded", bound: null },
+      claimImpairment: "unbounded",
+      incidentState: "active",
+    });
+    const result = evaluateV9EconomicControl(
+      args({
+        facts: facts([mintControl]),
+        mint: {
+          status: requiredKnown("mint"),
+          controlKey: mintControl.controlKey,
+          reconciliation: "continuous",
+          supervision: "prudential",
+          upgrade: { state: "immutable", controlKey: null },
+        },
+      }),
+    );
+
+    expect(result.structuralFailures).toContainEqual(
+      expect.objectContaining({ kind: "centralized-mint", severity: "critical" }),
+    );
+    // A compromised mint stays at the unbounded-or-compromised rung (score 25)
+    // even though its reconciliation is continuous and supervision prudential.
+    expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
+      posture: "unbounded-or-compromised",
+      score: 25,
+    });
+  });
+
   it("bounds a stale material control with a non-critical reason instead of failing closed", () => {
     const staleMintControl = control("mint:stale", "mint", { status: stale("mint-control") });
     const result = evaluateV9EconomicControl(
@@ -328,6 +403,7 @@ describe("Safety Score v9 economic control", () => {
           status: unresolvedStatus,
           controlKey: null,
           reconciliation: "unknown",
+          supervision: "unknown",
           upgrade: { state: "unknown", controlKey: null },
         },
         oracle: { status: unresolvedStatus, tier: null, branches: [] },

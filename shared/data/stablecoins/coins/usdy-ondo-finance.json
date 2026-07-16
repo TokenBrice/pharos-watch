@@ -220,8 +220,27 @@
         "evidence": "Phase 0c Safe verification refreshed the current Safe Transaction Service state: 4/7 owners, no enabled modules, zero guard, fallback handler 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4, observed against Ethereum block 25294485."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
+        {
+          "label": "Ondo USDY important notes and issuer",
+          "url": "https://docs.ondo.finance/general-access-products/usdy/important-notes"
+        },
+        {
+          "label": "Ondo USDY verification-agent comparison",
+          "url": "https://docs.ondo.finance/general-access-products/usdy/comparison-stablecoins"
+        },
+        {
+          "label": "Ondo USDY daily proof of reserves and attestation reports",
+          "url": "https://ondo.finance/usdy"
+        },
+        {
+          "label": "Ondo USDY trust and security",
+          "url": "https://docs.ondo.finance/trust-and-security"
+        },
         {
           "label": "Ondo docs",
           "url": "https://docs.ondo.finance/"
@@ -232,8 +251,8 @@
         }
       ],
       "evidence": "Ondo documentation describes USDY as issuer-operated, and Ethereum role reads identify a 4/7 Safe as the current admin/minter authority path. Phase 0c refreshed current Safe state through the Safe Transaction Service at Ethereum block 25294485.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11"
+      "reviewer": "Codex Phase 0c verification / SOL-IV calibration",
+      "reviewedAt": "2026-07-15"
     }
   },
   "deploymentModel": "third-party-bridge",

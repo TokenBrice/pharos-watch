@@ -454,6 +454,8 @@
         "evidence": "At finalized Solana slot 425774906, the XUSD mint account 4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z had this address as both mint and freeze authority. The authority account decoded as an initialized SPL Token multisig with m=3 and n=10."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
       "sources": [
         {
@@ -471,11 +473,19 @@
         {
           "label": "Solana XUSD mint",
           "url": "https://explorer.solana.com/address/4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z"
+        },
+        {
+          "label": "KK Yap XUSD reserve account examination - May 31, 2026",
+          "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a44bd73219d7e8e1139a331_XUSD_SCS_Reserve_Account_Report_(31_May_2026).docx.pdf"
+        },
+        {
+          "label": "MAS Financial Institutions Directory - StraitsX",
+          "url": "https://eservices.mas.gov.sg/fid/institution?term=StraitsX"
         }
       ],
-      "evidence": "Direct reads identify chain-local XUSD owner and MasterMinter controls on Ethereum and BNB Chain. At BNB Chain block 109962664, owner() and masterMinter() resolved separate 3-of-5 Safe v1.4.1 instances; neither had enabled modules, while the MasterMinter Safe carried guard 0x3653d130.... Although standard EIP-1967 slots were zero, legacy ZeppelinOS slots resolved implementation 0xCD6c...A599 and a separate 3-of-5 proxy-admin Safe. Ethereum remains a direct immutable deployment, and the Solana mint/freeze authority remains a 3-of-10 SPL Token multisig.",
-      "reviewer": "owner-triage",
-      "reviewedAt": "2026-07-14"
+      "evidence": "Direct reads identify chain-local XUSD owner and MasterMinter controls on Ethereum and BNB Chain. At BNB Chain block 109962664, owner() and masterMinter() resolved separate 3-of-5 Safe v1.4.1 instances; neither had enabled modules, while the MasterMinter Safe carried guard 0x3653d130.... Although standard EIP-1967 slots were zero, legacy ZeppelinOS slots resolved implementation 0xCD6c...A599 and a separate 3-of-5 proxy-admin Safe. Ethereum remains a direct immutable deployment, and the Solana mint/freeze authority remains a 3-of-10 SPL Token multisig. KK Yap & Associates performs recurring reserve examinations; the latest reviewed report covers May 31, 2026, was published June 23, 2026, and fully reconciles XUSD liabilities to reserve assets on the recorded semi-monthly cadence. The MAS directory matches the issuer, StraitsX USD Issuance Pte. Ltd., as a Major Payment Institution, supporting prudential supervision of the same legal entity.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
+      "reviewedAt": "2026-07-15"
     }
   },
   "deploymentModel": "native-multichain",

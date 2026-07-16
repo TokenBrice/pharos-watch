@@ -319,6 +319,19 @@ export type MintAuthorityDirectMintAbility = (typeof MINT_AUTHORITY_DIRECT_MINT_
 export const MINT_AUTHORITY_SAFE_SOURCE_VALUES = ["onchain", "safe-api", "manual"] as const;
 export type MintAuthoritySafeSource = (typeof MINT_AUTHORITY_SAFE_SOURCE_VALUES)[number];
 
+// Reviewed economic-control facts the Safety Score v9 engine consumes. They are
+// optional on the profile; when absent the engine keeps its inferred/encoding
+// behavior (fail-closed inertness). Evidence lives in the profile's existing
+// review.sources — these fields do not carry their own citations.
+export const MINT_AUTHORITY_ECONOMIC_CAP_SEMANTICS_VALUES = ["unbounded", "raiseable", "bounded", "unknown"] as const;
+export type MintAuthorityEconomicCapSemantics = (typeof MINT_AUTHORITY_ECONOMIC_CAP_SEMANTICS_VALUES)[number];
+
+export const MINT_AUTHORITY_RECONCILIATION_VALUES = ["continuous", "periodic", "not-applicable", "unknown"] as const;
+export type MintAuthorityReconciliation = (typeof MINT_AUTHORITY_RECONCILIATION_VALUES)[number];
+
+export const MINT_AUTHORITY_SUPERVISION_VALUES = ["prudential", "attestation-only", "none", "unknown"] as const;
+export type MintAuthoritySupervision = (typeof MINT_AUTHORITY_SUPERVISION_VALUES)[number];
+
 export const MINT_AUTHORITY_MODULES_OR_GUARDS_STATUS_VALUES = [
   "none-detected",
   "present",
@@ -437,6 +450,12 @@ export interface MintAuthorityProfile {
     sources: StablecoinLink[];
   }>;
   controls?: MintAuthorityControl[];
+  /** Reviewed economic mint bound; supersedes the encoding-derived cap in v9. */
+  economicCapSemantics?: MintAuthorityEconomicCapSemantics;
+  /** Reviewed supply-vs-reserve reconciliation cadence; supersedes v9 inference. */
+  reconciliation?: MintAuthorityReconciliation;
+  /** Reviewed prudential-supervision regime; graduates the reconciled mint rung. */
+  supervision?: MintAuthoritySupervision;
   review: MintAuthorityReview;
 }
 

@@ -63,31 +63,127 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "autoUSD is a strategy-vault share token over USDC; wrapper share minting occurs through deposits into the Auto Finance autopool, while base USDC mint authority is inherited from Circle.",
+    "confidence": "unknown",
+    "summary": "autoUSD is a USDC strategy-vault share token with a transparent-proxy upgrade path controlled by a 6-of-11 Safe. The currently cited Tokemak source does not match the deployed implementation, so the live share-mint predicate remains unresolved; durable base USDC issuance remains inherited from Circle.",
     "inheritedFrom": "usdc-circle",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": ["0xa7569a44f348d3d70d8ad5889e50f78e33d80d35"],
+      "implementationAddresses": ["0xfb2ebdedc38a7d19080e44ab1d621bc9afad0695"],
+      "adminAddresses": ["0x84a317a45248d6d3f92f40102680ffeda2ab95c0"],
+      "canChangeMintLogic": true,
+      "controlRef": "Auto Finance autoUSD ProxyAdmin owner Safe",
+      "observedAt": "2026-07-15",
+      "observedBlock": 25539960,
+      "sources": [
+        {
+          "label": "Ethereum autoUSD transparent proxy",
+          "url": "https://eth.blockscout.com/address/0xa7569a44f348d3d70d8ad5889e50f78e33d80d35"
+        },
+        {
+          "label": "Ethereum Auto Finance ProxyAdmin",
+          "url": "https://eth.blockscout.com/address/0x84a317a45248d6d3f92f40102680ffeda2ab95c0"
+        },
+        {
+          "label": "Tokemak AutopoolETH reference source (deployment version mismatch)",
+          "url": "https://github.com/Tokemak/v2-core-pub/blob/de163d5a1edf99281d7d000783b4dc8ade03591e/src/vault/AutopoolETH.sol"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
         "address": "0xa7569a44f348d3d70d8ad5889e50f78e33d80d35",
-        "label": "Auto Finance autoUSD autopool share accounting",
+        "label": "Auto Finance autoUSD share-mint path",
         "role": "wrapper",
         "authorityType": "contract",
-        "directMintAbility": "none",
-        "canRaiseCap": false,
+        "directMintAbility": "unknown",
+        "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Wrapper share minting represents deposits into the autoUSD autopool and does not create base USDC supply.",
+        "capDescription": "At the observation block maxMint was 5,192,296,850,611,050,827,771,912,723,178,402 shares and maxDeposit was 5,675,838,058,052,760,054,849 USDC units. These interface values do not prove the deployed share-mint predicate or an enforceable mint cap.",
         "sources": [
           {
             "label": "Auto Finance contract addresses",
             "url": "https://docs.auto.finance/developer-docs/contracts-overview/contract-addresses"
           },
           {
-            "label": "Auto Finance docs",
-            "url": "https://docs.auto.finance/"
+            "label": "Ethereum AutopoolETH verified implementation",
+            "url": "https://eth.blockscout.com/address/0xfb2ebdedc38a7d19080e44ab1d621bc9afad0695"
+          },
+          {
+            "label": "Tokemak AutopoolETH reference source (deployment version mismatch)",
+            "url": "https://github.com/Tokemak/v2-core-pub/blob/de163d5a1edf99281d7d000783b4dc8ade03591e/src/vault/AutopoolETH.sol"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "The tracked autoUSD contract is reviewed as a USDC strategy-vault wrapper; live-reserve metadata expects USDC as the underlying asset, so wrapper minting creates vault shares rather than durable base USDC."
+        "observedAt": "2026-07-15",
+        "observedBlock": 25539960,
+        "evidence": "At Ethereum block 25539960, asset() returned USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, paused() and isShutdown() were false, and maxMint/maxDeposit returned the stated bounds. Blockscout identifies the deployed implementation as AutopoolETH, but the retained pinned reference uses Solidity 0.8.17 while the deployed implementation is recorded as Solidity 0.8.24; it therefore cannot establish the live deposit or mint authorization path."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x6c4d843d9d075c4f8971e64dea16181b2cfa38f8",
+        "label": "Auto Finance autoUSD ProxyAdmin owner Safe",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "threshold": 6,
+        "signerCount": 11,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x4dbbdBd5a047200ea98546ce3531c0f7e4e4dcb2",
+            "0x460eab9041d85be2ab8512896c5df9a8932d5b50",
+            "0xaec19b0bd5ea526b01862a3d766337e32a0c829e",
+            "0xa9fae4d613adb44f23839a4c52c9ca6af25bbb4a",
+            "0xf98053ba410971d263b016d667c95fcfac65a5d1",
+            "0x4ab8ec9dc7ffae83551cddc3778da21a94497332",
+            "0x106b86d14f7febeF29436d14f9ef7cc5a2c4699",
+            "0x65dcd62932fef5af25ada91f0f24658e94e259c5",
+            "0x2d975be27dc534dca48d423c2e8a0d61f9b72b61",
+            "0x668193b5c71d22207e32e8b54d699c97c39dc9a8",
+            "0x0979f633ac8b35f17e2dd4a50ccbfab30ab25993"
+          ],
+          "threshold": 6,
+          "enabledModules": [],
+          "guard": null,
+          "moduleGuard": null,
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedBlock": 25539960,
+          "observedAt": "2026-07-15",
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Ethereum Auto Finance ProxyAdmin",
+            "url": "https://eth.blockscout.com/address/0x84a317a45248d6d3f92f40102680ffeda2ab95c0"
+          },
+          {
+            "label": "Ethereum autoUSD transparent proxy",
+            "url": "https://eth.blockscout.com/address/0xa7569a44f348d3d70d8ad5889e50f78e33d80d35"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Auto Finance ProxyAdmin owner Safe Transaction Service",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x6c4D843D9d075c4f8971E64DeA16181b2CFa38F8/"
+          }
+        ],
+        "observedAt": "2026-07-15",
+        "observedBlock": 25539960,
+        "evidence": "At Ethereum block 25539960, ProxyAdmin 0x84a317... getProxyImplementation(autoUSD) returned 0xfb2ebded..., getProxyAdmin(autoUSD) returned itself, and owner() returned this Safe. The Safe returned 11 owners, threshold 6, version 1.3.0, and no enabled modules. Its Safe Transaction Service record reported zero guard and module guard, fallback handler 0xf48f..., and master copy 0xd9db.... An eth_call to ProxyAdmin.upgrade(autoUSD, currentImplementation) from the Safe address succeeded."
       }
     ],
     "review": {
@@ -99,13 +195,30 @@
         {
           "label": "Existing USDC mint authority review",
           "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+        },
+        {
+          "label": "Ethereum autoUSD transparent proxy",
+          "url": "https://eth.blockscout.com/address/0xa7569a44f348d3d70d8ad5889e50f78e33d80d35"
+        },
+        {
+          "label": "Ethereum Auto Finance ProxyAdmin",
+          "url": "https://eth.blockscout.com/address/0x84a317a45248d6d3f92f40102680ffeda2ab95c0"
+        },
+        {
+          "label": "Tokemak AutopoolETH reference source (deployment version mismatch)",
+          "url": "https://github.com/Tokemak/v2-core-pub/blob/de163d5a1edf99281d7d000783b4dc8ade03591e/src/vault/AutopoolETH.sol"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
         }
       ],
-      "evidence": "autoUSD is tracked as a USDC strategy-vault variant with 100% USDC wrapper reserves in Pharos metadata. No separate base-supply mint authority is modeled for the wrapper; base USDC mint authority is inherited from Circle.",
-      "reviewer": "Codex mint-authority upgrade",
-      "reviewedAt": "2026-06-18",
+      "evidence": "At Ethereum block 25539960, autoUSD was an active USDC wrapper behind transparent proxy 0xa7569a44f348d3d70d8ad5889e50f78e33d80d35, whose ProxyAdmin is owned by the observed 6-of-11 Safe and can replace the implementation without a contract-enforced delay. The retained Tokemak commit is not source-aligned with deployed implementation 0xfb2ebdedc38a7d19080e44ab1d621bc9afad0695: it is a different Solidity version and its deposit/mint call graph differs. The on-chain topology is preserved here, but it does not establish the deployed share-mint predicate. Durable base USDC issuance remains inherited from Circle.",
+      "reviewer": "TERRA-III Safety Score V9 source-alignment challenge",
+      "reviewedAt": "2026-07-15",
+      "disposition": "unresolved",
       "unresolvedQuestions": [
-        "Upgrade/admin controls for the Auto Finance autopool contract were not independently re-read on-chain in this review; this profile only closes inherited base-mint coverage."
+        "Obtain bytecode-matched deployed implementation source or verified source metadata for 0xfb2ebdedc38a7d19080e44ab1d621bc9afad0695 before asserting the live autoUSD share-mint predicate or a capped mint path."
       ]
     }
   },

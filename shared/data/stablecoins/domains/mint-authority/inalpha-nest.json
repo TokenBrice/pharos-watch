@@ -85,10 +85,13 @@
         "evidence": "Safe API at Ethereum block 25,296,225: Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (GnosisSafeL2 v1.3.0), threshold 3-of-6, 6 owners, no modules, no guard, nonce 151. This Safe is owner() of the BoringVault and controls the RolesAuthority."
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "Ethereum and Plume reads on 2026-07-14 confirmed the inALPHA vault at 0x64ab176c...b855 has direct runtime code, zero EIP-1967 implementation/admin slots, no UUPS interface, Safe owner 0xa08a0dc4...a982, and RolesAuthority 0x5e500500...82ef on both chains. The authorized teller at 0x6104fe10...0cb6 has identical runtime bytecode on both chains, zero EIP-1967 slots, no UUPS interface, and the same Safe owner. The mint-critical vault and teller implementations are therefore immutable on both tracked deployments; the Safe can still change authorization through the separately reviewed RolesAuthority control path.",
+      "evidence": "Ethereum and Plume reads on 2026-07-14 confirmed the inALPHA vault at 0x64ab176c...b855 has direct runtime code, zero EIP-1967 implementation/admin slots, no UUPS interface, Safe owner 0xa08a0dc4...a982, and RolesAuthority 0x5e500500...82ef on both chains. The authorized teller at 0x6104fe10...0cb6 has identical runtime bytecode on both chains, zero EIP-1967 slots, no UUPS interface, and the same Safe owner. The mint-critical vault and teller implementations are therefore immutable on both tracked deployments; the Safe can still change authorization through the separately reviewed RolesAuthority control path. Evidence challenge completed 2026-07-15: Nest publishes issuer-operated hourly NAV and live vault composition, with the latest public vault-data snapshot dated 2026-07-08, but no recurring independent reconciliation of nALPHA supply to its multi-asset portfolio was found. Nest DAO LLC is a Marshall Islands DAO LLC, not a prudentially supervised fund issuer.",
       "reviewer": "Codex CTRL root batch 06",
-      "reviewedAt": "2026-07-14",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Blockscout — inALPHA BoringVault",
@@ -101,6 +104,18 @@
         {
           "label": "Nest docs - liquidity and redemptions",
           "url": "https://docs.nest.credit/about/liquidity-and-redemptions"
+        },
+        {
+          "label": "Nest vault NAV methodology",
+          "url": "https://docs.nest.credit/about/vaults/"
+        },
+        {
+          "label": "Nest available vaults snapshot",
+          "url": "https://docs.nest.credit/about/available-vaults/"
+        },
+        {
+          "label": "Nest terms identifying Nest DAO LLC",
+          "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/"
         }
       ]
     }

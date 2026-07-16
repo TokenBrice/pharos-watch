@@ -445,7 +445,7 @@
   "reserves": [
     {
       "name": "WTGXX (WisdomTree Government Money Market)",
-      "pct": 54.1,
+      "pct": 53,
       "risk": "low",
       "coinId": "wtgxx-wisdomtree",
       "assetClass": "fund-share",
@@ -455,7 +455,7 @@
     },
     {
       "name": "USTB (Superstate tokenized T-bills)",
-      "pct": 29.9,
+      "pct": 30.6,
       "risk": "low",
       "coinId": "ustb-superstate",
       "assetClass": "fund-share",
@@ -465,7 +465,7 @@
     },
     {
       "name": "BUIDL (BlackRock tokenized T-bills)",
-      "pct": 14.2,
+      "pct": 13.9,
       "risk": "low",
       "coinId": "buidl-blackrock",
       "assetClass": "fund-share",
@@ -481,10 +481,20 @@
       "issuerOrObligor": "Bridge Building Inc.",
       "riskFactors": ["counterparty", "liquidity", "custody", "smart-contract"],
       "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDC (Circle)",
+      "pct": 0.7,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial",
+      "riskFactors": ["counterparty", "custody", "liquidity"],
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-07-15",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
     "sources": [
@@ -513,11 +523,11 @@
         "url": "https://www.bridge.xyz/news/usdb"
       }
     ],
-    "rationale": "The official Frax balance-sheet API identifies WTGXX, USTB, BUIDL, and USDB holdings and their USD values. The live adapter aggregates repeated token rows and normalizes them against total assets to the four displayed percentages; a de minimis USDC balance rounds below 0.1% and does not create a displayed slice.",
-    "compositionBasis": "Official Frax frxUSD balance-sheet asset values normalized by total assets",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "The official Frax balance-sheet API identifies WTGXX, USTB, BUIDL, USDB, and USDC holdings and their USD values. This review mirrors the live adapter's exact normalized names and one-decimal weights and classifies every displayed slice.",
+    "compositionBasis": "Official Frax frxUSD balance-sheet asset values normalized by the live frax-balance-sheet adapter",
+    "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "No unclassified reserve exposure is present in the official balance sheet; the disclosed de minimis USDC balance rounds below the live adapter's 0.1% display precision.",
+    "knownUnknownExposure": "No unclassified reserve exposure is present in the official balance sheet or the live adapter output.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

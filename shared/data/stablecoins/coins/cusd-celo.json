@@ -22,7 +22,30 @@
     "url": "https://reserve.mento.org/",
     "attestorTier": "self",
     "cadence": "real-time",
-    "provider": "Mento Reserve dashboard"
+    "provider": "Mento Reserve dashboard",
+    "latestReport": {
+      "periodEnd": "2026-07-15",
+      "publishedAt": "2026-07-15",
+      "assuranceMethod": "self-verification",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Mento reserve overview as of July 15, 2026",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/overview"
+        },
+        {
+          "label": "Mento reserve asset ledger as of July 15, 2026",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        },
+        {
+          "label": "Mento reserve model documentation",
+          "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -139,6 +162,8 @@
         ]
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -148,11 +173,19 @@
         {
           "label": "Safe Transaction Service - Celo",
           "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+        },
+        {
+          "label": "Mento reserve dashboard",
+          "url": "https://reserve.mento.org/"
+        },
+        {
+          "label": "USDm Celo token owner() re-read 2026-07-16 = 4-of-6 Mento Safe",
+          "url": "https://celoscan.io/address/0x765de816845861e75a25fca122bb6898b8b1282a#readContract"
         }
       ],
-      "evidence": "At Celo block 69286148, Safe API (celo chain) confirmed 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 has threshold 4, 6 owners, no modules, zero guard, fallbackHandler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99, masterCopy 0x29fcB43b46531BcA003ddC8FCB67FFE91900C762 (Safe L2 v1.4.1). isMinter(Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD) = true. Monad confirmed at block 80,612,848: same Safe address is owner, threshold 4, 7 signers (including one additional signer not on Celo). NEAR: parent account a11bd.near is a plain EOA (no contract, ~11.69 NEAR, no lock) controlling the bridge subaccount cusd.token.a11bd.near; no owner view method exposed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Celo block 69286148, Safe API (celo chain) confirmed 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 has threshold 4, 6 owners, no modules, zero guard, fallbackHandler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99, masterCopy 0x29fcB43b46531BcA003ddC8FCB67FFE91900C762 (Safe L2 v1.4.1). isMinter(Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD) = true. Monad confirmed at block 80,612,848: same Safe address is owner, threshold 4, 7 signers (including one additional signer not on Celo). NEAR: parent account a11bd.near is a plain EOA (no contract, ~11.69 NEAR, no lock) controlling the bridge subaccount cusd.token.a11bd.near; no owner view method exposed. USDm (Mento Dollar) reserve backing is published only on Mento's own reserve dashboard (self-verification, no independent third-party attestor), so reconciliation is unknown, and no financial regulator supervises the Mento protocol, so supervision is none. Unlike the Mento FX variants whose token owner is the 48-hour Mento Timelock, the USDm Celo token owner re-read on 2026-07-16 is the 4-of-6 Mento Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 with no execution delay, and the NEAR deployment is minted by a plain EOA (a11bd.near); the mint admin is therefore self-controlled with no independent delay, so the encoding-derived unbounded cap is not superseded and no raiseable escape is earned.",
+      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16"
     }
   },
   "chainTier": "established-alt-l1",
@@ -236,7 +269,7 @@
   "reserves": [
     {
       "name": "AUSD (Agora Dollar)",
-      "pct": 27,
+      "pct": 27.4,
       "risk": "low",
       "coinId": "ausd-agora",
       "assetClass": "stablecoin",
@@ -246,7 +279,7 @@
     },
     {
       "name": "sUSDS (Sky savings USDS)",
-      "pct": 24.2,
+      "pct": 24.4,
       "risk": "low",
       "coinId": "susds-sky",
       "assetClass": "protocol-position",
@@ -265,7 +298,7 @@
     },
     {
       "name": "USDT",
-      "pct": 13,
+      "pct": 12.3,
       "risk": "low",
       "coinId": "usdt-tether",
       "assetClass": "stablecoin",
@@ -275,7 +308,7 @@
     },
     {
       "name": "EURC (Circle euro stablecoin)",
-      "pct": 11.9,
+      "pct": 12,
       "risk": "low",
       "coinId": "eurc-circle",
       "assetClass": "stablecoin",
@@ -285,7 +318,7 @@
     },
     {
       "name": "USDC",
-      "pct": 4,
+      "pct": 3.8,
       "risk": "low",
       "coinId": "usdc-circle",
       "assetClass": "stablecoin",
@@ -295,7 +328,7 @@
     },
     {
       "name": "stETH (Lido staked ETH)",
-      "pct": 2.3,
+      "pct": 2.5,
       "risk": "low",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Lido DAO",
@@ -304,8 +337,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex dependency review",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
     "sources": [
       {
@@ -313,13 +346,17 @@
         "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
       },
       {
+        "label": "Mento reserve overview API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/overview"
+      },
+      {
         "label": "Mento reserve documentation",
         "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
       }
     ],
-    "rationale": "Weights are the current USD-value percentages published by Mento's official reserve API, with chain variants consolidated by the reviewed live adapter. AUSD, sUSDS, USDT, EURC, and USDC are exact tracked reserve dependencies; CELO and stETH are identified exogenous collateral.",
+    "rationale": "The official Mento dashboard was timestamped 2026-07-15T19:26:06.471Z; the captured reserve payload had SHA-256 ba0db5ee035e34b408aa0ebf06ffe6ed17a3ba89b84368828791fd650c99c9ee and the overview payload had SHA-256 753143011a97a8f4924565c880e7f7a75c755c64ed4fb82163da9a3e542b3e94. Applying the reviewed live adapter's canonical grouping and one-decimal normalization yields the seven recorded rows. AUSD, sUSDS, USDT, EURC, and USDC are exact tracked reserve dependencies; CELO and stETH are identified exogenous collateral.",
     "compositionBasis": "Current Mento reserve asset USD values, consolidated by canonical asset through the reviewed Mento adapter",
-    "compositionAsOf": "2026-07-14",
+    "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
     "knownUnknownExposure": "All reserve API asset rows are identified and mapped or explicitly dispositioned.",
     "knownUnknownExposurePct": 0,
@@ -334,7 +371,7 @@
       {
         "reserveIndex": 6,
         "reserveName": "stETH (Lido staked ETH)",
-        "pct": 2.3,
+        "pct": 2.5,
         "disposition": "untracked-exogenous-asset",
         "rationale": "stETH is liquid-staking collateral rather than a stablecoin dependency."
       }

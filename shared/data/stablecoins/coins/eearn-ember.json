@@ -153,8 +153,9 @@
       }
     ],
     "rationale": "The existing eEARN profile and live ERC-4626-style adapter identify a single 100% USDC reserve relationship through the Ember Earn Ethereum vault. The reviewed product and contract sources support the wrapper dependency, but do not publish a current independent assurance report, strategy allocation, or fixed redemption window.",
-    "compositionBasis": "Ember Earn product disclosure and the tracked eEARN vault's expected USDC asset",
-    "scope": "dependency-relationships",
+    "compositionBasis": "Ember Earn product disclosure and the exact live ERC-4626 single-asset row",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
     "knownUnknownExposure": "The direct reserve dependency is identified as USDC. The vault's current strategy holdings, utilization, and legal custody terms are not separately disclosed in the reviewed sources.",
     "knownUnknownExposurePct": 0
   },

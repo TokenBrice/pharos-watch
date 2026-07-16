@@ -1777,6 +1777,7 @@ function buildEconomicControlReview(context: AssetBuildContext): V9EconomicContr
         }).status,
         controlKey: null,
         reconciliation: "unknown",
+        supervision: "unknown",
         upgrade: { state: "unknown", controlKey: null },
       },
       oracle: {

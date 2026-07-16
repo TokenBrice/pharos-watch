@@ -158,10 +158,12 @@
         "evidence": "At Ethereum block 25295016: iTRY token at 0xb492b4afd9658093694cf9452d5c272e8230f3b0; owner() = 0xbdb430adf64ff1c8201c10221ddb846fa62613b6. masterCopy() = 0x41675c099f32341bf84bfc5382af534df5c7461a (Gnosis Safe v1.3.0 L2). getOwners() returned same 5 signers as wiTRY owner, threshold = 3. These Safe contracts share the same signer set confirming unified Brix issuer control."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "At Ethereum block 25295016: wiTRY wrapper owner and iTRY token owner are both Gnosis Safe v1.3.0 L2 multisigs (3/5, same 5 signers) confirming issuer-controlled architecture. MegaETH OFT adapter (0x15b271d9012b5820fc42b1c495b4c1e206547de5) owner could not be confirmed — MegaETH public RPCs returned errors — but the Ethereum primary chain is fully verified. MegaETH is a bridged deployment; the Ethereum Safe controls the canonical supply.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25295016: wiTRY wrapper owner and iTRY token owner are both Gnosis Safe v1.3.0 L2 multisigs (3/5, same 5 signers) confirming issuer-controlled architecture. MegaETH OFT adapter (0x15b271d9012b5820fc42b1c495b4c1e206547de5) owner could not be confirmed — MegaETH public RPCs returned errors — but the Ethereum primary chain is fully verified. MegaETH is a bridged deployment; the Ethereum Safe controls the canonical supply. Accountable independently reconciles the iTRY and wiTRY liabilities to backing assets. The public proof-of-solvency page advertises a 15-minute interval but showed reserve data last updated 2026-06-24, so the observed evidence supports periodic, not continuous, reconciliation. No registry evidence established prudential reserve supervision over wiTRY issuance.",
+      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
           "label": "Brix iTRY",
@@ -174,6 +176,10 @@
         {
           "label": "wiTRY Ethereum token",
           "url": "https://etherscan.io/address/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee"
+        },
+        {
+          "label": "Accountable independent Brix proof of solvency",
+          "url": "https://accountable.brix.money/"
         }
       ]
     }

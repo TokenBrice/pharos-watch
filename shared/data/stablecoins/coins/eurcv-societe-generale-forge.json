@@ -26,7 +26,22 @@
     "cadence": "daily-nav",
     "attestorJurisdiction": "France",
     "attestorLicense": "EMI (MiCA)",
-    "attestorTier": "self"
+    "attestorTier": "self",
+    "latestReport": {
+      "periodEnd": "2026-07-15",
+      "publishedAt": "2026-07-15",
+      "assuranceMethod": "self-verification",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "SG-FORGE EURCV daily reserve disclosure - July 15, 2026",
+          "url": "https://www.sgforge.com/product/coinvertible/"
+        }
+      ]
+    }
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
@@ -241,6 +256,8 @@
         "evidence": "At Ethereum block 25530438, getOperators() returned this address as technical operator and eth_getCode returned empty bytecode. Verified SmartCoin V4 source gates _authorizeUpgrade() with onlyTechnical and additionally requires consumeAuthorizeImplementation() for a candidate previously authorized by the registrar. The EIP-1967 implementation is 0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b and the proxy-admin slot is zero."
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "prudential",
     "review": {
       "sources": [
         {
@@ -250,11 +267,15 @@
         {
           "label": "Ethereum EURCV token",
           "url": "https://etherscan.io/address/0x5f7827fdeb7c20b443265fc2f40845b715385ff2"
+        },
+        {
+          "label": "White & Case - SG-FORGE ACPR e-money institution licence for EURCV",
+          "url": "https://www.whitecase.com/news/press-release/white-case-advises-sg-forge-transformative-updates-eur-coinvertible-stablecoin"
         }
       ],
-      "evidence": "At Ethereum block 25530438, getOperators() returned unchanged registrar, operations, and technical EOAs; version() returned V4, newImplementation() returned zero, and the EIP-1967 implementation slot returned 0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b. Verified source establishes registrar-only minting and the registrar-authorization plus technical-execution UUPS upgrade sequence. XRPL, Stellar, and Solana remain separate issuer-operated deployments outside this Ethereum control review.",
-      "reviewer": "Codex Safety Score V9 CTRL curation",
-      "reviewedAt": "2026-07-14",
+      "evidence": "At Ethereum block 25530438, getOperators() returned unchanged registrar, operations, and technical EOAs; version() returned V4, newImplementation() returned zero, and the EIP-1967 implementation slot returned 0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b. Verified source establishes registrar-only minting and the registrar-authorization plus technical-execution UUPS upgrade sequence. XRPL, Stellar, and Solana remain separate issuer-operated deployments outside this Ethereum control review. SG-FORGE is an ACPR-authorised Electronic Money Institution and EURCV is structured as a MiCA electronic-money token, so the issuer is prudentially supervised. However SG-FORGE publishes only a self-reported daily 100%-collateral figure on its own website; no named independent accounting/verification firm attests EURCV reserves (the Hacken work is smart-contract-only and RWA.xyz lists no auditor), so supply is not independently reconciled and reconciliation is unknown. Under the rubric an unreconciled mint stays critical regardless of prudential supervision.",
+      "reviewer": "Codex Safety Score V9 CTRL curation; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16",
       "disposition": "scoreable"
     }
   },

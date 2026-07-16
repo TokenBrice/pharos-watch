@@ -250,10 +250,13 @@
         "evidence": "At Solana slot 432714278, ProgramData 91o8wFyxszM4DeQ5R6X6wJdyn9e8VRnsreVBTLb7Yrpg named off-curve Squads v4 vault FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f as upgrade authority. The vault resolved to autonomous multisig 2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN with threshold 3, six on-curve members, zero timelock, and no config authority. Members were 2HGJuU5LhHoxn1oaRiQWc9wAsVaFSRubrgtMcomu4dJH, 5xmqRUqK33A2oBRxjyG36HgMjjM19NRt8gYEBT9u78s6, 8dk5KyDAttJYT4pa9nSQYqLEK85w7ZbcHZdZjBMHoAhz, 96yg1uazqtxT4R4mTKPDcLSfbp3AAJiXJFMKZj28bsSk, DiNi78eqjYxVdwXiAiran2Fh4sPAbvQA4oDTq2a6mDQe, and J7nrqDcSuL77TPr1Vz7n8RC4VUeN4pXfx6Xx9E4SA59e. The Squads v4 program itself had no upgrade authority."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
-      "evidence": "At Solana slot 432714278, ONYC mint authority remained PDA AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX under OnRe program onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe. The live ProgramData upgrade authority was off-curve Squads vault FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f, not an EOA. It resolved to autonomous 3-of-6 Squads multisig 2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN with zero timelock and no config authority. The Squads program itself was immutable. No permissionless mint route existed.",
+      "evidence": "At Solana slot 432714278, ONYC mint authority remained PDA AbpE5YLpdpxj2jRczG9P341Jicf67NvZsaZYrATbMnNX under OnRe program onreuGhHHgVzMWSkj2oQDLDtvvGvoepBPkqyaubFcwe. The live ProgramData upgrade authority was off-curve Squads vault FvmhydbpHGQzMUp51GmhB1fwsrkyfmnRsTg7oPwDe25f, not an EOA. It resolved to autonomous 3-of-6 Squads multisig 2AD4x72wXvjZVxSQPCt77NYZGXNdMbFvtD5F3mcUAtcN with zero timelock and no config authority. The Squads program itself was immutable. No permissionless mint route existed. Reserve reconciliation: OnRe appointed Apex Group as independent attestation provider for ONyc, with monthly attestations; the latest published product attestation covers ONyc NAV, treasury balances, and reserve allocations as of 2026-05-31. Prudential supervision: the Bermuda Monetary Authority registry identifies On Re SAC Ltd (registration number 55347) as both a Class IIGB insurer and a Class F digital-asset business, matching the ONyc issuing entity. Reviewed 2026-07-15.",
       "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-13",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "ONYC SPL mint on Solana Explorer",
@@ -266,6 +269,22 @@
         {
           "label": "OnRe FAQ",
           "url": "https://docs.onre.finance/technical-resources/frequently-asked-questions"
+        },
+        {
+          "label": "OnRe appointment of Apex as independent ONyc attestation provider",
+          "url": "https://www.onre.finance/blog/onre-appoints-apex-group-as-independent-attestation-provider-for-onyc"
+        },
+        {
+          "label": "ONyc asset attestation for March 2026",
+          "url": "https://www.onre.finance/blog/onyc-asset-attestation-march-2026"
+        },
+        {
+          "label": "ONyc asset attestation for May 2026",
+          "url": "https://www.onre.finance/blog/onyc-asset-attestation-may-2026"
+        },
+        {
+          "label": "Bermuda Monetary Authority regulated-entities registry",
+          "url": "https://www.bma.bm/regulated-entities"
         }
       ]
     }

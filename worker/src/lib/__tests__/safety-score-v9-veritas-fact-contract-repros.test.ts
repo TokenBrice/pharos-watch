@@ -264,6 +264,7 @@ describe("VERITAS finding VER-009: oracle reasons can escape their archetype all
         status: notApplicableStatus("v9.control.mint-review"),
         controlKey: null,
         reconciliation: "not-applicable",
+        supervision: "unknown",
         upgrade: { state: "not-applicable", controlKey: null },
       },
       oracle: {

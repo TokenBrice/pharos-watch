@@ -161,7 +161,10 @@
         "evidence": "At Ethereum block 25294990, eth_getCode returned '0x' (no bytecode) — confirmed EOA. Issuer-context EOA consistent with enterprise MPC/HSM custody."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Superstate USTB docs",
@@ -174,11 +177,19 @@
         {
           "label": "Etherscan USTB contract",
           "url": "https://etherscan.io/address/0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e"
+        },
+        {
+          "label": "Superstate NAV API documentation",
+          "url": "https://docs.superstate.com/introduction-to-superstate/api"
+        },
+        {
+          "label": "SEC USTB Form D filing",
+          "url": "https://www.sec.gov/Archives/edgar/data/2004367/0000945621-25-000419-index.htm"
         }
       ],
-      "evidence": "At block 25294990: owner() = 0xad309BB6f13074128b4F23EF9EA2fe8552AfCA83, eth_getCode = '0x' (EOA confirmed). ProxyAdmin owner() = same address. Token and ProxyAdmin both confirmed under same issuer EOA. No on-chain roles beyond owner; issuance is issuer-backend via Superstate's fund subscription API.",
+      "evidence": "At block 25294990: owner() = 0xad309BB6f13074128b4F23EF9EA2fe8552AfCA83, eth_getCode = '0x' (EOA confirmed). ProxyAdmin owner() = same address. Token and ProxyAdmin both confirmed under same issuer EOA. No on-chain roles beyond owner; issuance is issuer-backend via Superstate's fund subscription API. Economic-control evidence reviewed 2026-07-15: NAV Fund Services independently calculates recurring USTB NAV and PwC audits the fund; the current product page exposes continuous NAV per share. The same page states that the fund is not registered under the Investment Company Act, and its Rule 506(c)/Section 3(c)(7) filing is not prudential supervision.",
       "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "reviewedAt": "2026-07-15"
     }
   },
   "deploymentModel": "native-multichain",

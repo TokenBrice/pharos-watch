@@ -853,64 +853,167 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "Spark (lending)",
-      "pct": 33,
-      "risk": "low"
-    },
-    {
       "name": "Stablecoins (PSM)",
-      "pct": 32,
-      "risk": "very-low"
+      "pct": 40.4,
+      "risk": "very-low",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky PSM contracts and external stablecoin issuers",
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract", "concentration"],
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "Grove (RWA)",
-      "pct": 24,
-      "risk": "low"
+      "pct": 24.1,
+      "risk": "low",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Grove Agent and underlying institutional-credit counterparties",
+      "riskFactors": ["credit", "counterparty", "liquidity", "custody", "smart-contract", "legal", "concentration"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Spark (lending)",
+      "pct": 22.8,
+      "risk": "low",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Spark Agent and its lending, liquidity, CeFi, and RWA counterparties",
+      "riskFactors": ["credit", "counterparty", "liquidity", "custody", "smart-contract", "market", "concentration"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Obex",
-      "pct": 5,
-      "risk": "medium"
+      "pct": 5.7,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Obex Agent and supported institutional stablecoin projects",
+      "riskFactors": ["credit", "counterparty", "liquidity", "custody", "smart-contract", "legal", "concentration"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Core (crypto vaults)",
-      "pct": 4,
-      "risk": "medium"
+      "pct": 4.6,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Sky Core vault collateral pools and underlying crypto protocols",
+      "riskFactors": ["market", "liquidity", "smart-contract", "custody", "counterparty", "concentration"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "Staking Engine",
-      "pct": 1,
-      "risk": "high"
+      "pct": 1.5,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Sky governance token and LockStake Engine",
+      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Legacy RWA",
-      "pct": 1,
-      "risk": "low"
+      "pct": 0.9,
+      "risk": "low",
+      "assetClass": "other",
+      "issuerOrObligor": "Sky legacy RWA legal structures and underlying obligors",
+      "riskFactors": ["credit", "counterparty", "liquidity", "custody", "legal", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-12",
-    "reviewer": "OpenAI Codex dependency review",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "OpenAI Codex Safety Score V9 curation",
     "confidence": "verified",
     "sources": [
       {
+        "label": "Sky MakerCore group debt snapshot",
+        "url": "https://info-sky.blockanalitica.com/groups/?days_ago=1&order=-debt"
+      },
+      {
         "label": "Sky protocol dashboard",
         "url": "https://info.sky.money/"
+      },
+      {
+        "label": "Sky Ecosystem agent model",
+        "url": "https://www.skyeco.com/ecosystem"
+      },
+      {
+        "label": "Sky LitePSM documentation",
+        "url": "https://developers.skyeco.com/protocol/liquidity/litepsm/"
+      },
+      {
+        "label": "Spark documentation",
+        "url": "https://docs.spark.fi/"
+      },
+      {
+        "label": "Grove protocol FAQ",
+        "url": "https://docs.grove.finance/faqs"
+      },
+      {
+        "label": "Obex institutional stablecoin mandate",
+        "url": "https://obex.xyz/"
+      },
+      {
+        "label": "Sky collateral liquidation documentation",
+        "url": "https://developers.skyeco.com/protocol/vaults/collateral-liquidation/"
+      },
+      {
+        "label": "Sky Staking Engine documentation",
+        "url": "https://developers.skyeco.com/protocol/rewards/staking-engine/"
       }
     ],
-    "rationale": "Sky publishes the PSM contribution as a group total rather than stablecoin-level weights.",
-    "compositionBasis": "Sky collateral group totals",
-    "scope": "selected-slices",
-    "knownUnknownExposure": "The PSM aggregate cannot be converted into score-affecting upstream edges until its stablecoin constituents are split.",
-    "knownUnknownExposurePct": 32,
+    "rationale": "The direct Sky MakerCore feed reports the complete seven-group debt envelope used by the live reserve adapter. Official protocol documentation establishes the PSM, Agent, crypto-vault, and Staking Engine failure domains; aggregate groups are classified conservatively without inventing look-through asset weights or liquidity terms.",
+    "compositionBasis": "Relative debt reported by the Sky MakerCore group endpoint and mapped through the canonical sky-makercore adapter",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The PSM group combines external stablecoins without publishing constituent weights in the group feed. The remaining groups are classified at their protocol or obligor failure domain and are not represented as direct tracked-stablecoin dependencies.",
+    "knownUnknownExposurePct": 40.4,
     "nonLinkDispositions": [
       {
-        "reserveIndex": 1,
+        "reserveIndex": 0,
         "reserveName": "Stablecoins (PSM)",
-        "pct": 32,
+        "pct": 40.4,
         "disposition": "basket-needs-split",
         "rationale": "The published group combines several PSM assets without per-asset weights.",
         "candidateCoinIds": ["usdc-circle", "usdt-tether", "usdp-paxos"]
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Grove (RWA)",
+        "pct": 24.1,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Grove is a Sky Agent allocation into institutional-credit strategies, not a direct wrapper around one tracked stablecoin."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Spark (lending)",
+        "pct": 22.8,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Spark is an allocator and lending-protocol position with multiple deployment counterparties, not a direct wrapper around one tracked stablecoin."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "Obex",
+        "pct": 5.7,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Obex is an Agent allocation across supported institutional stablecoin projects rather than one canonical tracked reserve asset."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "Core (crypto vaults)",
+        "pct": 4.6,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The Core bucket is a multi-collateral crypto-vault pool, not one canonical tracked reserve asset."
+      },
+      {
+        "reserveIndex": 5,
+        "reserveName": "Staking Engine",
+        "pct": 1.5,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The Staking Engine bucket is collateralized by SKY positions in LockStake Engine vaults, not by another tracked stablecoin."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "Legacy RWA",
+        "pct": 0.9,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The legacy RWA bucket represents external legal structures and obligors rather than a direct tracked-stablecoin dependency."
       }
     ]
   },

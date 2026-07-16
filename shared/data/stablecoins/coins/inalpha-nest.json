@@ -113,21 +113,109 @@
   "reserves": [
     {
       "name": "Nest private and structured credit vaults",
-      "pct": 93,
-      "risk": "high"
+      "pct": 91.4,
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Nest Alpha private-credit and structured-credit strategy counterparties",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "counterparty",
+        "custody",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
     },
     {
       "name": "Nest Treasury vault (nTBILL)",
-      "pct": 3,
+      "pct": 4.7,
       "risk": "low",
-      "coinId": "ntbill-nest"
+      "coinId": "ntbill-nest",
+      "depType": "collateral",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Nest Treasury Vault and its tokenized Treasury portfolio",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
-      "name": "Liquid stablecoin balances",
-      "pct": 4,
-      "risk": "low"
+      "name": "Liquid USDC balances",
+      "pct": 2.3,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle USDC held in the Nest Alpha Vault liquidity sleeve",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "pUSD liquid balance",
+      "pct": 1.6,
+      "risk": "high",
+      "coinId": "pusd-plume",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Plume pUSD and the Nest Alpha Vault liquidity sleeve",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Nest Alpha Vault positions API",
+        "url": "https://api.nest.credit/v1/vaults/nest-alpha-vault/positions"
+      },
+      {
+        "label": "Nest Alpha Vault price-update API",
+        "url": "https://api.nest.credit/v1/vaults/nest-alpha-vault/last-price-update"
+      },
+      {
+        "label": "Nest vault documentation",
+        "url": "https://docs.nest.credit/"
+      }
+    ],
+    "rationale": "The current first-party Nest positions capture reports 91.4% aggregate private and structured credit, 4.7% nTBILL, 2.3% USDC, and 1.6% pUSD for the Alpha Vault. The exact four-row envelope preserves the three tracked liquid or fund dependencies while treating the aggregate credit sleeve as a classified but not falsely decomposed borrower basket.",
+    "compositionBasis": "Current Nest Alpha Vault positions API snapshot captured on 2026-07-15",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The live API identifies the aggregate private and structured-credit sleeve but does not publish current borrower, security, maturity, custody, or facility-level weights for that sleeve.",
+    "knownUnknownExposurePct": 91.4,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Nest private and structured credit vaults",
+        "pct": 91.4,
+        "disposition": "basket-needs-split",
+        "rationale": "The current adapter exposes one aggregate private and structured-credit position without current constituent or obligor weights."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "nest-vault-positions",
     "version": 1,

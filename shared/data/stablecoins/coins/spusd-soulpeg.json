@@ -13,8 +13,9 @@
   },
   "collateral": "USDC deposited via SoulPeg's mint flow on BNB Chain, automatically routed into Venus Protocol lending markets to generate yield; spUSD itself is a freely transferable ERC-20 wrapper around a soul-bound sUSDC position",
   "pegMechanism": "Two-token system: soul-bound sUSDC is minted 1:1 against USDC and accrues Venus lending yield for the original wallet; SPUSD (spUSD) is a 1:1 freely tradeable ERC-20 wrapper around sUSDC and is convertible 1:1 at the wrapper contract; Pharos has not source-reviewed a holder-exercisable USDC exit route for SPUSD, so no redemption backstop is modeled",
-  "detailProvider": "coingecko",
+  "detailProvider": "defillama",
   "geckoId": "soulpeg-usd",
+  "llamaId": "413",
   "protocolSlug": "soulpeg",
   "links": [
     {
@@ -178,10 +179,12 @@
         }
       ]
     },
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "At BSC block 103632643: hasRole(MINTER_ROLE, wrapper 0x0e8fb2e…) = true; hasRole(BURNER_ROLE, wrapper) = true; hasRole(DEFAULT_ADMIN_ROLE, EOA 0xf683ab3…) = true; wrapper owner() = 0xf683ab3… (EOA confirmed via eth_getCode). MAX_SUPPLY() = 1,000,000,000 tokens (immutable constant, no setter function).",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At BSC block 103632643: hasRole(MINTER_ROLE, wrapper 0x0e8fb2e…) = true; hasRole(BURNER_ROLE, wrapper) = true; hasRole(DEFAULT_ADMIN_ROLE, EOA 0xf683ab3…) = true; wrapper owner() = 0xf683ab3… (EOA confirmed via eth_getCode). MAX_SUPPLY() = 1,000,000,000 tokens (immutable constant, no setter function). SoulPeg (spUSD) is a BNB Chain protocol with no disclosed registered entity; its own documentation states the contracts have not undergone a formal third-party audit and no reserve attestation or proof-of-reserves is published (reserves are on-chain USDC routed into Venus lending), so reconciliation is unknown. No named financial regulator, charter, or registry entry for any SoulPeg entity was found, so supervision is none.",
+      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16",
       "sources": [
         {
           "label": "SoulPeg docs",
@@ -190,6 +193,10 @@
         {
           "label": "SPUSD contract (BscScan)",
           "url": "https://bscscan.com/token/0x40ff3dea2eec93a7b71879874dc4407918da77a6"
+        },
+        {
+          "label": "SoulPeg audit-status FAQ (no formal audit)",
+          "url": "https://docs.soulpeg.io/docs/faq/audit-status"
         }
       ]
     }

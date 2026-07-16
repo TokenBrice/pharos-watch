@@ -102,7 +102,7 @@
   "reserves": [
     {
       "name": "Stablecoin reserves",
-      "pct": 64.2,
+      "pct": 64.3,
       "risk": "low",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Undisclosed stablecoin issuers",
@@ -132,7 +132,7 @@
     },
     {
       "name": "OTC aggregate positions",
-      "pct": 10.7,
+      "pct": 10.6,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Undisclosed OTC counterparties",
@@ -179,20 +179,21 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-12",
+    "reviewedAt": "2026-07-15",
     "reviewer": "OpenAI Codex dependency review",
     "confidence": "verified",
     "sources": [{ "label": "Neutrl Accountable dashboard", "url": "https://accountable.neutrl.finance/" }],
     "rationale": "The current Accountable type_split snapshot exposes five named reserve categories and weights: Stablecoin, JLP, OTC Aggregate, Other, and Protocol Owned Liquidity. The category weights are captured below, but the source does not identify stablecoin constituents, OTC counterparties, JLP positions, or the composition and custody of the other and protocol-owned-liquidity buckets.",
     "compositionBasis": "Accountable type_split categories",
-    "scope": "selected-slices",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
     "knownUnknownExposure": "Stablecoin constituents, OTC counterparties, JLP underlying positions, and the composition and custody of the Other and Protocol Owned Liquidity categories are not disclosed in the reviewed snapshot.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Stablecoin reserves",
-        "pct": 64.2,
+        "pct": 64.3,
         "disposition": "basket-needs-split",
         "rationale": "No constituent weights are available for a canonical dependency mapping."
       },
@@ -206,7 +207,7 @@
       {
         "reserveIndex": 2,
         "reserveName": "OTC aggregate positions",
-        "pct": 10.7,
+        "pct": 10.6,
         "disposition": "insufficient-evidence",
         "rationale": "The dashboard reports an aggregate OTC category without identifying current counterparties, contracts, or settlement terms."
       },

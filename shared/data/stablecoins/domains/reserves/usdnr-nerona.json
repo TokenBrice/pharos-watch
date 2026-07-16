@@ -2,7 +2,7 @@
   "id": "usdnr-nerona",
   "reserves": [
     {
-      "name": "M token held by the Nerona USDnr extension",
+      "name": "M token held by Nerona USDnr",
       "pct": 100,
       "risk": "very-low",
       "coinId": "m-m0",
@@ -32,8 +32,9 @@
       }
     ],
     "rationale": "Nerona describes USDnr as fully backed by short-duration Treasuries through M0, and the configured M0 extension identifies M as the directly held wrapper asset. No primary source supports the prior separate 1% stability-reserve estimate, so the reviewed direct composition is 100% M.",
-    "compositionBasis": "Nerona M0-extension wrapper design and M0 USDnr disclosure",
-    "scope": "dependency-relationships",
+    "compositionBasis": "Exact live M0-extension single-asset row, Nerona wrapper design, and M0 USDnr disclosure",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
     "knownUnknownExposure": "The public sources do not publish current M0 minter allocation or Treasury-position weights behind the M held by the extension.",
     "knownUnknownExposurePct": 0
   },

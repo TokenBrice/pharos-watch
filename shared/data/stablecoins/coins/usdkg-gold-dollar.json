@@ -14,8 +14,9 @@
   "collateral": "Physical gold bars (~376 kg, 30 bars) sourced from the Kyrgyz Ministry of Finance via state gold enterprise Kyrgyzaltyn (LBMA Good Delivery listed); stored in sealed boxes at an unnamed bank under custody of LLC Virelint Group",
   "pegMechanism": "1:1 mint and redemption against USD, Kyrgyzstani som, physical gold, or approved cryptocurrencies through Gold Dollar; KYC/AML verification required for all redemptions",
   "mechanismArchetype": "rwa-credit-fund",
-  "detailProvider": "coingecko",
+  "detailProvider": "defillama",
   "geckoId": "usdkg",
+  "llamaId": "409",
   "cmcSlug": "usdkg",
   "proofOfReserves": {
     "type": "independent-audit",
@@ -298,10 +299,12 @@
         "evidence": "At Tron block 84453790, owner() on TXZo12...nwEG returned 0x34b436...4fd5, the Tron address TEmt2R...A8jd. The verified owner contract ABI and current constant calls returned seven owners (TVZwUL...Jao, TQHTXd...XLU, TXAjos...WDG, TSfP1D...8vB, TZ5KnE...aXL, TMy7WS...bKw, and TEPMSb...AZv) and getThreshold() = 3. The custom multisig has no owner-management, module, or guard functions, and the token's issue() and redeem() functions are owner-gated."
       }
     ],
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "Gold Dollar is the sole issuer of USDKG and operates native owner-gated issue/redeem contracts on Ethereum and Tron. Current reads resolve separate 3-of-7 multisigs on both deployments. Verified bytecode and storage show direct immutable contracts rather than proxy deployments.",
-      "reviewer": "Codex V9 control curation",
-      "reviewedAt": "2026-07-14",
+      "evidence": "Gold Dollar is the sole issuer of USDKG and operates native owner-gated issue/redeem contracts on Ethereum and Tron. Current reads resolve separate 3-of-7 multisigs on both deployments. Verified bytecode and storage show direct immutable contracts rather than proxy deployments. The only public reserve audit for USDKG is a single Kreston Global ISRS 4400 agreed-upon-procedures gold review valued at 2025-11-28; despite a claimed quarterly cadence no newer report was found as of 2026-07, making the sole reconciliation stale and agreed-upon-procedures lighter than an attestation opinion, so reconciliation is not credibly established. The Kyrgyz oversight regimes checked are AML/VASP-only and the nominal regulator (Ministry of Finance) also owns the issuing state entity, so there is no arms-length prudential supervisor and supervision is none.",
+      "reviewer": "Codex V9 control curation; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16",
       "sources": [
         {
           "label": "USDKG transparency",
@@ -322,6 +325,10 @@
         {
           "label": "USDKG Tron owner multisig",
           "url": "https://tronscan.org/#/contract/TEmt2RaL2w6x51Lkx75hsDpBv63aPYA8jd/code"
+        },
+        {
+          "label": "USDKG gold audit coverage",
+          "url": "https://beincrypto.com/usdkg-gold-audit-reserves-verified/"
         }
       ]
     }

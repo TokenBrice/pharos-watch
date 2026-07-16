@@ -13,11 +13,13 @@ import type {
 import { assertV9ReasonCodesRegistered, assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
 
 export type V9MintReconciliation = "continuous" | "periodic" | "not-applicable" | "unknown";
+export type V9MintSupervision = "prudential" | "attestation-only" | "none" | "unknown";
 export type V9MintPosture =
   | "none-resolved"
   | "bounded-admin"
   | "partially-bounded-admin"
   | "concentrated-admin"
+  | "unbounded-reconciled"
   | "unbounded-or-compromised"
   | "unknown";
 export type V9OracleTier =
@@ -48,6 +50,7 @@ export interface V9MintMechanismReview {
   status: V9FactStatusV2;
   controlKey: string | null;
   reconciliation: V9MintReconciliation;
+  supervision: V9MintSupervision;
   upgrade: V9UpgradeControlReview;
 }
 
@@ -448,7 +451,11 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         return "unknown";
       }
       if (mintControl.capSemantics.kind === "unbounded" || mintControl.claimImpairment === "unbounded") {
-        return "unbounded-or-compromised";
+        // Economically unbounded minting that is reconciled against reserves is
+        // a distinct, higher-quality posture than an unreconciled one; only the
+        // latter (and any compromise, handled above) stays unbounded-or-compromised.
+        const reconciled = mint.reconciliation === "continuous" || mint.reconciliation === "periodic";
+        return reconciled ? "unbounded-reconciled" : "unbounded-or-compromised";
       }
       if (mintControl.claimImpairment === "none") return "none-resolved";
       if (mintControl.capSemantics.kind === "raiseable" || mint.reconciliation === "periodic") {
@@ -474,20 +481,26 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       controlKeys: componentControlKeys,
       failureDomains: componentFailureDomains,
     });
-    if (posture === "unbounded-or-compromised") {
-      // Reconciled unbounded minting is a graduated severity: supply is
-      // provably matched against reserves even though the mint path itself
-      // carries no on-chain bound. Compromise and unreconciled unbounded
-      // minting remain critical.
-      const reconciled =
-        !compromised && (mint.reconciliation === "continuous" || mint.reconciliation === "periodic");
+    if (posture === "unbounded-reconciled" || posture === "unbounded-or-compromised") {
+      // Severity keys off the posture: a reconciled unbounded mint
+      // (unbounded-reconciled) is high, graduating one rung to moderate when a
+      // reviewed prudential-supervision fact (NYDFS/SEC-class) applies.
+      // Compromise and unreconciled/unknown minting (unbounded-or-compromised)
+      // remain critical unconditionally.
+      const prudentiallySupervised = posture === "unbounded-reconciled" && mint.supervision === "prudential";
+      const severity: V9Severity =
+        posture === "unbounded-or-compromised" ? "critical" : prudentiallySupervised ? "moderate" : "high";
+      const reason =
+        posture === "unbounded-or-compromised"
+          ? "Economically effective minting is unbounded or compromised."
+          : prudentiallySupervised
+            ? "Minting is economically unbounded but reconciled and prudentially supervised."
+            : "Minting is economically unbounded but supply is reconciled against reserves.";
       addStructuralFailure({
         kind: "centralized-mint",
-        severity: reconciled ? "high" : "critical",
+        severity,
         binding: mintBinding,
-        reason: reconciled
-          ? "Minting is economically unbounded but supply is reconciled against reserves."
-          : "Economically effective minting is unbounded or compromised.",
+        reason,
         materialSharePct: null,
         controlKeys: componentControlKeys,
         failureDomains: componentFailureDomains,

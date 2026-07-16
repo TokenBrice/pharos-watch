@@ -258,10 +258,12 @@
         ]
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "Ethereum block 25295079: owner() = CCIPAdmin = 0x142a96da (EOA); getMinters() = [0xf3067615 CCIP pool, contract]. Arbitrum block 472413865: proxy owner = 0x142a96da (EOA), impl mint() gated only by Ownable; proxy-admin 0x50ead2d2 owned by EOA 0x7e5cc9bb. ApeChain: non-proxy, owner = 0x25a6a7fb (EOA). All on-chain mint surfaces resolved.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "Ethereum block 25295079: owner() = CCIPAdmin = 0x142a96da (EOA); getMinters() = [0xf3067615 CCIP pool, contract]. Arbitrum block 472413865: proxy owner = 0x142a96da (EOA), impl mint() gated only by Ownable; proxy-admin 0x50ead2d2 owned by EOA 0x7e5cc9bb. ApeChain: non-proxy, owner = 0x25a6a7fb (EOA). All on-chain mint surfaces resolved. Mint-tier review (2026-07-15): No named independent attestor, recurring cadence, or dated reserve-to-liability report was located; Pleasing Gold provides only issuer-controlled, ad hoc backing claims. No exact prudential stablecoin-issuer authorization for the issuer was found in Hong Kong SFC's public register.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
           "label": "Pleasing Golden docs",
@@ -274,6 +276,14 @@
         {
           "label": "PGOLD Arbitrum proxy",
           "url": "https://arbiscan.io/address/0x3e76bb02286bfeaa89dd35f11253f2cbce634f91"
+        },
+        {
+          "label": "Pleasing Gold issuer disclosure",
+          "url": "https://www.pleasinggold.com/"
+        },
+        {
+          "label": "Hong Kong SFC public register",
+          "url": "https://www.sfc.hk/en/Regulatory-functions/Intermediaries/Licensing/Register-of-licensed-persons-and-registered-institutions/Public-register-of-licensed-persons-and-registered-institutions"
         }
       ]
     },

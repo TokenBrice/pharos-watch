@@ -396,6 +396,8 @@
         "evidence": "At Ethereum block 25526176, this 86,400-second TimelockController held EthenaMinting V2's default-admin authority and could change mint caps and role membership. Its sole proposer and canceller was the 5-of-10 USDe owner Safe. The reviewed cap, role, and token setMinter selectors were not configured for delay bypass."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -425,11 +427,15 @@
         {
           "label": "Ethereum PublicNode RPC",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Ethena June 2026 custodian attestations",
+          "url": "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-june-3"
         }
       ],
-      "evidence": "At Ethereum block 25526176: USDe minter() returned EthenaMinting V2 0xe3490297; owner() returned 5/10 Safe 0x3B0AAf6e; pendingOwner() returned timelock 0xE8Dc0Fab, which had not accepted token ownership. The owner Safe had no enabled modules and a current guard. USDe's verified direct-deployment source exposes owner-only setMinter(address). The active EthenaMinting default admin was the one-day timelock, whose sole proposer and canceller was the same Safe. The minter contract enforces a 200,000,000 USDe per-block global mint cap, while its timelock admin can change cap and role parameters.",
-      "reviewer": "OpenAI Codex mint-authority review",
-      "reviewedAt": "2026-07-13"
+      "evidence": "At Ethereum block 25526176: USDe minter() returned EthenaMinting V2 0xe3490297; owner() returned 5/10 Safe 0x3B0AAf6e; pendingOwner() returned timelock 0xE8Dc0Fab, which had not accepted token ownership. The owner Safe had no enabled modules and a current guard. USDe's verified direct-deployment source exposes owner-only setMinter(address). The active EthenaMinting default admin was the one-day timelock, whose sole proposer and canceller was the same Safe. The minter contract enforces a 200,000,000 USDe per-block global mint cap, while its timelock admin can change cap and role parameters. Ethena's latest reviewed publication, issued July 1, 2026 for June 2026, describes the nineteenth monthly report from all integrated custodians and an independent third-party assessment of backing assets; the monthly reconciliation therefore qualifies as periodic. Searches of the BVI FSC and Dubai VARA public registers did not establish prudential supervision of the USDe issuer, so supervision is attestation-only.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
+      "reviewedAt": "2026-07-15"
     }
   },
   "deploymentModel": "third-party-bridge",

@@ -226,6 +226,8 @@
         "evidence": "Algorand ASA 2768422954: manager account UALFRIYMF7HTTWPGJCBEKJ2AIROCAQR57SO7ZK7LW2SFXQF6346PSDDU2M; freeze/clawback/reserve account 3PJ3E3D6XI7YWMJAUX6WDCHWZ4GC2WHTAQIWJBYVJ326LM2I6NSMSLGCDY. Single-account issuer-backend custody; Algorand ASA minting is natively single-key (no multisig ASA standard)."
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "prudential",
     "review": {
       "sources": [
         {
@@ -235,11 +237,23 @@
         {
           "label": "Sourcify HadronToken source",
           "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0xbAe166f5e8B4b6735341446b1405FA779a92D7c7/sources/contracts/tokens/HadronToken.sol"
+        },
+        {
+          "label": "Quantoz transparency",
+          "url": "https://www.quantoz.com/transparency"
+        },
+        {
+          "label": "DNB register - Quantoz Payments B.V.",
+          "url": "https://www.dnb.nl/openbaar-register/registerdetailpagina/?registerCode=WFTEG&relationNumber=R186418"
+        },
+        {
+          "label": "ESMA MiCA registers",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
         }
       ],
-      "evidence": "Ethereum (2026-05-25): owner 0x284Df7B9 3/5 HadronMultisig, proxy admin 0xa6724f79 3/5; Polygon block 88323602: owner 0x84e8d731 3/5, proxy admin 0x2f875fa2 3/5. XRPL issuer account confirmed (no signer list, master key enabled). Algorand ASA 2768422954 manager/freeze confirmed as issuer-operated accounts. All addressable mint-capable surfaces confirmed; XRPL and Algorand issuer-backend corroborated by Quantoz EMI issuance model.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "Ethereum (2026-05-25): owner 0x284Df7B9 3/5 HadronMultisig, proxy admin 0xa6724f79 3/5; Polygon block 88323602: owner 0x84e8d731 3/5, proxy admin 0x2f875fa2 3/5. XRPL issuer account confirmed (no signer list, master key enabled). Algorand ASA 2768422954 manager/freeze confirmed as issuer-operated accounts. All addressable mint-capable surfaces confirmed; XRPL and Algorand issuer-backend corroborated by Quantoz EMI issuance model. Mint-tier review (2026-07-15): No public dated independent EURQ reserve-to-liability report was located; Quantoz provides a live issuer dashboard and generic periodic-audit claims without a named attestor, cadence, or latest artifact. The DNB public register exactly matches Quantoz Payments B.V. as an electronic-money institution and EURQ EMT issuer, providing prudential supervision.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15"
     },
     "upgradeability": {
       "model": "transparent-proxy",

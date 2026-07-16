@@ -203,10 +203,12 @@
         "evidence": "At Solana mainnet (2026-06-11): getAccountInfo on 3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8 shows mintAuthority = GWM5GkUtdL2vNYbJLKG8wgydQUWtWn24KSsDBB2CdfAM; freezeAuthority = 5FtrPVACw11cGGEMGGiUbXRiaVS7SEd9Q9wpBAajWmfL. The mintAuthority account type was not enumerated further (not confirmed as program/multisig vs EOA wallet)."
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "At ETH block 25295039 and Base block 47200730: EVM chains (ETH, BSC, Base) confirmed with identical 2/2 Gnosis Safe ownership by consortium signers 0x7493c024... and 0x98cf8488... Base additionally has a ProxyAdmin (0x639e6756...) owned by EOA 0xdd3446ce..., which can upgrade the implementation. Solana mintAuthority = GWM5GkUtdL2vNYbJLKG8wgydQUWtWn24KSsDBB2CdfAM confirmed. Polygon contract confirmed same owner structure as ETH (not separately enumerated — same contract address 0x52828daa...).",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At ETH block 25295039 and Base block 47200730: EVM chains (ETH, BSC, Base) confirmed with identical 2/2 Gnosis Safe ownership by consortium signers 0x7493c024... and 0x98cf8488... Base additionally has a ProxyAdmin (0x639e6756...) owned by EOA 0xdd3446ce..., which can upgrade the implementation. Solana mintAuthority = GWM5GkUtdL2vNYbJLKG8wgydQUWtWn24KSsDBB2CdfAM confirmed. Polygon contract confirmed same owner structure as ETH (not separately enumerated — same contract address 0x52828daa...). Mint-tier review (2026-07-15): No accessible primary recurring independent reserve report was found. The issuer claims monthly audits, but its current 2026 downloads are smart-contract security audits; the only located reserve-report reference names Bala Isah Garba & Company for 2025-09-30 without a primary report artifact. Nigeria SEC's 2026-07-02 ARIP approval-in-principle matches Wrapped CBDC Ltd but explicitly is not a final license or prudential issuer charter.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
           "label": "cNGN docs",
@@ -223,6 +225,18 @@
         {
           "label": "cNGN Solana mint",
           "url": "https://solscan.io/token/3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8"
+        },
+        {
+          "label": "cNGN transparency page",
+          "url": "https://cngn.co/transparency"
+        },
+        {
+          "label": "Nigeria Auditor-General accredited audit firms",
+          "url": "https://oaugf.ng/images/downloads/Audit-Firms-10-06-24.pdf.pdf"
+        },
+        {
+          "label": "Nigeria SEC ARIP admission for Wrapped CBDC Ltd",
+          "url": "https://sec.gov.ng/for-investors/keep-track-of-circulars/sec-clears-seven-new-fintech-firms-for-admission-into-the-accelerated-regulatory-incubation-programme-arip/"
         }
       ]
     }

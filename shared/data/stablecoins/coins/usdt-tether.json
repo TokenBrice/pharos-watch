@@ -405,8 +405,19 @@
         "evidence": "At Ethereum block 25294588, USDT getOwner() returned this address; required() returned 3 and getOwners() returned six legacy multisig owner slots."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
+        {
+          "label": "Tether Q1 2026 BDO assurance report",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/6crn1tXbl6AtWZBWucZnfg/c4ff472d70c1b48c2f689f27b54c84f5/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_31-03-2026.pdf"
+        },
+        {
+          "label": "Tether El Salvador DASP authorization",
+          "url": "https://tether.io/news/tether-licensed-in-el-salvador-strengthening-focus-on-emerging-markets-and-innovation/"
+        },
         {
           "label": "Tether transparency",
           "url": "https://tether.to/en/transparency/"
@@ -417,8 +428,8 @@
         }
       ],
       "evidence": "Tether operates USDT issuance; Ethereum token owner reads identify the current on-chain supply-control owner as a 3/6 multisig-style contract. Phase 0c second pass rechecked getOwner(), required(), and getOwners() at Ethereum block 25294588.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11"
+      "reviewer": "Codex Phase 0c verification / SOL-IV calibration",
+      "reviewedAt": "2026-07-15"
     }
   },
   "deploymentModel": "native-multichain",

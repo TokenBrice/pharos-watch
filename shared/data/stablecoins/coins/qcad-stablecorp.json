@@ -14,8 +14,9 @@
   "collateral": "Canadian dollars held 1:1 in regulated Canadian financial institutions under the QCAD Digital Trust reserve framework",
   "pegMechanism": "Qualified holders can mint and redeem QCAD at 1 CAD through Stablecorp or authorized partners; issuer APIs publish live supply and fiat reserve totals.",
   "mechanismArchetype": "fiat-cash",
-  "detailProvider": "coingecko",
+  "detailProvider": "defillama",
   "geckoId": "stablecorp-qcad",
+  "llamaId": "424",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json",
@@ -250,10 +251,12 @@
         ]
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
-      "evidence": "Ethereum and Base reads resolve chain-local QCAD token-owner Safes at 0x4ff9ace93dd7a18bd7014aa9a179117adf20f6a9 and separate chain-local proxy-admin Safes at 0x6c4c5c74a29b1985f08149fb422f5afa03b4f59e. Each Safe is 3/6 with no enabled modules or guard. The proxy-admin Safe signer set was refreshed on 2026-07-13 and differs from the token-owner Safe. Both transparent-proxy implementations and immediate ProxyAdmin paths are identified.",
-      "reviewer": "Codex mint-authority review",
-      "reviewedAt": "2026-07-13",
+      "evidence": "Ethereum and Base reads resolve chain-local QCAD token-owner Safes at 0x4ff9ace93dd7a18bd7014aa9a179117adf20f6a9 and separate chain-local proxy-admin Safes at 0x6c4c5c74a29b1985f08149fb422f5afa03b4f59e. Each Safe is 3/6 with no enabled modules or guard. The proxy-admin Safe signer set was refreshed on 2026-07-13 and differs from the token-owner Safe. Both transparent-proxy implementations and immediate ProxyAdmin paths are identified. QCAD is issued by QCAD Digital Trust under a receipted OSC prospectus in the CSA value-referenced crypto asset (VRCA) interim framework (final CSA approval 2025-11-24); the prospectus requires reserves at least equal to circulating QCAD held in segregated accounts at Canadian financial institutions and names Kingston Ross Pasnak LLP as auditor providing monthly attestations plus audited annual financials on SEDAR+. Reconciled monthly and prudentially supervised by a named securities regulator places QCAD in the moderate tier; the separate Stablecorp FINTRAC MSB registration is AML-only and not counted as prudential.",
+      "reviewer": "Codex mint-authority review; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16",
       "sources": [
         {
           "label": "Stablecorp QCAD",
@@ -270,6 +273,14 @@
         {
           "label": "QCAD Base token",
           "url": "https://basescan.org/address/0xa15705e6fc8b3e08e7253f3758de1a754baa0761"
+        },
+        {
+          "label": "OSC orders/rulings/decisions - QCAD Digital Trust",
+          "url": "https://www.osc.ca/en/securities-law/orders-rulings-decisions/qcad-digital-trust"
+        },
+        {
+          "label": "QCAD Digital Trust prospectus filing under CSA VRCA framework",
+          "url": "https://www.prweb.com/releases/qcad-digital-trust-stablecorp-files-prospectus-for-the-qcad-stablecoin-under-csas-unique-interim-regulatory-framework-302481938.html"
         }
       ]
     },

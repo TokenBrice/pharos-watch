@@ -178,12 +178,14 @@
         "evidence": "At Ethereum block 25530887, hasRole(DEFAULT_ADMIN_ROLE, 0x24945ec1be35c11c1fc13c72c910851541afb10f) and hasRole(CONTRACT_ADMIN_ROLE, 0x24945ec1be35c11c1fc13c72c910851541afb10f) both return true; eth_getCode returns 0x (EOA). getRoleAdmin() for MINTER_ROLE, UPGRADER_ROLE, CONTRACT_ADMIN_ROLE and PAUSER_ROLE all return DEFAULT_ADMIN_ROLE, so this single key can grant MINTER_ROLE to any address and can grant itself UPGRADER_ROLE, whose sole power in ERC20F is _authorizeUpgrade. No timelock, multisig, or guard sits in front of it."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
       "disposition": "scoreable",
       "unresolvedQuestions": [],
-      "evidence": "At Ethereum block 25530887 the KAG proxy 0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e has EIP-1967 implementation 0x0f25045d15c163478bb67c56c5d9d602628f4f62 (ERC20F, verified) and an EIP-1967 admin slot of zero; proxiableUUID() reverts with the UUPSUpgradeable delegatecall guard, confirming UUPS rather than a transparent proxy with a ProxyAdmin. A full RoleGranted/RoleRevoked replay from deployment block 23337287 to 25530887 gives the complete current role set: MINTER_ROLE = 0xe560c473dee7b1d1d5ae316f4c1cba7157de498e (EOA); DEFAULT_ADMIN_ROLE = CONTRACT_ADMIN_ROLE = 0x24945ec1be35c11c1fc13c72c910851541afb10f (EOA); PAUSER_ROLE = one EOA; UPGRADER_ROLE = no holder. Because DEFAULT_ADMIN_ROLE is the role admin of UPGRADER_ROLE, the admin EOA can self-grant it and change mint logic, so canChangeMintLogic is true. The verified ERC20F source imposes no mint cap. Kinesis states it issues KAG against allocated silver bullion audited by Bureau Veritas; that constraint is contractual and off-chain, not enforced on-chain.",
-      "reviewer": "Claude CTRL kinesis batch",
-      "reviewedAt": "2026-07-14",
+      "evidence": "At Ethereum block 25530887 the KAG proxy 0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e has EIP-1967 implementation 0x0f25045d15c163478bb67c56c5d9d602628f4f62 (ERC20F, verified) and an EIP-1967 admin slot of zero; proxiableUUID() reverts with the UUPSUpgradeable delegatecall guard, confirming UUPS rather than a transparent proxy with a ProxyAdmin. A full RoleGranted/RoleRevoked replay from deployment block 23337287 to 25530887 gives the complete current role set: MINTER_ROLE = 0xe560c473dee7b1d1d5ae316f4c1cba7157de498e (EOA); DEFAULT_ADMIN_ROLE = CONTRACT_ADMIN_ROLE = 0x24945ec1be35c11c1fc13c72c910851541afb10f (EOA); PAUSER_ROLE = one EOA; UPGRADER_ROLE = no holder. Because DEFAULT_ADMIN_ROLE is the role admin of UPGRADER_ROLE, the admin EOA can self-grant it and change mint logic, so canChangeMintLogic is true. The verified ERC20F source imposes no mint cap. Kinesis states it issues KAG against allocated silver bullion audited by Bureau Veritas; that constraint is contractual and off-chain, not enforced on-chain. Mint-tier review (2026-07-15): Inspectorate International Limited, part of Bureau Veritas, performs independent physical-metal audits on a semiannual cycle and reconciles vaulted silver to KAG circulation; the latest audit date is 2026-04-20 and the report was published 2026-06-03. No exact prudential stablecoin-issuer charter for Kinesis was located; virtual-asset and corporate registrations do not supply prudential reserve supervision.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
           "label": "KAG token proxy on Etherscan",
@@ -200,6 +202,18 @@
         {
           "label": "Ethereum PublicNode RPC",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Kinesis April 2026 audit",
+          "url": "https://kinesis.money/audit-april-2026/"
+        },
+        {
+          "label": "Kinesis audit archive",
+          "url": "https://kinesis.money/audits/"
+        },
+        {
+          "label": "Kinesis trust and security overview",
+          "url": "https://kinesis.money/about-us/documents/trust-security-detailed-overview/"
         }
       ]
     }

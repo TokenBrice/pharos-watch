@@ -242,10 +242,12 @@
         ]
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25295025, BSC block 103628780, Polygon block 88323921: IDRT is a non-upgradeable Ownable ERC20 on each chain. Owner is a 4-of-6 Safe (v1.3.0) with identical signer set across Ethereum (0x109046f...), BSC (0x0e8b655...), and Polygon (0xa1f0fc5...) — all 6 EOA signers match. No modules or guard on any Safe. Harmony deployment excluded (chain is inactive). No proxy; no separate minter role.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25295025, BSC block 103628780, Polygon block 88323921: IDRT is a non-upgradeable Ownable ERC20 on each chain. Owner is a 4-of-6 Safe (v1.3.0) with identical signer set across Ethereum (0x109046f...), BSC (0x0e8b655...), and Polygon (0xa1f0fc5...) — all 6 EOA signers match. No modules or guard on any Safe. Harmony deployment excluded (chain is inactive). No proxy; no separate minter role. Mint-tier review (2026-07-15): Johannes Juara & Rekan issued a monthly agreed-upon-procedures report for 2026-01-31, signed 2026-02-09, but the expected subsequent monthly reports are absent as of 2026-07-15; current recurring reconciliation is therefore not established. Bappebti crypto-asset recognition and trading oversight do not constitute prudential supervision of PT Rupiah Token Indonesia as a stablecoin issuer.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
           "label": "Rupiah Token website",
@@ -254,6 +256,14 @@
         {
           "label": "IDRT Ethereum token (Etherscan)",
           "url": "https://etherscan.io/address/0x998ffe1e43facffb941dc337dd0468d52ba5b48a"
+        },
+        {
+          "label": "Johannes Juara IDRT January 2026 AUP report",
+          "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_January_31_2026_bfb907c3fe.pdf?updated_at=2026-02-20T07%3A40%3A45.154Z"
+        },
+        {
+          "label": "Bappebti legality checker",
+          "url": "https://ceklegalitas.bappebti.go.id/"
         }
       ]
     }

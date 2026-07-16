@@ -110,8 +110,8 @@
           "caps": "The pool can mint only through the verified BridgedApyxToken mint path, which enforces the stored supply cap; it cannot change the cap or upgrade the token.",
           "pausersAdminsUpgraders": "The verified BridgedApyxToken source gates mint(), burn(), and burnFrom() to the stored CCIP pool; AccessManager separately controls administrative functions and upgrades."
         },
-        "observedAt": "2026-07-14",
-        "observedBlock": 48620556,
+        "observedAt": "2026-07-15",
+        "observedBlock": 48676161,
         "sources": [
           {
             "label": "Base apyUSD wrapper",
@@ -120,9 +120,17 @@
           {
             "label": "Apyx bridged-token source",
             "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/bridge/BridgedApyxToken.sol"
+          },
+          {
+            "label": "Apyx BridgedApyxToken source (pinned 420e6873)",
+            "url": "https://github.com/apyx-labs/evm-contracts/blob/420e6873c2dc934048d8b2690e9329d3be7843d2/src/bridge/BridgedApyxToken.sol"
+          },
+          {
+            "label": "Base PublicNode fixed-block RPC",
+            "url": "https://base-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Base block 48620556, getCCIPPool() returned 0xEd23Fc184a3FE5d12cA92ca4f5CeFa640DECf21d and authority() returned AccessManager 0x8afde6a90d2396a64eb97e8e69e7548289f78a1d."
+        "evidence": "At Base block 48676161 on 2026-07-15, getCCIPPool() returned 0xEd23Fc184a3FE5d12cA92ca4f5CeFa640DECf21d, authority() returned AccessManager 0x8afde6a90d2396a64eb97e8e69e7548289f78a1d, supplyCap() returned 100000000000000000000000000, and paused() returned false. The pool has deployed code; getToken() returned this wrapper and owner() returned the reviewed 3/6 Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2. The pinned Apyx source identifies it as the CCIP-gated contract caller of mint/burn, while AccessManager retains administrative and upgrade functions."
       },
       {
         "chain": "ethereum",
@@ -223,6 +231,8 @@
         }
       ]
     },
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -248,11 +258,19 @@
         {
           "label": "Base apyUSD wrapper",
           "url": "https://base.blockscout.com/address/0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa"
+        },
+        {
+          "label": "Apyx third-party attestation",
+          "url": "https://docs.apyx.fi/collateral-and-custody/third-party-attestation"
+        },
+        {
+          "label": "TID Research apxUSD risk report",
+          "url": "https://tidresearch.com/reports/apxusd/"
         }
       ],
-      "evidence": "At Ethereum block 25530746, apyUSD is a UUPS proxy with implementation 0xfd616567ecc1607f61073951a1e822f7315bb112 and AccessManager authority 0xe167330e2eac88666de253e9607c6d9ae0ca2824. At Base block 48620556, the bridged apyUSD proxy uses implementation 0xe167330e2eac88666de253e9607c6d9ae0ca2824 and AccessManager authority 0x8afde6a90d2396a64eb97e8e69e7548289f78a1d. Verified Apyx source shows both implementations use UUPS and gate _authorizeUpgrade() with AccessManager restricted; current AccessManager reads resolve roles 24/25 to the same 3/6 Safe with three-day and seven-day delays. Base getCCIPPool() returned 0xEd23Fc184a3FE5d12cA92ca4f5CeFa640DECf21d. Wrapper is not paused and asset() returns apxUSD.",
-      "reviewer": "Codex Safety Score V9 data research",
-      "reviewedAt": "2026-07-14",
+      "evidence": "At Ethereum block 25530746, apyUSD is a UUPS proxy with implementation 0xfd616567ecc1607f61073951a1e822f7315bb112 and AccessManager authority 0xe167330e2eac88666de253e9607c6d9ae0ca2824. At Base block 48620556, the bridged apyUSD proxy uses implementation 0xe167330e2eac88666de253e9607c6d9ae0ca2824 and AccessManager authority 0x8afde6a90d2396a64eb97e8e69e7548289f78a1d. Verified Apyx source shows both implementations use UUPS and gate _authorizeUpgrade() with AccessManager restricted; current AccessManager reads resolve roles 24/25 to the same 3/6 Safe with three-day and seven-day delays. Base getCCIPPool() returned 0xEd23Fc184a3FE5d12cA92ca4f5CeFa640DECf21d. Wrapper is not paused and asset() returns apxUSD. apyUSD is an ERC-4626 wrapper of apxUSD (Apyx, BVI), backed by preferred-equity/DAT shares. Wolf & Company, P.C. runs monthly attestations, but the April 2026 engagement narrowed scope to securities only, dropping the cash/stablecoin components covered in March 2026, and apxUSD depegged twice in June 2026 (to ~$0.93 on 2026-06-04 and ~$0.78 on 2026-06-25); no independent reconciliation of the excluded reserve components after 2026-03-31 was confirmed, so reconciliation is unknown. No SEC or BVI FSC fund/issuer registration for Apyx was found, so supervision is none.",
+      "reviewer": "Codex Safety Score V9 data research; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16",
       "disposition": "scoreable"
     }
   },

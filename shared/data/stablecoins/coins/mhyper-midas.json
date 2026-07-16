@@ -457,10 +457,13 @@
         "evidence": "At Ethereum block 25527148, Monad block 87587807, Plasma block 27046783, and Katana block 37244325, every transparent proxy resolved to its chain-local ProxyAdmin. ProxyAdmin owners were timelocks 0xe3eee3e0d2398799c884a47fc40c029c8e241852, 0xfc8ac00c85cced29304c37727f525860039b852c, 0xe4ccb596112d35c9862d58a113342d122cfd3c2e, and 0x8d0074e92a97b2645f94e4711b08275c15998186; each returned getMinDelay() = 172800 and assigned sole proposer/executor/canceller authority to its local 1-of-3 Safe."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "Deployment-complete audit at Ethereum block 25527148, Monad block 87587807, Plasma block 27046783, and Katana block 37244325. Current M_HYPER_MINT_OPERATOR_ROLE holders are the shared EOA on all four chains, deposit-vault proxies on Ethereum and Plasma, and immutable Midas LayerZero adapters on Ethereum, Monad, and Plasma. DEFAULT_ADMIN_ROLE is held by the shared EOA plus chain-local 1-of-3 Safe on every deployment. All ten mint-critical transparent proxies resolve through chain-local ProxyAdmins to two-day timelocks controlled solely by those Safes; the three LayerZero adapters are non-proxy runtimes.",
+      "evidence": "Deployment-complete audit at Ethereum block 25527148, Monad block 87587807, Plasma block 27046783, and Katana block 37244325. Current M_HYPER_MINT_OPERATOR_ROLE holders are the shared EOA on all four chains, deposit-vault proxies on Ethereum and Plasma, and immutable Midas LayerZero adapters on Ethereum, Monad, and Plasma. DEFAULT_ADMIN_ROLE is held by the shared EOA plus chain-local 1-of-3 Safe on every deployment. All ten mint-critical transparent proxies resolve through chain-local ProxyAdmins to two-day timelocks controlled solely by those Safes; the three LayerZero adapters are non-proxy runtimes. Economic-control evidence reviewed 2026-07-15: mHYPER is the first live Midas Attestation Engine feed; periodic NAV and reserve claims are notarized and published through Chainlink CRE, then independently verified onchain by LlamaRisk and Canary. The current feed documentation was reviewed 2026-07-15. FMA prospectus approval is not issuer prudential licensing.",
       "reviewer": "Codex Safety Score V9 Midas multichain audit",
-      "reviewedAt": "2026-07-13",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Midas mHYPER docs",
@@ -477,6 +480,18 @@
         {
           "label": "Ethereum Midas LayerZero adapter",
           "url": "https://etherscan.io/address/0x148c86390a4ae6f7a02df5903bc0a89e8b4581a0#code"
+        },
+        {
+          "label": "Midas Attestation Engine feed documentation",
+          "url": "https://midas-docs.gitbook.io/midas-docs/how-does-it-work/midas-attestation-engine"
+        },
+        {
+          "label": "LlamaRisk production verification for Midas",
+          "url": "https://www.llamarisk.com/research/introducing-llamaguard-proof"
+        },
+        {
+          "label": "Midas mHYPER product",
+          "url": "https://midas.app/mhyper"
         }
       ]
     }

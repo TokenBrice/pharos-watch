@@ -13,8 +13,9 @@
   },
   "collateral": "USDC and bridged USDC.e backing on Polygon used for Polymarket prediction-market account balances",
   "pegMechanism": "Minted when users deposit supported USDC into Polymarket rails and redeemable back to USDC through the Polymarket application flow",
-  "detailProvider": "coingecko",
+  "detailProvider": "defillama",
   "geckoId": "polymarket-usd",
+  "llamaId": "406",
   "protocolSlug": "polymarket",
   "links": [
     {

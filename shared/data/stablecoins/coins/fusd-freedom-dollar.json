@@ -137,13 +137,15 @@
         "evidence": "At Zano height 3770932 (2026-07-14), get_asset_info for asset 86143388bd056a8f0bab669f78f14873fac8e2dd8d57898cdb725a2d5e2e4f8f returned asset_descriptor.owner = 497d6b7acd06401c59b2d52a3967968e8ca507a25f80e44d2bb4b5f8a348c7c1 (non-null: ownership is held, not renounced), owner_eth_pub_key = \"\" (empty), total_max_supply = 10000000000000000000, current_supply = 114000000000, decimal_point = 4, hidden_supply = false. Two independent daemons (node.zano.org and 37.27.100.59:10500) returned byte-identical descriptors. Per Zano docs the owner key is the sole authority validated for EMIT and UPDATE, and total_max_supply cannot be changed after deployment. Zano exposes no contract VM, so there is no minter registry, role admin, timelock, or proxy layer above this key; it is a single ed25519 public key with no on-chain multisig or threshold structure."
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "disposition": "scoreable",
-      "reviewer": "Claude CTRL batch (V9)",
-      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15",
       "sourceFreeRationale": "Resolved directly from Zano consensus state; the prior 'unverifiable privacy chain' disposition was wrong — Zano hides transaction amounts and addresses, but asset descriptors (owner key, supply, cap) are public and readable over the standard daemon RPC.",
       "unresolvedQuestions": [],
-      "evidence": "At Zano height 3770932 (2026-07-14), get_asset_info on node.zano.org (corroborated by daemon 37.27.100.59:10500) returned for asset 86143388bd056a8f0bab669f78f14873fac8e2dd8d57898cdb725a2d5e2e4f8f: owner 497d6b7acd06401c59b2d52a3967968e8ca507a25f80e44d2bb4b5f8a348c7c1, owner_eth_pub_key \"\", total_max_supply 10000000000000000000, current_supply 114000000000, decimal_point 4. Zano docs confirm EMIT and UPDATE are validated against the owner key alone and that total_max_supply is immutable post-deployment. The Freedom Dollar white paper describes issuance as 'On-demand via collateralized ZANO' with market-making bots and a publicly auditable ZANO reserve wallet, but claims no key renunciation and identifies no on-chain contract enforcing collateralization — consistent with a single owner key emitting under off-chain policy. Sole residual unknown: the off-chain custody of the owner private key (single operator vs shared/MPC control) is not observable on-chain, which is true of any key-based authority and does not affect the on-chain authority model.",
+      "evidence": "At Zano height 3770932 (2026-07-14), get_asset_info on node.zano.org (corroborated by daemon 37.27.100.59:10500) returned for asset 86143388bd056a8f0bab669f78f14873fac8e2dd8d57898cdb725a2d5e2e4f8f: owner 497d6b7acd06401c59b2d52a3967968e8ca507a25f80e44d2bb4b5f8a348c7c1, owner_eth_pub_key \"\", total_max_supply 10000000000000000000, current_supply 114000000000, decimal_point 4. Zano docs confirm EMIT and UPDATE are validated against the owner key alone and that total_max_supply is immutable post-deployment. The Freedom Dollar white paper describes issuance as 'On-demand via collateralized ZANO' with market-making bots and a publicly auditable ZANO reserve wallet, but claims no key renunciation and identifies no on-chain contract enforcing collateralization — consistent with a single owner key emitting under off-chain policy. Sole residual unknown: the off-chain custody of the owner private key (single operator vs shared/MPC control) is not observable on-chain, which is true of any key-based authority and does not affect the on-chain authority model. Mint-tier review (2026-07-15): No independent attestor, recurring cadence, or dated reserve-to-liability report was located; the Freedom Dollar whitepaper describes issuer-controlled collateral and a reserve wallet but supplies no independent reconciliation. The materials do not identify a regulated legal issuer, and no exact prudential issuer match was established in FinCEN's MSB registry.",
       "sources": [
         {
           "label": "Zano public daemon RPC (get_asset_info)",
@@ -164,6 +166,10 @@
         {
           "label": "Freedom Dollar white paper",
           "url": "https://www.freedomdollar.com/pdf/%5BEnglish%5DWhite-paper.pdf"
+        },
+        {
+          "label": "FinCEN MSB registry search",
+          "url": "https://www.fincen.gov/resources/msb-state-selector"
         }
       ]
     }

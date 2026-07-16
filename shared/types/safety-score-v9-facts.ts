@@ -653,6 +653,11 @@ const V9MintMechanismReviewV2Schema = z
     status: V9FactStatusV2Schema,
     controlKey: CanonicalTextSchema.nullable(),
     reconciliation: z.enum(["continuous", "periodic", "not-applicable", "unknown"]),
+    // Prudential supervision is a reviewed fact, never inferred: it graduates a
+    // reconciled-but-unbounded mint from a "high" to a "moderate" severity only
+    // when a per-coin review establishes an NYDFS/SEC-class supervisory regime.
+    // It defaults to "unknown" everywhere so the rung stays inert until curated.
+    supervision: z.enum(["prudential", "attestation-only", "none", "unknown"]).default("unknown"),
     upgrade: V9UpgradeControlReviewV2Schema,
   })
   .strict()

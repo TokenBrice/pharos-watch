@@ -199,6 +199,9 @@
         "evidence": "At Ethereum block 25526649, the USAT proxy owner() and ProxyAdmin owner() both returned this address. required() returned 3 and getOwners() returned five current legacy multisig owner slots: 0x6744A526..., 0x106743fD..., 0xD3Fc71bD..., 0x68298631..., and 0x1e1Ed372.... Verified HadronToken source exposes mint(address,uint256), redeem(uint256), and destroyBlockedFunds as owner-only functions."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
       "sources": [
         {
@@ -210,6 +213,10 @@
           "url": "https://www.anchorage.com/platform/usat-reserve-attestations"
         },
         {
+          "label": "OCC active regional and midsize institutions",
+          "url": "https://www.occ.gov/about/who-we-are/organizations/regional-and-midsize-financial-institutions/regional-and-midsize-financial-institutions-list.html"
+        },
+        {
           "label": "USAT Ethereum proxy",
           "url": "https://etherscan.io/address/0x07041776f5007aca2a54844f50503a18a72a8b68"
         },
@@ -218,9 +225,9 @@
           "url": "https://sourcify.dev/server/v2/contract/1/0x07041776f5007aca2a54844f50503a18a72a8b68?fields=sources,abi"
         }
       ],
-      "evidence": "At Ethereum block 25526649, the EIP-1967 implementation and admin slots resolved to implementation 0x8b98bcd9b1f8ae112fb2b58b45c3bc9a75cc4d0e and ProxyAdmin 0x3e4c6460aa00c11c81e3c5b95b15d612f5f2d9c7. ProxyAdmin.owner() and token owner() both returned the same reviewed legacy multisig, whose current required() value is 3 and getOwners() returned five signers. The verified HadronToken source confirms owner-only mint and redeem authority; ProxyAdmin source exposes immediate owner-only upgrades with no timelock.",
-      "reviewer": "Codex Safety Score V9 data research",
-      "reviewedAt": "2026-07-13"
+      "evidence": "At Ethereum block 25526649, the EIP-1967 implementation and admin slots resolved to implementation 0x8b98bcd9b1f8ae112fb2b58b45c3bc9a75cc4d0e and ProxyAdmin 0x3e4c6460aa00c11c81e3c5b95b15d612f5f2d9c7. ProxyAdmin.owner() and token owner() both returned the same reviewed legacy multisig, whose current required() value is 3 and getOwners() returned five signers. The verified HadronToken source confirms owner-only mint and redeem authority; ProxyAdmin source exposes immediate owner-only upgrades with no timelock. On 2026-07-15, Anchorage's primary transparency page listed monthly Big Four AICPA attestations for January through May 2026 and identified Anchorage Digital Bank N.A. as issuer; the OCC's current institution list independently confirmed the active national bank. USAT is therefore periodically reconciled and prudentially supervised, while its no-delay issuer-controlled mint is economically unbounded.",
+      "reviewer": "Codex Safety Score V9 data research / SOL-IV calibration",
+      "reviewedAt": "2026-07-15"
     }
   },
   "custodyModel": "institutional-regulated",

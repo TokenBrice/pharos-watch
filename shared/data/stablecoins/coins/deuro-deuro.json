@@ -15,7 +15,8 @@
   "collateral": "WFPS (Wrapped Frankencoin Pool Shares, about 63%), WBTC/cbBTC/kBTC (about 37%), plus DEPS, ZCHF, WETH/LsETH and tokenized equities, in oracle-free overcollateralized positions; WFPS/ZCHF/DEPS create cross-protocol Frankencoin-ecosystem and reflexive-governance exposure.",
   "pegMechanism": "Overcollateralized CDP with automated liquidation; no oracle dependency (same architecture as Frankencoin ZCHF)",
   "mechanismArchetype": "cdp",
-  "detailProvider": "coingecko",
+  "llamaId": "423",
+  "detailProvider": "defillama",
   "geckoId": "decentralized-euro",
   "oracleRisk": {
     "tier": "oracleless-or-internal",
@@ -219,11 +220,24 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Current review remains Upstream: dEURO's reserve envelope includes WBTC and cbBTC, and the reviewed WFPS position is governed by the Frankencoin protocol. The inherited status is retained because upstream issuer and protocol access controls remain part of the holder-control surface.",
-    "reviewer": "SONG-1 access evidence review",
-    "reviewedAt": "2026-07-14"
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Polygon dEURO verified proxy",
+        "url": "https://polygon.blockscout.com/address/0xc2ff25dd99e467d2589b2c26edd270f220f14e47"
+      },
+      {
+        "label": "Polygon dEURO proxy owner",
+        "url": "https://polygon.blockscout.com/address/0x355b8E02e7F5301E6fac9b7cAc1D6D9c86C0343f"
+      },
+      {
+        "label": "Polygon public JSON-RPC",
+        "url": "https://polygon.drpc.org"
+      }
+    ],
+    "evidence": "At Polygon block 90293314, the tracked dEURO deployment's proxyOwner() returned verified MultiSigWalletWithDailyLimit 0x355b8E02e7F5301E6fac9b7cAc1D6D9c86C0343f. Its required() returned 1 and getOwners() returned one owner, SafeProxy 0x3a635c48836E7c0B9aEB378640B0BfD516985cF5; that Safe reported threshold 5 with 9 owners. The verified UChildERC20Proxy source gates updateImplementation and updateAndCall with onlyProxyOwner, so the 5-of-9 Safe can submit and confirm a proxy-upgrade transaction through the legacy wallet with no observed timelock. The current implementation has ordinary transfer paths, but this establishes an immediate upgrade-control ability to introduce holder restrictions on a tracked deployment.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

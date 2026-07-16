@@ -246,9 +246,49 @@
       "pct": 100,
       "risk": "high",
       "coinId": "usds-sky",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sky stUSDS risk-capital module and SKY-backed borrower",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "market",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Sky stUSDS documentation",
+        "url": "https://developers.skyeco.com/protocol/tokens/stusds/"
+      },
+      {
+        "label": "Pinned stUSDS design and deployment README",
+        "url": "https://github.com/sky-ecosystem/stusds/blob/486bfe342c01afab7387a920dfcd7eeaaf91f4b7/README.md"
+      },
+      {
+        "label": "Pinned stUSDS implementation",
+        "url": "https://github.com/sky-ecosystem/stusds/blob/486bfe342c01afab7387a920dfcd7eeaaf91f4b7/src/StUsds.sol"
+      },
+      {
+        "label": "stUSDS Ethereum contract",
+        "url": "https://etherscan.io/address/0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9#readContract"
+      }
+    ],
+    "rationale": "stUSDS participates in Sky's risk-capital module and is economically exposed to the SKY-backed loan receivable rather than holding a simple cash reserve. The exact direct exposure is therefore one protocol position with explicit credit, concentration, market, liquidity, and smart-contract risks.",
+    "compositionBasis": "Exact live single-asset row, pinned stUSDS design, and deployed contract",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No additional direct stUSDS reserve slice is identified; borrower performance and risk-capital realization remain structured risks of the classified position.",
+    "knownUnknownExposurePct": 0
+  },
   "yieldConfig": {
     "yieldSource": "Sky stUSDS Rate",
     "yieldType": "lending-vault"

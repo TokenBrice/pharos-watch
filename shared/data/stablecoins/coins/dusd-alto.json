@@ -1012,39 +1012,279 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "DUSD token (0x63d74d22e689c715a04f2c13962b1f77f443d35b) is owned by AltoTimelockController (0xfae841679dc1a93d225ecc827e4bbf3e8d703f86, 1-hour min delay, self-administered). The timelock's proposer/executor is a 3-of-5 Alto Safe (0xc49bf619cc9a68f84a6c9ab88506f2627565a4d0). All deployer roles were revoked on-chain. Token minting requires onlyOwner (= timelock). Mint markets and PSM are contract-gated with per-market ceilings.",
+    "summary": "DUSD token (0x63d74d22e689c715a04f2c13962b1f77f443d35b) is a direct, non-proxy deployment owned by AltoTimelockController (0xfae841679dc1a93d225ecc827e4bbf3e8d703f86, 1-hour min delay, self-administered). The timelock's proposer/executor is a 3-of-5 Alto Safe (0xc49bf619cc9a68f84a6c9ab88506f2627565a4d0). At Ethereum block 25540452, 11 current contract minters were active in allowedMinter; each is restricted by its on-chain minterConfig ceiling. The token owner can change minter status and ceilings through the timelock, while a minter cannot change its own token-level ceiling.",
+    "upgradeability": {
+      "model": "immutable",
+      "implementationAddresses": [
+        "0x63d74d22e689c715a04f2c13962b1f77f443d35b"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-15",
+      "observedBlock": 25540452,
+      "sources": [
+        {
+          "label": "Ethereum DUSD verified direct-deployment source",
+          "url": "https://eth.blockscout.com/address/0x63d74d22e689c715a04f2c13962b1f77f443d35b?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC EIP-1967 slot check",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
-        "label": "Alto isolated mint markets (collateral mint)",
+        "label": "Alto DUSD active minter 0x1bd08b43d1579881cfad0a35aeea5b547dbe4c91",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "chain": "ethereum",
-        "capDescription": "Mint bounded by per-market debt ceilings and collateral risk parameters; markets must be in allowedMinter mapping.",
-        "canRaiseCap": "unknown",
+        "address": "0x1bd08b43d1579881cfad0a35aeea5b547dbe4c91",
+        "capDescription": "At Ethereum block 25540452: minted counter 822,997.840132023504938231 DUSD; ceiling 5,000,000,000 DUSD.",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-15",
+        "observedBlock": 25540452,
         "sources": [
           {
-            "label": "Alto DUSD docs",
-            "url": "https://docs.alto.money/alto-protocol/dusd"
+            "label": "Ethereum DUSD verified minter gate",
+            "url": "https://eth.blockscout.com/address/0x63d74d22e689c715a04f2c13962b1f77f443d35b?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode DUSD minter registry state",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "DUSD contract source (AltoOwnable2Step + Pausable + OFT) confirms mint() is gated by allowedMinter[msg.sender] and per-minter ceiling; setMinterStatus/setMinterCeiling require onlyOwner (= timelock). Market-level mint caps enforced on-chain."
+        "evidence": "At Ethereum block 25540452, allowedMinter(address) returned true and minterConfig(address) returned the stated minted counter and ceiling. Verified DUSD source permits mint only while active and only within that ceiling; setMinterCeiling is onlyOwner, so this minter cannot raise its own token-level cap."
       },
       {
-        "label": "Alto DUSD/USDC PSM",
+        "label": "Alto DUSD active minter 0x210bf54092b66443fddfec0f3f156e74b04cd2a2",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "chain": "ethereum",
-        "capDescription": "The public PSM can mint DUSD against USDC and burn DUSD for USDC, bounded by a 5,000,000 USDC capacity and 0.20% fee.",
-        "canRaiseCap": "unknown",
+        "address": "0x210bf54092b66443fddfec0f3f156e74b04cd2a2",
+        "capDescription": "At Ethereum block 25540452: minted counter 32,726.261001497313649817 DUSD; ceiling 53,117.647058823529411764 DUSD.",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-15",
+        "observedBlock": 25540452,
         "sources": [
           {
-            "label": "Alto PSM docs",
-            "url": "https://docs.alto.money/alto-protocol/psm"
+            "label": "Ethereum DUSD verified minter gate",
+            "url": "https://eth.blockscout.com/address/0x63d74d22e689c715a04f2c13962b1f77f443d35b?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode DUSD minter registry state",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "PSM must be in allowedMinter mapping; subject to same ceiling enforcement as other minters."
+        "evidence": "At Ethereum block 25540452, allowedMinter(address) returned true and minterConfig(address) returned the stated minted counter and ceiling. Verified DUSD source permits mint only while active and only within that ceiling; setMinterCeiling is onlyOwner, so this minter cannot raise its own token-level cap."
+      },
+      {
+        "label": "Alto DUSD active minter 0x2de874b83f4d0a64d81a16f2e050bcb55f118398",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "address": "0x2de874b83f4d0a64d81a16f2e050bcb55f118398",
+        "capDescription": "At Ethereum block 25540452: minted counter 0 DUSD; ceiling 5,000,000,000 DUSD.",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-15",
+        "observedBlock": 25540452,
+        "sources": [
+          {
+            "label": "Ethereum DUSD verified minter gate",
+            "url": "https://eth.blockscout.com/address/0x63d74d22e689c715a04f2c13962b1f77f443d35b?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode DUSD minter registry state",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25540452, allowedMinter(address) returned true and minterConfig(address) returned the stated minted counter and ceiling. Verified DUSD source permits mint only while active and only within that ceiling; setMinterCeiling is onlyOwner, so this minter cannot raise its own token-level cap."
+      },
+      {
+        "label": "Alto DUSD active minter 0x8b7448877e292b8422608d1dcbf066e484461948",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "address": "0x8b7448877e292b8422608d1dcbf066e484461948",
+        "capDescription": "At Ethereum block 25540452: minted counter 0 DUSD; ceiling 500,000 DUSD.",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-15",
+        "observedBlock": 25540452,
+        "sources": [
+          {
+            "label": "Ethereum DUSD verified minter gate",
+            "url": "https://eth.blockscout.com/address/0x63d74d22e689c715a04f2c13962b1f77f443d35b?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode DUSD minter registry state",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25540452, allowedMinter(address) returned true and minterConfig(address) returned the stated minted counter and ceiling. Verified DUSD source permits mint only while active and only within that ceiling; setMinterCeiling is onlyOwner, so this minter cannot raise its own token-level cap."
+      },
+      {
+        "label": "Alto DUSD active minter 0x8ded9e2b8bc5128b862dd534b97c8a32991959ff",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "address": "0x8ded9e2b8bc5128b862dd534b97c8a32991959ff",
+        "capDescription": "At Ethereum block 25540452: minted counter 3,900.656058758447582788 DUSD; ceiling 74,117.647058823529411764 DUSD.",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-15",
+        "observedBlock": 25540452,
+        "sources": [
+          {
+            "label": "Ethereum DUSD verified minter gate",
+            "url": "https://eth.blockscout.com/address/0x63d74d22e689c715a04f2c13962b1f77f443d35b?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode DUSD minter registry state",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25540452, allowedMinter(address) returned true and minterConfig(address) returned the stated minted counter and ceiling. Verified DUSD source permits mint only while active and only within that ceiling; setMinterCeiling is onlyOwner, so this minter cannot raise its own token-level cap."
+      },
+      {
+        "label": "Alto DUSD active minter 0xc0e2ddb06bb034c1f980531ec5cad944d71affbf",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "address": "0xc0e2ddb06bb034c1f980531ec5cad944d71affbf",
+        "capDescription": "At Ethereum block 25540452: minted counter 633.017945502565783008 DUSD; ceiling 664.668842777694072158 DUSD.",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-15",
+        "observedBlock": 25540452,
+        "sources": [
+          {
+            "label": "Ethereum DUSD verified minter gate",
+            "url": "https://eth.blockscout.com/address/0x63d74d22e689c715a04f2c13962b1f77f443d35b?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode DUSD minter registry state",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25540452, allowedMinter(address) returned true and minterConfig(address) returned the stated minted counter and ceiling. Verified DUSD source permits mint only while active and only within that ceiling; setMinterCeiling is onlyOwner, so this minter cannot raise its own token-level cap."
+      },
+      {
+        "label": "Alto DUSD active minter 0xd2ea320713158a7b7eae46025b8ad4cbf3cdc87e",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "address": "0xd2ea320713158a7b7eae46025b8ad4cbf3cdc87e",
+        "capDescription": "At Ethereum block 25540452: minted counter 880.915662824915920288 DUSD; ceiling 76,588.235294117647058823 DUSD.",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-15",
+        "observedBlock": 25540452,
+        "sources": [
+          {
+            "label": "Ethereum DUSD verified minter gate",
+            "url": "https://eth.blockscout.com/address/0x63d74d22e689c715a04f2c13962b1f77f443d35b?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode DUSD minter registry state",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25540452, allowedMinter(address) returned true and minterConfig(address) returned the stated minted counter and ceiling. Verified DUSD source permits mint only while active and only within that ceiling; setMinterCeiling is onlyOwner, so this minter cannot raise its own token-level cap."
+      },
+      {
+        "label": "Alto DUSD active minter 0xe17f10f8535336143d4f2fe304f3dcf7b23671e1",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "address": "0xe17f10f8535336143d4f2fe304f3dcf7b23671e1",
+        "capDescription": "At Ethereum block 25540452: minted counter 1,556.033496116061514677 DUSD; ceiling 5,454.545454545454545454 DUSD.",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-15",
+        "observedBlock": 25540452,
+        "sources": [
+          {
+            "label": "Ethereum DUSD verified minter gate",
+            "url": "https://eth.blockscout.com/address/0x63d74d22e689c715a04f2c13962b1f77f443d35b?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode DUSD minter registry state",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25540452, allowedMinter(address) returned true and minterConfig(address) returned the stated minted counter and ceiling. Verified DUSD source permits mint only while active and only within that ceiling; setMinterCeiling is onlyOwner, so this minter cannot raise its own token-level cap."
+      },
+      {
+        "label": "Alto DUSD active minter 0xeb7518311543fb6152f31f3c5075cfcb835c95c7",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "address": "0xeb7518311543fb6152f31f3c5075cfcb835c95c7",
+        "capDescription": "At Ethereum block 25540452: minted counter 0 DUSD; ceiling 5,000,000,000 DUSD.",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-15",
+        "observedBlock": 25540452,
+        "sources": [
+          {
+            "label": "Ethereum DUSD verified minter gate",
+            "url": "https://eth.blockscout.com/address/0x63d74d22e689c715a04f2c13962b1f77f443d35b?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode DUSD minter registry state",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25540452, allowedMinter(address) returned true and minterConfig(address) returned the stated minted counter and ceiling. Verified DUSD source permits mint only while active and only within that ceiling; setMinterCeiling is onlyOwner, so this minter cannot raise its own token-level cap."
+      },
+      {
+        "label": "Alto DUSD active minter 0xf897188dcd300fa80a2f7f0f0290f9ef64f2d47b",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "address": "0xf897188dcd300fa80a2f7f0f0290f9ef64f2d47b",
+        "capDescription": "At Ethereum block 25540452: minted counter 7.096990477974426831 DUSD; ceiling 7.459769027930114865 DUSD.",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-15",
+        "observedBlock": 25540452,
+        "sources": [
+          {
+            "label": "Ethereum DUSD verified minter gate",
+            "url": "https://eth.blockscout.com/address/0x63d74d22e689c715a04f2c13962b1f77f443d35b?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode DUSD minter registry state",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25540452, allowedMinter(address) returned true and minterConfig(address) returned the stated minted counter and ceiling. Verified DUSD source permits mint only while active and only within that ceiling; setMinterCeiling is onlyOwner, so this minter cannot raise its own token-level cap."
+      },
+      {
+        "label": "Alto DUSD active minter 0xfd8c25047f4397dc5461b919999585a2a3eac2ef",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "ethereum",
+        "address": "0xfd8c25047f4397dc5461b919999585a2a3eac2ef",
+        "capDescription": "At Ethereum block 25540452: minted counter 49,349.169985887810425536 DUSD; ceiling 75,903.614457831325301204 DUSD.",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-15",
+        "observedBlock": 25540452,
+        "sources": [
+          {
+            "label": "Ethereum DUSD verified minter gate",
+            "url": "https://eth.blockscout.com/address/0x63d74d22e689c715a04f2c13962b1f77f443d35b?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode DUSD minter registry state",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25540452, allowedMinter(address) returned true and minterConfig(address) returned the stated minted counter and ceiling. Verified DUSD source permits mint only while active and only within that ceiling; setMinterCeiling is onlyOwner, so this minter cannot raise its own token-level cap."
       },
       {
         "label": "AltoTimelockController (DUSD owner)",
@@ -1053,12 +1293,18 @@
         "directMintAbility": "can-authorize",
         "chain": "ethereum",
         "address": "0xfae841679dc1a93d225ecc827e4bbf3e8d703f86",
-        "canRaiseCap": "unknown",
-        "evidence": "At Ethereum block 25295203: DUSD.owner() = 0xfae841679dc1a93d225ecc827e4bbf3e8d703f86 (AltoTimelockController, confirmed via Blockscout source). Timelock getMinDelay() = 3600s (1 hour). Timelock has DEFAULT_ADMIN_ROLE for itself. Deployer (0xba5ed2b...) had all roles revoked (RoleRevoked events confirmed on-chain). Current proposer/executor: Alto Safe (0xc49bf619cc9a68f84a6c9ab88506f2627565a4d0).",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-15",
+        "observedBlock": 25540452,
+        "evidence": "At Ethereum block 25540452, DUSD.owner() = 0xfae841679dc1a93d225ecc827e4bbf3e8d703f86. Verified DUSD source restricts setMinterStatus and setMinterCeiling to onlyOwner, so this timelock can add/revoke a minter and raise or lower any token-level ceiling. Its getMinDelay() is 3600 seconds; existing RoleGranted/RoleRevoked evidence resolves the proposer/executor Safe and revocation of deployer roles.",
         "sources": [
           {
             "label": "AltoTimelockController on Etherscan",
             "url": "https://etherscan.io/address/0xfae841679dc1a93d225ecc827e4bbf3e8d703f86"
+          },
+          {
+            "label": "Ethereum PublicNode DUSD owner and timelock role reads",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ]
       },
@@ -1072,40 +1318,57 @@
         "threshold": 3,
         "signerCount": 5,
         "modulesOrGuardsStatus": "none-detected",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "safe": {
           "owners": [
             "0x91faf08dfca10d2cc69a134e389b6bf28afd5913",
-            "0x55a13d96752fd2bb94bfdd92d4d7279f127411ec",
+            "0x461c608d638fe23809d89bd9de59678ee24a1b52",
             "0xb56243c4444d718b45688009da8326e6fc532ca0",
             "0x4bdadba493226a63cf8039885a74b17612196e10",
             "0xdd4226988ba92d8600b50727769382646d7249b1"
           ],
           "threshold": 3,
           "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0x0000000000000000000000000000000000000000",
           "version": "1.x",
-          "observedBlock": 25295203,
+          "observedAt": "2026-07-15",
+          "observedBlock": 25540452,
           "source": "onchain"
         },
-        "evidence": "At Ethereum block 25295203: 0xc49bf619cc9a68f84a6c9ab88506f2627565a4d0 confirmed as GnosisSafe via Blockscout; getOwners() = 5 addresses; getThreshold() = 3; no modules detected. RoleGranted logs confirm this Safe holds PROPOSER_ROLE and EXECUTOR_ROLE on the timelock (granted by timelock itself, not deployer).",
+        "observedAt": "2026-07-15",
+        "observedBlock": 25540452,
+        "evidence": "At Ethereum block 25540452, getOwners() returned the five listed owners, getThreshold() returned 3, and getModulesPaginated() returned no enabled modules. hasRole(PROPOSER_ROLE, Safe) and hasRole(EXECUTOR_ROLE, Safe) both returned true on the DUSD owner timelock. It can therefore schedule and execute the owner's setMinterStatus and setMinterCeiling calls after the current 1-hour timelock delay.",
         "sources": [
           {
             "label": "Alto Safe on Etherscan",
             "url": "https://etherscan.io/address/0xc49bf619cc9a68f84a6c9ab88506f2627565a4d0"
+          },
+          {
+            "label": "Ethereum PublicNode Safe and timelock role reads",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ]
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25295203: DUSD token owner() = AltoTimelockController (0xfae841679dc1a93d225ecc827e4bbf3e8d703f86, 1hr min delay, self-admin). DUSD source confirms mint() gated by allowedMinter mapping; setMinterStatus onlyOwner. Timelock proposer/executor = Alto Safe (0xc49bf619..., 5 owners, threshold 3, no modules); RoleGranted/RoleRevoked logs confirm deployer roles fully revoked, Safe granted roles by timelock.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25540452, DUSD.owner() = AltoTimelockController (0xfae841679dc1a93d225ecc827e4bbf3e8d703f86). Verified DUSD source shows mint() is limited to allowedMinter[msg.sender] and minterConfig[msg.sender].ceiling, while onlyOwner can change minter status and ceilings. The direct, non-proxy constructor only initializes the pauser and does not seed a minter or ceiling. Full SetMinterStatus and SetMinterCeiling history from block 0 returned 15 and 29 events respectively; state reads over the 13 unique status-event addresses found 11 active minters and 2 inactive addresses. The controls enumerate the complete active set at this block. The owner timelock remains governed by the 3-of-5 Alto Safe after its 1-hour delay.",
+      "reviewer": "SONG Safety Score V9 control review",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
-          "label": "Alto DUSD docs",
-          "url": "https://docs.alto.money/alto-protocol/dusd"
+          "label": "Ethereum DUSD verified direct-deployment source",
+          "url": "https://eth.blockscout.com/address/0x63d74d22e689c715a04f2c13962b1f77f443d35b?tab=contract"
+        },
+        {
+          "label": "DUSD SetMinterStatus event history",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=latest&address=0x63d74d22e689c715a04f2c13962b1f77f443d35b&topic0=0x53b8f1e625ffdc96b26d9f5c6bba4ebc3f54077767495fa2619d32b285e193b9"
+        },
+        {
+          "label": "DUSD SetMinterCeiling event history",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=latest&address=0x63d74d22e689c715a04f2c13962b1f77f443d35b&topic0=0x124507a9451248f6ed70d62589b8d339a25ca7fce428770ef26a818745c3d347"
+        },
+        {
+          "label": "Ethereum PublicNode DUSD registry and EIP-1967 state reads",
+          "url": "https://ethereum-rpc.publicnode.com"
         },
         {
           "label": "DUSD token on Etherscan",

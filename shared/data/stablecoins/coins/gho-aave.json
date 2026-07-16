@@ -811,47 +811,64 @@
   "reserves": [
     {
       "name": "GhoDirectFacilitator GSMs Mainnet",
-      "pct": 38.4,
-      "risk": "medium"
+      "pct": 46.5,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave DAO mainnet GHO stability modules",
+      "riskFactors": ["counterparty", "liquidity", "smart-contract", "custody"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "CoreGhoDirectMinter",
-      "pct": 22.7,
-      "risk": "medium"
-    },
-    {
-      "name": "stataUSDC GSM",
-      "pct": 9.85,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "mechanism"
-    },
-    {
-      "name": "stataUSDT GSM",
-      "pct": 9.85,
-      "risk": "low",
-      "coinId": "usdt-tether",
-      "depType": "mechanism"
-    },
-    {
-      "name": "LidoGhoDirectMinter",
-      "pct": 7.6,
-      "risk": "medium"
-    },
-    {
-      "name": "GhoDirectFacilitator Plasma",
-      "pct": 6.9,
-      "risk": "medium"
+      "pct": 20.3,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave V3 Ethereum Core market",
+      "riskFactors": ["market", "liquidity", "smart-contract"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "HorizonGhoDirectMinter",
-      "pct": 4.7,
-      "risk": "medium"
+      "pct": 8.9,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave Horizon market",
+      "riskFactors": ["market", "liquidity", "smart-contract"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "stataUSDT GSM",
+      "pct": 10,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "mechanism",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether and Aave GHO Stability Module",
+      "riskFactors": ["counterparty", "liquidity", "smart-contract", "custody"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "LidoGhoDirectMinter",
+      "pct": 6.8,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave V3 Lido market",
+      "riskFactors": ["market", "liquidity", "smart-contract"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "GhoDirectFacilitator Plasma",
+      "pct": 7.5,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave V3 Plasma market",
+      "riskFactors": ["market", "liquidity", "smart-contract"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-12",
-    "reviewer": "OpenAI Codex dependency review",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
     "sources": [
       {
@@ -861,46 +878,51 @@
       {
         "label": "Aave GHO analytics",
         "url": "https://aave.tokenlogic.xyz/gho"
+      },
+      {
+        "label": "GHO facilitator registry and bucket state on Ethereum",
+        "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readContract"
       }
     ],
-    "rationale": "GHO facilitator balances include both identified GSM stablecoin mechanisms and direct issuance facilities that are not reserve-token claims.",
-    "compositionBasis": "On-chain facilitator bucket balances",
-    "scope": "selected-slices",
-    "knownUnknownExposure": "The residual mainnet GSM bucket is not identified at stablecoin level; direct minters are reviewed as issuance facilities.",
-    "knownUnknownExposurePct": 38.4,
+    "rationale": "The on-chain GHO adapter reconciles total supply across the current mainnet GSM aggregate, the tracked stataUSDT GSM, and four direct issuance facilities. This review mirrors the six exact live rows and classifies direct minters as protocol issuance positions rather than reserve-token claims.",
+    "compositionBasis": "On-chain GHO facilitator bucket levels and tracked GSM backing normalized by total GHO supply",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The aggregate mainnet GSM facilitator row does not expose its underlying stablecoin identities at the reviewed slice level; direct minters are separately identified issuance facilities.",
+    "knownUnknownExposurePct": 46.5,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "GhoDirectFacilitator GSMs Mainnet",
-        "pct": 38.4,
+        "pct": 46.5,
         "disposition": "insufficient-evidence",
         "rationale": "The residual bucket does not expose a stablecoin identity that can be mapped to one canonical target."
       },
       {
         "reserveIndex": 1,
         "reserveName": "CoreGhoDirectMinter",
-        "pct": 22.7,
+        "pct": 20.3,
+        "disposition": "not-applicable",
+        "rationale": "This facilitator is an issuance path, not a stablecoin reserve token."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "HorizonGhoDirectMinter",
+        "pct": 8.9,
         "disposition": "not-applicable",
         "rationale": "This facilitator is an issuance path, not a stablecoin reserve token."
       },
       {
         "reserveIndex": 4,
         "reserveName": "LidoGhoDirectMinter",
-        "pct": 7.6,
+        "pct": 6.8,
         "disposition": "not-applicable",
         "rationale": "This facilitator is an issuance path, not a stablecoin reserve token."
       },
       {
         "reserveIndex": 5,
         "reserveName": "GhoDirectFacilitator Plasma",
-        "pct": 6.9,
-        "disposition": "not-applicable",
-        "rationale": "This facilitator is an issuance path, not a stablecoin reserve token."
-      },
-      {
-        "reserveIndex": 6,
-        "reserveName": "HorizonGhoDirectMinter",
-        "pct": 4.7,
+        "pct": 7.5,
         "disposition": "not-applicable",
         "rationale": "This facilitator is an issuance path, not a stablecoin reserve token."
       }

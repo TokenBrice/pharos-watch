@@ -318,15 +318,56 @@
   "reserves": [
     {
       "name": "Digital-asset cash-and-carry strategy",
-      "pct": 80,
-      "risk": "high"
-    },
-    {
-      "name": "Short-duration Treasury bills and cash",
-      "pct": 20,
-      "risk": "very-low"
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Spiko cash-and-carry fund and digital-asset counterparties",
+      "riskFactors": [
+        "market",
+        "basis",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spiko cash-and-carry fund disclosure",
+        "url": "https://www.spiko.io/spiko-cash-and-carry"
+      },
+      {
+        "label": "Spiko SPKCC totals API",
+        "url": "https://public-api.spiko.io/share-classes/SPKCC/totals"
+      },
+      {
+        "label": "Spiko smart-contract disclosure",
+        "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+      }
+    ],
+    "rationale": "Spiko's current producer reports the SPKCC fund as one cash-and-carry strategy envelope, not a defensible fixed 80/20 allocation. The direct exposure is classified as hedged crypto with basis, venue, custody, liquidity, counterparty, smart-contract, and concentration risks retained.",
+    "compositionBasis": "Exact live SPKCC aggregate and official cash-and-carry fund disclosure",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The strategy envelope is identified, but current spot, derivative, collateral, venue, and liquidity-buffer weights are not published by the aggregate feed.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Digital-asset cash-and-carry strategy",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The aggregate feed does not split current spot, derivative, margin, venue, and liquidity-buffer exposures."
+      }
+    ]
+  },
   "yieldConfig": {
     "yieldSource": "Spiko Cash and Carry USD NAV",
     "yieldType": "nav-appreciation"

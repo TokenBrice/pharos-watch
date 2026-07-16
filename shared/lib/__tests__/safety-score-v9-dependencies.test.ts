@@ -4,6 +4,8 @@ import {
   buildV9DependencyEvaluationPlan,
   resolveV9DependencyInputs,
 } from "../safety-score-v9/dependencies";
+import { commonModeSignalSeverity } from "../safety-score-v9/evaluate-set";
+import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
 const domain = (kind: "reserve-custodian" | "mint-control", key: string) => ({ kind, key } as const);
 
@@ -131,5 +133,52 @@ describe("buildV9DependencyEvaluationPlan", () => {
     expect(() =>
       buildV9DependencyEvaluationPlan({ activeAssetIds: ["a"], assets: [asset("a", [edge("missing", "wrapper")])] }),
     ).toThrow(/Invalid.*dependency/);
+  });
+});
+
+describe("commonModeSignalSeverity (owner ruling 2026-07-15 Batch 3.3)", () => {
+  const materiality = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality;
+
+  it("graduates a common-mode group on a single reviewed mature chain to moderate", () => {
+    for (const chain of materiality.matureChains) {
+      expect(commonModeSignalSeverity({ kind: "chain", key: chain }, materiality)).toBe("moderate");
+    }
+  });
+
+  it("normalizes DefiLlama display-name chain keys to their canonical slug before matching", () => {
+    // Supply facts key chain domains by display name; they must tier identically
+    // to the slug form (coordinator namespace-fidelity ruling 2026-07-15).
+    for (const [displayName, slug] of [
+      ["Ethereum", "ethereum"],
+      ["BSC", "bsc"],
+      ["OP Mainnet", "optimism"],
+      ["Arbitrum", "arbitrum"],
+      ["Avalanche", "avalanche"],
+      ["Polygon", "polygon"],
+      ["Base", "base"],
+      ["Solana", "solana"],
+    ] as const) {
+      expect(materiality.matureChains).toContain(slug);
+      expect(commonModeSignalSeverity({ kind: "chain", key: displayName }, materiality)).toBe("moderate");
+    }
+  });
+
+  it("keeps a fragile, unreviewed, or unresolvable chain concentration at the default high severity", () => {
+    expect(materiality.commonModeSignal.severity).toBe("high");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, materiality)).toBe("high");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "Fantom" }, materiality)).toBe("high");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "unknown-l2" }, materiality)).toBe("high");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "chain:ethereum" }, materiality)).toBe("high");
+  });
+
+  it("keeps non-chain failure domains fail-closed at high", () => {
+    expect(commonModeSignalSeverity({ kind: "reserve-custodian", key: "custodian:a" }, materiality)).toBe("high");
+    expect(commonModeSignalSeverity({ kind: "mint-control", key: "mechanism:x" }, materiality)).toBe("high");
+  });
+
+  it("prices the graduated and default severities inside their locked grade bands", () => {
+    const limits = V9_CANDIDATE_POLICY_V1.policy.semantic.structural.signalLimits["critical-dependency"];
+    expect(limits.moderate).toBe(79); // top of B+ (75-79)
+    expect(limits.high).toBe(64);
   });
 });

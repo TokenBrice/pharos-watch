@@ -324,6 +324,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       ],
       notes: [
         "Fresh live reserve metadata reads Ebisu's Liquity v2-style ActivePool branch debt as the current direct redemption-capacity bound; if that on-chain snapshot is unavailable, the route is left unrated instead of using a full-supply fallback",
+        "Redemptions return the collateral of the lowest-rate loans, so the output depends on active collateral branches and position state. No complete fixed output basket is documented; outputAssets intentionally remains unset rather than publishing a tracked subset.",
       ],
     },
     "ussd-sonic-labs": {

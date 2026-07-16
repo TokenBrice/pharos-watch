@@ -303,10 +303,12 @@
         ]
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "Verified at Ethereum block 25295020. EURSToken (non-proxy) at 0xdb25f211ab05b1c97d595516f45794528a807ad8: owner (slot2) = Gnosis Safe 1.3.0 (7/3, no modules, no guard); issuer (slot3) = EOA 0x70250fcfef. totalSupply confirmed via slot4. Polygon contract (0xe111178a) has different storage layout; Ethereum is the primary verified deployment. Stellar issuer GC5FGD… confirmed as 5/3 multisig via Horizon API.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "Verified at Ethereum block 25295020. EURSToken (non-proxy) at 0xdb25f211ab05b1c97d595516f45794528a807ad8: owner (slot2) = Gnosis Safe 1.3.0 (7/3, no modules, no guard); issuer (slot3) = EOA 0x70250fcfef. totalSupply confirmed via slot4. Polygon contract (0xe111178a) has different storage layout; Ethereum is the primary verified deployment. Stellar issuer GC5FGD… confirmed as 5/3 multisig via Horizon API. STASIS advertises quarterly and annual BDO Malta work, but the latest public independent reserve procedures report is dated August 1, 2024; the latest issuer page entry is only a December 12, 2025 account statement. Challenge searches found no 2025 or 2026 independent supply-to-reserve reconciliation, so the stale BDO cadence is not treated as current and reconciliation is unknown. The MFSA registry search did not produce a stable exact issuer authorization for EURS/STSS, and no bank, trust, EMI, or equivalent prudential charter was verified; supervision is none.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
           "label": "STASIS Transparency",
@@ -319,6 +321,14 @@
         {
           "label": "Stellar Horizon issuer account",
           "url": "https://horizon.stellar.org/accounts/GC5FGCDEOGOGSNWCCNKS3OMEVDHTE3Q5A5FEQWQKV3AXA7N6KDQ2CUZJ"
+        },
+        {
+          "label": "BDO Malta EURS Cash Reserves Report - August 1, 2024",
+          "url": "https://api-site.stasis.net/api/weeklyStatement/download?id=205"
+        },
+        {
+          "label": "MFSA Financial Services Register",
+          "url": "https://fsr.mfsa.mt/"
         }
       ]
     }

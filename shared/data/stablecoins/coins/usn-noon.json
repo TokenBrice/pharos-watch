@@ -364,29 +364,85 @@
   "reserves": [
     {
       "name": "Private Credit (Fasanara FTAC)",
-      "pct": 68.4,
-      "risk": "high"
-    },
-    {
-      "name": "CLOs (JAAA)",
-      "pct": 13,
+      "pct": 72.3,
       "risk": "high",
-      "coinId": "jaaa-janus-henderson-anemoy"
-    },
-    {
-      "name": "DeFi Lending",
-      "pct": 8,
-      "risk": "medium"
-    },
-    {
-      "name": "Principal Tokens (PTs)",
-      "pct": 6.9,
-      "risk": "high"
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Fasanara Capital and FTAC borrowers",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "market",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
     },
     {
       "name": "US Treasury Bills",
-      "pct": 3.7,
-      "risk": "very-low"
+      "pct": 13.1,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "duration",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "DeFi Lending",
+      "pct": 8.2,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Undisclosed DeFi protocols and borrowers",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "CLOs (JAAA)",
+      "pct": 5.3,
+      "risk": "high",
+      "coinId": "jaaa-janus-henderson-anemoy",
+      "depType": "collateral",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Janus Henderson Anemoy AAA CLO Fund",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Unknown / unmapped Accountable buckets",
+      "pct": 1.1,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed Noon reserve counterparties",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "market",
+        "basis",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "liveReservesConfig": {
@@ -423,43 +479,50 @@
     }
   },
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG Safety Score V9 reserve review",
-    "confidence": "unknown",
-    "sources": [{"label":"Noon documentation","url":"https://docs.noon.capital/"}],
-    "rationale": "No dated issuer reserve statement was located to verify current allocation or reserve-slice identity.",
-    "compositionBasis": "Unverified legacy categories",
-    "scope": "selected-slices",
-    "knownUnknownExposure": "Current weights, obligors, and custody are undisclosed.",
-    "knownUnknownExposurePct": 87,
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Noon Accountable dashboard API",
+        "url": "https://cache.accountable.capital/dashboard/noon"
+      },
+      {
+        "label": "Noon transparency documentation",
+        "url": "https://docs.noon.capital/security/transparency"
+      },
+      {
+        "label": "Noon liquidity documentation",
+        "url": "https://docs.noon.capital/noon-the-basics/liquidity"
+      }
+    ],
+    "rationale": "The exact 2026-07-15 fixed-input capture identifies five Accountable deployment buckets and their weights. The dashboard establishes current category allocation, while Noon documents its transparency and liquidity model; it does not disclose the FTAC borrower book, DeFi protocols and positions, or the unmapped bucket constituents.",
+    "compositionBasis": "Accountable deployment-category snapshot captured at 2026-07-15T12:13:13Z",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "FTAC borrower-level exposure, DeFi protocol positions, and the unmapped Accountable bucket remain unresolved.",
+    "knownUnknownExposurePct": 81.6,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Private Credit (Fasanara FTAC)",
-        "pct": 68.4,
+        "pct": 72.3,
         "disposition": "insufficient-evidence",
-        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+        "rationale": "The current category and weight are known, but borrower identities, loan terms, seniority, and custody are not published."
       },
       {
         "reserveIndex": 2,
         "reserveName": "DeFi Lending",
-        "pct": 8,
-        "disposition": "insufficient-evidence",
-        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
-      },
-      {
-        "reserveIndex": 3,
-        "reserveName": "Principal Tokens (PTs)",
-        "pct": 6.9,
-        "disposition": "insufficient-evidence",
-        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+        "pct": 8.2,
+        "disposition": "basket-needs-split",
+        "rationale": "The current category and weight are known, but protocol, market, borrower, and position weights are not published."
       },
       {
         "reserveIndex": 4,
-        "reserveName": "US Treasury Bills",
-        "pct": 3.7,
+        "reserveName": "Unknown / unmapped Accountable buckets",
+        "pct": 1.1,
         "disposition": "insufficient-evidence",
-        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+        "rationale": "Accountable reports this residual without constituent identity or instrument detail."
       }
     ]
   },

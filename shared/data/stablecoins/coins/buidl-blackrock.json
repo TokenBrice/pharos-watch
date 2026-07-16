@@ -359,8 +359,23 @@
         "evidence": "This umbrella registry record preserves three independent immediate upgrade domains solely because the current upgradeability schema accepts one controlRef. It does not represent one shared signer or quorum: the six EVM deployments share EOA 0xe016...b09e, Solana's three programs share EOA 8d36...qzbB6, and the Aptos package is controlled by account 0x9184...977b."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
+        {
+          "label": "SEC BUIDL Form D filing",
+          "url": "https://www.sec.gov/Archives/edgar/data/2013810/000201439024000001/xslFormDX01/primary_doc.xml"
+        },
+        {
+          "label": "Chronicle BUIDL proof-of-assets dashboard",
+          "url": "https://chroniclelabs.org/dashboard/proofofassets"
+        },
+        {
+          "label": "Chronicle proof-of-assets methodology",
+          "url": "https://chronicle-showcase.com/"
+        },
         {
           "label": "Securitize BUIDL",
           "url": "https://securitize.io/blackrock/buidl"
@@ -399,8 +414,8 @@
         }
       ],
       "evidence": "The fixed exact cutoff was anchored at Ethereum block 25526129, BSC block 109812367, Optimism block 154188051, Arbitrum block 483535601, Avalanche block 90233120, Polygon block 90179923, Solana slot 432714278, and Aptos ledger version 6262999136. All six EVM token/trust-service pairs were uncapped and shared one zero-code EOA owner/MASTER that could mint, administer issuers, and upgrade immediately. Solana's live pre-cutoff issue transaction resolved the issuer signer and PDA path; its issuer, controller, and transfer-hook programs shared a separate immediate single-key upgrader. Aptos Roles resolved one issuer plus a master/package owner with immediate compatible-upgrade authority. These root controls are complete; chain-local delegated EVM issuer lists are not asserted to be identical across deployments.",
-      "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-13"
+      "reviewer": "Codex Safety Score V9 registry pass / SOL-IV calibration",
+      "reviewedAt": "2026-07-15"
     }
   },
   "deploymentModel": "native-multichain",

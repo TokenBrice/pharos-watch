@@ -14,8 +14,9 @@
   "mechanismArchetype": "fiat-cash",
   "collateral": "U.S. dollar cash held by Ondo at a brokerage for USDon settlement",
   "pegMechanism": "USDon is used as the native settlement stablecoin for Ondo Global Markets; USDC can be swapped 1:1 into USDon for purchases, and tokenized-asset redemptions can settle to USDon or to USDC when swapper liquidity is available",
-  "detailProvider": "coingecko",
+  "detailProvider": "defillama",
   "geckoId": "ondo-u-s-dollar-token",
+  "llamaId": "408",
   "cmcSlug": "us-dollar-tokenized-currency-ondo",
   "links": [
     {
@@ -307,10 +308,12 @@
         ]
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25295047 and BSC block 103630432 (2026-06-11): USDon ETH proxy (0xace8…) has EIP-1967 ProxyAdmin=0x5244… owned by TimelockController 0x3715… (2h delay). Token MINTER_ROLE has 2 holders: GMTokenManager (0x2c15…) and 3-of-6 Ondo Safe (0x7607…, no modules). DEFAULT_ADMIN = Timelock; Timelock PROPOSER = 4-of-7 Safe, EXECUTOR = 1-of-8 Safe + EOA. BSC structurally equivalent: MINTER_ROLE[0]=GMTokenManager(0x91f8…), MINTER_ROLE[1]=contract, DEFAULT_ADMIN=0x8860… (contract). Impl (USDon) confirmed on Blockscout. Regulation S restricts U.S.-person minting; no permissionless mint path.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25295047 and BSC block 103630432 (2026-06-11): USDon ETH proxy (0xace8…) has EIP-1967 ProxyAdmin=0x5244… owned by TimelockController 0x3715… (2h delay). Token MINTER_ROLE has 2 holders: GMTokenManager (0x2c15…) and 3-of-6 Ondo Safe (0x7607…, no modules). DEFAULT_ADMIN = Timelock; Timelock PROPOSER = 4-of-7 Safe, EXECUTOR = 1-of-8 Safe + EOA. BSC structurally equivalent: MINTER_ROLE[0]=GMTokenManager(0x91f8…), MINTER_ROLE[1]=contract, DEFAULT_ADMIN=0x8860… (contract). Impl (USDon) confirmed on Blockscout. Regulation S restricts U.S.-person minting; no permissionless mint path. USDon is issued by Ondo Global Markets (BVI) Limited; Ondo's Trust & Transparency page scopes its only third-party feed (Ankura Trust) to tokenized-stock holdings, not USDon's brokerage cash, and no dated independent report of USDon's specific cash reserve was found, so reconciliation is unknown. Ondo's own disclaimer states the issuer and tokens are not registered or licensed by the BVI FSC, SEC, CFTC or any financial regulator, so supervision is none.",
+      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16",
       "sources": [
         {
           "label": "Ondo GM trust and transparency",
@@ -323,6 +326,10 @@
         {
           "label": "USDon token on Etherscan",
           "url": "https://etherscan.io/address/0xace8e719899f6e91831b18ae746c9a965c2119f1"
+        },
+        {
+          "label": "Ondo Global Markets disclaimer (no regulator registration)",
+          "url": "https://docs.ondo.finance/ondo-global-markets/disclaimer"
         }
       ]
     }

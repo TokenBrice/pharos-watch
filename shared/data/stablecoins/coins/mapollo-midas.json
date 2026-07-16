@@ -365,10 +365,13 @@
         "evidence": "At Ethereum block 25527135, all five mint-critical transparent proxies had admin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac and zero beacon slots. ProxyAdmin.owner() returned this MidasTimelockController, whose getMinDelay() was 172800 seconds. Safe 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89 was its sole proposer, executor, and canceller."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "At Ethereum block 25527135, the complete mAPOLLO mint-critical proxy inventory was token 0x7cf9dec92ca9fd46f8d86e7798b72624bc116c05, deposit vault 0xc21511edd1e6ecdc36e8ad4c82117033e50d5921, shared access control 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b, data feed 0x9aebf5d6f9411bac355021ddfbe9b2c756bdd358, and manual aggregator 0x84303e5568c7b167fa4febc6253cddfe12b7ee4b. All five transparent proxies shared ProxyAdmin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac, owned by the two-day timelock. The timelock's sole initiating Safe remained 1-of-3 with no modules or guard.",
+      "evidence": "At Ethereum block 25527135, the complete mAPOLLO mint-critical proxy inventory was token 0x7cf9dec92ca9fd46f8d86e7798b72624bc116c05, deposit vault 0xc21511edd1e6ecdc36e8ad4c82117033e50d5921, shared access control 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b, data feed 0x9aebf5d6f9411bac355021ddfbe9b2c756bdd358, and manual aggregator 0x84303e5568c7b167fa4febc6253cddfe12b7ee4b. All five transparent proxies shared ProxyAdmin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac, owned by the two-day timelock. The timelock's sole initiating Safe remained 1-of-3 with no modules or guard. Economic-control evidence reviewed 2026-07-15: the Midas Attestation Engine creates periodic NAV and proof-of-reserve checkpoints, with source documents notarized by vLayer and independently verified by LlamaRisk or Canary; the live dashboard was reviewed on 2026-07-15. The FMA approval covers the prospectus and expressly is not issuer licensing or endorsement.",
       "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-13",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Midas smart contracts docs",
@@ -389,6 +392,14 @@
         {
           "label": "MidasTimelockController",
           "url": "https://eth.blockscout.com/address/0xe3eee3e0d2398799c884a47fc40c029c8e241852"
+        },
+        {
+          "label": "Midas Attestation Engine",
+          "url": "https://blog.midas.app/introducing-the-midas-attestation-engine/"
+        },
+        {
+          "label": "Midas prospectus documents",
+          "url": "https://docs.midas.app/resources/legal-documents/prospectus-documents"
         }
       ]
     }

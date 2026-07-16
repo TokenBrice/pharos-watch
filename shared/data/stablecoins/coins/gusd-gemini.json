@@ -294,6 +294,8 @@
         "evidence": "At Ethereum block 25526129, both ERC20Proxy 0x056fd409e1d7a124bd7017459dfea2f387b6d5cd and ERC20Store 0xc42b14e49744538e3c239f8ae48a1eaaf35e68a0 returned this custodian and current implementation 0x6704ba24b8640bccee6bf2fd276a6a1b8edf4ade. The custodian exposed Gemini's request/complete callback interface with defaultTimeLock() 172800, extendedTimeLock() 604800, and three active EOA signers decoded from deployment data and confirmed through signerSet: 0x7a6390ca97a7babdf10a7ce6edaa83a51be8b783, 0xc7990cdf6b076f4fc1c1a89008bed3844aa4c2a1, and 0xabf27274a828b492dfd5bcb2e885ffb00aa698c7. Gemini's source and whitepaper require coordinated Proxy and Store implementation replacement through this custodian."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
       "sources": [
         {
@@ -303,11 +305,19 @@
         {
           "label": "Gemini Dollar whitepaper",
           "url": "https://www.gemini.com/static/dollar/gemini-dollar-whitepaper.pdf"
+        },
+        {
+          "label": "BPM GUSD reserves examination - May 2026",
+          "url": "https://assets.ctfassets.net/jg6lo9a2ukvr/37f7Yx41qkN4XELuRzQrDv/e7d67a902d19e5fbf6a85ee620838d51/Gemini_Trust_Company__LLC_053126_GUSD_Reserves_Report_May_2026_-_Issued.pdf"
+        },
+        {
+          "label": "NYDFS virtual currency business registry",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
         }
       ],
-      "evidence": "At Ethereum block 25526129, the complete live graph was ERC20Proxy and ERC20Store -> implementation 0x6704ba24b8640bccee6bf2fd276a6a1b8edf4ade, with both custom upgrade pointers controlled by two-day 2-of-3 custodian 0xb983ed57aeaa180bc7a0078ddadf1ea217f2e421. The implementation's custodian was PrintLimiter 0x72519fa6cd095c99d5d67e31ddc117409bc5c047, whose limited printer was EOA 0xd24400ae8bfebb18ca49be86258a3c749cf46853 under a 136000000000-raw-unit ceiling and whose cap/direct-print custodian was one-hour 2-of-3 contract 0x1789cca7430aacbdb7c89f9b5695a9c06e4764eb.",
-      "reviewer": "Codex Safety Score V9 evidence audit",
-      "reviewedAt": "2026-07-13"
+      "evidence": "At Ethereum block 25526129, the complete live graph was ERC20Proxy and ERC20Store -> implementation 0x6704ba24b8640bccee6bf2fd276a6a1b8edf4ade, with both custom upgrade pointers controlled by two-day 2-of-3 custodian 0xb983ed57aeaa180bc7a0078ddadf1ea217f2e421. The implementation's custodian was PrintLimiter 0x72519fa6cd095c99d5d67e31ddc117409bc5c047, whose limited printer was EOA 0xd24400ae8bfebb18ca49be86258a3c749cf46853 under a 136000000000-raw-unit ceiling and whose cap/direct-print custodian was one-hour 2-of-3 contract 0x1789cca7430aacbdb7c89f9b5695a9c06e4764eb. BPM LLP performs monthly independent examinations; the latest reviewed report covers May 29, 2026, was issued June 29, 2026, and fully reconciles GUSD liabilities to reserve assets. The NYDFS registry matches Gemini Trust Company, LLC as a Limited Purpose Trust Charter holder and identifies GUSD as approved for issuance, supporting prudential supervision of the issuer.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
+      "reviewedAt": "2026-07-15"
     }
   },
   "custodyModel": "institutional-top",

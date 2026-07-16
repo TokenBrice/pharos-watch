@@ -250,7 +250,10 @@
         "evidence": "At Ethereum block 25526837, getRoleMemberCount(UPGRADER_ROLE) returned 1 and getRoleMember(...,0) returned this address; eth_getCode returned empty bytecode. Verified MintableToken source restricts _authorizeUpgrade() to UPGRADER_ROLE, so this single EOA can replace mint logic immediately."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Fidelity FIDD overview",
@@ -259,11 +262,23 @@
         {
           "label": "Ethereum FIDD token",
           "url": "https://etherscan.io/address/0x7c135549504245b5eae64fc0e99fa5ebabb8e35d"
+        },
+        {
+          "label": "Fidelity Digital Assets FIDD transparency",
+          "url": "https://www.fidelitydigitalassets.com/stablecoin"
+        },
+        {
+          "label": "PwC FIDD reserve examination - May 2026",
+          "url": "https://fwc.widen.net/s/sqqnvljnw5/fidelity-digital-assets---fidd-reserve-attestation-report---may-2026"
+        },
+        {
+          "label": "OCC active national trust banks",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/financial-institution-lists/trust-by-name.pdf"
         }
       ],
-      "evidence": "At Ethereum block 25526837, FIDD remained a UUPS proxy with implementation 0x8ae9cb3d..., zero proxy-admin and beacon slots, three default-admin EOAs, five minter EOAs, and one distinct upgrader EOA. Verified source gates _authorizeUpgrade() with UPGRADER_ROLE rather than DEFAULT_ADMIN_ROLE.",
+      "evidence": "At Ethereum block 25526837, FIDD remained a UUPS proxy with implementation 0x8ae9cb3d..., zero proxy-admin and beacon slots, three default-admin EOAs, five minter EOAs, and one distinct upgrader EOA. Verified source gates _authorizeUpgrade() with UPGRADER_ROLE rather than DEFAULT_ADMIN_ROLE. Economic-control evidence reviewed 2026-07-15: PwC examines FIDD reserves monthly; the latest available report covers 2026-05-29 and reconciles reserve assets to token liabilities. The OCC active national trust-bank list matches Fidelity Digital Assets, N.A. (charter 25398), the exact issuer.",
       "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-13"
+      "reviewedAt": "2026-07-15"
     }
   },
   "custodyModel": "institutional-top",

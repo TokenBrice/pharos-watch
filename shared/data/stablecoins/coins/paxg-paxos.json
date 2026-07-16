@@ -204,6 +204,8 @@
         "evidence": "At Ethereum block 25526129, the legacy Zeppelinos proxy admin slot returned no-code EOA 0xc94bcf6e1d8b3558e3b62e743630d50497e3851c, which can replace outer PAXG logic immediately. The separate no-code DEFAULT_ADMIN EOA can independently upgrade SupplyControl and its LayerZero controller or redirect the token to a different supply controller. Both paths have zero execution delay."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
       "sources": [
         {
@@ -213,11 +215,23 @@
         {
           "label": "Paxos PAXG contract repository",
           "url": "https://github.com/paxosglobal/paxos-gold-contract"
+        },
+        {
+          "label": "Paxos PAXG transparency",
+          "url": "https://www.paxos.com/paxg-transparency"
+        },
+        {
+          "label": "NYDFS regulated virtual-currency businesses",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
+        },
+        {
+          "label": "OCC Paxos national trust conditional approval",
+          "url": "https://www.occ.treas.gov/news-issuances/news-releases/2025/nr-occ-2025-125.html"
         }
       ],
-      "evidence": "At Ethereum block 25526129, legacy token proxy 0x45804880de22913dafe09f4980848ece6ecbaf78 used implementation 0x7da4c5d9eca180a03765a6d27196f2a0380fa543 and proxy-admin EOA 0xc94bcf6e1d8b3558e3b62e743630d50497e3851c. Its SupplyControl UUPS proxy used exact-source implementation 0xbb9f637fae6972ea9adeb2ac717c16590cec33e3 and three live controllers. DEFAULT_ADMIN EOA 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b could immediately manage controllers, redirect SupplyControl, upgrade SupplyControl, and upgrade controller proxy 0xd09ede557ef195983c9544a5724046fbd6e8a3c6. No pending default-admin transfer existed.",
-      "reviewer": "Codex Safety Score V9 evidence audit",
-      "reviewedAt": "2026-07-13"
+      "evidence": "At Ethereum block 25526129, legacy token proxy 0x45804880de22913dafe09f4980848ece6ecbaf78 used implementation 0x7da4c5d9eca180a03765a6d27196f2a0380fa543 and proxy-admin EOA 0xc94bcf6e1d8b3558e3b62e743630d50497e3851c. Its SupplyControl UUPS proxy used exact-source implementation 0xbb9f637fae6972ea9adeb2ac717c16590cec33e3 and three live controllers. DEFAULT_ADMIN EOA 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b could immediately manage controllers, redirect SupplyControl, upgrade SupplyControl, and upgrade controller proxy 0xd09ede557ef195983c9544a5724046fbd6e8a3c6. No pending default-admin transfer existed. Mint-tier review (2026-07-15): KPMG LLP performs monthly independent PAXG reserve attestations; the latest listed report covers 2026-05-31 and reconciles PAXG supply to allocated gold. NYDFS's registry exactly matches Paxos Trust Company, LLC, the PAXG issuer, as a limited-purpose trust and virtual-currency business, providing prudential issuer supervision.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15"
     }
   },
   "custodyModel": "institutional-top",

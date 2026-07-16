@@ -149,7 +149,7 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     const cusd = result.get("cusd-celo");
     expect(cusd?.routeStatus).toBe("degraded");
     expect(cusd?.outputImpairedDependencyId).toBe("ausd-agora");
-    expect(cusd?.outputImpairedShare).toBeCloseTo(0.27, 6);
+    expect(cusd?.outputImpairedShare).toBeCloseTo(0.274, 6);
     expect(cusd?.routeStatusReason).toContain("Output asset impairment");
   });
 
@@ -175,15 +175,15 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     ]);
 
     const result = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE);
-    const honey = result.get("honey-berachain");
-    expect(honey?.routeStatus).toBe("degraded");
-    // worst impaired dependency wins attribution
-    expect(honey?.outputImpairedDependencyId).toBe("usdc-circle");
-    expect(honey?.activeDepegBps).toBe(3000);
-    // Current reviewed USDC.e and USDt0 vault shares accumulate.
-    expect(honey?.outputImpairedShare).toBeCloseTo(0.00006381, 8);
-    // composition weights sum to exactly 1.0, so no over-leverage marker is emitted
-    expect(honey?.routeStatusReason).not.toContain("over-leveraged");
+    const cusd = result.get("cusd-celo");
+    expect(cusd?.routeStatus).toBe("degraded");
+    // worst impaired dependency wins attribution (USDC's -3000 bps beats USDT's -2600 bps)
+    expect(cusd?.outputImpairedDependencyId).toBe("usdc-circle");
+    expect(cusd?.activeDepegBps).toBe(3000);
+    // cUSD's reviewed USDC (3.8%) and USDT (12.3%) reserve shares accumulate.
+    expect(cusd?.outputImpairedShare).toBeCloseTo(0.161, 6);
+    // composition weights sum below 1.0, so no over-leverage marker is emitted
+    expect(cusd?.routeStatusReason).not.toContain("over-leveraged");
   });
 
   it("ignores severe depegs of coins that are no configured route's output dependency", async () => {
@@ -208,7 +208,7 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     expect(result.size).toBe(1);
   });
 
-  it("reports weighted output impairment for basket dependencies", async () => {
+  it("reports full output impairment when the sole backing asset is depegged", async () => {
     const db = mockD1([
       {
         match: "FROM depeg_events",
@@ -227,8 +227,9 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     const honey = result.get("honey-berachain");
     expect(honey?.routeStatus).toBe("degraded");
     expect(honey?.outputImpairedDependencyId).toBe("usde-ethena");
-    expect(honey?.outputImpairedShare).toBeGreaterThan(0);
-    expect(honey?.outputImpairedShare).toBeLessThan(1);
+    // Honey's reviewed live reserves are now a single USDe (Ethena) row at 100%,
+    // so a severe USDe depeg fully impairs the modeled route output.
+    expect(honey?.outputImpairedShare).toBe(1);
     expect(honey?.routeStatusReason).toContain("modeled route output is impaired");
   });
 });

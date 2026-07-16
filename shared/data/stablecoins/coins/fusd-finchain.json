@@ -354,6 +354,7 @@
         "evidence": "EIP-1967 proxy admin slot = 0x29A48097... (OZ ProxyAdmin). ProxyAdmin.owner() = 0xc61f22aa3a6469f4f90994421f4570459217c215; eth_getCode returned empty (EOA). Same ProxyAdmin confirmed on Avalanche and Sonic deployments."
       }
     ],
+    "reconciliation": "unknown",
     "review": {
       "sources": [
         {
@@ -363,11 +364,23 @@
         {
           "label": "FinChain deployments",
           "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
+        },
+        {
+          "label": "FinChain FUSD reserve dashboard",
+          "url": "https://fusd.finchain.global/#reserves"
+        },
+        {
+          "label": "FinChain FUSD reserves documentation",
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/fusd-reserves"
+        },
+        {
+          "label": "Bermuda Monetary Authority regulated entities",
+          "url": "https://www.bma.bm/regulated-entities"
         }
       ],
-      "evidence": "Ethereum block 25294994: MINTER_ROLE count = 4 (FinChain mint proxy + TokenBridgeSender + 2x CCIP BurnMintTokenPool); DEFAULT_ADMIN_ROLE = 1 holder (EOA 0xc61f22aa). ProxyAdmin 0x29A48097 owned by EOA 0xc61f22aa (confirmed empty code). Same ProxyAdmin present on Avalanche and Sonic. Monad deployment not verifiable (no public RPC). All addressable Ethereum/Avalanche/Sonic mint surfaces confirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "Ethereum block 25294994: MINTER_ROLE count = 4 (FinChain mint proxy + TokenBridgeSender + 2x CCIP BurnMintTokenPool); DEFAULT_ADMIN_ROLE = 1 holder (EOA 0xc61f22aa). ProxyAdmin 0x29A48097 owned by EOA 0xc61f22aa (confirmed empty code). Same ProxyAdmin present on Avalanche and Sonic. Monad deployment not verifiable (no public RPC). All addressable Ethereum/Avalanche/Sonic mint surfaces confirmed. Mint-tier review (2026-07-15): No named independent attestor, cadence, or dated reserve-to-liability report is public; the FinChain reserve dashboard is issuer-reported real-time data. The Bermuda Monetary Authority register matches FinChain Bermuda Limited as the licensed digital-asset issuer, providing prudential supervision but not independent reconciliation. The supervision field is intentionally omitted because the current adapter preserves periodic proof-of-reserves inference when reviewed reconciliation is unknown; authoring prudential would falsely graduate the mint tier.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15"
     },
     "upgradeability": {
       "model": "transparent-proxy",

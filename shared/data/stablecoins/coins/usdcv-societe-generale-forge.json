@@ -282,10 +282,11 @@
         "evidence": "The verified SmartCoin V4 implementation exposes proxiableUUID(), upgradeTo(), and upgradeToAndCall(), and gates _authorizeUpgrade to the technical operator. At Ethereum block 25530874, technical() returned 0x54124a6834af252a0f9ac7f478001aa500428955; eth_getCode at that block returned no bytecode. The proxy's EIP-1967 admin slot is zero, so this EOA is the UUPS upgrade authority rather than a ProxyAdmin contract."
       }
     ],
+    "reconciliation": "unknown",
     "review": {
-      "evidence": "At Ethereum block 25294784: USDCV and EURCV share implementation 0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b (SmartCoin V4, UUPS). Proxy admin slot zero. Immutable operators extracted from bytecode: registrar/minter EOA 0x7de0bbdfcd4a6a956f149befcca30d6b5bc5da69, operations EOA 0xc98cb9f53e20afbbeb75caf6456ed52d5d7903f6, technical/upgrade EOA 0x54124a6834af252a0f9ac7f478001aa500428955. All EOAs confirmed. On-chain model corroborates SG-FORGE issuer-backend description.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25294784: USDCV and EURCV share implementation 0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b (SmartCoin V4, UUPS). Proxy admin slot zero. Immutable operators extracted from bytecode: registrar/minter EOA 0x7de0bbdfcd4a6a956f149befcca30d6b5bc5da69, operations EOA 0xc98cb9f53e20afbbeb75caf6456ed52d5d7903f6, technical/upgrade EOA 0x54124a6834af252a0f9ac7f478001aa500428955. All EOAs confirmed. On-chain model corroborates SG-FORGE issuer-backend description. SG-FORGE publishes issuer-reported reserve composition and valuation daily, with the latest observed snapshot dated July 11, 2026, but challenge searches found no recurring independent USDCV assets-and-liabilities reconciliation or qualifying attestor. Reconciliation is therefore unknown. SG-FORGE's issuer disclosure identifies Société Générale-FORGE as the USDCV issuer and as an ACPR-authorized Electronic Money Institution; the ACPR register is the competent prudential registry, supporting prudential supervision of the same legal entity.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
           "label": "SG-FORGE CoinVertible",
@@ -294,6 +295,14 @@
         {
           "label": "Ethereum USDCV token",
           "url": "https://etherscan.io/address/0x5422374b27757da72d5265cc745ea906e0446634"
+        },
+        {
+          "label": "SG-FORGE USDCV launch and reserve disclosure",
+          "url": "https://www.sgforge.com/usd-stablecoin-bny-custodian/"
+        },
+        {
+          "label": "ACPR financial agents register",
+          "url": "https://acpr.banque-france.fr/fr/professionnels/vos-outils-et-services/consulter-les-registres/registre-des-agents-financiers-et-des-organismes-dassurance"
         }
       ]
     }

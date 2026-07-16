@@ -225,6 +225,31 @@
       "liquidityHorizon": "over-seven-days"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "K3 Capital sBOLD technical documentation",
+        "url": "https://k3-capital.gitbook.io/sbold/technical-details"
+      },
+      {
+        "label": "Liquity V2 Stability Pool documentation",
+        "url": "https://docs.liquity.org/v2-documentation/technical-docs-and-audits"
+      },
+      {
+        "label": "sBOLD Ethereum vault",
+        "url": "https://etherscan.io/address/0x50bd66d59911f5e086ec87ae43c811e0d059dd11#code"
+      }
+    ],
+    "rationale": "sBOLD is a vault position that deploys its BOLD into Liquity V2 Stability Pools. The direct reserve is therefore one identified protocol position whose BOLD, vault, Stability Pool, market, and liquidity risks remain explicit.",
+    "compositionBasis": "Exact live ERC-4626 single-asset row and K3 sBOLD technical documentation",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No additional direct sBOLD reserve slice is identified; its changing branch allocation is an internal attribute of the classified Stability Pool position.",
+    "knownUnknownExposurePct": 0
+  },
   "yieldConfig": {
     "yieldSource": "K3 sBOLD Stability Pool vault",
     "yieldType": "lending-vault"

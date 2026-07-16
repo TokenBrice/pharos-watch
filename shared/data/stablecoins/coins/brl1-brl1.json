@@ -40,22 +40,30 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "BRL1 official website",
-        "url": "https://brl1.io/en/"
+        "label": "BRL1 Polygon proxy",
+        "url": "https://polygon.blockscout.com/address/0x5c067c80c00ecd2345b05e83a3e758ef799c40b5"
       },
       {
-        "label": "BRL1 how it works",
-        "url": "https://brl1.io/en/como_funciona"
+        "label": "BRL1 ERC20F verified implementation",
+        "url": "https://polygon.blockscout.com/api/v2/smart-contracts/0xf7c3aceabab5b505effeab0603e11f2ed54020ac"
+      },
+      {
+        "label": "BRL1 DenyList verified implementation",
+        "url": "https://polygon.blockscout.com/api/v2/smart-contracts/0xae6c65b08de05c75ee7c9c19ac11ba2da6fb6a42"
+      },
+      {
+        "label": "Polygon current-state RPC",
+        "url": "https://polygon.drpc.org"
       }
     ],
-    "evidence": "BRL1's official materials describe a reserve-backed institutional token and public reserve transparency, but the reviewed disclosures do not expose a deployment-wide holder-balance blacklist or freeze inventory. The explicit Possible status is retained for unresolved issuer, vault, pause, proxy, or admin-control paths.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At Polygon block 90292623 on 2026-07-15, BRL1 proxy 0x5c067c80c00ecd2345b05e83a3e758ef799c40b5 resolved to verified ERC20F implementation 0xf7c3aceabab5b505effeab0603e11f2ed54020ac and reported accessRegistry 0x3EbcB1ACcf595579DD89FA57176C5803947Edb31. ERC20F checks that registry for both transfer sender and receiver, exposes a PAUSER_ROLE system-wide pause, and permits RECOVERY_ROLE to transfer tokens from a denied account. The live registry resolves to verified DenyList implementation 0xae6c65b08de05c75ee7c9c19ac11ba2da6fb6A42, whose hasAccess returns false for addresses in its access list; it exposes access-list-admin controls. These individually targeted denylist controls, plus the token pause, make BRL1 transfers directly restrictable even though the list was empty and the token unpaused at the review block. The failure domains are the BRL1 token role authority and its configured DenyList authority; UUPS upgrader authority can replace either implementation.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
@@ -191,6 +199,8 @@
         "evidence": "At Polygon block 90179923, DEFAULT_ADMIN_ROLE is held by this EOA and is the admin of MINTER_ROLE and UPGRADER_ROLE. No UPGRADER_ROLE account exists, but this EOA can grant the role and execute a UUPS upgrade without an enforced delay. EIP-1967 implementation is 0xf7c3aceabab5b505effeab0603e11f2ed54020ac; admin and beacon slots are zero. EOA 0xf0e67fb618496fbe0a44934d370738a611bc8fd1 has BURNER_ROLE, not UPGRADER_ROLE."
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -200,11 +210,19 @@
         {
           "label": "BRL1 Polygon token",
           "url": "https://polygonscan.com/address/0x5c067c80c00ecd2345b05e83a3e758ef799c40b5"
+        },
+        {
+          "label": "BRL1 how-it-works / reserves",
+          "url": "https://brl1.io/en/como_funciona"
+        },
+        {
+          "label": "Brazil BCB Resolutions 519-521/2025 stablecoin framework overview",
+          "url": "https://www.plasma.to/learn/tools/stablecoin-regulation-map/brazil"
         }
       ],
-      "evidence": "At Polygon block 90179923, BRL1 proxy 0x5c067c80c00ecd2345b05e83a3e758ef799c40b5 used UUPS implementation 0xf7c3aceabab5b505effeab0603e11f2ed54020ac with zero EIP-1967 admin and beacon slots. EOA 0x04412afc0a6fa21b255c6ccff28e97073d7750b3 was the sole live MINTER_ROLE holder. EOA 0xccfc24f563fbd798f171d16cc0706529c4739217 held DEFAULT_ADMIN_ROLE and could immediately grant MINTER_ROLE or UPGRADER_ROLE. No live UPGRADER_ROLE holder existed; 0xf0e67fb618496fbe0a44934d370738a611bc8fd1 held BURNER_ROLE only.",
-      "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-13"
+      "evidence": "At Polygon block 90179923, BRL1 proxy 0x5c067c80c00ecd2345b05e83a3e758ef799c40b5 used UUPS implementation 0xf7c3aceabab5b505effeab0603e11f2ed54020ac with zero EIP-1967 admin and beacon slots. EOA 0x04412afc0a6fa21b255c6ccff28e97073d7750b3 was the sole live MINTER_ROLE holder. EOA 0xccfc24f563fbd798f171d16cc0706529c4739217 held DEFAULT_ADMIN_ROLE and could immediately grant MINTER_ROLE or UPGRADER_ROLE. No live UPGRADER_ROLE holder existed; 0xf0e67fb618496fbe0a44934d370738a611bc8fd1 held BURNER_ROLE only. BRL1 is issued by a Brazilian consortium (Bitso, Mercado Bitcoin, Foxbit, Cainvest) with no single named regulated issuing entity; the latest reserve report (period end 2026-05-01) is a self-published PDF with ad-hoc cadence and self-verification and no named independent accounting firm, so reconciliation is unknown. Brazil's stablecoin framework (BCB Resolutions 519-521/2025) is still phasing in through 2026 and no BRL1-specific BCB or CVM registry entry was found, so supervision is none.",
+      "reviewer": "Codex Safety Score V9 registry pass; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16"
     }
   },
   "launchDate": "2025-02-17"

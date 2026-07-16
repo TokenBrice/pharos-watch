@@ -252,8 +252,10 @@
         ]
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "Full RoleGranted/RoleRevoked log scans on USDGLO (0x4f604735c1cf31399c6e711d5962b2b3e0225ad3) via Blockscout instances on ETH (from deployment block 15921266), Base, Celo, Polygon, Optimism, and Arbitrum show every role (DEFAULT_ADMIN, MINTER 0x9f2df0fe…, PAUSER 0x65d7a28e…, UPGRADER 0x189ab7a9…) consolidated to 0xb180f98037a63a3dca66b6b4ddbf250265b65110 with all earlier holders revoked. Rechecked on 2026-07-14 at ETH block 25530512 / Base 48619144 / Celo 72126877 / Polygon 90215095 / OP 154214430 / ARB 483746760: hasRole(UPGRADER_ROLE, 0xb180f9…) is true and eth_getCode returns empty on every chain. ERC-1967 implementation slots resolve to 0xf8dbe4f5… (ETH/Polygon), 0x693b51c1… (Base/OP/Arbitrum), and 0x865dda29… (Celo). Stellar issuer (GBBS25…) has 1 signer, weight=1. Brale-issued model confirmed from issuer materials.",
+      "evidence": "Full RoleGranted/RoleRevoked log scans on USDGLO (0x4f604735c1cf31399c6e711d5962b2b3e0225ad3) via Blockscout instances on ETH (from deployment block 15921266), Base, Celo, Polygon, Optimism, and Arbitrum show every role (DEFAULT_ADMIN, MINTER 0x9f2df0fe…, PAUSER 0x65d7a28e…, UPGRADER 0x189ab7a9…) consolidated to 0xb180f98037a63a3dca66b6b4ddbf250265b65110 with all earlier holders revoked. Rechecked on 2026-07-14 at ETH block 25530512 / Base 48619144 / Celo 72126877 / Polygon 90215095 / OP 154214430 / ARB 483746760: hasRole(UPGRADER_ROLE, 0xb180f9…) is true and eth_getCode returns empty on every chain. ERC-1967 implementation slots resolve to 0xf8dbe4f5… (ETH/Polygon), 0x693b51c1… (Base/OP/Arbitrum), and 0x865dda29… (Celo). Stellar issuer (GBBS25…) has 1 signer, weight=1. Brale-issued model confirmed from issuer materials. Mint-tier review (2026-07-15): No independent attestor exists: Brale Inc. management self-verifies monthly, with the latest report covering 2026-05-31 and published 2026-06-04. FinCEN and state money-transmitter records match Brale Inc., but MSB/transmitter licensing is AML and payments conduct status rather than prudential stablecoin-issuer supervision.",
       "sources": [
         {
           "label": "Brale USDGLO proof of reserve",
@@ -266,10 +268,18 @@
         {
           "label": "USDGLO token (Ethereum Blockscout)",
           "url": "https://eth.blockscout.com/address/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"
+        },
+        {
+          "label": "Brale USDGLO May 2026 management report",
+          "url": "https://brale.xyz/assets/reports/USDGLO-Glo-Dollar-Reserve-Attestation-Report-05-2026.pdf"
+        },
+        {
+          "label": "FinCEN MSB registry search",
+          "url": "https://www.fincen.gov/resources/msb-state-selector"
         }
       ],
-      "reviewer": "Codex CTRL batch 04",
-      "reviewedAt": "2026-07-14"
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15"
     }
   },
   "liveReservesConfig": {

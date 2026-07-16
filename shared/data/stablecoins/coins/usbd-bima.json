@@ -424,11 +424,60 @@
   ],
   "reserves": [
     {
-      "name": "Bitcoin LSTs / LRTs and approved BTC wrappers",
+      "name": "WBTC BIMA collateral wrapper",
       "pct": 100,
-      "risk": "high"
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "BIMA WBTC collateral wrapper and Wrapped Bitcoin custodians",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "BIMA mainnet address registry",
+        "url": "https://docs.bima.money/security/mainnet-addresses"
+      },
+      {
+        "label": "BIMA minting documentation",
+        "url": "https://docs.bima.money/minting-usbd"
+      },
+      {
+        "label": "WBTC BIMA collateral wrapper",
+        "url": "https://etherscan.io/address/0x59063fbe70d3b0f9312e5c89acdc476f5d2018e1#code"
+      },
+      {
+        "label": "Pinned BIMA TroveManager implementation",
+        "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/contracts/core/TroveManager.sol"
+      }
+    ],
+    "rationale": "The independent branch-balance producer found only the WBTC BIMA collateral-wrapper branch positive at the exact capture. The wrapper position retains WBTC market, custody, counterparty, liquidity, concentration, and BIMA smart-contract failure domains.",
+    "compositionBasis": "All configured positive BIMA branch balances captured on 2026-07-15",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No other configured BIMA branch had positive collateral at capture; underlying WBTC custody remains a structured risk of the classified wrapper position.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "WBTC BIMA collateral wrapper",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The BIMA WBTC wrapper is protocol collateral rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "evm-branch-balances",
     "version": 1,

@@ -2,19 +2,49 @@
   "id": "xo-exodus",
   "reserves": [
     {
-      "name": "U.S. dollars and other high-quality liquid reserve assets",
-      "pct": 100,
+      "name": "Tokenized treasury collateral",
+      "pct": 97.9,
       "risk": "low",
+      "coinId": "ustb-superstate",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Invesco Short Duration US Government Securities Fund",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Cash",
+      "pct": 2.1,
+      "risk": "very-low",
+      "assetClass": "cash",
+      "issuerOrObligor": "M0 permissioned issuers' eligible custody arrangements",
+      "riskFactors": [
+        "custody",
+        "counterparty",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Non-eligible token collateral",
+      "pct": 0.000115,
+      "risk": "high",
       "assetClass": "other",
-      "issuerOrObligor": "MoonPay reserve counterparties (not publicly named)",
+      "issuerOrObligor": "Undisclosed non-eligible token collateral obligor",
       "riskFactors": [
         "credit",
         "liquidity",
         "custody",
         "counterparty",
-        "concentration",
-        "legal",
-        "smart-contract"
+        "smart-contract",
+        "concentration"
       ],
       "liquidityHorizon": "unknown"
     }
@@ -31,21 +61,29 @@
       {
         "label": "MoonPay stablecoin terms",
         "url": "https://www.moonpay.com/legal/stablecoin_terms"
+      },
+      {
+        "label": "M0 collateral-composition API recipe",
+        "url": "https://docs.m0.org/api-reference/protocol/recipes/collateral-composition"
+      },
+      {
+        "label": "M0 Protocol API GraphQL endpoint",
+        "url": "https://protocol-api.m0.org/graphql"
       }
     ],
-    "rationale": "MoonPay describes XO as a fully reserved USD-backed stablecoin developed using M0 infrastructure. MoonPay's stablecoin terms permit U.S. dollars and other high-quality liquid USD-denominated assets in segregated accounts, but neither source publishes XO's current asset mix. M0 infrastructure use does not establish a token-specific M reserve dependency or allocation.",
-    "compositionBasis": "MoonPay XO announcement and stablecoin reserve terms; current asset-class weights undisclosed",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "MoonPay identifies XO as built on M0 infrastructure, and the configured first-party M0 producer reports the captured reserve mix as 97.9% eligible tokenized Treasury collateral and 2.1% cash after normalization. M0's token time series identifies USTB as the eligible collateral; MoonPay's terms retain the XO-specific segregation and legal context.",
+    "compositionBasis": "Exact live M0 collateral capture for XO, MoonPay XO announcement, and stablecoin terms",
+    "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "The full reserve envelope is disclosed, but the current mix among cash and other high-quality liquid assets, provider identities, and provider shares are not published.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "M0 reports a 0.000115% non-eligible token-collateral residual below the displayed two-slice precision and does not identify its obligor; XO-specific provider shares remain undisclosed.",
+    "knownUnknownExposurePct": 0.000115,
     "nonLinkDispositions": [
       {
-        "reserveIndex": 0,
-        "reserveName": "U.S. dollars and other high-quality liquid reserve assets",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "MoonPay does not publish XO's current reserve-asset allocation, counterparties, or provider shares."
+        "reserveIndex": 2,
+        "reserveName": "Non-eligible token collateral",
+        "pct": 0.000115,
+        "disposition": "insufficient-evidence",
+        "rationale": "The first-party current endpoint reports this residual but does not identify the token or obligor."
       }
     ]
   },

@@ -205,6 +205,8 @@
         "evidence": "At Ethereum block 25294738, EIP-1967 admin slot returned 0xa3b670f2dd1722c3d4b98f146467840540c2c53e; owner() on that ProxyAdmin returned EOA 0x3de5F6B51E7E154b12D1D8F3a4708848cd729974 (eth_getCode = empty, confirmed EOA)."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -218,11 +220,23 @@
         {
           "label": "MNEE ChangeMinter events (Blockscout)",
           "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf&fromBlock=0&toBlock=latest&topic0=0xcba8b2f67b1b66244252c443e6260110af641687bcceb46c810da702119ec828"
+        },
+        {
+          "label": "Wolf & Company MNEE May 2026 report",
+          "url": "https://mnee.ghost.io/content/files/2026/06/MNEE---Attestation-Opinion--May-2026--Final.pdf"
+        },
+        {
+          "label": "MNEE transparency",
+          "url": "https://www.mnee.io/transparency"
+        },
+        {
+          "label": "Antigua FSRC licensed digital-asset businesses",
+          "url": "https://www.fsrc.gov.ag/images/pdf/digital-assets/Directory_of_Licenced_Digital_Asset_Business.pdf"
         }
       ],
-      "evidence": "At Ethereum block 25294738: roleHolders()=4 (constant), requiredSignatures()=3 (constant). ChangeMinter event log (9 events) reconstructed current minter set as 5 addresses. isMinter() confirmed true for all 5. Proxy admin contract identified, its owner is an EOA (no bytecode). Source code confirms threshold-signature minting; no on-chain enumerable role list — membership confirmed from event reconstruction.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25294738: roleHolders()=4 (constant), requiredSignatures()=3 (constant). ChangeMinter event log (9 events) reconstructed current minter set as 5 addresses. isMinter() confirmed true for all 5. Proxy admin contract identified, its owner is an EOA (no bytecode). Source code confirms threshold-signature minting; no on-chain enumerable role list — membership confirmed from event reconstruction. Mint-tier review (2026-07-15): Wolf & Company, P.C. performs monthly independent reserve attestations; the latest report covers 2026-05-29 and was published 2026-06-10, reconciling MNEE in circulation to reserve assets. Antigua and Barbuda FSRC's directory matches MNEE Limited, but its listed digital-asset custody authorization is not prudential stablecoin-issuer supervision.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-15"
     },
     "upgradeability": {
       "model": "transparent-proxy",

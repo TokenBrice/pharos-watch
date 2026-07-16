@@ -277,16 +277,75 @@
   "custodyModel": "cex",
   "reserves": [
     {
-      "name": "BTC spot (held at Fireblocks, Copper, CEFFU)",
-      "pct": 50,
-      "risk": "medium"
+      "name": "Copper",
+      "pct": 72.2,
+      "risk": "medium",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Aegis and Copper",
+      "riskFactors": [
+        "market",
+        "basis",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
-      "name": "BTC-margined perpetual futures (short positions)",
-      "pct": 50,
-      "risk": "high"
+      "name": "Fireblocks",
+      "pct": 27.8,
+      "risk": "medium",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Aegis and Fireblocks",
+      "riskFactors": [
+        "market",
+        "basis",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Aegis Accountable YUSD dashboard API",
+        "url": "https://aegis.accountable.capital:10443/dashboard/YUSD"
+      },
+      {
+        "label": "Aegis YUSD backing and strategy",
+        "url": "https://aegis.im/"
+      }
+    ],
+    "rationale": "The 2026-07-15 Accountable snapshot split the adapter's scored reserve envelope between Copper and Fireblocks. Aegis describes that envelope as pooled BTC spot and short COIN-M perpetual positions, but the public snapshot does not split either custodian bucket into spot, derivative equity, margin, or venue exposures.",
+    "compositionBasis": "Accountable reserves_split values, normalized by the existing live-reserve adapter after excluding the separately reported insurance fund",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Both custody buckets contain an undisclosed mix of spot, hedge, margin, and counterparty exposures.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Copper",
+        "pct": 72.2,
+        "disposition": "basket-needs-split",
+        "rationale": "The snapshot identifies the custody bucket but does not split its BTC spot, derivative, margin, and venue exposures."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Fireblocks",
+        "pct": 27.8,
+        "disposition": "basket-needs-split",
+        "rationale": "The snapshot identifies the custody bucket but does not split its BTC spot, derivative, margin, and venue exposures."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "accountable",
     "version": 1,

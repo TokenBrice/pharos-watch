@@ -179,7 +179,16 @@
       "pct": 100,
       "risk": "medium",
       "coinId": "bold-liquity",
-      "depType": "wrapper"
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Yearn yBOLD vault and Liquity V2 Stability Pools",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "market",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -188,8 +197,9 @@
     "confidence": "verified",
     "sources": [{ "label": "Yearn yBOLD documentation", "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold" }, { "label": "Yearn yBOLD vault", "url": "https://yearn.fi/v3/1/0x9f4330700a36b29952869fac9b33f45eedd8a3d8" }],
     "rationale": "Yearn documents yBOLD as vault shares over BOLD deployed in Liquity V2 Stability Pools and redeemable for BOLD. The named BOLD wrapper relationship is complete; live Stability Pool allocation is dynamic.",
-    "compositionBasis": "Yearn yBOLD vault documentation",
-    "scope": "dependency-relationships",
+    "compositionBasis": "Exact live ERC-4626 single-asset row and Yearn yBOLD vault documentation",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
     "knownUnknownExposure": "The linked BOLD backing is disclosed; live Stability Pool allocation is not fixed in static metadata.",
     "knownUnknownExposurePct": 0
   },

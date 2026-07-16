@@ -14,22 +14,26 @@
     "navToken": false
   },
   "collateral": "Canadian dollar reserves held 1:1 in trust for token holders by Tetra Trust",
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "Docs",
-        "url": "https://tetradg.com/supported-blockchains/"
+        "label": "CADD full-match ERC20F implementation",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x0f25045d15c163478bb67c56c5d9d602628f4f62?fields=sources,abi,metadata"
       },
       {
-        "label": "Website",
-        "url": "https://tetradg.com/cadd-stablecoin/"
+        "label": "CADD Ethereum public RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "CADD Base public RPC",
+        "url": "https://base-rpc.publicnode.com"
       }
     ],
-    "evidence": "BLOCKED: On 2026-07-14, the issuer's CADD product and supported-blockchains pages returned an access-verification challenge rather than the token-control evidence needed to establish a current holder-level blacklist, freeze, pause, or transfer-restriction inventory. The tracked Ethereum and Base deployments remain in scope, but the available primary issuer pages do not support a stronger conclusion. Possible is retained rather than treating central issuance or upstream uncertainty as proof of a direct holder-control function.",
-    "reviewer": "SONG-5 Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At Ethereum block 25540162 and Base block 48677278, canonical proxy 0x16f93ebc5320c89efc8701577efe49d14a276a06 resolves to the full-match verified ERC20F implementation 0x0f25045d15c163478bb67c56c5d9d602628f4f62. Current hasRole reads confirm 0x47a5059be8e1876346f4b854377baaa3c0e0d4eb holds PAUSER_ROLE on both chains. Its pause() function is PAUSER_ROLE-gated and every token transfer passes whenNotPaused; transfer and transferFrom also query the active nonzero access registry for both sender and receiver, while recoverTokens can transfer from an account without access. Direct global and holder-level transfer control therefore exists.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
