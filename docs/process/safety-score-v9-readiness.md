@@ -39,14 +39,20 @@ The V9 implementation establishes candidate infrastructure without changing prod
   set from one normalized base input plus a V9 extension. Reviewed adapters
   preserve per-component URLs, review dates, content hashes, confidence, and
   freshness and reject future, stale-as-current, or registry-drifted evidence.
-  They do not infer permissionlessness, immutable upgrades, incident-free
-  history, bridge materiality, or numeric mint caps.
+  The producer derives canonical chain and deployment supply shares only from
+  the exact USD-denominated chain-supply input and reviewed route matches; it
+  does not infer permissionlessness, immutable upgrades, incident-free history,
+  or numeric mint caps.
 - `worker/src/lib/safety-score-v9-candidate.ts` and
   `worker/scripts/replay-safety-score-v9.ts` compile and evaluate the exact
-  candidate deterministically. The deployed Batch 5 policy semantic digest is
-  `5f4f92eec713b65b30d60e3cd8d05a613ab86b4512db4dead699c9b85c30f15e`;
-  its evaluation-build digest is
-  `ad5870b23bd1e09b586edb123c504aa0729e0d5d9b3b5201c6830b6d7f336dff`.
+  candidate deterministically. The selected shadow calibration candidate is
+  policy `84c0e4180eea111591a5a48dc1d9149d4f950b912cb239913a2cc6fa932f607d`,
+  evaluation build `b2c0b298bea563d8b548c3f9d594e43cb46b762b62bfd7be3053a72430d320d1`,
+  compiler schema `9d7b637e0f808df4f19699f7ad10f09413fb46cc66ed0befb707db59a44ca511`,
+  producer capability `19f1ab3ce18de294d33482cff07891f987a2715071cf48ba7cd75ff72562f198`,
+  and candidate ID
+  `safety-score-v9-candidate:v1:f3c9335b1fa87559f79421e392d876f7518a46a6575aa23b8cce2c7fcb2e876c`.
+  It has not been deployed or frozen for qualification.
 - **IDENTITY FREEZE RESCINDED BY OWNER RULING 2026-07-16; CALIBRATION SPRINT IN
   EFFECT:** deployed Batch 5 remains policy `5f4f92eec713b65b30d60e3cd8d05a613ab86b4512db4dead699c9b85c30f15e`
   and build `ad5870b23bd1e09b586edb123c504aa0729e0d5d9b3b5201c6830b6d7f336dff`;
@@ -56,7 +62,10 @@ The V9 implementation establishes candidate infrastructure without changing prod
   Identity-bound changes to policy, engine, schema, or producer capability may
   proceed only through retained same-input calibration replays. A later explicit
   owner re-freeze of a deployed identity is required before any prospective
-  qualifying window can begin.
+  qualifying window can begin. Each kept identity-bound batch also pays the
+  deterministic digest pin, generated manifest, and readiness-pin refresh cost;
+  batch same-day changes so those identity updates happen once, never against a
+  stale manifest.
 - The 2026-07-15 Batch 3 calibration revision (owner rulings 2026-07-15)
   applies the two ruled cap changes and nothing else. (1) The mint posture gains
   a distinct `unbounded-reconciled` rung (`mintPostureQuality` = 55) for an
@@ -86,32 +95,35 @@ The V9 implementation establishes candidate infrastructure without changing prod
   pinned by `worker/src/lib/__tests__/safety-score-v9-mint-authoring-contract.test.ts`.
 - The 2026-07-16 Batch 4 calibration revision (owner ruling Batch 4, option A)
   grades a chain common-mode signal by MATERIAL exposure rather than path count.
-  A new `materiality.matureChainShareThreshold` (0.05) sets the immateriality
-  floor: a non-mature chain whose supply share (aggregated from the asset's
-  `selectedBridgeRoutes`, or bounded above by its unattributed supply when it has
-  no selected route) is below the threshold now grades `moderate`, while a
-  material or unattributable non-mature share stays fail-closed at `high`. Mature
-  chains stay `moderate` regardless of share, and non-chain common-mode domains
-  keep the default `high`. This is grade-neutral on the 2026-07-16 cohort because
-  the flagship fiat coins are co-bound by non-chain common-mode (shared DEX
-  venues, bridges, reserves); see the measurement record for the per-coin binding
-  constraints.
+  `materiality.commonModeShareThreshold` (0.05) sets the immateriality floor.
+  Chain exposure comes from the conserved, canonical `supply.chainDistribution`
+  rows; unresolved source labels remain unattributed and fail closed. A
+  non-mature chain below 5% grades `moderate`, while a material or unattributable
+  non-mature share grades `high`; mature chains stay `moderate`.
 - The 2026-07-16 Batch 5 calibration revision (owner ruling Batch 5) extends the
-  common-mode severity decision per domain KIND, keyed off reviewed evidence.
-  `dex-protocol` liquidity concentration on a reviewed `materiality.matureVenues`
-  venue (curve/uniswap/balancer) is not a capping signal (diagnostic-only `low`,
-  which maps to a null critical-dependency limit and stays visible in the trace);
-  any other venue stays `high`. `bridge-route` concentration keys off the reviewed
-  bridge tier joined from `economicControlReview.bridge.routes`: a
-  `materiality.lowRiskBridgeTiers` tier (CCIP-class `external-validated-network`
-  and safer) grades `moderate`, any other or unreviewed tier stays fail-closed at
-  `high`. `reserve-issuer` concentration is excluded from the cap path (diagnostic
-  `low`) because backing concentration already prices single-obligor exposure;
-  `mint-control` and other kinds are unchanged. Same-input replay over the
-  2026-07-16 capture lifts BOLD and FXUSD from C+ (64) to B- (69) as their
-  mature-venue/CCIP-class non-chain caps clear; GHO holds on mint-control, USDC on
-  its unattributed-supply chain hold (queued for data curation), USDS on an
-  `external-lock-mint` bridge, and USDT stays 59/C.
+  5% common-mode decision to DEX and bridge domains. DEX exposure uses distinct,
+  score-eligible executable capacity at the policy stress notional; incomplete,
+  stale, or unvalued coverage remains unknown. Bridge-domain exposure joins
+  reviewed deployment supply to reviewed tiers, with missing or ambiguous joins
+  failing closed. Mature or proven-immaterial DEX domains are diagnostic; proven
+  immaterial bridges are `moderate`, while material bridges retain their reviewed
+  tier semantics. Reserve-issuer concentration remains diagnostic because
+  backing already prices the same obligor.
+- Deployment control is a separate 10% gate, not the 5% common-mode gate. Every
+  reviewed non-native supply row requires exactly one known control and one
+  reviewed route with the same share. Explicit native rows require no bridge
+  control. Unmatched deployments and pooled uncanonicalized labels must each be
+  strictly below 10%; unknown, stale, ambiguous, duplicate, or non-conserved
+  inventories fail closed. Retained rows that predate the native/controlled
+  discriminator remain parseable but cannot earn a native exemption.
+- The sprint limits the global evidence ceiling to reasons whose policy treatment
+  is `ceiling`; owning-pillar and diagnostic reasons stay visible without adding
+  a second global 69 cap. Exact USD chain supply is consumed directly without
+  price multiplication. LUSD now carries its reviewed immutable mint posture,
+  while FXUSD records native Ethereum issuance and the independently controlled
+  0.54% LayerZero Base deployment. A missing live peg deviation also no longer
+  erases an independently observed active-depeg score and peak: the current field
+  remains bounded-unknown while the adverse facts continue to score.
 - The 2026-07-15 candidate-v2 queue-binding revision adds explicit
   `local-component` paths to seven reason allowlists already emitted as
   aggregate facts. The revision changes evidence-work-queue metadata only;
@@ -246,7 +258,83 @@ Numeric weights, evidence ceilings, track-record ceilings, bounded-compensabilit
 
 Missing critical facts produce their exact reason-coded `NR`. Bounded facts with a `ceiling` treatment emit an executable reason cap that references an existing evidence or minimum track-record ceiling; a ceiling treatment cannot validate without such a rule. Every unresolved fact is emitted as an itemized audit record with asset, pillar, code, classification, criticality, path, and reason; its owner, fact class, boundedness, treatment, release severity, and public label are declared once in the candidate registry rather than duplicated on every row. Unsupported designs and unresolved methodology are not silently treated as missing data. The 24-asset calibration cohort also carries per-asset cohorts, candidate grade, disposition, and sorted critical facts. Parent evaluation is deterministic and parent-first; missing parents and cycles remain explicit. Fuzzy implementation dates use the conservative range end, and variants inherit the newest critical implementation layer.
 
-## Latest Recorded Result
+## 2026-07-16 Calibration Sprint Result
+
+The selected shadow candidate uses registry revision
+`sha256:2a821e9b50c4a82177c1589e0375a1a673ecee7be1a642329163486af5a47a39`.
+Its final same-input Day 3 replay has fact-set digest
+`fdbb0d345c1e7bcee0e39fd88da0b21213181c2fb03e7f52833c49a6d0e59402`
+and result digest
+`bfdbff11a1358813e83f8a2091a4c3af8c2a19e0030921593371b3f9cc87a56b`.
+The policy, build, compiler, producer, and candidate identities are pinned in
+Implementation Status above. Two assets remain honestly `NR`: `brlm-mento` and
+`zeusd-zoth`.
+
+| Exact replay | Grade distribution |
+| --- | --- |
+| Day 1 deployed Batch 5 baseline | B- 2, C+ 3, C 12, C- 22, D 132, F 171, NR 2 |
+| Final same-input Day 3 candidate | B+ 1, B 1, C+ 2, C 9, C- 11, D 106, F 212, NR 2 |
+| Each post-lock Day 4 capture | B+ 1, B 1, C+ 2, C 9, C- 12, D 105, F 212, NR 2 |
+
+The larger F cohort is not a target histogram. It is the result of replacing
+optimistic aggregate bridge/control assumptions with conserved deployment rows
+and fail-closed unresolved controls. All 19 top-30 D/F cards have a material
+trace: twelve are held by the missing/unsupported same-notional exit floor, four
+by critical mint/control posture, two by backing plus unresolved mechanism or
+control evidence, and one by its peg multiplier. No unexplained top-30 lift or
+regression remains.
+
+| Target | Day 1 | Final | Material result |
+| --- | ---: | ---: | --- |
+| BOLD | 69/B- | 79/B+ | Strong evidence; actual backing 78.05 and exit 72.76 keep raw quality at 79.19. |
+| FXUSD | 69/B- | 70/B | Strong evidence; exit 65.85 and correlated routes keep peg-adjusted quality at 70.19. |
+| USDC | 64/C+ | 64/C+ | 8.36% Hyperliquid supply is material non-mature-chain common mode, capped at 64. |
+| GHO | 64/C+ | 64/C+ | Shared Ethereum mint controller is material common mode, capped at 64. |
+| LUSD | 55/C | 59/C | Immutable mint evidence clears the old hold; unsafe liquidation mechanics cap at 59. |
+| USDT | 59/C | 55/C | Missing upgradeability and unresolved bridge/control identities now fail closed. |
+
+There is no real A-range asset. This is a successful falsification of that
+hypothesis, not a reason to move a dial: the strongest real candidates remain
+below A on the material facts in the table. The production-shaped composite
+test mixes reviewed real-asset backing, exit, control, peg, evidence, and
+track-record facts through the normal compiler and evaluator. It produces 88/A+
+with backing 90.53, exit 79.44, control 95, strong evidence, no gaps, and no
+binding cap. It injects no pillar score, cap, override, or asset exception.
+
+| Adverse control | Day 3 | Post-lock Day 4 |
+| --- | ---: | ---: |
+| USDD | 31/F | 31/F |
+| U | 31/F | 31/F |
+| USDai | 39/F | 39/F |
+| TUSD | 49/D | 53/C- |
+| EURS | 20/F | 20/F |
+| MIM | 0/F | 0/F |
+
+TUSD's fresh-input move is explained by a new measured Polygon DEX route, which
+raises exit from 35 to 46.37 without removing its adverse issuer facts. The
+other five controls are unchanged.
+
+After the Day 4 peg audit found and fixed a fail-open active-depeg projection,
+three new schema-v3 `exact-publication-inputs` generations at 14:35, 14:49, and
+15:05 UTC were replayed under the final identity. Their top-30 maximum score
+delta is zero. Outside the top 30, scUSD moves +1 when its measured DEX exit
+changes and Last USD moves -1 when a fresh active-depeg event lowers its peg
+score; both remain F. The captures were produced against registry `1778128d...`
+and then rekeyed to the local `2a821e9b...` metadata revision, so they are valid
+calibration projections, not release-window or activation evidence.
+
+**Sprint decision: no-go.** The candidate clears full-cohort reconciliation,
+the allowed A-range alternative, adverse-control preservation, causal top-30
+explanations, and post-lock stability. It misses two explicit readiness targets:
+USDC does not reach B-range, and only two real assets rather than five are B- or
+better. The smallest evidenced remaining causes are USDC's real Hyperliquid
+exposure, GHO's shared mint controller, and LUSD's unsafe liquidation mechanics;
+none justifies policy tuning solely to reach a grade. Keep the candidate available
+for dark diagnostics only. V8.17 remains public, qualifying days remain zero,
+and activation stays blocked until a later owner re-freeze and a new prospective
+window.
+
+## Legacy 2026-07-13 Recorded Result
 
 Baseline generated at `2026-07-13T02:00:00.000Z` from report cards observed at `2026-07-13T01:00:16.000Z`; the fixed compiler evidence boundary is `2026-07-13T01:02:53.000Z`. The inputs use the fixed v8.16 legacy replay and the P4a observations stored in that fixed input. The available fixed input is schema v1 `legacy-unverified`, not a publication-exact schema v3 capture. It also cannot bind generation/fingerprint metadata to the committed calibration, its normalized replay payload and methodology differ from the calibrated replay, and 381 supplied evidence timestamps are later than its clock. The committed P4 calibration is itself a public reconstruction produced with methodology and registry mismatch allowances. Each condition independently blocks readiness.
 
@@ -319,9 +407,11 @@ npm run safety-score-v9:sensitivity -- \
 
 When those ignored files are present, each output above is byte-reproducible. A clean clone cannot rebuild the tracked calibration or readiness JSON until the corresponding fixed inputs are archived in a durable, content-addressed location. The calibration remains a historical drift record and cannot authorize activation; its two mismatch flags are intentional historical-drift allowances.
 
-## Future Exact Capture
+## Activation-Exact Capture
 
-Once a private publication cache export is available, capture and replay it under distinct v9 filenames rather than overwriting the legacy baseline inputs:
+For a later prospective qualification window, capture and replay the deployed,
+owner-frozen identity under distinct V9 filenames rather than overwriting the
+legacy baseline inputs:
 
 ```bash
 npm run report-cards:capture-fixed-input -- \
@@ -341,6 +431,20 @@ npm run safety-score-v9:replay -- \
   --publication-epoch 0
 ```
 
-The exact-cache export may be either the raw private cache envelope or Wrangler's D1 JSON query result. The V9 replay accepts the resulting normalized exact JSON or the raw exact-cache envelope, uses only its explicit publication time and epoch, and emits the same candidate-pipeline intermediates and identities needed for byte comparison. An optional `v9-rc-N` ID labels the replay but does not promote the candidate policy or authorize release. No such publication-exact artifact is currently available in the research corpus. The public endpoint reconstruction mode instead requires `--baseline-output`, `--captured-at`, `--registry-revision`, and `--dex-generation-id`; it is not exact release-calibration evidence. V8 replay offers `--allow-methodology-mismatch` but intentionally has no registry-mismatch bypass. Calibration separately offers `--allow-methodology-mismatch` and `--allow-registry-mismatch`; use either only for an explicitly labeled drift study, never for activation evidence. The `p4b-activation-v1` policy defaults to, and refuses any override below, 45 eligible DEX assets and 27 eligible redemption assets. An `activate` request throws instead of writing a contradictory report whenever producer or coverage blockers remain.
+The exact-cache export may be either the raw private cache envelope or Wrangler's
+D1 JSON query result. The V9 replay accepts the normalized exact JSON or raw
+envelope, uses only its explicit publication time and epoch, and emits the
+pipeline intermediates and identities needed for byte comparison. The sprint
+captures prove that path, but their registry rekey means they are calibration
+projections rather than publication-exact activation evidence. A qualifying
+capture must match the deployed registry, producer generation, policy, build,
+compiler, and capability without rekey or mismatch allowance. Public-endpoint
+reconstruction and the calibration-only methodology/registry mismatch flags
+remain ineligible for activation evidence. An optional `v9-rc-N` label does not
+promote the candidate or authorize release.
 
-Files under `agents/` are ignored fixed-input/research working artifacts. The committed candidate policy, exit-route calibration, and readiness baseline are durable decision records, but their ignored source captures are not yet a durable evidence archive. An exact schema-v3 `exact-publication-inputs` capture with matching registry, producer generation, fingerprint, methodology, and replay bindings remains an activation blocker. Production remains on v8.17, P4 remains shadow-only, and no v9 activation is authorized while the recorded dispositions are `hold` and `no-go`.
+Files under `agents/` are ignored fixed-input/research working artifacts, not a
+durable evidence archive. An exact schema-v3 capture with matching deployed
+registry, producer generation, fingerprint, methodology, and replay bindings
+remains an activation blocker. Production remains on V8.17; V9 stays shadow-only
+and no activation is authorized while the recorded decision is no-go.
