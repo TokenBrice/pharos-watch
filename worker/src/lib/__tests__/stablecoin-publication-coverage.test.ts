@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   STABLECOIN_PUBLICATION_WAIVERS,
+  evaluateStablecoinActivePriceCoverage,
   evaluateStablecoinPublicationCoverage,
 } from "../stablecoin-publication-coverage";
 
@@ -70,5 +71,62 @@ describe("evaluateStablecoinPublicationCoverage", () => {
 
   it("becomes exact again as soon as a restored row is present", () => {
     expect(evaluateStablecoinPublicationCoverage(activeIds, nowSec).complete).toBe(true);
+  });
+});
+
+describe("evaluateStablecoinActivePriceCoverage", () => {
+  it("reports missing prices independently from complete row coverage", () => {
+    const coverage = evaluateStablecoinActivePriceCoverage([
+      {
+        id: "priced",
+        price: 1,
+        priceSource: "pyth",
+        priceObservedAt: 1_700_000_000,
+        circulating: { peggedUSD: 200 },
+      },
+      {
+        id: "missing",
+        price: null,
+        priceSource: "coingecko",
+        priceUpdatedAt: 1_699_000_000,
+        priceConfidence: "low",
+        circulating: { peggedUSD: 125.5 },
+      },
+    ], ["priced", "missing"]);
+
+    expect(coverage).toEqual({
+      complete: false,
+      expectedActiveCount: 2,
+      presentActiveCount: 2,
+      pricedActiveCount: 1,
+      missingPriceCount: 1,
+      pricedActiveIds: ["priced"],
+      missingActiveIds: ["missing"],
+      affectedMarketCapUsd: 125.5,
+      missingActiveAssets: [{
+        stablecoinId: "missing",
+        marketCapUsd: 125.5,
+        currentPrice: null,
+        currentSource: "coingecko",
+        currentObservedAt: 1_699_000_000,
+        currentConfidence: "low",
+      }],
+    });
+  });
+
+  it("treats a missing row and non-positive prices as uncovered", () => {
+    const coverage = evaluateStablecoinActivePriceCoverage([
+      { id: "zero", price: 0 },
+      { id: "negative", price: -1 },
+    ], ["zero", "negative", "absent"]);
+
+    expect(coverage.presentActiveCount).toBe(2);
+    expect(coverage.pricedActiveCount).toBe(0);
+    expect(coverage.missingActiveIds).toEqual(["zero", "negative", "absent"]);
+    expect(coverage.missingActiveAssets[2]).toMatchObject({
+      stablecoinId: "absent",
+      marketCapUsd: null,
+      currentPrice: null,
+    });
   });
 });

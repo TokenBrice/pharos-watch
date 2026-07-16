@@ -1,4 +1,5 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { getCirculatingRaw } from "@shared/lib/supply";
 
 export interface StablecoinPublicationWaiver {
   stablecoinId: string;
@@ -16,6 +17,37 @@ export interface StablecoinPublicationCoverage {
   waivedActiveIds: string[];
   expiredWaiverIds: string[];
   invalidWaiverIds: string[];
+}
+
+export interface StablecoinPriceCoverageAsset {
+  id: string;
+  price?: number | null;
+  priceSource?: string | null;
+  priceConfidence?: string | null;
+  priceObservedAt?: number | null;
+  priceUpdatedAt?: number | null;
+  circulating?: Record<string, number> | null;
+}
+
+export interface MissingActivePriceDetail {
+  stablecoinId: string;
+  marketCapUsd: number | null;
+  currentPrice: number | null;
+  currentSource: string | null;
+  currentObservedAt: number | null;
+  currentConfidence: string | null;
+}
+
+export interface StablecoinActivePriceCoverage {
+  complete: boolean;
+  expectedActiveCount: number;
+  presentActiveCount: number;
+  pricedActiveCount: number;
+  missingPriceCount: number;
+  pricedActiveIds: string[];
+  missingActiveIds: string[];
+  affectedMarketCapUsd: number;
+  missingActiveAssets: MissingActivePriceDetail[];
 }
 
 export interface ResolvedStablecoinPublicationWaivers {
@@ -112,5 +144,73 @@ export function evaluateStablecoinPublicationCoverage(
     waivedActiveIds,
     expiredWaiverIds: resolvedWaivers.expiredWaiverIds,
     invalidWaiverIds: resolvedWaivers.invalidWaiverIds,
+  };
+}
+
+function finiteNumberOrNull(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function marketCapOrNull(asset: StablecoinPriceCoverageAsset | undefined): number | null {
+  if (!asset?.circulating) return null;
+  const hasFiniteBucket = Object.values(asset.circulating).some(
+    (value) => typeof value === "number" && Number.isFinite(value),
+  );
+  return hasFiniteBucket ? getCirculatingRaw(asset) : null;
+}
+
+/** Price coverage is intentionally independent of row publication coverage.
+ * A published active row with a null, zero, negative, or non-finite price is
+ * still a public data-quality failure, but it must not block cache publication. */
+export function evaluateStablecoinActivePriceCoverage(
+  assets: Iterable<StablecoinPriceCoverageAsset>,
+  expectedActiveIds: readonly string[] = ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.id),
+): StablecoinActivePriceCoverage {
+  const assetsById = new Map<string, StablecoinPriceCoverageAsset>();
+  for (const asset of assets) {
+    assetsById.set(asset.id, asset);
+  }
+
+  const pricedActiveIds: string[] = [];
+  const missingActiveIds: string[] = [];
+  const missingActiveAssets: MissingActivePriceDetail[] = [];
+  let presentActiveCount = 0;
+  let affectedMarketCapUsd = 0;
+
+  for (const stablecoinId of expectedActiveIds) {
+    const asset = assetsById.get(stablecoinId);
+    if (asset) presentActiveCount++;
+
+    const currentPrice = finiteNumberOrNull(asset?.price);
+    if (currentPrice != null && currentPrice > 0) {
+      pricedActiveIds.push(stablecoinId);
+      continue;
+    }
+
+    const marketCapUsd = marketCapOrNull(asset);
+    if (marketCapUsd != null && marketCapUsd > 0) {
+      affectedMarketCapUsd += marketCapUsd;
+    }
+    missingActiveIds.push(stablecoinId);
+    missingActiveAssets.push({
+      stablecoinId,
+      marketCapUsd,
+      currentPrice,
+      currentSource: typeof asset?.priceSource === "string" ? asset.priceSource : null,
+      currentObservedAt: finiteNumberOrNull(asset?.priceObservedAt ?? asset?.priceUpdatedAt),
+      currentConfidence: typeof asset?.priceConfidence === "string" ? asset.priceConfidence : null,
+    });
+  }
+
+  return {
+    complete: missingActiveIds.length === 0,
+    expectedActiveCount: expectedActiveIds.length,
+    presentActiveCount,
+    pricedActiveCount: pricedActiveIds.length,
+    missingPriceCount: missingActiveIds.length,
+    pricedActiveIds,
+    missingActiveIds,
+    affectedMarketCapUsd,
+    missingActiveAssets,
   };
 }

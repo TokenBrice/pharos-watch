@@ -13,7 +13,10 @@ import {
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import type { AuthoritativeLivePriceOverrideStats } from "../../lib/authoritative-price-sources";
-import { evaluateStablecoinPublicationCoverage } from "../../lib/stablecoin-publication-coverage";
+import {
+  evaluateStablecoinActivePriceCoverage,
+  evaluateStablecoinPublicationCoverage,
+} from "../../lib/stablecoin-publication-coverage";
 
 const MAX_DIAGNOSTIC_ARRAY_ITEMS = 20;
 const MAX_DIAGNOSTIC_OBJECT_KEYS = 40;
@@ -226,8 +229,12 @@ export function buildStablecoinsSyncResult(input: {
     input.assets.map((asset) => String(asset.id)),
     input.syncStartSec,
   );
+  const activePriceCoverage = evaluateStablecoinActivePriceCoverage(input.assets);
   const status: CronResult["status"] =
-    input.depegErrorCount > 0 || input.stalenessCheckFailed || !publicationCoverage.complete
+    input.depegErrorCount > 0
+      || input.stalenessCheckFailed
+      || !publicationCoverage.complete
+      || !activePriceCoverage.complete
       ? "degraded"
       : "ok";
 
@@ -268,6 +275,7 @@ export function buildStablecoinsSyncResult(input: {
       ),
     },
     activePublicationCoverage: publicationCoverage,
+    activePriceCoverage,
     upstreamFetchOk: input.upstreamFetchOk ?? true,
     payloadAccepted: input.payloadAccepted ?? true,
     cacheWriteSucceeded: input.cacheWriteSucceeded ?? true,
@@ -318,6 +326,7 @@ export function buildStablecoinsSyncResult(input: {
       assetCount: input.assets.length,
       missingPrices: finalMissing,
       activePublicationCoverage: publicationCoverage,
+      activePriceCoverage,
       canonicalDeduplication: metadata.canonicalDeduplication,
       rejectedPrices: input.rejectedCount,
       nativePegCorrections: input.nativePegCorrectionCount ?? 0,

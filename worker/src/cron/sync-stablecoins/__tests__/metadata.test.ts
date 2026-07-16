@@ -121,5 +121,62 @@ describe("stablecoins pricing metadata", () => {
     expect(result.metadata).not.toContain(sentinel);
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.canonicalDeduplication).not.toHaveProperty("dedupedAssets");
+    expect(metadata.activePriceCoverage).toMatchObject({
+      complete: true,
+      pricedActiveCount: ACTIVE_STABLECOINS.length,
+      missingPriceCount: 0,
+    });
+  });
+
+  it("degrades missing active prices without blocking complete row publication", () => {
+    const missingId = ACTIVE_STABLECOINS[0]!.id;
+    const assets = ACTIVE_STABLECOINS.map((stablecoin) => ({
+      id: stablecoin.id,
+      name: stablecoin.name,
+      symbol: stablecoin.symbol,
+      price: stablecoin.id === missingId ? null : 1,
+      priceSource: stablecoin.id === missingId ? "coingecko" : "defillama-list",
+      priceConfidence: "single-source" as const,
+      priceObservedAt: 1_776_999_900,
+      circulating: { peggedUSD: stablecoin.id === missingId ? 125_500 : 1 },
+    })) as PeggedAsset[];
+    const result = buildStablecoinsSyncResult({
+      assets,
+      rawAssetCount: assets.length,
+      droppedMalformedAssets: 0,
+      canonicalDeduplication: {
+        dedupedAssets: assets,
+        duplicateRows: 0,
+        affectedIds: [],
+      },
+      enrichStats: {},
+      priceValidationStats: {},
+      providerDiagnostics: [],
+      rejectedCount: 0,
+      stalenessWarning: false,
+      stalenessCheckFailed: false,
+      gtProbe: { updatedCount: 0, stats: {} as never },
+      depegErrorCount: 0,
+      depegErrors: [],
+      syncStartSec: 1_777_000_000,
+    });
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      activePublicationCoverage: { complete: boolean };
+      activePriceCoverage: {
+        complete: boolean;
+        missingActiveIds: string[];
+        affectedMarketCapUsd: number;
+      };
+      capabilities: { stablecoinsCache: boolean };
+    };
+    expect(result.status).toBe("degraded");
+    expect(metadata.activePublicationCoverage.complete).toBe(true);
+    expect(metadata.capabilities.stablecoinsCache).toBe(true);
+    expect(metadata.activePriceCoverage).toMatchObject({
+      complete: false,
+      missingActiveIds: [missingId],
+      affectedMarketCapUsd: 125_500,
+    });
   });
 });

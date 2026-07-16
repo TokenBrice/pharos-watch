@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { CacheStatus, StablecoinPublicationHealth, StatusHealthValue } from "./core";
+import type { ActivePriceCoverageHealth, CacheStatus, StablecoinPublicationHealth, StatusHealthValue } from "./core";
 import { StatusHealthValueSchema } from "./core";
 import { CacheStatusSchema } from "./schema-primitives";
 import {
@@ -116,6 +116,7 @@ export interface HealthResponse {
   };
   circuits: Record<string, CircuitRecord>;
   stablecoinPublication?: StablecoinPublicationHealth;
+  activePriceCoverage?: ActivePriceCoverageHealth;
   alertBroker?: AlertBrokerHealthSummary;
   telegramSummary?: TelegramHealthSummary | null;
 }
@@ -189,6 +190,25 @@ export const HealthResponseSchema: z.ZodType<HealthResponse> = z.object({
     missingActiveIds: z.array(z.string()),
     waivedActiveIds: z.array(z.string()),
     expiredWaiverIds: z.array(z.string()),
+    observedAt: z.number().nullable(),
+  }).optional(),
+  activePriceCoverage: z.object({
+    status: z.enum(["complete", "incomplete", "unknown"]),
+    expectedActiveCount: z.number(),
+    presentActiveCount: z.number(),
+    pricedActiveCount: z.number(),
+    missingPriceCount: z.number(),
+    pricedActiveIds: z.array(z.string()),
+    missingActiveIds: z.array(z.string()),
+    affectedMarketCapUsd: z.number(),
+    missingActiveAssets: z.array(z.object({
+      stablecoinId: z.string(),
+      marketCapUsd: z.number().nullable(),
+      currentPrice: z.number().nullable(),
+      currentSource: z.string().nullable(),
+      currentObservedAt: z.number().nullable(),
+      currentConfidence: z.string().nullable(),
+    })),
     observedAt: z.number().nullable(),
   }).optional(),
   alertBroker: z.object({

@@ -250,6 +250,53 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     expect(result.overallStatus).not.toBe("healthy");
     expect(result.warnings).toContain("stablecoin-publication-unknown");
   });
+
+  it("degrades health for missing active prices while row publication remains complete", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const activeIds = [...ACTIVE_IDS];
+    const missingId = activeIds[0]!;
+    const db = makeMinimalDb(nowSec, undefined, {
+      activePublicationCoverage: {
+        complete: true,
+        expectedActiveCount: activeIds.length,
+        presentActiveCount: activeIds.length,
+        waivedActiveCount: 0,
+        missingActiveIds: [],
+        waivedActiveIds: [],
+        expiredWaiverIds: [],
+      },
+      activePriceCoverage: {
+        complete: false,
+        expectedActiveCount: activeIds.length,
+        presentActiveCount: activeIds.length,
+        pricedActiveCount: activeIds.length - 1,
+        missingPriceCount: 1,
+        pricedActiveIds: activeIds.filter((stablecoinId) => stablecoinId !== missingId),
+        missingActiveIds: [missingId],
+        affectedMarketCapUsd: 88_000_000,
+        missingActiveAssets: [{
+          stablecoinId: missingId,
+          marketCapUsd: 88_000_000,
+          currentPrice: null,
+          currentSource: null,
+          currentObservedAt: null,
+          currentConfidence: null,
+        }],
+      },
+    });
+
+    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+
+    expect(result.stablecoinPublication.status).toBe("complete");
+    expect(result.activePriceCoverage).toMatchObject({
+      status: "incomplete",
+      missingActiveIds: [missingId],
+      affectedMarketCapUsd: 88_000_000,
+    });
+    expect(result.activePriceCoverageImpactStatus).toBe("degraded");
+    expect(result.overallStatus).not.toBe("healthy");
+    expect(result.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
+  });
 });
 
 describe("assessPublicHealth mint/burn subquery failures", () => {

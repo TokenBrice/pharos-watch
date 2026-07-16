@@ -18,7 +18,10 @@ import {
   runFallbackDepegFollowThrough,
 } from "./fallback-publish";
 import type { CronProgressReporter } from "../../lib/cron-logger";
-import { evaluateStablecoinPublicationCoverage } from "../../lib/stablecoin-publication-coverage";
+import {
+  evaluateStablecoinActivePriceCoverage,
+  evaluateStablecoinPublicationCoverage,
+} from "../../lib/stablecoin-publication-coverage";
 
 function isFallbackCronResult(result: unknown): result is CronResult {
   return typeof result === "object" && result !== null && "metadata" in result;
@@ -144,9 +147,16 @@ export async function syncViaCoingeckoFallback(
     assets.map((asset) => String(asset.id)),
     syncStartSec,
   );
+  const activePriceCoverage = evaluateStablecoinActivePriceCoverage(assets);
 
   const result: CronResult = {
-    status: depegErrorCount > 0 || stalenessCheckFailed || !publicationCoverage.complete ? "degraded" : "ok",
+    status:
+      depegErrorCount > 0
+        || stalenessCheckFailed
+        || !publicationCoverage.complete
+        || !activePriceCoverage.complete
+        ? "degraded"
+        : "ok",
     itemCount: assets.length,
     metadata: buildSyncMetadata({
       rowsRead: assets.length,
@@ -174,6 +184,7 @@ export async function syncViaCoingeckoFallback(
       syncStartSec: cacheResult.syncStartSec,
       depegPipelineSucceeded: depegErrorCount === 0,
       activePublicationCoverage: publicationCoverage,
+      activePriceCoverage,
     }, {
       cacheWriteMode: "published",
       capabilities: {

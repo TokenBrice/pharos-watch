@@ -112,6 +112,19 @@ function makePublicHealth(overrides?: Partial<PublicHealthAssessment>): PublicHe
       observedAt: null,
     },
     stablecoinPublicationImpactStatus: "healthy",
+    activePriceCoverage: {
+      status: "complete",
+      expectedActiveCount: 0,
+      presentActiveCount: 0,
+      pricedActiveCount: 0,
+      missingPriceCount: 0,
+      pricedActiveIds: [],
+      missingActiveIds: [],
+      affectedMarketCapUsd: 0,
+      missingActiveAssets: [],
+      observedAt: null,
+    },
+    activePriceCoverageImpactStatus: "healthy",
     ...overrides,
   };
 }
