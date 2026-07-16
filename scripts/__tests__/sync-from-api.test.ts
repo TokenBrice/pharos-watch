@@ -45,7 +45,11 @@ describe("fetchWithRetry", () => {
     vi.stubEnv("DIGEST_API_KEY", "public-key");
     vi.stubEnv("SITE_API_SHARED_SECRET", "site-secret");
 
-    expect(apiFetchHeaders(["DIGEST_API_KEY"], { url: "https://pharos.watch/_site-data/digest-archive" })).toEqual({
+    expect(
+      apiFetchHeaders(["DIGEST_API_KEY"], {
+        url: "https://stablecoin-dashboard.pages.dev/_site-data/digest-archive",
+      }),
+    ).toEqual({
       Accept: "application/json",
       Origin: "https://pharos.watch",
     });

@@ -229,10 +229,13 @@ describe("generate-public-datasets", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const inputs = await loadPublicDatasetLiveInputs("https://pharos.watch/_site-data", "2026-05-16");
+    const inputs = await loadPublicDatasetLiveInputs(
+      "https://stablecoin-dashboard.pages.dev/_site-data",
+      "2026-05-16",
+    );
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://pharos.watch/_site-data/snapshots/2026-05-16.json",
+      "https://stablecoin-dashboard.pages.dev/_site-data/snapshots/2026-05-16.json",
       expect.anything(),
     );
     expect(inputs.effectiveSnapshotDate).toBe("2026-05-16");
