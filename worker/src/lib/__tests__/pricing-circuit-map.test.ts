@@ -65,6 +65,26 @@ describe("PRICING_SOURCE_TO_CIRCUIT contract", () => {
       enforced: true,
       enforcementPath: "direct-provider",
     });
+    expect(PRICING_SOURCE_CIRCUIT_METADATA["kava-pricefeed"]).toMatchObject({
+      circuit: CIRCUIT_SOURCE.KAVA_PRICEFEED,
+      enforced: true,
+      enforcementPath: "direct-provider",
+    });
+    expect(PRICING_SOURCE_CIRCUIT_METADATA["aerodrome-onchain"]).toMatchObject({
+      circuit: CIRCUIT_SOURCE.USX_STABLE_POOLS,
+      enforced: true,
+      enforcementPath: "direct-provider",
+    });
+    expect(PRICING_SOURCE_CIRCUIT_METADATA["velodrome-onchain"]).toMatchObject({
+      circuit: CIRCUIT_SOURCE.USX_STABLE_POOLS,
+      enforced: true,
+      enforcementPath: "direct-provider",
+    });
+    expect(PRICING_SOURCE_CIRCUIT_METADATA["curve-thin-onchain"]).toMatchObject({
+      circuit: CIRCUIT_SOURCE.AZND_CURVE_POOL,
+      enforced: true,
+      enforcementPath: "direct-provider",
+    });
     expect(PRICING_SOURCE_CIRCUIT_METADATA.cached).toMatchObject({
       circuit: null,
       enforced: false,

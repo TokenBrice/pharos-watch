@@ -16,7 +16,12 @@ import { resolveChainId } from "../chains";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { evaluateV9AccessPosture, type V9AccessPostureResult } from "./access-posture";
-import { createUnavailableV9BackingResult, type V9BackingResult, type V9ResolvedUpstreamExposure } from "./backing";
+import {
+  createUnavailableV9BackingResult,
+  isV9MaterialShare,
+  type V9BackingResult,
+  type V9ResolvedUpstreamExposure,
+} from "./backing";
 import { evaluateV9Backing } from "./archetypes";
 import { evaluateV9EconomicControlAssetFacts, type V9EconomicControlResult } from "./control";
 import {
@@ -249,36 +254,135 @@ function gapReasonsForStatus(
   return reasons.length > 0 ? reasons : [pillarReason(envelope, fallback, path)];
 }
 
+/** A reviewed bridge tier as carried by the fact set's bridge-route review. */
+type V9BridgeRouteTier = V9AssetFactsV2["economicControlReview"]["bridge"]["routes"][number]["tier"];
+
 /**
- * Grades a common-mode dependency signal's severity (owner ruling 2026-07-15
- * Batch 3.3; coordinator namespace-fidelity ruling 2026-07-15). Chain
- * concentration across reviewed mature chains grades one rung lower than the
- * default: a chain-kind failure domain whose chain is in the reviewed mature set
- * graduates to "moderate". The ruling is on chains, not string encodings, so the
- * failure-domain key is normalized to its canonical slug first — exit-route
- * facts key by slug ("ethereum") while supply facts key by DefiLlama display
- * name ("Ethereum", "OP Mainnet"), and both must tier identically. An
- * unresolvable name, a non-mature chain, or a non-chain domain stays fail-closed
- * at the policy's default common-mode severity.
+ * The per-asset evidence the common-mode grader keys severity off, by domain
+ * kind (owner rulings Batch 4 + Batch 5). `supplyExposure` gives the per-chain
+ * supply share; `bridgeTierByDomain` maps each bridge-route failure domain to its
+ * reviewed bridge tier.
+ */
+export interface V9SupplyChainExposure {
+  shareBySlug: ReadonlyMap<string, number>;
+  unattributedShare: number;
+}
+export interface V9CommonModeContext {
+  supplyExposure: V9SupplyChainExposure;
+  bridgeTierByDomain: ReadonlyMap<string, V9BridgeRouteTier>;
+}
+
+function summarizeSupplyChainExposure(supply: V9AssetFactsV2["supply"]): V9SupplyChainExposure {
+  const shareBySlug = new Map<string, number>();
+  for (const route of supply.selectedBridgeRoutes) {
+    const slug = resolveChainId(route.deploymentRouteKey.split(":")[0] ?? "");
+    if (slug === null) continue;
+    shareBySlug.set(slug, (shareBySlug.get(slug) ?? 0) + route.supplyShare);
+  }
+  // A chain lacking a selected route can hold at most the unattributed supply; a
+  // null (unreviewed) share fails closed to the whole base.
+  const unattributedShare = (supply.unreviewedRouteSupplyShare ?? 1) + (supply.unknownRouteSupplyShare ?? 0);
+  return { shareBySlug, unattributedShare };
+}
+
+function buildCommonModeContext(asset: V9AssetFactsV2 | undefined): V9CommonModeContext {
+  // A missing asset fact fails closed: no attributed share, no reviewed tiers.
+  if (!asset) {
+    return {
+      supplyExposure: { shareBySlug: new Map<string, number>(), unattributedShare: 1 },
+      bridgeTierByDomain: new Map<string, V9BridgeRouteTier>(),
+    };
+  }
+  const controlsByKey = new Map(asset.controls.map((control) => [control.controlKey, control]));
+  const bridgeTierByDomain = new Map<string, V9BridgeRouteTier>();
+  for (const route of asset.economicControlReview.bridge.routes) {
+    const control = controlsByKey.get(route.controlKey);
+    for (const domain of control?.failureDomains ?? []) {
+      if (domain.kind === "bridge-route") bridgeTierByDomain.set(`${domain.kind}:${domain.key}`, route.tier);
+    }
+  }
+  return { supplyExposure: summarizeSupplyChainExposure(asset.supply), bridgeTierByDomain };
+}
+
+/**
+ * Grades a common-mode signal for one asset by DOMAIN KIND and reviewed evidence
+ * (owner rulings Batch 3.3, Batch 4 (option A), Batch 5). Chain concentration
+ * grades by material exposure (mature chain or immaterial share -> "moderate",
+ * material/unattributable non-mature -> "high"). dex-protocol liquidity on a
+ * reviewed mature venue is not a capping signal ("low"); any other venue ->
+ * "high". bridge-route concentration keys off the reviewed bridge tier (low-risk
+ * -> "moderate", otherwise "high"). reserve-issuer concentration is already
+ * priced in backing, so it is diagnostic only ("low"). Every other kind keeps the
+ * default severity, and unknown/unreviewed evidence fails closed to it.
  */
 export function commonModeSignalSeverity(
   failureDomain: V9FailureDomainRef,
+  context: V9CommonModeContext,
   materiality: V9ValidatedPolicyEnvelope["policy"]["semantic"]["materiality"],
 ): V9Severity {
-  if (failureDomain.kind === "chain") {
-    const slug = resolveChainId(failureDomain.key);
-    if (slug !== null && materiality.matureChains.includes(slug)) {
-      return "moderate";
+  const high = materiality.commonModeSignal.severity;
+  switch (failureDomain.kind) {
+    case "chain": {
+      const slug = resolveChainId(failureDomain.key);
+      if (slug !== null && materiality.matureChains.includes(slug)) return "moderate";
+      const share =
+        slug !== null && context.supplyExposure.shareBySlug.has(slug)
+          ? context.supplyExposure.shareBySlug.get(slug)!
+          : context.supplyExposure.unattributedShare;
+      return isV9MaterialShare(share, materiality.matureChainShareThreshold) ? high : "moderate";
     }
+    case "reserve-issuer":
+      // Single-obligor exposure is already priced by backing concentration;
+      // keep the signal diagnostic (non-capping) to avoid double-counting.
+      return "low";
+    case "dex-protocol":
+      // Liquidity concentration is a concern only on an unreviewed venue; a
+      // reviewed mature venue is diagnostic (non-capping).
+      return materiality.matureVenues.includes(failureDomain.key.toLowerCase()) ? "low" : high;
+    case "bridge-route": {
+      // Supply-corruption common-mode stays capping, keyed off the reviewed
+      // bridge tier: a low-risk tier grades "moderate", any other or unreviewed
+      // tier fails closed to "high".
+      const tier = context.bridgeTierByDomain.get(`${failureDomain.kind}:${failureDomain.key}`);
+      return tier !== undefined && materiality.lowRiskBridgeTiers.includes(tier) ? "moderate" : high;
+    }
+    default:
+      return high;
   }
-  return materiality.commonModeSignal.severity;
+}
+
+function commonModeReasonQualifier(kind: V9FailureDomainRef["kind"], severity: V9Severity): string {
+  if (kind === "chain") {
+    return severity === "high"
+      ? "material or unattributable non-mature chain exposure"
+      : "reviewed mature chain or immaterial exposure";
+  }
+  if (kind === "dex-protocol") {
+    return severity === "low" ? "reviewed mature venue, diagnostic only" : "unreviewed venue concentration";
+  }
+  if (kind === "bridge-route") {
+    return severity === "moderate" ? "reviewed low-risk bridge tier" : "unreviewed or higher-risk bridge tier";
+  }
+  if (kind === "reserve-issuer") {
+    return "single-obligor exposure priced in backing, diagnostic only";
+  }
+  return severity === "high" ? "shared critical control identity" : "diagnostic";
 }
 
 function commonModeSignalsByAsset(
   plan: V9DependencyEvaluationPlan,
   envelope: V9ValidatedPolicyEnvelope,
+  assetsById: ReadonlyMap<string, V9AssetFactsV2>,
 ): ReadonlyMap<string, readonly V9StructuralSignal[]> {
   const materiality = envelope.policy.semantic.materiality;
+  const contextByAsset = new Map<string, V9CommonModeContext>();
+  const contextFor = (assetId: string): V9CommonModeContext => {
+    const cached = contextByAsset.get(assetId);
+    if (cached) return cached;
+    const context = buildCommonModeContext(assetsById.get(assetId));
+    contextByAsset.set(assetId, context);
+    return context;
+  };
   const signals = new Map<string, V9StructuralSignal[]>();
   for (const group of plan.commonModeGroups) {
     const assetIds = uniqueSorted(group.members.map((member) => member.assetId));
@@ -289,12 +393,13 @@ function commonModeSignalsByAsset(
       continue;
     }
     const key = domainKey(group.failureDomain);
-    const severity = commonModeSignalSeverity(group.failureDomain, materiality);
     for (const assetId of assetIds) {
+      const severity = commonModeSignalSeverity(group.failureDomain, contextFor(assetId), materiality);
+      const qualifier = commonModeReasonQualifier(group.failureDomain.kind, severity);
       const signal: V9StructuralSignal = {
         ...materiality.commonModeSignal,
         severity,
-        reason: `${group.members.length} reviewed paths across ${assetIds.length} assets share ${key}.`,
+        reason: `${group.members.length} reviewed paths across ${assetIds.length} assets share ${key}, ${qualifier}.`,
         failureDomainKeys: [key],
         evidence: [],
       };
@@ -502,7 +607,7 @@ export function evaluateV9FactSet(
     activeAssetIds: factSet.activeAssetIds,
     assets: factSet.assets,
   });
-  const commonSignals = commonModeSignalsByAsset(dependencyPlan, envelope);
+  const commonSignals = commonModeSignalsByAsset(dependencyPlan, envelope, assetsById);
   const evaluatedById = new Map<string, V9EvaluatedAsset>();
   // Terminal unavailable-asset roots per evaluated asset, propagated in
   // topological order: an unavailable asset inherits the union of the roots of

@@ -10,6 +10,7 @@ import {
 import { CACHE_UPSTREAM_PROVIDER } from "@shared/lib/status-metadata";
 import type {
   AlertBrokerHealthSummary,
+  ActivePriceCoverageHealth,
   CacheStatus,
   D1CapacityAssessment,
   HealthResponse,
@@ -32,7 +33,8 @@ import { buildMintBurnSyncHealth } from "./mint-burn-health-config";
 import { logWorkerEvent } from "./structured-log";
 import { loadCachedD1CapacityAssessment } from "./status/d1-capacity-store";
 import {
-  loadStablecoinPublicationHealth,
+  loadStablecoinCoverageHealth,
+  unknownActivePriceCoverageHealth,
   unknownStablecoinPublicationHealth,
 } from "./stablecoin-publication-health";
 
@@ -113,6 +115,8 @@ export interface PublicHealthAssessment {
   alertBrokerImpactStatus: HealthResponse["status"];
   stablecoinPublication: StablecoinPublicationHealth;
   stablecoinPublicationImpactStatus: HealthResponse["status"];
+  activePriceCoverage: ActivePriceCoverageHealth;
+  activePriceCoverageImpactStatus: HealthResponse["status"];
 }
 
 function publicHealthErrorMessage(kind: "blacklist" | "circuit" | "db" | "mint-burn"): string {
@@ -364,6 +368,8 @@ export async function assessPublicHealth(
       alertBrokerImpactStatus: "stale",
       stablecoinPublication: unknownStablecoinPublicationHealth(),
       stablecoinPublicationImpactStatus: "healthy",
+      activePriceCoverage: unknownActivePriceCoverageHealth(),
+      activePriceCoverageImpactStatus: "healthy",
     };
   }
 
@@ -373,7 +379,7 @@ export async function assessPublicHealth(
     mintBurnResult,
     circuitResult,
     d1CapacityResult,
-    stablecoinPublication,
+    stablecoinCoverageHealth,
   ] = await Promise.all([
     buildCacheStatuses(db, now),
     queryBlacklistGapMetrics(db, now, {
@@ -423,8 +429,9 @@ export async function assessPublicHealth(
         });
         return { assessment: null, error: "D1 capacity assessment unavailable." };
       }),
-    loadStablecoinPublicationHealth(db),
+    loadStablecoinCoverageHealth(db),
   ]);
+  const { publication: stablecoinPublication, activePriceCoverage } = stablecoinCoverageHealth;
 
   const cachesWithProvider: Record<string, CacheStatus> = {};
   for (const [key, cache] of Object.entries(cacheAssessment.caches)) {
@@ -494,6 +501,17 @@ export async function assessPublicHealth(
     warnings.push("stablecoin-publication-unknown");
   }
 
+  const activePriceCoverageImpactStatus = activePriceCoverage.status === "complete"
+    ? "healthy"
+    : "degraded";
+  if (activePriceCoverage.status === "incomplete") {
+    warnings.push(
+      `active-price-coverage-incomplete:${activePriceCoverage.missingActiveIds.join(",") || "count-mismatch"}`,
+    );
+  } else if (activePriceCoverage.status === "unknown") {
+    warnings.push("active-price-coverage-unknown");
+  }
+
   const blacklistImpactStatus = blacklistResult.error
     ? "degraded"
     : blacklistResult.metrics
@@ -511,6 +529,7 @@ export async function assessPublicHealth(
     d1CapacityImpactStatus,
     alertBrokerImpactStatus,
     stablecoinPublicationImpactStatus,
+    activePriceCoverageImpactStatus,
   );
 
   return {
@@ -542,5 +561,7 @@ export async function assessPublicHealth(
     alertBrokerImpactStatus,
     stablecoinPublication,
     stablecoinPublicationImpactStatus,
+    activePriceCoverage,
+    activePriceCoverageImpactStatus,
   };
 }

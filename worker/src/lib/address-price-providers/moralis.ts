@@ -8,10 +8,12 @@ import { applyInvalidShapeDiagnostic, buildCapSkipDiagnostic } from "../pricing-
 import { numberValue, stringValue } from "@shared/lib/type-guards";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
+  buildSkippedAddressPriceAttempts,
   chunk,
   createProviderRunState,
   emptyProviderResult,
   fetchProviderJson,
+  finalizeAddressPriceDiagnosticAttempts,
   getTokenAddressFromRecord,
   groupTargetsByProviderChain,
   incrementReason,
@@ -32,11 +34,12 @@ export async function runMoralisAddressProvider(
   deadlineMs: number,
 ): Promise<AddressPriceProviderRunResult> {
   const apiKey = config.moralisApiKey?.trim();
-  if (!apiKey) return emptyProviderResult("moralis-address", targets.length, "missing-provider");
+  if (!apiKey) return emptyProviderResult("moralis-address", targets, "missing-provider");
   const state = createProviderRunState();
   const { diagnostics, quotes, rejectedTargets } = state;
   let { successfulRequests, attemptedRequests } = state;
   let processedCount = 0;
+  const processedTargets = new Set<AddressPriceTarget>();
 
   for (const [providerChainId, chainTargets] of groupTargetsByProviderChain(targets)) {
     throwIfAborted(signal);
@@ -59,6 +62,7 @@ export async function runMoralisAddressProvider(
           }),
         },
         candidateCount: batch.length,
+        targets: batch,
         signal,
       });
       let diagnostic = rawDiagnostic;
@@ -121,13 +125,23 @@ export async function runMoralisAddressProvider(
         diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected Moralis token price array");
       }
       processedCount += batch.length;
-      diagnostics.push(diagnostic);
+      for (const target of batch) processedTargets.add(target);
+      diagnostics.push(finalizeAddressPriceDiagnosticAttempts(diagnostic, quotes));
     }
   }
 
   const cappedTargets = Math.max(0, targets.length - processedCount);
   if (cappedTargets > 0) {
-    diagnostics.push(buildCapSkipDiagnostic({ source: "moralis-address", label: "Moralis" }, cappedTargets));
+    const skippedTargets = targets.filter((target) => !processedTargets.has(target));
+    const diagnostic = buildCapSkipDiagnostic({ source: "moralis-address", label: "Moralis" }, cappedTargets);
+    const deadlineReached = Date.now() >= deadlineMs;
+    diagnostic.assetAttempts = buildSkippedAddressPriceAttempts(
+      "moralis-address",
+      skippedTargets,
+      deadlineReached ? "deadline" : "request-cap",
+      deadlineReached ? "timeout" : "cap",
+    );
+    diagnostics.push(diagnostic);
   }
 
   return {

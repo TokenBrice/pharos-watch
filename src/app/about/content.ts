@@ -67,7 +67,7 @@ export const DATA_SOURCE_GROUPS = [
   {
     label: "Supply & Price",
     sources:
-      "DefiLlama, CoinGecko, GeckoTerminal, CoinMarketCap, DexScreener, DexPaprika, Alchemy Prices API, Moralis Token Prices, Birdeye, Jupiter Price API, Pyth Network, Binance, Kraken, Bitstamp, Coinbase, RedStone, Curve on-chain, Chainlink NAV reserve telemetry, Superstate NAV/liquidity telemetry, Fluid, Balancer, Curve, Uniswap V3, Uniswap V4, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, Velodrome Slipstream, Zephyr Scanner, direct protocol redemption or FX-par quotes, and curated fail-closed on-chain supply-gap repairs",
+      "DefiLlama, CoinGecko, GeckoTerminal, CoinMarketCap, DexScreener, DexPaprika, Alchemy Prices API, Moralis Token Prices, Birdeye, Jupiter Price API, Pyth Network, Binance, Kraken, Bitstamp, Coinbase, RedStone, Kava Pricefeed, Curve on-chain, Chainlink NAV reserve telemetry, Superstate NAV/liquidity telemetry, Fluid, Balancer, Curve, Uniswap V3, Uniswap V4, Raydium, Orca, Meteora, PancakeSwap, Aerodrome, Velodrome, Mento Broker, Citrea StablecoinBridge, Zephyr Scanner, direct protocol redemption or FX-par quotes, and curated fail-closed on-chain supply-gap repairs",
   },
   {
     label: "Reserve Transparency",
@@ -92,7 +92,7 @@ export const DATA_SOURCE_GROUPS = [
   {
     label: "DEX Data",
     sources:
-      "DeFiLlama Yields & Protocols, protocol-native yield APIs and deterministic on-chain yield readers (Hashnote, Ondo, Midas NAV oracles, Morpho, Pendle, Royco Dawn, Yearn Kong, Beefy, Aave V3, Compound V3, BIMA Earn, Curve scrvUSD current-rate, B.Protocol LQTY-only, Zephyr Scanner), vaults.fyi as an optional gated supplemental yield source that is disabled by default and rankable only for explicitly allowlisted vaults, Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, Meteora API, PancakeSwap subgraphs, shadow Uniswap V3 and PancakeSwap V3 QuoterV2/factory RPC reads, Aerodrome and Velodrome Sugar view contracts, GeckoTerminal, DexScreener; dead or deprecated DEX slugs such as Bunni are blocked from runtime pricing and liquidity inputs rather than treated as live venues",
+      "DeFiLlama Yields & Protocols, protocol-native yield APIs and deterministic on-chain yield readers (Hashnote, Ondo, Midas NAV oracles, Re Protocol, Morpho, Pendle, Royco Dawn, Yearn Kong, Beefy, Aave V3, Compound V3, BIMA Earn, Curve scrvUSD current-rate, B.Protocol LQTY-only, Zephyr Scanner), vaults.fyi as an optional gated supplemental yield source that is disabled by default and rankable only for explicitly allowlisted vaults, Curve Finance API, The Graph, Fluid API + DexReservesResolver, Balancer API, Raydium API, Orca API, Meteora API, PancakeSwap subgraphs, shadow Uniswap V3 and PancakeSwap V3 QuoterV2/factory RPC reads, Aerodrome and Velodrome Sugar view contracts, GeckoTerminal, DexScreener; dead or deprecated DEX slugs such as Bunni are blocked from runtime pricing and liquidity inputs rather than treated as live venues",
   },
   { label: "AI Generation", sources: "Anthropic Claude (daily digest and Monday weekly recap)" },
 ] as const;

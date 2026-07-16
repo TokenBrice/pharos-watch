@@ -7,7 +7,7 @@ import { batchExecute } from "../../lib/db";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { PriceValidationReferences } from "../../lib/price-validation";
-import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
+import type { DexPriceObs, LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import { buildMeasuredPoolDirectionKey } from "../measured-execution/inventory";
 import {
@@ -435,13 +435,34 @@ export async function computeDepthStability(
 }
 
 /** Compute DEX-implied prices from the final retained pool set and persist to dex_prices. */
+export interface DexPricePersistenceDiagnostics {
+  rejectedObservationCount: number;
+  rejectedByStablecoin: Array<{
+    stablecoinId: string;
+    reason: "peg-impossible";
+    observations: Array<{
+      chain: string;
+      protocol: string;
+      poolKey: string | null;
+      price: number;
+      tvl: number;
+      sourceFamily: string | null;
+    }>;
+    truncated: number;
+  }>;
+  truncatedStablecoins: number;
+}
+
+const MAX_DEX_PRICE_REJECTION_ASSETS = 20;
+const MAX_DEX_PRICE_REJECTIONS_PER_ASSET = 5;
+
 export async function computeDexPrices(
   db: D1Database,
   retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>,
   nowSec: number,
   references?: PriceValidationReferences,
   signal?: AbortSignal,
-): Promise<void> {
+): Promise<DexPricePersistenceDiagnostics> {
   throwIfAborted(signal);
   const priceObservations = buildDexPriceObservationsFromRetainedPools(retainedPoolsByStablecoin);
   const existingRows = await db.prepare("SELECT stablecoin_id FROM dex_prices").all<{ stablecoin_id: string }>();
@@ -449,14 +470,16 @@ export async function computeDexPrices(
   throwIfAborted(signal);
 
   if (priceObservations.size === 0) {
-    if (existingIds.size === 0) return;
+    if (existingIds.size === 0) {
+      return { rejectedObservationCount: 0, rejectedByStablecoin: [], truncatedStablecoins: 0 };
+    }
 
     const retireStmts = Array.from(existingIds, (stablecoinId) =>
       db.prepare("DELETE FROM dex_prices WHERE stablecoin_id = ?").bind(stablecoinId),
     );
     await batchExecute(db, retireStmts, { signal });
     console.log(`[dex-liquidity] Retired ${retireStmts.length} DEX price rows with no current observations`);
-    return;
+    return { rejectedObservationCount: 0, rejectedByStablecoin: [], truncatedStablecoins: 0 };
   }
 
   // Load primary prices from stablecoins cache for comparison
@@ -474,10 +497,12 @@ export async function computeDexPrices(
   const observedIds = new Set<string>();
   let collapsedDuplicateGroups = 0;
   let collapsedDuplicateObservations = 0;
+  let rejectedObservationCount = 0;
+  let rejectedStablecoinCount = 0;
+  const rejectedByStablecoin: DexPricePersistenceDiagnostics["rejectedByStablecoin"] = [];
   for (const [id, observations] of priceObservations) {
     throwIfAborted(signal);
     if (observations.length === 0) continue;
-    observedIds.add(id);
 
     const {
       collapsed: collapsedObservations,
@@ -488,6 +513,39 @@ export async function computeDexPrices(
     collapsedDuplicateObservations += duplicateObservations;
     if (collapsedObservations.length === 0) continue;
 
+    // Validate before selecting the aggregate so an impossible quote cannot
+    // enter dex_prices while merely being hidden from price_sources_json.
+    const plausibleObservations: DexPriceObs[] = [];
+    const rejectedObservations: DexPriceObs[] = [];
+    for (const observation of collapsedObservations) {
+      (isPlausibleDexObservationPrice(id, observation.price, references)
+        ? plausibleObservations
+        : rejectedObservations).push(observation);
+    }
+    if (rejectedObservations.length > 0) {
+      rejectedObservationCount += rejectedObservations.length;
+      rejectedStablecoinCount++;
+      if (rejectedByStablecoin.length < MAX_DEX_PRICE_REJECTION_ASSETS) {
+        rejectedByStablecoin.push({
+          stablecoinId: id,
+          reason: "peg-impossible",
+          observations: rejectedObservations
+            .slice(0, MAX_DEX_PRICE_REJECTIONS_PER_ASSET)
+            .map((observation) => ({
+              chain: observation.chain,
+              protocol: observation.protocol,
+              poolKey: observation.poolKey ?? null,
+              price: observation.price,
+              tvl: observation.tvl,
+              sourceFamily: observation.sourceFamily ?? null,
+            })),
+          truncated: Math.max(0, rejectedObservations.length - MAX_DEX_PRICE_REJECTIONS_PER_ASSET),
+        });
+      }
+    }
+    if (plausibleObservations.length === 0) continue;
+    observedIds.add(id);
+
     // Look up primary price early — used for outlier filtering and deviation calc
     const primaryPrice = primaryPrices.get(id);
 
@@ -495,15 +553,15 @@ export async function computeDexPrices(
     // When a source (e.g. CoinGecko aggregate) reports a price near peg for a severely
     // depegged stablecoin, its high TVL can dominate the TVL-weighted median.
     // Only apply when 3+ observations exist and majority by count agrees with primary.
-    let medianInputObs = collapsedObservations;
-    if (primaryPrice != null && primaryPrice > 0 && collapsedObservations.length >= 3) {
-      const nearPrimary = collapsedObservations.filter((o) => {
+    let medianInputObs = plausibleObservations;
+    if (primaryPrice != null && primaryPrice > 0 && plausibleObservations.length >= 3) {
+      const nearPrimary = plausibleObservations.filter((o) => {
         const ratio = o.price / primaryPrice;
         return (
           ratio >= 1 / PRIMARY_PRICE_OUTLIER_MAX_DEVIATION_RATIO && ratio <= PRIMARY_PRICE_OUTLIER_MAX_DEVIATION_RATIO
         );
       });
-      if (nearPrimary.length >= 2 && nearPrimary.length > collapsedObservations.length / 2) {
+      if (nearPrimary.length >= 2 && nearPrimary.length > plausibleObservations.length / 2) {
         medianInputObs = nearPrimary;
       }
     }
@@ -529,7 +587,7 @@ export async function computeDexPrices(
     }
 
     // Raw TVL for DB storage (represents actual on-chain liquidity, not confidence-weighted)
-    const totalTvl = collapsedObservations.reduce((s, o) => s + o.tvl, 0);
+    const totalTvl = plausibleObservations.reduce((s, o) => s + o.tvl, 0);
     let deviationBps: number | null = null;
     if (primaryPrice != null && primaryPrice > 0) {
       deviationBps = Math.round((medianPrice / primaryPrice - 1) * 10000);
@@ -541,8 +599,7 @@ export async function computeDexPrices(
     // The scoring-level sanity gate has a wide 1% floor to avoid rejecting legitimately
     // depegged stablecoins. For the per-protocol display surface, apply a tighter 50%
     // primary-price ratio guard on top so near-peg alias-collapse rows are filtered.
-    const sanePriceObs = collapsedObservations.filter((obs) => {
-      if (!isPlausibleDexObservationPrice(id, obs.price, references)) return false;
+    const sanePriceObs = plausibleObservations.filter((obs) => {
       if (primaryPrice != null && primaryPrice > 0) {
         const ratio = obs.price / primaryPrice;
         if (ratio < DISPLAY_PRICE_RATIO_MIN || ratio > DISPLAY_PRICE_RATIO_MAX) return false;
@@ -576,7 +633,7 @@ export async function computeDexPrices(
           id,
           symbol,
           Math.round(medianPrice * 1e6) / 1e6, // 6 decimal places
-          collapsedObservations.length,
+          plausibleObservations.length,
           Math.round(totalTvl),
           deviationBps,
           primaryPrice ?? null,
@@ -604,4 +661,9 @@ export async function computeDexPrices(
         (retiredCount > 0 ? ` and retired ${retiredCount} stale rows` : ""),
     );
   }
+  return {
+    rejectedObservationCount,
+    rejectedByStablecoin,
+    truncatedStablecoins: Math.max(0, rejectedStablecoinCount - rejectedByStablecoin.length),
+  };
 }

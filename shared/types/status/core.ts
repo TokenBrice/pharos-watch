@@ -173,6 +173,38 @@ export interface StablecoinPublicationHealth {
   observedAt: number | null;
 }
 
+export interface ActivePriceCoverageGap {
+  stablecoinId: string;
+  symbol: string;
+  marketCapUsd: number | null;
+  currentPrice: number | null;
+  currentSource: string | null;
+  currentObservedAt: number | null;
+  currentConfidence: string | null;
+  consecutiveMissingGenerations: number;
+  lastAcceptedPrice: number | null;
+  lastAcceptedSource: string | null;
+  lastAcceptedObservedAt: number | null;
+  rejectionReason: string;
+  alertEligible: boolean;
+}
+
+export interface ActivePriceCoverageHealth {
+  status: "complete" | "incomplete" | "unknown";
+  expectedActiveCount: number;
+  presentActiveCount: number;
+  pricedActiveCount: number;
+  missingPriceCount: number;
+  pricedActiveIds: string[];
+  missingActiveIds: string[];
+  affectedMarketCapUsd: number;
+  missingActiveAssets: ActivePriceCoverageGap[];
+  alertEligibleCount: number;
+  alertEligibleIds: string[];
+  maxConsecutiveMissingGenerations: number;
+  observedAt: number | null;
+}
+
 export interface BlacklistReconciliationStatus {
   status: "not-run" | "running" | "verified" | "failed" | "unknown";
   runId: string | null;

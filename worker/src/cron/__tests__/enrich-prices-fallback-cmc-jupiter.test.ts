@@ -18,6 +18,7 @@ import {
   fixtureCIRCUIT_SOURCE,
   type PeggedAsset,
 } from "./enrich-prices.test-support";
+import { selectRotatedCmcCandidates } from "../sync-stablecoins/enrich-prices-cmc-pass";
 
 describe("enrichMissingPrices", () => {
   afterEach(cleanupEnrichMissingPricesTest);
@@ -829,6 +830,268 @@ describe("enrichMissingPrices", () => {
     });
   });
 
+  it("retrieves an exact MNEE slug through targeted quotes when the category page is truncated", async () => {
+    const assets: PeggedAsset[] = [{
+      id: "mnee-mnee",
+      name: "MNEE USD",
+      symbol: "MNEE",
+      price: 0,
+      cmcSlug: "mnee",
+      pegType: "peggedUSD",
+      contracts: [{
+        chain: "ethereum",
+        address: "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf",
+        decimals: 18,
+      }],
+      circulating: {},
+    }];
+    const fetchSpy = fixtureMockFetch([
+      { match: "/v1/cryptocurrency/category", body: cmcCategory([], 301) },
+      {
+        match: "/v3/cryptocurrency/quotes/latest",
+        body: { data: [{
+          id: 32878,
+          slug: "mnee",
+          symbol: "MNEE",
+          is_active: 1,
+          platform: {
+            slug: "ethereum",
+            token_address: "0x8cCeDbaE4916B79dA7f3F612eFb2Eb93A2bFD6Cf",
+          },
+          quote: [{ symbol: "USD", ...cmcUsdQuote(0.9998), volume_24h: 143_000 }],
+        }] },
+      },
+    ]);
+
+    const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, undefined);
+
+    expect(result.resolved).toBe(1);
+    expect(assets[0].price).toBe(0.9998);
+    expect(assets[0].priceSource).toBe("coinmarketcap");
+    expect(fetchSpy.getHistory().map((entry) => entry.url)).toEqual([
+      expect.stringContaining("/v1/cryptocurrency/category"),
+      expect.stringContaining("/v3/cryptocurrency/quotes/latest?slug=mnee&convert=USD"),
+    ]);
+    expect(result.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        endpoint: "pro-api.coinmarketcap.com/v1/cryptocurrency/category",
+        success: true,
+        errorClass: "truncated-response",
+      }),
+      expect.objectContaining({
+        endpoint: "pro-api.coinmarketcap.com/v3/cryptocurrency/quotes/latest",
+        success: true,
+        matchedCount: 1,
+        resolvedCount: 1,
+        assetAttempts: [expect.objectContaining({
+          assetId: "mnee-mnee",
+          adapter: "coinmarketcap",
+          chain: "ethereum",
+          target: "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf",
+          state: "attempted",
+          result: "resolved",
+          replaySafe: false,
+        })],
+      }),
+    ]));
+  });
+
+  it("replays an identity-verified targeted quote across the next three cooldown generations", async () => {
+    const makeAsset = (): PeggedAsset => ({
+      id: "test-dollar",
+      name: "Test Dollar",
+      symbol: "TUSD",
+      price: 0,
+      cmcSlug: "test-dollar",
+      pegType: "peggedUSD",
+      contracts: [{
+        chain: "ethereum",
+        address: "0x1111111111111111111111111111111111111111",
+        decimals: 18,
+      }],
+      circulating: {},
+    });
+    const initialDb = fixtureMockD1([
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+      { match: "circuit", rows: [] },
+    ]);
+    fixtureMockFetch([
+      { match: "/v1/cryptocurrency/category", body: cmcCategory([], 301) },
+      {
+        match: "/v3/cryptocurrency/quotes/latest",
+        body: { data: [{
+          id: 123,
+          slug: "test-dollar",
+          symbol: "TUSD",
+          is_active: 1,
+          platform: {
+            slug: "ethereum",
+            token_address: "0x1111111111111111111111111111111111111111",
+          },
+          quote: { USD: { ...cmcUsdQuote(1.0002), volume_24h: 50_000 } },
+        }] },
+      },
+    ]);
+
+    const firstAssets = [makeAsset()];
+    await expect(fixtureRunCmcPass(firstAssets, "test-cmc-key", undefined, initialDb))
+      .resolves.toMatchObject({ resolved: 1 });
+    const verifiedCacheWrite = initialDb.getHistory().find(
+      (entry) => entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+        entry.binds[0] === "cmc_verified_targeted_quotes:v1",
+    );
+    expect(verifiedCacheWrite).toBeDefined();
+
+    const nowSec = Math.floor(Date.now() / 1_000);
+    const replayDb = fixtureMockD1([{
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      rows: [
+        {
+          key: "cmc_verified_targeted_quotes:v1",
+          value: String(verifiedCacheWrite?.binds[1]),
+          updated_at: nowSec,
+        },
+        { key: "cmc_last_fetch", value: "1", updated_at: nowSec },
+      ],
+    }]);
+    const fetchSpy = fixtureMockFetch();
+
+    for (let generation = 2; generation <= 4; generation += 1) {
+      const assets = [makeAsset()];
+      const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, replayDb);
+      expect(result.resolved, `generation ${generation}`).toBe(1);
+      expect(assets[0]).toMatchObject({
+        price: 1.0002,
+        priceSource: "coinmarketcap",
+        priceConfidence: "fallback",
+        priceObservedAtMode: "upstream",
+      });
+      expect(result.diagnostics).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          endpoint: "coinmarketcap:verified-targeted-cache",
+          resolvedCount: 1,
+          assetAttempts: [expect.objectContaining({
+            adapter: "coinmarketcap-verified-cache",
+            result: "resolved",
+            replaySafe: true,
+          })],
+        }),
+      ]));
+    }
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["stale observation", Math.floor(Date.now() / 1_000) - 3_601, "0x1111111111111111111111111111111111111111"],
+    ["wrong contract", Math.floor(Date.now() / 1_000) - 60, "0x2222222222222222222222222222222222222222"],
+  ])("rejects a verified CMC cache entry with a %s", async (_reason, observedAt, providerAddress) => {
+    const nowSec = Math.floor(Date.now() / 1_000);
+    const db = fixtureMockD1([{
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      rows: [
+        {
+          key: "cmc_verified_targeted_quotes:v1",
+          value: JSON.stringify([{
+            assetId: "test-dollar",
+            slug: "test-dollar",
+            symbol: "TUSD",
+            price: 1.0002,
+            volume24h: 50_000,
+            observedAt,
+            providerAddress,
+            chain: "ethereum",
+            active: true,
+          }]),
+          updated_at: nowSec,
+        },
+        { key: "cmc_last_fetch", value: "1", updated_at: nowSec },
+      ],
+    }]);
+    const fetchSpy = fixtureMockFetch();
+    const assets: PeggedAsset[] = [{
+      id: "test-dollar",
+      name: "Test Dollar",
+      symbol: "TUSD",
+      price: 0,
+      cmcSlug: "test-dollar",
+      pegType: "peggedUSD",
+      contracts: [{
+        chain: "ethereum",
+        address: "0x1111111111111111111111111111111111111111",
+        decimals: 18,
+      }],
+      circulating: {},
+    }];
+
+    const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, db);
+
+    expect(result.resolved).toBe(0);
+    expect(assets[0].price).toBe(0);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("rotates targeted candidates at the hourly quota boundary", () => {
+    const candidates = Array.from({ length: 26 }, (_, index) => ({
+      index,
+      asset: {
+        id: `coin-${index}`,
+        symbol: `C${index}`,
+        cmcSlug: `coin-${index}`,
+      } as PeggedAsset,
+    }));
+
+    const first = selectRotatedCmcCandidates(candidates, 0).map((entry) => entry.asset.id);
+    const second = selectRotatedCmcCandidates(candidates, 3_600).map((entry) => entry.asset.id);
+
+    expect(first).toHaveLength(25);
+    expect(second).toHaveLength(25);
+    expect(first).not.toEqual(second);
+    expect(new Set([...first, ...second])).toHaveProperty("size", 26);
+  });
+
+  it.each([
+    ["wrong contract", "MNEE", "0x0000000000000000000000000000000000000001", undefined, 1, 143_000],
+    ["missing contract", "MNEE", null, undefined, 1, 143_000],
+    ["symbol collision", "MNEE2", "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf", undefined, 1, 143_000],
+    ["stale quote", "MNEE", "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf", staleIsoTimestamp(), 1, 143_000],
+    ["inactive quote", "MNEE", "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf", undefined, 0, 143_000],
+    ["zero-volume quote", "MNEE", "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf", undefined, 1, 0],
+  ])("rejects a targeted CMC %s", async (_name, symbol, tokenAddress, lastUpdated, isActive, volume24h) => {
+    const assets: PeggedAsset[] = [{
+      id: "mnee-mnee",
+      name: "MNEE USD",
+      symbol: "MNEE",
+      price: 0,
+      cmcSlug: "mnee",
+      pegType: "peggedUSD",
+      contracts: [{
+        chain: "ethereum",
+        address: "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf",
+        decimals: 18,
+      }],
+      circulating: {},
+    }];
+    fixtureMockFetch([
+      { match: "/v1/cryptocurrency/category", body: cmcCategory([]) },
+      {
+        match: "/v3/cryptocurrency/quotes/latest",
+        body: { data: [{
+          id: 32878,
+          slug: "mnee",
+          symbol,
+          is_active: isActive,
+          platform: tokenAddress == null ? null : { slug: "ethereum", token_address: tokenAddress },
+          quote: { USD: { ...cmcUsdQuote(0.9998, lastUpdated), volume_24h: volume24h } },
+        }] },
+      },
+    ]);
+
+    const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, undefined);
+
+    expect(result.resolved).toBe(0);
+    expect(assets[0].price).toBe(0);
+  });
+
   it("skips CMC quotes with stale quote timestamps", async () => {
     const assets: PeggedAsset[] = [
       {
@@ -920,7 +1183,7 @@ describe("enrichMissingPrices", () => {
     });
   });
 
-  it("records a CMC breaker failure when the category response is truncated", async () => {
+  it("retains usable category rows while reporting an unseen truncated tail", async () => {
     const assets: PeggedAsset[] = [
       {
         id: "test-dollar",
@@ -956,9 +1219,12 @@ describe("enrichMissingPrices", () => {
 
     const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, db);
 
-    expect(result.resolved).toBe(0);
+    expect(result.resolved).toBe(1);
+    expect(assets[0].price).toBe(1.0001);
     expect(result.diagnostics?.[0]).toMatchObject({
-      errorClass: "invalid-shape",
+      success: true,
+      errorClass: "truncated-response",
+      resolvedCount: 1,
     });
     const circuitWrite = db
       .getHistory()
@@ -968,7 +1234,8 @@ describe("enrichMissingPrices", () => {
           entry.binds[0] === `circuit:${fixtureCIRCUIT_SOURCE.CMC_PRICES}`,
       );
     expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({
-      consecutiveFailures: 1,
+      state: "closed",
+      consecutiveFailures: 0,
     });
   });
 

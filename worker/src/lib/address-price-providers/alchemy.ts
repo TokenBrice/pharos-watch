@@ -7,9 +7,11 @@ import { throwIfAborted } from "../abort";
 import { applyInvalidShapeDiagnostic, buildCapSkipDiagnostic } from "../pricing-provider-lifecycle";
 import {
   chunk,
+  buildSkippedAddressPriceAttempts,
   createProviderRunState,
   emptyProviderResult,
   fetchProviderJson,
+  finalizeAddressPriceDiagnosticAttempts,
   groupTargetsByProviderChain,
   incrementReason,
   isRecord,
@@ -35,15 +37,13 @@ export async function runAlchemyAddressProvider(
   deadlineMs: number,
 ): Promise<AddressPriceProviderRunResult> {
   const apiKey = config.alchemyApiKey?.trim();
-  if (!apiKey) return emptyProviderResult("alchemy-address", targets.length, "missing-provider");
+  if (!apiKey) return emptyProviderResult("alchemy-address", targets, "missing-provider");
   const state = createProviderRunState();
   const { diagnostics, quotes, rejectedTargets } = state;
   let { successfulRequests, attemptedRequests } = state;
   const batches = buildAlchemyBatches(targets);
   const requestBatches = batches.slice(0, ALCHEMY_ADDRESS_MAX_REQUESTS);
-  const cappedTargets = batches
-    .slice(ALCHEMY_ADDRESS_MAX_REQUESTS)
-    .reduce((sum, batch) => sum + batch.length, 0);
+  const processedTargets = new Set<AddressPriceTarget>();
 
   for (const batch of requestBatches) {
     throwIfAborted(signal);
@@ -66,6 +66,7 @@ export async function runAlchemyAddressProvider(
         }),
       },
       candidateCount: batch.length,
+      targets: batch,
       signal,
     });
     let diagnostic = rawDiagnostic;
@@ -104,11 +105,21 @@ export async function runAlchemyAddressProvider(
     } else if (json != null) {
       diagnostic = applyInvalidShapeDiagnostic(diagnostic, "Expected Alchemy prices data array");
     }
-    diagnostics.push(diagnostic);
+    for (const target of batch) processedTargets.add(target);
+    diagnostics.push(finalizeAddressPriceDiagnosticAttempts(diagnostic, quotes));
   }
 
-  if (cappedTargets > 0) {
-    diagnostics.push(buildCapSkipDiagnostic({ source: "alchemy-address", label: "Alchemy" }, cappedTargets));
+  const skippedTargets = targets.filter((target) => !processedTargets.has(target));
+  if (skippedTargets.length > 0) {
+    const diagnostic = buildCapSkipDiagnostic({ source: "alchemy-address", label: "Alchemy" }, skippedTargets.length);
+    const deadlineReached = Date.now() >= deadlineMs;
+    diagnostic.assetAttempts = buildSkippedAddressPriceAttempts(
+      "alchemy-address",
+      skippedTargets,
+      deadlineReached ? "deadline" : "request-cap",
+      deadlineReached ? "timeout" : "cap",
+    );
+    diagnostics.push(diagnostic);
   }
 
   return {

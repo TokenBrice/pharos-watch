@@ -6,6 +6,7 @@ import { USER_AGENT } from "../constants";
 import { fetchWithRetry } from "../fetch-retry";
 import { parsePositiveNumber } from "../number-utils";
 import {
+  createPricingAssetAttempt,
   endpointLabel,
   type PricingProviderAttemptDiagnostic,
   type PricingProviderDiagnosticSource,
@@ -150,6 +151,8 @@ export async function fetchProviderJson(params: {
   fetchLogUrl?: string;
   init?: RequestInit;
   candidateCount: number;
+  targets?: readonly AddressPriceTarget[];
+  candidateAt?: number;
   signal?: AbortSignal;
 }): Promise<{ json: unknown | null; diagnostic: PricingProviderAttemptDiagnostic }> {
   const baseDiagnostic = {
@@ -158,6 +161,15 @@ export async function fetchProviderJson(params: {
     endpoint: params.endpoint ?? endpointLabel(params.url),
     candidateCount: params.candidateCount,
   };
+  const assetAttempts = params.targets?.slice(0, 100).map((target) => createPricingAssetAttempt({
+    assetId: target.stablecoinId,
+    adapter: params.provider,
+    chain: target.chain,
+    target: target.address,
+    state: "attempted",
+    result: "unresolved",
+    candidateAt: params.candidateAt ?? Math.floor(Date.now() / 1000),
+  }));
 
   const response = await fetchWithRetry(
     params.url,
@@ -184,6 +196,7 @@ export async function fetchProviderJson(params: {
       diagnostic: buildPricingProviderDiagnostic(baseDiagnostic, {
         errorClass: "no-response",
         rejectionReasonCounts: { "upstream-error": 1 },
+        ...(assetAttempts ? { assetAttempts } : {}),
       }),
     };
   }
@@ -191,6 +204,7 @@ export async function fetchProviderJson(params: {
   const diagnostic = buildPricingProviderDiagnostic(baseDiagnostic, {
     status: response.status,
     ok: response.ok,
+    ...(assetAttempts ? { assetAttempts } : {}),
   });
 
   if (!response.ok) {
@@ -221,9 +235,11 @@ export async function fetchProviderJson(params: {
 
 export function emptyProviderResult(
   provider: AddressPriceProviderKey,
-  candidateCount: number,
+  targetsOrCandidateCount: readonly AddressPriceTarget[] | number,
   reason: PricingProviderRejectionReason,
 ): AddressPriceProviderRunResult {
+  const targets = Array.isArray(targetsOrCandidateCount) ? targetsOrCandidateCount : [];
+  const candidateCount = typeof targetsOrCandidateCount === "number" ? targetsOrCandidateCount : targets.length;
   return {
     quotes: [],
     diagnostics: [{
@@ -235,11 +251,84 @@ export function emptyProviderResult(
       success: false,
       candidateCount,
       rejectionReasonCounts: { [reason]: candidateCount },
+      ...(targets.length > 0 ? {
+        assetAttempts: targets.slice(0, 100).map((target) => createPricingAssetAttempt({
+          assetId: target.stablecoinId,
+          adapter: provider,
+          chain: target.chain,
+          target: target.address,
+          state: "skipped",
+          skipReason: "missing-provider",
+          rejectionClass: reason,
+          candidateAt: Math.floor(Date.now() / 1000),
+        })),
+      } : {}),
     }],
     rejectedTargets: { [reason]: candidateCount },
     successfulRequests: 0,
     attemptedRequests: 0,
   };
+}
+
+export function finalizeAddressPriceDiagnosticAttempts(
+  diagnostic: PricingProviderAttemptDiagnostic,
+  quotes: readonly AddressPriceQuote[],
+): PricingProviderAttemptDiagnostic {
+  if (!diagnostic.assetAttempts?.length) return diagnostic;
+  const quotesByTarget = new Map(quotes.map((quote) => [
+    `${quote.stablecoinId}:${quote.chain}:${quote.address.toLowerCase()}`,
+    quote,
+  ]));
+  const rejectionEntries = Object.entries(diagnostic.rejectionReasonCounts ?? {})
+    .filter((entry): entry is [PricingProviderRejectionReason, number] => typeof entry[1] === "number" && entry[1] > 0);
+  const exactSharedRejection = rejectionEntries.length === 1 && rejectionEntries[0][1] >= diagnostic.assetAttempts.length
+    ? rejectionEntries[0][0]
+    : null;
+  return {
+    ...diagnostic,
+    assetAttempts: diagnostic.assetAttempts.map((attempt) => {
+      const quote = attempt.chain && attempt.target
+        ? quotesByTarget.get(`${attempt.assetId}:${attempt.chain}:${attempt.target.toLowerCase()}`)
+        : undefined;
+      if (quote) {
+        return {
+          ...attempt,
+          source: quote.source,
+          result: "resolved" as const,
+          observedAt: quote.observedAt,
+        };
+      }
+      if (!diagnostic.success) {
+        return {
+          ...attempt,
+          result: "failed" as const,
+          rejectionClass: diagnostic.errorClass ?? rejectionEntries[0]?.[0] ?? "upstream-error",
+        };
+      }
+      if (exactSharedRejection) {
+        return { ...attempt, result: "rejected" as const, rejectionClass: exactSharedRejection };
+      }
+      return attempt;
+    }),
+  };
+}
+
+export function buildSkippedAddressPriceAttempts(
+  provider: AddressPriceProviderKey,
+  targets: readonly AddressPriceTarget[],
+  skipReason: "budget" | "deadline" | "negative-cache" | "provider-suppressed" | "request-cap",
+  rejectionClass: string,
+): PricingProviderAttemptDiagnostic["assetAttempts"] {
+  return targets.slice(0, 100).map((target) => createPricingAssetAttempt({
+    assetId: target.stablecoinId,
+    adapter: provider,
+    chain: target.chain,
+    target: target.address,
+    state: "skipped",
+    skipReason,
+    rejectionClass,
+    candidateAt: Math.floor(Date.now() / 1000),
+  }));
 }
 
 /** Initialize the mutable accumulators shared by every address-price provider run function. */

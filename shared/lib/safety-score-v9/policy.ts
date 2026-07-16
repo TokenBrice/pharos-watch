@@ -34,6 +34,8 @@ function semanticPayload(policy: V9MethodologyPolicy): V9MethodologySemanticPayl
       materiality: {
         ...policy.semantic.materiality,
         matureChains: sortedUnique(policy.semantic.materiality.matureChains),
+        matureVenues: sortedUnique(policy.semantic.materiality.matureVenues),
+        lowRiskBridgeTiers: sortedUnique(policy.semantic.materiality.lowRiskBridgeTiers),
       },
       backing: {
         ...policy.semantic.backing,

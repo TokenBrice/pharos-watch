@@ -35,6 +35,18 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     defaultWeight: 3,
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
+    key: "curve-thin-onchain",
+    label: "Curve exact-pool quote",
+    shortLabel: "Curve exact",
+    depegSourceFamily: "dex:curve",
+    maxTrustedAgeSec: 5 * 60,
+    defaultWeight: 1,
+    isReplaySafe: false,
+    freshnessKind: "upstream",
+    supportsUpstreamObservedAt: true,
+    defaultObservedAtMode: "upstream",
+  }),
+  definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
     key: "uniswap-v3-dex",
     label: "Uniswap V3",
     shortLabel: "Uniswap V3",

@@ -225,6 +225,7 @@ interface DexLiquidityScoreState {
 interface DexLiquidityPersistenceState {
   persistence: DexLiquidityPersistence;
   challengerPublication: Awaited<ReturnType<typeof publishDexPriceChallengerSnapshots>>;
+  dexPriceDiagnostics: Awaited<ReturnType<typeof computeDexPrices>>;
   historicalSnapshot: DexLiquidityHistoricalSnapshot;
 }
 
@@ -833,6 +834,11 @@ async function persistDexLiquidityScoreState(
         skippedStablecoins: scoreState.retainedPoolsByStablecoin.size,
         missingTables: false,
       },
+      dexPriceDiagnostics: {
+        rejectedObservationCount: 0,
+        rejectedByStablecoin: [],
+        truncatedStablecoins: 0,
+      },
       historicalSnapshot: {
         snapshotRowsWritten: 0,
         skipped: true,
@@ -898,7 +904,7 @@ async function persistDexLiquidityScoreState(
     },
     ctx.signal,
   );
-  await computeDexPrices(
+  const dexPriceDiagnostics = await computeDexPrices(
     ctx.db,
     scoreState.retainedPoolsByStablecoin,
     ctx.syncStartSec,
@@ -939,12 +945,14 @@ async function persistDexLiquidityScoreState(
       },
       orphanCleanupFailed: persistence.orphanCleanupFailed,
       retentionPruneFailed: historicalSnapshot.retentionPruneFailed,
+      dexPriceDiagnostics,
     },
   });
 
   return {
     persistence,
     challengerPublication,
+    dexPriceDiagnostics,
     historicalSnapshot,
   };
 }
@@ -987,6 +995,7 @@ function buildDexLiquidityCronResult(
         },
         sourceCoverage: scoreState.analysis.sourceCoverage,
         challengerPublication: persistenceState.challengerPublication,
+        dexPriceDiagnostics: persistenceState.dexPriceDiagnostics,
         failedSources: sourceState.failedSources,
         fallbackSignals: sourceState.fallbackSignals,
         persistence: persistenceState.persistence,

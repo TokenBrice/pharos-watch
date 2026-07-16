@@ -31,6 +31,9 @@ describe("pricing source registry", () => {
       "bitstamp",
       "coinbase",
       "redstone",
+      "kava-pricefeed",
+      "aerodrome-onchain",
+      "velodrome-onchain",
       "curve-onchain",
       "curve-oracle",
       "chainlink-nav",
@@ -39,6 +42,7 @@ describe("pricing source registry", () => {
       "fluid-dex",
       "balancer-dex",
       "curve-dex",
+      "curve-thin-onchain",
       "uniswap-v3-dex",
       "uniswap-v4-dex",
       "raydium-dex",
@@ -94,6 +98,22 @@ describe("pricing source registry", () => {
       bypassesSoftValidationGuardrails: true,
       defaultObservedAtMode: "local_fetch",
     });
+
+    expect(getPricingSourceRegistryEntry("kava-pricefeed")).toMatchObject({
+      key: "kava-pricefeed",
+      trustTier: "hard_oracle",
+      freshnessKind: "upstream",
+      maxTrustedAgeSec: 30 * 60,
+      isReplaySafe: true,
+      canBeDepegAuthoritative: true,
+      canSingleSourceDepegAuthoritative: true,
+      isProtocolOverride: true,
+      depegSourceFamily: "oracle:kava-pricefeed",
+      defaultObservedAtMode: "upstream",
+    });
+
+    expect(countDepegAuthoritativeSources(["aerodrome-onchain+velodrome-onchain"])).toBe(2);
+    expect(isReplaySafePriceSource("aerodrome-onchain+velodrome-onchain")).toBe(true);
 
     expect(getPricingSourceRegistryEntry("chainlink-nav")).toMatchObject({
       key: "chainlink-nav",

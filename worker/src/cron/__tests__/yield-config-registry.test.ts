@@ -134,24 +134,18 @@ describe("yield config registry", () => {
     });
   });
 
-  it("keeps AZND on the exact loAZND wrapper path without price-derived fallback", () => {
+  it("keeps base AZND non-yield-bearing while retaining the exact loAZND identity", () => {
     const coin = trackedCoinsById.get("aznd-mu-digital");
     const manifest = YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === "aznd-mu-digital");
 
-    expect(coin?.flags).toMatchObject({ yieldBearing: true, navToken: false });
+    expect(coin?.flags).toMatchObject({ yieldBearing: false, navToken: false });
     expect(ON_CHAIN_RATE_CONFIGS.some((entry) => entry.stablecoinId === "aznd-mu-digital")).toBe(false);
     expect(YIELD_VARIANT_MAP["aznd-mu-digital"]).toMatchObject({
       variantSymbol: "loAZND",
       variantChain: "monad",
       variantAddress: "0x9c82eB49B51F7Dc61e22Ff347931CA32aDc6cd90",
     });
-    expect(manifest?.strategies).toEqual(expect.arrayContaining([
-      expect.objectContaining({ kind: "native-pool" }),
-      expect.objectContaining({ kind: "variant-pool" }),
-    ]));
-    expect(manifest?.strategies).not.toEqual(expect.arrayContaining([
-      expect.objectContaining({ kind: "price-derived" }),
-    ]));
+    expect(manifest).toBeUndefined();
   });
 
   it("promotes Wave 1 tracked vaults to deterministic on-chain readers", () => {
@@ -287,24 +281,16 @@ describe("yield config registry", () => {
       .map((entry) => entry.stablecoinId)
       .sort();
 
-    expect(quarantined).toEqual(["reusd-re-protocol", "scrvusd-curve", "ustb-superstate"]);
+    expect(quarantined).toEqual(["scrvusd-curve", "ustb-superstate"]);
   });
 
   it("keeps quarantined deterministic probe configs inactive until manually restored", () => {
     const probeIds = QUARANTINED_DETERMINISTIC_PROBE_CONFIGS.map((config) => config.stablecoinId);
 
-    expect(probeIds).toEqual(["reusd-re-protocol"]);
+    expect(probeIds).toEqual([]);
     expect(onChainIds.has("reusd-re-protocol")).toBe(false);
     expect(onChainIds.has("ustb-superstate")).toBe(false);
     expect(probeIds).not.toContain("ustb-superstate");
-    expect(QUARANTINED_DETERMINISTIC_PROBE_CONFIGS[0]).toMatchObject({
-      stablecoinId: "reusd-re-protocol",
-      chain: "ethereum",
-      contract: "0x1202f5c7B4b9E47a1A9837B26881B7C20112BD51",
-      selector: "0x07a2d13a",
-      decimals: 18,
-    });
-    expect(BigInt(QUARANTINED_DETERMINISTIC_PROBE_CONFIGS[0].inputAmount)).toBe(ONE_E18_INPUT_AMOUNT);
   });
 
   it("tracks current quarantine review windows in typed lifecycle metadata", () => {
@@ -312,13 +298,28 @@ describe("yield config registry", () => {
       lifecycle: "quarantined",
       reason: expect.objectContaining({ nextReviewAt: "2026-10-09" }),
     });
-    expect(YIELD_ADAPTER_LIFECYCLE["reusd-re-protocol"]).toMatchObject({
-      lifecycle: "quarantined",
-      reason: expect.objectContaining({ nextReviewAt: "2026-08-09" }),
-    });
+    expect(YIELD_ADAPTER_LIFECYCLE["reusd-re-protocol"]).toBeUndefined();
     expect(YIELD_ADAPTER_LIFECYCLE["ustb-superstate"]).toMatchObject({
       lifecycle: "quarantined",
       reason: expect.objectContaining({ code: "token-not-erc4626", nextReviewAt: "2026-10-15" }),
+    });
+  });
+
+  it("wires Re Protocol yield to reUSDe and the official price API", () => {
+    expect(YIELD_POOL_MAP["reusd-re-protocol"]).toBeUndefined();
+    expect(YIELD_VARIANT_MAP["reusd-re-protocol"]).toMatchObject({
+      variantSymbol: "reUSDe",
+      variantAddress: "0xdDC0f880ff6e4e22E4B74632fBb43Ce4DF6cCC5a",
+      variantChain: "ethereum",
+      variantProject: "re-protocol",
+      yieldSource: "Re Protocol Insurance Alpha (reUSDe)",
+      yieldType: "nav-appreciation",
+    });
+    expect(
+      YIELD_SOURCE_REGISTRY.find((entry) => entry.stablecoinId === "reusd-re-protocol"),
+    ).toMatchObject({
+      directProtocolApiLabel: "Re Protocol Insurance Alpha (reUSDe)",
+      directProtocolApiSourceKey: "protocol-api:re-protocol-reusde",
     });
   });
 

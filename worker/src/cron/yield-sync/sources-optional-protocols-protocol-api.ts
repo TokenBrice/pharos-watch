@@ -38,6 +38,19 @@ interface ZephyrHistoricalReturns {
   oneDay?: ZephyrReturnWindow;
 }
 
+interface RePriceObservation {
+  apy?: number;
+  date?: string;
+  price?: number;
+}
+
+interface RePriceResponse {
+  success?: boolean;
+  data?: {
+    reUSDe?: RePriceObservation[];
+  };
+}
+
 const BIMA_SUSBD_SOURCE_KEY = "protocol-api:bima-susbd";
 const BIMA_SUSBD_SOURCE_LABEL = "BIMA savings (sUSBD)";
 const BIMA_SUSBD_SOURCE_TYPE = "lending-vault";
@@ -58,6 +71,14 @@ const ONDO_USDY_SOURCE_LABEL = "Ondo USDY Oracle";
 const ONDO_USDY_SOURCE_TYPE = "nav-appreciation";
 const ONDO_USDY_ORACLE = "0xa0219aa5b31e65bc920b5b6dfb8edf0988121de0";
 const ONDO_GET_PRICE_SELECTOR = "0x98d5fdca";
+const RE_REUSDE_SOURCE_KEY = "protocol-api:re-protocol-reusde";
+const RE_REUSDE_SOURCE_LABEL = "Re Protocol Insurance Alpha (reUSDe)";
+const RE_REUSDE_SOURCE_TYPE = "nav-appreciation";
+const RE_REUSDE_PRICE_URL = "https://api.re.xyz/price";
+const RE_REUSDE_CONTRACT = "0xdDC0f880ff6e4e22E4B74632fBb43Ce4DF6cCC5a";
+const RE_REUSDE_MAX_FRESHNESS_SEC = 3 * DAY_SECONDS;
+const RE_REUSDE_MIN_APY_PERCENT = -100;
+const RE_REUSDE_MAX_APY_PERCENT = 500;
 const ZEPHYR_ZYS_SOURCE_KEY = "protocol-api:zys-zephyr-protocol";
 const ZEPHYR_ZYS_SOURCE_LABEL = "Zephyr Scanner ZYS returns";
 const ZEPHYR_ZYS_SOURCE_TYPE = "nav-appreciation";
@@ -264,6 +285,71 @@ export async function fetchOndoUsdyOracleSource(
   } catch (error) {
     if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
     console.warn("[yield] Ondo USDY oracle source failed:", error);
+    return null;
+  }
+}
+
+export async function fetchReProtocolReusdeSource(signal?: AbortSignal): Promise<ResolvedYield | null> {
+  try {
+    const result = await fetchJsonWithRetry<RePriceResponse>(
+      RE_REUSDE_PRICE_URL,
+      {
+        headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+        signal,
+      },
+      0,
+      { timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS },
+    );
+    if (!result?.response.ok || result.body.success !== true) return null;
+
+    const observations = result.body.data?.reUSDe;
+    if (!Array.isArray(observations) || observations.length === 0) return null;
+
+    const parsed = observations
+      .map((observation) => {
+        const observedAt = typeof observation.date === "string"
+          ? Date.parse(`${observation.date}T00:00:00Z`) / 1000
+          : Number.NaN;
+        return {
+          apy: getFiniteNumber(observation.apy),
+          observedAt,
+          price: getFiniteNumber(observation.price),
+        };
+      })
+      .filter((observation) =>
+        observation.apy != null &&
+        observation.apy >= RE_REUSDE_MIN_APY_PERCENT &&
+        observation.apy <= RE_REUSDE_MAX_APY_PERCENT &&
+        Number.isFinite(observation.observedAt) &&
+        observation.price != null &&
+        observation.price > 0,
+      )
+      .sort((a, b) => b.observedAt - a.observedAt);
+    const latest = parsed[0];
+    if (!latest || latest.apy == null || latest.price == null) return null;
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (latest.observedAt > nowSec || nowSec - latest.observedAt > RE_REUSDE_MAX_FRESHNESS_SEC) {
+      return null;
+    }
+
+    return {
+      currentApy: latest.apy,
+      apyBase: latest.apy,
+      apyReward: null,
+      sourcePool: RE_REUSDE_CONTRACT,
+      sourceTvlUsd: null,
+      dataSource: "protocol-api",
+      exchangeRate: latest.price,
+      sourceKey: RE_REUSDE_SOURCE_KEY,
+      yieldSource: RE_REUSDE_SOURCE_LABEL,
+      yieldType: RE_REUSDE_SOURCE_TYPE,
+      sourceObservedAt: latest.observedAt,
+      comparisonAnchorObservedAt: null,
+    };
+  } catch (error) {
+    if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+    console.warn("[yield] Re Protocol reUSDe source failed:", error);
     return null;
   }
 }

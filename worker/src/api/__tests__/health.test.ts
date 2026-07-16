@@ -8,12 +8,29 @@ type HealthDbOptions = {
   extraCacheRows?: Record<string, unknown>[];
   dexAge?: number;
   blacklistEntry?: MockTableConfig;
+  publicationEntry?: MockTableConfig;
   symbolRows?: Record<string, unknown>[];
   statusStartedAt?: number;
   extras?: MockTableConfig[];
 };
 
-function completePublicationEntry(now: number): MockTableConfig {
+function completePublicationEntry(
+  now: number,
+  activePriceCoverage: Record<string, unknown> = {
+    complete: true,
+    expectedActiveCount: ACTIVE_IDS.size,
+    presentActiveCount: ACTIVE_IDS.size,
+    pricedActiveCount: ACTIVE_IDS.size,
+    missingPriceCount: 0,
+    pricedActiveIds: [...ACTIVE_IDS],
+    missingActiveIds: [],
+    affectedMarketCapUsd: 0,
+    missingActiveAssets: [],
+    alertEligibleCount: 0,
+    alertEligibleIds: [],
+    maxConsecutiveMissingGenerations: 0,
+  },
+): MockTableConfig {
   return {
     match: "job = 'sync-stablecoins' AND metadata IS NOT NULL",
     rows: [],
@@ -29,6 +46,7 @@ function completePublicationEntry(now: number): MockTableConfig {
           waivedActiveIds: [],
           expiredWaiverIds: [],
         },
+        activePriceCoverage,
       }),
     },
   };
@@ -61,13 +79,14 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
     extraCacheRows = [],
     dexAge = 60,
     blacklistEntry = { match: "blacklist_events", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+    publicationEntry = completePublicationEntry(now),
     symbolRows = [{ symbol: "USDT", latest: now - 600 }],
     statusStartedAt = now - 300,
     extras = [],
   } = options;
 
   return mockD1([
-    completePublicationEntry(now),
+    publicationEntry,
     dewsPublicationEntry(now),
     {
       match: "cache WHERE key IN",
@@ -251,6 +270,57 @@ describe("handleHealth", () => {
     expect(JSON.stringify(body)).not.toContain("daysUntilExhaustion");
     expect(body.warnings).toContain("d1-capacity-warning");
     expect(body.warnings.join(" ")).not.toContain("75");
+  });
+
+  it("degrades when a complete active publication has missing prices", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const activeIds = [...ACTIVE_IDS];
+    const missingId = activeIds[0]!;
+    const db = makeHealthyHealthDb(now, {
+      publicationEntry: completePublicationEntry(now, {
+        complete: false,
+        expectedActiveCount: activeIds.length,
+        presentActiveCount: activeIds.length,
+        pricedActiveCount: activeIds.length - 1,
+        missingPriceCount: 1,
+        pricedActiveIds: activeIds.filter((stablecoinId) => stablecoinId !== missingId),
+        missingActiveIds: [missingId],
+        affectedMarketCapUsd: 88_000_000,
+        missingActiveAssets: [{
+          stablecoinId: missingId,
+          symbol: "MISS",
+          marketCapUsd: 88_000_000,
+          consecutiveMissingGenerations: 2,
+          rejectionReason: "no-accepted-price",
+          alertEligible: true,
+        }],
+        alertEligibleCount: 1,
+        alertEligibleIds: [missingId],
+        maxConsecutiveMissingGenerations: 2,
+      }),
+    });
+
+    const res = await handleHealth(db);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      status: "healthy" | "degraded" | "stale";
+      warnings: string[];
+      stablecoinPublication: { status: string };
+      activePriceCoverage: {
+        status: string;
+        missingActiveIds: string[];
+        alertEligibleIds: string[];
+      };
+    };
+
+    expect(body.status).toBe("degraded");
+    expect(body.stablecoinPublication.status).toBe("complete");
+    expect(body.activePriceCoverage).toMatchObject({
+      status: "incomplete",
+      missingActiveIds: [missingId],
+      alertEligibleIds: [missingId],
+    });
+    expect(body.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
   });
 
   it("returns the bounded realtime Cache-Control profile", async () => {

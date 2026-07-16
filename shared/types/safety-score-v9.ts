@@ -997,6 +997,29 @@ const V9MaterialityPolicySchema = z
     // at the lower "moderate" severity. A group touching any chain outside this
     // set (or an unknown/non-chain failure domain) keeps the "high" severity.
     matureChains: z.array(z.string().min(1)),
+    // Supply share below which a non-mature chain's common-mode concentration is
+    // immaterial and does not raise the severity. A non-mature chain carrying a
+    // material (>= threshold) or unattributable share stays fail-closed at "high".
+    matureChainShareThreshold: z.number().finite().min(0).max(1),
+    // Reviewed liquidity venues (dex-protocol common-mode) whose concentration is
+    // not a capping signal — it graduates to the non-capping "low" severity. A
+    // concentration on any other (or unknown) venue stays fail-closed at "high".
+    matureVenues: z.array(z.string().min(1)),
+    // Reviewed bridge tiers (bridge-route common-mode) treated as low risk: their
+    // shared-bridge concentration grades "moderate" instead of the default
+    // "high". Any other or unreviewed tier stays fail-closed at "high".
+    lowRiskBridgeTiers: z.array(
+      z.enum([
+        "single-chain-or-native",
+        "issuer-native-burn-mint",
+        "canonical-rollup-bridge",
+        "issuer-native-lock-mint",
+        "external-validated-network",
+        "liquidity-or-intent-route",
+        "external-lock-mint",
+        "opaque-or-unknown",
+      ]),
+    ),
   })
   .strict();
 

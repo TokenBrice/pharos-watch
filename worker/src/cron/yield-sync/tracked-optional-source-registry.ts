@@ -7,6 +7,7 @@ import {
   fetchEtherfuseCetesSource,
   fetchHashnoteUsycSource,
   fetchOndoUsdyOracleSource,
+  fetchReProtocolReusdeSource,
   fetchZephyrZysSource,
 } from "./sources";
 import { fetchMidasMmevNavOracleSource } from "./midas-mmev-nav-oracle";
@@ -21,6 +22,7 @@ const CETES_ETHERFUSE_ID = "cetes-etherfuse";
 const HASHNOTE_USYC_ID = "usyc-hashnote";
 const MIDAS_MMEV_ID = "mmev-midas";
 const ONDO_USDY_ID = "usdy-ondo-finance";
+const RE_REUSD_ID = "reusd-re-protocol";
 const ZEPHYR_ZYS_ID = "zys-zephyr-protocol";
 const MIDAS_MMEV_NAV_ORACLE_SOURCE_KEY = "protocol-api:midas-mmev-nav-oracle";
 const ONDO_USDY_ORACLE_SOURCE_KEY = "protocol-api:ondo-usdy-oracle";
@@ -180,6 +182,17 @@ const TRACKED_OPTIONAL_SOURCE_REGISTRY: TrackedOptionalSourceEntry[] = [
       );
       return candidate?.yield ?? null;
     },
+  },
+  {
+    stablecoinId: RE_REUSD_ID,
+    sourceKey: "protocol-api:re-protocol-reusde",
+    run: (context) =>
+      runTimedOptionalSource(
+        "Re Protocol reUSDe source",
+        context.signal,
+        (budgetSignal) => fetchReProtocolReusdeSource(budgetSignal),
+        null,
+      ),
   },
   {
     stablecoinId: ZEPHYR_ZYS_ID,

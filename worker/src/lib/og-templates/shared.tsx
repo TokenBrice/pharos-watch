@@ -1,19 +1,20 @@
 import * as React from "react";
 import type { ReactNode } from "react";
 
-// Base colors
-const BG = "#0a0f1e";
-const TEXT_PRIMARY = "#e8e8e8";
-const TEXT_SECONDARY = "#8b8fa3";
-const FROST_BLUE = "#5ba3d9";
+// Matches the current light product shell used by static route captures.
+const BG = "#f8f8fa";
+const TEXT_PRIMARY = "#171719";
+const TEXT_SECONDARY = "#5f6570";
+const FROST_BLUE = "#0e7490";
+export const TRACK_BG = "#e4e7eb";
 
 // Semantic colors for data visualization
 export const SEMANTIC_COLORS = {
-  positive: "#22c55e",   // Green for good/up
-  negative: "#ef4444",   // Red for bad/down
-  warning: "#f59e0b",    // Orange for caution
-  neutral: "#94a3b8",    // Gray for neutral
-  highlight: "#5ba3d9",  // Frost blue for highlights
+  positive: "#15803d",   // Green for good/up
+  negative: "#dc2626",   // Red for bad/down
+  warning: "#b45309",    // Orange for caution
+  neutral: "#64748b",    // Gray for neutral
+  highlight: "#0e7490",  // Frost blue for highlights
 };
 
 /**
@@ -24,10 +25,10 @@ export const SEMANTIC_COLORS = {
  * so grade colors are consistent across share images.
  */
 export const GRADE_COLORS: Record<string, string> = {
-  "A+": "#22c55e", "A": "#22c55e", "A-": "#4ade80",
-  "B+": "#5ba3d9", "B": "#5ba3d9", "B-": "#7dd3fc",
-  "C+": "#f59e0b", "C": "#f59e0b", "C-": "#fbbf24",
-  "D": "#f97316", "F": "#ef4444", "NR": "#94a3b8",
+  "A+": "#15803d", "A": "#15803d", "A-": "#16a34a",
+  "B+": "#0369a1", "B": "#0369a1", "B-": "#0284c7",
+  "C+": "#a16207", "C": "#a16207", "C-": "#b45309",
+  "D": "#c2410c", "F": "#dc2626", "NR": "#64748b",
 };
 
 export interface CardFrameProps {
@@ -51,7 +52,7 @@ export function MetricLabel({
       style={{
         fontSize,
         color: TEXT_SECONDARY,
-        letterSpacing: "0.06em",
+        letterSpacing: "0",
         textTransform: "uppercase",
       }}
     >
@@ -78,8 +79,8 @@ export function CardFrame({
         backgroundColor: BG,
         color: TEXT_PRIMARY,
         fontFamily: "Geist Sans",
-        padding: "48px 56px",
-        borderTop: borderTopColor ? `4px solid ${borderTopColor}` : "none",
+        padding: "42px 52px",
+        borderTop: `4px solid ${borderTopColor ?? "#22c55e"}`,
         position: "relative",
       }}
     >
@@ -89,14 +90,24 @@ export function CardFrame({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 32,
+          marginBottom: 28,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {/* Pharos Logo - SVG lighthouse icon */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {/* SVG Logo - 40px height, maintaining aspect ratio */}
-            <svg width="40" height="40" viewBox="0 0 88 88" fill="none">
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 40,
+                height: 40,
+                borderRadius: 7,
+                backgroundColor: "#18191c",
+              }}
+            >
+            <svg width="34" height="34" viewBox="0 0 88 88" fill="none">
               <defs>
                 <radialGradient id="glow" cx="50%" cy="50%" r="50%">
                   <stop offset="0%" stopColor="#E8DCC4" stopOpacity="0.45"/>
@@ -126,28 +137,29 @@ export function CardFrame({
               <path d="M39,22 C39,14 49,14 49,22 Z" fill="#E8DCC4" opacity="0.9"/>
               {/* Lantern room */}
               <rect x="38.5" y="22" width="11" height="7" rx="1" fill="#F5F0E6" opacity="0.85"/>
-              <line x1="42" y1="22" x2="42" y2="29" stroke="#0a1628" strokeWidth="0.8" opacity="0.3"/>
-              <line x1="46" y1="22" x2="46" y2="29" stroke="#0a1628" strokeWidth="0.8" opacity="0.3"/>
+              <line x1="42" y1="22" x2="42" y2="29" stroke="#18191c" strokeWidth="0.8" opacity="0.3"/>
+              <line x1="46" y1="22" x2="46" y2="29" stroke="#18191c" strokeWidth="0.8" opacity="0.3"/>
               {/* Gallery */}
               <rect x="34" y="29" width="20" height="4" rx="1.5" fill="#E8DCC4" opacity="0.85"/>
               {/* Tower shaft */}
               <path d="M37,33 L51,33 L54,66 L34,66 Z" fill="url(#tBody)" opacity="0.8"/>
               {/* Bands */}
-              <line x1="36.2" y1="44" x2="52.2" y2="44" stroke="#0d1f3c" strokeWidth="2" opacity="0.35"/>
-              <line x1="35.3" y1="55" x2="53.1" y2="55" stroke="#0d1f3c" strokeWidth="2" opacity="0.35"/>
+              <line x1="36.2" y1="44" x2="52.2" y2="44" stroke="#18191c" strokeWidth="2" opacity="0.35"/>
+              <line x1="35.3" y1="55" x2="53.1" y2="55" stroke="#18191c" strokeWidth="2" opacity="0.35"/>
               {/* Base */}
               <rect x="30" y="66" width="28" height="5" rx="2.5" fill="#E8DCC4" opacity="0.7"/>
               <rect x="26" y="71" width="36" height="5" rx="2.5" fill="#E8DCC4" opacity="0.45"/>
             </svg>
+            </div>
             <span
               style={{
                 fontSize: 22,
                 fontWeight: 700,
-                color: FROST_BLUE,
-                letterSpacing: "0.08em",
+                color: TEXT_PRIMARY,
+                letterSpacing: "0",
               }}
             >
-              PHAROS
+              Pharos
             </span>
           </div>
           {subtitle && (
@@ -156,33 +168,30 @@ export function CardFrame({
             </span>
           )}
         </div>
-        <span style={{ fontSize: 14, color: TEXT_SECONDARY }}>
-          pharos.watch
-        </span>
+        {badge ? (
+          <div
+            style={{
+              display: "flex",
+              padding: "5px 12px",
+              borderRadius: 4,
+              backgroundColor: badge.color,
+              color: "#fff",
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: "0",
+            }}
+          >
+            {badge.text}
+          </div>
+        ) : (
+          <span style={{ fontSize: 14, color: TEXT_SECONDARY }}>
+            pharos.watch
+          </span>
+        )}
       </div>
 
-      {/* Badge */}
-      {badge && (
-        <div
-          style={{
-            position: "absolute",
-            top: 48,
-            right: 56,
-            padding: "4px 12px",
-            borderRadius: 4,
-            backgroundColor: badge.color,
-            color: "#fff",
-            fontSize: 12,
-            fontWeight: 700,
-            letterSpacing: "0.06em",
-          }}
-        >
-          {badge.text}
-        </div>
-      )}
-
       {/* Title */}
-      <div style={{ fontSize: 32, fontWeight: 700, marginBottom: 24 }}>
+      <div style={{ fontSize: 34, fontWeight: 700, marginBottom: 24 }}>
         {title}
       </div>
 
@@ -198,7 +207,7 @@ export function CardFrame({
             display: "flex",
             position: "absolute",
             bottom: 16,
-            right: 56,
+            right: 52,
             fontSize: 12,
             color: TEXT_SECONDARY,
             fontFamily: "Geist Mono",

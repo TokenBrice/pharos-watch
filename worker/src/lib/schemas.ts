@@ -45,6 +45,39 @@ export const CmcCategoryResponseSchema = z.object({
     .optional(),
 });
 
+const CmcLatestQuoteEntrySchema = z.object({
+  id: z.number().int().positive(),
+  slug: z.string(),
+  symbol: z.string(),
+  is_active: z.number().int().optional(),
+  platform: z
+    .object({
+      slug: z.string().nullable().optional(),
+      token_address: z.string().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
+  quote: z.union([
+    z.object({
+      USD: z.object({
+        price: z.number().nullable().optional(),
+        volume_24h: z.number().nullable().optional(),
+        last_updated: z.string().nullable().optional(),
+      }),
+    }),
+    z.array(z.object({
+      symbol: z.string(),
+      price: z.number().nullable().optional(),
+      volume_24h: z.number().nullable().optional(),
+      last_updated: z.string().nullable().optional(),
+    })),
+  ]),
+});
+
+export const CmcLatestQuotesResponseSchema = z.object({
+  data: z.array(CmcLatestQuoteEntrySchema),
+});
+
 const JupiterQuotedPriceEntrySchema = z.object({
   usdPrice: z.number(),
   decimals: z.number().int().nonnegative(),

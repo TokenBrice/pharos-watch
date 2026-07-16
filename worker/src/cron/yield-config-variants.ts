@@ -1,11 +1,14 @@
 import type { YieldVariant } from "./yield-config-registry";
 
 export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
-  // reUSD -> stUSR (Resolv staked wrapper)
+  // reUSD -> reUSDe (Re Protocol Insurance Alpha junior tranche)
   "reusd-re-protocol": {
-    variantSymbol: "stUSR",
-    variantAddress: "0x1202f5c7B4b9E47a1A9837B26881B7C20112BD51",
+    variantSymbol: "reUSDe",
+    variantAddress: "0xdDC0f880ff6e4e22E4B74632fBb43Ce4DF6cCC5a",
     variantChain: "ethereum",
+    variantProject: "re-protocol",
+    yieldSource: "Re Protocol Insurance Alpha (reUSDe)",
+    yieldType: "nav-appreciation",
   },
   // AZND -> loAZND (Mu Digital locked/staking wrapper)
   "aznd-mu-digital": {

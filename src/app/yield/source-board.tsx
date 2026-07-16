@@ -218,7 +218,7 @@ function StackBar({
                 <span className="font-medium">
                   {seg.label} ({seg.count})
                 </span>
-                <span className="block text-muted-foreground">{seg.description}</span>
+                <span className="block text-background/75">{seg.description}</span>
               </TooltipContent>
             </Tooltip>
           );
@@ -375,7 +375,7 @@ function SourceRiskDriverChips({ drivers }: { drivers: readonly YieldSourceBoard
           </TooltipTrigger>
           <TooltipContent className="max-w-[260px] text-xs">
             <span className="font-medium">{pluralize(driver.count, "visible row")}</span>
-            <span className="block text-muted-foreground">{driver.description}</span>
+            <span className="block text-background/75">{driver.description}</span>
           </TooltipContent>
         </Tooltip>
       ))}
@@ -411,7 +411,7 @@ function SourceLaneRow({ group }: { group: YieldSourceBoardGroup }) {
             </TooltipTrigger>
             <TooltipContent className="max-w-[260px] text-xs">
               <span className="font-medium">{YIELD_SOURCE_CONFIDENCE_DEFINITIONS[tier].label}</span>
-              <span className="block text-muted-foreground">
+              <span className="block text-background/75">
                 {YIELD_SOURCE_CONFIDENCE_DEFINITIONS[tier].description}
               </span>
             </TooltipContent>

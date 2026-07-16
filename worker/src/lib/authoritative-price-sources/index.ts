@@ -2,7 +2,14 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { rethrowIfAborted } from "../abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../circuit-breaker";
+import {
+  appendPricingAssetAttempts,
+  createPricingAssetAttempt,
+  errorClassFor,
+  type PricingAssetAttemptRecord,
+} from "../pricing-provider-diagnostics";
 import type { PriceValidationReferences } from "../price-validation";
+import { azndCurvePoolProvider } from "./aznd-curve-pool";
 import { capCusdProvider } from "./cap-cusd";
 import { erc4626NavProvider } from "./erc4626-nav";
 import {
@@ -11,12 +18,17 @@ import {
   type HistoricalPriceResolution,
   type LivePriceContext,
   type PriceSourceProvider,
+  getRegistryLivePriceDiagnosticTarget,
 } from "./helpers";
 import { idleCdoTrancheProvider } from "./idle-cdo-tranche";
 import { inheritedTrackedPriceProvider } from "./inherited-tracked";
 import { iusdInfinifiProvider } from "./infinifi-iusd";
+import { jusdStablecoinBridgeProvider } from "./jusd-stablecoin-bridge";
+import { kavaUsdxPricefeedProvider } from "./kava-pricefeed";
+import { mentoPhpmProvider } from "./mento-phpm";
 import { previewRedeemProvider } from "./preview-redeem";
 import { protocolParProvider } from "./protocol-par";
+import { usxStablePoolProvider } from "./usx-stable-pools";
 
 export type {
   CurrentPriceOverride,
@@ -31,6 +43,11 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   iusdInfinifiProvider,
   inheritedTrackedPriceProvider,
   protocolParProvider,
+  azndCurvePoolProvider,
+  mentoPhpmProvider,
+  usxStablePoolProvider,
+  kavaUsdxPricefeedProvider,
+  jusdStablecoinBridgeProvider,
   erc4626NavProvider,
   previewRedeemProvider,
   idleCdoTrancheProvider,
@@ -48,7 +65,10 @@ export interface AuthoritativeLivePriceOverrideStats {
   skippedCircuitOpen: number;
   skippedBudget: number;
   timedOut: boolean;
+  assetAttempts: PricingAssetAttemptRecord[];
 }
+
+const MAX_AUTHORITATIVE_ASSET_ATTEMPTS = 512;
 
 type LivePriceProvider = PriceSourceProvider & {
   fetchLivePrice: NonNullable<PriceSourceProvider["fetchLivePrice"]>;
@@ -122,6 +142,7 @@ export function createAuthoritativeLivePriceOverrideStats(
     skippedCircuitOpen: 0,
     skippedBudget: 0,
     timedOut: false,
+    assetAttempts: [],
   };
 }
 
@@ -180,6 +201,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
     .filter(
       (entry): entry is AuthoritativeLivePriceCandidate =>
         typeof entry.provider?.fetchLivePrice === "function" &&
+        !(entry.provider.liveMissingOnly && hasUsableLivePrice(entry.asset)) &&
         (options?.maxProviderLivePriority == null ||
           getProviderLivePriority(entry.provider) <= options.maxProviderLivePriority),
     );
@@ -194,21 +216,59 @@ export async function fetchAuthoritativeLivePriceOverrides(
   const liveSignal = signal && budgetSignal ? AbortSignal.any([signal, budgetSignal]) : (budgetSignal ?? signal);
   const circuitAttempts = new Map<string, boolean>();
 
+  const recordAttempt = (
+    asset: PeggedAsset,
+    provider: LivePriceProvider,
+    input: Omit<Parameters<typeof createPricingAssetAttempt>[0], "assetId" | "adapter" | "source" | "chain" | "target" | "replaySafe"> & {
+      source?: string;
+    },
+  ): void => {
+    if (!stats) return;
+    const target = getRegistryLivePriceDiagnosticTarget(asset.id);
+    appendPricingAssetAttempts(stats.assetAttempts, [createPricingAssetAttempt({
+      assetId: asset.id,
+      adapter: provider.source,
+      source: input.source ?? provider.source,
+      ...(target ?? {}),
+      ...input,
+    })], MAX_AUTHORITATIVE_ASSET_ATTEMPTS);
+  };
+
+  const recordSkippedBudget = (startIndex: number): void => {
+    const candidateAt = Math.floor(Date.now() / 1000);
+    for (const candidate of prioritizedCandidates.slice(startIndex)) {
+      recordAttempt(candidate.asset, candidate.provider, {
+        state: "skipped",
+        skipReason: "budget",
+        rejectionClass: "timeout",
+        candidateAt,
+      });
+    }
+  };
+
   for (let index = 0; index < prioritizedCandidates.length; index += 1) {
     if (budgetSignal?.aborted) {
       if (stats) {
         stats.timedOut = true;
         stats.skippedBudget += prioritizedCandidates.length - index;
       }
+      recordSkippedBudget(index);
       break;
     }
 
     const { asset, provider } = prioritizedCandidates[index];
+    const candidateAt = Math.floor(Date.now() / 1000);
     const circuitSource = provider.liveCircuitSource;
     if (circuitSource && options?.db) {
       const allowed = await shouldAttemptLiveFetch(options.db, circuitSource, circuitAttempts);
       if (!allowed) {
         if (stats) stats.skippedCircuitOpen += 1;
+        recordAttempt(asset, provider, {
+          state: "skipped",
+          skipReason: "circuit-open",
+          rejectionClass: "blocked",
+          candidateAt,
+        });
         continue;
       }
     }
@@ -220,12 +280,25 @@ export async function fetchAuthoritativeLivePriceOverrides(
         results.set(asset.id, override);
         applyOverrideToLiveContext(liveContext, asset.id, override);
         if (stats) stats.successCount += 1;
+        recordAttempt(asset, provider, {
+          state: "attempted",
+          result: "resolved",
+          source: override.source,
+          candidateAt,
+          observedAt: override.observedAt,
+        });
         if (circuitSource && options?.db) {
           await recordOutcomeSafe(options.db, circuitSource, true);
           circuitAttempts.delete(circuitSource);
         }
       } else {
         if (stats) stats.emptyCount += 1;
+        recordAttempt(asset, provider, {
+          state: "attempted",
+          result: "empty",
+          rejectionClass: "missing-quote",
+          candidateAt,
+        });
         if (circuitSource && options?.db && provider.recordNullLiveResultAsCircuitFailure) {
           await recordOutcomeSafe(options.db, circuitSource, false);
           circuitAttempts.delete(circuitSource);
@@ -238,10 +311,23 @@ export async function fetchAuthoritativeLivePriceOverrides(
           stats.timedOut = true;
           stats.skippedBudget += prioritizedCandidates.length - index - 1;
         }
+        recordAttempt(asset, provider, {
+          state: "attempted",
+          result: "failed",
+          rejectionClass: "timeout",
+          candidateAt,
+        });
+        recordSkippedBudget(index + 1);
         console.warn(`[authoritative-price-sources] live override budget exhausted after ${budgetMs}ms`);
         break;
       }
       if (stats) stats.failedCount += 1;
+      recordAttempt(asset, provider, {
+        state: "attempted",
+        result: "failed",
+        rejectionClass: errorClassFor(error),
+        candidateAt,
+      });
       if (circuitSource && options?.db) {
         await recordOutcomeSafe(options.db, circuitSource, false);
         circuitAttempts.delete(circuitSource);

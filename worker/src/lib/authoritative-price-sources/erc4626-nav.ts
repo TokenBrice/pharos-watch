@@ -32,6 +32,7 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
     id: "said-gaib",
     parentId: AID_GAIB_ID,
     chain: ETHEREUM_CHAIN,
+    allowFreshNonReplaySafeParent: true,
   }),
   {
     id: "susdt-spark",
@@ -162,6 +163,7 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
     vaultDecimals: 18,
     assetDecimals: 18,
     allowFreshNonReplaySafeParent: true,
+    allowFreshReplaySafeSingleSourceParent: true,
   },
   {
     id: "sbold-k3-capital",
@@ -222,7 +224,10 @@ export const erc4626NavProvider: PriceSourceProvider = {
       config.parentId,
       () =>
         `[authoritative-price-sources] ${asset.id}: skipped ERC-4626 NAV price because parent ${config.parentId} provenance is not trusted`,
-      { allowFreshNonReplaySafeParent: config.allowFreshNonReplaySafeParent },
+      {
+        allowFreshNonReplaySafeParent: config.allowFreshNonReplaySafeParent,
+        allowFreshReplaySafeSingleSourceParent: config.allowFreshReplaySafeSingleSourceParent,
+      },
     );
     if (!parent) return null;
 

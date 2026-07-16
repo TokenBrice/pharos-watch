@@ -1,5 +1,5 @@
 import * as React from "react";
-import { CardFrame, MetricLabel, TEXT_SECONDARY, FROST_BLUE, SEMANTIC_COLORS } from "./shared";
+import { CardFrame, MetricLabel, TEXT_SECONDARY, FROST_BLUE, SEMANTIC_COLORS, TRACK_BG } from "./shared";
 import { formatCurrency } from "@shared/lib/format";
 
 export interface ChainCardTopStablecoin {
@@ -106,7 +106,7 @@ export function ChainCard({ data }: { data: ChainCardData }) {
             style={{ display: "flex", alignItems: "center", gap: 16, fontFamily: "Geist Mono", fontSize: 18 }}
           >
             <span style={{ width: 110, fontWeight: 700 }}>{coin.symbol}</span>
-            <div style={{ display: "flex", width: 520, height: 12, borderRadius: 6, backgroundColor: "#1c2440" }}>
+            <div style={{ display: "flex", width: 520, height: 12, borderRadius: 6, backgroundColor: TRACK_BG }}>
               <div
                 style={{
                   display: "flex",

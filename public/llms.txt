@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 346 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 344 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -251,7 +251,6 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Sui Dollar (USDsui)](https://pharos.watch/stablecoin/usdsui-sui/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [eSui Dollar (suiUSDe)](https://pharos.watch/stablecoin/suiusde-sui/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Crown BRLV (BRLV)](https://pharos.watch/stablecoin/brlv-crown/): centralized stablecoin backed by real-world assets pegged to Brazilian Real.
-- [Royal Euro (REUR)](https://pharos.watch/stablecoin/reur-royal-euro/): centralized stablecoin backed by real-world assets pegged to Euro.
 - [Hex Trust USDX (USDX)](https://pharos.watch/stablecoin/usdx-hex-trust/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Hive Backed Dollar (HBD)](https://pharos.watch/stablecoin/hbd-hive/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [StraitsX XUSD (XUSD)](https://pharos.watch/stablecoin/xusd-straitsx/): centralized stablecoin backed by real-world assets pegged to US Dollar.
@@ -284,7 +283,6 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Unity (UTY)](https://pharos.watch/stablecoin/uty-xsy/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Stasis Euro (EURS)](https://pharos.watch/stablecoin/eurs-stasis/): centralized stablecoin backed by real-world assets pegged to Euro.
 - [Metronome Synth USD (MSUSD)](https://pharos.watch/stablecoin/msusd-metronome/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [Royal Dollar (RUSD)](https://pharos.watch/stablecoin/rusd-royal-dollar/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Ring USD (USDR)](https://pharos.watch/stablecoin/usdr-ring/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Asymmetry USDaf (USDaf)](https://pharos.watch/stablecoin/usdaf-asymmetry/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Quill USD (USDQ)](https://pharos.watch/stablecoin/usdq-quill/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.

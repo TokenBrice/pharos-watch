@@ -113,6 +113,7 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
     mintBurn: assessment.mintBurn,
     circuits: assessment.circuits,
     stablecoinPublication: assessment.stablecoinPublication,
+    activePriceCoverage: assessment.activePriceCoverage,
     alertBroker: assessment.alertBroker,
     telegramSummary,
   };

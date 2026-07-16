@@ -1,6 +1,7 @@
 import type { HistoricalSnapshotWriteResult, PersistScoresResult } from "./persistence";
 import type { DexLiquidityPostScoreAnalysis } from "./orchestrator-analysis";
 import type { DexPaginationPersistenceSummary } from "../../lib/dex-api-common";
+import type { DexPricePersistenceDiagnostics } from "./scoring";
 
 export type { DexLiquidityPostScoreAnalysis } from "./orchestrator-analysis";
 export { analyzeDexLiquidityPostScoring } from "./orchestrator-analysis";
@@ -61,6 +62,7 @@ export function buildDexLiquidityCronMetadata(params: {
     skippedStablecoins: number;
     missingTables: boolean;
   };
+  dexPriceDiagnostics: DexPricePersistenceDiagnostics;
   failedSources: string[];
   fallbackSignals: string[];
   persistence: PersistScoresResult;
@@ -85,6 +87,7 @@ export function buildDexLiquidityCronMetadata(params: {
       challengerSnapshotTablesMissing: params.challengerPublication.missingTables,
     },
     failedSources: [...new Set(params.failedSources)],
+    dexPriceDiagnostics: params.dexPriceDiagnostics,
     fallbackMode: [...new Set(params.fallbackSignals)],
     persistence: {
       generationId: params.persistence.generationId ?? null,

@@ -158,6 +158,22 @@ describe("authoritative-price-sources", () => {
     fetchMarketBackfillPriceSeriesMock.mockReset();
   });
 
+  it("does not enqueue a missing-only AZND fallback over a usable incumbent price", async () => {
+    const stats = createAuthoritativeLivePriceOverrideStats();
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [{ id: "aznd-mu-digital", price: 0.31 } as PeggedAsset],
+      undefined,
+      undefined,
+      { stats },
+    );
+
+    expect(overrides.size).toBe(0);
+    expect(stats.candidateCount).toBe(0);
+    expect(stats.attemptedCount).toBe(0);
+    expect(stats.assetAttempts).toEqual([]);
+    expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+  });
+
   describe("fetchVaultAssetsPerShareViaSelector", () => {
     const vaultConfig = {
       id: "test-vault",
@@ -219,21 +235,27 @@ describe("authoritative-price-sources", () => {
 
   it("returns a live cUSD override from the authoritative redemption quote", async () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValue(QUOTE_HEX);
+    const stats = createAuthoritativeLivePriceOverrideStats();
 
-    const overrides = await fetchAuthoritativeLivePriceOverrides([
-      {
-        id: "cusd-cap",
-        name: "Cap cUSD",
-        symbol: "CUSD",
-        circulating: { peggedUSD: 114_000_000 },
-      },
-      {
-        id: "usdt-tether",
-        name: "Tether",
-        symbol: "USDT",
-        circulating: { peggedUSD: 100_000_000_000 },
-      },
-    ]);
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [
+        {
+          id: "cusd-cap",
+          name: "Cap cUSD",
+          symbol: "CUSD",
+          circulating: { peggedUSD: 114_000_000 },
+        },
+        {
+          id: "usdt-tether",
+          name: "Tether",
+          symbol: "USDT",
+          circulating: { peggedUSD: 100_000_000_000 },
+        },
+      ],
+      undefined,
+      undefined,
+      { stats },
+    );
 
     expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledTimes(1);
     expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledWith(
@@ -252,6 +274,18 @@ describe("authoritative-price-sources", () => {
       confidence: "high",
     });
     expect(overrides.has("usdt-tether")).toBe(false);
+    expect(stats.assetAttempts).toEqual([
+      expect.objectContaining({
+        assetId: "cusd-cap",
+        adapter: "protocol-redeem",
+        source: "protocol-redeem",
+        chain: "ethereum",
+        target: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+        state: "attempted",
+        result: "resolved",
+        replaySafe: true,
+      }),
+    ]);
   });
 
   it("skips live RPC protocol-redeem overrides while the grouped circuit is open", async () => {
@@ -297,6 +331,14 @@ describe("authoritative-price-sources", () => {
       attemptedCount: 0,
       skippedCircuitOpen: 1,
     });
+    expect(stats.assetAttempts).toEqual([
+      expect.objectContaining({
+        assetId: "cusd-cap",
+        state: "skipped",
+        skipReason: "circuit-open",
+        rejectionClass: "blocked",
+      }),
+    ]);
   });
 
   it("reuses an open grouped circuit decision within one live override run", async () => {
@@ -587,6 +629,14 @@ describe("authoritative-price-sources", () => {
       failedCount: 0,
       timedOut: true,
     });
+    expect(stats.assetAttempts).toEqual([
+      expect.objectContaining({
+        assetId: "cusd-cap",
+        state: "attempted",
+        result: "failed",
+        rejectionClass: "timeout",
+      }),
+    ]);
   });
 
   it("replays historical cUSD prices through the same authoritative provider", async () => {
@@ -2032,6 +2082,50 @@ describe("authoritative-price-sources", () => {
     expect(overrides.get("sbold-k3-capital")?.price).toBeCloseTo(1.062 * 1.0001, 6);
   });
 
+  it("prices sYUSD before GT hardening from a fresh replay-safe single-source YUSD parent", async () => {
+    const assetsPerShareRaw = 1_044_572_348_140_406_493n.toString(16).padStart(64, "0");
+    fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${assetsPerShareRaw}`);
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "syusd-aegis",
+        name: "Aegis Staked YUSD",
+        symbol: "sYUSD",
+        price: null,
+      },
+      {
+        id: "yusd-aegis",
+        name: "Aegis YUSD",
+        symbol: "YUSD",
+        price: 0.99896,
+        priceSource: "coingecko",
+        priceConfidence: "single-source",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "upstream",
+      },
+    ]);
+
+    expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledWith(
+      "ethereum",
+      "0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
+      expect.stringMatching(/^0x07a2d13a/),
+      "latest",
+      expect.any(Object),
+    );
+    expect(overrides.get("syusd-aegis")).toMatchObject({
+      price: expect.closeTo(1.043486, 6),
+      source: "coingecko",
+      confidence: "single-source",
+      metadata: {
+        inheritedFrom: "yusd-aegis",
+        parentSource: "coingecko",
+        parentConfidence: "single-source",
+        parentReplaySafe: true,
+      },
+    });
+  });
+
   it("prices Aave sGHO from the registry vault previewRedeem() x tracked GHO price", async () => {
     const oneGhoRaw = 1_000_000_000_000_000_000n.toString(16).padStart(64, "0");
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${oneGhoRaw}`);
@@ -2108,6 +2202,87 @@ describe("authoritative-price-sources", () => {
       confidence: "high",
       metadata: { inheritedFrom: "aid-gaib" },
     });
+  });
+
+  it("allows sAID to use a fresh high-confidence non-replay-safe AID parent in the same run", async () => {
+    const assetsPerShareRaw = 1_059_200_000_000_000_000n.toString(16).padStart(64, "0");
+    fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${assetsPerShareRaw}`);
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "said-gaib",
+        name: "GAIB sAID",
+        symbol: "sAID",
+        price: null,
+      },
+      {
+        id: "aid-gaib",
+        name: "GAIB AID",
+        symbol: "AID",
+        price: 0.9998,
+        priceSource: "alchemy-address+coingecko+moralis-address",
+        priceConfidence: "high",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "local_fetch",
+        priceSyncedAt: nowSec - 30,
+      },
+    ]);
+
+    expect(overrides.get("said-gaib")).toMatchObject({
+      price: 1.05898816,
+      source: "protocol-redeem",
+      confidence: "high",
+      metadata: {
+        inheritedFrom: "aid-gaib",
+        parentReplaySafe: false,
+      },
+    });
+    expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("still rejects cached, stale, or low-confidence non-replay-safe AID parents for sAID", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const parentCases = [
+      {
+        priceSource: "cached+alchemy-address+moralis-address",
+        priceConfidence: "high" as const,
+        priceObservedAt: nowSec - 60,
+      },
+      {
+        priceSource: "alchemy-address+coingecko+moralis-address",
+        priceConfidence: "high" as const,
+        priceObservedAt: nowSec - 20 * 60,
+      },
+      {
+        priceSource: "alchemy-address+coingecko+moralis-address",
+        priceConfidence: "low" as const,
+        priceObservedAt: nowSec - 60,
+      },
+    ];
+
+    for (const parentCase of parentCases) {
+      const overrides = await fetchAuthoritativeLivePriceOverrides([
+        {
+          id: "said-gaib",
+          name: "GAIB sAID",
+          symbol: "sAID",
+          price: null,
+        },
+        {
+          id: "aid-gaib",
+          name: "GAIB AID",
+          symbol: "AID",
+          price: 0.9998,
+          priceObservedAtMode: "local_fetch",
+          ...parentCase,
+        },
+      ]);
+
+      expect(overrides.has("said-gaib")).toBe(false);
+    }
+    expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
   });
 
   it("skips ERC-4626 NAV override when parent price is stale or untrusted", async () => {

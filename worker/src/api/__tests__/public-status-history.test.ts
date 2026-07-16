@@ -84,6 +84,22 @@ function stubPublicHealth(overallStatus: "healthy" | "degraded" | "stale"): Publ
       observedAt: null,
     },
     stablecoinPublicationImpactStatus: "healthy",
+    activePriceCoverage: {
+      status: "complete",
+      expectedActiveCount: 0,
+      presentActiveCount: 0,
+      pricedActiveCount: 0,
+      missingPriceCount: 0,
+      pricedActiveIds: [],
+      missingActiveIds: [],
+      affectedMarketCapUsd: 0,
+      missingActiveAssets: [],
+      alertEligibleCount: 0,
+      alertEligibleIds: [],
+      maxConsecutiveMissingGenerations: 0,
+      observedAt: null,
+    },
+    activePriceCoverageImpactStatus: "healthy",
   };
 }
 

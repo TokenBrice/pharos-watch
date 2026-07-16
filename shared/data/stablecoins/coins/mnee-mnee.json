@@ -17,6 +17,7 @@
   "llamaId": "284",
   "detailProvider": "defillama",
   "geckoId": "mnee-usd-stablecoin",
+  "cmcSlug": "mnee",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.mnee.io/transparency",

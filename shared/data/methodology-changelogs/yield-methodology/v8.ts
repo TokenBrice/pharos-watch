@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.36",
+    title: "Re Protocol Insurance Alpha Source",
+    date: "2026-07-16",
+    effectiveAt: 1784160000,
+    summary:
+      "Re Protocol yield now follows the official daily reUSDe Insurance Alpha feed instead of an unrelated Resolv stUSR pool mapping.",
+    impact: [
+      "`reusd-re-protocol` gains the curated `protocol-api:re-protocol-reusde` source using the latest valid reUSDe APY and NAV published by Re Protocol",
+      "The yield variant now identifies the Ethereum reUSDe Insurance Alpha contract; the unrelated stUSR variant, DeFiLlama pool UUID, and failed generic ERC-4626 quarantine probe are removed",
+      "Daily reUSDe observations use the existing 72-hour slow-NAV freshness window and fail closed on stale, malformed, non-positive NAV, or out-of-envelope APY data",
+      "PYS weights, source-risk penalties, benchmark rules, and source arbitration order are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.35",
     title: "Source-Cadence and Wrapper Corrections",
     date: "2026-07-16",

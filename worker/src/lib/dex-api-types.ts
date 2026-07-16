@@ -6,6 +6,12 @@ export interface DexApiPoolToken {
   decimals: number;
   /** Per-token USD price when available (Balancer provides this via balanceUSD/balance). */
   priceUsd?: number | null;
+  /** A current tracked stablecoin dependency required to convert a token quote
+   * into USD. No peg-reference fallback is permitted when this is present. */
+  priceUsdDependency?: {
+    stablecoinId: string;
+    multiplier: number;
+  };
   /** Optional target pool weight for protocols like Balancer weighted pools. */
   weight?: number | null;
   /**

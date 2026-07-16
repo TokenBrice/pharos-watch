@@ -18,7 +18,17 @@ import {
   runFallbackDepegFollowThrough,
 } from "./fallback-publish";
 import type { CronProgressReporter } from "../../lib/cron-logger";
-import { evaluateStablecoinPublicationCoverage } from "../../lib/stablecoin-publication-coverage";
+import {
+  compactStablecoinActivePriceCoverage,
+  evaluateStablecoinActivePriceCoverage,
+  evaluateStablecoinPublicationCoverage,
+  loadPreviousStablecoinActivePriceCoverage,
+} from "../../lib/stablecoin-publication-coverage";
+import { alertOnMissingActiveStablecoinPrices } from "../../lib/stablecoin-publication-alerts";
+import {
+  buildPriceSourceAttemptLedger,
+  compactPriceSourceAttemptLedger,
+} from "./metadata";
 
 function isFallbackCronResult(result: unknown): result is CronResult {
   return typeof result === "object" && result !== null && "metadata" in result;
@@ -140,13 +150,38 @@ export async function syncViaCoingeckoFallback(
   });
   if (isFallbackCronResult(depegResult)) return depegResult;
   const { depegErrorCount, providerDiagnostics: depegProviderDiagnostics } = depegResult;
+  const previousActivePriceCoverage = await loadPreviousStablecoinActivePriceCoverage(db, syncStartSec);
   const publicationCoverage = evaluateStablecoinPublicationCoverage(
     assets.map((asset) => String(asset.id)),
     syncStartSec,
   );
+  const activePriceCoverage = evaluateStablecoinActivePriceCoverage(assets, undefined, {
+    previousCoverage: previousActivePriceCoverage,
+    previousAcceptedAssetsById: previousAssetsById,
+  });
+  const persistedActivePriceCoverage = activePriceCoverage.missingActiveAssets.length > 20
+    ? compactStablecoinActivePriceCoverage(activePriceCoverage, 20)
+    : activePriceCoverage;
+  const providerDiagnostics = [...fallbackProviderDiagnostics, ...depegProviderDiagnostics];
+  const activePriceCoverageAlert = await alertOnMissingActiveStablecoinPrices(
+    db,
+    activePriceCoverage,
+    alertWebhookUrl,
+  );
+  const priceSourceAttemptLedger = compactPriceSourceAttemptLedger(buildPriceSourceAttemptLedger({
+    missingActiveIds: activePriceCoverage.missingActiveIds,
+    providerDiagnostics,
+    authoritativeOverrideStats,
+  }));
 
   const result: CronResult = {
-    status: depegErrorCount > 0 || stalenessCheckFailed || !publicationCoverage.complete ? "degraded" : "ok",
+    status:
+      depegErrorCount > 0
+        || stalenessCheckFailed
+        || !publicationCoverage.complete
+        || !activePriceCoverage.complete
+        ? "degraded"
+        : "ok",
     itemCount: assets.length,
     metadata: buildSyncMetadata({
       rowsRead: assets.length,
@@ -156,7 +191,7 @@ export async function syncViaCoingeckoFallback(
       fallbackMode: "coingecko-supply-fallback",
       validationFailures: 0,
       enrichment: enrichStats,
-      providerDiagnostics: [...fallbackProviderDiagnostics, ...depegProviderDiagnostics],
+      providerDiagnostics,
       rejectedPrices: rejectedCount,
       nativePegCorrections: nativePegCorrectionCount,
       nativePegFills: nativePegFillCount,
@@ -174,6 +209,9 @@ export async function syncViaCoingeckoFallback(
       syncStartSec: cacheResult.syncStartSec,
       depegPipelineSucceeded: depegErrorCount === 0,
       activePublicationCoverage: publicationCoverage,
+      activePriceCoverage: persistedActivePriceCoverage,
+      activePriceCoverageAlert,
+      priceSourceAttemptLedger,
     }, {
       cacheWriteMode: "published",
       capabilities: {

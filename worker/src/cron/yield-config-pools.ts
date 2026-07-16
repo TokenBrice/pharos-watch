@@ -9,8 +9,7 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "usdy-ondo-finance": "ac61ee82-2fe4-4f9b-a9cd-7fb33f598859",
   // BUIDL (173) - no DL pool; Blackrock/Securitize fund not tracked by DL Yields
   // YLDS (272) - no DL pool; Figure Markets not tracked by DL Yields
-  // reUSD -> stUSR - resolv native staking, Ethereum, $109M TVL, ~0.6% APY
-  "reusd-re-protocol": "0aedb3f6-9298-49de-8bb0-2f611a4df784",
+  // reUSD -> reUSDe uses the Re Protocol API; no verified DeFiLlama pool UUID
   // TBILL - openeden-tbill native, Ethereum, $27M TVL, ~3.0% APY
   "tbill-openeden": "e140f3b2-0327-46ea-93f5-88b17b0a0a16",
   // YUSD - aegis native, Ethereum, $36M TVL, ~5.7% APY

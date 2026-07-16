@@ -7,6 +7,7 @@ import {
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { throwIfAborted } from "../../lib/abort";
 import {
   fetchEvmMulticall3Aggregate3AtBlock,
   type EvmMulticall3Call,
@@ -543,7 +544,9 @@ export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveCryptoSwap
       }
       // Each chain lane has at most one in-flight RPC request.
       for (const blockRequests of requestsByBlock.values()) {
+        throwIfAborted(input.signal);
         for (let offset = 0; offset < blockRequests.length; offset += CURVE_MULTICALL_BATCH_SIZE) {
+          throwIfAborted(input.signal);
           const chunk = blockRequests.slice(offset, offset + CURVE_MULTICALL_BATCH_SIZE);
           const calls = chunk.map((request) => ({
             label: request.label,

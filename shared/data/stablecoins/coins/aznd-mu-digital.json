@@ -7,7 +7,7 @@
     "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": true,
+    "yieldBearing": false,
     "rwa": true,
     "navToken": false
   },
@@ -48,7 +48,7 @@
     "reserveDisclosureUrl": "https://docs.mudigital.net/protocol-overview/asia-dollar-aznd",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "AZND is a yield-bearing Asia Dollar product with mint/redeem mechanics; GENIUS treatment remains unresolved.",
+    "notes": "AZND is the non-yield-bearing Asia Dollar base token; yield accrues only after depositing it into the separate loAZND vault. GENIUS treatment remains unresolved.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -84,7 +84,7 @@
         "FDIC GENIUS Act NPRM",
         "NCUA PPSI application and standards proposals"
       ],
-      "summary": "AZND materials describe a yield-bearing stablecoin and mint/redeem mechanics, but no public GENIUS approval, official application, or foreign registration source was located.",
+      "summary": "AZND materials describe a non-yield-bearing base token, a separate yield-bearing loAZND vault, and mint/redeem mechanics, but no public GENIUS approval, official application, or foreign registration source was located.",
       "reviewer": "Pharos compliance research",
       "reviewedAt": "2026-06-18"
     },

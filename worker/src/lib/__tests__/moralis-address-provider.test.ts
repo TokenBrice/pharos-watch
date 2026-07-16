@@ -22,6 +22,7 @@ function makeTarget(index: number): AddressPriceTarget {
     origin: "contracts",
     previousSourceDepth: 0,
     missingPrice: false,
+    expiresBeforeNextGeneration: false,
     circulatingUsd: 1_000_000,
   };
 }

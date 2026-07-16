@@ -22,6 +22,7 @@ export const PRICE_SOURCE_HEALTH_BUCKET_KEYS = [
   "fluid-dex",
   "balancer-dex",
   "curve-dex",
+  "curve-thin-onchain",
   "uniswap-v3-dex",
   "uniswap-v4-dex",
   "raydium-dex",

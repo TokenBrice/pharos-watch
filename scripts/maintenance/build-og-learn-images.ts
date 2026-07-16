@@ -78,15 +78,14 @@ if (CHECK_MODE) {
 
 mkdirSync(OUT_DIR, { recursive: true });
 
-// Dark-mode token substitutions. var() doesn't resolve in standalone SVG;
-// inline literal oklch() colors keep the dark-mode appearance.
+// Light product-shell substitutions. var() doesn't resolve in standalone SVG.
 const TOKEN_MAP: Record<string, string> = {
-  "var(--card)": "oklch(0.140 0.010 260)",
-  "var(--border-default)": "oklch(1 0 0 / 0.18)",
-  "var(--text-tertiary)": "oklch(0.708 0 0)",
-  "var(--text-secondary)": "oklch(0.85 0.005 260)",
-  "var(--severity-severe)": "oklch(0.704 0.191 22)",
-  "var(--severity-healthy)": "oklch(0.690 0.180 155)",
+  "var(--card)": "#ffffff",
+  "var(--border-default)": "#d9dce1",
+  "var(--text-tertiary)": "#71717a",
+  "var(--text-secondary)": "#52525b",
+  "var(--severity-severe)": "#dc2626",
+  "var(--severity-healthy)": "#15803d",
 };
 
 function extractDesktopSvg(slug: MechanismArchetype): { inner: string; viewBoxH: number } {
@@ -104,8 +103,7 @@ function extractDesktopSvg(slug: MechanismArchetype): { inner: string; viewBoxH:
   for (const [k, v] of Object.entries(TOKEN_MAP)) {
     inner = inner.split(k).join(v);
   }
-  // Substitute currentColor with white (label fill)
-  inner = inner.split('fill="currentColor"').join('fill="#f5f5f7"');
+  inner = inner.split('fill="currentColor"').join('fill="#171719"');
   // USDC -> STBL (the placeholder symbol used on explainer pages)
   inner = inner.split("USDC").join("STBL");
   return { inner, viewBoxH: heightAttr };
@@ -123,26 +121,18 @@ function buildOgSvg(slug: MechanismArchetype): string {
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 628" width="1200" height="628" font-family="ui-sans-serif, system-ui, -apple-system, &quot;Segoe UI&quot;, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif">
-  <defs>
-    <radialGradient id="bg" cx="20%" cy="0%" r="120%">
-      <stop offset="0%" stop-color="oklch(0.16 0.020 248)" />
-      <stop offset="60%" stop-color="oklch(0.110 0.010 260)" />
-      <stop offset="100%" stop-color="oklch(0.085 0.015 260)" />
-    </radialGradient>
-  </defs>
-
-  <rect width="1200" height="628" fill="url(#bg)" />
+  <rect width="1200" height="628" fill="#f8f8fa" />
 
   <!-- top hairline -->
-  <line x1="0" y1="0" x2="1200" y2="0" stroke="oklch(0.72 0.14 248)" stroke-opacity="0.4" stroke-width="2" />
+  <line x1="0" y1="2" x2="1200" y2="2" stroke="#22c55e" stroke-width="4" />
 
   <!-- kicker -->
-  <text x="100" y="120" font-size="22" font-weight="700" letter-spacing="4" fill="oklch(0.72 0.14 248)">
+  <text x="100" y="120" font-size="22" font-weight="700" letter-spacing="0" fill="#0e7490">
     PHAROS · MECHANISM EXPLAINER
   </text>
 
   <!-- archetype title -->
-  <text x="100" y="200" font-size="56" font-weight="800" fill="#f5f5f7" letter-spacing="-1.5">
+  <text x="100" y="200" font-size="56" font-weight="800" fill="#171719" letter-spacing="0">
     ${escapeXml(title)}
   </text>
 
@@ -152,9 +142,9 @@ function buildOgSvg(slug: MechanismArchetype): string {
   </svg>
 
   <!-- bottom row: wordmark + URL -->
-  <line x1="100" y1="555" x2="1100" y2="555" stroke="oklch(1 0 0 / 0.10)" stroke-width="1" />
-  <text x="100" y="595" font-size="20" font-weight="700" fill="#f5f5f7" letter-spacing="2">PHAROS</text>
-  <text x="1100" y="595" font-size="20" font-weight="500" fill="oklch(0.708 0 0)" text-anchor="end">
+  <line x1="100" y1="555" x2="1100" y2="555" stroke="#d9dce1" stroke-width="1" />
+  <text x="100" y="595" font-size="20" font-weight="700" fill="#171719" letter-spacing="0">Pharos</text>
+  <text x="1100" y="595" font-size="20" font-weight="500" fill="#5f6570" text-anchor="end">
     pharos.watch
   </text>
 </svg>

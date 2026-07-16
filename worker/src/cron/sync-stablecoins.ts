@@ -20,6 +20,11 @@ import {
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { createBinanceFetchSession } from "../lib/cex-tickers";
+import {
+  evaluateStablecoinActivePriceCoverage,
+  loadPreviousStablecoinActivePriceCoverage,
+} from "../lib/stablecoin-publication-coverage";
+import { alertOnMissingActiveStablecoinPrices } from "../lib/stablecoin-publication-alerts";
 
 export interface SyncStablecoinsOptions {
   cmcApiKey?: string;
@@ -68,6 +73,7 @@ export async function syncStablecoins(
     throw new Error(intake.errorMessage);
   }
   const { assets, rawAssetCount, droppedMalformedAssets, canonicalDeduplication, supplyGapReconciliation, trackedCoverage } = intake;
+  const previousActivePriceCoverage = await loadPreviousStablecoinActivePriceCoverage(db, syncStartSec);
   const pricingStage = await runStablecoinsPricingStage({
     db,
     assets,
@@ -164,6 +170,15 @@ export async function syncStablecoins(
   if (isAbortResult(publication)) return publication;
   if (!("cacheResult" in publication)) return publication;
   const { cacheResult, depegErrorCount, depegErrors, providerDiagnostics: depegProviderDiagnostics = [] } = publication;
+  const activePriceCoverage = evaluateStablecoinActivePriceCoverage(assets, undefined, {
+    previousCoverage: previousActivePriceCoverage,
+    previousAcceptedAssetsById: intake.previousAssetsById,
+  });
+  const activePriceCoverageAlert = await alertOnMissingActiveStablecoinPrices(
+    db,
+    activePriceCoverage,
+    alertWebhookUrl,
+  );
   const result = buildStablecoinsSyncResult({
     assets,
     rawAssetCount,
@@ -191,6 +206,10 @@ export async function syncStablecoins(
     cacheKey: cacheResult.cacheKey, syncStartSec: cacheResult.syncStartSec,
     responseReadyCacheError: cacheResult.responseReadyCacheError,
     depegPipelineSucceeded: depegErrorCount === 0,
+    previousActivePriceCoverage,
+    previousAcceptedAssetsById: intake.previousAssetsById,
+    activePriceCoverage,
+    activePriceCoverageAlert,
   });
   await reportStablecoinsStage(reportProgress, "complete", "Completed stablecoins sync", {
     itemsDone: assets.length,

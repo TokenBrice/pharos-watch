@@ -28,6 +28,10 @@ export interface AddressPriceAssetLike {
   price?: number | null;
   circulating?: Record<string, number>;
   consensusSources?: string[];
+  priceSource?: string | null;
+  priceConfidence?: string | null;
+  priceObservedAt?: number | null;
+  priceUpdatedAt?: number | null;
 }
 
 export interface AddressPriceTarget {
@@ -40,6 +44,7 @@ export interface AddressPriceTarget {
   origin: "contracts" | "tradedContracts" | "asset.address";
   previousSourceDepth: number;
   missingPrice: boolean;
+  expiresBeforeNextGeneration: boolean;
   circulatingUsd: number;
 }
 

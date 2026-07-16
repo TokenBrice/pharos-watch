@@ -44,9 +44,16 @@ The V9 implementation establishes candidate infrastructure without changing prod
 - `worker/src/lib/safety-score-v9-candidate.ts` and
   `worker/scripts/replay-safety-score-v9.ts` compile and evaluate the exact
   candidate deterministically. The current policy semantic digest is
-  `9913d3dc3f4d4f00842c99be47a8ee5ac608b589867329ef18f7ad9c63e94ded`;
+  `5f4f92eec713b65b30d60e3cd8d05a613ab86b4512db4dead699c9b85c30f15e`;
   the current evaluation-build digest is
-  `03630cd7bf76cd8fa4e6377113e22b05ca876d60f2692997f32222b3f23c599c`.
+  `ad5870b23bd1e09b586edb123c504aa0729e0d5d9b3b5201c6830b6d7f336dff`.
+- **IDENTITY FREEZE (owner-ruled 2026-07-16, option A of the freeze decision
+  packet):** the two digests above are FROZEN. The qualifying shadow window
+  accumulates on this identity from its production deployment onward. No
+  engine, policy, or manifest-bound producer change may land before activation;
+  any new finding — audit, calibration, or capability — queues as post-activation
+  v9.1. Data and curation changes remain allowed (the freeze pins identity, not
+  inputs). Owner ruling record: Batches 3–5 in the coordinator decision log.
 - The 2026-07-15 Batch 3 calibration revision (owner rulings 2026-07-15)
   applies the two ruled cap changes and nothing else. (1) The mint posture gains
   a distinct `unbounded-reconciled` rung (`mintPostureQuality` = 55) for an
@@ -74,6 +81,34 @@ The V9 implementation establishes candidate infrastructure without changing prod
   inference), and `supervision` (graduates the reconciled rung). Absent fields
   reproduce today's behavior exactly; the reference shape and precedence are
   pinned by `worker/src/lib/__tests__/safety-score-v9-mint-authoring-contract.test.ts`.
+- The 2026-07-16 Batch 4 calibration revision (owner ruling Batch 4, option A)
+  grades a chain common-mode signal by MATERIAL exposure rather than path count.
+  A new `materiality.matureChainShareThreshold` (0.05) sets the immateriality
+  floor: a non-mature chain whose supply share (aggregated from the asset's
+  `selectedBridgeRoutes`, or bounded above by its unattributed supply when it has
+  no selected route) is below the threshold now grades `moderate`, while a
+  material or unattributable non-mature share stays fail-closed at `high`. Mature
+  chains stay `moderate` regardless of share, and non-chain common-mode domains
+  keep the default `high`. This is grade-neutral on the 2026-07-16 cohort because
+  the flagship fiat coins are co-bound by non-chain common-mode (shared DEX
+  venues, bridges, reserves); see the measurement record for the per-coin binding
+  constraints.
+- The 2026-07-16 Batch 5 calibration revision (owner ruling Batch 5) extends the
+  common-mode severity decision per domain KIND, keyed off reviewed evidence.
+  `dex-protocol` liquidity concentration on a reviewed `materiality.matureVenues`
+  venue (curve/uniswap/balancer) is not a capping signal (diagnostic-only `low`,
+  which maps to a null critical-dependency limit and stays visible in the trace);
+  any other venue stays `high`. `bridge-route` concentration keys off the reviewed
+  bridge tier joined from `economicControlReview.bridge.routes`: a
+  `materiality.lowRiskBridgeTiers` tier (CCIP-class `external-validated-network`
+  and safer) grades `moderate`, any other or unreviewed tier stays fail-closed at
+  `high`. `reserve-issuer` concentration is excluded from the cap path (diagnostic
+  `low`) because backing concentration already prices single-obligor exposure;
+  `mint-control` and other kinds are unchanged. Same-input replay over the
+  2026-07-16 capture lifts BOLD and FXUSD from C+ (64) to B- (69) as their
+  mature-venue/CCIP-class non-chain caps clear; GHO holds on mint-control, USDC on
+  its unattributed-supply chain hold (queued for data curation), USDS on an
+  `external-lock-mint` bridge, and USDT stays 59/C.
 - The 2026-07-15 candidate-v2 queue-binding revision adds explicit
   `local-component` paths to seven reason allowlists already emitted as
   aggregate facts. The revision changes evidence-work-queue metadata only;

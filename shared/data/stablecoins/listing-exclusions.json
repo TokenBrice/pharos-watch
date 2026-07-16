@@ -95,6 +95,80 @@
           "url": "https://academy.binance.com/en/articles/what-is-bfusd"
         }
       ]
+    },
+    {
+      "catalogId": "reur-royal-euro",
+      "decidedAt": "2026-07-16",
+      "reason": "All identified public exchange markets were delisted; remaining issuer-described access is institutional, OTC, or private rather than an ordinary public acquisition or redemption route.",
+      "providerIds": {
+        "coingecko": ["royal-euro"],
+        "defillama": ["414"]
+      },
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x3ed0b3c4c0168a560d34e361b8130dcca4677736"
+        },
+        {
+          "chain": "bsc",
+          "address": "0x3ed0b3c4c0168a560d34e361b8130dcca4677736"
+        },
+        {
+          "chain": "tron",
+          "address": "TXUi9vL8Ltz4dVpC6RM8CdtKSTHxFZuFbz"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "AscendEX RUSD and REUR delisting notice",
+          "url": "https://ascendex.com/ms/support/articles/143564-ascendex-will-delist-rusd-reur-on-2026630"
+        },
+        {
+          "label": "RCOINS institutional access description",
+          "url": "https://www.rcoins.digital/REUR"
+        },
+        {
+          "label": "RCOINS private settlement network description",
+          "url": "https://www.rcoins.digital/RxBridge.html"
+        }
+      ]
+    },
+    {
+      "catalogId": "rusd-royal-dollar",
+      "decidedAt": "2026-07-16",
+      "reason": "All identified public exchange markets were delisted; remaining issuer-described access is institutional, OTC, or private rather than an ordinary public acquisition or redemption route.",
+      "providerIds": {
+        "coingecko": ["royal-dollar"],
+        "defillama": ["415"]
+      },
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x44bb433d29fe966992a9c812da7f252c9c53f285"
+        },
+        {
+          "chain": "bsc",
+          "address": "0x44bb433d29fe966992a9c812da7f252c9c53f285"
+        },
+        {
+          "chain": "tron",
+          "address": "TUvns399UpycBBpVsCVJLCjXFBjzHrNUR1"
+        }
+      ],
+      "evidence": [
+        {
+          "label": "AscendEX RUSD and REUR delisting notice",
+          "url": "https://ascendex.com/ms/support/articles/143564-ascendex-will-delist-rusd-reur-on-2026630"
+        },
+        {
+          "label": "RCOINS institutional access description",
+          "url": "https://www.rcoins.digital/RUSD"
+        },
+        {
+          "label": "RCOINS private settlement network description",
+          "url": "https://www.rcoins.digital/RxBridge.html"
+        }
+      ]
     }
   ]
 }
