@@ -175,11 +175,18 @@ export interface StablecoinPublicationHealth {
 
 export interface ActivePriceCoverageGap {
   stablecoinId: string;
+  symbol: string;
   marketCapUsd: number | null;
   currentPrice: number | null;
   currentSource: string | null;
   currentObservedAt: number | null;
   currentConfidence: string | null;
+  consecutiveMissingGenerations: number;
+  lastAcceptedPrice: number | null;
+  lastAcceptedSource: string | null;
+  lastAcceptedObservedAt: number | null;
+  rejectionReason: string;
+  alertEligible: boolean;
 }
 
 export interface ActivePriceCoverageHealth {
@@ -192,6 +199,9 @@ export interface ActivePriceCoverageHealth {
   missingActiveIds: string[];
   affectedMarketCapUsd: number;
   missingActiveAssets: ActivePriceCoverageGap[];
+  alertEligibleCount: number;
+  alertEligibleIds: string[];
+  maxConsecutiveMissingGenerations: number;
   observedAt: number | null;
 }
 

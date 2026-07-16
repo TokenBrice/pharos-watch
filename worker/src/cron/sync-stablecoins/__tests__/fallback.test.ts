@@ -155,6 +155,13 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
     expect(meta.downstreamSafe).toBe(false);
     expect(meta.capabilities).toMatchObject({ stablecoinsCache: false });
     expect(meta.activePublicationCoverage).toMatchObject({ complete: false });
+    const activePriceCoverage = meta.activePriceCoverage as {
+      missingPriceCount: number;
+      missingActiveAssets: unknown[];
+      missingActiveState: unknown[];
+    };
+    expect(activePriceCoverage.missingActiveAssets).toHaveLength(20);
+    expect(activePriceCoverage.missingActiveState).toHaveLength(activePriceCoverage.missingPriceCount);
   });
 
   // -----------------------------------------------------------------------

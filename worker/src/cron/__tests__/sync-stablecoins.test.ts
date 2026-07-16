@@ -358,21 +358,43 @@ vi.mock("../../lib/alerts", () => ({
 
 // Coverage completeness is exercised in stablecoin-publication-coverage.test.ts.
 // This suite isolates pricing/publication mechanics with intentionally partial fixtures.
-vi.mock("../../lib/stablecoin-publication-coverage", () => ({
-  evaluateStablecoinPublicationCoverage: (ids: Iterable<string>) => {
-    const published = [...new Set(ids)];
-    return {
-      complete: true,
-      expectedActiveCount: published.length,
-      presentActiveCount: published.length,
-      waivedActiveCount: 0,
-      missingActiveIds: [],
-      waivedActiveIds: [],
-      expiredWaiverIds: [],
-      invalidWaiverIds: [],
-    };
-  },
-}));
+vi.mock("../../lib/stablecoin-publication-coverage", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/stablecoin-publication-coverage")>();
+  return {
+    ...actual,
+    loadPreviousStablecoinActivePriceCoverage: vi.fn(async () => null),
+    evaluateStablecoinPublicationCoverage: (ids: Iterable<string>) => {
+      const published = [...new Set(ids)];
+      return {
+        complete: true,
+        expectedActiveCount: published.length,
+        presentActiveCount: published.length,
+        waivedActiveCount: 0,
+        missingActiveIds: [],
+        waivedActiveIds: [],
+        expiredWaiverIds: [],
+        invalidWaiverIds: [],
+      };
+    },
+    evaluateStablecoinActivePriceCoverage: (assets: Iterable<{ id: string }>) => {
+      const pricedActiveIds = [...new Set([...assets].map((asset) => String(asset.id)))];
+      return {
+        complete: true,
+        expectedActiveCount: pricedActiveIds.length,
+        presentActiveCount: pricedActiveIds.length,
+        pricedActiveCount: pricedActiveIds.length,
+        missingPriceCount: 0,
+        pricedActiveIds,
+        missingActiveIds: [],
+        affectedMarketCapUsd: 0,
+        missingActiveAssets: [],
+        alertEligibleCount: 0,
+        alertEligibleIds: [],
+        maxConsecutiveMissingGenerations: 0,
+      };
+    },
+  };
+});
 
 import { syncStablecoins } from "../sync-stablecoins";
 import { stampPriceMetadata } from "../sync-stablecoins/shared";

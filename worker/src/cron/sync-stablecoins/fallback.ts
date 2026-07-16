@@ -19,8 +19,10 @@ import {
 } from "./fallback-publish";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import {
+  compactStablecoinActivePriceCoverage,
   evaluateStablecoinActivePriceCoverage,
   evaluateStablecoinPublicationCoverage,
+  loadPreviousStablecoinActivePriceCoverage,
 } from "../../lib/stablecoin-publication-coverage";
 
 function isFallbackCronResult(result: unknown): result is CronResult {
@@ -143,11 +145,18 @@ export async function syncViaCoingeckoFallback(
   });
   if (isFallbackCronResult(depegResult)) return depegResult;
   const { depegErrorCount, providerDiagnostics: depegProviderDiagnostics } = depegResult;
+  const previousActivePriceCoverage = await loadPreviousStablecoinActivePriceCoverage(db, syncStartSec);
   const publicationCoverage = evaluateStablecoinPublicationCoverage(
     assets.map((asset) => String(asset.id)),
     syncStartSec,
   );
-  const activePriceCoverage = evaluateStablecoinActivePriceCoverage(assets);
+  const activePriceCoverage = evaluateStablecoinActivePriceCoverage(assets, undefined, {
+    previousCoverage: previousActivePriceCoverage,
+    previousAcceptedAssetsById: previousAssetsById,
+  });
+  const persistedActivePriceCoverage = activePriceCoverage.missingActiveAssets.length > 20
+    ? compactStablecoinActivePriceCoverage(activePriceCoverage, 20)
+    : activePriceCoverage;
 
   const result: CronResult = {
     status:
@@ -184,7 +193,7 @@ export async function syncViaCoingeckoFallback(
       syncStartSec: cacheResult.syncStartSec,
       depegPipelineSucceeded: depegErrorCount === 0,
       activePublicationCoverage: publicationCoverage,
-      activePriceCoverage,
+      activePriceCoverage: persistedActivePriceCoverage,
     }, {
       cacheWriteMode: "published",
       capabilities: {

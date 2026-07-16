@@ -1,4 +1,4 @@
-import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { isRecord } from "@shared/lib/type-guards";
 import type {
   ActivePriceCoverageGap,
@@ -6,6 +6,11 @@ import type {
   StablecoinPublicationHealth,
 } from "@shared/types/status";
 import { tryParseJson } from "./json-parse";
+import { ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS } from "./stablecoin-publication-coverage";
+
+const ACTIVE_STABLECOIN_SYMBOL_BY_ID = new Map(
+  ACTIVE_STABLECOINS.map((stablecoin) => [stablecoin.id, stablecoin.symbol] as const),
+);
 
 export function unknownStablecoinPublicationHealth(
   observedAt: number | null = null,
@@ -35,6 +40,9 @@ export function unknownActivePriceCoverageHealth(
     missingActiveIds: [],
     affectedMarketCapUsd: 0,
     missingActiveAssets: [],
+    alertEligibleCount: 0,
+    alertEligibleIds: [],
+    maxConsecutiveMissingGenerations: 0,
     observedAt,
   };
 }
@@ -58,13 +66,50 @@ function parseMissingActivePriceAssets(value: unknown): ActivePriceCoverageGap[]
   const parsed: ActivePriceCoverageGap[] = [];
   for (const entry of value) {
     if (!isRecord(entry) || typeof entry.stablecoinId !== "string") continue;
+    const consecutiveMissingGenerations = Math.max(1, Math.floor(finiteNumber(
+      entry.consecutiveMissingGenerations,
+      1,
+    )));
     parsed.push({
       stablecoinId: entry.stablecoinId,
+      symbol: typeof entry.symbol === "string" ? entry.symbol : entry.stablecoinId,
       marketCapUsd: nullableFiniteNumber(entry.marketCapUsd),
       currentPrice: nullableFiniteNumber(entry.currentPrice),
       currentSource: typeof entry.currentSource === "string" ? entry.currentSource : null,
       currentObservedAt: nullableFiniteNumber(entry.currentObservedAt),
       currentConfidence: typeof entry.currentConfidence === "string" ? entry.currentConfidence : null,
+      consecutiveMissingGenerations,
+      lastAcceptedPrice: nullableFiniteNumber(entry.lastAcceptedPrice),
+      lastAcceptedSource: typeof entry.lastAcceptedSource === "string" ? entry.lastAcceptedSource : null,
+      lastAcceptedObservedAt: nullableFiniteNumber(entry.lastAcceptedObservedAt),
+      rejectionReason: typeof entry.rejectionReason === "string" ? entry.rejectionReason : "no-accepted-price",
+      alertEligible: entry.alertEligible === true
+        || consecutiveMissingGenerations >= ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS,
+    });
+  }
+  return parsed;
+}
+
+function parseMissingActivePriceState(value: unknown): ActivePriceCoverageGap[] {
+  if (!Array.isArray(value)) return [];
+  const parsed: ActivePriceCoverageGap[] = [];
+  for (const entry of value.slice(0, ACTIVE_IDS.size)) {
+    if (!Array.isArray(entry) || entry.length < 6 || typeof entry[0] !== "string") continue;
+    const consecutiveMissingGenerations = Math.max(1, Math.floor(finiteNumber(entry[1], 1)));
+    parsed.push({
+      stablecoinId: entry[0],
+      symbol: ACTIVE_STABLECOIN_SYMBOL_BY_ID.get(entry[0]) ?? entry[0],
+      marketCapUsd: null,
+      currentPrice: null,
+      currentSource: null,
+      currentObservedAt: null,
+      currentConfidence: null,
+      consecutiveMissingGenerations,
+      lastAcceptedPrice: nullableFiniteNumber(entry[2]),
+      lastAcceptedSource: typeof entry[3] === "string" ? entry[3] : null,
+      lastAcceptedObservedAt: nullableFiniteNumber(entry[4]),
+      rejectionReason: typeof entry[5] === "string" ? entry[5] : "no-accepted-price",
+      alertEligible: consecutiveMissingGenerations >= ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS,
     });
   }
   return parsed;
@@ -120,6 +165,22 @@ function parseActivePriceCoverageHealth(
   const pricedActiveIds = stringArray(coverage.pricedActiveIds);
   const missingActiveIds = stringArray(coverage.missingActiveIds);
   const missingPriceCount = finiteNumber(coverage.missingPriceCount, missingActiveIds.length);
+  const missingDetailsById = new Map(
+    parseMissingActivePriceState(coverage.missingActiveState)
+      .map((entry) => [entry.stablecoinId, entry] as const),
+  );
+  for (const entry of parseMissingActivePriceAssets(coverage.missingActiveAssets)) {
+    missingDetailsById.set(entry.stablecoinId, entry);
+  }
+  const missingActiveAssets = (missingActiveIds.length > 0
+    ? missingActiveIds
+    : [...missingDetailsById.keys()])
+    .map((stablecoinId) => missingDetailsById.get(stablecoinId))
+    .filter((entry): entry is ActivePriceCoverageGap => entry != null);
+  const derivedAlertEligibleIds = missingActiveAssets
+    .filter((entry) => entry.alertEligible)
+    .map((entry) => entry.stablecoinId);
+  const alertEligibleIds = stringArray(coverage.alertEligibleIds);
   const complete = coverage.complete === true
     && expectedActiveCount === ACTIVE_IDS.size
     && presentActiveCount === ACTIVE_IDS.size
@@ -139,7 +200,16 @@ function parseActivePriceCoverageHealth(
     pricedActiveIds,
     missingActiveIds,
     affectedMarketCapUsd: finiteNumber(coverage.affectedMarketCapUsd),
-    missingActiveAssets: parseMissingActivePriceAssets(coverage.missingActiveAssets),
+    missingActiveAssets,
+    alertEligibleCount: finiteNumber(coverage.alertEligibleCount, derivedAlertEligibleIds.length),
+    alertEligibleIds: alertEligibleIds.length > 0 ? alertEligibleIds : derivedAlertEligibleIds,
+    maxConsecutiveMissingGenerations: finiteNumber(
+      coverage.maxConsecutiveMissingGenerations,
+      missingActiveAssets.reduce(
+        (max, entry) => Math.max(max, entry.consecutiveMissingGenerations),
+        0,
+      ),
+    ),
     observedAt,
   };
 }

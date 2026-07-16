@@ -14,9 +14,14 @@ import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-regist
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import type { AuthoritativeLivePriceOverrideStats } from "../../lib/authoritative-price-sources";
 import {
+  compactStablecoinActivePriceCoverage,
   evaluateStablecoinActivePriceCoverage,
   evaluateStablecoinPublicationCoverage,
+  type PreviousStablecoinActivePriceCoverage,
+  type StablecoinPriceCoverageAsset,
+  type StablecoinActivePriceCoverage,
 } from "../../lib/stablecoin-publication-coverage";
+import type { StablecoinPriceCoverageAlertResult } from "../../lib/stablecoin-publication-alerts";
 
 const MAX_DIAGNOSTIC_ARRAY_ITEMS = 20;
 const MAX_DIAGNOSTIC_OBJECT_KEYS = 40;
@@ -221,6 +226,10 @@ export function buildStablecoinsSyncResult(input: {
   syncStartSec?: number;
   responseReadyCacheError?: string | null;
   depegPipelineSucceeded?: boolean;
+  previousActivePriceCoverage?: PreviousStablecoinActivePriceCoverage | null;
+  previousAcceptedAssetsById?: ReadonlyMap<string, StablecoinPriceCoverageAsset>;
+  activePriceCoverage?: StablecoinActivePriceCoverage;
+  activePriceCoverageAlert?: StablecoinPriceCoverageAlertResult;
 }): CronResult {
   const finalMissing = input.assets.filter(hasMissingPrice).length;
   const priceSourceHealth = buildPriceSourceHealth(input.assets);
@@ -229,7 +238,11 @@ export function buildStablecoinsSyncResult(input: {
     input.assets.map((asset) => String(asset.id)),
     input.syncStartSec,
   );
-  const activePriceCoverage = evaluateStablecoinActivePriceCoverage(input.assets);
+  const activePriceCoverage = input.activePriceCoverage
+    ?? evaluateStablecoinActivePriceCoverage(input.assets, undefined, {
+      previousCoverage: input.previousActivePriceCoverage,
+      previousAcceptedAssetsById: input.previousAcceptedAssetsById,
+    });
   const status: CronResult["status"] =
     input.depegErrorCount > 0
       || input.stalenessCheckFailed
@@ -276,6 +289,7 @@ export function buildStablecoinsSyncResult(input: {
     },
     activePublicationCoverage: publicationCoverage,
     activePriceCoverage,
+    activePriceCoverageAlert: input.activePriceCoverageAlert,
     upstreamFetchOk: input.upstreamFetchOk ?? true,
     payloadAccepted: input.payloadAccepted ?? true,
     cacheWriteSucceeded: input.cacheWriteSucceeded ?? true,
@@ -319,6 +333,10 @@ export function buildStablecoinsSyncResult(input: {
     capabilities,
   });
   if (serializedByteLength(serializedMetadata) >= MAX_STABLECOINS_CRON_METADATA_BYTES) {
+    const compactedActivePriceCoverage = compactStablecoinActivePriceCoverage(
+      activePriceCoverage,
+      MAX_DIAGNOSTIC_ARRAY_ITEMS,
+    );
     const compactedMetadata = {
       rowsRead: input.rawAssetCount,
       rowsWritten: input.assets.length,
@@ -326,7 +344,7 @@ export function buildStablecoinsSyncResult(input: {
       assetCount: input.assets.length,
       missingPrices: finalMissing,
       activePublicationCoverage: publicationCoverage,
-      activePriceCoverage,
+      activePriceCoverage: compactedActivePriceCoverage,
       canonicalDeduplication: metadata.canonicalDeduplication,
       rejectedPrices: input.rejectedCount,
       nativePegCorrections: input.nativePegCorrectionCount ?? 0,

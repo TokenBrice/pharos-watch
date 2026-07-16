@@ -159,6 +159,28 @@ describe("stablecoins pricing metadata", () => {
       depegErrorCount: 0,
       depegErrors: [],
       syncStartSec: 1_777_000_000,
+      previousActivePriceCoverage: {
+        missingActiveIds: [missingId],
+        missingActiveAssets: [{
+          stablecoinId: missingId,
+          symbol: ACTIVE_STABLECOINS[0]!.symbol,
+          marketCapUsd: 125_500,
+          currentPrice: null,
+          currentSource: null,
+          currentObservedAt: null,
+          currentConfidence: null,
+          consecutiveMissingGenerations: 1,
+          lastAcceptedPrice: 1.002,
+          lastAcceptedSource: "pyth",
+          lastAcceptedObservedAt: 1_776_999_000,
+          rejectionReason: "no-accepted-price",
+          alertEligible: false,
+        }],
+      },
+      previousAcceptedAssetsById: new Map([[
+        missingId,
+        { id: missingId, symbol: ACTIVE_STABLECOINS[0]!.symbol, price: null },
+      ]]),
     });
 
     const metadata = JSON.parse(result.metadata ?? "{}") as {
@@ -167,6 +189,8 @@ describe("stablecoins pricing metadata", () => {
         complete: boolean;
         missingActiveIds: string[];
         affectedMarketCapUsd: number;
+        alertEligibleIds: string[];
+        missingActiveAssets: Array<Record<string, unknown>>;
       };
       capabilities: { stablecoinsCache: boolean };
     };
@@ -177,6 +201,68 @@ describe("stablecoins pricing metadata", () => {
       complete: false,
       missingActiveIds: [missingId],
       affectedMarketCapUsd: 125_500,
+      alertEligibleIds: [missingId],
     });
+    expect(metadata.activePriceCoverage.missingActiveAssets[0]).toMatchObject({
+      symbol: ACTIVE_STABLECOINS[0]!.symbol,
+      consecutiveMissingGenerations: 2,
+      lastAcceptedPrice: 1.002,
+      lastAcceptedSource: "pyth",
+      lastAcceptedObservedAt: 1_776_999_000,
+      rejectionReason: "no-accepted-price",
+      alertEligible: true,
+    });
+  });
+
+  it("compacts all-asset gap state below the cron metadata limit without losing streak state", () => {
+    const assets = ACTIVE_STABLECOINS.map((stablecoin) => ({
+      id: stablecoin.id,
+      name: stablecoin.name,
+      symbol: stablecoin.symbol,
+      price: null,
+      circulating: { peggedUSD: 1 },
+    })) as PeggedAsset[];
+    const result = buildStablecoinsSyncResult({
+      assets,
+      rawAssetCount: assets.length,
+      droppedMalformedAssets: 0,
+      canonicalDeduplication: {
+        dedupedAssets: assets,
+        duplicateRows: 0,
+        affectedIds: [],
+      },
+      enrichStats: {},
+      priceValidationStats: {},
+      providerDiagnostics: [],
+      rejectedCount: 0,
+      stalenessWarning: false,
+      stalenessCheckFailed: false,
+      gtProbe: { updatedCount: 0, stats: {} as never },
+      depegErrorCount: 0,
+      depegErrors: [],
+      syncStartSec: 1_777_000_000,
+      previousAcceptedAssetsById: new Map(assets.map((asset) => [
+        asset.id,
+        {
+          id: asset.id,
+          symbol: asset.symbol,
+          price: 1,
+          priceSource: "intentionally-overlong-source-".repeat(20),
+          priceObservedAt: 1_776_999_000,
+        },
+      ])),
+    });
+
+    expect(new TextEncoder().encode(result.metadata ?? "").byteLength).toBeLessThan(64 * 1024);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      activePriceCoverage: {
+        missingActiveAssets: unknown[];
+        missingActiveAssetsTruncated: number;
+        missingActiveState: unknown[];
+      };
+    };
+    expect(metadata.activePriceCoverage.missingActiveAssets).toHaveLength(20);
+    expect(metadata.activePriceCoverage.missingActiveAssetsTruncated).toBe(ACTIVE_STABLECOINS.length - 20);
+    expect(metadata.activePriceCoverage.missingActiveState).toHaveLength(ACTIVE_STABLECOINS.length);
   });
 });

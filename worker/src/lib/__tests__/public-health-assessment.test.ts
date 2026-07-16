@@ -276,12 +276,22 @@ describe("assessPublicHealth upstream provider enrichment", () => {
         affectedMarketCapUsd: 88_000_000,
         missingActiveAssets: [{
           stablecoinId: missingId,
+          symbol: "MISS",
           marketCapUsd: 88_000_000,
           currentPrice: null,
           currentSource: null,
           currentObservedAt: null,
           currentConfidence: null,
+          consecutiveMissingGenerations: 2,
+          lastAcceptedPrice: 1.001,
+          lastAcceptedSource: "pyth",
+          lastAcceptedObservedAt: nowSec - 1_800,
+          rejectionReason: "no-accepted-price",
+          alertEligible: true,
         }],
+        alertEligibleCount: 1,
+        alertEligibleIds: [missingId],
+        maxConsecutiveMissingGenerations: 2,
       },
     });
 
@@ -292,10 +302,65 @@ describe("assessPublicHealth upstream provider enrichment", () => {
       status: "incomplete",
       missingActiveIds: [missingId],
       affectedMarketCapUsd: 88_000_000,
+      alertEligibleCount: 1,
+      alertEligibleIds: [missingId],
+      maxConsecutiveMissingGenerations: 2,
+    });
+    expect(result.activePriceCoverage.missingActiveAssets[0]).toMatchObject({
+      stablecoinId: missingId,
+      symbol: "MISS",
+      consecutiveMissingGenerations: 2,
+      lastAcceptedPrice: 1.001,
+      lastAcceptedSource: "pyth",
+      rejectionReason: "no-accepted-price",
+      alertEligible: true,
     });
     expect(result.activePriceCoverageImpactStatus).toBe("degraded");
     expect(result.overallStatus).not.toBe("healthy");
     expect(result.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
+  });
+
+  it("reconstructs alertable gaps from compacted cron state", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const activeIds = [...ACTIVE_IDS];
+    const missingId = activeIds[0]!;
+    const db = makeMinimalDb(nowSec, undefined, {
+      activePriceCoverage: {
+        complete: false,
+        expectedActiveCount: activeIds.length,
+        presentActiveCount: activeIds.length,
+        pricedActiveCount: activeIds.length - 1,
+        missingPriceCount: 1,
+        pricedActiveIds: activeIds.filter((stablecoinId) => stablecoinId !== missingId),
+        missingActiveIds: [missingId],
+        affectedMarketCapUsd: 88_000_000,
+        missingActiveAssets: [],
+        missingActiveState: [[
+          missingId,
+          4,
+          0.999,
+          "redstone",
+          nowSec - 3_600,
+          "no-accepted-price",
+        ]],
+        alertEligibleCount: 1,
+        alertEligibleIds: [missingId],
+        maxConsecutiveMissingGenerations: 4,
+      },
+    });
+
+    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+
+    expect(result.activePriceCoverage.missingActiveAssets).toEqual([
+      expect.objectContaining({
+        stablecoinId: missingId,
+        consecutiveMissingGenerations: 4,
+        lastAcceptedPrice: 0.999,
+        lastAcceptedSource: "redstone",
+        rejectionReason: "no-accepted-price",
+        alertEligible: true,
+      }),
+    ]);
   });
 });
 

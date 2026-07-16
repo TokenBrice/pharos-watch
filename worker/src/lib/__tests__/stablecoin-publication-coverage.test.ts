@@ -4,7 +4,9 @@ import {
   STABLECOIN_PUBLICATION_WAIVERS,
   evaluateStablecoinActivePriceCoverage,
   evaluateStablecoinPublicationCoverage,
+  loadPreviousStablecoinActivePriceCoverage,
 } from "../stablecoin-publication-coverage";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 const QUARANTINED_NIGHT_WATCH_OMISSIONS = [
   "benji-franklin-templeton",
@@ -105,12 +107,22 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       affectedMarketCapUsd: 125.5,
       missingActiveAssets: [{
         stablecoinId: "missing",
+        symbol: "missing",
         marketCapUsd: 125.5,
         currentPrice: null,
         currentSource: "coingecko",
         currentObservedAt: 1_699_000_000,
         currentConfidence: "low",
+        consecutiveMissingGenerations: 1,
+        lastAcceptedPrice: null,
+        lastAcceptedSource: null,
+        lastAcceptedObservedAt: null,
+        rejectionReason: "no-accepted-price",
+        alertEligible: false,
       }],
+      alertEligibleCount: 0,
+      alertEligibleIds: [],
+      maxConsecutiveMissingGenerations: 1,
     });
   });
 
@@ -127,6 +139,91 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       stablecoinId: "absent",
       marketCapUsd: null,
       currentPrice: null,
+    });
+  });
+
+  it("carries the last accepted observation and alerts on the second missing generation", () => {
+    const previousAcceptedAssetsById = new Map([[
+      "missing",
+      {
+        id: "missing",
+        symbol: "MISS",
+        price: 0.998,
+        priceSource: "pyth",
+        priceObservedAt: 1_700_000_000,
+      },
+    ]]);
+    const first = evaluateStablecoinActivePriceCoverage(
+      [{ id: "missing", symbol: "MISS", price: null }],
+      ["missing"],
+      { previousAcceptedAssetsById },
+    );
+    const second = evaluateStablecoinActivePriceCoverage(
+      [{ id: "missing", symbol: "MISS", price: null }],
+      ["missing"],
+      {
+        previousCoverage: first,
+        previousAcceptedAssetsById: new Map([[
+          "missing",
+          { id: "missing", symbol: "MISS", price: null },
+        ]]),
+      },
+    );
+
+    expect(first.missingActiveAssets[0]).toMatchObject({
+      symbol: "MISS",
+      consecutiveMissingGenerations: 1,
+      lastAcceptedPrice: 0.998,
+      lastAcceptedSource: "pyth",
+      lastAcceptedObservedAt: 1_700_000_000,
+      alertEligible: false,
+    });
+    expect(second).toMatchObject({
+      alertEligibleCount: 1,
+      alertEligibleIds: ["missing"],
+      maxConsecutiveMissingGenerations: 2,
+    });
+    expect(second.missingActiveAssets[0]).toMatchObject({
+      consecutiveMissingGenerations: 2,
+      lastAcceptedPrice: 0.998,
+      lastAcceptedSource: "pyth",
+      lastAcceptedObservedAt: 1_700_000_000,
+      rejectionReason: "no-accepted-price",
+      alertEligible: true,
+    });
+  });
+
+  it("loads bounded streak state from the latest prior cron metadata", async () => {
+    const db = mockD1([{
+      match: "activePriceCoverage",
+      rows: [],
+      first: {
+        metadata: JSON.stringify({
+          activePriceCoverage: {
+            missingActiveIds: ["missing"],
+            missingActiveAssets: [],
+            missingActiveState: [[
+              "missing",
+              3,
+              1.001,
+              "redstone",
+              1_699_000_000,
+              "no-accepted-price",
+            ]],
+          },
+        }),
+      },
+    }]);
+
+    await expect(loadPreviousStablecoinActivePriceCoverage(db, 1_700_000_000)).resolves.toMatchObject({
+      missingActiveIds: ["missing"],
+      missingActiveAssets: [{
+        stablecoinId: "missing",
+        consecutiveMissingGenerations: 3,
+        lastAcceptedPrice: 1.001,
+        lastAcceptedSource: "redstone",
+        alertEligible: true,
+      }],
     });
   });
 });
