@@ -1,4 +1,5 @@
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
+import { CIRCUIT_SOURCE } from "../constants";
 import { fetchEvmCallHexAtBlock } from "../evm-rpc";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import {
@@ -144,7 +145,9 @@ export async function fetchUsxStablePoolPrice(
 
 export const usxStablePoolProvider: PriceSourceProvider = {
   source: `${AERODROME_ONCHAIN_SOURCE}+${VELODROME_ONCHAIN_SOURCE}`,
+  liveCircuitSource: CIRCUIT_SOURCE.USX_STABLE_POOLS,
   livePriority: 1,
+  recordNullLiveResultAsCircuitFailure: true,
   matches(stablecoinId: string): boolean {
     return stablecoinId === USX_ID;
   },

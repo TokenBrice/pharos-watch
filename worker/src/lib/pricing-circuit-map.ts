@@ -87,6 +87,18 @@ export const PRICING_SOURCE_CIRCUIT_METADATA: Record<string, PricingCircuitMetad
   coinbase: direct(CIRCUIT_SOURCE.COINBASE_PRICES, "Coinbase ticker fetches are directly circuit-gated."),
   redstone: direct(CIRCUIT_SOURCE.REDSTONE_PRICES, "RedStone fetch is directly circuit-gated."),
   "kava-pricefeed": direct(CIRCUIT_SOURCE.KAVA_PRICEFEED, "Kava Pricefeed REST queries are directly circuit-gated."),
+  "aerodrome-onchain": direct(
+    CIRCUIT_SOURCE.USX_STABLE_POOLS,
+    "Exact Base Aerodrome USX pool route; both required routes share the USX stable-pool circuit.",
+  ),
+  "velodrome-onchain": direct(
+    CIRCUIT_SOURCE.USX_STABLE_POOLS,
+    "Exact Optimism Velodrome USX pool route; both required routes share the USX stable-pool circuit.",
+  ),
+  "curve-thin-onchain": direct(
+    CIRCUIT_SOURCE.AZND_CURVE_POOL,
+    "Exact thin AZND Curve fallback route with its own circuit, separate from primary Curve pools.",
+  ),
   "curve-onchain": direct(CIRCUIT_SOURCE.CURVE_ONCHAIN, "Curve on-chain quote path is circuit-gated."),
   "curve-oracle": direct(CIRCUIT_SOURCE.CURVE_ORACLE, "Curve oracle quote path is circuit-gated."),
   "chainlink-nav": synthesized(

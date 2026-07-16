@@ -1,4 +1,5 @@
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
+import { CIRCUIT_SOURCE } from "../constants";
 import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmCallHexAtBlock } from "../evm-rpc";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import {
@@ -136,7 +137,9 @@ export async function fetchAzndCurvePoolPrice(
 
 export const azndCurvePoolProvider: PriceSourceProvider = {
   source: AZND_CURVE_SOURCE,
+  liveCircuitSource: CIRCUIT_SOURCE.AZND_CURVE_POOL,
   livePriority: 1,
+  recordNullLiveResultAsCircuitFailure: true,
   matches(stablecoinId: string): boolean {
     return stablecoinId === AZND_ID;
   },
