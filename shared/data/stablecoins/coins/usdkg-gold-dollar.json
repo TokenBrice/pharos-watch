@@ -337,7 +337,7 @@
     {
       "name": "Physical gold (LBMA Good Delivery bars)",
       "pct": 100,
-      "risk": "medium",
+      "risk": "very-low",
       "assetClass": "other",
       "issuerOrObligor": "LLC Virelint Group and the USDKG reserve-custody structure",
       "riskFactors": ["market", "custody", "counterparty", "legal", "liquidity", "concentration"],
@@ -358,8 +358,9 @@
         "url": "https://www.usdkg.com/blog/usdkgs-gold-audit-a-new-standard-for-stablecoins"
       }
     ],
-    "rationale": "USDKG's transparency portal identifies physical gold as the complete reserve category and indexes the Q4 2025 Kreston report. The issuer's dated audit summary says Kreston performed agreed-upon procedures covering existence, ownership, quantity, valuation, serial and purity documentation, sealed storage, transport records, and custody agreements for 30 bars totaling approximately 376 kilograms. The medium risk tier reflects gold-market, physical-custody, legal, and redemption-liquidity exposure rather than treating bullion as cash-equivalent.",
+    "rationale": "USDKG's transparency portal identifies physical gold as the complete reserve category and indexes the Q4 2025 Kreston report. The issuer's dated audit summary says Kreston performed agreed-upon procedures covering existence, ownership, quantity, valuation, serial and purity documentation, sealed storage, transport records, and custody agreements for 30 bars totaling approximately 376 kilograms. The active reserve-risk rubric classifies physical bullion as very-low risk; the slice's structured risk factors retain its gold-market, physical-custody, counterparty, legal, redemption-liquidity, and concentration exposures.",
     "compositionBasis": "USDKG Q4 2025 Kreston physical-gold reserve verification",
+    "compositionAsOf": "2025-11-28",
     "scope": "full-composition",
     "knownUnknownExposure": "No reserve asset class remains unidentified; current bar-level allocation, named bank, custody concentration, and holder redemption timing remain outside the composition percentage.",
     "knownUnknownExposurePct": 0,
