@@ -12,6 +12,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
+import { getOgCaptureValidationError } from "../lib/og-capture-validation.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.join(__dirname, "../../public");
@@ -54,9 +55,7 @@ const ALL_PAGES = [
 ];
 
 const requestedPaths = process.argv.slice(2);
-const PAGES = requestedPaths.length
-  ? ALL_PAGES.filter((p) => requestedPaths.includes(p.path))
-  : ALL_PAGES;
+const PAGES = requestedPaths.length ? ALL_PAGES.filter((p) => requestedPaths.includes(p.path)) : ALL_PAGES;
 
 if (requestedPaths.length && PAGES.length === 0) {
   console.error(`No matching pages for: ${requestedPaths.join(", ")}`);
@@ -122,6 +121,8 @@ const SOCIAL_CAPTURE_CSS = `
   }
 `;
 
+const failures = [];
+
 for (const { path: pagePath, file } of PAGES) {
   const url = BASE + pagePath;
   const outFile = path.join(OUT, file);
@@ -130,15 +131,25 @@ for (const { path: pagePath, file } of PAGES) {
 
   const page = await context.newPage();
   try {
+    let response;
     try {
-      await page.goto(url, { waitUntil: "networkidle", timeout: 20_000 });
+      response = await page.goto(url, { waitUntil: "networkidle", timeout: 20_000 });
     } catch {
       // Pages with periodic polling (e.g. /digest) may never reach networkidle.
       // Fall back to `load` and let the post-goto settle handle hydration.
-      await page.goto(url, { waitUntil: "load", timeout: 20_000 });
+      response = await page.goto(url, { waitUntil: "load", timeout: 20_000 });
     }
     // Extra settle time for React hydration + data fetch
     await page.waitForTimeout(3000);
+    const bodyText = await page.locator("body").innerText();
+    const validationError = getOgCaptureValidationError({
+      status: response?.status(),
+      hasMainContent: (await page.locator("#main-content").count()) > 0,
+      bodyText,
+    });
+    if (validationError) {
+      throw new Error(`${validationError} at ${page.url()}`);
+    }
     await page.addStyleTag({ content: SOCIAL_CAPTURE_CSS });
     // Hide the feedback button and any overlays
     await page.evaluate(() => {
@@ -151,11 +162,20 @@ for (const { path: pagePath, file } of PAGES) {
     await page.screenshot({ path: outFile, clip: { x: 0, y: 0, width: OG_WIDTH, height: OG_HEIGHT } });
     console.log("done");
   } catch (err) {
-    console.log(`FAILED: ${err.message}`);
+    const message = err instanceof Error ? err.message : String(err);
+    failures.push({ pagePath, message });
+    console.log(`FAILED: ${message}`);
   } finally {
     await page.close();
   }
+
+  if (failures.length > 0) break;
 }
 
 await browser.close();
-console.log("\nAll screenshots saved to public/");
+if (failures.length > 0) {
+  console.error(`\nOG capture stopped after ${failures[0].pagePath} failed: ${failures[0].message}`);
+  process.exitCode = 1;
+} else {
+  console.log("\nAll screenshots saved to public/");
+}

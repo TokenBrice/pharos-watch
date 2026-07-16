@@ -4,7 +4,7 @@ Pharos serves six classes of Open Graph / Twitter preview images. They have diff
 
 ## 1. Static page screenshots (`public/og-*.png`)
 
-Captured by `scripts/maintenance/screenshot-og.mjs` via Playwright Chromium against the live site. Each capture is 1200×628. The script injects CSS to hide chrome (header, aside, footer, overlays) and force the `#main-content` region to fill the frame.
+Captured by `scripts/maintenance/screenshot-og.mjs` via Playwright Chromium against a deployed site origin. Each capture is 1200×628. The script injects CSS to hide chrome (header, aside, footer, overlays) and force the `#main-content` region to fill the frame.
 
 This table is the screenshot capture roster, not proof that a route selects the captured filename in runtime metadata. Route metadata in `src/app/**/page.tsx` and the helpers in `src/lib/page-metadata.ts` are authoritative for social selection.
 
@@ -38,7 +38,7 @@ This table is the screenshot capture roster, not proof that a route selects the 
 | `og-pharoswatchbot.png` | `/pharoswatchbot/` |
 | `og-default.png` | `/screener` |
 
-`screenshot-og.mjs` first tries `waitUntil: "networkidle"` with a 20 s timeout, then falls back to `waitUntil: "load"` for pages with persistent polling (e.g. `/digest`).
+`screenshot-og.mjs` first tries `waitUntil: "networkidle"` with a 20 s timeout, then falls back to `waitUntil: "load"` for pages with persistent polling (e.g. `/digest`). Before writing each PNG, it requires a successful document response and the `#main-content` application shell, and rejects Cloudflare security-challenge text. The first invalid capture stops the run with a non-zero exit instead of opening a PR with an error page.
 
 Eight captured files are currently not selected by their corresponding route metadata: `og-about.png`, `og-cemetery.png`, `og-depeg.png`, `og-learn-mechanisms.png`, `og-safety-scores.png`, `og-stability-index.png`, `og-digest.png`, and `og-methodology.png`. Those routes select editorial or dynamic cards instead. Treat the files as capture outputs, not runtime metadata inventory, unless the route metadata is changed explicitly.
 
@@ -46,6 +46,7 @@ Eight captured files are currently not selected by their corresponding route met
 
 ```bash
 npm run og:capture                                   # captures the live pharos.watch
+OG_BASE_URL=https://stablecoin-dashboard.pages.dev npm run og:capture # captures the production Pages artifact
 OG_BASE_URL=http://127.0.0.1:3000 npm run og:capture # captures local dev
 ```
 
@@ -53,7 +54,7 @@ OG_BASE_URL=http://127.0.0.1:3000 npm run og:capture # captures local dev
 
 - After a meaningful UI change on any covered page.
 - After a methodology version bump that changes a page's headline or layout.
-- Automatically: a weekly GitHub Action (`.github/workflows/og-refresh.yml`) runs against production and opens a PR with the diff. The workflow requires the `OG_REFRESH_GITHUB_TOKEN` repository secret, using a bot or PAT token that can push `automated/og-refresh` and open PRs so normal `pull_request` checks run.
+- Automatically: a weekly GitHub Action (`.github/workflows/og-refresh.yml`) captures the production artifact through `stablecoin-dashboard.pages.dev`, avoiding custom-domain security challenges for shared GitHub egress, and opens a PR with the diff. The workflow requires the `OG_REFRESH_GITHUB_TOKEN` repository secret, using a bot or PAT token that can push `automated/og-refresh` and open PRs so normal `pull_request` checks run.
 
 ## 2. Editorial content cards (`public/og-editorial-*.png`)
 

@@ -22,6 +22,8 @@ jobs:
           tooling-cache: "true"
           install-playwright-chromium: "true"
       - name: Capture OG screenshots from production
+        env:
+          OG_BASE_URL: https://stablecoin-dashboard.pages.dev
         run: npm run og:capture
       - name: Detect diff
         id: diff
@@ -63,5 +65,5 @@ jobs:
               --base main \
               --head "$BRANCH" \
               --title "chore(og): refresh static OG screenshots" \
-              --body "Automated weekly refresh of static OG screenshots via \`npm run og:capture\` against \`https://pharos.watch\`. See [docs/og-images.md](../blob/main/docs/og-images.md)."
+              --body "Automated weekly refresh of static OG screenshots via \`npm run og:capture\` against the production Pages deployment at \`https://stablecoin-dashboard.pages.dev\`. See [docs/og-images.md](../blob/main/docs/og-images.md)."
           fi
