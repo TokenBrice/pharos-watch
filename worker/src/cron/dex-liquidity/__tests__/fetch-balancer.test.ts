@@ -382,6 +382,7 @@ describe("fetchBalancerPools reviewed USP route", () => {
   function dispatch(params: {
     listedPools?: unknown[];
     reviewedPool?: unknown;
+    referenceReturn?: string;
     boundedReturn?: string;
     reportedPriceImpact?: string | null;
   } = {}) {
@@ -405,7 +406,9 @@ describe("fetchBalancerPools reviewed USP route", () => {
           data: {
             sorGetSwapPaths: quote(
               amount,
-              params.boundedReturn ?? "999.990384",
+              amount === "1"
+                ? params.referenceReturn ?? "1.00003"
+                : params.boundedReturn ?? "999.990384",
               params.reportedPriceImpact ?? null,
             ),
           },
@@ -482,7 +485,7 @@ describe("fetchBalancerPools reviewed USP route", () => {
   });
 
   it("preserves a non-par SOR mark instead of using generic balanceUSD", async () => {
-    dispatch({ boundedReturn: "920" });
+    dispatch({ referenceReturn: "0.92001", boundedReturn: "920" });
 
     const result = await fetchBalancerPools();
     const pool = result.pools.find((entry) => entry.poolAddress === poolId);
@@ -503,6 +506,17 @@ describe("fetchBalancerPools reviewed USP route", () => {
 
   it("fails price discovery closed when the API reports excessive impact", async () => {
     dispatch({ reportedPriceImpact: "0.05" });
+
+    const result = await fetchBalancerPools();
+
+    const token = result.pools.find((entry) => entry.poolAddress === poolId)
+      ?.tokens.find((entry) => entry.address === usp);
+    expect(token?.priceUsd).toBeNull();
+    expect(token?.priceUsdDependency).toBeUndefined();
+  });
+
+  it("fails price discovery closed when the bounded quote diverges from the reference quote", async () => {
+    dispatch({ boundedReturn: "950" });
 
     const result = await fetchBalancerPools();
 

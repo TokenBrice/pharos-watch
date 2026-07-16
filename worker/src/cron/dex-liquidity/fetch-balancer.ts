@@ -190,8 +190,10 @@ interface ReviewedBalancerRoute {
     underlyingDecimals: number;
   };
   hook: { address: string; type: "STABLE_SURGE" };
+  referenceSwapAmount: string;
   boundedSwapAmount: string;
   maxQuoteTvlShare: number;
+  maxCalculatedPriceImpactRatio: number;
   maxReportedPriceImpactRatio: number;
 }
 
@@ -223,8 +225,10 @@ const REVIEWED_BALANCER_ROUTES: readonly ReviewedBalancerRoute[] = [{
     address: "0xbdbadc891bb95dee80ebc491699228ef0f7d6ff1",
     type: "STABLE_SURGE",
   },
+  referenceSwapAmount: "1",
   boundedSwapAmount: "1000",
   maxQuoteTvlShare: 0.05,
+  maxCalculatedPriceImpactRatio: 0.02,
   maxReportedPriceImpactRatio: 0.02,
 }];
 
@@ -503,10 +507,12 @@ function quoteMatchesReviewedRoute(
 function resolveReviewedBalancerRoute(
   route: ReviewedBalancerRoute,
   poolValue: unknown,
+  referenceQuoteValue: unknown,
   boundedQuoteValue: unknown,
 ): ReviewedBalancerRouteResult | null {
   if (
     !isReviewedBalancerPool(poolValue) ||
+    !isReviewedBalancerQuote(referenceQuoteValue) ||
     !isReviewedBalancerQuote(boundedQuoteValue)
   ) return null;
 
@@ -572,18 +578,29 @@ function resolveReviewedBalancerRoute(
     hook.reviewData.warnings.length !== 0
   ) return null;
 
-  if (!quoteMatchesReviewedRoute(boundedQuoteValue, route, route.boundedSwapAmount)) return null;
+  if (
+    !quoteMatchesReviewedRoute(referenceQuoteValue, route, route.referenceSwapAmount) ||
+    !quoteMatchesReviewedRoute(boundedQuoteValue, route, route.boundedSwapAmount)
+  ) return null;
 
+  const referenceInput = parseFloat(referenceQuoteValue.swapAmount);
+  const referenceOutput = parseFloat(referenceQuoteValue.returnAmount);
+  const referencePrice = referenceOutput / referenceInput;
   const boundedInput = parseFloat(boundedQuoteValue.swapAmount);
   const boundedOutput = parseFloat(boundedQuoteValue.returnAmount);
   const boundedPrice = boundedOutput / boundedInput;
+  const calculatedPriceImpact = Math.abs(boundedPrice / referencePrice - 1);
   const reportedPriceImpact = boundedQuoteValue.priceImpact?.priceImpact == null
     ? null
     : parseFloat(boundedQuoteValue.priceImpact.priceImpact);
   const quoteTvlShare = boundedOutput / tvlUsd;
   if (
+    !Number.isFinite(referencePrice) ||
+    referencePrice <= 0 ||
     !Number.isFinite(boundedPrice) ||
     boundedPrice <= 0 ||
+    !Number.isFinite(calculatedPriceImpact) ||
+    calculatedPriceImpact > route.maxCalculatedPriceImpactRatio ||
     !Number.isFinite(quoteTvlShare) ||
     quoteTvlShare <= 0 ||
     quoteTvlShare > route.maxQuoteTvlShare ||
@@ -664,6 +681,15 @@ async function fetchReviewedBalancerRoute(
     chain: route.chain,
     poolIds: [route.poolId],
   };
+  const referenceResponse = await fetchReviewedBalancerQuery<NonNullable<ReviewedBalancerQuoteResponse["data"]>>(
+    REVIEWED_QUOTE_QUERY,
+    { ...quoteVariables, swapAmount: route.referenceSwapAmount },
+    `${label} reference quote`,
+    warnings,
+    signal,
+  );
+  if (!referenceResponse) return null;
+
   const boundedResponse = await fetchReviewedBalancerQuery<NonNullable<ReviewedBalancerQuoteResponse["data"]>>(
     REVIEWED_QUOTE_QUERY,
     { ...quoteVariables, swapAmount: route.boundedSwapAmount },
@@ -676,6 +702,7 @@ async function fetchReviewedBalancerRoute(
   const resolved = resolveReviewedBalancerRoute(
     route,
     poolResponse.poolGetPool,
+    referenceResponse.sorGetSwapPaths,
     boundedResponse.sorGetSwapPaths,
   );
   if (!resolved) warnings.push(`${label} failed identity or quote validation`);
