@@ -279,7 +279,7 @@
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "Usual documents USD0 cross-chain transfers across Ethereum, Arbitrum, Base, and BNB Chain using Chainlink CCIP for messaging and LayerZero for omnichain token transfers.",
-    "reviewedAt": "2026-06-13",
+    "reviewedAt": "2026-07-16",
     "reviewer": "Codex bridge route review",
     "confidence": "verified",
     "protocols": [
@@ -319,16 +319,28 @@
         "id": "ethereum:0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5",
         "destinationChain": "ethereum",
         "contractAddress": "0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Usual Collateral Bridge Infrastructure",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xde6e1F680C4816446C8D515989E2358636A38b04",
+        "failureDomainKeys": [
+          "protocol:usual-ucbi",
+          "contract:ethereum:0xde6e1f680c4816446c8d515989e2358636a38b04",
+          "contract:ethereum:0xb969b0d14f7682baf37ba7c364b351b830a812b2"
+        ],
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Usual USD0 mint, redeem, and multichain architecture",
+            "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0/flow-and-architecture"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x35f1c5cb7fb977e669fd244c567da99d8a3a6850",
