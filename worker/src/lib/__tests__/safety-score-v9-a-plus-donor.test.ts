@@ -569,6 +569,7 @@ const donorReplay = {
           {
             coverageClass: "exact-lower-bound",
             executionCertainty: "bounded",
+            modelConfidence: "medium",
             executionCosts: [
               {
                 executionCostBps: 200,
@@ -624,6 +625,7 @@ const donorReplay = {
           {
             coverageClass: "exact-lower-bound",
             executionCertainty: "bounded",
+            modelConfidence: "medium",
             executionCosts: [
               {
                 executionCostBps: 0,

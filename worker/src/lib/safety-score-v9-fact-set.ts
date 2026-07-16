@@ -245,6 +245,9 @@ const RouteReviewSchema = z
       "unknown",
     ]),
     executionCertainty: z.enum(["guaranteed", "bounded", "conditional", "discretionary", "unknown"]),
+    // Retained schema-v2 route reviews predate this field. Normalize them to
+    // the conservative modeled-confidence floor at the compiler boundary.
+    modelConfidence: z.enum(["high", "medium", "low"]).default("low"),
     coverageClass: z.enum(["exact-complete", "exact-lower-bound", "diagnostic"]),
     settlementModel: z.enum(["atomic", "same-day", "bounded-delay", "queued", "eventual", "unknown"]),
     settlementSlaSec: z.number().int().nonnegative().nullable(),
@@ -681,8 +684,8 @@ function normalizeMechanismReview(
   context: AssetBuildContext,
   review: V9MechanismRiskReview,
 ): V9MechanismRiskReviewFactV2 {
-  const evidenceId = researchEvidence(context);
-  const evidence = context.evidence.get(evidenceId)!;
+  const evidenceIds = componentResearchEvidence(context, "mechanism-risk-review");
+  const evidence = context.evidence.get(evidenceIds[0]!)!;
   const normalized = structuredClone(review) as V9MechanismRiskReview;
   const componentGapIds: string[] = [];
   const componentEvidenceIds = new Set<string>();
@@ -697,9 +700,9 @@ function normalizeMechanismReview(
       fact.status = createV9FactStatus({
         applicability: original.applicability,
         observationState: "known",
-        evidenceRefIds: [evidenceId],
+        evidenceRefIds: evidenceIds,
       });
-      componentEvidenceIds.add(evidenceId);
+      for (const evidenceId of evidenceIds) componentEvidenceIds.add(evidenceId);
       continue;
     }
     // A missing non-serial component is bounded like a stale or
@@ -719,7 +722,7 @@ function normalizeMechanismReview(
         path: { kind: "local-component", componentKey: `mechanism-review:${componentKey}` },
         message: `The ${componentKey} mechanism review is not a current known fact.`,
         evidenceRefIds:
-          original.observationState === "stale" || original.observationState === "bounded-unknown" ? [evidenceId] : [],
+          original.observationState === "stale" || original.observationState === "bounded-unknown" ? evidenceIds : [],
       }),
     );
     const applicability =
@@ -728,7 +731,7 @@ function normalizeMechanismReview(
       applicability,
       observationState: original.observationState,
       evidenceRefIds:
-        original.observationState === "stale" || original.observationState === "bounded-unknown" ? [evidenceId] : [],
+        original.observationState === "stale" || original.observationState === "bounded-unknown" ? evidenceIds : [],
       gapIds: [gapId],
     });
     if (original.observationState === "stale") {
@@ -740,7 +743,9 @@ function normalizeMechanismReview(
       hasIncomplete = true;
     }
     componentGapIds.push(gapId);
-    if (fact.status.evidenceRefIds.length > 0) componentEvidenceIds.add(evidenceId);
+    if (fact.status.evidenceRefIds.length > 0) {
+      for (const evidenceId of evidenceIds) componentEvidenceIds.add(evidenceId);
+    }
   }
 
   const observationState = hasIncomplete ? "bounded-unknown" : hasStale ? "stale" : "known";
@@ -748,7 +753,7 @@ function normalizeMechanismReview(
     status: createV9FactStatus({
       applicability: requiredV9Applicability("v9.backing.mechanism-review"),
       observationState,
-      evidenceRefIds: [...new Set([evidenceId, ...componentEvidenceIds])],
+      evidenceRefIds: [...componentEvidenceIds],
       gapIds: componentGapIds,
     }),
     review: normalized,
@@ -1008,7 +1013,7 @@ function buildReserves(context: AssetBuildContext): {
     const evidenceId = reserveSourceEvidence(context, exposureKey, groupedSlices);
     const evidence = context.evidence.get(evidenceId)!;
     const issuerOrObligorKey = classification?.issuerOrObligorKey ?? raw.issuerOrObligor ?? null;
-    const assetClass = classification?.assetClass ?? raw.assetClass ?? null;
+    const assetClass = classification?.assetClass ?? raw.assetClass ?? (raw.coinId ? ("stablecoin" as const) : null);
     const failureDomains = stableFailureDomains([
       ...(classification?.failureDomains ?? []),
       ...(issuerOrObligorKey ? [{ kind: "reserve-issuer" as const, key: issuerOrObligorKey }] : []),
@@ -1328,6 +1333,7 @@ function buildRoute(
       holderAccess: "unknown",
       executionModel: "unknown",
       executionCertainty: "unknown",
+      modelConfidence: "low",
       observationConfidence: args.observation.confidence,
       evidenceKind: args.observation.evidenceKind,
       coverageClass: "diagnostic",
@@ -1483,6 +1489,7 @@ function buildRoute(
     holderAccess: args.review.holderAccess,
     executionModel: args.review.executionModel,
     executionCertainty: args.review.executionCertainty,
+    modelConfidence: args.review.modelConfidence,
     observationConfidence: args.observation.confidence,
     evidenceKind: args.observation.evidenceKind,
     coverageClass: args.review.coverageClass,
@@ -1732,16 +1739,20 @@ function buildControls(context: AssetBuildContext): {
           observationState: "bounded-unknown",
           evidenceRefIds: evidenceIds,
         }).status;
-  if (review.state === "reviewed-controls") {
+  const hasKnownControl = review.controls.some(controlCanCarryKnownStatus);
+  if (review.state === "reviewed-controls" || hasKnownControl) {
     assertKnownComponentEvidenceCurrent(context, "control", evidenceIds);
   }
   return {
     controlStatus: status,
     controls: review.controls.map((control) => {
-      const controlStatus =
-        review.state === "reviewed-controls" && !controlCanCarryKnownStatus(control)
-          ? boundedControlSemanticsStatus(context, control, evidenceIds)
-          : status;
+      const controlStatus = controlCanCarryKnownStatus(control)
+        ? createV9FactStatus({
+            applicability: requiredV9Applicability("v9.control.review"),
+            observationState: "known",
+            evidenceRefIds: evidenceIds,
+          })
+        : boundedControlSemanticsStatus(context, control, evidenceIds);
       return {
         ...control,
         sourceGenerationId: context.extension.sources.researchOverlays.generationId,
@@ -1754,10 +1765,12 @@ function buildControls(context: AssetBuildContext): {
 function controlCanCarryKnownStatus(control: ExtensionControlOverlay): boolean {
   return (
     control.authority !== null &&
+    control.authority.model !== "unknown" &&
     control.failureDomains.length > 0 &&
     control.capSemantics.kind !== "unknown" &&
     control.claimImpairment !== "unknown" &&
-    control.economicLossScope !== "unknown"
+    control.economicLossScope !== "unknown" &&
+    control.incidentState !== "unknown"
   );
 }
 

@@ -67,6 +67,30 @@ function fixedInputStub(row: RedemptionBackstopEntry | undefined): ReportCardsFi
   } as unknown as ReportCardsFixedInput;
 }
 
+function liveDirectRow(routeStatusSource: RedemptionBackstopEntry["routeStatusSource"]): RedemptionBackstopEntry {
+  const row = supplyFullRow();
+  const observation = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), row.stablecoinId)[0]!.observation;
+  return {
+    ...row,
+    sourceMode: "dynamic",
+    capacityConfidence: "live-direct",
+    capacityKind: "live-direct-bounded",
+    routeStatusSource,
+    modelConfidence: "high",
+    capacityProfile: {
+      ...row.capacityProfile!,
+      exitRouteObservations: [
+        {
+          ...observation,
+          evidenceKind: "onchain-contract-state",
+          confidence: "high",
+          scoreEligible: true,
+        },
+      ],
+    },
+  };
+}
+
 describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
   it("derives one retained route for a full-supply row without observations", () => {
     const retained = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(supplyFullRow()), "usdc-circle");
@@ -91,7 +115,39 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     expect(reviews.map((review) => `${review.lane}:${review.routeId}`)).toEqual(
       retained.map((route) => `${route.lane}:${route.observation.routeId}`),
     );
-    expect(reviews[0]).toMatchObject({ settlementModel: "atomic", settlementSlaSec: 0 });
+    expect(reviews[0]).toMatchObject({
+      settlementModel: "atomic",
+      settlementSlaSec: 0,
+      modelConfidence: "medium",
+    });
+  });
+
+  it("preserves the captured redemption model-confidence rollup", () => {
+    const fixedInput = fixedInputStub(supplyFullRow({ modelConfidence: "high" }));
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]).toMatchObject({
+      lane: "redemption",
+      executionCertainty: "bounded",
+      modelConfidence: "high",
+    });
+  });
+
+  it("fails static-open live-direct evidence closed only at the v9 adapter", () => {
+    const row = liveDirectRow("static-config");
+    expect(row.capacityProfile?.exitRouteObservations?.[0]?.scoreEligible).toBe(true);
+    expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]).toMatchObject({
+      lane: "redemption",
+      coverageClass: "diagnostic",
+      modelConfidence: "high",
+    });
+  });
+
+  it.each(["onchain", "protocol-api"] as const)("keeps %s-sourced live-direct evidence scoreable", (source) => {
+    const row = liveDirectRow(source);
+    expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]).toMatchObject({
+      lane: "redemption",
+      coverageClass: "exact-lower-bound",
+      modelConfidence: "high",
+    });
   });
 
   it("values a resolved stable-basket output at the weakest component's price", () => {
@@ -184,6 +240,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       expect.objectContaining({
         lane: "dex",
         routeId: route.routeId,
+        modelConfidence: "medium",
         coverageClass: "exact-complete",
         output: expect.objectContaining({
           kind: "tracked-stablecoin",

@@ -12,7 +12,7 @@ import {
   type V9MintSupervision,
   type V9OracleControlReview,
 } from "../safety-score-v9/control";
-import { resolveV9ReasonPolicy, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { loadV9MethodologyPolicy, resolveV9ReasonPolicy, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
 function requiredKnown(rule = "fixture.required"): V9FactStatusV2 {
   return {
@@ -623,6 +623,29 @@ describe("Safety Score v9 economic control", () => {
       expect.objectContaining({ componentKey: "bridge:unverified", binding: true }),
     );
     expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality);
+  });
+
+  it("keeps deployment control materiality independent from common-mode thresholds", () => {
+    const threshold = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100;
+    const materialBridge = control("bridge:separate-materiality", "bridge", {
+      scope: "deployment",
+      status: boundedUnknown("control.separate-materiality"),
+      economicLossScope: "deployment",
+      materialSupplyShare: threshold,
+    });
+    const input = {
+      facts: { ...facts([materialBridge]), controlStatus: boundedUnknown("control.separate-materiality") },
+      bridge: {
+        status: requiredKnown("bridge"),
+        routes: [{ controlKey: materialBridge.controlKey, tier: "opaque-or-unknown" as const }],
+      },
+    };
+    const changedCommonModePolicy = structuredClone(V9_CANDIDATE_POLICY_V1.policy);
+    changedCommonModePolicy.semantic.materiality.commonModeHighShareThreshold = 0.2;
+
+    expect(
+      evaluateV9EconomicControl(args({ ...input, policy: loadV9MethodologyPolicy(changedCommonModePolicy) })),
+    ).toEqual(evaluateV9EconomicControl(args(input)));
   });
 
   it("ignores below-threshold bridge review residue but fails closed at the exact threshold", () => {

@@ -76,6 +76,7 @@ function route(assetId: string, lane: "dex" | "redemption") {
     holderAccess: lane === "dex" ? ("permissionless" as const) : ("retail-open" as const),
     executionModel: lane === "dex" ? ("market-depth" as const) : ("deterministic" as const),
     executionCertainty: "bounded" as const,
+    modelConfidence: "medium" as const,
     observationConfidence: "high" as const,
     evidenceKind: lane === "dex" ? ("measured-executable-depth" as const) : ("documented-terms" as const),
     coverageClass: "exact-complete" as const,

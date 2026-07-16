@@ -30,14 +30,19 @@ with archetype-specific Backing, Exit, and Economic Control pillars bounded by
 the weakest material failure path, structural ceilings, evidence sufficiency,
 dependencies, peg behavior, and stress propagation. Candidate failures cannot
 affect V8 publication; exact candidate state is available only to the admin
-workspace. A drift-labeled research replay rates 358 of 361 assets, but no
-publication-exact candidate capture has yet proved that rateability against the
-current registry and producer generations. Independent holdout validation,
-release-cohort coverage, a frozen release candidate, and at least 14
-consecutive verified shadow days plus two elapsed cycles of the four-hour
-slowest score-bearing producer are still mandatory before any public or
-downstream cutover. The window must also cover at least two distinct observed
-and archived `liveReserves` and `redemption` generations. See
+workspace. The 2026-07-16 real-A calibration rates 342 of 344 assets and
+produces BOLD at 84/A through the normal compiler and evaluator. Three distinct
+exact production inputs reproduce that A and the same grade distribution after
+local projection onto the reviewed registry; the production-shaped composite
+remains 88/A+. The candidate is still not calibration-ready: F-count,
+upper-cohort breadth, IQR, and adverse-control gates fail. The captures were
+locally rekeyed and therefore are calibration evidence, not activation-window
+evidence. Independent holdout validation, release-cohort coverage, a later
+owner-frozen release candidate, and at least 14 consecutive verified shadow
+days plus two elapsed cycles of the four-hour slowest score-bearing producer
+remain mandatory before any public or downstream cutover. The window must also
+cover at least two distinct observed and archived `liveReserves` and
+`redemption` generations. See
 [Safety Score V9 readiness](./process/safety-score-v9-readiness.md), the
 [single-publisher rollout contract](./process/safety-score-v9-rollout.md), and
 the [consumer ledger](./process/safety-score-v9-consumer-ledger.md).

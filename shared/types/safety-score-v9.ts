@@ -991,35 +991,40 @@ const V9MaterialityPolicySchema = z
     commonControlMinAssets: z.number().int().positive(),
     commonControlMinPaths: z.number().int().positive(),
     commonModeSignal: z.object({ kind: z.literal("critical-dependency"), severity: V9SeveritySchema }).strict(),
-    // Reviewed mature chains whose shared common-mode concentration is graded
-    // at the lower "moderate" severity. A group touching any chain outside this
-    // set (or an unknown/non-chain failure domain) keeps the "high" severity.
+    // Reviewed mature chains whose shared common-mode concentration is
+    // diagnostic rather than a coin-specific ceiling.
     matureChains: z.array(z.string().min(1)),
-    // Conservative share bound below which a common-mode concentration is
-    // immaterial. Material (>= threshold), overlapping, or unknown bounds stay
-    // fail-closed unless kind-specific reviewed evidence lowers the severity.
+    // Proven exposure below this threshold is diagnostic. Exposure between this
+    // threshold and commonModeHighShareThreshold is moderate.
     commonModeShareThreshold: z.number().finite().min(0).max(1),
+    // Proven exposure at or above this threshold is high. Unknown or
+    // unattributed exposure is also high regardless of its nominal bound.
+    commonModeHighShareThreshold: z.number().finite().min(0).max(1).optional(),
     // Reviewed liquidity venues (dex-protocol common-mode) whose concentration is
-    // not a capping signal — it graduates to the non-capping "low" severity. A
-    // concentration on any other (or unknown) venue stays fail-closed at "high".
+    // not a capping signal. Non-mature venues use the proportional thresholds.
     matureVenues: z.array(z.string().min(1)),
-    // Reviewed bridge tiers (bridge-route common-mode) treated as low risk: their
-    // shared-bridge concentration grades "moderate" instead of the default
-    // "high". Any other or unreviewed tier stays fail-closed at "high".
-    lowRiskBridgeTiers: z.array(
-      z.enum([
-        "single-chain-or-native",
-        "issuer-native-burn-mint",
-        "canonical-rollup-bridge",
-        "issuer-native-lock-mint",
-        "external-validated-network",
-        "liquidity-or-intent-route",
-        "external-lock-mint",
-        "opaque-or-unknown",
-      ]),
-    ),
+    // Retained schema-v1 policies may carry the former bridge allowlist. It is
+    // accepted only for replay compatibility and stripped before validation;
+    // current materiality semantics never consult it.
+    lowRiskBridgeTiers: z.array(z.string().min(1)).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((materiality, ctx) => {
+    if (
+      materiality.commonModeHighShareThreshold !== undefined &&
+      materiality.commonModeShareThreshold >= materiality.commonModeHighShareThreshold
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["commonModeHighShareThreshold"],
+        message: "Common-mode high-share threshold must exceed the diagnostic-share threshold",
+      });
+    }
+  })
+  .transform(({ lowRiskBridgeTiers: _legacyBridgeTiers, ...materiality }) => ({
+    ...materiality,
+    commonModeHighShareThreshold: materiality.commonModeHighShareThreshold ?? materiality.commonModeShareThreshold,
+  }));
 
 const V9StructuralPolicySchema = z
   .object({

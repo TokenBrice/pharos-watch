@@ -34,7 +34,10 @@ function capacityPoints(observation: ExitRouteObservation): RouteReview["executi
       executionCostBps: point.maxCostBps,
     }))
     .sort((left, right) =>
-      compareText(`${left.maxCostBps}:${left.requestedNotionalUsd}`, `${right.maxCostBps}:${right.requestedNotionalUsd}`),
+      compareText(
+        `${left.maxCostBps}:${left.requestedNotionalUsd}`,
+        `${right.maxCostBps}:${right.requestedNotionalUsd}`,
+      ),
     );
 }
 
@@ -164,6 +167,7 @@ function buildDexRouteReview(
     holderAccess: "permissionless",
     executionModel: "market-depth",
     executionCertainty: "bounded",
+    modelConfidence: "medium",
     coverageClass: dexCoverageClass(fixedInput, assetId),
     settlementModel: "atomic",
     settlementSlaSec: 0,
@@ -206,6 +210,21 @@ function redemptionExecutionCertainty(entry: RedemptionBackstopEntry): RouteRevi
   return "discretionary";
 }
 
+function redemptionCoverageClass(
+  entry: RedemptionBackstopEntry,
+  observation: ExitRouteObservation,
+): RouteReview["coverageClass"] {
+  const requiresCurrentOpenAttribution =
+    observation.scoreEligible &&
+    entry.sourceMode === "dynamic" &&
+    (entry.capacityKind === "live-direct" || entry.capacityKind === "live-direct-bounded") &&
+    (entry.settlementModel === "atomic" || entry.settlementModel === "immediate");
+  const hasCurrentOpenAttribution =
+    entry.routeStatus === "open" &&
+    (entry.routeStatusSource === "onchain" || entry.routeStatusSource === "protocol-api");
+  return requiresCurrentOpenAttribution && !hasCurrentOpenAttribution ? "diagnostic" : "exact-lower-bound";
+}
+
 function redemptionSettlement(entry: RedemptionBackstopEntry): {
   settlementModel: RouteReview["settlementModel"];
   settlementSlaSec: number | null;
@@ -241,10 +260,15 @@ function redemptionExecutionCosts(
       requestedNotionalUsd: point.requestedNotionalUsd,
       maxCostBps: point.maxCostBps,
       executionCostBps:
-        entry.feeBps !== null && Number.isFinite(entry.feeBps) ? Math.min(entry.feeBps, point.maxCostBps) : point.maxCostBps,
+        entry.feeBps !== null && Number.isFinite(entry.feeBps)
+          ? Math.min(entry.feeBps, point.maxCostBps)
+          : point.maxCostBps,
     }))
     .sort((left, right) =>
-      compareText(`${left.maxCostBps}:${left.requestedNotionalUsd}`, `${right.maxCostBps}:${right.requestedNotionalUsd}`),
+      compareText(
+        `${left.maxCostBps}:${left.requestedNotionalUsd}`,
+        `${right.maxCostBps}:${right.requestedNotionalUsd}`,
+      ),
     );
 }
 
@@ -266,7 +290,8 @@ function buildRedemptionRouteReview(
     holderAccess: redemptionHolderAccess(entry),
     executionModel: redemptionExecutionModel(entry),
     executionCertainty: redemptionExecutionCertainty(entry),
-    coverageClass: "exact-lower-bound",
+    modelConfidence: entry.modelConfidence,
+    coverageClass: redemptionCoverageClass(entry, observation),
     ...redemptionSettlement(entry),
     physicalResourceKeys,
     executionCosts: redemptionExecutionCosts(entry, observation),

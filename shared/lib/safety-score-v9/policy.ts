@@ -1,7 +1,6 @@
 import candidatePolicyAsset from "../../data/safety-score-v9/methodology-policy-candidate-v1.json";
 import {
   V9MethodologyPolicySchema,
-  V9MethodologySemanticPayloadSchema,
   V9ReasonCodeSchema,
   type V9FactDisposition,
   type V9MethodologyPolicy,
@@ -22,12 +21,12 @@ function compareCodeUnits(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-function sortedUnique(values: readonly string[]): string[] {
+function sortedUnique<T extends string>(values: readonly T[]): T[] {
   return [...new Set(values)].sort(compareCodeUnits);
 }
 
 function semanticPayload(policy: V9MethodologyPolicy): V9MethodologySemanticPayload {
-  return V9MethodologySemanticPayloadSchema.parse({
+  return {
     schemaVersion: policy.schemaVersion,
     semantic: {
       ...policy.semantic,
@@ -35,7 +34,6 @@ function semanticPayload(policy: V9MethodologyPolicy): V9MethodologySemanticPayl
         ...policy.semantic.materiality,
         matureChains: sortedUnique(policy.semantic.materiality.matureChains),
         matureVenues: sortedUnique(policy.semantic.materiality.matureVenues),
-        lowRiskBridgeTiers: sortedUnique(policy.semantic.materiality.lowRiskBridgeTiers),
       },
       backing: {
         ...policy.semantic.backing,
@@ -82,7 +80,7 @@ function semanticPayload(policy: V9MethodologyPolicy): V9MethodologySemanticPayl
         permittedTreatments: sortedUnique(entry.permittedTreatments),
       }))
       .sort((left, right) => compareCodeUnits(left.code, right.code)),
-  });
+  } satisfies V9MethodologySemanticPayload;
 }
 
 function deepFreeze<T>(value: T): Readonly<T> {

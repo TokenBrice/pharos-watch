@@ -96,6 +96,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     ),
     exempt("scripts/maintenance/analyze-gsc-coverage.mjs", "read-only"),
     exempt("scripts/maintenance/analyze-gsc-performance.mjs", "read-only"),
+    exempt("scripts/maintenance/analyze-safety-score-v9-calibration.mjs", "build"),
     exempt("scripts/maintenance/audit-dex-pricing-source-gaps.ts", "build"),
     exempt("scripts/maintenance/audit-dia-provider-poc.ts", "build"),
     exempt("scripts/maintenance/audit-eurostablecoins-coverage.mjs", "build"),

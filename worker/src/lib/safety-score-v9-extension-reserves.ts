@@ -18,7 +18,7 @@ export function buildSafetyScoreV9ReserveClassifications(slices: readonly Reserv
       return {
         exposureKey,
         classificationKey: `source-native:${exposureKey}`,
-        assetClass: slice.assetClass ?? null,
+        assetClass: slice.assetClass ?? (slice.coinId ? ("stablecoin" as const) : null),
         issuerOrObligorKey,
         riskFactors: [...(slice.riskFactors ?? [])].sort(compareText),
         liquidityHorizon: slice.liquidityHorizon ?? null,

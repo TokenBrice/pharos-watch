@@ -26,7 +26,7 @@ describe("Safety Score v9 methodology policy", () => {
     expect(V9_CANDIDATE_POLICY_V1.policy.lifecycle).toBe("candidate");
     expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBeNull();
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "84c0e4180eea111591a5a48dc1d9149d4f950b912cb239913a2cc6fa932f607d",
+      "5d90e0bdb2990844ea3af0de7cf05044bf81900203774e64bfc5e406baa31719",
     );
     expect(Object.isFrozen(V9_CANDIDATE_POLICY_V1.policy.semantic.formula)).toBe(true);
   });
@@ -151,14 +151,30 @@ describe("Safety Score v9 methodology policy", () => {
     expect(() => loadV9MethodologyPolicy(grades)).toThrow(/every rated grade/i);
 
     const legacyMaterialityField: unknown = structuredClone(candidateClone());
-    const legacyMateriality = (
-      legacyMaterialityField as { semantic: { materiality: Record<string, unknown> } }
-    ).semantic.materiality;
+    const legacyMateriality = (legacyMaterialityField as { semantic: { materiality: Record<string, unknown> } })
+      .semantic.materiality;
     legacyMateriality.matureChainShareThreshold = legacyMateriality.commonModeShareThreshold;
     delete legacyMateriality.commonModeShareThreshold;
     expect(() => loadV9MethodologyPolicy(legacyMaterialityField)).toThrow();
 
+    const invertedCommonModeTiers = candidateClone();
+    invertedCommonModeTiers.semantic.materiality.commonModeHighShareThreshold =
+      invertedCommonModeTiers.semantic.materiality.commonModeShareThreshold;
+    expect(() => loadV9MethodologyPolicy(invertedCommonModeTiers)).toThrow(/must exceed/i);
+
     expect(() => loadV9MethodologyPolicy({ ...candidateClone(), assetIds: ["usdc"] })).toThrow();
+  });
+
+  it("loads retained schema-v1 materiality fields through the conservative compatibility adapter", () => {
+    const retainedPolicy: unknown = structuredClone(candidateClone());
+    const materiality = (retainedPolicy as { semantic: { materiality: Record<string, unknown> } }).semantic.materiality;
+    delete materiality.commonModeHighShareThreshold;
+    materiality.commonModeShareThreshold = 0.15;
+    materiality.lowRiskBridgeTiers = ["canonical-rollup-bridge"];
+
+    const loaded = loadV9MethodologyPolicy(retainedPolicy);
+    expect(loaded.policy.semantic.materiality.commonModeHighShareThreshold).toBe(0.15);
+    expect("lowRiskBridgeTiers" in loaded.policy.semantic.materiality).toBe(false);
   });
 
   it("requires exact signal, disposition, priority, and reason coverage", () => {

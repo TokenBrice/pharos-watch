@@ -459,10 +459,7 @@ export function evaluateV9ReserveExposures(
           treatment: resolveV9ReasonPolicy(policy, unavailableCode).reason.defaultTreatment,
         });
       }
-    } else if (
-      exposure.trackedAssetId !== null &&
-      !seriallyResolvedUpstreamAssetIds.has(exposure.trackedAssetId)
-    ) {
+    } else if (exposure.trackedAssetId !== null && !seriallyResolvedUpstreamAssetIds.has(exposure.trackedAssetId)) {
       score = Math.min(score, backing.boundedUnknownQuality);
       const unavailableCode = isV9MaterialShare(materialityWeight, threshold)
         ? ("material-dependency-unavailable" as const)
@@ -530,10 +527,7 @@ export function evaluateV9ReserveExposures(
   // 12% row, so a named split cannot dodge the structural cap (VER2-002). One
   // reason is emitted per crossing obligor group with the union of evidence
   // and failure domains.
-  const obligorGroups = new Map<
-    string,
-    { share: number; evidence: string[]; failureDomains: V9FailureDomainRef[] }
-  >();
+  const obligorGroups = new Map<string, { share: number; evidence: string[]; failureDomains: V9FailureDomainRef[] }>();
   for (const exposure of exposures) {
     if (exposure.assetClass !== "private-credit" || exposure.issuerOrObligorKey === null) continue;
     const key = exposure.issuerOrObligorKey;
@@ -669,9 +663,14 @@ function finalizeBackingResult(result: Omit<V9BackingResult, "traceDigest">): V9
   };
 }
 
-export function evaluateV9ArchetypeBacking(
+// Only the whole-review fallback may price missing serial components locally;
+// an authored partial review remains fail-closed for the same missing claim.
+type V9ArchetypeBackingEvaluationMode = "reviewed" | "bounded-whole-review-absence";
+
+function evaluateV9ArchetypeBackingInternal(
   input: V9ArchetypeBackingInput,
   policy: V9BackingEvaluationPolicy,
+  mode: V9ArchetypeBackingEvaluationMode,
 ): V9BackingResult {
   const backing = backingPolicy(policy);
   const archetypePolicy = backing.archetypes[input.archetype];
@@ -703,18 +702,20 @@ export function evaluateV9ArchetypeBacking(
     const state = component.fact.status.observationState;
     const unresolvedApplicability = component.fact.status.applicability.state === "unresolved";
     const missing = state === "missing" || state === "unsupported" || unresolvedApplicability;
-    if (missing && serial) {
+    if (missing && serial && mode === "reviewed") {
       rateability = "NR";
       unresolved.push(...gapReasons(input.asset, component.fact.status.gapIds, pathKey, "NR", "critical-unresolved"));
     } else if (state !== "known") {
       unresolved.push(
-        ...gapReasons(
-          input.asset,
-          component.fact.status.gapIds,
-          pathKey,
-          state === "stale" ? "ceiling" : "pillar",
-          state === "stale" ? "insufficient-evidence" : "critical-unresolved",
-        ),
+        ...(mode === "bounded-whole-review-absence"
+          ? policyGapReasons(input.asset, component.fact.status.gapIds, pathKey, "missing-pillar-evidence", policy)
+          : gapReasons(
+              input.asset,
+              component.fact.status.gapIds,
+              pathKey,
+              state === "stale" ? "ceiling" : "pillar",
+              state === "stale" ? "insufficient-evidence" : "critical-unresolved",
+            )),
       );
     }
     const score =
@@ -789,6 +790,13 @@ export function evaluateV9ArchetypeBacking(
   });
 }
 
+export function evaluateV9ArchetypeBacking(
+  input: V9ArchetypeBackingInput,
+  policy: V9BackingEvaluationPolicy,
+): V9BackingResult {
+  return evaluateV9ArchetypeBackingInternal(input, policy, "reviewed");
+}
+
 export function createUnknownArchetypeV9BackingResult(
   assetId: string,
   archetype: string,
@@ -812,29 +820,36 @@ export function createUnknownArchetypeV9BackingResult(
 }
 
 export function createUnavailableV9BackingResult(
-  asset: Pick<V9AssetFactsV2, "assetId" | "archetype" | "mechanismRiskReview" | "gaps">,
+  asset: V9BackingAssetInput,
+  unavailableReview: Pick<V9AssetFactsV2, "archetype" | "mechanismRiskReview">,
   policy: V9BackingEvaluationPolicy,
 ): V9BackingResult {
   assertV9BackingPolicy(policy);
-  const gapCodes = asset.mechanismRiskReview.status.gapIds.flatMap((gapId) => {
+  const gapCodes = unavailableReview.mechanismRiskReview.status.gapIds.flatMap((gapId) => {
     const gap = asset.gaps.find((candidate) => candidate.gapId === gapId);
     return gap ? [gap.reasonCode] : [];
   });
   const reasonCodes = uniqueSorted(gapCodes.length > 0 ? gapCodes : (["missing-pillar-evidence"] as V9ReasonCode[]));
-  const unresolved = reasonCodes.map((code) => ({
+  const unresolved: V9BackingUnresolvedReason[] = reasonCodes.map((code) => ({
     code,
     pathKey: "mechanism:review",
-    gapIds: uniqueSorted(asset.mechanismRiskReview.status.gapIds),
+    gapIds: uniqueSorted(unavailableReview.mechanismRiskReview.status.gapIds),
     treatment: resolveV9ReasonPolicy(policy, code).reason.defaultTreatment,
   }));
+  if (
+    unavailableReview.archetype === "unresolved" &&
+    !unresolved.some((reason) => reason.code === "missing-archetype")
+  ) {
+    unresolved.push({ code: "missing-archetype", pathKey: "mechanism:archetype", gapIds: [], treatment: "NR" });
+  }
   const shared = {
     assetId: asset.assetId,
-    archetype: asset.archetype,
+    archetype: unavailableReview.archetype,
     policyId: policy.policy.policyId,
     policySemanticDigest: policy.semanticDigest,
     structuralReasons: [],
     unresolved,
-    evidenceRefIds: uniqueSorted(asset.mechanismRiskReview.status.evidenceRefIds),
+    evidenceRefIds: uniqueSorted(unavailableReview.mechanismRiskReview.status.evidenceRefIds),
     failureDomains: [],
   } as const;
   if (unresolved.some((reason) => reason.treatment === "NR")) {
@@ -846,28 +861,26 @@ export function createUnavailableV9BackingResult(
       contributions: [],
     });
   }
-  // The policy treats the absent mechanism review as bounded: the pillar
-  // scores at the bounded-unknown quality with the reason-coded ceiling, and
-  // no mechanism claim is made.
-  const quality = backingPolicy(policy).boundedUnknownQuality;
-  return finalizeBackingResult({
-    ...shared,
-    rateability: "rateable",
-    score: quality,
-    pillarCeiling: null,
-    contributions: [
-      {
-        componentKey: "mechanism:review",
-        source: "mechanism",
-        score: quality,
-        normalizedWeight: 1,
-        weightedScore: quality,
-        observationState: "bounded-unknown",
-        provenance: null,
-        evidenceRefIds: uniqueSorted(asset.mechanismRiskReview.status.evidenceRefIds),
-        failureDomains: [],
-        upstreamAssetId: null,
-      },
-    ],
-  });
+  if (unavailableReview.archetype === "unresolved") {
+    throw new Error("Safety Score v9 unresolved archetype passed the unavailable-review NR guard");
+  }
+
+  const archetypePolicy = backingPolicy(policy).archetypes[unavailableReview.archetype];
+  const components = Object.keys(archetypePolicy.componentWeights).map((componentKey) => ({
+    componentKey,
+    fact: {
+      status: unavailableReview.mechanismRiskReview.status,
+      quality: null,
+      failureDomains: [],
+    },
+  }));
+  return evaluateV9ArchetypeBackingInternal(
+    {
+      archetype: unavailableReview.archetype,
+      asset,
+      components,
+    },
+    policy,
+    "bounded-whole-review-absence",
+  );
 }

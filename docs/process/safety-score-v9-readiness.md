@@ -16,7 +16,7 @@ other.
 - `shared/data/safety-score-v9/calibration-cohort-v1.json`: 24 active assets spanning fiat anchors, CDPs, wrappers, private credit, synthetic designs, RWA funds, bridge scope, dependencies, and missing-evidence cases.
 - `shared/data/safety-score-v9/matched-invariants-v1.ts`: expectation-free transformations for redemption, optional routes, reserve and bridge materiality, dependency availability, oracle common mode, evidence criticality, and parent propagation.
 - `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`: the explicit candidate-only methodology policy, including formula order and constants, evidence dispositions, exit and materiality policy, structural limits, and the complete reason-code registry. It has lifecycle `candidate` and no release version; it is not an active `9.0` policy.
-- `shared/data/safety-score-v9/golden-scenarios-v1.ts`: the durable 30-case archetype corpus and 28 ordering constraints used for policy sensitivity and the research evaluator. Expectations remain outside production-shaped scoring inputs.
+- `shared/data/safety-score-v9/golden-scenarios-v1.ts`: the durable 30-case archetype corpus and 32 ordering constraints used for policy sensitivity and the research evaluator. Expectations remain outside production-shaped scoring inputs.
 - `shared/data/safety-score-v9/exit-route-calibration-v1.json`: all-active P4 producer coverage, calibrated coverage floors, legacy-versus-active score movements, and the activation disposition.
 - `shared/data/safety-score-v9/readiness-baseline-v1.json`: final all-active compiler output, itemized manual-evidence audit, calibration-cohort dispositions, historical calibration, route coverage, shadow evaluation, and go/no-go recommendation.
 
@@ -29,7 +29,7 @@ The V9 implementation establishes candidate infrastructure without changing prod
 - `shared/lib/safety-score-v9-research.ts` and `shared/lib/safety-score-v9-compiler.ts` now require an explicit validated policy. Compiled inputs bind the semantic digest that produced them, and scoring rejects a mismatched policy. Score traces carry both the evaluation policy ID and semantic digest. Production-shaped scoring inputs cannot supply arbitrary numeric caps; that capability is confined to the phase-zero scenario adapter used by the research harness.
 - `shared/types/report-cards-base-input.ts` and `shared/lib/report-cards-base-input-identity.ts` define the model-neutral, canonical base-input identity and deterministic generation ID shared by the V8 publisher and V9 candidate.
 - `shared/lib/safety-score-v9/exit-observation-set.ts` provides deterministic DEX/redemption observation merging, stable route ordering, duplicate handling, conflict rejection, and per-lane diagnostics.
-- `scripts/maintenance/run-safety-score-v9-policy-sensitivity.ts` perturbs one numeric semantic field at a time over the durable golden corpus and reports affected archetypes, grade cliffs, full cap-candidate and binding-cap changes, score saturation, and all 28 pairwise ordering gaps/pass transitions. Its parameter listing contains only fields whose two default isolated perturbations both satisfy the policy schema; coupled fields are not advertised, and explicit invalid attempts fail closed.
+- `scripts/maintenance/run-safety-score-v9-policy-sensitivity.ts` perturbs one numeric semantic field at a time over the durable golden corpus and reports affected archetypes, grade cliffs, full cap-candidate and binding-cap changes, score saturation, and all 32 pairwise ordering gaps/pass transitions. Its parameter listing contains only fields whose two default isolated perturbations both satisfy the policy schema; coupled fields are not advertised, and explicit invalid attempts fail closed.
 - The runtime-neutral `facts`, archetype, Backing, Exit, Control, access-posture,
   dependency, formula, score, trace, stress, coverage, validation, and public
   projection modules under `shared/lib/safety-score-v9/` form one strict
@@ -46,12 +46,12 @@ The V9 implementation establishes candidate infrastructure without changing prod
 - `worker/src/lib/safety-score-v9-candidate.ts` and
   `worker/scripts/replay-safety-score-v9.ts` compile and evaluate the exact
   candidate deterministically. The selected shadow calibration candidate is
-  policy `84c0e4180eea111591a5a48dc1d9149d4f950b912cb239913a2cc6fa932f607d`,
-  evaluation build `b2c0b298bea563d8b548c3f9d594e43cb46b762b62bfd7be3053a72430d320d1`,
-  compiler schema `9d7b637e0f808df4f19699f7ad10f09413fb46cc66ed0befb707db59a44ca511`,
-  producer capability `19f1ab3ce18de294d33482cff07891f987a2715071cf48ba7cd75ff72562f198`,
+  policy `5d90e0bdb2990844ea3af0de7cf05044bf81900203774e64bfc5e406baa31719`,
+  evaluation build `10d76e3e6d38556841c9175c83d0850ce111e6c0477877cc32bf1a39fdf0b30c`,
+  compiler schema `4707f71439205b75a875726e759534f60e4ef363137052bd3126c80a2177d6e0`,
+  producer capability `6b2a7a9287636425b75304d2f88bdb7a422ed3e8b53a3ffe1971796798e35ad8`,
   and candidate ID
-  `safety-score-v9-candidate:v1:f3c9335b1fa87559f79421e392d876f7518a46a6575aa23b8cce2c7fcb2e876c`.
+  `safety-score-v9-candidate:v1:9589f4bec11e7a066232cc2167a6c6ea9438a5bcc76c0a0fa4c70b5a0de4fecd`.
   It has not been deployed or frozen for qualification.
 - **IDENTITY FREEZE RESCINDED BY OWNER RULING 2026-07-16; CALIBRATION SPRINT IN
   EFFECT:** deployed Batch 5 remains policy `5f4f92eec713b65b30d60e3cd8d05a613ab86b4512db4dead699c9b85c30f15e`
@@ -109,6 +109,22 @@ The V9 implementation establishes candidate infrastructure without changing prod
   immaterial bridges are `moderate`, while material bridges retain their reviewed
   tier semantics. Reserve-issuer concentration remains diagnostic because
   backing already prices the same obligor.
+- The 2026-07-16 real-A calibration batch makes proportional chain, DEX, and
+  bridge common mode diagnostic below 5%, moderate from 5% to below 10%, and
+  high at 10% or when exposure is unknown. Mature chain and DEX ecosystem
+  domains remain diagnostic; serial control domains do not enter this
+  proportional path. Whole missing mechanism reviews now retain known reserve
+  evidence and charge only the missing authored components at the existing
+  bounded quality, while authored partial reviews and integrity failures keep
+  their stricter treatment. The route compiler carries reviewed modeled
+  confidence instead of re-deriving it from execution certainty, defaults old
+  schema-v2 rows conservatively to low, and applies static-open suppression only
+  in the V9 adapter so public Redemption Backstop v4.18 remains unchanged.
+  Exact tracked-asset reserve slices inherit the evaluated upstream bound;
+  vague labels stay unresolved. Partially reviewed control inventories now
+  localize known status to semantically complete controls, including a known
+  authority model and incident state. The score-bearing mechanism overlay is
+  included in the evaluation-build manifest.
 - Deployment control is a separate 10% gate, not the 5% common-mode gate. Every
   reviewed non-native supply row requires exactly one known control and one
   reviewed route with the same share. Explicit native rows require no bridge
@@ -258,7 +274,77 @@ Numeric weights, evidence ceilings, track-record ceilings, bounded-compensabilit
 
 Missing critical facts produce their exact reason-coded `NR`. Bounded facts with a `ceiling` treatment emit an executable reason cap that references an existing evidence or minimum track-record ceiling; a ceiling treatment cannot validate without such a rule. Every unresolved fact is emitted as an itemized audit record with asset, pillar, code, classification, criticality, path, and reason; its owner, fact class, boundedness, treatment, release severity, and public label are declared once in the candidate registry rather than duplicated on every row. Unsupported designs and unresolved methodology are not silently treated as missing data. The 24-asset calibration cohort also carries per-asset cohorts, candidate grade, disposition, and sorted critical facts. Parent evaluation is deterministic and parent-first; missing parents and cycles remain explicit. Fuzzy implementation dates use the conservative range end, and variants inherit the newest critical implementation layer.
 
-## 2026-07-16 Calibration Sprint Result
+## 2026-07-16 Real-A Calibration Result
+
+The latest calibration projection uses registry fingerprint
+`9f806506d925a51ae64d862324f17319e5e149f2006344426a53b2b1e1022161`
+and the candidate identities pinned in Implementation Status. It remains a
+local reviewed-registry projection rather than activation evidence: the three
+production inputs were captured before that registry evidence was deployed and
+were rekeyed locally. V8.17 remains the public methodology.
+
+The retained engine-only replay and the reviewed evidence batch establish the
+following distribution:
+
+| Replay                       | Grade distribution                                    | C- or better | B- or better | IQR |
+| ---------------------------- | ----------------------------------------------------- | -----------: | -----------: | --: |
+| Locked baseline              | B+ 1, B 1, C+ 2, C 9, C- 12, D 105, F 212, NR 2       |           25 |            2 |   9 |
+| Corrected retained engine    | A 1, B 1, C+ 3, C 14, C- 14, D 123, F 186, NR 2       |           33 |            2 |   9 |
+| Reviewed-registry projection | A 1, B 1, B- 1, C+ 3, C 13, C- 14, D 123, F 186, NR 2 |           33 |            3 |   9 |
+| Each fresh capture           | A 1, B 1, B- 1, C+ 2, C 14, C- 14, D 127, F 182, NR 2 |           33 |            3 |   9 |
+
+Coverage stays 342/344 with `brlm-mento` and `zeusd-zoth` as the two
+integrity/classification `NR` assets and more than 99.99% of tracked supply
+rated. The fresh captures reduce the largest exact pillar tuple to 61/342
+(17.8%) and the largest score bucket to 47/342 (13.7%). Those two concentration
+gates pass. The retained reviewed-registry projection has 65/342 (19.0%) at the
+largest tuple and 52/342 (15.2%) in the largest score bucket.
+
+BOLD is a real production-path A: backing 78.05, exit 90.74, control 90,
+uncapped quality 85.48, and final 84/A under the unchanged less-than-24-month
+track-record cap. It has positive supply, strong current pillar evidence, an
+included executable DEX route, and no unresolved asset-wide control. FXUSD is
+70/B. Reviewed PUSD mint and upgrade evidence adds a third B-range asset at
+68/B-. The production-shaped composite remains 88/A+ without an injected
+score, cap, whitelist, or asset exception.
+
+Three distinct schema-v3 exact inputs were captured at 17:49, 18:04, and 18:19
+UTC. Their source generations and base-input generations are distinct. All
+three reproduce BOLD 84/A, the same histogram, the same B-range set, and zero
+top-30 score movement. Outside the top 30, Last USD moves by one point with its
+peg input; other observed changes do not cross a grade.
+
+The adverse-control gate does not pass. On the retained input, USDD moves from
+31/F to 39/F because its documented redemption route had been double-discounted:
+the captured medium modeled confidence was incorrectly re-derived as low. The
+fixed route is still bounded by the critical centralized-mint cap at 39, but a
+same-input lift violates the written guard. On fresh inputs, U also moves from
+31/F to 32/F when a current live reserve snapshot replaces the missing reserve
+envelope; the snapshot still records an undisclosed mixed basket, unsafe
+backing signals, and control 25. Neither movement is counted as calibration
+success.
+
+| Friday gate                                 | Result                                |
+| ------------------------------------------- | ------------------------------------- |
+| Coverage 342/344 and at least 99.99% supply | Pass                                  |
+| Existing live asset at 83-86/A              | Pass: BOLD 84/A                       |
+| A+ composite at least 87                    | Pass: 88/A+                           |
+| F at most 180                               | Fail: 186 retained, 182 fresh         |
+| C- or better at least 35                    | Fail: 33                              |
+| B- or better at least 5                     | Fail: 3                               |
+| Largest pillar tuple at most 20%            | Pass                                  |
+| Largest score bucket at most 15%            | Pass fresh; fail retained at 15.2%    |
+| Score IQR at least 12                       | Fail: 9                               |
+| Adverse controls unchanged                  | Fail: USDD retained; U on fresh input |
+
+**Latest ruling: not calibration-ready.** The batch proves that V9 can produce
+a defensible A for an existing live stablecoin without moving grade bands,
+weights, floors, or known-risk caps. It also materially reduces evidence
+compression. It does not satisfy the complete readiness contract, so V9 stays
+shadow-only, qualifying days remain zero, and no activation or public cutover
+is authorized.
+
+## Prior 2026-07-16 Calibration Sprint Result
 
 The selected shadow candidate uses registry revision
 `sha256:2a821e9b50c4a82177c1589e0375a1a673ecee7be1a642329163486af5a47a39`.
@@ -270,11 +356,11 @@ The policy, build, compiler, producer, and candidate identities are pinned in
 Implementation Status above. Two assets remain honestly `NR`: `brlm-mento` and
 `zeusd-zoth`.
 
-| Exact replay | Grade distribution |
+| Exact replay                     | Grade distribution                              |
 | --- | --- |
-| Day 1 deployed Batch 5 baseline | B- 2, C+ 3, C 12, C- 22, D 132, F 171, NR 2 |
+| Day 1 deployed Batch 5 baseline  | B- 2, C+ 3, C 12, C- 22, D 132, F 171, NR 2     |
 | Final same-input Day 3 candidate | B+ 1, B 1, C+ 2, C 9, C- 11, D 106, F 212, NR 2 |
-| Each post-lock Day 4 capture | B+ 1, B 1, C+ 2, C 9, C- 12, D 105, F 212, NR 2 |
+| Each post-lock Day 4 capture     | B+ 1, B 1, C+ 2, C 9, C- 12, D 105, F 212, NR 2 |
 
 The larger F cohort is not a target histogram. It is the result of replacing
 optimistic aggregate bridge/control assumptions with conserved deployment rows
@@ -284,14 +370,14 @@ by critical mint/control posture, two by backing plus unresolved mechanism or
 control evidence, and one by its peg multiplier. No unexplained top-30 lift or
 regression remains.
 
-| Target | Day 1 | Final | Material result |
+| Target | Day 1 | Final | Material result                                                                       |
 | --- | ---: | ---: | --- |
-| BOLD | 69/B- | 79/B+ | Strong evidence; actual backing 78.05 and exit 72.76 keep raw quality at 79.19. |
-| FXUSD | 69/B- | 70/B | Strong evidence; exit 65.85 and correlated routes keep peg-adjusted quality at 70.19. |
-| USDC | 64/C+ | 64/C+ | 8.36% Hyperliquid supply is material non-mature-chain common mode, capped at 64. |
-| GHO | 64/C+ | 64/C+ | Shared Ethereum mint controller is material common mode, capped at 64. |
-| LUSD | 55/C | 59/C | Immutable mint evidence clears the old hold; unsafe liquidation mechanics cap at 59. |
-| USDT | 59/C | 55/C | Missing upgradeability and unresolved bridge/control identities now fail closed. |
+| BOLD   | 69/B- | 79/B+ | Strong evidence; actual backing 78.05 and exit 72.76 keep raw quality at 79.19.       |
+| FXUSD  | 69/B- |  70/B | Strong evidence; exit 65.85 and correlated routes keep peg-adjusted quality at 70.19. |
+| USDC   | 64/C+ | 64/C+ | 8.36% Hyperliquid supply is material non-mature-chain common mode, capped at 64.      |
+| GHO    | 64/C+ | 64/C+ | Shared Ethereum mint controller is material common mode, capped at 64.                |
+| LUSD   |  55/C |  59/C | Immutable mint evidence clears the old hold; unsafe liquidation mechanics cap at 59.  |
+| USDT   |  59/C |  55/C | Missing upgradeability and unresolved bridge/control identities now fail closed.      |
 
 There is no real A-range asset. This is a successful falsification of that
 hypothesis, not a reason to move a dial: the strongest real candidates remain
@@ -303,12 +389,12 @@ binding cap. It injects no pillar score, cap, override, or asset exception.
 
 | Adverse control | Day 3 | Post-lock Day 4 |
 | --- | ---: | ---: |
-| USDD | 31/F | 31/F |
-| U | 31/F | 31/F |
-| USDai | 39/F | 39/F |
-| TUSD | 49/D | 53/C- |
-| EURS | 20/F | 20/F |
-| MIM | 0/F | 0/F |
+| USDD            |  31/F |            31/F |
+| U               |  31/F |            31/F |
+| USDai           |  39/F |            39/F |
+| TUSD            |  49/D |           53/C- |
+| EURS            |  20/F |            20/F |
+| MIM             |   0/F |             0/F |
 
 TUSD's fresh-input move is explained by a new measured Polygon DEX route, which
 raises exit from 35 to 46.37 without removing its adverse issuer facts. The

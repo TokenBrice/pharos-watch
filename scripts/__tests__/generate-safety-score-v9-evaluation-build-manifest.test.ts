@@ -30,6 +30,7 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     expect(V9_SCORE_EVALUATOR_SOURCE_PATHS).toContain("shared/lib/safety-score-v9/formula.ts");
     expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("worker/src/lib/safety-score-v9-fact-set.ts");
     expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("shared/lib/p4-exit-route-capacity.ts");
+    expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("shared/data/safety-score-v9/mechanism-review-overlays-v1.json");
     expect(paths).toContain("shared/lib/safety-score-v9/score.ts");
     expect(paths).toContain("worker/src/lib/safety-score-v9-fact-set.ts");
     expect(paths).not.toContain("shared/lib/safety-score-v9/public.ts");
@@ -72,6 +73,13 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     const root = fixtureRoot();
     const before = buildV9EvaluationBuildManifest(root);
     writeFileSync(resolve(root, "shared/lib/p4-exit-route-capacity.ts"), "changed capability matrix\n");
+    expect(buildV9EvaluationBuildManifest(root).digest).not.toBe(before.digest);
+  });
+
+  it("changes the digest when a score-bearing mechanism overlay changes", () => {
+    const root = fixtureRoot();
+    const before = buildV9EvaluationBuildManifest(root);
+    writeFileSync(resolve(root, "shared/data/safety-score-v9/mechanism-review-overlays-v1.json"), '{"changed":true}\n');
     expect(buildV9EvaluationBuildManifest(root).digest).not.toBe(before.digest);
   });
 
