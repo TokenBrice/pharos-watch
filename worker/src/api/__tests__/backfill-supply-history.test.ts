@@ -530,7 +530,7 @@ describe("handleBackfillSupplyHistory", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 
-      if (url.includes("/coins/saturn-dollar/market_chart")) {
+      if (url.includes("/coins/spark-savings-usdt/market_chart")) {
         return new Response(
           JSON.stringify({
             market_caps: [[ts1, 0], [ts2, 0]],
@@ -539,7 +539,7 @@ describe("handleBackfillSupplyHistory", () => {
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
-      if (url.includes("/coins/saturn-dollar?")) {
+      if (url.includes("/coins/spark-savings-usdt?")) {
         return new Response(
           JSON.stringify({ market_data: { circulating_supply: 0 } }),
           { status: 200, headers: { "Content-Type": "application/json" } },
@@ -579,9 +579,9 @@ describe("handleBackfillSupplyHistory", () => {
 
     const res = await handleBackfillSupplyHistory(
       makeDb(capturedStatements),
-      makeApiUrl("/api/backfill-supply-history?stablecoin=usdat-saturn&startDay=2026-04-09&endDay=2026-04-10"),
+      makeApiUrl("/api/backfill-supply-history?stablecoin=susdt-spark&startDay=2026-04-09&endDay=2026-04-10"),
       true,
-      makeApiRequest("/api/backfill-supply-history?stablecoin=usdat-saturn&startDay=2026-04-09&endDay=2026-04-10", {
+      makeApiRequest("/api/backfill-supply-history?stablecoin=susdt-spark&startDay=2026-04-09&endDay=2026-04-10", {
         adminKey: "secret",
       }),
       null,
@@ -605,7 +605,7 @@ describe("handleBackfillSupplyHistory", () => {
     );
     expect(inserts).toHaveLength(2);
     // 1,000,000 tokens × $1.0002 ≈ 1,000,200
-    expect(inserts[0].args[0]).toBe("usdat-saturn");
+    expect(inserts[0].args[0]).toBe("susdt-spark");
     expect(inserts[0].args[2] as number).toBeCloseTo(1_000_200, -1);
     expect(inserts[0].args[3] as number).toBeCloseTo(1.0002, 4);
     expect(inserts[1].args[2] as number).toBeCloseTo(1_101_210, -1);
@@ -624,7 +624,7 @@ describe("handleBackfillSupplyHistory", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 
-      if (url.includes("/coins/saturn-dollar/market_chart")) {
+      if (url.includes("/coins/spark-savings-usdt/market_chart")) {
         return new Response(
           JSON.stringify({
             market_caps: [[ts1, 1_234_567], [ts2, 0]],
@@ -633,7 +633,7 @@ describe("handleBackfillSupplyHistory", () => {
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
-      if (url.includes("/coins/saturn-dollar?")) {
+      if (url.includes("/coins/spark-savings-usdt?")) {
         return new Response(
           JSON.stringify({ market_data: { circulating_supply: 0 } }),
           { status: 200, headers: { "Content-Type": "application/json" } },
@@ -671,9 +671,9 @@ describe("handleBackfillSupplyHistory", () => {
 
     const res = await handleBackfillSupplyHistory(
       makeDb(capturedStatements),
-      makeApiUrl("/api/backfill-supply-history?stablecoin=usdat-saturn&startDay=2026-04-09&endDay=2026-04-10"),
+      makeApiUrl("/api/backfill-supply-history?stablecoin=susdt-spark&startDay=2026-04-09&endDay=2026-04-10"),
       true,
-      makeApiRequest("/api/backfill-supply-history?stablecoin=usdat-saturn&startDay=2026-04-09&endDay=2026-04-10", {
+      makeApiRequest("/api/backfill-supply-history?stablecoin=susdt-spark&startDay=2026-04-09&endDay=2026-04-10", {
         adminKey: "secret",
       }),
       null,
@@ -696,8 +696,8 @@ describe("handleBackfillSupplyHistory", () => {
       stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
     );
     expect(inserts).toHaveLength(2);
-    expect(inserts[0].args).toEqual(["usdat-saturn", Math.floor(ts1 / 1000 / 86_400) * 86_400, 1_234_567, 1.0002]);
-    expect(inserts[1].args[0]).toBe("usdat-saturn");
+    expect(inserts[0].args).toEqual(["susdt-spark", Math.floor(ts1 / 1000 / 86_400) * 86_400, 1_234_567, 1.0002]);
+    expect(inserts[1].args[0]).toBe("susdt-spark");
     expect(inserts[1].args[1]).toBe(Math.floor(ts2 / 1000 / 86_400) * 86_400);
     expect(inserts[1].args[2] as number).toBeCloseTo(1_101_210, -1);
     expect(inserts[1].args[3] as number).toBeCloseTo(1.0011, 4);
@@ -1162,13 +1162,13 @@ describe("handleBackfillSupplyHistory", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 
-      if (url.includes("/coins/saturn-dollar/market_chart")) {
+      if (url.includes("/coins/spark-savings-usdt/market_chart")) {
         return new Response(
           JSON.stringify({ market_caps: [[ts1, 0]], prices: [[ts1, 1.0]] }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
-      if (url.includes("/coins/saturn-dollar?")) {
+      if (url.includes("/coins/spark-savings-usdt?")) {
         return new Response(
           JSON.stringify({ market_data: { circulating_supply: 0 } }),
           { status: 200, headers: { "Content-Type": "application/json" } },
@@ -1179,9 +1179,9 @@ describe("handleBackfillSupplyHistory", () => {
 
     const res = await handleBackfillSupplyHistory(
       makeDb(),
-      makeApiUrl("/api/backfill-supply-history?stablecoin=usdat-saturn&startDay=2026-04-09&endDay=2026-04-09"),
+      makeApiUrl("/api/backfill-supply-history?stablecoin=susdt-spark&startDay=2026-04-09&endDay=2026-04-09"),
       true,
-      makeApiRequest("/api/backfill-supply-history?stablecoin=usdat-saturn&startDay=2026-04-09&endDay=2026-04-09", {
+      makeApiRequest("/api/backfill-supply-history?stablecoin=susdt-spark&startDay=2026-04-09&endDay=2026-04-09", {
         adminKey: "secret",
       }),
       null,

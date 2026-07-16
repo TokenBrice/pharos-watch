@@ -6,6 +6,7 @@ import { mockFetchRetry } from "../../test-helpers/cron";
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
 import { syncStablecoinCharts } from "../sync-stablecoin-charts";
+import { STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS } from "../../lib/stablecoin-charts-reconciliation";
 
 function makeRawChartPoints(
   count: number,
@@ -194,7 +195,11 @@ describe("syncStablecoinCharts", () => {
       supplementalHistoryChunks: number;
       supplementalHistoryMaxBindCount: number;
     };
-    expect(metadata.supplementalHistoryChunks).toBeGreaterThan(1);
+    // Chunked at the 90-bind limit; the config size drives how many chunks the
+    // supplemental supply-history query splits into.
+    expect(metadata.supplementalHistoryChunks).toBe(
+      Math.ceil(STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS.length / 90),
+    );
     expect(metadata.supplementalHistoryMaxBindCount).toBeLessThanOrEqual(90);
 
     const supplyHistoryQueries = (db as MockD1Database)
