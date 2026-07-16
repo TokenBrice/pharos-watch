@@ -337,8 +337,41 @@
     {
       "name": "Physical gold (LBMA Good Delivery bars)",
       "pct": 100,
-      "risk": "very-low"
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "LLC Virelint Group and the USDKG reserve-custody structure",
+      "riskFactors": ["market", "custody", "counterparty", "legal", "liquidity", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-16",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USDKG transparency and Q4 2025 reserve report index",
+        "url": "https://www.usdkg.com/transparency"
+      },
+      {
+        "label": "USDKG Kreston gold-audit summary (2025-12-08)",
+        "url": "https://www.usdkg.com/blog/usdkgs-gold-audit-a-new-standard-for-stablecoins"
+      }
+    ],
+    "rationale": "USDKG's transparency portal identifies physical gold as the complete reserve category and indexes the Q4 2025 Kreston report. The issuer's dated audit summary says Kreston performed agreed-upon procedures covering existence, ownership, quantity, valuation, serial and purity documentation, sealed storage, transport records, and custody agreements for 30 bars totaling approximately 376 kilograms. The medium risk tier reflects gold-market, physical-custody, legal, and redemption-liquidity exposure rather than treating bullion as cash-equivalent.",
+    "compositionBasis": "USDKG Q4 2025 Kreston physical-gold reserve verification",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No reserve asset class remains unidentified; current bar-level allocation, named bank, custody concentration, and holder redemption timing remain outside the composition percentage.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Physical gold (LBMA Good Delivery bars)",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Physical gold is an exogenous commodity reserve rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
   "launchDate": "2025-12-01"
 }
