@@ -11,7 +11,6 @@ import {
 const EXPECTED_RETIRED_DILUTABLE_UPSTREAM_IDS = [
   "crvusd-curve",
   "dai-makerdao",
-  "dola-inverse-finance",
   "jpyt-dephaser",
   "pht-pht",
   "reusd-resupply",
@@ -65,7 +64,8 @@ describe("report-card blacklist authority", () => {
     expect(resolved.get("usdr-ring")).toBe(true);
     expect(resolved.get("inalpha-nest")).toBe(true);
     expect(resolved.get("sbold-k3-capital")).toBe("possible");
-    expect(resolved.get("cdp-enosys")).toBe("possible");
+    // cdp-enosys: re-audited up to a resolved Yes — owner can register burn/forced-transfer callers.
+    expect(resolved.get("cdp-enosys")).toBe(true);
   });
 
   it("pins the follow-up audit for disputed unfreezable classifications", () => {
@@ -122,7 +122,9 @@ describe("report-card blacklist authority", () => {
     expect(resolved.get("m-m0")).toBe(true);
     expect(resolved.get("isc-international-stable-currency")).toBe(true);
     expect(resolved.get("usg-tangent")).toBe(true);
-    expect(resolved.get("dllr-sovryn")).toBe("possible");
+    // dllr-sovryn: re-audited up to a resolved Yes — manager-gated burn plus an
+    // owner-settable MassetManager proxy establish direct holder intervention.
+    expect(resolved.get("dllr-sovryn")).toBe(true);
     expect(resolved.get("fxd-fathom")).toBe("possible");
     expect(resolved.get("cjpy-yamato")).toBe("possible");
     // jusd-juicedollar: TERRA re-review confirmed the verified Citrea JUSD source
@@ -131,7 +133,10 @@ describe("report-card blacklist authority", () => {
     // longer propagates as inheritance.
     expect(resolved.get("jusd-juicedollar")).toBe(false);
     expect(resolved.get("silk-shade-protocol")).toBe("inherited");
-    expect(resolved.get("bnusd-balanced")).toBe("inherited");
+    // bnusd-balanced: re-audited up to a resolved Yes — the canonical bnUSD SCORE
+    // exposes a Governance-only govTransfer that moves balances from arbitrary
+    // source addresses, a direct holder-control surface above reserve inheritance.
+    expect(resolved.get("bnusd-balanced")).toBe(true);
   });
 
   it("pins the retired Dilutable cohort under freeze-only semantics", () => {
