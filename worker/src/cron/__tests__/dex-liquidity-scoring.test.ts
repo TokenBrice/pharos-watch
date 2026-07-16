@@ -766,7 +766,7 @@ describe("dex-liquidity scoring", () => {
   });
 
   it("rejects a peg-impossible KRWO price before replacing dex_prices", async () => {
-    await computeDexPrices(
+    const diagnostics = await computeDexPrices(
       makeQueryDb([{ match: "SELECT stablecoin_id FROM dex_prices", all: [{ stablecoin_id: "krwo-gimswap" }] }]),
       new Map([
         ["krwo-gimswap", [makeDexPricePool({
@@ -786,6 +786,23 @@ describe("dex-liquidity scoring", () => {
     expect(prepared).toHaveLength(1);
     expect(prepared[0]?.sql).toContain("DELETE FROM dex_prices");
     expect(prepared[0]?.boundValues).toEqual(["krwo-gimswap"]);
+    expect(diagnostics).toEqual({
+      rejectedObservationCount: 1,
+      rejectedByStablecoin: [{
+        stablecoinId: "krwo-gimswap",
+        reason: "peg-impossible",
+        observations: [{
+          chain: "BSC",
+          protocol: "pancakeswap",
+          poolKey: "bsc:pancakeswap-krwo-usdt",
+          price: 1349.284,
+          tvl: 82_806,
+          sourceFamily: "direct_api",
+        }],
+        truncated: 0,
+      }],
+      truncatedStablecoins: 0,
+    });
   });
 
   it("persists a correctly oriented KRWO price inside the KRW peg band", async () => {

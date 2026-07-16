@@ -7,7 +7,7 @@ import { batchExecute } from "../../lib/db";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { PriceValidationReferences } from "../../lib/price-validation";
-import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
+import type { DexPriceObs, LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import { buildMeasuredPoolDirectionKey } from "../measured-execution/inventory";
 import {
@@ -435,13 +435,34 @@ export async function computeDepthStability(
 }
 
 /** Compute DEX-implied prices from the final retained pool set and persist to dex_prices. */
+export interface DexPricePersistenceDiagnostics {
+  rejectedObservationCount: number;
+  rejectedByStablecoin: Array<{
+    stablecoinId: string;
+    reason: "peg-impossible";
+    observations: Array<{
+      chain: string;
+      protocol: string;
+      poolKey: string | null;
+      price: number;
+      tvl: number;
+      sourceFamily: string | null;
+    }>;
+    truncated: number;
+  }>;
+  truncatedStablecoins: number;
+}
+
+const MAX_DEX_PRICE_REJECTION_ASSETS = 20;
+const MAX_DEX_PRICE_REJECTIONS_PER_ASSET = 5;
+
 export async function computeDexPrices(
   db: D1Database,
   retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>,
   nowSec: number,
   references?: PriceValidationReferences,
   signal?: AbortSignal,
-): Promise<void> {
+): Promise<DexPricePersistenceDiagnostics> {
   throwIfAborted(signal);
   const priceObservations = buildDexPriceObservationsFromRetainedPools(retainedPoolsByStablecoin);
   const existingRows = await db.prepare("SELECT stablecoin_id FROM dex_prices").all<{ stablecoin_id: string }>();
@@ -449,14 +470,16 @@ export async function computeDexPrices(
   throwIfAborted(signal);
 
   if (priceObservations.size === 0) {
-    if (existingIds.size === 0) return;
+    if (existingIds.size === 0) {
+      return { rejectedObservationCount: 0, rejectedByStablecoin: [], truncatedStablecoins: 0 };
+    }
 
     const retireStmts = Array.from(existingIds, (stablecoinId) =>
       db.prepare("DELETE FROM dex_prices WHERE stablecoin_id = ?").bind(stablecoinId),
     );
     await batchExecute(db, retireStmts, { signal });
     console.log(`[dex-liquidity] Retired ${retireStmts.length} DEX price rows with no current observations`);
-    return;
+    return { rejectedObservationCount: 0, rejectedByStablecoin: [], truncatedStablecoins: 0 };
   }
 
   // Load primary prices from stablecoins cache for comparison
@@ -474,6 +497,9 @@ export async function computeDexPrices(
   const observedIds = new Set<string>();
   let collapsedDuplicateGroups = 0;
   let collapsedDuplicateObservations = 0;
+  let rejectedObservationCount = 0;
+  let rejectedStablecoinCount = 0;
+  const rejectedByStablecoin: DexPricePersistenceDiagnostics["rejectedByStablecoin"] = [];
   for (const [id, observations] of priceObservations) {
     throwIfAborted(signal);
     if (observations.length === 0) continue;
@@ -489,9 +515,34 @@ export async function computeDexPrices(
 
     // Validate before selecting the aggregate so an impossible quote cannot
     // enter dex_prices while merely being hidden from price_sources_json.
-    const plausibleObservations = collapsedObservations.filter((observation) =>
-      isPlausibleDexObservationPrice(id, observation.price, references)
-    );
+    const plausibleObservations: DexPriceObs[] = [];
+    const rejectedObservations: DexPriceObs[] = [];
+    for (const observation of collapsedObservations) {
+      (isPlausibleDexObservationPrice(id, observation.price, references)
+        ? plausibleObservations
+        : rejectedObservations).push(observation);
+    }
+    if (rejectedObservations.length > 0) {
+      rejectedObservationCount += rejectedObservations.length;
+      rejectedStablecoinCount++;
+      if (rejectedByStablecoin.length < MAX_DEX_PRICE_REJECTION_ASSETS) {
+        rejectedByStablecoin.push({
+          stablecoinId: id,
+          reason: "peg-impossible",
+          observations: rejectedObservations
+            .slice(0, MAX_DEX_PRICE_REJECTIONS_PER_ASSET)
+            .map((observation) => ({
+              chain: observation.chain,
+              protocol: observation.protocol,
+              poolKey: observation.poolKey ?? null,
+              price: observation.price,
+              tvl: observation.tvl,
+              sourceFamily: observation.sourceFamily ?? null,
+            })),
+          truncated: Math.max(0, rejectedObservations.length - MAX_DEX_PRICE_REJECTIONS_PER_ASSET),
+        });
+      }
+    }
     if (plausibleObservations.length === 0) continue;
     observedIds.add(id);
 
@@ -610,4 +661,9 @@ export async function computeDexPrices(
         (retiredCount > 0 ? ` and retired ${retiredCount} stale rows` : ""),
     );
   }
+  return {
+    rejectedObservationCount,
+    rejectedByStablecoin,
+    truncatedStablecoins: Math.max(0, rejectedStablecoinCount - rejectedByStablecoin.length),
+  };
 }
