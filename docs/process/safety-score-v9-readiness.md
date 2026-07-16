@@ -46,7 +46,7 @@ The V9 implementation establishes candidate infrastructure without changing prod
   candidate deterministically. The current policy semantic digest is
   `9913d3dc3f4d4f00842c99be47a8ee5ac608b589867329ef18f7ad9c63e94ded`;
   the current evaluation-build digest is
-  `049c288cc02a887f18dc2785bcdb712b64195a6d1cc331443e2c17ac75634e60`.
+  `03630cd7bf76cd8fa4e6377113e22b05ca876d60f2692997f32222b3f23c599c`.
 - The 2026-07-15 Batch 3 calibration revision (owner rulings 2026-07-15)
   applies the two ruled cap changes and nothing else. (1) The mint posture gains
   a distinct `unbounded-reconciled` rung (`mintPostureQuality` = 55) for an

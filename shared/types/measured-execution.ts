@@ -5,6 +5,7 @@ import { ExitRouteCapacityPointSchema } from "./exit-route";
 export const DEX_MEASURED_EXECUTION_SCHEMA_VERSION = "dex-measured-execution-v1" as const;
 export const DEX_MEASURED_TARGET_SCHEMA_VERSION = "dex-measured-target-v1" as const;
 export const DEX_MEASURED_MAX_COST_BPS = 200;
+export const DEX_MEASURED_MAX_FAVORABLE_OUTPUT_RATIO = 1.02;
 export const DEX_MEASURED_MARGINAL_NOTIONAL_USD = 1_000;
 export const DEX_MEASURED_CAPACITY_NOTIONALS_USD = [100_000, 1_000_000, 10_000_000, 25_000_000] as const;
 export const DEX_MEASURED_FRESHNESS_MAX_SEC = 2 * 30 * 60;
@@ -46,11 +47,13 @@ export const DexMeasuredExecutionQuotePointProofSchema = z.object({
   amountInRaw: z.string().regex(/^[1-9][0-9]*$/),
   amountOutRaw: z.string().regex(/^[0-9]+$/),
   callData: z.string().regex(/^0x[0-9a-f]+$/),
-  returnData: z.string().regex(/^0x[0-9a-f]+$/),
+  returnData: z.string().regex(/^0x[0-9a-f]*$/),
   inputUsd: z.number().finite().positive(),
   outputUsd: z.number().finite().nonnegative(),
   costBps: z.number().finite().nonnegative(),
   passesCostBound: z.boolean(),
+  /** A decoded Multicall inner failure at this exact input, not an RPC failure. */
+  reverted: z.literal(true).optional(),
 });
 export type DexMeasuredExecutionQuotePointProof = z.infer<typeof DexMeasuredExecutionQuotePointProofSchema>;
 
@@ -345,7 +348,13 @@ export function validateDexMeasuredExecutionProfile(input: {
       return Math.abs(point.inputUsd - claimed.inputUsd) > 0.02 ||
         Math.abs(point.outputUsd - claimed.outputUsd) > 0.02 ||
         Math.abs(point.costBps - claimed.costBps) > 0.02 ||
-        point.passesCostBound !== claimed.passesCostBound;
+        point.passesCostBound !== claimed.passesCostBound ||
+        (claimed.reverted === true
+          ? claimed.amountOutRaw !== "0" ||
+            claimed.outputUsd !== 0 ||
+            Math.abs(claimed.costBps - 10_000) > 0.02 ||
+            claimed.passesCostBound
+          : claimed.returnData === "0x");
     })
   ) issues.add("invalid-quote-proof");
   const recomputedMarginal = recomputedProof[0];
@@ -355,7 +364,10 @@ export function validateDexMeasuredExecutionProfile(input: {
   ) issues.add("invalid-quote-proof");
   // A marginal quote below the cost bound is valid measured zero-capacity
   // evidence. Only an implausibly favorable quote breaches the spot guard.
-  if (recomputedMarginal == null || recomputedMarginal.outputUsd / recomputedMarginal.inputUsd > 1.02) {
+  if (
+    recomputedMarginal == null ||
+    recomputedMarginal.outputUsd / recomputedMarginal.inputUsd > DEX_MEASURED_MAX_FAVORABLE_OUTPUT_RATIO
+  ) {
     issues.add("quote-price-mismatch");
   }
 

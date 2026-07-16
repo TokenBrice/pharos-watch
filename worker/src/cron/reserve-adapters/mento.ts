@@ -598,60 +598,83 @@ interface MentoPoolExchange {
   };
 }
 
-function mentoPoolEnumerationCacheKey(params: MentoBrokerPoolParams): string {
+interface MentoPoolCallOptions {
+  signal: AbortSignal;
+  ctx: AdapterContext | undefined;
+  rpcUrl: string | undefined;
+  fallbackRpcUrl: string | undefined;
+  rpcMode: EvmOnchainInput["rpcMode"];
+  chain: string;
+}
+
+function mentoPoolCacheKey(params: MentoBrokerPoolParams, resource: string): string {
   return [
-    "mento-bipool-enumeration:v1",
+    "mento-bipool:v2",
     params.rpcUrl ?? "",
     params.fallbackRpcUrl ?? "",
+    resource,
   ].join(":");
 }
 
-function loadMentoPoolExchanges(
-  params: MentoBrokerPoolParams,
-  callOptions: {
-    signal: AbortSignal;
-    ctx: AdapterContext | undefined;
-    rpcUrl: string | undefined;
-    fallbackRpcUrl: string | undefined;
-    rpcMode: EvmOnchainInput["rpcMode"];
-    chain: string;
-  },
-): Promise<MentoPoolExchange[]> {
-  const cacheKey = mentoPoolEnumerationCacheKey(params);
-  const cached = callOptions.ctx?.requestCache?.get(cacheKey) as Promise<MentoPoolExchange[]> | undefined;
+function loadCachedMentoPoolRead<T>(
+  cacheKey: string,
+  callOptions: MentoPoolCallOptions,
+  load: () => Promise<T>,
+): Promise<T> {
+  const cache = callOptions.ctx?.requestCache;
+  const cached = cache?.get(cacheKey) as Promise<T> | undefined;
   if (cached) return cached;
 
-  const request = (async () => {
-    const exchangeIdsRaw = await fetchOnchainRawCall({
-      ...callOptions,
-      contract: MENTO_BIPOOL_MANAGER_ADDRESS,
-      data: GET_EXCHANGE_IDS_SELECTOR,
-    });
-    const exchangeIds = decodeBytes32ArrayWord(exchangeIdsRaw, {
-      maxItems: MENTO_BROKER_POOL_MAX_EXCHANGE_IDS,
-    });
-    if (!exchangeIds || exchangeIds.length === 0) {
-      throw new Error("mento broker-pool: could not enumerate BiPoolManager exchange ids");
+  const request: Promise<T> = load().catch((error) => {
+    // Each coin has its own redemption deadline. Do not let one coin's abort
+    // leave a rejected promise that poisons every later Mento coin in the run.
+    if (callOptions.signal.aborted && cache?.get(cacheKey) === request) {
+      cache.delete(cacheKey);
     }
+    throw error;
+  });
+  cache?.set(cacheKey, request);
+  return request;
+}
 
-    const poolExchanges: MentoPoolExchange[] = [];
-    for (const exchangeId of exchangeIds) {
-      throwIfAborted(callOptions.signal);
-      const poolExchange = decodePoolExchange(await fetchOnchainRawCall({
+function loadMentoExchangeIds(
+  params: MentoBrokerPoolParams,
+  callOptions: MentoPoolCallOptions,
+): Promise<`0x${string}`[]> {
+  return loadCachedMentoPoolRead(
+    mentoPoolCacheKey(params, "exchange-ids"),
+    callOptions,
+    async () => {
+      const exchangeIdsRaw = await fetchOnchainRawCall({
         ...callOptions,
         contract: MENTO_BIPOOL_MANAGER_ADDRESS,
-        data: `${GET_POOL_EXCHANGE_SELECTOR}${exchangeId.slice(2)}`,
-      }));
-      if (poolExchange) poolExchanges.push(poolExchange);
-    }
-    return poolExchanges;
-  })();
+        data: GET_EXCHANGE_IDS_SELECTOR,
+      });
+      const exchangeIds = decodeBytes32ArrayWord(exchangeIdsRaw, {
+        maxItems: MENTO_BROKER_POOL_MAX_EXCHANGE_IDS,
+      });
+      if (!exchangeIds || exchangeIds.length === 0) {
+        throw new Error("mento broker-pool: could not enumerate BiPoolManager exchange ids");
+      }
+      return exchangeIds;
+    },
+  );
+}
 
-  // Keep rejected enumeration promises for this run. Repeating the same 17 RPC
-  // reads for every Mento coin cannot turn a run-scoped provider failure into a
-  // success, and it was the largest avoidable reserve-slot cost during Night Watch.
-  callOptions.ctx?.requestCache?.set(cacheKey, request);
-  return request;
+function loadMentoPoolExchange(
+  params: MentoBrokerPoolParams,
+  exchangeId: `0x${string}`,
+  callOptions: MentoPoolCallOptions,
+): Promise<MentoPoolExchange | null> {
+  return loadCachedMentoPoolRead(
+    mentoPoolCacheKey(params, `exchange:${exchangeId}`),
+    callOptions,
+    async () => decodePoolExchange(await fetchOnchainRawCall({
+      ...callOptions,
+      contract: MENTO_BIPOOL_MANAGER_ADDRESS,
+      data: `${GET_POOL_EXCHANGE_SELECTOR}${exchangeId.slice(2)}`,
+    })),
+  );
 }
 
 function decodePoolExchange(raw: string | null): MentoPoolExchange | null {
@@ -687,7 +710,32 @@ async function fetchMentoBrokerPoolRedemption(
     chain: CELO_ONCHAIN_INPUT.chain,
   };
 
-  const poolExchanges = await loadMentoPoolExchanges(params, callOptions);
+  const exchangeIds = await loadMentoExchangeIds(params, callOptions);
+  const poolExchanges: MentoPoolExchange[] = [];
+  const matchedPoolIndexes = new Set<number>();
+  for (const exchangeId of exchangeIds) {
+    throwIfAborted(signal);
+    const poolExchange = await loadMentoPoolExchange(params, exchangeId, callOptions);
+    if (!poolExchange) continue;
+
+    let matchedExchange = false;
+    for (const [index, poolConfig] of params.pools.entries()) {
+      if (matchedPoolIndexes.has(index)) continue;
+      const selfAddress = poolConfig.selfTokenAddress.toLowerCase();
+      const counterAddress = poolConfig.counterAsset.address.toLowerCase();
+      const asset0 = poolExchange.asset0.toLowerCase();
+      const asset1 = poolExchange.asset1.toLowerCase();
+      if (
+        (asset0 === selfAddress && asset1 === counterAddress) ||
+        (asset0 === counterAddress && asset1 === selfAddress)
+      ) {
+        matchedPoolIndexes.add(index);
+        matchedExchange = true;
+      }
+    }
+    if (matchedExchange) poolExchanges.push(poolExchange);
+    if (matchedPoolIndexes.size === params.pools.length) break;
+  }
 
   let capacityUsd = 0;
   let maxFeeBps: number | null = null;

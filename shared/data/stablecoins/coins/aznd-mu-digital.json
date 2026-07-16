@@ -2,14 +2,14 @@
   "id": "aznd-mu-digital",
   "name": "Mu Digital AZND",
   "symbol": "AZND",
-  "oneLiner": "AZND is Mu Digital's KYC-gated, NAV-bearing dollar token backed by a Singapore-regulated Asia credit fund, with a muBOND junior tranche absorbing first losses.",
+  "oneLiner": "AZND is Mu Digital's KYC-gated dollar token; users lock it in the loAZND vault for Asia credit yield, with muBOND absorbing first losses.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
     "rwa": true,
-    "navToken": true
+    "navToken": false
   },
   "collateral": "The last Accountable snapshot Pharos ingested showed the Asset Pool concentrated in short-term cash and liquid bonds; Mu Digital's published mandate still targets an Asia credit portfolio with illiquid private credit capped at 20%, and the muBOND junior tranche overcollateralizes AZND at ~118%",
   "pegMechanism": "KYC-gated 1:1 mint using USDC, USDT, or AUSD; redemptions processed weekly (~7 calendar days) per Singapore fund liquidity calendar; muBOND junior tranche absorbs NAV losses first; insurance fund provides additional backstop; permissionless secondary swaps via DEX partners on Monad",
@@ -164,8 +164,8 @@
     ]
   },
   "yieldConfig": {
-    "yieldSource": "Mu Digital Asian Dollar credit fund",
-    "yieldType": "nav-appreciation"
+    "yieldSource": "Mu Digital loAZND vault",
+    "yieldType": "lending-vault"
   },
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",

@@ -124,6 +124,7 @@ export function buildDexMeasuredExecutionProfile(input: {
     outputUsd: point.outputUsd,
     costBps: point.costBps,
     passesCostBound: point.passesCostBound,
+    ...(point.reverted ? { reverted: true as const } : {}),
   }));
 
   return {

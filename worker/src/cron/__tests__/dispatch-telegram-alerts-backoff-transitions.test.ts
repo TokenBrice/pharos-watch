@@ -6,6 +6,7 @@ import {
   formatConsolidatedMessageSpy,
   makeSafetySnapshotCache,
   makeSafetySourceCache,
+  mockSendToChat,
   parseLogRecords,
   readCacheValue,
   resetDispatchTelegramAlertsTest,
@@ -14,6 +15,7 @@ import {
   telegramDeliveryTranscript,
   TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
   TELEGRAM_MAX_MESSAGES_PER_RUN,
+  type CronProgressUpdate,
 } from "./dispatch-telegram-alerts.test-support";
 
 function sources(
@@ -70,7 +72,7 @@ describe("dispatchTelegramAlerts", () => {
   beforeEach(resetDispatchTelegramAlertsTest);
   afterEach(cleanupDispatchTelegramAlertsTest);
 
-  it("records a fresh-send first strike without deactivating the subscriber", async () => {
+  it("records a fresh-send chat_not_found first strike without deactivating the subscriber", async () => {
     const harness = createDispatchHarness();
     sources(harness, { dews: { "usdc-circle": "CALM" } });
     harness.seed({
@@ -83,8 +85,8 @@ describe("dispatchTelegramAlerts", () => {
       blocked: true,
       retryable: false,
       permanentFailure: true,
-      statusCode: 403,
-      errorClass: "blocked",
+      statusCode: 400,
+      errorClass: "chat_not_found",
       delivery: "blocked",
       retryAfterSec: null,
     });
@@ -101,7 +103,7 @@ describe("dispatchTelegramAlerts", () => {
     ).toEqual({ alert_dews: 1 });
   });
 
-  it("deactivates a fresh-send blocked subscriber only on the second strike", async () => {
+  it("deactivates a fresh-send chat_not_found subscriber only on the second strike", async () => {
     const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();
     sources(harness, { dews: { "usdc-circle": "CALM" } });
@@ -115,8 +117,8 @@ describe("dispatchTelegramAlerts", () => {
       blocked: true,
       retryable: false,
       permanentFailure: true,
-      statusCode: 403,
-      errorClass: "blocked",
+      statusCode: 400,
+      errorClass: "chat_not_found",
       delivery: "blocked",
       retryAfterSec: null,
     });
@@ -133,9 +135,26 @@ describe("dispatchTelegramAlerts", () => {
     expect(
       harness.sqlite.prepare("SELECT alert_dews FROM telegram_subscriptions WHERE chat_id = '99999'").get(),
     ).toEqual({ alert_dews: 0 });
+
+    const attemptedAtDisable = mockSendToChat.mock.calls.length;
+    vi.advanceTimersByTime(121_000);
+    harness.seed({
+      dews: [{ stablecoinId: "usdc-circle", score: 92, band: "DANGER", computedAt: now + 121 }],
+    });
+
+    const nextMetadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+    expect(nextMetadata).toMatchObject({
+      eventsDetected: { dews: 1 },
+      subscribersNotified: 0,
+      messagesSent: 0,
+    });
+    expect(mockSendToChat).toHaveBeenCalledTimes(attemptedAtDisable);
+    expect(
+      harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE chat_id = '99999'").get(),
+    ).toEqual({ count: 0 });
   });
 
-  it("drains pending queue before processing fresh events", async () => {
+  it("drains pending queue on an eventless dispatch", async () => {
     const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();
     sources(harness);
@@ -150,6 +169,39 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.pendingDrained).toBe(2);
     expect(telegramDeliveryTranscript.map((entry) => entry.chatId)).toEqual(["100", "200"]);
     expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
+  });
+
+  it("drains existing pending alerts before authoritative target planning", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const harness = createDispatchHarness();
+    sources(harness, { dews: { "usdc-circle": "CALM" } });
+    harness.seed({
+      dews: [{ stablecoinId: "usdc-circle", score: 55, band: "WARNING" }],
+      pending: [{ id: 1, chatId: "pending-chat", html: "<b>Old alert</b>", createdAt: now - 120 }],
+      subscribers: [{ chatId: "fresh-chat" }],
+      subscriptions: [{ chatId: "fresh-chat", stablecoinId: "usdc-circle", alerts: { dews: true } }],
+    });
+    const reportProgress = vi.fn(async (_update: CronProgressUpdate) => undefined);
+
+    const metadata = JSON.parse(
+      (await dispatchTelegramAlerts(harness.db, "bot-token", undefined, undefined, reportProgress)).metadata,
+    );
+
+    const fanoutBuiltCallIndex = reportProgress.mock.calls.findIndex(([update]) => update.stage === "fanout-built");
+    expect(fanoutBuiltCallIndex).toBeGreaterThanOrEqual(0);
+    expect(mockSendToChat.mock.invocationCallOrder[0]).toBeLessThan(
+      reportProgress.mock.invocationCallOrder[fanoutBuiltCallIndex]!,
+    );
+    expect(metadata).toMatchObject({
+      pendingAttempted: 1,
+      pendingSent: 1,
+      pendingEnqueued: 1,
+      pendingTotal: 1,
+    });
+    expect(telegramDeliveryTranscript.map((entry) => entry.chatId)).toEqual(["pending-chat"]);
+    expect(
+      harness.sqlite.prepare("SELECT chat_id, delivery_state FROM telegram_pending_alerts").all(),
+    ).toEqual([{ chat_id: "fresh-chat", delivery_state: "pending" }]);
   });
 
   it("captures overflow subscribers durably before bounded materialization", async () => {
@@ -284,21 +336,38 @@ describe("dispatchTelegramAlerts", () => {
       "old-chat",
       retryResult({ statusCode: 429, errorClass: "rate_limit", retryAfterSec: 45 }),
     );
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+    const firstMetadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
 
-    expect(metadata).toMatchObject({
-      pendingAttempted: 2,
+    expect(firstMetadata).toMatchObject({
+      pendingAttempted: 1,
       pendingRetryQueued: 1,
+      pendingEnqueued: 1,
       freshAttempted: 0,
       freshSent: 0,
       freshDeferredPerChat: 0,
     });
-    expect(telegramDeliveryTranscript.map((entry) => entry.chatId).sort()).toEqual(["fresh-chat", "old-chat"]);
+    expect(telegramDeliveryTranscript.map((entry) => entry.chatId)).toEqual(["old-chat"]);
+
+    vi.advanceTimersByTime(5 * 60_000);
+    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+
+    expect(metadata).toMatchObject({
+      pendingAttempted: 2,
+      pendingRetryQueued: 0,
+      freshAttempted: 0,
+      freshSent: 0,
+      freshDeferredPerChat: 0,
+    });
+    expect(telegramDeliveryTranscript.map((entry) => entry.chatId).sort()).toEqual([
+      "fresh-chat",
+      "old-chat",
+      "old-chat",
+    ]);
     expect(
       harness.sqlite
         .prepare("SELECT chat_id, not_before_at, attempts, delivery_state FROM telegram_pending_alerts")
         .all(),
-    ).toEqual([{ chat_id: "old-chat", not_before_at: now + 45, attempts: 1, delivery_state: "pending" }]);
+    ).toEqual([]);
   });
 
   it("defers fresh alerts for chats already in per-chat backoff without sending", async () => {

@@ -44,6 +44,11 @@ export interface QuoterV2BatchOutcome {
   failureReason?: string;
 }
 
+interface AdaptiveChunkResult {
+  results: EvmMulticall3Result[];
+  transportFailureLabels: string[];
+}
+
 async function runWithConcurrency<T>(
   values: readonly T[],
   concurrency: number,
@@ -132,9 +137,12 @@ async function executeAdaptiveChunk(input: {
   chainRpcs: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   rpcBudget?: DexMeasuredExecutionRpcBudget;
-}): Promise<EvmMulticall3Result[]> {
+}): Promise<AdaptiveChunkResult> {
   if (input.rpcBudget && !input.rpcBudget.canRequestChain(input.chain)) {
-    return input.calls.map((call) => ({ label: call.label, success: false, returnData: "0x" }));
+    return {
+      results: input.calls.map((call) => ({ label: call.label, success: false, returnData: "0x" })),
+      transportFailureLabels: input.calls.map((call) => call.label),
+    };
   }
   const result = await fetchEvmMulticall3Aggregate3AtBlock(input.chain, input.calls, input.blockNumber, {
     chainRpcs: input.chainRpcs,
@@ -148,19 +156,28 @@ async function executeAdaptiveChunk(input: {
   });
   if (result != null) {
     input.rpcBudget?.recordChainResult(input.chain, true);
-    return result;
+    return { results: result, transportFailureLabels: [] };
   }
   if (input.rpcBudget?.stopReason) {
-    return input.calls.map((call) => ({ label: call.label, success: false, returnData: "0x" }));
+    return {
+      results: input.calls.map((call) => ({ label: call.label, success: false, returnData: "0x" })),
+      transportFailureLabels: input.calls.map((call) => call.label),
+    };
   }
   if (input.calls.length === 1) {
     input.rpcBudget?.recordChainResult(input.chain, false);
-    return [{ label: input.calls[0]!.label, success: false, returnData: "0x" }];
+    return {
+      results: [{ label: input.calls[0]!.label, success: false, returnData: "0x" }],
+      transportFailureLabels: [input.calls[0]!.label],
+    };
   }
   const midpoint = Math.ceil(input.calls.length / 2);
   const left = await executeAdaptiveChunk({ ...input, calls: input.calls.slice(0, midpoint) });
   const right = await executeAdaptiveChunk({ ...input, calls: input.calls.slice(midpoint) });
-  return [...left, ...right];
+  return {
+    results: [...left.results, ...right.results],
+    transportFailureLabels: [...left.transportFailureLabels, ...right.transportFailureLabels],
+  };
 }
 
 function decodePoint(request: EncodedQuoterV2Request, result: EvmMulticall3Result): DexMeasuredRawQuotePoint | null {
@@ -204,6 +221,28 @@ function decodePoint(request: EncodedQuoterV2Request, result: EvmMulticall3Resul
   }
 }
 
+function buildRevertedPoint(
+  request: EncodedQuoterV2Request,
+  result: EvmMulticall3Result,
+): DexMeasuredRawQuotePoint {
+  return {
+    amountInRaw: request.amountInRaw.toString(),
+    amountOutRaw: "0",
+    callData: request.callData.toLowerCase(),
+    returnData: result.returnData.toLowerCase() as `0x${string}`,
+    inputUsd: rawAmountToUsd(
+      request.amountInRaw,
+      request.target.tokenIn.decimals,
+      request.target.tokenIn.referencePriceUsd,
+    ),
+    outputUsd: 0,
+    costBps: 10_000,
+    passesCostBound: false,
+    reverted: true,
+    adapterMetadata: { executionReverted: true },
+  };
+}
+
 export async function quoteQuoterV2Requests(input: {
   requests: readonly QuoterV2Request[];
   blockNumber: number;
@@ -226,6 +265,7 @@ export async function quoteQuoterV2Requests(input: {
   }
 
   const resultsByLabel = new Map<string, EvmMulticall3Result>();
+  const transportFailureLabels = new Set<string>();
   await runWithConcurrency([...byChain], 3, async ([chain, requests]) => {
     for (let offset = 0; offset < requests.length; offset += QUOTER_MULTICALL_BATCH_SIZE) {
       const chunk = requests.slice(offset, offset + QUOTER_MULTICALL_BATCH_SIZE);
@@ -243,19 +283,22 @@ export async function quoteQuoterV2Requests(input: {
         signal: input.signal,
         rpcBudget: input.rpcBudget,
       });
-      for (const result of initial) resultsByLabel.set(result.label, result);
+      for (const result of initial.results) resultsByLabel.set(result.label, result);
+      for (const label of initial.transportFailureLabels) transportFailureLabels.add(label);
 
       const failedCalls = calls.filter((call) => !resultsByLabel.get(call.label)?.success);
-      if (failedCalls.length > 0) {
+      for (const failedCall of failedCalls) {
         const retry = await executeAdaptiveChunk({
           chain,
-          calls: failedCalls,
+          calls: [failedCall],
           blockNumber: input.blockNumber,
           chainRpcs: input.chainRpcs,
           signal: input.signal,
           rpcBudget: input.rpcBudget,
         });
-        for (const result of retry) resultsByLabel.set(result.label, result);
+        for (const result of retry.results) resultsByLabel.set(result.label, result);
+        if (retry.transportFailureLabels.includes(failedCall.label)) transportFailureLabels.add(failedCall.label);
+        else transportFailureLabels.delete(failedCall.label);
       }
     }
   });
@@ -263,13 +306,29 @@ export async function quoteQuoterV2Requests(input: {
   for (const request of valid) {
     const result = resultsByLabel.get(request.label);
     const outcomeIndex = Number.parseInt(request.label.slice(0, request.label.indexOf(":")), 10);
-    const point = result ? decodePoint(request, result) : null;
+    if (!result || transportFailureLabels.has(request.label)) {
+      outcomes[outcomeIndex] = {
+        targetId: request.target.targetId,
+        inputUsd: request.inputUsd,
+        failureReason: "quoter-rpc-unavailable",
+      };
+      continue;
+    }
+    if (!result.success) {
+      outcomes[outcomeIndex] = {
+        targetId: request.target.targetId,
+        inputUsd: request.inputUsd,
+        point: buildRevertedPoint(request, result),
+      };
+      continue;
+    }
+    const point = decodePoint(request, result);
     outcomes[outcomeIndex] = point
       ? { targetId: request.target.targetId, inputUsd: request.inputUsd, point }
       : {
           targetId: request.target.targetId,
           inputUsd: request.inputUsd,
-          failureReason: "quoter-revert-or-invalid-result",
+          failureReason: "quoter-invalid-result",
         };
   }
   return outcomes;
@@ -347,7 +406,7 @@ export async function resolveQuoterV2PoolBindings(input: {
   await runWithConcurrency([...byChain], 3, async ([chain, requests]) => {
     for (let offset = 0; offset < requests.length; offset += QUOTER_MULTICALL_BATCH_SIZE) {
       const chunk = requests.slice(offset, offset + QUOTER_MULTICALL_BATCH_SIZE);
-      const results = await executeAdaptiveChunk({
+      const execution = await executeAdaptiveChunk({
         chain,
         calls: chunk.map((request) => ({
           label: request.label,
@@ -360,12 +419,13 @@ export async function resolveQuoterV2PoolBindings(input: {
         signal: input.signal,
         rpcBudget: input.rpcBudget,
       });
-      const byLabel = new Map(results.map((result) => [result.label, result]));
+      const byLabel = new Map(execution.results.map((result) => [result.label, result]));
+      const transportFailures = new Set(execution.transportFailureLabels);
       for (const request of chunk) {
         const index = Number.parseInt(request.label.slice(0, request.label.indexOf(":")), 10);
         const result = byLabel.get(request.label);
         const resolvedPool = result?.success ? decodeV3FactoryGetPool(result.returnData as `0x${string}`) : null;
-        if (!result || !resolvedPool) {
+        if (!result || transportFailures.has(request.label) || !resolvedPool) {
           outcomes[index] = { targetId: request.target.targetId, failureReason: "factory-get-pool-failed" };
         } else if (resolvedPool !== request.expectedPool) {
           outcomes[index] = { targetId: request.target.targetId, failureReason: "factory-pool-mismatch" };
@@ -454,12 +514,31 @@ export function validateQuoterV2ProfileProof(profile: DexMeasuredExecutionProfil
       )
         issues.add("call-data-mismatch");
 
-      const decodedResult = decodeFunctionResult({
-        abi: QUOTER_V2_ABI,
-        functionName: "quoteExactInputSingle",
-        data: point.returnData as `0x${string}`,
-      }) as readonly [bigint, bigint, number, bigint];
-      if (decodedResult[0].toString() !== point.amountOutRaw) issues.add("return-data-mismatch");
+      if (point.reverted) {
+        if (
+          point.amountOutRaw !== "0" ||
+          point.outputUsd !== 0 ||
+          point.costBps !== 10_000 ||
+          point.passesCostBound
+        ) issues.add("invalid-revert-proof");
+        try {
+          decodeFunctionResult({
+            abi: QUOTER_V2_ABI,
+            functionName: "quoteExactInputSingle",
+            data: point.returnData as `0x${string}`,
+          });
+          issues.add("revert-data-decodes-as-success");
+        } catch {
+          // Revert data must not decode as a successful QuoterV2 result.
+        }
+      } else {
+        const decodedResult = decodeFunctionResult({
+          abi: QUOTER_V2_ABI,
+          functionName: "quoteExactInputSingle",
+          data: point.returnData as `0x${string}`,
+        }) as readonly [bigint, bigint, number, bigint];
+        if (decodedResult[0].toString() !== point.amountOutRaw) issues.add("return-data-mismatch");
+      }
     } catch {
       issues.add("abi-decode-failed");
     }

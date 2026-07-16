@@ -680,7 +680,7 @@ describe("mento redemption telemetry", () => {
     expect(result.metadata?.redemptionFeeBps).toBe(5);
   });
 
-  it("enumerates broker pools sequentially once for all Mento coins in the same reserve run", async () => {
+  it("caches broker reads separately and stops each coin once its configured pools match", async () => {
     const requestedData: string[] = [];
     let activePoolReads = 0;
     let maxActivePoolReads = 0;
@@ -702,18 +702,48 @@ describe("mento redemption telemetry", () => {
           spread: 5n * 10n ** 20n,
         });
       }
+      if (data === `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_3.slice(2)}`) {
+        return encodePoolExchange({
+          asset0: USDT_ADDRESS,
+          asset1: USDM_ADDRESS,
+          bucket0: 2n * 10n ** 18n,
+          bucket1: 0n,
+          spread: 10n ** 22n,
+        });
+      }
       return null;
     });
-    const config = makeRedemptionConfig({
+    const usdcConfig = makeRedemptionConfig({
       redemption: {
         kind: "broker-pool",
         pools: [{ selfTokenAddress: USDM_ADDRESS, counterAsset: { address: USDC_ADDRESS } }],
       },
     });
+    const usdtConfig = makeRedemptionConfig({
+      redemption: {
+        kind: "broker-pool",
+        pools: [{ selfTokenAddress: USDM_ADDRESS, counterAsset: { address: USDT_ADDRESS } }],
+      },
+    });
     const requestCache = makeRequestCache();
 
-    await fetchMentoReserves({ id: "cusd-celo" } as never, config, new AbortController().signal, { requestCache } as never);
-    await fetchMentoReserves({ id: "ceur-celo" } as never, config, new AbortController().signal, { requestCache } as never);
+    await fetchMentoReserves(
+      { id: "cusd-celo" } as never,
+      usdcConfig,
+      new AbortController().signal,
+      { requestCache } as never,
+    );
+    expect(requestedData).toEqual([
+      GET_EXCHANGE_IDS_SELECTOR,
+      `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`,
+    ]);
+
+    await fetchMentoReserves(
+      { id: "ceur-celo" } as never,
+      usdtConfig,
+      new AbortController().signal,
+      { requestCache } as never,
+    );
 
     expect(maxActivePoolReads).toBe(1);
     expect(requestedData).toEqual([
@@ -722,6 +752,78 @@ describe("mento redemption telemetry", () => {
       `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_2.slice(2)}`,
       `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_3.slice(2)}`,
     ]);
+  });
+
+  it("continues a broker scan after another coin times out without inheriting its rejected read", async () => {
+    vi.useFakeTimers();
+    try {
+      const requestedData: string[] = [];
+      let exchangeTwoAttempts = 0;
+      vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data, signal }) => {
+        requestedData.push(data);
+        if (data === GET_EXCHANGE_IDS_SELECTOR) {
+          return encodeExchangeIds([EXCHANGE_ID_1, EXCHANGE_ID_2, EXCHANGE_ID_3]);
+        }
+        if (data === `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`) return null;
+        if (data === `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_2.slice(2)}`) {
+          exchangeTwoAttempts += 1;
+          if (exchangeTwoAttempts === 1) {
+            return new Promise((_resolve, reject) => {
+              signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+            });
+          }
+          return null;
+        }
+        if (data === `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_3.slice(2)}`) {
+          return encodePoolExchange({
+            asset0: USDM_ADDRESS,
+            asset1: USDC_ADDRESS,
+            bucket0: 0n,
+            bucket1: 10n ** 18n,
+            spread: 5n * 10n ** 20n,
+          });
+        }
+        return null;
+      });
+      const config = makeRedemptionConfig({
+        redemption: {
+          kind: "broker-pool",
+          pools: [{ selfTokenAddress: USDM_ADDRESS, counterAsset: { address: USDC_ADDRESS } }],
+        },
+      });
+      const requestCache = makeRequestCache();
+
+      const firstResultPromise = fetchMentoReserves(
+        { id: "cusd-celo" } as never,
+        config,
+        new AbortController().signal,
+        { requestCache } as never,
+      );
+      await vi.advanceTimersByTimeAsync(8_000);
+      const firstResult = await firstResultPromise;
+      const secondResult = await fetchMentoReserves(
+        { id: "ceur-celo" } as never,
+        config,
+        new AbortController().signal,
+        { requestCache } as never,
+      );
+
+      expect(firstResult.metadata?.redemption).toBeUndefined();
+      expect(firstResult.warnings?.some((warning) =>
+        warning.code === "mento-redemption-telemetry-failed"
+        && warning.message.includes("mento-redemption-timeout")
+      )).toBe(true);
+      expect(secondResult.metadata?.redemption).toMatchObject({ capacityUsd: 1 });
+      expect(requestedData).toEqual([
+        GET_EXCHANGE_IDS_SELECTOR,
+        `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_1.slice(2)}`,
+        `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_2.slice(2)}`,
+        `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_2.slice(2)}`,
+        `${GET_POOL_EXCHANGE_SELECTOR}${EXCHANGE_ID_3.slice(2)}`,
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("fails broker-pool telemetry closed when the RPC returns too many exchange ids", async () => {
@@ -753,7 +855,7 @@ describe("mento redemption telemetry", () => {
     expect(fetchOnchainRawCall).toHaveBeenCalledTimes(1);
   });
 
-  it("retains a failed broker enumeration for the run instead of retrying it per coin", async () => {
+  it("retains a failed exchange-id read for the run instead of retrying it per coin", async () => {
     vi.mocked(fetchOnchainRawCall).mockRejectedValue(new Error("rpc down"));
     const config = makeRedemptionConfig({
       redemption: {

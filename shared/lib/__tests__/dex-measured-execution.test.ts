@@ -9,6 +9,7 @@ import {
   toDexMeasuredExecutionPublicProfile,
   validateDexMeasuredExecutionProfile,
   type DexMeasuredExecutionProfile,
+  type DexMeasuredExecutionQuotePointProof,
   type DexMeasuredExecutionTarget,
 } from "../../types/measured-execution";
 
@@ -38,6 +39,20 @@ function proofPoint(inputUsd: number, outputUsd: number) {
     outputUsd,
     costBps,
     passesCostBound: costBps <= DEX_MEASURED_MAX_COST_BPS,
+  };
+}
+
+function revertedProofPoint(inputUsd: number): DexMeasuredExecutionQuotePointProof {
+  return {
+    amountInRaw: String(Math.round(inputUsd * 1_000_000)),
+    amountOutRaw: "0",
+    callData: "0x1234",
+    returnData: "0x",
+    inputUsd,
+    outputUsd: 0,
+    costBps: 10_000,
+    passesCostBound: false,
+    reverted: true,
   };
 }
 
@@ -191,6 +206,65 @@ describe("DEX measured execution contract", () => {
       expectedQuoteGenerationId: "quotes-1",
       nowSec,
     })).toEqual([]);
+  });
+
+  it("accepts a deterministic upper-probe revert as a capacity bracket", () => {
+    const nowSec = 10_000;
+    const revertedProfile = profile(nowSec);
+    revertedProfile.quoteProof = [proofPoint(1_000, 999), revertedProofPoint(100_000)];
+    revertedProfile.capacityCurve = buildDexMeasuredCapacityCurve(
+      revertedProfile.quoteProof,
+      revertedProfile.retainedTvlUsdAtQuote,
+    );
+
+    expect(revertedProfile.capacityCurve.map((point) => point.executableUsd)).toEqual([1_000, 1_000, 1_000, 1_000]);
+    expect(validateDexMeasuredExecutionProfile({
+      profile: revertedProfile,
+      quotedTarget: target(nowSec),
+      currentTarget: target(nowSec),
+      expectedTargetGenerationId: "targets-1",
+      expectedQuoteGenerationId: "quotes-1",
+      nowSec,
+    })).toEqual([]);
+  });
+
+  it("accepts a deterministic marginal revert as measured zero capacity", () => {
+    const nowSec = 10_000;
+    const revertedProfile = profile(nowSec);
+    revertedProfile.quoteProof = [revertedProofPoint(1_000)];
+    revertedProfile.marginalOutputRatio = 0;
+    revertedProfile.capacityCurve = buildDexMeasuredCapacityCurve(
+      revertedProfile.quoteProof,
+      revertedProfile.retainedTvlUsdAtQuote,
+    );
+
+    expect(revertedProfile.capacityCurve.every((point) => point.executableUsd === 0)).toBe(true);
+    expect(validateDexMeasuredExecutionProfile({
+      profile: revertedProfile,
+      quotedTarget: target(nowSec),
+      currentTarget: target(nowSec),
+      expectedTargetGenerationId: "targets-1",
+      expectedQuoteGenerationId: "quotes-1",
+      nowSec,
+    })).toEqual([]);
+  });
+
+  it("rejects a reverted proof with synthetic fields that do not match zero execution", () => {
+    const nowSec = 10_000;
+    const tampered = profile(nowSec);
+    tampered.quoteProof = [revertedProofPoint(1_000)];
+    tampered.quoteProof[0]!.amountOutRaw = "1";
+    tampered.marginalOutputRatio = 0;
+    tampered.capacityCurve = buildDexMeasuredCapacityCurve(tampered.quoteProof, tampered.retainedTvlUsdAtQuote);
+
+    expect(validateDexMeasuredExecutionProfile({
+      profile: tampered,
+      quotedTarget: target(nowSec),
+      currentTarget: target(nowSec),
+      expectedTargetGenerationId: "targets-1",
+      expectedQuoteGenerationId: "quotes-1",
+      nowSec,
+    })).toContain("invalid-quote-proof");
   });
 
   it("projects raw calldata and return proofs out of the public profile", () => {

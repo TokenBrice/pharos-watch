@@ -1,5 +1,6 @@
 import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "@shared/lib/exit-route-identity";
 import {
+  DEX_MEASURED_MAX_FAVORABLE_OUTPUT_RATIO,
   DEX_MEASURED_TARGET_SCHEMA_VERSION,
   buildDexMeasuredExecutionTargetId,
   type DexMeasuredExecutionTarget,
@@ -59,6 +60,18 @@ export function buildMeasuredPoolDirectionKey(stablecoinId: string, poolId: stri
   return `${stablecoinId.trim().toLowerCase()}|${poolId.trim().toLowerCase()}`;
 }
 
+function hasCoherentPancakeSpotPrice(
+  pool: DexApiPool,
+  inputIndex: number,
+  inputReferencePriceUsd: number,
+  outputReferencePriceUsd: number,
+): boolean {
+  if (pool.price == null || !Number.isFinite(pool.price) || pool.price <= 0) return false;
+  const outputPerInput = inputIndex === 0 ? pool.price : 1 / pool.price;
+  const outputValueRatio = (outputPerInput * outputReferencePriceUsd) / inputReferencePriceUsd;
+  return Number.isFinite(outputValueRatio) && outputValueRatio <= DEX_MEASURED_MAX_FAVORABLE_OUTPUT_RATIO;
+}
+
 export function buildPancakeMeasuredExecutionTargets(input: {
   pools: readonly DexApiPool[];
   chainAddressToId: Map<string, string>;
@@ -109,6 +122,7 @@ export function buildPancakeMeasuredExecutionTargets(input: {
         input.stablecoinPriceById,
       );
       if (inputPrice == null || outputPrice == null || inputPrice <= 0 || outputPrice <= 0) continue;
+      if (!hasCoherentPancakeSpotPrice(pool, inputIndex, inputPrice, outputPrice)) continue;
       const outputStablecoinId = input.chainAddressToId.get(buildChainAddressKey(pool.chain, tokenOut.address));
       if (outputStablecoinId === stablecoinId) continue;
       const adapterProfileId = "pancakeswap-v3-quoter-v2";

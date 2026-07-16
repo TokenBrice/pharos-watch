@@ -89,6 +89,19 @@ describe("fetchPancakeSwapPools", () => {
     expect(pool.feeRate).toBeCloseTo(0.0001);
   });
 
+  it("preserves a valid zero-decimal token instead of defaulting it to 18", async () => {
+    const zeroDecimalPool = makePool("0xpool");
+    zeroDecimalPool.token1.decimals = "0";
+    vi.mocked(fetchTextWithRetry)
+      .mockImplementationOnce(async () => textResult(response({ data: { pools: [zeroDecimalPool] } })))
+      .mockImplementationOnce(async () => textResult(response({ data: { poolHourDatas: [] } })))
+      .mockImplementation(async () => textResult(response({ data: { pools: [] } })));
+
+    const result = await fetchPancakeSwapPools("graph-key");
+
+    expect(result.pools[0]?.tokens[1]?.decimals).toBe(0);
+  });
+
   it("keeps pool coverage when the hourly volume query fails for a page", async () => {
     vi.mocked(fetchTextWithRetry)
       .mockImplementationOnce(async () => textResult(response({

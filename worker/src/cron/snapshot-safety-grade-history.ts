@@ -91,19 +91,24 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
 
     let latest = latestByCoin.get(card.id);
     const latestV2 = latestV2ByCoin.get(card.id);
+    let requiresIdentityBoundary = false;
     if (latestV2) {
       try {
         const latestIdentity = safetyScoreHistoryIdentityFromV2Row(latestV2);
         if (!safetyScoreHistoryIdentitiesAreComparable(identity, latestIdentity)) {
-          suppressedIdentityTransitions++;
-          continue;
+          if (latestIdentity.model !== identity.model) {
+            suppressedIdentityTransitions++;
+            continue;
+          }
+          requiresIdentityBoundary = true;
+        } else {
+          latest = {
+            stablecoin_id: latestV2.stablecoin_id,
+            grade: latestV2.grade,
+            score: latestV2.score,
+            recorded_at: latestV2.recorded_at,
+          };
         }
-        latest = {
-          stablecoin_id: latestV2.stablecoin_id,
-          grade: latestV2.grade,
-          score: latestV2.score,
-          recorded_at: latestV2.recorded_at,
-        };
       } catch {
         suppressedIdentityTransitions++;
         continue;
@@ -111,8 +116,12 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
     } else if (latest) {
       // Legacy rows have no complete publication identity, so they can never
       // establish an organic predecessor for the current V8 snapshot.
-      suppressedIdentityTransitions++;
+      requiresIdentityBoundary = true;
+    }
+
+    if (requiresIdentityBoundary) {
       if (degradedReportCardInputs) {
+        suppressedIdentityTransitions++;
         suppressedTransitions++;
         continue;
       }

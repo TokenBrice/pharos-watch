@@ -1,7 +1,6 @@
 import {
   ALFRED_SONIA_COMPOUNDED_INDEX_CSV_URL,
   FRED_SONIA_COMPOUNDED_INDEX_CSV_URL,
-  USER_AGENT,
 } from "../../lib/constants";
 import {
   fetchAndParseBenchmark,
@@ -14,6 +13,9 @@ import { deriveSoniaCompoundedRate } from "./boe";
 
 const ST_LOUIS_FED_SONIA_MAX_OBSERVATION_AGE_DAYS = 140;
 const ST_LOUIS_FED_SONIA_MAX_FUTURE_SKEW_DAYS = 1;
+// The graph edge returns HTTP 520 to generic and browser user agents from
+// Workers. A contact-bearing product UA is accepted by both FRED and ALFRED.
+const ST_LOUIS_FED_USER_AGENT = "Pharos/1.0 (+https://pharos.watch)";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function parseFredLatest(csv: string): { recordDate: string; rate: number } | null {
@@ -36,7 +38,7 @@ export async function tryFredCsv(
 ): Promise<{ rate: number; recordDate: string } | null> {
   return fetchAndParseBenchmark({
     url,
-    headers: { "User-Agent": USER_AGENT },
+    headers: { "User-Agent": ST_LOUIS_FED_USER_AGENT },
     parse: parseFredLatest,
     warnLabel: "FRED CSV",
     signal,
@@ -89,7 +91,7 @@ export async function tryFredSoniaCompoundedIndex(
 ): Promise<{ rate: number; recordDate: string } | null> {
   return fetchAndParseBenchmark({
     url: FRED_SONIA_COMPOUNDED_INDEX_CSV_URL,
-    headers: { "User-Agent": USER_AGENT },
+    headers: { "User-Agent": ST_LOUIS_FED_USER_AGENT },
     parse: parseFredSoniaCompoundedIndexCsv,
     warnLabel: "FRED SONIA Compounded Index CSV",
     signal,
@@ -103,7 +105,7 @@ export async function tryAlfredSoniaCompoundedIndex(
 ): Promise<{ rate: number; recordDate: string } | null> {
   return fetchAndParseBenchmark({
     url: ALFRED_SONIA_COMPOUNDED_INDEX_CSV_URL,
-    headers: { "User-Agent": USER_AGENT },
+    headers: { "User-Agent": ST_LOUIS_FED_USER_AGENT },
     parse: parseFredSoniaCompoundedIndexCsv,
     warnLabel: "ALFRED SONIA Compounded Index CSV",
     signal,

@@ -10,7 +10,10 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
   // AZND -> loAZND (Mu Digital locked/staking wrapper)
   "aznd-mu-digital": {
     variantSymbol: "loAZND",
+    variantAddress: "0x9c82eB49B51F7Dc61e22Ff347931CA32aDc6cd90",
     variantChain: "monad",
+    yieldSource: "Mu Digital loAZND vault",
+    yieldType: "lending-vault",
   },
   // BOLD -> yBOLD (Yearn vault over Liquity Stability Pool)
   "bold-liquity": {

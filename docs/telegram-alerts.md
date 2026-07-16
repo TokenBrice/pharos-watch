@@ -616,7 +616,7 @@ Delivery semantics are explicit:
 - `permanent_failure`
 
 Fresh retryable failures are enqueued into `telegram_pending_alerts` instead of being dropped.
-`403` responses from the pending-queue dispatcher follow a two-strike rule: the first 403 stamps `consecutive_block_first_at` on `telegram_subscribers` and increments `consecutive_block_count` but leaves alert flags untouched; a second 403 within 24 hours of the first strike disables the subscriber's global flags and all per-coin alert booleans. When the second strike disables a chat, any other live pending rows for that chat are dead-lettered with `blocked_disabled` and deleted so a known-blocked bot is not retried until the pending-row TTL. Any successful send resets both counters. A first strike older than 24 hours is treated as fresh.
+Blocked or definitively unreachable responses (`403` or Telegram `chat not found`) follow a two-strike rule: the first response stamps `consecutive_block_first_at` on `telegram_subscribers` and increments `consecutive_block_count` but leaves alert flags untouched; a second response within 24 hours of the first strike disables the subscriber's global flags and all per-coin alert booleans. When the second strike disables a chat, any other live pending rows for that chat are dead-lettered with `blocked_disabled` and deleted so the bot does not retry a known-undeliverable chat until the pending-row TTL. Any successful send resets both counters. A first strike older than 24 hours is treated as fresh.
 
 ### Pending Delivery Queue
 
@@ -638,7 +638,7 @@ The TTL — not a per-row attempts cap — bounds how long the queue keeps retry
 Each drain re-selects unexpired rows whose `not_before_at` has elapsed; rows that age
 past their TTL are copied into `telegram_alert_dead_letters` and then deleted in a
 capped cleanup batch at the end of the run, leaving any overflow for later dispatch
-runs. `execution_unknown` rows are excluded from ordinary TTL and blocked-chat cleanup. They remain queryable for 90 days, then are projected to target truth, copied to the dead-letter audit with `reason = 'execution_unknown_archived'`, and deleted only by an owner/generation/timestamp CAS. Operator resolution racing that archive wins and preserves the live row.
+runs. `execution_unknown` rows are excluded from ordinary TTL and blocked-chat cleanup. They remain queryable for 90 days, then are projected to target truth, copied to the dead-letter audit with `reason = 'execution_unknown_archived'`, and deleted only by an owner/generation/timestamp CAS. After reviewing the exact effect evidence, an operator may acknowledge exact pending IDs through `POST /api/admin-telegram-delivery-control`; this uses the same fail-closed archive path, preserves the ambiguous target outcome, and records the reason without replaying the effect. Operator resolution racing automatic archival fails with a row-change conflict instead of overwriting evidence.
 Admin broadcasts preflight `messageHtml` before target selection or enqueue. The accepted
 Telegram HTML subset is `a[href]`, `b`/`strong`, `i`/`em`, `u`/`ins`, `s`/`strike`/`del`,
 `code`, `pre`, `tg-spoiler`, and `blockquote` with optional `expandable`; only simple

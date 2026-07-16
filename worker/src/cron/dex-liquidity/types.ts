@@ -247,6 +247,8 @@ export interface SymbolLookups {
 
 export interface DataSources {
   pools: LlamaPool[];
+  /** Count before tracked-token compaction. Retained for progress and run metadata. */
+  rawPoolCount: number;
   dexProjects: Set<string>;
   /** DL protocol slug → total protocol TVL. Used to cap inflated CG/GT per-pool TVL. */
   protocolTvlCaps: Map<string, number>;

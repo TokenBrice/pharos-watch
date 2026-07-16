@@ -25,6 +25,7 @@ vi.mock("../dex-liquidity/pool-helpers", () => ({
   getTrackedContracts: vi.fn(() => new Map()),
   classifyPoolType: vi.fn(() => "unknown"),
   isCryptoSwap: vi.fn(() => false),
+  parsePoolSymbols: vi.fn((symbol: string) => symbol.toUpperCase().split(/[-/+ ]+/).filter(Boolean)),
 }));
 vi.mock("../dex-liquidity/price-sanity", () => ({ isPlausibleDexObservationPrice: vi.fn(() => true) }));
 vi.mock("../../lib/price-validation", () => ({}));
@@ -39,7 +40,15 @@ vi.mock("../dex-liquidity/pool-identity", () => ({
   })),
   registerKnownPoolIdentity: vi.fn(),
 }));
-vi.mock("../dex-liquidity/token-resolution", () => ({ resolveTrackedStablecoinId: vi.fn() }));
+vi.mock("../dex-liquidity/token-resolution", () => ({
+  resolveTrackedStablecoinId: vi.fn(),
+  getChainScopedSymbolIds: vi.fn(
+    (symbol: string, chain: string, lookups: { symbolToChainScopedIds: Map<string, Map<string, string[]>> }) =>
+      lookups.symbolToChainScopedIds.get(symbol)?.get(chain.toLowerCase()) ?? [],
+  ),
+  makeChainAddressKey: vi.fn((chain: string, address: string) => `${chain.toLowerCase()}:${address.toLowerCase()}`),
+  normalizeTokenAddress: vi.fn((address: string) => address.trim().toLowerCase()),
+}));
 vi.mock("../dex-liquidity/subgraph-source-families", () => ({
   fetchAerodromeData: vi.fn(async () => ({ aerodromePriceObs: new Map(), aerodromeIsStable: new Map() })),
   fetchUniV3Data: vi.fn(async () => ({ uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(), uniV3PriceObs: new Map() })),
@@ -53,6 +62,13 @@ import { recordOutcome } from "../../lib/circuit-breaker";
 
 // Must be imported AFTER vi.mock calls
 const { fetchDataSources } = await import("../dex-liquidity/fetch-primary");
+
+const PRIMARY_POOL_LOOKUPS = {
+  chainAddressToId: new Map<string, string>(),
+  symbolToChainScopedIds: new Map([
+    ["USDC", new Map([["ethereum", ["usdc-circle"]]])],
+  ]),
+};
 
 describe("fetchDataSources — malformed JSON resilience", () => {
   beforeEach(() => {
@@ -69,7 +85,7 @@ describe("fetchDataSources — malformed JSON resilience", () => {
       .mockResolvedValueOnce(null);                              // protocols
 
     const db = mockD1();
-    const result = await fetchDataSources(null, db);
+    const result = await fetchDataSources(null, db, PRIMARY_POOL_LOOKUPS);
     // Curve circuit is closed → curve payloads are all null → catastrophic check triggers → null
     // The key assertion: no unhandled SyntaxError thrown — function ran to completion.
     expect(result).toBeNull();
@@ -90,7 +106,7 @@ describe("fetchDataSources — malformed JSON resilience", () => {
       .mockResolvedValueOnce(null);
 
     const db = mockD1();
-    const result = await fetchDataSources(null, db);
+    const result = await fetchDataSources(null, db, PRIMARY_POOL_LOOKUPS);
     // dlYieldsAvailable = true, so catastrophic check passes → returns DataSources
     expect(result).not.toBeNull();
     expect(result!.pools).toHaveLength(1001);
@@ -117,7 +133,7 @@ describe("fetchDataSources — malformed JSON resilience", () => {
       });
 
     const db = mockD1();
-    const result = await fetchDataSources(null, db);
+    const result = await fetchDataSources(null, db, PRIMARY_POOL_LOOKUPS);
 
     expect(result).not.toBeNull();
     expect(setCache).toHaveBeenCalledWith(

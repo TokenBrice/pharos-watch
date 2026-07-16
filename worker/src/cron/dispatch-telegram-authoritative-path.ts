@@ -87,6 +87,12 @@ export async function executeAuthoritativeFanoutPath(
     nowSec,
     snapshotState,
   } = context;
+  const prePlanDrainResult = context.pendingCapacityBefore.due > 0
+    ? await drainPendingQueue(db, context.botToken, TELEGRAM_PENDING_DRAIN_BUDGET, context.signal, {
+      softDeadlineAtMs: context.dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
+      markTelegramDeliveryStarted: context.markTelegramDeliveryStarted,
+    })
+    : null;
   const fanoutStartedAtMs = Date.now();
   let cacheResult: Promise<StablecoinsCacheLoadResult> | null = null;
   const sourceResolution = await resolveTelegramAlertSourcePresetPages(db, sourceEvent, nowSec, {
@@ -157,12 +163,12 @@ export async function executeAuthoritativeFanoutPath(
     },
   });
 
-  const drainResult = context.pendingCapacityBefore.due > 0 || (planner?.enqueued ?? 0) > 0
+  const drainResult = prePlanDrainResult ?? ((planner?.enqueued ?? 0) > 0
     ? await drainPendingQueue(db, context.botToken, TELEGRAM_PENDING_DRAIN_BUDGET, context.signal, {
       softDeadlineAtMs: context.dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
       markTelegramDeliveryStarted: context.markTelegramDeliveryStarted,
     })
-    : emptyDrainResult();
+    : emptyDrainResult());
   const archivedUnknown = await archiveAgedExecutionUnknownPendingAlerts(db, nowSec);
   const expiredCount = await cleanupExpiredPendingAlerts(db, nowSec);
   const pendingCapacityAfter =

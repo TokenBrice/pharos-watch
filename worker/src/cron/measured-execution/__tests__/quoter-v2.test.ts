@@ -17,6 +17,7 @@ import {
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
 import {
+  encodeQuoterV2ExactInputSingle,
   encodeV3FactoryGetPool,
   quoteQuoterV2Requests,
   resolveQuoterV2PoolBindings,
@@ -292,5 +293,150 @@ describe("QuoterV2 pinned-block replay proofs", () => {
     expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mock.calls.map((call) => call[1].length)).toEqual([
       8, 4, 2, 2, 4, 2, 2,
     ]);
+  });
+
+  it("retries failed inner quotes as serialized singletons", async () => {
+    const fixture = REPLAYS[0]!;
+    const target = makeTarget(fixture);
+    const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
+      async (_chain: string, calls: Array<{ label: string }>) =>
+        calls.map((call, index) => ({
+          label: call.label,
+          success: calls.length === 1 || index === 0,
+          returnData: calls.length === 1 || index === 0 ? fixture.quoteReturnData : "0x",
+        })),
+    );
+
+    const outcomes = await quoteQuoterV2Requests({
+      requests: Array.from({ length: 3 }, () => ({
+        target,
+        inputUsd: 1_000_000,
+        endpointAddress: deployment.endpointAddress,
+      })),
+      blockNumber: fixture.blockNumber,
+      chainRpcs: new Map(),
+    });
+
+    expect(outcomes.every((outcome) => outcome.point != null)).toBe(true);
+    expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mock.calls.map((call) => call[1].length)).toEqual([3, 1, 1]);
+  });
+
+  it("retains a decoded singleton revert as a non-passing capacity proof", async () => {
+    const fixture = REPLAYS[0]!;
+    const target = makeTarget(fixture);
+    const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
+      async (_chain: string, calls: Array<{ label: string }>) =>
+        calls.map((call) => ({ label: call.label, success: false, returnData: "0x" })),
+    );
+
+    const [outcome] = await quoteQuoterV2Requests({
+      requests: [{ target, inputUsd: 100_000, endpointAddress: deployment.endpointAddress }],
+      blockNumber: fixture.blockNumber,
+      chainRpcs: new Map(),
+    });
+
+    expect(outcome?.failureReason).toBeUndefined();
+    expect(outcome?.point).toMatchObject({
+      amountOutRaw: "0",
+      returnData: "0x",
+      inputUsd: 100_000,
+      outputUsd: 0,
+      costBps: 10_000,
+      passesCostBound: false,
+      reverted: true,
+    });
+    expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps RPC transport failures operationally degraded", async () => {
+    const fixture = REPLAYS[0]!;
+    const target = makeTarget(fixture);
+    const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockResolvedValue(null);
+
+    const [outcome] = await quoteQuoterV2Requests({
+      requests: [{ target, inputUsd: 100_000, endpointAddress: deployment.endpointAddress }],
+      blockNumber: fixture.blockNumber,
+      chainRpcs: new Map(),
+    });
+
+    expect(outcome).toEqual({
+      targetId: target.targetId,
+      inputUsd: 100_000,
+      failureReason: "quoter-rpc-unavailable",
+    });
+  });
+
+  it("keeps malformed successful returndata operationally degraded", async () => {
+    const fixture = REPLAYS[0]!;
+    const target = makeTarget(fixture);
+    const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
+      async (_chain: string, calls: Array<{ label: string }>) =>
+        calls.map((call) => ({ label: call.label, success: true, returnData: "0x1234" })),
+    );
+
+    const [outcome] = await quoteQuoterV2Requests({
+      requests: [{ target, inputUsd: 100_000, endpointAddress: deployment.endpointAddress }],
+      blockNumber: fixture.blockNumber,
+      chainRpcs: new Map(),
+    });
+
+    expect(outcome).toEqual({
+      targetId: target.targetId,
+      inputUsd: 100_000,
+      failureReason: "quoter-invalid-result",
+    });
+  });
+
+  it("rejects a reverted proof carrying ABI-decodable success data", () => {
+    const fixture = REPLAYS[0]!;
+    const target = makeTarget(fixture);
+    const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+    const profile: DexMeasuredExecutionProfile = {
+      schemaVersion: DEX_MEASURED_EXECUTION_SCHEMA_VERSION,
+      kind: "measured-executable-depth",
+      targetId: target.targetId,
+      targetGenerationId: "targets-1",
+      quoteGenerationId: "quotes-1",
+      adapterProfileId: target.adapterProfileId,
+      protocol: target.protocol,
+      chain: target.chain,
+      poolId: target.poolId,
+      tokenIn: target.tokenIn,
+      tokenOut: target.tokenOut,
+      feePips: target.feePips,
+      retainedTvlUsdAtQuote: target.retainedTvlUsd,
+      retainedPoolPriceUsdAtQuote: target.retainedPoolPriceUsd,
+      quotedAt: target.capturedAt,
+      blockNumber: fixture.blockNumber,
+      executionEndpoint: {
+        address: deployment.endpointAddress,
+        codeHash: deployment.expectedCodeHash,
+      },
+      maxCostBps: DEX_MEASURED_MAX_COST_BPS,
+      marginalOutputRatio: 0,
+      capacityCurve: DEX_MEASURED_CAPACITY_NOTIONALS_USD.map((requestedNotionalUsd) => ({
+        requestedNotionalUsd,
+        maxCostBps: DEX_MEASURED_MAX_COST_BPS,
+        executableUsd: 0,
+        completionRatio: 0,
+      })),
+      quoteProof: [{
+        amountInRaw: "1000000000",
+        amountOutRaw: "0",
+        callData: encodeQuoterV2ExactInputSingle(target, 1_000_000_000n),
+        returnData: fixture.quoteReturnData,
+        inputUsd: 1_000,
+        outputUsd: 0,
+        costBps: 10_000,
+        passesCostBound: false,
+        reverted: true as const,
+      }],
+    };
+
+    expect(validateQuoterV2ProfileProof(profile)).toContain("revert-data-decodes-as-success");
   });
 });

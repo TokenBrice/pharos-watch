@@ -2792,8 +2792,8 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
     "status": "published"
   },
   "methodology": {
-    "version": "8.34",
-    "currentVersion": "8.34",
+    "version": "8.35",
+    "currentVersion": "8.35",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1710500000, "ageSeconds": 42, "status": "fresh" }
@@ -2956,7 +2956,7 @@ Yield adapter manifest for every yield-bearing asset. The route is public-read, 
 
 ```text
 {
-  "methodologyVersion": "v8.34",
+  "methodologyVersion": "v8.35",
   "updatedAt": 1779210000,
   "entries": [
     {
@@ -2970,7 +2970,7 @@ Yield adapter manifest for every yield-bearing asset. The route is public-read, 
       "project": null,
       "lifecycle": "active",
       "quarantineReason": null,
-      "methodologyVersion": "v8.34",
+      "methodologyVersion": "v8.35",
       "updatedAt": 1779210000
     }
   ]
@@ -3022,8 +3022,8 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
     "status": "published"
   },
   "methodology": {
-    "version": "8.34",
-    "currentVersion": "8.34",
+    "version": "8.35",
+    "currentVersion": "8.35",
     "changelogPath": "/methodology/yield-changelog/"
   }
 }
@@ -3059,7 +3059,7 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
   "pysAtPublish": 42.7,
   "pysInputsAtPublish": {
     "schemaVersion": 1,
-    "methodologyVersion": "8.34",
+    "methodologyVersion": "8.35",
     "apy30d": 12.1,
     "safetyScore": 81,
     "varianceScore": 0.18,
@@ -5741,6 +5741,18 @@ Reads the authoritative Telegram transport circuit and the independent `fresh`, 
 ```
 
 Resume is also generation-fenced. It retains the row as inert audit state, advances its generation, and sets `expiresAt` to the current time. A stale generation returns `409` and does not mutate the active control.
+
+**Execution-unknown acknowledgement body**
+
+```json
+{
+  "action": "acknowledge_execution_unknown",
+  "pendingIds": [30557, 30558],
+  "operatorReason": "Reviewed the interrupted send owner and accepted the at-most-once outcome."
+}
+```
+
+This action accepts 1-100 exact pending-row IDs. Every row must still be `execution_unknown`; otherwise the request returns `409` without changing any row. A successful acknowledgement preserves the exact payload and lifecycle in `telegram_alert_dead_letters` with `reason = "execution_unknown_archived"`, retains `execution_unknown` as the authoritative target outcome, removes the row from the active backlog, and records the operator reason in `admin_action_audit`. It never resends or changes an ambiguous effect to accepted.
 
 **Response**
 

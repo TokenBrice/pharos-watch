@@ -7,7 +7,7 @@ import { isYieldRelevantDlPool } from "../yield-sync/pool-filter";
 import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import type {
   LlamaPool, CurveApiPayload, CurvePoolEntry, DexPriceObs,
-  DataSources, CurveLookups,
+  DataSources, CurveLookups, SymbolLookups,
 } from "./types";
 import {
   DEFILLAMA_YIELDS_URL, DEFILLAMA_PROTOCOLS_URL,
@@ -28,6 +28,7 @@ import {
   resolveTrackedStablecoinId,
 } from "./token-resolution";
 import { toErrorMessage } from "../../lib/error-utils";
+import { resolveLlamaPoolStablecoinMatches } from "./pool-match-resolution";
 
 const PRIMARY_SOURCE_JSON_TIMEOUT_MS = 30_000;
 
@@ -55,15 +56,46 @@ function buildProtocolCategoryCachePayload(protocols: DefiLlamaProtocolRow[]): s
   return JSON.stringify({ protocols: compactProtocols });
 }
 
+export interface PrimaryPoolCompactionResult {
+  pools: LlamaPool[];
+  rawPoolCount: number;
+  retainedPoolCount: number;
+  skippedUntrackedCount: number;
+}
+
+export function compactPrimaryPoolsForTrackedStablecoins(
+  pools: LlamaPool[],
+  lookups: Pick<SymbolLookups, "chainAddressToId" | "symbolToChainScopedIds">,
+): PrimaryPoolCompactionResult {
+  const retainedPools: LlamaPool[] = [];
+  for (const pool of pools) {
+    if (resolveLlamaPoolStablecoinMatches(pool, lookups).matchedIds.size > 0) {
+      retainedPools.push(pool);
+    }
+  }
+
+  return {
+    pools: retainedPools,
+    rawPoolCount: pools.length,
+    retainedPoolCount: retainedPools.length,
+    skippedUntrackedCount: pools.length - retainedPools.length,
+  };
+}
+
 /** Fetch DeFiLlama Yields, Protocols list, and Curve API data. Returns null only on truly catastrophic failure. */
-export async function fetchDataSources(graphApiKey: string | null, db: D1Database, signal?: AbortSignal): Promise<DataSources | null> {
+export async function fetchDataSources(
+  graphApiKey: string | null,
+  db: D1Database,
+  lookups: Pick<SymbolLookups, "chainAddressToId" | "symbolToChainScopedIds">,
+  signal?: AbortSignal,
+): Promise<DataSources | null> {
   const dlYieldsAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_YIELDS);
   const dlProtocolsAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_PROTOCOLS);
 
   // Fetch DL first, consume bodies immediately to release connections before Curve batch.
   // Jobs on this trigger run sequentially; consume early to stay within the
   // repo's six-request budget during the Curve parallel phase that follows.
-  const [llamaResult, protocolsResult] = await Promise.all([
+  let [llamaResult, protocolsResult] = await Promise.all([
     dlYieldsAllowed
       ? fetchJsonWithRetry<DefiLlamaYieldsPayload>(
           DEFILLAMA_YIELDS_URL,
@@ -84,6 +116,7 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
 
   // --- DL Yields (consume body to release connection) ---
   let pools: LlamaPool[] = [];
+  let rawPoolCount = 0;
   const fallbackDexProjects = new Set<string>();
   let dlYieldsAvailable = false;
 
@@ -92,18 +125,17 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
       try {
         const llamaData = llamaResult.body;
         if (llamaData.data && llamaData.data.length >= 1000) {
-          await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, true);
-          pools = llamaData.data;
-          dlYieldsAvailable = true;
-          for (const pool of pools) {
+          const rawPools = llamaData.data;
+          rawPoolCount = rawPools.length;
+          for (const pool of rawPools) {
             if (!pool.project || pool.exposure === "single") continue;
             fallbackDexProjects.add(pool.project);
           }
-          console.log(`[dex-liquidity] Got ${pools.length} pools from DeFiLlama yields`);
+          console.log(`[dex-liquidity] Got ${rawPoolCount} pools from DeFiLlama yields`);
 
           // Cache minimal stablecoin pool data for yield sync (avoids redundant 13MB re-fetch)
           try {
-            const minimalPools = pools
+            const minimalPools = rawPools
               .filter(isYieldRelevantDlPool)
               .map((p) => ({
                 pool: p.pool, chain: p.chain, project: p.project, symbol: p.symbol,
@@ -116,11 +148,26 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
           } catch (e) {
             console.warn("[dex-liquidity] Failed to cache stablecoin pools for yield sync:", e);
           }
+
+          const compacted = compactPrimaryPoolsForTrackedStablecoins(rawPools, lookups);
+          await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, true);
+          pools = compacted.pools;
+          dlYieldsAvailable = true;
+          if (compacted.skippedUntrackedCount > 0) {
+            console.log(
+              `[dex-liquidity] Retained ${compacted.retainedPoolCount} DeFiLlama pools with tracked tokens ` +
+                `(skipped ${compacted.skippedUntrackedCount} before Curve fetching)`,
+            );
+          }
         } else {
           await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);
           console.warn(`[dex-liquidity] DeFiLlama returned only ${llamaData.data?.length ?? 0} pools — degraded mode`);
         }
       } catch (e) {
+        pools = [];
+        rawPoolCount = 0;
+        fallbackDexProjects.clear();
+        dlYieldsAvailable = false;
         console.warn("[dex-liquidity] DeFiLlama yields response parse failed:", toErrorMessage(e));
         await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);
       }
@@ -131,6 +178,7 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
   } else {
     console.warn("[dex-liquidity] DL yields circuit open — CG/GT will be primary pool source");
   }
+  llamaResult = null;
 
   // --- DL Protocols (consume body to release connection) ---
   const dexProjects = new Set<string>();
@@ -181,6 +229,7 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
   } else {
     console.warn("[dex-liquidity] DL protocols circuit open — dead-protocol filtering degraded");
   }
+  protocolsResult = null;
 
   if (dexProjects.size === 0 && fallbackDexProjects.size > 0) {
     for (const project of fallbackDexProjects) dexProjects.add(project);
@@ -218,7 +267,16 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
     return null;
   }
 
-  return { pools, dexProjects, protocolTvlCaps, curvePayloads, graphApiKey, dlYieldsAvailable, dlProtocolsAvailable };
+  return {
+    pools,
+    rawPoolCount,
+    dexProjects,
+    protocolTvlCaps,
+    curvePayloads,
+    graphApiKey,
+    dlYieldsAvailable,
+    dlProtocolsAvailable,
+  };
 }
 
 /** Parse Curve API responses into pool lookup maps and per-token price observations. */

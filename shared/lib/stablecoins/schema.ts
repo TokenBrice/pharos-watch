@@ -418,6 +418,16 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMe
         path: ["reserves", index, "coinId"],
       });
     }
+    if (
+      meta.liveReservesConfig?.adapter === "curated-validated" &&
+      (meta.reserves?.length ?? 0) === 0
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "curated-validated live reserve configs require a non-empty reserve composition",
+        path: ["liveReservesConfig", "adapter"],
+      });
+    }
 
     const linkedRelationshipKeys = new Set(
       (meta.reserves ?? [])

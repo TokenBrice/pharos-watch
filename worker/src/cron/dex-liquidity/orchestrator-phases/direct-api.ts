@@ -56,14 +56,19 @@ export interface DirectApiFetcher {
   fn: (signal?: AbortSignal) => Promise<DexApiFetchResult>;
 }
 
+export interface DirectApiFetchPhaseEntry {
+  name: string;
+  circuitKey: string;
+  normalizedProtocol: string;
+  supportedChains: string[];
+  result: DexApiFetchResult;
+  /** Exact raw-source identities retained without keeping discarded pool objects alive. */
+  authoritativeExactPoolKeys?: Set<string>;
+  poolCompaction?: DirectApiProviderPoolCompaction;
+}
+
 export interface DirectApiFetchPhaseResult {
-  results: Array<{
-    name: string;
-    circuitKey: string;
-    normalizedProtocol: string;
-    supportedChains: string[];
-    result: DexApiFetchResult;
-  }>;
+  results: DirectApiFetchPhaseEntry[];
   failedSources: string[];
   fallbackSignals: string[];
   sourceWarnings: string[];
@@ -75,6 +80,10 @@ export interface DirectApiPoolCompactionCounts {
   retainedPoolCount: number;
   skippedInvalidUnitCount: number;
   skippedUntrackedCount: number;
+}
+
+export interface DirectApiProviderPoolCompaction extends DirectApiPoolCompactionCounts {
+  measuredExecutionPools: DexApiPool[];
 }
 
 export interface CompactedDirectApiFetchPhase {
@@ -119,47 +128,78 @@ export function compactDirectApiFetchPhasePools(
     skippedUntrackedCount: 0,
   };
 
-  const results = phase.results.map((entry) => {
-    const rawPoolCount = entry.result.pools.length;
-    for (const pool of entry.result.pools) {
-      if (
-        (pool.source === "fluid" || pool.source === "pancakeswap") &&
-        hasTrackedDirectApiToken(pool, lookups)
-      ) {
-        measuredExecutionPools.push(pool);
-      }
-    }
-    const normalized = normalizeDexApiPoolsForMerge(entry.result.pools);
-    const normalizedPoolCount = normalized.pools.length;
-    let retainedPoolCount = 0;
-    for (const pool of normalized.pools) {
-      if (hasTrackedDirectApiToken(pool, lookups)) {
-        normalized.pools[retainedPoolCount++] = pool;
-      }
-    }
-    normalized.pools.length = retainedPoolCount;
-    const retainedPools = normalized.pools;
-
-    counts.rawPoolCount += rawPoolCount;
-    counts.retainedPoolCount += retainedPoolCount;
-    counts.skippedInvalidUnitCount += normalized.skippedInvalidUnitCount;
-    counts.skippedUntrackedCount += normalizedPoolCount - retainedPoolCount;
-    pools.push(...retainedPools);
-
-    return {
-      ...entry,
-      result: {
-        ...entry.result,
-        pools: retainedPools,
-      },
-    };
-  });
+  const results = phase.results.map((entry) => compactDirectApiProviderEntry(entry, lookups));
+  for (const entry of results) {
+    const compaction = entry.poolCompaction!;
+    counts.rawPoolCount += compaction.rawPoolCount;
+    counts.retainedPoolCount += compaction.retainedPoolCount;
+    counts.skippedInvalidUnitCount += compaction.skippedInvalidUnitCount;
+    counts.skippedUntrackedCount += compaction.skippedUntrackedCount;
+    pools.push(...entry.result.pools);
+    measuredExecutionPools.push(...compaction.measuredExecutionPools);
+  }
 
   return {
     phase: { ...phase, results },
     pools,
     measuredExecutionPools,
     counts,
+  };
+}
+
+function compactDirectApiProviderEntry(
+  entry: DirectApiFetchPhaseEntry,
+  lookups: Pick<SymbolLookups, "chainAddressToId" | "symbolToChainScopedIds">,
+): DirectApiFetchPhaseEntry {
+  if (entry.poolCompaction) return entry;
+
+  const rawPools = entry.result.pools;
+  const authoritativeExactPoolKeys =
+    entry.result.ok && !entry.result.degraded && (entry.result.warnings?.length ?? 0) === 0
+      ? new Set<string>()
+      : undefined;
+  const measuredExecutionPools: DexApiPool[] = [];
+  const retainedPools: DexApiPool[] = [];
+  let normalizedPoolCount = 0;
+  let skippedInvalidUnitCount = 0;
+
+  for (const rawPool of rawPools) {
+    if (authoritativeExactPoolKeys) {
+      const exactPoolKey = buildDirectApiPoolIdentity(rawPool).exactPoolKey;
+      if (exactPoolKey) authoritativeExactPoolKeys.add(exactPoolKey);
+    }
+    if (
+      (rawPool.source === "fluid" || rawPool.source === "pancakeswap") &&
+      hasTrackedDirectApiToken(rawPool, lookups)
+    ) {
+      measuredExecutionPools.push(rawPool);
+    }
+
+    // Normalize one pool at a time so the full raw provider graph never
+    // coexists with a second full normalized graph.
+    const normalized = normalizeDexApiPoolsForMerge([rawPool]);
+    skippedInvalidUnitCount += normalized.skippedInvalidUnitCount;
+    const pool = normalized.pools[0];
+    if (!pool) continue;
+    normalizedPoolCount++;
+    if (hasTrackedDirectApiToken(pool, lookups)) {
+      retainedPools.push(pool);
+    }
+  }
+
+  // The fetch result owns this array. Replacing it here drops the raw provider
+  // graph before the serialized phase advances to the next provider.
+  entry.result.pools = retainedPools;
+  return {
+    ...entry,
+    ...(authoritativeExactPoolKeys ? { authoritativeExactPoolKeys } : {}),
+    poolCompaction: {
+      rawPoolCount: rawPools.length,
+      retainedPoolCount: retainedPools.length,
+      skippedInvalidUnitCount,
+      skippedUntrackedCount: normalizedPoolCount - retainedPools.length,
+      measuredExecutionPools,
+    },
   };
 }
 
@@ -280,6 +320,7 @@ export async function runDirectApiFetchPhase(
   db: D1Database,
   fetchers: DirectApiFetcher[],
   signal?: AbortSignal,
+  lookups?: Pick<SymbolLookups, "chainAddressToId" | "symbolToChainScopedIds">,
 ): Promise<DirectApiFetchPhaseResult> {
   const providerContext = createProviderExecutionContextForJob({
     job: "sync-dex-liquidity",
@@ -321,12 +362,19 @@ export async function runDirectApiFetchPhase(
       } else if (result.degraded) {
         fallbackSignals.push(`${circuitKey}-partial`);
       }
+      const entry: DirectApiFetchPhaseEntry = {
+        name,
+        circuitKey,
+        normalizedProtocol,
+        supportedChains,
+        result,
+      };
       return {
         failedSources,
         fallbackSignals,
         sourceWarnings,
         circuitEvents,
-        entry: { name, circuitKey, normalizedProtocol, supportedChains, result },
+        entry: lookups ? compactDirectApiProviderEntry(entry, lookups) : entry,
       };
     } catch (err) {
       if (err instanceof ProviderCircuitOpenError) {
