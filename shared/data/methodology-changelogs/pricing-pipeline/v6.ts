@@ -2,6 +2,27 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.193",
+    title: "Missing-price coverage and deterministic route hardening",
+    date: "2026-07-16",
+    effectiveAt: 1784184600,
+    summary:
+      "Active-price coverage now degrades health independently of row publication, while reviewed protocol and exact-market routes recover long-tail assets without relaxing global freshness, replay, or depeg-authority rules.",
+    impact: [
+      "Cron metadata and public health identify active assets with unusable prices, affected raw USD circulating value, missing-generation streaks, last accepted provenance, and current rejection context while cache publication continues; a two-generation gap emits an asset-specific delivery-deduplicated alert",
+      "Already-missing and soon-expiring assets retain priority access to bounded provider budgets instead of being rotated behind breadth-oriented already-priced assets, and asset-level route attempts remain available through metadata compaction",
+      "sAID, sYUSD, Kava USDX, PHPm, and USX use narrowly scoped protocol or executable-pool routes with current dependency, identity, depth, freshness, and route-agreement checks",
+      "JUSD uses a funded, publicly executable Citrea bridge burn path behind a dedicated circuit, while USP uses a reviewed Balancer SOR route whose USDC quote must be converted by an independently authoritative current USDC price",
+      "KRWO corrects Pancake V3 pair orientation, and every DEX aggregate now passes peg-aware validation before it can replace or enter `dex_prices`",
+      "Configured unresolved CoinMarketCap slugs use a rotating exact-identity targeted quote pass; verified results preserve their original upstream time through the hourly quota cooldown, while inactive, stale, zero-volume, wrong-contract, and peg-impossible quotes remain missing",
+      "The exact AZND Curve route is published only with fallback confidence after fresh-block identity, balance, and bounded-impact checks, so a thin display quote cannot independently become depeg-authoritative evidence or replay-safe cache state",
+      "MNEE, VEUR, and NXUSD remain explicit coverage failures when reviewed sources are inactive, depleted, stale, or non-executable; the pipeline does not replace those gaps with nominal peg values",
+      "Royal RUSD and REUR leave active pricing scope after primary evidence showed their public venue and withdrawals closed; no nominal par prices replace the discontinued market",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.192",
     title: "Independent-source consensus and missing-price scheduling",
     date: "2026-07-15",

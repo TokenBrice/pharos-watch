@@ -665,7 +665,7 @@ async function fetchReviewedBalancerRoute(
 ): Promise<ReviewedBalancerRouteResult | null> {
   const label = `reviewed route ${route.poolId}`;
   // This pool response is an identity/admission gate only. Price evidence comes
-  // entirely from the single SOR response that quotes the full route to USDC.
+  // from the reference and bounded SOR responses that quote the full route to USDC.
   const poolResponse = await fetchReviewedBalancerQuery<NonNullable<ReviewedBalancerPoolResponse["data"]>>(
     REVIEWED_POOL_QUERY,
     { id: route.poolId, chain: route.chain },
