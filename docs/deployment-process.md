@@ -157,7 +157,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 Reusable Pages sequence in `.github/workflows/pages-release.yml`:
 
 1. Check out at the default shallow depth and install the workspace without a browser.
-2. When `refresh_data=true`, refresh digests, confirmed depeg events, and public dataset mirrors through authenticated `https://site-api.pharos.watch`; invalid or missing inputs fail before build and publish.
+2. When `refresh_data=true`, refresh digests, confirmed depeg events, and public dataset mirrors through the Origin-gated `https://stablecoin-dashboard.pages.dev/_site-data` proxy into `site-api.pharos.watch`; invalid or missing inputs fail before build and publish.
 3. Clear `.next`, build once with the production feature-flag environment, and preserve the selected committed or freshly refreshed data through the prebuild hook.
 4. Run artifact-specific checks: feature-flag inlining, build size, build attribution, and static SEO.
 5. Write `out/__pharos_release.json`, publish that exact `out/` directory with one `wrangler pages deploy` command, resolve the latest production deployment through `wrangler pages deployment list --json`, and require one cache-busted target-SHA marker match from that immutable `pages.dev` deployment URL within the bounded polling window.
@@ -177,9 +177,8 @@ Repository secrets consumed only by jobs attached to the production environment:
 
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
-- `SITE_API_SHARED_SECRET`
 
-The Cloudflare credentials authorize Worker/D1 and Pages deployment. `SITE_API_SHARED_SECRET` authenticates the scheduled Pages refresh. Ordinary Pages code releases receive only the Cloudflare credentials. Re-enter these values as environment-scoped secrets before deleting their repository-scoped copies; GitHub does not expose existing secret values for automated migration. Secret values are never recorded in the repository.
+The Cloudflare credentials authorize Worker/D1 and Pages deployment. Re-enter these values as environment-scoped secrets before deleting their repository-scoped copies; GitHub does not expose existing secret values for automated migration. Secret values are never recorded in the repository. The matching Pages and Worker `SITE_API_SHARED_SECRET` bindings remain Cloudflare-managed; scheduled refreshes reach that authenticated Worker lane through the Pages proxy without exposing the secret to the GitHub runner.
 
 The manual zone-cache recovery workflow additionally requires the Cloudflare token to grant `Zone Read` and `Cache Purge` for `pharos.watch`. Normal Pages and Worker deployment permissions do not imply those zone permissions.
 
@@ -231,7 +230,7 @@ Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`
 
 - Schedule: `17 8 * * *` UTC, after the 08:05 UTC daily digest slot.
 - The workflow has one main-only reusable job and calls `pages-release.yml` with `refresh_data: true`.
-- It refreshes all three API-backed datasets through authenticated `site-api.pharos.watch`, builds and checks the exact artifact, publishes once, and verifies the release marker on the immutable production deployment URL.
+- It refreshes all three API-backed datasets through the production `stablecoin-dashboard.pages.dev/_site-data` proxy, builds and checks the exact artifact, publishes once, and verifies the release marker on the immutable production deployment URL.
 - It intentionally skips Worker deployment and broad live smoke lanes. Missing or invalid refresh data fails before publication.
 - Manual rebuild dispatch uses the same path and the shared `production-deploy` lock.
 

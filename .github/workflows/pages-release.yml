@@ -13,8 +13,6 @@ on:
         required: true
       CLOUDFLARE_ACCOUNT_ID:
         required: true
-      SITE_API_SHARED_SECRET:
-        required: false
 
 permissions:
   contents: read
@@ -49,11 +47,10 @@ jobs:
       - name: Refresh API-backed release data
         if: ${{ inputs.refresh_data }}
         env:
-          DIGEST_API_URL: https://site-api.pharos.watch
-          DEPEG_EVENTS_API_URL: https://site-api.pharos.watch
-          PUBLIC_DATASETS_API_URL: https://site-api.pharos.watch
+          DIGEST_API_URL: https://stablecoin-dashboard.pages.dev/_site-data
+          DEPEG_EVENTS_API_URL: https://stablecoin-dashboard.pages.dev/_site-data
+          PUBLIC_DATASETS_API_URL: https://stablecoin-dashboard.pages.dev/_site-data
           PUBLIC_DATASETS_REQUIRE_API: "1"
-          SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}
         run: |
           npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json
           npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json

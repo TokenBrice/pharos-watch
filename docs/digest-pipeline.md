@@ -369,7 +369,7 @@ npx tsx scripts/maintenance/sync-digests.ts --api-url https://ops-api.example.co
 The scheduled/manual Pages refresh runs digest sync inside `.github/workflows/pages-release.yml`:
 
 1. When `refresh_data=true`, the `pages-release` job fetches `GET /api/digest-archive` once and writes normalized `data/digests.json` before `next build`. Ordinary code releases use the committed snapshot.
-2. The refresh calls authenticated `https://site-api.pharos.watch` with `SITE_API_SHARED_SECRET`; it does not depend on the public API/WAF lane.
+2. The refresh calls `https://stablecoin-dashboard.pages.dev/_site-data`, whose Pages Function authenticates upstream requests to `site-api.pharos.watch`; it does not depend on the custom-domain edge path used by public traffic.
 3. The scheduled `Rebuild Pages` workflow runs once at 08:17 UTC after the 08:05 UTC daily digest slot.
 
 This keeps the Pages build itself network-independent once the digest snapshot has been fetched and avoids hard-coding `https://api.pharos.watch` into the build path.

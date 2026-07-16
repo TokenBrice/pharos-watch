@@ -570,7 +570,6 @@ describe("validate-ci parity", () => {
     expect(Object.keys(workflowCall.secrets).sort()).toEqual([
       "CLOUDFLARE_ACCOUNT_ID",
       "CLOUDFLARE_API_TOKEN",
-      "SITE_API_SHARED_SECRET",
     ]);
 
     const job = workflow.jobs["pages-release"];
@@ -584,9 +583,9 @@ describe("validate-ci parity", () => {
     const marker = steps.find((step) => step.name === "Verify deployment release marker");
     expect(refresh?.if).toBe("${{ inputs.refresh_data }}");
     expect(refresh?.env).toMatchObject({
-      DIGEST_API_URL: "https://site-api.pharos.watch",
-      DEPEG_EVENTS_API_URL: "https://site-api.pharos.watch",
-      PUBLIC_DATASETS_API_URL: "https://site-api.pharos.watch",
+      DIGEST_API_URL: "https://stablecoin-dashboard.pages.dev/_site-data",
+      DEPEG_EVENTS_API_URL: "https://stablecoin-dashboard.pages.dev/_site-data",
+      PUBLIC_DATASETS_API_URL: "https://stablecoin-dashboard.pages.dev/_site-data",
       PUBLIC_DATASETS_REQUIRE_API: "1",
     });
     expect(refresh?.run).toContain("npm run generate:public-datasets");
@@ -613,6 +612,7 @@ describe("validate-ci parity", () => {
     expect(jobText).not.toContain("test:smoke-ui");
     expect(jobText).not.toContain("test:smoke-ops");
     expect(jobText).not.toContain("test:smoke-transport");
+    expect(jobText).not.toContain("SITE_API_SHARED_SECRET");
     expect(jobText).not.toContain("PAGES_RELEASE_ALLOW_EXISTING_DATA_ON_FETCH_FAILURE");
     expect(jobText).not.toContain("rollback-pages");
   });
@@ -630,7 +630,6 @@ describe("validate-ci parity", () => {
     expect(Object.keys(release.secrets ?? {}).sort()).toEqual([
       "CLOUDFLARE_ACCOUNT_ID",
       "CLOUDFLARE_API_TOKEN",
-      "SITE_API_SHARED_SECRET",
     ]);
   });
 
