@@ -5,7 +5,7 @@
     {
       "assetId": "bold-liquity",
       "archetype": "cdp",
-      "reviewedAt": "2026-07-13",
+      "reviewedAt": "2026-07-15",
       "sources": [
         {
           "label": "Liquity V2 protocol stats API (total_coll_value, total_bold_supply, total_sp_deposits)",
@@ -14,9 +14,29 @@
         {
           "label": "Liquity V2 documentation (per-branch MCR, Stability Pool liquidation mechanics, branch isolation)",
           "url": "https://docs.liquity.org/"
+        },
+        {
+          "label": "Liquity V2 borrowing, liquidation, branch-shutdown, and urgent-redemption documentation",
+          "url": "https://docs.liquity.org/v2-faq/borrowing-and-liquidations"
+        },
+        {
+          "label": "Liquity V2 redemption documentation",
+          "url": "https://docs.liquity.org/v2-faq/redemptions-and-delegation"
+        },
+        {
+          "label": "Pinned Liquity V2 protocol implementation and design README",
+          "url": "https://github.com/liquity/bold/blob/c8a5a4ee2e9dc024905856b6698a77d849c68c7e/README.md"
+        },
+        {
+          "label": "Pinned Liquity V2 StabilityPool implementation",
+          "url": "https://github.com/liquity/bold/blob/c8a5a4ee2e9dc024905856b6698a77d849c68c7e/contracts/src/StabilityPool.sol"
+        },
+        {
+          "label": "Pinned Liquity V2 TroveManager implementation",
+          "url": "https://github.com/liquity/bold/blob/c8a5a4ee2e9dc024905856b6698a77d849c68c7e/contracts/src/TroveManager.sol"
         }
       ],
-      "notes": "Measured 2026-07-13 from the protocol's own stats API: total collateral value $71,324,392 against total BOLD supply 29,047,740 gives a system collateralization ratio of 2.455; Stability Pool deposits of 19,111,283 BOLD against the same supply give a liquidation capacity ratio of 0.658. Collateralization parameters and Stability Pool liquidation mechanics are documented protocol design reviewed against the docs; backstop, branch isolation, shutdown/bad-debt, and structural redemption are left bounded-unknown pending a dedicated review even though redemption and per-branch isolation are documented features.",
+      "notes": "Measured 2026-07-13 from the protocol's own stats API: total collateral value $71,324,392 against total BOLD supply 29,047,740 gives a system collateralization ratio of 2.455; Stability Pool deposits of 19,111,283 BOLD against the same supply give a liquidation capacity ratio of 0.658. The dedicated qualitative review on 2026-07-15 used Liquity's current documentation and implementation pinned at commit c8a5a4ee2e9dc024905856b6698a77d849c68c7e. Each branch has its own Stability Pool; liquidation burns deposited BOLD against debt and redistributes any remainder only among active Troves in that branch. That establishes an adequate two-stage backstop and adequate operational branch isolation, while the shared BOLD claim still exposes holders to unrecovered debt from any branch and prevents a strong rating. A branch can permanently shut down below its SCR or on oracle failure, stop interest and new borrower operations, and enable urgent branch redemptions. Liquity's own risk disclosure nevertheless states that collapsed collateral can leave unbacked BOLD with no unconditional recapitalization facility, so shutdown and bad-debt handling is limited. Any BOLD holder can permissionlessly redeem through the CollateralRegistry for a routed mix of collateral at protocol value, with urgent redemption available after branch shutdown, supporting adequate structural redemption.",
       "metrics": {
         "collateralizationRatio": 2.455,
         "liquidationCapacityRatio": 0.658
@@ -26,6 +46,18 @@
           "quality": "adequate"
         },
         "liquidationMechanics": {
+          "quality": "adequate"
+        },
+        "backstop": {
+          "quality": "adequate"
+        },
+        "branchIsolation": {
+          "quality": "adequate"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
           "quality": "adequate"
         }
       }
@@ -58,9 +90,25 @@
         {
           "label": "Liquity V1 documentation (150% CCR / Recovery Mode)",
           "url": "https://docs.liquity.org/liquity-v1/faq/recovery-mode"
+        },
+        {
+          "label": "Liquity V1 general protocol documentation",
+          "url": "https://docs.liquity.org/liquity-v1/faq/general"
+        },
+        {
+          "label": "Liquity V1 redemption documentation",
+          "url": "https://docs.liquity.org/liquity-v1/faq/redemptions-and-lusd-price-stability"
+        },
+        {
+          "label": "Pinned Liquity V1 TroveManager implementation",
+          "url": "https://github.com/liquity/dev/blob/3e64ee1b52c50d51587c64c1cf75e0ba82934979/packages/contracts/contracts/TroveManager.sol"
+        },
+        {
+          "label": "Pinned Liquity V1 StabilityPool implementation",
+          "url": "https://github.com/liquity/dev/blob/3e64ee1b52c50d51587c64c1cf75e0ba82934979/packages/contracts/contracts/StabilityPool.sol"
         }
       ],
-      "notes": "Measured on-chain 2026-07-14 at finalized Ethereum block 25533257 via journaled eth_call (evidence: shared/data/safety-score-v9/mechanism-measurements/lusd-liquity/2026-07-14-block-25533257.json; producer scripts/maintenance/measure-cdp-mechanism-metrics.ts, byte-replay verified). The contract graph was derived on-chain from the LUSD token (troveManagerAddress(), stabilityPoolAddress(), then TroveManager.priceFeed()) rather than from a published address list. TroveManager.getTCR at the canonical protocol price - an eth_call simulation of PriceFeed.fetchPrice() = 1875.88242714 USD/ETH, agreeing 0.0000% with the Chainlink ETH/USD feed - returned 5.033 (derivation check: getTCR == floor(coll x price / debt), exact). An earlier same-day read at block 25530791 used the frozen lastGoodPrice (1780.21673094, ~5.1% stale in the quiet system) and gave 4.776; superseded by owner decision D2 on 2026-07-14. StabilityPool.getTotalLUSDDeposits() over getEntireSystemDebt() gives a liquidation capacity ratio of 0.278; LUSD totalSupply() equals getEntireSystemDebt() exactly at the pinned block, so the ratio is identical against supply. checkRecoveryMode() was false, MCR 110%, CCR 150%. Collateralization parameters and liquidation mechanics are documented, immutable protocol design reviewed against the V1 docs. Backstop, branch isolation, shutdown/bad-debt, and structural redemption are left bounded-unknown pending a dedicated review, even though redistribution-to-Troves and permissionless redemption are documented features: the Stability Pool covers only 27.8% of system debt, and the redistribution fallback that absorbs the remainder has not been reviewed here.",
+      "notes": "Measured on-chain 2026-07-14 at finalized Ethereum block 25533257 via journaled eth_call (evidence: shared/data/safety-score-v9/mechanism-measurements/lusd-liquity/2026-07-14-block-25533257.json; producer scripts/maintenance/measure-cdp-mechanism-metrics.ts, byte-replay verified). The contract graph was derived on-chain from the LUSD token (troveManagerAddress(), stabilityPoolAddress(), then TroveManager.priceFeed()) rather than from a published address list. TroveManager.getTCR at the canonical protocol price - an eth_call simulation of PriceFeed.fetchPrice() = 1875.88242714 USD/ETH, agreeing 0.0000% with the Chainlink ETH/USD feed - returned 5.033 (derivation check: getTCR == floor(coll x price / debt), exact). An earlier same-day read at block 25530791 used the frozen lastGoodPrice (1780.21673094, about 5.1% stale in the quiet system) and gave 4.776; superseded by owner decision D2 on 2026-07-14. StabilityPool.getTotalLUSDDeposits() over getEntireSystemDebt() gives a liquidation capacity ratio of 0.278; LUSD totalSupply() equals getEntireSystemDebt() exactly at the pinned block, so the ratio is identical against supply. checkRecoveryMode() was false, MCR 110%, CCR 150%. The pinned implementation and official documentation establish that Stability Pool deposits burn liquidated debt and that any residual debt and collateral are redistributed across active Troves, supporting an adequate backstop design while the measured 27.8% committed-capital ratio remains visible. Liquity V1 is one immutable ETH-only Trove system, so cross-branch isolation is structurally not applicable. Recovery Mode changes liquidation rules but the protocol has no shutdown or unconditional recapitalization facility, supporting limited shutdownAndBadDebt quality. Any holder can permissionlessly redeem LUSD for protocol-priced ETH from the lowest-collateralized Troves, supporting adequate structural redemption.",
       "metrics": {
         "collateralizationRatio": 5.033,
         "liquidationCapacityRatio": 0.278
@@ -70,6 +118,20 @@
           "quality": "adequate"
         },
         "liquidationMechanics": {
+          "quality": "adequate"
+        },
+        "backstop": {
+          "quality": "adequate"
+        },
+        "branchIsolation": {
+          "applicability": "not-applicable",
+          "rationale": "Liquity V1 is a single immutable ETH-only Trove system, so no separate collateral branches can transmit losses to one another.",
+          "sourceUrl": "https://docs.liquity.org/liquity-v1/faq/general"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
           "quality": "adequate"
         }
       }
@@ -108,11 +170,15 @@
           "url": "https://usefelix.gitbook.io/docs/advanced/risk-management"
         },
         {
+          "label": "Pinned Felix TroveManager implementation (branch liquidation redistribution, shutdown, and urgent redemption)",
+          "url": "https://github.com/felixprotocol/felix-contracts/blob/10b54573015b1013fc383cb6bfddc5a232323896/src/TroveManager.sol"
+        },
+        {
           "label": "DefiLlama peggedAsset 251 (independent circulating cross-check: 11,563,600.69 feUSD)",
           "url": "https://stablecoins.llama.fi/stablecoin/251"
         }
       ],
-      "notes": "Measured on-chain 2026-07-14 at HyperEVM block 40440545 via eth_call. The contract graph was derived on-chain: the feUSD token exposes no Liquity getters (it is a role-gated upgradeable ERC20, not Liquity's BoldToken), so the graph was taken from the CollateralRegistry proxy 0x9de1e57 (impl 0xD06DfC33), whose totalCollaterals() = 4 and getTroveManager(i)/getToken(i) enumerate exactly four branches: WHYPE (TM 0x3100F4e7), UBTC (TM 0xbbe5f227), kHYPE (TM 0x7c07bB77), wstHYPE (TM 0x58446C58). The registry address is corroborated by Felix's own docs, and each TroveManager's activePool() matches the four holders already in the coin file's liveReservesConfig. Per branch, getEntireBranchColl() x PriceFeed.lastGoodPrice() over getEntireBranchDebt(): WHYPE 430,173.636 WHYPE @ $65.20795344 = $28,050,742 vs debt 9,522,352.500 (CR 2.946); UBTC 28.055 @ $62,449.56855 = $1,752,006 vs debt 569,059.981 (CR 3.079); kHYPE 75,231.740 @ $64.98626 = $4,889,029 vs debt 1,123,782.912 (CR 4.351); wstHYPE 10,395.891 @ $65.41448 = $680,042 vs debt 348,425.553 (CR 1.952). System totals: collateral $35,371,819 over total branch debt 11,563,620.946 feUSD = collateralizationRatio 3.059. Cross-checks: (1) Felix's TroveManager has no getTCR(uint256), so collateral was verified three ways — TroveManager.getEntireBranchColl() equals ActivePool.getCollBalance() equals the collateral ERC20's balanceOf(ActivePool) for all four branches (exact, to within 1 wei on WHYPE); (2) re-valuing the same collateral at the live PriceFeed.fetchPrice() instead of lastGoodPrice() gives CR 3.070, agreeing to within 0.4%; (3) total branch debt 11,563,620.946 versus feUSD totalSupply() 11,563,588.435 agree to 0.0003% — supply is 32.51 feUSD BELOW debt, which is the expected direction for Liquity V2 (branch debt includes interest accrued but not yet minted), not a discrepancy. DefiLlama independently reports 11,563,600.69 circulating. liquidationCapacityRatio = sum of StabilityPool.getTotalfeUSDDeposits() (the fork's rename of getTotalBoldDeposits) 9,915,239.353 over total debt = 0.857; each pool's deposits plus getYieldGainsOwed() reconcile exactly against feUSD.balanceOf(StabilityPool), confirming the deposit figure is committed capital actually held, not an accounting claim. IMPORTANT QUALIFIER: Stability Pools are branch-local and cannot cross-subsidize, and coverage is very uneven — UBTC's pool holds 3.572x its own branch debt while wstHYPE holds only 0.238x and WHYPE 0.703x. Capping each branch's usable pool at its own debt gives a branch-isolation-adjusted ratio of 0.731; the reported 0.857 is the brief's uncapped sum-over-total definition and is the optimistic bound. Parameters read on-chain from each BorrowerOperations: MCR 135% / CCR 170% / SCR 120% for WHYPE, kHYPE and wstHYPE, and MCR 125% / CCR 150% / SCR 120% for UBTC. All four branches are live (shutdownTime() = 0) and on their primary oracle (PriceFeed priceSource = 0, i.e. not fallen back to lastGoodPrice). Liquidation penalties are not exposed by any public getter. Collateralization parameters and the two-stage liquidation cascade (Stability Pool offset, then redistribution of residual debt and collateral to active troves in the same branch) are reviewed against Felix's docs and confirmed on-chain. Backstop, branch isolation, shutdown/bad-debt and structural redemption are left bounded-unknown: the redistribution fallback that must absorb the 27% of debt the pools do not cover has not been reviewed, and Felix's docs state bad-debt monitoring is delegated to Anthias Labs without documenting a bad-debt resolution mechanism.",
+      "notes": "Measured on-chain 2026-07-14 at HyperEVM block 40440545 via eth_call. The contract graph was derived on-chain: the feUSD token exposes no Liquity getters (it is a role-gated upgradeable ERC20, not Liquity's BoldToken), so the graph was taken from the CollateralRegistry proxy 0x9de1e57 (impl 0xD06DfC33), whose totalCollaterals() = 4 and getTroveManager(i)/getToken(i) enumerate exactly four branches: WHYPE (TM 0x3100F4e7), UBTC (TM 0xbbe5f227), kHYPE (TM 0x7c07bB77), wstHYPE (TM 0x58446C58). The registry address is corroborated by Felix's own docs, and each TroveManager's activePool() matches the four holders already in the coin file's liveReservesConfig. Per branch, getEntireBranchColl() x PriceFeed.lastGoodPrice() over getEntireBranchDebt(): WHYPE 430,173.636 WHYPE @ $65.20795344 = $28,050,742 vs debt 9,522,352.500 (CR 2.946); UBTC 28.055 @ $62,449.56855 = $1,752,006 vs debt 569,059.981 (CR 3.079); kHYPE 75,231.740 @ $64.98626 = $4,889,029 vs debt 1,123,782.912 (CR 4.351); wstHYPE 10,395.891 @ $65.41448 = $680,042 vs debt 348,425.553 (CR 1.952). System totals: collateral $35,371,819 over total branch debt 11,563,620.946 feUSD = collateralizationRatio 3.059. Cross-checks: (1) Felix's TroveManager has no getTCR(uint256), so collateral was verified three ways — TroveManager.getEntireBranchColl() equals ActivePool.getCollBalance() equals the collateral ERC20's balanceOf(ActivePool) for all four branches (exact, to within 1 wei on WHYPE); (2) re-valuing the same collateral at the live PriceFeed.fetchPrice() instead of lastGoodPrice() gives CR 3.070, agreeing to within 0.4%; (3) total branch debt 11,563,620.946 versus feUSD totalSupply() 11,563,588.435 agree to 0.0003% — supply is 32.51 feUSD BELOW debt, which is the expected direction for Liquity V2 (branch debt includes interest accrued but not yet minted), not a discrepancy. DefiLlama independently reports 11,563,600.69 circulating. liquidationCapacityRatio = sum of StabilityPool.getTotalfeUSDDeposits() (the fork's rename of getTotalBoldDeposits) 9,915,239.353 over total debt = 0.857; each pool's deposits plus getYieldGainsOwed() reconcile exactly against feUSD.balanceOf(StabilityPool), confirming the deposit figure is committed capital actually held, not an accounting claim. IMPORTANT QUALIFIER: Stability Pools are branch-local and cannot cross-subsidize, and coverage is very uneven — UBTC's pool holds 3.572x its own branch debt while wstHYPE holds only 0.238x and WHYPE 0.703x. Capping each branch's usable pool at its own debt gives a branch-isolation-adjusted ratio of 0.731; the reported 0.857 is the brief's uncapped sum-over-total definition and is the optimistic bound. Parameters read on-chain from each BorrowerOperations: MCR 135% / CCR 170% / SCR 120% for WHYPE, kHYPE and wstHYPE, and MCR 125% / CCR 150% / SCR 120% for UBTC. All four branches are live (shutdownTime() = 0) and on their primary oracle (PriceFeed priceSource = 0, i.e. not fallen back to lastGoodPrice). Liquidation penalties are not exposed by any public getter. Felix's docs and pinned implementation establish an independent state contract per branch, a branch-local Stability Pool with residual debt and collateral redistributed only to that branch's active troves, system redemption through the CollateralRegistry, and SCR-triggered branch shutdown with urgent redemption. Backstop and branch isolation are adequate; structural redemption is adequate. Shutdown and bad-debt handling are limited because shutdown, urgent redemption, and redistribution are implemented, but no separate recapitalization facility covers a branch-wide collateral deficit and the documented external control is Anthias monitoring.",
       "metrics": {
         "collateralizationRatio": 3.059,
         "liquidationCapacityRatio": 0.857
@@ -122,6 +188,18 @@
           "quality": "adequate"
         },
         "liquidationMechanics": {
+          "quality": "adequate"
+        },
+        "backstop": {
+          "quality": "adequate"
+        },
+        "branchIsolation": {
+          "quality": "adequate"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
           "quality": "adequate"
         }
       }
@@ -138,9 +216,13 @@
         {
           "label": "f(x) Protocol documentation",
           "url": "https://fxprotocol.gitbook.io/fx-docs"
+        },
+        {
+          "label": "Pinned f(x) PoolManager implementation",
+          "url": "https://github.com/AladdinDAO/fx-protocol-contracts/blob/5e198e93657db008a57129e7eea21a996618f17f/contracts/core/PoolManager.sol"
         }
       ],
-      "notes": "Measured at operator-pinned Ethereum block 25536894; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/fxusd-f-x-protocol/2026-07-15-block-25536894.json. The add-only RegisterPool history was queried from the PoolManager deployment block through the pinned block and contains exactly the two configured long pools. Both were graph-checked against PoolManager; pool debt plus legacy supply reconciled to total supply with 0.000000% divergence, and manager accounting agreed within 0.0024%. Protocol anchor-valued collateral over supply gives 1.493559. fxBASE token inventory gives 0.891605 committed liquidation capacity and agrees with share NAV within 0.0227%. Both pools were unpaused for borrowing and redemption at the pinned block.",
+      "notes": "Measured at operator-pinned Ethereum block 25536894; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/fxusd-f-x-protocol/2026-07-15-block-25536894.json. The add-only RegisterPool history was queried from the PoolManager deployment block through the pinned block and contains exactly the two configured long pools. Both were graph-checked against PoolManager; pool debt plus legacy supply reconciled to total supply with 0.000000% divergence, and manager accounting agreed within 0.0024%. Protocol anchor-valued collateral over supply gives 1.493559. fxBASE token inventory gives 0.891605 committed liquidation capacity and agrees with share NAV within 0.0227%. Both pools were unpaused for borrowing and redemption at the pinned block. The pinned PoolManager implementation gives EMERGENCY_ROLE a protocol pause, permits a DEBT_REDUCER_ROLE to burn supplied fxUSD while reducing pool debt, and lets the short-pool counterparty settle shortfall by reducing long-pool collateral and invalidating residual credit notes. Normal redemption is disabled while paused, although counterparty-only settlement redemption remains available, and the implementation establishes no unconditional external recapitalization facility. These bounded emergency and bad-debt paths support limited shutdownAndBadDebt quality.",
       "metrics": {
         "collateralizationRatio": 1.493559,
         "liquidationCapacityRatio": 0.891605
@@ -170,6 +252,10 @@
           "applicability": "measured",
           "quality": "limited"
         },
+        "shutdownAndBadDebt": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
         "structuralRedemption": {
           "applicability": "measured",
           "quality": "adequate"
@@ -188,9 +274,17 @@
         {
           "label": "Resupply protocol stability-mechanics documentation",
           "url": "https://docs.resupply.fi/resupply-protocol/stability-mechanics"
+        },
+        {
+          "label": "Pinned Resupply LiquidationHandler implementation",
+          "url": "https://github.com/resupplyfi/resupply/blob/537b5a0424efd1663b7a2c3262d4a2d0536fc670/src/protocol/LiquidationHandler.sol"
+        },
+        {
+          "label": "Pinned Resupply RedemptionHandler implementation",
+          "url": "https://github.com/resupplyfi/resupply/blob/537b5a0424efd1663b7a2c3262d4a2d0536fc670/src/protocol/RedemptionHandler.sol"
         }
       ],
-      "notes": "Measured at finalized Ethereum block 25536894; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/reusd-resupply/2026-07-15-block-25536894.json. The registry enumerated 19 unique pairs and their collateral vault conversions; active-pair collateral over debt gives 1.078969, with debt and token supply diverging 0.0304%. Three zero-debt pairs remain enumerated but their converted assets are excluded from the system ratio. InsurancePool reUSD held against debt gives 0.100629 committed liquidation capacity. Collateral is a layered ERC-4626 claim on crvUSD/frxUSD lending markets valued at protocol accounting par, not proof of immediate underlying liquidity.",
+      "notes": "Measured at finalized Ethereum block 25536894; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/reusd-resupply/2026-07-15-block-25536894.json. The registry enumerated 19 unique pairs and their collateral vault conversions; active-pair collateral over debt gives 1.078969, with debt and token supply diverging 0.0304%. Three zero-debt pairs remain enumerated but their converted assets are excluded from the system ratio. InsurancePool reUSD held against debt gives 0.100629 committed liquidation capacity. Collateral is a layered ERC-4626 claim on crvUSD/frxUSD lending markets valued at protocol accounting par, not proof of immediate underlying liquidity. The pinned LiquidationHandler records uncovered debt by collateral and can clear it only when recovered collateral or InsurancePool assets are sufficient, while owner-directed distribution can socialize impaired collateral to InsurancePool holders; this is a defined but limited bad-debt path without unconditional recapitalization or global settlement. The pinned RedemptionHandler lets holders redeem pair debt directly only when its owner-configurable guard is disabled or the reUSD oracle price falls below the permissionless threshold; otherwise only the protocol redemption operator may call it. Same-transaction communal redemption therefore exists, but its conditional access and configurable fees support limited structural redemption.",
       "metrics": {
         "collateralizationRatio": 1.078969,
         "liquidationCapacityRatio": 0.100629
@@ -218,6 +312,12 @@
         },
         "branchIsolation": {
           "applicability": "measured",
+          "quality": "limited"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
           "quality": "limited"
         }
       }
@@ -276,9 +376,17 @@
         {
           "label": "Quill deployment documentation",
           "url": "https://docs.quill.finance/documentation/contract-addresses"
+        },
+        {
+          "label": "Quill Stability Pool documentation",
+          "url": "https://docs.quill.finance/faq/price-stability-and-stability-pool"
+        },
+        {
+          "label": "Quill liquidation and redemption documentation",
+          "url": "https://docs.quill.finance/faq/liquidations-oracle-and-redemptions"
         }
       ],
-      "notes": "Measured at finalized Scroll block 34367075; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/usdq-quill/2026-07-15-block-34367075.json. The token-derived registry enumerated all four configured branches and reconciled debt to supply within 0.3577%, so controller coverage is complete. The measured health state is failed: aggregate protocol-priced collateral over debt is 0.676425, Stability Pool deposits over supply are 0.003830, and SCR branch 3 reports shutdownTime 1775494874 with redeemable=false. Those observations are retained as warnings and are not averaged away or mislabeled as incomplete coverage.",
+      "notes": "Measured at finalized Scroll block 34367075; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/usdq-quill/2026-07-15-block-34367075.json. The token-derived registry enumerated all four configured branches and reconciled debt to supply within 0.3577%, so controller coverage is complete. The measured health state is failed: aggregate protocol-priced collateral over debt is 0.676425, Stability Pool deposits were only 506.7716 USDQ against 132,307.8984 supply (0.003830), and the SCR branch represented about 78.9% of debt while reporting shutdownTime 1775494874 and redeemable=false. Quill documents Stability Pool offsets and permissionless redemptions, but the pinned state leaves both resources materially impaired; backstop and structural redemption are therefore weak rather than adequate.",
       "metrics": {
         "collateralizationRatio": 0.676425,
         "liquidationCapacityRatio": 0.00383
@@ -300,6 +408,10 @@
           "applicability": "measured",
           "quality": "weak"
         },
+        "backstop": {
+          "applicability": "measured",
+          "quality": "weak"
+        },
         "branchIsolation": {
           "applicability": "measured",
           "quality": "adequate"
@@ -307,6 +419,10 @@
         "shutdownAndBadDebt": {
           "applicability": "measured",
           "quality": "failed"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "weak"
         }
       }
     },
@@ -322,9 +438,17 @@
         {
           "label": "Mento V3 CDP documentation",
           "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp"
+        },
+        {
+          "label": "Pinned Mento StabilityPool implementation",
+          "url": "https://github.com/mento-protocol/bold/blob/164914333258515a2b58603f931513dc421b62ba/contracts/src/StabilityPool.sol"
+        },
+        {
+          "label": "Pinned Mento TroveManager implementation",
+          "url": "https://github.com/mento-protocol/bold/blob/164914333258515a2b58603f931513dc421b62ba/contracts/src/TroveManager.sol"
         }
       ],
-      "notes": "Measured at finalized Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/gbpm-mento/2026-07-15-block-72202985.json. The registry enumerated its single configured branch, the ActivePool debt matched the controller, and debt matched supply exactly. Protocol-priced USDm collateral over debt gives 2.142757; Stability Pool deposits over supply give 0.094585. The branch was live and redeemable at the pinned block.",
+      "notes": "Measured at finalized Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/gbpm-mento/2026-07-15-block-72202985.json. The registry enumerated its single configured branch, the ActivePool debt matched the controller, and debt matched supply exactly. Protocol-priced USDm collateral over debt gives 2.142757; Stability Pool deposits over supply give 0.094585. The branch was live and redeemable at the pinned block. The live manager and dedicated Stability Pool support adequate offset capacity and normal structural redemption. Pinned shutdown and urgent-redemption code plus residual redistribution provide a defined bad-debt path, but not unconditional recapitalization, so shutdown and bad-debt handling remains limited.",
       "metrics": {
         "collateralizationRatio": 2.142757,
         "liquidationCapacityRatio": 0.094585
@@ -346,7 +470,19 @@
           "applicability": "measured",
           "quality": "adequate"
         },
+        "backstop": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
         "branchIsolation": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "shutdownAndBadDebt": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "structuralRedemption": {
           "applicability": "measured",
           "quality": "adequate"
         }
@@ -519,7 +655,7 @@
           "url": "https://docs.mento.org/mento-v3"
         }
       ],
-      "notes": "Pinned Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/ghsm-mento/2026-07-15-block-72202985.json. The producer enumerated all 16 live exchange IDs, found the configured token/USDm pair exactly once, and measured 10000000 USDm of counter-bucket capacity at a 15 bps spread. Conversion capacity is an analogous exit metric only and is not relabeled as collateralization or liquidation capital.",
+      "notes": "Pinned Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/ghsm-mento/2026-07-15-block-72202985.json. The producer enumerated all 16 live exchange IDs, found the configured token/USDm pair exactly once, and measured 10000000 USDm of counter-bucket capacity at the journaled 100 bps fee. Conversion capacity is an analogous exit metric rather than dedicated liquidation capital. The bounded virtual USDm counter-bucket provides limited conversion support; pair buckets limit flow but Broker, USDm, reserve, and oracle failure domains remain shared; BreakerBox and trading limits can halt unsafe conversion without supplying an unconditional residual-deficit recapitalization path. Backstop, branch isolation, and shutdown/bad-debt handling are therefore limited.",
       "metrics": {
         "collateralizationRatio": null,
         "liquidationCapacityRatio": null
@@ -549,6 +685,18 @@
           "applicability": "not-applicable",
           "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
           "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "backstop": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "branchIsolation": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "shutdownAndBadDebt": {
+          "applicability": "measured",
+          "quality": "limited"
         },
         "structuralRedemption": {
           "applicability": "measured",
@@ -570,7 +718,7 @@
           "url": "https://docs.mento.org/mento-v3"
         }
       ],
-      "notes": "Pinned Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/kesm-mento/2026-07-15-block-72202985.json. The producer enumerated all 16 live exchange IDs, found the configured token/USDm pair exactly once, and measured 10000000 USDm of counter-bucket capacity at a 15 bps spread. Conversion capacity is an analogous exit metric only and is not relabeled as collateralization or liquidation capital.",
+      "notes": "Pinned Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/kesm-mento/2026-07-15-block-72202985.json. The producer enumerated all 16 live exchange IDs, found the configured token/USDm pair exactly once, and measured 10000000 USDm of counter-bucket capacity at the journaled 100 bps fee. Conversion capacity is an analogous exit metric rather than dedicated liquidation capital. The bounded virtual USDm counter-bucket provides limited conversion support; pair buckets limit flow but Broker, USDm, reserve, and oracle failure domains remain shared; BreakerBox and trading limits can halt unsafe conversion without supplying an unconditional residual-deficit recapitalization path. Backstop, branch isolation, and shutdown/bad-debt handling are therefore limited.",
       "metrics": {
         "collateralizationRatio": null,
         "liquidationCapacityRatio": null
@@ -600,6 +748,18 @@
           "applicability": "not-applicable",
           "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
           "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "backstop": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "branchIsolation": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "shutdownAndBadDebt": {
+          "applicability": "measured",
+          "quality": "limited"
         },
         "structuralRedemption": {
           "applicability": "measured",
@@ -621,7 +781,7 @@
           "url": "https://docs.mento.org/mento-v3"
         }
       ],
-      "notes": "Pinned Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/phpm-mento/2026-07-15-block-72202985.json. The producer enumerated all 16 live exchange IDs, found the configured token/USDm pair exactly once, and measured 10000000 USDm of counter-bucket capacity at a 15 bps spread. Conversion capacity is an analogous exit metric only and is not relabeled as collateralization or liquidation capital.",
+      "notes": "Pinned Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/phpm-mento/2026-07-15-block-72202985.json. The producer enumerated all 16 live exchange IDs, found the configured token/USDm pair exactly once, and measured 10000000 USDm of counter-bucket capacity at the journaled 30 bps fee. Conversion capacity is an analogous exit metric rather than dedicated liquidation capital. The bounded virtual USDm counter-bucket provides limited conversion support; pair buckets limit flow but Broker, USDm, reserve, and oracle failure domains remain shared; BreakerBox and trading limits can halt unsafe conversion without supplying an unconditional residual-deficit recapitalization path. Backstop, branch isolation, and shutdown/bad-debt handling are therefore limited.",
       "metrics": {
         "collateralizationRatio": null,
         "liquidationCapacityRatio": null
@@ -651,6 +811,18 @@
           "applicability": "not-applicable",
           "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
           "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "backstop": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "branchIsolation": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "shutdownAndBadDebt": {
+          "applicability": "measured",
+          "quality": "limited"
         },
         "structuralRedemption": {
           "applicability": "measured",
@@ -672,7 +844,7 @@
           "url": "https://docs.mento.org/mento-v3"
         }
       ],
-      "notes": "Pinned Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/zarm-mento/2026-07-15-block-72202985.json. The producer enumerated all 16 live exchange IDs, found the configured token/USDm pair exactly once, and measured 10000000 USDm of counter-bucket capacity at a 15 bps spread. Conversion capacity is an analogous exit metric only and is not relabeled as collateralization or liquidation capital.",
+      "notes": "Pinned Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/zarm-mento/2026-07-15-block-72202985.json. The producer enumerated all 16 live exchange IDs, found the configured token/USDm pair exactly once, and measured 10000000 USDm of counter-bucket capacity at the journaled 30 bps fee. Conversion capacity is an analogous exit metric rather than dedicated liquidation capital. The bounded virtual USDm counter-bucket provides limited conversion support; pair buckets limit flow but Broker, USDm, reserve, and oracle failure domains remain shared; BreakerBox and trading limits can halt unsafe conversion without supplying an unconditional residual-deficit recapitalization path. Backstop, branch isolation, and shutdown/bad-debt handling are therefore limited.",
       "metrics": {
         "collateralizationRatio": null,
         "liquidationCapacityRatio": null
@@ -702,6 +874,18 @@
           "applicability": "not-applicable",
           "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
           "sourceUrl": "https://docs.mento.org/mento-v3"
+        },
+        "backstop": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "branchIsolation": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "shutdownAndBadDebt": {
+          "applicability": "measured",
+          "quality": "limited"
         },
         "structuralRedemption": {
           "applicability": "measured",
@@ -823,9 +1007,17 @@
         {
           "label": "Yamato protocol documentation (no-liquidation design and redemptions)",
           "url": "https://docs.yamato.fi/readme/english-overview"
+        },
+        {
+          "label": "Pinned Yamato protocol pool implementation",
+          "url": "https://github.com/DeFiGeek-Community/yamato/blob/f0eb294909f9d95c60a7eabba6ca783842f0153b/contracts/PoolV2.sol"
+        },
+        {
+          "label": "Pinned Yamato bad-debt sweep implementation",
+          "url": "https://github.com/DeFiGeek-Community/yamato/blob/f0eb294909f9d95c60a7eabba6ca783842f0153b/contracts/YamatoSweeperV2.sol"
         }
       ],
-      "notes": "Measured at finalized Ethereum block 25536894; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/cjpy-yamato/2026-07-15-block-25536894.json. Yamato getStates collateral and debt, its resolved protocol price feed, and exact debt-to-token-supply reconciliation give a system collateralization ratio of 2.292195. Yamato documents no forced liquidation, so liquidation capacity is structurally N/A. The protocol pool balance over debt is 0.007045 and is retained only as an analogous redemption/sweep ratio.",
+      "notes": "Measured at finalized Ethereum block 25536894; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/cjpy-yamato/2026-07-15-block-25536894.json. Yamato getStates collateral and debt, its resolved protocol price feed, and exact debt-to-token-supply reconciliation give a system collateralization ratio of 2.292195. Yamato documents no forced liquidation, so liquidation capacity is structurally N/A. The protocol redemption and sweep pool was only 0.007045 of debt and is an upper bound because only part funds bad-debt sweeps. Fee-funded reserves and the pinned zero-collateral debt sweep path establish a backstop and residual-deficit mechanism, but their small measured size, governance pause dependency, and lack of unconditional recapitalization support weak quality. Branch isolation is structurally N/A because Yamato V1 is one ETH-only pledge system without independent collateral branches.",
       "metrics": {
         "collateralizationRatio": 2.292195,
         "liquidationCapacityRatio": null
@@ -853,6 +1045,19 @@
           "rationale": "Yamato has a no-liquidation design; its protocol pool is a redemption resource, not a liquidation pool.",
           "sourceUrl": "https://docs.yamato.fi/readme/english-overview"
         },
+        "backstop": {
+          "applicability": "measured",
+          "quality": "weak"
+        },
+        "branchIsolation": {
+          "applicability": "not-applicable",
+          "rationale": "Yamato V1 is a single ETH-only pledge system with no separate collateral branches.",
+          "sourceUrl": "https://docs.yamato.fi/readme/english-overview"
+        },
+        "shutdownAndBadDebt": {
+          "applicability": "measured",
+          "quality": "weak"
+        },
         "structuralRedemption": {
           "applicability": "measured",
           "quality": "limited"
@@ -871,9 +1076,17 @@
         {
           "label": "Aave GHO facilitator documentation",
           "url": "https://aave.com/help/gho-stablecoin/facilitators"
+        },
+        {
+          "label": "Aave Umbrella deficit-coverage documentation",
+          "url": "https://aave.com/help/umbrella/umbrella"
+        },
+        {
+          "label": "Aave v3.3 deficit-management design by BGD Labs",
+          "url": "https://governance.aave.com/t/bgd-aave-v3-3-feat-umbrella/20129"
         }
       ],
-      "notes": "Measured at finalized Ethereum block 25536894; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/gho-aave/2026-07-15-block-25536894.json. All six facilitator bucket levels sum exactly to 599,000,000 GHO total supply, proving issuance allocation rather than collateral adequacy. Shared multi-debt Aave accounts have no honest GHO-only system collateralization ratio, and external liquidators are not a GHO-dedicated committed pool, so both requested ratios are structurally N/A. Unused facilitator capacity is 0.447412 of supply but is governance mint authority, not backstop capital. The two directly inspected, unfrozen and unseized GSMs provide a non-exhaustive swappable-capacity lower bound of 0.099750.",
+      "notes": "Measured at finalized Ethereum block 25536894; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/gho-aave/2026-07-15-block-25536894.json. All six facilitator bucket levels sum exactly to 599,000,000 GHO total supply, proving issuance allocation rather than collateral adequacy. Shared multi-debt Aave accounts have no honest GHO-only system collateralization ratio, and external liquidators are not a GHO-dedicated committed pool, so both requested ratios are structurally N/A. Unused facilitator capacity is 0.447412 of supply but is governance mint authority, not backstop capital. The two directly inspected, unfrozen and unseized GSMs provide a non-exhaustive swappable-capacity lower bound of 0.099750. Governance-set per-facilitator bucket caps provide bounded issuance isolation, but they do not make GHO losses fully facility-remote. Aave v3.3 explicitly records zero-collateral residual GHO debt as a reserve deficit and provides a special direct-GHO deficit burn path. Umbrella then automates first-loss-offset and staker coverage for supported asset-network pairs, including GHO on Ethereum, but current coverage is not established across every measured facilitator. Branch isolation, backstop, and shutdown/bad-debt handling are therefore limited rather than adequate.",
       "metrics": {
         "collateralizationRatio": null,
         "liquidationCapacityRatio": null
@@ -905,9 +1118,298 @@
           "rationale": "External Aave liquidators are not a GHO-dedicated committed liquidation pool.",
           "sourceUrl": "https://aave.com/help/gho-stablecoin/facilitators"
         },
+        "backstop": {
+          "quality": "limited"
+        },
+        "branchIsolation": {
+          "quality": "limited"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
         "structuralRedemption": {
           "applicability": "measured",
           "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "sgho-aave",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Aave sGHO documentation",
+          "url": "https://aave.com/docs/aave-v3/guides/sgho"
+        },
+        {
+          "label": "sGHO proxy at the pinned Ethereum deployment",
+          "url": "https://etherscan.io/address/0xe1753f2e00940cc31213dd92013cf019dfe4ca1d#readContract"
+        },
+        {
+          "label": "sGHO implementation source at fixed address",
+          "url": "https://etherscan.io/address/0xff229a0bbb614a284de8ae0e41e5974878fd7c04#code"
+        },
+        {
+          "label": "Aave GHO facilitator documentation",
+          "url": "https://aave.com/help/gho-stablecoin/facilitators"
+        },
+        {
+          "label": "Aave Umbrella deficit-coverage documentation",
+          "url": "https://aave.com/help/umbrella/umbrella"
+        }
+      ],
+      "notes": "Measured at finalized Ethereum block 25536894. sGHO total supply was 146,587,988.821 shares and previewRedeem(totalSupply) returned 147,608,889.611 GHO, an underlying conversion ratio of 1.006964423. The deployed proxy resolved to implementation 0xff229a0bbb614a284de8ae0e41e5974878fd7c04, whose savings-share path converts holders directly into the tracked GHO parent without a separately documented redemption fee. sGHO does not originate collateralized debt or operate a liquidation pool, so CDP collateralization and liquidation metrics and their local mechanism components are structurally N/A. Backstop, branch-isolation, and residual-deficit risk remain serial to the measured GHO facilitator system and inherit its limited quality. The current full-supply previewRedeem path supports adequate local structural redemption into GHO without claiming that GHO itself has an adequate fiat exit.",
+      "metrics": {
+        "collateralizationRatio": null,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "not-applicable",
+          "rationale": "sGHO is a savings-share wrapper over GHO and does not originate a separate collateralized debt system.",
+          "sourceUrl": "https://aave.com/docs/aave-v3/guides/sgho"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "sGHO has no dedicated liquidation pool; holder shares convert to the tracked GHO parent.",
+          "sourceUrl": "https://aave.com/docs/aave-v3/guides/sgho"
+        }
+      },
+      "analogousMetrics": {
+        "underlyingGhoConversionRatio": 1.006964423
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "not-applicable",
+          "rationale": "sGHO is an ERC-4626-style savings share and has no local collateralization parameters.",
+          "sourceUrl": "https://aave.com/docs/aave-v3/guides/sgho"
+        },
+        "liquidationMechanics": {
+          "applicability": "not-applicable",
+          "rationale": "The wrapper does not create borrower positions or liquidate collateral.",
+          "sourceUrl": "https://aave.com/docs/aave-v3/guides/sgho"
+        },
+        "backstop": {
+          "quality": "limited"
+        },
+        "branchIsolation": {
+          "quality": "limited"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "hollar-hydrated",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "HOLLAR token facilitator registry at pinned Hydration EVM block",
+          "url": "https://rpc.hydradx.cloud"
+        },
+        {
+          "label": "Hydration HOLLAR protocol documentation",
+          "url": "https://docs.hydration.net/products/hollar/"
+        },
+        {
+          "label": "Hydration Borrowing and liquidation documentation",
+          "url": "https://docs.hydration.net/products/borrowing/overview/"
+        }
+      ],
+      "notes": "At Hydration EVM block 13156814 (hash 0x156a1de37fb9ee787c8e8bfcffc8562f96597b0bb9d2afbabfd5282a006c7871, 2026-07-15T20:03:39Z), HOLLAR totalSupply was 11,704,581.364990795218703870 and exactly reconciled to four facilitator bucket levels: Hydration Market 11,209,520.464263113492339716 (95.7703664%), HOLLAR Stability Module 364,154.509863438876798927 (3.1112134%), GIGAHDX 130,906.390864242849565227 (1.1184201%), and FlashMinter zero. Unused facilitator capacity was 1.590628 of supply, but this is mint authority rather than collateral or committed loss capital. Hydration documents a shared Aave v3 lending market and protocol liquidations that flash-mint repayment assets, sell seized collateral, and burn the flash amount. Because issuance spans heterogeneous facilitator modules and the primary market is a shared multi-debt account system, there is no honest HOLLAR-only system collateralization ratio. Because liquidation uses transient flash issuance rather than a HOLLAR-dedicated pool contractually committed to debt offset, liquidation-capacity ratio is structurally not applicable. HSM sell-back support is explicitly conditional rather than unlimited, facilitator caps provide only partial branch isolation, and the reviewed docs do not establish an unconditional residual-bad-debt recapitalization facility; those components remain limited.",
+      "metrics": {
+        "collateralizationRatio": null,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "not-applicable",
+          "rationale": "HOLLAR issuance spans facilitator modules, including a shared multi-debt Aave v3 market, so no honest HOLLAR-only system collateralization ratio exists.",
+          "sourceUrl": "https://docs.hydration.net/products/borrowing/overview/"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "Hydration liquidations use transient flash-minted repayment and collateral sale rather than a HOLLAR-dedicated pool contractually committed to debt offset.",
+          "sourceUrl": "https://docs.hydration.net/products/borrowing/overview/"
+        }
+      },
+      "analogousMetrics": {
+        "facilitatorUnusedCapacityRatio": 1.590628,
+        "hydrationMarketIssuedShareRatio": 0.957704,
+        "hsmIssuedShareRatio": 0.031112,
+        "gigahdxIssuedShareRatio": 0.011184
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "not-applicable",
+          "rationale": "HOLLAR has no independently attributable token-only vault collateralization system across its heterogeneous facilitator modules.",
+          "sourceUrl": "https://docs.hydration.net/products/borrowing/overview/"
+        },
+        "liquidationMechanics": {
+          "applicability": "not-applicable",
+          "rationale": "Hydration liquidations are external or protocol flash-mint executions, not a HOLLAR-dedicated committed liquidation pool.",
+          "sourceUrl": "https://docs.hydration.net/products/borrowing/overview/"
+        },
+        "backstop": {
+          "quality": "limited"
+        },
+        "branchIsolation": {
+          "quality": "limited"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "hyusd-hylo",
+      "archetype": "synthetic-delta-neutral",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Pinned Hylo SDK deployment and account layouts",
+          "url": "https://github.com/hylo-so/hylo-sdk/tree/104f216773d7f7e2139ee8d5751de0d10205d984"
+        },
+        {
+          "label": "Solana mainnet RPC used for finalized pool reads",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Hylo multi-asset architecture",
+          "url": "https://docs.hylo.so/protocol-overview/multi-asset-architecture"
+        },
+        {
+          "label": "Hylo invariant equations",
+          "url": "https://docs.hylo.so/technical-addendum/hylo-equations"
+        },
+        {
+          "label": "Hylo core mechanism",
+          "url": "https://docs.hylo.so/protocol-overview/core-mechanism"
+        },
+        {
+          "label": "Hylo additional risk management",
+          "url": "https://docs.hylo.so/technical-addendum/additional-risk-management"
+        }
+      ],
+      "notes": "Measured from the deployment graph in Hylo SDK commit 104f216773d7f7e2139ee8d5751de0d10205d984 at finalized Solana slot 433130492. SOL-LST, cbBTC, and USDC pool vUSD liabilities of 11,164,504.952198, 0.827193, and 900,595.668355 sum exactly to the 12,065,101.447746 HYUSD token supply. Pyth price paths at slot 433130620 valued the corresponding collateral at $16,030,031.7531, $1.2987, and $900,691.5764, for system collateralization of 140.328075% and a 40.328075 percentage-point margin buffer. Each pool's xASSET tranche absorbs its full collateral-price exposure under the documented invariant, so hedge coverage is 1.0 without an external derivatives venue or funding-rate dependency. Per-pool collateralization was 143.580318% for SOL-LST, 157.002964% for cbBTC, and 100.010649% for USDC; all drawdown ledgers were zero. The Earn Pool held 9,794,082.888014 HYUSD, or 0.811769626 of supply, as measured loss-absorption capacity. The cbBTC pool was paused at the pinned slot, which remains visible as an operating constraint rather than being treated as missing collateral.",
+      "metrics": {
+        "hedgeCoverageRatio": 1,
+        "marginBufferPct": 40.328075,
+        "lossAbsorptionShare": 0.811769626
+      },
+      "analogousMetrics": {
+        "systemCollateralizationRatio": 1.403281,
+        "solPoolCollateralizationRatio": 1.435803,
+        "cbBtcPoolCollateralizationRatio": 1.57003,
+        "usdcPoolCollateralizationRatio": 1.000106
+      },
+      "venueShares": [],
+      "components": {
+        "venueAndCustody": {
+          "quality": "adequate"
+        },
+        "hedgeReconciliation": {
+          "quality": "adequate"
+        },
+        "fundingBasisStress": {
+          "applicability": "not-applicable",
+          "rationale": "Hylo uses internal xASSET reserve tranches to absorb collateral-price exposure and does not rely on an external perpetual-futures hedge or funding-rate carry.",
+          "sourceUrl": "https://docs.hylo.so/technical-addendum/hylo-equations"
+        },
+        "marginAndLiquidation": {
+          "quality": "adequate"
+        },
+        "lossAbsorption": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "usdn-smardex",
+      "archetype": "synthetic-delta-neutral",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Pinned SmarDex USDN contracts",
+          "url": "https://github.com/SmarDex-Ecosystem/usdn-contracts/tree/0e6822448f574f836b1c18a1893eeba49293dac9"
+        },
+        {
+          "label": "SmarDex protocol-balance definition",
+          "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/protocol-balance"
+        },
+        {
+          "label": "SmarDex imbalance protections",
+          "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/protocol-balance/imbalance-protections"
+        },
+        {
+          "label": "USDN token at the pinned Ethereum deployment",
+          "url": "https://etherscan.io/address/0xde17a000ba631c5d7c2bd9fb692efea52d90dee2#readContract"
+        },
+        {
+          "label": "Ethereum RPC used for pinned state reads",
+          "url": "https://ethereum.publicnode.com"
+        }
+      ],
+      "notes": "Measured at finalized Ethereum block 25538539 (hash 0xb330fef131b2811db58627e67624839127f565a1e03de3390f69f4b2f289ff50, timestamp 1784124335). The funding-adjusted vault held 285.681881329567891017 wstETH, long trading exposure was 296.792858771543458157 wstETH, and long first-loss equity was 247.721653681560338748 wstETH against 667,726.0499027995 USDN supply. Protocol custody reconciled to stored vault plus long exposure and fees within 0.0000003 wstETH. Hedge coverage is 0.9611784610 and long first-loss equity represents 0.8655346378 of the funding-adjusted vault. Raw solvency was 0.9981669345190698 and raw margin was -0.1833065481%; marginBufferPct is conservatively floored at zero rather than publishing a negative policy input. The single onchain venue and pinned balance equations support adequate custody, hedge reconciliation, margin/liquidation handling, and loss absorption. Funding stress and unwind capacity remain limited because both depend on one wstETH market, one Ethereum deployment, oracle execution, and protocol-managed imbalance controls.",
+      "metrics": {
+        "hedgeCoverageRatio": 0.961178461,
+        "marginBufferPct": 0,
+        "lossAbsorptionShare": 0.8655346378
+      },
+      "analogousMetrics": {
+        "rawSolvencyRatio": 0.9981669345190698,
+        "rawMarginPct": -0.1833065481,
+        "netDeltaShare": 0.038821539
+      },
+      "venueShares": [
+        {
+          "venueKey": "smardex-usdn-ethereum",
+          "share": 1,
+          "failureDomains": [
+            {
+              "kind": "chain",
+              "key": "ethereum"
+            },
+            {
+              "kind": "dex-protocol",
+              "key": "smardex-usdn"
+            },
+            {
+              "kind": "reserve-issuer",
+              "key": "wsteth"
+            }
+          ]
+        }
+      ],
+      "components": {
+        "venueAndCustody": {
+          "quality": "adequate"
+        },
+        "hedgeReconciliation": {
+          "quality": "adequate"
+        },
+        "fundingBasisStress": {
+          "quality": "limited"
+        },
+        "marginAndLiquidation": {
+          "quality": "adequate"
+        },
+        "unwindCapacity": {
+          "quality": "limited"
+        },
+        "lossAbsorption": {
+          "quality": "adequate"
         }
       }
     },
@@ -1056,13 +1558,24 @@
         {
           "label": "Securitize BUIDL product disclosure (BlackRock manager, BNY Mellon custodian, and tokenized-share structure)",
           "url": "https://securitize.io/blackrock/buidl"
+        },
+        {
+          "label": "Chronicle BUIDL Proof of Asset launch dated March 26, 2026",
+          "url": "https://www.businesswire.com/news/home/20260326402329/en/BUIDL-tokenized-by-Securitize-is-now-verified-onchain-by-Chronicle-Proof-of-Asset"
+        },
+        {
+          "label": "Chronicle BUIDL Proof of Asset dashboard reviewed July 15, 2026",
+          "url": "https://chroniclelabs.org/dashboard/proofofasset/blackrock-buidl"
         }
       ],
-      "notes": "The SEC-filed agreement defines BUIDL tokens as authenticated non-voting participating shares, requires confirmation that shares are validly issued, fully paid, and nonassessable, and identifies Securitize as registrar and transfer agent. Securitize identifies the BlackRock USD Institutional Digital Liquidity Fund, BlackRock as manager, and The Bank of New York Mellon as custodian. The agreement defers governing rights, redemptions, and liquidation treatment to a confidential offering memorandum, so public evidence establishes a fund-share representation but not seniority or liquidation priority; fund claim and seniority is limited. No public independent NAV-administrator methodology or current maturity table was established, so NAV valuation and duration and liquidity remain uncurated.",
+      "notes": "The SEC-filed agreement defines BUIDL tokens as authenticated non-voting participating shares, requires confirmation that shares are validly issued, fully paid, and nonassessable, and identifies Securitize as registrar and transfer agent. Securitize identifies the BlackRock USD Institutional Digital Liquidity Fund, BlackRock as manager, and The Bank of New York Mellon as custodian. The agreement defers governing rights, redemptions, and liquidation treatment to a confidential offering memorandum, so public evidence establishes a fund-share representation but not seniority or liquidation priority; fund claim and seniority is limited. No public independent NAV-administrator methodology or current maturity table was established, so NAV valuation and duration and liquidity remain uncurated. Chronicle's BUIDL-specific Proof of Asset release and dashboard provide continuous independent verification of fund holdings, composition, and valuation data. Under the implemented T-bill assurance semantics this supports adequate loss recovery design as an assurance and reconciliation signal; it does not assert a public legal loss waterfall.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
           "quality": "limited"
+        },
+        "lossRecoveryDesign": {
+          "quality": "adequate"
         }
       }
     },
@@ -1114,7 +1627,7 @@
           "url": "https://docs.ondo.finance/developer-guides/usdy-instant-manager-integration"
         }
       ],
-      "notes": "USDY is a secured debt obligation rather than a direct fund share. Ondo states that Ankura Trust Company, as collateral agent, holds a perfected security interest and can liquidate collateral after default, but the reviewed public material is issuer disclosure and the current offering and security agreements, liquidation waterfall, and post-transition seniority terms were not available. Fund claim and seniority is therefore limited. Ondo describes a daily reference and redemption price driven by an issuer-set monthly token yield rate rather than an independently struck fund NAV, directly supporting weak NAV valuation. A current maturity or WAM table consistent with redemption terms was not established, so duration and liquidity remains uncurated.",
+      "notes": "USDY is a secured debt obligation rather than a direct fund share. Ondo states that Ankura Trust Company, as collateral agent, holds a perfected security interest and can liquidate collateral after default, but the reviewed public material is issuer disclosure and the current offering and security agreements, liquidation waterfall, and post-transition seniority terms were not available. Fund claim and seniority is therefore limited. Ondo describes a daily reference and redemption price driven by an issuer-set monthly token yield rate rather than an independently struck fund NAV, directly supporting weak NAV valuation. A current maturity or WAM table consistent with redemption terms was not established, so duration and liquidity remains uncurated. Ondo further states that a missed timely redemption is an Event of Default mandating Ankura Trust to liquidate the investment portfolio and repay token holders, subject to holder approval. This is a disclosed recovery design, but issuer-only evidence without the governing agreements or waterfall caps it at limited.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
@@ -1122,6 +1635,9 @@
         },
         "navValuation": {
           "quality": "weak"
+        },
+        "lossRecoveryDesign": {
+          "quality": "limited"
         }
       }
     },
@@ -1148,6 +1664,36 @@
       }
     },
     {
+      "assetId": "aid-gaib",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "GAIB AID transparency dashboard",
+          "url": "https://aid.gaib.ai/transparency"
+        },
+        {
+          "label": "Issuer-published AID transparency calculation bundle",
+          "url": "https://aid.gaib.ai/assets/Transparency-Cbj57HBf.js"
+        },
+        {
+          "label": "Issuer-published AID multichain accounting bundle",
+          "url": "https://aid.gaib.ai/assets/useMigrationData-BPrRbQkF.js"
+        },
+        {
+          "label": "GAIB AID product documentation",
+          "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid"
+        }
+      ],
+      "notes": "GAIB's current transparency application defines circulating AID as multichain token supply less AID held by sAID, and defines observable reserve as USDC in the Ethereum redeemer plus supported stablecoins held by configured minters. At pinned Ethereum block 25540463, Arbitrum block 484226968, Base block 48679097, and BSC block 110195949, the issuer's formula produced 608,363.8989269533 circulating AID and 611,373.9588013005 of observable USDC/USDT reserve, a self-reported circulating-coverage ratio of 1.0049477950. This current, reproducible issuer/on-chain reconciliation supports limited assurance and reconciliation. It is not an independent examination and does not reconcile the full 20,038,311.6208727 multichain token supply or disclose the Treasury/stable-asset composition claimed for AID, so it cannot support a stronger quality or an asset-wide reserve composition. The reviewed product and legal disclosures do not establish holder reserve rights, legal segregation, reserve custodians, provider shares, no-rehypothecation, or failure continuity; claim and custody remain uncurated.",
+      "metrics": {},
+      "components": {
+        "assuranceAndReconciliation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
       "assetId": "u-united-stables",
       "archetype": "fiat-cash",
       "reviewedAt": "2026-07-15",
@@ -1159,9 +1705,13 @@
         {
           "label": "United Stables product disclosure (segregated-custody marketing claim contradicted by governing terms)",
           "url": "https://www.u.tech/"
+        },
+        {
+          "label": "United Stables live proof-of-reserves endpoint (aggregate reserve and token balances)",
+          "url": "https://u.tech/u-client-api/v1/public/u/por"
         }
       ],
-      "notes": "United Stables' governing terms state that reserves need not be segregated or held in trust, remain property held for the issuer's own account, and give holders no preferential, secured, proprietary, fiduciary, or trust claim. That affirmative contradiction to the product site's segregated-custody marketing makes claim and segregation failed. The terms also make the custodian set and reserve mix discretionary, provide no assurance about exact custody, and establish no encumbrance or replacement-continuity protection. Custody continuity is therefore failed. Provider identities, allocations, and any recovery arrangement remain undisclosed.",
+      "notes": "United Stables' governing terms state that reserves need not be segregated or held in trust, remain property held for the issuer's own account, and give holders no preferential, secured, proprietary, fiduciary, or trust claim. That affirmative contradiction to the product site's segregated-custody marketing makes claim and segregation failed. The terms also make the custodian set and reserve mix discretionary, provide no assurance about exact custody, and establish no encumbrance or replacement-continuity protection, so custody continuity is failed. The issuer-operated proof-of-reserves endpoint reported totalReserve 1,050,186,198.26, totalToken 1,043,009,108.40, ripcord false, and updatedAt 2026-07-15T18:36:28.678Z, a self-reported aggregate reserve-to-token ratio of 1.006881. Because the endpoint provides neither reserve composition nor independent examination or reconciliation methodology, assurance and reconciliation is limited. Provider identities, allocations, and any recovery arrangement remain undisclosed.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -1169,6 +1719,9 @@
         },
         "custodyContinuity": {
           "quality": "failed"
+        },
+        "assuranceAndReconciliation": {
+          "quality": "limited"
         }
       }
     },
@@ -1240,13 +1793,24 @@
         {
           "label": "Usual RWA collateral policy",
           "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0/rwa-collateral"
+        },
+        {
+          "label": "Usual analytics and on-chain reserve-verification guide",
+          "url": "https://docs.usual.money/resources-and-ecosystem/analytics"
+        },
+        {
+          "label": "USD0 collateral-holder account used by the current on-chain branch telemetry",
+          "url": "https://etherscan.io/address/0xdd82875f0840aad58a455a70b88eed9f59ceC7c7"
         }
       ],
-      "notes": "USD0 is a protocol wrapper whose DAO-controlled contracts own the RWA collateral. Holders may redeem USD0 into an underlying RWA token at par, but holding USD0 does not confer direct ownership or seniority in USYC or another underlying fund. Fund claim and seniority is therefore weak. The wrapper uses par and oracle mechanics rather than an independently administered fund NAV, and protocol duration-eligibility ceilings are policy limits rather than a measured portfolio maturity table. NAV valuation and duration and liquidity remain uncurated.",
+      "notes": "USD0 is a protocol wrapper whose DAO-controlled contracts own the RWA collateral. Holders may redeem USD0 into an underlying RWA token at par, but holding USD0 does not confer direct ownership or seniority in USYC or another underlying fund. Fund claim and seniority is therefore weak. The wrapper uses par and oracle mechanics rather than an independently administered fund NAV, and protocol duration-eligibility ceilings are policy limits rather than a measured portfolio maturity table. NAV valuation and duration and liquidity remain uncurated. Usual publishes the collateral contracts and describes reserve balances as independently auditable on-chain; the current score-grade branch telemetry directly observes the accepted collateral-token balances. That provides measured asset-side verification, but the reviewed adapter does not read USD0 debt or otherwise reconcile the branch balances against complete cross-chain liabilities. Under the implemented T-bill assurance semantics, this supports limited loss recovery design without claiming full assets-and-liabilities assurance.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
           "quality": "weak"
+        },
+        "lossRecoveryDesign": {
+          "quality": "limited"
         }
       }
     },
@@ -1262,9 +1826,13 @@
         {
           "label": "Figure Certificate Company Form 10-Q for March 31, 2026 (qualified assets, providers, and maturities)",
           "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000008/fcc-20260331.htm"
+        },
+        {
+          "label": "Figure Certificate Company 2025 Form 10-K with KPMG independent audit report",
+          "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000006/fcc-20251231.htm"
         }
       ],
-      "notes": "The FCC prospectus defines YLDS certificates as unsecured obligations backed only generally by Figure Certificate Company assets and not secured by particular reserve assets, so fund claim and seniority is weak. Certificates accrue simple interest at face value, while investments use amortized cost and an affiliated administrator rather than an independently struck fund NAV; NAV valuation is weak. FCC's Form 10-Q identifies UMB Bank, Flagstar Bank, Goldman Sachs Financial Square, overnight repo, and Treasury-bill maturities. Duration and liquidity is not overlaid because the current measured reserve path already bounds overnight repo at one day and Treasury bills at 49 days.",
+      "notes": "The FCC prospectus defines YLDS certificates as unsecured obligations backed only generally by Figure Certificate Company assets and not secured by particular reserve assets, so fund claim and seniority is weak. Certificates accrue simple interest at face value, while investments use amortized cost and an affiliated administrator rather than an independently struck fund NAV; NAV valuation is weak. FCC's Form 10-Q identifies UMB Bank, Flagstar Bank, Goldman Sachs Financial Square, overnight repo, and Treasury-bill maturities. Duration and liquidity is not overlaid because the current measured reserve path already bounds overnight repo at one day and Treasury bills at 49 days. KPMG's March 19, 2026 PCAOB audit opinion covers FCC's December 31, 2025 balance sheet, investment schedules, certificate-reserve liabilities, and custodian confirmations and states that the financial statements fairly present FCC's position under U.S. GAAP. Under the implemented T-bill assurance semantics, that current independent assets-and-liabilities audit supports strong loss recovery design without asserting that the newer unaudited March composition was itself audited.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
@@ -1272,6 +1840,9 @@
         },
         "navValuation": {
           "quality": "weak"
+        },
+        "lossRecoveryDesign": {
+          "quality": "strong"
         }
       }
     },
@@ -1479,15 +2050,78 @@
           "url": "https://apidocs.bridge.xyz/platform/issuance/reserve-management"
         },
         {
+          "label": "Bridge reporting and transparency documentation",
+          "url": "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency"
+        },
+        {
           "label": "Phantom CASH product disclosure",
           "url": "https://www.usecash.xyz/"
         }
       ],
-      "notes": "CASH is issued through Bridge Building Inc. Bridge's binding terms require segregated reserve accounts but expressly deny holders any direct or indirect reserve property interest; only an eligible Bridge user receives the assigned contractual redemption right. Claim and segregation is therefore weak. Bridge's reserve documentation lists configurable platform providers such as Lead Bank, BlackRock, Fidelity, Superstate, and BUIDL, but it is not a CASH-specific custody allocation. A current CASH reserve report, exact providers and shares, legal trust or insolvency priority, encumbrance terms, independent reconciliation, and failure continuity were not established, so custody continuity remains uncurated.",
+      "notes": "CASH is issued through Bridge Building Inc. Bridge's binding terms require segregated reserve accounts but expressly deny holders any direct or indirect reserve property interest; only an eligible Bridge user receives the assigned contractual redemption right. Claim and segregation is therefore weak. Bridge's reserve documentation lists configurable platform providers such as Lead Bank, BlackRock, Fidelity, Superstate, and BUIDL, but it is not a CASH-specific custody allocation. Bridge's terms describe a daily reserve-to-outstanding-token coverage process, and its reporting documentation defines real-time supply, reserve, and inventory reporting plus monthly balance reports. The reviewed public CASH endpoints require credentials, and no CASH-specific report output or independent examination was available. This issuer-only documented reconciliation process supports weak assurance and reconciliation without implying a public measured reserve composition. Exact providers and shares, legal trust or insolvency priority, encumbrance terms, and failure continuity remain unestablished, so custody continuity remains uncurated.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
           "quality": "weak"
+        },
+        "assuranceAndReconciliation": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "gusd-gate",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Gate GUSD product disclosure",
+          "url": "https://www.gate.com/gusd"
+        },
+        {
+          "label": "Gate GUSD minting and redemption guide",
+          "url": "https://www.gate.tv/staking/GUSD"
+        },
+        {
+          "label": "Gate GUSD launch disclosure",
+          "url": "https://www.gate.com/learn/articles/gusd-the-note-like-evolution-of-stablecoins/12656"
+        }
+      ],
+      "notes": "Gate self-reports that GUSD is backed by a mixed Treasury-RWA, stablecoin, and ecosystem-yield basket and describes its mint and redemption flow, but publishes no current independent assets-and-liabilities reconciliation for this product. The lossRecoveryDesign field implements assurance and reconciliation for the T-bill archetype; an issuer-only backing assertion supports weak quality without treating Gate's separate exchange proof-of-reserves program as GUSD evidence.",
+      "metrics": {},
+      "components": {
+        "lossRecoveryDesign": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "m-m0",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "M0 protocol roles and independent Validator attestations",
+          "url": "https://docs.m0.org/protocol/roles"
+        },
+        {
+          "label": "M0 MinterGateway collateral verification and expiry rules",
+          "url": "https://docs.m0.org/protocol/minting-burning"
+        },
+        {
+          "label": "M0 current collateral-composition API recipe",
+          "url": "https://docs.m0.org/api-reference/protocol/recipes/collateral-composition"
+        },
+        {
+          "label": "M0 Protocol API GraphQL endpoint",
+          "url": "https://protocol-api.m0.org/graphql"
+        }
+      ],
+      "notes": "M0 requires threshold signatures from independent permissioned Validators that directly verify each Minter's off-chain collateral, binds signatures to fresh timestamps and retrieval proposals, and treats expired collateral as zero for protocol calculations. The current Protocol API exposes the resulting collateral composition. This evidence-backed on-chain attestation and reconciliation design supports adequate lossRecoveryDesign under the T-bill archetype's assurance control; it does not assert a separate legal recovery waterfall.",
+      "metrics": {},
+      "components": {
+        "lossRecoveryDesign": {
+          "quality": "adequate"
         }
       }
     },
@@ -1509,11 +2143,40 @@
           "url": "https://docs.cfx.to/docs/key-features"
         }
       ],
-      "notes": "CFX self-reports that MoveUSD collateral is held in a beneficiary account at an FDIC-member bank and that custodial accounts are in the bank's name and separate from CFX assets. This is useful segregation evidence but is not a governing holder claim; CFX is a FinCEN money-services business and state money transmitter rather than a prudentially supervised stablecoin issuer. Claim and segregation is therefore limited. The beneficiary's legal identity, holder priority and redemption contract, bank or custodian name and share, non-rehypothecation, alternate-provider recovery, and an independent current reserve reconciliation were not established, so custody continuity remains uncurated.",
+      "notes": "CFX self-reports that MoveUSD collateral is held in a beneficiary account at an FDIC-member bank and that custodial accounts are in the bank's name and separate from CFX assets. This is useful segregation evidence but is not a governing holder claim; CFX is a FinCEN money-services business and state money transmitter rather than a prudentially supervised stablecoin issuer. Claim and segregation is therefore limited. The beneficiary's legal identity, holder priority and redemption contract, bank or custodian name and share, non-rehypothecation, and alternate-provider recovery were not established, so custody continuity remains uncurated. CFX's current 1:1 backing statement is issuer self-verification without a measured assets-and-liabilities report, which supports weak assurance and reconciliation rather than leaving the method unidentified.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "usdai-usd-ai",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "USD.AI March 2026 mint and redeem upgrade (1:1 PYUSD backing)",
+          "url": "https://usd.ai/insights/usdai-mint-redeem-upgrade"
+        },
+        {
+          "label": "USDai Arbitrum implementation and baseToken contract",
+          "url": "https://arbitrum.blockscout.com/address/0x2af577d7e3baa01a991509f7f218dea1ff7d5bc4?tab=contract"
+        },
+        {
+          "label": "Arbitrum public RPC used for the fixed-block liability reconciliation",
+          "url": "https://arbitrum-one-rpc.publicnode.com"
+        }
+      ],
+      "notes": "USD.AI states that every base USDai is backed 1:1 by PYUSD. At Arbitrum block 483800206, the reviewed contract calls identified canonical PYUSD as baseToken, reconciled 196,394,460.208802187811855903 USDai of canonical totalSupply plus bridgedSupply, and measured 196,394,460.221193 PYUSD held by the hub. The positive 0.012390812188144097 PYUSD surplus closes the complete base-token liability at that pinned block. This direct on-chain assets-and-liabilities proof supports adequate assurance and reconciliation; it does not assert an independent financial-statement audit or classify the separate sUSDai strategy portfolio.",
+      "metrics": {},
+      "components": {
+        "assuranceAndReconciliation": {
+          "quality": "adequate"
         }
       }
     },
@@ -1533,13 +2196,24 @@
         {
           "label": "Frax frxUSD balance-sheet API (mixed reserve-token portfolio)",
           "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+        },
+        {
+          "label": "Chaos Labs frxUSD proof-of-reserves feed",
+          "url": "https://oracles.chaoslabs.xyz/por-feeds/frxusd_por"
+        },
+        {
+          "label": "Frax project update announcing independent Chaos Labs monitoring across deployments",
+          "url": "https://news.frax.com/p/frax-finance-biweekly-project-update-8b0"
         }
       ],
-      "notes": "frxUSD is a wrapper stablecoin backed by enshrined-custodian tokens rather than a direct fund share. Frax self-reports that users can redeem through inventory-bearing custodian contracts, but guarantees neither a particular reserve asset nor continuous custodian availability; the current portfolio includes WTGXX, USTB, BUIDL, USDC, and USDB. These issuer-reported indirect wrapper mechanics support only limited fund claim and seniority, not weak contrary evidence. Holder bankruptcy and pass-through terms, an independent composite NAV administrator and method, current underlying maturity or WAM, and a reviewed loss waterfall were not established, so NAV valuation and duration and liquidity remain uncurated.",
+      "notes": "frxUSD is a wrapper stablecoin backed by enshrined-custodian tokens rather than a direct fund share. Frax self-reports that users can redeem through inventory-bearing custodian contracts, but guarantees neither a particular reserve asset nor continuous custodian availability; the current portfolio includes WTGXX, USTB, BUIDL, USDC, and USDB. These issuer-reported indirect wrapper mechanics support only limited fund claim and seniority, not weak contrary evidence. Holder bankruptcy and pass-through terms, an independent composite NAV administrator and method, and current underlying maturity or WAM were not established, so NAV valuation and duration and liquidity remain uncurated. The lossRecoveryDesign field implements the assurance-and-reconciliation control for this archetype: Frax identifies the live Chaos Labs feed as independent on-chain monitoring and real-time reserve verification across all network deployments, which supports adequate quality without asserting a legal loss waterfall.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
           "quality": "limited"
+        },
+        "lossRecoveryDesign": {
+          "quality": "adequate"
         }
       }
     },
@@ -1585,12 +2259,41 @@
         {
           "label": "Bridge reserve-management documentation (generic platform providers)",
           "url": "https://apidocs.bridge.xyz/platform/issuance/reserve-management"
+        },
+        {
+          "label": "Bridge reporting and transparency documentation",
+          "url": "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency"
         }
       ],
-      "notes": "USDsui is issued through Bridge's Open Issuance platform. Bridge's binding terms segregate reserves but deny holders a reserve property interest and condition the assigned redemption right on becoming an eligible Bridge user, so claim and segregation is weak. Bridge's generic provider menu is not a USDsui-specific reserve or custody allocation. A current USDsui reserve report, provider identities and shares, holder trust or insolvency priority, encumbrance policy, independent reconciliation, and failure continuity were not established, so custody continuity remains uncurated.",
+      "notes": "USDsui is issued through Bridge's Open Issuance platform. Bridge's binding terms segregate reserves but deny holders a reserve property interest and condition the assigned redemption right on becoming an eligible Bridge user, so claim and segregation is weak. Bridge's generic provider menu is not a USDsui-specific reserve or custody allocation. The terms require a daily reserve-market-value-to-outstanding-token coverage calculation, and Bridge's reporting documentation defines real-time supply and reserve reporting plus monthly balance reports. No public USDsui-specific report output or independent examination was available, so this issuer-documented process supports weak assurance and reconciliation without implying a measured USDsui reserve snapshot. Provider identities and shares, holder trust or insolvency priority, encumbrance policy, and failure continuity remain unestablished, so custody continuity remains uncurated.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
+          "quality": "weak"
+        },
+        "assuranceAndReconciliation": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "jpyc-jpyc",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "JPYC EX launch and reserve disclosure dated 2025-10-24",
+          "url": "https://corporate.jpyc.co.jp/news/posts/jpyc-ex-launch"
+        },
+        {
+          "label": "JPYC Payment Services Act disclosure",
+          "url": "https://corporate.jpyc.co.jp/terms/kessaiho"
+        }
+      ],
+      "notes": "JPYC's current launch disclosure states that issued JPYC is protected at no less than 100% by Japanese-yen deposits and Japanese government bonds and describes direct 1:1 issuance and redemption through JPYC EX. The issuer does not publish a dated assets-and-liabilities balance, current deposit-versus-bond weights, an independent examination, or a reproducible reconciliation method. This current issuer-only backing control supports weak assurance and reconciliation without inferring a holder claim, custody arrangement, or reserve composition from Japanese funds-transfer regulation.",
+      "metrics": {},
+      "components": {
+        "assuranceAndReconciliation": {
           "quality": "weak"
         }
       }
@@ -1615,13 +2318,20 @@
         {
           "label": "JupUSD live reserve API",
           "url": "https://api.jupusd.money/api/data"
+        },
+        {
+          "label": "Solana mainnet RPC used for the finalized same-slot reconciliation",
+          "url": "https://api.mainnet-beta.solana.com"
         }
       ],
-      "notes": "Jupiter reports that JupUSD directly holds USDtb and USDC in program vaults and Anchorage Porto wallets and restricts direct minting and redemption to registered benefactors. The reviewed sources do not provide governing holder terms that pass through USDtb trust rights or USDC issuer claims, so claim and segregation remains uncurated. Jupiter names the Anchorage Porto arrangement and explicitly warns that custodian failure can impair reserve access; this self-reported, concentrated custody evidence supports limited custody continuity. The legal owner and signers of the wallets, provider-failure recovery, pass-through rights, and an independent current assets-and-liabilities examination were not established.",
+      "notes": "Jupiter reports that JupUSD directly holds USDtb and USDC in program vaults and Anchorage Porto wallets and restricts direct minting and redemption to registered benefactors. The reviewed sources do not provide governing holder terms that pass through USDtb trust rights or USDC issuer claims, so claim and segregation remains uncurated. Jupiter names the Anchorage Porto arrangement and explicitly warns that custodian failure can impair reserve access; this self-reported, concentrated custody evidence supports limited custody continuity. At finalized Solana slot 433129180 (block hash G374NUPV9xRKjtZWZcwFU8hibSYTg7zZrSdebLxwUo7G, 2026-07-15T20:03:11Z), one getMultipleAccounts response reproduced every reserve balance listed by the live API and the JupUSD mint supply. The six reserve accounts held 53,135,293.963026 USDtb and USDC units against 53,073,230.290646 JupUSD, a 62,063.672380-unit surplus and 1.0011693969264754 coverage ratio. This exact same-slot on-chain assets-and-liabilities reconciliation supports adequate assurance; it does not establish wallet legal ownership, provider-failure recovery, or pass-through rights.",
       "metrics": {},
       "components": {
         "custodyContinuity": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "quality": "adequate"
         }
       }
     },
@@ -1709,13 +2419,20 @@
         {
           "label": "EURI issuer product disclosure",
           "url": "https://www.eurite.com/"
+        },
+        {
+          "label": "EURI issuer attestation-process disclosure",
+          "url": "https://www.eurite.com/about-us/"
         }
       ],
-      "notes": "Banking Circle's issuer whitepaper describes a separate fiduciary estate under Luxembourg law, identifies EURI holders as third-party beneficiaries, grants par redemption, and states that estate assets are bankruptcy remote from Banking Circle. Because the reviewed evidence is issuer-published and no current itemized independent reserve report was available, claim and segregation is limited rather than strong. Current reserve banks or custodians, provider shares, no-rehypothecation, and replacement continuity were not established, so custody continuity remains uncurated.",
+      "notes": "Banking Circle's issuer whitepaper describes a separate fiduciary estate under Luxembourg law, identifies EURI holders as third-party beneficiaries, grants par redemption, and states that estate assets are bankruptcy remote from Banking Circle. Because the reviewed evidence is issuer-published and no current itemized independent reserve report was available, claim and segregation is limited rather than strong. EURI's current issuer page says EY periodically attests 1:1 backing; no dated public attestation output, measured assets-and-liabilities scope, or reproducible reconciliation method was found in the reviewed issuer media. This issuer-only process claim supports weak assurance and reconciliation without implying current independent measurement. Current reserve banks or custodians, provider shares, no-rehypothecation, and replacement continuity were not established, so custody continuity remains uncurated.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "quality": "weak"
         }
       }
     },
@@ -1731,13 +2448,20 @@
         {
           "label": "Monerium fee and redemption schedule",
           "url": "https://monerium.com/fee-schedule/"
+        },
+        {
+          "label": "Monerium financial information and safeguarded-assets reporting",
+          "url": "https://monerium.com/financial-information/"
         }
       ],
-      "notes": "Monerium self-reports that EURe is licensed e-money representing one safeguarded euro, redeemable at par, with priority claims on safeguarded assets held in segregated accounts. This issuer-only disclosure supports limited claim and segregation. The reviewed sources do not name safeguarding institutions or allocations, provide a current independent assets-and-liabilities report, establish provider-level no-rehypothecation, or describe replacement continuity, so custody continuity remains uncurated.",
+      "notes": "Monerium self-reports that EURe is licensed e-money representing one safeguarded euro, redeemable at par, with priority claims on safeguarded assets held in segregated accounts. This issuer-only disclosure supports limited claim and segregation. Monerium's current EURe page also states that each EURe is backed one-to-one by safeguarded liquid euro reserves. Its financial-information page publishes an audited 2024 assets-and-liabilities table with EUR 26,521,018.35 of e-money matched by the same amount of safeguarded assets, but says regular public attestations are still being prepared and provides no current measured reconciliation. That identifiable but issuer-only backing method supports weak assurance and reconciliation. The reviewed sources do not name safeguarding institutions or allocations, establish provider-level no-rehypothecation, or describe replacement continuity, so custody continuity remains uncurated.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "quality": "weak"
         }
       }
     },
@@ -2230,6 +2954,52 @@
         },
         "custodyContinuity": {
           "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "eur0-usual",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Usual EUR0 collateral documentation",
+          "url": "https://tech.usual.money/smart-contracts/eur0-collateral"
+        },
+        {
+          "label": "Usual EUR0 token mechanics",
+          "url": "https://tech.usual.money/smart-contracts/token-contracts/eur0"
+        },
+        {
+          "label": "Usual EUR0 Classical Oracle mechanics",
+          "url": "https://tech.usual.money/smart-contracts/utility-contracts/eur0/eur0-classical-oracle"
+        },
+        {
+          "label": "EUR0 TokenMapping contract at the pinned Ethereum deployment",
+          "url": "https://etherscan.io/address/0xf20Ba8F5195fCC094d94a937F0d2719f6Da14A4a"
+        },
+        {
+          "label": "Spiko SICAV prospectus",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+        }
+      ],
+      "notes": "EUR0 is a Usual protocol wrapper whose collateral treasury, rather than EUR0 holders, owns the eligible fund token. At pinned Ethereum block 25530533 the deployed TokenMapping returned exactly one eligible asset, Spiko EUTBL, and the published treasury held 192,323.85243 EUTBL against 191,181.471117208263827024 EUR0 supply, a 1.005975377 coverage ratio. This complete current single-asset pin overturns the prior mixed-wrapper uncertainty without turning EUR0 into a direct Spiko fund share. Fund claim and seniority is weak because no EUTBL share or liquidation priority passes through to EUR0 holders. NAV valuation is weak because EUR0 uses an upgradeable protocol oracle rather than an independently struck EUR0 fund NAV. The sole current collateral's binding prospectus caps eligible-instrument residual maturity at 180 days and provides daily dealing, supporting limited duration and liquidity for the fully mapped wrapper. Exact assets-and-liabilities coverage plus the enforced collateral-at-or-above-supply design supports adequate loss recovery and reconciliation without claiming a direct holder fund right.",
+      "metrics": {},
+      "analogousMetrics": {
+        "eligibleCollateralCoverageRatio": 1.005975377
+      },
+      "components": {
+        "fundClaimAndSeniority": {
+          "quality": "weak"
+        },
+        "navValuation": {
+          "quality": "weak"
+        },
+        "durationAndLiquidity": {
+          "quality": "limited"
+        },
+        "lossRecoveryDesign": {
+          "quality": "adequate"
         }
       }
     },
@@ -2821,13 +3591,20 @@
         {
           "label": "Solstice risk disclosures",
           "url": "https://docs.solstice.finance/legal-documents/risk-disclosures.md"
+        },
+        {
+          "label": "Solstice live signed proof-of-solvency API",
+          "url": "https://attestation-api.solstice.finance/dashboard"
         }
       ],
-      "notes": "Solstice's current proof disclosure expressly states that USX holders have no direct ownership, claim, or beneficial interest in collateral, while the binding terms state that the Foundation is not a trustee, agent, or fiduciary and disclaims fiduciary duties. This affirmative adverse evidence supports weak claim and segregation rather than treating a missing document as negative evidence. Current documents name Copper Technologies and Ceffu but provide no current reserve-owner mapping or provider allocations, reserve-wide anti-rehypothecation, estate-segregation terms, failure recovery, or succession; historical Equinox Fund I letters do not establish current USX custody continuity.",
+      "notes": "Solstice's current proof disclosure expressly states that USX holders have no direct ownership, claim, or beneficial interest in collateral, while the binding terms state that the Foundation is not a trustee, agent, or fiduciary and disclaims fiduciary duties. This affirmative adverse evidence supports weak claim and segregation rather than treating a missing document as negative evidence. Current documents name Copper Technologies and Ceffu but provide no current reserve-owner mapping or provider allocations, reserve-wide anti-rehypothecation, estate-segregation terms, failure recovery, or succession; historical Equinox Fund I letters do not establish current USX custody continuity. The live July 15 proof payload publishes signed collateral and liability commitments plus a zero-knowledge proof and reconciles $525,095,474.74 of reserves against $522,891,044.14 of supply, a 1.004216 coverage ratio. This current cryptographic assets-and-liabilities reconciliation supports adequate assurance and reconciliation, while the lack of asset-category weights prevents it from establishing reserve composition or custody continuity.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
           "quality": "weak"
+        },
+        "assuranceAndReconciliation": {
+          "quality": "adequate"
         }
       }
     },
@@ -2980,6 +3757,315 @@
       "components": {
         "claimAndSegregation": {
           "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "satusd-river",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "River protocol-info API snapshot timestamped 2026-07-15T19:00:00Z",
+          "url": "https://api-airdrop.river.inc/protocol-info"
+        },
+        {
+          "label": "River Stability Pool documentation",
+          "url": "https://docs.river.inc/products/editor/stability-pool"
+        },
+        {
+          "label": "River Recovery Mode documentation",
+          "url": "https://docs.river.inc/products/editor/recovery-mode"
+        },
+        {
+          "label": "River Ethereum deployment",
+          "url": "https://docs.river.inc/outro/deployed-contracts/ethereum"
+        },
+        {
+          "label": "River BNB Chain deployment",
+          "url": "https://docs.river.inc/outro/deployed-contracts/bnb-chain"
+        },
+        {
+          "label": "River X Layer deployment",
+          "url": "https://docs.river.inc/outro/deployed-contracts/x-layer"
+        },
+        {
+          "label": "River Base deployment",
+          "url": "https://docs.river.inc/outro/deployed-contracts/base"
+        },
+        {
+          "label": "River Arbitrum deployment",
+          "url": "https://docs.river.inc/outro/deployed-contracts/arbitrum"
+        },
+        {
+          "label": "River Sonic deployment",
+          "url": "https://docs.river.inc/outro/deployed-contracts/sonic"
+        },
+        {
+          "label": "River BOB deployment",
+          "url": "https://docs.river.inc/outro/deployed-contracts/bob"
+        },
+        {
+          "label": "River B2 deployment",
+          "url": "https://docs.river.inc/outro/deployed-contracts/bsquared"
+        },
+        {
+          "label": "River Hemi deployment",
+          "url": "https://docs.river.inc/outro/deployed-contracts/hemi"
+        },
+        {
+          "label": "River BEVM deployment",
+          "url": "https://docs.river.inc/outro/deployed-contracts/bevm"
+        },
+        {
+          "label": "River Bitlayer deployment",
+          "url": "https://docs.river.inc/outro/deployed-contracts/bitlayer"
+        },
+        {
+          "label": "Pinned River StabilityPool implementation",
+          "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/core/StabilityPool.sol"
+        }
+      ],
+      "notes": "River's API snapshot at 2026-07-15T19:00:00Z reports $254,319,149.00350454 of protocol TVL against 159,365,925.99223334 satUSD supply, giving collateralizationRatio 1.5958188516151108. The official Stability Pool and Recovery Mode documentation establishes that chain-local Stability Pools commit satUSD to clear liquidated debt. Selector 0x0d9a6b35 (getTotalDebtTokenDeposits()) was read from every official SatoshiXApp deployment and cross-checked exactly against that app's satUSD balance at the same block: Ethereum 0xb8374e4DfF99202292da2FE34425e1dE665b67E6 at block 25540114 = 8,837.800177189052; BNB Chain 0x07BbC5A83B83a5C440D1CAedBF1081426d0AA4Ec at 110186594 = 12,751.16370658105; X Layer 0xB4d4793a1CD57b6EceBADf6FcbE5aEd03e8e93eC at 65374297 = 44,877.05520062706; Base 0x9a3c724ee9603A7550499bE73DC743B371811dd3 at 48676993 = 7,205.437601073615; Arbitrum 0x07BbC5A83B83a5C440D1CAedBF1081426d0AA4Ec at 484210121 = 4,977.343604015958; Sonic 0x07BbC5A83B83a5C440D1CAedBF1081426d0AA4Ec at 75997451 = 5,265.127187231309; BOB 0xEC272aF6e65C4D7857091225fa8ED300Df787CCF at 35640673 = 26,841.654465700816; B2 0x2863E3D0f29E2EEC6adEFC0dF0d3171DaD542c02 at 35489772 = 4,612.832444260231; Hemi 0x07BbC5A83B83a5C440D1CAedBF1081426d0AA4Ec at 4856385 = 10,139.238245634355; BEVM 0xd4b0eEcF327c0F1B43d487FEcFD2eA56E746A72b at 12329185 = 6,896.967405032389; Bitlayer 0x95E5b977c8c33DE5b3B5D2216F1097C2017Bdf71 at 23955321 = 35,941.88055. The exact aggregate 168,346.500587345834817192 satUSD divided by current supply gives liquidationCapacityRatio 0.0010563519117351985. The low ratio is retained without qualitative adjustment; unreviewed backstop, branch-isolation, shutdown/bad-debt, and structural-redemption components remain bounded rather than inferred.",
+      "metrics": {
+        "collateralizationRatio": 1.5958188516151108,
+        "liquidationCapacityRatio": 0.0010563519117351985
+      },
+      "components": {
+        "collateralizationParameters": {
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "eusd-electronic-usd",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "EUSD RToken 0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f",
+          "url": "https://etherscan.io/address/0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f#readProxyContract"
+        },
+        {
+          "label": "EUSD Main 0x7697aE4dEf3C3Cd52493Ba3a6F57fc6d8c59108a",
+          "url": "https://etherscan.io/address/0x7697ae4def3c3cd52493ba3a6f57fc6d8c59108a#readProxyContract"
+        },
+        {
+          "label": "EUSD BasketHandler 0x6d309297ddDFeA104A6E89a132e2f05ce3828e07",
+          "url": "https://etherscan.io/address/0x6d309297dddfea104a6e89a132e2f05ce3828e07#readProxyContract"
+        },
+        {
+          "label": "Pinned Reserve Protocol BasketHandler fullyCollateralized implementation",
+          "url": "https://github.com/reserve-protocol/protocol/blob/879b0e955de3aa82b5b9f06c532429087ce7feea/contracts/p1/BasketHandler.sol#L310-L315"
+        }
+      ],
+      "notes": "Measured at finalized Ethereum block 25540146 (hash 0x0d5e064fde952157e8e4d26500fe5f7c159f7bbe3067d4d46747fbe30ce16378). EUSD.main() returned 0x7697aE4dEf3C3Cd52493Ba3a6F57fc6d8c59108a; Main.basketHandler() returned 0x6d309297ddDFeA104A6E89a132e2f05ce3828e07; Main.backingManager() returned 0xF014FEF41cCB703975827C8569a3f0940cFD80A4. RToken totalSupply() and basketsNeeded() both returned 23,249,398.342590277208124074 basket units. BasketHandler.basketsHeldBy(backingManager).bottom returned 23,298,730.548920955515233985, a conservative 1.002121870235 coverage ratio, and fullyCollateralized() returned true. The pinned implementation defines this boolean as the conservative held-basket floor covering RToken liabilities. This exact same-block on-chain assets-and-liabilities reconciliation supports adequate assurance; the remaining holder-claim and custody-continuity components are not inferred from it.",
+      "metrics": {},
+      "components": {
+        "assuranceAndReconciliation": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "cgusd-cygnus-finance",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Cygnus cgUSD issuance and daily NAV reconciliation disclosure",
+          "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/token-and-contract/cgusd/how-it-works"
+        },
+        {
+          "label": "Verified Base cgUSD contract source",
+          "url": "https://base.blockscout.com/address/0xca72827a3d211cfd8f6b00ac98824872b72cab49?tab=contract_code"
+        },
+        {
+          "label": "Verified Base AccountingOracle source",
+          "url": "https://base.blockscout.com/address/0x3430bcadc7f23c42e7054e20f129d67baa91b184?tab=contract_code"
+        },
+        {
+          "label": "Pinned Base block 48677800",
+          "url": "https://base.blockscout.com/block/48677800"
+        }
+      ],
+      "notes": "At pinned Base block 48677800 (2026-07-15T19:49:07Z), getTotalAssets returned 790,558,371 buffered units and 75,896,866,450,000 invested/off-chain units; getTotalPooledAssets and totalSupply both returned 75,897,657,008,371. Verified source defines pooled assets as buffered plus invested assets, and AccountingOracle passes reportData.offChainBalance into handleOracleReport as the new invested-assets value. The latest processed oracle reference slot was 6,098,431, mapping to 2026-06-15T14:06:12Z, so the off-chain report was about 30 days old. This is an exact but self-reported aggregate assets-and-liabilities reconciliation, not independent holdings verification, and supports limited lossRecoveryDesign under the T-bill archetype's assurance control. Public sources did not establish a holder legal claim and seniority, independent NAV administrator and method, or a current measured maturity table; those components remain uncurated.",
+      "metrics": {},
+      "components": {
+        "lossRecoveryDesign": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "msusd-metronome",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Metronome official contracts",
+          "url": "https://docs.metronome.io/metronome-synth/contracts"
+        },
+        {
+          "label": "Pinned Metronome Pool implementation",
+          "url": "https://github.com/autonomoussoftware/metronome-synth-public/blob/3f6a1016c7980ac603be397a7c3d73644e62dbe7/contracts/Pool.sol"
+        },
+        {
+          "label": "Pinned Metronome DebtToken implementation",
+          "url": "https://github.com/autonomoussoftware/metronome-synth-public/blob/3f6a1016c7980ac603be397a7c3d73644e62dbe7/contracts/DebtToken.sol"
+        },
+        {
+          "label": "Pinned Metronome Pauseable implementation",
+          "url": "https://github.com/autonomoussoftware/metronome-synth-public/blob/3f6a1016c7980ac603be397a7c3d73644e62dbe7/contracts/utils/Pauseable.sol"
+        },
+        {
+          "label": "Metronome liquidation documentation",
+          "url": "https://docs.metronome.io/metronome-synth/risks/liquidation"
+        }
+      ],
+      "notes": "The exhaustive branch review covers all five registered Metronome msUSD pools. Each Pool account is cross-margin across every registered synthetic DebtToken, so no honest msUSD-only system collateralization ratio exists. Liquidation is funded by external callers supplying the selected debt token, is capped at 50% of that debt per call, and has no protocol-funded stability pool or insurance backstop, so liquidationCapacityRatio is also structurally not applicable. Collateral factors, issue limits, and immediate external-caller liquidation are explicit, but shared cross-synth collateral creates limited branch isolation. Collateral-exhausted debt remains without an unconditional recapitalization path. Shutdown disables issue, repay, deposit, withdraw, liquidate, and swap, and msUSD holders have no direct collateral redemption; backstop, shutdown/bad-debt, and structural-redemption components therefore fail.",
+      "metrics": {
+        "collateralizationRatio": null,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "not-applicable",
+          "rationale": "Metronome Pool accounts are cross-margin across every registered synthetic DebtToken, so no msUSD-only system collateralization ratio exists.",
+          "sourceUrl": "https://github.com/autonomoussoftware/metronome-synth-public/blob/3f6a1016c7980ac603be397a7c3d73644e62dbe7/contracts/Pool.sol"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "Metronome liquidations are funded by external callers supplying msUSD rather than by an msUSD-dedicated pool committed to debt offset.",
+          "sourceUrl": "https://github.com/autonomoussoftware/metronome-synth-public/blob/3f6a1016c7980ac603be397a7c3d73644e62dbe7/contracts/Pool.sol"
+        }
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "backstop": {
+          "applicability": "measured",
+          "quality": "failed"
+        },
+        "branchIsolation": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "shutdownAndBadDebt": {
+          "applicability": "measured",
+          "quality": "failed"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "failed"
+        }
+      }
+    },
+    {
+      "assetId": "usdm-moneta",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Charli3 official ODV registry and USDM reserve-feed configuration",
+          "url": "https://github.com/Charli3-Official/datum-demo-v3/blob/main/mainnet-c3-networks.yaml"
+        },
+        {
+          "label": "Charli3 datum-demo reader and decoding documentation",
+          "url": "https://github.com/Charli3-Official/datum-demo-v3"
+        },
+        {
+          "label": "NBX USDM reserve-verification and supply-counter disclosure",
+          "url": "https://nbx.com/en/whatisusdm"
+        },
+        {
+          "label": "USDM Charli3 reserve-oracle integration disclosure",
+          "url": "https://medium.com/@USDMOfficial/transparent-stablecoin-the-power-of-the-charli3-oracle-for-mehens-bank-reserves-c14515ba9c25"
+        },
+        {
+          "label": "Koios Cardano address information API",
+          "url": "https://api.koios.rest/api/v1/address_info"
+        },
+        {
+          "label": "Koios Cardano asset information API",
+          "url": "https://api.koios.rest/api/v1/asset_info"
+        }
+      ],
+      "notes": "Charli3's ODV contract publishes an independently relayed USDM reserve-balance value, while the issuer-described mint policy compares that value with the on-chain counter UTxO that records total supply and rejects minting above verified reserves. The reserve-feed datum observed during review reported $15,899,085.17 and the ledger reported 9,563,374.93 USDM supply, but the feed observation expired on 2026-05-06 and does not contain liabilities or constitute an accounting examination. This actual programmatic reserve-to-supply control supports limited assurance and reconciliation without treating the stale observation as a current same-snapshot solvency proof.",
+      "metrics": {},
+      "components": {
+        "assuranceAndReconciliation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "usdo-openeden",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "OpenEden USDO user agreement",
+          "url": "https://drive.google.com/file/d/19FbyzUxqMpc7Boh7VtF1Oim_L8SqWlYf/view"
+        },
+        {
+          "label": "OpenEden USDO risk disclosure",
+          "url": "https://docs.openeden.com/usdo/risks"
+        },
+        {
+          "label": "OpenEden USDO redemption workflow",
+          "url": "https://docs.openeden.com/usdo/usdo-token/redemption-workflow"
+        }
+      ],
+      "notes": "OpenEden's binding USDO agreement limits holder claims to Segregated Account USDO, provides no sponsor or general-account recourse after that pool is exhausted, and grants only a contractual redemption right rather than ownership of reserve assets. Redemptions are fulfilled FIFO by liquidating reserve assets, while the risk disclosure acknowledges reserve loss or inaccessibility and no deposit insurance. This is an explicit but weak pass-through recovery design: the segregated pool is the sole recovery source and no recapitalization or protective loss waterfall is promised.",
+      "metrics": {},
+      "components": {
+        "lossRecoveryDesign": {
+          "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "musd-metamask",
+      "archetype": "tbill",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Pinned mUSD implementation",
+          "url": "https://github.com/m0-foundation/mUSD/blob/1124f5b26e61004715552c3d1158cd22f0dae70b/src/MUSD.sol"
+        },
+        {
+          "label": "Pinned M extension wrap and unwrap implementation",
+          "url": "https://github.com/m0-foundation/evm-m-extensions/blob/909c536deac54de5a5bc3305f57e310c327fb441/src/MExtension.sol"
+        },
+        {
+          "label": "M0 Validator roles",
+          "url": "https://docs.m0.org/protocol/roles"
+        },
+        {
+          "label": "M0 collateral verification and expiry rules",
+          "url": "https://docs.m0.org/protocol/minting-burning"
+        },
+        {
+          "label": "M0 Protocol API",
+          "url": "https://protocol-api.m0.org/graphql"
+        }
+      ],
+      "notes": "The pinned implementations transfer M before minting the same amount of mUSD and burn mUSD before returning M. M0 requires fresh, threshold-signed collateral attestations from independent validators and treats expired collateral as zero for protocol accounting. Those programmatic verification and expiry controls support adequate loss-recovery design under the T-bill assurance control; this review does not assert a separate legal mUSD loss waterfall or curate the methodology-owned sibling components.",
+      "metrics": {},
+      "components": {
+        "lossRecoveryDesign": {
+          "applicability": "measured",
+          "quality": "adequate"
         }
       }
     }
