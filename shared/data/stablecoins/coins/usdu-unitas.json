@@ -298,21 +298,49 @@
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
-      "name": "Binance off-exchange / perp margin",
-      "pct": 54,
-      "risk": "high"
-    },
-    {
-      "name": "Solana on-chain reserves",
-      "pct": 42,
-      "risk": "low"
-    },
-    {
-      "name": "BSC on-chain reserves",
-      "pct": 4,
-      "risk": "low"
+      "name": "On-chain collateral and off-exchange delta-neutral strategy basket",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Unitas protocol, Copper/Ceffu custody routes, and undisclosed hedge venues",
+      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-16",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Accountable Unitas proof-of-solvency snapshot (2026-07-16)",
+        "url": "https://accountable.unitas.so/"
+      },
+      {
+        "label": "Unitas backing, custody, and security overview",
+        "url": "https://docs.unitas.so/backing-custody-and-security/overview"
+      },
+      {
+        "label": "Unitas off-exchange settlement documentation",
+        "url": "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas"
+      }
+    ],
+    "rationale": "Accountable's dated proof-of-solvency snapshot verifies aggregate assets and liabilities but does not expose a current asset- or venue-level reserve split. Unitas documents an on-chain collateral layer plus off-exchange perpetual hedges and names Copper/Ceffu as example custody routes, but the reviewed issuer pages do not publish current weights. The prior fixed Binance/Solana/BSC percentages are therefore replaced with one unresolved strategy basket.",
+    "compositionBasis": "Accountable aggregate solvency snapshot and Unitas's complete documented strategy envelope; current constituent weights undisclosed",
+    "compositionAsOf": "2026-07-16",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current collateral assets, chain and venue weights, long and short notionals, hedge counterparties, margin, custody-provider shares, and insurance-fund balances are not exposed in the reviewed dated snapshot.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "On-chain collateral and off-exchange delta-neutral strategy basket",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The solvency proof verifies the aggregate while withholding the current constituent and venue allocation needed for defensible reserve slices."
+      }
+    ]
+  },
   "yieldConfig": {
     "yieldSource": "Unitas savings (sUSDu)",
     "yieldType": "governance-set"
