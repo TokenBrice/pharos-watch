@@ -217,14 +217,24 @@
         "evidence": "EIP-1967 proxy-admin slot returned this contract; owner() returned 0x2D49CB4194dFa42d711699a87C10C6BbC05d94b6 (reconfirmed at BSC block 103627514), whose owner() resolves to the same 4/6 Safe (0x009c5467667dcD2Ab8C310E84B105cC0b570a8F4). ProxyAdmin is a non-multisig upgrader contract; modules not applicable."
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "BSC block 103627514: token owner() = 0x009c5467667dcD2Ab8C310E84B105cC0b570a8F4 (4/6 Safe, 6 owners confirmed via RPC getOwners, threshold 4 via storage slot 4); proxy-admin chain confirmed (EIP-1967 slot → 0x61108af7…, owner → 0x2D49CB4…, owner → same Safe). All mint-capable surfaces on-chain confirmed. Reserve backing is undisclosed by issuer but does not affect mint-path verification.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "BSC block 103627514: token owner() = 0x009c5467667dcD2Ab8C310E84B105cC0b570a8F4 (4/6 Safe, 6 owners confirmed via RPC getOwners, threshold 4 via storage slot 4); proxy-admin chain confirmed (EIP-1967 slot → 0x61108af7…, owner → 0x2D49CB4…, owner → same Safe). All mint-capable surfaces on-chain confirmed. Reserve backing is undisclosed by issuer but does not affect mint-path verification. UUSD (Anything Labs) is a BSC protocol with no disclosed registered entity or jurisdiction; its site, whitepaper and GitHub disclose no reserve composition, custodian, or independent attestation (only smart-contract security scanners such as SlowMist and GoPlus), so reconciliation is unknown. No financial regulator or licence for Anything Labs or UUSD was found, so supervision is none.",
+      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16",
       "sources": [
         {
           "label": "UUSD contract (BscScan)",
           "url": "https://bscscan.com/token/0x61a10e8556bed032ea176330e7f17d6a12a10000"
+        },
+        {
+          "label": "UUSD website",
+          "url": "https://uusd.ai/"
+        },
+        {
+          "label": "UUSD whitepaper",
+          "url": "https://uusd.ai/whitepaper.pdf"
         }
       ]
     },

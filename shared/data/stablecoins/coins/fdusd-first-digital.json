@@ -580,6 +580,8 @@
         "evidence": "This is a schema-level umbrella for independently verified upgrade domains, not a common quorum. The shared 4-of-6 EVM signer set owns the Ethereum/BSC ProxyAdmin at 0xbb812... and Arbitrum ProxyAdmin at 0x1f8c...; the Sui 4-of-7 multisig owns UpgradeCap 0x0033...; and the TON 4-of-6 admin can execute the Jetton master's code-and-data upgrade operation. Each path has zero on-chain delay. Solana is excluded because the classic SPL Token program is immutable."
       }
     ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -601,11 +603,19 @@
         {
           "label": "TON FDUSD Jetton master",
           "url": "https://tonviewer.com/EQD0Evpk4timFOHmy4Sv3l_KEUXlM-dN1_KhroTCfB2wkO89"
+        },
+        {
+          "label": "First Digital transparency (AOGB monthly attestation)",
+          "url": "https://www.firstdigitallabs.com/transparency"
+        },
+        {
+          "label": "HKMA grants first stablecoin issuer licences (2026-04-10)",
+          "url": "https://www.hkma.gov.hk/eng/news-and-media/press-releases/2026/04/20260410-4/"
         }
       ],
-      "evidence": "All six positive-supply issuer-native deployments were traced at cutoff 2026-07-13T20:34:40Z. Ethereum block 25526129, BSC block 109812367, Arbitrum block 483535601, Sui checkpoint 298226093, Solana slot 432714278, and TON masterchain seqno 79471628 resolved exact mint principals, thresholds, signer counts, module or guard state, pending-admin state, and every issuer-controlled mint-logic upgrade path. No unresolved native deployment or mint-capable controller remains.",
-      "reviewer": "Codex fixed-cutoff authority audit",
-      "reviewedAt": "2026-07-13",
+      "evidence": "All six positive-supply issuer-native deployments were traced at cutoff 2026-07-13T20:34:40Z. Ethereum block 25526129, BSC block 109812367, Arbitrum block 483535601, Sui checkpoint 298226093, Solana slot 432714278, and TON masterchain seqno 79471628 resolved exact mint principals, thresholds, signer counts, module or guard state, pending-admin state, and every issuer-controlled mint-logic upgrade path. No unresolved native deployment or mint-capable controller remains. AOGB CPA Limited (Hong Kong) publishes monthly ISAE 3000 attestations reconciling FDUSD supply to reserves (latest period end 2026-06-30, published 2026-07-10), so supply is reconciled. Supervision is attestation-only: First Digital Trust holds a Hong Kong TCSP registration and participated in the HKMA stablecoin sandbox, but the HKMA's first stablecoin issuer licences (2026-04-10) went to Anchorpoint and HSBC, not First Digital/FD121, and neither the sandbox nor a TCSP registration is prudential reserve/issuance supervision. FDUSD therefore sits in the high tier.",
+      "reviewer": "Codex fixed-cutoff authority audit; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16",
       "disposition": "scoreable"
     }
   },

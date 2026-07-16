@@ -162,6 +162,8 @@
         ]
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -171,11 +173,19 @@
         {
           "label": "Safe Transaction Service - Celo",
           "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+        },
+        {
+          "label": "Mento reserve dashboard",
+          "url": "https://reserve.mento.org/"
+        },
+        {
+          "label": "USDm Celo token owner() re-read 2026-07-16 = 4-of-6 Mento Safe",
+          "url": "https://celoscan.io/address/0x765de816845861e75a25fca122bb6898b8b1282a#readContract"
         }
       ],
-      "evidence": "At Celo block 69286148, Safe API (celo chain) confirmed 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 has threshold 4, 6 owners, no modules, zero guard, fallbackHandler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99, masterCopy 0x29fcB43b46531BcA003ddC8FCB67FFE91900C762 (Safe L2 v1.4.1). isMinter(Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD) = true. Monad confirmed at block 80,612,848: same Safe address is owner, threshold 4, 7 signers (including one additional signer not on Celo). NEAR: parent account a11bd.near is a plain EOA (no contract, ~11.69 NEAR, no lock) controlling the bridge subaccount cusd.token.a11bd.near; no owner view method exposed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Celo block 69286148, Safe API (celo chain) confirmed 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 has threshold 4, 6 owners, no modules, zero guard, fallbackHandler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99, masterCopy 0x29fcB43b46531BcA003ddC8FCB67FFE91900C762 (Safe L2 v1.4.1). isMinter(Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD) = true. Monad confirmed at block 80,612,848: same Safe address is owner, threshold 4, 7 signers (including one additional signer not on Celo). NEAR: parent account a11bd.near is a plain EOA (no contract, ~11.69 NEAR, no lock) controlling the bridge subaccount cusd.token.a11bd.near; no owner view method exposed. USDm (Mento Dollar) reserve backing is published only on Mento's own reserve dashboard (self-verification, no independent third-party attestor), so reconciliation is unknown, and no financial regulator supervises the Mento protocol, so supervision is none. Unlike the Mento FX variants whose token owner is the 48-hour Mento Timelock, the USDm Celo token owner re-read on 2026-07-16 is the 4-of-6 Mento Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 with no execution delay, and the NEAR deployment is minted by a plain EOA (a11bd.near); the mint admin is therefore self-controlled with no independent delay, so the encoding-derived unbounded cap is not superseded and no raiseable escape is earned.",
+      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16"
     }
   },
   "chainTier": "established-alt-l1",

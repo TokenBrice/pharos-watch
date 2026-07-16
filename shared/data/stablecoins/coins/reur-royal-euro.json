@@ -202,10 +202,12 @@
         ]
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "Ethereum block 25295037: owner = DEFAULT_ADMIN = MASTERMINTER = 0xc50ebe57 (EOA), not upgradeable, no sub-minters configured. BSC block 103629529: same owner confirmed. Tron (TXUi9vL8Ltz4dVpC6RM8CdtKSTHxFZuFbz): MASTERMINTER = 0x9a0c5f3a (EOA). All on-chain mint surfaces resolved across all deployed chains.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "Ethereum block 25295037: owner = DEFAULT_ADMIN = MASTERMINTER = 0xc50ebe57 (EOA), not upgradeable, no sub-minters configured. BSC block 103629529: same owner confirmed. Tron (TXUi9vL8Ltz4dVpC6RM8CdtKSTHxFZuFbz): MASTERMINTER = 0x9a0c5f3a (EOA). All on-chain mint surfaces resolved across all deployed chains. REUR proof-of-reserves is issuer-self-published (RIB Digital-signed snapshots, self-verification, no liability reconciliation) with no named independent accounting firm, so reconciliation is unknown. The only verifiable banking licence in the Royal-branded group (Labuan FSA investment-bank licence 220147BI) belongs to a separate Malaysian entity, The Royal Investment Bank of Kelantan, not the Hong Kong REUR issuer RIB Digital Holdings Limited, and no regulator supervising the actual issuer was found, so supervision is none.",
+      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16",
       "sources": [
         {
           "label": "REUR Ethereum token",
@@ -214,6 +216,14 @@
         {
           "label": "REUR Tron token",
           "url": "https://tronscan.org/#/contract/TXUi9vL8Ltz4dVpC6RM8CdtKSTHxFZuFbz"
+        },
+        {
+          "label": "RIB Digital REUR self-published proof-of-reserves snapshot",
+          "url": "https://ribstatic.com/public_sanitized/2026-04-20/REUR_sanitized_PoR_snapshot_20260420_1.json"
+        },
+        {
+          "label": "RCOINS / Royal Euro site",
+          "url": "https://www.rcoins.digital/"
         }
       ]
     }

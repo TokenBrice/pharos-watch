@@ -278,10 +278,12 @@
         }
       ]
     },
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25540331, DGLD's MINTER_ROLE and DEFAULT_ADMIN_ROLE and its ProxyAdmin owner all resolve to issuer EOA 0xb1c1bc081e49b8f4bb4e1960c2f7d9cd9dff8b9d. At Base block 48678413, the replacement native DGLD token's MINTER_ROLE, DEFAULT_ADMIN_ROLE, and ProxyAdmin owner all resolve to issuer EOA 0xe003a81a40803fedb701870c589c0a96d14544a0. Both transparent-proxy implementations and immediate upgrade paths are recorded. The issuer's February bridge-mint incident was resolved by retiring the bridge and replacing the Base deployment.",
-      "reviewer": "Codex deployment-control review",
-      "reviewedAt": "2026-07-15",
+      "evidence": "At Ethereum block 25540331, DGLD's MINTER_ROLE and DEFAULT_ADMIN_ROLE and its ProxyAdmin owner all resolve to issuer EOA 0xb1c1bc081e49b8f4bb4e1960c2f7d9cd9dff8b9d. At Base block 48678413, the replacement native DGLD token's MINTER_ROLE, DEFAULT_ADMIN_ROLE, and ProxyAdmin owner all resolve to issuer EOA 0xe003a81a40803fedb701870c589c0a96d14544a0. Both transparent-proxy implementations and immediate upgrade paths are recorded. The issuer's February bridge-mint incident was resolved by retiring the bridge and replacing the Base deployment. DGLD's bar registry (explorer.dgld.ch) is published by MKS PAMP, which acquired full ownership of issuer Gold Token SA in 2026, so it is not an independent third-party reconciliation; a February 2026 bridge exploit also minted unbacked DGLD on Base undetected, undercutting the real-time backing claim, and no dated independent assurance report of the physical gold was found, so reconciliation is not credibly established. Gold Token SA's only regulatory touchpoint is VQF AML self-regulatory membership, not prudential supervision, so supervision is none.",
+      "reviewer": "Codex deployment-control review; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16",
       "disposition": "scoreable",
       "sources": [
         {
@@ -299,6 +301,10 @@
         {
           "label": "DGLD post-incident report and July 15 update",
           "url": "https://dgld.ch/news/post-incident-report-february-2026-exploit"
+        },
+        {
+          "label": "MKS PAMP acquires full ownership of Gold Token SA",
+          "url": "https://www.mkspamp.com/mks-pamp-acquires-full-ownership-gold-token-sa-relaunch-leading-real-world-asset-backed-tokenized"
         }
       ]
     }

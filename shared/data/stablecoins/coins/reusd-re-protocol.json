@@ -369,6 +369,9 @@
         "evidence": "At Ethereum block 25530324, Safe calls returned threshold 3 and five owners; Safe Transaction Service reported version 1.4.1, no modules, and zero guard. Timelock hasRole() returned true for this Safe as the sole PROPOSER_ROLE, EXECUTOR_ROLE, and CANCELLER_ROLE holder."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -386,11 +389,15 @@
         {
           "label": "reUSD Sourcify source",
           "url": "https://sourcify.dev/server/v2/contract/1/0x5086bf358635b81d8c47c66d1c8b9e567db70c72?fields=sources,abi"
+        },
+        {
+          "label": "The Network Firm proof-of-reserves",
+          "url": "https://www.thenetworkfirm.com/proof-of-reserves"
         }
       ],
-      "evidence": "A complete Blockscout RoleGranted/RoleRevoked event replay through Ethereum block 25530324, followed by direct hasRole() checks, found three live MINTER_ROLE holders, one DEFAULT_ADMIN_ROLE holder, and one UPGRADER_ROLE holder. Verified implementations establish the callable behavior of each minter. The admin/upgrader is a 172800-second TimelockController governed by a 3-of-5 Safe with no modules or guard.",
-      "reviewer": "Codex Safety Score V9 CTRL curation",
-      "reviewedAt": "2026-07-14",
+      "evidence": "A complete Blockscout RoleGranted/RoleRevoked event replay through Ethereum block 25530324, followed by direct hasRole() checks, found three live MINTER_ROLE holders, one DEFAULT_ADMIN_ROLE holder, and one UPGRADER_ROLE holder. Verified implementations establish the callable behavior of each minter. The admin/upgrader is a 172800-second TimelockController governed by a 3-of-5 Safe with no modules or guard. reUSD is issued by the Resilience Foundation (Cayman exempted foundation company); The Network Firm attests the off-chain Regulation-114 trust/reinsurance balances daily and publishes the result to a live Chainlink proof-of-reserve feed, so supply is continuously reconciled. The reinsurer Cover Re SPC is CIMA-licensed, but the reUSD token issuer itself is an unregulated foundation, so supervision is attestation-only. The permissioned minter's encoding-derived cap does not bound issuance against reserves, so economic cap semantics are authored unbounded; reconciled continuously without a prudential supervisor places reUSD in the high tier.",
+      "reviewer": "Codex Safety Score V9 CTRL curation; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16",
       "disposition": "scoreable"
     }
   },

@@ -213,6 +213,7 @@
         "evidence": "At Ethereum block 25321527: owner() on REUSD returned 0xc07e000044f95655c11fda4cd37f70a94d7e0a7d. eth_getCode returned contract code. REUSD source: mint() requires operators[msg.sender] || msg.sender == owner(); no direct REUSD operator was found in the reviewed state. Core source: execute() is callable by voter 0x11111111063874ce8dc6232cb5c1c849359476e6 (token-weighted on-chain governance) or operators with explicit per-selector permissions. Active GuardianUpgradeable permissions are bounded emergency/operator functions rather than direct stablecoin mint authority."
       }
     ],
+    "economicCapSemantics": "raiseable",
     "review": {
       "sources": [
         {
@@ -236,9 +237,9 @@
           "url": "https://docs.resupply.fi/faq/multisig-and-admin-permissions"
         }
       ],
-      "evidence": "At Ethereum block 25321527: REUSD mint() is gated by owner (Core 0xc07e…) or direct stablecoin operators; Core.voter() returns 0x11111111063874ce8dc6232cb5c1c849359476e6. The Voter contract enforces token-weighted proposal execution with 30% quorum, a 7-day voting period, and a 1-day execution delay. Resupply's docs state contracts are owned by Core and governed through on-chain voting. The current GuardianUpgradeable proxy is controlled by a 3-of-5 Safe and has bounded emergency/operator permissions, but the active implementation does not expose the older revertVoter path and does not hold direct REUSD mint authority. Mint authority is therefore DAO-governed with emergency multisig controls.",
-      "reviewer": "Codex governance review",
-      "reviewedAt": "2026-06-15"
+      "evidence": "At Ethereum block 25321527: REUSD mint() is gated by owner (Core 0xc07e…) or direct stablecoin operators; Core.voter() returns 0x11111111063874ce8dc6232cb5c1c849359476e6. The Voter contract enforces token-weighted proposal execution with 30% quorum, a 7-day voting period, and a 1-day execution delay. Resupply's docs state contracts are owned by Core and governed through on-chain voting. The current GuardianUpgradeable proxy is controlled by a 3-of-5 Safe and has bounded emergency/operator permissions, but the active implementation does not expose the older revertVoter path and does not hold direct REUSD mint authority. Mint authority is therefore DAO-governed with emergency multisig controls. reUSD minting is over-collateralised issuance gated by owner (the Resupply Core governance contract) or explicitly set operators; at block 25321527 Core execution is controlled by the token-weighted Voter contract enforcing a 30% quorum, a 7-day voting period and a 1-day execution delay, so authorising new mint capacity requires on-chain governance behind an independently enforced delay. The encoding-derived direct-mint cap is therefore economically raiseable rather than unbounded, placing reUSD outside the fiat-custodial centralized-mint scope.",
+      "reviewer": "Codex governance review; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16"
     }
   },
   "collateralQuality": "exotic",

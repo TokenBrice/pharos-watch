@@ -248,6 +248,8 @@
         "evidence": "At Ethereum block 25294761, hasRole(DEFAULT_ADMIN_ROLE, 0x3885be…) = true; eth_getCode returned no bytecode (EOA confirmed). This EOA also owns MINTER_ROLE contract 0x410C19… (owner() confirmed). Same EOA holds DEFAULT_ADMIN on Arbitrum, Base, and BSC."
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -265,11 +267,19 @@
         {
           "label": "AID default-admin Safe API",
           "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x32793F6B11820Fa9C7039dFa640B751f491A027d/"
+        },
+        {
+          "label": "GAIB AID transparency dashboard",
+          "url": "https://aid.gaib.ai/transparency"
+        },
+        {
+          "label": "GAIB transparency scope (audits cover the financing deployment)",
+          "url": "https://docs.gaib.ai/products/gaib-products/transparency"
         }
       ],
-      "evidence": "At Ethereum block 25294761: hasRole confirmed for all four controls (MINTER_ROLE×2 contract holders, DEFAULT_ADMIN Safe 3/5, DEFAULT_ADMIN EOA). Both MINTER_ROLE holders are contracts (4099 and 3162 bytes); 0x410C19….owner()=EOA 0x3885be…; 0xE2E142….owner()=contract 0xee0cd7c…. EOA 0x3885be… confirmed no bytecode. DEFAULT_ADMIN Safe 3/5 confirmed (threshold 3, 5 owners, no modules, no guard). Same DEFAULT_ADMIN Safe and EOA confirmed on Arbitrum, Base, and BSC via hasRole. Arb/Base/BSC MINTER_ROLE has no active holders (different impl 0xfd8cf705… from Ethereum); minting on those chains routes via bridge contract authorized by DEFAULT_ADMIN.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25294761: hasRole confirmed for all four controls (MINTER_ROLE×2 contract holders, DEFAULT_ADMIN Safe 3/5, DEFAULT_ADMIN EOA). Both MINTER_ROLE holders are contracts (4099 and 3162 bytes); 0x410C19….owner()=EOA 0x3885be…; 0xE2E142….owner()=contract 0xee0cd7c…. EOA 0x3885be… confirmed no bytecode. DEFAULT_ADMIN Safe 3/5 confirmed (threshold 3, 5 owners, no modules, no guard). Same DEFAULT_ADMIN Safe and EOA confirmed on Arbitrum, Base, and BSC via hasRole. Arb/Base/BSC MINTER_ROLE has no active holders (different impl 0xfd8cf705… from Ethereum); minting on those chains routes via bridge contract authorized by DEFAULT_ADMIN. GAIB names McMillan Woods (Hong Kong) CPA for periodic reports, but GAIB's transparency documentation scopes that work to verifying the GPU/AI-financing deployment (e.g. the June 2026 Spiceflow assurance report), not an AID reserve-versus-circulating-supply reconciliation, and AID's dollar backing is shown only via self-displayed on-chain addresses, so no credible independent recurring reconciliation of AID reserves was found and reconciliation is unknown. Singapore's stablecoin regime covers only SGD/G10-pegged issuers and no MAS licence or other prudential authorisation for GAIB/AID was located, so supervision is none.",
+      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16"
     }
   },
   "collateralQuality": "rwa",

@@ -231,16 +231,26 @@
         "evidence": "owner() and masterMinter() both returned this address at Ethereum block 25166592; Safe API returned a 3/5 Safe with no enabled modules and the zero guard. The minter contract (0x56c5892b...) is also owned by this Safe (confirmed at block 25295183)."
       }
     ],
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
           "label": "Flying Tulip docs",
           "url": "https://docs.flyingtulip.com/"
+        },
+        {
+          "label": "Flying Tulip ftUSD dashboard (self-reported backing)",
+          "url": "https://flyingtulip.com/ftusd/dashboard/"
+        },
+        {
+          "label": "Flying Tulip contract addresses (3-of-5 Safe controls the mint)",
+          "url": "https://docs.flyingtulip.com/contract-addresses/"
         }
       ],
-      "evidence": "At Ethereum block 25295183: minter contract 0x56c5892b... has 76 bytes of code; owner() returns 3/5 Safe 0x1118e1c0. At Sonic block 73503133: owner() = 0x1118e1c0, masterMinter() = 0x1118e1c0, minter() = 0x56c5892b (UUPS proxy, impl 0xf47bb65f, no ProxyAdmin slot). The same 3/5 Safe controls the entire mint surface on both chains.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25295183: minter contract 0x56c5892b... has 76 bytes of code; owner() returns 3/5 Safe 0x1118e1c0. At Sonic block 73503133: owner() = 0x1118e1c0, masterMinter() = 0x1118e1c0, minter() = 0x56c5892b (UUPS proxy, impl 0xf47bb65f, no ProxyAdmin slot). The same 3/5 Safe controls the entire mint surface on both chains. ftUSD's entire mint surface (token owner, masterMinter, and the upgradeable minter contract) is controlled by a single 3-of-5 Safe with no timelock on both Ethereum and Sonic, so the mint is self-controlled with no independent bound and does not earn a raiseable escape. Backing is shown only on Flying Tulip's own real-time dashboard with no independent third-party attestation, so reconciliation is unknown, and no financial regulator supervises the issuer, so supervision is none.",
+      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16"
     }
   },
   "collateralQuality": "exotic",

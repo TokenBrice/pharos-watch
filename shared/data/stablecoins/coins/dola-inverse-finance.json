@@ -247,6 +247,7 @@
         "evidence": "At Ethereum block 25294782: DOLA.operator() = 0x926dF14a23BE491164dCF93f4c468A50ef659D5B confirmed. Contract bytecode identified as Compound Timelock: admin() = 0xbeccb6bb0aa4ab551966a7e4b97cec74bb359bf6 (GovernorBravo), delay = 0x2a300 = 172800s (48h). GovernorBravo slot 0 stores Timelock address confirming circular DAO governance pairing."
       }
     ],
+    "economicCapSemantics": "raiseable",
     "review": {
       "sources": [
         {
@@ -258,9 +259,9 @@
           "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/governance/overview"
         }
       ],
-      "evidence": "At Ethereum block 25294782: DOLA operator() confirmed = Timelock 0x926dF14a (48h delay). Timelock admin = 0xbeccb6bb (GovernorBravo, INV-token governance). GovernorBravo slot 0 = Timelock address (standard Compound Bravo pairing). Full DAO governance chain confirmed: INV vote → GovernorBravo → 48h Timelock → DOLA mint/burn. No multisig bypass.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25294782: DOLA operator() confirmed = Timelock 0x926dF14a (48h delay). Timelock admin = 0xbeccb6bb (GovernorBravo, INV-token governance). GovernorBravo slot 0 = Timelock address (standard Compound Bravo pairing). Full DAO governance chain confirmed: INV vote → GovernorBravo → 48h Timelock → DOLA mint/burn. No multisig bypass. DOLA minting is over-collateralised issuance controlled by the token operator, which at block 25294782 is a Compound Timelock with a 48-hour delay administered by INV-token GovernorBravo; every supply change requires an on-chain INV vote followed by the independently enforced 48-hour execution delay, so the encoding-derived direct-mint cap is economically raiseable rather than unbounded and DOLA falls outside the fiat-custodial centralized-mint scope.",
+      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16"
     }
   },
   "deploymentModel": "third-party-bridge",
