@@ -1,4 +1,5 @@
 import { resolveMechanismArchetype } from "@shared/lib/classification/resolve-mechanism-archetype";
+import { resolveChainId } from "@shared/lib/chains";
 import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation";
 import { diagnoseDependencyGraph, type DependencyGraphEdge } from "@shared/lib/dependency-graph";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
@@ -29,6 +30,7 @@ import {
 import { buildSafetyScoreV9MechanismReview } from "./safety-score-v9-extension-mechanism";
 import { buildSafetyScoreV9ReserveClassifications } from "./safety-score-v9-extension-reserves";
 import { SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY } from "@shared/lib/redemption-backstop-scoring";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import {
   buildSafetyScoreV9RetainedRedemptionRoutes,
   buildSafetyScoreV9RouteReviews,
@@ -36,6 +38,9 @@ import {
 import {
   buildSafetyScoreV9SupplyReview,
   safetyScoreV9RouteSupplyShare,
+  V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX,
+  V9_UNMATCHED_CHAIN_ROUTE_PREFIX,
+  V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX,
 } from "./safety-score-v9-extension-supply";
 import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
 
@@ -84,6 +89,8 @@ type ControlOverlay = NonNullable<
 type ReserveClassification = ReturnType<typeof buildSafetyScoreV9ReserveClassifications>[number];
 
 const RESERVE_WEIGHT_MATCH_TOLERANCE_PCT = 0.5;
+const DEPLOYMENT_MATERIAL_SHARE_THRESHOLD =
+  V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100;
 
 function digest(domain: string, payload: unknown): string {
   return sha256Hex(stableJsonStringifyV1({ domain, payload }));
@@ -837,23 +844,131 @@ function bridgeControl(
     ? `${route.controllerChain}:${route.controllerAddress.toLowerCase()}`
     : (route.failureDomainKeys?.[0] ?? `bridge-route:${route.id}`);
   const mintsRepresentation = capabilities.includes("bridge-mint");
+  const reviewed = route.reviewDisposition === "reviewed";
   return {
     controlKey: `bridge-meta:${assetId}:${digest("safety-score-v9.bridge-control-key.v1", route.id).slice(0, 20)}`,
     deploymentKey: route.id,
     controlKind: "bridge",
     scope: "deployment",
     capabilities,
-    capSemantics: mintsRepresentation ? { kind: "unbounded", bound: null } : { kind: "not-applicable", bound: null },
-    claimImpairment: mintsRepresentation ? "unbounded" : "bounded",
+    capSemantics: !reviewed
+      ? { kind: "unknown", bound: null }
+      : mintsRepresentation
+        ? { kind: "unbounded", bound: null }
+        : { kind: "not-applicable", bound: null },
+    claimImpairment: !reviewed ? "unknown" : mintsRepresentation ? "unbounded" : "bounded",
     economicLossScope: "deployment",
     authority: { authorityKey, model: route.controllerAddress ? "contract" : "unknown", threshold: null },
     delaySec: null,
     materialSupplyShare,
-    incidentState: route.reviewDisposition === "reviewed" ? "none" : "unknown",
+    incidentState: reviewed ? "none" : "unknown",
     failureDomains: (route.failureDomainKeys?.length ? route.failureDomainKeys : [route.id])
       .map((key) => ({ kind: "bridge-route" as const, key }))
       .sort((left, right) => compareText(left.key, right.key)),
   };
+}
+
+function unmatchedBridgeControl(assetId: string, route: NonNullable<ExtensionAsset["supplyReview"]>["selectedBridgeRoutes"][number]): ControlOverlay {
+  return {
+    controlKey: `bridge-supply:${assetId}:${digest("safety-score-v9.unmatched-bridge-control-key.v1", route.deploymentRouteKey).slice(0, 20)}`,
+    deploymentKey: route.deploymentRouteKey,
+    controlKind: "bridge",
+    scope: "deployment",
+    capabilities: [],
+    capSemantics: { kind: "unknown", bound: null },
+    claimImpairment: "unknown",
+    economicLossScope: "deployment",
+    authority: {
+      authorityKey: `bridge-route:${route.deploymentRouteKey}`,
+      model: "unknown",
+      threshold: null,
+    },
+    delaySec: null,
+    materialSupplyShare: route.supplyShare,
+    incidentState: "unknown",
+    failureDomains: [{ kind: "bridge-route", key: route.deploymentRouteKey }],
+  };
+}
+
+function canonicalRouteChain(routeId: string): string | null {
+  const separator = routeId.indexOf(":");
+  return separator > 0 ? resolveChainId(routeId.slice(0, separator)) : null;
+}
+
+/**
+ * Proves that every unresolved exact deployment is independently below the
+ * deployment threshold. Shares are intentionally not summed: each row has a
+ * distinct deployment-scoped failure domain. Uncanonicalized raw labels are
+ * the exception and arrive as one conservative pooled row.
+ */
+function hasCompleteSubthresholdBridgeInventory(
+  profileRoutes: readonly BridgeRouteDeployment[],
+  controls: readonly ControlOverlay[],
+  supplyReview: ExtensionAsset["supplyReview"],
+): boolean {
+  if (supplyReview === null || supplyReview.selectedBridgeRoutes.length === 0) return false;
+  const rows = supplyReview.selectedBridgeRoutes;
+  const totalRowShare = rows.reduce((sum, row) => sum + row.supplyShare, 0);
+  const aggregateShare =
+    supplyReview.selectedRouteSupplyShare +
+    supplyReview.unreviewedRouteSupplyShare +
+    supplyReview.unknownRouteSupplyShare;
+  if (Math.abs(totalRowShare - 1) > 0.000001 || Math.abs(aggregateShare - 1) > 0.000001) return false;
+  if (rows.some((row) => row.deploymentRouteKey.startsWith(V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX))) return false;
+
+  const controlCounts = new Map<string, number>();
+  const controlsByDeployment = new Map<string, ControlOverlay>();
+  for (const control of controls) {
+    controlCounts.set(control.deploymentKey, (controlCounts.get(control.deploymentKey) ?? 0) + 1);
+    controlsByDeployment.set(control.deploymentKey, control);
+  }
+  if ([...controlCounts.values()].some((count) => count !== 1)) return false;
+
+  const exactRowsByDeployment = new Map(rows.map((row) => [row.deploymentRouteKey, row]));
+  for (const row of rows) {
+    if (row.reviewState === "selected-reviewed") continue;
+    const control = controlsByDeployment.get(row.deploymentRouteKey);
+    if (
+      control === undefined ||
+      control.scope !== "deployment" ||
+      control.economicLossScope !== "deployment" ||
+      control.materialSupplyShare === null ||
+      Math.abs(control.materialSupplyShare - row.supplyShare) > 0.000001 ||
+      control.materialSupplyShare >= DEPLOYMENT_MATERIAL_SHARE_THRESHOLD
+    ) {
+      return false;
+    }
+  }
+
+  const presentCanonicalChains = new Set<string>();
+  for (const row of rows) {
+    if (row.deploymentRouteKey.startsWith(V9_UNMATCHED_CHAIN_ROUTE_PREFIX)) {
+      const scopedKey = row.deploymentRouteKey.slice(V9_UNMATCHED_CHAIN_ROUTE_PREFIX.length);
+      const separator = scopedKey.indexOf(":");
+      if (separator <= 0) return false;
+      presentCanonicalChains.add(scopedKey.slice(separator + 1));
+      continue;
+    }
+    if (row.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX)) continue;
+    const chain = canonicalRouteChain(row.deploymentRouteKey);
+    if (chain !== null) presentCanonicalChains.add(chain);
+  }
+
+  for (const route of profileRoutes) {
+    if (route.reviewDisposition === "reviewed") continue;
+    if (exactRowsByDeployment.has(route.id)) continue;
+    const chain = canonicalRouteChain(route.id);
+    const control = controlsByDeployment.get(route.id);
+    if (
+      chain === null ||
+      presentCanonicalChains.has(chain) ||
+      control === undefined ||
+      control.materialSupplyShare !== 0
+    ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function adaptBridgeReview(
@@ -897,10 +1012,17 @@ function adaptBridgeReview(
     sources: profile.sources,
     payload: profile,
   });
-  const reviewedRoutes = (profile.routes ?? []).filter((route) => route.reviewDisposition === "reviewed");
-  const controls = reviewedRoutes
+  const profileRoutes = profile.routes ?? [];
+  const reviewedRoutes = profileRoutes.filter((route) => route.reviewDisposition === "reviewed");
+  // Keep every non-native route as a control fact so exact deployment shares
+  // remain available even when the route review itself is unresolved.
+  const profileControls = profileRoutes
     .map((route) => bridgeControl(meta.id, route, safetyScoreV9RouteSupplyShare(supplyReview ?? null, route.id)))
     .filter((control): control is ControlOverlay => control !== null);
+  const unmatchedControls = (supplyReview?.selectedBridgeRoutes ?? [])
+    .filter((route) => route.reviewState === "unmatched")
+    .map((route) => unmatchedBridgeControl(meta.id, route));
+  const controls = [...profileControls, ...unmatchedControls];
   const controlsByDeployment = new Map(controls.map((control) => [control.deploymentKey, control]));
   const routes = reviewedRoutes.flatMap((route) => {
     const control = controlsByDeployment.get(route.id);
@@ -919,8 +1041,9 @@ function adaptBridgeReview(
       controls: [],
     };
   }
-  const allRoutesReviewed = (profile.routes ?? []).every((route) => route.reviewDisposition === "reviewed");
-  const state = allRoutesReviewed && reviewedObservationState(confidence) === "known" ? "known" : "bounded-unknown";
+  const allMaterialRoutesReviewed = hasCompleteSubthresholdBridgeInventory(profileRoutes, controls, supplyReview);
+  const state =
+    allMaterialRoutesReviewed && reviewedObservationState(confidence) === "known" ? "known" : "bounded-unknown";
   return {
     review: {
       status: requiredStatus("v9.control.bridge-review", state, `bridge:${meta.id}`, evidenceKeys),
@@ -979,9 +1102,7 @@ function adaptMintReview(
               control.canRaiseCap === false &&
               allControls.some(
                 (candidate, candidateIndex) =>
-                  candidateIndex !== index &&
-                  candidate.chain === control.chain &&
-                  candidate.canRaiseCap === true,
+                  candidateIndex !== index && candidate.chain === control.chain && candidate.canRaiseCap === true,
               ),
             profile.economicCapSemantics,
           ),
@@ -1016,9 +1137,7 @@ function adaptMintReview(
   // A reviewed reconciliation cadence supersedes the inferred one; absent or
   // "unknown" keeps the inference (fail-closed inertness).
   const reconciliation =
-    profile.reconciliation && profile.reconciliation !== "unknown"
-      ? profile.reconciliation
-      : inferredReconciliation;
+    profile.reconciliation && profile.reconciliation !== "unknown" ? profile.reconciliation : inferredReconciliation;
   const immutableWithoutMint = mintControl === null && upgrade.state === "immutable";
   const state = !reviewComplete
     ? profile.review.disposition === "unresolved" || reviewedObservationState(confidence) === "missing"
@@ -1177,12 +1296,16 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         controls.length > 0 &&
         controls.every(
           (control) =>
-            control.capSemantics.kind !== "unknown" &&
-            control.claimImpairment !== "unknown" &&
-            control.economicLossScope !== "unknown" &&
-            control.incidentState !== "unknown" &&
-            control.authority !== null &&
-            control.authority.model !== "unknown",
+            control.economicLossScope === "access-only" ||
+            (control.economicLossScope === "deployment" &&
+              control.materialSupplyShare !== null &&
+              control.materialSupplyShare < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD) ||
+            (control.capSemantics.kind !== "unknown" &&
+              control.claimImpairment !== "unknown" &&
+              control.economicLossScope !== "unknown" &&
+              control.incidentState !== "unknown" &&
+              control.authority !== null &&
+              control.authority.model !== "unknown"),
         );
       return {
         assetId,

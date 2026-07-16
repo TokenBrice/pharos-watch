@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import {
@@ -87,6 +88,17 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(review.structuralRedemption.quality).toBe("adequate");
     // The overlay is ignored when the resolved archetype disagrees.
     expect(buildSafetyScoreV9MechanismReview(fixedInputStub(), boldMeta, "fiat-cash")).toBeNull();
+  });
+
+  it("keeps LUSD's measured liquidation capacity and unsafe-backing ceiling outside control changes", () => {
+    const review = buildSafetyScoreV9MechanismReview(fixedInputStub(), { id: "lusd-liquity" } as MechanismMeta, "cdp");
+    if (review?.archetype !== "cdp") throw new Error("expected the curated LUSD CDP overlay");
+    expect(review.liquidationCapacityRatio).toBe(0.278);
+    expect(V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp.liquidationSignal).toEqual({
+      kind: "unsafe-backing",
+      severity: "high",
+    });
+    expect(V9_CANDIDATE_POLICY_V1.policy.semantic.structural.signalLimits["unsafe-backing"].high).toBe(59);
   });
 
   it("merges a gated fiat-cash overlay over the built review without degrading derived assurance", () => {

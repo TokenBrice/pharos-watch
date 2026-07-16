@@ -206,6 +206,11 @@ function factSetCore(message = "Launch date evidence has not been established.")
           circulatingUnits: null,
           referencePriceUsd: null,
           circulatingUsd: 10_000_000,
+          chainDistribution: {
+            chains: [{ chainId: "chain:fixture", supplyUsd: 10_000_000, supplyShare: 1 }],
+            unattributedSupplyUsd: 0,
+            unattributedSupplyShare: 0,
+          },
           selectedBridgeRoutes: [],
           selectedRouteSupplyShare: 0,
           unknownRouteSupplyShare: 0,

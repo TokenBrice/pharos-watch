@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { compileV9FactSetV2 } from "@shared/lib/safety-score-v9/compile";
+import { resolveChainId } from "@shared/lib/chains";
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
 import { isDexExitRouteCoverageComplete } from "@shared/lib/p4-exit-route-capacity";
 import { canonicalV9DependencyEdgeKey, canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
@@ -359,8 +360,20 @@ const SupplyReviewSchema = z
           supplyUsd: z.number().finite().nonnegative(),
           supplyShare: FractionSchema,
           reviewState: z.enum(["selected-reviewed", "selected-unresolved", "unmatched"]),
+          // Optional only for retained V2 extension compatibility. Current
+          // producers always distinguish reviewed native from controlled rows.
+          reviewedRouteKind: z.enum(["native", "controlled"]).optional(),
         })
-        .strict(),
+        .strict()
+        .superRefine((route, ctx) => {
+          if (route.reviewState !== "selected-reviewed" && route.reviewedRouteKind !== undefined) {
+            ctx.addIssue({
+              code: "custom",
+              path: ["reviewedRouteKind"],
+              message: "Only selected-reviewed supply rows carry a reviewed route kind",
+            });
+          }
+        }),
       (route) => route.deploymentRouteKey,
     ),
     selectedRouteSupplyShare: FractionSchema,
@@ -460,6 +473,10 @@ export const SafetyScoreV9FactSetExtensionV2Schema = z
 
 export type SafetyScoreV9FactSetExtensionV2 = z.infer<typeof SafetyScoreV9FactSetExtensionV2Schema>;
 type AssetExtension = SafetyScoreV9FactSetExtensionV2["assets"][number];
+type ExtensionControlOverlay = Extract<
+  NonNullable<AssetExtension["controlReview"]>,
+  { state: "reviewed-controls" }
+>["controls"][number];
 
 interface AssetBuildContext {
   readonly fixedInput: ReportCardsFixedInput;
@@ -493,9 +510,26 @@ function projectResearchOverlayPayload(value: unknown): unknown {
 }
 
 function stableFailureDomains(domains: readonly V9FailureDomainRef[]): V9FailureDomainRef[] {
-  return [...new Map(domains.map((domain) => [`${domain.kind}:${domain.key}`, domain])).values()].sort((left, right) =>
-    compareText(`${left.kind}:${left.key}`, `${right.kind}:${right.key}`),
+  const normalized = domains.map((domain): V9FailureDomainRef => {
+    if (domain.kind !== "chain") return domain;
+    return { kind: "chain", key: resolveChainId(domain.key) ?? domain.key.toLowerCase() };
+  });
+  return [...new Map(normalized.map((domain) => [`${domain.kind}:${domain.key}`, domain])).values()].sort(
+    (left, right) => compareText(`${left.kind}:${left.key}`, `${right.kind}:${right.key}`),
   );
+}
+
+function normalizeCompiledFailureDomains<T>(value: T): T {
+  if (Array.isArray(value)) return value.map((entry) => normalizeCompiledFailureDomains(entry)) as T;
+  if (value === null || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entry]) => [
+      key,
+      key === "failureDomains" && Array.isArray(entry)
+        ? stableFailureDomains(entry as V9FailureDomainRef[])
+        : normalizeCompiledFailureDomains(entry),
+    ]),
+  ) as T;
 }
 
 function addEvidence(context: AssetBuildContext, evidence: V9EvidenceReferenceV2): string {
@@ -677,7 +711,8 @@ function normalizeMechanismReview(
       context,
       createV9FactGap({
         gapId: `${context.asset.assetId}:gap:mechanism-review:${componentKey}`,
-        reasonCode: original.observationState === "unsupported" ? "missing-pillar-evidence" : "bounded-mechanism-review",
+        reasonCode:
+          original.observationState === "unsupported" ? "missing-pillar-evidence" : "bounded-mechanism-review",
         ownerDomain: "backing",
         policyRuleId: original.applicability.policyRuleId,
         observationState: original.observationState,
@@ -1702,12 +1737,57 @@ function buildControls(context: AssetBuildContext): {
   }
   return {
     controlStatus: status,
-    controls: review.controls.map((control) => ({
-      ...control,
-      sourceGenerationId: context.extension.sources.researchOverlays.generationId,
-      status,
-    })),
+    controls: review.controls.map((control) => {
+      const controlStatus =
+        review.state === "reviewed-controls" && !controlCanCarryKnownStatus(control)
+          ? boundedControlSemanticsStatus(context, control, evidenceIds)
+          : status;
+      return {
+        ...control,
+        sourceGenerationId: context.extension.sources.researchOverlays.generationId,
+        status: controlStatus,
+      };
+    }),
   };
+}
+
+function controlCanCarryKnownStatus(control: ExtensionControlOverlay): boolean {
+  return (
+    control.authority !== null &&
+    control.failureDomains.length > 0 &&
+    control.capSemantics.kind !== "unknown" &&
+    control.claimImpairment !== "unknown" &&
+    control.economicLossScope !== "unknown"
+  );
+}
+
+function boundedControlSemanticsStatus(
+  context: AssetBuildContext,
+  control: ExtensionControlOverlay,
+  evidenceRefIds: readonly string[],
+): V9FactStatusV2 {
+  const gapId = addGap(
+    context,
+    createV9FactGap({
+      gapId: `${context.asset.assetId}:gap:deployment-control:${control.controlKey}`,
+      reasonCode: "unresolved-control-identity",
+      ownerDomain: "control",
+      policyRuleId: "v9.control.review",
+      observationState: "bounded-unknown",
+      path:
+        control.scope === "deployment"
+          ? { kind: "deployment-control", deploymentKey: control.deploymentKey, controlKey: control.controlKey }
+          : { kind: "local-component", componentKey: `control:${control.controlKey}` },
+      message: "The control inventory is known, but this control's authority or economic semantics remain unresolved.",
+      evidenceRefIds,
+    }),
+  );
+  return createV9FactStatus({
+    applicability: requiredV9Applicability("v9.control.review"),
+    observationState: "bounded-unknown",
+    evidenceRefIds,
+    gapIds: [gapId],
+  });
 }
 
 function normalizeEconomicControlStatus(
@@ -1998,6 +2078,8 @@ function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
     peg.pegScore !== null &&
     peg.currentDeviationBps !== null &&
     (!peg.activeDepeg || activeDepegBps !== null);
+  const hasPartialActiveDepegEvidence =
+    reference !== null && peg.pegScore !== null && peg.activeDepeg === true && activeDepegBps !== null;
   let status: V9FactStatusV2;
   if (!complete) {
     status = missingLocalFact(context, {
@@ -2033,12 +2115,12 @@ function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
     referenceKind: reference?.referenceKind ?? "other",
     referenceKey: reference?.referenceKey ?? `unresolved:${context.asset.assetId}`,
     methodologyVersion: peg.methodologyVersion,
-    pegScore: complete ? peg.pegScore : null,
+    pegScore: complete || hasPartialActiveDepegEvidence ? peg.pegScore : null,
     // The v8 peg summary reports signed deviation; the v9 peg fact carries the
     // magnitude per its nonnegative schema contract.
     currentDeviationBps: complete && peg.currentDeviationBps !== null ? Math.abs(peg.currentDeviationBps) : null,
-    activeDepeg: complete ? peg.activeDepeg : null,
-    activeDepegBps: complete && peg.activeDepeg ? activeDepegBps : null,
+    activeDepeg: complete ? peg.activeDepeg : hasPartialActiveDepegEvidence ? true : null,
+    activeDepegBps: (complete && peg.activeDepeg) || hasPartialActiveDepegEvidence ? activeDepegBps : null,
     trackingSpanDays: peg.trackingSpanDays,
     failureDomains: reference?.failureDomains ?? [],
   };
@@ -2063,6 +2145,7 @@ function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
       circulatingUnits: null,
       referencePriceUsd: null,
       circulatingUsd: null,
+      chainDistribution: null,
       selectedBridgeRoutes: [],
       selectedRouteSupplyShare: null,
       unknownRouteSupplyShare: null,
@@ -2087,6 +2170,28 @@ function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
   );
   const evidence = context.evidence.get(evidenceId)!;
   const review = context.asset.supplyReview;
+  const supplyByChainId = new Map<string, number>();
+  let unattributedSupplyUsd = 0;
+  for (const chain of chains) {
+    const supplyUsd = chainRows[chain]!.current;
+    const chainId = resolveChainId(chain);
+    if (chainId === null) {
+      unattributedSupplyUsd += supplyUsd;
+      continue;
+    }
+    supplyByChainId.set(chainId, (supplyByChainId.get(chainId) ?? 0) + supplyUsd);
+  }
+  const chainDistribution = {
+    chains: [...supplyByChainId.entries()]
+      .sort(([left], [right]) => compareText(left, right))
+      .map(([chainId, supplyUsd]) => ({
+        chainId,
+        supplyUsd,
+        supplyShare: circulatingUsd > 0 ? supplyUsd / circulatingUsd : 0,
+      })),
+    unattributedSupplyUsd,
+    unattributedSupplyShare: circulatingUsd > 0 ? unattributedSupplyUsd / circulatingUsd : 0,
+  };
   let status: V9FactStatusV2;
   if (evidence.freshness.state === "stale") {
     status = missingLocalFact(context, {
@@ -2119,18 +2224,48 @@ function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
       (review.unreviewedRouteSupplyShare ?? 0) +
       (review.unknownRouteSupplyShare ?? 0);
     const rowShareSum = review.selectedBridgeRoutes.reduce((sum, route) => sum + route.supplyShare, 0);
-    const selectedShares = (review.selectedRouteSupplyShare ?? 0) + (review.unreviewedRouteSupplyShare ?? 0);
+    const reviewedRowShare = review.selectedBridgeRoutes.reduce(
+      (sum, route) => sum + (route.reviewState === "selected-reviewed" ? route.supplyShare : 0),
+      0,
+    );
+    const unresolvedRowShare = review.selectedBridgeRoutes.reduce(
+      (sum, route) => sum + (route.reviewState === "selected-unresolved" ? route.supplyShare : 0),
+      0,
+    );
+    const unmatchedRowShare = review.selectedBridgeRoutes.reduce(
+      (sum, route) => sum + (route.reviewState === "unmatched" ? route.supplyShare : 0),
+      0,
+    );
+    const carriesExplicitUnmatchedRows = review.selectedBridgeRoutes.some((route) => route.reviewState === "unmatched");
     if (circulatingUsd > 0 && Math.abs(shareSum - 1) > 0.000001) {
       throw new Error(
         `Bridge supply shares do not reconcile for ${context.asset.assetId}: ` +
           `selected+unreviewed+unknown=${shareSum} must conserve to 1 over positive circulating supply`,
       );
     }
-    if (circulatingUsd > 0 && Math.abs(rowShareSum - selectedShares) > 0.000001) {
+    const expectedRowShare = carriesExplicitUnmatchedRows
+      ? shareSum
+      : (review.selectedRouteSupplyShare ?? 0) + (review.unreviewedRouteSupplyShare ?? 0);
+    if (circulatingUsd > 0 && Math.abs(rowShareSum - expectedRowShare) > 0.000001) {
       throw new Error(
-        `Bridge supply shares do not reconcile for ${context.asset.assetId}: ` +
-          `selected route rows sum to ${rowShareSum} but the selected/unreviewed shares claim ${selectedShares}`,
+        `Bridge supply rows do not reconcile for ${context.asset.assetId}: ` +
+          `route rows sum to ${rowShareSum} but the represented aggregate claims ${expectedRowShare}`,
       );
+    }
+    const categoryClaims: Array<readonly [string, number, number]> = [
+      ["reviewed", reviewedRowShare, review.selectedRouteSupplyShare ?? 0],
+      ["unresolved", unresolvedRowShare, review.unreviewedRouteSupplyShare ?? 0],
+    ];
+    if (carriesExplicitUnmatchedRows) {
+      categoryClaims.push(["unmatched", unmatchedRowShare, review.unknownRouteSupplyShare ?? 0]);
+    }
+    for (const [label, rowShare, claimedShare] of categoryClaims) {
+      if (circulatingUsd > 0 && Math.abs(rowShare - claimedShare) > 0.000001) {
+        throw new Error(
+          `Bridge supply ${label} rows do not reconcile for ${context.asset.assetId}: ` +
+            `rows sum to ${rowShare} but the aggregate claims ${claimedShare}`,
+        );
+      }
     }
     status = createV9FactStatus({
       applicability: requiredV9Applicability("v9.supply.current"),
@@ -2145,12 +2280,13 @@ function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
     circulatingUnits: null,
     referencePriceUsd: null,
     circulatingUsd,
+    chainDistribution,
     selectedBridgeRoutes: review?.selectedBridgeRoutes ?? [],
     selectedRouteSupplyShare: review?.selectedRouteSupplyShare ?? null,
     unknownRouteSupplyShare: review?.unknownRouteSupplyShare ?? null,
     unreviewedRouteSupplyShare: review?.unreviewedRouteSupplyShare ?? null,
     failureDomains: stableFailureDomains([
-      ...chains.map((chain) => ({ kind: "chain" as const, key: chain })),
+      ...chains.map((chain) => ({ kind: "chain" as const, key: resolveChainId(chain) ?? chain.toLowerCase() })),
       ...(review?.failureDomains ?? []),
     ]),
   };
@@ -2181,7 +2317,7 @@ function compileAsset(
   const accessReview = buildAccessReview(context);
   const peg = buildPeg(context);
   const supply = buildSupply(context);
-  return {
+  const compiledAsset: V9AssetFactsV2 = {
     assetId: asset.assetId,
     archetype: asset.archetype,
     evidence: [...context.evidence.values()],
@@ -2197,6 +2333,9 @@ function compileAsset(
     peg,
     supply,
   };
+  // Normalize once at the producer boundary so every score-bearing pillar,
+  // including nested mechanism reviews, shares the same chain identity.
+  return normalizeCompiledFailureDomains(compiledAsset);
 }
 
 /**

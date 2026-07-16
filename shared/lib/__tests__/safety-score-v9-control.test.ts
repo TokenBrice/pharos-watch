@@ -12,7 +12,7 @@ import {
   type V9MintSupervision,
   type V9OracleControlReview,
 } from "../safety-score-v9/control";
-import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { resolveV9ReasonPolicy, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
 function requiredKnown(rule = "fixture.required"): V9FactStatusV2 {
   return {
@@ -41,6 +41,15 @@ function stale(rule = "fixture.stale"): V9FactStatusV2 {
   return {
     applicability: { state: "required", policyRuleId: rule, rationale: null, gapId: null },
     observationState: "stale",
+    evidenceRefIds: [`evidence:${rule}`],
+    gapIds: [`gap:${rule}`],
+  };
+}
+
+function boundedUnknown(rule = "fixture.bounded-unknown"): V9FactStatusV2 {
+  return {
+    applicability: { state: "required", policyRuleId: rule, rationale: null, gapId: null },
+    observationState: "bounded-unknown",
     evidenceRefIds: [`evidence:${rule}`],
     gapIds: [`gap:${rule}`],
   };
@@ -453,6 +462,292 @@ describe("Safety Score v9 economic control", () => {
     expect(canonical.score).toBe(45);
     expect(canonical.structuralFailures).toContainEqual(
       expect.objectContaining({ kind: "material-bridge", binding: true }),
+    );
+  });
+
+  it("keeps unresolved access-only and below-threshold deployment controls nonbinding under a known aggregate", () => {
+    const threshold = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100;
+    const unresolvedStatus = boundedUnknown("control.peripheral");
+    const accessControl = control("freeze:unresolved", "freeze", { status: unresolvedStatus });
+    const peripheralBridge = control("bridge:unresolved-peripheral", "bridge", {
+      scope: "deployment",
+      status: unresolvedStatus,
+      economicLossScope: "deployment",
+      materialSupplyShare: threshold - 0.001,
+    });
+    const result = evaluateV9EconomicControl(
+      args({
+        facts: {
+          ...facts([accessControl, peripheralBridge]),
+          controlStatus: requiredKnown("controls"),
+        },
+        bridge: {
+          status: requiredKnown("bridge"),
+          routes: [{ controlKey: peripheralBridge.controlKey, tier: "opaque-or-unknown" }],
+        },
+      }),
+    );
+
+    expect(result).toMatchObject({ score: 95, state: "rated", reasons: [] });
+    expect(result.components.some((component) => component.componentKey === "bridge:unverified")).toBe(false);
+    expect(result.structuralFailures).toEqual([]);
+  });
+
+  it("does not let a known material control make a subthreshold unresolved deployment bind", () => {
+    const threshold = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100;
+    const unresolvedStatus = boundedUnknown("control.peripheral-mixed");
+    const knownCustody = control("custody:known-material", "custody");
+    const peripheralBridge = control("bridge:unresolved-peripheral-mixed", "bridge", {
+      scope: "deployment",
+      status: unresolvedStatus,
+      economicLossScope: "deployment",
+      materialSupplyShare: threshold - 0.001,
+    });
+    const result = evaluateV9EconomicControl(
+      args({
+        facts: {
+          ...facts([knownCustody, peripheralBridge]),
+          controlStatus: requiredKnown("controls"),
+        },
+        bridge: {
+          status: requiredKnown("bridge"),
+          routes: [{ controlKey: peripheralBridge.controlKey, tier: "opaque-or-unknown" }],
+        },
+      }),
+    );
+
+    expect(result).toMatchObject({ score: 95, state: "rated", reasons: [] });
+    expect(result.components.some((component) => component.componentKey === "bridge:unverified")).toBe(false);
+  });
+
+  it("keeps unrepresented aggregate control residue fail-closed without section fallbacks", () => {
+    const aggregateStatus = boundedUnknown("control.unrepresented-residue");
+    const result = evaluateV9EconomicControl(
+      args({
+        facts: {
+          ...facts([control("custody:known", "custody")]),
+          controlStatus: aggregateStatus,
+        },
+      }),
+    );
+    const reasonPolicy = resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, "unresolved-control-identity");
+
+    expect(result.reasons).toEqual([
+      expect.objectContaining({ code: "unresolved-control-identity", path: "controls", controlKey: null }),
+    ]);
+    expect(result.components.map((component) => component.componentKey)).toEqual(["bridge:native", "mint", "oracle"]);
+    expect(reasonPolicy.ceiling).toEqual({ kind: "reason:unresolved-control-identity", limit: 55 });
+    expect(Math.min(result.score!, reasonPolicy.ceiling!.limit)).toBe(55);
+  });
+
+  it("does not let a subthreshold unresolved row erase aggregate control residue", () => {
+    const threshold = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100;
+    const aggregateStatus = boundedUnknown("control.aggregate-residue");
+    const peripheralBridge = control("bridge:unresolved-peripheral-residue", "bridge", {
+      scope: "deployment",
+      status: boundedUnknown("control.peripheral-residue"),
+      economicLossScope: "deployment",
+      materialSupplyShare: threshold - 0.001,
+    });
+    const result = evaluateV9EconomicControl(
+      args({
+        facts: {
+          ...facts([control("custody:known-with-residue", "custody"), peripheralBridge]),
+          controlStatus: aggregateStatus,
+        },
+        bridge: {
+          status: requiredKnown("bridge"),
+          routes: [{ controlKey: peripheralBridge.controlKey, tier: "opaque-or-unknown" }],
+        },
+      }),
+    );
+    const reasonPolicy = resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, "unresolved-control-identity");
+
+    expect(result.reasons).toEqual([
+      expect.objectContaining({ code: "unresolved-control-identity", path: "controls", controlKey: null }),
+    ]);
+    expect(result.components.some((component) => component.componentKey === "bridge:unverified")).toBe(false);
+    expect(reasonPolicy.ceiling).toEqual({ kind: "reason:unresolved-control-identity", limit: 55 });
+    expect(Math.min(result.score!, reasonPolicy.ceiling!.limit)).toBe(55);
+  });
+
+  it("does not let a generic material control reason authorize an unrelated section fallback", () => {
+    const unresolvedStatus = boundedUnknown("control.custody-material");
+    const unresolvedCustody = control("custody:unresolved-material", "custody", {
+      status: unresolvedStatus,
+    });
+    const result = evaluateV9EconomicControl(
+      args({
+        facts: {
+          ...facts([unresolvedCustody]),
+          controlStatus: unresolvedStatus,
+        },
+        bridge: noBridge(),
+      }),
+    );
+
+    expect(result.reasons.map((reason) => reason.code)).toContain("unresolved-control-identity");
+    expect(result.components.some((component) => component.componentKey === "bridge:unverified")).toBe(false);
+    expect(result.score).toBe(95);
+  });
+
+  it.each([
+    ["exactly threshold", V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100],
+    ["above threshold", V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100 + 0.01],
+    ["missing share", null],
+  ])("keeps an unresolved deployment control fail-closed when its share is %s", (_label, materialSupplyShare) => {
+    const unresolvedStatus = boundedUnknown("control.material");
+    const materialBridge = control("bridge:unresolved-material", "bridge", {
+      scope: "deployment",
+      status: unresolvedStatus,
+      economicLossScope: "deployment",
+      materialSupplyShare,
+    });
+    const result = evaluateV9EconomicControl(
+      args({
+        facts: {
+          ...facts([materialBridge]),
+          controlStatus: unresolvedStatus,
+        },
+        bridge: {
+          status: requiredKnown("bridge"),
+          routes: [{ controlKey: materialBridge.controlKey, tier: "opaque-or-unknown" }],
+        },
+      }),
+    );
+
+    expect(result.reasons.map((reason) => reason.code)).toEqual(
+      expect.arrayContaining(["selected-bridge-route-unresolved", "unresolved-control-identity"]),
+    );
+    expect(result.components).toContainEqual(
+      expect.objectContaining({ componentKey: "bridge:unverified", binding: true }),
+    );
+    expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality);
+  });
+
+  it("ignores below-threshold bridge review residue but fails closed at the exact threshold", () => {
+    const threshold = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100;
+    const resultFor = (unreviewedRouteSupplyShare: number, supplyStatus = requiredKnown("supply")) => {
+      const unresolvedBridge = control("bridge:unresolved-residue", "bridge", {
+        scope: "deployment",
+        status: boundedUnknown("control.unresolved-residue"),
+        economicLossScope: "deployment",
+        materialSupplyShare: unreviewedRouteSupplyShare,
+      });
+      return evaluateV9EconomicControl(
+        args({
+          facts: {
+            ...facts([unresolvedBridge]),
+            supply: {
+              ...facts().supply,
+              status: supplyStatus,
+              selectedBridgeRoutes: [
+                {
+                  deploymentRouteKey: "ethereum:native",
+                  supplyUsd: 100 * (1 - unreviewedRouteSupplyShare),
+                  supplyShare: 1 - unreviewedRouteSupplyShare,
+                  reviewState: "selected-reviewed",
+                  reviewedRouteKind: "native",
+                },
+                {
+                  deploymentRouteKey: unresolvedBridge.deploymentKey,
+                  supplyUsd: 100 * unreviewedRouteSupplyShare,
+                  supplyShare: unreviewedRouteSupplyShare,
+                  reviewState: "selected-unresolved",
+                },
+              ],
+              selectedRouteSupplyShare: 1 - unreviewedRouteSupplyShare,
+              unreviewedRouteSupplyShare,
+            },
+          },
+          bridge: { status: requiredKnown("bridge"), routes: [] },
+        }),
+      );
+    };
+
+    const peripheral = resultFor(threshold - 0.001);
+    expect(peripheral.reasons).toEqual([]);
+    expect(peripheral.components.some((component) => component.componentKey === "bridge:unverified")).toBe(false);
+    expect(peripheral.score).toBe(95);
+
+    const material = resultFor(threshold);
+    expect(material.reasons.map((reason) => reason.code)).toContain("missing-bridge-route-rows");
+    expect(material.components).toContainEqual(
+      expect.objectContaining({ componentKey: "bridge:unverified", binding: true }),
+    );
+
+    const staleSupply = resultFor(threshold - 0.001, boundedUnknown("supply.stale"));
+    expect(staleSupply.reasons.map((reason) => reason.code)).toContain("missing-bridge-route-rows");
+    expect(staleSupply.components).toContainEqual(
+      expect.objectContaining({ componentKey: "bridge:unverified", binding: true }),
+    );
+  });
+
+  it("rejects a required-known reviewed bridge inventory with no route joins", () => {
+    const result = evaluateV9EconomicControl(
+      args({
+        facts: {
+          ...facts(),
+          supply: {
+            ...facts().supply,
+            selectedBridgeRoutes: [
+              {
+                deploymentRouteKey: "ethereum:reviewed",
+                supplyUsd: 100,
+                supplyShare: 1,
+                reviewState: "selected-reviewed",
+              },
+            ],
+          },
+        },
+        bridge: { status: requiredKnown("bridge"), routes: [] },
+      }),
+    );
+
+    expect(result.reasons.map((reason) => reason.code)).toContain("missing-bridge-route-rows");
+    expect(result.components).toContainEqual(
+      expect.objectContaining({ componentKey: "bridge:unverified", binding: true }),
+    );
+  });
+
+  it("fails closed when a retained mixed inventory omits the reviewed route kind", () => {
+    const unresolvedBridge = control("bridge:retained-unresolved", "bridge", {
+      scope: "deployment",
+      status: boundedUnknown("control.retained-unresolved"),
+      economicLossScope: "deployment",
+      materialSupplyShare: 0.09,
+    });
+    const result = evaluateV9EconomicControl(
+      args({
+        facts: {
+          ...facts([unresolvedBridge]),
+          supply: {
+            ...facts().supply,
+            selectedBridgeRoutes: [
+              {
+                deploymentRouteKey: "ethereum:retained-reviewed",
+                supplyUsd: 91,
+                supplyShare: 0.91,
+                reviewState: "selected-reviewed",
+              },
+              {
+                deploymentRouteKey: unresolvedBridge.deploymentKey,
+                supplyUsd: 9,
+                supplyShare: 0.09,
+                reviewState: "selected-unresolved",
+              },
+            ],
+            selectedRouteSupplyShare: 0.91,
+            unreviewedRouteSupplyShare: 0.09,
+          },
+        },
+        bridge: { status: requiredKnown("bridge"), routes: [] },
+      }),
+    );
+
+    expect(result.reasons.map((reason) => reason.code)).toContain("missing-bridge-route-rows");
+    expect(result.components).toContainEqual(
+      expect.objectContaining({ componentKey: "bridge:unverified", binding: true }),
     );
   });
 

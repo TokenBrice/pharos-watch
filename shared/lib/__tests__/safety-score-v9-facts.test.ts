@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { compileV9FactSetV2, assertExactV9ActiveAssetSet } from "../safety-score-v9/compile";
 import { evaluateV9FactSet } from "../safety-score-v9/evaluate-set";
+import { projectV9ExitEvaluationRoute, resolveV9DistinctExitCapacity } from "../safety-score-v9/exit";
 import {
   canonicalV9DependencyEdgeKey,
   canonicalV9RouteKey,
@@ -16,6 +17,7 @@ import {
 } from "../safety-score-v9/evidence";
 import { createV9FactGap, optionalExitV9Path } from "../safety-score-v9/reasons";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { stableJsonStringifyV1 } from "../stable-json";
 import type { V9AssetFactsV2 } from "../../types/safety-score-v9-facts";
 
 const AS_OF_SEC = 1_000;
@@ -194,6 +196,11 @@ function minimalAsset(assetId: string) {
       circulatingUnits: null,
       referencePriceUsd: null,
       circulatingUsd: 1_000_000,
+      chainDistribution: {
+        chains: [{ chainId: "chain:fixture", supplyUsd: 1_000_000, supplyShare: 1 }],
+        unattributedSupplyUsd: 0,
+        unattributedSupplyShare: 0,
+      },
       selectedBridgeRoutes: [],
       selectedRouteSupplyShare: 0,
       unknownRouteSupplyShare: 0,
@@ -549,6 +556,11 @@ function fullAsset(reversed: boolean) {
       circulatingUnits: null,
       referencePriceUsd: null,
       circulatingUsd: 10_000_000,
+      chainDistribution: {
+        chains: [{ chainId: "chain:ethereum", supplyUsd: 10_000_000, supplyShare: 1 }],
+        unattributedSupplyUsd: 0,
+        unattributedSupplyShare: 0,
+      },
       selectedBridgeRoutes: order([
         {
           deploymentRouteKey: "bridge:ethereum",
@@ -621,6 +633,529 @@ describe("Safety Score v9 normalized fact protocol", () => {
     );
   });
 
+  it("deduplicates overlapping DEX physical resources before applying common-mode materiality", () => {
+    const input = coreFixture();
+    const alpha = input.assets[0]! as unknown as V9AssetFactsV2;
+    const delta = structuredClone(alpha);
+    delta.assetId = "delta";
+    input.activeAssetIds.push(delta.assetId);
+    input.assets.push(delta as never);
+
+    for (const asset of [alpha, delta]) {
+      const primary = asset.exitRoutes.find((route) => route.routeId === "amm-main")!;
+      primary.capacityCurve = primary.capacityCurve.map((point) => ({
+        ...point,
+        executableUsd: 30_000,
+        completionRatio: 30_000 / point.requestedNotionalUsd,
+      }));
+    }
+
+    const primary = alpha.exitRoutes.find((route) => route.routeId === "amm-main")!;
+    const projected = projectV9ExitEvaluationRoute(primary);
+    const overlappingRoute = (routeKey: string, executableUsd: number, physicalResourceKeys: string[]) => ({
+      ...projected,
+      routeKey,
+      physicalResourceKeys,
+      capacityCurve: projected.capacityCurve.map((point) => {
+        const executableAtPoint = Math.min(executableUsd, point.requestedNotionalUsd);
+        return {
+          ...point,
+          executableUsd: executableAtPoint,
+          completionRatio: executableAtPoint / point.requestedNotionalUsd,
+        };
+      }),
+    });
+    expect(
+      resolveV9DistinctExitCapacity(
+        [
+          overlappingRoute("route:a", 20_000, ["resource:a"]),
+          overlappingRoute("route:b", 30_000, ["resource:a", "resource:b"]),
+          overlappingRoute("route:c", 40_000, ["resource:b"]),
+        ],
+        {
+          requestedNotionalUsd: 1_000_000,
+          maxCostBps: 200,
+          comparisonWindowSec: 300,
+          rawSupplyRequestUsd: 1_000_000,
+        },
+        V9_CANDIDATE_POLICY_V1,
+      ).valuedExecutableUsd,
+    ).toBe(40_000);
+
+    const evaluated = evaluateV9FactSet(compileV9FactSetV2(input), V9_CANDIDATE_POLICY_V1);
+    for (const assetId of ["alpha", "delta"]) {
+      const signal = evaluated.assets
+        .find((asset) => asset.assetId === assetId)!
+        .scoreInput.dependencyStructuralSignals.find((candidate) =>
+          candidate.failureDomainKeys.includes("dex-protocol:dex:fixture"),
+        );
+      expect(signal).toMatchObject({ kind: "critical-dependency", severity: "low" });
+    }
+  });
+
+  it("qualifies DEX common-mode groups with score-bearing routes only", () => {
+    const evaluateSharedDex = (alphaEligible: boolean, deltaEligible: boolean) => {
+      const input = coreFixture();
+      const alpha = input.assets[0]! as unknown as V9AssetFactsV2;
+      const delta = structuredClone(alpha);
+      delta.assetId = "delta";
+      input.activeAssetIds.push(delta.assetId);
+      input.assets.push(delta as never);
+      for (const [asset, eligible] of [
+        [alpha, alphaEligible],
+        [delta, deltaEligible],
+      ] as const) {
+        if (eligible) continue;
+        const route = asset.exitRoutes.find((candidate) => candidate.routeId === "amm-main")!;
+        route.coverageClass = "diagnostic";
+        route.scoreEligible = false;
+      }
+      return evaluateV9FactSet(compileV9FactSetV2(input), V9_CANDIDATE_POLICY_V1);
+    };
+    const dexSignal = (evaluated: ReturnType<typeof evaluateV9FactSet>, assetId: string) =>
+      evaluated.assets
+        .find((asset) => asset.assetId === assetId)!
+        .scoreInput.dependencyStructuralSignals.find((signal) =>
+          signal.failureDomainKeys.includes("dex-protocol:dex:fixture"),
+        );
+
+    const diagnosticOnly = evaluateSharedDex(false, false);
+    expect(dexSignal(diagnosticOnly, "alpha")).toBeUndefined();
+    expect(dexSignal(diagnosticOnly, "delta")).toBeUndefined();
+
+    const oneEligible = evaluateSharedDex(true, false);
+    expect(dexSignal(oneEligible, "alpha")).toBeUndefined();
+    expect(dexSignal(oneEligible, "delta")).toBeUndefined();
+
+    const twoEligible = evaluateSharedDex(true, true);
+    expect(dexSignal(twoEligible, "alpha")).toMatchObject({ severity: "high" });
+    expect(dexSignal(twoEligible, "delta")).toMatchObject({ severity: "high" });
+  });
+
+  it("derives bridge share bounds through reviewed control and deployment joins", () => {
+    type BridgeJoinVariant =
+      | "known"
+      | "aggregate-mismatch"
+      | "contradictory-share"
+      | "missing-capability"
+      | "null-control-share"
+      | "same-domain-epsilon-no-row"
+      | "same-domain-invalid"
+      | "same-domain-null-no-row"
+      | "same-domain-zero-no-row"
+      | "separate-domain-unjoined"
+      | "supply-mismatch"
+      | "stale-control"
+      | "stale-review"
+      | "unmatched"
+      | "wrong-kind";
+    const evaluateBridgeSeverity = (
+      targetShare: number,
+      variant: BridgeJoinVariant = "known",
+      requestedDomainKey = "protocol:fixture-bridge",
+    ) => {
+      const input = coreFixture();
+      const alpha = input.assets[0]! as unknown as V9AssetFactsV2;
+      const delta = structuredClone(alpha);
+      delta.assetId = "delta";
+      input.activeAssetIds.push(delta.assetId);
+      input.assets.push(delta as never);
+
+      for (const asset of [alpha, delta]) {
+        const targetDomain = { kind: "bridge-route" as const, key: "protocol:fixture-bridge" };
+        const nativeDomain = {
+          kind: "bridge-route" as const,
+          key: variant === "separate-domain-unjoined" ? "bridge:native" : `native:${asset.assetId}`,
+        };
+        const controlTemplate = asset.controls.find((control) => control.controlKey === "control:minter")!;
+        const targetControl: V9AssetFactsV2["controls"][number] = {
+          ...structuredClone(controlTemplate),
+          controlKey: "control:bridge-target",
+          deploymentKey: "bridge:target",
+          controlKind: variant === "wrong-kind" ? "mint" : "bridge",
+          scope: "deployment",
+          capabilities: variant === "missing-capability" ? [] : ["bridge-mint"],
+          materialSupplyShare:
+            variant === "null-control-share" ? null : variant === "contradictory-share" ? 1 : targetShare,
+          failureDomains: [targetDomain],
+        };
+        const nativeControl: V9AssetFactsV2["controls"][number] = {
+          ...structuredClone(controlTemplate),
+          controlKey: "control:bridge-native",
+          deploymentKey: "bridge:native",
+          controlKind: "bridge",
+          scope: "deployment",
+          capabilities: ["bridge-mint"],
+          materialSupplyShare: 1 - targetShare,
+          failureDomains: [nativeDomain],
+        };
+        const sameDomainMissingRow = [
+          "same-domain-epsilon-no-row",
+          "same-domain-invalid",
+          "same-domain-null-no-row",
+          "same-domain-zero-no-row",
+        ].includes(variant);
+        const invalidSameDomainControl: V9AssetFactsV2["controls"][number] | null = sameDomainMissingRow
+          ? {
+              ...structuredClone(controlTemplate),
+              controlKey: "control:bridge-invalid",
+              deploymentKey: "bridge:invalid",
+              controlKind: "bridge",
+              scope: "deployment",
+              capabilities: ["bridge-mint"],
+              materialSupplyShare:
+                variant === "same-domain-zero-no-row"
+                  ? 0
+                  : variant === "same-domain-null-no-row"
+                    ? null
+                    : variant === "same-domain-epsilon-no-row"
+                      ? Number.EPSILON
+                      : targetShare,
+              failureDomains: [targetDomain],
+            }
+          : null;
+        if (variant === "stale-control") {
+          const staleEvidence = createV9EvidenceReference(
+            {
+              evidenceId: `evidence:stale-bridge-control:${asset.assetId}`,
+              sourceId: "bridge-control-source",
+              sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId,
+              disposition: "published",
+              observedAtSec: 600,
+              publishedAtSec: 610,
+              maxAgeSec: 100,
+            },
+            AS_OF_SEC,
+          );
+          const staleGap = createV9FactGap({
+            gapId: `gap:stale-bridge-control:${asset.assetId}`,
+            reasonCode: "selected-bridge-route-unresolved",
+            ownerDomain: "control",
+            policyRuleId: "control.bridge.current",
+            observationState: "stale",
+            path: {
+              kind: "deployment-control",
+              deploymentKey: targetControl.deploymentKey,
+              controlKey: targetControl.controlKey,
+            },
+            message: "The bridge control review is stale.",
+            evidenceRefIds: [staleEvidence.evidenceId],
+          });
+          asset.evidence.push(staleEvidence);
+          asset.gaps.push(staleGap);
+          targetControl.status = createV9FactStatus({
+            applicability: requiredV9Applicability("control.bridge.current"),
+            observationState: "stale",
+            evidenceRefIds: [staleEvidence.evidenceId],
+            gapIds: [staleGap.gapId],
+          });
+        }
+        asset.controls.push(
+          targetControl,
+          ...(variant === "separate-domain-unjoined" ? [] : [nativeControl]),
+          ...(invalidSameDomainControl === null ? [] : [invalidSameDomainControl]),
+        );
+        const targetUsesLowRiskTier = sameDomainMissingRow || variant === "separate-domain-unjoined";
+        asset.economicControlReview.bridge = {
+          status: knownStatus("evidence:base", "control.bridge.review"),
+          routes: [
+            {
+              controlKey: targetControl.controlKey,
+              tier: targetUsesLowRiskTier ? "external-validated-network" : "opaque-or-unknown",
+            },
+            ...(variant === "separate-domain-unjoined"
+              ? []
+              : [{ controlKey: nativeControl.controlKey, tier: "single-chain-or-native" as const }]),
+            ...(invalidSameDomainControl === null
+              ? []
+              : [{ controlKey: invalidSameDomainControl.controlKey, tier: "canonical-rollup-bridge" as const }]),
+          ],
+        };
+        if (variant === "stale-review") {
+          const staleEvidence = createV9EvidenceReference(
+            {
+              evidenceId: `evidence:stale-bridge-review:${asset.assetId}`,
+              sourceId: "bridge-review-source",
+              sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId,
+              disposition: "published",
+              observedAtSec: 600,
+              publishedAtSec: 610,
+              maxAgeSec: 100,
+            },
+            AS_OF_SEC,
+          );
+          const staleGap = createV9FactGap({
+            gapId: `gap:stale-bridge-review:${asset.assetId}`,
+            reasonCode: "selected-bridge-route-unresolved",
+            ownerDomain: "control",
+            policyRuleId: "control.bridge.review.current",
+            observationState: "stale",
+            path: {
+              kind: "deployment-control",
+              deploymentKey: targetControl.deploymentKey,
+              controlKey: targetControl.controlKey,
+            },
+            message: "The bridge review envelope is stale.",
+            evidenceRefIds: [staleEvidence.evidenceId],
+          });
+          asset.evidence.push(staleEvidence);
+          asset.gaps.push(staleGap);
+          asset.economicControlReview.bridge.status = createV9FactStatus({
+            applicability: requiredV9Applicability("control.bridge.review.current"),
+            observationState: "stale",
+            evidenceRefIds: [staleEvidence.evidenceId],
+            gapIds: [staleGap.gapId],
+          });
+        }
+        asset.supply.selectedBridgeRoutes = [
+          {
+            deploymentRouteKey: variant === "unmatched" ? "bridge:unmatched" : targetControl.deploymentKey,
+            supplyUsd: (variant === "supply-mismatch" ? 9_000_000 : 10_000_000) * targetShare,
+            supplyShare: targetShare,
+            reviewState: "selected-reviewed",
+          },
+          {
+            deploymentRouteKey: nativeControl.deploymentKey,
+            supplyUsd: 10_000_000 * (1 - targetShare),
+            supplyShare: 1 - targetShare,
+            reviewState: "selected-reviewed",
+          },
+        ];
+        asset.supply.selectedRouteSupplyShare = variant === "aggregate-mismatch" ? 0.99 : 1;
+        asset.supply.unknownRouteSupplyShare = 0;
+        asset.supply.unreviewedRouteSupplyShare = 0;
+        asset.supply.failureDomains.push(targetDomain, nativeDomain);
+      }
+
+      const evaluated = evaluateV9FactSet(compileV9FactSetV2(input), V9_CANDIDATE_POLICY_V1);
+      return evaluated.assets
+        .find((asset) => asset.assetId === "alpha")!
+        .scoreInput.dependencyStructuralSignals.find((signal) =>
+          signal.failureDomainKeys.includes(`bridge-route:${requestedDomainKey}`),
+        )!.severity;
+    };
+
+    expect(evaluateBridgeSeverity(0.0499)).toBe("moderate");
+    expect(evaluateBridgeSeverity(0.05)).toBe("high");
+    expect(evaluateBridgeSeverity(0.0499, "aggregate-mismatch")).toBe("high");
+    expect(evaluateBridgeSeverity(0.0499, "contradictory-share")).toBe("high");
+    expect(evaluateBridgeSeverity(0.0499, "missing-capability")).toBe("high");
+    expect(evaluateBridgeSeverity(0.0499, "null-control-share")).toBe("high");
+    expect(evaluateBridgeSeverity(0.0499, "same-domain-zero-no-row")).toBe("moderate");
+    expect(evaluateBridgeSeverity(0.0499, "same-domain-null-no-row")).toBe("high");
+    expect(evaluateBridgeSeverity(0.0499, "same-domain-epsilon-no-row")).toBe("high");
+    expect(evaluateBridgeSeverity(0.0499, "same-domain-invalid")).toBe("high");
+    expect(evaluateBridgeSeverity(0.0499, "separate-domain-unjoined")).toBe("moderate");
+    expect(evaluateBridgeSeverity(0.0499, "separate-domain-unjoined", "bridge:native")).toBe("high");
+    expect(evaluateBridgeSeverity(0.0499, "supply-mismatch")).toBe("high");
+    expect(evaluateBridgeSeverity(0.0499, "unmatched")).toBe("high");
+    expect(evaluateBridgeSeverity(0.0499, "wrong-kind")).toBe("high");
+    expect(evaluateBridgeSeverity(0.0499, "stale-control")).toBe("high");
+    expect(evaluateBridgeSeverity(0.0499, "stale-review")).toBe("high");
+  });
+
+  it("does not treat a control-only bridge domain as exact supply attribution", () => {
+    const input = coreFixture();
+    const alpha = input.assets[0]! as unknown as V9AssetFactsV2;
+    const delta = structuredClone(alpha);
+    delta.assetId = "delta";
+    input.activeAssetIds.push(delta.assetId);
+    input.assets.push(delta as never);
+
+    for (const asset of [alpha, delta]) {
+      const targetDomain = { kind: "bridge-route" as const, key: "protocol:fixture-bridge" };
+      const controlOnlyDomain = { kind: "bridge-route" as const, key: "bridge:native" };
+      const controlTemplate = asset.controls.find((control) => control.controlKey === "control:minter")!;
+      const targetControl: V9AssetFactsV2["controls"][number] = {
+        ...structuredClone(controlTemplate),
+        controlKey: "control:bridge-target",
+        deploymentKey: "bridge:target",
+        controlKind: "bridge",
+        scope: "deployment",
+        capabilities: ["bridge-mint"],
+        materialSupplyShare: 0.0499,
+        failureDomains: [targetDomain],
+      };
+      const decoyControl: V9AssetFactsV2["controls"][number] = {
+        ...structuredClone(controlTemplate),
+        controlKey: "control:bridge-decoy",
+        deploymentKey: "bridge:decoy",
+        controlKind: "bridge",
+        scope: "deployment",
+        capabilities: ["bridge-mint"],
+        materialSupplyShare: 0,
+        failureDomains: [controlOnlyDomain],
+      };
+      asset.controls.push(targetControl, decoyControl);
+      asset.economicControlReview.bridge = {
+        status: knownStatus("evidence:base", "control.bridge.review"),
+        routes: [
+          { controlKey: targetControl.controlKey, tier: "external-validated-network" },
+          { controlKey: decoyControl.controlKey, tier: "canonical-rollup-bridge" },
+        ],
+      };
+      asset.supply.selectedBridgeRoutes = [
+        {
+          deploymentRouteKey: targetControl.deploymentKey,
+          supplyUsd: 499_000,
+          supplyShare: 0.0499,
+          reviewState: "selected-reviewed",
+        },
+        {
+          deploymentRouteKey: "bridge:native",
+          supplyUsd: 9_501_000,
+          supplyShare: 0.9501,
+          reviewState: "selected-reviewed",
+        },
+      ];
+      asset.supply.selectedRouteSupplyShare = 1;
+      asset.supply.unknownRouteSupplyShare = 0;
+      asset.supply.unreviewedRouteSupplyShare = 0;
+      asset.supply.failureDomains.push(targetDomain);
+    }
+
+    const evaluated = evaluateV9FactSet(compileV9FactSetV2(input), V9_CANDIDATE_POLICY_V1);
+    for (const assetId of ["alpha", "delta"]) {
+      expect(
+        evaluated.assets
+          .find((asset) => asset.assetId === assetId)!
+          .scoreInput.dependencyStructuralSignals.find((signal) =>
+            signal.failureDomainKeys.includes("bridge-route:protocol:fixture-bridge"),
+          ),
+      ).toMatchObject({ severity: "high" });
+    }
+  });
+
+  it("rejects bridge reviews that reference a missing control before evaluation", () => {
+    const input = coreFixture();
+    const alpha = input.assets[0]! as unknown as V9AssetFactsV2;
+    alpha.economicControlReview.bridge = {
+      status: knownStatus("evidence:base", "control.bridge.review"),
+      routes: [{ controlKey: "control:missing-bridge", tier: "external-validated-network" }],
+    };
+    expect(() => compileV9FactSetV2(input)).toThrow(/review references unknown control control:missing-bridge/);
+  });
+
+  it("does not turn pillar or diagnostic reasons into a global limited-evidence cap", () => {
+    const pillarInput = coreFixture();
+    const pillarAsset = pillarInput.assets[0]! as unknown as V9AssetFactsV2;
+    const pillarGap = createV9FactGap({
+      gapId: "gap:bounded-mechanism",
+      reasonCode: "bounded-mechanism-review",
+      ownerDomain: "backing",
+      policyRuleId: "backing.mechanism.bounded",
+      observationState: "bounded-unknown",
+      path: { kind: "local-component", componentKey: "assurance-and-reconciliation" },
+      message: "The assurance component is conservatively bounded.",
+      evidenceRefIds: ["evidence:base"],
+    });
+    pillarAsset.gaps.push(pillarGap);
+    const pillarReview = pillarAsset.mechanismRiskReview.review!;
+    if (pillarReview.archetype !== "fiat-cash") throw new Error("Expected fiat fixture");
+    pillarReview.assuranceAndReconciliation = {
+      ...pillarReview.assuranceAndReconciliation,
+      status: createV9FactStatus({
+        applicability: requiredV9Applicability("backing.mechanism.bounded"),
+        observationState: "bounded-unknown",
+        evidenceRefIds: ["evidence:base"],
+        gapIds: [pillarGap.gapId],
+      }),
+      quality: null,
+    };
+    const pillarEvaluated = evaluateV9FactSet(compileV9FactSetV2(pillarInput), V9_CANDIDATE_POLICY_V1).assets.find(
+      (asset) => asset.assetId === "alpha",
+    )!;
+    expect(pillarEvaluated.scoreInput.pillars.backing).toMatchObject({
+      evidenceLevel: "strong",
+      reasons: [expect.objectContaining({ code: "bounded-mechanism-review" })],
+    });
+    expect(pillarEvaluated.trace.caps.map((cap) => cap.kind)).not.toContain("evidence:limited");
+
+    const diagnosticInput = coreFixture();
+    const diagnosticAsset = diagnosticInput.assets[0]! as unknown as V9AssetFactsV2;
+    const dexRoute = diagnosticAsset.exitRoutes.find((route) => route.routeId === "amm-main")!;
+    const redemptionRoute = diagnosticAsset.exitRoutes.find((route) => route.routeId === "issuer-main")!;
+    redemptionRoute.failureDomains.push(dexRoute.failureDomains.find((domain) => domain.kind === "dex-protocol")!);
+    const diagnosticEvaluated = evaluateV9FactSet(
+      compileV9FactSetV2(diagnosticInput),
+      V9_CANDIDATE_POLICY_V1,
+    ).assets.find((asset) => asset.assetId === "alpha")!;
+    expect(diagnosticEvaluated.exit.reasons).toContain("correlated-exit-routes");
+    expect(diagnosticEvaluated.scoreInput.pillars.exit.evidenceLevel).toBe("adequate");
+    expect(diagnosticEvaluated.trace.caps.map((cap) => cap.kind)).not.toContain("evidence:limited");
+  });
+
+  it("keeps ceiling reasons limited and NR conditions insufficient", () => {
+    const ceilingInput = coreFixture();
+    const ceilingAsset = ceilingInput.assets[0]! as unknown as V9AssetFactsV2;
+    const staleEvidence = createV9EvidenceReference(
+      {
+        evidenceId: "evidence:stale-assurance",
+        sourceId: "assurance-source",
+        sourceGenerationId: "assurance:g1",
+        disposition: "published",
+        observedAtSec: 600,
+        publishedAtSec: 610,
+        maxAgeSec: 100,
+      },
+      AS_OF_SEC,
+    );
+    const ceilingGap = createV9FactGap({
+      gapId: "gap:stale-assurance",
+      reasonCode: "missing-latest-assurance-report",
+      ownerDomain: "backing",
+      policyRuleId: "backing.assurance.current",
+      observationState: "stale",
+      path: { kind: "local-component", componentKey: "assurance-and-reconciliation" },
+      message: "The latest assurance report is stale.",
+      evidenceRefIds: [staleEvidence.evidenceId],
+    });
+    ceilingAsset.evidence.push(staleEvidence);
+    ceilingAsset.gaps.push(ceilingGap);
+    const ceilingReview = ceilingAsset.mechanismRiskReview.review!;
+    if (ceilingReview.archetype !== "fiat-cash") throw new Error("Expected fiat fixture");
+    ceilingReview.assuranceAndReconciliation = {
+      ...ceilingReview.assuranceAndReconciliation,
+      status: createV9FactStatus({
+        applicability: requiredV9Applicability("backing.assurance.current"),
+        observationState: "stale",
+        evidenceRefIds: [staleEvidence.evidenceId],
+        gapIds: [ceilingGap.gapId],
+      }),
+    };
+    const ceilingEvaluated = evaluateV9FactSet(compileV9FactSetV2(ceilingInput), V9_CANDIDATE_POLICY_V1).assets.find(
+      (asset) => asset.assetId === "alpha",
+    )!;
+    expect(ceilingEvaluated.scoreInput.pillars.backing.evidenceLevel).toBe("limited");
+    expect(ceilingEvaluated.trace.caps.map((cap) => cap.kind)).toContain("evidence:limited");
+
+    const nrInput = coreFixture();
+    const nrAsset = nrInput.assets[0]! as unknown as V9AssetFactsV2;
+    const nrGap = createV9FactGap({
+      gapId: "gap:missing-mechanism-review",
+      reasonCode: "missing-pillar-evidence",
+      ownerDomain: "backing",
+      policyRuleId: "backing.mechanism.required",
+      observationState: "missing",
+      path: { kind: "local-component", componentKey: "mechanism-review" },
+      message: "The mechanism review is missing.",
+    });
+    nrAsset.gaps.push(nrGap);
+    nrAsset.mechanismRiskReview = {
+      status: createV9FactStatus({
+        applicability: requiredV9Applicability("backing.mechanism.required"),
+        observationState: "missing",
+        gapIds: [nrGap.gapId],
+      }),
+      review: null,
+    };
+    const nrEvaluated = evaluateV9FactSet(compileV9FactSetV2(nrInput), V9_CANDIDATE_POLICY_V1).assets.find(
+      (asset) => asset.assetId === "alpha",
+    )!;
+    expect(nrEvaluated.scoreInput.pillars.backing.evidenceLevel).toBe("insufficient");
+    expect(nrEvaluated.trace.finalScore).toBeNull();
+  });
+
   it("propagates serial SCC failure while keeping every active asset in the result", () => {
     const input = coreFixture();
     const beta = input.assets[1]! as unknown as V9AssetFactsV2;
@@ -687,6 +1222,152 @@ describe("Safety Score v9 normalized fact protocol", () => {
     const compiled = compileV9FactSetV2(coreFixture());
     expect(() => assertExactV9ActiveAssetSet(compiled, ["gamma", "alpha", "beta"])).not.toThrow();
     expect(() => assertExactV9ActiveAssetSet(compiled, ["alpha", "beta"])).toThrow("exact active asset set");
+  });
+
+  it("canonicalizes and reconciles explicit chain supply attribution", () => {
+    const attributed = coreFixture();
+    attributed.assets[0]!.supply.chainDistribution = {
+      chains: [
+        { chainId: "fantom", supplyUsd: 499_000, supplyShare: 0.0499 },
+        { chainId: "ethereum", supplyUsd: 8_501_000, supplyShare: 0.8501 },
+      ],
+      unattributedSupplyUsd: 1_000_000,
+      unattributedSupplyShare: 0.1,
+    };
+    expect(compileV9FactSetV2(attributed).assets[0]!.supply.chainDistribution).toEqual({
+      chains: [
+        { chainId: "ethereum", supplyUsd: 8_501_000, supplyShare: 0.8501 },
+        { chainId: "fantom", supplyUsd: 499_000, supplyShare: 0.0499 },
+      ],
+      unattributedSupplyUsd: 1_000_000,
+      unattributedSupplyShare: 0.1,
+    });
+
+    const duplicate = structuredClone(attributed);
+    duplicate.assets[0]!.supply.chainDistribution!.chains[1]!.chainId = "fantom";
+    expect(() => compileV9FactSetV2(duplicate)).toThrow("Duplicate canonical key: fantom");
+
+    const usdMismatch = structuredClone(attributed);
+    usdMismatch.assets[0]!.supply.chainDistribution!.chains[0]!.supplyUsd -= 1_000;
+    expect(() => compileV9FactSetV2(usdMismatch)).toThrow("Chain supply USD must reconcile");
+
+    const shareMismatch = structuredClone(attributed);
+    shareMismatch.assets[0]!.supply.chainDistribution!.unattributedSupplyShare = 0.2;
+    expect(() => compileV9FactSetV2(shareMismatch)).toThrow("Chain supply shares must reconcile");
+
+    const zeroSupply = coreFixture();
+    zeroSupply.assets[1]!.supply.circulatingUsd = 0;
+    zeroSupply.assets[1]!.supply.chainDistribution = {
+      chains: [{ chainId: "chain:fixture", supplyUsd: 0, supplyShare: 0 }],
+      unattributedSupplyUsd: 0,
+      unattributedSupplyShare: 0,
+    };
+    expect(compileV9FactSetV2(zeroSupply).assets[1]!.supply.chainDistribution).toEqual(
+      zeroSupply.assets[1]!.supply.chainDistribution,
+    );
+    zeroSupply.assets[1]!.supply.chainDistribution.chains[0]!.supplyShare = 0.01;
+    expect(() => compileV9FactSetV2(zeroSupply)).toThrow("Chain supply shares must reconcile");
+  });
+
+  it("parses retained V2 facts without injecting the additive chain distribution field", () => {
+    const retainedCore = coreFixture();
+    for (const asset of retainedCore.assets) {
+      delete (asset.supply as { chainDistribution?: unknown }).chainDistribution;
+    }
+    const retained = compileV9FactSetV2(retainedCore);
+    expect(
+      retained.assets.every((asset) => !Object.prototype.hasOwnProperty.call(asset.supply, "chainDistribution")),
+    ).toBe(true);
+
+    const retainedBytes = stableJsonStringifyV1(retained);
+    const reparsed = parseCompiledV9FactSetV2(JSON.parse(retainedBytes));
+    expect(stableJsonStringifyV1(reparsed)).toBe(retainedBytes);
+    expect(reparsed.v9FactSetDigest).toBe(retained.v9FactSetDigest);
+  });
+
+  it("canonicalizes retained chain aliases for evaluation and fails closed on canonical collisions", () => {
+    const configure = (
+      input: ReturnType<typeof coreFixture>,
+      chains: Array<{ chainId: string; supplyUsd: number; supplyShare: number }>,
+    ) => {
+      for (const asset of input.assets.slice(1)) {
+        asset.supply.chainDistribution = {
+          chains,
+          unattributedSupplyUsd: 0,
+          unattributedSupplyShare: 0,
+        };
+        asset.supply.failureDomains = [{ kind: "chain", key: "hyperliquid" }];
+      }
+    };
+    const severity = (input: ReturnType<typeof coreFixture>) =>
+      evaluateV9FactSet(compileV9FactSetV2(input), V9_CANDIDATE_POLICY_V1)
+        .assets.find((asset) => asset.assetId === "beta")!
+        .scoreInput.dependencyStructuralSignals.find((signal) => signal.failureDomainKeys.includes("chain:hyperliquid"))
+        ?.severity;
+
+    const alias = coreFixture();
+    configure(alias, [{ chainId: "hyperliquid-l1", supplyUsd: 1_000_000, supplyShare: 1 }]);
+    expect(severity(alias)).toBe("high");
+
+    const collision = coreFixture();
+    configure(collision, [
+      { chainId: "ethereum", supplyUsd: 950_200, supplyShare: 0.9502 },
+      { chainId: "hyperliquid", supplyUsd: 24_900, supplyShare: 0.0249 },
+      { chainId: "hyperliquid-l1", supplyUsd: 24_900, supplyShare: 0.0249 },
+    ]);
+    expect(severity(collision)).toBe("high");
+  });
+
+  it("fails chain attribution closed when the distribution is unavailable or the supply fact is bounded", () => {
+    const configureImmaterialChain = (input: ReturnType<typeof coreFixture>) => {
+      for (const asset of input.assets.slice(1)) {
+        asset.supply.chainDistribution = {
+          chains: [
+            { chainId: "chain:fixture", supplyUsd: 49_900, supplyShare: 0.0499 },
+            { chainId: "other", supplyUsd: 950_100, supplyShare: 0.9501 },
+          ],
+          unattributedSupplyUsd: 0,
+          unattributedSupplyShare: 0,
+        };
+      }
+    };
+    const chainSignal = (input: ReturnType<typeof coreFixture>, assetId: string) =>
+      evaluateV9FactSet(compileV9FactSetV2(input), V9_CANDIDATE_POLICY_V1)
+        .assets.find((asset) => asset.assetId === assetId)!
+        .scoreInput.dependencyStructuralSignals.find((signal) =>
+          signal.failureDomainKeys.includes("chain:chain:fixture"),
+        );
+
+    const known = coreFixture();
+    configureImmaterialChain(known);
+    expect(chainSignal(known, "beta")?.severity).toBe("moderate");
+
+    const unavailable = coreFixture();
+    configureImmaterialChain(unavailable);
+    (unavailable.assets[1]! as unknown as V9AssetFactsV2).supply.chainDistribution = null;
+    expect(chainSignal(unavailable, "beta")?.severity).toBe("high");
+
+    const bounded = coreFixture();
+    configureImmaterialChain(bounded);
+    const beta = bounded.assets[1]! as unknown as V9AssetFactsV2;
+    const gap = createV9FactGap({
+      gapId: "gap:bounded-chain-supply",
+      reasonCode: "runtime-bridge-materiality-unavailable",
+      ownerDomain: "control",
+      policyRuleId: "v9.supply.current",
+      observationState: "bounded-unknown",
+      path: { kind: "local-component", componentKey: "chain-supply" },
+      message: "The retained chain distribution is not current enough for score-bearing attribution.",
+      evidenceRefIds: ["evidence:base"],
+    });
+    beta.gaps.push(gap);
+    beta.supply.status = createV9FactStatus({
+      applicability: requiredV9Applicability("v9.supply.current"),
+      observationState: "bounded-unknown",
+      evidenceRefIds: ["evidence:base"],
+      gapIds: [gap.gapId],
+    });
+    expect(chainSignal(bounded, "beta")?.severity).toBe("high");
   });
 
   it("retains an unresolved archetype as an explicit fact state", () => {
@@ -945,6 +1626,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
 
     const factChanged = coreFixture();
     factChanged.assets[0]!.supply.circulatingUsd += 1;
+    factChanged.assets[0]!.supply.chainDistribution!.chains[0]!.supplyUsd += 1;
     expect(compileV9FactSetV2(factChanged).v9FactSetDigest).not.toBe(first.v9FactSetDigest);
 
     const mechanismChanged = coreFixture();

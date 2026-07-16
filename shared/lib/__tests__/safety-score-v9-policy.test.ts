@@ -26,7 +26,7 @@ describe("Safety Score v9 methodology policy", () => {
     expect(V9_CANDIDATE_POLICY_V1.policy.lifecycle).toBe("candidate");
     expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBeNull();
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "5f4f92eec713b65b30d60e3cd8d05a613ab86b4512db4dead699c9b85c30f15e",
+      "84c0e4180eea111591a5a48dc1d9149d4f950b912cb239913a2cc6fa932f607d",
     );
     expect(Object.isFrozen(V9_CANDIDATE_POLICY_V1.policy.semantic.formula)).toBe(true);
   });
@@ -103,9 +103,9 @@ describe("Safety Score v9 methodology policy", () => {
       expect(entry?.pathKinds, code).not.toContain("*");
     }
 
-    expect(resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, "runtime-bridge-materiality-unavailable").reason).toMatchObject(
-      { ownerDomain: "control", defaultTreatment: "ceiling" },
-    );
+    expect(
+      resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, "runtime-bridge-materiality-unavailable").reason,
+    ).toMatchObject({ ownerDomain: "control", defaultTreatment: "ceiling" });
     expect(resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, "missing-archetype").reason).toMatchObject({
       ownerDomain: "methodology",
       pathKinds: ["methodology"],
@@ -149,6 +149,14 @@ describe("Safety Score v9 methodology policy", () => {
     const grades = candidateClone();
     grades.semantic.formula.gradeThresholds.reverse();
     expect(() => loadV9MethodologyPolicy(grades)).toThrow(/every rated grade/i);
+
+    const legacyMaterialityField: unknown = structuredClone(candidateClone());
+    const legacyMateriality = (
+      legacyMaterialityField as { semantic: { materiality: Record<string, unknown> } }
+    ).semantic.materiality;
+    legacyMateriality.matureChainShareThreshold = legacyMateriality.commonModeShareThreshold;
+    delete legacyMateriality.commonModeShareThreshold;
+    expect(() => loadV9MethodologyPolicy(legacyMaterialityField)).toThrow();
 
     expect(() => loadV9MethodologyPolicy({ ...candidateClone(), assetIds: ["usdc"] })).toThrow();
   });

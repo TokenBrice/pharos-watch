@@ -30,7 +30,13 @@ import {
   type V9DependencyEvaluationPlan,
   type V9ResolvedDependencyInputs,
 } from "./dependencies";
-import { evaluateV9ExitAssetFacts, projectV9ExitEvaluationRoute, type V9ExitEvaluationResult } from "./exit";
+import {
+  evaluateV9ExitAssetFacts,
+  projectV9ExitEvaluationRoute,
+  resolveV9DistinctExitCapacity,
+  type V9ExitEvaluationResult,
+  type V9ExitStressRequest,
+} from "./exit";
 import { parseCompiledV9FactSetV2 } from "./facts";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
 import {
@@ -162,19 +168,31 @@ function structuralSignalFromControl(
   };
 }
 
+function reasonClassifiedEvidenceLevel(
+  score: number | null,
+  reasonCodes: readonly V9ReasonCode[],
+  envelope: V9ValidatedPolicyEnvelope,
+  fallback: V9EvidenceLevel,
+): V9EvidenceLevel {
+  if (score === null) return "insufficient";
+  const treatments = reasonCodes.map((code) => resolveV9ReasonPolicy(envelope, code).reason.defaultTreatment);
+  if (treatments.includes("NR")) return "insufficient";
+  if (treatments.includes("ceiling")) return "limited";
+  return fallback;
+}
+
 function backingPillar(result: V9BackingResult, envelope: V9ValidatedPolicyEnvelope): V9PillarEvaluation {
   const reasons = canonicalReasons(
     result.unresolved.map((reason) => pillarReason(envelope, reason.code, `backing:${reason.pathKey}`)),
   );
-  const evidenceLevel: V9EvidenceLevel =
-    result.score === null
-      ? "insufficient"
-      : result.unresolved.some((reason) => reason.treatment !== "diagnostic")
-        ? "limited"
-        : "strong";
   return {
     score: result.score,
-    evidenceLevel,
+    evidenceLevel: reasonClassifiedEvidenceLevel(
+      result.score,
+      result.unresolved.map((reason) => reason.code),
+      envelope,
+      "strong",
+    ),
     reasons,
     structuralSignals: result.structuralReasons.map(structuralSignalFromBacking),
   };
@@ -194,26 +212,28 @@ function exitPillar(
     primary.status.observationState === "known" &&
     primary.observationConfidence === "high" &&
     envelope.policy.semantic.exit.strongEvidenceKinds.includes(primary.evidenceKind);
-  const evidenceLevel: V9EvidenceLevel =
-    result.score === null
-      ? "insufficient"
-      : asset.exitStatus.observationState !== "known"
-        ? "limited"
-        : primaryStrong
-          ? "strong"
-          : "adequate";
   return {
     score: result.score,
-    evidenceLevel,
+    evidenceLevel: reasonClassifiedEvidenceLevel(
+      result.score,
+      result.reasons,
+      envelope,
+      primaryStrong ? "strong" : "adequate",
+    ),
     reasons: canonicalReasons(result.reasons.map((code) => pillarReason(envelope, code, `exit:${code}`))),
     structuralSignals: [],
   };
 }
 
-function controlPillar(result: V9EconomicControlResult): V9PillarEvaluation {
+function controlPillar(result: V9EconomicControlResult, envelope: V9ValidatedPolicyEnvelope): V9PillarEvaluation {
   return {
     score: result.score,
-    evidenceLevel: result.score === null ? "insufficient" : result.reasons.length > 0 ? "limited" : "strong",
+    evidenceLevel: reasonClassifiedEvidenceLevel(
+      result.score,
+      result.reasons.map((reason) => reason.code),
+      envelope,
+      "strong",
+    ),
     reasons: canonicalReasons(
       result.reasons.map((reason) => ({ code: reason.code, path: `control:${reason.path}`, message: reason.label })),
     ),
@@ -257,11 +277,21 @@ function gapReasonsForStatus(
 /** A reviewed bridge tier as carried by the fact set's bridge-route review. */
 type V9BridgeRouteTier = V9AssetFactsV2["economicControlReview"]["bridge"]["routes"][number]["tier"];
 
+export interface V9ConservativeShareBounds {
+  lower: number;
+  upper: number;
+}
+
+export interface V9BridgeDomainExposure {
+  shareBounds: V9ConservativeShareBounds;
+  reviewedTiers: readonly V9BridgeRouteTier[];
+  reviewedTiersComplete: boolean;
+}
+
 /**
  * The per-asset evidence the common-mode grader keys severity off, by domain
- * kind (owner rulings Batch 4 + Batch 5). `supplyExposure` gives the per-chain
- * supply share; `bridgeTierByDomain` maps each bridge-route failure domain to its
- * reviewed bridge tier.
+ * kind. The dependency plan remains identity-only; DEX and bridge materiality is
+ * derived here from the asset's exact fact set.
  */
 export interface V9SupplyChainExposure {
   shareBySlug: ReadonlyMap<string, number>;
@@ -269,51 +299,262 @@ export interface V9SupplyChainExposure {
 }
 export interface V9CommonModeContext {
   supplyExposure: V9SupplyChainExposure;
-  bridgeTierByDomain: ReadonlyMap<string, V9BridgeRouteTier>;
+  dexExposureByDomain: ReadonlyMap<string, V9ConservativeShareBounds>;
+  bridgeExposureByDomain: ReadonlyMap<string, V9BridgeDomainExposure>;
+}
+
+const UNKNOWN_SHARE_BOUNDS: V9ConservativeShareBounds = { lower: 0, upper: 1 };
+
+function clampShare(value: number): number {
+  return Math.max(0, Math.min(1, value));
 }
 
 function summarizeSupplyChainExposure(supply: V9AssetFactsV2["supply"]): V9SupplyChainExposure {
-  const shareBySlug = new Map<string, number>();
-  for (const route of supply.selectedBridgeRoutes) {
-    const slug = resolveChainId(route.deploymentRouteKey.split(":")[0] ?? "");
-    if (slug === null) continue;
-    shareBySlug.set(slug, (shareBySlug.get(slug) ?? 0) + route.supplyShare);
+  if (!isKnownRequiredStatus(supply.status)) {
+    return { shareBySlug: new Map<string, number>(), unattributedShare: 1 };
   }
-  // A chain lacking a selected route can hold at most the unattributed supply; a
-  // null (unreviewed) share fails closed to the whole base.
-  const unattributedShare = (supply.unreviewedRouteSupplyShare ?? 1) + (supply.unknownRouteSupplyShare ?? 0);
-  return { shareBySlug, unattributedShare };
+  if (supply.chainDistribution === null || supply.chainDistribution === undefined) {
+    return { shareBySlug: new Map<string, number>(), unattributedShare: 1 };
+  }
+  const shareBySlug = new Map<string, number>();
+  for (const row of supply.chainDistribution.chains) {
+    const chainId = resolveChainId(row.chainId) ?? row.chainId.toLowerCase();
+    // Retained facts can contain pre-canonical aliases. Ambiguous rows must not
+    // be merged silently because that could understate a material chain share.
+    if (shareBySlug.has(chainId)) {
+      return { shareBySlug: new Map<string, number>(), unattributedShare: 1 };
+    }
+    shareBySlug.set(chainId, row.supplyShare);
+  }
+  return { shareBySlug, unattributedShare: supply.chainDistribution.unattributedSupplyShare };
 }
 
-function buildCommonModeContext(asset: V9AssetFactsV2 | undefined): V9CommonModeContext {
+function referenceExitRequest(envelope: V9ValidatedPolicyEnvelope): V9ExitStressRequest {
+  const request = envelope.policy.semantic.exit.stressRequest;
+  return {
+    requestedNotionalUsd: request.referenceNotionalUsd,
+    maxCostBps: request.maxCostBps,
+    comparisonWindowSec: request.settlementHorizonSec,
+    rawSupplyRequestUsd: request.referenceNotionalUsd,
+  };
+}
+
+function summarizeDexDomainExposure(
+  asset: V9AssetFactsV2,
+  envelope: V9ValidatedPolicyEnvelope,
+): ReadonlyMap<string, V9ConservativeShareBounds> {
+  const request = referenceExitRequest(envelope);
+  const dexRoutes = asset.exitRoutes.filter((route) => route.lane === "dex");
+  const domains = uniqueSorted(
+    dexRoutes
+      .filter((route) => route.coverageClass !== "diagnostic")
+      .flatMap((route) => route.failureDomains.filter((domain) => domain.kind === "dex-protocol").map(domainKey)),
+  );
+  return new Map(
+    domains.map((key) => {
+      const relevantRoutes = dexRoutes.filter(
+        (route) =>
+          route.coverageClass !== "diagnostic" && route.failureDomains.some((domain) => domainKey(domain) === key),
+      );
+      const projectedRoutes = relevantRoutes.map(projectV9ExitEvaluationRoute);
+      const resolved = resolveV9DistinctExitCapacity(projectedRoutes, request, envelope);
+      const lower = clampShare(
+        Math.min(request.requestedNotionalUsd, resolved.valuedExecutableUsd) / request.requestedNotionalUsd,
+      );
+      const completeAndCurrent =
+        asset.exitStatus.observationState === "known" &&
+        relevantRoutes.length > 0 &&
+        relevantRoutes.every((route) => {
+          if (
+            route.status.observationState !== "known" ||
+            !route.scoreEligible ||
+            route.coverageClass !== "exact-complete"
+          ) {
+            return false;
+          }
+          return resolved.includedRouteKeys.includes(route.routeKey);
+        });
+      return [key, { lower, upper: completeAndCurrent ? lower : 1 }] as const;
+    }),
+  );
+}
+
+const SHARE_RECONCILIATION_TOLERANCE = 0.000001;
+
+function isKnownRequiredStatus(status: V9FactStatusV2): boolean {
+  return status.applicability.state === "required" && status.observationState === "known";
+}
+
+function sharesReconcile(left: number, right: number): boolean {
+  return Math.abs(left - right) <= SHARE_RECONCILIATION_TOLERANCE;
+}
+
+function bridgeSupplyIsConsistent(supply: V9AssetFactsV2["supply"]): boolean {
+  const circulatingUsd = supply.circulatingUsd;
+  if (!isKnownRequiredStatus(supply.status) || circulatingUsd === null) return false;
+  const { selectedRouteSupplyShare, unknownRouteSupplyShare, unreviewedRouteSupplyShare } = supply;
+  if (selectedRouteSupplyShare === null || unknownRouteSupplyShare === null || unreviewedRouteSupplyShare === null) {
+    return false;
+  }
+  const expectedTotalShare = circulatingUsd > 0 ? 1 : 0;
+  if (
+    !sharesReconcile(
+      selectedRouteSupplyShare + unknownRouteSupplyShare + unreviewedRouteSupplyShare,
+      expectedTotalShare,
+    )
+  ) {
+    return false;
+  }
+  const reviewedRowShare = supply.selectedBridgeRoutes
+    .filter((route) => route.reviewState === "selected-reviewed")
+    .reduce((sum, route) => sum + route.supplyShare, 0);
+  const unresolvedRowShare = supply.selectedBridgeRoutes
+    .filter((route) => route.reviewState === "selected-unresolved")
+    .reduce((sum, route) => sum + route.supplyShare, 0);
+  const unmatchedRowShare = supply.selectedBridgeRoutes
+    .filter((route) => route.reviewState === "unmatched")
+    .reduce((sum, route) => sum + route.supplyShare, 0);
+  const carriesExplicitUnmatchedRows = supply.selectedBridgeRoutes.some((route) => route.reviewState === "unmatched");
+  if (
+    !sharesReconcile(reviewedRowShare, selectedRouteSupplyShare) ||
+    !sharesReconcile(unresolvedRowShare, unreviewedRouteSupplyShare) ||
+    (carriesExplicitUnmatchedRows && !sharesReconcile(unmatchedRowShare, unknownRouteSupplyShare))
+  ) {
+    return false;
+  }
+  return supply.selectedBridgeRoutes.every((route) => {
+    if (circulatingUsd === 0) {
+      return route.supplyUsd <= 0.01 && route.supplyShare <= SHARE_RECONCILIATION_TOLERANCE;
+    }
+    return sharesReconcile(route.supplyUsd / circulatingUsd, route.supplyShare);
+  });
+}
+
+function summarizeBridgeDomainExposure(asset: V9AssetFactsV2): ReadonlyMap<string, V9BridgeDomainExposure> {
+  const controlsByKey = new Map(asset.controls.map((control) => [control.controlKey, control]));
+  const selectedByDeployment = new Map(
+    asset.supply.selectedBridgeRoutes.map((route) => [route.deploymentRouteKey, route]),
+  );
+  const lowerByDomain = new Map<string, number>();
+  const tiersByDomain = new Map<string, Set<V9BridgeRouteTier>>();
+  const validJoinedDeployments = new Set<string>();
+  const joinedDomainDeployments = new Set<string>();
+  const unresolvedDomains = new Set<string>();
+  const supplyBridgeDomainKeys: ReadonlySet<string> = new Set(
+    asset.supply.failureDomains.filter((domain) => domain.kind === "bridge-route").map(domainKey),
+  );
+  const domainKeys = new Set(supplyBridgeDomainKeys);
+  const bridgeReviewKnown = isKnownRequiredStatus(asset.economicControlReview.bridge.status);
+  const supplyConsistent = bridgeSupplyIsConsistent(asset.supply);
+  let unresolvedJoin = !bridgeReviewKnown || !supplyConsistent;
+
+  for (const review of asset.economicControlReview.bridge.routes) {
+    const control = controlsByKey.get(review.controlKey);
+    if (!control) {
+      unresolvedJoin = true;
+      continue;
+    }
+    const bridgeDomains = control.failureDomains.filter((domain) => domain.kind === "bridge-route");
+    if (bridgeDomains.length === 0) {
+      unresolvedJoin = true;
+      continue;
+    }
+    const selected = selectedByDeployment.get(control.deploymentKey);
+    const validControl =
+      isKnownRequiredStatus(control.status) &&
+      control.controlKind === "bridge" &&
+      control.capabilities.includes("bridge-mint");
+    const knownZeroExposure =
+      bridgeReviewKnown &&
+      supplyConsistent &&
+      validControl &&
+      selected === undefined &&
+      control.materialSupplyShare === 0;
+    const materialShareConsistent =
+      selected !== undefined &&
+      control.materialSupplyShare !== null &&
+      sharesReconcile(control.materialSupplyShare, selected.supplyShare);
+    const validJoin =
+      bridgeReviewKnown &&
+      supplyConsistent &&
+      validControl &&
+      selected?.reviewState === "selected-reviewed" &&
+      materialShareConsistent;
+    if (validJoin) validJoinedDeployments.add(control.deploymentKey);
+    for (const domain of bridgeDomains) {
+      const key = domainKey(domain);
+      domainKeys.add(key);
+      if (knownZeroExposure) continue;
+      if (!validJoin) {
+        unresolvedDomains.add(key);
+        continue;
+      }
+      const tiers = tiersByDomain.get(key) ?? new Set<V9BridgeRouteTier>();
+      tiers.add(review.tier);
+      tiersByDomain.set(key, tiers);
+      const joinedDomainDeployment = `${key}\u0000${control.deploymentKey}`;
+      if (!joinedDomainDeployments.has(joinedDomainDeployment)) {
+        lowerByDomain.set(key, (lowerByDomain.get(key) ?? 0) + selected.supplyShare);
+        joinedDomainDeployments.add(joinedDomainDeployment);
+      }
+    }
+  }
+
+  for (const route of asset.supply.selectedBridgeRoutes) {
+    if (route.reviewState !== "selected-reviewed" || validJoinedDeployments.has(route.deploymentRouteKey)) continue;
+    const attributableDomain = `bridge-route:${route.deploymentRouteKey}`;
+    if (supplyBridgeDomainKeys.has(attributableDomain)) {
+      unresolvedDomains.add(attributableDomain);
+    } else {
+      unresolvedJoin = true;
+    }
+  }
+  const unresolvedShare = supplyConsistent
+    ? clampShare(asset.supply.unreviewedRouteSupplyShare! + asset.supply.unknownRouteSupplyShare!)
+    : 1;
+
+  return new Map(
+    [...domainKeys].sort(compareText).map((key) => {
+      const lower = clampShare(lowerByDomain.get(key) ?? 0);
+      const upper = unresolvedJoin || unresolvedDomains.has(key) ? 1 : clampShare(lower + unresolvedShare);
+      return [
+        key,
+        {
+          shareBounds: { lower, upper },
+          reviewedTiers: [...(tiersByDomain.get(key) ?? [])].sort(compareText),
+          reviewedTiersComplete: !unresolvedJoin && !unresolvedDomains.has(key),
+        },
+      ] as const;
+    }),
+  );
+}
+
+function buildCommonModeContext(
+  asset: V9AssetFactsV2 | undefined,
+  envelope: V9ValidatedPolicyEnvelope,
+): V9CommonModeContext {
   // A missing asset fact fails closed: no attributed share, no reviewed tiers.
   if (!asset) {
     return {
       supplyExposure: { shareBySlug: new Map<string, number>(), unattributedShare: 1 },
-      bridgeTierByDomain: new Map<string, V9BridgeRouteTier>(),
+      dexExposureByDomain: new Map<string, V9ConservativeShareBounds>(),
+      bridgeExposureByDomain: new Map<string, V9BridgeDomainExposure>(),
     };
   }
-  const controlsByKey = new Map(asset.controls.map((control) => [control.controlKey, control]));
-  const bridgeTierByDomain = new Map<string, V9BridgeRouteTier>();
-  for (const route of asset.economicControlReview.bridge.routes) {
-    const control = controlsByKey.get(route.controlKey);
-    for (const domain of control?.failureDomains ?? []) {
-      if (domain.kind === "bridge-route") bridgeTierByDomain.set(`${domain.kind}:${domain.key}`, route.tier);
-    }
-  }
-  return { supplyExposure: summarizeSupplyChainExposure(asset.supply), bridgeTierByDomain };
+  return {
+    supplyExposure: summarizeSupplyChainExposure(asset.supply),
+    dexExposureByDomain: summarizeDexDomainExposure(asset, envelope),
+    bridgeExposureByDomain: summarizeBridgeDomainExposure(asset),
+  };
 }
 
 /**
  * Grades a common-mode signal for one asset by DOMAIN KIND and reviewed evidence
  * (owner rulings Batch 3.3, Batch 4 (option A), Batch 5). Chain concentration
  * grades by material exposure (mature chain or immaterial share -> "moderate",
- * material/unattributable non-mature -> "high"). dex-protocol liquidity on a
- * reviewed mature venue is not a capping signal ("low"); any other venue ->
- * "high". bridge-route concentration keys off the reviewed bridge tier (low-risk
- * -> "moderate", otherwise "high"). reserve-issuer concentration is already
- * priced in backing, so it is diagnostic only ("low"). Every other kind keeps the
- * default severity, and unknown/unreviewed evidence fails closed to it.
+ * material/unattributable non-mature -> "high"). Non-chain domains use
+ * conservative asset-local share bounds, with reviewed mature DEX venues and
+ * reviewed low-risk bridge tiers retaining their kind-specific lower severity.
  */
 export function commonModeSignalSeverity(
   failureDomain: V9FailureDomainRef,
@@ -323,28 +564,34 @@ export function commonModeSignalSeverity(
   const high = materiality.commonModeSignal.severity;
   switch (failureDomain.kind) {
     case "chain": {
-      const slug = resolveChainId(failureDomain.key);
-      if (slug !== null && materiality.matureChains.includes(slug)) return "moderate";
-      const share =
-        slug !== null && context.supplyExposure.shareBySlug.has(slug)
-          ? context.supplyExposure.shareBySlug.get(slug)!
-          : context.supplyExposure.unattributedShare;
-      return isV9MaterialShare(share, materiality.matureChainShareThreshold) ? high : "moderate";
+      const chainId = resolveChainId(failureDomain.key) ?? failureDomain.key.toLowerCase();
+      if (materiality.matureChains.includes(chainId)) return "moderate";
+      const share = context.supplyExposure.shareBySlug.has(chainId)
+        ? context.supplyExposure.shareBySlug.get(chainId)!
+        : context.supplyExposure.unattributedShare;
+      return isV9MaterialShare(share, materiality.commonModeShareThreshold) ? high : "moderate";
     }
     case "reserve-issuer":
       // Single-obligor exposure is already priced by backing concentration;
       // keep the signal diagnostic (non-capping) to avoid double-counting.
       return "low";
     case "dex-protocol":
-      // Liquidity concentration is a concern only on an unreviewed venue; a
-      // reviewed mature venue is diagnostic (non-capping).
-      return materiality.matureVenues.includes(failureDomain.key.toLowerCase()) ? "low" : high;
+      if (materiality.matureVenues.includes(failureDomain.key.toLowerCase())) return "low";
+      return (context.dexExposureByDomain.get(domainKey(failureDomain)) ?? UNKNOWN_SHARE_BOUNDS).upper <
+        materiality.commonModeShareThreshold
+        ? "low"
+        : high;
     case "bridge-route": {
-      // Supply-corruption common-mode stays capping, keyed off the reviewed
-      // bridge tier: a low-risk tier grades "moderate", any other or unreviewed
-      // tier fails closed to "high".
-      const tier = context.bridgeTierByDomain.get(`${failureDomain.kind}:${failureDomain.key}`);
-      return tier !== undefined && materiality.lowRiskBridgeTiers.includes(tier) ? "moderate" : high;
+      const exposure = context.bridgeExposureByDomain.get(domainKey(failureDomain));
+      if (exposure !== undefined && exposure.shareBounds.upper < materiality.commonModeShareThreshold) {
+        return "moderate";
+      }
+      const reviewedLowRiskTier =
+        exposure !== undefined &&
+        exposure.reviewedTiersComplete &&
+        exposure.reviewedTiers.length > 0 &&
+        exposure.reviewedTiers.every((tier) => materiality.lowRiskBridgeTiers.includes(tier));
+      return reviewedLowRiskTier ? "moderate" : high;
     }
     default:
       return high;
@@ -358,10 +605,14 @@ function commonModeReasonQualifier(kind: V9FailureDomainRef["kind"], severity: V
       : "reviewed mature chain or immaterial exposure";
   }
   if (kind === "dex-protocol") {
-    return severity === "low" ? "reviewed mature venue, diagnostic only" : "unreviewed venue concentration";
+    return severity === "low"
+      ? "reviewed mature venue or proven immaterial capacity, diagnostic only"
+      : "material or unresolved venue concentration";
   }
   if (kind === "bridge-route") {
-    return severity === "moderate" ? "reviewed low-risk bridge tier" : "unreviewed or higher-risk bridge tier";
+    return severity === "moderate"
+      ? "proven immaterial share or reviewed low-risk bridge tier"
+      : "material or unresolved share with missing, conflicting, or higher-risk bridge tier";
   }
   if (kind === "reserve-issuer") {
     return "single-obligor exposure priced in backing, diagnostic only";
@@ -379,16 +630,32 @@ function commonModeSignalsByAsset(
   const contextFor = (assetId: string): V9CommonModeContext => {
     const cached = contextByAsset.get(assetId);
     if (cached) return cached;
-    const context = buildCommonModeContext(assetsById.get(assetId));
+    const context = buildCommonModeContext(assetsById.get(assetId), envelope);
     contextByAsset.set(assetId, context);
     return context;
   };
   const signals = new Map<string, V9StructuralSignal[]>();
   for (const group of plan.commonModeGroups) {
-    const assetIds = uniqueSorted(group.members.map((member) => member.assetId));
+    const effectiveMembers =
+      group.failureDomain.kind === "dex-protocol"
+        ? group.members.filter((member) => {
+            if (member.owner !== "exit") return false;
+            const route = assetsById
+              .get(member.assetId)
+              ?.exitRoutes.find((candidate) => candidate.routeKey === member.pathKey);
+            return (
+              route?.lane === "dex" &&
+              isKnownRequiredStatus(route.status) &&
+              route.scoreEligible &&
+              route.coverageClass !== "diagnostic" &&
+              route.failureDomains.some((domain) => domainKey(domain) === domainKey(group.failureDomain))
+            );
+          })
+        : group.members;
+    const assetIds = uniqueSorted(effectiveMembers.map((member) => member.assetId));
     if (
       assetIds.length < materiality.commonControlMinAssets ||
-      group.members.length < materiality.commonControlMinPaths
+      effectiveMembers.length < materiality.commonControlMinPaths
     ) {
       continue;
     }
@@ -399,7 +666,7 @@ function commonModeSignalsByAsset(
       const signal: V9StructuralSignal = {
         ...materiality.commonModeSignal,
         severity,
-        reason: `${group.members.length} reviewed paths across ${assetIds.length} assets share ${key}, ${qualifier}.`,
+        reason: `${effectiveMembers.length} reviewed paths across ${assetIds.length} assets share ${key}, ${qualifier}.`,
         failureDomainKeys: [key],
         evidence: [],
       };
@@ -664,7 +931,7 @@ export function evaluateV9FactSet(
     const pillars = {
       backing: backingPillar(backing, envelope),
       exit: exitPillar(asset, exit, envelope),
-      control: controlPillar(control),
+      control: controlPillar(control, envelope),
     };
     const methodologyReasons =
       asset.implementation.launchedAtSec === null
@@ -691,7 +958,9 @@ export function evaluateV9FactSet(
     const unavailableUpstreamRoots = uniqueSorted(
       [...resolved.basket, ...resolved.serial]
         .filter((dependency) => evaluatedById.get(dependency.upstreamAssetId)?.trace.finalScore === null)
-        .flatMap((dependency) => unavailabilityRootsById.get(dependency.upstreamAssetId) ?? [dependency.upstreamAssetId]),
+        .flatMap(
+          (dependency) => unavailabilityRootsById.get(dependency.upstreamAssetId) ?? [dependency.upstreamAssetId],
+        ),
     );
     unavailabilityRootsById.set(
       assetId,

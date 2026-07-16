@@ -19,6 +19,14 @@ function routeChain(routeId: string): string | null {
   return separator > 0 ? canonicalChainKey(routeId.slice(0, separator)) : null;
 }
 
+export const V9_UNMATCHED_CHAIN_ROUTE_PREFIX = "unmatched-chain:";
+export const V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX = "ambiguous-chain:";
+export const V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX = "unmatched-chain-label-pool:";
+
+function unmatchedRouteKey(assetId: string, chain: string, routeCount: number): string {
+  return `${routeCount === 0 ? V9_UNMATCHED_CHAIN_ROUTE_PREFIX : V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX}${assetId}:${canonicalChainKey(chain)}`;
+}
+
 /**
  * Reconciles the exact captured per-chain circulating supply against the
  * reviewed bridge-route rows. Chains without a unique reviewed route row stay
@@ -35,7 +43,7 @@ export function buildSafetyScoreV9SupplyReview(
   if (chains.length === 0 || totalUsd <= 0) return null;
 
   const routes = profile?.routes ?? [];
-  if (chains.length > 1 && routes.length === 0) return null;
+  if (chains.length > 1 && profile === undefined) return null;
 
   const routesByChain = new Map<string, typeof routes>();
   for (const route of routes) {
@@ -44,31 +52,81 @@ export function buildSafetyScoreV9SupplyReview(
     routesByChain.set(chain, [...(routesByChain.get(chain) ?? []), route]);
   }
 
+  const supplyByChain = new Map<string, { sourceChain: string; supplyUsd: number }>();
+  for (const chain of chains) {
+    const key = canonicalChainKey(chain);
+    const existing = supplyByChain.get(key);
+    supplyByChain.set(key, {
+      sourceChain: existing?.sourceChain ?? chain,
+      supplyUsd: (existing?.supplyUsd ?? 0) + chainRows[chain]!.current,
+    });
+  }
+
   const selectedBridgeRoutes: SupplyReview["selectedBridgeRoutes"][number][] = [];
   let unknownUsd = 0;
+  let uncanonicalizedUsd = 0;
   let unreviewedUsd = 0;
   const failureDomains: SupplyReview["failureDomains"][number][] = [];
-  for (const chain of chains) {
-    const supplyUsd = chainRows[chain]!.current;
-    const chainRoutes = routesByChain.get(canonicalChainKey(chain)) ?? [];
-    if (chainRoutes.length !== 1) {
-      // Zero rows means the chain has no reviewed route; multiple rows cannot
-      // be split with per-chain supply alone. Both stay unknown.
+  for (const [chain, { sourceChain, supplyUsd }] of [...supplyByChain.entries()].sort(([left], [right]) =>
+    compareText(left, right),
+  )) {
+    if (resolveChainId(sourceChain) === null) {
+      // Raw provider labels are exact supply observations but not canonical
+      // chain identities. Pool them conservatively so aliases cannot each
+      // receive an independent subthreshold exemption.
       unknownUsd += supplyUsd;
+      uncanonicalizedUsd += supplyUsd;
+      continue;
+    }
+    const chainRoutes = routesByChain.get(chain) ?? [];
+    if (chainRoutes.length !== 1) {
+      // Preserve each canonical exact deployment instead of collapsing
+      // independent chains into one unknown remainder. Ambiguous profile
+      // matches retain a separate fail-closed disposition.
+      unknownUsd += supplyUsd;
+      const deploymentRouteKey = unmatchedRouteKey(assetId, sourceChain, chainRoutes.length);
+      selectedBridgeRoutes.push({
+        deploymentRouteKey,
+        supplyUsd,
+        supplyShare: supplyUsd / totalUsd,
+        reviewState: "unmatched",
+      });
+      failureDomains.push({ kind: "bridge-route", key: deploymentRouteKey });
       continue;
     }
     const route = chainRoutes[0]!;
     const reviewed = route.reviewDisposition === "reviewed";
     if (!reviewed) unreviewedUsd += supplyUsd;
-    selectedBridgeRoutes.push({
-      deploymentRouteKey: route.id,
-      supplyUsd,
-      supplyShare: supplyUsd / totalUsd,
-      reviewState: reviewed ? "selected-reviewed" : "selected-unresolved",
-    });
+    selectedBridgeRoutes.push(
+      reviewed
+        ? {
+            deploymentRouteKey: route.id,
+            supplyUsd,
+            supplyShare: supplyUsd / totalUsd,
+            reviewState: "selected-reviewed",
+            reviewedRouteKind:
+              route.routeClass === "native" || route.issuanceModel === "native-issuance" ? "native" : "controlled",
+          }
+        : {
+            deploymentRouteKey: route.id,
+            supplyUsd,
+            supplyShare: supplyUsd / totalUsd,
+            reviewState: "selected-unresolved",
+          },
+    );
     for (const key of route.failureDomainKeys?.length ? route.failureDomainKeys : [route.id]) {
       failureDomains.push({ kind: "bridge-route", key });
     }
+  }
+  if (uncanonicalizedUsd > 0) {
+    const deploymentRouteKey = `${V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX}${assetId}`;
+    selectedBridgeRoutes.push({
+      deploymentRouteKey,
+      supplyUsd: uncanonicalizedUsd,
+      supplyShare: uncanonicalizedUsd / totalUsd,
+      reviewState: "unmatched",
+    });
+    failureDomains.push({ kind: "bridge-route", key: deploymentRouteKey });
   }
   const reviewedSelectedUsd = selectedBridgeRoutes.reduce(
     (sum, route) => sum + (route.reviewState === "selected-reviewed" ? route.supplyUsd : 0),
