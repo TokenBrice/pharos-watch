@@ -134,24 +134,18 @@ describe("yield config registry", () => {
     });
   });
 
-  it("keeps AZND on the exact loAZND wrapper path without price-derived fallback", () => {
+  it("keeps base AZND non-yield-bearing while retaining the exact loAZND identity", () => {
     const coin = trackedCoinsById.get("aznd-mu-digital");
     const manifest = YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === "aznd-mu-digital");
 
-    expect(coin?.flags).toMatchObject({ yieldBearing: true, navToken: false });
+    expect(coin?.flags).toMatchObject({ yieldBearing: false, navToken: false });
     expect(ON_CHAIN_RATE_CONFIGS.some((entry) => entry.stablecoinId === "aznd-mu-digital")).toBe(false);
     expect(YIELD_VARIANT_MAP["aznd-mu-digital"]).toMatchObject({
       variantSymbol: "loAZND",
       variantChain: "monad",
       variantAddress: "0x9c82eB49B51F7Dc61e22Ff347931CA32aDc6cd90",
     });
-    expect(manifest?.strategies).toEqual(expect.arrayContaining([
-      expect.objectContaining({ kind: "native-pool" }),
-      expect.objectContaining({ kind: "variant-pool" }),
-    ]));
-    expect(manifest?.strategies).not.toEqual(expect.arrayContaining([
-      expect.objectContaining({ kind: "price-derived" }),
-    ]));
+    expect(manifest).toBeUndefined();
   });
 
   it("promotes Wave 1 tracked vaults to deterministic on-chain readers", () => {

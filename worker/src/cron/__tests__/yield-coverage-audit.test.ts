@@ -31,7 +31,6 @@ import {
 import { probeQuarantinedDeterministicAdapters } from "../yield-coverage-audit-quarantine";
 import { loadDlStablecoinPools } from "../yield-sync/sources";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
-import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { YieldAdapterLifecycleEntry } from "../yield-config-registry";
 import type { DlPool } from "../yield-sync/types";
 import { buildYieldCoverageEvidenceFingerprint } from "../yield-coverage-review-dispositions";
@@ -985,87 +984,21 @@ describe("probeQuarantinedDeterministicAdapters", () => {
       nextReviewAt: "2026-10-09",
     },
   ];
-  const chainRpcs = new Map<string, ChainRpcConfig>([
-    ["ethereum", {
-      chainId: "ethereum",
-      chainName: "Ethereum",
-      type: "evm",
-      rpcUrl: "https://rpc.example",
-      explorerUrl: "https://etherscan.io",
-    }],
-  ]);
-
-  it("skips configured probes when chain RPCs are unavailable", async () => {
-    const result = await probeQuarantinedDeterministicAdapters({ quarantinedAdapters });
+  it("does not probe retired deterministic adapters", async () => {
+    const result = await probeQuarantinedDeterministicAdapters({
+      quarantinedAdapters,
+      chainRpcs: new Map(),
+    });
 
     expect(result.readyToRestore).toEqual([]);
     expect(result.summary).toEqual({
-      configuredProbeCount: 1,
+      configuredProbeCount: 0,
       attemptedCount: 0,
       readyToRestoreCount: 0,
-      skippedCount: 1,
-      failureCounts: {},
-      skippedReason: "chain-rpcs-unavailable",
-    });
-    expect(mockFetchEvmUint256AtBlock).not.toHaveBeenCalled();
-  });
-
-  it("returns ready-to-restore candidates for nonzero probe rates inside the envelope", async () => {
-    mockFetchEvmUint256AtBlock.mockResolvedValue(1_500_000_000_000_000_000n);
-
-    const result = await probeQuarantinedDeterministicAdapters({
-      quarantinedAdapters,
-      chainRpcs,
-    });
-
-    expect(result.readyToRestore).toEqual([{
-      stablecoinId: "reusd-re-protocol",
-      code: "convert-to-assets-empty",
-      since: "2026-03-15",
-      nextReviewAt: "2026-08-09",
-      sourceKey: "onchain:reusd-re-protocol",
-      chain: "ethereum",
-      contract: "0x1202f5c7B4b9E47a1A9837B26881B7C20112BD51",
-      exchangeRate: 1.5,
-    }]);
-    expect(result.summary).toEqual({
-      configuredProbeCount: 1,
-      attemptedCount: 1,
-      readyToRestoreCount: 1,
       skippedCount: 0,
       failureCounts: {},
     });
-    expect(mockFetchEvmUint256AtBlock).toHaveBeenCalledTimes(1);
-    expect(mockFetchEvmUint256AtBlock).toHaveBeenCalledWith(
-      undefined,
-      "0x1202f5c7B4b9E47a1A9837B26881B7C20112BD51",
-      expect.stringMatching(/^0x07a2d13a/),
-      "latest",
-      expect.objectContaining({
-        extraRpcUrls: ["https://rpc.example"],
-        timeoutMs: 6_000,
-      }),
-    );
-  });
-
-  it("rejects zero and above-envelope quarantine probe rates", async () => {
-    for (const rawRate of [0n, 4_000_000_000_000_000_000n]) {
-      mockFetchEvmUint256AtBlock.mockResolvedValueOnce(rawRate);
-
-      const result = await probeQuarantinedDeterministicAdapters({
-        quarantinedAdapters,
-        chainRpcs,
-      });
-
-      expect(result.readyToRestore).toEqual([]);
-      expect(result.summary).toEqual({
-        configuredProbeCount: 1,
-        attemptedCount: 1,
-        readyToRestoreCount: 0,
-        skippedCount: 0,
-        failureCounts: { "out-of-envelope": 1 },
-      });
-    }
+    expect(mockFetchEvmUint256AtBlock).not.toHaveBeenCalled();
   });
 });
 
