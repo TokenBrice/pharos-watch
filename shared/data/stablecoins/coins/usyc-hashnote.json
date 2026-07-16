@@ -20,8 +20,8 @@
   "pythFeedId": "0x01cb900802d74a2e3d36bd9bf100523532b650c47dcac2e8202ba1e972eab305",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "USYC docs list Ethereum and BSC deployments and a Cross Chain Teller that lets users subscribe and redeem native USYC from Ethereum. The route is reviewed as issuer-native burn/mint style fund administration rather than a permissionless bridge.",
-    "reviewedAt": "2026-06-13",
+    "summary": "USYC docs list the Ethereum, BSC, and Solana tokens with issuer-operated teller contracts. Subscription mints USYC against USDC and redemption burns USYC for USDC; BSC uses the Cross Chain Teller from Ethereum. The reviewed routes are issuer-native teller paths rather than permissionless bridges.",
+    "reviewedAt": "2026-07-16",
     "reviewer": "Codex bridge route review",
     "confidence": "verified",
     "protocols": [
@@ -42,6 +42,10 @@
       {
         "label": "USYC introduction",
         "url": "https://usyc.docs.hashnote.com/"
+      },
+      {
+        "label": "USYC subscription and redemption",
+        "url": "https://usyc.docs.hashnote.com/overview/subscription-and-redemption"
       }
     ],
     "routes": [
@@ -49,46 +53,93 @@
         "id": "ethereum:0x136471a34f6ef19fe571effc1ca711fdb8e49f2b",
         "destinationChain": "ethereum",
         "contractAddress": "0x136471a34f6ef19fe571effc1ca711fdb8e49f2b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USYC Teller",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xeE35F963BFC71b51eC95147f26c030D674ea30e6",
+        "failureDomainKeys": [
+          "protocol:usyc-teller",
+          "contract:ethereum:0xee35f963bfc71b51ec95147f26c030d674ea30e6"
+        ],
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "USYC smart contracts",
+            "url": "https://usyc.docs.hashnote.com/overview/smart-contracts"
+          },
+          {
+            "label": "USYC subscription and redemption",
+            "url": "https://usyc.docs.hashnote.com/overview/subscription-and-redemption"
+          }
+        ]
       },
       {
         "id": "bsc:0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311",
         "destinationChain": "bsc",
         "contractAddress": "0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "protocol": "USYC Cross Chain Teller",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "bsc",
+        "controllerAddress": "0xf38979E05650be7926EA07BB59C48Fb9b1DB3D08",
+        "failureDomainKeys": [
+          "protocol:usyc-teller",
+          "contract:bsc:0xf38979e05650be7926ea07bb59c48fb9b1db3d08"
+        ],
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "USYC smart contracts",
+            "url": "https://usyc.docs.hashnote.com/overview/smart-contracts"
+          },
+          {
+            "label": "USYC subscription and redemption",
+            "url": "https://usyc.docs.hashnote.com/overview/subscription-and-redemption"
+          }
+        ]
       },
       {
         "id": "solana:7LWanZteUKtvFjv4MHYgKXXdAuCQYFPJysL9pxxdRQGn",
         "destinationChain": "solana",
         "contractAddress": "7LWanZteUKtvFjv4MHYgKXXdAuCQYFPJysL9pxxdRQGn",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USYC Solana Teller",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "solana",
+        "controllerAddress": "EMfvuBR8rre2f7sNqdDyPzQW7kgBUsVtxg7nX93YwAdm",
+        "failureDomainKeys": [
+          "protocol:usyc-teller",
+          "contract:solana:EMfvuBR8rre2f7sNqdDyPzQW7kgBUsVtxg7nX93YwAdm"
+        ],
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "USYC smart contracts",
+            "url": "https://usyc.docs.hashnote.com/overview/smart-contracts"
+          },
+          {
+            "label": "USYC subscription and redemption",
+            "url": "https://usyc.docs.hashnote.com/overview/subscription-and-redemption"
+          }
+        ]
       }
     ]
   },
