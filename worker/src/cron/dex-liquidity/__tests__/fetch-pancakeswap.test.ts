@@ -102,6 +102,28 @@ describe("fetchPancakeSwapPools", () => {
     expect(result.pools[0]?.tokens[1]?.decimals).toBe(0);
   });
 
+  it("maps Pancake's asymmetric token1Price to the token0/token1 pool ratio", async () => {
+    const krwoPool = makePool("0xkrwo-usdt");
+    krwoPool.token0 = {
+      id: "0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1",
+      symbol: "KRWO",
+      decimals: "6",
+    };
+    krwoPool.token1 = { id: "0xusdt", symbol: "USDT", decimals: "18" };
+    krwoPool.token0Price = "1349.284";
+    krwoPool.token1Price = "0.00074113379";
+
+    vi.mocked(fetchTextWithRetry)
+      .mockImplementationOnce(async () => textResult(response({ data: { pools: [krwoPool] } })))
+      .mockImplementationOnce(async () => textResult(response({ data: { poolHourDatas: [] } })))
+      .mockImplementation(async () => textResult(response({ data: { pools: [] } })));
+
+    const result = await fetchPancakeSwapPools("graph-key");
+
+    expect(result.pools[0]?.price).toBeCloseTo(0.00074113379, 11);
+    expect(result.pools[0]?.price).not.toBe(1349.284);
+  });
+
   it("keeps pool coverage when the hourly volume query fails for a page", async () => {
     vi.mocked(fetchTextWithRetry)
       .mockImplementationOnce(async () => textResult(response({

@@ -250,7 +250,8 @@ export async function fetchPancakeSwapPools(
           const feeBps = Number.isFinite(feeTier) ? feeTier / 100 : 5;
           const reserve0 = parseFloat(pool.totalValueLockedToken0);
           const reserve1 = parseFloat(pool.totalValueLockedToken1);
-          const token0Price = parseFloat(pool.token0Price);
+          // DexApiPool.price is token0/token1. Pancake names that ratio token1Price.
+          const token0PerToken1Price = parseFloat(pool.token1Price);
 
           pools.push({
             source: "pancakeswap",
@@ -269,7 +270,10 @@ export async function fetchPancakeSwapPools(
                 decimals: parseTokenDecimals(pool.token1.decimals),
               },
             ],
-            price: Number.isFinite(token0Price) && token0Price > 0 ? token0Price : null,
+            price:
+              Number.isFinite(token0PerToken1Price) && token0PerToken1Price > 0
+                ? token0PerToken1Price
+                : null,
             tvlUsd,
             volume24hUsd: volume24hByPool.get(pool.id.toLowerCase()) ?? 0,
             feeRate: Number.isFinite(feeTier) && feeTier > 0 ? feeTier / 1_000_000 : null,

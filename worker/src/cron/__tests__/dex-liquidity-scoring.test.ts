@@ -748,7 +748,7 @@ describe("dex-liquidity scoring", () => {
     expect(batchExecute).toHaveBeenCalledTimes(1);
     const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
     const upserts = statements as PreparedStatementWithMeta[];
-    expect(upserts).toHaveLength(2);
+    expect(upserts).toHaveLength(1);
     expect(upserts[0]?.boundValues).toEqual([
       "usdt-tether",
       "USDT",
@@ -763,16 +763,57 @@ describe("dex-liquidity scoring", () => {
       ]),
       1_700_000_001,
     ]);
-    expect(upserts[1]?.boundValues).toEqual([
-      "usdc-circle",
-      "USDC",
-      1.2,
-      1,
-      100_000,
-      null,
-      null,
-      JSON.stringify([]),
+  });
+
+  it("rejects a peg-impossible KRWO price before replacing dex_prices", async () => {
+    await computeDexPrices(
+      makeQueryDb([{ match: "SELECT stablecoin_id FROM dex_prices", all: [{ stablecoin_id: "krwo-gimswap" }] }]),
+      new Map([
+        ["krwo-gimswap", [makeDexPricePool({
+          poolId: "bsc:pancakeswap-krwo-usdt",
+          project: "pancakeswap",
+          chain: "BSC",
+          tvlUsd: 82_806,
+          price: 1349.284,
+          source: "direct_api",
+        })]],
+      ]),
       1_700_000_001,
+    );
+
+    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
+    const prepared = statements as PreparedStatementWithMeta[];
+    expect(prepared).toHaveLength(1);
+    expect(prepared[0]?.sql).toContain("DELETE FROM dex_prices");
+    expect(prepared[0]?.boundValues).toEqual(["krwo-gimswap"]);
+  });
+
+  it("persists a correctly oriented KRWO price inside the KRW peg band", async () => {
+    await computeDexPrices(
+      makeQueryDb([]),
+      new Map([
+        ["krwo-gimswap", [makeDexPricePool({
+          poolId: "bsc:pancakeswap-krwo-usdt",
+          project: "pancakeswap",
+          chain: "BSC",
+          tvlUsd: 82_806,
+          price: 0.00074113379,
+          source: "direct_api",
+        })]],
+      ]),
+      1_700_000_002,
+    );
+
+    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
+    const prepared = statements as PreparedStatementWithMeta[];
+    expect(prepared).toHaveLength(1);
+    expect(prepared[0]?.sql).toContain("INSERT INTO dex_prices");
+    expect(prepared[0]?.boundValues.slice(0, 5)).toEqual([
+      "krwo-gimswap",
+      "KRWO",
+      0.000741,
+      1,
+      82_806,
     ]);
   });
 
@@ -825,7 +866,7 @@ describe("dex-liquidity scoring", () => {
             project: "raydium",
             chain: "Solana",
             tvlUsd: 180_000,
-            price: 1.2,
+            price: 1.18,
             source: "dexscreener",
           }),
         ]],
@@ -843,7 +884,10 @@ describe("dex-liquidity scoring", () => {
       280_000,
       0,
       1,
-      JSON.stringify([{ protocol: "curve", chain: "Ethereum", price: 1, tvl: 100_000, sourceFamily: "dl" }]),
+      JSON.stringify([
+        { protocol: "raydium", chain: "Solana", price: 1.18, tvl: 180_000, sourceFamily: "dexscreener" },
+        { protocol: "curve", chain: "Ethereum", price: 1, tvl: 100_000, sourceFamily: "dl" },
+      ]),
       1_700_000_001,
     ]);
   });

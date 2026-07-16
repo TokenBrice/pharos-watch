@@ -477,7 +477,6 @@ export async function computeDexPrices(
   for (const [id, observations] of priceObservations) {
     throwIfAborted(signal);
     if (observations.length === 0) continue;
-    observedIds.add(id);
 
     const {
       collapsed: collapsedObservations,
@@ -488,6 +487,14 @@ export async function computeDexPrices(
     collapsedDuplicateObservations += duplicateObservations;
     if (collapsedObservations.length === 0) continue;
 
+    // Validate before selecting the aggregate so an impossible quote cannot
+    // enter dex_prices while merely being hidden from price_sources_json.
+    const plausibleObservations = collapsedObservations.filter((observation) =>
+      isPlausibleDexObservationPrice(id, observation.price, references)
+    );
+    if (plausibleObservations.length === 0) continue;
+    observedIds.add(id);
+
     // Look up primary price early — used for outlier filtering and deviation calc
     const primaryPrice = primaryPrices.get(id);
 
@@ -495,15 +502,15 @@ export async function computeDexPrices(
     // When a source (e.g. CoinGecko aggregate) reports a price near peg for a severely
     // depegged stablecoin, its high TVL can dominate the TVL-weighted median.
     // Only apply when 3+ observations exist and majority by count agrees with primary.
-    let medianInputObs = collapsedObservations;
-    if (primaryPrice != null && primaryPrice > 0 && collapsedObservations.length >= 3) {
-      const nearPrimary = collapsedObservations.filter((o) => {
+    let medianInputObs = plausibleObservations;
+    if (primaryPrice != null && primaryPrice > 0 && plausibleObservations.length >= 3) {
+      const nearPrimary = plausibleObservations.filter((o) => {
         const ratio = o.price / primaryPrice;
         return (
           ratio >= 1 / PRIMARY_PRICE_OUTLIER_MAX_DEVIATION_RATIO && ratio <= PRIMARY_PRICE_OUTLIER_MAX_DEVIATION_RATIO
         );
       });
-      if (nearPrimary.length >= 2 && nearPrimary.length > collapsedObservations.length / 2) {
+      if (nearPrimary.length >= 2 && nearPrimary.length > plausibleObservations.length / 2) {
         medianInputObs = nearPrimary;
       }
     }
@@ -529,7 +536,7 @@ export async function computeDexPrices(
     }
 
     // Raw TVL for DB storage (represents actual on-chain liquidity, not confidence-weighted)
-    const totalTvl = collapsedObservations.reduce((s, o) => s + o.tvl, 0);
+    const totalTvl = plausibleObservations.reduce((s, o) => s + o.tvl, 0);
     let deviationBps: number | null = null;
     if (primaryPrice != null && primaryPrice > 0) {
       deviationBps = Math.round((medianPrice / primaryPrice - 1) * 10000);
@@ -541,8 +548,7 @@ export async function computeDexPrices(
     // The scoring-level sanity gate has a wide 1% floor to avoid rejecting legitimately
     // depegged stablecoins. For the per-protocol display surface, apply a tighter 50%
     // primary-price ratio guard on top so near-peg alias-collapse rows are filtered.
-    const sanePriceObs = collapsedObservations.filter((obs) => {
-      if (!isPlausibleDexObservationPrice(id, obs.price, references)) return false;
+    const sanePriceObs = plausibleObservations.filter((obs) => {
       if (primaryPrice != null && primaryPrice > 0) {
         const ratio = obs.price / primaryPrice;
         if (ratio < DISPLAY_PRICE_RATIO_MIN || ratio > DISPLAY_PRICE_RATIO_MAX) return false;
@@ -576,7 +582,7 @@ export async function computeDexPrices(
           id,
           symbol,
           Math.round(medianPrice * 1e6) / 1e6, // 6 decimal places
-          collapsedObservations.length,
+          plausibleObservations.length,
           Math.round(totalTvl),
           deviationBps,
           primaryPrice ?? null,
