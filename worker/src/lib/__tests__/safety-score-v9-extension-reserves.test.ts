@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ReserveSlice } from "@shared/types/reserves";
 import { buildReviewedReserveClassifications, type V9ExtensionRegistryMeta } from "../safety-score-v9-extension";
+import { buildSafetyScoreV9ReserveClassifications } from "../safety-score-v9-extension-reserves";
 
 const CLOCK_SEC = Date.UTC(2026, 6, 14) / 1_000;
 
@@ -28,6 +29,28 @@ function reviewedMeta(
 }
 
 describe("buildReviewedReserveClassifications", () => {
+  it("classifies exact tracked-asset slices without guessing from vague labels", () => {
+    const classifications = buildSafetyScoreV9ReserveClassifications([
+      { name: "Parent shares", pct: 80, risk: "low", coinId: "parent-stablecoin", depType: "wrapper" },
+      { name: "Solana", pct: 20, risk: "medium" },
+    ]);
+
+    expect(classifications).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          assetClass: "stablecoin",
+          issuerOrObligorKey: "asset:parent-stablecoin",
+          failureDomains: [{ kind: "reserve-issuer", key: "asset:parent-stablecoin" }],
+        }),
+        expect.objectContaining({
+          assetClass: null,
+          issuerOrObligorKey: null,
+          failureDomains: [],
+        }),
+      ]),
+    );
+  });
+
   it("fills missing live classification fields from one normalized name and rounded weight match", () => {
     const classifications = buildReviewedReserveClassifications(
       [{ name: "U.S. Treasury Bills", pct: 61.2, risk: "very-low" }],

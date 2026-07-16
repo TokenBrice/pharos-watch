@@ -5,6 +5,18 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 const KNOWN_TICKERS = ["USDC", "USDT", "DAI", "FRAX", "USDe", "USDtb", "BUIDL", "USDS", "USYC", "OUSG", "DOLA", "GHO", "crvUSD", "FRXUSD", "USD0"];
 const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
+    "usdm-mega::USDC and USDtb reserve basket::USDC",
+    "MegaUSD's 100% reserve slice is an unsplit USDC/USDtb basket with no published current allocation, so a USDC coinId would overstate the dependency.",
+  ],
+  [
+    "usdm-mega::USDC and USDtb reserve basket::USDT",
+    "MegaUSD's 100% reserve slice is an unsplit USDC/USDtb basket with no published current allocation; the USDT substring in USDtb is not evidence of a direct USDT reserve link.",
+  ],
+  [
+    "usdm-mega::USDC and USDtb reserve basket::USDtb",
+    "MegaUSD's 100% reserve slice is an unsplit USDC/USDtb basket with no published current allocation, so a USDtb coinId would overstate the dependency.",
+  ],
+  [
     "gho-aave::GhoDirectFacilitator GSMs Mainnet::GHO",
     "GHO facilitator labels describe issuance rails, not upstream GHO reserve assets that should inherit coinId linkage.",
   ],

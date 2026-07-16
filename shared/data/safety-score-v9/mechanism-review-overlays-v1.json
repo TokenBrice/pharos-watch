@@ -1273,6 +1273,93 @@
       }
     },
     {
+      "assetId": "usdd-tron-dao-reserve",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-16",
+      "sources": [
+        {
+          "label": "USDD official live collateral API (vault collateral, debt, limits, total collateral, and total supply)",
+          "url": "https://app-api.usdd.io/data-platform/latest-collateral?chain=tron"
+        },
+        {
+          "label": "USDD system architecture (shared accounting, Dutch collateral auctions, debt auctions, and PSM)",
+          "url": "https://docs.usdd.io/system-architecture/system-architecture"
+        },
+        {
+          "label": "USDD Dog liquidation-engine documentation",
+          "url": "https://docs.usdd.io/developers/core-contracts/dog"
+        },
+        {
+          "label": "USDD Clip Dutch-auction documentation",
+          "url": "https://docs.usdd.io/developers/core-contracts/clip"
+        },
+        {
+          "label": "USDD collateral-auction user documentation (external bidders stake USDD)",
+          "url": "https://docs.usdd.io/user-guide/collateral-auction"
+        },
+        {
+          "label": "USDD PSM user documentation (1:1 swaps bounded by displayed availability)",
+          "url": "https://docs.usdd.io/user-guide/psm-peg-stability-module"
+        },
+        {
+          "label": "USDD official deployment addresses (Vat, Vow, Flop, End, ESM, and per-ilk auction contracts)",
+          "url": "https://docs.usdd.io/developers/deployment-addresses"
+        },
+        {
+          "label": "USDD Smart Allocator documentation (reserve deployment, dynamic monitoring, and risk reserve)",
+          "url": "https://docs.usdd.io/smart-allocator"
+        },
+        {
+          "label": "ChainSecurity USDD V2 code assessment hosted by USDD (Vow, Flop, End, ESM, and keeper dependencies)",
+          "url": "https://usdd.io/USDD-V2-audit-report.pdf"
+        }
+      ],
+      "notes": "Reviewed 2026-07-16 against USDD's official live Tron collateral API, current official documentation, and the USDD-hosted ChainSecurity V2 assessment. The API reported $1,903,674,277.60 total collateral against 1,226,645,029.842961 USDD total supply, giving a self-reported system collateralization ratio of 1.551936. It also reported 77,726,668.75 USDT in PSM-USDT-A, only 0.063365 of supply; this is a snapshot of direct PSM USDT inventory, not committed liquidation capital. Per-ilk minimum ratios, debt ceilings, delayed oracle routing, Dog liquidation thresholds, and Clip Dutch auctions are explicit, supporting adequate collateralization parameters and liquidation mechanics. Auction buyers must supply or stake USDD, however, and the protocol documents no USDD-dedicated pool contractually committed to debt offset, so liquidationCapacityRatio is structurally not applicable. All collateral types share Vat accounting and Vow deficit handling rather than branch-local loss absorption. ChainSecurity records that V2 Flop cannot mint recapitalization tokens: it can sell only JST already deposited in the contract, with no guarantee that sufficient JST will be present, and a trusted operator can withdraw that inventory. Smart Allocator describes only an unquantified portion of returns retained as a risk reserve. That is a weak, non-guaranteed deficit backstop. End and ESM provide a defined shutdown path, but ChainSecurity also records dependence on external cage keepers and warns that absent execution can leave undercollateralized vaults unprocessed and holders unable to redeem fairly. PSM redemption is 1:1 and zero-fee only up to the target token shown as Available. Those constraints support limited branch isolation, shutdown/bad-debt, and structural redemption without weakening the observed collateral surplus or documented auction design.",
+      "metrics": {
+        "collateralizationRatio": 1.551936,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "measured"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "USDD collateral auctions are funded by external bidders staking or supplying USDD, not by a USDD-dedicated pool contractually committed to debt offset.",
+          "sourceUrl": "https://docs.usdd.io/user-guide/collateral-auction"
+        }
+      },
+      "analogousMetrics": {
+        "psmUsdtInventoryRatio": 0.063365
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "backstop": {
+          "applicability": "measured",
+          "quality": "weak"
+        },
+        "branchIsolation": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "shutdownAndBadDebt": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "limited"
+        }
+      }
+    },
+    {
       "assetId": "hyusd-hylo",
       "archetype": "synthetic-delta-neutral",
       "reviewedAt": "2026-07-15",

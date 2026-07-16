@@ -460,19 +460,6 @@ function mapSettlement(route: V9ExitRouteFactV2): V9ExitSettlement {
   }
 }
 
-function mapModelConfidence(route: V9ExitRouteFactV2): "high" | "medium" | "low" {
-  switch (route.executionCertainty) {
-    case "guaranteed":
-      return "high";
-    case "bounded":
-      return "medium";
-    case "conditional":
-    case "discretionary":
-    case "unknown":
-      return "low";
-  }
-}
-
 function mapOutputQuality(route: V9ExitRouteFactV2): V9ExitOutputQuality {
   if (route.output.valuation?.basis === "nav") return "nav";
   if (route.output.kind === "fiat") return "stable-single";
@@ -500,7 +487,7 @@ export function projectV9ExitEvaluationRoute(route: V9ExitRouteFactV2): V9ExitEv
     coverageClass: route.coverageClass,
     evidenceKind: route.evidenceKind,
     observationConfidence: route.observationConfidence,
-    modelConfidence: mapModelConfidence(route),
+    modelConfidence: route.modelConfidence,
     ...access,
     settlement: mapSettlement(route),
     settlementDelaySec: route.settlementSlaSec ?? 0,

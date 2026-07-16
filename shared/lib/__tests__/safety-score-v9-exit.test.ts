@@ -28,10 +28,34 @@ function route(overrides: Partial<V9ExitEvaluationRoute> = {}): V9ExitEvaluation
     outputResolved: true,
     outputValueRetention: 1,
     capacityCurve: [
-      { requestedNotionalUsd: 100_000, maxCostBps: 200, executableUsd: 100_000, completionRatio: 1, executionCostBps: 0 },
-      { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 1_000_000, completionRatio: 1, executionCostBps: 0 },
-      { requestedNotionalUsd: 10_000_000, maxCostBps: 200, executableUsd: 10_000_000, completionRatio: 1, executionCostBps: 0 },
-      { requestedNotionalUsd: 25_000_000, maxCostBps: 200, executableUsd: 25_000_000, completionRatio: 1, executionCostBps: 0 },
+      {
+        requestedNotionalUsd: 100_000,
+        maxCostBps: 200,
+        executableUsd: 100_000,
+        completionRatio: 1,
+        executionCostBps: 0,
+      },
+      {
+        requestedNotionalUsd: 1_000_000,
+        maxCostBps: 200,
+        executableUsd: 1_000_000,
+        completionRatio: 1,
+        executionCostBps: 0,
+      },
+      {
+        requestedNotionalUsd: 10_000_000,
+        maxCostBps: 200,
+        executableUsd: 10_000_000,
+        completionRatio: 1,
+        executionCostBps: 0,
+      },
+      {
+        requestedNotionalUsd: 25_000_000,
+        maxCostBps: 200,
+        executableUsd: 25_000_000,
+        completionRatio: 1,
+        executionCostBps: 0,
+      },
     ],
     routeScoreCap: null,
     failureDomains: ["redemption-rail:issuer"],
@@ -48,9 +72,7 @@ describe("selectV9ExitStressRequest", () => {
       maxCostBps: 200,
     });
     expect(selectV9ExitStressRequest(100_000, V9_CANDIDATE_POLICY_V1)?.requestedNotionalUsd).toBe(100_000);
-    expect(selectV9ExitStressRequest(10_000_000_000, V9_CANDIDATE_POLICY_V1)?.requestedNotionalUsd).toBe(
-      25_000_000,
-    );
+    expect(selectV9ExitStressRequest(10_000_000_000, V9_CANDIDATE_POLICY_V1)?.requestedNotionalUsd).toBe(25_000_000);
   });
 
   it("fails closed without valid circulating supply", () => {
@@ -80,7 +102,13 @@ describe("evaluateV9Exit", () => {
             routeFamily: "dex-amm",
             evidenceKind: "measured-executable-depth",
             capacityCurve: [
-              { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 10_000, completionRatio: 0.01, executionCostBps: 150 },
+              {
+                requestedNotionalUsd: 1_000_000,
+                maxCostBps: 200,
+                executableUsd: 10_000,
+                completionRatio: 0.01,
+                executionCostBps: 150,
+              },
             ],
             failureDomains: ["redemption-rail:issuer"],
             physicalResourceKeys: ["rail:issuer"],
@@ -210,6 +238,7 @@ describe("evaluateV9Exit", () => {
       holderAccess: "allowlisted",
       executionModel: "deterministic",
       executionCertainty: "bounded",
+      modelConfidence: "high",
       observationConfidence: "medium",
       evidenceKind: "documented-terms",
       coverageClass: "exact-lower-bound",
@@ -264,7 +293,7 @@ describe("evaluateV9Exit", () => {
     expect(projected).toMatchObject({
       access: "whitelisted-onchain",
       holderEligibility: "whitelisted-primary",
-      modelConfidence: "medium",
+      modelConfidence: "high",
       settlement: "same-day",
       outputValueRetention: 1,
     });

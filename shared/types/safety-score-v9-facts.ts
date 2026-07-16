@@ -434,6 +434,9 @@ const V9ExitRouteFactV2Schema = z
       "unknown",
     ]),
     executionCertainty: z.enum(["guaranteed", "bounded", "conditional", "discretionary", "unknown"]),
+    // Retained schema-v2 facts predate this field. Parse them conservatively;
+    // current compilers still materialize the normalized value in their output.
+    modelConfidence: z.enum(["high", "medium", "low"]).default("low"),
     observationConfidence: z.enum(["high", "medium", "low", "unknown"]),
     evidenceKind: z.enum([
       "measured-executable-depth",

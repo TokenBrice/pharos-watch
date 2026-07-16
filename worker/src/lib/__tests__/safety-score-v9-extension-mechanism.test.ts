@@ -5,7 +5,9 @@ import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import {
   buildSafetyScoreV9MechanismReview,
   expandOverlayReview,
+  getSafetyScoreV9MechanismOverlayEvidence,
   MechanismReviewOverlaySchema,
+  SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
   type MechanismReviewOverlay,
 } from "../safety-score-v9-extension-mechanism";
 
@@ -13,11 +15,14 @@ type MechanismMeta = Pick<StablecoinMeta, "id" | "reserves" | "reserveReview" | 
 
 // Curated overlays now re-bound after twelve months (VER2-004), so the stub
 // carries a clock within a year of the fixture overlay review dates
-// (2026-07-13..15) to keep them current.
-const STUB_CLOCK_SEC = Date.UTC(2026, 6, 15) / 1_000;
+// (2026-07-13..16) to keep them current.
+const STUB_CLOCK_SEC = Date.UTC(2026, 6, 17) / 1_000;
 
-function fixedInputStub(liveReserves: Record<string, unknown[]> = {}): ReportCardsFixedInput {
-  return { clockSec: STUB_CLOCK_SEC, liveReserveMap: liveReserves } as unknown as ReportCardsFixedInput;
+function fixedInputStub(
+  liveReserves: Record<string, unknown[]> = {},
+  clockSec = STUB_CLOCK_SEC,
+): ReportCardsFixedInput {
+  return { clockSec, liveReserveMap: liveReserves } as unknown as ReportCardsFixedInput;
 }
 
 const BARE_META: MechanismMeta = { id: "alpha" } as MechanismMeta;
@@ -99,6 +104,43 @@ describe("buildSafetyScoreV9MechanismReview", () => {
       severity: "high",
     });
     expect(V9_CANDIDATE_POLICY_V1.policy.semantic.structural.signalLimits["unsafe-backing"].high).toBe(59);
+  });
+
+  it("compiles USDD's collateral surplus without erasing its market-funded and shared-deficit constraints", () => {
+    const review = buildSafetyScoreV9MechanismReview(
+      fixedInputStub(),
+      { id: "usdd-tron-dao-reserve" } as MechanismMeta,
+      "cdp",
+    );
+    if (review?.archetype !== "cdp") throw new Error("expected the curated USDD CDP overlay");
+
+    expect(review.collateralizationRatio).toBe(1.551936);
+    expect(review.metricApplicability.collateralizationRatio.state).toBe("measured");
+    expect(review.liquidationCapacityRatio).toBeNull();
+    expect(review.metricApplicability.liquidationCapacityRatio.state).toBe("not-applicable");
+    expect(review.collateralizationParameters.quality).toBe("adequate");
+    expect(review.liquidationMechanics.quality).toBe("adequate");
+    expect(review.backstop.quality).toBe("weak");
+    expect(review.branchIsolation.quality).toBe("limited");
+    expect(review.shutdownAndBadDebt.quality).toBe("limited");
+    expect(review.structuralRedemption.quality).toBe("limited");
+  });
+
+  it("binds curated overlays to their content and rejects date-only reviews until the next UTC day", () => {
+    expect(SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST).toMatch(/^[a-f0-9]{64}$/);
+    expect(getSafetyScoreV9MechanismOverlayEvidence("usdd-tron-dao-reserve", "cdp", STUB_CLOCK_SEC)).toEqual(
+      expect.objectContaining({ reviewedAt: "2026-07-16", maxAgeSec: 31_536_000 }),
+    );
+
+    const sameDaySec = Date.UTC(2026, 6, 16, 12) / 1_000;
+    expect(
+      buildSafetyScoreV9MechanismReview(
+        fixedInputStub({}, sameDaySec),
+        { id: "usdd-tron-dao-reserve" } as MechanismMeta,
+        "cdp",
+      ),
+    ).toBeNull();
+    expect(getSafetyScoreV9MechanismOverlayEvidence("usdd-tron-dao-reserve", "cdp", sameDaySec)).toBeNull();
   });
 
   it("merges a gated fiat-cash overlay over the built review without degrading derived assurance", () => {

@@ -244,6 +244,7 @@ function reviewedExtension(fixedInput = exactFixedInput("alpha")): SafetyScoreV9
       holderAccess: "permissionless",
       executionModel: "market-depth",
       executionCertainty: "bounded",
+      modelConfidence: "medium",
       coverageClass: "exact-complete",
       settlementModel: "atomic",
       settlementSlaSec: null,
@@ -351,7 +352,12 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
     expect(left.candidate.factSetDigest).toBe(left.compiledFacts.v9FactSetDigest);
     expect(left.compilerFactSchemaIdentity.compiledFactSchemaCapabilities).toEqual([
       "canonical-chain-supply-distribution.v1",
+      "exit-route-modeled-confidence.v1",
     ]);
+    expect(left.producerCapabilityIdentity.sourceAdapters.dexExitRoutes).toBe("fixed-input.dex-exit-observations.v2");
+    expect(left.producerCapabilityIdentity.sourceAdapters.redemptionExitRoutes).toBe(
+      "fixed-input.redemption-exit-observations.v2",
+    );
     expect(left.producerCapabilityIdentity.sourceAdapters.chainSupply).toBe("fixed-input.usd-circulating-supply.v2");
     expect(
       left.compiledFacts.assets.every((asset) =>
@@ -545,6 +551,7 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
     const asset = extension.assets[0]!;
     asset.routeReviews[0]!.executionModel = "atomic";
     asset.routeReviews[0]!.executionCertainty = "guaranteed";
+    asset.routeReviews[0]!.modelConfidence = "high";
     asset.routeReviews[0]!.executionCosts = stressGrid.map((requestedNotionalUsd) => ({
       requestedNotionalUsd,
       maxCostBps: observation.maxCostBps,

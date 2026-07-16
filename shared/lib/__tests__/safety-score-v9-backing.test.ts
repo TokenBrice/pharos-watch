@@ -1,11 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
   assertV9BackingPolicy,
+  createUnavailableV9BackingResult,
+  evaluateV9ArchetypeBacking,
   evaluateV9ReserveExposures,
   type V9BackingAssetInput,
 } from "../safety-score-v9/backing";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
-import type { V9FactStatusV2, V9ReserveExposureFactV2 } from "../../types/safety-score-v9-facts";
+import type {
+  V9AssetFactsV2,
+  V9FactGapV2,
+  V9FactStatusV2,
+  V9ReserveExposureFactV2,
+} from "../../types/safety-score-v9-facts";
 
 const knownStatus = (evidenceId: string): V9FactStatusV2 => ({
   applicability: { state: "required", policyRuleId: "backing.required", rationale: null, gapId: null },
@@ -44,13 +51,39 @@ function exposure(args: {
   };
 }
 
-function asset(reserveExposures: readonly V9ReserveExposureFactV2[]): V9BackingAssetInput {
+function asset(
+  reserveExposures: readonly V9ReserveExposureFactV2[],
+  gaps: readonly V9FactGapV2[] = [],
+): V9BackingAssetInput {
   return {
     assetId: "asset",
     reserveStatus: knownStatus("evidence:reserve-envelope"),
     reserveExposures,
-    gaps: [],
+    gaps,
     resolvedUpstreamExposures: [],
+  };
+}
+
+function unavailableReview(
+  gap: V9FactGapV2,
+  archetype: V9AssetFactsV2["archetype"] = "fiat-cash",
+): Pick<V9AssetFactsV2, "archetype" | "mechanismRiskReview"> {
+  return {
+    archetype,
+    mechanismRiskReview: {
+      status: {
+        applicability: {
+          state: "required",
+          policyRuleId: "v9.backing.mechanism-review",
+          rationale: null,
+          gapId: null,
+        },
+        observationState: "missing",
+        evidenceRefIds: [],
+        gapIds: [gap.gapId],
+      },
+      review: null,
+    },
   };
 }
 
@@ -191,5 +224,129 @@ describe("Safety Score v9 backing exposure primitives", () => {
         materialShare: 0.4,
       }),
     );
+  });
+
+  it("preserves known reserves while charging an absent mechanism review at authored component weights", () => {
+    const gap: V9FactGapV2 = {
+      gapId: "gap:mechanism-review",
+      reasonCode: "bounded-mechanism-review",
+      ownerDomain: "backing",
+      policyRuleId: "v9.backing.mechanism-review",
+      observationState: "missing",
+      path: { kind: "local-component", componentKey: "mechanism-risk-review" },
+      message: "No policy-independent mechanism review is present.",
+      evidenceRefIds: [],
+    };
+    const backingAsset = asset(
+      ["a", "b", "c", "d"].map((key) => exposure({ key, weight: 0.25 })),
+      [gap],
+    );
+    const reserve = evaluateV9ReserveExposures(backingAsset, V9_CANDIDATE_POLICY_V1);
+    const result = createUnavailableV9BackingResult(backingAsset, unavailableReview(gap), V9_CANDIDATE_POLICY_V1);
+    const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing;
+    const archetypePolicy = policy.archetypes["fiat-cash"];
+    const mechanismWeight = 1 - archetypePolicy.reserveWeight;
+    const mechanismContributions = result.contributions.filter((entry) => entry.source === "mechanism");
+
+    expect(result).toMatchObject({ rateability: "rateable", pillarCeiling: null });
+    expect(result.score).toBeCloseTo(reserve.score! * archetypePolicy.reserveWeight + 35 * mechanismWeight, 12);
+    expect(result.score).toBeGreaterThan(35);
+    expect(mechanismContributions.map((entry) => entry.componentKey)).toEqual([
+      "mechanism:assurance-and-reconciliation",
+      "mechanism:claim-and-segregation",
+      "mechanism:custody-continuity",
+    ]);
+    for (const contribution of mechanismContributions) {
+      const componentKey = contribution.componentKey.replace("mechanism:", "");
+      expect(contribution.score).toBe(policy.boundedUnknownQuality);
+      expect(contribution.observationState).toBe("missing");
+      expect(contribution.evidenceRefIds).toEqual([]);
+      expect(contribution.normalizedWeight * mechanismWeight).toBeCloseTo(
+        archetypePolicy.componentWeights[componentKey],
+        12,
+      );
+    }
+    expect(result.unresolved).toHaveLength(3);
+    expect(result.unresolved).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "bounded-mechanism-review", treatment: "pillar" })]),
+    );
+  });
+
+  it("keeps unavailable-review integrity and archetype failures NR", () => {
+    const integrityGap: V9FactGapV2 = {
+      gapId: "gap:integrity",
+      reasonCode: "missing-pillar-evidence",
+      ownerDomain: "evidence",
+      policyRuleId: "v9.backing.mechanism-review",
+      observationState: "unsupported",
+      path: { kind: "local-component", componentKey: "mechanism-risk-review" },
+      message: "The mechanism review design is unsupported.",
+      evidenceRefIds: [],
+    };
+    const archetypeGap: V9FactGapV2 = {
+      gapId: "gap:archetype",
+      reasonCode: "missing-archetype",
+      ownerDomain: "methodology",
+      policyRuleId: "v9.backing.mechanism-review",
+      observationState: "missing",
+      path: { kind: "methodology", componentKey: "mechanism-risk-review" },
+      message: "The mechanism archetype is unresolved.",
+      evidenceRefIds: [],
+    };
+    const exposures = [exposure({ key: "cash", weight: 1 })];
+    const integrity = createUnavailableV9BackingResult(
+      asset(exposures, [integrityGap]),
+      unavailableReview(integrityGap),
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const unresolvedArchetype = createUnavailableV9BackingResult(
+      asset(exposures, [archetypeGap]),
+      unavailableReview(archetypeGap, "unresolved"),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(integrity).toMatchObject({ rateability: "NR", score: null, contributions: [] });
+    expect(integrity.unresolved).toContainEqual(expect.objectContaining({ code: "missing-pillar-evidence" }));
+    expect(unresolvedArchetype).toMatchObject({ rateability: "NR", score: null, contributions: [] });
+    expect(unresolvedArchetype.unresolved).toContainEqual(expect.objectContaining({ code: "missing-archetype" }));
+  });
+
+  it("keeps missing serial components NR for ordinary typed-review evaluation", () => {
+    const gap: V9FactGapV2 = {
+      gapId: "gap:serial-claim",
+      reasonCode: "critical-unresolved",
+      ownerDomain: "backing",
+      policyRuleId: "fiat.claim.required",
+      observationState: "missing",
+      path: { kind: "local-component", componentKey: "claim-and-segregation" },
+      message: "The direct reserve claim is unresolved.",
+      evidenceRefIds: [],
+    };
+    const missingStatus: V9FactStatusV2 = {
+      applicability: { state: "required", policyRuleId: "fiat.claim.required", rationale: null, gapId: null },
+      observationState: "missing",
+      evidenceRefIds: [],
+      gapIds: [gap.gapId],
+    };
+    const strongFact = (key: string) => ({
+      status: knownStatus(`mechanism:${key}`),
+      quality: "strong" as const,
+      failureDomains: [],
+    });
+    const result = evaluateV9ArchetypeBacking(
+      {
+        archetype: "fiat-cash",
+        asset: asset([exposure({ key: "cash", weight: 1 })], [gap]),
+        components: [
+          { componentKey: "claim-and-segregation", fact: { status: missingStatus, quality: null, failureDomains: [] } },
+          { componentKey: "custody-continuity", fact: strongFact("custody") },
+          { componentKey: "assurance-and-reconciliation", fact: strongFact("assurance") },
+        ],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(result).toMatchObject({ rateability: "NR", score: null });
+    expect(result.unresolved).toContainEqual(expect.objectContaining({ code: "critical-unresolved", treatment: "NR" }));
   });
 });

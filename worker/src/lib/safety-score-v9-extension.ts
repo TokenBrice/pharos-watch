@@ -27,7 +27,11 @@ import {
   computeSafetyScoreV9ReserveExposureKey,
   type SafetyScoreV9FactSetExtensionV2,
 } from "./safety-score-v9-fact-set";
-import { buildSafetyScoreV9MechanismReview } from "./safety-score-v9-extension-mechanism";
+import {
+  buildSafetyScoreV9MechanismReview,
+  getSafetyScoreV9MechanismOverlayEvidence,
+  SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
+} from "./safety-score-v9-extension-mechanism";
 import { buildSafetyScoreV9ReserveClassifications } from "./safety-score-v9-extension-reserves";
 import { SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY } from "@shared/lib/redemption-backstop-scoring";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
@@ -868,7 +872,10 @@ function bridgeControl(
   };
 }
 
-function unmatchedBridgeControl(assetId: string, route: NonNullable<ExtensionAsset["supplyReview"]>["selectedBridgeRoutes"][number]): ControlOverlay {
+function unmatchedBridgeControl(
+  assetId: string,
+  route: NonNullable<ExtensionAsset["supplyReview"]>["selectedBridgeRoutes"][number],
+): ControlOverlay {
   return {
     controlKey: `bridge-supply:${assetId}:${digest("safety-score-v9.unmatched-bridge-control-key.v1", route.deploymentRouteKey).slice(0, 20)}`,
     deploymentKey: route.deploymentRouteKey,
@@ -1230,6 +1237,10 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     pegDataById: fixedInput.pegDataById,
     activeDepegPeakBpsById: fixedInput.activeDepegPeakBpsById,
   });
+  const researchOverlaysGenerationDigest = digest("safety-score-v9.research-overlays.v2", {
+    registryRevision: fixedInput.registryRevision,
+    mechanismReviewOverlaysDigest: SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
+  });
   const sources = {
     registryObservedAtSec,
     unavailableRedemptionObservedAtSec: boundedObservedAt(
@@ -1252,7 +1263,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       maxAgeSec: CRON_INTERVALS["sync-stablecoins"] * 2,
     },
     researchOverlays: {
-      generationId: `registry:${fixedInput.registryRevision}`,
+      generationId: `research-overlays:v2:${researchOverlaysGenerationDigest}`,
       observedAtSec: registryObservedAtSec,
       // Curated mechanism/reserve/route overlays re-bound after twelve months,
       // consistent with the D1 overlay standard and the mechanism-overlay
@@ -1279,6 +1290,19 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       const archetype = resolveMechanismArchetype(meta, metaById) ?? "unresolved";
       const liveReserves = fixedInput.liveReserveMap[assetId] ?? [];
       const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec);
+      const mechanismRiskReview = buildSafetyScoreV9MechanismReview(fixedInput, meta, archetype);
+      const mechanismOverlayEvidence = getSafetyScoreV9MechanismOverlayEvidence(assetId, archetype, clockSec);
+      if (mechanismRiskReview && mechanismOverlayEvidence) {
+        reviewEvidence.add({
+          componentKeys: ["mechanism-risk-review"],
+          sourceId: "safety-score-v9.mechanism-review-overlay",
+          reviewedAt: mechanismOverlayEvidence.reviewedAt,
+          confidence: "manual-review",
+          sources: mechanismOverlayEvidence.sources,
+          payload: mechanismOverlayEvidence.payload,
+          maxAgeSec: mechanismOverlayEvidence.maxAgeSec,
+        });
+      }
       const reserveClassifications = buildReviewedReserveClassifications(liveReserves, meta, clockSec);
       addReserveClassificationEvidence(meta, reserveClassifications, reviewEvidence);
       addDependencyEvidence(meta, reviewEvidence);
@@ -1311,7 +1335,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         assetId,
         archetype,
         launchedAtSec: conservativeDateEndSec(meta.implementationLaunchDate ?? meta.launchDate, clockSec),
-        mechanismRiskReview: buildSafetyScoreV9MechanismReview(fixedInput, meta, archetype),
+        mechanismRiskReview,
         dependencies: {
           ...prepared.dependency,
           diagnostics: cycle

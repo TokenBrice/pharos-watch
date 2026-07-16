@@ -62,6 +62,25 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "cgUSD is an ERC-4626 rebasing vault on Base where users mint by depositing USDC/USDT (incl. cross-chain via Axelar), but Cygnus custodies the off-chain U.S. Treasury reserves, controls the daily oracle-reported NAV rebase, and runs an AMO managing on-chain liquidity. Both the vault and oracle are owned by a TimelockController with 10s delay, controlled by a 2/11 Safe as proposer.",
+    "upgradeability": {
+      "model": "immutable",
+      "implementationAddresses": [
+        "0xca72827a3d211cfd8f6b00ac98824872b72cab49"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-16",
+      "observedBlock": 47199109,
+      "sources": [
+        {
+          "label": "cgUSD exact verified direct-deployment source",
+          "url": "https://base.blockscout.com/address/0xca72827a3d211cfd8f6b00ac98824872b72cab49?tab=contract"
+        },
+        {
+          "label": "Base mainnet RPC EIP-1967 slot check",
+          "url": "https://mainnet.base.org"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Cygnus accounting oracle/rebase + reserve custodian",

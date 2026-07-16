@@ -160,9 +160,47 @@
     {
       "name": "Institutional credit and market-neutral fund basket",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed rwaUSDi private-pool borrowers, funds, and strategy counterparties",
+      "riskFactors": ["credit", "counterparty", "liquidity", "custody", "legal", "market", "concentration"],
+      "liquidityHorizon": "over-seven-days"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-16",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "AFI rwaUSDi proof-of-reserves snapshot (2026-07-16)",
+        "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs"
+      },
+      {
+        "label": "AFI rwaUSDi periodic reserve reports",
+        "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/periodic-report?pageNo=1&offset=20"
+      },
+      {
+        "label": "Multipli rwaUSDi institutional-credit documentation",
+        "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets"
+      }
+    ],
+    "rationale": "AFI's dated proof verifies aggregate reserves and liabilities for rwaUSDi and the signed periodic index records weekly solvency checks through July 12, 2026, but the current proof returns no reserve breakdown. Multipli describes the rwaUSDi envelope as permissioned private pools spanning private credit, asset-backed lending, project finance, and structured or market-neutral strategies with scheduled redemptions and periodic pricing. Because no current holdings, weights, borrowers, funds, or strategy counterparties are disclosed, the complete envelope remains one unresolved mixed basket.",
+    "compositionBasis": "AFI aggregate solvency proof plus Multipli's documented rwaUSDi eligible-asset envelope; current constituents and weights undisclosed",
+    "compositionAsOf": "2026-07-16",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current asset classes, individual borrowers and funds, constituent weights, credit seniority, maturities, valuation marks, custody shares, strategy exposures, and redemption schedules are not exposed by the reviewed proof.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Institutional credit and market-neutral fund basket",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "AFI verifies only the aggregate and Multipli publishes an eligible-asset envelope rather than a dated current constituent allocation."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

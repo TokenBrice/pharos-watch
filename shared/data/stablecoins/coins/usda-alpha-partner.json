@@ -59,11 +59,44 @@
   "deploymentModel": "single-chain",
   "reserves": [
     {
-      "name": "Protocol-managed collateral and liquidity reserves",
+      "name": "Undisclosed reserve assets",
       "pct": 100,
-      "risk": "high"
+      "risk": "very-high",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed reserve providers",
+      "riskFactors": ["credit", "counterparty", "custody", "legal", "liquidity", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-16",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Alpha Partners official website reviewed for reserve disclosure",
+        "url": "https://alphapartner.vip/"
+      },
+      {
+        "label": "Alpha Partners official documentation reviewed for reserve disclosure",
+        "url": "https://ap-organization-1.gitbook.io/alpha-partners"
+      }
+    ],
+    "rationale": "The reviewed Alpha Partners website and documentation describe the AP U-Card, USDT top-ups, and the broader platform but do not identify USDA, its reserve assets, reserve accounts, custodians, balances, mint/redemption backing controls, or an independent reserve report. No primary reserve-composition source was available. The prior protocol-managed collateral label is therefore narrowed to an explicit undisclosed-reserve bucket rather than implying unsupported asset classes.",
+    "compositionBasis": "No primary USDA reserve-composition disclosure found in the reviewed issuer corpus",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All reserve asset identities, weights, obligors, custodians, legal safeguards, liquidity terms, valuation methods, and asset-versus-liability reconciliation remain unknown.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Undisclosed reserve assets",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The reviewed official issuer surfaces do not publish a USDA reserve source from which a composition could be authored."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

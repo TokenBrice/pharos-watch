@@ -390,6 +390,7 @@ function fullAsset(reversed: boolean) {
         holderAccess: "permissionless",
         executionModel: "market-depth",
         executionCertainty: "bounded",
+        modelConfidence: "medium",
         observationConfidence: "high",
         evidenceKind: "reserve-based-amm-simulation",
         coverageClass: "exact-complete",
@@ -416,6 +417,7 @@ function fullAsset(reversed: boolean) {
         holderAccess: "retail-open",
         executionModel: "deterministic",
         executionCertainty: "guaranteed",
+        modelConfidence: "high",
         observationConfidence: "high",
         evidenceKind: "documented-terms",
         coverageClass: "exact-complete",
@@ -439,6 +441,7 @@ function fullAsset(reversed: boolean) {
         holderAccess: "unknown",
         executionModel: "unknown",
         executionCertainty: "unknown",
+        modelConfidence: "low",
         observationConfidence: "unknown",
         evidenceKind: "unobserved",
         coverageClass: "diagnostic",
@@ -600,6 +603,17 @@ function coreFixture(reversed = false) {
 }
 
 describe("Safety Score v9 normalized fact protocol", () => {
+  it("defaults retained v2 fact routes without modeled confidence to low", () => {
+    const retained = structuredClone(coreFixture());
+    const route = retained.assets[0]!.exitRoutes.find((candidate) => candidate.routeId === "amm-main")!;
+    delete (route as unknown as Record<string, unknown>).modelConfidence;
+
+    const compiled = compileV9FactSetV2(retained);
+    expect(compiled.assets[0]!.exitRoutes.find((candidate) => candidate.routeId === "amm-main")).toMatchObject({
+      modelConfidence: "low",
+    });
+  });
+
   it("canonicalizes every ordered identity surface and produces a permutation-stable digest", () => {
     const ordered = compileV9FactSetV2(coreFixture(false));
     const reversed = compileV9FactSetV2(coreFixture(true));
@@ -935,17 +949,19 @@ describe("Safety Score v9 normalized fact protocol", () => {
         )!.severity;
     };
 
-    expect(evaluateBridgeSeverity(0.0499)).toBe("moderate");
-    expect(evaluateBridgeSeverity(0.05)).toBe("high");
+    expect(evaluateBridgeSeverity(0.0499)).toBe("low");
+    expect(evaluateBridgeSeverity(0.05)).toBe("moderate");
+    expect(evaluateBridgeSeverity(0.0999)).toBe("moderate");
+    expect(evaluateBridgeSeverity(0.1)).toBe("high");
     expect(evaluateBridgeSeverity(0.0499, "aggregate-mismatch")).toBe("high");
     expect(evaluateBridgeSeverity(0.0499, "contradictory-share")).toBe("high");
     expect(evaluateBridgeSeverity(0.0499, "missing-capability")).toBe("high");
     expect(evaluateBridgeSeverity(0.0499, "null-control-share")).toBe("high");
-    expect(evaluateBridgeSeverity(0.0499, "same-domain-zero-no-row")).toBe("moderate");
+    expect(evaluateBridgeSeverity(0.0499, "same-domain-zero-no-row")).toBe("low");
     expect(evaluateBridgeSeverity(0.0499, "same-domain-null-no-row")).toBe("high");
     expect(evaluateBridgeSeverity(0.0499, "same-domain-epsilon-no-row")).toBe("high");
     expect(evaluateBridgeSeverity(0.0499, "same-domain-invalid")).toBe("high");
-    expect(evaluateBridgeSeverity(0.0499, "separate-domain-unjoined")).toBe("moderate");
+    expect(evaluateBridgeSeverity(0.0499, "separate-domain-unjoined")).toBe("low");
     expect(evaluateBridgeSeverity(0.0499, "separate-domain-unjoined", "bridge:native")).toBe("high");
     expect(evaluateBridgeSeverity(0.0499, "supply-mismatch")).toBe("high");
     expect(evaluateBridgeSeverity(0.0499, "unmatched")).toBe("high");
@@ -1340,7 +1356,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
 
     const known = coreFixture();
     configureImmaterialChain(known);
-    expect(chainSignal(known, "beta")?.severity).toBe("moderate");
+    expect(chainSignal(known, "beta")?.severity).toBe("low");
 
     const unavailable = coreFixture();
     configureImmaterialChain(unavailable);

@@ -30,14 +30,25 @@ with archetype-specific Backing, Exit, and Economic Control pillars bounded by
 the weakest material failure path, structural ceilings, evidence sufficiency,
 dependencies, peg behavior, and stress propagation. Candidate failures cannot
 affect V8 publication; exact candidate state is available only to the admin
-workspace. A drift-labeled research replay rates 358 of 361 assets, but no
-publication-exact candidate capture has yet proved that rateability against the
-current registry and producer generations. Independent holdout validation,
-release-cohort coverage, a frozen release candidate, and at least 14
-consecutive verified shadow days plus two elapsed cycles of the four-hour
-slowest score-bearing producer are still mandatory before any public or
-downstream cutover. The window must also cover at least two distinct observed
-and archived `liveReserves` and `redemption` generations. See
+workspace. The 2026-07-16 real-A calibration rates 342 of 344 assets and
+produces a numerical BOLD 84/A through the normal compiler and evaluator. The
+hardened judge does not qualify it as a defensible real A because 15 of its 34
+score-bearing evidence references have `not-assessed` freshness. Three
+distinct exact production inputs reproduce the numerical output and the same
+grade distribution after local projection onto the reviewed registry, but the
+repeated-real-A gate therefore fails. The production-shaped composite fixture
+remains 88/A+; no standalone composite replay or bound causal-attribution
+artifact was supplied to the Friday judge, so those evidence gates fail
+closed. The candidate is still not calibration-ready: real-A evidence
+freshness, F-count, upper-cohort breadth, IQR, adverse-control, composite-replay,
+and causal-attribution gates fail or remain incomplete. The captures were
+locally rekeyed and therefore are calibration evidence, not activation-window
+evidence. Independent holdout validation, release-cohort coverage, a later
+owner-frozen release candidate, and at least 14 consecutive verified shadow
+days plus two elapsed cycles of the four-hour slowest score-bearing producer
+remain mandatory before any public or downstream cutover. The window must also
+cover at least two distinct observed and archived `liveReserves` and
+`redemption` generations. See
 [Safety Score V9 readiness](./process/safety-score-v9-readiness.md), the
 [single-publisher rollout contract](./process/safety-score-v9-rollout.md), and
 the [consumer ledger](./process/safety-score-v9-consumer-ledger.md).

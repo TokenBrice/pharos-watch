@@ -38,7 +38,10 @@ const SafetyScoreV9CompilerFactSchemaIdentityV1Schema = z
     fixedInputSchemaVersion: z.literal(3),
     factExtensionSchemaVersion: z.literal(2),
     compiledFactSchemaVersion: z.literal(2),
-    compiledFactSchemaCapabilities: z.tuple([z.literal("canonical-chain-supply-distribution.v1")]),
+    compiledFactSchemaCapabilities: z.tuple([
+      z.literal("canonical-chain-supply-distribution.v1"),
+      z.literal("exit-route-modeled-confidence.v1"),
+    ]),
     compilerAdapter: z.literal("exact-fixed-input-to-v9-facts.v1"),
     evaluationBuildDigest: Sha256Schema,
   })
@@ -57,8 +60,8 @@ const SafetyScoreV9ProducerCapabilityIdentityV1Schema = z
     sourceAdapters: z
       .object({
         registry: z.literal("fixed-input.registry.v1"),
-        dexExitRoutes: z.literal("fixed-input.dex-exit-observations.v1"),
-        redemptionExitRoutes: z.literal("fixed-input.redemption-exit-observations.v1"),
+        dexExitRoutes: z.literal("fixed-input.dex-exit-observations.v2"),
+        redemptionExitRoutes: z.literal("fixed-input.redemption-exit-observations.v2"),
         liveReserves: z.literal("fixed-input.live-reserves.v1"),
         chainSupply: z.literal("fixed-input.usd-circulating-supply.v2"),
         peg: z.literal("fixed-input.peg-summary.v1"),
@@ -177,7 +180,7 @@ function compilerFactSchemaIdentity(
     fixedInputSchemaVersion: fixedInput.schemaVersion,
     factExtensionSchemaVersion: extension.schemaVersion,
     compiledFactSchemaVersion: compiledFacts.schemaVersion,
-    compiledFactSchemaCapabilities: ["canonical-chain-supply-distribution.v1"],
+    compiledFactSchemaCapabilities: ["canonical-chain-supply-distribution.v1", "exit-route-modeled-confidence.v1"],
     compilerAdapter: "exact-fixed-input-to-v9-facts.v1",
     evaluationBuildDigest: SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST,
   });
@@ -195,8 +198,8 @@ function producerCapabilityIdentity(
     },
     sourceAdapters: {
       registry: "fixed-input.registry.v1",
-      dexExitRoutes: "fixed-input.dex-exit-observations.v1",
-      redemptionExitRoutes: "fixed-input.redemption-exit-observations.v1",
+      dexExitRoutes: "fixed-input.dex-exit-observations.v2",
+      redemptionExitRoutes: "fixed-input.redemption-exit-observations.v2",
       liveReserves: "fixed-input.live-reserves.v1",
       chainSupply: "fixed-input.usd-circulating-supply.v2",
       peg: "fixed-input.peg-summary.v1",

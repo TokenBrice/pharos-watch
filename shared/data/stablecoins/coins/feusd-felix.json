@@ -415,7 +415,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "feUSD is minted from Liquity-v2-fork CDPs on Hyperliquid (HyperEVM) against HYPE, kHYPE, wstHYPE, and bridged BTC at user-set interest rates. The feUSD token (0x02c6a2fa) is an EIP-1967 proxy whose ProxyAdmin (0x44a600c0) is owned by a central admin proxy (0xf42fdd95). That admin proxy's own ProxyAdmin (0xdf1293b4) is owned by a Gnosis Safe 1.3.0 multisig (0x699090e7, 3-of-6, no modules, no guard). The same multisig is the ultimate upgrade authority for the entire Felix protocol.",
+    "summary": "feUSD is minted from Liquity-v2-fork CDPs on Hyperliquid (HyperEVM) against HYPE, kHYPE, wstHYPE, and bridged BTC at user-set interest rates. Each of the four active branches authorizes its BorrowerOperations and ActivePool contracts to mint feUSD, for eight current token-level minters. The feUSD token (0x02c6a2fa) is an EIP-1967 proxy whose ProxyAdmin (0x44a600c0) is owned by a central admin proxy (0xf42fdd95). That admin proxy's own ProxyAdmin (0xdf1293b4) is owned by a Gnosis Safe 1.3.0 multisig (0x699090e7, 3-of-6, no modules, no guard). The same multisig is the ultimate upgrade authority for the entire Felix protocol.",
     "upgradeability": {
       "model": "custom",
       "proxyAddresses": [
@@ -448,14 +448,196 @@
     },
     "controls": [
       {
-        "label": "Felix CDP branch contracts (collateral mint)",
+        "label": "Felix WHYPE BorrowerOperations",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "chain": "hyperevm",
-        "capDescription": "Per-asset and global feUSD mint caps plus block-level mint/redemption caps; bounded by per-trove collateral ratio with $1-of-collateral redemption.",
+        "address": "0x5b271dc20ba7beb8eee276eb4f1644b6a217f0a3",
+        "capDescription": "User debt issuance is constrained by WHYPE collateral requirements and the branch maxDebtCap; the Felix admin can raise that cap.",
         "canRaiseCap": true,
-        "evidence": "At HyperEVM block 37553335: feUSD token (0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70) is an EIP-1967 proxy (implementation slot = 0x444322c3c54908fa5a7842a4f3ff085ec67f2598, proxy admin slot = 0x44a600c031dbdf652500f4a6d84b168056f13692). ProxyAdmin confirmed by getProxyImplementation returning the implementation address."
+        "modulesOrGuardsStatus": "present",
+        "observedAt": "2026-07-16",
+        "observedBlock": 40636026,
+        "sources": [
+          {
+            "label": "Felix HyperEVM deployment manifest",
+            "url": "https://github.com/felixprotocol/felix-contracts/blob/main/addresses/999.json"
+          },
+          {
+            "label": "Felix feUSD token source",
+            "url": "https://github.com/felixprotocol/felix-contracts/blob/main/src/feUSDToken.sol"
+          }
+        ],
+        "evidence": "At HyperEVM block 37553335: feUSD token (0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70) is an EIP-1967 proxy (implementation slot = 0x444322c3c54908fa5a7842a4f3ff085ec67f2598, proxy admin slot = 0x44a600c031dbdf652500f4a6d84b168056f13692). ProxyAdmin confirmed by getProxyImplementation returning the implementation address. At block 40636026, CollateralRegistry reported exactly four active collaterals; the WHYPE registry resolved this BorrowerOperations address and feUSD borrowerOperationsAddresses(address) returned true."
+      },
+      {
+        "label": "Felix WHYPE ActivePool",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "hyperevm",
+        "address": "0x39ebba742b6917d49d4a9ac7cf5c70f84d34cc9e",
+        "capDescription": "Mints only accounted WHYPE-branch aggregate interest and batch-management fees derived from branch debt; it has no independent arbitrary-mint entry point.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "present",
+        "observedAt": "2026-07-16",
+        "observedBlock": 40636026,
+        "sources": [
+          {
+            "label": "Felix HyperEVM deployment manifest",
+            "url": "https://github.com/felixprotocol/felix-contracts/blob/main/addresses/999.json"
+          },
+          {
+            "label": "Felix ActivePool source",
+            "url": "https://github.com/felixprotocol/felix-contracts/blob/main/src/ActivePool.sol"
+          }
+        ],
+        "evidence": "At block 40636026, the WHYPE registry resolved this ActivePool address and feUSD activePoolAddresses(address) returned true. The current ActivePool source mints only accounted aggregate interest, Stability Pool yield, and batch-management fees."
+      },
+      {
+        "label": "Felix UBTC BorrowerOperations",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "hyperevm",
+        "address": "0x36b7bd65276eda7cdc5f730da5cdb7ee7736672e",
+        "capDescription": "User debt issuance is constrained by UBTC collateral requirements and the branch maxDebtCap; the Felix admin can raise that cap.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "present",
+        "observedAt": "2026-07-16",
+        "observedBlock": 40636026,
+        "sources": [
+          {
+            "label": "Felix HyperEVM deployment manifest",
+            "url": "https://github.com/felixprotocol/felix-contracts/blob/main/addresses/999.json"
+          },
+          {
+            "label": "Felix feUSD token source",
+            "url": "https://github.com/felixprotocol/felix-contracts/blob/main/src/feUSDToken.sol"
+          }
+        ],
+        "evidence": "At block 40636026, CollateralRegistry index 1 resolved UBTC and its TroveManager; the UBTC branch registry resolved this BorrowerOperations address and feUSD borrowerOperationsAddresses(address) returned true."
+      },
+      {
+        "label": "Felix UBTC ActivePool",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "hyperevm",
+        "address": "0x8d99575ebbbda038a626ca769561c16fdd7a5939",
+        "capDescription": "Mints only accounted UBTC-branch aggregate interest and batch-management fees derived from branch debt; it has no independent arbitrary-mint entry point.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "present",
+        "observedAt": "2026-07-16",
+        "observedBlock": 40636026,
+        "sources": [
+          {
+            "label": "Felix HyperEVM deployment manifest",
+            "url": "https://github.com/felixprotocol/felix-contracts/blob/main/addresses/999.json"
+          },
+          {
+            "label": "Felix ActivePool source",
+            "url": "https://github.com/felixprotocol/felix-contracts/blob/main/src/ActivePool.sol"
+          }
+        ],
+        "evidence": "At block 40636026, the UBTC registry resolved this ActivePool address and feUSD activePoolAddresses(address) returned true. The current ActivePool source mints only accounted aggregate interest, Stability Pool yield, and batch-management fees."
+      },
+      {
+        "label": "Felix kHYPE BorrowerOperations",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "hyperevm",
+        "address": "0x3a2a181ab6e4ffb77c87ee201041a0806dadc397",
+        "capDescription": "User debt issuance is constrained by kHYPE collateral requirements and the branch maxDebtCap; the Felix admin can raise that cap.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "present",
+        "observedAt": "2026-07-16",
+        "observedBlock": 40636026,
+        "sources": [
+          {
+            "label": "Felix HyperEVM deployment manifest",
+            "url": "https://github.com/felixprotocol/felix-contracts/blob/main/addresses/999.json"
+          },
+          {
+            "label": "Felix feUSD token source",
+            "url": "https://github.com/felixprotocol/felix-contracts/blob/main/src/feUSDToken.sol"
+          }
+        ],
+        "evidence": "At block 40636026, CollateralRegistry index 2 resolved kHYPE and its TroveManager; the kHYPE branch registry resolved this BorrowerOperations address and feUSD borrowerOperationsAddresses(address) returned true."
+      },
+      {
+        "label": "Felix kHYPE ActivePool",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "hyperevm",
+        "address": "0xbfd0b103a49faf426f36864d19f5d871bf411a5a",
+        "capDescription": "Mints only accounted kHYPE-branch aggregate interest and batch-management fees derived from branch debt; it has no independent arbitrary-mint entry point.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "present",
+        "observedAt": "2026-07-16",
+        "observedBlock": 40636026,
+        "sources": [
+          {
+            "label": "Felix HyperEVM deployment manifest",
+            "url": "https://github.com/felixprotocol/felix-contracts/blob/main/addresses/999.json"
+          },
+          {
+            "label": "Felix ActivePool source",
+            "url": "https://github.com/felixprotocol/felix-contracts/blob/main/src/ActivePool.sol"
+          }
+        ],
+        "evidence": "At block 40636026, the kHYPE registry resolved this ActivePool address and feUSD activePoolAddresses(address) returned true. The current ActivePool source mints only accounted aggregate interest, Stability Pool yield, and batch-management fees."
+      },
+      {
+        "label": "Felix wstHYPE BorrowerOperations",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "hyperevm",
+        "address": "0x389c03c1f77981d158fbe286e7cafac2bb2fe83e",
+        "capDescription": "User debt issuance is constrained by wstHYPE collateral requirements and the branch maxDebtCap; the Felix admin can raise that cap.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "present",
+        "observedAt": "2026-07-16",
+        "observedBlock": 40636026,
+        "sources": [
+          {
+            "label": "Felix HyperEVM deployment manifest",
+            "url": "https://github.com/felixprotocol/felix-contracts/blob/main/addresses/999.json"
+          },
+          {
+            "label": "Felix feUSD token source",
+            "url": "https://github.com/felixprotocol/felix-contracts/blob/main/src/feUSDToken.sol"
+          }
+        ],
+        "evidence": "At block 40636026, CollateralRegistry index 3 resolved wstHYPE and its TroveManager; the wstHYPE branch registry resolved this BorrowerOperations address and feUSD borrowerOperationsAddresses(address) returned true."
+      },
+      {
+        "label": "Felix wstHYPE ActivePool",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "hyperevm",
+        "address": "0x7abca40474d6b5f000f801d7fe7e0df4c89425ff",
+        "capDescription": "Mints only accounted wstHYPE-branch aggregate interest and batch-management fees derived from branch debt; it has no independent arbitrary-mint entry point.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "present",
+        "observedAt": "2026-07-16",
+        "observedBlock": 40636026,
+        "sources": [
+          {
+            "label": "Felix HyperEVM deployment manifest",
+            "url": "https://github.com/felixprotocol/felix-contracts/blob/main/addresses/999.json"
+          },
+          {
+            "label": "Felix ActivePool source",
+            "url": "https://github.com/felixprotocol/felix-contracts/blob/main/src/ActivePool.sol"
+          }
+        ],
+        "evidence": "At block 40636026, the wstHYPE registry resolved this ActivePool address and feUSD activePoolAddresses(address) returned true. The current ActivePool source mints only accounted aggregate interest, Stability Pool yield, and batch-management fees."
       },
       {
         "label": "Felix admin multisig (ultimate upgrade and parameter authority)",
@@ -489,9 +671,9 @@
       }
     ],
     "review": {
-      "evidence": "On-chain reads traced the full Felix admin chain: feUSD token (0x02c6a2fa) → ProxyAdmin (0x44a600c0, owner=0xf42fdd95) → nested admin proxy 0xf42fdd95 (implementation 0xd2fe30df..., ProxyAdmin 0xdf1293b4) → 0xdf1293b4 owner()=0x699090e7 → Gnosis Safe 1.3.0 (3-of-6, 6 current EOA signers, no modules, no guard, fallback handler=0x017062a1). Rechecked at HyperEVM block 40435040; the proxy, implementation, and ownership chain is unchanged. The same 0xf42f proxy owns the Felix AddressesRegistry (0x9de1e57049c475736289cb006212f3e1dce4711b). The 3-of-6 Safe is the ultimate admin authority.",
-      "reviewer": "Codex CTRL batch 07",
-      "reviewedAt": "2026-07-14",
+      "evidence": "On-chain reads traced the full Felix admin chain: feUSD token (0x02c6a2fa) → ProxyAdmin (0x44a600c0, owner=0xf42fdd95) → nested admin proxy 0xf42fdd95 (implementation 0xd2fe30df..., ProxyAdmin 0xdf1293b4) → 0xdf1293b4 owner()=0x699090e7 → Gnosis Safe 1.3.0 (3-of-6, 6 current EOA signers, no modules, no guard, fallback handler=0x017062a1). Rechecked at HyperEVM block 40435040; the proxy, implementation, and ownership chain is unchanged. The same 0xf42f proxy owns the Felix AddressesRegistry (0x9de1e57049c475736289cb006212f3e1dce4711b). The 3-of-6 Safe is the ultimate admin authority. At block 40636026, CollateralRegistry totalCollaterals() returned 4 and indices 0-3 resolved WHYPE, UBTC, kHYPE, and wstHYPE while index 4 reverted. Each branch registry resolved one BorrowerOperations and one ActivePool address, and all eight corresponding feUSD authorization mappings returned true.",
+      "reviewer": "Codex P3 control review",
+      "reviewedAt": "2026-07-16",
       "sources": [
         {
           "label": "Felix docs",
@@ -500,6 +682,14 @@
         {
           "label": "feUSD token on HyperEVM",
           "url": "https://explorer.hyperliquid.xyz/address/0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70"
+        },
+        {
+          "label": "Felix HyperEVM deployment manifest",
+          "url": "https://github.com/felixprotocol/felix-contracts/blob/main/addresses/999.json"
+        },
+        {
+          "label": "Felix feUSD token source",
+          "url": "https://github.com/felixprotocol/felix-contracts/blob/main/src/feUSDToken.sol"
         }
       ]
     }

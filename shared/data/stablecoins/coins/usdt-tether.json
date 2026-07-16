@@ -543,8 +543,8 @@
   "launchDate": "2014-10-06",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "USDT has many issuer-native deployments, but the reviewed A5 route set also includes USDT0, which locks canonical USDT in an Ethereum OFT adapter and mints equivalent USDT0 on destination chains. Pharos scores the reviewed cross-chain route conservatively as external lock/mint because the weakest durable route depends on OFT lock/mint infrastructure.",
-    "reviewedAt": "2026-06-13",
+    "summary": "USDT has issuer-native deployments on Tether-supported protocols and third-party representations on other networks. This review confirms only the contracts listed in Tether's supported-protocol registry as native issuance; USDT0 and every other unverified route remain conservatively unresolved at deployment level.",
+    "reviewedAt": "2026-07-16",
     "reviewer": "Codex bridge route review",
     "confidence": "verified",
     "protocols": [
@@ -575,6 +575,14 @@
       {
         "label": "L2BEAT LayerZero",
         "url": "https://l2beat.com/interop/protocols/layerzero"
+      },
+      {
+        "label": "Tether supported protocols and integration guidelines",
+        "url": "https://tether.to/en/supported-protocols/"
+      },
+      {
+        "label": "Tether International Relevant Information Document",
+        "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
       }
     ],
     "routes": [
@@ -582,31 +590,49 @@
         "id": "ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7",
         "destinationChain": "ethereum",
         "contractAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Tether native USDT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Tether supported protocols and integration guidelines",
+            "url": "https://tether.to/en/supported-protocols/"
+          },
+          {
+            "label": "Tether International Relevant Information Document",
+            "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+          }
+        ]
       },
       {
         "id": "tron:TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
         "destinationChain": "tron",
         "contractAddress": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Tether native USDT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Tether supported protocols and integration guidelines",
+            "url": "https://tether.to/en/supported-protocols/"
+          },
+          {
+            "label": "Tether International Relevant Information Document",
+            "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+          }
+        ]
       },
       {
         "id": "arbitrum:0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9",
@@ -657,16 +683,25 @@
         "id": "avalanche:0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7",
         "destinationChain": "avalanche",
         "contractAddress": "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Tether native USDT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Tether supported protocols and integration guidelines",
+            "url": "https://tether.to/en/supported-protocols/"
+          },
+          {
+            "label": "Tether International Relevant Information Document",
+            "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+          }
+        ]
       },
       {
         "id": "bsc:0x55d398326f99059ff775485246999027b3197955",
@@ -687,106 +722,169 @@
         "id": "celo:0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e",
         "destinationChain": "celo",
         "contractAddress": "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Tether native USDT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Tether supported protocols and integration guidelines",
+            "url": "https://tether.to/en/supported-protocols/"
+          },
+          {
+            "label": "Tether International Relevant Information Document",
+            "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+          }
+        ]
       },
       {
         "id": "solana:Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
         "destinationChain": "solana",
         "contractAddress": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Tether native USDT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Tether supported protocols and integration guidelines",
+            "url": "https://tether.to/en/supported-protocols/"
+          },
+          {
+            "label": "Tether International Relevant Information Document",
+            "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+          }
+        ]
       },
       {
         "id": "ton:EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs",
         "destinationChain": "ton",
         "contractAddress": "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Tether native USDT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Tether supported protocols and integration guidelines",
+            "url": "https://tether.to/en/supported-protocols/"
+          },
+          {
+            "label": "Tether International Relevant Information Document",
+            "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+          }
+        ]
       },
       {
         "id": "near:usdt.tether-token.near",
         "destinationChain": "near",
         "contractAddress": "usdt.tether-token.near",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Tether native USDT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Tether supported protocols and integration guidelines",
+            "url": "https://tether.to/en/supported-protocols/"
+          },
+          {
+            "label": "Tether International Relevant Information Document",
+            "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+          }
+        ]
       },
       {
         "id": "aptos:0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b",
         "destinationChain": "aptos",
         "contractAddress": "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Tether native USDT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Tether supported protocols and integration guidelines",
+            "url": "https://tether.to/en/supported-protocols/"
+          },
+          {
+            "label": "Tether International Relevant Information Document",
+            "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+          }
+        ]
       },
       {
         "id": "klaytn:0xd077a400968890eacc75cdc901f0356c943e4fdb",
         "destinationChain": "klaytn",
         "contractAddress": "0xd077a400968890eacc75cdc901f0356c943e4fdb",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Tether native USDT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Tether supported protocols and integration guidelines",
+            "url": "https://tether.to/en/supported-protocols/"
+          },
+          {
+            "label": "Tether International Relevant Information Document",
+            "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+          }
+        ]
       },
       {
         "id": "kava:0x919c1c267bc06a7039e03fcc2ef738525769109c",
         "destinationChain": "kava",
         "contractAddress": "0x919c1c267bc06a7039e03fcc2ef738525769109c",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Tether native USDT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Tether supported protocols and integration guidelines",
+            "url": "https://tether.to/en/supported-protocols/"
+          },
+          {
+            "label": "Tether International Relevant Information Document",
+            "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+          }
+        ]
       },
       {
         "id": "sui:0x375f70cf2ae4c00bf37117d0c85a2c71545e6ee05c4a5c7d282cd66a4504b068::usdt::USDT",
@@ -807,31 +905,49 @@
         "id": "polkadot:1984",
         "destinationChain": "polkadot",
         "contractAddress": "1984",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Tether native USDT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Tether supported protocols and integration guidelines",
+            "url": "https://tether.to/en/supported-protocols/"
+          },
+          {
+            "label": "Tether International Relevant Information Document",
+            "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+          }
+        ]
       },
       {
         "id": "tezos:KT1XnTn74bUtxHfDtBmm2bGZAQfhPbvKWR8o",
         "destinationChain": "tezos",
         "contractAddress": "KT1XnTn74bUtxHfDtBmm2bGZAQfhPbvKWR8o",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Tether native USDT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Tether supported protocols and integration guidelines",
+            "url": "https://tether.to/en/supported-protocols/"
+          },
+          {
+            "label": "Tether International Relevant Information Document",
+            "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+          }
+        ]
       },
       {
         "id": "injective:peggy0xdAC17F958D2ee523a2206206994597C13D831ec7",

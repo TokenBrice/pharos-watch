@@ -138,6 +138,7 @@
     "report-cards:calibrate-exit-routes": "tsx worker/scripts/generate-exit-route-calibration.ts",
     "safety-score-v9:replay": "tsx worker/scripts/replay-safety-score-v9.ts",
     "safety-score-v9:replay-summary": "node scripts/maintenance/summarize-safety-score-v9-replay.mjs",
+    "safety-score-v9:calibration-analysis": "tsx scripts/maintenance/analyze-safety-score-v9-calibration.mjs",
     "safety-score-v9:shadow-gate": "tsx worker/scripts/check-safety-score-v9-shadow-gate.ts",
     "safety-score-v9:readiness": "tsx scripts/maintenance/generate-safety-score-v9-readiness.ts",
     "safety-score-v9:coverage": "tsx scripts/maintenance/generate-safety-score-v9-coverage-report.ts",

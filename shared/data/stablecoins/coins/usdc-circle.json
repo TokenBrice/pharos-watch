@@ -519,11 +519,28 @@
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "USDC's cross-chain route is primarily issuer-native Circle infrastructure, including CCTP burn/mint and Circle Gateway surfaces tracked by L2BEAT Interop. Because the route is issuer-operated and burn/mint based, it is scored as a strong bridge-route profile; the penalty-only Safety Score blend cannot lift USDC's Decentralization score.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex L2BEAT route review",
+    "summary": "Circle's contract registry identifies the reviewed native USDC deployments below, while Circle documents CCTP as native USDC burn/mint infrastructure. Hyperliquid's official bridge documentation identifies its HyperCore USDC as an Arbitrum lock-and-mint representation controlled by the stake-weighted validator set. Deployments not supported by these primary sources remain unresolved.",
+    "reviewedAt": "2026-07-16",
+    "reviewer": "SOL-FEEDER primary-source deployment review",
     "confidence": "verified",
     "protocols": [
+      {
+        "source": "docs",
+        "name": "Circle native USDC and CCTP",
+        "url": "https://developers.circle.com/cctp/concepts/supported-chains-and-domains",
+        "bridgeTypes": [
+          "nativeIssuance",
+          "burnAndMint"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "Hyperliquid bridge",
+        "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hypercore/bridge",
+        "bridgeTypes": [
+          "validatedBridge"
+        ]
+      },
       {
         "source": "l2beat",
         "name": "CCTP v2",
@@ -545,6 +562,22 @@
     ],
     "sources": [
       {
+        "label": "Circle USDC mainnet contract addresses",
+        "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+      },
+      {
+        "label": "Circle CCTP supported blockchains and domains",
+        "url": "https://developers.circle.com/cctp/concepts/supported-chains-and-domains"
+      },
+      {
+        "label": "Hyperliquid bridge architecture",
+        "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hypercore/bridge"
+      },
+      {
+        "label": "Hyperliquid Bridge2 contract and flow",
+        "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/bridge2"
+      },
+      {
         "label": "Circle USDC docs",
         "url": "https://developers.circle.com/stablecoins/what-is-usdc"
       },
@@ -563,7 +596,7 @@
         "destinationChain": "ethereum",
         "canonicalChain": "ethereum",
         "contractAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        "protocol": "Circle",
+        "protocol": "Circle native USDC",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
@@ -571,8 +604,12 @@
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12",
+        "observedAt": "2026-07-16",
         "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          },
           {
             "label": "Circle USDC docs",
             "url": "https://developers.circle.com/stablecoins/what-is-usdc"
@@ -591,91 +628,121 @@
         "id": "arbitrum:0xaf88d065e77c8cc2239327c5edb3a432268e5831",
         "destinationChain": "arbitrum",
         "contractAddress": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "base:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
         "destinationChain": "base",
         "contractAddress": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "optimism:0x0b2c639c533813f4aa9d7837caf62653d097ff85",
         "destinationChain": "optimism",
         "contractAddress": "0x0b2c639c533813f4aa9d7837caf62653d097ff85",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "polygon:0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
         "destinationChain": "polygon",
         "contractAddress": "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "avalanche:0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
         "destinationChain": "avalanche",
         "contractAddress": "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "celo:0xceba9300f2b948710d2653dd7b07f33a8b32118c",
         "destinationChain": "celo",
         "contractAddress": "0xceba9300f2b948710d2653dd7b07f33a8b32118c",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "gnosis:0xddafbb505ad214d7b80b1f830fccc89b60fb7a83",
@@ -696,46 +763,61 @@
         "id": "solana:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
         "destinationChain": "solana",
         "contractAddress": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "sui:0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
         "destinationChain": "sui",
         "contractAddress": "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "aptos:0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
         "destinationChain": "aptos",
         "contractAddress": "0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "tron:TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8",
@@ -756,181 +838,241 @@
         "id": "zksync:0x1d17cbcf0d6d143135ae902365d2e5e2a16538d4",
         "destinationChain": "zksync",
         "contractAddress": "0x1d17cbcf0d6d143135ae902365d2e5e2a16538d4",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "sonic:0x29219dd400f2bf60e5a23d13be72b486d4038894",
         "destinationChain": "sonic",
         "contractAddress": "0x29219dd400f2bf60e5a23d13be72b486d4038894",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "starknet:0x33068f6539f8e6e6b131e6b2b814e6c34a5224bc66947c47dab9dfee93b35fb",
         "destinationChain": "starknet",
         "contractAddress": "0x33068f6539f8e6e6b131e6b2b814e6c34a5224bc66947c47dab9dfee93b35fb",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "near:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
         "destinationChain": "near",
         "contractAddress": "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "algorand:31566704",
         "destinationChain": "algorand",
         "contractAddress": "31566704",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "hedera:0.0.456858",
         "destinationChain": "hedera",
         "contractAddress": "0.0.456858",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "sei:0xe15fc38f6d8c56af07bbcbe3baf5708a2bf42392",
         "destinationChain": "sei",
         "contractAddress": "0xe15fc38f6d8c56af07bbcbe3baf5708a2bf42392",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "worldchain:0x79a02482a880bce3f13e09da970dc34db4cd24d1",
         "destinationChain": "worldchain",
         "contractAddress": "0x79a02482a880bce3f13e09da970dc34db4cd24d1",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "unichain:0x078d782b760474a361dda0af3839290b0ef57ad6",
         "destinationChain": "unichain",
         "contractAddress": "0x078d782b760474a361dda0af3839290b0ef57ad6",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "ink:0x2d270e6886d130d724215a266106e6832161eaed",
         "destinationChain": "ink",
         "contractAddress": "0x2d270e6886d130d724215a266106e6832161eaed",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "polkadot:1337",
         "destinationChain": "polkadot",
         "contractAddress": "1337",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "xrpl:5553444300000000000000000000000000000000.rGm7WCVp9gb4jZHWTEtGUr4dd74z2XuWhE",
         "destinationChain": "xrpl",
         "contractAddress": "5553444300000000000000000000000000000000.rGm7WCVp9gb4jZHWTEtGUr4dd74z2XuWhE",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "moonriver:0xffffffff7d2b0b761af01ca8e25242976ac0ad7d",
@@ -951,76 +1093,101 @@
         "id": "plume:0x222365ef19f7947e5484218551b56bb3965aa7af",
         "destinationChain": "plume",
         "contractAddress": "0x222365ef19f7947e5484218551b56bb3965aa7af",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "hyperevm:0xb88339cb7199b77e23db6e890353e22632ba630f",
         "destinationChain": "hyperevm",
         "contractAddress": "0xb88339cb7199b77e23db6e890353e22632ba630f",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "monad:0x754704bc059f8c67012fed69bc8a327a5aafb603",
         "destinationChain": "monad",
         "contractAddress": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "xdc:0xfa2958cb79b0491cc627c1557f441ef849ca8eb1",
         "destinationChain": "xdc",
         "contractAddress": "0xfa2958cb79b0491cc627c1557f441ef849ca8eb1",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "stellar:USDC-GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
         "destinationChain": "stellar",
         "contractAddress": "USDC-GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "cronos:0x3d7f2c478aafdb65542bcb44bceec05849999d2d",
@@ -1041,16 +1208,21 @@
         "id": "noble:uusdc",
         "destinationChain": "noble",
         "contractAddress": "uusdc",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "mantle:0x09bc4e0d864854c6afb6eb9a9cdf58ac190d0df9",
@@ -1071,16 +1243,21 @@
         "id": "linea:0x176211869ca2b568f2a7d4ee941e073a821ee1ff",
         "destinationChain": "linea",
         "contractAddress": "0x176211869ca2b568f2a7d4ee941e073a821ee1ff",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "scroll:0x06efdbff2a14a7c8e15944d1f4a48f9f95f663a4",
@@ -1206,76 +1383,112 @@
         "id": "codex:0xd996633a415985dbd7d6d12f4a4343e31f5037cf",
         "destinationChain": "codex",
         "contractAddress": "0xd996633a415985dbd7d6d12f4a4343e31f5037cf",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "edgechain:0x98d2919b9a214e6fa5384ac81e6864ba686ad74c",
         "destinationChain": "edgechain",
         "contractAddress": "0x98d2919b9a214e6fa5384ac81e6864ba686ad74c",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "hyperliquid:0x6d1e7cde53ba9467b783cb7c530ce054",
         "destinationChain": "hyperliquid",
         "contractAddress": "0x6d1e7cde53ba9467b783cb7c530ce054",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Hyperliquid native USDC bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sourceChain": "arbitrum",
+        "canonicalChain": "arbitrum",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x2df1c51e09aecf9cacb7bc98cb1742757f163df7",
+        "failureDomainKeys": [
+          "bridge:hyperliquid-arbitrum-usdc"
+        ],
+        "sources": [
+          {
+            "label": "Hyperliquid bridge architecture",
+            "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hypercore/bridge"
+          },
+          {
+            "label": "Hyperliquid Bridge2 contract and flow",
+            "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/bridge2"
+          }
+        ]
       },
       {
         "id": "injective:0xa00c59ff5a080d2b954d0c75e46e22a0c371235a",
         "destinationChain": "injective",
         "contractAddress": "0xa00c59ff5a080d2b954d0c75e46e22a0c371235a",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "morph-l2:0xcfb1186f4e93d60e60a8bdd997427d1f33bc372b",
         "destinationChain": "morph-l2",
         "contractAddress": "0xcfb1186f4e93d60e60a8bdd997427d1f33bc372b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       }
     ]
   },

@@ -268,7 +268,61 @@
     "mintPath": "amo-or-custodian-hybrid",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "frxUSD can be minted and redeemed through governance-approved FrxUSDCustodian contracts with per-custodian caps; the token and custodians are owned by the current 4/7 frxUSD owner/custodian admin Safe.",
+    "summary": "frxUSD can be minted and redeemed through governance-approved FrxUSDCustodian contracts with per-custodian caps; the token and custodians are owned by the current 4/7 frxUSD owner/custodian admin Safe, while proxy upgrades require the same Safe to pass through a 24-hour timelock.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+        "0xFE2Ea8dE262d956e852F12DE108fda57171a0a29",
+        "0x860Cc723935FC9A15fF8b1A94237a711DFeF7857",
+        "0xe827abf9f462ac4f147753d86bc5f91e186e4e9c",
+        "0x4F95C5bA0C7c69FB2f9340E190cCeE890B3bd87c",
+        "0x5fbAa3A3B489199338fbD85F7E3D444dc0504F33"
+      ],
+      "implementationAddresses": [
+        "0x0000000048d2c8baf31742f6765383278bada4d5",
+        "0x1f6d8f7fbe237aee37fcf9df958bb8bb5948320e",
+        "0x4db9c0e8893b565f7419cf3886062845a8cbc529",
+        "0xbccd08e2996a5c748e01fde3feca959dee24276b",
+        "0x0a2d27a86a2ea07bcc34e457c65aeca7631c0f10",
+        "0x7617e69d47c1c18e2e3bb0b470aa0fbbd45b57da"
+      ],
+      "adminAddresses": [
+        "0x0b2c3df006b2bd43cbcc60075e7a0bf314474ed6",
+        "0x3cdf7631aa3c8015445041ff4c5b91783ad53c1d",
+        "0x53043dc135b68521834c06592fbefdd93e770e9d",
+        "0x69dc4f46bb49cba89a95715923937de8a8f2071f",
+        "0x1a4563f238fa693ba9771cdba5ee8280a114ed7e",
+        "0x3046a74ff708774efbabba685b5b93fa1d134aeb"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 86400,
+      "controlRef": "frxUSD upgrade timelock",
+      "observedAt": "2026-07-16",
+      "observedBlock": 25546949,
+      "sources": [
+        {
+          "label": "FraxNet custodian addresses",
+          "url": "https://docs.frax.com/fraxnet/addresses/fraxnet-custodians"
+        },
+        {
+          "label": "frxUSD token verified proxy",
+          "url": "https://eth.blockscout.com/address/0xcacd6fd266af91b8aed52accc382b4e165586e29?tab=contract"
+        },
+        {
+          "label": "frxUSD ProxyAdmin verified source",
+          "url": "https://eth.blockscout.com/address/0x0b2c3df006b2bd43cbcc60075e7a0bf314474ed6?tab=contract"
+        },
+        {
+          "label": "frxUSD upgrade timelock verified source",
+          "url": "https://eth.blockscout.com/address/0xb898Ad2976b4d8f2E21521C9db16b7497825E503?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -279,6 +333,8 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-16",
+        "observedBlock": 25546949,
         "capDescription": "FrxUSDCustodian vaults mint/redeem frxUSD against approved backing assets subject to custodian-specific caps and fees.",
         "sources": [
           {
@@ -290,7 +346,7 @@
             "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
           }
         ],
-        "evidence": "FraxNet docs list this custodian address; owner() returned the frxUSD owner/custodian admin Safe at Ethereum block 25294620."
+        "evidence": "FraxNet docs list this custodian address; at Ethereum block 25546949 owner() returned the frxUSD owner/custodian admin Safe, while EIP-1967 slots resolved implementation 0x1f6d8f7fbe237aee37fcf9df958bb8bb5948320e and ProxyAdmin 0x3cdf7631aa3c8015445041ff4c5b91783ad53c1d."
       },
       {
         "chain": "ethereum",
@@ -301,6 +357,8 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-16",
+        "observedBlock": 25546949,
         "capDescription": "FrxUSDCustodian vaults mint/redeem frxUSD against approved backing assets subject to custodian-specific caps and fees.",
         "sources": [
           {
@@ -312,7 +370,7 @@
             "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
           }
         ],
-        "evidence": "FraxNet docs list this custodian address; owner() returned the frxUSD owner/custodian admin Safe at Ethereum block 25294620."
+        "evidence": "FraxNet docs list this custodian address; at Ethereum block 25546949 owner() returned the frxUSD owner/custodian admin Safe, while EIP-1967 slots resolved implementation 0x4db9c0e8893b565f7419cf3886062845a8cbc529 and ProxyAdmin 0x53043dc135b68521834c06592fbefdd93e770e9d."
       },
       {
         "chain": "ethereum",
@@ -323,6 +381,8 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-16",
+        "observedBlock": 25546949,
         "capDescription": "FrxUSDCustodian vaults mint/redeem frxUSD against approved backing assets subject to custodian-specific caps and fees.",
         "sources": [
           {
@@ -334,7 +394,7 @@
             "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
           }
         ],
-        "evidence": "FraxNet docs list this custodian address; owner() returned the frxUSD owner/custodian admin Safe at Ethereum block 25294620."
+        "evidence": "FraxNet docs list this custodian address; at Ethereum block 25546949 owner() returned the frxUSD owner/custodian admin Safe, while EIP-1967 slots resolved implementation 0xbccd08e2996a5c748e01fde3feca959dee24276b and ProxyAdmin 0x69dc4f46bb49cba89a95715923937de8a8f2071f."
       },
       {
         "chain": "ethereum",
@@ -345,6 +405,8 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-16",
+        "observedBlock": 25546949,
         "capDescription": "FrxUSDCustodian vaults mint/redeem frxUSD against approved backing assets subject to custodian-specific caps and fees.",
         "sources": [
           {
@@ -356,7 +418,7 @@
             "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
           }
         ],
-        "evidence": "FraxNet docs list this custodian address; owner() returned the frxUSD owner/custodian admin Safe at Ethereum block 25294620."
+        "evidence": "FraxNet docs list this custodian address; at Ethereum block 25546949 owner() returned the frxUSD owner/custodian admin Safe, while EIP-1967 slots resolved implementation 0x0a2d27a86a2ea07bcc34e457c65aeca7631c0f10 and ProxyAdmin 0x1a4563f238fa693ba9771cdba5ee8280a114ed7e."
       },
       {
         "chain": "ethereum",
@@ -367,6 +429,8 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-16",
+        "observedBlock": 25546949,
         "capDescription": "FrxUSDCustodian vaults mint/redeem frxUSD against approved backing assets subject to custodian-specific caps and fees.",
         "sources": [
           {
@@ -378,7 +442,34 @@
             "url": "https://docs.frax.com/fraxnet/contracts/frxUsdCustodians"
           }
         ],
-        "evidence": "FraxNet docs list this custodian address; owner() returned the frxUSD owner/custodian admin Safe at Ethereum block 25294620."
+        "evidence": "FraxNet docs list this custodian address; at Ethereum block 25546949 owner() returned the frxUSD owner/custodian admin Safe, while EIP-1967 slots resolved implementation 0x7617e69d47c1c18e2e3bb0b470aa0fbbd45b57da and ProxyAdmin 0x3046a74ff708774efbabba685b5b93fa1d134aeb."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb898Ad2976b4d8f2E21521C9db16b7497825E503",
+        "label": "frxUSD upgrade timelock",
+        "role": "timelock",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 86400,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-16",
+        "observedBlock": 25546949,
+        "failureDomainKeys": [
+          "safe:ethereum:0xfffffF4F3baC444b2C0ecf2A1840d018bE783937"
+        ],
+        "sources": [
+          {
+            "label": "frxUSD upgrade timelock verified source",
+            "url": "https://eth.blockscout.com/address/0xb898Ad2976b4d8f2E21521C9db16b7497825E503?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25546949, all six frxUSD token/custodian ProxyAdmins returned this verified Compound-style timelock as owner. Its admin() was the 4-of-7 frxUSD owner/custodian admin Safe, pendingAdmin() was zero, and delay() was 86400 seconds; verified source requires the admin to queue upgrades and wait through the delay before execution."
       },
       {
         "chain": "ethereum",
@@ -391,8 +482,13 @@
         "signerCount": 7,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-16",
+        "observedBlock": 25546949,
+        "failureDomainKeys": [
+          "safe:ethereum:0xfffffF4F3baC444b2C0ecf2A1840d018bE783937"
+        ],
         "safe": {
-          "version": "1.3.0+L2",
+          "version": "1.3.0",
           "threshold": 4,
           "owners": [
             "0x6933BCC3e96f1C4d2cb73Cb391d854b18Ab7A4F2",
@@ -407,8 +503,9 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "moduleGuard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
-          "observedBlock": 25294620,
-          "source": "safe-api"
+          "observedBlock": 25546949,
+          "observedAt": "2026-07-16",
+          "source": "onchain"
         },
         "sources": [
           {
@@ -416,7 +513,7 @@
             "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937/"
           }
         ],
-        "evidence": "frxUSD token owner() and all listed Ethereum custodian owner() reads returned this Safe at Ethereum block 25294620; Safe API returned threshold 4, seven owners, no enabled modules, zero guard, and zero moduleGuard on 2026-06-11."
+        "evidence": "At Ethereum block 25546949, frxUSD token owner(), every listed custodian owner(), and the upgrade timelock admin() returned this Safe. On-chain Safe reads returned version 1.3.0, threshold 4, the seven listed owners, no enabled modules, zero guard, and zero moduleGuard."
       }
     ],
     "review": {
@@ -432,11 +529,27 @@
         {
           "label": "Safe transaction service",
           "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937/"
+        },
+        {
+          "label": "frxUSD token verified proxy",
+          "url": "https://eth.blockscout.com/address/0xcacd6fd266af91b8aed52accc382b4e165586e29?tab=contract"
+        },
+        {
+          "label": "frxUSD ProxyAdmin verified source",
+          "url": "https://eth.blockscout.com/address/0x0b2c3df006b2bd43cbcc60075e7a0bf314474ed6?tab=contract"
+        },
+        {
+          "label": "frxUSD upgrade timelock verified source",
+          "url": "https://eth.blockscout.com/address/0xb898Ad2976b4d8f2E21521C9db16b7497825E503?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
         }
       ],
-      "evidence": "FraxNet docs list the current frxUSD custodian contracts; Phase 0c second pass confirmed frxUSD token owner() and every listed Ethereum custodian owner() resolves to 0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937 at Ethereum block 25294620. The Safe API record for that address returns a 4/7 Safe with no enabled modules, zero guard, and zero moduleGuard.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25546949, the frxUSD token and all five custodian proxies published by Frax resolved distinct EIP-1967 implementations and ProxyAdmins. Every ProxyAdmin had identical verified runtime and owner() = 0xb898Ad2976b4d8f2E21521C9db16b7497825E503. That verified timelock had admin 0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937, pendingAdmin zero, and a 86400-second delay. The same 4-of-7 Safe directly owned the token and every custodian, could raise their mint caps, and had no enabled modules, guard, or module guard. This establishes the complete published Ethereum token/custodian upgrade and mint-control chain; replacing mint-critical logic requires the Safe-controlled 24-hour timelock.",
+      "reviewer": "Codex V9 control curation",
+      "reviewedAt": "2026-07-16"
     }
   },
   "deploymentModel": "third-party-bridge",

@@ -1,5 +1,7 @@
 import { z } from "zod";
 import mechanismReviewOverlaysAsset from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
+import { sha256Hex } from "@shared/lib/sha256";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { ProofOfReservesLatestReport, StablecoinMeta } from "@shared/types/core";
 import {
   V9MechanismRiskReviewSchema,
@@ -386,23 +388,57 @@ export function expandOverlayReview(
   return V9MechanismRiskReviewSchema.parse(review);
 }
 
+const MECHANISM_REVIEW_OVERLAY_FILE = MechanismReviewOverlayFileSchema.parse(mechanismReviewOverlaysAsset);
+
+export const SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST = sha256Hex(
+  stableJsonStringifyV1({
+    domain: "safety-score-v9.mechanism-review-overlays.v1",
+    overlays: MECHANISM_REVIEW_OVERLAY_FILE,
+  }),
+);
+
 const MECHANISM_REVIEW_OVERLAYS: ReadonlyMap<string, MechanismReviewOverlay> = new Map(
-  MechanismReviewOverlayFileSchema.parse(mechanismReviewOverlaysAsset).overlays.map((overlay) => [
-    overlay.assetId,
-    overlay,
-  ]),
+  MECHANISM_REVIEW_OVERLAY_FILE.overlays.map((overlay) => [overlay.assetId, overlay]),
 );
 
 // The approved D1 fiat/tbill overlay standard re-bounds curated claims after
-// twelve months. An overlay whose review has aged past that window (or whose
-// date is unparseable) is treated as absent so the mechanism review falls back
-// to the conservative bounded-unknown evidence path (VER2-004).
+// twelve months. Date-only reviews become score-bearing after their UTC day has
+// elapsed, preventing evidence published later that day from entering an earlier
+// point-in-time capture. Invalid or expired reviews fall back to the conservative
+// bounded-unknown evidence path (VER2-004).
 const MECHANISM_OVERLAY_MAX_AGE_SEC = 31_536_000;
+const DAY_SEC = 86_400;
 
 function isMechanismOverlayCurrent(overlay: MechanismReviewOverlay, clockSec: number): boolean {
   const reviewedAtSec = Date.parse(`${overlay.reviewedAt}T00:00:00.000Z`) / 1_000;
   if (!Number.isFinite(reviewedAtSec)) return false;
-  return reviewedAtSec + MECHANISM_OVERLAY_MAX_AGE_SEC > clockSec;
+  return reviewedAtSec + DAY_SEC <= clockSec && reviewedAtSec + MECHANISM_OVERLAY_MAX_AGE_SEC > clockSec;
+}
+
+function currentMechanismOverlay(assetId: string, archetype: string, clockSec: number): MechanismReviewOverlay | null {
+  const overlay = MECHANISM_REVIEW_OVERLAYS.get(assetId);
+  return overlay && overlay.archetype === archetype && isMechanismOverlayCurrent(overlay, clockSec) ? overlay : null;
+}
+
+export function getSafetyScoreV9MechanismOverlayEvidence(
+  assetId: string,
+  archetype: string,
+  clockSec: number,
+): {
+  reviewedAt: string;
+  sources: MechanismReviewOverlay["sources"];
+  payload: MechanismReviewOverlay;
+  maxAgeSec: number;
+} | null {
+  const overlay = currentMechanismOverlay(assetId, archetype, clockSec);
+  return overlay
+    ? {
+        reviewedAt: overlay.reviewedAt,
+        sources: overlay.sources,
+        payload: overlay,
+        maxAgeSec: MECHANISM_OVERLAY_MAX_AGE_SEC,
+      }
+    : null;
 }
 
 /**
@@ -420,8 +456,8 @@ export function buildSafetyScoreV9MechanismReview(
   meta: MechanismMeta,
   archetype: string,
 ): V9MechanismRiskReview | null {
-  const overlay = MECHANISM_REVIEW_OVERLAYS.get(meta.id);
-  if (overlay && overlay.archetype === archetype && isMechanismOverlayCurrent(overlay, fixedInput.clockSec)) {
+  const overlay = currentMechanismOverlay(meta.id, archetype, fixedInput.clockSec);
+  if (overlay) {
     const fallbackReview =
       archetype === "fiat-cash"
         ? buildFiatCashReview(fixedInput, meta)

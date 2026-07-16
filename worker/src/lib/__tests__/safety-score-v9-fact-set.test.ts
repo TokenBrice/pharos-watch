@@ -150,8 +150,7 @@ function exactFixedInput(
             methodologyVersion: "peg:fixture-v1",
           },
         },
-    activeDepegPeakBpsById:
-      args.activeDepegPeakBps === undefined ? {} : { alpha: args.activeDepegPeakBps },
+    activeDepegPeakBpsById: args.activeDepegPeakBps === undefined ? {} : { alpha: args.activeDepegPeakBps },
     dexLiqMap: {
       alpha: {
         liquidityScore: args.liquidityScore ?? 12,
@@ -256,7 +255,6 @@ function exactTwoAssetFixedInput(options: { mapAlphaCollateral?: boolean; omitAl
                 risk: "low" as const,
                 coinId: "beta",
                 depType: "collateral" as const,
-                assetClass: "stablecoin" as const,
                 issuerOrObligor: "asset:beta",
                 riskFactors: ["counterparty" as const],
                 liquidityHorizon: "immediate" as const,
@@ -305,6 +303,7 @@ function routeReview(routeId = "dex:primary", observedAt = OBSERVED_AT_SEC) {
     holderAccess: "permissionless" as const,
     executionModel: "market-depth" as const,
     executionCertainty: "bounded" as const,
+    modelConfidence: "medium" as const,
     coverageClass: "exact-complete" as const,
     settlementModel: "atomic" as const,
     settlementSlaSec: null,
@@ -433,6 +432,15 @@ function extension(): SafetyScoreV9FactSetExtensionV2 {
 const V9_EVALUATION_TEST_TIMEOUT_MS = 30_000;
 
 describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
+  it("defaults retained v2 route reviews without modeled confidence to low", () => {
+    const fixed = exactFixedInput();
+    const retained = structuredClone(extension());
+    delete (retained.assets[0]!.routeReviews[0] as unknown as Record<string, unknown>).modelConfidence;
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, retained);
+    expect(compiled.assets[0]!.exitRoutes[0]).toMatchObject({ modelConfidence: "low" });
+  });
+
   it("builds a conservative baseline overlay without inventing missing reviews", () => {
     const fixed = exactFixedInput();
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
@@ -606,13 +614,31 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     const compiledMappedAlpha = compiledMapped.assets.find((asset) => asset.assetId === "alpha")!;
     expect(compiledMappedAlpha.dependencies.status.observationState).toBe("known");
     expect(compiledMappedAlpha.reserveExposures).toEqual(
-      expect.arrayContaining([expect.objectContaining({ trackedAssetId: "beta", weight: 0.5 })]),
+      expect.arrayContaining([
+        expect.objectContaining({
+          trackedAssetId: "beta",
+          assetClass: "stablecoin",
+          weight: 0.5,
+          status: expect.objectContaining({ observationState: "known" }),
+        }),
+      ]),
     );
     expect(
       evaluateV9FactSet(compiledMapped, V9_CANDIDATE_POLICY_V1)
         .assets.find((asset) => asset.assetId === "alpha")!
         .scoreInput.dependencyReasons.map((reason) => reason.code),
     ).not.toContain("unreviewed-dependency-relationships");
+
+    const retainedNullClassification = structuredClone(mapped);
+    retainedNullClassification.assets
+      .find((asset) => asset.assetId === "alpha")!
+      .reserveClassifications.find((classification) => classification.issuerOrObligorKey === "asset:beta")!.assetClass =
+      null;
+    expect(
+      compileSafetyScoreV9FactSetFromFixedInput(mappedFixed, retainedNullClassification)
+        .assets.find((asset) => asset.assetId === "alpha")!
+        .reserveExposures.find((exposure) => exposure.trackedAssetId === "beta"),
+    ).toMatchObject({ assetClass: "stablecoin", status: { observationState: "known" } });
 
     const mismatchedMapping = structuredClone(mapped);
     mismatchedMapping.assets.find((asset) => asset.assetId === "alpha")!.dependencies!.edges[0]!.weight = 0.4;
@@ -691,6 +717,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     });
     expect(alpha.exitRoutes[0]).toMatchObject({
       routeId: "dex:primary",
+      modelConfidence: "medium",
       status: { observationState: "known" },
       scoreEligible: true,
     });
@@ -1183,6 +1210,129 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace.finalGrade).not.toBe("NR");
   });
 
+  it("keeps a reviewed upgrade control known inside a partial control inventory", () => {
+    const fixed = exactFixedInput();
+    const mixed = extension();
+    const asset = mixed.assets[0]!;
+    const bridgeDeploymentKey = "ethereum:0x3333333333333333333333333333333333333333";
+    const bridgeControlKey = "bridge:unresolved";
+    const mintControlKey = "mint:unresolved";
+    const upgradeControlKey = "upgrade:reviewed";
+
+    asset.controlReview = {
+      state: "partially-reviewed-controls",
+      rationale: "The upgrade authority is reviewed, while bridge and direct-minter identities remain unresolved.",
+      controls: [
+        {
+          controlKey: bridgeControlKey,
+          deploymentKey: bridgeDeploymentKey,
+          controlKind: "bridge",
+          scope: "deployment",
+          capabilities: ["bridge-mint"],
+          capSemantics: { kind: "unbounded", bound: null },
+          claimImpairment: "unbounded",
+          economicLossScope: "deployment",
+          authority: { authorityKey: `bridge-route:${bridgeDeploymentKey}`, model: "unknown", threshold: null },
+          delaySec: null,
+          materialSupplyShare: 1,
+          incidentState: "none",
+          failureDomains: [{ kind: "bridge-route", key: bridgeDeploymentKey }],
+        },
+        {
+          controlKey: mintControlKey,
+          deploymentKey: "asset:alpha",
+          controlKind: "mint",
+          scope: "global",
+          capabilities: ["mint"],
+          capSemantics: { kind: "raiseable", bound: null },
+          claimImpairment: "bounded",
+          economicLossScope: "global-claim",
+          authority: null,
+          delaySec: null,
+          materialSupplyShare: null,
+          incidentState: "none",
+          failureDomains: [],
+        },
+        {
+          controlKey: upgradeControlKey,
+          deploymentKey: "asset:alpha",
+          controlKind: "upgrade",
+          scope: "global",
+          capabilities: ["upgrade"],
+          capSemantics: { kind: "not-applicable", bound: null },
+          claimImpairment: "unbounded",
+          economicLossScope: "global-claim",
+          authority: {
+            authorityKey: "ethereum:0x4444444444444444444444444444444444444444",
+            model: "multisig",
+            threshold: { required: 3, total: 6 },
+          },
+          delaySec: null,
+          materialSupplyShare: null,
+          incidentState: "none",
+          failureDomains: [{ kind: "upgrade-control", key: "ethereum:0x4444444444444444444444444444444444444444" }],
+        },
+      ],
+    };
+    asset.economicControlReview = {
+      ...asset.economicControlReview!,
+      mint: {
+        status: status("known", "v9.control.mint-review"),
+        controlKey: mintControlKey,
+        reconciliation: "not-applicable",
+        supervision: "unknown",
+        upgrade: { state: "reviewed", controlKey: upgradeControlKey },
+      },
+      bridge: {
+        status: {
+          applicability: {
+            state: "required",
+            policyRuleId: "v9.control.bridge-review",
+            rationale: null,
+            gapId: null,
+          },
+          observationState: "bounded-unknown",
+          evidenceRefIds: ["placeholder:evidence"],
+          gapIds: ["extension-gap:bridge:alpha"],
+        },
+        routes: [],
+      },
+    };
+    asset.supplyReview = {
+      selectedBridgeRoutes: [
+        {
+          deploymentRouteKey: bridgeDeploymentKey,
+          supplyUsd: 10_000_000,
+          supplyShare: 1,
+          reviewState: "selected-unresolved",
+        },
+      ],
+      selectedRouteSupplyShare: 0,
+      unknownRouteSupplyShare: 0,
+      unreviewedRouteSupplyShare: 1,
+      failureDomains: [{ kind: "bridge-route", key: bridgeDeploymentKey }],
+    };
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, mixed).assets[0]!;
+    expect(compiled.controlStatus).toMatchObject({ observationState: "bounded-unknown" });
+    expect(compiled.controls.find((control) => control.controlKey === upgradeControlKey)?.status).toMatchObject({
+      observationState: "known",
+      gapIds: [],
+    });
+    for (const unresolvedControlKey of [bridgeControlKey, mintControlKey]) {
+      expect(compiled.controls.find((control) => control.controlKey === unresolvedControlKey)?.status).toMatchObject({
+        observationState: "bounded-unknown",
+        gapIds: [expect.stringContaining(unresolvedControlKey)],
+      });
+    }
+
+    const evaluated = evaluateV9FactSet(compileSafetyScoreV9FactSetFromFixedInput(fixed, mixed), V9_CANDIDATE_POLICY_V1)
+      .assets[0]!;
+    expect(evaluated.control.reasons.map((reason) => reason.code)).not.toContain("missing-upgradeability-review");
+    expect(evaluated.control.reasons.some((reason) => reason.path.includes(bridgeControlKey))).toBe(true);
+    expect(evaluated.control.reasons.some((reason) => reason.path.includes(mintControlKey))).toBe(true);
+  });
+
   it("joins a capped minter to its separately reviewed cap-raising governor", () => {
     const fixed = exactFixedInput();
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
@@ -1577,9 +1727,10 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       peripheralFixture.extension,
     ).assets[0]!;
     expect(compiledPeripheral.controlStatus).toMatchObject({ observationState: "known" });
-    expect(
-      compiledPeripheral.controls.find((control) => control.deploymentKey.startsWith("base:"))?.status,
-    ).toMatchObject({ observationState: "known" });
+    expect(compiledPeripheral.controls.find((control) => control.deploymentKey.startsWith("base:"))).toMatchObject({
+      authority: { model: "unknown" },
+      status: { observationState: "bounded-unknown" },
+    });
     const compiledPeripheralUnresolved = compiledPeripheral.controls.find((control) =>
       control.deploymentKey.startsWith("polygon:"),
     )!;
@@ -1630,10 +1781,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       observedAt: "1970-01-01",
       sources: disposition === "reviewed" ? [{ label: "Bridge docs", url: "https://example.com/bridge" }] : undefined,
     });
-    const baselineFor = (
-      chainShares: Record<string, number>,
-      extraRoutes: ReturnType<typeof route>[] = [],
-    ) => {
+    const baselineFor = (chainShares: Record<string, number>, extraRoutes: ReturnType<typeof route>[] = []) => {
       const fixed = exactFixedInput({
         chainSupplyByChain: Object.fromEntries(
           Object.entries(chainShares).map(([chain, share]) => [chain, row(share * 10_000)]),
@@ -1698,22 +1846,18 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     const pooledAtThreshold = baselineFor({ ethereum: 0.9, "Future Chain": 0.05, future_chain: 0.05 });
     expect(pooledAtThreshold.asset.economicControlReview?.bridge.status.observationState).toBe("bounded-unknown");
 
-    const ambiguous = baselineFor(
-      { ethereum: 0.95, base: 0.05 },
-      [
-        route("base:0x2222222222222222222222222222222222222222"),
-        route("base:0x3333333333333333333333333333333333333333"),
-      ],
-    );
+    const ambiguous = baselineFor({ ethereum: 0.95, base: 0.05 }, [
+      route("base:0x2222222222222222222222222222222222222222"),
+      route("base:0x3333333333333333333333333333333333333333"),
+    ]);
     expect(ambiguous.asset.supplyReview?.selectedBridgeRoutes).toContainEqual(
       expect.objectContaining({ deploymentRouteKey: "ambiguous-chain:alpha:base", supplyShare: 0.05 }),
     );
     expect(ambiguous.asset.economicControlReview?.bridge.status.observationState).toBe("bounded-unknown");
 
-    const canonicalOrphan = baselineFor(
-      { ethereum: 1 },
-      [route("hyperevm:0x4444444444444444444444444444444444444444")],
-    );
+    const canonicalOrphan = baselineFor({ ethereum: 1 }, [
+      route("hyperevm:0x4444444444444444444444444444444444444444"),
+    ]);
     expect(canonicalOrphan.asset.economicControlReview?.bridge.status.observationState).toBe("known");
     expect(
       canonicalOrphan.asset.controlReview?.state === "reviewed-controls"
@@ -1721,13 +1865,10 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         : null,
     ).toMatchObject({ materialSupplyShare: 0, capSemantics: { kind: "unknown" } });
 
-    const uncanonicalizableOrphan = baselineFor(
-      { ethereum: 1 },
-      [route("futurechain:0x5555555555555555555555555555555555555555")],
-    );
-    expect(uncanonicalizableOrphan.asset.economicControlReview?.bridge.status.observationState).toBe(
-      "bounded-unknown",
-    );
+    const uncanonicalizableOrphan = baselineFor({ ethereum: 1 }, [
+      route("futurechain:0x5555555555555555555555555555555555555555"),
+    ]);
+    expect(uncanonicalizableOrphan.asset.economicControlReview?.bridge.status.observationState).toBe("bounded-unknown");
   });
 
   it("does not let an unresolved access-only control contaminate a resolved aggregate", () => {

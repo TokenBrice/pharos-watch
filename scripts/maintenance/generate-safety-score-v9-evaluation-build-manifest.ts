@@ -58,6 +58,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
  * file, add its score-bearing transitive sources here too.
  */
 export const V9_FACT_PRODUCER_SOURCE_PATHS = [
+  "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
   "shared/lib/classification/resolve-mechanism-archetype.ts",
   "shared/lib/cron-jobs.ts",
   "shared/lib/dependency-derivation.ts",

@@ -296,6 +296,7 @@ export interface V9BridgeDomainExposure {
 export interface V9SupplyChainExposure {
   shareBySlug: ReadonlyMap<string, number>;
   unattributedShare: number;
+  complete: boolean;
 }
 export interface V9CommonModeContext {
   supplyExposure: V9SupplyChainExposure;
@@ -303,7 +304,8 @@ export interface V9CommonModeContext {
   bridgeExposureByDomain: ReadonlyMap<string, V9BridgeDomainExposure>;
 }
 
-const UNKNOWN_SHARE_BOUNDS: V9ConservativeShareBounds = { lower: 0, upper: 1 };
+const SUPPLY_USD_RECONCILIATION_TOLERANCE = 0.01;
+const SHARE_RECONCILIATION_TOLERANCE = 0.000001;
 
 function clampShare(value: number): number {
   return Math.max(0, Math.min(1, value));
@@ -311,10 +313,25 @@ function clampShare(value: number): number {
 
 function summarizeSupplyChainExposure(supply: V9AssetFactsV2["supply"]): V9SupplyChainExposure {
   if (!isKnownRequiredStatus(supply.status)) {
-    return { shareBySlug: new Map<string, number>(), unattributedShare: 1 };
+    return { shareBySlug: new Map<string, number>(), unattributedShare: 1, complete: false };
   }
   if (supply.chainDistribution === null || supply.chainDistribution === undefined) {
-    return { shareBySlug: new Map<string, number>(), unattributedShare: 1 };
+    return { shareBySlug: new Map<string, number>(), unattributedShare: 1, complete: false };
+  }
+  const circulatingUsd = supply.circulatingUsd;
+  const distributedUsd =
+    supply.chainDistribution.chains.reduce((sum, row) => sum + row.supplyUsd, 0) +
+    supply.chainDistribution.unattributedSupplyUsd;
+  const distributedShare =
+    supply.chainDistribution.chains.reduce((sum, row) => sum + row.supplyShare, 0) +
+    supply.chainDistribution.unattributedSupplyShare;
+  const expectedShare = circulatingUsd !== null && circulatingUsd > 0 ? 1 : 0;
+  if (
+    circulatingUsd === null ||
+    Math.abs(distributedUsd - circulatingUsd) > SUPPLY_USD_RECONCILIATION_TOLERANCE ||
+    Math.abs(distributedShare - expectedShare) > SHARE_RECONCILIATION_TOLERANCE
+  ) {
+    return { shareBySlug: new Map<string, number>(), unattributedShare: 1, complete: false };
   }
   const shareBySlug = new Map<string, number>();
   for (const row of supply.chainDistribution.chains) {
@@ -322,11 +339,15 @@ function summarizeSupplyChainExposure(supply: V9AssetFactsV2["supply"]): V9Suppl
     // Retained facts can contain pre-canonical aliases. Ambiguous rows must not
     // be merged silently because that could understate a material chain share.
     if (shareBySlug.has(chainId)) {
-      return { shareBySlug: new Map<string, number>(), unattributedShare: 1 };
+      return { shareBySlug: new Map<string, number>(), unattributedShare: 1, complete: false };
     }
     shareBySlug.set(chainId, row.supplyShare);
   }
-  return { shareBySlug, unattributedShare: supply.chainDistribution.unattributedSupplyShare };
+  return {
+    shareBySlug,
+    unattributedShare: supply.chainDistribution.unattributedSupplyShare,
+    complete: true,
+  };
 }
 
 function referenceExitRequest(envelope: V9ValidatedPolicyEnvelope): V9ExitStressRequest {
@@ -378,8 +399,6 @@ function summarizeDexDomainExposure(
     }),
   );
 }
-
-const SHARE_RECONCILIATION_TOLERANCE = 0.000001;
 
 function isKnownRequiredStatus(status: V9FactStatusV2): boolean {
   return status.applicability.state === "required" && status.observationState === "known";
@@ -536,7 +555,7 @@ function buildCommonModeContext(
   // A missing asset fact fails closed: no attributed share, no reviewed tiers.
   if (!asset) {
     return {
-      supplyExposure: { shareBySlug: new Map<string, number>(), unattributedShare: 1 },
+      supplyExposure: { shareBySlug: new Map<string, number>(), unattributedShare: 1, complete: false },
       dexExposureByDomain: new Map<string, V9ConservativeShareBounds>(),
       bridgeExposureByDomain: new Map<string, V9BridgeDomainExposure>(),
     };
@@ -549,13 +568,23 @@ function buildCommonModeContext(
 }
 
 /**
- * Grades a common-mode signal for one asset by DOMAIN KIND and reviewed evidence
- * (owner rulings Batch 3.3, Batch 4 (option A), Batch 5). Chain concentration
- * grades by material exposure (mature chain or immaterial share -> "moderate",
- * material/unattributable non-mature -> "high"). Non-chain domains use
- * conservative asset-local share bounds, with reviewed mature DEX venues and
- * reviewed low-risk bridge tiers retaining their kind-specific lower severity.
+ * Grades proportional common-mode domains from reviewed asset-local exposure.
+ * Mature ecosystem domains are diagnostic; otherwise proven exposure below 5%
+ * is diagnostic, 5%-<10% is moderate, and >=10% or unknown is high. Serial
+ * control domains do not enter this proportional path and remain fail-closed.
  */
+function proportionalCommonModeSeverity(
+  share: number | null,
+  mature: boolean,
+  materiality: V9ValidatedPolicyEnvelope["policy"]["semantic"]["materiality"],
+): V9Severity {
+  if (mature) return "low";
+  const high = materiality.commonModeSignal.severity;
+  if (share === null) return high;
+  if (!isV9MaterialShare(share, materiality.commonModeShareThreshold)) return "low";
+  return isV9MaterialShare(share, materiality.commonModeHighShareThreshold) ? high : "moderate";
+}
+
 export function commonModeSignalSeverity(
   failureDomain: V9FailureDomainRef,
   context: V9CommonModeContext,
@@ -565,33 +594,28 @@ export function commonModeSignalSeverity(
   switch (failureDomain.kind) {
     case "chain": {
       const chainId = resolveChainId(failureDomain.key) ?? failureDomain.key.toLowerCase();
-      if (materiality.matureChains.includes(chainId)) return "moderate";
-      const share = context.supplyExposure.shareBySlug.has(chainId)
-        ? context.supplyExposure.shareBySlug.get(chainId)!
-        : context.supplyExposure.unattributedShare;
-      return isV9MaterialShare(share, materiality.commonModeShareThreshold) ? high : "moderate";
+      const share = context.supplyExposure.complete
+        ? clampShare((context.supplyExposure.shareBySlug.get(chainId) ?? 0) + context.supplyExposure.unattributedShare)
+        : null;
+      return proportionalCommonModeSeverity(share, materiality.matureChains.includes(chainId), materiality);
     }
     case "reserve-issuer":
       // Single-obligor exposure is already priced by backing concentration;
       // keep the signal diagnostic (non-capping) to avoid double-counting.
       return "low";
     case "dex-protocol":
-      if (materiality.matureVenues.includes(failureDomain.key.toLowerCase())) return "low";
-      return (context.dexExposureByDomain.get(domainKey(failureDomain)) ?? UNKNOWN_SHARE_BOUNDS).upper <
-        materiality.commonModeShareThreshold
-        ? "low"
-        : high;
+      return proportionalCommonModeSeverity(
+        context.dexExposureByDomain.get(domainKey(failureDomain))?.upper ?? null,
+        materiality.matureVenues.includes(failureDomain.key.toLowerCase()),
+        materiality,
+      );
     case "bridge-route": {
       const exposure = context.bridgeExposureByDomain.get(domainKey(failureDomain));
-      if (exposure !== undefined && exposure.shareBounds.upper < materiality.commonModeShareThreshold) {
-        return "moderate";
-      }
-      const reviewedLowRiskTier =
-        exposure !== undefined &&
-        exposure.reviewedTiersComplete &&
-        exposure.reviewedTiers.length > 0 &&
-        exposure.reviewedTiers.every((tier) => materiality.lowRiskBridgeTiers.includes(tier));
-      return reviewedLowRiskTier ? "moderate" : high;
+      return proportionalCommonModeSeverity(
+        exposure !== undefined && exposure.reviewedTiersComplete ? exposure.shareBounds.upper : null,
+        false,
+        materiality,
+      );
     }
     default:
       return high;
@@ -600,19 +624,20 @@ export function commonModeSignalSeverity(
 
 function commonModeReasonQualifier(kind: V9FailureDomainRef["kind"], severity: V9Severity): string {
   if (kind === "chain") {
-    return severity === "high"
-      ? "material or unattributable non-mature chain exposure"
-      : "reviewed mature chain or immaterial exposure";
+    if (severity === "low")
+      return "reviewed mature chain or conservative exposure upper bound below 5%, diagnostic only";
+    if (severity === "moderate") return "conservative non-mature exposure upper bound from 5% to below 10%";
+    return "conservative exposure upper bound at or above 10%, or chain inventory unavailable";
   }
   if (kind === "dex-protocol") {
-    return severity === "low"
-      ? "reviewed mature venue or proven immaterial capacity, diagnostic only"
-      : "material or unresolved venue concentration";
+    if (severity === "low") return "reviewed mature venue or proven exposure below 5%, diagnostic only";
+    if (severity === "moderate") return "reviewed non-mature exposure from 5% to below 10%";
+    return "exposure at or above 10%, or unknown venue concentration";
   }
   if (kind === "bridge-route") {
-    return severity === "moderate"
-      ? "proven immaterial share or reviewed low-risk bridge tier"
-      : "material or unresolved share with missing, conflicting, or higher-risk bridge tier";
+    if (severity === "low") return "proven exposure below 5%, diagnostic only";
+    if (severity === "moderate") return "reviewed exposure from 5% to below 10%";
+    return "exposure at or above 10%, or unknown/unattributed bridge exposure";
   }
   if (kind === "reserve-issuer") {
     return "single-obligor exposure priced in backing, diagnostic only";
@@ -914,7 +939,7 @@ export function evaluateV9FactSet(
     };
     const backing =
       asset.mechanismRiskReview.review === null
-        ? createUnavailableV9BackingResult(asset, envelope)
+        ? createUnavailableV9BackingResult(backingAsset, asset, envelope)
         : evaluateV9Backing(backingAsset, asset.mechanismRiskReview.review, envelope);
     const exit = evaluateV9ExitAssetFacts(asset, envelope);
     const control = evaluateV9EconomicControlAssetFacts(
