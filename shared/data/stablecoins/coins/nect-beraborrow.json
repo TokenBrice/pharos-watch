@@ -123,7 +123,7 @@
     {
       "name": "solvBTC",
       "pct": 5.8,
-      "risk": "high",
+      "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Solv Protocol and its Bitcoin custody network",
       "riskFactors": [

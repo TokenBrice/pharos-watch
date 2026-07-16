@@ -731,7 +731,6 @@
       "name": "FPI",
       "pct": 0.1,
       "risk": "medium",
-      "coinId": "fpi-frax",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Frax Protocol",
       "riskFactors": ["market", "smart-contract", "liquidity", "custody"],
@@ -838,6 +837,13 @@
         "candidateCoinIds": [
           "usdb-bridge"
         ]
+      },
+      {
+        "reserveIndex": 18,
+        "reserveName": "FPI",
+        "pct": 0.1,
+        "disposition": "self-reserve",
+        "rationale": "FPI is a Frax-ecosystem stablecoin genesis-collateralized by FRAX itself (fpi-frax carries the upstream fpi-frax -> frax-frax reserve link), so promoting FRAX's 0.1% FPI balance-sheet holding to a dependency edge would close a circular FRAX<->FPI path that the static scoring graph forbids. The position is retained as reserve evidence but treated as downstream Frax-ecosystem self exposure rather than an upstream stablecoin edge."
       },
       {
         "reserveIndex": 24,

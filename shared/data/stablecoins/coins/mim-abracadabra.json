@@ -534,7 +534,7 @@
     {
       "name": "WETH",
       "pct": 2.9,
-      "risk": "low",
+      "risk": "very-low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Ethereum WETH contract and Abracadabra cauldron",
       "riskFactors": [
