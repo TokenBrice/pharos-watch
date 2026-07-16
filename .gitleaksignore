@@ -1,15 +1,19 @@
 036023b2f9a5c0b8f61a55da6ffd6f5a2074fb18:worker/src/cron/reserve-adapters/__tests__/fixtures/frax-balance-sheet.json:generic-api-key:1
+0597d16755012314734e215605cf7bc4c31727fa:src/components/status/__tests__/api-keys-panel.test.tsx:generic-api-key:289
+0fc00a62cb77444203bea7f3c2422827ee5cf1c9:shared/lib/yield-auto-lending.ts:generic-api-key:18
 12826def811756d4028d52c6e4a615b61d089ae2:worker/src/cron/reserve-adapters/__tests__/reserve-protocol-dtf.test.ts:generic-api-key:36
 13f5836c367be6e282298c82f90dcf4ef24e3e08:worker/src/lib/__tests__/yield-source-links.test.ts:generic-api-key:121
 1589d0a2ec7f1b7b2e97e2e36f8081e696994771:shared/lib/stablecoins/usd-major.ts:generic-api-key:545
 1589d0a2ec7f1b7b2e97e2e36f8081e696994771:shared/lib/stablecoins/usd-minor.ts:generic-api-key:2421
 1589d0a2ec7f1b7b2e97e2e36f8081e696994771:shared/lib/stablecoins/usd-minor.ts:generic-api-key:2498
+17655461beaeda65fb92395e4f161d1cf56cc25f:worker/src/api/__tests__/telegram-webhook-setup-adoption.test.ts:generic-api-key:9
 1d7549e868b49aabc4aa6b355e8c729e97386670:worker/src/api/__tests__/api-keys.test.ts:generic-api-key:233
 1d7549e868b49aabc4aa6b355e8c729e97386670:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:135
 1d7549e868b49aabc4aa6b355e8c729e97386670:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:376
 1d7549e868b49aabc4aa6b355e8c729e97386670:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:841
 1d7549e868b49aabc4aa6b355e8c729e97386670:worker/src/test-helpers/__shared/fixtures.ts:generic-api-key:197
 2439593bc6e905a33967fe8df7342beea3a02788:agents/plans/2026-04-24-tighten-public-api-gate-plan.md:curl-auth-header:1480
+2543020623535ecdf515b4086b3ee39f775ee57e:src/app/learn/case-studies/content/buidl-tokenized-tbill-2025.ts:generic-api-key:145
 25e832f563fce12b4552824dc9850178acd778d9:agents/research/2026-04-15-pmusd-custody-recheck.md:generic-api-key:57
 25e832f563fce12b4552824dc9850178acd778d9:agents/research/2026-04-15-pmusd-custody-recheck.md:generic-api-key:58
 25e832f563fce12b4552824dc9850178acd778d9:agents/research/2026-04-15-pmusd-custody-recheck.md:generic-api-key:59
@@ -76,6 +80,7 @@
 3e5efced13d6b59a79d4694f002bf968594cde44:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:339
 3e5efced13d6b59a79d4694f002bf968594cde44:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:340
 46b937d767b61b7dc39d11dcb272c4b80cccfbf6:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:765
+4fd14411b571a949c4720c02bb7fb3c509916fdf:worker/src/cron/__tests__/yield-config-registry.test.ts:generic-api-key:100
 54d2afd8f0b3f26cf916c54fb05d28415c763501:agents/tasks/2026-04-22-yield-history-cleanup-local-artifact.json:generic-api-key:60
 54d2afd8f0b3f26cf916c54fb05d28415c763501:agents/tasks/2026-04-22-yield-history-cleanup-local-artifact.json:generic-api-key:75
 55ec97df6476744cd72d6557b3e811ee31603a42:agents/audits/2026-04-16-liquidity-dedup-audit.md:generic-api-key:4
@@ -149,6 +154,8 @@ c0b0bc25cd6224d5aec1d39771c697583956cc81:worker/src/cron/yield-config-lending-pr
 c0b0bc25cd6224d5aec1d39771c697583956cc81:worker/src/cron/yield-config-lending-protocols.ts:generic-api-key:156
 c1cf1b2ea1a9e2e139e680d99ca16ad64993d99b:worker/src/cron/__tests__/yield-config-registry.test.ts:generic-api-key:159
 c1cf1b2ea1a9e2e139e680d99ca16ad64993d99b:worker/src/cron/yield-config-lending-protocols.ts:generic-api-key:99
+c37d958c0a2760a8538a5dcdbd39e6d87227394e:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:152
+c37d958c0a2760a8538a5dcdbd39e6d87227394e:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:153
 c704c552c55fd92577e16752557470deef00ecd0:worker/src/api/__tests__/api-keys.test.ts:generic-api-key:157
 c704c552c55fd92577e16752557470deef00ecd0:worker/src/api/__tests__/api-keys.test.ts:generic-api-key:183
 c704c552c55fd92577e16752557470deef00ecd0:worker/src/api/__tests__/api-keys.test.ts:generic-api-key:224
@@ -173,6 +180,7 @@ e844697802a283353cef81cdc0a5eb45b81ebb9a:shared/data/stablecoins/coins/eusd-elec
 e99c23704d6fab58258a34389d6e1f515872db5e:shared/lib/__tests__/blacklist-active-records.test.ts:generic-api-key:135
 e99c23704d6fab58258a34389d6e1f515872db5e:shared/lib/__tests__/blacklist-active-records.test.ts:generic-api-key:161
 e99c23704d6fab58258a34389d6e1f515872db5e:shared/lib/__tests__/blacklist-active-records.test.ts:generic-api-key:183
+e99c5b01250651bb2f28051352337087f5c79df3:worker/scripts/data/night-watch-blacklist-manifest-2026-07-09.json:generic-api-key:7
 ec317cf6af3872629d48146e93c68f3df9966118:shared/data/stablecoins/coins.client.generated.json:generic-api-key:27483
 ec317cf6af3872629d48146e93c68f3df9966118:shared/data/stablecoins/coins.generated.json:generic-api-key:62592
 ec317cf6af3872629d48146e93c68f3df9966118:shared/data/stablecoins/coins/zchf-frankencoin.json:generic-api-key:200
