@@ -15,6 +15,7 @@ import {
 import { getCache, setCache } from "../../lib/db-cache";
 import { CmcCategoryResponseSchema, CmcLatestQuotesResponseSchema } from "../../lib/schemas";
 import {
+  createPricingAssetAttempt,
   endpointLabel,
   type PricingProviderAttemptDiagnostic,
 } from "../../lib/pricing-provider-diagnostics";
@@ -45,7 +46,9 @@ const CMC_CATEGORY_ENDPOINT = "pro-api.coinmarketcap.com/v1/cryptocurrency/categ
 const CMC_QUOTES_ENDPOINT = "pro-api.coinmarketcap.com/v3/cryptocurrency/quotes/latest";
 const CMC_STABLECOIN_CATEGORY_ID = "604f2753ebccdd50cd175fc1";
 const CMC_LAST_FETCH_CACHE_KEY = "cmc_last_fetch";
+const CMC_VERIFIED_QUOTES_CACHE_KEY = "cmc_verified_targeted_quotes:v1";
 const CMC_TARGETED_MAX_SLUGS = 25;
+const CMC_VERIFIED_QUOTES_MAX_ENTRIES = 100;
 
 interface CmcFallbackQuote extends FallbackPriceQuote {
   observedAt: number;
@@ -53,9 +56,49 @@ interface CmcFallbackQuote extends FallbackPriceQuote {
   slug?: string;
 }
 
-interface CmcTargetedCandidate {
+export interface CmcTargetedCandidate {
   asset: PeggedAsset;
   index: number;
+}
+
+interface CmcVerifiedTargetedQuote {
+  assetId: string;
+  slug: string;
+  symbol: string;
+  price: number;
+  volume24h: number;
+  observedAt: number;
+  providerAddress: string | null;
+  chain: string | null;
+  active: true;
+}
+
+export function selectRotatedCmcCandidates(
+  candidates: readonly CmcTargetedCandidate[],
+  nowSec = Math.floor(Date.now() / 1_000),
+): CmcTargetedCandidate[] {
+  if (candidates.length <= CMC_TARGETED_MAX_SLUGS) return [...candidates];
+  const start = (Math.floor(nowSec / CMC_FETCH_COOLDOWN_SEC) * CMC_TARGETED_MAX_SLUGS) % candidates.length;
+  return Array.from(
+    { length: CMC_TARGETED_MAX_SLUGS },
+    (_, offset) => candidates[(start + offset) % candidates.length]!,
+  );
+}
+
+function buildSkippedCmcAttempts(
+  candidates: readonly CmcTargetedCandidate[],
+  skipReason: "circuit-open" | "provider-suppressed" | "request-cap",
+  rejectionClass: string,
+): NonNullable<PricingProviderAttemptDiagnostic["assetAttempts"]> {
+  return candidates.slice(0, 100).map((candidate) => createPricingAssetAttempt({
+    assetId: candidate.asset.id,
+    adapter: "coinmarketcap",
+    target: `slug:${candidate.asset.cmcSlug}`,
+    state: "skipped",
+    skipReason,
+    rejectionClass,
+    candidateAt: Math.floor(Date.now() / 1000),
+  }));
 }
 
 function normalizedContractAddress(value: string | null | undefined): string | null {
@@ -70,6 +113,146 @@ function matchesConfiguredContract(asset: PeggedAsset, providerAddress: string):
   );
 }
 
+function parseVerifiedCmcQuote(value: unknown): CmcVerifiedTargetedQuote | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const entry = value as Record<string, unknown>;
+  if (
+    typeof entry.assetId !== "string" || entry.assetId.length > 160 ||
+    typeof entry.slug !== "string" || entry.slug.length > 160 ||
+    typeof entry.symbol !== "string" || entry.symbol.length > 40 ||
+    typeof entry.price !== "number" || !Number.isFinite(entry.price) || entry.price <= 0 ||
+    typeof entry.volume24h !== "number" || !Number.isFinite(entry.volume24h) || entry.volume24h <= 0 ||
+    typeof entry.observedAt !== "number" || !Number.isFinite(entry.observedAt) || entry.observedAt <= 0 ||
+    entry.active !== true ||
+    !(entry.providerAddress == null || typeof entry.providerAddress === "string") ||
+    !(entry.chain == null || typeof entry.chain === "string")
+  ) return null;
+  return {
+    assetId: entry.assetId,
+    slug: entry.slug,
+    symbol: entry.symbol,
+    price: entry.price,
+    volume24h: entry.volume24h,
+    observedAt: Math.floor(entry.observedAt),
+    providerAddress: normalizedContractAddress(entry.providerAddress as string | null),
+    chain: typeof entry.chain === "string" ? entry.chain.slice(0, 80) : null,
+    active: true,
+  };
+}
+
+async function loadVerifiedCmcQuotes(db: D1Database | undefined): Promise<CmcVerifiedTargetedQuote[]> {
+  if (!db) return [];
+  try {
+    const row = await getCache(db, CMC_VERIFIED_QUOTES_CACHE_KEY);
+    if (!row) return [];
+    const parsed = JSON.parse(row.value) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .slice(0, CMC_VERIFIED_QUOTES_MAX_ENTRIES)
+      .map(parseVerifiedCmcQuote)
+      .filter((entry): entry is CmcVerifiedTargetedQuote => entry != null);
+  } catch (error) {
+    console.warn("[enrich-prices] Failed to load verified CMC targeted quotes:", error);
+    return [];
+  }
+}
+
+function replayVerifiedCmcQuotes(params: {
+  assets: PeggedAsset[];
+  candidates: readonly CmcTargetedCandidate[];
+  cachedQuotes: readonly CmcVerifiedTargetedQuote[];
+  fxRates: Record<string, number> | undefined;
+}): { resolved: number; diagnostic: PricingProviderAttemptDiagnostic | null } {
+  if (params.candidates.length === 0 || params.cachedQuotes.length === 0) {
+    return { resolved: 0, diagnostic: null };
+  }
+  const cachedByAssetId = new Map(params.cachedQuotes.map((quote) => [quote.assetId, quote] as const));
+  const attempts: NonNullable<PricingProviderAttemptDiagnostic["assetAttempts"]> = [];
+  let resolved = 0;
+  for (const candidate of params.candidates) {
+    const cached = cachedByAssetId.get(candidate.asset.id);
+    if (!cached) continue;
+    const hasConfiguredContracts = (candidate.asset.contracts?.length ?? 0) > 0;
+    const providerAddressMatches = !hasConfiguredContracts || (
+      cached.providerAddress != null && matchesConfiguredContract(candidate.asset, cached.providerAddress)
+    );
+    const accepted =
+      cached.slug === candidate.asset.cmcSlug?.toLowerCase() &&
+      cached.symbol === candidate.asset.symbol.toUpperCase() &&
+      cached.active &&
+      providerAddressMatches &&
+      isFreshFallbackObservedAt(cached.observedAt, CMC_QUOTE_MAX_AGE_SEC) &&
+      isReasonablePrice(
+        cached.price,
+        candidate.asset.pegType as string | undefined,
+        params.fxRates,
+        buildPriceReasonablenessOptions(candidate.asset),
+      );
+    attempts.push(createPricingAssetAttempt({
+      assetId: candidate.asset.id,
+      adapter: "coinmarketcap-verified-cache",
+      source: "coinmarketcap",
+      ...(accepted && cached.chain && cached.providerAddress
+        ? { chain: cached.chain, target: cached.providerAddress }
+        : { target: `slug:${candidate.asset.cmcSlug}` }),
+      state: "attempted",
+      result: accepted ? "resolved" : "rejected",
+      ...(!accepted ? { rejectionClass: "cached-quote-rejected" } : {}),
+      candidateAt: Math.floor(Date.now() / 1_000),
+      observedAt: cached.observedAt,
+      replaySafe: true,
+    }));
+    if (!accepted) continue;
+    applyResolvedPrice(
+      params.assets[candidate.index],
+      cached.price,
+      "coinmarketcap",
+      "fallback",
+      cached.observedAt,
+      "upstream",
+    );
+    resolved += 1;
+  }
+  return {
+    resolved,
+    diagnostic: buildPricingProviderDiagnostic({
+      source: "coinmarketcap",
+      stage: "fallback",
+      endpoint: "coinmarketcap:verified-targeted-cache",
+      candidateCount: attempts.length,
+    }, {
+      ok: true,
+      success: true,
+      responseRowCount: params.cachedQuotes.length,
+      resolvedCount: resolved,
+      assetAttempts: attempts,
+    }),
+  };
+}
+
+async function persistVerifiedCmcQuotes(
+  db: D1Database | undefined,
+  previous: readonly CmcVerifiedTargetedQuote[],
+  accepted: readonly CmcVerifiedTargetedQuote[],
+): Promise<void> {
+  if (!db || accepted.length === 0) return;
+  const merged = new Map<string, CmcVerifiedTargetedQuote>();
+  for (const quote of [...previous, ...accepted]) {
+    if (isFreshFallbackObservedAt(quote.observedAt, CMC_QUOTE_MAX_AGE_SEC)) {
+      merged.set(quote.assetId, quote);
+    }
+  }
+  try {
+    await setCache(
+      db,
+      CMC_VERIFIED_QUOTES_CACHE_KEY,
+      JSON.stringify([...merged.values()].slice(-CMC_VERIFIED_QUOTES_MAX_ENTRIES)),
+    );
+  } catch (error) {
+    console.warn("[enrich-prices] Failed to persist verified CMC targeted quotes:", error);
+  }
+}
+
 async function fetchTargetedCmcQuotes(params: {
   assets: PeggedAsset[];
   candidates: CmcTargetedCandidate[];
@@ -78,6 +261,7 @@ async function fetchTargetedCmcQuotes(params: {
   signal?: AbortSignal;
 }): Promise<{
   resolved: number;
+  acceptedQuotes: CmcVerifiedTargetedQuote[];
   diagnostic: PricingProviderAttemptDiagnostic;
   rateLimited: boolean;
 }> {
@@ -110,14 +294,53 @@ async function fetchTargetedCmcQuotes(params: {
   }, {
     status: result?.response.status ?? null,
     ok: result?.response.ok === true,
+    assetAttempts: params.candidates.slice(0, 100).map((candidate) => (
+      createPricingAssetAttempt({
+        assetId: candidate.asset.id,
+        adapter: "coinmarketcap",
+        target: `slug:${candidate.asset.cmcSlug}`,
+        state: "attempted",
+        result: "unresolved",
+        candidateAt: Math.floor(Date.now() / 1000),
+      })
+    )),
+  });
+  const updateAttempt = (
+    assetId: string,
+    result: "resolved" | "rejected",
+    rejectionClass?: string,
+    observedAt?: number | null,
+    identity?: { chain: string; target: string },
+  ): void => {
+    diagnostic.assetAttempts = diagnostic.assetAttempts?.map((attempt) => (
+      attempt.assetId === assetId
+        ? {
+            ...attempt,
+            result,
+            ...(rejectionClass ? { rejectionClass } : {}),
+            ...(observedAt !== undefined ? { observedAt } : {}),
+            ...(identity ?? {}),
+          }
+        : attempt
+    ));
+  };
+  const failAllAttempts = (value: PricingProviderAttemptDiagnostic): PricingProviderAttemptDiagnostic => ({
+    ...value,
+    assetAttempts: value.assetAttempts?.map((attempt) => ({
+      ...attempt,
+      result: "failed",
+      rejectionClass: value.errorClass ?? Object.keys(value.rejectionReasonCounts ?? {})[0] ?? "upstream-error",
+    })),
   });
   if (!result?.response.ok) {
+    const nonOkDiagnostic = await applyNonOkProviderDiagnostic(
+      diagnostic,
+      result ? responseFromBufferedBody(result) : null,
+    );
     return {
       resolved: 0,
-      diagnostic: await applyNonOkProviderDiagnostic(
-        diagnostic,
-        result ? responseFromBufferedBody(result) : null,
-      ),
+      acceptedQuotes: [],
+      diagnostic: failAllAttempts(nonOkDiagnostic),
       rateLimited: result?.response.status === 429,
     };
   }
@@ -126,18 +349,24 @@ async function fetchTargetedCmcQuotes(params: {
   try {
     json = JSON.parse(result.body);
   } catch (error) {
-    return { resolved: 0, diagnostic: applyJsonParseFailureDiagnostic(diagnostic, error), rateLimited: false };
+    return {
+      resolved: 0,
+      acceptedQuotes: [],
+      diagnostic: failAllAttempts(applyJsonParseFailureDiagnostic(diagnostic, error)),
+      rateLimited: false,
+    };
   }
   const parsed = CmcLatestQuotesResponseSchema.safeParse(json);
   if (!parsed.success) {
     return {
       resolved: 0,
-      diagnostic: {
+      acceptedQuotes: [],
+      diagnostic: failAllAttempts({
         ...diagnostic,
         errorClass: "invalid-shape",
         errorMessage: "Expected CoinMarketCap v3 latest-quotes payload",
         rejectionReasonCounts: { "invalid-shape": 1 },
-      },
+      }),
       rateLimited: false,
     };
   }
@@ -149,11 +378,13 @@ async function fetchTargetedCmcQuotes(params: {
   };
   let resolved = 0;
   let matched = 0;
+  const acceptedQuotes: CmcVerifiedTargetedQuote[] = [];
   for (const candidate of params.candidates) {
     const expectedSlug = candidate.asset.cmcSlug!.toLowerCase();
     const quote = quotesBySlug.get(expectedSlug);
     if (!quote) {
       reject("missing-quote");
+      updateAttempt(candidate.asset.id, "rejected", "missing-quote");
       continue;
     }
     const providerAddress = normalizedContractAddress(quote.platform?.token_address);
@@ -161,15 +392,24 @@ async function fetchTargetedCmcQuotes(params: {
     if (
       quote.slug.toLowerCase() !== expectedSlug ||
       quote.symbol.toUpperCase() !== candidate.asset.symbol.toUpperCase() ||
-      quote.is_active === 0 ||
+      quote.is_active !== 1 ||
       (requiresContractIdentity && (
         providerAddress == null || !matchesConfiguredContract(candidate.asset, providerAddress)
       ))
     ) {
       reject("unsupported-quote");
+      updateAttempt(candidate.asset.id, "rejected", "unsupported-quote");
       continue;
     }
     matched += 1;
+    const matchedDeployment = providerAddress == null
+      ? null
+      : candidate.asset.contracts?.find(
+          (deployment) => normalizedContractAddress(deployment.address) === providerAddress,
+        ) ?? null;
+    const providerIdentity = matchedDeployment && providerAddress
+      ? { chain: matchedDeployment.chain, target: providerAddress }
+      : undefined;
     const usdQuote = Array.isArray(quote.quote)
       ? quote.quote.find((entry) => entry.symbol.toUpperCase() === "USD")
       : quote.quote.USD;
@@ -178,6 +418,7 @@ async function fetchTargetedCmcQuotes(params: {
     const observedAt = parseUnixOrIsoTimestampSec(usdQuote?.last_updated);
     if (!isFreshFallbackObservedAt(observedAt, CMC_QUOTE_MAX_AGE_SEC)) {
       reject("stale");
+      updateAttempt(candidate.asset.id, "rejected", "stale", observedAt, providerIdentity);
       continue;
     }
     if (
@@ -190,6 +431,7 @@ async function fetchTargetedCmcQuotes(params: {
       )
     ) {
       reject("price-rejected");
+      updateAttempt(candidate.asset.id, "rejected", "price-rejected", observedAt, providerIdentity);
       continue;
     }
     applyResolvedPrice(
@@ -201,10 +443,23 @@ async function fetchTargetedCmcQuotes(params: {
       "upstream",
     );
     resolved += 1;
+    acceptedQuotes.push({
+      assetId: candidate.asset.id,
+      slug: expectedSlug,
+      symbol: candidate.asset.symbol.toUpperCase(),
+      price,
+      volume24h,
+      observedAt: observedAt!,
+      providerAddress,
+      chain: matchedDeployment?.chain ?? null,
+      active: true,
+    });
+    updateAttempt(candidate.asset.id, "resolved", undefined, observedAt, providerIdentity);
   }
 
   return {
     resolved,
+    acceptedQuotes,
     diagnostic: {
       ...diagnostic,
       success: true,
@@ -244,6 +499,18 @@ export async function runCmcPass(
     });
     return { resolved, failures: [], diagnostics };
   };
+
+  const replayCandidates = collectMissingPriceCandidates(assets)
+    .filter((entry) => entry.asset.cmcSlug != null);
+  const cachedVerifiedQuotes = await loadVerifiedCmcQuotes(db);
+  const replay = replayVerifiedCmcQuotes({
+    assets,
+    candidates: replayCandidates,
+    cachedQuotes: cachedVerifiedQuotes,
+    fxRates,
+  });
+  resolved += replay.resolved;
+  if (replay.diagnostic) diagnostics.push(replay.diagnostic);
 
   const missingAfterPass1b = collectMissingPriceCandidates(assets);
   if (missingAfterPass1b.length === 0) {
@@ -340,19 +607,10 @@ export async function runCmcPass(
         const categoryTruncated =
           cmcData.data.num_tokens > CMC_CATEGORY_LIMIT ||
           cmcData.data.coins.length < cmcData.data.num_tokens;
-        if (categoryTruncated) {
-          diagnostics.push({
-            ...diagnostic,
-            responseRowCount: cmcData.data.coins.length,
-            errorClass: "invalid-shape",
-            errorMessage: `CoinMarketCap category response may be truncated (${cmcData.data.coins.length}/${cmcData.data.num_tokens})`,
-            rejectionReasonCounts: { "invalid-shape": 1 },
-          });
-        }
         diagnostic.responseRowCount = cmcData.data.coins.length;
         const cmcBySymbol = new Map<string, CmcFallbackQuote>();
         const cmcBySlug = new Map<string, CmcFallbackQuote>();
-        for (const entry of categoryTruncated ? [] : cmcData.data.coins) {
+        for (const entry of cmcData.data.coins) {
           const price = entry.quote?.USD?.price;
           const observedAt = parseUnixOrIsoTimestampSec(entry.quote?.USD?.last_updated);
           if (
@@ -378,6 +636,7 @@ export async function runCmcPass(
           }
         }
 
+        let categoryResolved = 0;
         for (const entry of missingAfterPass1b) {
           const symbolKey = entry.asset.symbol.toUpperCase();
           const allowSymbolFallback = UNIQUE_ACTIVE_SYMBOLS.has(symbolKey);
@@ -402,20 +661,23 @@ export async function runCmcPass(
               cmcQuote.observedAtMode,
             );
             resolved += 1;
+            categoryResolved += 1;
           }
         }
         let providerAttempts = 1;
-        let providerSuccesses = 0;
-        if (!categoryTruncated) {
-          diagnostic.resolvedCount = resolved;
-          diagnostic.success = true;
-          diagnostics.push(diagnostic);
-          providerSuccesses += 1;
+        let providerSuccesses = 1;
+        diagnostic.resolvedCount = categoryResolved;
+        diagnostic.success = true;
+        if (categoryTruncated) {
+          diagnostic.errorClass = "truncated-response";
+          diagnostic.errorMessage =
+            `CoinMarketCap category response has an unseen tail (${cmcData.data.coins.length}/${cmcData.data.num_tokens}); usable returned rows were retained`;
         }
+        diagnostics.push(diagnostic);
 
-        const targetedCandidates = collectMissingPriceCandidates(assets)
-          .filter((entry) => entry.asset.cmcSlug != null)
-          .slice(0, CMC_TARGETED_MAX_SLUGS);
+        const allTargetedCandidates = collectMissingPriceCandidates(assets)
+          .filter((entry) => entry.asset.cmcSlug != null);
+        const targetedCandidates = selectRotatedCmcCandidates(allTargetedCandidates);
         if (targetedCandidates.length > 0) {
           providerAttempts += 1;
           const targeted = await fetchTargetedCmcQuotes({
@@ -426,9 +688,28 @@ export async function runCmcPass(
             signal,
           });
           resolved += targeted.resolved;
+          await persistVerifiedCmcQuotes(db, cachedVerifiedQuotes, targeted.acceptedQuotes);
           diagnostics.push(targeted.diagnostic);
           if (targeted.diagnostic.success) providerSuccesses += 1;
           if (targeted.rateLimited) await markCmcFetchCooldown(db, "targeted 429");
+        }
+        const targetedIds = new Set(targetedCandidates.map((candidate) => candidate.asset.id));
+        const cappedTargetedCandidates = allTargetedCandidates.filter(
+          (candidate) => !targetedIds.has(candidate.asset.id),
+        );
+        if (cappedTargetedCandidates.length > 0) {
+          diagnostics.push(buildPricingProviderDiagnostic({
+            source: "coinmarketcap",
+            stage: "fallback",
+            endpoint: `${CMC_QUOTES_ENDPOINT}:request-cap`,
+            candidateCount: cappedTargetedCandidates.length,
+          }, {
+            ok: true,
+            success: true,
+            errorClass: "cap",
+            errorMessage: `Skipped ${cappedTargetedCandidates.length} targeted CMC slugs after request cap`,
+            assetAttempts: buildSkippedCmcAttempts(cappedTargetedCandidates, "request-cap", "cap"),
+          }));
         }
 
         if (providerSuccesses > 0) {
@@ -456,8 +737,29 @@ export async function runCmcPass(
           successful: 0,
         });
       }
+    } else {
+      const cooldownCandidates = missingAfterPass1b.filter((entry) => entry.asset.cmcSlug != null);
+      if (cooldownCandidates.length > 0) {
+        diagnostics.push(buildPricingProviderDiagnostic({
+          source: "coinmarketcap",
+          stage: "fallback",
+          endpoint: `${CMC_QUOTES_ENDPOINT}:cooldown`,
+          candidateCount: cooldownCandidates.length,
+        }, {
+          ok: true,
+          success: true,
+          errorClass: "cooldown",
+          errorMessage: "CoinMarketCap fetch cooldown active",
+          assetAttempts: buildSkippedCmcAttempts(cooldownCandidates, "provider-suppressed", "cooldown"),
+        }));
+      }
     }
   } else if (cmcApiKey && !cmcAllowed) {
+    const blockedDiagnostic = diagnostics[diagnostics.length - 1];
+    const blockedCandidates = missingAfterPass1b.filter((entry) => entry.asset.cmcSlug != null);
+    if (blockedDiagnostic && blockedCandidates.length > 0) {
+      blockedDiagnostic.assetAttempts = buildSkippedCmcAttempts(blockedCandidates, "circuit-open", "blocked");
+    }
     console.warn("[enrich] CoinMarketCap circuit open — skipping pass 2");
   }
 
