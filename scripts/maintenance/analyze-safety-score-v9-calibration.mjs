@@ -1,10 +1,17 @@
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
-import { pathToFileURL } from "node:url";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { compileV9FactSetV2 } from "../../shared/lib/safety-score-v9/compile.ts";
 import { evaluateV9FactSet } from "../../shared/lib/safety-score-v9/evaluate-set.ts";
 import { V9_CANDIDATE_POLICY_V1 } from "../../shared/lib/safety-score-v9/policy.ts";
-import { buildSafetyScoreV9Candidate } from "../../worker/src/lib/safety-score-v9-candidate.ts";
+
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+const TSX_CLI_PATH = fileURLToPath(import.meta.resolve("tsx/cli"));
+const TRUSTED_REPLAY_CLI_PATH = resolve(REPO_ROOT, "worker/scripts/replay-safety-score-v9.ts");
+const trustedReplayCache = new Map();
 
 const GRADE_ORDER = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "NR"];
 const GRADE_BOUNDARIES = [40, 50, 55, 60, 65, 70, 75, 80, 83, 87, 100];
@@ -603,14 +610,58 @@ function reproduceCandidateReplay(replay, label) {
     throw new Error(`${label} candidate must bind a nonnegative integer publishedAtSec`);
   }
   const candidateId = replay.pipeline.candidate.candidateId;
-  const rebuilt = buildSafetyScoreV9Candidate({
+  const replayInput = {
     fixedInput: replay.pipeline.fixedInput,
     extension: replay.pipeline.extension,
     publishedAtSec,
     ...(typeof candidateId === "string" && /^v9-rc-[1-9][0-9]*$/.test(candidateId)
       ? { releaseCandidateId: candidateId }
       : {}),
-  });
+  };
+  const cacheKey = stableStringify(replayInput);
+  let rebuilt = trustedReplayCache.get(cacheKey);
+  if (rebuilt === undefined) {
+    const tempDir = mkdtempSync(resolve(tmpdir(), "pharos-v9-calibration-replay-"));
+    const fixedInputPath = resolve(tempDir, "fixed-input.json");
+    const extensionPath = resolve(tempDir, "extension.json");
+    const outputPath = resolve(tempDir, "replay.json");
+    try {
+      writeFileSync(fixedInputPath, `${JSON.stringify(replayInput.fixedInput)}\n`, "utf8");
+      if (replayInput.extension !== undefined) {
+        writeFileSync(extensionPath, `${JSON.stringify(replayInput.extension)}\n`, "utf8");
+      }
+      const args = [
+        TSX_CLI_PATH,
+        TRUSTED_REPLAY_CLI_PATH,
+        "--input",
+        fixedInputPath,
+        ...(replayInput.extension === undefined ? [] : ["--extension", extensionPath]),
+        "--output",
+        outputPath,
+        "--published-at",
+        String(publishedAtSec),
+        ...(replayInput.releaseCandidateId
+          ? ["--release-candidate-id", replayInput.releaseCandidateId]
+          : []),
+      ];
+      execFileSync(process.execPath, args, {
+        cwd: REPO_ROOT,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        maxBuffer: 256 * 1024 * 1024,
+      });
+      rebuilt = JSON.parse(readFileSync(outputPath, "utf8")).pipeline;
+      trustedReplayCache.set(cacheKey, rebuilt);
+    } catch (error) {
+      const stderr = error && typeof error === "object" && "stderr" in error ? String(error.stderr).trim() : "";
+      throw new Error(
+        `${label} could not run the trusted production compiler and evaluator${stderr ? `: ${stderr}` : ""}`,
+        { cause: error },
+      );
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  }
   if (stableStringify(rebuilt) !== stableStringify(replay.pipeline)) {
     throw new Error(`${label} does not reproduce through the trusted production compiler and evaluator`);
   }

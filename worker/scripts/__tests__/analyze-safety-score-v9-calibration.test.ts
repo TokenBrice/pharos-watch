@@ -1,7 +1,7 @@
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { describe, expect, it } from "vitest";
-import { createReportCardsFixedInput } from "../../worker/src/lib/report-cards-fixed-input";
-import { buildSafetyScoreV9Candidate } from "../../worker/src/lib/safety-score-v9-candidate";
+import { createReportCardsFixedInput } from "../../src/lib/report-cards-fixed-input";
+import { buildSafetyScoreV9Candidate } from "../../src/lib/safety-score-v9-candidate";
 import {
   analyzeV9Calibration,
   captureMovements,
@@ -10,7 +10,7 @@ import {
   projectScoreBearingCalibrationInput,
   qualifyingCompositeCards,
   repeatedRealAAssetIds,
-} from "../maintenance/analyze-safety-score-v9-calibration.mjs";
+} from "../../../scripts/maintenance/analyze-safety-score-v9-calibration.mjs";
 
 const BASE_CLOCK_SEC = 2_000_000_000;
 
