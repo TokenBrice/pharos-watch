@@ -210,27 +210,39 @@ describe("sendToChat", () => {
   });
 
   it.each([
-    [{ description: "Bad Request: chat not found" }, 400, "chat_not_found"],
-    [{ description: "Bad Request: can't parse entities: unsupported start tag" }, 400, "formatting_error"],
-    [{ description: "Bad Request: message is too long" }, 400, "payload_too_large"],
-  ] as const)("classifies Telegram JSON failures as %s", async (body, status, errorClass) => {
+    [
+      { description: "Bad Request: chat not found" },
+      400,
+      { errorClass: "chat_not_found", blocked: true, delivery: "blocked" },
+    ],
+    [
+      { description: "Bad Request: can't parse entities: unsupported start tag" },
+      400,
+      { errorClass: "formatting_error", blocked: false, delivery: "permanent_failure" },
+    ],
+    [
+      { description: "Bad Request: message is too long" },
+      400,
+      { errorClass: "payload_too_large", blocked: false, delivery: "permanent_failure" },
+    ],
+  ] as const)("classifies Telegram JSON failures as %s", async (body, status, expected) => {
     fetchSpy.mockResolvedValueOnce(
       new Response(JSON.stringify({ ok: false, error_code: status, ...body }), { status }),
     );
     await expect(sendToChat("12345", "test", "bot-token")).resolves.toMatchObject({
       ok: false,
-      errorClass,
       permanentFailure: true,
+      ...expected,
     });
   });
 
-  it("returns the migration target without retrying the old chat", async () => {
+  it("prioritizes a migration target over the chat_not_found lifecycle", async () => {
     fetchSpy.mockResolvedValueOnce(
       new Response(
         JSON.stringify({
           ok: false,
           error_code: 400,
-          description: "Bad Request: group chat was upgraded to a supergroup chat",
+          description: "Bad Request: chat not found",
           parameters: { migrate_to_chat_id: -1001234567890 },
         }),
         { status: 400 },
@@ -242,6 +254,8 @@ describe("sendToChat", () => {
       errorClass: "chat_migrated",
       migrateToChatId: "-1001234567890",
       permanentFailure: true,
+      blocked: false,
+      delivery: "permanent_failure",
     });
   });
 

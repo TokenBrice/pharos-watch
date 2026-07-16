@@ -1884,10 +1884,10 @@ describe("drainPendingQueue", () => {
     }
   });
 
-  it("records a first-strike 403 without zeroing alert flags and deletes the pending message", async () => {
+  it("records a first-strike chat_not_found without zeroing alert flags and deletes the pending message", async () => {
     mockSendToChat.mockResolvedValue({
       ok: false, blocked: true, retryable: false, permanentFailure: true,
-      statusCode: 403, errorClass: "blocked", delivery: "blocked", retryAfterSec: null,
+      statusCode: 400, errorClass: "chat_not_found", delivery: "blocked", retryAfterSec: null,
     });
 
     const db = mockD1([
@@ -1924,11 +1924,11 @@ describe("drainPendingQueue", () => {
     expect(flagCascade).toBeUndefined();
   });
 
-  it("disables the subscriber on a second 403 within the 24h window", async () => {
+  it("disables the subscriber on a second chat_not_found within the 24h window", async () => {
     const now = Math.floor(Date.now() / 1000);
     mockSendToChat.mockResolvedValue({
       ok: false, blocked: true, retryable: false, permanentFailure: true,
-      statusCode: 403, errorClass: "blocked", delivery: "blocked", retryAfterSec: null,
+      statusCode: 400, errorClass: "chat_not_found", delivery: "blocked", retryAfterSec: null,
     });
 
     const db = mockD1([
@@ -1975,7 +1975,7 @@ describe("drainPendingQueue", () => {
     expect(subscriptionsCascade!.sql).toContain("alert_reserve=0");
   });
 
-  it("dead-letters and deletes sibling pending rows when a second 403 disables the chat", async () => {
+  it("dead-letters and deletes sibling pending rows when a second chat_not_found disables the chat", async () => {
     const { sqlite, db } = setupTelegramPendingSqlite();
     try {
       const now = Math.floor(Date.now() / 1000);
@@ -2007,7 +2007,7 @@ describe("drainPendingQueue", () => {
 
       mockSendToChat.mockResolvedValue({
         ok: false, blocked: true, retryable: false, permanentFailure: true,
-        statusCode: 403, errorClass: "blocked", delivery: "blocked", retryAfterSec: null,
+        statusCode: 400, errorClass: "chat_not_found", delivery: "blocked", retryAfterSec: null,
       });
 
       const result = await drainPendingQueue(db, "bot-token", 1);

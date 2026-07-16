@@ -3,8 +3,9 @@ import { logTelegramEvent } from "../../lib/telegram-log";
 import { buildInClause, chunkArray, executeAtomicBatch } from "../../lib/db";
 
 /**
- * Two-strike gate for 403 responses. Increments the per-subscriber consecutive
- * block counter and reports whether the aggressive cascade should run.
+ * Two-strike gate for blocked or definitively unreachable chats. Increments
+ * the per-subscriber block counter and reports whether the disable cascade
+ * should run.
  *
  * Rules:
  * - First strike: record `consecutive_block_first_at = nowSec`, count = 1, return false.

@@ -72,7 +72,7 @@ describe("dispatchTelegramAlerts", () => {
   beforeEach(resetDispatchTelegramAlertsTest);
   afterEach(cleanupDispatchTelegramAlertsTest);
 
-  it("records a fresh-send first strike without deactivating the subscriber", async () => {
+  it("records a fresh-send chat_not_found first strike without deactivating the subscriber", async () => {
     const harness = createDispatchHarness();
     sources(harness, { dews: { "usdc-circle": "CALM" } });
     harness.seed({
@@ -85,8 +85,8 @@ describe("dispatchTelegramAlerts", () => {
       blocked: true,
       retryable: false,
       permanentFailure: true,
-      statusCode: 403,
-      errorClass: "blocked",
+      statusCode: 400,
+      errorClass: "chat_not_found",
       delivery: "blocked",
       retryAfterSec: null,
     });
@@ -103,7 +103,7 @@ describe("dispatchTelegramAlerts", () => {
     ).toEqual({ alert_dews: 1 });
   });
 
-  it("deactivates a fresh-send blocked subscriber only on the second strike", async () => {
+  it("deactivates a fresh-send chat_not_found subscriber only on the second strike", async () => {
     const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();
     sources(harness, { dews: { "usdc-circle": "CALM" } });
@@ -117,8 +117,8 @@ describe("dispatchTelegramAlerts", () => {
       blocked: true,
       retryable: false,
       permanentFailure: true,
-      statusCode: 403,
-      errorClass: "blocked",
+      statusCode: 400,
+      errorClass: "chat_not_found",
       delivery: "blocked",
       retryAfterSec: null,
     });
@@ -135,6 +135,23 @@ describe("dispatchTelegramAlerts", () => {
     expect(
       harness.sqlite.prepare("SELECT alert_dews FROM telegram_subscriptions WHERE chat_id = '99999'").get(),
     ).toEqual({ alert_dews: 0 });
+
+    const attemptedAtDisable = mockSendToChat.mock.calls.length;
+    vi.advanceTimersByTime(121_000);
+    harness.seed({
+      dews: [{ stablecoinId: "usdc-circle", score: 92, band: "DANGER", computedAt: now + 121 }],
+    });
+
+    const nextMetadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+    expect(nextMetadata).toMatchObject({
+      eventsDetected: { dews: 1 },
+      subscribersNotified: 0,
+      messagesSent: 0,
+    });
+    expect(mockSendToChat).toHaveBeenCalledTimes(attemptedAtDisable);
+    expect(
+      harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE chat_id = '99999'").get(),
+    ).toEqual({ count: 0 });
   });
 
   it("drains pending queue on an eventless dispatch", async () => {

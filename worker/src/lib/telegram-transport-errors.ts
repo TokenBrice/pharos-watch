@@ -131,7 +131,9 @@ export function classifyTelegramResponseFailure(
   if (statusCode >= 500) return failure("server_error", { retryable: true, permanentFailure: false });
   if (statusCode === 413 || isPayloadTooLargeDescription(description)) return failure("payload_too_large");
   if (isFormattingDescription(description)) return failure("formatting_error");
-  if (isChatNotFoundDescription(description)) return failure("chat_not_found");
+  if (isChatNotFoundDescription(description)) {
+    return failure("chat_not_found", { blocked: true, delivery: "blocked" });
+  }
   if (statusCode === 403 || isBlockedLifecycleDescription(description)) {
     return failure("blocked", { blocked: true, delivery: "blocked" });
   }
