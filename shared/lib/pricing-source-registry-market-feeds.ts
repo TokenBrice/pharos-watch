@@ -121,6 +121,22 @@ export const PRICING_SOURCE_REGISTRY_MARKET_FEEDS = [
       hasUpstreamTimestamp: true,
     },
   }),
+  definePricingSource(PRICING_SOURCE_PRESETS.hardMarket, {
+    key: "aerodrome-onchain",
+    label: "Aerodrome on-chain",
+    shortLabel: "Aerodrome",
+    depegSourceFamily: "dex:aerodrome-onchain",
+    maxTrustedAgeSec: 15 * 60,
+    defaultWeight: 2,
+  }),
+  definePricingSource(PRICING_SOURCE_PRESETS.hardMarket, {
+    key: "velodrome-onchain",
+    label: "Velodrome on-chain",
+    shortLabel: "Velodrome",
+    depegSourceFamily: "dex:velodrome-onchain",
+    maxTrustedAgeSec: 15 * 60,
+    defaultWeight: 2,
+  }),
   definePricingSource(PRICING_SOURCE_PRESETS.hardProtocol, {
     key: "curve-onchain",
     label: "Curve on-chain",

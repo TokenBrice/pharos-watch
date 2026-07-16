@@ -32,6 +32,8 @@ describe("pricing source registry", () => {
       "coinbase",
       "redstone",
       "kava-pricefeed",
+      "aerodrome-onchain",
+      "velodrome-onchain",
       "curve-onchain",
       "curve-oracle",
       "chainlink-nav",
@@ -108,6 +110,9 @@ describe("pricing source registry", () => {
       depegSourceFamily: "oracle:kava-pricefeed",
       defaultObservedAtMode: "upstream",
     });
+
+    expect(countDepegAuthoritativeSources(["aerodrome-onchain+velodrome-onchain"])).toBe(2);
+    expect(isReplaySafePriceSource("aerodrome-onchain+velodrome-onchain")).toBe(true);
 
     expect(getPricingSourceRegistryEntry("chainlink-nav")).toMatchObject({
       key: "chainlink-nav",

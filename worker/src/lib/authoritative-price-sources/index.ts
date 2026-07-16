@@ -16,8 +16,10 @@ import { idleCdoTrancheProvider } from "./idle-cdo-tranche";
 import { inheritedTrackedPriceProvider } from "./inherited-tracked";
 import { iusdInfinifiProvider } from "./infinifi-iusd";
 import { kavaUsdxPricefeedProvider } from "./kava-pricefeed";
+import { mentoPhpmProvider } from "./mento-phpm";
 import { previewRedeemProvider } from "./preview-redeem";
 import { protocolParProvider } from "./protocol-par";
+import { usxStablePoolProvider } from "./usx-stable-pools";
 
 export type {
   CurrentPriceOverride,
@@ -32,6 +34,8 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   iusdInfinifiProvider,
   inheritedTrackedPriceProvider,
   protocolParProvider,
+  mentoPhpmProvider,
+  usxStablePoolProvider,
   kavaUsdxPricefeedProvider,
   erc4626NavProvider,
   previewRedeemProvider,
