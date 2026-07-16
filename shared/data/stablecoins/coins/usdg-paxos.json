@@ -303,7 +303,7 @@
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "USDG is Paxos-issued and its official Global Dollar page lists deployments on Ethereum, Solana, Ink, and X Layer. The route is reviewed as issuer-native multichain issuance/redemption.",
-    "reviewedAt": "2026-06-13",
+    "reviewedAt": "2026-07-16",
     "reviewer": "Codex bridge route review",
     "confidence": "verified",
     "sources": [
@@ -321,16 +321,25 @@
         "id": "ethereum:0xe343167631d89b6ffc58b88d6b7fb0228795491d",
         "destinationChain": "ethereum",
         "contractAddress": "0xe343167631d89b6ffc58b88d6b7fb0228795491d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Paxos native USDG",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Global Dollar USDG deployments and USDG0 distinction",
+            "url": "https://globaldollar.com/build-with-usdg"
+          },
+          {
+            "label": "Paxos USDG contract specification",
+            "url": "https://github.com/paxosglobal/usdg-contract"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x004b506865409877c9fa29bfb1eba929984b9bbc",
@@ -351,46 +360,73 @@
         "id": "solana:2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH",
         "destinationChain": "solana",
         "contractAddress": "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Paxos native USDG",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Global Dollar USDG deployments and USDG0 distinction",
+            "url": "https://globaldollar.com/build-with-usdg"
+          },
+          {
+            "label": "Paxos USDG contract specification",
+            "url": "https://github.com/paxosglobal/usdg-contract"
+          }
+        ]
       },
       {
         "id": "ink:0xe343167631d89b6ffc58b88d6b7fb0228795491d",
         "destinationChain": "ink",
         "contractAddress": "0xe343167631d89b6ffc58b88d6b7fb0228795491d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Paxos native USDG",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Global Dollar USDG deployments and USDG0 distinction",
+            "url": "https://globaldollar.com/build-with-usdg"
+          },
+          {
+            "label": "Paxos USDG contract specification",
+            "url": "https://github.com/paxosglobal/usdg-contract"
+          }
+        ]
       },
       {
         "id": "xlayer:0x4ae46a509f6b1d9056937ba4500cb143933d2dc8",
         "destinationChain": "xlayer",
         "contractAddress": "0x4ae46a509f6b1d9056937ba4500cb143933d2dc8",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Paxos native USDG",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-16",
+        "sources": [
+          {
+            "label": "Global Dollar USDG deployments and USDG0 distinction",
+            "url": "https://globaldollar.com/build-with-usdg"
+          },
+          {
+            "label": "Paxos USDG contract specification",
+            "url": "https://github.com/paxosglobal/usdg-contract"
+          }
+        ]
       }
     ]
   },
