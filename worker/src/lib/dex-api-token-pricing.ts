@@ -76,6 +76,19 @@ function deriveTokenUsdPrice(
 ): number | null {
   const token = pool.tokens[tokenIndex];
 
+  if (token.priceUsdDependency) {
+    const dependencyPrice = trackedStablecoinPrices?.get(token.priceUsdDependency.stablecoinId);
+    const multiplier = token.priceUsdDependency.multiplier;
+    if (
+      dependencyPrice == null ||
+      !Number.isFinite(dependencyPrice) ||
+      dependencyPrice <= 0 ||
+      !Number.isFinite(multiplier) ||
+      multiplier <= 0
+    ) return null;
+    return dependencyPrice * multiplier;
+  }
+
   if (token.priceUsd != null && Number.isFinite(token.priceUsd) && token.priceUsd > 0) {
     return token.priceUsd;
   }

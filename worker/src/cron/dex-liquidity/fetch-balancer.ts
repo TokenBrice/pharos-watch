@@ -64,6 +64,7 @@ const REVIEWED_POOL_TYPES = new Set([...STABLE_MATH_POOL_TYPES, ...REVIEWED_CUST
 // values (e.g. legacy Fantom multiUSDC/DEI pool reports $337B). Set conservatively below
 // the global DIRECT_API_MAX_POOL_TVL_USD ($10B) so obvious garbage is rejected at source.
 const BALANCER_MAX_POOL_TVL_USD = 2_000_000_000;
+const REVIEWED_ROUTE_MIN_TVL_USD = 50_000;
 
 const QUERY = `query($first: Int!, $skip: Int!) {
   poolGetPools(
@@ -103,6 +104,130 @@ const AMP_QUERY = `query($first: Int!, $skip: Int!) {
   }
 }`;
 
+const REVIEWED_POOL_QUERY = `query($id: String!, $chain: GqlChain!) {
+  poolGetPool(id: $id, chain: $chain) {
+    id
+    address
+    type
+    chain
+    dynamicData { totalLiquidity volume24h swapFee isPaused swapEnabled }
+    poolTokens {
+      index
+      address
+      symbol
+      decimals
+      balance
+      balanceUSD
+      weight
+      priceRate
+      priceRateProvider
+      isErc4626
+      isAllowed
+      underlyingToken { address symbol decimals }
+    }
+    ... on GqlPoolStable {
+      amp
+      protocolVersion
+      hasErc4626
+      hasAnyAllowedBuffer
+      hook {
+        address
+        type
+        config {
+          enableHookAdjustedAmounts
+          shouldCallAfterSwap
+          shouldCallBeforeSwap
+          shouldCallComputeDynamicSwapFee
+        }
+        reviewData { summary warnings }
+      }
+    }
+  }
+}`;
+
+const REVIEWED_QUOTE_QUERY = `query(
+  $tokenIn: String!,
+  $tokenOut: String!,
+  $swapAmount: AmountHumanReadable!,
+  $chain: GqlChain!,
+  $poolIds: [String!]
+) {
+  sorGetSwapPaths(
+    tokenIn: $tokenIn,
+    tokenOut: $tokenOut,
+    swapAmount: $swapAmount,
+    swapType: EXACT_IN,
+    chain: $chain,
+    poolIds: $poolIds,
+    useProtocolVersion: 3,
+    considerPoolsWithHooks: true
+  ) {
+    tokenIn
+    tokenOut
+    swapAmount
+    returnAmount
+    protocolVersion
+    tokenAddresses
+    priceImpact { priceImpact error }
+    paths { pools isBuffer protocolVersion }
+  }
+}`;
+
+interface ReviewedBalancerRoute {
+  chain: string;
+  internalChain: string;
+  poolId: string;
+  poolAddress: string;
+  poolType: "STABLE";
+  protocolVersion: 3;
+  targetToken: { index: number; address: string; decimals: number };
+  quoteToken: {
+    index: number;
+    address: string;
+    decimals: number;
+    rateProvider: string;
+    underlyingAddress: string;
+    underlyingDecimals: number;
+  };
+  hook: { address: string; type: "STABLE_SURGE" };
+  boundedSwapAmount: string;
+  maxQuoteTvlShare: number;
+  maxReportedPriceImpactRatio: number;
+}
+
+/** Reviewed against the Balancer primary API on 2026-07-16. The SOR quote is
+ * constrained to this pool and exits through the waEthUSDC buffer to canonical
+ * USDC, so the wrapper rate is part of the executable path rather than a par
+ * assumption about USP. */
+const REVIEWED_BALANCER_ROUTES: readonly ReviewedBalancerRoute[] = [{
+  chain: "MAINNET",
+  internalChain: "ethereum",
+  poolId: "0x114907c2a07978c38ebb9f9f6a5261a846b79521",
+  poolAddress: "0x114907c2a07978c38ebb9f9f6a5261a846b79521",
+  poolType: "STABLE",
+  protocolVersion: 3,
+  targetToken: {
+    index: 0,
+    address: "0x97ccc1c046d067ab945d3cf3cc6920d3b1e54c88",
+    decimals: 18,
+  },
+  quoteToken: {
+    index: 1,
+    address: "0xd4fa2d31b7968e448877f69a96de69f5de8cd23e",
+    decimals: 6,
+    rateProvider: "0x8f4e8439b970363648421c692dd897fb9c0bd1d9",
+    underlyingAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    underlyingDecimals: 6,
+  },
+  hook: {
+    address: "0xbdbadc891bb95dee80ebc491699228ef0f7d6ff1",
+    type: "STABLE_SURGE",
+  },
+  boundedSwapAmount: "1000",
+  maxQuoteTvlShare: 0.05,
+  maxReportedPriceImpactRatio: 0.02,
+}];
+
 interface BalancerPool {
   id: string;
   address?: string | null;
@@ -127,6 +252,70 @@ interface BalancerAmpRow {
   id: string;
   chain: string;
   amp?: string | null;
+}
+
+type ReviewedBalancerPoolToken = BalancerPool["poolTokens"][number] & {
+  index: number;
+  priceRateProvider?: string | null;
+  isErc4626: boolean;
+  isAllowed: boolean;
+  underlyingToken?: {
+    address: string;
+    symbol: string;
+    decimals: number;
+  } | null;
+};
+
+interface ReviewedBalancerPool extends Omit<BalancerPool, "poolTokens"> {
+  amp: string;
+  protocolVersion: number;
+  hasErc4626: boolean;
+  hasAnyAllowedBuffer: boolean;
+  hook?: {
+    address: string;
+    type: string;
+    config: {
+      enableHookAdjustedAmounts: boolean;
+      shouldCallAfterSwap: boolean;
+      shouldCallBeforeSwap: boolean;
+      shouldCallComputeDynamicSwapFee: boolean;
+    };
+    reviewData: { summary: string; warnings: unknown[] };
+  } | null;
+  poolTokens: ReviewedBalancerPoolToken[];
+}
+
+interface ReviewedBalancerQuote {
+  tokenIn: string;
+  tokenOut: string;
+  swapAmount: string;
+  returnAmount: string;
+  protocolVersion: number;
+  tokenAddresses: string[];
+  priceImpact?: {
+    priceImpact?: string | null;
+    error?: string | null;
+  } | null;
+  paths: Array<{
+    pools: string[];
+    isBuffer: boolean[];
+    protocolVersion: number;
+  }>;
+}
+
+type ReviewedBalancerPoolResponse = {
+  data?: { poolGetPool?: unknown };
+  errors?: unknown;
+};
+
+type ReviewedBalancerQuoteResponse = {
+  data?: { sorGetSwapPaths?: unknown };
+  errors?: unknown;
+};
+
+interface ReviewedBalancerRouteResult {
+  pool: ReviewedBalancerPool;
+  targetPriceInUsdc: number;
 }
 
 interface BalancerCapabilitySweep {
@@ -198,6 +387,299 @@ function isBalancerPool(value: unknown): value is BalancerPool {
     isBalancerDynamicData(value.dynamicData) &&
     Array.isArray(value.poolTokens) &&
     value.poolTokens.every(isBalancerPoolToken);
+}
+
+function normalizedAddress(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function isReviewedBalancerPoolToken(value: unknown): value is ReviewedBalancerPoolToken {
+  if (!isBalancerPoolToken(value) || !isDexApiRecord(value)) return false;
+  const record = value as Record<string, unknown>;
+  const underlying = record.underlyingToken;
+  return Number.isInteger(record.index) &&
+    typeof record.isErc4626 === "boolean" &&
+    typeof record.isAllowed === "boolean" &&
+    isOptionalString(record.priceRateProvider) &&
+    (
+      underlying == null ||
+      (
+        isDexApiRecord(underlying) &&
+        typeof underlying.address === "string" &&
+        typeof underlying.symbol === "string" &&
+        typeof underlying.decimals === "number" &&
+        Number.isInteger(underlying.decimals)
+      )
+    );
+}
+
+function isReviewedBalancerPool(value: unknown): value is ReviewedBalancerPool {
+  if (!isBalancerPool(value) || !isDexApiRecord(value)) return false;
+  const hook = value.hook;
+  return typeof value.amp === "string" &&
+    typeof value.protocolVersion === "number" &&
+    Number.isInteger(value.protocolVersion) &&
+    typeof value.hasErc4626 === "boolean" &&
+    typeof value.hasAnyAllowedBuffer === "boolean" &&
+    value.poolTokens.every(isReviewedBalancerPoolToken) &&
+    (
+      hook == null ||
+      (
+        isDexApiRecord(hook) &&
+        typeof hook.address === "string" &&
+        typeof hook.type === "string" &&
+        isDexApiRecord(hook.config) &&
+        typeof hook.config.enableHookAdjustedAmounts === "boolean" &&
+        typeof hook.config.shouldCallAfterSwap === "boolean" &&
+        typeof hook.config.shouldCallBeforeSwap === "boolean" &&
+        typeof hook.config.shouldCallComputeDynamicSwapFee === "boolean" &&
+        isDexApiRecord(hook.reviewData) &&
+        typeof hook.reviewData.summary === "string" &&
+        Array.isArray(hook.reviewData.warnings)
+      )
+    );
+}
+
+function isReviewedBalancerQuote(value: unknown): value is ReviewedBalancerQuote {
+  if (!isDexApiRecord(value) || !Array.isArray(value.tokenAddresses) || !Array.isArray(value.paths)) return false;
+  return typeof value.tokenIn === "string" &&
+    typeof value.tokenOut === "string" &&
+    typeof value.swapAmount === "string" &&
+    typeof value.returnAmount === "string" &&
+    typeof value.protocolVersion === "number" &&
+    value.tokenAddresses.every((address) => typeof address === "string") &&
+    (
+      value.priceImpact == null ||
+      (
+        isDexApiRecord(value.priceImpact) &&
+        isOptionalString(value.priceImpact.priceImpact) &&
+        isOptionalString(value.priceImpact.error)
+      )
+    ) &&
+    value.paths.every((path) =>
+      isDexApiRecord(path) &&
+      Array.isArray(path.pools) &&
+      path.pools.every((pool) => typeof pool === "string") &&
+      Array.isArray(path.isBuffer) &&
+      path.isBuffer.every((entry) => typeof entry === "boolean") &&
+      typeof path.protocolVersion === "number"
+    );
+}
+
+function reviewedRouteForPool(pool: Pick<BalancerPool, "id" | "address" | "chain">): ReviewedBalancerRoute | null {
+  const poolAddress = extractBalancerPoolAddress(pool);
+  return REVIEWED_BALANCER_ROUTES.find((route) =>
+    route.chain === pool.chain &&
+    normalizedAddress(route.poolId) === normalizedAddress(pool.id) &&
+    normalizedAddress(route.poolAddress) === poolAddress
+  ) ?? null;
+}
+
+function quoteMatchesReviewedRoute(
+  quote: ReviewedBalancerQuote,
+  route: ReviewedBalancerRoute,
+  expectedAmount: string,
+): boolean {
+  const expectedTokenAddresses = [
+    route.targetToken.address,
+    route.quoteToken.address,
+    route.quoteToken.underlyingAddress,
+  ].map(normalizedAddress);
+  const path = quote.paths[0];
+  return normalizedAddress(quote.tokenIn) === normalizedAddress(route.targetToken.address) &&
+    normalizedAddress(quote.tokenOut) === normalizedAddress(route.quoteToken.underlyingAddress) &&
+    parseFloat(quote.swapAmount) === parseFloat(expectedAmount) &&
+    quote.protocolVersion === route.protocolVersion &&
+    quote.tokenAddresses.map(normalizedAddress).join(":") === expectedTokenAddresses.join(":") &&
+    quote.paths.length === 1 &&
+    path != null &&
+    path.protocolVersion === route.protocolVersion &&
+    path.pools.map(normalizedAddress).join(":") === [route.poolId, route.quoteToken.address].map(normalizedAddress).join(":") &&
+    path.isBuffer.length === 2 &&
+    path.isBuffer[0] === false &&
+    path.isBuffer[1] === true;
+}
+
+function resolveReviewedBalancerRoute(
+  route: ReviewedBalancerRoute,
+  poolValue: unknown,
+  boundedQuoteValue: unknown,
+): ReviewedBalancerRouteResult | null {
+  if (
+    !isReviewedBalancerPool(poolValue) ||
+    !isReviewedBalancerQuote(boundedQuoteValue)
+  ) return null;
+
+  const pool = poolValue;
+  if (
+    normalizedAddress(pool.id) !== normalizedAddress(route.poolId) ||
+    normalizedAddress(extractBalancerPoolAddress(pool)) !== normalizedAddress(route.poolAddress) ||
+    pool.chain !== route.chain ||
+    pool.type !== route.poolType ||
+    pool.protocolVersion !== route.protocolVersion ||
+    pool.dynamicData.isPaused !== false ||
+    pool.dynamicData.swapEnabled !== true ||
+    pool.hasErc4626 !== true ||
+    pool.hasAnyAllowedBuffer !== true ||
+    pool.poolTokens.length !== 2
+  ) return null;
+
+  const amp = parseFloat(pool.amp);
+  const tvlUsd = parseFloat(pool.dynamicData.totalLiquidity);
+  const swapFee = parseFloat(pool.dynamicData.swapFee);
+  const balances = pool.poolTokens.map((token) => parseFloat(token.balance));
+  if (
+    !Number.isFinite(amp) ||
+    amp <= 0 ||
+    !Number.isFinite(tvlUsd) ||
+    tvlUsd < REVIEWED_ROUTE_MIN_TVL_USD ||
+    tvlUsd > BALANCER_MAX_POOL_TVL_USD ||
+    !Number.isFinite(swapFee) ||
+    swapFee < 0 ||
+    swapFee >= 1 ||
+    balances.some((balance) => !Number.isFinite(balance) || balance <= 0)
+  ) return null;
+
+  const target = pool.poolTokens.find((token) => token.index === route.targetToken.index);
+  const quoteToken = pool.poolTokens.find((token) => token.index === route.quoteToken.index);
+  if (!target || !quoteToken) return null;
+  if (
+    normalizedAddress(target.address) !== normalizedAddress(route.targetToken.address) ||
+    target.decimals !== route.targetToken.decimals ||
+    target.isErc4626 !== false ||
+    target.isAllowed !== true ||
+    normalizedAddress(quoteToken.address) !== normalizedAddress(route.quoteToken.address) ||
+    quoteToken.decimals !== route.quoteToken.decimals ||
+    quoteToken.isErc4626 !== true ||
+    quoteToken.isAllowed !== true ||
+    normalizedAddress(quoteToken.priceRateProvider ?? "") !== normalizedAddress(route.quoteToken.rateProvider) ||
+    normalizedAddress(quoteToken.underlyingToken?.address ?? "") !== normalizedAddress(route.quoteToken.underlyingAddress) ||
+    quoteToken.underlyingToken?.decimals !== route.quoteToken.underlyingDecimals
+  ) return null;
+
+  const priceRate = parseFloat(quoteToken.priceRate ?? "");
+  if (!Number.isFinite(priceRate) || priceRate <= 0) return null;
+  const hook = pool.hook;
+  if (
+    !hook ||
+    normalizedAddress(hook.address) !== normalizedAddress(route.hook.address) ||
+    hook.type !== route.hook.type ||
+    hook.config.enableHookAdjustedAmounts !== false ||
+    hook.config.shouldCallAfterSwap !== false ||
+    hook.config.shouldCallBeforeSwap !== false ||
+    hook.config.shouldCallComputeDynamicSwapFee !== true ||
+    hook.reviewData.summary.trim().toLowerCase() !== "safe" ||
+    hook.reviewData.warnings.length !== 0
+  ) return null;
+
+  if (!quoteMatchesReviewedRoute(boundedQuoteValue, route, route.boundedSwapAmount)) return null;
+
+  const boundedInput = parseFloat(boundedQuoteValue.swapAmount);
+  const boundedOutput = parseFloat(boundedQuoteValue.returnAmount);
+  const boundedPrice = boundedOutput / boundedInput;
+  const reportedPriceImpact = boundedQuoteValue.priceImpact?.priceImpact == null
+    ? null
+    : parseFloat(boundedQuoteValue.priceImpact.priceImpact);
+  const quoteTvlShare = boundedOutput / tvlUsd;
+  if (
+    !Number.isFinite(boundedPrice) ||
+    boundedPrice <= 0 ||
+    !Number.isFinite(quoteTvlShare) ||
+    quoteTvlShare <= 0 ||
+    quoteTvlShare > route.maxQuoteTvlShare ||
+    (
+      reportedPriceImpact != null &&
+      (
+        !Number.isFinite(reportedPriceImpact) ||
+        reportedPriceImpact < 0 ||
+        reportedPriceImpact > route.maxReportedPriceImpactRatio
+      )
+    )
+  ) return null;
+
+  return {
+    pool,
+    targetPriceInUsdc: boundedPrice,
+  };
+}
+
+async function fetchReviewedBalancerQuery<T extends object>(
+  query: string,
+  variables: Record<string, unknown>,
+  label: string,
+  warnings: string[],
+  signal?: AbortSignal,
+): Promise<T | null> {
+  try {
+    const res = await fetch(BALANCER_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
+      body: JSON.stringify({ query, variables }),
+      signal: buildDirectApiRequestSignal(signal),
+    });
+    if (!res.ok) {
+      warnings.push(`${label} returned ${res.status}`);
+      await cancelResponseBodyQuietly(res);
+      return null;
+    }
+
+    const parsed = await readDexApiJson<{ data?: T; errors?: unknown }>(res, label);
+    if (!parsed.ok) {
+      warnings.push(parsed.error);
+      return null;
+    }
+    const graphqlErrors = formatGraphqlErrors(parsed.data.errors);
+    if (graphqlErrors.length > 0) {
+      warnings.push(`${label} GraphQL errors: ${graphqlErrors.join("; ")}`);
+      return null;
+    }
+    return parsed.data.data ?? null;
+  } catch (err) {
+    rethrowIfAborted(err, signal);
+    warnings.push(`${label} request failed: ${toErrorMessage(err)}`);
+    return null;
+  }
+}
+
+async function fetchReviewedBalancerRoute(
+  route: ReviewedBalancerRoute,
+  warnings: string[],
+  signal?: AbortSignal,
+): Promise<ReviewedBalancerRouteResult | null> {
+  const label = `reviewed route ${route.poolId}`;
+  // This pool response is an identity/admission gate only. Price evidence comes
+  // entirely from the single SOR response that quotes the full route to USDC.
+  const poolResponse = await fetchReviewedBalancerQuery<NonNullable<ReviewedBalancerPoolResponse["data"]>>(
+    REVIEWED_POOL_QUERY,
+    { id: route.poolId, chain: route.chain },
+    `${label} pool`,
+    warnings,
+    signal,
+  );
+  if (!poolResponse) return null;
+
+  const quoteVariables = {
+    tokenIn: route.targetToken.address,
+    tokenOut: route.quoteToken.underlyingAddress,
+    chain: route.chain,
+    poolIds: [route.poolId],
+  };
+  const boundedResponse = await fetchReviewedBalancerQuery<NonNullable<ReviewedBalancerQuoteResponse["data"]>>(
+    REVIEWED_QUOTE_QUERY,
+    { ...quoteVariables, swapAmount: route.boundedSwapAmount },
+    `${label} bounded quote`,
+    warnings,
+    signal,
+  );
+  if (!boundedResponse) return null;
+
+  const resolved = resolveReviewedBalancerRoute(
+    route,
+    poolResponse.poolGetPool,
+    boundedResponse.sorGetSwapPaths,
+  );
+  if (!resolved) warnings.push(`${label} failed identity or quote validation`);
+  return resolved;
 }
 
 function formatGraphqlErrors(errors: unknown): string[] {
@@ -365,6 +847,68 @@ function captureGateForPool(
   return null;
 }
 
+function shapeBalancerPool(
+  pool: BalancerPool,
+  chain: string,
+  priceOverrides: ReadonlyMap<string, number | null> = new Map(),
+  priceDependencyOverrides: ReadonlyMap<
+    string,
+    NonNullable<DexApiPool["tokens"][number]["priceUsdDependency"]>
+  > = new Map(),
+  gateOverride?: BalancerExecutionCapabilityGate,
+): DexApiPool {
+  const tvlUsd = parseFloat(pool.dynamicData.totalLiquidity);
+  const volume24h = parseFloat(pool.dynamicData.volume24h);
+  const swapFee = parseFloat(pool.dynamicData.swapFee);
+  const balances = pool.poolTokens.map((token) => parseFloat(token.balance));
+  const poolAddress = extractBalancerPoolAddress(pool);
+  const executionCapabilityGate = gateOverride ?? captureGateForPool(pool, poolAddress, balances, swapFee);
+  const poolType = STABLE_DISPLAY_POOL_TYPES.has(pool.type)
+    ? "balancer-stable"
+    : pool.type === "WEIGHTED"
+      ? "balancer-weighted"
+      : "balancer-custom";
+
+  return {
+    source: "balancer",
+    chain,
+    poolAddress,
+    poolType,
+    tokens: pool.poolTokens.map((token) => {
+      const balance = parseFloat(token.balance);
+      const balanceUsd = parseFloat(token.balanceUSD);
+      const weight = token.weight == null ? null : parseFloat(token.weight);
+      const priceRate = token.priceRate == null ? null : parseFloat(token.priceRate);
+      const tokenAddress = normalizedAddress(token.address);
+      const sourcePriceUsd = Number.isFinite(balance) && balance > 0 && Number.isFinite(balanceUsd) && balanceUsd > 0
+        ? balanceUsd / balance
+        : null;
+      const priceUsd = priceOverrides.has(tokenAddress)
+        ? priceOverrides.get(tokenAddress) ?? null
+        : sourcePriceUsd;
+      const priceUsdDependency = priceDependencyOverrides.get(tokenAddress);
+      return {
+        address: token.address,
+        symbol: token.symbol,
+        decimals: token.decimals,
+        priceUsd,
+        ...(priceUsdDependency ? { priceUsdDependency } : {}),
+        weight: Number.isFinite(weight) && weight != null && weight > 0 ? weight : null,
+        priceRate: Number.isFinite(priceRate) && priceRate != null && priceRate > 0 ? priceRate : null,
+      };
+    }),
+    // Per-token priceUsd is authoritative. A scalar pool ratio is ambiguous
+    // unless its direction and reference token are captured explicitly.
+    price: null,
+    tvlUsd,
+    volume24hUsd: Number.isFinite(volume24h) ? volume24h : 0,
+    feeRate: Number.isFinite(swapFee) ? swapFee : null,
+    balances: balances.every(Number.isFinite) ? balances : null,
+    balancesNormalized: true,
+    ...(executionCapabilityGate ? { executionCapabilityGate } : {}),
+  };
+}
+
 export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFetchResult> {
   const results: DexApiPool[] = [];
   const errors: string[] = [];
@@ -443,57 +987,22 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
       }
 
       const tvlUsd = parseFloat(pool.dynamicData.totalLiquidity);
-      const volume24h = parseFloat(pool.dynamicData.volume24h);
-      const swapFee = parseFloat(pool.dynamicData.swapFee);
       if (!Number.isFinite(tvlUsd) || tvlUsd <= 0) continue;
       if (tvlUsd > BALANCER_MAX_POOL_TVL_USD) {
         malformedRows++;
         continue;
       }
 
-      const poolType = STABLE_DISPLAY_POOL_TYPES.has(pool.type)
-        ? "balancer-stable"
-        : pool.type === "WEIGHTED"
-          ? "balancer-weighted"
-          : "balancer-custom";
-
-      const balances = pool.poolTokens.map((t) => parseFloat(t.balance));
-      const poolAddress = extractBalancerPoolAddress(pool);
-      const executionCapabilityGate = captureGateForPool(pool, poolAddress, balances, swapFee);
-
-      // Per-token priceUsd is the authoritative price for Balancer rows. The scalar
-      // pool.price field is meaningless at pool granularity — drop it to remove a footgun.
-      const price: number | null = null;
-
-      results.push({
-        source: "balancer",
-        chain,
-        poolAddress,
-        poolType,
-        tokens: pool.poolTokens.map((t) => {
-          const bal = parseFloat(t.balance);
-          const balUsd = parseFloat(t.balanceUSD);
-          const weight = t.weight == null ? null : parseFloat(t.weight);
-          const priceRate = t.priceRate == null ? null : parseFloat(t.priceRate);
-          const tokenPriceUsd = (Number.isFinite(bal) && bal > 0 && Number.isFinite(balUsd) && balUsd > 0)
-            ? balUsd / bal : null;
-          return {
-            address: t.address,
-            symbol: t.symbol,
-            decimals: t.decimals,
-            priceUsd: tokenPriceUsd,
-            weight: Number.isFinite(weight) && weight != null && weight > 0 ? weight : null,
-            priceRate: Number.isFinite(priceRate) && priceRate != null && priceRate > 0 ? priceRate : null,
-          };
-        }),
-        price,
-        tvlUsd,
-        volume24hUsd: Number.isFinite(volume24h) ? volume24h : 0,
-        feeRate: Number.isFinite(swapFee) ? swapFee : null,
-        balances: balances.every(Number.isFinite) ? balances : null,
-        balancesNormalized: true,
-        ...(executionCapabilityGate ? { executionCapabilityGate } : {}),
-      });
+      const reviewedRoute = reviewedRouteForPool(pool);
+      const genericPriceOverrides = new Map<string, number | null>();
+      if (reviewedRoute) {
+        // The aggregate balanceUSD field can collapse USP to issuer par. This
+        // reviewed route is priceable only through its bounded executable quote.
+        genericPriceOverrides.set(normalizedAddress(reviewedRoute.targetToken.address), null);
+      }
+      const shapedPool = shapeBalancerPool(pool, chain, genericPriceOverrides);
+      results.push(shapedPool);
+      const executionCapabilityGate = shapedPool.executionCapabilityGate;
       if (executionCapabilityGate == null && (STABLE_MATH_POOL_TYPES.has(pool.type) || pool.type === "WEIGHTED")) {
         exactCandidatePoolIdsByIndex.set(results.length - 1, {
           poolId: ampJoinKey(pool.chain, pool.id),
@@ -551,6 +1060,52 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
         ampAttached,
         capabilityGated,
       },
+    });
+  }
+
+  let reviewedRouteCount = 0;
+  for (const route of REVIEWED_BALANCER_ROUTES) {
+    const reviewed = await fetchReviewedBalancerRoute(route, warnings, signal);
+    if (!reviewed) continue;
+
+    const priceOverrides = new Map<string, number | null>([
+      [normalizedAddress(route.targetToken.address), null],
+      [normalizedAddress(route.quoteToken.address), null],
+    ]);
+    const priceDependencyOverrides = new Map<string, NonNullable<DexApiPool["tokens"][number]["priceUsdDependency"]>>([
+      [normalizedAddress(route.targetToken.address), {
+        stablecoinId: "usdc-circle",
+        multiplier: reviewed.targetPriceInUsdc,
+      }],
+    ]);
+    // Stable Surge computes a dynamic fee and the buffer unwrap is a separate
+    // hop. The bounded SOR quote is valid price evidence, but the generic
+    // invariant model must remain gated until it models both behaviors.
+    const shapedPool = shapeBalancerPool(
+      reviewed.pool,
+      route.internalChain,
+      priceOverrides,
+      priceDependencyOverrides,
+      balancerGate("unsupported-invariant"),
+    );
+    shapedPool.amp = parseFloat(reviewed.pool.amp);
+
+    const existingIndex = results.findIndex((pool) =>
+      pool.chain === route.internalChain &&
+      normalizedAddress(pool.poolAddress) === normalizedAddress(route.poolAddress)
+    );
+    if (existingIndex >= 0) results[existingIndex] = shapedPool;
+    else results.push(shapedPool);
+    reviewedRouteCount++;
+  }
+  if (reviewedRouteCount > 0) {
+    logWorkerEvent({
+      scope: "lib",
+      level: "info",
+      event: "fetch-balancer.reviewed-routes",
+      job: "sync-dex-liquidity",
+      message: "Resolved reviewed Balancer routes through a bounded executable quote",
+      metadata: { resolved: reviewedRouteCount, configured: REVIEWED_BALANCER_ROUTES.length },
     });
   }
 
