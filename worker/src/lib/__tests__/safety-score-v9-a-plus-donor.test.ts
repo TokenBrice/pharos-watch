@@ -1,7 +1,11 @@
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { describe, expect, it } from "vitest";
-import { computeReportCardsRegistryFingerprint, createReportCardsFixedInput } from "../report-cards-fixed-input";
+import {
+  computeReportCardsRegistryFingerprint,
+  createReportCardsFixedInput,
+  type ReportCardsFixedInputDraft,
+} from "../report-cards-fixed-input";
 import { buildSafetyScoreV9Candidate, computeSafetyScoreV9CandidateId } from "../safety-score-v9-candidate";
 import {
   SafetyScoreV9FactSetExtensionV2Schema,
@@ -29,7 +33,30 @@ const RETAINED_344_ASSET_IDENTITY = {
 
 // These frozen capture fragments intentionally stay raw until the production
 // fixed-input and extension schemas validate the assembled two-asset fixture.
-const donorFixed: any = {
+type DonorFixedInputFragment = Pick<
+  ReportCardsFixedInputDraft,
+  | "capturedAt"
+  | "sourceGeneration"
+  | "dexGenerationId"
+  | "redemptionGenerationId"
+  | "registryRevision"
+  | "methodologyVersion"
+  | "clockSec"
+  | "updatedAt"
+  | "liquidityStale"
+  | "redemptionStale"
+  | "inputFreshness"
+  | "pegDataById"
+  | "redemptionBackstopMap"
+  | "resolvedBlacklistStatuses"
+  | "liveReserveMap"
+  | "liveReserveProvenanceMap"
+  | "chainCirculatingById"
+> & {
+  dexLiqMap: Record<string, Partial<ReportCardsFixedInputDraft["dexLiqMap"][string]>>;
+};
+
+const donorFixed = {
   capturedAt: "2026-07-16T11:04:30.000Z",
   sourceGeneration: "report-cards:8.17:1784199667",
   dexGenerationId: "dex-liquidity-1784198459",
@@ -359,9 +386,14 @@ const donorFixed: any = {
       },
     },
   },
+} satisfies DonorFixedInputFragment;
+
+type ExtensionAsset = SafetyScoreV9FactSetExtensionV2["assets"][number];
+type DonorExtensionFragment = Omit<SafetyScoreV9FactSetExtensionV2, "assets"> & {
+  assets: Array<{ assetId: string } & Partial<ExtensionAsset>>;
 };
 
-const donorReplay: any = {
+const donorReplay = {
   extension: {
     compiledAtSec: 1784199870,
     registryFingerprint: "1778128d7fb2310eaac57c924f3a7b1110915427ab6dadd5c18b4712b6e6d76c",
@@ -397,7 +429,7 @@ const donorReplay: any = {
     },
     assets: [
       {
-        assetId: "ausd-agora",
+        assetId: "ausd-agora" as const,
         mechanismRiskReview: {
           archetype: "fiat-cash",
           assuranceAndReconciliation: {
@@ -524,7 +556,7 @@ const donorReplay: any = {
         ],
       },
       {
-        assetId: "bold-liquity",
+        assetId: "bold-liquity" as const,
         pegReference: {
           failureDomains: [],
           referenceKey: "USD",
@@ -532,7 +564,7 @@ const donorReplay: any = {
         },
       },
       {
-        assetId: "dai-makerdao",
+        assetId: "dai-makerdao" as const,
         routeReviews: [
           {
             coverageClass: "exact-lower-bound",
@@ -644,7 +676,7 @@ const donorReplay: any = {
         ],
       },
       {
-        assetId: "europ-schuman",
+        assetId: "europ-schuman" as const,
         mechanismRiskReview: {
           archetype: "fiat-cash",
           assuranceAndReconciliation: {
@@ -695,7 +727,7 @@ const donorReplay: any = {
         },
       },
       {
-        assetId: "sdola-inverse-finance",
+        assetId: "sdola-inverse-finance" as const,
         controlReview: {
           controls: [
             {
@@ -933,7 +965,7 @@ const donorReplay: any = {
         ],
       },
       {
-        assetId: "usdc-circle",
+        assetId: "usdc-circle" as const,
         dependencies: {
           baseSource: "live-unmapped",
           dependencyFromLive: true,
@@ -1019,15 +1051,21 @@ const donorReplay: any = {
         },
       },
       {
-        assetId: "usdt-tether",
+        assetId: "usdt-tether" as const,
         launchedAtSec: 1412553600,
       },
     ],
   },
-};
+} satisfies { extension: DonorExtensionFragment };
 
-function donorAsset(assetId: string): any {
-  return donorReplay.extension.assets.find((asset: any) => asset.assetId === assetId);
+type DonorAsset = (typeof donorReplay.extension.assets)[number];
+
+function donorAsset<AssetId extends DonorAsset["assetId"]>(
+  assetId: AssetId,
+): Extract<DonorAsset, { assetId: AssetId }> {
+  const asset = donorReplay.extension.assets.find((candidate) => candidate.assetId === assetId);
+  if (!asset) throw new Error(`Missing donor asset ${assetId}`);
+  return asset as Extract<DonorAsset, { assetId: AssetId }>;
 }
 
 type DonorRouteReview = SafetyScoreV9FactSetExtensionV2["assets"][number]["routeReviews"][number];
@@ -1036,6 +1074,12 @@ function findDonorRouteReview(asset: { routeReviews: readonly DonorRouteReview[]
   const review = asset.routeReviews.find((candidate) => candidate.routeId === routeId);
   if (!review) throw new Error(`Missing donor route review ${routeId}`);
   return review;
+}
+
+function findRoute<TRoute extends { routeId: string }>(routes: readonly TRoute[], routeId: string): TRoute {
+  const route = routes.find((candidate) => candidate.routeId === routeId);
+  if (!route) throw new Error(`Missing donor route ${routeId}`);
+  return route;
 }
 
 function clone<T>(value: T): T {
@@ -1057,9 +1101,7 @@ function objectKeysDeep(value: unknown): string[] {
 
 function buildFixture() {
   const sourceDex = donorFixed.dexLiqMap["dai-makerdao"];
-  const dexObservation = clone(
-    sourceDex.exitRouteObservations.find((route: any) => route.routeId === DAI_DEX_ROUTE_ID),
-  );
+  const dexObservation = clone(findRoute(sourceDex.exitRouteObservations, DAI_DEX_ROUTE_ID));
   dexObservation.routeId = ownerRekey(dexObservation.routeId);
   const aggregateExecutableUsd = dexObservation.executableUsd;
   const sourceRedemption = donorFixed.redemptionBackstopMap["dai-makerdao"];
@@ -1189,19 +1231,19 @@ function buildFixture() {
     .filter((binding) => binding.evidenceKeys.every((key: string) => evidenceKeys.has(key)))
     .map((binding) => ({ ...clone(binding), componentKey: ownerRekey(binding.componentKey) }));
   const sourceControl = clone(sdola.controlReview);
-  sourceControl.controls = sourceControl.controls.map((control: any) => ({
+  sourceControl.controls = sourceControl.controls.map((control) => ({
     ...control,
     controlKey: ownerRekey(control.controlKey),
     deploymentKey: ownerRekey(control.deploymentKey),
   }));
   const accessReview = clone(agora.accessReview);
-  accessReview.freeze.reviews = accessReview.freeze.reviews.map((review: any) => ({
+  accessReview.freeze.reviews = accessReview.freeze.reviews.map((review) => ({
     ...review,
     reviewKey: ownerRekey(review.reviewKey),
   }));
   const routeReviews = [
-    dai.routeReviews.find((route: any) => route.routeId === DAI_DEX_ROUTE_ID),
-    dai.routeReviews.find((route: any) => route.routeId === DAI_REDEMPTION_ROUTE_ID),
+    findDonorRouteReview(dai, DAI_DEX_ROUTE_ID),
+    findDonorRouteReview(dai, DAI_REDEMPTION_ROUTE_ID),
   ].map((review) => ({ ...clone(review), routeId: ownerRekey(review.routeId) }));
 
   const extension = SafetyScoreV9FactSetExtensionV2Schema.parse({
