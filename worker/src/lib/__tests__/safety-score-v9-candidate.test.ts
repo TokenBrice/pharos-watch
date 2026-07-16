@@ -13,7 +13,7 @@ import {
 import type { SafetyScoreV9FactSetExtensionV2 } from "../safety-score-v9-fact-set";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
 
-const AS_OF_SEC = 1_783_944_000;
+const AS_OF_SEC = 1_784_160_000;
 const OBSERVED_AT_SEC = AS_OF_SEC - 100;
 const PUBLISHED_AT_SEC = AS_OF_SEC + 10;
 
@@ -489,7 +489,7 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
       economicControlReview: {
         mint: {
           status: { observationState: "known" },
-          reconciliation: "not-applicable",
+          reconciliation: "periodic",
           upgrade: { state: "reviewed" },
         },
       },
