@@ -13,7 +13,7 @@ import {
   responseFromBufferedBody,
 } from "../../lib/pricing-provider-lifecycle";
 import { getCache, setCache } from "../../lib/db-cache";
-import { CmcCategoryResponseSchema } from "../../lib/schemas";
+import { CmcCategoryResponseSchema, CmcLatestQuotesResponseSchema } from "../../lib/schemas";
 import {
   endpointLabel,
   type PricingProviderAttemptDiagnostic,
@@ -42,13 +42,176 @@ const CMC_QUOTE_MAX_AGE_SEC = 60 * 60;
 const CMC_FETCH_COOLDOWN_SEC = 3600;
 const CMC_PASSTHROUGH_STATUSES = [400, 401, 403, 404, 408, 409, 418, 425, 429, 451, 500, 502, 503, 504];
 const CMC_CATEGORY_ENDPOINT = "pro-api.coinmarketcap.com/v1/cryptocurrency/category";
+const CMC_QUOTES_ENDPOINT = "pro-api.coinmarketcap.com/v3/cryptocurrency/quotes/latest";
 const CMC_STABLECOIN_CATEGORY_ID = "604f2753ebccdd50cd175fc1";
 const CMC_LAST_FETCH_CACHE_KEY = "cmc_last_fetch";
+const CMC_TARGETED_MAX_SLUGS = 25;
 
 interface CmcFallbackQuote extends FallbackPriceQuote {
   observedAt: number;
   symbol: string;
   slug?: string;
+}
+
+interface CmcTargetedCandidate {
+  asset: PeggedAsset;
+  index: number;
+}
+
+function normalizedContractAddress(value: string | null | undefined): string | null {
+  const normalized = value?.trim().toLowerCase();
+  return normalized ? normalized : null;
+}
+
+function matchesConfiguredContract(asset: PeggedAsset, providerAddress: string): boolean {
+  const normalized = normalizedContractAddress(providerAddress);
+  return normalized != null && (asset.contracts ?? []).some(
+    (deployment) => normalizedContractAddress(deployment.address) === normalized,
+  );
+}
+
+async function fetchTargetedCmcQuotes(params: {
+  assets: PeggedAsset[];
+  candidates: CmcTargetedCandidate[];
+  cmcApiKey: string;
+  fxRates: Record<string, number> | undefined;
+  signal?: AbortSignal;
+}): Promise<{
+  resolved: number;
+  diagnostic: PricingProviderAttemptDiagnostic;
+  rateLimited: boolean;
+}> {
+  const slugs = params.candidates.map((entry) => entry.asset.cmcSlug!.toLowerCase());
+  const url = `https://${CMC_QUOTES_ENDPOINT}?slug=${encodeURIComponent(slugs.join(","))}&convert=USD`;
+  const timeout = AbortSignal.timeout(CMC_REQUEST_TIMEOUT_MS);
+  const requestSignal = params.signal ? AbortSignal.any([params.signal, timeout]) : timeout;
+  const result = await fetchTextWithRetry(
+    url,
+    {
+      headers: {
+        "X-CMC_PRO_API_KEY": params.cmcApiKey,
+        Accept: "application/json",
+        "User-Agent": USER_AGENT,
+      },
+      signal: requestSignal,
+    },
+    CMC_MAX_RETRIES,
+    {
+      timeoutMs: CMC_REQUEST_TIMEOUT_MS,
+      passthroughStatuses: CMC_PASSTHROUGH_STATUSES,
+      returnFinalResponse: true,
+    },
+  );
+  const diagnostic = buildPricingProviderDiagnostic({
+    source: "coinmarketcap",
+    stage: "fallback",
+    endpoint: endpointLabel(url),
+    candidateCount: params.candidates.length,
+  }, {
+    status: result?.response.status ?? null,
+    ok: result?.response.ok === true,
+  });
+  if (!result?.response.ok) {
+    return {
+      resolved: 0,
+      diagnostic: await applyNonOkProviderDiagnostic(
+        diagnostic,
+        result ? responseFromBufferedBody(result) : null,
+      ),
+      rateLimited: result?.response.status === 429,
+    };
+  }
+
+  let json: unknown;
+  try {
+    json = JSON.parse(result.body);
+  } catch (error) {
+    return { resolved: 0, diagnostic: applyJsonParseFailureDiagnostic(diagnostic, error), rateLimited: false };
+  }
+  const parsed = CmcLatestQuotesResponseSchema.safeParse(json);
+  if (!parsed.success) {
+    return {
+      resolved: 0,
+      diagnostic: {
+        ...diagnostic,
+        errorClass: "invalid-shape",
+        errorMessage: "Expected CoinMarketCap v3 latest-quotes payload",
+        rejectionReasonCounts: { "invalid-shape": 1 },
+      },
+      rateLimited: false,
+    };
+  }
+
+  const quotesBySlug = new Map(parsed.data.data.map((entry) => [entry.slug.toLowerCase(), entry]));
+  const rejections: NonNullable<PricingProviderAttemptDiagnostic["rejectionReasonCounts"]> = {};
+  const reject = (reason: keyof typeof rejections): void => {
+    rejections[reason] = (rejections[reason] ?? 0) + 1;
+  };
+  let resolved = 0;
+  let matched = 0;
+  for (const candidate of params.candidates) {
+    const expectedSlug = candidate.asset.cmcSlug!.toLowerCase();
+    const quote = quotesBySlug.get(expectedSlug);
+    if (!quote) {
+      reject("missing-quote");
+      continue;
+    }
+    const providerAddress = normalizedContractAddress(quote.platform?.token_address);
+    if (
+      quote.slug.toLowerCase() !== expectedSlug ||
+      quote.symbol.toUpperCase() !== candidate.asset.symbol.toUpperCase() ||
+      quote.is_active === 0 ||
+      (providerAddress != null && !matchesConfiguredContract(candidate.asset, providerAddress))
+    ) {
+      reject("unsupported-quote");
+      continue;
+    }
+    matched += 1;
+    const usdQuote = Array.isArray(quote.quote)
+      ? quote.quote.find((entry) => entry.symbol.toUpperCase() === "USD")
+      : quote.quote.USD;
+    const price = usdQuote?.price;
+    const volume24h = usdQuote?.volume_24h;
+    const observedAt = parseUnixOrIsoTimestampSec(usdQuote?.last_updated);
+    if (!isFreshFallbackObservedAt(observedAt, CMC_QUOTE_MAX_AGE_SEC)) {
+      reject("stale");
+      continue;
+    }
+    if (
+      price == null || price <= 0 || volume24h == null || !Number.isFinite(volume24h) || volume24h <= 0 ||
+      !isReasonablePrice(
+        price,
+        candidate.asset.pegType as string | undefined,
+        params.fxRates,
+        buildPriceReasonablenessOptions(candidate.asset),
+      )
+    ) {
+      reject("price-rejected");
+      continue;
+    }
+    applyResolvedPrice(
+      params.assets[candidate.index],
+      price,
+      "coinmarketcap",
+      "fallback",
+      observedAt!,
+      "upstream",
+    );
+    resolved += 1;
+  }
+
+  return {
+    resolved,
+    diagnostic: {
+      ...diagnostic,
+      success: true,
+      responseRowCount: quotesBySlug.size,
+      matchedCount: matched,
+      resolvedCount: resolved,
+      ...(Object.keys(rejections).length > 0 ? { rejectionReasonCounts: rejections } : {}),
+    },
+    rateLimited: false,
+  };
 }
 
 async function markCmcFetchCooldown(db: D1Database | undefined, reason: string): Promise<void> {
@@ -171,10 +334,10 @@ export async function runCmcPass(
           return recordFailureAndReturn();
         }
         const cmcData = parsed.data;
-        if (
+        const categoryTruncated =
           cmcData.data.num_tokens > CMC_CATEGORY_LIMIT ||
-          cmcData.data.coins.length < cmcData.data.num_tokens
-        ) {
+          cmcData.data.coins.length < cmcData.data.num_tokens;
+        if (categoryTruncated) {
           diagnostics.push({
             ...diagnostic,
             responseRowCount: cmcData.data.coins.length,
@@ -182,12 +345,11 @@ export async function runCmcPass(
             errorMessage: `CoinMarketCap category response may be truncated (${cmcData.data.coins.length}/${cmcData.data.num_tokens})`,
             rejectionReasonCounts: { "invalid-shape": 1 },
           });
-          return recordFailureAndReturn();
         }
         diagnostic.responseRowCount = cmcData.data.coins.length;
         const cmcBySymbol = new Map<string, CmcFallbackQuote>();
         const cmcBySlug = new Map<string, CmcFallbackQuote>();
-        for (const entry of cmcData.data.coins) {
+        for (const entry of categoryTruncated ? [] : cmcData.data.coins) {
           const price = entry.quote?.USD?.price;
           const observedAt = parseUnixOrIsoTimestampSec(entry.quote?.USD?.last_updated);
           if (
@@ -239,19 +401,42 @@ export async function runCmcPass(
             resolved += 1;
           }
         }
-        diagnostic.resolvedCount = resolved;
-        diagnostic.success = true;
-        diagnostics.push(diagnostic);
-
-        if (db) {
-          await markCmcFetchCooldown(db, "success");
-          await recordProviderOutcomeSafe({
-            db,
-            circuitSource: CIRCUIT_SOURCE.CMC_PRICES,
-            attempted: 1,
-            successful: 1,
-          });
+        let providerAttempts = 1;
+        let providerSuccesses = 0;
+        if (!categoryTruncated) {
+          diagnostic.resolvedCount = resolved;
+          diagnostic.success = true;
+          diagnostics.push(diagnostic);
+          providerSuccesses += 1;
         }
+
+        const targetedCandidates = collectMissingPriceCandidates(assets)
+          .filter((entry) => entry.asset.cmcSlug != null)
+          .slice(0, CMC_TARGETED_MAX_SLUGS);
+        if (targetedCandidates.length > 0) {
+          providerAttempts += 1;
+          const targeted = await fetchTargetedCmcQuotes({
+            assets,
+            candidates: targetedCandidates,
+            cmcApiKey,
+            fxRates,
+            signal,
+          });
+          resolved += targeted.resolved;
+          diagnostics.push(targeted.diagnostic);
+          if (targeted.diagnostic.success) providerSuccesses += 1;
+          if (targeted.rateLimited) await markCmcFetchCooldown(db, "targeted 429");
+        }
+
+        if (providerSuccesses > 0) {
+          await markCmcFetchCooldown(db, "success");
+        }
+        await recordProviderOutcomeSafe({
+          db,
+          circuitSource: CIRCUIT_SOURCE.CMC_PRICES,
+          attempted: providerAttempts,
+          successful: providerSuccesses,
+        });
       } else {
         diagnostics.push(await applyNonOkProviderDiagnostic(
           diagnostic,

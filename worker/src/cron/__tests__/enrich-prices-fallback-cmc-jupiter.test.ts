@@ -829,6 +829,100 @@ describe("enrichMissingPrices", () => {
     });
   });
 
+  it("retrieves an exact MNEE slug through targeted quotes when the category page is truncated", async () => {
+    const assets: PeggedAsset[] = [{
+      id: "mnee-mnee",
+      name: "MNEE USD",
+      symbol: "MNEE",
+      price: 0,
+      cmcSlug: "mnee",
+      pegType: "peggedUSD",
+      contracts: [{
+        chain: "ethereum",
+        address: "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf",
+        decimals: 18,
+      }],
+      circulating: {},
+    }];
+    const fetchSpy = fixtureMockFetch([
+      { match: "/v1/cryptocurrency/category", body: cmcCategory([], 301) },
+      {
+        match: "/v3/cryptocurrency/quotes/latest",
+        body: { data: [{
+          id: 32878,
+          slug: "mnee",
+          symbol: "MNEE",
+          is_active: 1,
+          platform: {
+            slug: "ethereum",
+            token_address: "0x8cCeDbaE4916B79dA7f3F612eFb2Eb93A2bFD6Cf",
+          },
+          quote: [{ symbol: "USD", ...cmcUsdQuote(0.9998), volume_24h: 143_000 }],
+        }] },
+      },
+    ]);
+
+    const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, undefined);
+
+    expect(result.resolved).toBe(1);
+    expect(assets[0].price).toBe(0.9998);
+    expect(assets[0].priceSource).toBe("coinmarketcap");
+    expect(fetchSpy.getHistory().map((entry) => entry.url)).toEqual([
+      expect.stringContaining("/v1/cryptocurrency/category"),
+      expect.stringContaining("/v3/cryptocurrency/quotes/latest?slug=mnee&convert=USD"),
+    ]);
+    expect(result.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ endpoint: "pro-api.coinmarketcap.com/v1/cryptocurrency/category", success: false }),
+      expect.objectContaining({
+        endpoint: "pro-api.coinmarketcap.com/v3/cryptocurrency/quotes/latest",
+        success: true,
+        matchedCount: 1,
+        resolvedCount: 1,
+      }),
+    ]));
+  });
+
+  it.each([
+    ["wrong contract", "MNEE", "0x0000000000000000000000000000000000000001", undefined, 1],
+    ["symbol collision", "MNEE2", "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf", undefined, 1],
+    ["stale quote", "MNEE", "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf", staleIsoTimestamp(), 1],
+    ["inactive quote", "MNEE", "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf", undefined, 0],
+  ])("rejects a targeted CMC %s", async (_name, symbol, tokenAddress, lastUpdated, isActive) => {
+    const assets: PeggedAsset[] = [{
+      id: "mnee-mnee",
+      name: "MNEE USD",
+      symbol: "MNEE",
+      price: 0,
+      cmcSlug: "mnee",
+      pegType: "peggedUSD",
+      contracts: [{
+        chain: "ethereum",
+        address: "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf",
+        decimals: 18,
+      }],
+      circulating: {},
+    }];
+    fixtureMockFetch([
+      { match: "/v1/cryptocurrency/category", body: cmcCategory([]) },
+      {
+        match: "/v3/cryptocurrency/quotes/latest",
+        body: { data: [{
+          id: 32878,
+          slug: "mnee",
+          symbol,
+          is_active: isActive,
+          platform: { slug: "ethereum", token_address: tokenAddress },
+          quote: { USD: { ...cmcUsdQuote(0.9998, lastUpdated), volume_24h: 143_000 } },
+        }] },
+      },
+    ]);
+
+    const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, undefined);
+
+    expect(result.resolved).toBe(0);
+    expect(assets[0].price).toBe(0);
+  });
+
   it("skips CMC quotes with stale quote timestamps", async () => {
     const assets: PeggedAsset[] = [
       {
