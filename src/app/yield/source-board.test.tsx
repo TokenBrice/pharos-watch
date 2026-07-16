@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { YieldSourceBoard } from "@/app/yield/source-board";
 import { buildYieldSourceBoardModel } from "@/app/yield/source-board-model";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@/test/fixtures/yield";
@@ -20,6 +20,18 @@ function makeBoardRanking(overrides = {}) {
 }
 
 describe("YieldSourceBoard", () => {
+  beforeAll(() => {
+    vi.stubGlobal("ResizeObserver", class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    });
+  });
+
+  afterAll(() => {
+    vi.unstubAllGlobals();
+  });
+
   afterEach(() => {
     cleanup();
   });
@@ -137,6 +149,21 @@ describe("YieldSourceBoard", () => {
     expect(watchSegment.className).toContain("h-6");
     expect(watchSegment.className).toContain("min-w-6");
     expect(watchSegment.querySelector('span[aria-hidden="true"]')?.className).toContain("top-2 h-2");
+  });
+
+  it("uses inverse-surface contrast for source-quality tooltip descriptions", async () => {
+    const model = buildYieldSourceBoardModel([makeBoardRanking()]);
+
+    render(<YieldSourceBoard model={model} onFilterChange={vi.fn()} />);
+
+    fireEvent.focus(screen.getByRole("button", { name: /Watch: 1\..*Filter rows/i }));
+
+    const descriptions = await screen.findAllByText(/Medium or explainable source-risk evidence/i);
+    expect(descriptions.length).toBeGreaterThan(0);
+    for (const description of descriptions) {
+      expect(description.className).toContain("text-background/75");
+      expect(description.className).not.toContain("text-muted-foreground");
+    }
   });
 
   it("clears an active source-quality segment when clicked again", () => {
