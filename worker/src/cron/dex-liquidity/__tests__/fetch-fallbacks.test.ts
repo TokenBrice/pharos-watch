@@ -58,8 +58,14 @@ import {
   buildCgTickerPriceObservations,
   filterValidCgTickers,
 } from "../coingecko-tickers-shared";
-import { fetchCgTickersFallback, fetchDsFallbackPools, getCgTickersFallbackTargets } from "../fetch-fallbacks";
-import { createKnownPoolIdentityIndex } from "../pool-identity";
+import {
+  fetchCgTickersFallback,
+  fetchDsFallbackPools,
+  getCgTickersFallbackTargets,
+  getDsFallbackTargets,
+  getFallbackTargets,
+} from "../fetch-fallbacks";
+import { buildPoolIdentity, createKnownPoolIdentityIndex, registerKnownPoolIdentity } from "../pool-identity";
 import type { CgTicker, DexPriceObs, LiquidityMetrics } from "../types";
 import { fetchJsonWithRetry } from "../../../lib/fetch-retry";
 import { fetchDsTokenPoolsWithStatus } from "../../../lib/dexscreener";
@@ -180,6 +186,93 @@ describe("DexScreener fallback identity", () => {
         chain: "solana",
       }),
     ]);
+  });
+
+  it("compacts repeated exact pools without changing derived-identity cardinality", async () => {
+    const pair = {
+      chainId: "solana",
+      dexId: "raydium",
+      pairAddress: "11111111111111111111111111111111",
+      baseToken: { address: "MintCase", name: "USD Coin", symbol: "USDC" },
+      quoteToken: { address: "QuoteCase", name: "Tether", symbol: "USDT" },
+      priceUsd: "1",
+      priceNative: "1",
+      volume: { h24: 20_000, h6: 0, h1: 0, m5: 0 },
+      liquidity: { usd: 100_000, base: 0, quote: 0 },
+      pairCreatedAt: null,
+    };
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({ ok: true, pairs: [pair, pair] });
+    const known = createKnownPoolIdentityIndex();
+    registerKnownPoolIdentity(
+      known,
+      buildPoolIdentity({
+        chain: "solana",
+        protocol: "raydium",
+        tokenAddresses: ["MintCase", "QuoteCase"],
+        poolType: "generic",
+      }),
+    );
+
+    const result = await fetchDsFallbackPools(createMockDb(), new Map(), new Map(), known);
+
+    expect(result.newPools.get("usdc-circle")).toHaveLength(1);
+    expect(result.priceObs.get("usdc-circle")).toHaveLength(1);
+  });
+
+  it("finalizes useful partial pools when the crawl deadline expires", async () => {
+    const contracts = activeStablecoins[0]!.contracts!;
+    contracts.push({ chain: "solana", address: "SecondMint", decimals: 6 });
+    let now = 0;
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => now);
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockImplementationOnce(async () => {
+      now = 200;
+      return {
+        ok: true,
+        pairs: [
+          {
+            chainId: "solana",
+            dexId: "raydium",
+            pairAddress: "11111111111111111111111111111111",
+            baseToken: { address: "MintCase", name: "USD Coin", symbol: "USDC" },
+            quoteToken: { address: "QuoteCase", name: "Tether", symbol: "USDT" },
+            priceUsd: "1",
+            priceNative: "1",
+            volume: { h24: 20_000, h6: 0, h1: 0, m5: 0 },
+            liquidity: { usd: 100_000, base: 0, quote: 0 },
+            pairCreatedAt: null,
+          },
+        ],
+      };
+    });
+
+    try {
+      const result = await fetchDsFallbackPools(
+        createMockDb(),
+        new Map(),
+        new Map(),
+        createKnownPoolIdentityIndex(),
+        undefined,
+        100,
+      );
+
+      expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledTimes(1);
+      expect(result.newPools.get("usdc-circle")).toHaveLength(1);
+    } finally {
+      contracts.pop();
+      nowSpy.mockRestore();
+    }
+  });
+});
+
+describe("DexScreener fallback targeting", () => {
+  it("does not crawl a coin when only measured-balance coverage is weak", () => {
+    const metrics = new Map([["usdc-circle", makeMetric({ totalTvlForBalance: 0 })]]);
+    const observations = new Map([["usdc-circle", [makeObservation(), makeObservation({ protocol: "uniswap-v3" })]]]);
+
+    expect(getFallbackTargets(metrics, observations, { requireTrackedContracts: true }).map((meta) => meta.id)).toEqual(
+      ["usdc-circle"],
+    );
+    expect(getDsFallbackTargets(metrics, observations)).toEqual([]);
   });
 });
 

@@ -24,7 +24,6 @@ import {
 } from "./coingecko-tickers-shared";
 import {
   buildPoolIdentity,
-  countPoolIdentityKeys,
   getIdentityDedupReason,
   registerKnownPoolIdentity,
   type KnownPoolIdentityIndex,
@@ -40,16 +39,21 @@ const DEXSCREENER_LIQUIDITY_CIRCUIT = CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY;
 
 function needsCoverageEnrichment(metric: LiquidityMetrics | undefined, observations: DexPriceObs[]): boolean {
   if (!metric) return true;
+  if (needsDexScreenerEnrichment(metric, observations)) return true;
+  const measuredBalanceShare = metric.totalTvlUsd > 0 ? metric.totalTvlForBalance / metric.totalTvlUsd : 0;
+  return measuredBalanceShare < WEAK_COVERAGE_MIN_MEASURED_BALANCE_SHARE;
+}
+
+function needsDexScreenerEnrichment(metric: LiquidityMetrics | undefined, observations: DexPriceObs[]): boolean {
+  if (!metric) return true;
   if ((metric.poolCount ?? 0) === 0) return true;
   if (observations.length === 0) return true;
 
   const protocolCount = new Set(observations.map((observation) => observation.protocol)).size;
-  const measuredBalanceShare = metric.totalTvlUsd > 0 ? metric.totalTvlForBalance / metric.totalTvlUsd : 0;
 
   if (metric.poolCount < WEAK_COVERAGE_MIN_POOL_COUNT) return true;
   if (protocolCount < WEAK_COVERAGE_MIN_PROTOCOL_COUNT) return true;
   if (metric.totalTvlUsd < WEAK_COVERAGE_MIN_TVL_USD) return true;
-  if (measuredBalanceShare < WEAK_COVERAGE_MIN_MEASURED_BALANCE_SHARE) return true;
 
   return false;
 }
@@ -93,6 +97,16 @@ export function getCgTickersFallbackTargets(
   });
 }
 
+export function getDsFallbackTargets(
+  metrics: Map<string, LiquidityMetrics>,
+  priceObservations: Map<string, DexPriceObs[]>,
+): typeof ACTIVE_STABLECOINS {
+  return ACTIVE_STABLECOINS.filter((meta) => {
+    if (getTrackedContracts(meta).length === 0) return false;
+    return needsDexScreenerEnrichment(metrics.get(meta.id), priceObservations.get(meta.id) ?? []);
+  });
+}
+
 /** DexScreener fallback: fetch pools for tracked stablecoins with missing pool or price coverage. */
 export async function fetchDsFallbackPools(
   db: D1Database,
@@ -111,8 +125,14 @@ export async function fetchDsFallbackPools(
     pool: GtNewPool;
     identity: PoolIdentity;
   }> = [];
+  const candidateExactKeys = new Set<string>();
+  const candidateIdentityCounts = {
+    derived: new Map<string, number>(),
+    wildcard: new Map<string, number>(),
+  };
+  const priceObservationExactKeys = new Map<string, Set<string>>();
 
-  const targetCoins = getFallbackTargets(metrics, priceObservations, { requireTrackedContracts: true });
+  const targetCoins = getDsFallbackTargets(metrics, priceObservations);
 
   if (targetCoins.length === 0) {
     await logCronEvent(db, {
@@ -146,6 +166,27 @@ export async function fetchDsFallbackPools(
   let successfulRequests = 0;
   let poolsFound = 0;
 
+  const finalizeCandidates = () => {
+    for (const candidate of candidates) {
+      const dedupReason = getIdentityDedupReason(candidate.identity, knownPoolIndex, {
+        derived: candidate.identity.derivedMatchKey
+          ? (candidateIdentityCounts.derived.get(candidate.identity.derivedMatchKey) ?? 0)
+          : 0,
+        wildcard: candidate.identity.optionalWildcardKey
+          ? (candidateIdentityCounts.wildcard.get(candidate.identity.optionalWildcardKey) ?? 0)
+          : 0,
+      });
+      if (dedupReason) continue;
+
+      registerKnownPoolIdentity(knownPoolIndex, candidate.identity);
+      const poolList = newPools.get(candidate.stablecoinId) ?? [];
+      poolList.push(candidate.pool);
+      newPools.set(candidate.stablecoinId, poolList);
+      poolsFound++;
+    }
+    candidates.length = 0;
+  };
+
   const recordFallbackOutcome = async () => {
     if (requests > 0) {
       await recordOutcome(db, DEXSCREENER_LIQUIDITY_CIRCUIT, successfulRequests > 0);
@@ -163,6 +204,7 @@ export async function fetchDsFallbackPools(
         metadata: { requests, phase: "between-coins" },
       });
       await recordFallbackOutcome();
+      finalizeCandidates();
       return { newPools, priceObs };
     }
 
@@ -179,6 +221,7 @@ export async function fetchDsFallbackPools(
           metadata: { requests, phase: "mid-coin" },
         });
         await recordFallbackOutcome();
+        finalizeCandidates();
         return { newPools, priceObs };
       }
 
@@ -263,22 +306,29 @@ export async function fetchDsFallbackPools(
           isPlausibleDexObservationPrice(meta.id, priceUsd, references) &&
           tvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD
         ) {
-          const obs = priceObs.get(meta.id) ?? [];
-          obs.push({
-            price: priceUsd,
-            tvl,
-            chain: contract.chain,
-            protocol: pair.dexId,
-            poolKey: pairIdentity.exactPoolKey ?? undefined,
-            derivedMatchKey: pairIdentity.derivedMatchKey ?? undefined,
-            identityConfidence: pairIdentity.exactPoolKey
-              ? "exact"
-              : pairIdentity.derivedMatchKey
-                ? "derived_ambiguous"
-                : "none",
-            sourceFamily: "dexscreener",
-          });
-          priceObs.set(meta.id, obs);
+          const seenExactKeys = priceObservationExactKeys.get(meta.id) ?? new Set<string>();
+          if (!pairIdentity.exactPoolKey || !seenExactKeys.has(pairIdentity.exactPoolKey)) {
+            const obs = priceObs.get(meta.id) ?? [];
+            obs.push({
+              price: priceUsd,
+              tvl,
+              chain: contract.chain,
+              protocol: pair.dexId,
+              poolKey: pairIdentity.exactPoolKey ?? undefined,
+              derivedMatchKey: pairIdentity.derivedMatchKey ?? undefined,
+              identityConfidence: pairIdentity.exactPoolKey
+                ? "exact"
+                : pairIdentity.derivedMatchKey
+                  ? "derived_ambiguous"
+                  : "none",
+              sourceFamily: "dexscreener",
+            });
+            priceObs.set(meta.id, obs);
+            if (pairIdentity.exactPoolKey) {
+              seenExactKeys.add(pairIdentity.exactPoolKey);
+              priceObservationExactKeys.set(meta.id, seenExactKeys);
+            }
+          }
         }
 
         // Compute maturity
@@ -302,6 +352,27 @@ export async function fetchDsFallbackPools(
         else if (pair.labels?.includes("StableSwap")) poolType = "stableswap";
 
         const symbolStr = `${pair.baseToken.symbol ?? "?"} / ${pair.quoteToken.symbol ?? "?"}`;
+
+        if (pairIdentity.derivedMatchKey) {
+          candidateIdentityCounts.derived.set(
+            pairIdentity.derivedMatchKey,
+            (candidateIdentityCounts.derived.get(pairIdentity.derivedMatchKey) ?? 0) + 1,
+          );
+        }
+        if (pairIdentity.optionalWildcardKey) {
+          candidateIdentityCounts.wildcard.set(
+            pairIdentity.optionalWildcardKey,
+            (candidateIdentityCounts.wildcard.get(pairIdentity.optionalWildcardKey) ?? 0) + 1,
+          );
+        }
+
+        if (
+          pairIdentity.exactPoolKey &&
+          (knownPoolIndex.exactKeys.has(pairIdentity.exactPoolKey) || candidateExactKeys.has(pairIdentity.exactPoolKey))
+        ) {
+          continue;
+        }
+        if (pairIdentity.exactPoolKey) candidateExactKeys.add(pairIdentity.exactPoolKey);
 
         candidates.push({
           stablecoinId: meta.id,
@@ -344,25 +415,7 @@ export async function fetchDsFallbackPools(
   }
 
   await recordFallbackOutcome();
-
-  const identityCounts = countPoolIdentityKeys(candidates.map((candidate) => candidate.identity));
-  for (const candidate of candidates) {
-    const dedupReason = getIdentityDedupReason(candidate.identity, knownPoolIndex, {
-      derived: candidate.identity.derivedMatchKey
-        ? (identityCounts.derived.get(candidate.identity.derivedMatchKey) ?? 0)
-        : 0,
-      wildcard: candidate.identity.optionalWildcardKey
-        ? (identityCounts.wildcard.get(candidate.identity.optionalWildcardKey) ?? 0)
-        : 0,
-    });
-    if (dedupReason) continue;
-
-    registerKnownPoolIdentity(knownPoolIndex, candidate.identity);
-    const poolList = newPools.get(candidate.stablecoinId) ?? [];
-    poolList.push(candidate.pool);
-    newPools.set(candidate.stablecoinId, poolList);
-    poolsFound++;
-  }
+  finalizeCandidates();
 
   await logCronEvent(db, {
     job: "sync-dex-liquidity",
