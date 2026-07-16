@@ -37,9 +37,25 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.firstdigitallabs.com/transparency",
-    "provider": "Prescient Assurance",
+    "provider": "AOGB CPA Limited",
     "attestorTier": "niche",
-    "cadence": "monthly"
+    "cadence": "monthly",
+    "attestorJurisdiction": "Hong Kong",
+    "latestReport": {
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-10",
+      "assuranceMethod": "attestation",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "AOGB FDUSD reserves attestation - June 2026",
+          "url": "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6a55fa3b263f9436c944049d_ISAE3000%20-%20Attestation%20Report%20on%20Reserves%20Account%20%28June%202026%29.pdf"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -598,7 +614,7 @@
   "reserves": [
     {
       "name": "U.S. Treasury Bills",
-      "pct": 86.4,
+      "pct": 85.3,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -607,18 +623,27 @@
     },
     {
       "name": "Cash",
-      "pct": 13.6,
+      "pct": 10.4,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Financial institutions holding FDUSD reserve accounts",
       "riskFactors": ["counterparty", "custody", "concentration"],
       "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Fixed Deposit",
+      "pct": 4.3,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Financial institutions holding FDUSD fixed deposits",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "concentration"],
+      "liquidityHorizon": "seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-07-15",
     "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
+    "confidence": "verified",
     "sources": [
       {
         "label": "First Digital Labs transparency",
@@ -629,10 +654,11 @@
         "url": "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6a55fa3b263f9436c944049d_ISAE3000%20-%20Attestation%20Report%20on%20Reserves%20Account%20%28June%202026%29.pdf"
       }
     ],
-    "rationale": "The exact First Digital transparency capture fetched on July 14, 2026 reports 86.4% U.S. Treasury Bills and 13.6% Cash. AOGB's June 30 limited-assurance report independently supports the Treasury-bill and cash-at-financial-institutions classifications, but its earlier weights and fixed-deposit position are not carried forward into the July 14 composition.",
-    "compositionBasis": "Exact First Digital transparency composition captured on July 14, 2026",
+    "rationale": "The current First Digital transparency feed reports 85.3% U.S. Treasury Bills, 10.4% Cash, and 4.3% Fixed Deposit after source rounding. AOGB's independent limited-assurance report dated July 10 reconciles FDUSD in circulation to the June 30 reserve accounts and reports the corresponding balances as $300.24 million of Treasury bills, $36.49 million of cash, and $15.00 million of fixed deposits.",
+    "compositionBasis": "AOGB June 30, 2026 FDUSD reserves attestation aligned to the current First Digital transparency feed",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The reserve asset classes are fully classified, but First Digital does not identify the financial institutions or their shares in the live cash category.",
+    "knownUnknownExposure": "The reserve asset classes are fully classified, but First Digital does not identify the financial institutions or their shares in the cash and fixed-deposit categories.",
     "knownUnknownExposurePct": 0
   },
   "liveReservesConfig": {

@@ -104,10 +104,10 @@
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "wrapper",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle Internet Financial (USDC); Yearn v3 strategy allocator",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Yearn v3 strategy allocator and Circle USDC",
       "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody", "market"],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -125,8 +125,9 @@
       }
     ],
     "rationale": "The Yearn v3 vault is an ERC-4626 share over USDC and routes that USDC through its strategy allocator. The existing 100% direct USDC envelope is retained; changing strategy allocations are not decomposed into fixed authored percentages.",
-    "compositionBasis": "Yearn v3 USDC vault underlying-asset and strategy-allocator disclosures",
-    "scope": "dependency-relationships",
+    "compositionBasis": "Exact live ERC-4626 single-asset row and Yearn v3 USDC vault disclosures",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
     "knownUnknownExposure": "No unlinked direct reserve asset remains. Current strategy weights and legal custody safeguards are not fixed by the reviewed public sources.",
     "knownUnknownExposurePct": 0
   },

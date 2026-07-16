@@ -337,9 +337,44 @@
       "pct": 100,
       "risk": "high",
       "coinId": "usn-noon",
-      "depType": "wrapper"
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Noon sUSN staking vault and USN",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "market",
+        "counterparty",
+        "custody"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Noon USN and sUSN documentation",
+        "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
+      },
+      {
+        "label": "sUSN Ethereum vault",
+        "url": "https://etherscan.io/address/0xe24a3dc889621612422a64e6388927901608b91d#code"
+      },
+      {
+        "label": "Noon Accountable dashboard",
+        "url": "https://noon.accountable.capital/"
+      }
+    ],
+    "rationale": "sUSN is a staking-vault share over USN. The exact direct reserve is one protocol position; USN portfolio, custody, market, and redemption risks remain inherited through the tracked wrapper dependency.",
+    "compositionBasis": "Exact live ERC-4626 single-asset row, sUSN vault, and Noon product documentation",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No additional direct sUSN reserve slice is identified; upstream USN strategy allocations are tracked on the parent asset.",
+    "knownUnknownExposurePct": 0
+  },
   "yieldConfig": {
     "yieldSource": "Noon staking (sUSN)",
     "yieldType": "nav-appreciation"

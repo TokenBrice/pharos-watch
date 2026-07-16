@@ -509,26 +509,6 @@
   "infrastructures": [
     "liquity-v2"
   ],
-  "reserves": [
-    {
-      "name": "HYPE / kHYPE / wstHYPE (Hyperliquid native + LSTs)",
-      "pct": 80,
-      "risk": "very-high",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Hyperliquid and liquid-staking protocol issuers",
-      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "BTC (bridged UBTC)",
-      "pct": 20,
-      "risk": "medium",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Bridged Bitcoin custody and bridge operators",
-      "riskFactors": ["market", "liquidity", "custody", "smart-contract", "counterparty"],
-      "liquidityHorizon": "unknown"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "liquity-v2-branches",
     "version": 1,

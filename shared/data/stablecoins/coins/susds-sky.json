@@ -334,9 +334,43 @@
       "pct": 100,
       "risk": "low",
       "coinId": "usds-sky",
-      "depType": "wrapper"
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sky Savings USDS vault and USDS",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "market",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Sky sUSDS documentation",
+        "url": "https://developers.skyeco.com/protocol/tokens/susds/"
+      },
+      {
+        "label": "Sky active contract registry",
+        "url": "https://chainlog.skyeco.com/api/mainnet/active.json"
+      },
+      {
+        "label": "Sky USDS source repository",
+        "url": "https://github.com/sky-ecosystem/usds"
+      }
+    ],
+    "rationale": "sUSDS is a savings-vault share over USDS. The exact direct reserve is one protocol position; USDS collateral, governance, and redemption risks remain inherited through the tracked wrapper dependency.",
+    "compositionBasis": "Exact live ERC-4626 single-asset row and Sky sUSDS documentation",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No additional direct sUSDS reserve slice is identified; underlying USDS reserve composition is tracked on the parent asset.",
+    "knownUnknownExposurePct": 0
+  },
   "yieldConfig": {
     "yieldSource": "Sky Savings Rate (sUSDS)",
     "yieldType": "nav-appreciation"

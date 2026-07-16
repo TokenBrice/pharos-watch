@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Sovryn Dollar DLLR",
-      "pct": 89.94,
+      "pct": 89.4,
       "risk": "medium",
       "coinId": "dllr-sovryn",
       "depType": "collateral",
@@ -14,7 +14,7 @@
     },
     {
       "name": "Rootstock Bridged USDT",
-      "pct": 9.61,
+      "pct": 9.7,
       "risk": "low",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -26,7 +26,7 @@
     },
     {
       "name": "Dollar on Chain DOC",
-      "pct": 0.45,
+      "pct": 0.9,
       "risk": "medium",
       "coinId": "doc-money-on-chain",
       "depType": "collateral",
@@ -54,9 +54,9 @@
         "url": "https://rootstock.blockscout.com/address/0x1440d19436bEEaf8517896bffB957A88ec95a00F"
       }
     ],
-    "rationale": "Direct balanceOf reads at Rootstock block 9,050,920 returned 950,504.343218 DLLR, 101,544.643077 bridged USDT, and 4,724.102040 DOC in the BabelFish reserve contract. The configured USDC and DAI branch balances were zero. Normalizing the three dollar-pegged balances gives 89.94%, 9.61%, and 0.45%.",
-    "compositionBasis": "Rootstock reserve-contract balances at block 9,050,920",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "The independent BabelFish adapter read the configured Rootstock reserve-contract balances at the exact capture. Normalizing the three positive dollar-pegged balances produced 89.4% DLLR, 9.7% bridged USDT, and 0.9% DOC; configured USDC and DAI balances were zero.",
+    "compositionBasis": "Exact live Rootstock reserve-contract balances captured on 2026-07-15",
+    "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
     "knownUnknownExposure": "The composition is fully linked, but each constituent retains its issuer, bridge, smart-contract, and liquidity risks.",
     "knownUnknownExposurePct": 0

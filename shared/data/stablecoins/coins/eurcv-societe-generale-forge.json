@@ -26,7 +26,22 @@
     "cadence": "daily-nav",
     "attestorJurisdiction": "France",
     "attestorLicense": "EMI (MiCA)",
-    "attestorTier": "self"
+    "attestorTier": "self",
+    "latestReport": {
+      "periodEnd": "2026-07-15",
+      "publishedAt": "2026-07-15",
+      "assuranceMethod": "self-verification",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "SG-FORGE EURCV daily reserve disclosure - July 15, 2026",
+          "url": "https://www.sgforge.com/product/coinvertible/"
+        }
+      ]
+    }
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

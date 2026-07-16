@@ -361,11 +361,125 @@
   ],
   "reserves": [
     {
-      "name": "BTC / WBTC / BTCB / cbBTC (overcollateralized CDP vaults)",
-      "pct": 100,
-      "risk": "medium"
+      "name": "BTC",
+      "pct": 61.9,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Bitcoin network",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "BTCB",
+      "pct": 37.1,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Binance BTCB",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "CBBTC",
+      "pct": 0.9,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Coinbase cbBTC",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "WBTC",
+      "pct": 0.1,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Wrapped Bitcoin custodians and merchant network",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "BTCFi current market API",
+        "url": "https://www.btcfi.one/api/getBtcfiMarket?isTestnet=false"
+      },
+      {
+        "label": "BTCFi supported-handler API",
+        "url": "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false"
+      },
+      {
+        "label": "BTCFi BtcUSD mint documentation",
+        "url": "https://docs.bifrostnetwork.com/eng.btcfi.one/dashboard/3.-mint-btcusd"
+      },
+      {
+        "label": "BTCB BNB Chain contract",
+        "url": "https://bscscan.com/token/0x7130d2a12b9bcBFAe4f2634d864A1Ee1Ce3Ead9c"
+      }
+    ],
+    "rationale": "The configured BTCFi producer reports the current collateral mix by supported handler. Native BTC is direct crypto collateral, while BTCB, cbBTC, and WBTC retain their wrapper issuer, custody, counterparty, and smart-contract failure domains.",
+    "compositionBasis": "BTCFi current collateral balances by supported handler captured on 2026-07-15",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All positive collateral handlers are identified; wrapper reserve custody and redemption risks remain explicit structured risk factors.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "BTC",
+        "pct": 61.9,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Native BTC collateral is not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "BTCB",
+        "pct": 37.1,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "BTCB is wrapped Bitcoin collateral rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "CBBTC",
+        "pct": 0.9,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "cbBTC is wrapped Bitcoin collateral rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "WBTC",
+        "pct": 0.1,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "WBTC is wrapped Bitcoin collateral rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "btcfi",
     "version": 1,

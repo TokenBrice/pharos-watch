@@ -2,36 +2,64 @@
   "id": "usde-ethena",
   "reserves": [
     {
-      "name": "Liquid Stables (USDtb / USDC / USDT)",
-      "pct": 76,
-      "risk": "low",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Ethena reserve stablecoin issuers and lending markets",
-      "riskFactors": ["counterparty", "custody", "smart-contract", "concentration"],
+      "name": "Liquid stables / cash equivalents",
+      "pct": 99,
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "Ethena reserve stablecoin issuers, lending protocols, RWA issuers, and institutional borrowers",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "market",
+        "basis",
+        "liquidity",
+        "duration",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "BTC collateral",
+      "pct": 0.6,
+      "risk": "medium",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Ethena off-exchange custodians and derivatives venues for BTC collateral",
+      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity", "concentration"],
       "liquidityHorizon": "one-day"
     },
     {
-      "name": "BTC (delta-neutral)",
-      "pct": 16,
+      "name": "ETH / liquid staking collateral",
+      "pct": 0.4,
       "risk": "medium",
       "assetClass": "hedged-crypto",
-      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity"],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "ETH / ETH LSTs (delta-neutral)",
-      "pct": 8,
-      "risk": "medium",
-      "assetClass": "hedged-crypto",
-      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity", "smart-contract"],
+      "issuerOrObligor": "Ethena off-exchange custodians, liquid-staking issuers, and derivatives venues for ETH collateral",
+      "riskFactors": [
+        "market",
+        "basis",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
       "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-13",
+    "reviewedAt": "2026-07-15",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Ethena current collateral positions API",
+        "url": "https://app.ethena.fi/api/positions/current/collateral"
+      },
+      {
+        "label": "Ethena current strategy breakdown API",
+        "url": "https://app.ethena.fi/api/collateral-breakdown"
+      },
       {
         "label": "Ethena transparency",
         "url": "https://app.ethena.fi/dashboards/transparency"
@@ -41,20 +69,34 @@
         "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail"
       }
     ],
-    "rationale": "The transparency dashboard supports the aggregate stablecoin and delta-neutral backing categories. The liquid-stable bucket has no durable constituent weights, so it remains an explicitly unresolved dependency basket.",
-    "compositionBasis": "Curated snapshot aligned to the Ethena transparency categories",
-    "compositionAsOf": "2026-07-12",
+    "rationale": "The exact source-native adapter output is retained at 99.0% Liquid stables / cash equivalents, 0.6% BTC collateral, and 0.4% ETH / liquid staking collateral from the July 15 issuer snapshot. Ethena's same-day strategy breakdown shows that the adapter's Liquid Cash identity is a mixed accounting basket spanning liquid stables, DeFi lending, RWA, institutional lending, and crypto-basis strategies, so it is classified as a mixed basket rather than falsely treated as pure stablecoin exposure.",
+    "compositionBasis": "Exact Ethena live-reserve adapter identities and rounded weights, interpreted with the same-day issuer strategy breakdown",
+    "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "The liquid-stables basket has identified candidate assets but no defensible constituent percentages.",
-    "knownUnknownExposurePct": 76,
+    "knownUnknownExposure": "The 99% source-native Liquid Cash row remains an aggregate basket. Ethena publishes same-day strategy-category weights, but not a one-to-one constituent and failure-domain split for the exact adapter identity.",
+    "knownUnknownExposurePct": 99,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Liquid Stables (USDtb / USDC / USDT)",
-        "pct": 76,
+        "reserveName": "Liquid stables / cash equivalents",
+        "pct": 99,
         "disposition": "basket-needs-split",
-        "rationale": "USDtb, USDC, and USDT are tracked, but only their combined allocation is reported.",
-        "candidateCoinIds": ["usdtb-ethena", "usdc-circle", "usdt-tether"]
+        "rationale": "The scored live identity aggregates stablecoins, lending strategies, RWA, institutional lending, and crypto-basis positions without a compatible constituent and failure-domain allocation.",
+        "candidateCoinIds": ["usdtb-ethena", "usdc-circle", "usdt-tether", "pyusd-paypal"]
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "BTC collateral",
+        "pct": 0.6,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "BTC backing and its paired derivatives positions are external crypto exposures rather than tracked stablecoin dependencies."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "ETH / liquid staking collateral",
+        "pct": 0.4,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "ETH and liquid-staking backing with paired derivatives positions are external crypto exposures rather than tracked stablecoin dependencies."
       }
     ]
   },

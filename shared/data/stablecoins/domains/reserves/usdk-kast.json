@@ -2,20 +2,49 @@
   "id": "usdk-kast",
   "reserves": [
     {
-      "name": "M0 M token backing for KAST Dollar",
-      "pct": 100,
+      "name": "Tokenized treasury collateral",
+      "pct": 97.9,
+      "risk": "low",
+      "coinId": "ustb-superstate",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Invesco Short Duration US Government Securities Fund",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Cash",
+      "pct": 2.1,
       "risk": "very-low",
-      "coinId": "m-m0",
-      "depType": "wrapper",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "M0 Protocol permissioned issuers and collateral SPVs",
+      "assetClass": "cash",
+      "issuerOrObligor": "M0 permissioned issuers' eligible custody arrangements",
+      "riskFactors": [
+        "custody",
+        "counterparty",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Non-eligible token collateral",
+      "pct": 0.000115,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed non-eligible token collateral obligor",
       "riskFactors": [
         "credit",
         "liquidity",
         "custody",
         "counterparty",
         "smart-contract",
-        "legal"
+        "concentration"
       ],
       "liquidityHorizon": "unknown"
     }
@@ -36,13 +65,31 @@
       {
         "label": "KAST Dollar launch announcement",
         "url": "https://www.kast.xyz/blog/kast-strengthens-its-banking-alternative-platform-with-its-own-stablecoins"
+      },
+      {
+        "label": "M0 collateral-composition API recipe",
+        "url": "https://docs.m0.org/api-reference/protocol/recipes/collateral-composition"
+      },
+      {
+        "label": "M0 Protocol API GraphQL endpoint",
+        "url": "https://protocol-api.m0.org/graphql"
       }
     ],
-    "rationale": "KAST and M0 identify USDK as a Solana stablecoin built on M0, while M0 documents extension tokens as wrapping and unwrapping the M foundation. The reserve envelope therefore preserves the direct 100% M wrapper dependency and leaves M0 issuer, collateral, and custody details to the upstream record instead of duplicating an unsupported USDK-specific Treasury breakdown.",
-    "compositionBasis": "KAST USDK's documented M0-extension relationship",
-    "scope": "dependency-relationships",
-    "knownUnknownExposure": "The direct M0 dependency is identified, but USDK-specific sources do not publish the current M0 issuer allocation, Treasury holdings, custody-provider split, or a dated assurance report.",
-    "knownUnknownExposurePct": 0
+    "rationale": "KAST identifies USDK as an M0 extension, and the first-party M0 Protocol API reports the inherited current collateral mix as 97.9% eligible tokenized Treasury collateral and 2.1% cash after adapter normalization. The token time series identifies USTB as the eligible token collateral; the wrapper keeps the M0 issuer, custody, and smart-contract context.",
+    "compositionBasis": "Exact live M0 collateral capture for USDK and documented M0-extension relationship",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "M0 reports a 0.000115% non-eligible token-collateral residual below the displayed two-slice precision and does not identify its obligor.",
+    "knownUnknownExposurePct": 0.000115,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 2,
+        "reserveName": "Non-eligible token collateral",
+        "pct": 0.000115,
+        "disposition": "insufficient-evidence",
+        "rationale": "The first-party current endpoint reports this residual but does not identify the token or obligor."
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [

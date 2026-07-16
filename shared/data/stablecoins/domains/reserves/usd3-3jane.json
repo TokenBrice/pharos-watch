@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Aave USDC liquidity buffer",
-      "pct": 24.3,
+      "pct": 20.1,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -15,7 +15,7 @@
     },
     {
       "name": "Fintech and crypto credit receivables",
-      "pct": 75.7,
+      "pct": 79.9,
       "risk": "high",
       "assetClass": "private-credit",
       "issuerOrObligor": "3Jane credit facility borrowers",
@@ -24,8 +24,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-13",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
     "confidence": "verified",
     "sources": [
       {
@@ -45,17 +45,17 @@
         "url": "https://github.com/3jane-protocol/moneymarket-contracts"
       }
     ],
-    "rationale": "The reviewed USD3 accounting exposes the strategy's waUSDC position, the MorphoCredit market liquidity available to that position, and the remaining deployed credit exposure. The snapshot uses those onchain values rather than treating the full NAV as liquid USDC.",
-    "compositionBasis": "Ethereum block 25524745: the strategy's waUSDC position was split pro rata by MorphoCredit market liquidity, then converted to USDC through waUSDC.convertToAssets(); direct idle USDC was included in the liquid bucket.",
-    "compositionAsOf": "2026-07-13",
+    "rationale": "The current USD3 adapter capture exposes the strategy's waUSDC position, the MorphoCredit market liquidity available to that position, and the remaining deployed credit exposure. The exact fixed snapshot allocates 20.1% to the Aave USDC liquidity buffer and 79.9% to deployed credit rather than treating the full NAV as liquid USDC.",
+    "compositionBasis": "Current 3Jane onchain-accounting capture: the strategy's waUSDC position was split pro rata by MorphoCredit market liquidity, converted through waUSDC.convertToAssets(), and combined with direct idle USDC",
+    "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "Facility-level borrower identities, maturities, and concentration are not exposed by the aggregate strategy accounting; the full aggregate NAV is nevertheless allocated between liquid waUSDC and deployed credit.",
+    "knownUnknownExposure": "The full NAV is allocated between classified liquid USDC and private-credit exposures; facility-level borrower identities, maturities, and concentration remain attributes of the classified aggregate credit sleeve rather than an unallocated reserve share.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 1,
         "reserveName": "Fintech and crypto credit receivables",
-        "pct": 75.7,
+        "pct": 79.9,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The bucket represents loans and receivables owed by credit-facility borrowers, not a tracked stablecoin or wrapper that can carry a canonical coinId."
       }

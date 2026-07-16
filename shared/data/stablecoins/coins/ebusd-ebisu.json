@@ -1225,35 +1225,134 @@
   ],
   "reserves": [
     {
+      "name": "stcUSD",
+      "pct": 42.8,
+      "risk": "medium",
+      "coinId": "stcusd-cap",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Cap stcUSD vault, operators, and cUSD",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody",
+        "market"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
       "name": "sUSDe (Ethena savings)",
-      "pct": 43.9,
+      "pct": 36.7,
       "risk": "medium",
       "coinId": "susde-ethena",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Ethena sUSDe staking vault and USDe",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "market"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "WBTC",
-      "pct": 24.2,
-      "risk": "medium"
-    },
-    {
-      "name": "LBTC",
-      "pct": 23.6,
-      "risk": "medium"
-    },
-    {
-      "name": "stcUSD",
-      "pct": 5.7,
+      "pct": 8.6,
       "risk": "medium",
-      "coinId": "stcusd-cap",
-      "depType": "collateral"
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Wrapped Bitcoin custodians and merchant network",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
     },
     {
       "name": "weETH",
-      "pct": 2.6,
-      "risk": "low"
+      "pct": 6.9,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ether.fi liquid-restaking protocol and Ethereum",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "LBTC",
+      "pct": 5,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Lombard LBTC protocol and Bitcoin custody network",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Ebisu protocol documentation",
+        "url": "https://ebisu.gitbook.io/ebisu-money"
+      },
+      {
+        "label": "Ebisu application",
+        "url": "https://ebisu.money/"
+      },
+      {
+        "label": "Ethereum public RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "rationale": "The independent Liquity-v2 branch producer read every configured positive Ebisu branch in one current Ethereum capture and normalized the exact stcUSD, sUSDe, WBTC, weETH, and LBTC collateral values. Tracked savings wrappers retain their upstream dependency links, while the three crypto collateral rows retain their market, liquidity, custody, counterparty, and smart-contract failure domains.",
+    "compositionBasis": "All configured positive Ebisu Ethereum branch balances captured on 2026-07-15",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All configured positive branches are identified; wrapper, validator, custody, and liquidation-liquidity risks remain structured within the five classified exposures.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 2,
+        "reserveName": "WBTC",
+        "pct": 8.6,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "WBTC is crypto collateral rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "weETH",
+        "pct": 6.9,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "weETH is liquid-restaking collateral rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "LBTC",
+        "pct": 5,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "LBTC is wrapped Bitcoin collateral rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "liquity-v2-branches",
     "version": 1,

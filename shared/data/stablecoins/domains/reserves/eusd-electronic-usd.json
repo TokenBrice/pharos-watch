@@ -1,0 +1,129 @@
+{
+  "id": "eusd-electronic-usd",
+  "reserves": [
+    {
+      "name": "Wrapped Compound USDT (wcUSDTv3)",
+      "pct": 32.1,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Compound III USDT market and its collateralized borrowers",
+      "riskFactors": ["credit", "liquidity", "counterparty", "smart-contract", "concentration"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Static Aave USDC (saEthUSDC) — Primary BM",
+      "pct": 29.8,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave V3 Ethereum USDC market and its supplied-liquidity borrowers",
+      "riskFactors": ["credit", "liquidity", "counterparty", "smart-contract", "concentration"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Wrapped Compound USDC (wcUSDCv3) — Primary BM",
+      "pct": 29.4,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Compound III USDC market and its collateralized borrowers",
+      "riskFactors": ["credit", "liquidity", "counterparty", "smart-contract", "concentration"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Static Aave USDC (saEthUSDC) — Secondary BM",
+      "pct": 4.4,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave V3 Ethereum USDC market and its supplied-liquidity borrowers",
+      "riskFactors": ["credit", "liquidity", "counterparty", "smart-contract", "concentration"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Wrapped Compound USDC (wcUSDCv3) — Secondary BM",
+      "pct": 4.3,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Compound III USDC market and its collateralized borrowers",
+      "riskFactors": ["credit", "liquidity", "counterparty", "smart-contract", "concentration"],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "EUSD Reserve Protocol deployment and live basket",
+        "url": "https://app.reserve.org/ethereum/token/0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f/overview"
+      },
+      {
+        "label": "Reserve Protocol contracts",
+        "url": "https://github.com/reserve-protocol/protocol"
+      },
+      {
+        "label": "Aave supplied-token withdrawal documentation",
+        "url": "https://aave.com/help/supplying/withdraw-tokens"
+      },
+      {
+        "label": "Compound III collateral and borrowing documentation",
+        "url": "https://docs.compound.finance/collateral-and-borrowing/"
+      }
+    ],
+    "rationale": "The independent EVM branch snapshot observed at 2026-07-15T12:13:19Z contains five exact backing-manager rows. Each row is retained one-to-one with its live name and weight and classified as an Aave or Compound protocol position over the tracked USDC or USDT underlying. The classifications add the lending-market failure domain without weakening the canonical stablecoin dependency.",
+    "compositionBasis": "Independent Reserve Protocol backing-manager balances observed at 2026-07-15T12:13:19Z",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All five captured rows are classified and linked to their tracked underlying stablecoins; borrower-level collateral and utilization remain risks of the named lending protocols rather than unclassified reserve slices.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Reserve Protocol BackingManager and collateral-plugin contracts",
+        "role": "other",
+        "jurisdiction": "Onchain protocol"
+      },
+      {
+        "name": "Aave V3 Ethereum Pool",
+        "role": "other",
+        "jurisdiction": "Onchain protocol"
+      },
+      {
+        "name": "Compound III Comet contracts",
+        "role": "other",
+        "jurisdiction": "Onchain protocol"
+      }
+    ],
+    "segregation": "mixed",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Reserve Protocol collateral model",
+        "url": "https://github.com/reserve-protocol/protocol"
+      },
+      {
+        "label": "Aave supplied-token withdrawal documentation",
+        "url": "https://aave.com/help/supplying/withdraw-tokens"
+      },
+      {
+        "label": "Compound III collateral and borrowing documentation",
+        "url": "https://docs.compound.finance/collateral-and-borrowing/"
+      }
+    ],
+    "uncertainty": "The reviewed sources establish that EUSD's reserve contracts hold positions in Aave and Compound lending protocols, but they do not establish a legal custody wrapper, bankruptcy remoteness, provider allocation, or a separate offchain custodian. Rehypothecation is marked permitted because the reserve positions are supplied into lending markets by design."
+  }
+}

@@ -487,27 +487,112 @@
   "collateralQuality": "exotic",
   "reserves": [
     {
-      "name": "yvDAI cauldron collateral",
-      "pct": 52,
+      "name": "yvDAI",
+      "pct": 45.7,
       "risk": "medium",
-      "coinId": "dai-makerdao"
+      "coinId": "dai-makerdao",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Yearn yvDAI vault, DAI, and Abracadabra cauldron",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "market",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
-      "name": "WBTC cauldron collateral",
-      "pct": 37,
-      "risk": "medium"
+      "name": "WBTC",
+      "pct": 42.5,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Wrapped Bitcoin custodians and Abracadabra cauldron",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
     },
     {
-      "name": "yvWETH cauldron collateral",
-      "pct": 8,
-      "risk": "high"
+      "name": "yvWETH",
+      "pct": 8.9,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Yearn yvWETH vault, WETH, and Abracadabra cauldron",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "market",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
-      "name": "CDP WETH cauldron collateral",
-      "pct": 3,
-      "risk": "low"
+      "name": "WETH",
+      "pct": 2.9,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum WETH contract and Abracadabra cauldron",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Abracadabra architecture overview",
+        "url": "https://dev.abracadabra.money/getting-started/architecture-overview"
+      },
+      {
+        "label": "Abracadabra cauldrons application",
+        "url": "https://app.abracadabra.money/"
+      },
+      {
+        "label": "Abracadabra Ethereum BentoBox",
+        "url": "https://etherscan.io/address/0xd96f48665a1410c0cd669a88898eca36b9fc2cce#readContract"
+      }
+    ],
+    "rationale": "The independent Abracadabra producer measured all configured positive Ethereum cauldron collateral at one capture and normalized the resulting yvDAI, WBTC, yvWETH, and WETH balances. Yearn vault rows remain protocol positions, while direct wrapped assets retain their market, custody, liquidity, counterparty, and smart-contract risks.",
+    "compositionBasis": "Exact live Abracadabra cauldron balances captured on 2026-07-15",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All positive configured cauldron collateral is identified; vault strategy and wrapper custody risks remain structured within the four classified positions.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "WBTC",
+        "pct": 42.5,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "WBTC is crypto collateral rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "yvWETH",
+        "pct": 8.9,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "yvWETH is a Yearn protocol position rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "WETH",
+        "pct": 2.9,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "WETH is crypto collateral rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
   "liveReservesConfig": {
     "adapter": "abracadabra",
     "version": 1,

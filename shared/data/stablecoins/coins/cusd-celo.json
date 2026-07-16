@@ -22,7 +22,30 @@
     "url": "https://reserve.mento.org/",
     "attestorTier": "self",
     "cadence": "real-time",
-    "provider": "Mento Reserve dashboard"
+    "provider": "Mento Reserve dashboard",
+    "latestReport": {
+      "periodEnd": "2026-07-15",
+      "publishedAt": "2026-07-15",
+      "assuranceMethod": "self-verification",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Mento reserve overview as of July 15, 2026",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/overview"
+        },
+        {
+          "label": "Mento reserve asset ledger as of July 15, 2026",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        },
+        {
+          "label": "Mento reserve model documentation",
+          "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -236,7 +259,7 @@
   "reserves": [
     {
       "name": "AUSD (Agora Dollar)",
-      "pct": 27,
+      "pct": 27.4,
       "risk": "low",
       "coinId": "ausd-agora",
       "assetClass": "stablecoin",
@@ -246,7 +269,7 @@
     },
     {
       "name": "sUSDS (Sky savings USDS)",
-      "pct": 24.2,
+      "pct": 24.4,
       "risk": "low",
       "coinId": "susds-sky",
       "assetClass": "protocol-position",
@@ -265,7 +288,7 @@
     },
     {
       "name": "USDT",
-      "pct": 13,
+      "pct": 12.3,
       "risk": "low",
       "coinId": "usdt-tether",
       "assetClass": "stablecoin",
@@ -275,7 +298,7 @@
     },
     {
       "name": "EURC (Circle euro stablecoin)",
-      "pct": 11.9,
+      "pct": 12,
       "risk": "low",
       "coinId": "eurc-circle",
       "assetClass": "stablecoin",
@@ -285,7 +308,7 @@
     },
     {
       "name": "USDC",
-      "pct": 4,
+      "pct": 3.8,
       "risk": "low",
       "coinId": "usdc-circle",
       "assetClass": "stablecoin",
@@ -295,7 +318,7 @@
     },
     {
       "name": "stETH (Lido staked ETH)",
-      "pct": 2.3,
+      "pct": 2.5,
       "risk": "low",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Lido DAO",
@@ -304,8 +327,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex dependency review",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
     "sources": [
       {
@@ -313,13 +336,17 @@
         "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
       },
       {
+        "label": "Mento reserve overview API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/overview"
+      },
+      {
         "label": "Mento reserve documentation",
         "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
       }
     ],
-    "rationale": "Weights are the current USD-value percentages published by Mento's official reserve API, with chain variants consolidated by the reviewed live adapter. AUSD, sUSDS, USDT, EURC, and USDC are exact tracked reserve dependencies; CELO and stETH are identified exogenous collateral.",
+    "rationale": "The official Mento dashboard was timestamped 2026-07-15T19:26:06.471Z; the captured reserve payload had SHA-256 ba0db5ee035e34b408aa0ebf06ffe6ed17a3ba89b84368828791fd650c99c9ee and the overview payload had SHA-256 753143011a97a8f4924565c880e7f7a75c755c64ed4fb82163da9a3e542b3e94. Applying the reviewed live adapter's canonical grouping and one-decimal normalization yields the seven recorded rows. AUSD, sUSDS, USDT, EURC, and USDC are exact tracked reserve dependencies; CELO and stETH are identified exogenous collateral.",
     "compositionBasis": "Current Mento reserve asset USD values, consolidated by canonical asset through the reviewed Mento adapter",
-    "compositionAsOf": "2026-07-14",
+    "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
     "knownUnknownExposure": "All reserve API asset rows are identified and mapped or explicitly dispositioned.",
     "knownUnknownExposurePct": 0,
@@ -334,7 +361,7 @@
       {
         "reserveIndex": 6,
         "reserveName": "stETH (Lido staked ETH)",
-        "pct": 2.3,
+        "pct": 2.5,
         "disposition": "untracked-exogenous-asset",
         "rationale": "stETH is liquid-staking collateral rather than a stablecoin dependency."
       }

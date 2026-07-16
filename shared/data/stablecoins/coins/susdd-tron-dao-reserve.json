@@ -206,9 +206,43 @@
       "pct": 100,
       "risk": "medium",
       "coinId": "usdd-tron-dao-reserve",
-      "depType": "wrapper"
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "sUSDD savings contracts and USDD",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "market",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USDD sUSDD mechanism documentation",
+        "url": "https://docs.usdd.io/susdd-mechanism"
+      },
+      {
+        "label": "USDD collateral and contract registry",
+        "url": "https://docs.usdd.io/introduction/collateral-asset-contract-addresses"
+      },
+      {
+        "label": "sUSDD Ethereum contract",
+        "url": "https://etherscan.io/address/0xc5d6a7b61d18afa11435a889557b068bb9f29930#code"
+      }
+    ],
+    "rationale": "sUSDD is a savings-wrapper share over USDD rather than a separate collateral portfolio. The exact direct reserve is the wrapper position; USDD reserve, market, governance, and redemption risks remain inherited through the tracked parent dependency.",
+    "compositionBasis": "Exact live single-asset row and USDD's sUSDD mechanism documentation",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No additional direct sUSDD reserve slice is identified; underlying USDD reserve composition is tracked on the parent asset.",
+    "knownUnknownExposurePct": 0
+  },
   "yieldConfig": {
     "yieldSource": "USDD savings (sUSDD)",
     "yieldType": "nav-appreciation"

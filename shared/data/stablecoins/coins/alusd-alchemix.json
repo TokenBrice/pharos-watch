@@ -386,7 +386,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-07-15",
     "reviewer": "OpenAI Codex dependency review",
     "confidence": "verified",
     "sources": [
@@ -395,19 +395,23 @@
         "url": "https://etherscan.io/address/0x5C6374a2ac4EBC38DeA0Fc1F8716e5Ea1AdD94dd"
       },
       {
-        "label": "Alchemix IAlchemistV2State interface",
-        "url": "https://github.com/alchemix-finance/v2-foundry/blob/master/src/interfaces/alchemist/IAlchemistV2State.sol"
+        "label": "Alchemix IAlchemistV2State interface (commit 8915ef7b)",
+        "url": "https://github.com/alchemix-finance/v2-foundry/blob/8915ef7b1714c16f9e260a4ef41c5f254d5b7f58/src/interfaces/alchemist/IAlchemistV2State.sol"
+      },
+      {
+        "label": "Alchemix multichain alAsset documentation",
+        "url": "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemix-on-l2"
       },
       {
         "label": "Alchemix collateral de-pegging documentation",
         "url": "https://v2-docs.alchemix.fi/resources/guides/vault-losses-and-collateral-de-pegging"
       }
     ],
-    "rationale": "At Ethereum block 25530459, the AlchemistV2 expectedValue for every registered yield token was aggregated by its on-chain underlying token. The resulting USD-like collateral mix was 80.2263% DAI, 15.9306% USDC, 0.3867% USDT, and 3.4564% FRAX, rounded to one decimal while preserving a 100% total. Each slice maps to its exact tracked stablecoin dependency.",
-    "compositionBasis": "AlchemistV2 getSupportedYieldTokens() and getYieldTokenParameters().expectedValue aggregated by underlying token at Ethereum block 25530459",
+    "rationale": "At Ethereum block 25530459, the Ethereum AlchemistV2 expectedValue for every registered yield token was aggregated by its on-chain underlying token. The resulting controller-local mix was 80.2263% DAI, 15.9306% USDC, 0.3867% USDT, and 3.4564% FRAX, rounded to one decimal while preserving a 100% total. Each observed slice maps to its exact tracked stablecoin dependency. Alchemix also documents locally minted Optimism and Arbitrum xalUSD backed by chain-local future yield plus bridged Mainnet alUSD; those controllers, bridge lockboxes, Transmuters, and AMO balances are not reconciled in this Ethereum-only snapshot, so it is retained as selected-slice evidence rather than an asset-wide composition.",
+    "compositionBasis": "Ethereum AlchemistV2 getSupportedYieldTokens() and getYieldTokenParameters().expectedValue aggregated by underlying token at Ethereum block 25530459",
     "compositionAsOf": "2026-07-14",
-    "scope": "full-composition",
-    "knownUnknownExposure": "All registered yield-token expected values were attributed to their on-chain underlying stablecoins.",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "All registered yield-token expected values in the observed Ethereum Alchemist were attributed to their on-chain underlying stablecoins; asset-wide L2, bridge, Transmuter, and AMO exposure remains unreconciled outside this selected slice.",
     "knownUnknownExposurePct": 0
   },
   "liveReservesConfig": {

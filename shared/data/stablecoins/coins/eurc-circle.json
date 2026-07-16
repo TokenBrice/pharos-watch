@@ -26,7 +26,22 @@
     "attestorTier": "big4",
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
-    "attestorLicense": "PCAOB-registered"
+    "attestorLicense": "PCAOB-registered",
+    "latestReport": {
+      "periodEnd": "2026-05-29",
+      "publishedAt": "2026-06-29",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex backing review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Deloitte EURC examination report - May 2026",
+          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20May%2026.pdf"
+        }
+      ]
+    }
   },
   "links": [
     {

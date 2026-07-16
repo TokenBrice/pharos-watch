@@ -2,22 +2,13 @@
   "id": "tusd-trueusd",
   "reserves": [
     {
-      "name": "First Digital Trust fund investments (at cost, opaque)",
-      "pct": 99.98,
+      "name": "USD reserves (Moore Hong Kong attested)",
+      "pct": 100,
       "risk": "very-high",
       "assetClass": "fund-share",
-      "issuerOrObligor": "First Digital Trust Limited and undisclosed fund investments",
+      "issuerOrObligor": "First Digital Trust Limited, undisclosed fund investments, and depository institutions",
       "riskFactors": ["credit", "liquidity", "custody", "counterparty", "legal", "concentration"],
       "liquidityHorizon": "over-seven-days"
-    },
-    {
-      "name": "Cash at depository institutions",
-      "pct": 0.02,
-      "risk": "very-low",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "Undisclosed depository institutions",
-      "riskFactors": ["counterparty", "custody", "concentration"],
-      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
@@ -34,26 +25,19 @@
         "url": "https://tusd.io/transparency"
       }
     ],
-    "rationale": "Moore CPA's July 14 reasonable-assurance report states $501.850 million held through First Digital Trust Limited and $78,900.88 of cash against $501.928901 million of total collateral. Those balances normalize to 99.98% and 0.02%; the report values the First Digital position at reported cost and does not disclose the underlying fund instruments or fair value.",
+    "rationale": "The independent Chainlink/Moore live feed publishes one aggregate row named USD reserves (Moore Hong Kong attested), so the reviewed classification is keyed to that exact 100% live identity. Moore CPA's July 14 reasonable-assurance report preserves the underlying detail: $501.850 million held through First Digital Trust Limited and $78,900.88 of cash against $501.928901 million of total collateral, or 99.98% and 0.02%. The report values the First Digital position at reported cost and does not disclose its underlying fund instruments or fair value.",
     "compositionBasis": "Moore CPA examination of the TUSD Consolidated Reserves Report as of July 14, 2026",
     "compositionAsOf": "2026-07-14",
     "scope": "full-composition",
-    "knownUnknownExposure": "The assets, liquidity, counterparties, and current fair value inside the First Digital Trust fund position are not disclosed; the report also notes ongoing litigation and restrictions affecting that collateral.",
-    "knownUnknownExposurePct": 99.98,
+    "knownUnknownExposure": "The live feed exposes the attested reserve as one aggregate row. Moore's report identifies a 99.98% First Digital Trust fund position and 0.02% cash, but the aggregate row cannot be split one-to-one for live classification and the fund's assets, liquidity, counterparties, and current fair value remain undisclosed; the report also notes ongoing litigation and restrictions affecting that collateral.",
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "First Digital Trust fund investments (at cost, opaque)",
-        "pct": 99.98,
+        "reserveName": "USD reserves (Moore Hong Kong attested)",
+        "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "The report identifies the depository and aggregate cost balance but not the fund's underlying instruments, position weights, liquidity, or fair value."
-      },
-      {
-        "reserveIndex": 1,
-        "reserveName": "Cash at depository institutions",
-        "pct": 0.02,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "Cash held at depository institutions is an external reserve asset rather than a tracked stablecoin dependency."
+        "rationale": "The exact live row aggregates the 99.98% opaque First Digital Trust fund position with 0.02% cash. It therefore cannot support a one-to-one tracked dependency or a more granular live classification, even though the report-level split remains recorded in this review and custody profile."
       }
     ]
   },

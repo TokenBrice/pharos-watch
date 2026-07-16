@@ -254,20 +254,60 @@
     {
       "name": "wstETH-backed USDN vault",
       "pct": 100,
-      "risk": "medium"
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Lido wstETH protocol",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "basis",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG Safety Score V9 reserve review",
-    "confidence": "unknown",
-    "sources": [{ "label": "SMARDEX USDN protocol documentation", "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol" }],
-    "rationale": "BLOCKED: protocol documentation establishes a shared wstETH vault and long-side mechanics but does not publish a current vault collateral balance, composition, or independently attested allocation.",
-    "compositionBasis": "Documented USDN vault design; current collateral state undisclosed",
-    "scope": "selected-slices",
-    "knownUnknownExposure": "The entire recorded vault category lacks a current sourced collateral allocation.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [{ "reserveIndex": 0, "reserveName": "wstETH-backed USDN vault", "pct": 100, "disposition": "insufficient-evidence", "rationale": "No current vault collateral composition is published." }]
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Pinned SmarDex USDN deployment source",
+        "url": "https://github.com/SmarDex-Ecosystem/usdn-contracts/tree/0e6822448f574f836b1c18a1893eeba49293dac9"
+      },
+      {
+        "label": "SmarDex USDN vault documentation",
+        "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/vault-side"
+      },
+      {
+        "label": "SmarDex imbalance protections",
+        "url": "https://docs.smardex.io/ultimate-synthetic-delta-neutral/the-usdn-protocol/protocol-balance/imbalance-protections"
+      },
+      {
+        "label": "Lido wstETH contract documentation",
+        "url": "https://docs.lido.fi/contracts/wsteth/"
+      },
+      {
+        "label": "Lido protocol requirements and risks",
+        "url": "https://docs.lido.fi/prd/"
+      }
+    ],
+    "rationale": "At finalized Ethereum block 25538539, two independent RPCs returned canonical Lido wstETH from the USDN protocol proxy getAsset() call. The same block reconciled the proxy and stored vault balances with the pinned SmarDex deployment source and the current live reserve producer. The sole 100% reserve exposure is therefore classified as perpetual wstETH crypto collateral; liquidity remains unknown because protocol imbalance protections can suspend withdrawals and Lido withdrawal queues have no defensible fixed upper bound.",
+    "compositionBasis": "Exact live evm-branch-balances row reconciled to two RPCs and pinned SmarDex source at Ethereum block 25538539",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unidentified reserve slice remains; market, liquidity, smart-contract, basis, and concentration risks remain structured on the wstETH exposure.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "wstETH-backed USDN vault",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "wstETH is liquid-staking crypto collateral rather than a tracked stablecoin dependency."
+      }
+    ]
   },
   "liveReservesConfig": {
     "adapter": "evm-branch-balances",

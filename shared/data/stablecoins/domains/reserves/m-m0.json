@@ -2,8 +2,8 @@
   "id": "m-m0",
   "reserves": [
     {
-      "name": "USTB tokenized Treasury fund shares",
-      "pct": 97.875243,
+      "name": "Tokenized treasury collateral",
+      "pct": 97.9,
       "risk": "low",
       "coinId": "ustb-superstate",
       "assetClass": "fund-share",
@@ -13,7 +13,7 @@
     },
     {
       "name": "Cash",
-      "pct": 2.124642,
+      "pct": 2.1,
       "risk": "very-low",
       "assetClass": "cash",
       "issuerOrObligor": "M0 permissioned issuers' eligible custody arrangements",
@@ -52,8 +52,8 @@
         "url": "https://github.com/m0-foundation/protocol/blob/b42fe5bc13b14202c684f78aaa15be284664834d/src/MToken.sol"
       }
     ],
-    "rationale": "M0's first-party Protocol API capture on 2026-07-15 reports 2.124642% cash, 97.875243% eligible token collateral, and 0.000115% non-eligible token collateral. Its 2026-07-14 token time series identifies USTB as the sole eligible on-chain collateral definition. The Ethereum MToken contract and pinned source corroborate the live token and gateway context without treating token supply as a collateral total.",
-    "compositionBasis": "M0 Protocol API CollateralCurrent capture and 2026-07-14 token time series",
+    "rationale": "M0's first-party Protocol API capture on 2026-07-15 reports 2.1% cash and 97.9% eligible token collateral after the live adapter's normalization; a 0.000115% non-eligible token residual remains below display precision. Its 2026-07-14 token time series identifies USTB as the sole eligible on-chain collateral definition. The Ethereum MToken contract and pinned source corroborate the live token and gateway context without treating token supply as a collateral total.",
+    "compositionBasis": "M0 Protocol API CollateralCurrent capture normalized by the live m0 adapter and 2026-07-14 token time series",
     "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
     "knownUnknownExposure": "The first-party current response discloses a 0.000115% non-eligible token-collateral residual but does not identify its token or obligor.",

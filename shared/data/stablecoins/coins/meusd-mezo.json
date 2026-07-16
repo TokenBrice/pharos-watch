@@ -307,13 +307,24 @@
   ],
   "reserves": [
     {
-      "name": "Bitcoin (BTC) — native and wrapped variants (tBTC, WBTC, SolvBTC, cbBTC)",
+      "name": "BTC collateral in Mezo ActivePool",
       "pct": 100,
-      "risk": "medium"
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Bitcoin network, Mezo collateral system, and supported BTC bridge issuers",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-07-15",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
     "sources": [
@@ -326,19 +337,19 @@
         "url": "https://mezo.org/docs/users/borrow/liquidation-mechanics/"
       }
     ],
-    "rationale": "Mezo documents MUSD as a Bitcoin-collateralized CDP. Borrowed MUSD is backed by BTC placed in the ActivePool; collateral returns on repayment, is paid out on redemptions, or moves to the StabilityPool or DefaultPool following liquidation. The documented design is BTC-only, so no unsupported multi-asset allocation is asserted.",
-    "compositionBasis": "Mezo MUSD collateral, custody, liquidation, and redemption documentation",
-    "compositionAsOf": "2026-07-14",
-    "scope": "full-composition",
-    "knownUnknownExposure": "The published product documentation does not disclose a current split among native BTC and supported wrapped-BTC variants.",
-    "knownUnknownExposurePct": 100,
+    "rationale": "The exact current fixed input reports one live row, BTC collateral in Mezo ActivePool, at 100%. Mezo documents the ActivePool as the BTC collateral account for its Liquity-style CDP path; collateral returns on repayment, is paid out on redemption, or moves through the StabilityPool and DefaultPool on liquidation. The structured classification covers that observed aggregate BTC slice and retains native, wrapped, bridge, custody, and contract risks without inventing a variant allocation. This selected slice does not establish that every separate MUSD mint-authority path is backed by the ActivePool.",
+    "compositionBasis": "Mezo ActivePool live-reserve capture and MUSD collateral documentation",
+    "compositionAsOf": "2026-07-15",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "No unresolved part of the recorded ActivePool slice remains; native-versus-wrapped BTC source-path weights are not published and are retained as aggregate risk factors. Separate non-CDP MUSD issuance paths are outside this selected-slice review.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Bitcoin (BTC) — native and wrapped variants (tBTC, WBTC, SolvBTC, cbBTC)",
+        "reserveName": "BTC collateral in Mezo ActivePool",
         "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The source establishes BTC-only collateral but not live native versus wrapped-BTC weights."
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The observed BTC collateral is an external cryptoasset exposure rather than a tracked stablecoin dependency."
       }
     ]
   },

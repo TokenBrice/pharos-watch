@@ -2,7 +2,7 @@
   "id": "jtrsy-anemoy",
   "reserves": [
     {
-      "name": "JTRSY fund portfolio: short-duration U.S. Treasury bills and cash settlement sleeve",
+      "name": "Janus Henderson Anemoy Treasury Fund NAV",
       "pct": 100,
       "risk": "very-low",
       "assetClass": "fund-share",
@@ -39,13 +39,14 @@
     ],
     "rationale": "Anemoy states that JTRSY holds U.S. Treasury bills with a maximum six-month maturity, offers daily redemptions, and settles investments and redemptions in USDC. The issuer also says the fund portfolio is viewable through Centrifuge, but the reviewed public pages do not support the previous 97%/3% split or a current holding-level allocation. The reserve is therefore represented as one 100% fund portfolio envelope.",
     "compositionBasis": "Anemoy JTRSY fund disclosure and Centrifuge/Chainlink transparency references",
+    "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
     "knownUnknownExposure": "The fund strategy and daily-liquidity model are disclosed, but current Treasury-bill holdings, cash sleeve, counterparties, custodians, and security-level weights are not reproduced in the reviewed public sources.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "JTRSY fund portfolio: short-duration U.S. Treasury bills and cash settlement sleeve",
+        "reserveName": "Janus Henderson Anemoy Treasury Fund NAV",
         "pct": 100,
         "disposition": "basket-needs-split",
         "rationale": "The issuer discloses the strategy and redemption terms but does not publish a current defensible split between Treasury holdings and cash or security-level positions in the reviewed pages."

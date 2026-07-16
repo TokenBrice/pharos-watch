@@ -311,11 +311,15 @@
         "url": "https://aid.gaib.ai/transparency"
       },
       {
+        "label": "June 2026 Spiceflow asset-deployment assurance report",
+        "url": "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/view"
+      },
+      {
         "label": "AID Ethereum implementation source",
         "url": "https://sourcify.dev/server/v2/contract/1/0x2db74834f556e1f19ed397e5f935a983e4c2f38b"
       }
     ],
-    "rationale": "GAIB states that AID is fully backed by U.S. Treasuries and stable assets and is minted 1:1 with USDC, USDT, and other accepted stablecoins. GAIB's transparency dashboard exposes an attestation-report link, but its owner disables downloads; the public documentation and dashboard do not reproduce a current asset-and-liability component allocation. At Ethereum block 0x1859e17, the AID proxy resolved to 0x2db74834f556e1f19ed397e5f935a983e4c2f38b; the reviewed verified token source exposes token controls but no reserve-accounting view. The complete reserve envelope is retained as one slice.",
+    "rationale": "GAIB states that AID is fully backed by U.S. Treasuries and stable assets and is minted 1:1 with USDC, USDT, and other accepted stablecoins. The transparency dashboard's June 2026 report is accessible, but it is a limited-assurance review of Spiceflow Corp's GPU-financing asset deployment as of June 30, 2026, not an AID reserve assets-and-liabilities reconciliation. The public documentation and dashboard do not reproduce a current AID reserve component allocation. At Ethereum block 0x1859e17, the AID proxy resolved to 0x2db74834f556e1f19ed397e5f935a983e4c2f38b; the reviewed verified token source exposes token controls but no reserve-accounting view. The complete reserve envelope is retained as one slice.",
     "compositionBasis": "GAIB AID product and transparency disclosures with a fixed-block Ethereum token-source review; constituent weights are undisclosed",
     "compositionAsOf": "2026-07-15",
     "scope": "full-composition",

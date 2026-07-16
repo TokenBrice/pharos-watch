@@ -542,7 +542,7 @@
   ],
   "reserves": [
     {
-      "name": "ysyBOLD (Yearn savings BOLD)",
+      "name": "ysyBOLD",
       "pct": 79.5,
       "risk": "medium",
       "coinId": "bold-liquity",
@@ -558,7 +558,7 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "scrvUSD (Savings crvUSD)",
+      "name": "scrvUSD",
       "pct": 9.9,
       "risk": "medium",
       "coinId": "scrvusd-curve",
@@ -574,7 +574,7 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "sUSDS (Sky savings USDS)",
+      "name": "sUSDS",
       "pct": 7.4,
       "risk": "low",
       "coinId": "susds-sky",
@@ -604,7 +604,7 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "sfrxUSD (Staked Frax USD)",
+      "name": "sfrxUSD",
       "pct": 1.5,
       "risk": "medium",
       "coinId": "sfrxusd-frax",
@@ -620,7 +620,7 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "WBTC",
+      "name": "wBTC",
       "pct": 0.4,
       "risk": "medium",
       "assetClass": "cryptoasset",
@@ -635,8 +635,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-6 V9 reserve review",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
     "confidence": "probable",
     "sources": [
       {
@@ -653,8 +653,8 @@
       }
     ],
     "rationale": "The official Asymmetry stats endpoint reports the current USDaf V2 collateral mix, and the pinned deployment registry and contracts map the reported positions to the reviewed slices. The snapshot does not independently establish legal custody, reserve segregation, or assurance for the underlying protocol positions and BTC wrappers.",
-    "compositionBasis": "Asymmetry Finance /api/stats collateral mix normalized on 2026-07-14",
-    "compositionAsOf": "2026-07-14",
+    "compositionBasis": "Asymmetry Finance /api/stats collateral mix normalized on 2026-07-15",
+    "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
     "knownUnknownExposure": "Underlying protocol-position custody, wrapper counterparty exposure, and independent reserve assurance are not established by the public stats endpoint.",
     "knownUnknownExposurePct": 0

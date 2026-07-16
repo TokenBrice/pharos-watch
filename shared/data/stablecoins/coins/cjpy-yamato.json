@@ -268,7 +268,16 @@
     {
       "name": "ETH",
       "pct": 100,
-      "risk": "very-low"
+      "risk": "very-low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum network and Yamato CDP system",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -278,6 +287,7 @@
     "sources": [{ "label": "Yamato documentation", "url": "https://docs.yamato.fi/v/en" }, { "label": "Yamato Ethereum contract", "url": "https://etherscan.io/address/0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257" }],
     "rationale": "Yamato documents CJPY as minted against ETH pledges with a 130% minimum collateral ratio. The tracked reserve envelope is therefore the sole ETH collateral category; live position weights change onchain and are not represented as a static allocation.",
     "compositionBasis": "Yamato ETH-CDP collateral design",
+    "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
     "knownUnknownExposure": "No reserve exposure outside ETH pledges is documented; current individual pledge positions are dynamic.",
     "knownUnknownExposurePct": 0,
