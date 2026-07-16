@@ -1,6 +1,6 @@
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { CIRCUIT_SOURCE } from "../constants";
-import { fetchEvmCallHexAtBlock } from "../evm-rpc";
+import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmCallHexAtBlock } from "../evm-rpc";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import {
   decodeUint256WordBigInt,
@@ -24,6 +24,8 @@ const GET_AMOUNT_OUT_SELECTOR = "0xf140a35a";
 const QUOTE_NOTIONAL_TOKENS = 1_000;
 const MIN_QUOTE_RESERVE_USD = 25_000;
 const MAX_ROUTE_DIVERGENCE_RATIO = 0.05;
+const MAX_BLOCK_AGE_SEC = 5 * 60;
+const MAX_BLOCK_FUTURE_SKEW_SEC = 60;
 
 interface StablePoolRoute {
   chain: "optimism" | "base";
@@ -75,18 +77,31 @@ function routesAgree(prices: readonly number[]): boolean {
   return min > 0 && (max - min) / min <= MAX_ROUTE_DIVERGENCE_RATIO;
 }
 
-async function fetchStablePoolQuote(route: StablePoolRoute, signal?: AbortSignal): Promise<number | null> {
+async function fetchStablePoolQuote(
+  route: StablePoolRoute,
+  signal?: AbortSignal,
+): Promise<{ price: number; observedAt: number } | null> {
   const options = {
     signal,
     extraRpcUrls: getPublicFallbackRpcUrls(route.chain),
   };
+  const blockNumber = await fetchEvmBlockNumber(route.chain, options);
+  if (blockNumber == null) return null;
+  const blockTimestamp = await fetchEvmBlockTimestamp(route.chain, blockNumber, options);
+  const nowSec = Math.floor(Date.now() / 1_000);
+  if (
+    blockTimestamp == null ||
+    blockTimestamp > nowSec + MAX_BLOCK_FUTURE_SKEW_SEC ||
+    nowSec - blockTimestamp > MAX_BLOCK_AGE_SEC
+  ) return null;
+
   const inputRaw = BigInt(QUOTE_NOTIONAL_TOKENS) * 10n ** BigInt(route.tokenDecimals);
   const quoteCall = `${GET_AMOUNT_OUT_SELECTOR}${encodeUint256(inputRaw)}${encodeAddress(route.token)}`;
   const [token0Raw, token1Raw, reservesRaw, outputRaw] = await Promise.all([
-    fetchEvmCallHexAtBlock(route.chain, route.pool, TOKEN0_SELECTOR, "latest", options),
-    fetchEvmCallHexAtBlock(route.chain, route.pool, TOKEN1_SELECTOR, "latest", options),
-    fetchEvmCallHexAtBlock(route.chain, route.pool, GET_RESERVES_SELECTOR, "latest", options),
-    fetchEvmCallHexAtBlock(route.chain, route.pool, quoteCall, "latest", options),
+    fetchEvmCallHexAtBlock(route.chain, route.pool, TOKEN0_SELECTOR, blockNumber, options),
+    fetchEvmCallHexAtBlock(route.chain, route.pool, TOKEN1_SELECTOR, blockNumber, options),
+    fetchEvmCallHexAtBlock(route.chain, route.pool, GET_RESERVES_SELECTOR, blockNumber, options),
+    fetchEvmCallHexAtBlock(route.chain, route.pool, quoteCall, blockNumber, options),
   ]);
 
   const token0 = decodeAddressWord(token0Raw);
@@ -107,7 +122,7 @@ async function fetchStablePoolQuote(route: StablePoolRoute, signal?: AbortSignal
 
   const quoteAmount = decimalFromRaw(output, route.quoteDecimals);
   const price = quoteAmount / QUOTE_NOTIONAL_TOKENS;
-  return Number.isFinite(price) && price > 0 ? price : null;
+  return Number.isFinite(price) && price > 0 ? { price, observedAt: blockTimestamp } : null;
 }
 
 export async function fetchUsxStablePoolPrice(
@@ -126,10 +141,12 @@ export async function fetchUsxStablePoolPrice(
   if (!quoteParent) return null;
 
   const routePrices: number[] = [];
+  const routeObservedAt: number[] = [];
   for (const route of USX_STABLE_POOL_ROUTES) {
-    const price = await fetchStablePoolQuote(route, signal);
-    if (price == null) return null;
-    routePrices.push(price * quoteParent.trustedParent.price);
+    const quote = await fetchStablePoolQuote(route, signal);
+    if (quote == null) return null;
+    routePrices.push(quote.price * quoteParent.trustedParent.price);
+    routeObservedAt.push(quote.observedAt);
   }
   if (!routesAgree(routePrices)) return null;
 
@@ -138,8 +155,8 @@ export async function fetchUsxStablePoolPrice(
     price,
     source: `${AERODROME_ONCHAIN_SOURCE}+${VELODROME_ONCHAIN_SOURCE}`,
     confidence: "high",
-    observedAt: Math.floor(Date.now() / 1000),
-    observedAtMode: "local_fetch",
+    observedAt: Math.min(...routeObservedAt),
+    observedAtMode: "upstream",
   };
 }
 

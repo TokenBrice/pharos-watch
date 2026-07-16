@@ -2,9 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 
 const fetchEvmCallHexAtBlockMock = vi.fn();
+const fetchEvmBlockNumberMock = vi.fn();
+const fetchEvmBlockTimestampMock = vi.fn();
 
 vi.mock("../evm-rpc", () => ({
   fetchEvmCallHexAtBlock: (...args: unknown[]) => fetchEvmCallHexAtBlockMock(...args),
+  fetchEvmBlockNumber: (...args: unknown[]) => fetchEvmBlockNumberMock(...args),
+  fetchEvmBlockTimestamp: (...args: unknown[]) => fetchEvmBlockTimestampMock(...args),
 }));
 
 import { fetchUsxStablePoolPrice } from "../authoritative-price-sources/usx-stable-pools";
@@ -43,6 +47,8 @@ function mockRouteCalls(secondRouteOutput = 390_000_000n): void {
 describe("USX exact stable-pool price", () => {
   beforeEach(() => {
     fetchEvmCallHexAtBlockMock.mockReset();
+    fetchEvmBlockNumberMock.mockReset().mockResolvedValue(123_456);
+    fetchEvmBlockTimestampMock.mockReset().mockImplementation(async () => Math.floor(Date.now() / 1_000) - 30);
   });
 
   it("accepts two identity-bound executable USDC routes that agree", async () => {
@@ -56,8 +62,11 @@ describe("USX exact stable-pool price", () => {
       price: 0.3895,
       source: "aerodrome-onchain+velodrome-onchain",
       confidence: "high",
-      observedAtMode: "local_fetch",
+      observedAtMode: "upstream",
     });
+    expect(fetchEvmBlockNumberMock).toHaveBeenCalledTimes(2);
+    expect(fetchEvmBlockTimestampMock).toHaveBeenCalledTimes(2);
+    expect(fetchEvmCallHexAtBlockMock.mock.calls.every((call) => call[3] === 123_456)).toBe(true);
   });
 
   it("fails closed when the two executable routes materially disagree", async () => {
@@ -94,5 +103,14 @@ describe("USX exact stable-pool price", () => {
     await expect(fetchUsxStablePoolPrice({
       assetsById: new Map([["usdc-circle", trustedUsdc()]]),
     })).resolves.toBeNull();
+  });
+
+  it("rejects a stale route block before reading pool state", async () => {
+    fetchEvmBlockTimestampMock.mockResolvedValue(Math.floor(Date.now() / 1_000) - 301);
+
+    await expect(fetchUsxStablePoolPrice({
+      assetsById: new Map([["usdc-circle", trustedUsdc()]]),
+    })).resolves.toBeNull();
+    expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
   });
 });

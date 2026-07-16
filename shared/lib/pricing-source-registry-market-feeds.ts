@@ -128,6 +128,9 @@ export const PRICING_SOURCE_REGISTRY_MARKET_FEEDS = [
     depegSourceFamily: "dex:aerodrome-onchain",
     maxTrustedAgeSec: 15 * 60,
     defaultWeight: 2,
+    freshnessKind: "upstream",
+    supportsUpstreamObservedAt: true,
+    defaultObservedAtMode: "upstream",
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.hardMarket, {
     key: "velodrome-onchain",
@@ -136,6 +139,9 @@ export const PRICING_SOURCE_REGISTRY_MARKET_FEEDS = [
     depegSourceFamily: "dex:velodrome-onchain",
     maxTrustedAgeSec: 15 * 60,
     defaultWeight: 2,
+    freshnessKind: "upstream",
+    supportsUpstreamObservedAt: true,
+    defaultObservedAtMode: "upstream",
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.hardProtocol, {
     key: "curve-onchain",
