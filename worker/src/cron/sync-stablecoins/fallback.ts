@@ -24,6 +24,11 @@ import {
   evaluateStablecoinPublicationCoverage,
   loadPreviousStablecoinActivePriceCoverage,
 } from "../../lib/stablecoin-publication-coverage";
+import { alertOnMissingActiveStablecoinPrices } from "../../lib/stablecoin-publication-alerts";
+import {
+  buildPriceSourceAttemptLedger,
+  compactPriceSourceAttemptLedger,
+} from "./metadata";
 
 function isFallbackCronResult(result: unknown): result is CronResult {
   return typeof result === "object" && result !== null && "metadata" in result;
@@ -157,6 +162,17 @@ export async function syncViaCoingeckoFallback(
   const persistedActivePriceCoverage = activePriceCoverage.missingActiveAssets.length > 20
     ? compactStablecoinActivePriceCoverage(activePriceCoverage, 20)
     : activePriceCoverage;
+  const providerDiagnostics = [...fallbackProviderDiagnostics, ...depegProviderDiagnostics];
+  const activePriceCoverageAlert = await alertOnMissingActiveStablecoinPrices(
+    db,
+    activePriceCoverage,
+    alertWebhookUrl,
+  );
+  const priceSourceAttemptLedger = compactPriceSourceAttemptLedger(buildPriceSourceAttemptLedger({
+    missingActiveIds: activePriceCoverage.missingActiveIds,
+    providerDiagnostics,
+    authoritativeOverrideStats,
+  }));
 
   const result: CronResult = {
     status:
@@ -175,7 +191,7 @@ export async function syncViaCoingeckoFallback(
       fallbackMode: "coingecko-supply-fallback",
       validationFailures: 0,
       enrichment: enrichStats,
-      providerDiagnostics: [...fallbackProviderDiagnostics, ...depegProviderDiagnostics],
+      providerDiagnostics,
       rejectedPrices: rejectedCount,
       nativePegCorrections: nativePegCorrectionCount,
       nativePegFills: nativePegFillCount,
@@ -194,6 +210,8 @@ export async function syncViaCoingeckoFallback(
       depegPipelineSucceeded: depegErrorCount === 0,
       activePublicationCoverage: publicationCoverage,
       activePriceCoverage: persistedActivePriceCoverage,
+      activePriceCoverageAlert,
+      priceSourceAttemptLedger,
     }, {
       cacheWriteMode: "published",
       capabilities: {

@@ -33,7 +33,7 @@ const MAX_DIAGNOSTIC_DEPTH = 4;
 const MAX_STABLECOINS_CRON_METADATA_BYTES = 64 * 1024;
 const MAX_PRICE_SOURCE_ATTEMPT_LEDGER_RECORDS = 100;
 
-interface PriceSourceAttemptLedger {
+export interface PriceSourceAttemptLedger {
   version: 1;
   missingActiveIds: string[];
   recordCount: number;
@@ -41,7 +41,7 @@ interface PriceSourceAttemptLedger {
   records: PricingAssetAttemptRecord[];
 }
 
-type CompactPriceSourceAttempt = readonly [
+export type CompactPriceSourceAttempt = readonly [
   assetId: string,
   adapter: string,
   source: string,
@@ -54,7 +54,7 @@ type CompactPriceSourceAttempt = readonly [
   replaySafe: boolean,
 ];
 
-function buildPriceSourceAttemptLedger(input: {
+export function buildPriceSourceAttemptLedger(input: {
   missingActiveIds: readonly string[];
   providerDiagnostics: readonly PricingProviderAttemptDiagnostic[];
   authoritativeOverrideStats?: AuthoritativeLivePriceOverrideStats;
@@ -74,7 +74,7 @@ function buildPriceSourceAttemptLedger(input: {
   };
 }
 
-function compactPriceSourceAttemptLedger(ledger: PriceSourceAttemptLedger): Omit<PriceSourceAttemptLedger, "records"> & {
+export function compactPriceSourceAttemptLedger(ledger: PriceSourceAttemptLedger): Omit<PriceSourceAttemptLedger, "records"> & {
   records: CompactPriceSourceAttempt[];
 } {
   return {

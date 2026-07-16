@@ -162,6 +162,16 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
     };
     expect(activePriceCoverage.missingActiveAssets).toHaveLength(20);
     expect(activePriceCoverage.missingActiveState).toHaveLength(activePriceCoverage.missingPriceCount);
+    expect(meta.activePriceCoverageAlert).toMatchObject({
+      eligibleCount: 0,
+      dueCount: 0,
+      sent: false,
+    });
+    expect(meta.priceSourceAttemptLedger).toMatchObject({
+      version: 1,
+      missingActiveIds: expect.any(Array),
+      records: [],
+    });
   });
 
   // -----------------------------------------------------------------------
