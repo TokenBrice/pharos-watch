@@ -5,6 +5,7 @@ import {
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { throwIfAborted } from "../../lib/abort";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import { fetchEvmBlockNumber } from "../../lib/evm-rpc";
 import { toErrorMessage } from "../../lib/error-utils";
@@ -259,6 +260,7 @@ export async function syncDexMeasuredExecution(
       deploymentGroups.set(key, group);
     }
     for (const deploymentRows of deploymentGroups.values()) {
+      throwIfAborted(signal);
       const deployment = deploymentRows[0]!.deployment!;
       if (deployment.kind === "quoter-v2") {
         const verified = await verifyDexMeasuredExecutionDeployment({
@@ -321,6 +323,7 @@ export async function syncDexMeasuredExecution(
       rowsByFactory.set(key, deploymentRows);
     }
     for (const deploymentRows of rowsByFactory.values()) {
+      throwIfAborted(signal);
       const deployment = deploymentRows[0]!.deployment!;
       if (deployment.kind !== "quoter-v2") continue;
       const outcomes = await resolveQuoterV2PoolBindings({
@@ -381,6 +384,7 @@ export async function syncDexMeasuredExecution(
         byAdapter.set(kind, rows);
       }
       for (const [kind, adapterRequests] of byAdapter) {
+        throwIfAborted(signal);
         if (kind === "quoter-v2") {
           const outcomes = await quoteQuoterV2Requests({
             requests: adapterRequests.map(({ state, inputUsd }) => ({
@@ -420,6 +424,7 @@ export async function syncDexMeasuredExecution(
 
   await runStage(states.map((state) => ({ state, inputUsd: 1_000 })));
   for (const notional of [100_000, 1_000_000, 10_000_000, 25_000_000]) {
+    throwIfAborted(signal);
     await runStage(
       states
         .filter(
@@ -432,6 +437,7 @@ export async function syncDexMeasuredExecution(
     );
   }
   for (let round = 0; round < REFINEMENT_ROUNDS; round++) {
+    throwIfAborted(signal);
     await runStage(
       states.flatMap((state) => {
         if (state.failedReason || !state.bracket) return [];

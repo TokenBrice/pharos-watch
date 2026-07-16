@@ -7,6 +7,7 @@ import {
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { throwIfAborted } from "../../lib/abort";
 import {
   fetchEvmCodeAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock,
@@ -452,6 +453,7 @@ function createFluidResolverQuoteExecutor(dependencies: FluidResolverQuoteDepend
       // A chain lane owns one RPC request at a time, including when a caller
       // accidentally supplies more than one pinned block for the same chain.
       for (const requests of requestsByBlock.values()) {
+        throwIfAborted(input.signal);
         const first = requests[0]!;
         const verification = input.deploymentVerified
           ? { ok: true as const, codeHash: first.deployment.expectedCodeHash }
@@ -468,6 +470,7 @@ function createFluidResolverQuoteExecutor(dependencies: FluidResolverQuoteDepend
         }
 
         for (let offset = 0; offset < requests.length; offset += FLUID_MULTICALL_BATCH_SIZE) {
+          throwIfAborted(input.signal);
           const chunk = requests.slice(offset, offset + FLUID_MULTICALL_BATCH_SIZE);
           const calls = chunk.map((request) => ({
             label: request.label,

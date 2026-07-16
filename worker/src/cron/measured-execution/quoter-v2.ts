@@ -7,6 +7,7 @@ import {
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { throwIfAborted } from "../../lib/abort";
 import {
   fetchEvmMulticall3Aggregate3AtBlock,
   type EvmMulticall3Call,
@@ -268,6 +269,7 @@ export async function quoteQuoterV2Requests(input: {
   const transportFailureLabels = new Set<string>();
   await runWithConcurrency([...byChain], 3, async ([chain, requests]) => {
     for (let offset = 0; offset < requests.length; offset += QUOTER_MULTICALL_BATCH_SIZE) {
+      throwIfAborted(input.signal);
       const chunk = requests.slice(offset, offset + QUOTER_MULTICALL_BATCH_SIZE);
       const calls = chunk.map((request) => ({
         label: request.label,
@@ -288,6 +290,7 @@ export async function quoteQuoterV2Requests(input: {
 
       const failedCalls = calls.filter((call) => !resultsByLabel.get(call.label)?.success);
       for (const failedCall of failedCalls) {
+        throwIfAborted(input.signal);
         const retry = await executeAdaptiveChunk({
           chain,
           calls: [failedCall],
@@ -405,6 +408,7 @@ export async function resolveQuoterV2PoolBindings(input: {
 
   await runWithConcurrency([...byChain], 3, async ([chain, requests]) => {
     for (let offset = 0; offset < requests.length; offset += QUOTER_MULTICALL_BATCH_SIZE) {
+      throwIfAborted(input.signal);
       const chunk = requests.slice(offset, offset + QUOTER_MULTICALL_BATCH_SIZE);
       const execution = await executeAdaptiveChunk({
         chain,
