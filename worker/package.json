@@ -13,13 +13,13 @@
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260708.1",
     "typescript": "~5.9.0",
-    "wrangler": "4.108.0"
+    "wrangler": "4.110.0"
   },
   "dependencies": {
     "@cf-wasm/resvg": "^0.3.4",
     "react": "^19.2.7",
     "satori": "^0.26.0",
-    "viem": "2.54.6",
+    "viem": "2.55.0",
     "zod": "^4.4.3"
   }
 }
