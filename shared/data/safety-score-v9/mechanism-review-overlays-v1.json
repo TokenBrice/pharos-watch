@@ -1536,26 +1536,33 @@
     {
       "assetId": "usdt-tether",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-15",
+      "reviewedAt": "2026-07-17",
       "sources": [
         {
           "label": "Tether Token Terms of Sale and Service (personal contractual redemption right and eligibility conditions; updated 2026-02-26)",
           "url": "https://tether.to/en/legal/"
         },
         {
-          "label": "Tether International Relevant Information Document (issuer, primary-market obligation, and reserve-funded redemption lifecycle; published 2026-02-20)",
+          "label": "Tether International Relevant Information Document (issuer, primary-market obligation, reserve-funded redemption lifecycle, and Safeguarding Arrangements custody disclosure; published 2026-02-20)",
           "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
         },
         {
           "label": "Tether transparency and assurance disclosures (issuer-owned reserve characterization)",
           "url": "https://tether.to/transparency/?tab=reports"
+        },
+        {
+          "label": "BDO ISAE 3000R assurance report on Tether International's Financial Figures and Reserves Report as of 31 March 2026 (reserve composition, bank/depositary confirmation procedures, custodian emphasis of matter; signed 2026-04-30)",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/6crn1tXbl6AtWZBWucZnfg/c4ff472d70c1b48c2f689f27b54c84f5/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_31-03-2026.pdf"
         }
       ],
-      "notes": "Tether International, S.A. de C.V.'s Terms make purchase and redemption a personal contractual right available only to verified customers. The 2026 Relevant Information Document and Tether's transparency disclosures characterize reserves as issuer-held and issuer-owned assets that Tether invests and manages at its discretion, while the post-sale obligation is conditional redemption for eligible primary-market customers. The reviewed sources establish neither beneficial ownership or a direct reserve-asset claim for holders nor reserve segregation, a holder trust, or bankruptcy-remoteness protection. Claim and segregation are therefore weak. The Relevant Information Document says reserves are held through various third parties, including banks and licensed financial institutions, but no reviewed primary source names the USDT reserve custodians, provider shares, failure-continuity protections, or rehypothecation restrictions, so custody continuity remains uncurated and bounded-unknown.",
+      "notes": "Tether International, S.A. de C.V.'s Terms make purchase and redemption a personal contractual right available only to verified customers. The 2026-02-20 Relevant Information Document and Tether's transparency disclosures characterize reserves as issuer-held and issuer-owned assets that Tether invests and manages at its sole discretion, while the post-sale obligation is conditional redemption for eligible primary-market customers; the BDO ISAE 3000R report as of 2026-03-31 likewise defines the Reserves as all assets owned by the Company. The reviewed sources establish neither beneficial ownership or a direct reserve-asset claim for holders nor reserve segregation, a holder trust, or bankruptcy-remoteness protection. Claim and segregation are therefore weak. Custody continuity, reviewed 2026-07-17: the RID's Safeguarding Arrangements section states Tether primarily holds the Reserves with various third parties including banks and licensed financial institutions, and BDO's 2026-03-31 ISAE 3000R procedures obtained confirmation letters directly from banks and depositaries and sample-tested precious-metals inventory to confirm asset existence, but no reviewed primary source names the USDT reserve custodians, provider shares, custodian-failure continuity or replacement terms, or rehypothecation restrictions, and the report's emphasis of matter excludes key-custodian or counterparty illiquidity from the assured valuation. These are self-reported custody disclosures only, so custody continuity is limited under the D1 mapping (adequate would require a recent attestation naming custodians). Reserve composition verified 2026-07-17 against the BDO Financial Figures and Reserves Report as of 31 March 2026 (approved 30 April 2026; latest published attestation at review date): U.S. Treasury bills $117.04B (61.03%), overnight reverse repurchase agreements $19.33B (10.08%), term reverse repurchase agreements $4.75B (2.47%), cash and bank deposits $0.11B (0.06%), precious metals $19.84B (10.34%), Bitcoin $6.62B (3.45%), public equities $3.41B (1.78%), other investments $4.84B (2.53%), secured loans $15.83B (8.25%); total assets $191.77B against liabilities $183.54B, an $8.23B excess. The attestation's residual corporate-bond category ($3.0M, 0.0016%) is de minimis and not separately sliced. The reserve schema has no per-slice source slot; the per-slice document/date/URL table is recorded in the ANCHOR-EV package-3 packet (schema gap logged there).",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
           "quality": "weak"
+        },
+        "custodyContinuity": {
+          "quality": "limited"
         }
       }
     },

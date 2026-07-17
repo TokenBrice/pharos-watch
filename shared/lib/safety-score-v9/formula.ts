@@ -112,6 +112,38 @@ export interface V9ReserveLossFacts {
   failureDomainKey: string;
 }
 
+export interface V9WindowedPegScoreFacts {
+  pegScore: number | null;
+  activeDepeg: boolean | null | undefined;
+  lastEventAt: number | null | undefined;
+  clockSec: number;
+  windowSec: number;
+  quietHistoryFloor: number;
+}
+
+/**
+ * Apply the matrix-verified R5 proxy at the V9 adapter boundary. Capture input
+ * carries only an aggregate peg summary, so this cannot recompute event-level
+ * history; it only removes a legacy penalty after a proven quiet window.
+ */
+export function deriveV9WindowedPegScore(facts: V9WindowedPegScoreFacts): number | null {
+  if (!Number.isInteger(facts.clockSec)) throw new Error("clockSec must be an integer Unix timestamp");
+  if (!Number.isInteger(facts.windowSec) || facts.windowSec <= 0) {
+    throw new Error("windowSec must be a positive integer");
+  }
+  if (!Number.isFinite(facts.quietHistoryFloor) || facts.quietHistoryFloor < 0 || facts.quietHistoryFloor > 100) {
+    throw new Error("quietHistoryFloor must be between 0 and 100");
+  }
+  if (facts.pegScore === null || facts.activeDepeg !== false || facts.pegScore >= facts.quietHistoryFloor) {
+    return facts.pegScore;
+  }
+  const cutoffSec = facts.clockSec - facts.windowSec;
+  if (facts.lastEventAt !== null && facts.lastEventAt !== undefined && facts.lastEventAt >= cutoffSec) {
+    return facts.pegScore;
+  }
+  return facts.quietHistoryFloor;
+}
+
 /** Convert reserve exposure and loss absorption facts into a cap-free structural signal. */
 export function deriveV9ReserveLossSignal(
   facts: V9ReserveLossFacts,

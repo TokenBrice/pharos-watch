@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import PharosWatchBotPage, { metadata } from "./page";
 import {
   TELEGRAM_ALERT_EXAMPLES,
+  TELEGRAM_COMMAND_COUNT,
   TELEGRAM_COMMAND_GROUPS,
   TELEGRAM_FAQ,
   TELEGRAM_PAGE_DESCRIPTION,
@@ -55,37 +55,26 @@ vi.mock("./mini-app-screenshot-carousel", () => ({
   MiniAppScreenshotCarousel: () => <section aria-label="Mini App screenshots">screenshots</section>,
 }));
 
-vi.mock("@/components/feature-page-shell", () => ({
-  FeaturePageShell: ({
-    title,
-    children,
-    headerActions,
-  }: {
-    title: string;
-    children: ReactNode;
-    headerActions?: ReactNode;
-  }) => (
-    <main>
-      <h1>{title}</h1>
-      {headerActions}
-      {children}
-    </main>
+vi.mock("./instrument-panel", () => ({
+  InstrumentPanel: () => (
+    <section id="panel" aria-label="Live Telegram adoption metrics">
+      pulse board
+    </section>
   ),
+}));
+
+vi.mock("./night-shift-metric", () => ({
+  NightShiftMetric: () => <p>hero metric</p>,
+}));
+
+vi.mock("./live-watcher-count", () => ({
+  LiveWatcherCount: () => <span>1,842</span>,
 }));
 
 vi.mock("@/components/copy-button", () => ({
   CopyButton: ({ text, className }: { text: string; className?: string }) => (
     <button type="button" aria-label={`Copy ${text}`} className={className} />
   ),
-}));
-
-vi.mock("./telegram-pulse-strip", () => ({
-  TelegramPulseBoard: () => <section aria-label="Live Telegram adoption metrics">pulse board</section>,
-  TelegramPulseStrip: () => <div>pulse strip</div>,
-}));
-
-vi.mock("./telegram-hero-metric", () => ({
-  TelegramHeroMetric: () => <p>hero metric</p>,
 }));
 
 afterEach(() => {
@@ -154,72 +143,86 @@ describe("PharosWatchBotPage", () => {
     expect(TELEGRAM_MINI_APP_PAYLOAD_PATTERN.test(RECOMMENDED_SETUP_START_PAYLOAD)).toBe(true);
   });
 
-  it("renders the distilled decision path, complete reference, and JSON-LD", () => {
+  it("renders the night-watch experience, the un-collapsed reference, and JSON-LD", () => {
     const { container } = render(<PharosWatchBotPage />);
 
-    expect(screen.getAllByRole("heading", { name: "PharosWatchBot" }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("link", { name: /open bot/i }).length).toBeGreaterThan(0);
-    expect(screen.getByRole("heading", { name: "Stablecoin alerts, before you have to check." })).toBeTruthy();
-    // The hero is benefits-led: the mini-app screenshot lives only in the carousel (mocked here).
-    expect(container.querySelector('img[src="/featured/telegram-mini-app/home.png"]')).toBeNull();
+    // Act I — the hero.
+    expect(screen.getByRole("heading", { name: "Stablecoin alerts, before you have to check.", level: 1 })).toBeTruthy();
+    expect(
+      screen.getByText(`Free Telegram alerts for ${TRACKED_STABLECOIN_COUNT.toLocaleString("en-US")} tracked stablecoins`),
+    ).toBeTruthy();
+    expect(screen.getAllByRole("link", { name: /open the bot/i }).length).toBeGreaterThan(0);
+    // The hero stays copy-led: the mini-app screenshot lives only in the carousel (mocked here).
+    expect(container.querySelector('img[src="/featured/telegram-mini-app/home.jpg"]')).toBeNull();
+
+    // Act II — every family lands as a signal with plain-language framing.
+    expect(screen.getByRole("heading", { name: "What lands in your chat" })).toBeTruthy();
     for (const family of TELEGRAM_ALERT_FAMILIES) {
       expect(screen.getAllByText(family.label).length).toBeGreaterThan(0);
     }
-    expect(screen.getByText("Command Reference")).toBeTruthy();
-    const commandDetails = screen.getByText("Command Reference").closest("details") as HTMLDetailsElement;
-    expect(commandDetails.open).toBe(false);
-    expect(screen.getByLabelText("PharosWatchBot command reference")).toBeTruthy();
-    expect(screen.queryByRole("table", { name: "PharosWatchBot command reference" })).toBeNull();
-    expect(screen.getAllByText("/brief").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("/sample").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("/forget").length).toBeGreaterThan(0);
-    expect(screen.getByText(/\/market is a deprecated compatibility alias/i)).toBeTruthy();
-    expect(screen.getByText(/use \/forget in a private chat for immediate subscriber-data deletion/i)).toBeTruthy();
-    expect(
-      screen.getByText(
-        `Free Telegram alerts for ${TRACKED_STABLECOIN_COUNT.toLocaleString("en-US")} tracked stablecoins`,
-      ),
-    ).toBeTruthy();
-    expect(screen.getByText(/Safety changes name the score driver/i)).toBeTruthy();
-    expect(screen.getAllByText(/Reason: Active depeg peak 7546 bps/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/DEWS and depeg alerts for the current top 25 USD stablecoins/i)).toBeTruthy();
-    expect(screen.getByText("The same alert state, without slash commands")).toBeTruthy();
-    expect(screen.getByText("Global alerts")).toBeTruthy();
-    expect(screen.getByText("Per-coin tuning")).toBeTruthy();
-    expect(screen.getByText("Delivery health")).toBeTruthy();
-    expect(screen.getByText("Coin search")).toBeTruthy();
-    expect(screen.getByText("Bot sync")).toBeTruthy();
-    expect(screen.getByText("Deep links")).toBeTruthy();
-    expect(screen.getByText("Launch alerts")).toBeTruthy();
-    expect(screen.getAllByText("Reserve Drift").length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/all six families/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText("/start").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("/export").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("/import <token>").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("/pause [off|1h|4h|24h]").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("/recap [on|off]").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("/recap time <hour>").length).toBeGreaterThan(0);
-    expect(screen.getByText(/separate from the market-wide Daily Digest channel/i)).toBeTruthy();
-    expect(screen.getByLabelText("Mini App screenshots")).toBeTruthy();
-    // The reliability contract derives its TTLs from the shared delivery policy.
-    const riskTtlClaim = `Risk alerts expire after ${PENDING_TTL_SEC / 3600} hours`;
-    expect(screen.getByText((content) => content.includes(riskTtlClaim))).toBeTruthy();
-    expect(screen.getByText(/reserve drift follows the four-hour live-reserve producer/i)).toBeTruthy();
-    const examples = screen.getByRole("heading", { name: "What lands in your chat" });
-    const setup = screen.getByRole("heading", { name: "Start in two minutes" });
-    const evidence = screen.getByLabelText("Live Telegram adoption metrics");
-    expect(Boolean(examples.compareDocumentPosition(setup) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
-    expect(Boolean(setup.compareDocumentPosition(evidence) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
-
-    expect(container.textContent).not.toMatch(/no dropped alerts|arrive in order/i);
     expect(container.textContent).toContain("Depeg Early Warning System");
+    expect(screen.getAllByText(/Reason: Active depeg peak 7546 bps/i).length).toBeGreaterThan(0);
 
+    // The two-minute setup keeps its anchor and its recommended command.
+    expect(screen.getByRole("heading", { name: "Start in two minutes" })).toBeTruthy();
+    expect(screen.getByText(/DEWS and depeg alerts for the current top 25 USD stablecoins/i)).toBeTruthy();
     const commandStrings = screen.getAllByText(RECOMMENDED_SETUP_COMMAND).filter((node) => node.tagName === "CODE");
     expect(commandStrings.length).toBeGreaterThan(0);
     for (const command of commandStrings) {
       expect(command.className).toContain("whitespace-pre-wrap");
       expect(command.className).toContain("[overflow-wrap:anywhere]");
     }
+
+    // Acts IV–V.
+    expect(screen.getByRole("heading", { name: "The same alert state, without slash commands" })).toBeTruthy();
+    for (const feature of ["Global alerts", "Per-coin tuning", "Delivery health", "Coin search", "Bot sync", "Deep links", "Launch alerts"]) {
+      expect(screen.getByText(feature)).toBeTruthy();
+    }
+    expect(screen.getByLabelText("Mini App screenshots")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "One recap each morning" })).toBeTruthy();
+
+    // Act VI — the reference is fully visible, not folded behind details.
+    expect(screen.getByRole("heading", { name: "Commands, limits, and answers" })).toBeTruthy();
+    const commandReference = screen.getByLabelText("PharosWatchBot command reference");
+    expect(commandReference.closest("details")).toBeNull();
+    expect(screen.getByLabelText("Filter bot commands")).toBeTruthy();
+    expect(screen.getByText(`${TELEGRAM_COMMAND_COUNT} commands in ${TELEGRAM_COMMAND_GROUPS.length} groups`)).toBeTruthy();
+    expect(screen.getAllByText("/brief").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("/sample").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("/forget").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("/start").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("/export").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("/import <token>").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("/pause [off|1h|4h|24h]").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("/recap [on|off]").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("/recap time <hour>").length).toBeGreaterThan(0);
+    expect(screen.getByText(/\/market is a deprecated compatibility alias/i)).toBeTruthy();
+    expect(screen.getByText("Other starter setups")).toBeTruthy();
+    expect(screen.getAllByText("/subscribe@PharosWatchBot dews usd-top25").length).toBeGreaterThan(0);
+
+    // The filter narrows the reference without a server round-trip.
+    fireEvent.change(screen.getByLabelText("Filter bot commands"), { target: { value: "mute" } });
+    expect(
+      screen.getByText((content) => content.includes(`of ${TELEGRAM_COMMAND_COUNT} commands match`)),
+    ).toBeTruthy();
+
+    // The reliability contract stays policy-derived and in plain sight.
+    expect(screen.getByRole("heading", { name: /What Pharos promises/i })).toBeTruthy();
+    const riskTtlClaim = `Risk alerts expire after ${PENDING_TTL_SEC / 3600} hours`;
+    expect(screen.getByText((content) => content.includes(riskTtlClaim))).toBeTruthy();
+    expect(screen.getByText(/reserve drift follows the four-hour live-reserve producer/i)).toBeTruthy();
+    expect(screen.getByText(/use \/forget in a private chat for immediate subscriber-data deletion/i)).toBeTruthy();
+    expect(screen.getByText(/separate from the market-wide Daily Digest channel/i)).toBeTruthy();
+
+    // Narrative order: signals → setup → instrument panel.
+    const signals = container.querySelector("#signals") as HTMLElement;
+    const setup = container.querySelector("#getting-started") as HTMLElement;
+    const evidence = screen.getByLabelText("Live Telegram adoption metrics");
+    expect(Boolean(signals.compareDocumentPosition(setup) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    expect(Boolean(setup.compareDocumentPosition(evidence) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+
+    expect(container.textContent).not.toMatch(/no dropped alerts|arrive in order/i);
+
     for (const copyButton of screen.getAllByRole("button", { name: /^Copy / })) {
       expect(copyButton.className).toContain("size-11");
       expect(copyButton.className).toContain("shrink-0");

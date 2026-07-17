@@ -572,6 +572,7 @@
         "evidence": "GovActionsProxy.owner() returned this address and eth_getCode returned empty. The EOA can immediately execute governance changes that authorize mint rails or raise system limits."
       }
     ],
+    "supervision": "none",
     "review": {
       "sources": [
         {

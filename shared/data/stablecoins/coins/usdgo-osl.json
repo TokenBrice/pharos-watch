@@ -16,7 +16,7 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations",
-    "provider": "Big Four accounting firm via Anchorage Digital Bank",
+    "provider": "Deloitte & Touche LLP via Anchorage Digital Bank",
     "attestorTier": "big4",
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
@@ -340,6 +340,14 @@
         {
           "label": "OCC active national banks by name",
           "url": "https://occ.gov/topics/charters-and-licensing/financial-institution-lists/national-by-name.pdf"
+        },
+        {
+          "label": "OCC news release 2021-6: Anchorage Digital Bank national trust bank charter",
+          "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html"
+        },
+        {
+          "label": "OCC news release 2025-80: termination of the April 21, 2022 consent order (AA-ENF-2025-44)",
+          "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-80.html"
         },
         {
           "label": "USDGO website",

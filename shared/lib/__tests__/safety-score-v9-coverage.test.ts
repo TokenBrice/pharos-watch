@@ -226,14 +226,19 @@ function asset(assetId: string, index: number) {
   };
 }
 
-function fixture() {
+function fixture(withShockCoverage = false) {
   const ids = Array.from({ length: 305 }, (_, index) => `asset-${String(index + 1).padStart(3, "0")}`);
+  const shockCoverage = withShockCoverage ? source("shock:g1", "f") : null;
+  const sourceFingerprints = {
+    ...SOURCES,
+    ...(shockCoverage === null ? {} : { shockCoverage }),
+  };
   const factSet = compileV9FactSetV2({
     schemaVersion: 2,
     baseInputGenerationId: BASE_INPUT_GENERATION_ID,
     asOfSec: AS_OF_SEC,
     compiledAtSec: 1_100,
-    sourceFingerprints: SOURCES,
+    sourceFingerprints,
     activeAssetIds: ids,
     assets: ids.map(asset),
   });
@@ -245,6 +250,7 @@ function fixture() {
     chainSupply: SOURCES.chainSupply.generationId,
     peg: SOURCES.peg.generationId,
     researchOverlays: SOURCES.researchOverlays.generationId,
+    ...(shockCoverage === null ? {} : { shockCoverage: shockCoverage.generationId }),
   };
   const evaluationPayload = {
     schemaVersion: 1 as const,
@@ -338,6 +344,20 @@ describe("Safety Score v9 release coverage", () => {
     ]);
     expect(report.producerCapabilityDigest).toMatch(/^[a-f0-9]{64}$/);
     expect(evaluateV9ReleaseCoverage(input).reportDigest).toBe(report.reportDigest);
+  });
+
+  it("preserves legacy source sets and requires the current shock source generation exactly", () => {
+    const legacy = fixture();
+    expect(evaluateV9ReleaseCoverage(legacy).identityChecks.sourceGenerations).toBe(true);
+    expect(legacy.evaluation.sourceGenerations).not.toHaveProperty("shockCoverage");
+
+    const current = fixture(true);
+    expect(evaluateV9ReleaseCoverage(current).identityChecks.sourceGenerations).toBe(true);
+    expect(current.evaluation.sourceGenerations.shockCoverage).toBe("shock:g1");
+
+    const missing = structuredClone(current);
+    delete missing.evaluation.sourceGenerations.shockCoverage;
+    expect(evaluateV9ReleaseCoverage(missing).identityChecks.sourceGenerations).toBe(false);
   });
 
   it("fails closed on an identity mismatch without changing the frozen floor", () => {

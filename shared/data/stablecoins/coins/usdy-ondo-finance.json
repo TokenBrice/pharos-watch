@@ -242,6 +242,10 @@
           "url": "https://docs.ondo.finance/trust-and-security"
         },
         {
+          "label": "Ondo Global Markets trust and transparency (Ankura daily verification and liability reconciliation)",
+          "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+        },
+        {
           "label": "Ondo docs",
           "url": "https://docs.ondo.finance/"
         },
@@ -250,9 +254,9 @@
           "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1a694A09494E214a3Be3652e4B343B7B81A73ad7/"
         }
       ],
-      "evidence": "Ondo documentation describes USDY as issuer-operated, and Ethereum role reads identify a 4/7 Safe as the current admin/minter authority path. Phase 0c refreshed current Safe state through the Safe Transaction Service at Ethereum block 25294485.",
-      "reviewer": "Codex Phase 0c verification / SOL-IV calibration",
-      "reviewedAt": "2026-07-15"
+      "evidence": "Ondo documentation describes USDY as issuer-operated, and Ethereum role reads identify a 4/7 Safe as the current admin/minter authority path. Phase 0c refreshed current Safe state through the Safe Transaction Service at Ethereum block 25294485. FIAT-CTRL 2026-07-17 re-verification: supervision stays attestation-only (USDY is a Reg S tokenized note issued by Ondo Global Markets (BVI) Limited; no NYDFS/OCC/SEC-class prudential regime; Ankura Trust Company serves as independent verification and collateral agent), and reconciliation stays periodic (Ondo documents Ankura's daily verification of underlying asset existence/amounts and confirmation of investor-liability-to-reserve reconciliation).",
+      "reviewer": "Codex Phase 0c verification / SOL-IV calibration; Kimi FIAT-CTRL shard-18 re-verification",
+      "reviewedAt": "2026-07-17"
     }
   },
   "deploymentModel": "third-party-bridge",
@@ -516,16 +520,21 @@
         "jurisdiction": "United States"
       },
       {
+        "name": "US-registered custodial broker-dealers (not publicly identified)",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
         "name": "U.S. bank counterparties (not publicly identified)",
         "role": "bank",
         "jurisdiction": "United States"
       }
     ],
-    "segregation": "unknown",
+    "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-17",
+    "reviewer": "Kimi FIAT-CTRL shard-18 control-evidence review",
     "confidence": "verified",
     "sources": [
       {
@@ -533,11 +542,15 @@
         "url": "https://docs.ondo.finance/general-access-products/usdy/comparison-stablecoins"
       },
       {
+        "label": "Ondo Global Markets trust and transparency",
+        "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+      },
+      {
         "label": "Ondo trust and security",
         "url": "https://docs.ondo.finance/trust-and-security"
       }
     ],
-    "uncertainty": "Ondo documents a bankruptcy-remote issuer, perfected security interest, and Ankura's collateral-agent authority, but does not identify the custody banks, provider shares, account segregation, or rehypothecation terms in the reviewed public materials."
+    "uncertainty": "Ondo documents issuer Ondo Global Markets (BVI) Limited as a bankruptcy-remote SPV with full segregation of assets, books, and accounts from Ondo Finance Inc. and the Ondo Foundation group, and Ankura Trust Company holds a first-priority perfected security interest in the backing assets as verification and collateral agent with contractual wind-down authority. The custodial broker-dealers and bank counterparties, provider shares, custodian-level account segregation, and rehypothecation terms are not identified in the reviewed public materials."
   },
   "liveReservesConfig": {
     "adapter": "chainlink-nav",

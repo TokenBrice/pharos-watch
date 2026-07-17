@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { DependencyTypeSchema } from "./dependency-types";
 import { V9PathKindSchema, V9ReasonCodeSchema, V9ReasonOwnerDomainSchema } from "./safety-score-v9";
-import { V9MechanismRiskReviewSchema } from "./safety-score-v9-backing";
+import { V9CdpStressCoverageFactSchema, V9MechanismRiskReviewSchema } from "./safety-score-v9-backing";
 import {
   V9FactStatusV2Schema,
   V9FailureDomainRefSchema,
@@ -278,6 +278,7 @@ const V9ReserveExposureFactV2Schema = z
     classificationKey: CanonicalTextSchema,
     sourceGenerationId: CanonicalTextSchema,
     provenance: z.enum(["live", "curated", "curated-fallback"]),
+    evidenceClass: z.enum(["independent", "issuer-attested"]).optional(),
     status: V9FactStatusV2Schema,
     name: CanonicalTextSchema,
     weight: PositiveFractionSchema,
@@ -658,10 +659,10 @@ const V9MintMechanismReviewV2Schema = z
     status: V9FactStatusV2Schema,
     controlKey: CanonicalTextSchema.nullable(),
     reconciliation: z.enum(["continuous", "periodic", "not-applicable", "unknown"]),
-    // Prudential supervision is a reviewed fact, never inferred: it graduates a
-    // reconciled-but-unbounded mint from a "high" to a "moderate" severity only
-    // when a per-coin review establishes an NYDFS/SEC-class supervisory regime.
-    // It defaults to "unknown" everywhere so the rung stays inert until curated.
+    // Prudential supervision is a reviewed fact, never inferred. Under R3 a
+    // reconciled unbounded mint emits no centralized-mint cap only when a
+    // per-coin review establishes a prudential supervisory regime; unknown
+    // supervision remains on the fail-closed high rung.
     supervision: z.enum(["prudential", "attestation-only", "none", "unknown"]).default("unknown"),
     upgrade: V9UpgradeControlReviewV2Schema,
   })
@@ -1046,11 +1047,13 @@ export type V9MechanismRiskReviewFactV2 = z.infer<typeof V9MechanismRiskReviewFa
 const V9AssetFactsV2Schema = z
   .object({
     assetId: CanonicalTextSchema,
+    assetIssuerKey: CanonicalTextSchema.nullable().optional(),
     archetype: V9ResolvedMechanismArchetypeSchema,
     evidence: canonicalArrayBy(V9EvidenceReferenceV2Schema, (reference) => reference.evidenceId),
     gaps: canonicalArrayBy(V9FactGapV2Schema, (gap) => gap.gapId),
     implementation: V9ImplementationFactV2Schema,
     mechanismRiskReview: V9MechanismRiskReviewFactV2Schema,
+    cdpStressCoverage: V9CdpStressCoverageFactSchema.optional(),
     dependencies: V9EffectiveDependenciesV2Schema,
     reserveStatus: V9FactStatusV2Schema,
     reserveExposures: canonicalArrayBy(V9ReserveExposureFactV2Schema, (exposure) => exposure.exposureKey),
@@ -1070,6 +1073,13 @@ const V9AssetFactsV2Schema = z
         code: "custom",
         path: ["mechanismRiskReview", "review", "archetype"],
         message: "Mechanism review archetype does not match the asset archetype",
+      });
+    }
+    if (asset.cdpStressCoverage !== undefined && asset.archetype !== "cdp") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["cdpStressCoverage"],
+        message: "Only CDP assets may carry stress-coverage facts",
       });
     }
     const controlKeys = new Set(asset.controls.map((control) => control.controlKey));
@@ -1118,6 +1128,7 @@ export const V9FactSourceFingerprintsV2Schema = z
     chainSupply: V9FactSourceIdentityV2Schema,
     peg: V9FactSourceIdentityV2Schema,
     researchOverlays: V9FactSourceIdentityV2Schema,
+    shockCoverage: V9FactSourceIdentityV2Schema.optional(),
   })
   .strict();
 export type V9FactSourceFingerprintsV2 = z.infer<typeof V9FactSourceFingerprintsV2Schema>;
@@ -1229,6 +1240,35 @@ function validateAssetReferences(
     }
   }
   for (const edge of asset.dependencies.edges) captureRefs(`dependency:${edge.edgeKey}`, edge.evidenceRefIds, []);
+  if (asset.cdpStressCoverage !== undefined) {
+    captureRefs("cdp-stress-coverage", asset.cdpStressCoverage.evidenceRefIds, []);
+    if (asset.cdpStressCoverage.complete && asset.cdpStressCoverage.evidenceRefIds.length === 0) {
+      addIssue(
+        ctx,
+        ["assets", assetIndex, "cdpStressCoverage", "evidenceRefIds"],
+        "Complete stress coverage requires compiled journal evidence",
+      );
+    }
+    const source = asset.cdpStressCoverage.source;
+    if (source !== null) {
+      for (const evidenceId of asset.cdpStressCoverage.evidenceRefIds) {
+        const reference = evidenceById.get(evidenceId);
+        if (
+          reference &&
+          (reference.sourceId !== "safety-score-v9.cdp-shock-coverage-measurement" ||
+            reference.sourceGenerationId !== `cdp-shock-coverage:v1:${source.journalSha256}` ||
+            reference.contentSha256 !== source.journalSha256 ||
+            reference.observedAtSec !== source.block.timestampUnix)
+        ) {
+          addIssue(
+            ctx,
+            ["assets", assetIndex, "cdpStressCoverage", "evidenceRefIds"],
+            `Stress evidence ${evidenceId} does not match its journal provenance`,
+          );
+        }
+      }
+    }
+  }
   for (const route of asset.exitRoutes) {
     captureRefs(`settlement:${route.routeKey}`, route.settlementEvidenceRefIds, []);
     if (route.output.valuation) captureRefs(`valuation:${route.routeKey}`, route.output.valuation.evidenceRefIds, []);
@@ -1319,7 +1359,10 @@ function validateFactSetCore(value: V9FactSetCoreV2, ctx: z.RefinementCtx): void
     addIssue(ctx, ["assets"], "Assets must match the exact active asset set");
   }
   const activeAssetIds = new Set(value.activeAssetIds);
-
+  const hasStressCoverage = value.assets.some((asset) => asset.cdpStressCoverage !== undefined);
+  if (hasStressCoverage && value.sourceFingerprints.shockCoverage === undefined) {
+    addIssue(ctx, ["sourceFingerprints", "shockCoverage"], "Stress coverage requires a source fingerprint");
+  }
   for (const [assetIndex, asset] of value.assets.entries()) {
     for (const [evidenceIndex, evidence] of asset.evidence.entries()) {
       if (evidence.observedAtSec > value.asOfSec) {

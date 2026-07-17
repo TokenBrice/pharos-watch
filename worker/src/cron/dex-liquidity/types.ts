@@ -213,6 +213,8 @@ export interface ScoreComponents {
 }
 
 export interface CurvePoolEntry {
+  poolAddress?: string;
+  apiIsBroken?: boolean;
   A: number;
   balanceRatio: number;
   tvl: number;
@@ -237,12 +239,15 @@ export interface SymbolLookups {
   symbolToChainScopedIds: Map<string, Map<string, string[]>>;
   addressToId: Map<string, string>;
   chainAddressToId: Map<string, string>;
-  contractMetaByChainAddress: Map<string, {
-    stablecoinId: string;
-    symbol: string;
-    decimals: number | null;
-    source: "contract" | "tradedContract";
-  }>;
+  contractMetaByChainAddress: Map<
+    string,
+    {
+      stablecoinId: string;
+      symbol: string;
+      decimals: number | null;
+      source: "contract" | "tradedContract";
+    }
+  >;
 }
 
 export interface DataSources {
@@ -271,10 +276,7 @@ export interface UniV3Lookups {
   uniV3PoolFees: Map<string, number>;
   uniV3SymbolFees: Map<string, number>;
   uniV3PriceObs: Map<string, DexPriceObs[]>;
-  uniV3ExecutionCandidates: Map<
-    string,
-    import("../measured-execution/candidate-types").UniV3ExecutionCandidate[]
-  >;
+  uniV3ExecutionCandidates: Map<string, import("../measured-execution/candidate-types").UniV3ExecutionCandidate[]>;
 }
 
 export interface ScoreResult {
@@ -296,7 +298,13 @@ export interface GtCrawlResult {
   /** Price observations from fallback pools after native-source overlap guards. */
   priceObs: Map<string, DexPriceObs[]>;
   /** Stats for logging */
-  stats: { requests: number; poolsSeen: number; poolsNew: number; poolsSkippedCurve: number; poolsSkippedKnown: number };
+  stats: {
+    requests: number;
+    poolsSeen: number;
+    poolsNew: number;
+    poolsSkippedCurve: number;
+    poolsSkippedKnown: number;
+  };
 }
 
 export interface GtNewPool {

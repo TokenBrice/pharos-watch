@@ -59,6 +59,15 @@ describe("DEX deployment outcomes", () => {
     });
     expect(empty[0]).toMatchObject({ outcome: "verified_no_pools", observedPoolCount: 0 });
 
+    const curveObserved = classifyDexDeploymentOutcomes({
+      stablecoinId: "test",
+      deployments: [DEPLOYMENT],
+      pools: [],
+      providerChecks: [{ ...DEPLOYMENT, provider: "curve", status: "success", observedPoolCount: 2 }],
+      nowSec: 100,
+    });
+    expect(curveObserved[0]).toMatchObject({ outcome: "observed_pools", observedPoolCount: 2 });
+
     const inaccessible = classifyDexDeploymentOutcomes({
       stablecoinId: "test",
       deployments: [{ ...DEPLOYMENT, chain: "cardano" }],
@@ -71,8 +80,8 @@ describe("DEX deployment outcomes", () => {
 
   it("materializes every audited unsupported deployment", () => {
     const outcomes = buildStaticInaccessibleDeploymentOutcomes(100);
-    expect(outcomes).toHaveLength(264);
-    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(120);
+    expect(outcomes).toHaveLength(250);
+    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(117);
   });
 
   it("matches non-EVM deployments case-sensitively while retaining EVM normalization", () => {

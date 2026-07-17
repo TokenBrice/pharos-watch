@@ -40,7 +40,26 @@
     "attestorTier": "big4",
     "cadence": "annual",
     "attestorJurisdiction": "United States",
-    "attestorLicense": "PCAOB-registered"
+    "attestorLicense": "PCAOB-registered",
+    "latestReport": {
+      "periodEnd": "2025-12-31",
+      "publishedAt": "2026-03-20",
+      "assuranceMethod": "audit",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Kimi FIAT-CTRL shard-20 evidence review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Figure Certificate Company FY2025 Form 10-K (KPMG audit opinion dated 2026-03-19)",
+          "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000006/fcc-20251231.htm"
+        },
+        {
+          "label": "SEC EDGAR filing index, accession 0001974395-26-000006 (filed 2026-03-20)",
+          "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000006/"
+        }
+      ]
+    }
   },
   "links": [
     {

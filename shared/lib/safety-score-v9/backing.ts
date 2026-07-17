@@ -46,6 +46,17 @@ export interface V9BackingAssetInput {
   readonly gaps: readonly V9FactGapV2[];
   readonly resolvedUpstreamExposures: readonly V9ResolvedUpstreamExposure[];
   readonly seriallyResolvedUpstreamAssetIds?: readonly string[];
+  readonly cdpLiquidationCapacitySelection?: V9CdpLiquidationCapacitySelection;
+}
+
+export interface V9CdpLiquidationCapacitySelection {
+  readonly selectedPath: "stress-measurement" | "legacyLCR";
+  readonly coverageRatio: number | null;
+  readonly reason: string;
+  readonly fallbackReason: string | null;
+  readonly measurementAgeSec: number | null;
+  readonly selectedEvidenceRefIds: readonly string[];
+  readonly stressEvidenceRefIds: readonly string[];
 }
 
 export type V9BackingEvaluationPolicy = V9ValidatedPolicyEnvelope;
@@ -421,9 +432,11 @@ export function evaluateV9ReserveExposures(
     const upstream = upstreamByExposure.get(exposure.exposureKey);
     const materialityWeight = materialityWeightFor(exposure);
     const requiredUnknown = exposure.status.applicability.state === "unresolved";
+    const confidenceMultiplier =
+      exposure.evidenceClass === "issuer-attested" ? backing.reserve.issuerAttestedConfidenceMultiplier : 1;
     let score =
       state === "known" || state === "stale"
-        ? scoreV9ReserveExposureClassification(exposure, policy)
+        ? scoreV9ReserveExposureClassification(exposure, policy) * confidenceMultiplier
         : backing.boundedUnknownQuality;
     // The availability materiality is decided HERE from the aggregate root
     // weight and never read from the projected reason codes: a split that reads

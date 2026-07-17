@@ -154,6 +154,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0208     | `0208_eurq_ddr_events_90589_90595_link.sql`               | Link four reviewed EURQ live flaps to the active unsealed incident, advance ordered lineage, and close their durable DDR repair tasks                    |
 | 0209     | `0209_cngn_ddr_event_90599_link.sql`                      | Link reviewed cNGN reopen 90599 to the active unsealed incident, advance lineage from event 90584, and close its durable DDR repair task                  |
 | 0210     | `0210_cngn_ddr_events_90604_90608_link.sql`               | Link four reviewed cNGN live flaps to the active unsealed incident, advance ordered lineage, and close their durable DDR repair tasks                    |
+| 0211     | `0211_safety_score_v9_release_cohorts.sql`                | Add owner-ratified frozen V9-9 release cohort records keyed by sealed release candidate                                                                  |
 
 ## Retired Individual Migrations
 
@@ -247,6 +248,7 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0208_eurq_ddr_events_90589_90595_link.sql`: roll back DDR publication behavior by restoring the prior Worker. Keep the append-only repair authorizations, consumptions, links, and ordered revisions as reviewed provenance; do not recreate the closed tasks or detach events 90589, 90591, 90594, and 90595 without a separate corrective migration.
 - `0209_cngn_ddr_event_90599_link.sql`: roll back DDR publication behavior by restoring the prior Worker. Keep the append-only repair authorizations, consumptions, link, and revision as reviewed provenance; do not recreate the closed task or detach event 90599 without a separate corrective migration.
 - `0210_cngn_ddr_events_90604_90608_link.sql`: roll back DDR publication behavior by restoring the prior Worker. Keep the append-only repair authorizations, consumptions, links, and ordered revisions as reviewed provenance; do not recreate the closed tasks or detach events 90604, 90606, 90607, and 90608 without a separate corrective migration.
+- `0211_safety_score_v9_release_cohorts.sql`: roll back release-cohort gating by restoring the prior Worker; the ratified-release-coverage floor fails closed without a readable cohort, and older Workers ignore the table. Keep ratified cohort rows as counted release evidence; do not edit or delete them without a new ratification under a fresh release-candidate ID.
 
 ## Rollback Procedure
 

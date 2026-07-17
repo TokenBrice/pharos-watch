@@ -10,7 +10,12 @@ import type {
   V9StructuralSignalKind,
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
-import { assertV9ReasonCodesRegistered, assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
+import {
+  V9_CANDIDATE_POLICY_V1,
+  assertV9ReasonCodesRegistered,
+  assertV9ValidatedPolicyEnvelope,
+  resolveV9ReasonPolicy,
+} from "./policy";
 
 export type V9MintReconciliation = "continuous" | "periodic" | "not-applicable" | "unknown";
 export type V9MintSupervision = "prudential" | "attestation-only" | "none" | "unknown";
@@ -52,6 +57,41 @@ export interface V9MintMechanismReview {
   reconciliation: V9MintReconciliation;
   supervision: V9MintSupervision;
   upgrade: V9UpgradeControlReview;
+}
+
+export interface V9MintControlPostureFacts {
+  supervision: V9MintSupervision;
+  reconciliation: V9MintReconciliation;
+  attestationCadence: "independent-periodic" | "self-reported" | "unknown";
+  custodyStructure: "segregated-diversified" | "concentrated-custodian" | "unknown";
+  openLegalEvents: "none" | "open" | "unknown";
+}
+
+/**
+ * Grade the full R4 control-posture tuple. The production review currently
+ * carries only supervision and reconciliation, so its bounded proxy is
+ * applied separately in evaluateV9EconomicControl; unknown richer facts keep
+ * this full grader on the existing conservative posture value.
+ */
+export function gradeV9MintControlPosture(
+  posture: V9MintPosture,
+  facts: V9MintControlPostureFacts,
+  envelope: V9ValidatedPolicyEnvelope = V9_CANDIDATE_POLICY_V1,
+): number {
+  assertV9ValidatedPolicyEnvelope(envelope);
+  const policy = envelope.policy.semantic.control;
+  const conservative = policy.mintPostureQuality[posture];
+  if (posture !== "concentrated-admin" && posture !== "unbounded-reconciled") return conservative;
+
+  const reconciled = facts.reconciliation === "continuous" || facts.reconciliation === "periodic";
+  const favorableSupportingFacts =
+    facts.attestationCadence === "independent-periodic" &&
+    facts.custodyStructure === "segregated-diversified" &&
+    facts.openLegalEvents === "none";
+  if (!reconciled || !favorableSupportingFacts) return conservative;
+  if (facts.supervision === "prudential") return policy.mintPostureGrading.prudentialReconciled;
+  if (facts.supervision === "attestation-only") return policy.mintPostureGrading.attestationOnlyReconciled;
+  return conservative;
 }
 
 export interface V9OracleBranchReview {
@@ -559,39 +599,52 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       ...(upgradeControl?.failureDomains ?? []),
     ]);
     const mintBinding = mintControl === null ? true : bindingByMateriality(mintControl, materialShareThreshold);
+    const mintReconciled = mint.reconciliation === "continuous" || mint.reconciliation === "periodic";
+    const mintPostureScore =
+      (posture === "concentrated-admin" || posture === "unbounded-reconciled") && mintReconciled
+        ? mint.supervision === "prudential"
+          ? policy.control.mintPostureGrading.prudentialReconciled
+          : mint.supervision === "attestation-only"
+            ? policy.control.mintPostureGrading.attestationOnlyReconciled
+            : policy.control.mintPostureQuality[posture]
+        : policy.control.mintPostureQuality[posture];
     components.push({
       componentKey: "mint",
       kind: "mint",
       posture,
-      score: policy.control.mintPostureQuality[posture],
+      score: mintPostureScore,
       binding: mintBinding,
       controlKeys: componentControlKeys,
       failureDomains: componentFailureDomains,
     });
     if (posture === "unbounded-reconciled" || posture === "unbounded-or-compromised") {
-      // Severity keys off the posture: a reconciled unbounded mint
-      // (unbounded-reconciled) is high, graduating one rung to moderate when a
-      // reviewed prudential-supervision fact (NYDFS/SEC-class) applies.
-      // Compromise and unreconciled/unknown minting (unbounded-or-compromised)
-      // remain critical unconditionally.
+      // R3 keeps reconciled mint risk inside the control pillar for prudential
+      // issuers, emits a diagnostic low signal for attestation-only issuers,
+      // and fails closed for absent/unknown supervision. Compromise and
+      // unreconciled minting remain critical.
       const prudentiallySupervised = posture === "unbounded-reconciled" && mint.supervision === "prudential";
-      const severity: V9Severity =
-        posture === "unbounded-or-compromised" ? "critical" : prudentiallySupervised ? "moderate" : "high";
-      const reason =
+      const severity: V9Severity | null =
         posture === "unbounded-or-compromised"
-          ? "Economically effective minting is unbounded or compromised."
+          ? "critical"
           : prudentiallySupervised
-            ? "Minting is economically unbounded but reconciled and prudentially supervised."
-            : "Minting is economically unbounded but supply is reconciled against reserves.";
-      addStructuralFailure({
-        kind: "centralized-mint",
-        severity,
-        binding: mintBinding,
-        reason,
-        materialSharePct: null,
-        controlKeys: componentControlKeys,
-        failureDomains: componentFailureDomains,
-      });
+            ? null
+            : mint.supervision === "attestation-only"
+              ? "low"
+              : "high";
+      if (severity !== null) {
+        addStructuralFailure({
+          kind: "centralized-mint",
+          severity,
+          binding: mintBinding,
+          reason:
+            posture === "unbounded-or-compromised"
+              ? "Economically effective minting is unbounded or compromised."
+              : "Minting is economically unbounded but supply is reconciled against reserves.",
+          materialSharePct: null,
+          controlKeys: componentControlKeys,
+          failureDomains: componentFailureDomains,
+        });
+      }
     } else if (posture === "concentrated-admin") {
       addStructuralFailure({
         kind: "centralized-mint",
@@ -741,8 +794,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         ? null
         : Math.min(1, args.facts.supply.unknownRouteSupplyShare + args.facts.supply.unreviewedRouteSupplyShare);
     const unresolvedBridgeResidueBinds =
-      unresolvedBridgeShare === null ||
-      (unresolvedBridgeShare > 0 && !completeSubthresholdUnresolvedJoins);
+      unresolvedBridgeShare === null || (unresolvedBridgeShare > 0 && !completeSubthresholdUnresolvedJoins);
     const hasUnresolvedSupplyRows = args.facts.supply.selectedBridgeRoutes.some(
       (route) => route.reviewState !== "selected-reviewed",
     );

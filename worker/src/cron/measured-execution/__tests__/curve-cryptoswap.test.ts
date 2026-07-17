@@ -146,14 +146,14 @@ function completeRuntimeEvidence(generation: CurveCryptoSwapPoolPolicy["generati
 }
 
 describe("Curve CryptoSwap shadow policy", () => {
-  it("retains exactly the approved 25-pool cohort without fabricated activation pins", () => {
-    expect(CURVE_CRYPTOSWAP_SHADOW_COHORT).toHaveLength(25);
-    expect(CURVE_CRYPTOSWAP_SHADOW_COHORT.filter((entry) => entry.generation === "twocrypto-ng")).toHaveLength(21);
+  it("pins the eight reviewed crvUSD TwoCrypto pools while retaining the shadow census", () => {
+    expect(CURVE_CRYPTOSWAP_SHADOW_COHORT).toHaveLength(30);
+    expect(CURVE_CRYPTOSWAP_SHADOW_COHORT.filter((entry) => entry.generation === "twocrypto-ng")).toHaveLength(26);
     expect(CURVE_CRYPTOSWAP_SHADOW_COHORT.filter((entry) => entry.generation === "tricrypto-ng")).toHaveLength(2);
     expect(CURVE_CRYPTOSWAP_SHADOW_COHORT.filter((entry) => entry.generation === "legacy-cryptoswap")).toHaveLength(1);
     expect(CURVE_CRYPTOSWAP_SHADOW_COHORT.filter((entry) => entry.generation === "special-tridbr")).toHaveLength(1);
     expect(
-      CURVE_CRYPTOSWAP_SHADOW_COHORT.every(
+      CURVE_CRYPTOSWAP_SHADOW_COHORT.filter((entry) => entry.mode === "shadow").every(
         (entry) =>
           entry.mode === "shadow" &&
           entry.scoreEligible === false &&
@@ -164,6 +164,43 @@ describe("Curve CryptoSwap shadow policy", () => {
           entry.expectedMathCodeHash == null,
       ),
     ).toBe(true);
+    const active = CURVE_CRYPTOSWAP_SHADOW_COHORT.filter((entry) => entry.mode === "active");
+    expect(active).toHaveLength(8);
+    expect(
+      active.every(
+        (entry) =>
+          entry.scoreEligible &&
+          entry.transferSemanticsReviewed &&
+          entry.expectedPoolCodeHash != null &&
+          entry.expectedFactoryCodeHash != null &&
+          entry.expectedViewsCodeHash != null &&
+          entry.expectedMathCodeHash != null,
+      ),
+    ).toBe(true);
+  });
+
+  it("admits a reviewed active policy only with complete matching runtime evidence", () => {
+    const policy = CURVE_CRYPTOSWAP_SHADOW_COHORT.find((entry) => entry.mode === "active");
+    if (!policy) throw new Error("missing active Curve CryptoSwap policy");
+    expect(
+      evaluateCurveCryptoSwapEligibility({
+        chain: policy.chain,
+        endpointAddress: policy.poolAddress,
+        policy,
+        evidence: {
+          apiIsBroken: false,
+          poolCodeHash: policy.expectedPoolCodeHash,
+          factoryAddress: policy.expectedFactoryAddress,
+          factoryCodeHash: policy.expectedFactoryCodeHash,
+          viewsAddress: policy.expectedViewsAddress,
+          viewsCodeHash: policy.expectedViewsCodeHash,
+          mathAddress: policy.expectedMathAddress,
+          mathCodeHash: policy.expectedMathCodeHash,
+          ngKillMethodUnavailable: true,
+          transferSemanticsReviewed: true,
+        },
+      }),
+    ).toEqual({ ok: true });
   });
 
   it("fails closed across API pause, kill, runtime, dependency, and activation gates", () => {

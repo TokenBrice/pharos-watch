@@ -1,0 +1,293 @@
+{
+  "schemaVersion": 1,
+  "kind": "cdp-mechanism-measurement",
+  "assetId": "zchf-frankencoin",
+  "archetype": "cdp",
+  "capturedAtIso": "2026-07-17T07:53:16.000Z",
+  "capturedBy": "KIMI ANCHOR-EV package-5 mechanism review",
+  "apiCaptures": [
+    {
+      "name": "frankencoin-info",
+      "url": "https://api.frankencoin.com/ecosystem/frankencoin/info",
+      "fetchedAtUnix": 1784274796,
+      "payload": {
+        "token": { "usd": 1.2367427384017617, "supply": 34067697.74755217 },
+        "tvl": { "usd": 69127794.63348424, "chf": 55895047.92469438 },
+        "fps": { "price": 1388.4796978868449, "totalSupply": 8890.151184727241, "marketCap": 12343794.431138458 },
+        "chainSupply": {
+          "ethereum-mainnet": 30360328.030399412,
+          "base": 2276437.361587587,
+          "gnosis": 1398168.7130293602,
+          "arbitrum": 26001.929951831047,
+          "optimism": 5600.12,
+          "polygon": 1142.9185,
+          "avalanche": 16.67408398168284,
+          "sonic": 2
+        }
+      },
+      "note": "chainSupply values keyed by chain name from the API's chainId map (1, 8453, 100, 42161, 10, 137, 43114, 146); they sum to the reported total supply 34067697.74755217."
+    },
+    {
+      "name": "collateral-positions-details",
+      "url": "https://api.frankencoin.com/ecosystem/collateral/positions/details",
+      "fetchedAtUnix": 1784274796,
+      "note": "Open, non-denied position collateral balances valued with the protocol price mapping below; method reproduces the 2026-07-15 reserveReview capture."
+    },
+    {
+      "name": "prices-mapping",
+      "url": "https://api.frankencoin.com/prices/mapping",
+      "fetchedAtUnix": 1784274796
+    }
+  ],
+  "computedCollateralChf": {
+    "method": "sum over open, non-denied positions of collateralBalance x price-mapping CHF price",
+    "totalValueChf": 55346748.16,
+    "totalMintedFromPositionsZchf": 33537246.86,
+    "rows": [
+      { "symbol": "BOSS", "balance": 2377594.0, "priceChf": 7.2819, "valueChf": 17313401.75, "mintedZchf": 6886023.21 },
+      { "symbol": "cbBTC", "balance": 203.6857, "priceChf": 50768.6979, "valueChf": 10340858.82, "mintedZchf": 7572427.98 },
+      { "symbol": "WBTC", "balance": 143.4869, "priceChf": 50762.4953, "valueChf": 7283751.2, "mintedZchf": 5062045.79 },
+      { "symbol": "DQTS", "balance": 602200.0, "priceChf": 8.0287, "valueChf": 4834883.14, "mintedZchf": 3520000.0 },
+      { "symbol": "LsETH", "balance": 2858.9517, "priceChf": 1656.7353, "valueChf": 4736526.15, "mintedZchf": 3290652.04 },
+      { "symbol": "wstETH", "balance": 2151.573, "priceChf": 1828.4354, "valueChf": 3934012.2, "mintedZchf": 2096779.0 },
+      { "symbol": "SPYon", "balance": 6044.5574, "priceChf": 606.4027, "valueChf": 3665435.92, "mintedZchf": 2916948.47 },
+      { "symbol": "XAUt", "balance": 289.5449, "priceChf": 3226.5901, "valueChf": 934242.83, "mintedZchf": 825000.0 },
+      { "symbol": "PAXG", "balance": 243.2607, "priceChf": 3223.4185, "valueChf": 784131.12, "mintedZchf": 605613.51 },
+      { "symbol": "WETH", "balance": 492.665, "priceChf": 1475.2779, "valueChf": 726817.73, "mintedZchf": 491206.53 },
+      { "symbol": "GNO", "balance": 6500.0, "priceChf": 90.8749, "valueChf": 590686.85, "mintedZchf": 195000.0 },
+      { "symbol": "REALU", "balance": 71074.0, "priceChf": 1.3896, "valueChf": 98764.43, "mintedZchf": 43288.8 },
+      { "symbol": "LENDS", "balance": 1245.0, "priceChf": 67.9773, "valueChf": 84631.74, "mintedZchf": 24900.0 },
+      { "symbol": "CRV", "balance": 61345.9847, "priceChf": 0.1688, "valueChf": 10355.2, "mintedZchf": 7361.52 },
+      { "symbol": "ysyBOLD", "balance": 9433.98, "priceChf": 0.8744, "valueChf": 8249.07, "mintedZchf": 0.0 }
+    ],
+    "crossCheck": "The protocol API's own TVL figure is 55895047.92 CHF (0.99% above this computation); total supply 34067697.75 ZCHF exceeds position-minted 33537246.86 ZCHF by ~530k ZCHF, the amount minted through the stablecoin bridges (XCHF/VCHF/CHFAU), which hold locked source stablecoins instead of position collateral."
+  },
+  "chainReads": [
+    {
+      "chain": "ethereum",
+      "rpcUrl": "https://ethereum-rpc.publicnode.com",
+      "blockNumber": 25551030,
+      "calls": [
+        {
+          "name": "frankencoin.reserve",
+          "to": "0xb58e61c3098d85632df34eecfb899a1ed80921cb",
+          "signature": "reserve()(address)",
+          "decoded": "0x1bA26788dfDe592fec8bcB0Eaff472a42BE341B2"
+        },
+        {
+          "name": "frankencoin.MIN_APPLICATION_PERIOD",
+          "to": "0xb58e61c3098d85632df34eecfb899a1ed80921cb",
+          "signature": "MIN_APPLICATION_PERIOD()(uint256)",
+          "decoded": "1209600"
+        },
+        {
+          "name": "frankencoin.equity",
+          "to": "0xb58e61c3098d85632df34eecfb899a1ed80921cb",
+          "signature": "equity()(uint256)",
+          "decoded": "4114598.143712818569674844"
+        },
+        {
+          "name": "frankencoin.minterReserve",
+          "to": "0xb58e61c3098d85632df34eecfb899a1ed80921cb",
+          "signature": "minterReserve()(uint256)",
+          "decoded": "8634163.32948201201468599"
+        },
+        {
+          "name": "frankencoin.eip1967-implementation-slot",
+          "to": "0xb58e61c3098d85632df34eecfb899a1ed80921cb",
+          "signature": "eth_getStorageAt(slot 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc)",
+          "decoded": "0x0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        {
+          "name": "equity.totalSupply",
+          "to": "0x1bA26788dfDe592fec8bcB0Eaff472a42BE341B2",
+          "signature": "totalSupply()(uint256)",
+          "decoded": "8890.151184727240661998"
+        },
+        {
+          "name": "tokenAdminRegistry.getPool(zchf)",
+          "to": "0xb22764f98dD05c789929716D677382Df22C05Cb6",
+          "signature": "getPool(address)(address)",
+          "decoded": "0x9359cd75549DaE00Cdd8D22297BC9B13FbBe4B79"
+        },
+        {
+          "name": "l1-tokenpool.typeAndVersion",
+          "to": "0x9359cd75549DaE00Cdd8D22297BC9B13FbBe4B79",
+          "signature": "typeAndVersion()(string)",
+          "decoded": "BurnMintTokenPool 1.5.1"
+        },
+        {
+          "name": "stablecoin-bridge-chfau.zchf",
+          "to": "0x3e445ff4ddDf0ff8aE7458c9746eD80bD664F6C1",
+          "signature": "zchf()(address)",
+          "decoded": "0xB58E61C3098d85632Df34EecfB899A1Ed80921cB"
+        },
+        {
+          "name": "stablecoin-bridge-chfau.chf",
+          "to": "0x3e445ff4ddDf0ff8aE7458c9746eD80bD664F6C1",
+          "signature": "chf()(address)",
+          "decoded": "0xBD4DfC058eb95b8De5ceAF39966A1a70F5556F78"
+        },
+        {
+          "name": "stablecoin-bridge-chfau.limit",
+          "to": "0x3e445ff4ddDf0ff8aE7458c9746eD80bD664F6C1",
+          "signature": "limit()(uint256)",
+          "decoded": "10000000.0"
+        },
+        {
+          "name": "stablecoin-bridge-chfau.horizon",
+          "to": "0x3e445ff4ddDf0ff8aE7458c9746eD80bD664F6C1",
+          "signature": "horizon()(uint256)",
+          "decoded": "1807188455 (2027-04-17T07:27:35Z)"
+        }
+      ]
+    },
+    {
+      "chain": "optimism",
+      "rpcUrl": "https://optimism-rpc.publicnode.com",
+      "blockNumber": 154337993,
+      "calls": [
+        {
+          "name": "bridged-frankencoin.name",
+          "to": "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
+          "signature": "name()(string)",
+          "decoded": "Frankencoin"
+        },
+        {
+          "name": "bridged-frankencoin.eip1967-implementation-slot",
+          "to": "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
+          "signature": "eth_getStorageAt(slot 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc)",
+          "decoded": "0x0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        {
+          "name": "ccip-pool.getToken",
+          "to": "0x7CBac118B3F299f8BE1C3DBA66368D96B37D7743",
+          "signature": "getToken()(address)",
+          "decoded": "0xD4dD9e2F021BB459D5A5f6c24C12fE09c5D45553"
+        },
+        {
+          "name": "bridged-frankencoin.minters(ccip-pool)",
+          "to": "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
+          "signature": "minters(address)(uint256)",
+          "decoded": "1749108769 (2025-06-05T09:32:49Z)"
+        }
+      ]
+    },
+    {
+      "chain": "base",
+      "rpcUrl": "https://base-rpc.publicnode.com",
+      "calls": [
+        {
+          "name": "ccip-pool.getToken",
+          "to": "0x7CBac118B3F299f8BE1C3DBA66368D96B37D7743",
+          "signature": "getToken()(address)",
+          "decoded": "0xD4dD9e2F021BB459D5A5f6c24C12fE09c5D45553"
+        },
+        {
+          "name": "bridged-frankencoin.minters(ccip-pool)",
+          "to": "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
+          "signature": "minters(address)(uint256)",
+          "decoded": "1749111919 (2025-06-05T10:25:19Z)"
+        }
+      ]
+    },
+    {
+      "chain": "gnosis",
+      "rpcUrl": "https://gnosis-rpc.publicnode.com",
+      "calls": [
+        {
+          "name": "ccip-pool.getToken",
+          "to": "0x7CBac118B3F299f8BE1C3DBA66368D96B37D7743",
+          "signature": "getToken()(address)",
+          "decoded": "0xD4dD9e2F021BB459D5A5f6c24C12fE09c5D45553"
+        },
+        {
+          "name": "bridged-frankencoin.minters(ccip-pool)",
+          "to": "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
+          "signature": "minters(address)(uint256)",
+          "decoded": "1749113880 (2025-06-05T10:58:00Z)"
+        }
+      ]
+    },
+    {
+      "chain": "arbitrum",
+      "rpcUrl": "https://arbitrum-one-rpc.publicnode.com",
+      "calls": [
+        {
+          "name": "ccip-pool.getToken",
+          "to": "0x7CBac118B3F299f8BE1C3DBA66368D96B37D7743",
+          "signature": "getToken()(address)",
+          "decoded": "0xD4dD9e2F021BB459D5A5f6c24C12fE09c5D45553"
+        },
+        {
+          "name": "bridged-frankencoin.minters(ccip-pool)",
+          "to": "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
+          "signature": "minters(address)(uint256)",
+          "decoded": "1749111515 (2025-06-05T10:18:35Z)"
+        }
+      ]
+    },
+    {
+      "chain": "polygon",
+      "rpcUrl": "https://polygon-bor-rpc.publicnode.com",
+      "calls": [
+        {
+          "name": "ccip-pool.getToken",
+          "to": "0x7CBac118B3F299f8BE1C3DBA66368D96B37D7743",
+          "signature": "getToken()(address)",
+          "decoded": "0xD4dD9e2F021BB459D5A5f6c24C12fE09c5D45553"
+        },
+        {
+          "name": "bridged-frankencoin.minters(ccip-pool)",
+          "to": "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
+          "signature": "minters(address)(uint256)",
+          "decoded": "1749108114 (2025-06-05T09:21:54Z)"
+        }
+      ]
+    },
+    {
+      "chain": "avalanche",
+      "rpcUrl": "https://avalanche-c-chain-rpc.publicnode.com",
+      "calls": [
+        {
+          "name": "ccip-pool.getToken",
+          "to": "0x7CBac118B3F299f8BE1C3DBA66368D96B37D7743",
+          "signature": "getToken()(address)",
+          "decoded": "0xD4dD9e2F021BB459D5A5f6c24C12fE09c5D45553"
+        },
+        {
+          "name": "bridged-frankencoin.minters(ccip-pool)",
+          "to": "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
+          "signature": "minters(address)(uint256)",
+          "decoded": "1749113152 (2025-06-05T10:45:52Z)"
+        }
+      ]
+    },
+    {
+      "chain": "sonic",
+      "rpcUrl": "https://sonic-rpc.publicnode.com",
+      "calls": [
+        {
+          "name": "ccip-pool.getToken",
+          "to": "0x7CBac118B3F299f8BE1C3DBA66368D96B37D7743",
+          "signature": "getToken()(address)",
+          "decoded": "0xD4dD9e2F021BB459D5A5f6c24C12fE09c5D45553"
+        },
+        {
+          "name": "bridged-frankencoin.minters(ccip-pool)",
+          "to": "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
+          "signature": "minters(address)(uint256)",
+          "decoded": "1749114272 (2025-06-05T11:04:32Z)"
+        }
+      ]
+    }
+  ],
+  "derived": {
+    "collateralizationRatio": 1.6246,
+    "collateralizationRatioDerivation": "55346748.16 CHF computed position-collateral value / 34067697.75 ZCHF total supply; protocol-API TVL cross-check gives 55895047.92 / 34067697.75 = 1.6407",
+    "systemEquityRatio": 0.1208,
+    "systemEquityRatioDerivation": "4114598.14 ZCHF on-chain equity() / 34067697.75 ZCHF total supply",
+    "combinedReserveRatio": 0.3742,
+    "combinedReserveRatioDerivation": "(4114598.14 equity + 8634163.33 minterReserve) / 34067697.75 total supply"
+  }
+}

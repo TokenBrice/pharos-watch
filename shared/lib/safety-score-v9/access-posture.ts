@@ -12,6 +12,9 @@ export type V9FreezeExposure = "none-known" | "upstream" | "direct" | "possible"
 export type V9PrimaryExitPosture = "permissionless" | "eligibility-gated" | "issuer-discretionary" | "none" | "unknown";
 export type V9GovernancePosture = "immutable" | "distributed" | "concentrated" | "single-entity" | "unknown";
 
+/** D11: reviewed access evidence remains current for 365 days. */
+export const V9_ACCESS_EVIDENCE_MAX_AGE_SEC = 31_536_000;
+
 export interface V9TransferAccessReview {
   status: V9FactStatusV2;
   posture: Exclude<V9TransferPosture, "unknown"> | null;

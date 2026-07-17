@@ -3,17 +3,12 @@ import type { ContractDeployment } from "@shared/types/core";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { crawlCoinGeckoPoolsStage } from "./crawl-coingecko-pools";
 import { crawlGeckoTerminalPoolsStage } from "./crawl-geckoterminal-pools";
-import {
-  crawlDexScreenerPoolsStage,
-  selectDexScreenerTargets,
-} from "./crawl-dexscreener-pools";
+import { crawlDexScreenerPoolsStage, selectDexScreenerTargets } from "./crawl-dexscreener-pools";
 import { crawlCoinGeckoTickersStage } from "./crawl-coingecko-tickers";
+import { crawlCurvePoolsStage } from "./crawl-curve-pools";
 import { createCrawlStageContext, type StagedPriceObservation } from "./staged-pool";
 import type { DexDeploymentProviderCheck, StagedPool } from "./types";
-import {
-  classifyDexDeploymentOutcomes,
-  type DexDeploymentOutcomeWrite,
-} from "./deployment-outcomes";
+import { classifyDexDeploymentOutcomes, type DexDeploymentOutcomeWrite } from "./deployment-outcomes";
 
 export interface CrawlResult {
   pools: StagedPool[];
@@ -105,6 +100,9 @@ export async function crawlCoin(
     shouldRun: pools.length === 0 || priceObs.length === 0,
     context,
   });
+
+  const curveStage = await crawlCurvePoolsStage({ coinTargets, context });
+  providerChecks.push(...curveStage.providerChecks);
 
   return {
     pools,

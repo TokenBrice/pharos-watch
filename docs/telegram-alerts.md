@@ -55,18 +55,19 @@ BotFather-owned release checklist:
 
 ## Frontend Main Page
 
-`src/app/pharoswatchbot/page.tsx` is the product-facing main page for PharosWatchBot and the wider Telegram feature set. It is promoted into the
-primary navigation immediately after `/alt-pegs/`.
+`src/app/pharoswatchbot/page.tsx` is the product-facing main page for PharosWatchBot and the wider Telegram feature set. It is linked from the top-nav menus ("Alert Bot") and the homepage status strip.
 
 - Route: `/pharoswatchbot/`
 - Legacy alias: `/telegram` redirects to `/pharoswatchbot/`, and `/telegram/*` redirects to the matching `/pharoswatchbot/*` path
 - Covers the public `@pharoswatch` digest channel, the `@pharoswatchers` community channel, and the `@PharosWatchBot` subscription bot
-- Reads `/_site-data/telegram-pulse` for snapshot-first watcher/subscription telemetry, including the hero pulse strip, the visible active-chat / load-test-evidence / alert-follows / top-follows summary, the Telegram chat lifecycle chart, and a "More information" disclosure for follow composition, daily lifecycle deltas, aggregate alert-type counts, and privacy-filtered quiet-hours/pending-delivery counts
+- Art direction: the page is one night of alerts told as a scrollytelling descent from dusk to dawn — drawn lighthouse hero → six alert-family signal cards arriving on a timeline → two-minute setup → live adoption board → Mini App showcase → daily recap and final CTA → the reference shelf (full command reference, reliability contract, FAQ). The page follows the site theme: dark theme renders the night world; light theme renders the same scene as day (pale sky, ink lighthouse) via the page-scoped ladder and scene variables in `night-watch.css`.
+- Reads `/_site-data/telegram-pulse` for snapshot-first watcher/subscription telemetry: the hero's live "watchers on tonight's shift" count-up, the instrument panel's active watchers / alert follows (explicit + preset-implied split) / daily lifecycle deltas / top-followed coins summary, and the Telegram chat lifecycle chart — all rendered on the surface, not folded behind disclosure. Public adoption metrics only: no operational Mini App or queued-delivery counts.
 - Does not call the webhook or any other mutating bot API; it links users to Telegram plus the on-site digest archive
 - Presents the bot around low-noise growth paths: the recommended `/subscribe dews,depeg usd-top25` default, preset cohorts, group-addressed commands, reasoned safety-grade alerts, the private personalized Daily Recap (`/recap`, `/recap on|off`, and `/recap time <hour>`), quiet hours, inline snooze, and the overflow delivery queue
 - Documents Daily Recap in the command reference, Mini App capability list, and FAQ, including its private-chat scope, confirmed-timezone requirement, material-change suppression, and separation from the market-wide Daily Digest
 - The recommended setup deep link preloads a Telegram confirmation for `dews,depeg usd-top25`; it does not silently subscribe the user before they confirm in Telegram.
 - Renders a visible FAQ section with matching `FAQPage` JSON-LD, plus `HowTo` and `SoftwareApplication` JSON-LD for the bot setup flow
+- The command reference is filterable client-side and fully visible (no collapsed defaults); alert examples remain the verbatim `shared/lib/telegram-alert-samples.ts` text with plain-language family framing.
 
 ## Public Pulse Privacy And Freshness
 
@@ -81,11 +82,11 @@ Publication is ordered so the heavy-section reuse marker can never claim work th
 Freshness is split deliberately:
 
 - `currentSnapshotAt` / `updatedAt` describe the current aggregate pulse, refreshed on the 5-minute Telegram pulse cadence.
-- `lifecycleHistoryUpdatedAt` describes the latest daily lifecycle-history snapshot when any lifecycle snapshot exists, including bootstrap periods where `historySource="live-fallback"` is used because older active-chat cohort points are prefixed ahead of the fixed daily snapshots.
+- `lifecycleHistoryUpdatedAt` describes the latest daily lifecycle-history snapshot when any lifecycle snapshot exists, including periods where `historySource="live-fallback"` because older active-chat cohort points are prefixed ahead of the fixed daily snapshots.
 - `lifecycleHistoryEverySeconds=900` documents the lifecycle snapshot refresh cadence.
 - Heavy public pulse sections (`topCoins`, lifecycle history, and Mini App daily usage counters) are reused for up to 15 minutes when the cached pulse is valid. The current aggregate counts still refresh on the 5-minute pulse cadence, and pending-delivery count can reuse the dispatch lane's pending-capacity snapshot.
 
-The public chart labels snapshot-backed history as daily lifecycle snapshots. During bootstrap, it keeps the full lifecycle visible by prefixing fixed daily snapshots with live fallback points when active chats predate the first snapshot row. Those fallback prefix points are cumulative current active chats by subscriber-created date and should not be presented as stable churn-adjusted lifecycle history.
+The public chart labels snapshot-backed history as daily lifecycle snapshots. It keeps the full lifecycle visible by permanently prefixing fixed daily snapshots with live fallback points whenever active chats predate the first snapshot row. Those fallback prefix points are cumulative current active chats by subscriber-created date and should not be presented as stable churn-adjusted lifecycle history.
 
 ## D1 Schema
 

@@ -13,7 +13,8 @@ import type { LiquidityPoolSourceFamily } from "@shared/types/market";
 export const DEFILLAMA_YIELDS_URL = "https://yields.llama.fi/pools";
 export const DEFILLAMA_PROTOCOLS_URL = "https://api.llama.fi/protocols";
 export const CURVE_API_BASE = "https://api.curve.finance/v1/getPools/all";
-export const CURVE_CHAINS = ["ethereum", "base", "arbitrum", "polygon"] as const;
+export const CURVE_CHAINS = ["ethereum", "base", "arbitrum", "polygon", "fraxtal", "sonic", "taiko", "zksync"] as const;
+export const DEX_LIQUIDITY_POOL_MIN_TVL_USD = 10_000;
 
 // Uniswap V3 subgraph IDs per chain
 export const UNIV3_SUBGRAPHS: Record<string, string> = {
@@ -79,8 +80,14 @@ export const buildAerodromePairQuery = (skip: number): string => `{
 
 /** Quality score for non-stablecoin pairing assets */
 export const VOLATILE_PAIR_QUALITY: Record<string, number> = {
-  WETH: 0.65, ETH: 0.65, STETH: 0.65, WSTETH: 0.65, RETH: 0.65,
-  WBTC: 0.6, TBTC: 0.55, CBBTC: 0.6,
+  WETH: 0.65,
+  ETH: 0.65,
+  STETH: 0.65,
+  WSTETH: 0.65,
+  RETH: 0.65,
+  WBTC: 0.6,
+  TBTC: 0.55,
+  CBBTC: 0.6,
 };
 
 /** Symbol → governance type lookup from ACTIVE_STABLECOINS */
@@ -105,8 +112,14 @@ export const ORDERBOOK_TVL_FACTOR = 3;
 
 /** CoinGecko coin IDs we accept as USD-equivalent quote assets */
 export const USD_QUOTE_COIN_IDS = new Set([
-  "tether", "usd-coin", "dai", "true-usd", "frax", "c1usd",
-  "binance-usd", "paxos-standard",
+  "tether",
+  "usd-coin",
+  "dai",
+  "true-usd",
+  "frax",
+  "c1usd",
+  "binance-usd",
+  "paxos-standard",
 ]);
 
 /** Per-chain timeout for subgraph queries (UniV3, Aerodrome) */

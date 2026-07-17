@@ -6,16 +6,22 @@ import { buildDlStablecoinPoolsCache } from "../yield-sync/cache";
 import { isYieldRelevantDlPool } from "../yield-sync/pool-filter";
 import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import type {
-  LlamaPool, CurveApiPayload, CurvePoolEntry, DexPriceObs,
-  DataSources, CurveLookups, SymbolLookups,
+  LlamaPool,
+  CurveApiPayload,
+  CurvePoolEntry,
+  DexPriceObs,
+  DataSources,
+  CurveLookups,
+  SymbolLookups,
 } from "./types";
 import {
-  DEFILLAMA_YIELDS_URL, DEFILLAMA_PROTOCOLS_URL,
-  CURVE_API_BASE, CURVE_CHAINS,
+  DEFILLAMA_YIELDS_URL,
+  DEFILLAMA_PROTOCOLS_URL,
+  CURVE_API_BASE,
+  CURVE_CHAINS,
+  DEX_LIQUIDITY_POOL_MIN_TVL_USD,
 } from "./constants";
-import {
-  normalizeProtocol, classifyPoolType, isCryptoSwap, buildPoolFingerprint,
-} from "./pool-helpers";
+import { normalizeProtocol, classifyPoolType, isCryptoSwap, buildPoolFingerprint } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import {
@@ -24,9 +30,7 @@ import {
   registerKnownPoolIdentity,
   type KnownPoolIdentityIndex,
 } from "./pool-identity";
-import {
-  resolveTrackedStablecoinId,
-} from "./token-resolution";
+import { resolveTrackedStablecoinId } from "./token-resolution";
 import { toErrorMessage } from "../../lib/error-utils";
 import { resolveLlamaPoolStablecoinMatches } from "./pool-match-resolution";
 
@@ -105,12 +109,9 @@ export async function fetchDataSources(
         )
       : Promise.resolve(null),
     dlProtocolsAllowed
-      ? fetchJsonWithRetry<unknown>(
-          DEFILLAMA_PROTOCOLS_URL,
-          { headers: { "User-Agent": USER_AGENT }, signal },
-          2,
-          { timeoutMs: PRIMARY_SOURCE_JSON_TIMEOUT_MS },
-        )
+      ? fetchJsonWithRetry<unknown>(DEFILLAMA_PROTOCOLS_URL, { headers: { "User-Agent": USER_AGENT }, signal }, 2, {
+          timeoutMs: PRIMARY_SOURCE_JSON_TIMEOUT_MS,
+        })
       : Promise.resolve(null),
   ]);
 
@@ -135,15 +136,21 @@ export async function fetchDataSources(
 
           // Cache minimal stablecoin pool data for yield sync (avoids redundant 13MB re-fetch)
           try {
-            const minimalPools = rawPools
-              .filter(isYieldRelevantDlPool)
-              .map((p) => ({
-                pool: p.pool, chain: p.chain, project: p.project, symbol: p.symbol,
-                poolMeta: p.poolMeta ?? null,
-                tvlUsd: p.tvlUsd, apy: p.apy, apyBase: p.apyBase,
-                apyReward: p.apyReward, apyMean30d: p.apyMean30d ?? p.apy, stablecoin: p.stablecoin, exposure: p.exposure,
-                underlyingTokens: p.underlyingTokens ?? null,
-              }));
+            const minimalPools = rawPools.filter(isYieldRelevantDlPool).map((p) => ({
+              pool: p.pool,
+              chain: p.chain,
+              project: p.project,
+              symbol: p.symbol,
+              poolMeta: p.poolMeta ?? null,
+              tvlUsd: p.tvlUsd,
+              apy: p.apy,
+              apyBase: p.apyBase,
+              apyReward: p.apyReward,
+              apyMean30d: p.apyMean30d ?? p.apy,
+              stablecoin: p.stablecoin,
+              exposure: p.exposure,
+              underlyingTokens: p.underlyingTokens ?? null,
+            }));
             await setCache(db, "dl-stablecoin-pools", buildDlStablecoinPoolsCache(minimalPools));
           } catch (e) {
             console.warn("[dex-liquidity] Failed to cache stablecoin pools for yield sync:", e);
@@ -214,7 +221,9 @@ export async function fetchDataSources(
         dlProtocolsAvailable = dexProjects.size > 0;
         await recordOutcome(db, CIRCUIT_SOURCE.DL_PROTOCOLS, dlProtocolsAvailable);
         if (dlProtocolsAvailable) {
-          console.log(`[dex-liquidity] Indexed ${dexProjects.size} active DEX projects, ${protocolTvlCaps.size} with TVL caps`);
+          console.log(
+            `[dex-liquidity] Indexed ${dexProjects.size} active DEX projects, ${protocolTvlCaps.size} with TVL caps`,
+          );
         } else {
           console.warn("[dex-liquidity] DeFiLlama protocols response had zero active DEX projects — degraded");
         }
@@ -311,7 +320,7 @@ export async function buildCurveLookups(
         const coinBalances = pool.coins.map((coin) => {
           const raw = parseFloat(coin.poolBalance);
           const decimals = parseInt(coin.decimals, 10);
-          const usdBalance = isNaN(raw) || isNaN(decimals) ? 0 : raw / 10 ** decimals * (coin.usdPrice || 1);
+          const usdBalance = isNaN(raw) || isNaN(decimals) ? 0 : (raw / 10 ** decimals) * (coin.usdPrice || 1);
           return { coin, usdBalance };
         });
 
@@ -335,9 +344,7 @@ export async function buildCurveLookups(
 
         // v2: Use metapool-adjusted TVL when available
         const metapoolAdjustedTvl =
-          pool.basePoolAddress && pool.usdTotalExcludingBasePool > 0
-            ? pool.usdTotalExcludingBasePool
-            : pool.usdTotal;
+          pool.basePoolAddress && pool.usdTotalExcludingBasePool > 0 ? pool.usdTotalExcludingBasePool : pool.usdTotal;
 
         // Build a key from pool coins for matching
         const coinSymbols = pool.coins
@@ -381,6 +388,8 @@ export async function buildCurveLookups(
           executionCoins.every((coin) => coin !== null);
 
         const entry: CurvePoolEntry = {
+          poolAddress: pool.address,
+          apiIsBroken: false,
           A,
           balanceRatio,
           tvl: pool.usdTotal,
@@ -394,12 +403,17 @@ export async function buildCurveLookups(
             ? { executionCoins: executionCoins as NonNullable<CurvePoolEntry["executionCoins"]> }
             : {}),
         };
-        curvePoolMap.set(
-          `${chain}:${pool.address.toLowerCase()}`,
-          entry,
+        curvePoolMap.set(`${chain}:${pool.address.toLowerCase()}`, entry);
+        const fingerprintKey = buildPoolFingerprint(
+          chain,
+          "curve",
+          pool.coins.map((coin) => coin.address),
         );
-        const fingerprintKey = buildPoolFingerprint(chain, "curve", pool.coins.map((coin) => coin.address));
-        if (fingerprintKey && !ambiguousFingerprints.has(fingerprintKey)) {
+        if (
+          fingerprintKey &&
+          pool.usdTotal >= DEX_LIQUIDITY_POOL_MIN_TVL_USD &&
+          !ambiguousFingerprints.has(fingerprintKey)
+        ) {
           if (curvePoolMap.has(fingerprintKey)) {
             curvePoolMap.delete(fingerprintKey);
             ambiguousFingerprints.add(fingerprintKey);
@@ -408,10 +422,7 @@ export async function buildCurveLookups(
           }
         }
         // Also store by symbol combo for fallback matching
-        curvePoolMap.set(
-          `${chain}:${coinSymbols}`,
-          entry,
-        );
+        curvePoolMap.set(`${chain}:${coinSymbols}`, entry);
 
         // Extract per-token price observations for DEX cross-validation
         // Filter: pool TVL >= $50K, balance ratio >= 0.3, coin has valid usdPrice
@@ -440,7 +451,11 @@ export async function buildCurveLookups(
               protocol: "curve",
               poolKey: identity.exactPoolKey ?? undefined,
               derivedMatchKey: identity.derivedMatchKey ?? undefined,
-              identityConfidence: identity.exactPoolKey ? "exact" : identity.derivedMatchKey ? "derived_unique" : "none",
+              identityConfidence: identity.exactPoolKey
+                ? "exact"
+                : identity.derivedMatchKey
+                  ? "derived_unique"
+                  : "none",
               sourceFamily: "dl",
             });
             priceObservations.set(resolved.stablecoinId, obs);
@@ -451,7 +466,9 @@ export async function buildCurveLookups(
       console.warn(`[dex-liquidity] Failed to parse Curve ${CURVE_CHAINS[i]}:`, err);
     }
   }
-  console.log(`[dex-liquidity] Indexed ${curvePoolMap.size} Curve pools, ${priceObservations.size} coins with Curve price obs`);
+  console.log(
+    `[dex-liquidity] Indexed ${curvePoolMap.size} Curve pools, ${priceObservations.size} coins with Curve price obs`,
+  );
 
   return { curvePoolMap, priceObservations };
 }
@@ -470,7 +487,7 @@ export function buildKnownPoolAddresses(
 
   // DeFiLlama pools are identity-poor, so only their derived keys are trustworthy.
   for (const pool of pools) {
-    if (!pool.tvlUsd || pool.tvlUsd < 10_000) continue;
+    if (!pool.tvlUsd || pool.tvlUsd < DEX_LIQUIDITY_POOL_MIN_TVL_USD) continue;
     if (enforceDexProjectFilter && !dexProjects.has(pool.project)) continue;
     if (pool.exposure === "single") continue;
     const identity = buildPoolIdentity({
@@ -489,44 +506,53 @@ export function buildKnownPoolAddresses(
   for (const key of curvePoolMap.keys()) {
     const [chain, poolAddress] = key.split(":");
     if (!poolAddress || !poolAddress.includes("0x")) continue;
-    registerKnownPoolIdentity(known, buildPoolIdentity({
-      chain,
-      protocol: "curve",
-      poolAddressOrId: poolAddress,
-      tokenAddresses: [],
-      poolType: "curve-stableswap",
-      isStable: true,
-    }));
+    registerKnownPoolIdentity(
+      known,
+      buildPoolIdentity({
+        chain,
+        protocol: "curve",
+        poolAddressOrId: poolAddress,
+        tokenAddresses: [],
+        poolType: "curve-stableswap",
+        isStable: true,
+      }),
+    );
   }
 
   // UniV3 pools (keyed as chain:address in the fees map)
   for (const key of uniV3PoolFees.keys()) {
     const [chain, poolAddress] = key.split(":");
     if (!poolAddress) continue;
-    registerKnownPoolIdentity(known, buildPoolIdentity({
-      chain,
-      protocol: "uniswap-v3",
-      poolAddressOrId: poolAddress,
-      tokenAddresses: [],
-    }));
+    registerKnownPoolIdentity(
+      known,
+      buildPoolIdentity({
+        chain,
+        protocol: "uniswap-v3",
+        poolAddressOrId: poolAddress,
+        tokenAddresses: [],
+      }),
+    );
   }
 
   // Aerodrome pools (keyed as chain:address in the isStable map)
   for (const [key, isStable] of aerodromeIsStable.entries()) {
     const [chain, poolAddress] = key.split(":");
     if (!poolAddress) continue;
-    registerKnownPoolIdentity(known, buildPoolIdentity({
-      chain,
-      protocol: "aerodrome",
-      poolAddressOrId: poolAddress,
-      tokenAddresses: [],
-      isStable,
-    }));
+    registerKnownPoolIdentity(
+      known,
+      buildPoolIdentity({
+        chain,
+        protocol: "aerodrome",
+        poolAddressOrId: poolAddress,
+        tokenAddresses: [],
+        isStable,
+      }),
+    );
   }
 
   console.log(
     `[dex-liquidity] Built known pool identity index: ${known.exactKeys.size} exact keys, ` +
-    `${derivedCount} derived DL keys`,
+      `${derivedCount} derived DL keys`,
   );
   return known;
 }

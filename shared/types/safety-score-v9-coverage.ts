@@ -192,6 +192,7 @@ const V9CoverageSourceGenerationsSchema = z
     chainSupply: CanonicalTextSchema,
     peg: CanonicalTextSchema,
     researchOverlays: CanonicalTextSchema,
+    shockCoverage: CanonicalTextSchema.optional(),
   })
   .strict();
 

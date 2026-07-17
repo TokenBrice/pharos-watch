@@ -7,6 +7,7 @@ export const DISCOVERY_STAGE_TIMEOUT_MS = {
   geckoTerminal: 8_000,
   dexscreener: 6_000,
   cgTickers: 6_000,
+  curve: 8_000,
 } as const;
 
 export type StagedPriceObservation = DexPriceObs & { stablecoinId: string };

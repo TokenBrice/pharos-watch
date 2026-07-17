@@ -12,6 +12,8 @@
       },
       "compensabilityHeadroom": 20,
       "pegExponent": 0.4,
+      "pegHistoryWindowSec": 94672800,
+      "pegQuietHistoryFloor": 97,
       "activeDepegCaps": [
         {
           "minimumBps": 2500,
@@ -229,15 +231,19 @@
         "base",
         "bsc",
         "ethereum",
+        "hyperliquid",
         "optimism",
         "polygon",
-        "solana"
+        "solana",
+        "tron",
+        "xrpl"
       ],
       "commonModeShareThreshold": 0.05,
       "commonModeHighShareThreshold": 0.1,
       "matureVenues": [
         "balancer",
         "curve",
+        "raydium",
         "uniswap"
       ]
     },
@@ -309,6 +315,7 @@
           "liquidity": 0.3,
           "maturity": 0.15
         },
+        "issuerAttestedConfidenceMultiplier": 0.8,
         "concentrationWeight": 0.15,
         "concentrationBands": [
           {
@@ -368,7 +375,13 @@
         },
         "cdp": {
           "minimumCollateralizationRatio": 1.1,
+          "instantaneousCollateralShock": 0.5,
           "minimumLiquidationCapacityRatio": 0.5,
+          "stressMeasurementFreshness": {
+            "maxAgeSec": 259200,
+            "ratification": "owner-ratified",
+            "rationale": "A 72-hour bound reflects LUSD remaining clear through a 60% shock and slow trove-book drift; stale stress measurements fail closed to legacy LCR."
+          },
           "collateralizationSignal": {
             "kind": "unsafe-backing",
             "severity": "critical"
@@ -764,6 +777,10 @@
         "unbounded-or-compromised": 25,
         "unknown": 45
       },
+      "mintPostureGrading": {
+        "prudentialReconciled": 80,
+        "attestationOnlyReconciled": 70
+      },
       "oracleTierQuality": {
         "oracleless-or-internal": 95,
         "redundant-with-failover": 90,
@@ -805,7 +822,7 @@
           "critical": 39
         },
         "centralized-mint": {
-          "low": null,
+          "low": 83,
           "moderate": 74,
           "high": 59,
           "critical": 39

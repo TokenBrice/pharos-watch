@@ -39,8 +39,9 @@ export type DexDeploymentProviderCheckStatus = "success" | "failure";
 export interface DexDeploymentProviderCheck {
   chain: string;
   address: string;
-  provider: "coingecko" | "geckoterminal" | "dexscreener";
+  provider: "coingecko" | "geckoterminal" | "dexscreener" | "curve";
   status: DexDeploymentProviderCheckStatus;
+  observedPoolCount?: number;
 }
 
 /**

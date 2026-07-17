@@ -746,6 +746,61 @@ describe("Safety Score v9 normalized fact protocol", () => {
     expect(dexSignal(twoEligible, "delta")).toMatchObject({ severity: "high" });
   });
 
+  it("joins dependency-owned mint-control groups through asset issuer identity", () => {
+    const evaluateSharedMint = (betaIssuer: string | null, gammaIssuer: string | null) => {
+      const input = coreFixture();
+      const beta = input.assets[1]! as unknown as V9AssetFactsV2;
+      const gamma = input.assets[2]! as unknown as V9AssetFactsV2;
+      for (const [asset, issuer] of [
+        [beta, betaIssuer],
+        [gamma, gammaIssuer],
+      ] as const) {
+        asset.assetIssuerKey = issuer;
+        asset.dependencies = {
+          status: knownStatus(),
+          sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId,
+          source: "manual",
+          baseSource: "manual",
+          dependencyFromLive: false,
+          mappedLiveReserveWeight: null,
+          fallbackReason: null,
+          edges: [
+            {
+              edgeKey: canonicalV9DependencyEdgeKey("mechanism", "alpha"),
+              upstreamAssetId: "alpha",
+              dependencyType: "mechanism",
+              pathKind: "serial-dependency",
+              weight: 1,
+              economicRole: "serial-claim",
+              evidenceRefIds: ["evidence:base"],
+              failureDomains: [{ kind: "mint-control", key: "shared:dependency-minter" }],
+            },
+          ],
+          diagnostics: { graphState: "valid", issueCodes: [], sccMemberAssetIds: [] },
+        };
+      }
+      return evaluateV9FactSet(compileV9FactSetV2(input), V9_CANDIDATE_POLICY_V1);
+    };
+    const signal = (evaluated: ReturnType<typeof evaluateV9FactSet>, assetId: string) =>
+      evaluated.assets
+        .find((asset) => asset.assetId === assetId)!
+        .scoreInput.dependencyStructuralSignals.find((candidate) =>
+          candidate.failureDomainKeys.includes("mint-control:shared:dependency-minter"),
+        );
+
+    const sameIssuer = evaluateSharedMint("issuer:shared", "issuer:shared");
+    expect(signal(sameIssuer, "beta")).toMatchObject({ severity: "low" });
+    expect(signal(sameIssuer, "gamma")).toMatchObject({ severity: "low" });
+
+    const crossIssuer = evaluateSharedMint("issuer:shared", "issuer:other");
+    expect(signal(crossIssuer, "beta")).toMatchObject({ severity: "high" });
+    expect(signal(crossIssuer, "gamma")).toMatchObject({ severity: "high" });
+
+    const unresolved = evaluateSharedMint("issuer:shared", null);
+    expect(signal(unresolved, "beta")).toMatchObject({ severity: "high" });
+    expect(signal(unresolved, "gamma")).toMatchObject({ severity: "high" });
+  });
+
   it("derives bridge share bounds through reviewed control and deployment joins", () => {
     type BridgeJoinVariant =
       | "known"
@@ -1301,7 +1356,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
     expect(reparsed.v9FactSetDigest).toBe(retained.v9FactSetDigest);
   });
 
-  it("canonicalizes retained chain aliases for evaluation and fails closed on canonical collisions", () => {
+  it("canonicalizes the retained Hyperliquid alias and applies R2 maturity after collisions", () => {
     const configure = (
       input: ReturnType<typeof coreFixture>,
       chains: Array<{ chainId: string; supplyUsd: number; supplyShare: number }>,
@@ -1323,7 +1378,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
 
     const alias = coreFixture();
     configure(alias, [{ chainId: "hyperliquid-l1", supplyUsd: 1_000_000, supplyShare: 1 }]);
-    expect(severity(alias)).toBe("high");
+    expect(severity(alias)).toBe("low");
 
     const collision = coreFixture();
     configure(collision, [
@@ -1331,7 +1386,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
       { chainId: "hyperliquid", supplyUsd: 24_900, supplyShare: 0.0249 },
       { chainId: "hyperliquid-l1", supplyUsd: 24_900, supplyShare: 0.0249 },
     ]);
-    expect(severity(collision)).toBe("high");
+    expect(severity(collision)).toBe("low");
   });
 
   it("fails chain attribution closed when the distribution is unavailable or the supply fact is bounded", () => {

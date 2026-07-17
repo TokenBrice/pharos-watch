@@ -121,7 +121,6 @@ const DIRECT_LLAMMA_MULTICALL_BATCH_SIZE = 500;
 const CRVUSD_MARKET_READ_CONCURRENCY = 2;
 const CRVUSD_MAX_LLAMMA_MARKETS = 256;
 const CRVUSD_MAX_LLAMMA_BANDS_PER_MARKET = 2_048;
-const CRVUSD_MAX_LLAMMA_MULTICALL_ENTRIES = 8_192;
 const CRVUSD_MAX_YIELD_BASIS_MARKETS = 256;
 const YIELD_BASIS_FACTORY = "0x370a449febb9411c95bf897021377fe0b7d100c0";
 const YIELD_BASIS_VIEW_GAS = "0x5B8D80";
@@ -515,17 +514,6 @@ async function fetchLlammaMarketExposures(signal: AbortSignal, ctx?: AdapterCont
   const descriptors = await fetchLlammaMarketDescriptors(signal, ctx);
   if (descriptors.length === 0) return [];
 
-  const multicallEntryCount = descriptors.reduce(
-    (total, market) => total + validateLlammaBandCount(market.minBand, market.maxBand, market.marketId) * 2,
-    0,
-  );
-  if (multicallEntryCount > CRVUSD_MAX_LLAMMA_MULTICALL_ENTRIES) {
-    throw new Error(
-      `crvUSD LLAMMA band multicall exceeds operational cap: ` +
-        `${multicallEntryCount} > ${CRVUSD_MAX_LLAMMA_MULTICALL_ENTRIES}`,
-    );
-  }
-
   const priceMap = await fetchDefiLlamaPrices(
     Array.from(
       new Map(
@@ -543,69 +531,59 @@ async function fetchLlammaMarketExposures(signal: AbortSignal, ctx?: AdapterCont
     ctx,
   );
 
-  const calls = descriptors.flatMap((market) => {
-    const marketCalls = [];
+  return mapWithConcurrency(descriptors, CRVUSD_MARKET_READ_CONCURRENCY, async (market) => {
+    const calls: OnchainMulticall3Call[] = [];
     for (let band = market.minBand; band <= market.maxBand; band += 1) {
       throwIfAborted(signal);
-      marketCalls.push({
+      calls.push({
         label: `${market.marketId}:y:${band}`,
         contract: market.ammAddress,
         data: encodeFunctionData({ abi: CURVE_AMM_ABI, functionName: "bands_y", args: [BigInt(band)] }),
       });
-      marketCalls.push({
+      calls.push({
         label: `${market.marketId}:x:${band}`,
         contract: market.ammAddress,
         data: encodeFunctionData({ abi: CURVE_AMM_ABI, functionName: "bands_x", args: [BigInt(band)] }),
       });
     }
-    return marketCalls;
-  });
 
-  const results = await fetchOnchainMulticall3({
-    calls,
-    chain: ETHEREUM_CHAIN,
-    signal,
-    ctx,
-    rpcUrl: ETHEREUM_RPC_URLS[0],
-    fallbackRpcUrl: ETHEREUM_RPC_URLS[1],
-    timeoutMs: 20_000,
-    multicallBatchSize: DIRECT_LLAMMA_MULTICALL_BATCH_SIZE,
-  });
-  if (!results) {
-    throw new Error("crvUSD LLAMMA band multicall failed");
-  }
+    const results = await fetchOnchainMulticall3({
+      calls,
+      chain: ETHEREUM_CHAIN,
+      signal,
+      ctx,
+      rpcUrl: ETHEREUM_RPC_URLS[0],
+      fallbackRpcUrl: ETHEREUM_RPC_URLS[1],
+      timeoutMs: 20_000,
+      multicallBatchSize: DIRECT_LLAMMA_MULTICALL_BATCH_SIZE,
+    });
+    if (!results) {
+      throw new Error(`crvUSD LLAMMA band multicall failed for market ${market.marketId}`);
+    }
 
-  const byMarket = new Map<number, { y: bigint; x: bigint }>();
-  for (const result of results) {
-    if (!result.success) {
-      throw new Error(`crvUSD LLAMMA band call failed: ${result.label}`);
+    const totals = { y: 0n, x: 0n };
+    for (const result of results) {
+      if (!result.success) {
+        throw new Error(`crvUSD LLAMMA band call failed: ${result.label}`);
+      }
+      const [, axis] = result.label.split(":");
+      if (axis === "y") {
+        totals.y += decodeFunctionResult({
+          abi: CURVE_AMM_ABI,
+          functionName: "bands_y",
+          data: result.returnData,
+        }) as bigint;
+      } else if (axis === "x") {
+        totals.x += decodeFunctionResult({
+          abi: CURVE_AMM_ABI,
+          functionName: "bands_x",
+          data: result.returnData,
+        }) as bigint;
+      } else {
+        throw new Error(`crvUSD LLAMMA band call returned invalid axis: ${result.label}`);
+      }
     }
-    const [marketIdRaw, axis] = result.label.split(":");
-    const marketId = Number(marketIdRaw);
-    if (!Number.isSafeInteger(marketId)) {
-      throw new Error(`crvUSD LLAMMA band call returned invalid label: ${result.label}`);
-    }
-    const current = byMarket.get(marketId) ?? { y: 0n, x: 0n };
-    if (axis === "y") {
-      current.y += decodeFunctionResult({
-        abi: CURVE_AMM_ABI,
-        functionName: "bands_y",
-        data: result.returnData,
-      }) as bigint;
-    } else if (axis === "x") {
-      current.x += decodeFunctionResult({
-        abi: CURVE_AMM_ABI,
-        functionName: "bands_x",
-        data: result.returnData,
-      }) as bigint;
-    } else {
-      throw new Error(`crvUSD LLAMMA band call returned invalid axis: ${result.label}`);
-    }
-    byMarket.set(marketId, current);
-  }
 
-  return descriptors.map((market) => {
-    const totals = byMarket.get(market.marketId) ?? { y: 0n, x: 0n };
     const price = priceMap.get(normalizeAddress(market.collateralAddress));
     if (price == null) {
       throw new Error(`crvUSD LLAMMA missing DefiLlama price for market ${market.marketId} (${market.symbol})`);

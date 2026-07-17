@@ -206,6 +206,7 @@ describe("validate-ci parity", () => {
       ["openapi", 0, "deterministic", true, []],
       ["world-map", 0, "deterministic", true, []],
       ["safety-score-v8-evaluation-build", 0, "deterministic", true, []],
+      ["safety-score-v9-shock-coverage-registry", 0, "pinned-input", true, []],
       ["safety-score-v9-evaluation-build", 0, "deterministic", true, []],
       ["stablecoin-prevalidated-registry", 1, "deterministic", true, ["stablecoin-catalog"]],
       ["legacy-stablecoin-redirects", 1, "deterministic", true, ["stablecoin-catalog"]],
@@ -229,6 +230,7 @@ describe("validate-ci parity", () => {
       "tsx scripts/maintenance/generate-openapi-spec.ts",
       "tsx scripts/maintenance/build-world-map-svg.ts",
       "tsx scripts/maintenance/generate-safety-score-v8-evaluation-build-manifest.ts",
+      "tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts",
       "tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts",
       "node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs",
       "node scripts/maintenance/generate-legacy-stablecoin-redirects.mjs",
@@ -252,6 +254,7 @@ describe("validate-ci parity", () => {
       "tsx scripts/maintenance/generate-openapi-spec.ts --check",
       "tsx scripts/maintenance/build-world-map-svg.ts --check",
       "tsx scripts/maintenance/generate-safety-score-v8-evaluation-build-manifest.ts --check",
+      "tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts --check",
       "tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts --check",
       "node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs --check",
       "node scripts/maintenance/generate-legacy-stablecoin-redirects.mjs --check",
@@ -278,6 +281,16 @@ describe("validate-ci parity", () => {
     expect(GENERATED_ARTIFACT_REGISTRY.every((artifact) => artifact.phase >= 0 && artifact.phase <= 3)).toBe(true);
     expect(GENERATED_ARTIFACT_REGISTRY.every((artifact) => artifact.sourcePaths.length > 0)).toBe(true);
     expect(GENERATED_ARTIFACT_REGISTRY.every((artifact) => artifact.outputPaths.length > 0)).toBe(true);
+    expect(
+      GENERATED_ARTIFACT_REGISTRY.find((artifact) => artifact.id === "safety-score-v9-shock-coverage-registry"),
+    ).toMatchObject({
+      outputPaths: ["shared/data/safety-score-v9/shock-coverage-measurements-v1.json"],
+      sourcePaths: [
+        "scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts",
+        "shared/data/safety-score-v9/mechanism-measurements/**/*-shock-coverage.json",
+        "shared/data/safety-score-v9/shock-coverage-replay-attestations-v1.json",
+      ],
+    });
     expect(GENERATED_ARTIFACT_REGISTRY.filter((artifact) => artifact.bootstrap).map((artifact) => artifact.id)).toEqual(
       [
         "stablecoin-catalog",
@@ -287,6 +300,7 @@ describe("validate-ci parity", () => {
         "openapi",
         "world-map",
         "safety-score-v8-evaluation-build",
+        "safety-score-v9-shock-coverage-registry",
         "safety-score-v9-evaluation-build",
         "stablecoin-prevalidated-registry",
         "legacy-stablecoin-redirects",
@@ -305,10 +319,10 @@ describe("validate-ci parity", () => {
     expect(
       buildGeneratedArtifactPhases().map(({ artifacts }) => artifacts.map((artifact: { id: string }) => artifact.id)),
     ).toEqual([
-      expectedArtifacts.slice(0, 11).map(([id]) => id),
-      expectedArtifacts.slice(11, 14).map(([id]) => id),
-      expectedArtifacts.slice(14, 18).map(([id]) => id),
-      expectedArtifacts.slice(18).map(([id]) => id),
+      expectedArtifacts.slice(0, 12).map(([id]) => id),
+      expectedArtifacts.slice(12, 15).map(([id]) => id),
+      expectedArtifacts.slice(15, 19).map(([id]) => id),
+      expectedArtifacts.slice(19).map(([id]) => id),
     ]);
     expect(buildGeneratedArtifactExecutionPhases().map(({ phase }) => phase)).toEqual([0, 1, 2, 3]);
     expect(
@@ -316,10 +330,10 @@ describe("validate-ci parity", () => {
         units.map((unit: { commands: string[] }) => unit.commands[0]),
       ),
     ).toEqual([
-      expectedCommands.slice(0, 11),
-      expectedCommands.slice(11, 14),
-      expectedCommands.slice(14, 18),
-      expectedCommands.slice(18),
+      expectedCommands.slice(0, 12),
+      expectedCommands.slice(12, 15),
+      expectedCommands.slice(15, 19),
+      expectedCommands.slice(19),
     ]);
     expect(GENERATED_ARTIFACTS_MAX_PARALLEL).toBe(4);
   });
@@ -357,6 +371,7 @@ describe("validate-ci parity", () => {
         "openapi",
         "world-map",
         "safety-score-v8-evaluation-build",
+        "safety-score-v9-shock-coverage-registry",
         "safety-score-v9-evaluation-build",
       ],
       ["stablecoin-prevalidated-registry", "legacy-stablecoin-redirects", "stablecoin-client-registry"],

@@ -116,17 +116,21 @@
       }
     ],
     "segregation": "segregated",
-    "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "conditional",
+    "reviewedAt": "2026-07-17",
+    "reviewer": "Kimi FIAT-CTRL R4 control-evidence review",
     "confidence": "verified",
     "sources": [
       {
         "label": "KPMG USDG Redemption Assets Report - May 2026",
         "url": "https://framerusercontent.com/assets/o61pz3wuO4LmxEuDTUxmINc09qc.pdf"
+      },
+      {
+        "label": "Paxos USD Stablecoin Terms and Conditions (last modified 2026-06-30)",
+        "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
       }
     ],
-    "uncertainty": "The report confirms segregated, unencumbered accounts and a qualified custodian, but anonymizes the commercial banks and custodian and does not establish bankruptcy remoteness or a contractual prohibition on rehypothecation."
+    "uncertainty": "The KPMG-examined report confirms segregated, unencumbered accounts held on behalf of USDG token holders, and the Paxos USD Stablecoin terms (sections 1.1.1, 3.1.2, 3.2.2.1) contractually commit PDS/PIE to hold reserves in segregated custodial accounts apart from corporate funds, on behalf of and for the benefit of token holders; the MAS Letter of Undertaking adds regulatory safeguarding requirements and MiCA/EMD2 statutory safeguarding covers the small PIE-held share. No trust or SPV structure is documented for the PDS-held bulk, and the terms' explicit bankruptcy-remote statement covers only Paxos Trust Company-issued coins, so remoteness stays contractual-only. Rehypothecation is conditional: the examined criterion requires unencumbered redemption assets and the report prohibits selling or repledging repo collateral, but rehypothecation terms for cash deposits are not established. The report anonymizes the commercial banks and the qualified Treasury custodian."
   }
 }

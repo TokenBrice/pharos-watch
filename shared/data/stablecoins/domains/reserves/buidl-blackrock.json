@@ -12,8 +12,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-13",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-17",
+    "reviewer": "Kimi FIAT-CTRL shard-02 control-evidence review",
     "confidence": "verified",
     "sources": [
       {
@@ -23,13 +23,21 @@
       {
         "label": "Securitize BUIDL collateral announcement",
         "url": "https://investors.securitize.io/news/news-details/2026/OKX-BlackRock-and-Standard-Chartered-Launch-Joint-Framework-to-Establish-New-Utility-for-Tokenized-Real-World-Assets/default.aspx"
+      },
+      {
+        "label": "Securitize Markets BUIDL Arbitrum STEP application (PwC independent auditor, annual shareholder reports)",
+        "url": "https://forum.arbitrum.foundation/t/securitize-markets-buidl-step-application/23652"
+      },
+      {
+        "label": "Chronicle Proof of Asset BUIDL verification launch",
+        "url": "https://chroniclelabs.org/blog/buidl-tokenized-by-securitize-is-now-verified-onchain-by-chronicle-proof-of-asset"
       }
     ],
     "rationale": "Current issuer materials confirm that BUIDL invests across cash, Treasury bills, and repurchase agreements but do not publish a durable category split. The prior 60/30/10 estimate was therefore replaced by the supported aggregate basket.",
     "compositionBasis": "BlackRock/Securitize stated investment categories",
     "compositionAsOf": "2026-04-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "The allocation among cash, Treasury bills, and repurchase agreements is not captured in the reviewed durable sources. The reviewed public materials also do not provide a current assets-and-liabilities assurance report or documented loss-recovery waterfall for token holders, so the mechanism loss-recovery component remains unresolved.",
+    "knownUnknownExposure": "The allocation among cash, Treasury bills, and repurchase agreements is not captured in the reviewed durable sources. PricewaterhouseCoopers LLP is the Fund's retained independent auditor and shareholders receive an annual audited financial report within about 120 days of fiscal year-end (issuer-stated, 2024-05-04), but those audited reports are not published; public assurance is instead the real-time Chronicle Proof of Asset verification launched 2026-03-26. The reviewed public materials do not provide a public periodic assets-and-liabilities assurance report or documented loss-recovery waterfall for token holders, so the mechanism loss-recovery component remains unresolved.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -46,15 +54,16 @@
       {
         "name": "The Bank of New York Mellon",
         "role": "custodian",
-        "jurisdiction": "United States"
+        "jurisdiction": "United States",
+        "sharePct": 100
       }
     ],
-    "segregation": "unknown",
+    "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-13",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-17",
+    "reviewer": "Kimi FIAT-CTRL shard-02 control-evidence review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "BlackRock BUIDL launch",
@@ -63,8 +72,16 @@
       {
         "label": "SEC BUIDL Form D filing",
         "url": "https://www.sec.gov/Archives/edgar/data/2013810/0002014390-24-000001-index.htm"
+      },
+      {
+        "label": "Securitize Markets BUIDL Arbitrum STEP application (custodian account titling, administrator, auditor)",
+        "url": "https://forum.arbitrum.foundation/t/securitize-markets-buidl-step-application/23652"
+      },
+      {
+        "label": "rwa.xyz BUIDL asset profile (service providers, bankruptcy-remote account segregation)",
+        "url": "https://app.rwa.xyz/assets/BUIDL"
       }
     ],
-    "uncertainty": "The separate BVI fund structure and BNY Mellon service role are public, but reviewed sources do not establish provider shares, account-level segregation, or rehypothecation restrictions."
+    "uncertainty": "The issuer-authored Arbitrum STEP application (2024-05-04) states BNY Mellon is the Fund's administrator and custodian and that the Fund's assets are held in one or more accounts in the name of the Fund, with subcustodians and depositories permitted; no other fund-level custodian is named in reviewed sources, so the documented custody is a single-provider concentration. rwa.xyz (2026-07-16) lists the account segregation as bankruptcy remote. Sub-custodian splits and rehypothecation restrictions are not stated in reviewed public sources."
   }
 }

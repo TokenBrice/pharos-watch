@@ -13,6 +13,7 @@ import {
   buildSafetyScoreV9ShadowDailySuccess,
   buildSafetyScoreV9ShadowEnvelope,
   type SafetyScoreV8ComparableSnapshot,
+  type SafetyScoreV9CoverageFloor,
   type SafetyScoreV9ReplayArtifactKind,
 } from "../safety-score-v9-shadow";
 import {
@@ -190,13 +191,14 @@ function buildSuccessfulState(
   candidateValue: SafetyScoreV9Response,
   references: Awaited<ReturnType<typeof parseSafetyScoreV9ReplayArtifact>>["reference"][],
   artifactKeys: string[],
+  coverageFloors: SafetyScoreV9CoverageFloor[] = [],
 ) {
   const envelope = buildSafetyScoreV9ShadowEnvelope({
     candidate: candidateValue,
     expectedActiveIds: candidateValue.cards.map((card) => card.id),
     compilerFactSchemaDigest: COMPILER_FACT_SCHEMA_DIGEST,
     producerCapabilityDigest: PRODUCER_CAPABILITY_DIGEST,
-    coverageFloors: [],
+    coverageFloors,
     replayArtifacts: references,
   });
   const v8: SafetyScoreV8ComparableSnapshot = {
@@ -228,7 +230,11 @@ function buildSuccessfulState(
   return { envelope, diff, daily };
 }
 
-async function successfulState(archived = false, candidateValue = candidate()) {
+async function successfulState(
+  archived = false,
+  candidateValue = candidate(),
+  coverageFloors: SafetyScoreV9CoverageFloor[] = [],
+) {
   const artifacts = archived ? await buildArtifactSet() : [];
   const references = await Promise.all(
     artifacts.map(async (artifact) => (await parseSafetyScoreV9ReplayArtifact(artifact)).reference),
@@ -239,6 +245,7 @@ async function successfulState(archived = false, candidateValue = candidate()) {
       candidateValue,
       references,
       artifacts.map((artifact) => artifact.artifactKey),
+      coverageFloors,
     ),
   };
 }
@@ -715,6 +722,63 @@ describe("Safety Score v9 shadow state persistence", () => {
       selected_run_at_sec: refreshed.daily.selectedRun?.selectedAtSec,
       latest_error_code: "write-failed",
     });
+  });
+
+  it("persists a pinned in-window selection as a daily-only metadata update", async () => {
+    const latencyFloor: SafetyScoreV9CoverageFloor = {
+      id: "scheduled-start-latency",
+      status: "pass",
+      observed: 300,
+      required: "<= 3600 seconds after the scheduled daily selection point",
+      detail: "The daily shadow attempt began inside the preregistered start window",
+    };
+    const { sqlite, db } = createTestDatabase();
+    const original = await successfulState(false, candidate(), [latencyFloor]);
+    await persistSafetyScoreV9ShadowState(db, original);
+
+    // A later same-day refresh recomputes a full candidate state, but the
+    // daily builder pins the in-window selection and persists no latest rows.
+    const refreshedCandidate = {
+      ...candidate(),
+      candidateId: "candidate-v9-store-late-refresh",
+      policyVersion: "candidate-v9-store-late-refresh",
+      publicationGenerationId: "v9-shadow:late-refresh-generation",
+      resultDigest: digest("8"),
+    };
+    const late = await successfulState(false, refreshedCandidate, [
+      { ...latencyFloor, status: "fail", observed: 7_200 },
+    ]);
+    const pinnedDaily = buildSafetyScoreV9ShadowDailySuccess({
+      utcDay: original.daily.utcDay,
+      selectedAtSec: SCHEDULED_FOR_SEC + 3 * 60 * 60,
+      updatedAtSec: SCHEDULED_FOR_SEC + 3 * 60 * 60 + 1,
+      previous: original.daily,
+      envelope: late.envelope,
+      diff: late.diff,
+    });
+    expect(pinnedDaily.selectedRun).toEqual(original.daily.selectedRun);
+
+    await expect(persistSafetyScoreV9ShadowState(db, { daily: pinnedDaily })).resolves.toBeUndefined();
+
+    // The retained latest envelope/diff stay bound to the pinned in-window
+    // run while the compact daily row advances.
+    await expect(loadLatestSafetyScoreV9ShadowEnvelope(db)).resolves.toEqual(original.envelope);
+    await expect(loadLatestSafetyScoreV9DiffReport(db)).resolves.toEqual(original.diff);
+    await expect(loadSafetyScoreV9ShadowHistory(db)).resolves.toEqual([pinnedDaily]);
+    expect(
+      sqlite
+        .prepare("SELECT successful_attempt_count, failed_attempt_count, selected_run_at_sec FROM safety_score_v9_shadow_daily")
+        .get(),
+    ).toEqual({
+      successful_attempt_count: 2,
+      failed_attempt_count: 0,
+      selected_run_at_sec: original.daily.selectedRun?.selectedAtSec,
+    });
+
+    // A different selection still cannot land without its latest state.
+    await expect(persistSafetyScoreV9ShadowState(db, { daily: late.daily })).rejects.toThrow(
+      "must persist its latest envelope and diff",
+    );
   });
 
   it("rolls back selected artifacts, daily state, and envelope when the atomic latest write fails", async () => {

@@ -174,9 +174,28 @@ function assertCompilerIdentity(value, label) {
   );
   const historicalBaseline =
     identity.evaluationBuildDigest === EXPECTED_BASELINE_BINDINGS.candidateIdentity.evaluationBuildDigest;
-  const expectedCapabilities = historicalBaseline
-    ? ["canonical-chain-supply-distribution.v1"]
-    : ["canonical-chain-supply-distribution.v1", "exit-route-modeled-confidence.v1"];
+  const phaseOneCapabilities = ["canonical-chain-supply-distribution.v1", "exit-route-modeled-confidence.v1"];
+  const transferFactCapabilities = [...phaseOneCapabilities, "reviewed-transfer-deployments.v1"];
+  const shockCoverageCapabilities = [
+    ...phaseOneCapabilities,
+    "journaled-cdp-shock-coverage.v1",
+    "reviewed-transfer-deployments.v1",
+  ];
+  const productionProfile = historicalBaseline
+    ? "historical"
+    : stableStringify(identity.compiledFactSchemaCapabilities) === stableStringify(shockCoverageCapabilities)
+      ? "shock-coverage"
+      : stableStringify(identity.compiledFactSchemaCapabilities) === stableStringify(transferFactCapabilities)
+        ? "transfer-fact"
+        : "phase-one";
+  const expectedCapabilities =
+    productionProfile === "historical"
+      ? ["canonical-chain-supply-distribution.v1"]
+      : productionProfile === "shock-coverage"
+        ? shockCoverageCapabilities
+        : productionProfile === "transfer-fact"
+          ? transferFactCapabilities
+          : phaseOneCapabilities;
   if (
     identity.schemaVersion !== 1 ||
     identity.fixedInputSchemaVersion !== 3 ||
@@ -188,10 +207,11 @@ function assertCompilerIdentity(value, label) {
     throw new Error(`${label} compiler identity does not match its closed production profile`);
   }
   requireDigest(identity.evaluationBuildDigest, `${label} compiler identity evaluationBuildDigest`);
-  return { identity, historicalBaseline };
+  return { identity, productionProfile };
 }
 
-function assertProducerIdentity(value, label, historicalBaseline) {
+function assertProducerIdentity(value, label, productionProfile) {
+  const includesReviewedTransfers = productionProfile === "transfer-fact" || productionProfile === "shock-coverage";
   const identity = requireExactKeys(
     value,
     [
@@ -211,7 +231,16 @@ function assertProducerIdentity(value, label, historicalBaseline) {
   );
   const adapters = requireExactKeys(
     identity.sourceAdapters,
-    ["registry", "dexExitRoutes", "redemptionExitRoutes", "liveReserves", "chainSupply", "peg", "researchOverlays"],
+    [
+      "registry",
+      "dexExitRoutes",
+      "redemptionExitRoutes",
+      "liveReserves",
+      "chainSupply",
+      "peg",
+      "researchOverlays",
+      ...(productionProfile === "shock-coverage" ? ["shockCoverage"] : []),
+    ],
     `${label} producer source adapters`,
   );
   const versions = requireExactKeys(
@@ -219,20 +248,18 @@ function assertProducerIdentity(value, label, historicalBaseline) {
     ["dexExitRoutes", "redemptionExitRoutes", "peg"],
     `${label} producer methodology versions`,
   );
-  const freshness = requireExactKeys(
-    identity.freshnessPolicySec,
-    [
-      "dexExitRoutes",
-      "redemptionExitRoutes",
-      "documentedTermsExitRoutes",
-      "liveReserves",
-      "chainSupply",
-      "peg",
-      "researchOverlays",
-    ],
-    `${label} producer freshness policy`,
-  );
-  const routeAdapterVersion = historicalBaseline ? "v1" : "v2";
+  const freshnessKeys = [
+    "dexExitRoutes",
+    "redemptionExitRoutes",
+    "documentedTermsExitRoutes",
+    ...(includesReviewedTransfers ? ["accessReviews"] : []),
+    "liveReserves",
+    "chainSupply",
+    "peg",
+    "researchOverlays",
+  ];
+  const freshness = requireExactKeys(identity.freshnessPolicySec, freshnessKeys, `${label} producer freshness policy`);
+  const routeAdapterVersion = productionProfile === "historical" ? "v1" : "v2";
   const expectedAdapters = {
     registry: "fixed-input.registry.v1",
     dexExitRoutes: `fixed-input.dex-exit-observations.${routeAdapterVersion}`,
@@ -240,7 +267,10 @@ function assertProducerIdentity(value, label, historicalBaseline) {
     liveReserves: "fixed-input.live-reserves.v1",
     chainSupply: "fixed-input.usd-circulating-supply.v2",
     peg: "fixed-input.peg-summary.v1",
-    researchOverlays: "v9-fact-extension.review-overlays.v2",
+    researchOverlays: includesReviewedTransfers
+      ? "v9-fact-extension.review-overlays.v3"
+      : "v9-fact-extension.review-overlays.v2",
+    ...(productionProfile === "shock-coverage" ? { shockCoverage: "journal-registry.cdp-shock-coverage.v1" } : {}),
   };
   if (
     identity.schemaVersion !== 1 ||
@@ -259,6 +289,11 @@ function assertProducerIdentity(value, label, historicalBaseline) {
   );
   for (const key of ["dexExitRoutes", "redemptionExitRoutes", "documentedTermsExitRoutes"]) {
     requireNonnegativeInteger(freshness[key], `${label} producer freshness ${key}`);
+  }
+  if (includesReviewedTransfers) {
+    if (freshness.accessReviews !== 31_536_000) {
+      throw new Error(`${label} producer access freshness must be 31536000 seconds`);
+    }
   }
   for (const key of ["liveReserves", "chainSupply", "peg", "researchOverlays"]) {
     requireNonnegativeInteger(freshness[key], `${label} producer freshness ${key}`, true);
@@ -491,11 +526,11 @@ function assertReplay(replay, label) {
   }
   const pipeline = replay.pipeline;
   const candidateIdentity = assertCandidateIdentity(pipeline.candidateIdentity, label);
-  const { identity: compilerIdentity, historicalBaseline } = assertCompilerIdentity(
+  const { identity: compilerIdentity, productionProfile } = assertCompilerIdentity(
     pipeline.compilerFactSchemaIdentity,
     label,
   );
-  const producer = assertProducerIdentity(pipeline.producerCapabilityIdentity, label, historicalBaseline);
+  const producer = assertProducerIdentity(pipeline.producerCapabilityIdentity, label, productionProfile);
   const computedBaseId = computeCalibrationBaseInputGenerationId(pipeline.fixedInput);
   if (fixedBaseId !== computedBaseId || pipeline.compiledFacts.baseInputGenerationId !== computedBaseId) {
     throw new Error(`${label} fixed-input generation does not match its score-bearing payload`);
@@ -548,6 +583,9 @@ function assertReplay(replay, label) {
     dexExitRoutes: pipeline.extension?.routeFreshness?.dexMaxAgeSec,
     redemptionExitRoutes: pipeline.extension?.routeFreshness?.redemptionMaxAgeSec,
     documentedTermsExitRoutes: pipeline.extension?.routeFreshness?.documentedTermsMaxAgeSec,
+    ...(productionProfile === "transfer-fact" || productionProfile === "shock-coverage"
+      ? { accessReviews: 31_536_000 }
+      : {}),
     liveReserves: pipeline.extension?.sources?.liveReserves?.maxAgeSec,
     chainSupply: pipeline.extension?.sources?.chainSupply?.maxAgeSec,
     peg: pipeline.extension?.sources?.peg?.maxAgeSec,
@@ -640,9 +678,7 @@ function reproduceCandidateReplay(replay, label) {
         outputPath,
         "--published-at",
         String(publishedAtSec),
-        ...(replayInput.releaseCandidateId
-          ? ["--release-candidate-id", replayInput.releaseCandidateId]
-          : []),
+        ...(replayInput.releaseCandidateId ? ["--release-candidate-id", replayInput.releaseCandidateId] : []),
       ];
       execFileSync(process.execPath, args, {
         cwd: REPO_ROOT,

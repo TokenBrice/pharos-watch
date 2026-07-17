@@ -746,18 +746,29 @@
       },
       {
         "id": "gnosis:0xddafbb505ad214d7b80b1f830fccc89b60fb7a83",
+        "sourceChain": "ethereum",
         "destinationChain": "gnosis",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xddafbb505ad214d7b80b1f830fccc89b60fb7a83",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Gnosis OmniBridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-17",
+        "sources": [
+          {
+            "label": "Gnosis OmniBridge documentation",
+            "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/omnibridge"
+          },
+          {
+            "label": "Bridged USDC (USDC.e) token on Gnosisscan",
+            "url": "https://gnosisscan.io/address/0xddafbb505ad214d7b80b1f830fccc89b60fb7a83"
+          }
+        ]
       },
       {
         "id": "solana:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
@@ -823,16 +834,26 @@
         "id": "tron:TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8",
         "destinationChain": "tron",
         "contractAddress": "TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC (discontinued on TRON)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Circle discontinued USDC on TRON effective 2024-02-21: minting ceased immediately and Circle-supported redemption wound down through February 2025. Remaining supply is legacy Circle-issued TRC20 USDC with no active issuer mint/redemption channel; the deployment itself is Circle's official contract, not a bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-17",
+        "sources": [
+          {
+            "label": "FXStreet report on Circle's 2024-02-21 TRON discontinuation announcement",
+            "url": "https://www.fxstreet.com/cryptocurrencies/news/usdc-stablecoin-issuer-circle-ends-support-on-tron-due-to-compliance-risk-management-issues-202402211117"
+          },
+          {
+            "label": "USDC-TRC20 contract on TronScan",
+            "url": "https://tronscan.org/#/token20/TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8"
+          }
+        ]
       },
       {
         "id": "zksync:0x1d17cbcf0d6d143135ae902365d2e5e2a16538d4",
@@ -1193,16 +1214,25 @@
         "id": "cronos:0x3d7f2c478aafdb65542bcb44bceec05849999d2d",
         "destinationChain": "cronos",
         "contractAddress": "0x3d7f2c478aafdb65542bcb44bceec05849999d2d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-17",
+        "sources": [
+          {
+            "label": "Circle USDC mainnet contract addresses",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          },
+          {
+            "label": "USDC token on Cronos explorer",
+            "url": "https://explorer.cronos.org/token/0x3D7F2C478aAfdB65542BCB44bCeeC05849999d2D"
+          }
+        ]
       },
       {
         "id": "noble:uusdc",
@@ -1276,18 +1306,29 @@
       },
       {
         "id": "osmosis:ibc/498A0751C798A0D9A389AA3691123DADA57DAA4FE165D5C75894505B876BA6E4",
+        "sourceChain": "noble",
         "destinationChain": "osmosis",
+        "canonicalChain": "noble",
         "contractAddress": "ibc/498A0751C798A0D9A389AA3691123DADA57DAA4FE165D5C75894505B876BA6E4",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Noble USDC via IBC",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-17",
+        "sources": [
+          {
+            "label": "Cosmos chain-registry Osmosis assetlist (USDC = Noble uusdc via IBC channel-750)",
+            "url": "https://github.com/cosmos/chain-registry/blob/master/osmosis/assetlist.json"
+          },
+          {
+            "label": "Circle USDC mainnet contract addresses (Noble native issuance)",
+            "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
       },
       {
         "id": "etherlink:0x796ea11fa2dd751ed01b53c372ffdb4aaa8f00f9",

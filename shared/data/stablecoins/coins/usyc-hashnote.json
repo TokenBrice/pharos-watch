@@ -719,26 +719,48 @@
       },
       {
         "name": "Marex",
-        "role": "prime-broker"
+        "role": "prime-broker",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Customers Bank",
+        "role": "bank",
+        "jurisdiction": "United States"
       }
     ],
-    "segregation": "unknown",
+    "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-17",
+    "reviewer": "Kimi FIAT-CTRL shard-19 evidence pass",
     "confidence": "probable",
     "sources": [
+      {
+        "label": "USYC introduction — segregated custodial accounts at prime broker",
+        "url": "https://usyc.docs.hashnote.com/"
+      },
+      {
+        "label": "USYC service providers — Marex, Customers Bank, Cohen and Company, NAV Consulting",
+        "url": "https://usyc.docs.hashnote.com/overview/service-providers"
+      },
       {
         "label": "Circle USYC product disclosure",
         "url": "https://www.circle.com/usyc"
       },
       {
-        "label": "Hashnote USYC Arbitrum STEP application",
+        "label": "Hashnote USYC Arbitrum STEP application (2024-05-02)",
         "url": "https://forum.arbitrum.foundation/t/hashnote-usyc-step-application/23587"
       }
     ],
-    "uncertainty": "The issuer's 2024 application identifies BNY Mellon custody through Marex and describes the Cayman fund as bankruptcy-remote, but current public Circle materials do not restate provider shares, account segregation, or rehypothecation terms."
+    "uncertainty": "Current issuer documentation (accessed 2026-07-17) states fund assets are protected through segregated custodial accounts at the prime broker and names Marex as prime broker and Customers Bank as bank. BNY Mellon's custodian role is documented in the 2024-05-02 STEP application — which also states substantially all fund assets sit in the Marex prime-brokerage account, a single-prime-broker concentration — and is not restated in current Circle docs. Provider shares and rehypothecation terms remain undisclosed."
+  },
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://usyc.docs.hashnote.com/overview/service-providers",
+    "provider": "Cohen and Company",
+    "attestorTier": "niche",
+    "cadence": "annual",
+    "attestorJurisdiction": "Cayman Islands"
   },
   "liveReservesConfig": {
     "adapter": "chainlink-nav",

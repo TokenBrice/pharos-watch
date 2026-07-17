@@ -1,4 +1,4 @@
-import { decodeFunctionData, decodeFunctionResult, encodeFunctionData, parseAbi } from "viem/utils";
+import { decodeFunctionData, decodeFunctionResult, encodeFunctionData, keccak256, parseAbi } from "viem/utils";
 
 import {
   DEX_MEASURED_MAX_COST_BPS,
@@ -9,13 +9,21 @@ import {
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { throwIfAborted } from "../../lib/abort";
 import {
+  fetchEvmCallHexAtBlock,
+  fetchEvmCodeAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock,
   type EvmMulticall3Call,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
-import type { DexMeasuredExecutionAdapter, DexMeasuredRawQuotePoint } from "./profiles";
+import type { DexMeasuredExecutionAdapter, DexMeasuredExecutionRpcBudget, DexMeasuredRawQuotePoint } from "./profiles";
 
 const CURVE_CRYPTOSWAP_ABI = parseAbi(["function get_dy(uint256 i,uint256 j,uint256 dx) view returns (uint256)"]);
+const CURVE_CRYPTOSWAP_DEPENDENCY_ABI = parseAbi([
+  "function factory() view returns (address)",
+  "function MATH() view returns (address)",
+  "function is_killed() view returns (bool)",
+  "function views_implementation() view returns (address)",
+]);
 const CURVE_MULTICALL_BATCH_SIZE = 8;
 const CURVE_MULTICALL_GAS = "0x1c9c380";
 const EVM_ADDRESS_PATTERN = /^0x[0-9a-f]{40}$/;
@@ -29,8 +37,8 @@ export interface CurveCryptoSwapPoolPolicy {
   chain: "ethereum" | "arbitrum" | "base" | "polygon";
   poolAddress: `0x${string}`;
   generation: CurveCryptoSwapGeneration;
-  mode: "shadow";
-  scoreEligible: false;
+  mode: "shadow" | "active";
+  scoreEligible: boolean;
   expectedPoolCodeHash?: `0x${string}`;
   expectedFactoryAddress?: `0x${string}`;
   expectedFactoryCodeHash?: `0x${string}`;
@@ -38,7 +46,35 @@ export interface CurveCryptoSwapPoolPolicy {
   expectedViewsCodeHash?: `0x${string}`;
   expectedMathAddress?: `0x${string}`;
   expectedMathCodeHash?: `0x${string}`;
-  transferSemanticsReviewed: false;
+  transferSemanticsReviewed: boolean;
+}
+
+const ETHEREUM_TWOCRYPTO_FACTORY = "0x98ee851a00abee0d95d08cf4ca2bdce32aeaaf7f";
+const ETHEREUM_TWOCRYPTO_FACTORY_CODE_HASH = "0xbb7ab663bc3ea17b6e97e4fa41bc7b5912b49e8835cce4d9643b86ac5b29b986";
+const ETHEREUM_TWOCRYPTO_VIEWS = "0x07cdebf81977e111b08c126defa07818d0045b80";
+const ETHEREUM_TWOCRYPTO_VIEWS_CODE_HASH = "0x150bdfd73c90c22774ddcbf6672214afc6e2587afa27fb145576138382de7d9c";
+
+function activeEthereumTwocryptoPolicy(
+  poolAddress: `0x${string}`,
+  expectedPoolCodeHash: `0x${string}`,
+  expectedMathAddress: `0x${string}`,
+  expectedMathCodeHash: `0x${string}`,
+): CurveCryptoSwapPoolPolicy {
+  return {
+    chain: "ethereum",
+    poolAddress,
+    generation: "twocrypto-ng",
+    mode: "active",
+    scoreEligible: true,
+    expectedPoolCodeHash,
+    expectedFactoryAddress: ETHEREUM_TWOCRYPTO_FACTORY,
+    expectedFactoryCodeHash: ETHEREUM_TWOCRYPTO_FACTORY_CODE_HASH,
+    expectedViewsAddress: ETHEREUM_TWOCRYPTO_VIEWS,
+    expectedViewsCodeHash: ETHEREUM_TWOCRYPTO_VIEWS_CODE_HASH,
+    expectedMathAddress,
+    expectedMathCodeHash,
+    transferSemanticsReviewed: true,
+  };
 }
 
 function shadowPolicy(
@@ -56,11 +92,38 @@ function shadowPolicy(
   };
 }
 
-/**
- * Fixed P7 retained cohort. Runtime and dependency hashes are intentionally
- * absent until the complete 25-pool census and transfer-semantics review land.
- */
+/** Fixed reviewed cohort: eight active Ethereum TwoCrypto pools plus shadow-only candidates. */
 export const CURVE_CRYPTOSWAP_SHADOW_COHORT: readonly CurveCryptoSwapPoolPolicy[] = [
+  activeEthereumTwocryptoPolicy(
+    "0x862cb4e988fb66e72f128d1183829f8c05b6c6a0",
+    "0xd19e3a232367411c825df98165c95898c08e181fe2e0f9211445f48eb4c0dc62",
+    "0xbfddf58cb6ef84e115ff47c10e49a80b2653ea13",
+    "0x8d9625bc2747c3d3471e2cd9dd3a3dd3855271b6a4c711b6b7c2e576163211f2",
+  ),
+  activeEthereumTwocryptoPolicy(
+    "0x313698667d7fdd6789a9bc70821309ff891e729a",
+    "0xe4ac67017f888827e6efe22cd8edc37bf562166368f6eb62837bff2e4a4a23e8",
+    "0xbfddf58cb6ef84e115ff47c10e49a80b2653ea13",
+    "0x8d9625bc2747c3d3471e2cd9dd3a3dd3855271b6a4c711b6b7c2e576163211f2",
+  ),
+  activeEthereumTwocryptoPolicy(
+    "0x6e5492f8ea2370844ee098a56dd88e1717e4a9c2",
+    "0x21cdea51fbfdc55ec46c00742aa4518bb8bed7716052d59a5c878829b7ed8183",
+    "0x79839c2d74531a8222c0f555865aac1834e82e51",
+    "0xe97fd5e910f41e3c85fd62c320b19b05e505422366e8c2cad63af015338b38d7",
+  ),
+  activeEthereumTwocryptoPolicy(
+    "0x4f52c3a81e33521e5a9a47fd9d3be475d2279c2e",
+    "0xaefafc4c0157bc496db238fc46d730a140174f3fb542527bb86443974ed4f7a6",
+    "0xbfddf58cb6ef84e115ff47c10e49a80b2653ea13",
+    "0x8d9625bc2747c3d3471e2cd9dd3a3dd3855271b6a4c711b6b7c2e576163211f2",
+  ),
+  activeEthereumTwocryptoPolicy(
+    "0x656341ef90b622c6634e0573772ffb7f3669b9f3",
+    "0x116eeee684882885cda3ddf0287d0979f71d64030fbec90f1f52924cf0e7643a",
+    "0xbfddf58cb6ef84e115ff47c10e49a80b2653ea13",
+    "0x8d9625bc2747c3d3471e2cd9dd3a3dd3855271b6a4c711b6b7c2e576163211f2",
+  ),
   shadowPolicy("ethereum", "0xe79fb88c7937b39b3e1cabd44faefa5258578b2d", "twocrypto-ng"),
   shadowPolicy("ethereum", "0x384ca8992f955009bdd94849488e580559590157", "twocrypto-ng"),
   shadowPolicy("ethereum", "0x4fdccb810f22578ad6700fc10a8c9b6c1df61852", "twocrypto-ng"),
@@ -68,9 +131,24 @@ export const CURVE_CRYPTOSWAP_SHADOW_COHORT: readonly CurveCryptoSwapPoolPolicy[
   shadowPolicy("ethereum", "0x592878b920101946fb5915ab97961bc546f211cc", "twocrypto-ng"),
   shadowPolicy("ethereum", "0x06ac09ca29369e2483533eb68dfe0a4d4143543d", "tricrypto-ng"),
   shadowPolicy("ethereum", "0x4ebdf703948ddcea3b11f675b4d1fba9d2414a14", "tricrypto-ng"),
-  shadowPolicy("ethereum", "0xf1f435b05d255a5dbde37333c0f61da6f69c6127", "twocrypto-ng"),
-  shadowPolicy("ethereum", "0x83f24023d15d835a213df24fd309c47dab5beb32", "twocrypto-ng"),
-  shadowPolicy("ethereum", "0xd9ff8396554a0d18b2cfbec53e1979b7ecce8373", "twocrypto-ng"),
+  activeEthereumTwocryptoPolicy(
+    "0xf1f435b05d255a5dbde37333c0f61da6f69c6127",
+    "0xd0b9195b91086bd9cafaa5e1ab8a6eab1a0d473fadb6c1a3ca69e31f687100e9",
+    "0x79839c2d74531a8222c0f555865aac1834e82e51",
+    "0xe97fd5e910f41e3c85fd62c320b19b05e505422366e8c2cad63af015338b38d7",
+  ),
+  activeEthereumTwocryptoPolicy(
+    "0x83f24023d15d835a213df24fd309c47dab5beb32",
+    "0xb00ba7467a75fffe15d018cc822a09b282a285f4012f857b19966046b3191b3a",
+    "0x79839c2d74531a8222c0f555865aac1834e82e51",
+    "0xe97fd5e910f41e3c85fd62c320b19b05e505422366e8c2cad63af015338b38d7",
+  ),
+  activeEthereumTwocryptoPolicy(
+    "0xd9ff8396554a0d18b2cfbec53e1979b7ecce8373",
+    "0x1578c5a836891e466a1fa5879bc7f0e36bfd9fc625586765541191d8cd3880ae",
+    "0x79839c2d74531a8222c0f555865aac1834e82e51",
+    "0xe97fd5e910f41e3c85fd62c320b19b05e505422366e8c2cad63af015338b38d7",
+  ),
   shadowPolicy("ethereum", "0xec977f46467a3021785cff88894886e617abd65b", "twocrypto-ng"),
   shadowPolicy("ethereum", "0x66da369fc5dbba0774da70546bd20f2b242cd34d", "special-tridbr"),
   shadowPolicy("ethereum", "0x98a7f18d4e56cfe84e3d081b40001b3d5bd3eb8b", "legacy-cryptoswap"),
@@ -203,6 +281,89 @@ export function evaluateCurveCryptoSwapEligibility(input: {
   return { ok: true };
 }
 
+export type CurveCryptoSwapDeploymentVerification =
+  | { ok: true; codeHash: `0x${string}`; runtimeEvidence: CurveCryptoSwapRuntimeEvidence }
+  | { ok: false; reason: CurveCryptoSwapEligibilityFailure };
+
+export async function verifyCurveCryptoSwapDeployment(input: {
+  policy: CurveCryptoSwapPoolPolicy;
+  blockNumber: number;
+  chainRpcs: Map<string, ChainRpcConfig>;
+  signal?: AbortSignal;
+  rpcBudget?: DexMeasuredExecutionRpcBudget;
+}): Promise<CurveCryptoSwapDeploymentVerification> {
+  const { policy, rpcBudget } = input;
+  const requestOptions = {
+    chainRpcs: input.chainRpcs,
+    signal: input.signal,
+    timeoutMs: 15_000,
+    ...(rpcBudget ? { deadlineMs: rpcBudget.deadlineMs } : {}),
+    ...(rpcBudget ? { beforeRequest: () => rpcBudget.tryConsume() } : {}),
+    maxRetries: 0,
+  };
+  const readCodeHash = async (address: `0x${string}`): Promise<`0x${string}` | null> => {
+    if (rpcBudget && !rpcBudget.canRequestChain(policy.chain)) return null;
+    const code = await fetchEvmCodeAtBlock(policy.chain, address, input.blockNumber, requestOptions);
+    rpcBudget?.recordChainResult(policy.chain, code != null);
+    return code == null ? null : (keccak256(code).toLowerCase() as `0x${string}`);
+  };
+  const readAddress = async (address: `0x${string}`, functionName: "factory" | "MATH" | "views_implementation") => {
+    if (rpcBudget && !rpcBudget.canRequestChain(policy.chain)) return null;
+    const raw = await fetchEvmCallHexAtBlock(
+      policy.chain,
+      address,
+      encodeFunctionData({ abi: CURVE_CRYPTOSWAP_DEPENDENCY_ABI, functionName }),
+      input.blockNumber,
+      requestOptions,
+    );
+    rpcBudget?.recordChainResult(policy.chain, raw != null);
+    if (raw == null) return null;
+    try {
+      return canonicalAddress(decodeFunctionResult({ abi: CURVE_CRYPTOSWAP_DEPENDENCY_ABI, functionName, data: raw }));
+    } catch {
+      return null;
+    }
+  };
+
+  const poolCodeHash = await readCodeHash(policy.poolAddress);
+  if (poolCodeHash == null) return { ok: false, reason: "runtime-code-unavailable" };
+  const factoryAddress = await readAddress(policy.poolAddress, "factory");
+  const mathAddress = await readAddress(policy.poolAddress, "MATH");
+  if (factoryAddress == null || mathAddress == null) return { ok: false, reason: "dependency-code-unavailable" };
+  const viewsAddress = await readAddress(factoryAddress, "views_implementation");
+  if (viewsAddress == null) return { ok: false, reason: "dependency-code-unavailable" };
+  const factoryCodeHash = await readCodeHash(factoryAddress);
+  const viewsCodeHash = await readCodeHash(viewsAddress);
+  const mathCodeHash = await readCodeHash(mathAddress);
+
+  const killedRaw = await fetchEvmCallHexAtBlock(
+    policy.chain,
+    policy.poolAddress,
+    encodeFunctionData({ abi: CURVE_CRYPTOSWAP_DEPENDENCY_ABI, functionName: "is_killed" }),
+    input.blockNumber,
+    requestOptions,
+  );
+  const runtimeEvidence: CurveCryptoSwapRuntimeEvidence = {
+    apiIsBroken: false,
+    poolCodeHash,
+    factoryAddress,
+    ...(factoryCodeHash ? { factoryCodeHash } : {}),
+    viewsAddress,
+    ...(viewsCodeHash ? { viewsCodeHash } : {}),
+    mathAddress,
+    ...(mathCodeHash ? { mathCodeHash } : {}),
+    ngKillMethodUnavailable: killedRaw == null,
+    transferSemanticsReviewed: policy.transferSemanticsReviewed,
+  };
+  const eligibility = evaluateCurveCryptoSwapEligibility({
+    chain: policy.chain,
+    endpointAddress: policy.poolAddress,
+    policy,
+    evidence: runtimeEvidence,
+  });
+  return eligibility.ok ? { ok: true, codeHash: poolCodeHash, runtimeEvidence } : eligibility;
+}
+
 export type CurveCryptoSwapQuoteFailure =
   | "unsupported-chain-or-pool"
   | "invalid-pinned-block"
@@ -251,6 +412,7 @@ interface CurveCryptoSwapQuoteDependencies {
     blockNumber: number;
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
+    rpcBudget?: DexMeasuredExecutionRpcBudget;
   }): Promise<EvmMulticall3Result[] | null>;
 }
 
@@ -502,8 +664,11 @@ export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveCryptoSwap
     blockNumber: number;
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
+    rpcBudget?: DexMeasuredExecutionRpcBudget;
   }): Promise<EvmMulticall3Result[]> {
+    if (input.rpcBudget && !input.rpcBudget.canRequestChain(input.chain)) return [];
     const result = await dependencies.executeMulticall(input);
+    input.rpcBudget?.recordChainResult(input.chain, result != null);
     if (result != null) return result;
     if (input.calls.length === 1) {
       return [{ label: input.calls[0]!.label, success: false, returnData: "0x" }];
@@ -518,6 +683,7 @@ export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveCryptoSwap
     requests: readonly CurveCryptoSwapRequest[];
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
+    rpcBudget?: DexMeasuredExecutionRpcBudget;
   }): Promise<CurveCryptoSwapBatchOutcome[]> {
     const prepared = input.requests.map(prepareRequest);
     const outcomes: CurveCryptoSwapBatchOutcome[] = input.requests.map((request, index) => ({
@@ -560,6 +726,7 @@ export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveCryptoSwap
             blockNumber: chunk[0]!.blockNumber,
             chainRpcs: input.chainRpcs,
             signal: input.signal,
+            rpcBudget: input.rpcBudget,
           });
           const byLabel = new Map(results.map((result) => [result.label, result]));
           for (const request of chunk) {
@@ -590,6 +757,8 @@ export const quoteCurveCryptoSwapRequests = createCurveCryptoSwapQuoteExecutor({
       signal: input.signal,
       timeoutMs: 30_000,
       maxRetries: 1,
+      ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
+      ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),
       gas: CURVE_MULTICALL_GAS,
       multicallBatchSize: Math.min(CURVE_MULTICALL_BATCH_SIZE, input.calls.length),
     }),

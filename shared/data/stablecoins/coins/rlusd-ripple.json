@@ -365,18 +365,27 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "NYDFS-approved U.S. depository institutions and asset custodians (not publicly identified)",
+        "name": "The Bank of New York Mellon Corporation (BNY) - primary reserve custodian",
         "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Additional NYDFS-approved U.S. depository institutions and asset custodians (not publicly identified)",
+        "role": "bank",
         "jurisdiction": "United States"
       }
     ],
     "segregation": "segregated",
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-17",
+    "reviewer": "Kimi V9 FIAT-CTRL curation",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Ripple press release: Ripple Selects BNY to Custody Ripple USD Reserves (2025-07-09)",
+        "url": "https://ripple.com/ripple-press/ripple-selects-bny-to-custody-ripple-usd-reserves/"
+      },
       {
         "label": "Deloitte RLUSD Reserves Report - May 2026",
         "url": "https://cdn.sanity.io/files/ior4a5y3/production/00bb3899f244c392ab77e55e65dee33cf271dfce.pdf/RLUSD_Attestation_Report_-_May_2026_Final.pdf"
@@ -386,7 +395,7 @@
         "url": "https://ripple.com/legal/stablecoin/"
       }
     ],
-    "uncertainty": "The report and terms confirm segregated reserve accounts held with NYDFS-approved U.S. depositories or custodians, but do not identify providers or establish statutory bankruptcy remoteness and rehypothecation treatment."
+    "uncertainty": "Ripple's July 9, 2025 press release names BNY as the primary RLUSD reserve custodian, and the Deloitte report plus stablecoin terms confirm segregated reserve accounts held with NYDFS-approved U.S. depositories or custodians. Custody allocation shares, the identities of any additional depository institutions, statutory bankruptcy remoteness, and reserve-wide rehypothecation treatment remain undisclosed."
   },
   "liveReservesConfig": {
     "adapter": "ripple-transparency",

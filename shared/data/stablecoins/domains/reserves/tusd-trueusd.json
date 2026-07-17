@@ -50,21 +50,22 @@
         "jurisdiction": "Hong Kong"
       },
       {
-        "name": "Undisclosed depository institutions",
+        "name": "Undisclosed Bahamian depository institutions",
         "role": "bank",
-        "sharePct": 0.02
+        "sharePct": 0.02,
+        "jurisdiction": "Bahamas"
       }
     ],
     "segregation": "segregated",
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "permitted",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-16",
+    "reviewer": "Kimi FIAT-CTRL shard-09 control-evidence review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Moore CPA TUSD Consolidated Reserves Report - July 14, 2026",
-        "url": "https://widget.verinumus.io/api/v1/tusd/report?tokens=%5BTrueUSD%5D"
+        "label": "Moore CPA Independent Assurance Report on the TUSD Consolidated Reserves Report - July 16, 2026",
+        "url": "https://widget.verinumus.io/api/v1/tusd/report"
       }
     ],
     "uncertainty": "The report describes collateral accounts held for TUSD holders and identifies First Digital Trust, but it does not name every depository institution or establish statutory bankruptcy remoteness. It states that substantially all collateral was invested for yield and records ongoing litigation over access to the First Digital position."

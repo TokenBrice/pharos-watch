@@ -634,6 +634,8 @@ const V9FormulaPolicySchema = z
       .strict(),
     compensabilityHeadroom: ScoreSchema,
     pegExponent: z.number().finite().min(0).max(1),
+    pegHistoryWindowSec: z.number().int().positive(),
+    pegQuietHistoryFloor: ScoreSchema,
     activeDepegCaps: z
       .array(
         z
@@ -775,6 +777,7 @@ const V9BackingPolicySchema = z
             maturity: z.number().finite().min(0).max(1),
           })
           .strict(),
+        issuerAttestedConfidenceMultiplier: z.number().finite().positive().max(1),
         concentrationWeight: z.number().finite().min(0).max(1),
         concentrationBands: z
           .array(z.object({ minShareInclusive: z.number().finite().min(0).max(1), score: ScoreSchema }).strict())
@@ -804,7 +807,15 @@ const V9BackingPolicySchema = z
         cdp: z
           .object({
             minimumCollateralizationRatio: z.number().finite().nonnegative(),
+            instantaneousCollateralShock: z.number().finite().positive().max(1),
             minimumLiquidationCapacityRatio: z.number().finite().nonnegative(),
+            stressMeasurementFreshness: z
+              .object({
+                maxAgeSec: z.number().int().positive(),
+                ratification: z.literal("owner-ratified"),
+                rationale: z.string().trim().min(1),
+              })
+              .strict(),
             collateralizationSignal: V9BackingSignalRuleSchema,
             liquidationSignal: V9BackingSignalRuleSchema,
           })
@@ -846,6 +857,12 @@ const V9ControlPolicySchema = z
         "unbounded-reconciled": ScoreSchema,
         "unbounded-or-compromised": ScoreSchema,
         unknown: ScoreSchema,
+      })
+      .strict(),
+    mintPostureGrading: z
+      .object({
+        prudentialReconciled: ScoreSchema,
+        attestationOnlyReconciled: ScoreSchema,
       })
       .strict(),
     oracleTierQuality: z

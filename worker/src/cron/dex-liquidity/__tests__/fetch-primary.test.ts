@@ -67,9 +67,7 @@ const FAKE_DL_POOLS = Array.from({ length: 1001 }, (_, i) => ({
 
 const PRIMARY_POOL_LOOKUPS = {
   chainAddressToId: new Map<string, string>(),
-  symbolToChainScopedIds: new Map([
-    ["USDC", new Map([["ethereum", ["usdc-circle"]]])],
-  ]),
+  symbolToChainScopedIds: new Map([["USDC", new Map([["ethereum", ["usdc-circle"]]])]]),
 };
 
 function mockDlYieldsSuccess() {
@@ -120,9 +118,9 @@ describe("fetchDataSources", () => {
     const result = await fetchDataSources(null, createMockDb(), PRIMARY_POOL_LOOKUPS);
     expect(result).not.toBeNull();
     // Curve calls should not have been made
-    const curveCalls = vi.mocked(fetchJsonWithRetry).mock.calls.filter(
-      (call) => String(call[0]).includes("api.curve.finance"),
-    );
+    const curveCalls = vi
+      .mocked(fetchJsonWithRetry)
+      .mock.calls.filter((call) => String(call[0]).includes("api.curve.finance"));
     expect(curveCalls).toHaveLength(0);
   });
 
@@ -130,11 +128,7 @@ describe("fetchDataSources", () => {
     mockDlYieldsSuccess();
     const result = await fetchDataSources(null, createMockDb(), PRIMARY_POOL_LOOKUPS);
     expect(result).not.toBeNull();
-    expect(vi.mocked(recordOutcome)).toHaveBeenCalledWith(
-      expect.anything(),
-      "curve-liquidity-api",
-      true,
-    );
+    expect(vi.mocked(recordOutcome)).toHaveBeenCalledWith(expect.anything(), "curve-liquidity-api", true);
   });
 
   it("records failure when all Curve chains fail", async () => {
@@ -163,11 +157,7 @@ describe("fetchDataSources", () => {
 
     const result = await fetchDataSources(null, createMockDb(), PRIMARY_POOL_LOOKUPS);
     expect(result).not.toBeNull(); // DL is still up
-    expect(vi.mocked(recordOutcome)).toHaveBeenCalledWith(
-      expect.anything(),
-      "curve-liquidity-api",
-      false,
-    );
+    expect(vi.mocked(recordOutcome)).toHaveBeenCalledWith(expect.anything(), "curve-liquidity-api", false);
   });
 
   it("returns DL-only data when Curve fails", async () => {
@@ -320,11 +310,7 @@ describe("fetchDataSources", () => {
       rawPoolCount: 0,
       dlYieldsAvailable: false,
     });
-    expect(vi.mocked(recordOutcome)).toHaveBeenCalledWith(
-      expect.anything(),
-      CIRCUIT_SOURCE.DL_YIELDS,
-      false,
-    );
+    expect(vi.mocked(recordOutcome)).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.DL_YIELDS, false);
   });
 });
 
@@ -425,7 +411,7 @@ describe("buildCurveLookups", () => {
   it("indexes pools by coin-set fingerprint and fails closed on duplicates", async () => {
     const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
     const USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7";
-    const makeApiPool = (address: string, coins: Array<{ symbol: string; address: string }>) => ({
+    const makeApiPool = (address: string, coins: Array<{ symbol: string; address: string }>, usdTotal = 200_000) => ({
       address,
       name: coins.map((coin) => coin.symbol).join("/"),
       amplificationCoefficient: "1000",
@@ -435,7 +421,7 @@ describe("buildCurveLookups", () => {
         usdPrice: 1,
         decimals: "6",
       })),
-      usdTotal: 200_000,
+      usdTotal,
       isMetaPool: false,
       assetTypeName: "USD",
       totalSupply: 0,
@@ -465,6 +451,15 @@ describe("buildCurveLookups", () => {
               { symbol: "USDC", address: USDC },
               { symbol: "USDT", address: USDT },
             ]),
+            // Dust duplicates do not poison the retained pool's address-grade join.
+            makeApiPool(
+              "0x4444444444444444444444444444444444444444",
+              [
+                { symbol: "USDC", address: USDC },
+                { symbol: "FRAX", address: "0x853d955acef822db058eb8505911ed77f175b99e" },
+              ],
+              40,
+            ),
           ],
         },
       },
@@ -481,5 +476,6 @@ describe("buildCurveLookups", () => {
     // Address keys stay intact for all three pools.
     expect(curvePoolMap.has("ethereum:0x1111111111111111111111111111111111111111")).toBe(true);
     expect(curvePoolMap.has("ethereum:0x3333333333333333333333333333333333333333")).toBe(true);
+    expect(curvePoolMap.has("ethereum:0x4444444444444444444444444444444444444444")).toBe(true);
   });
 });

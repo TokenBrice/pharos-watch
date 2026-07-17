@@ -367,7 +367,14 @@ describe("fetchCrvUsdReserves", () => {
     );
   });
 
-  it("rejects aggregate LLAMMA band multicalls above the adapter cap before dispatch", async () => {
+  it("streams aggregate LLAMMA band reads above the former global cap per market", async () => {
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([[BTC_ASSET, 100]]));
+    vi.mocked(fetchOnchainMulticall3).mockImplementation(async (options) => {
+      if (isLlammaBandMulticall(options)) {
+        return mockLlammaBandMulticall(options, 1n * 10n ** 18n, 0n);
+      }
+      return mockMulticallFromEvmCalls(options);
+    });
     vi.mocked(fetchEvmCallHexAtBlock).mockImplementation(async (_chain, address, data) => {
       const normalizedAddress = address.toLowerCase();
       const callData = data as `0x${string}`;
@@ -432,13 +439,14 @@ describe("fetchCrvUsdReserves", () => {
       },
     };
 
-    await expect(fetchCrvUsdReserves({} as never, config, signal)).rejects.toThrow(
-      "crvUSD LLAMMA band multicall exceeds operational cap: 9006 > 8192",
-    );
-    expect(fetchDefiLlamaPrices).not.toHaveBeenCalled();
-    expect(vi.mocked(fetchOnchainMulticall3).mock.calls.some(([options]) => isLlammaBandMulticall(options))).toBe(
-      false,
-    );
+    const result = await fetchCrvUsdReserves({} as never, config, signal);
+    const bandCalls = vi
+      .mocked(fetchOnchainMulticall3)
+      .mock.calls.filter(([options]) => isLlammaBandMulticall(options));
+
+    expect(result.metadata).toMatchObject({ directMarketCount: 3, directActiveMarketCount: 3 });
+    expect(bandCalls).toHaveLength(3);
+    expect(bandCalls.every(([options]) => options.calls.length === 3002)).toBe(true);
   });
 
   it("drops Yield Basis when its untrusted market count exceeds the adapter cap before scheduling market reads", async () => {
