@@ -169,12 +169,11 @@ export function InstrumentPanel() {
   const follows = useCountUp(data?.coinSubscriptions ?? null);
 
   return (
-    <section id="panel" className="pharos-night-slate scroll-mt-28" aria-labelledby="panel-title">
+    <section id="panel" className="pharos-night-slate scroll-mt-20" aria-labelledby="panel-title">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:py-24 lg:px-5 xl:px-9">
         <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
           <div className="max-w-2xl">
-            <p className="pharos-numeric text-xs text-muted-foreground">02:13 — the bot&rsquo;s own numbers</p>
-            <h2 id="panel-title" className="pharos-display mt-3 text-foreground">
+            <h2 id="panel-title" className="pharos-display text-foreground">
               Live adoption
             </h2>
             <p className="pharos-lead mt-3">

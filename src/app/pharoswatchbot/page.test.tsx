@@ -154,8 +154,6 @@ describe("PharosWatchBotPage", () => {
     expect(screen.getAllByRole("link", { name: /open the bot/i }).length).toBeGreaterThan(0);
     // The hero stays copy-led: the mini-app screenshot lives only in the carousel (mocked here).
     expect(container.querySelector('img[src="/featured/telegram-mini-app/home.jpg"]')).toBeNull();
-    // The section rail is the page's quick-nav.
-    expect(screen.getByLabelText("Page sections")).toBeTruthy();
 
     // Act II — every family lands as a signal with plain-language framing.
     expect(screen.getByRole("heading", { name: "What lands in your chat" })).toBeTruthy();

@@ -7,7 +7,6 @@ import "./night-watch.css";
 import { TELEGRAM_PAGE_DESCRIPTION } from "./telegram-content";
 import { buildTelegramPageJsonLd } from "./telegram-json-ld";
 import { NightWatchHero } from "./night-watch-hero";
-import { NightProgressNav } from "./night-progress-nav";
 import { NightSignalsTimeline } from "./night-signals-timeline";
 import { NightSetupStrip } from "./night-setup-strip";
 import { InstrumentPanel } from "./instrument-panel";
@@ -23,12 +22,12 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 /**
- * One night of alerts, dusk to dawn. The wrapper escapes the shell padding
- * for a full-bleed scene and follows the site theme: dark theme renders the
- * night world, light theme the same scene as day (the page-scoped ladder and
- * scene variables in night-watch.css switch on `.dark`). Acts: hero (22:04) →
- * alert examples (23:47) → setup → live adoption (02:13) → Mini App (05:40)
- * → daily recap (08:05) → reference.
+ * One night of alerts, told as a descent from dusk to dawn. The wrapper
+ * escapes the shell padding for a full-bleed scene and follows the site
+ * theme: dark theme renders the night world, light theme the same scene as
+ * day (the page-scoped ladder and scene variables in night-watch.css switch
+ * on `.dark`). Acts: hero → alert examples → setup → live adoption →
+ * Mini App → daily recap → reference.
  */
 export default function PharosWatchBotPage() {
   return (
@@ -40,7 +39,6 @@ export default function PharosWatchBotPage() {
         ]}
       />
       <NightWatchHero />
-      <NightProgressNav />
       <NightSignalsTimeline />
       <NightSetupStrip />
       <InstrumentPanel />

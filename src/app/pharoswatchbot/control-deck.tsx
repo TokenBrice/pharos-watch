@@ -12,12 +12,11 @@ import { MINI_APP_HOME_DEEP_LINK, MINI_APP_WATCHLIST_DEEP_LINK } from "./telegra
  */
 export function ControlDeck() {
   return (
-    <section id="control" className="pharos-night-deep scroll-mt-28" aria-labelledby="control-title">
+    <section id="control" className="pharos-night-deep scroll-mt-20" aria-labelledby="control-title">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:py-24 lg:px-5 xl:px-9">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)] lg:items-start lg:gap-14">
           <div>
-            <p className="pharos-numeric text-xs text-muted-foreground">05:40 — tuning without commands</p>
-            <h2 id="control-title" className="pharos-display mt-3 text-foreground">
+            <h2 id="control-title" className="pharos-display text-foreground">
               The same alert state, without slash commands
             </h2>
             <p className="pharos-lead mt-3 max-w-2xl">

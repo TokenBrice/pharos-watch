@@ -18,9 +18,9 @@ const FAMILY_ICONS: Record<TelegramAlertType, LucideIcon> = {
 type AlertExample = (typeof TELEGRAM_ALERT_EXAMPLES)[number];
 
 /**
- * One signal arrival on the night timeline: a frost node lights on the spine
- * and the card drifts up into place once the row nears the viewport. The
- * message body is the verbatim, contract-tested text the bot sends.
+ * One signal arrival on the timeline: a frost node lights on the spine and
+ * the card drifts up into place once the row nears the viewport. The message
+ * body is the verbatim, contract-tested text the bot sends.
  */
 function SignalRow({ alert }: { alert: AlertExample }) {
   const { ref, near } = useNearViewport<HTMLLIElement>("160px");
@@ -31,46 +31,41 @@ function SignalRow({ alert }: { alert: AlertExample }) {
       <span aria-hidden="true" className="relative">
         <span className="pharos-signal-node absolute left-1/2 top-1.5 size-3 -translate-x-1/2 rounded-full" />
       </span>
-      <div className="min-w-0">
-        <p className="pharos-numeric text-xs text-muted-foreground">{alert.time} UTC</p>
-        <article className="pharos-signal-card mt-2 rounded-xl border border-border/60 bg-card/70 p-4 sm:p-5">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/60 text-foreground">
-              <Icon className="h-4 w-4" aria-hidden="true" />
-            </span>
-            <h3 className="text-sm font-semibold text-foreground">{alert.label}</h3>
-            <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase text-muted-foreground">
-              {alert.key}
-            </code>
+      <article className="pharos-signal-card min-w-0 rounded-xl border border-border/60 bg-card/70 p-4 sm:p-5">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/60 text-foreground">
+            <Icon className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <h3 className="text-sm font-semibold text-foreground">{alert.label}</h3>
+          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase text-muted-foreground">
+            {alert.key}
+          </code>
+        </div>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">{alert.tagline}</p>
+        <div className="mt-4 rounded-lg border border-border/50 bg-background/70 p-3">
+          <div className="flex items-center gap-2 border-b border-border/40 pb-2">
+            <Image src="/pharos-icon.png" alt="" width={20} height={20} className="rounded-full" />
+            <span className="text-xs font-medium text-foreground">PharosWatchBot</span>
           </div>
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">{alert.tagline}</p>
-          <div className="mt-4 rounded-lg border border-border/50 bg-background/70 p-3">
-            <div className="flex items-center gap-2 border-b border-border/40 pb-2">
-              <Image src="/pharos-icon.png" alt="" width={20} height={20} className="rounded-full" />
-              <span className="text-xs font-medium text-foreground">PharosWatchBot</span>
-              <span className="pharos-numeric ml-auto text-[10px] text-muted-foreground">{alert.time}</span>
-            </div>
-            <p className="mt-2 whitespace-pre-wrap font-mono text-xs leading-relaxed text-foreground/90 [overflow-wrap:anywhere]">
-              {alert.content}
-            </p>
-          </div>
-        </article>
-      </div>
+          <p className="mt-2 whitespace-pre-wrap font-mono text-xs leading-relaxed text-foreground/90 [overflow-wrap:anywhere]">
+            {alert.content}
+          </p>
+        </div>
+      </article>
     </li>
   );
 }
 
 /**
- * Act II — 23:47, what lands in your chat. The six alert families as a
- * timeline of the night; each card arrives as you scroll past its timestamp.
+ * Act II — what lands in your chat. The six alert families as a timeline;
+ * each card arrives as you scroll to it.
  */
 export function NightSignalsTimeline() {
   return (
-    <section id="signals" className="pharos-night-deep scroll-mt-28" aria-labelledby="signals-title">
+    <section id="signals" className="pharos-night-deep scroll-mt-20" aria-labelledby="signals-title">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:py-24 lg:px-5 xl:px-9">
         <div className="max-w-2xl">
-          <p className="pharos-numeric text-xs text-muted-foreground">23:47 — a DEWS alert lands</p>
-          <h2 id="signals-title" className="pharos-display mt-3 text-foreground">
+          <h2 id="signals-title" className="pharos-display text-foreground">
             What lands in your chat
           </h2>
           <p className="pharos-lead mt-3">

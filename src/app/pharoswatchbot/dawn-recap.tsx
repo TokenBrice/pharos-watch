@@ -19,12 +19,11 @@ export function DawnRecap() {
   const secondaryActions = TELEGRAM_ACTIONS.filter((action) => !action.isPrimary);
 
   return (
-    <section id="dawn" className="pharos-night-dawn relative scroll-mt-28 overflow-hidden" aria-labelledby="dawn-title">
+    <section id="dawn" className="pharos-night-dawn relative scroll-mt-20 overflow-hidden" aria-labelledby="dawn-title">
       <div aria-hidden="true" className="pharos-night-dawn-glow absolute inset-x-0 bottom-0 h-[420px]" />
       <div className="relative mx-auto max-w-6xl px-4 py-16 sm:py-24 lg:px-5 xl:px-9">
         <div className="max-w-2xl">
-          <p className="pharos-numeric text-xs text-muted-foreground">08:05 — the daily recap</p>
-          <h2 id="dawn-title" className="pharos-display mt-3 text-foreground">
+          <h2 id="dawn-title" className="pharos-display text-foreground">
             One recap each morning
           </h2>
           <p className="pharos-lead mt-3">
@@ -82,7 +81,7 @@ export function DawnRecap() {
             <div
               key={action.key}
               id={action.key === "digest" ? "channel" : "community"}
-              className="scroll-mt-28 border-t border-border/55 py-4"
+              className="scroll-mt-20 border-t border-border/55 py-4"
             >
               <h3 className="text-sm font-semibold text-foreground">{action.title}</h3>
               <p className="mt-1 font-mono text-xs text-muted-foreground">{action.handle}</p>

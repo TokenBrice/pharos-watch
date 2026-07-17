@@ -126,36 +126,30 @@ export const RECOMMENDED_SETUPS = [
 // the message bodies themselves derive from the shared manifests so the
 // bubbles stay exactly what the bot sends (worker contract test enforced).
 // The taglines are the plain-language read of each family — jargon spelled
-// out, honest caveat included. Times are the Night Watch narrative anchors.
-const ALERT_EXAMPLE_PRESENTATION: Record<TelegramAlertType, { tagline: string; time: string }> = {
+// out, honest caveat included.
+const ALERT_EXAMPLE_PRESENTATION: Record<TelegramAlertType, { tagline: string }> = {
   dews: {
     tagline:
       "DEWS — the Depeg Early Warning System — scores stress before a peg breaks. Fires when a coin crosses into a worse band, with the two highest-stress signals named.",
-    time: "23:47",
   },
   depeg: {
     tagline:
       "Fires when a peg moves past your severity step (100, 250, or 500 basis points), again on each worsening milestone, and when the peg recovers.",
-    time: "00:32",
   },
   safety: {
     tagline:
       "Fires on live safety-grade shifts and names the driver on the Reason line, so you know why, not just what. Methodology re-scores never page you.",
-    time: "01:18",
   },
   launch: {
     tagline: "Fires when a tracked pre-launch stablecoin goes live. Subscribe by ticker — presets don't cover launches.",
-    time: "02:56",
   },
   reserve: {
     tagline:
       "Fires when a live-tracked coin's backing mix newly diverges from its curated profile. Entering drift only, and only on coins with live reserve tracking.",
-    time: "04:21",
   },
   freeze: {
     tagline:
       "Fires when the verified on-chain tape records an issuer blacklist, release, or destroy event. Opt-in, per coin.",
-    time: "05:12",
   },
 };
 
@@ -164,7 +158,6 @@ export const TELEGRAM_ALERT_EXAMPLES = TELEGRAM_ALERT_FAMILIES.map((family) => (
   label: family.label,
   tagline: ALERT_EXAMPLE_PRESENTATION[family.key].tagline,
   content: TELEGRAM_PUBLIC_ALERT_SAMPLES[family.key].message,
-  time: ALERT_EXAMPLE_PRESENTATION[family.key].time,
 }));
 
 export const TELEGRAM_COMMAND_GROUPS = [

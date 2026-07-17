@@ -37,11 +37,10 @@ const ADMIN_ALERT_TTL_LABEL = formatPolicyDuration(TELEGRAM_ALERT_TTL_SEC.adminB
  */
 export function FieldManual() {
   return (
-    <section id="manual" className="pharos-night-dawn scroll-mt-28" aria-labelledby="manual-title">
+    <section id="manual" className="pharos-night-dawn scroll-mt-20" aria-labelledby="manual-title">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:py-24 lg:px-5 xl:px-9">
         <div className="max-w-2xl">
-          <p className="pharos-numeric text-xs text-muted-foreground">Reference — kept in plain sight</p>
-          <h2 id="manual-title" className="pharos-display mt-3 text-foreground">
+          <h2 id="manual-title" className="pharos-display text-foreground">
             Commands, limits, and answers
           </h2>
           <p className="pharos-lead mt-3">

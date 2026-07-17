@@ -34,7 +34,7 @@ const WATCH_ORDERS = [
  */
 export function NightSetupStrip() {
   return (
-    <section id="getting-started" className="pharos-night-deep scroll-mt-28" aria-labelledby="setup-title">
+    <section id="getting-started" className="pharos-night-deep scroll-mt-20" aria-labelledby="setup-title">
       <div className="mx-auto max-w-6xl px-4 pb-16 sm:pb-24 lg:px-5 xl:px-9">
         <div className="rounded-2xl border border-border/60 bg-card/50 p-6 sm:p-8">
           <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">

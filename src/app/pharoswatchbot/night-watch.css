@@ -92,12 +92,6 @@
   background-color: var(--night-dawn);
 }
 
-/* The pinned shift-log bar: the abyss, slightly translucent over scrolling
-   content. */
-.pharos-night-nav {
-  background-color: color-mix(in oklab, var(--night-abyss) 88%, transparent);
-}
-
 /* --------------------------------------------------------------------------
    Act I — the hero scene: a drawn lighthouse over night water.
    The beam is a frost wedge rotating slowly around the lamp; its reflection
@@ -167,23 +161,6 @@
   50% {
     opacity: 0.7;
   }
-}
-
-/* --------------------------------------------------------------------------
-   Progress chrome — the shift log pinned under the global nav. A hairline
-   frost track fills with scroll; the active act's timestamp node stays lit.
-   -------------------------------------------------------------------------- */
-.pharos-night-progress-track {
-  position: relative;
-  height: 2px;
-  background: color-mix(in oklab, var(--foreground) 10%, transparent);
-}
-
-.pharos-night-progress-fill {
-  position: absolute;
-  inset: 0;
-  transform-origin: left center;
-  background: var(--frost-blue);
 }
 
 /* --------------------------------------------------------------------------
