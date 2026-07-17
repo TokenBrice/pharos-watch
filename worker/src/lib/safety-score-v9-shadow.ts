@@ -1070,6 +1070,31 @@ export const SafetyScoreV9ShadowDailySchema = z
   });
 export type SafetyScoreV9ShadowDaily = z.infer<typeof SafetyScoreV9ShadowDailySchema>;
 
+/** Coverage-floor ID proving the day's selected run started inside the preregistered 00:30–01:30 UTC window. */
+export const SAFETY_SCORE_V9_SHADOW_START_LATENCY_FLOOR_ID = "scheduled-start-latency";
+
+function selectedRunStartedInWindow(selectedRun: SafetyScoreV9ShadowSelectedRun): boolean {
+  return selectedRun.coverage.coverageFloors.some(
+    (floor) => floor.id === SAFETY_SCORE_V9_SHADOW_START_LATENCY_FLOOR_ID && floor.status === "pass",
+  );
+}
+
+/**
+ * Latest same-day success time derivable from the compact daily row. A failed
+ * attempt stamps latestError.atSec === updatedAtSec, so any row whose latest
+ * activity was a success has updatedAtSec ahead of its latest error. Pinned
+ * rows keep their in-window selected run while refreshes advance updatedAtSec,
+ * which is exactly the signal the refresh throttle needs.
+ */
+export function safetyScoreV9ShadowLastSuccessfulAttemptAtSec(daily: SafetyScoreV9ShadowDaily): number | null {
+  const parsed = SafetyScoreV9ShadowDailySchema.parse(daily);
+  if (parsed.selectedRun === null) return null;
+  if (parsed.latestError !== null && parsed.latestError.atSec >= parsed.updatedAtSec) {
+    return parsed.selectedRun.selectedAtSec;
+  }
+  return parsed.updatedAtSec;
+}
+
 function selectedRunIdentity(envelope: SafetyScoreV9ShadowEnvelope): SafetyScoreV9ShadowIdentity {
   const candidate = envelope.candidate;
   return SafetyScoreV9ShadowIdentitySchema.parse({
@@ -1116,10 +1141,11 @@ export function buildSafetyScoreV9ShadowDailySuccess(input: {
   artifactKeys?: readonly string[];
 }): SafetyScoreV9ShadowDaily {
   const previous = assertDailyPredecessor(input.previous, input.utcDay, input.updatedAtSec);
-  // Intra-day refreshes re-select: the day's selected run is the LATEST
-  // success, so the compact daily row, the retained latest candidate/diff
-  // rows, and any evidence-day artifacts stay coherent while the candidate
-  // iterates during the day. The gate still counts the day once.
+  // Intra-day refreshes re-select while no in-window run exists: the day's
+  // selected run is the LATEST success, so the compact daily row, the retained
+  // latest candidate/diff rows, and any evidence-day artifacts stay coherent
+  // while the candidate iterates during the day. The gate still counts the day
+  // once. A re-selection older than the current selected run fails closed.
   if (
     previous?.selectedRun !== null &&
     previous?.selectedRun !== undefined &&
@@ -1142,6 +1168,28 @@ export function buildSafetyScoreV9ShadowDailySuccess(input: {
     diff.v9Identity.resultDigest !== identity.resultDigest
   ) {
     throw new Error("Safety Score v9 daily diff identity does not match the selected candidate");
+  }
+  // Start-latency pin: once the day has a selected success whose own
+  // scheduled-start-latency floor passes (the preregistered 00:30-01:30 UTC
+  // start window), that EARLIEST in-window run stays selected for the rest of
+  // the UTC day. Later refreshes still record attempts and advance the daily
+  // metadata, but they must not steal selection, because re-selecting a late
+  // run is what made every day's selected run fail the start-latency floor.
+  if (previous?.selectedRun !== null && previous?.selectedRun !== undefined && selectedRunStartedInWindow(previous.selectedRun)) {
+    if ((input.archiveSelectionReasons?.length ?? 0) > 0 || (input.artifactKeys?.length ?? 0) > 0) {
+      throw new Error("Safety Score v9 archive evidence requires the attempt to become the day's selected run");
+    }
+    return SafetyScoreV9ShadowDailySchema.parse({
+      schemaVersion: SAFETY_SCORE_V9_SHADOW_SCHEMA_VERSION,
+      utcDay: input.utcDay,
+      updatedAtSec: input.updatedAtSec,
+      attemptCounts: {
+        successful: previous.attemptCounts.successful + 1,
+        failed: previous.attemptCounts.failed,
+      },
+      selectedRun: previous.selectedRun,
+      latestError: previous.latestError,
+    });
   }
   return SafetyScoreV9ShadowDailySchema.parse({
     schemaVersion: SAFETY_SCORE_V9_SHADOW_SCHEMA_VERSION,

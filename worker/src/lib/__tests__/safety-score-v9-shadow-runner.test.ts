@@ -344,6 +344,64 @@ describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_
     expect(mockLoadReviewDispositions).not.toHaveBeenCalled();
   });
 
+  it("fires the day's first attempt inside the preregistered start window and pins it against refreshes", async () => {
+    const dayStartSec = Math.floor(CLOCK_SEC / 86_400) * 86_400;
+    const inWindowClockSec = dayStartSec + SAFETY_SCORE_V9_SHADOW_DAILY_START_OFFSET_SEC + 300;
+    const first = await runSafetyScoreV9ShadowAfterV8Publication({
+      ...input(),
+      fixedInput: exactFixedInput(inWindowClockSec),
+      nowSec: inWindowClockSec + 10,
+    });
+
+    expect(first).toMatchObject({ status: "published", utcDay: UTC_DAY });
+    const firstPersisted = mockPersistState.mock.calls[0]![1];
+    const latencyFloor = firstPersisted.envelope.coverage.coverageFloors.find(
+      (floor: { id: string }) => floor.id === "scheduled-start-latency",
+    );
+    expect(latencyFloor).toMatchObject({ status: "pass", observed: 310 });
+    const firstDaily = firstPersisted.daily;
+    expect(firstDaily.selectedRun.selectedAtSec).toBe(inWindowClockSec + 10);
+
+    // A later same-day refresh keeps the in-window selection and updates only
+    // the daily metadata; the retained latest envelope/diff stay bound to the
+    // pinned run.
+    const refreshClockSec = inWindowClockSec + 3 * 3_600 + 60;
+    mockLoadHistory.mockResolvedValue([firstDaily]);
+    mockPersistState.mockClear();
+    const refreshed = await runSafetyScoreV9ShadowAfterV8Publication({
+      ...input(),
+      fixedInput: exactFixedInput(refreshClockSec),
+      nowSec: refreshClockSec + 10,
+    });
+
+    expect(refreshed).toMatchObject({ status: "published", archiveSelectionReasons: [] });
+    if (refreshed.status !== "published") throw new Error("Expected published shadow result");
+    expect(refreshed.qualifying).toBe(firstDaily.selectedRun.qualification.qualifies);
+    expect(refreshed.qualificationBlockers).toEqual(firstDaily.selectedRun.qualification.blockers);
+    expect(mockPersistState).toHaveBeenCalledTimes(1);
+    const persistedRefresh = mockPersistState.mock.calls[0]![1];
+    expect(persistedRefresh.envelope).toBeUndefined();
+    expect(persistedRefresh.diff).toBeUndefined();
+    expect(persistedRefresh.localArtifactBundle).toBeUndefined();
+    expect(persistedRefresh.daily.selectedRun).toEqual(firstDaily.selectedRun);
+    expect(persistedRefresh.daily.attemptCounts).toEqual({ successful: 2, failed: 0 });
+    expect(persistedRefresh.daily.updatedAtSec).toBe(refreshClockSec + 10);
+
+    // The refresh throttle measures from the latest success, not the pinned
+    // selection: a call minutes after the pinned refresh still skips.
+    const soonClockSec = refreshClockSec + 15 * 60;
+    mockLoadHistory.mockResolvedValue([persistedRefresh.daily]);
+    mockPersistState.mockClear();
+    const skipped = await runSafetyScoreV9ShadowAfterV8Publication({
+      ...input(),
+      fixedInput: exactFixedInput(soonClockSec),
+      nowSec: soonClockSec + 10,
+    });
+
+    expect(skipped).toMatchObject({ status: "skipped", reason: "successful-run-already-selected" });
+    expect(mockPersistState).not.toHaveBeenCalled();
+  });
+
   it("retries a failed run on the same UTC day and increments compact counters", async () => {
     mockLoadReviewDispositions.mockRejectedValueOnce(new Error("review store unavailable"));
     await expect(runSafetyScoreV9ShadowAfterV8Publication(input())).resolves.toMatchObject({ status: "failed" });
