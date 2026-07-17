@@ -462,9 +462,13 @@ export async function computeDexPrices(
   nowSec: number,
   references?: PriceValidationReferences,
   signal?: AbortSignal,
+  exactPriceEvidenceByStablecoin?: Map<string, DexPriceObs[]>,
 ): Promise<DexPricePersistenceDiagnostics> {
   throwIfAborted(signal);
-  const priceObservations = buildDexPriceObservationsFromRetainedPools(retainedPoolsByStablecoin);
+  const priceObservations = buildDexPriceObservationsFromRetainedPools(
+    retainedPoolsByStablecoin,
+    exactPriceEvidenceByStablecoin,
+  );
   const existingRows = await db.prepare("SELECT stablecoin_id FROM dex_prices").all<{ stablecoin_id: string }>();
   const existingIds = new Set((existingRows.results ?? []).map((row) => row.stablecoin_id));
   throwIfAborted(signal);

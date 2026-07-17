@@ -910,6 +910,7 @@ async function persistDexLiquidityScoreState(
     ctx.syncStartSec,
     sourceState.validationReferences,
     ctx.signal,
+    sourceState.priceObservations,
   );
 
   const historicalSnapshot = (await writeHistoricalSnapshots(

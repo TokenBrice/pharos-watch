@@ -658,7 +658,7 @@ export async function integrateDirectApiLiquidityPhase(params: {
     }
 
     const directApiPriceObs = extractPriceObservations(
-      retainedDirectApiPools,
+      directApiPoolsForContribution,
       params.chainAddressToId,
       params.symbolToChainScopedIds,
       params.validationReferences,
