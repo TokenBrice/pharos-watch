@@ -158,10 +158,9 @@ function buildLifecycleHistory(
     };
   }
 
-  if (snapshotHistory.length > 1 || fallbackHistory.length === 0) {
-    return { source: "snapshot", points: snapshotHistory };
-  }
-
+  // Prepend the subscriber-cohort history whenever it reaches back before the
+  // first daily snapshot — not only during the bootstrap window — so the
+  // public chart always shows the full available bot lifecycle.
   const firstSnapshotTimestamp = snapshotHistory[0]?.timestamp ?? 0;
   const fallbackPrefix = fallbackHistory.filter(
     (point) => point.timestamp > 0 && point.timestamp < firstSnapshotTimestamp,

@@ -603,7 +603,7 @@ describe("handleTelegramPulse", () => {
     ]);
   });
 
-  it("does not expose pre-snapshot fallback cohorts after multiple snapshot days exist", async () => {
+  it("prefixes pre-snapshot fallback cohorts even after multiple snapshot days exist", async () => {
     const db = mockD1([
       {
         match: "FROM telegram_watcher_lifecycle_daily",
@@ -677,15 +677,17 @@ describe("handleTelegramPulse", () => {
       watcherHistory: Array<{ date: string; activeWatchers: number; snapshotAt?: number | null }>;
     };
 
-    expect(body.historySource).toBe("snapshot");
+    // The full available lifecycle stays visible: cohort points that predate
+    // the first daily snapshot lead the series, snapshots follow.
+    expect(body.historySource).toBe("live-fallback");
     expect(body.lifecycleHistoryUpdatedAt).toBe(1_778_766_000);
     expect(body.watcherHistory.map((point) => point.date)).toEqual([
+      "2026-03-08",
+      "2026-05-11",
       "2026-05-13",
       "2026-05-14",
     ]);
-    expect(body.watcherHistory.some((point) => point.date === "2026-03-08")).toBe(false);
-    expect(body.watcherHistory.some((point) => point.date === "2026-05-11")).toBe(false);
-    expect(body.watcherHistory[0]?.activeWatchers).toBe(519);
+    expect(body.watcherHistory[0]?.activeWatchers).toBe(10);
     const lastPoint = body.watcherHistory[body.watcherHistory.length - 1];
     expect(lastPoint?.activeWatchers).toBe(540);
     expect(lastPoint?.snapshotAt).toBe(1_778_766_000);
