@@ -4,6 +4,7 @@ import {
   aggregateProtocolSources,
   classifyCoverage,
   collapseDuplicateObservations,
+  buildDexPriceObservationsFromRetainedPools,
   filterRetainedPools,
 } from "../scoring-helpers";
 import { isPlausibleDexObservationPrice } from "../price-sanity";
@@ -259,6 +260,75 @@ describe("collapseDuplicateObservations", () => {
     // Both lack a qualifying key, so both pass through unchanged
     expect(collapsed).toHaveLength(2);
     expect(duplicateGroups).toBe(0);
+  });
+});
+
+describe("buildDexPriceObservationsFromRetainedPools", () => {
+  it("joins exact direct evidence to an unpriced retained primary pool", () => {
+    const pool = makePool({
+      poolId: "ethereum:0xusp",
+      project: "balancer",
+      tvlUsd: 52_000,
+      price: undefined,
+      source: "dl",
+    });
+    const result = buildDexPriceObservationsFromRetainedPools(
+      new Map([["usp-pareto-credit", [pool]]]),
+      new Map([
+        [
+          "usp-pareto-credit",
+          [
+            makeObs({
+              price: 0.919816,
+              tvl: 53_000,
+              chain: "ethereum",
+              protocol: "balancer",
+              poolKey: "ethereum:0xusp",
+              identityConfidence: "exact",
+              sourceFamily: "direct_api",
+            }),
+          ],
+        ],
+      ]),
+    );
+
+    expect(result.get("usp-pareto-credit")).toEqual([
+      expect.objectContaining({
+        price: 0.919816,
+        tvl: 52_000,
+        poolKey: "ethereum:0xusp",
+        sourceFamily: "direct_api",
+      }),
+    ]);
+  });
+
+  it("does not join derived, mismatched, or sub-threshold evidence", () => {
+    const pool = makePool({ poolId: "ethereum:0xretained", tvlUsd: 52_000, price: undefined });
+    const result = buildDexPriceObservationsFromRetainedPools(
+      new Map([["usp-pareto-credit", [pool]]]),
+      new Map([
+        [
+          "usp-pareto-credit",
+          [
+            makeObs({
+              poolKey: "ethereum:0xretained",
+              identityConfidence: "derived_unique",
+            }),
+            makeObs({
+              poolKey: "ethereum:0xother",
+              identityConfidence: "exact",
+            }),
+            makeObs({
+              poolKey: "ethereum:0xretained",
+              identityConfidence: "exact",
+              tvl: 49_999,
+            }),
+          ],
+        ],
+      ]),
+    );
+
+    expect(result.has("usp-pareto-credit")).toBe(false);
   });
 });
 

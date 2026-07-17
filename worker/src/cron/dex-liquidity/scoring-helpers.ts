@@ -504,28 +504,58 @@ export function aggregateProtocolSources(
 
 export function buildDexPriceObservationsFromRetainedPools(
   retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>,
+  exactPriceEvidenceByStablecoin?: Map<string, DexPriceObs[]>,
 ): Map<string, DexPriceObs[]> {
   const observations = new Map<string, DexPriceObs[]>();
 
   for (const [stablecoinId, pools] of retainedPoolsByStablecoin) {
-    const pricedPools = pools
-      .filter((pool) => (
-        !isBlockedDexId(pool.project) &&
-        typeof pool.price === "number" &&
-        Number.isFinite(pool.price) &&
-        pool.price > 0 &&
-        Number.isFinite(pool.tvlUsd) &&
-        pool.tvlUsd >= DEX_PRICE_OBSERVATION_MIN_TVL_USD
-      ))
-      .map((pool) => ({
-        price: pool.price!,
-        tvl: pool.tvlUsd,
-        chain: pool.chain,
-        protocol: pool.project,
-        poolKey: pool.poolId,
-        identityConfidence: "exact" as const,
-        sourceFamily: pool.source,
-      }));
+    const exactEvidenceByPool = new Map<string, DexPriceObs[]>();
+    for (const evidence of exactPriceEvidenceByStablecoin?.get(stablecoinId) ?? []) {
+      if (
+        evidence.identityConfidence !== "exact" ||
+        !evidence.poolKey ||
+        !Number.isFinite(evidence.price) ||
+        evidence.price <= 0 ||
+        !Number.isFinite(evidence.tvl) ||
+        evidence.tvl < DEX_PRICE_OBSERVATION_MIN_TVL_USD
+      ) {
+        continue;
+      }
+      const existing = exactEvidenceByPool.get(evidence.poolKey) ?? [];
+      existing.push(evidence);
+      exactEvidenceByPool.set(evidence.poolKey, existing);
+    }
+
+    const pricedPools: DexPriceObs[] = [];
+    for (const pool of pools) {
+      if (
+        isBlockedDexId(pool.project) ||
+        !Number.isFinite(pool.tvlUsd) ||
+        pool.tvlUsd < DEX_PRICE_OBSERVATION_MIN_TVL_USD
+      ) {
+        continue;
+      }
+
+      if (typeof pool.price === "number" && Number.isFinite(pool.price) && pool.price > 0) {
+        pricedPools.push({
+          price: pool.price,
+          tvl: pool.tvlUsd,
+          chain: pool.chain,
+          protocol: pool.project,
+          poolKey: pool.poolId,
+          identityConfidence: "exact",
+          sourceFamily: pool.source,
+        });
+        continue;
+      }
+
+      for (const evidence of exactEvidenceByPool.get(pool.poolId) ?? []) {
+        pricedPools.push({
+          ...evidence,
+          tvl: Math.min(pool.tvlUsd, evidence.tvl),
+        });
+      }
+    }
 
     if (pricedPools.length > 0) {
       observations.set(stablecoinId, pricedPools);

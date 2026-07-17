@@ -1,10 +1,14 @@
 import { DatabaseSync } from "node:sqlite";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { handleAdminTelegramAdoptionReport } from "../admin-telegram-adoption-report";
 
 describe("admin Telegram adoption report", () => {
+  afterEach(() => vi.useRealTimers());
+
   it("returns only suppressed aggregate data behind admin auth", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-10T12:00:00Z"));
     const sqlite = new DatabaseSync(":memory:");
     sqlite.exec(`
       CREATE TABLE telegram_adoption_daily (

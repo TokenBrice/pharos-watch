@@ -517,6 +517,64 @@ describe("snapshotSupply", () => {
     }
   });
 
+  it("repairs null prices in an already-complete same-day snapshot without rewriting other fields", async () => {
+    const { DatabaseSync } = await import("node:sqlite");
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec(`
+        CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL);
+        CREATE TABLE supply_history (
+          stablecoin_id TEXT NOT NULL,
+          snapshot_date INTEGER NOT NULL,
+          circulating_usd REAL NOT NULL,
+          price REAL,
+          PRIMARY KEY (stablecoin_id, snapshot_date)
+        );
+      `);
+      const nowSec = Math.floor(Date.now() / 1000);
+      const snapshotDate = Date.UTC(2025, 5, 15) / 1000;
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+        "stablecoins",
+        JSON.stringify({ peggedAssets: [
+          { id: "usdt-tether", symbol: "USDT", price: 1.001, circulating: { peggedUSD: 100 } },
+          { id: "usdc-circle", symbol: "USDC", price: 0.999, circulating: { peggedUSD: 50 } },
+        ] }),
+        nowSec - 60,
+      );
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+        "snapshot-supply:last-write",
+        completionMarker({ snapshotDate }),
+        nowSec - 60,
+      );
+      sqlite.prepare(
+        "INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
+      ).run("usdt-tether", snapshotDate, 90, null);
+      sqlite.prepare(
+        "INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
+      ).run("usdc-circle", snapshotDate, 45, 0.998);
+
+      const result = await snapshotSupply(createSqliteD1(sqlite), undefined, {
+        nowSec,
+        requiredActiveIds: DEFAULT_REQUIRED_IDS,
+        snapshotEligibleIds: DEFAULT_REQUIRED_IDS,
+      });
+
+      expect(result.itemCount).toBe(1);
+      expect(JSON.parse(String(result.metadata))).toMatchObject({
+        reason: "repaired_missing_prices_today",
+        repairedPriceRows: 1,
+      });
+      expect(sqlite.prepare(
+        "SELECT stablecoin_id, circulating_usd, price FROM supply_history ORDER BY stablecoin_id",
+      ).all()).toEqual([
+        { stablecoin_id: "usdc-circle", circulating_usd: 45, price: 0.998 },
+        { stablecoin_id: "usdt-tether", circulating_usd: 90, price: 1.001 },
+      ]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("invalidates completion when an applied waiver owner or expiry changes", async () => {
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
     const snapshotDate = Date.UTC(2025, 5, 15) / 1000;

@@ -32,6 +32,20 @@ describe("adaptAttestationPdfIndex", () => {
     vi.unstubAllGlobals();
   });
 
+  it("parses Solomon's GitHub attestation index", () => {
+    const result = adaptAttestationPdfIndex(`
+      <a href="/SolomonLabs/attestations/blob/main/ceffu/2026/2026-03-01.pdf">2026-03-01.pdf</a>
+      <a href="/SolomonLabs/attestations/blob/main/ceffu/2026/2026-04-01.pdf">2026-04-01.pdf</a>
+    `, CONFIGURED_PARAMS, {
+      indexUrl: "https://github.com/SolomonLabs/attestations/tree/main/ceffu/2026",
+    });
+
+    expect(result.metadata).toMatchObject({
+      reportDate: "2026-04-01",
+      reportPdfUrl: "https://github.com/SolomonLabs/attestations/blob/main/ceffu/2026/2026-04-01.pdf",
+    });
+  });
+
   it("selects the newest dated PDF link and emits configured reserve slices", () => {
     const html = `
       <a href="/reports/2026-01-31-attestation.pdf">January 2026 attestation</a>

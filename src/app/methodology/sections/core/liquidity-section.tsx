@@ -72,8 +72,10 @@ export function LiquidityMethodologySection() {
           </p>
           <p>
             Repeated sightings of the same physical pool across direct API, staged, and fallback sources are collapsed
-            before DEX price aggregation. A separate challenger snapshot preserves the full retained pool set for depeg
-            checks, instead of relying on the visible top-pools subset. Balancer stablecoin pools also get a narrow
+            before DEX price aggregation. Exact direct price evidence can rejoin only when the same canonical pool survives
+            final scoring and both records clear the price-observation floor; derived or mismatched identities remain
+            excluded. A separate challenger snapshot preserves the full retained pool set for depeg checks, instead of
+            relying on the visible top-pools subset. Balancer stablecoin pools also get a narrow
             stable-pair identity fallback when DeFiLlama omits the subtype in `balancer-v3`, preventing direct-API stable
             pools from being double-counted as faux weighted rows.
           </p>
