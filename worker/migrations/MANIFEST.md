@@ -153,6 +153,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0207     | `0207_telegram_execution_unknown_backlog_archive.sql`     | Guard, archive, and remove the exact reviewed Telegram execution-unknown backlog, then rebuild its ten authoritative job counters                       |
 | 0208     | `0208_eurq_ddr_events_90589_90595_link.sql`               | Link four reviewed EURQ live flaps to the active unsealed incident, advance ordered lineage, and close their durable DDR repair tasks                    |
 | 0209     | `0209_cngn_ddr_event_90599_link.sql`                      | Link reviewed cNGN reopen 90599 to the active unsealed incident, advance lineage from event 90584, and close its durable DDR repair task                  |
+| 0210     | `0210_cngn_ddr_events_90604_90608_link.sql`               | Link four reviewed cNGN live flaps to the active unsealed incident, advance ordered lineage, and close their durable DDR repair tasks                    |
 
 ## Retired Individual Migrations
 
@@ -245,6 +246,7 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0207_telegram_execution_unknown_backlog_archive.sql`: do not requeue or reinterpret the archived effects during rollback. Keep the deterministic dead-letter evidence and authoritative `execution_unknown` target truth; restoring live queue rows could duplicate Telegram delivery and requires a separate operator-reviewed reconciliation.
 - `0208_eurq_ddr_events_90589_90595_link.sql`: roll back DDR publication behavior by restoring the prior Worker. Keep the append-only repair authorizations, consumptions, links, and ordered revisions as reviewed provenance; do not recreate the closed tasks or detach events 90589, 90591, 90594, and 90595 without a separate corrective migration.
 - `0209_cngn_ddr_event_90599_link.sql`: roll back DDR publication behavior by restoring the prior Worker. Keep the append-only repair authorizations, consumptions, link, and revision as reviewed provenance; do not recreate the closed task or detach event 90599 without a separate corrective migration.
+- `0210_cngn_ddr_events_90604_90608_link.sql`: roll back DDR publication behavior by restoring the prior Worker. Keep the append-only repair authorizations, consumptions, links, and ordered revisions as reviewed provenance; do not recreate the closed tasks or detach events 90604, 90606, 90607, and 90608 without a separate corrective migration.
 
 ## Rollback Procedure
 

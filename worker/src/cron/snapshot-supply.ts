@@ -1,5 +1,6 @@
 import {
   D1_MAX_BOUND_PARAMETERS,
+  batchExecute,
   chunkArray,
   executeAtomicBatch,
   prepareMultiRowInsertStatements,
@@ -72,6 +73,27 @@ function buildAlreadyWrittenBeforeFreshnessGateResult(params: {
       freshnessGateLabel: params.freshnessGateLabel,
     }),
   };
+}
+
+async function repairSameDayMissingPrices(
+  db: D1Database,
+  snapshotDate: number,
+  snapshotRows: readonly (readonly [string, number, number, number | null])[],
+  signal?: AbortSignal,
+): Promise<number> {
+  const missing = await db.prepare(
+    "SELECT stablecoin_id FROM supply_history WHERE snapshot_date = ? AND price IS NULL",
+  ).bind(snapshotDate).all<{ stablecoin_id: string }>();
+  throwIfAborted(signal);
+
+  const missingIds = new Set((missing.results ?? []).map((row) => row.stablecoin_id));
+  const repairs = snapshotRows
+    .filter(([stablecoinId, , , price]) => missingIds.has(stablecoinId) && price != null)
+    .map(([stablecoinId, , , price]) => db.prepare(
+      "UPDATE supply_history SET price = ? WHERE stablecoin_id = ? AND snapshot_date = ? AND price IS NULL",
+    ).bind(price, stablecoinId, snapshotDate));
+
+  return batchExecute(db, repairs, { signal });
 }
 
 export async function snapshotSupply(
@@ -182,7 +204,25 @@ export async function snapshotSupply(
     && lastWrite?.snapshotDate === snapshotDate
     && lastWrite.exactCoverageVerified
   ) {
-    return { itemCount: 0, metadata: JSON.stringify({ reason: "already_written_today", snapshotDate }) };
+    try {
+      const repairedPriceRows = await repairSameDayMissingPrices(db, snapshotDate, snapshotRows, signal);
+      return {
+        itemCount: repairedPriceRows,
+        metadata: JSON.stringify({
+          reason: repairedPriceRows > 0 ? "repaired_missing_prices_today" : "already_written_today",
+          snapshotDate,
+          repairedPriceRows,
+        }),
+      };
+    } catch (err) {
+      rethrowIfAborted(err, signal);
+      recordCronFailure("snapshot-supply", err, { metadata: { stage: "sameDayPriceRepair" } });
+      return {
+        status: "degraded",
+        itemCount: 0,
+        metadata: JSON.stringify({ reason: "same_day_price_repair_failed", error: String(err).slice(0, 200) }),
+      };
+    }
   }
   if (!publicationCoverage.complete) {
     const cacheCoverage = evaluateStablecoinPublicationCoverage(

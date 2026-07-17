@@ -126,7 +126,7 @@
     "inputs": {
       "primary": {
         "kind": "http-html",
-        "url": "https://docs.solomonlabs.org/transparency/asset-attestations"
+        "url": "https://github.com/SolomonLabs/attestations/tree/main/ceffu/2026"
       }
     },
     "params": {
