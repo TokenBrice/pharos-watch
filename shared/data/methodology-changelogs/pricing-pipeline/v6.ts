@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.194",
+    title: "Exact retained-pool price evidence join",
+    date: "2026-07-17",
+    effectiveAt: 1784267952,
+    summary:
+      "Exact direct-API price evidence can now survive physical-pool dedup when the same canonical pool remains on the final retained scoring surface.",
+    impact: [
+      "A direct quote discarded as an exact duplicate can contribute to `dex_prices` only when its canonical pool id matches a final retained pool for the same asset",
+      "Both the retained pool and the exact evidence must independently clear the existing $50,000 price-observation floor; joined weight is capped at the smaller TVL",
+      "Derived identities, mismatched pool ids, sub-threshold evidence, and raw observations without a retained pool still fail closed",
+      "The reviewed Balancer USP route can reach the pricing bridge without double-counting the pool or weakening retained-pool admission",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.193",
     title: "Missing-price coverage and deterministic route hardening",
     date: "2026-07-16",

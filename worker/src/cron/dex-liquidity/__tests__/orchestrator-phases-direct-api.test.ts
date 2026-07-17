@@ -323,6 +323,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
       source: "dl",
     });
     const metrics = new Map([["usdc-circle", usdcMetrics]]);
+    const priceObservations = new Map();
     const directApiPools: DexApiPool[] = [
       {
         source: "raydium",
@@ -347,7 +348,7 @@ describe("integrateDirectApiLiquidityPhase", () => {
       knownPoolIndex,
       contractMetaByChainAddress: new Map(),
       metrics,
-      priceObservations: new Map(),
+      priceObservations,
       chainAddressToId: new Map([
         ["solana:UsdcMint", "usdc-circle"],
         ["solana:UsdtMint", "usdt-tether"],
@@ -369,5 +370,14 @@ describe("integrateDirectApiLiquidityPhase", () => {
       invariant: "constant-product",
       trackedTokenIndex: 0,
     });
+    expect(priceObservations.get("usdc-circle")).toEqual([
+      expect.objectContaining({
+        price: 1,
+        tvl: 4_000_000,
+        poolKey: `solana:${poolAddress}`,
+        identityConfidence: "exact",
+        sourceFamily: "direct_api",
+      }),
+    ]);
   });
 });
