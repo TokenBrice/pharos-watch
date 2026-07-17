@@ -18,6 +18,7 @@ import {
 } from "./safety-score-v9-candidate";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "./safety-score-v9-extension";
 import { loadSafetyScoreV9MovementReviewDispositions } from "./safety-score-v9-movement-reviews";
+import { assessSafetyScoreV9ShadowReleaseCoverage } from "./safety-score-v9-release-coverage";
 import {
   assessSafetyScoreV9ShadowQualification,
   buildSafetyScoreV9DiffReport,
@@ -254,6 +255,7 @@ function releaseCoverageFloors(
   rateableCount: number,
   scheduledForSec: number,
   startedAtSec: number,
+  ratifiedReleaseCoverageFloor: SafetyScoreV9CoverageFloor,
 ): SafetyScoreV9CoverageFloor[] {
   const exactCount = observedCount === expectedCount;
   const startDelaySec = Math.max(0, startedAtSec - scheduledForSec);
@@ -277,13 +279,7 @@ function releaseCoverageFloors(
           ? "The V9 candidate meets the ratified active-asset rateability floor"
           : "The V9 candidate is below the ratified active-asset rateability floor",
     },
-    {
-      id: "ratified-release-coverage",
-      status: "fail",
-      observed: 0,
-      required: "a gate-passed V9-9 release coverage report bound to this exact candidate",
-      detail: "No frozen V9-9 release cohort and passing coverage report is wired into the shadow candidate",
-    },
+    ratifiedReleaseCoverageFloor,
     {
       id: "scheduled-start-latency",
       status: startDelaySec <= SAFETY_SCORE_V9_SHADOW_MAX_START_DELAY_SEC ? "pass" : "fail",
@@ -442,12 +438,26 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
 
     const completedAtSec = nowSecAtLeast(startedAtSec, input.nowSec);
     const expectedActiveIds = [...fixedInput.activeAssetIds].sort(compareText);
+    stage = "serialize";
+    const releaseCoverage = await assessSafetyScoreV9ShadowReleaseCoverage({
+      db: input.db,
+      candidateId,
+      candidatePolicyDigest: pipeline.candidate.policy.semanticDigest,
+      candidateEvaluationBuildDigest: pipeline.candidate.evaluationBuildDigest,
+      candidateFactSetDigest: pipeline.candidate.factSetDigest,
+      candidateResultDigest: pipeline.candidate.resultDigest,
+      compiledFacts: pipeline.compiledFacts,
+      evaluatedSet: pipeline.evaluatedSet,
+      producerCapabilityDigest: pipeline.producerCapabilityDigest,
+      signal: shadowSignal,
+    });
     const floors = releaseCoverageFloors(
       pipeline.candidate.cards.length,
       expectedActiveIds.length,
       pipeline.candidate.completeness.ratedCount,
       scheduledForSec,
       startedAtSec,
+      releaseCoverage.floor,
     );
     const baseEnvelope = buildSafetyScoreV9ShadowEnvelope({
       candidate: pipeline.candidate,
@@ -455,7 +465,7 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       compilerFactSchemaDigest: pipeline.compilerFactSchemaDigest,
       producerCapabilityDigest: pipeline.producerCapabilityDigest,
       coverageFloors: floors,
-      unresolvedReleaseBlockers: ["ratified-release-coverage-unavailable"],
+      unresolvedReleaseBlockers: releaseCoverage.unresolvedReleaseBlockers,
     });
     const supply = supplyProjection(pipeline);
     const v8 = buildV8ComparableSnapshot({
@@ -465,7 +475,6 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       methodologyVersion: input.v8MethodologyVersion,
     });
 
-    stage = "serialize";
     const pendingDiff = buildSafetyScoreV9DiffReport({
       generatedAtSec: completedAtSec,
       expectedActiveIds,
@@ -504,7 +513,7 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       compilerFactSchemaDigest: pipeline.compilerFactSchemaDigest,
       producerCapabilityDigest: pipeline.producerCapabilityDigest,
       coverageFloors: floors,
-      unresolvedReleaseBlockers: ["ratified-release-coverage-unavailable"],
+      unresolvedReleaseBlockers: releaseCoverage.unresolvedReleaseBlockers,
       unresolvedCriticalMovementIds,
     });
     let diff = buildSafetyScoreV9DiffReport({
