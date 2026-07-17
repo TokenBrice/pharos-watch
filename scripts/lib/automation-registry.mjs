@@ -283,6 +283,20 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     ],
   }),
   generatedArtifact({
+    id: "safety-score-v9-shock-coverage-registry",
+    checkCommand: "tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts --check",
+    command: "tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts",
+    bootstrap: true,
+    outputPaths: ["shared/data/safety-score-v9/shock-coverage-measurements-v1.json"],
+    phase: 0,
+    reproducibility: "pinned-input",
+    script: "scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts",
+    sourcePaths: [
+      "shared/data/safety-score-v9/mechanism-measurements/**/*-shock-coverage.json",
+      "shared/data/safety-score-v9/shock-coverage-replay-attestations-v1.json",
+    ],
+  }),
+  generatedArtifact({
     id: "safety-score-v9-evaluation-build",
     checkCommand: "tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts --check",
     command: "tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts",

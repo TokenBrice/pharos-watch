@@ -26,8 +26,15 @@ describe("Safety Score v9 methodology policy", () => {
     expect(V9_CANDIDATE_POLICY_V1.policy.lifecycle).toBe("candidate");
     expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBeNull();
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "8d7f10f04d211f90840a7274bf8aa9a41c65f2d840c6aaafc5302d7686310e17",
+      "c660ddf0559624b6d186384b6fe43f6a2d8e1ee6129aa392fe3d15a15c809306",
     );
+    const cdpPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp;
+    expect(cdpPolicy.instantaneousCollateralShock).toBe(0.5);
+    expect(cdpPolicy.minimumLiquidationCapacityRatio).toBe(0.5);
+    expect(cdpPolicy.stressMeasurementFreshness).toMatchObject({
+      maxAgeSec: 259_200,
+      ratification: "owner-ratified",
+    });
     expect(Object.isFrozen(V9_CANDIDATE_POLICY_V1.policy.semantic.formula)).toBe(true);
   });
 

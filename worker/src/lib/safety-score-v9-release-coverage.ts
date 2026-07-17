@@ -270,14 +270,21 @@ export function projectSafetyScoreV9CoverageEvaluation(input: {
   producerCapabilityDigest: string;
 }): V9CoverageEvaluationSnapshotV1 {
   const { evaluatedSet } = input;
+  for (const source of EVALUATION_SOURCE_KEYS) {
+    const generation = evaluatedSet.sourceGenerations[source];
+    if (typeof generation !== "string" || generation.length === 0) {
+      throw new Error(`Safety Score v9 evaluated set is missing its ${source} source generation`);
+    }
+  }
   const sourceGenerations = Object.fromEntries(
-    EVALUATION_SOURCE_KEYS.map((source) => {
-      const generation = evaluatedSet.sourceGenerations[source];
-      if (typeof generation !== "string" || generation.length === 0) {
-        throw new Error(`Safety Score v9 evaluated set is missing its ${source} source generation`);
-      }
-      return [source, generation];
-    }),
+    Object.entries(evaluatedSet.sourceGenerations)
+      .sort(([left], [right]) => compareText(left, right))
+      .map(([source, generation]) => {
+        if (typeof generation !== "string" || generation.length === 0) {
+          throw new Error(`Safety Score v9 evaluated set is missing its ${source} source generation`);
+        }
+        return [source, generation];
+      }),
   ) as V9CoverageEvaluationSnapshotV1["sourceGenerations"];
   const payload = {
     schemaVersion: 1 as const,

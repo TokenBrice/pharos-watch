@@ -15,6 +15,7 @@ import {
   createSafetyScoreV9ReleaseCohortRecord,
   loadSafetyScoreV9ReleaseCohort,
   persistSafetyScoreV9ReleaseCohort,
+  projectSafetyScoreV9CoverageEvaluation,
   type SafetyScoreV9ReleaseCohortRecord,
 } from "../safety-score-v9-release-coverage";
 
@@ -442,6 +443,24 @@ describe("Safety Score V9 release cohort store", () => {
 });
 
 describe("Safety Score V9 ratified release coverage floor", () => {
+  it("projects both legacy and shock-aware source generations without dropping keys", () => {
+    const fixture = buildFixture();
+    const legacy = projectSafetyScoreV9CoverageEvaluation({
+      evaluatedSet: fixture.evaluatedSet,
+      producerCapabilityDigest: PRODUCER_CAPABILITY_DIGEST,
+    });
+    expect(legacy.sourceGenerations).not.toHaveProperty("shockCoverage");
+
+    const shockAware = projectSafetyScoreV9CoverageEvaluation({
+      evaluatedSet: {
+        ...fixture.evaluatedSet,
+        sourceGenerations: { ...fixture.evaluatedSet.sourceGenerations, shockCoverage: "shock:g1" },
+      },
+      producerCapabilityDigest: PRODUCER_CAPABILITY_DIGEST,
+    });
+    expect(shockAware.sourceGenerations.shockCoverage).toBe("shock:g1");
+  });
+
   it("passes on a gate-passed report bound to the exact candidate and drops the blocker", async () => {
     const fixture = buildFixture();
     const { db } = await seedCohort(fixture.cohort);

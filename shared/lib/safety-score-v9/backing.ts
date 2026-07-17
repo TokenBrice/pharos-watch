@@ -46,6 +46,17 @@ export interface V9BackingAssetInput {
   readonly gaps: readonly V9FactGapV2[];
   readonly resolvedUpstreamExposures: readonly V9ResolvedUpstreamExposure[];
   readonly seriallyResolvedUpstreamAssetIds?: readonly string[];
+  readonly cdpLiquidationCapacitySelection?: V9CdpLiquidationCapacitySelection;
+}
+
+export interface V9CdpLiquidationCapacitySelection {
+  readonly selectedPath: "stress-measurement" | "legacyLCR";
+  readonly coverageRatio: number | null;
+  readonly reason: string;
+  readonly fallbackReason: string | null;
+  readonly measurementAgeSec: number | null;
+  readonly selectedEvidenceRefIds: readonly string[];
+  readonly stressEvidenceRefIds: readonly string[];
 }
 
 export type V9BackingEvaluationPolicy = V9ValidatedPolicyEnvelope;

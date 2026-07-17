@@ -353,6 +353,7 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
     expect(left.compilerFactSchemaIdentity.compiledFactSchemaCapabilities).toEqual([
       "canonical-chain-supply-distribution.v1",
       "exit-route-modeled-confidence.v1",
+      "journaled-cdp-shock-coverage.v1",
       "reviewed-transfer-deployments.v1",
     ]);
     expect(left.producerCapabilityIdentity.sourceAdapters.dexExitRoutes).toBe("fixed-input.dex-exit-observations.v2");
@@ -363,6 +364,7 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
     expect(left.producerCapabilityIdentity.sourceAdapters.researchOverlays).toBe(
       "v9-fact-extension.review-overlays.v3",
     );
+    expect(left.producerCapabilityIdentity.sourceAdapters.shockCoverage).toBe("journal-registry.cdp-shock-coverage.v1");
     expect(left.producerCapabilityIdentity.freshnessPolicySec.accessReviews).toBe(31_536_000);
     expect(
       left.compiledFacts.assets.every((asset) =>

@@ -83,6 +83,150 @@ const V9CdpMetricApplicabilitySchema = z.discriminatedUnion("state", [
 ]);
 export type V9CdpMetricApplicability = z.infer<typeof V9CdpMetricApplicabilitySchema>;
 
+const V9CdpStressBranchContributionSchema = z
+  .object({
+    branchIndex: z.number().int().nonnegative(),
+    stressLiquidatableDebt: z.string().regex(/^[0-9]+$/),
+    stressPoolOffsetDebt: z.string().regex(/^[0-9]+$/),
+    stressLiquidationCoverageRatio: z.number().finite().min(0).max(1),
+  })
+  .strict();
+
+const V9CdpStressCodeHashPinSchema = z
+  .object({
+    name: z.string().trim().min(1),
+    address: z.string().regex(/^0x[0-9a-f]{40}$/),
+    role: z.string().trim().min(1),
+    codeHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  })
+  .strict();
+
+const V9CdpStressMeasurementSourceSchema = z
+  .object({
+    journalPath: z.string().trim().min(1),
+    journalSha256: z.string().regex(/^[0-9a-f]{64}$/),
+    block: z
+      .object({
+        number: z.number().int().nonnegative(),
+        hash: z.string().regex(/^0x[0-9a-f]{64}$/),
+        timestampUnix: z.number().int().nonnegative(),
+        timestampIso: z.string().datetime(),
+      })
+      .strict(),
+    sourcePin: z
+      .object({
+        repository: z.string().url(),
+        commit: z.string().regex(/^[0-9a-f]{40}$/),
+        liquidationContractPath: z.string().trim().min(1),
+      })
+      .strict(),
+  })
+  .strict();
+
+const V9CdpStressReplayVerificationSchema = z
+  .object({
+    attestationPath: z.string().trim().min(1),
+    attestedAt: z.string().date(),
+    toolPath: z.string().trim().min(1),
+    toolVersion: z.string().trim().min(1),
+    mode: z.literal("offline-byte-identical"),
+    callsConsumed: z.number().int().nonnegative(),
+    codePinsConsumed: z.number().int().nonnegative(),
+  })
+  .strict();
+
+/** Exact journal projection used to select stress coverage or visible legacy-LCR fallback. */
+export const V9CdpStressCoverageFactSchema = z
+  .object({
+    family: z.string().trim().min(1),
+    applicability: z.enum(["measured", "not-measured"]),
+    failureReason: z.string().trim().min(1).nullable(),
+    complete: z.boolean(),
+    blockers: z.array(z.string().trim().min(1)),
+    exactReplayPassed: z.boolean(),
+    replayVerification: V9CdpStressReplayVerificationSchema.nullable(),
+    source: V9CdpStressMeasurementSourceSchema.nullable(),
+    shockPolicy: z
+      .object({
+        scoreShockFractionPpm: z.number().int().min(0).max(1_000_000),
+        sensitivityShockFractionsPpm: z.array(z.number().int().min(0).max(1_000_000)),
+        debtReconciliationTolerancePpm: z.number().int().nonnegative(),
+      })
+      .strict(),
+    stressShockFraction: z.number().finite().min(0).max(1).nullable(),
+    stressLiquidatableDebt: z
+      .string()
+      .regex(/^[0-9]+$/)
+      .nullable(),
+    stressPoolOffsetDebt: z
+      .string()
+      .regex(/^[0-9]+$/)
+      .nullable(),
+    stressLiquidationCoverageRatio: z.number().finite().min(0).max(1).nullable(),
+    branchContributions: z.array(V9CdpStressBranchContributionSchema),
+    codeHashPins: z.array(V9CdpStressCodeHashPinSchema),
+    evidenceRefIds: z.array(z.string().trim().min(1)),
+  })
+  .strict()
+  .superRefine((fact, ctx) => {
+    const measuredValues = [
+      fact.stressShockFraction,
+      fact.stressLiquidatableDebt,
+      fact.stressPoolOffsetDebt,
+      fact.stressLiquidationCoverageRatio,
+    ];
+    if (fact.applicability === "measured" && fact.failureReason !== null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["failureReason"],
+        message: "Measured stress facts cannot fail applicability",
+      });
+    }
+    if (fact.applicability === "not-measured" && fact.failureReason === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["failureReason"],
+        message: "Unavailable stress facts need a failure reason",
+      });
+    }
+    if (fact.complete) {
+      if (
+        fact.applicability !== "measured" ||
+        fact.source === null ||
+        measuredValues.some((value) => value === null) ||
+        fact.branchContributions.length === 0 ||
+        fact.codeHashPins.length === 0 ||
+        fact.blockers.length > 0
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["complete"],
+          message: "Complete stress facts require exact measured provenance",
+        });
+      }
+    }
+    if (fact.exactReplayPassed !== (fact.replayVerification !== null)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["replayVerification"],
+        message: "Exact replay status requires matching verification provenance",
+      });
+    }
+    const branchIndexes = fact.branchContributions.map((branch) => branch.branchIndex);
+    if (branchIndexes.some((branchIndex, index) => branchIndex !== index)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["branchContributions"],
+        message: "Stress branches must preserve contiguous journal order",
+      });
+    }
+    const pinNames = fact.codeHashPins.map((pin) => pin.name);
+    if (new Set(pinNames).size !== pinNames.length) {
+      ctx.addIssue({ code: "custom", path: ["codeHashPins"], message: "Stress code-hash pin names must be unique" });
+    }
+  });
+export type V9CdpStressCoverageFact = z.infer<typeof V9CdpStressCoverageFactSchema>;
+
 const V9CdpMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("cdp"),

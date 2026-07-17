@@ -34,7 +34,12 @@ import {
   type V9MechanismRiskReviewFactV2,
   type V9ReserveExposureFactV2,
 } from "@shared/types/safety-score-v9-facts";
-import { V9MechanismRiskReviewSchema, type V9MechanismRiskReview } from "@shared/types/safety-score-v9-backing";
+import {
+  V9CdpStressCoverageFactSchema,
+  V9MechanismRiskReviewSchema,
+  type V9CdpStressCoverageFact,
+  type V9MechanismRiskReview,
+} from "@shared/types/safety-score-v9-backing";
 import {
   DexExitRouteObservationSchema,
   ExitRouteObservationSchema,
@@ -44,6 +49,7 @@ import {
 import { ReserveSliceSchema, type ReserveSlice } from "@shared/types/reserves";
 import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
 import { assertSafetyScoreV9ExactExtensionAssets } from "./safety-score-v9-fact-set-boundary";
+import { hydrateSafetyScoreV9ShockCoverageExtension } from "./safety-score-v9-extension-shock";
 
 const CanonicalTextSchema = z.string().trim().min(1);
 const UnixSecondsSchema = z.number().int().nonnegative();
@@ -406,6 +412,7 @@ const AssetExtensionSchema = z
     archetype: V9ResolvedMechanismArchetypeSchema,
     launchedAtSec: UnixSecondsSchema.nullable(),
     mechanismRiskReview: V9MechanismRiskReviewSchema.nullable(),
+    cdpStressCoverage: V9CdpStressCoverageFactSchema.optional(),
     dependencies: EffectiveDependenciesOverlaySchema.nullable(),
     reserveApplicability: ReserveApplicabilitySchema,
     reserveClassifications: canonicalArrayBy(ReserveClassificationSchema, (row) => row.exposureKey),
@@ -425,6 +432,13 @@ const AssetExtensionSchema = z
   })
   .strict()
   .superRefine((asset, ctx) => {
+    if (asset.cdpStressCoverage !== undefined && asset.archetype !== "cdp") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["cdpStressCoverage"],
+        message: "Only CDP extension assets may carry stress-coverage facts",
+      });
+    }
     const evidenceKeys = new Set(asset.researchEvidence.map((evidence) => evidence.evidenceKey));
     for (let bindingIndex = 0; bindingIndex < asset.componentEvidence.length; bindingIndex += 1) {
       const binding = asset.componentEvidence[bindingIndex]!;
@@ -496,6 +510,15 @@ type ExtensionControlOverlay = Extract<
   { state: "reviewed-controls" }
 >["controls"][number];
 
+export function materializeSafetyScoreV9FactSetExtension(
+  fixedInput: Readonly<ReportCardsFixedInput>,
+  extensionValue: unknown,
+): Readonly<SafetyScoreV9FactSetExtensionV2> {
+  return SafetyScoreV9FactSetExtensionV2Schema.parse(
+    hydrateSafetyScoreV9ShockCoverageExtension(extensionValue, fixedInput.clockSec),
+  );
+}
+
 interface AssetBuildContext {
   readonly fixedInput: ReportCardsFixedInput;
   readonly extension: SafetyScoreV9FactSetExtensionV2;
@@ -524,7 +547,11 @@ function projectResearchOverlayPayload(value: unknown): unknown {
       observationState: record.observationState,
     };
   }
-  return Object.fromEntries(Object.entries(record).map(([key, entry]) => [key, projectResearchOverlayPayload(entry)]));
+  return Object.fromEntries(
+    Object.entries(record)
+      .filter(([key]) => key !== "cdpStressCoverage")
+      .map(([key, entry]) => [key, projectResearchOverlayPayload(entry)]),
+  );
 }
 
 function stableFailureDomains(domains: readonly V9FailureDomainRef[]): V9FailureDomainRef[] {
@@ -821,6 +848,34 @@ function buildMechanismReview(context: AssetBuildContext): V9MechanismRiskReview
     throw new Error(`Mechanism review archetype mismatch for ${context.asset.assetId}`);
   }
   return normalizeMechanismReview(context, context.asset.mechanismRiskReview);
+}
+
+function buildCdpStressCoverage(context: AssetBuildContext): V9CdpStressCoverageFact | undefined {
+  if (context.asset.archetype !== "cdp") return undefined;
+  const selected = context.asset.cdpStressCoverage;
+  if (selected === undefined) return undefined;
+  const fact = structuredClone(selected);
+  if (fact.source !== null) {
+    fact.evidenceRefIds = [
+      addEvidence(
+        context,
+        createV9EvidenceReference(
+          {
+            evidenceId: `${context.asset.assetId}:cdp-shock-coverage:${fact.source.journalSha256.slice(0, 16)}`,
+            sourceId: "safety-score-v9.cdp-shock-coverage-measurement",
+            sourceGenerationId: `cdp-shock-coverage:v1:${fact.source.journalSha256}`,
+            disposition: "observed",
+            observedAtSec: fact.source.block.timestampUnix,
+            url: fact.source.sourcePin.repository,
+            contentSha256: fact.source.journalSha256,
+            maxAgeSec: null,
+          },
+          context.fixedInput.clockSec,
+        ),
+      ),
+    ];
+  }
+  return V9CdpStressCoverageFactSchema.parse(fact);
 }
 
 function buildDependencies(context: AssetBuildContext): V9EffectiveDependenciesV2 {
@@ -2380,6 +2435,7 @@ function compileAsset(
   };
   const implementation = buildImplementation(context);
   const mechanismRiskReview = buildMechanismReview(context);
+  const cdpStressCoverage = buildCdpStressCoverage(context);
   const rawDependencies = buildDependencies(context);
   const reserves = buildReserves(context);
   const dependencies = reconcileCollateralDependencyMappings(context, rawDependencies, reserves.reserveExposures);
@@ -2397,6 +2453,7 @@ function compileAsset(
     gaps: [...context.gaps.values()],
     implementation,
     mechanismRiskReview,
+    ...(cdpStressCoverage === undefined ? {} : { cdpStressCoverage }),
     dependencies,
     ...reserves,
     ...routes,
@@ -2419,20 +2476,18 @@ export function compileSafetyScoreV9FactSetFromFixedInput(
   fixedInputValue: unknown,
   extensionValue: unknown,
 ): Readonly<CompiledV9FactSetV2> {
-  return compileSafetyScoreV9FactSetFromNormalizedInput(
-    normalizeFixedInput(fixedInputValue),
-    SafetyScoreV9FactSetExtensionV2Schema.parse(extensionValue),
-  );
+  return compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(fixedInputValue), extensionValue);
 }
 
 /** Trusted runtime entrypoint for already validated publication inputs. */
 export function compileSafetyScoreV9FactSetFromNormalizedInput(
   fixedInput: Readonly<ReportCardsFixedInput>,
-  extension: Readonly<SafetyScoreV9FactSetExtensionV2>,
+  extensionValue: unknown,
 ): Readonly<CompiledV9FactSetV2> {
   if (fixedInput.captureKind !== "exact-publication-inputs") {
     throw new Error("Safety Score v9 fact compilation requires exact publication inputs");
   }
+  const extension = materializeSafetyScoreV9FactSetExtension(fixedInput, extensionValue);
   if (extension.registryFingerprint !== fixedInput.registryFingerprint) {
     throw new Error(
       `Safety Score v9 extension registry fingerprint ${extension.registryFingerprint} does not match fixed input ${fixedInput.registryFingerprint}`,
@@ -2445,6 +2500,16 @@ export function compileSafetyScoreV9FactSetFromNormalizedInput(
   );
   const redemptionObservedAtSec =
     fixedInput.inputFreshness.redemptionBackstops.updatedAt ?? extension.sources.unavailableRedemptionObservedAtSec;
+  const shockCoveragePayload = extension.assets.flatMap((asset) =>
+    asset.cdpStressCoverage === undefined
+      ? []
+      : [{ assetId: asset.assetId, cdpStressCoverage: asset.cdpStressCoverage }],
+  );
+  const shockCoveragePayloadSha256 = digest("safety-score-v9.cdp-shock-coverage-source.v1", shockCoveragePayload);
+  const shockCoverageObservedAtSec = shockCoveragePayload.reduce(
+    (latest, entry) => Math.max(latest, entry.cdpStressCoverage.source?.block.timestampUnix ?? 0),
+    0,
+  );
   return compileV9FactSetV2({
     schemaVersion: 2,
     baseInputGenerationId: fixedInput.baseInputGenerationId,
@@ -2495,6 +2560,15 @@ export function compileSafetyScoreV9FactSetFromNormalizedInput(
         payloadSha256: researchPayloadSha256,
         observedAtSec: extension.sources.researchOverlays.observedAtSec,
       },
+      ...(shockCoveragePayload.length === 0
+        ? {}
+        : {
+            shockCoverage: {
+              generationId: `cdp-shock-coverage:v1:${shockCoveragePayloadSha256}`,
+              payloadSha256: shockCoveragePayloadSha256,
+              observedAtSec: shockCoverageObservedAtSec,
+            },
+          }),
     },
     activeAssetIds: fixedInput.activeAssetIds,
     assets: extension.assets.map((asset) => compileAsset(fixedInput, extension, asset, researchPayloadSha256)),

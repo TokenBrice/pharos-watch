@@ -12,6 +12,7 @@ import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
 import { z } from "zod";
 import {
   compileSafetyScoreV9FactSetFromNormalizedInput,
+  materializeSafetyScoreV9FactSetExtension,
   SafetyScoreV9FactSetExtensionV2Schema,
   type SafetyScoreV9FactSetExtensionV2,
 } from "./safety-score-v9-fact-set";
@@ -42,6 +43,7 @@ const SafetyScoreV9CompilerFactSchemaIdentityV1Schema = z
     compiledFactSchemaCapabilities: z.tuple([
       z.literal("canonical-chain-supply-distribution.v1"),
       z.literal("exit-route-modeled-confidence.v1"),
+      z.literal("journaled-cdp-shock-coverage.v1"),
       z.literal("reviewed-transfer-deployments.v1"),
     ]),
     compilerAdapter: z.literal("exact-fixed-input-to-v9-facts.v1"),
@@ -68,6 +70,7 @@ const SafetyScoreV9ProducerCapabilityIdentityV1Schema = z
         chainSupply: z.literal("fixed-input.usd-circulating-supply.v2"),
         peg: z.literal("fixed-input.peg-summary.v1"),
         researchOverlays: z.literal("v9-fact-extension.review-overlays.v3"),
+        shockCoverage: z.literal("journal-registry.cdp-shock-coverage.v1"),
       })
       .strict(),
     scoreBearingMethodologyVersions: z
@@ -186,6 +189,7 @@ function compilerFactSchemaIdentity(
     compiledFactSchemaCapabilities: [
       "canonical-chain-supply-distribution.v1",
       "exit-route-modeled-confidence.v1",
+      "journaled-cdp-shock-coverage.v1",
       "reviewed-transfer-deployments.v1",
     ],
     compilerAdapter: "exact-fixed-input-to-v9-facts.v1",
@@ -211,6 +215,7 @@ function producerCapabilityIdentity(
       chainSupply: "fixed-input.usd-circulating-supply.v2",
       peg: "fixed-input.peg-summary.v1",
       researchOverlays: "v9-fact-extension.review-overlays.v3",
+      shockCoverage: "journal-registry.cdp-shock-coverage.v1",
     },
     scoreBearingMethodologyVersions: {
       dexExitRoutes: sortedUnique(fixedInput.inputMethodologyVersions.dexLiquidity),
@@ -281,7 +286,8 @@ export function buildSafetyScoreV9CandidateFromNormalizedInput(
   const policy = input.policy ?? V9_CANDIDATE_POLICY_V1;
   assertV9ValidatedPolicyEnvelope(policy);
   const policyVersion = candidatePolicyVersion(policy);
-  const extension = SafetyScoreV9FactSetExtensionV2Schema.parse(
+  const extension = materializeSafetyScoreV9FactSetExtension(
+    fixedInput,
     input.extension ?? buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput),
   );
   const compiledFacts = compileSafetyScoreV9FactSetFromNormalizedInput(fixedInput, extension);

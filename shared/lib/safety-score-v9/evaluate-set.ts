@@ -20,9 +20,11 @@ import {
   createUnavailableV9BackingResult,
   isV9MaterialShare,
   type V9BackingResult,
+  type V9CdpLiquidationCapacitySelection,
   type V9ResolvedUpstreamExposure,
 } from "./backing";
 import { evaluateV9Backing } from "./archetypes";
+import { selectV9CdpLiquidationCapacity } from "./archetypes/cdp";
 import { evaluateV9EconomicControlAssetFacts, type V9EconomicControlResult } from "./control";
 import {
   buildV9DependencyEvaluationPlan,
@@ -62,6 +64,7 @@ export interface V9EvaluatedAsset {
   trace: V9ProductionScoreTrace;
   compactTrace: V9CompactScoreTrace;
   stressState: V9PublicStressState;
+  liquidationCapacitySelection?: V9CdpLiquidationCapacitySelection;
 }
 
 export interface V9EvaluatedSet {
@@ -79,16 +82,6 @@ export interface V9EvaluatedSet {
   scoreResultDigest: string;
   evaluatedSetDigest: string;
 }
-
-const SOURCE_KEYS = [
-  "registry",
-  "dex",
-  "redemption",
-  "liveReserves",
-  "chainSupply",
-  "peg",
-  "researchOverlays",
-] as const;
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -117,7 +110,11 @@ function deepFreeze<T>(value: T): Readonly<T> {
 }
 
 function sourceGenerations(factSet: CompiledV9FactSetV2): Readonly<Record<string, string>> {
-  return Object.fromEntries(SOURCE_KEYS.map((source) => [source, factSet.sourceFingerprints[source].generationId]));
+  return Object.fromEntries(
+    Object.entries(factSet.sourceFingerprints)
+      .sort(([left], [right]) => compareText(left, right))
+      .map(([source, identity]) => [source, identity.generationId]),
+  );
 }
 
 function pillarReason(
@@ -964,6 +961,11 @@ export function evaluateV9FactSet(
     ).find((candidate) => candidate.assetId === assetId);
     if (!resolved) throw new Error(`Safety Score v9 dependency inputs are missing for ${assetId}`);
 
+    const cdpReview = asset.mechanismRiskReview.review?.archetype === "cdp" ? asset.mechanismRiskReview.review : null;
+    const liquidationCapacitySelection =
+      asset.archetype === "cdp"
+        ? selectV9CdpLiquidationCapacity(asset.assetId, cdpReview, asset.cdpStressCoverage, envelope, factSet.asOfSec)
+        : undefined;
     const backingAsset = {
       assetId: asset.assetId,
       reserveStatus: asset.reserveStatus,
@@ -977,6 +979,9 @@ export function evaluateV9FactSet(
         envelope,
       ),
       seriallyResolvedUpstreamAssetIds: resolved.serial.map((dependency) => dependency.upstreamAssetId),
+      ...(liquidationCapacitySelection === undefined
+        ? {}
+        : { cdpLiquidationCapacitySelection: liquidationCapacitySelection }),
     };
     const backing =
       asset.mechanismRiskReview.review === null
@@ -1051,6 +1056,7 @@ export function evaluateV9FactSet(
       trace,
       compactTrace: projectCompactV9ScoreTrace(trace),
       stressState,
+      ...(liquidationCapacitySelection === undefined ? {} : { liquidationCapacitySelection }),
     });
   }
 

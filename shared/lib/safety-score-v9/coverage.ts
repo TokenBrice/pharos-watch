@@ -22,15 +22,6 @@ import { parseCompiledV9FactSetV2 } from "./facts";
 const V9_RELEASE_COVERAGE_REPORT_DIGEST_DOMAIN = "safety-score-v9.release-coverage-report.v1";
 const V9_COVERAGE_EVALUATION_PROJECTION_DIGEST_DOMAIN = "safety-score-v9.coverage-evaluation-projection.v1";
 
-const SOURCE_KEYS = [
-  "registry",
-  "dex",
-  "redemption",
-  "liveReserves",
-  "chainSupply",
-  "peg",
-  "researchOverlays",
-] as const;
 const REVIEW_DOMAINS = ["backing", "control", "access", "peg", "supply", "implementation"] as const;
 
 function compareText(left: string, right: string): number {
@@ -329,11 +320,19 @@ export function evaluateV9ReleaseCoverage(args: {
   );
 
   const expectedSourceGenerations = Object.fromEntries(
-    SOURCE_KEYS.map((source) => [source, factSet.sourceFingerprints[source].generationId]),
+    Object.entries(factSet.sourceFingerprints)
+      .sort(([left], [right]) => compareText(left, right))
+      .map(([source, fingerprint]) => [source, fingerprint.generationId]),
   ) as V9CoverageEvaluationSnapshotV1["sourceGenerations"];
-  const sourceGenerationMatch = SOURCE_KEYS.every(
-    (source) => evaluation.sourceGenerations[source] === expectedSourceGenerations[source],
-  );
+  const expectedSourceKeys = Object.keys(expectedSourceGenerations).sort(compareText);
+  const evaluationSourceKeys = Object.keys(evaluation.sourceGenerations).sort(compareText);
+  const sourceGenerationMatch =
+    sameStrings(expectedSourceKeys, evaluationSourceKeys) &&
+    expectedSourceKeys.every(
+      (source) =>
+        evaluation.sourceGenerations[source as keyof typeof evaluation.sourceGenerations] ===
+        expectedSourceGenerations[source as keyof typeof expectedSourceGenerations],
+    );
   const identityChecks = {
     factSetDigest:
       evaluation.factSetDigest === factSet.v9FactSetDigest &&

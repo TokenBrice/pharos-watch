@@ -807,7 +807,15 @@ const V9BackingPolicySchema = z
         cdp: z
           .object({
             minimumCollateralizationRatio: z.number().finite().nonnegative(),
+            instantaneousCollateralShock: z.number().finite().positive().max(1),
             minimumLiquidationCapacityRatio: z.number().finite().nonnegative(),
+            stressMeasurementFreshness: z
+              .object({
+                maxAgeSec: z.number().int().positive(),
+                ratification: z.literal("owner-ratified"),
+                rationale: z.string().trim().min(1),
+              })
+              .strict(),
             collateralizationSignal: V9BackingSignalRuleSchema,
             liquidationSignal: V9BackingSignalRuleSchema,
           })

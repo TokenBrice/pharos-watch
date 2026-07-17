@@ -375,7 +375,13 @@
         },
         "cdp": {
           "minimumCollateralizationRatio": 1.1,
+          "instantaneousCollateralShock": 0.5,
           "minimumLiquidationCapacityRatio": 0.5,
+          "stressMeasurementFreshness": {
+            "maxAgeSec": 259200,
+            "ratification": "owner-ratified",
+            "rationale": "A 72-hour bound reflects LUSD remaining clear through a 60% shock and slow trove-book drift; stale stress measurements fail closed to legacy LCR."
+          },
           "collateralizationSignal": {
             "kind": "unsafe-backing",
             "severity": "critical"
