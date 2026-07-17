@@ -274,6 +274,44 @@ Numeric weights, evidence ceilings, track-record ceilings, bounded-compensabilit
 
 Missing critical facts produce their exact reason-coded `NR`. Bounded facts with a `ceiling` treatment emit an executable reason cap that references an existing evidence or minimum track-record ceiling; a ceiling treatment cannot validate without such a rule. Every unresolved fact is emitted as an itemized audit record with asset, pillar, code, classification, criticality, path, and reason; its owner, fact class, boundedness, treatment, release severity, and public label are declared once in the candidate registry rather than duplicated on every row. Unsupported designs and unresolved methodology are not silently treated as missing data. The 24-asset calibration cohort also carries per-asset cohorts, candidate grade, disposition, and sorted critical facts. Parent evaluation is deterministic and parent-first; missing parents and cycles remain explicit. Fuzzy implementation dates use the conservative range end, and variants inherit the newest critical implementation layer.
 
+## 2026-07-17 Anchor-Coherence Batch Chain
+
+Four accepted, identity-chained engine batches implemented the 2026-07-17
+owner rulings (anchor set R1–R9 and D1–D13; the working record lives in the
+ignored research workspace's anchor-coherence plan):
+
+1. Stage A/B (`02f7d183`, `148389d2`): mature-domain conditioning for
+   tron/hyperliquid/xrpl/raydium, the superseded Batch3#1 mint ladder
+   (prudential+reconciled uncapped, attestation-only+reconciled capped 83),
+   graded control posture, issuer-scoped mint-control common-mode, the
+   36-month peg window, and owner-ratified 0.80-confidence admission of
+   prudentially supervised, independently signed issuer-attested reserve
+   compositions.
+2. Reviewed transfer facts (`6695f228`): a V9-only transfer overlay
+   (permissionless/restrictable/permissioned) preferred by the access
+   adapter, with a 365-day access-evidence freshness bound; missing facts
+   stay fail-closed and the public V8 producer is byte-unchanged.
+3. Shock-coverage integration (`cf71c1ba`): journaled 50% shock-demand
+   coverage (`cdp.instantaneousCollateralShock = 0.5`) preferred over
+   legacy liquidation-capacity when a complete measurement is at most
+   259,200 seconds old; staleness and incompleteness fall back visibly to
+   the legacy ratio. LUSD clears `unsafe-backing:high` at `coverage50 = 1`
+   on the pinned input; MIM and all six adverse projections are
+   hash-identical across the chain.
+4. CL measured-execution activation (`615a7fea`): the owner-ratified
+   six-key QuoterV2 cohort became score-eligible behind the existing
+   fail-closed gate; unratified deployments remain shadow-only.
+
+The final candidate identity of the chain is policy digest
+`c660ddf0559624b6d186384b6fe43f6a2d8e1ee6129aa392fe3d15a15c809306` and
+evaluation-build digest
+`da992cd61ae7d84eb3f515ac43d71be0c8762cb4270ca108dc73a238bdfa0202`.
+Every batch was accepted against the same pinned 2026-07-16 exact input
+with per-change causal attribution and byte-identical adverse projections.
+These are calibration results, not activation evidence; V8.17 remains the
+public methodology and the recorded no-go ruling stands until a qualifying
+window under an owner-frozen deployed identity completes.
+
 ## 2026-07-16 Real-A Calibration Result
 
 The latest calibration projection uses registry fingerprint
