@@ -1,0 +1,279 @@
+/* --------------------------------------------------------------------------
+   /pharoswatchbot/ art direction — one night of alerts, dusk to dawn.
+   The frost beam is the through-line: lighthouse sweep → signal spine →
+   instrument pulse → dawn glow. The page follows the site theme: dark theme
+   renders the night world; light theme renders the same scene as day (pale
+   sky, ink lighthouse). Everything runs on semantic tokens plus the
+   page-scoped ladder and scene variables below. All motion is reduced-motion
+   aware (the global reset in globals.css also applies).
+   -------------------------------------------------------------------------- */
+
+/* Fixed rem steps for the hero headline (kept from the pre-revamp ladder;
+   plain CSS so new sizes never depend on the Tailwind JIT cache). */
+.pharoswatchbot-hero-title {
+  font-size: 2rem;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+}
+
+@media (min-width: 640px) {
+  .pharoswatchbot-hero-title {
+    font-size: 3rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .pharoswatchbot-hero-title {
+    font-size: 3.75rem;
+  }
+}
+
+/* Night-surface ladder and scene variables. The page follows the site theme:
+   dark theme gets the night world (abyss → dawn); light theme gets the "day
+   watch" — pale sky, ink lighthouse, the same frost beam. Acts descend the
+   ladder either way; text and panels keep the semantic tokens. */
+.pharos-night {
+  --night-abyss: oklch(0.975 0.004 247);
+  --night-deep: oklch(0.962 0.005 247);
+  --night-slate: oklch(0.948 0.007 247);
+  --night-dawn: oklch(0.935 0.009 247);
+  --night-sky-top: oklch(0.972 0.005 248);
+  --night-sky-bottom: oklch(0.91 0.016 245);
+  --night-water: oklch(0.945 0.01 247);
+  --night-line: oklch(0.3 0.02 260);
+  --lighthouse-ink: oklch(0.34 0.025 260);
+  --lamp-core: var(--frost-blue);
+  --beam-strong: 0.55;
+  --beam-mid: 0.22;
+  --beam-far: 0.06;
+  --beam-core-strong: 0.5;
+  --beam-core-mid: 0.16;
+  --lamp-halo: 0.24;
+  --lamp-mid: 0.45;
+  background-color: var(--night-abyss);
+  /* Elements that merely inherit `color` would otherwise pick up the page
+     theme's body color and render dark-on-dark inside the night scope. */
+  color: var(--foreground);
+}
+
+.dark .pharos-night {
+  --night-abyss: oklch(0.115 0.018 262);
+  --night-deep: oklch(0.145 0.02 260);
+  --night-slate: oklch(0.175 0.024 258);
+  --night-dawn: oklch(0.215 0.028 256);
+  --night-sky-top: var(--night-abyss);
+  --night-sky-bottom: var(--night-deep);
+  --night-water: var(--night-abyss);
+  --night-line: #ffffff;
+  --lighthouse-ink: oklch(0.07 0.012 262);
+  --lamp-core: #ffffff;
+  --beam-strong: 0.85;
+  --beam-mid: 0.35;
+  --beam-far: 0.12;
+  --beam-core-strong: 0.8;
+  --beam-core-mid: 0.2;
+  --lamp-halo: 0.13;
+  --lamp-mid: 0.45;
+}
+
+.pharos-night-abyss {
+  background-color: var(--night-abyss);
+}
+
+.pharos-night-deep {
+  background-color: var(--night-deep);
+}
+
+.pharos-night-slate {
+  background-color: var(--night-slate);
+}
+
+.pharos-night-dawn {
+  background-color: var(--night-dawn);
+}
+
+/* The pinned shift-log bar: the abyss, slightly translucent over scrolling
+   content. */
+.pharos-night-nav {
+  background-color: color-mix(in oklab, var(--night-abyss) 88%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+   Act I — the hero scene: a drawn lighthouse over night water.
+   The beam is a frost wedge rotating slowly around the lamp; its reflection
+   mirrors it on the water, much fainter. Restraint rule: one scene, one beam.
+   -------------------------------------------------------------------------- */
+.pharos-night-scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.pharos-night-scene svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.pharos-night-beam {
+  transform-box: view-box;
+  transform-origin: 1182px 216px;
+}
+
+/* Stars belong to the night sky only. */
+.pharos-night-stars {
+  display: none;
+}
+
+.dark .pharos-night-stars {
+  display: inline;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pharos-night-beam {
+    animation: pharos-night-beam-sweep 16s ease-in-out infinite alternate;
+  }
+
+  .pharos-night-star {
+    animation: pharos-night-star-twinkle 6s ease-in-out infinite;
+  }
+
+  .pharos-night-star:nth-of-type(2n) {
+    animation-duration: 7.5s;
+    animation-delay: 1.2s;
+  }
+
+  .pharos-night-star:nth-of-type(3n) {
+    animation-duration: 5.2s;
+    animation-delay: 2.4s;
+  }
+}
+
+@keyframes pharos-night-beam-sweep {
+  from {
+    transform: rotate(-6.5deg);
+  }
+  to {
+    transform: rotate(8deg);
+  }
+}
+
+@keyframes pharos-night-star-twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Progress chrome — the shift log pinned under the global nav. A hairline
+   frost track fills with scroll; the active act's timestamp node stays lit.
+   -------------------------------------------------------------------------- */
+.pharos-night-progress-track {
+  position: relative;
+  height: 2px;
+  background: color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+
+.pharos-night-progress-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: var(--frost-blue);
+}
+
+/* --------------------------------------------------------------------------
+   Act II — the signals timeline. A faint spine with a frost node per signal;
+   each card arrives once its own row nears the viewport (useNearViewport +
+   data-revealed, the established reveal idiom). No-JS and reduced-motion
+   users always see the resting state.
+   -------------------------------------------------------------------------- */
+.pharos-signal-spine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 11.5px;
+  width: 1px;
+  background: color-mix(in oklab, var(--foreground) 12%, transparent);
+}
+
+.pharos-signal-card {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 420ms var(--motion-ease-standard),
+    transform 420ms var(--motion-ease-standard),
+    border-color 420ms var(--motion-ease-standard);
+}
+
+@media (scripting: enabled) {
+  [data-revealed="false"] .pharos-signal-card {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  [data-revealed="false"] .pharos-signal-node {
+    background: color-mix(in oklab, var(--foreground) 25%, transparent);
+    box-shadow: none;
+  }
+}
+
+.pharos-signal-node {
+  background: var(--frost-blue);
+  box-shadow: 0 0 12px color-mix(in oklab, var(--frost-blue) 65%, transparent);
+  transition:
+    background 420ms var(--motion-ease-standard),
+    box-shadow 420ms var(--motion-ease-standard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pharos-signal-card,
+  .pharos-signal-node {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Act V — dawn. The narrow beam becomes a wide, even glow at the horizon:
+   the watch hands over to daylight. Drawn with frost only (semantic rule).
+   -------------------------------------------------------------------------- */
+.pharos-night-dawn-glow {
+  background: radial-gradient(
+    ellipse 90% 55% at 50% 115%,
+    color-mix(in oklab, var(--frost-blue) 16%, transparent) 0%,
+    color-mix(in oklab, var(--frost-blue) 6%, transparent) 45%,
+    transparent 75%
+  );
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pharos-night-dawn-glow {
+    animation: pharos-night-dawn-breathe 9s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes pharos-night-dawn-breathe {
+  from {
+    opacity: 0.75;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Mini App carousel track (absorbed from telegram-carousel.css). */
+.telegram-mini-app-carousel-track {
+  transition: transform 240ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .telegram-mini-app-carousel-track {
+    transition: none;
+  }
+}

@@ -10,19 +10,6 @@ import { TELEGRAM_PUBLIC_ALERT_SAMPLES } from "@shared/lib/telegram-alert-sample
 export const TELEGRAM_PAGE_DESCRIPTION =
   "PharosWatchBot delivers customizable stablecoin risk alerts, watchlists, daily recaps, quiet hours, and threshold controls in Telegram.";
 
-/**
- * One-line utility blurb per alert family for the hero signal board. Keyed by
- * `TelegramAlertType` so adding or renaming a family forces a hero line too.
- */
-export const TELEGRAM_HERO_FAMILY_BLURBS: Record<TelegramAlertType, string> = {
-  dews: "Crossing into a worse early-warning band",
-  depeg: "Triggered, worsening, and resolved at your bps step",
-  safety: "Grade moves with the score driver named",
-  launch: "Tracked pre-launch stablecoins going live",
-  reserve: "Backing-mix drift on live-tracked reserves",
-  freeze: "Opt-in, from the verified on-chain tape",
-};
-
 export const TELEGRAM_ACTIONS = [
   {
     key: "bot",
@@ -81,30 +68,30 @@ export const MINI_APP_FEATURES = [
 export const MINI_APP_SCREENSHOTS = [
   {
     title: "Home",
-    src: "/featured/telegram-mini-app/home.png",
+    src: "/featured/telegram-mini-app/home.jpg",
     alt: "PharosWatchBot Mini App home screen with watcher state, snooze controls, quiet hours, and last delivery",
-    width: 583,
+    width: 549,
     height: 1280,
   },
   {
     title: "Watchlist",
-    src: "/featured/telegram-mini-app/watchlist.png",
+    src: "/featured/telegram-mini-app/watchlist.jpg",
     alt: "PharosWatchBot Mini App watchlist screen with per-coin alert toggles",
-    width: 583,
+    width: 549,
     height: 1280,
   },
   {
     title: "Presets",
-    src: "/featured/telegram-mini-app/presets.png",
+    src: "/featured/telegram-mini-app/presets.jpg",
     alt: "PharosWatchBot Mini App presets screen with followed and available preset watchlists",
-    width: 583,
+    width: 549,
     height: 1280,
   },
   {
     title: "Settings",
-    src: "/featured/telegram-mini-app/settings.png",
+    src: "/featured/telegram-mini-app/settings.jpg",
     alt: "PharosWatchBot Mini App settings screen with global alerts, depeg step, and quiet hours",
-    width: 583,
+    width: 549,
     height: 1280,
   },
 ] as const satisfies readonly { title: string; src: string; alt: string; width: number; height: number }[];
@@ -138,32 +125,37 @@ export const RECOMMENDED_SETUPS = [
 // Page-specific presentation for each alert-family example; keys, labels, and
 // the message bodies themselves derive from the shared manifests so the
 // bubbles stay exactly what the bot sends (worker contract test enforced).
+// The taglines are the plain-language read of each family — jargon spelled
+// out, honest caveat included. Times are the Night Watch narrative anchors.
 const ALERT_EXAMPLE_PRESENTATION: Record<TelegramAlertType, { tagline: string; time: string }> = {
   dews: {
     tagline:
-      "Fires when a coin crosses into a worse band of DEWS, Pharos's Depeg Early Warning System. Shows the two highest-stress sub-signals.",
-    time: "09:41",
+      "DEWS — the Depeg Early Warning System — scores stress before a peg breaks. Fires when a coin crosses into a worse band, with the two highest-stress signals named.",
+    time: "23:47",
   },
   depeg: {
-    tagline: "Fires on depegs that meet your step (100/250/500 bps), worsening milestones, and resolution.",
-    time: "09:43",
+    tagline:
+      "Fires when a peg moves past your severity step (100, 250, or 500 basis points), again on each worsening milestone, and when the peg recovers.",
+    time: "00:32",
   },
   safety: {
-    tagline: "Fires on live grade shifts and points to the driver. Re-scores from methodology changes don't page you.",
-    time: "09:45",
+    tagline:
+      "Fires on live safety-grade shifts and names the driver on the Reason line, so you know why, not just what. Methodology re-scores never page you.",
+    time: "01:18",
   },
   launch: {
-    tagline: "Fires when a tracked pre-launch asset goes live. Must be subscribed by ticker; presets don't apply here.",
-    time: "09:47",
+    tagline: "Fires when a tracked pre-launch stablecoin goes live. Subscribe by ticker — presets don't cover launches.",
+    time: "02:56",
   },
   reserve: {
     tagline:
-      "Fires when a live-reserve-tracked coin newly diverges from its curated reserve profile. Entering drift only.",
-    time: "09:49",
+      "Fires when a live-tracked coin's backing mix newly diverges from its curated profile. Entering drift only, and only on coins with live reserve tracking.",
+    time: "04:21",
   },
   freeze: {
-    tagline: "Fires when the verified tape records an issuer blacklist, release, or destroy event for a subscribed coin.",
-    time: "09:51",
+    tagline:
+      "Fires when the verified on-chain tape records an issuer blacklist, release, or destroy event. Opt-in, per coin.",
+    time: "05:12",
   },
 };
 
