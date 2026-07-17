@@ -37,7 +37,8 @@ When DefiLlama publishes a tracked zero-supply row for an asset that also has po
 6. Build the exact completion identity and check the once-per-UTC-date guard:
    - read cache key `snapshot-supply:last-write`
    - coverage-version 2 markers bind the UTC date to a SHA-256 digest of the sorted required active IDs plus the exact applied waiver IDs, owners, and expiries; count-only version 1 markers remain readable but cannot authorize a writer skip
-   - skip with `reason: "already_written_today"` only when the marker date and digest match the current complete coverage evaluation (one snapshot per UTC day, written by the first healthy run after UTC midnight; a wall-clock cooldown previously drifted the write time through the day)
+   - when the marker date and digest match the current complete coverage evaluation, conditionally repair only same-day rows whose stored `price` is still `null` and whose current cache row now has a positive price; otherwise skip with `reason: "already_written_today"`
+   - same-day repair never overwrites a non-null historical price, circulating supply, or rows outside cron ownership
 7. For each PSI-eligible cached asset:
    - Sum circulating supply via `sumPegBuckets(asset.circulating)` --- already in USD
    - Skip if sum <= 0
@@ -74,7 +75,7 @@ CREATE INDEX idx_supply_hist_date ON supply_history(snapshot_date DESC);
 | `circulating_usd` | REAL | Total market cap in USD |
 | `price` | REAL | USD price at snapshot time (may be `null`) |
 
-The primary key `(stablecoin_id, snapshot_date)` enforces one row per coin per UTC day. The cron uses `INSERT OR REPLACE`, so re-runs on the same day are idempotent and refresh the row with the latest valid cached values. In the checked-in migration tree this table now lives in `worker/migrations/0000_baseline.sql`.
+The primary key `(stablecoin_id, snapshot_date)` enforces one row per coin per UTC day. The first complete run atomically replaces the cron-owned daily set. Later complete runs only fill a same-day `null` price from a current positive cache price, preserving the original circulating value and every non-null price. In the checked-in migration tree this table now lives in `worker/migrations/0000_baseline.sql`.
 
 ### onchain_supply
 
