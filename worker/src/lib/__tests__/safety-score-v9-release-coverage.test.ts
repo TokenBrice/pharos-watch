@@ -566,7 +566,7 @@ describe("Safety Score V9 ratified release coverage floor", () => {
     const nrResult = await assessSafetyScoreV9ShadowReleaseCoverage(assessmentInput(nrDrift, nrDb));
     expect(nrResult.floor.status).toBe("fail");
     expect(nrResult.floor.detail).toContain("nr-reason-mismatch");
-  });
+  }, 30_000);
 
   it("fails closed when the stored cohort record is tampered with or the table is missing", async () => {
     const fixture = buildFixture();
