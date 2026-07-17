@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v8/evaluation-build-manifest-v1";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { buildV9DependencyEvaluationPlan } from "@shared/lib/safety-score-v9/dependencies";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
@@ -12,6 +14,7 @@ import {
   type SafetyScoreV9FactSetExtensionV2,
 } from "../safety-score-v9-fact-set";
 import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../safety-score-v9-extension";
+import type { SafetyScoreV9ReviewedTransferFact } from "../safety-score-v9-extension-transfer";
 
 const AS_OF_SEC = 10_000;
 const OBSERVED_AT_SEC = 9_900;
@@ -39,7 +42,12 @@ function notApplicableStatus(policyRuleId: string) {
   };
 }
 
-function route(routeId = "dex:primary", observedAt = OBSERVED_AT_SEC, chain = "ethereum"): ExitRouteObservation {
+function route(
+  routeId = "dex:primary",
+  observedAt = OBSERVED_AT_SEC,
+  chain = "ethereum",
+  clockSec = AS_OF_SEC,
+): ExitRouteObservation {
   return {
     routeId,
     routeFamily: "dex-amm",
@@ -54,7 +62,7 @@ function route(routeId = "dex:primary", observedAt = OBSERVED_AT_SEC, chain = "e
     confidence: "high",
     scoreEligible: true,
     observedAt,
-    freshnessSeconds: AS_OF_SEC - observedAt,
+    freshnessSeconds: clockSec - observedAt,
     commonModeKeys: ["chain:ethereum", "protocol:fixture-dex"],
     capacityCurve: [
       {
@@ -93,8 +101,11 @@ function exactFixedInput(
         circulatingPrevMonth: number;
       }
     >;
+    clockSec?: number;
   } = {},
 ) {
+  const clockSec = args.clockSec ?? AS_OF_SEC;
+  const observedAtSec = clockSec - 100;
   const reserve = {
     name: "Custodied cash",
     pct: 100,
@@ -114,16 +125,16 @@ function exactFixedInput(
     activeAssetIds: ["alpha"],
     capturedAt: "2026-07-13T00:00:00.000Z",
     sourceGeneration: "report-cards:fixture:10000",
-    dexGenerationId: `dex-liquidity-${OBSERVED_AT_SEC}`,
+    dexGenerationId: `dex-liquidity-${observedAtSec}`,
     redemptionGenerationId: "redemption-backstops-unavailable",
     registryRevision: "registry:fixture",
     methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-    clockSec: AS_OF_SEC,
-    updatedAt: AS_OF_SEC,
+    clockSec,
+    updatedAt: clockSec,
     liquidityStale: false,
     redemptionStale: true,
     inputFreshness: {
-      dexLiquidity: { updatedAt: OBSERVED_AT_SEC, ageSeconds: 100, stale: false },
+      dexLiquidity: { updatedAt: observedAtSec, ageSeconds: clockSec - observedAtSec, stale: false },
       redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
     },
     pegDataById: args.omitPegRow
@@ -139,7 +150,7 @@ function exactFixedInput(
             currentDeviationBps: args.currentDeviationBps === undefined ? 1 : args.currentDeviationBps,
             pegScore: args.pegScore === undefined ? 99 : args.pegScore,
             priceSource: "fixture-price",
-            priceObservedAt: OBSERVED_AT_SEC,
+            priceObservedAt: observedAtSec,
             pegPct: 99,
             severityScore: 0,
             spreadPenalty: 0,
@@ -165,7 +176,7 @@ function exactFixedInput(
         effectiveTvlUsd: 1_000_000,
         balanceMeasuredTvlUsd: 1_000_000,
         organicMeasuredTvlUsd: 1_000_000,
-        exitRouteObservations: [route("dex:primary", OBSERVED_AT_SEC, args.routeChain ?? "ethereum")],
+        exitRouteObservations: [route("dex:primary", observedAtSec, args.routeChain ?? "ethereum", clockSec)],
         exitRouteObservationCoverage: {
           status: "populated",
           capabilityMatrixVersion: "p4a.4",
@@ -179,7 +190,7 @@ function exactFixedInput(
           unsupportedReasons: {},
         },
         methodologyVersion: "dex:fixture-v1",
-        updatedAt: OBSERVED_AT_SEC,
+        updatedAt: observedAtSec,
       },
     },
     redemptionBackstopMap: {},
@@ -189,7 +200,7 @@ function exactFixedInput(
     liveReserveProvenanceMap: args.omitLiveReserve
       ? {}
       : {
-          alpha: { source: "fixture-reserve-api", fetchedAt: OBSERVED_AT_SEC },
+          alpha: { source: "fixture-reserve-api", fetchedAt: observedAtSec },
         },
     chainCirculatingById: {
       alpha: args.chainSupplyByChain ?? {
@@ -1127,7 +1138,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     );
   });
 
-  it("maps reviewed blacklistability without inventing permissionlessness", () => {
+  it("prefers reviewed deployment transfer facts and preserves the absent-fact fallback", () => {
     const fixed = exactFixedInput();
     const reviewBase = {
       sources: [{ label: "Reviewed token controls", url: "https://example.com/token-controls" }],
@@ -1135,18 +1146,52 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       reviewer: "Fixture reviewer",
       reviewedAt: "1970-01-01",
     };
-    const build = (reviewedStatus: true | false | "possible") =>
-      buildSafetyScoreV9BaselineExtension(fixed, {
+    const transferFact = (
+      posture: "permissionless" | "restrictable" | "permissioned",
+    ): SafetyScoreV9ReviewedTransferFact => ({
+      assetId: "alpha",
+      reviewedAt: "1970-01-01",
+      reviewer: "Fixture reviewer",
+      deployments: [
+        {
+          chainId: "ethereum",
+          contractOrTokenId: "0xalpha",
+          scope: "canonical",
+          posture,
+          evidence: "The verified token implementation establishes this deployment posture.",
+          sources: [{ label: "Verified token source", url: "https://example.com/token-source" }],
+        },
+      ],
+    });
+    const build = (
+      reviewedStatus: true | false | "possible",
+      transferReview?: SafetyScoreV9ReviewedTransferFact,
+      input = fixed,
+      options: {
+        blacklistReviewedAt?: string;
+        contracts?: Array<{ chain: string; address: string; decimals: number }>;
+      } = {},
+    ) =>
+      buildSafetyScoreV9BaselineExtension(input, {
         metaById: new Map([
           [
             "alpha",
             {
               id: "alpha",
               mechanismArchetype: "fiat-cash" as const,
-              blacklistabilityReview: { ...reviewBase, reviewedStatus },
+              contracts: options.contracts ?? [
+                { chain: "ethereum", address: "0xalpha", decimals: 18 },
+                { chain: "base", address: "0xbeta", decimals: 18 },
+              ],
+              blacklistabilityReview: {
+                ...reviewBase,
+                reviewedAt: options.blacklistReviewedAt ?? reviewBase.reviewedAt,
+                reviewedStatus,
+              },
             },
           ],
         ]),
+        reviewedTransferFacts: new Map(transferReview ? [["alpha", transferReview]] : []),
       });
 
     const restrictable = compileSafetyScoreV9FactSetFromFixedInput(fixed, build(true)).assets[0]!;
@@ -1161,7 +1206,10 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     });
     expect(
       restrictable.evidence.find((candidate) => candidate.sourceId === "stablecoin-meta.blacklistability-review"),
-    ).toMatchObject({ url: "https://example.com/token-controls", freshness: { state: "not-assessed" } });
+    ).toMatchObject({
+      url: "https://example.com/token-controls",
+      freshness: { state: "current", maxAgeSec: V9_ACCESS_EVIDENCE_MAX_AGE_SEC },
+    });
 
     const noBlacklist = compileSafetyScoreV9FactSetFromFixedInput(fixed, build(false)).assets[0]!;
     expect(noBlacklist.accessReview.transfer).toMatchObject({
@@ -1179,6 +1227,95 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       reach: "possible",
       status: { observationState: "bounded-unknown" },
     });
+
+    for (const posture of ["permissionless", "restrictable", "permissioned"] as const) {
+      const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, build(true, transferFact(posture))).assets[0]!;
+      expect(compiled.accessReview.transfer).toMatchObject({ posture, status: { observationState: "known" } });
+      expect(compiled.accessReview.freeze.reviews[0]).toMatchObject({
+        reach: "individual",
+        status: { observationState: "known" },
+      });
+      expect(
+        compiled.evidence.find((candidate) => candidate.sourceId === "safety-score-v9.reviewed-transfer-overlay"),
+      ).toMatchObject({
+        url: "https://example.com/token-source",
+        freshness: { state: "current", maxAgeSec: V9_ACCESS_EVIDENCE_MAX_AGE_SEC },
+      });
+    }
+
+    const multiChain = exactFixedInput({
+      chainSupplyByChain: {
+        ethereum: {
+          current: 9_000_000,
+          circulatingPrevDay: 9_000_000,
+          circulatingPrevWeek: 9_000_000,
+          circulatingPrevMonth: 9_000_000,
+        },
+        base: {
+          current: 1_000_000,
+          circulatingPrevDay: 1_000_000,
+          circulatingPrevWeek: 1_000_000,
+          circulatingPrevMonth: 1_000_000,
+        },
+      },
+    });
+    const incomplete = compileSafetyScoreV9FactSetFromFixedInput(
+      multiChain,
+      build(true, transferFact("permissionless"), multiChain),
+    ).assets[0]!;
+    expect(incomplete.accessReview.transfer).toMatchObject({
+      posture: null,
+      status: { observationState: "bounded-unknown" },
+    });
+
+    const wrongContract = transferFact("permissionless");
+    wrongContract.deployments[0]!.contractOrTokenId = "0xwrong";
+    expect(
+      compileSafetyScoreV9FactSetFromFixedInput(fixed, build(true, wrongContract)).assets[0]!.accessReview.transfer,
+    ).toMatchObject({ posture: null, status: { observationState: "bounded-unknown" } });
+
+    const wrongScope: SafetyScoreV9ReviewedTransferFact = {
+      ...transferFact("permissionless"),
+      deployments: [
+        { ...transferFact("permissionless").deployments[0]!, scope: "additional" },
+        {
+          ...transferFact("permissionless").deployments[0]!,
+          chainId: "base",
+          contractOrTokenId: "0xbeta",
+        },
+      ],
+    };
+    expect(
+      compileSafetyScoreV9FactSetFromFixedInput(fixed, build(true, wrongScope)).assets[0]!.accessReview.transfer,
+    ).toMatchObject({ posture: null, status: { observationState: "bounded-unknown" } });
+
+    expect(
+      compileSafetyScoreV9FactSetFromFixedInput(
+        fixed,
+        build(true, transferFact("permissionless"), fixed, {
+          contracts: [
+            { chain: "ethereum", address: "0xalpha", decimals: 18 },
+            { chain: "ethereum", address: "0xalpha2", decimals: 18 },
+          ],
+        }),
+      ).assets[0]!.accessReview.transfer,
+    ).toMatchObject({ posture: null, status: { observationState: "bounded-unknown" } });
+
+    const staleInput = exactFixedInput({ clockSec: V9_ACCESS_EVIDENCE_MAX_AGE_SEC + 1 });
+    const stale = compileSafetyScoreV9FactSetFromFixedInput(
+      staleInput,
+      build(true, transferFact("permissionless"), staleInput, { blacklistReviewedAt: "1971-01-01" }),
+    ).assets[0]!;
+    expect(stale.accessReview.transfer).toMatchObject({ posture: null, status: { observationState: "stale" } });
+    expect(stale.accessReview.freeze.status.observationState).toBe("known");
+    expect(
+      stale.evidence.find((candidate) => candidate.sourceId === "safety-score-v9.reviewed-transfer-overlay"),
+    ).toMatchObject({ freshness: { state: "stale", maxAgeSec: V9_ACCESS_EVIDENCE_MAX_AGE_SEC } });
+
+    expect(build(true).registryFingerprint).toBe(build(true, transferFact("permissionless")).registryFingerprint);
+    expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
+      "fd7f8504a4412127c79823e43ed4d63507e1930319c73ab926c91b1a9a480bd7",
+    );
   });
 
   it("maps only explicit oracle branch families and remains NR without a mechanism review", () => {

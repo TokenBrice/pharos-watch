@@ -1,4 +1,5 @@
 import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v9/evaluation-build-manifest-v1";
+import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { evaluateV9FactSet, type V9EvaluatedSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { DEX_ROUTE_SOURCE_CAPABILITIES } from "@shared/lib/p4-exit-route-capacity";
 import { assertV9ValidatedPolicyEnvelope, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
@@ -41,6 +42,7 @@ const SafetyScoreV9CompilerFactSchemaIdentityV1Schema = z
     compiledFactSchemaCapabilities: z.tuple([
       z.literal("canonical-chain-supply-distribution.v1"),
       z.literal("exit-route-modeled-confidence.v1"),
+      z.literal("reviewed-transfer-deployments.v1"),
     ]),
     compilerAdapter: z.literal("exact-fixed-input-to-v9-facts.v1"),
     evaluationBuildDigest: Sha256Schema,
@@ -65,7 +67,7 @@ const SafetyScoreV9ProducerCapabilityIdentityV1Schema = z
         liveReserves: z.literal("fixed-input.live-reserves.v1"),
         chainSupply: z.literal("fixed-input.usd-circulating-supply.v2"),
         peg: z.literal("fixed-input.peg-summary.v1"),
-        researchOverlays: z.literal("v9-fact-extension.review-overlays.v2"),
+        researchOverlays: z.literal("v9-fact-extension.review-overlays.v3"),
       })
       .strict(),
     scoreBearingMethodologyVersions: z
@@ -81,6 +83,7 @@ const SafetyScoreV9ProducerCapabilityIdentityV1Schema = z
         dexExitRoutes: z.number().int().nonnegative(),
         redemptionExitRoutes: z.number().int().nonnegative(),
         documentedTermsExitRoutes: z.number().int().nonnegative(),
+        accessReviews: z.literal(V9_ACCESS_EVIDENCE_MAX_AGE_SEC),
         liveReserves: z.number().int().nonnegative().nullable(),
         chainSupply: z.number().int().nonnegative().nullable(),
         peg: z.number().int().nonnegative().nullable(),
@@ -180,7 +183,11 @@ function compilerFactSchemaIdentity(
     fixedInputSchemaVersion: fixedInput.schemaVersion,
     factExtensionSchemaVersion: extension.schemaVersion,
     compiledFactSchemaVersion: compiledFacts.schemaVersion,
-    compiledFactSchemaCapabilities: ["canonical-chain-supply-distribution.v1", "exit-route-modeled-confidence.v1"],
+    compiledFactSchemaCapabilities: [
+      "canonical-chain-supply-distribution.v1",
+      "exit-route-modeled-confidence.v1",
+      "reviewed-transfer-deployments.v1",
+    ],
     compilerAdapter: "exact-fixed-input-to-v9-facts.v1",
     evaluationBuildDigest: SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST,
   });
@@ -203,7 +210,7 @@ function producerCapabilityIdentity(
       liveReserves: "fixed-input.live-reserves.v1",
       chainSupply: "fixed-input.usd-circulating-supply.v2",
       peg: "fixed-input.peg-summary.v1",
-      researchOverlays: "v9-fact-extension.review-overlays.v2",
+      researchOverlays: "v9-fact-extension.review-overlays.v3",
     },
     scoreBearingMethodologyVersions: {
       dexExitRoutes: sortedUnique(fixedInput.inputMethodologyVersions.dexLiquidity),
@@ -222,6 +229,7 @@ function producerCapabilityIdentity(
       // Documented-terms freshness governs score-eligible redemption evidence
       // and must be capability-bound (VER-011).
       documentedTermsExitRoutes: extension.routeFreshness.documentedTermsMaxAgeSec,
+      accessReviews: V9_ACCESS_EVIDENCE_MAX_AGE_SEC,
       liveReserves: extension.sources.liveReserves.maxAgeSec,
       chainSupply: extension.sources.chainSupply.maxAgeSec,
       peg: extension.sources.peg.maxAgeSec,

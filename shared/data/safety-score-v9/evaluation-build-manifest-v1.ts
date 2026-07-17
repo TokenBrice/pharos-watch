@@ -70,7 +70,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/access-posture.ts",
-      "sha256": "8c07f75af960d7c056a99866166b6a4ae3fbffe25c91edd5d74116e8cce64702"
+      "sha256": "f2fcb786349463058875c218e9f7d45cf08ed7c87a4c92100b660fbfcd3cae18"
     },
     {
       "path": "shared/lib/safety-score-v9/archetypes/algorithmic.ts",
@@ -245,8 +245,12 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "53672f4d40897c9f9f3bf255f21dca695336f1047e8b2c5f52db59988d5eee3d"
     },
     {
+      "path": "worker/src/lib/safety-score-v9-extension-transfer.ts",
+      "sha256": "b72f69505f408b0894b78235521dec3805bff6797e0fc7e35f79a262aea14a8e"
+    },
+    {
       "path": "worker/src/lib/safety-score-v9-extension.ts",
-      "sha256": "4ebb1edddc17ae3a917a822fb762c659b19f325528bd81f856395470a170ec27"
+      "sha256": "e0e9eca5a5d010534b9ee6c9c2f3f35efc5daef2f164f1d51ce09008bf597acb"
     },
     {
       "path": "worker/src/lib/safety-score-v9-fact-set-boundary.ts",
@@ -257,7 +261,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "9950f5509006931af6077cbf1dc0f6cb1912849f6a4cccd0ef2dc6cbc71fe39b"
     }
   ],
-  "digest": "cc002a43b5c344084ae3574740da6140b68a72642957d814dc617c571fd53f59"
+  "digest": "3cc87acddebb333e3f9b0e6b1350f1ae2e80d9c72e1da074af267239dc96f7c0"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

@@ -4,6 +4,7 @@ import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation"
 import { diagnoseDependencyGraph, type DependencyGraphEdge } from "@shared/lib/dependency-graph";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { computeReportCardsRegistryFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
+import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -37,6 +38,14 @@ import {
   SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
 } from "./safety-score-v9-extension-mechanism";
 import { buildSafetyScoreV9ReserveClassifications } from "./safety-score-v9-extension-reserves";
+import {
+  computeSafetyScoreV9ReviewedTransferFactsDigest,
+  resolveSafetyScoreV9ReviewedTransferFact,
+  SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS,
+  safetyScoreV9TransferDeploymentKey,
+  type SafetyScoreV9ReviewedTransferFact,
+  type SafetyScoreV9TransferMaterialScope,
+} from "./safety-score-v9-extension-transfer";
 import { SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY } from "@shared/lib/redemption-backstop-scoring";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import {
@@ -71,12 +80,14 @@ export type V9ExtensionRegistryMeta = Pick<
   | "oracleRisk"
   | "bridgeRouteRisk"
   | "blacklistabilityReview"
+  | "contracts"
 > &
   Partial<Pick<StablecoinMeta, "flags">>;
 
 export interface BuildSafetyScoreV9BaselineExtensionOptions {
   metaById?: ReadonlyMap<string, V9ExtensionRegistryMeta>;
   registryFingerprint?: string;
+  reviewedTransferFacts?: ReadonlyMap<string, SafetyScoreV9ReviewedTransferFact>;
 }
 
 interface PreparedDependency {
@@ -847,35 +858,144 @@ function addDependencyEvidence(meta: V9ExtensionRegistryMeta, evidence: ReviewEv
   });
 }
 
+function accessEvidenceObservationState(reviewedAt: string, clockSec: number): "current" | "stale" {
+  const reviewedAtSec = Date.parse(`${reviewedAt}T00:00:00.000Z`) / 1_000;
+  if (!Number.isFinite(reviewedAtSec)) throw new Error("Safety Score v9 access review has an invalid review date");
+  if (reviewedAtSec > clockSec) throw new Error("Safety Score v9 access review is later than the scoring clock");
+  return clockSec - reviewedAtSec <= V9_ACCESS_EVIDENCE_MAX_AGE_SEC ? "current" : "stale";
+}
+
+function transferMaterialScope(
+  fixedInput: Readonly<ReportCardsFixedInput>,
+  assetId: string,
+  meta: V9ExtensionRegistryMeta,
+): SafetyScoreV9TransferMaterialScope {
+  const rows = fixedInput.chainCirculatingById[assetId] ?? {};
+  const totalSupplyUsd = Object.values(rows).reduce((sum, row) => sum + row.current, 0);
+  if (totalSupplyUsd <= 0) {
+    return {
+      authoritativeDeploymentKeys: [],
+      materialDeploymentKeys: [],
+      materialDeploymentScopeComplete: false,
+    };
+  }
+
+  const supplyByChainId = new Map<string, number>();
+  let unresolvedSupplyUsd = 0;
+  for (const [chain, row] of Object.entries(rows)) {
+    const chainId = resolveChainId(chain);
+    if (chainId === null) {
+      unresolvedSupplyUsd += row.current;
+    } else {
+      supplyByChainId.set(chainId, (supplyByChainId.get(chainId) ?? 0) + row.current);
+    }
+  }
+  const authoritativeDeployments = (meta.contracts ?? []).flatMap((deployment) => {
+    const chainId = resolveChainId(deployment.chain);
+    return chainId === null ? [] : [{ chainId, key: safetyScoreV9TransferDeploymentKey(chainId, deployment.address) }];
+  });
+  const authoritativeDeploymentKeys = [...new Set(authoritativeDeployments.map(({ key }) => key))].sort(compareText);
+  const deploymentsByChainId = new Map<string, string[]>();
+  for (const deployment of authoritativeDeployments) {
+    deploymentsByChainId.set(deployment.chainId, [
+      ...(deploymentsByChainId.get(deployment.chainId) ?? []),
+      deployment.key,
+    ]);
+  }
+  const materialChainIds = [...supplyByChainId.entries()]
+    .filter(([, supplyUsd]) => supplyUsd / totalSupplyUsd >= DEPLOYMENT_MATERIAL_SHARE_THRESHOLD)
+    .map(([chainId]) => chainId)
+    .sort(compareText);
+  const materialDeploymentKeys = [
+    ...new Set(materialChainIds.flatMap((chainId) => deploymentsByChainId.get(chainId) ?? [])),
+  ].sort(compareText);
+  return {
+    authoritativeDeploymentKeys,
+    materialDeploymentKeys,
+    materialDeploymentScopeComplete:
+      unresolvedSupplyUsd / totalSupplyUsd < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD &&
+      materialChainIds.length > 0 &&
+      materialChainIds.every((chainId) => (deploymentsByChainId.get(chainId)?.length ?? 0) > 0),
+  };
+}
+
 function adaptAccessReview(
   meta: V9ExtensionRegistryMeta,
   metaById: ReadonlyMap<string, V9ExtensionRegistryMeta>,
   evidence: ReviewEvidenceBuilder,
+  transferReview: SafetyScoreV9ReviewedTransferFact | undefined,
+  materialScope: SafetyScoreV9TransferMaterialScope,
+  clockSec: number,
 ): ExtensionAsset["accessReview"] {
   const review: BlacklistabilityReview | undefined = meta.blacklistabilityReview;
-  if (!review) return null;
-  const evidenceKeys = evidence.add({
-    componentKeys: ["access:transfer", "access:freeze", `access:freeze:blacklist:${meta.id}`],
-    sourceId: "stablecoin-meta.blacklistability-review",
-    reviewedAt: review.reviewedAt,
-    confidence: "manual-review",
-    sources: review.sources,
-    payload: review,
-  });
-  const status = review.reviewedStatus;
+  if (!review && !transferReview) return null;
+
+  const transferResolution = transferReview
+    ? resolveSafetyScoreV9ReviewedTransferFact(transferReview, clockSec, materialScope)
+    : null;
+  const transferEvidenceKeys = transferReview
+    ? evidence.add({
+        componentKeys: ["access:transfer"],
+        sourceId: "safety-score-v9.reviewed-transfer-overlay",
+        reviewedAt: transferReview.reviewedAt,
+        confidence: "manual-review",
+        sources: transferReview.deployments.flatMap((deployment) => deployment.sources),
+        payload: transferReview,
+        maxAgeSec: V9_ACCESS_EVIDENCE_MAX_AGE_SEC,
+      })
+    : [];
+
+  const blacklistFreshness = review ? accessEvidenceObservationState(review.reviewedAt, clockSec) : null;
+  const blacklistEvidenceKeys = review
+    ? evidence.add({
+        // The blacklist fact owns freeze posture. Its transfer binding remains
+        // only as the compatibility fallback when no dedicated fact exists.
+        componentKeys: [
+          ...(transferReview ? [] : ["access:transfer"]),
+          "access:freeze",
+          `access:freeze:blacklist:${meta.id}`,
+        ],
+        sourceId: "stablecoin-meta.blacklistability-review",
+        reviewedAt: review.reviewedAt,
+        confidence: "manual-review",
+        sources: review.sources,
+        payload: review,
+        maxAgeSec: V9_ACCESS_EVIDENCE_MAX_AGE_SEC,
+      })
+    : [];
+  const status = review?.reviewedStatus;
   const inheritedFrom = meta.mintAuthority?.inheritedFrom ?? meta.variantOf ?? null;
   const inheritedResolvable = inheritedFrom !== null && metaById.has(inheritedFrom);
   const freezeKnown = status === true || status === false;
-  const freezeState = freezeKnown ? "known" : "bounded-unknown";
-  const transferKnown = status === true;
+  const freezeState =
+    blacklistFreshness === "stale" ? "stale" : freezeKnown ? "known" : review ? "bounded-unknown" : "missing";
+  const legacyTransferState =
+    status === false || review === undefined
+      ? "missing"
+      : blacklistFreshness === "stale"
+        ? "stale"
+        : status === true
+          ? "known"
+          : "bounded-unknown";
+  const transferState = transferResolution?.observationState ?? legacyTransferState;
+  const transferPosture = transferResolution
+    ? transferResolution.posture
+    : legacyTransferState === "known"
+      ? "restrictable"
+      : null;
   const freezeReview =
-    status === "inherited" && !inheritedResolvable
+    review === undefined || (status === "inherited" && !inheritedResolvable)
       ? []
       : [
           {
             reviewKey: `blacklist:${meta.id}`,
             source: status === "inherited" ? ("upstream" as const) : ("blacklist" as const),
-            status: requiredStatus("v9.access.freeze-review", freezeState, `access-freeze:${meta.id}`, evidenceKeys),
+            status: requiredStatus(
+              "v9.access.freeze-review",
+              freezeState,
+              `access-freeze:${meta.id}`,
+              blacklistEvidenceKeys,
+            ),
             reach:
               status === false ? ("none" as const) : status === true ? ("individual" as const) : ("possible" as const),
             controlKey: null,
@@ -890,18 +1010,18 @@ function adaptAccessReview(
     transfer: {
       status: requiredStatus(
         "v9.access.transfer-review",
-        transferKnown ? "known" : status === "possible" || status === "inherited" ? "bounded-unknown" : "missing",
+        transferState,
         `access-transfer:${meta.id}`,
-        transferKnown || status === "possible" || status === "inherited" ? evidenceKeys : [],
+        transferReview ? transferEvidenceKeys : legacyTransferState === "missing" ? [] : blacklistEvidenceKeys,
       ),
-      posture: transferKnown ? "restrictable" : null,
+      posture: transferPosture,
     },
     freeze: {
       status: requiredStatus(
         "v9.access.freeze-review",
-        freezeKnown ? "known" : "bounded-unknown",
+        freezeState,
         `access-freeze:${meta.id}`,
-        evidenceKeys,
+        review ? blacklistEvidenceKeys : [],
       ),
       reviews: freezeReview,
     },
@@ -1387,6 +1507,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
   options: BuildSafetyScoreV9BaselineExtensionOptions = {},
 ): SafetyScoreV9FactSetExtensionV2 {
   const metaById = options.metaById ?? ACTIVE_META_BY_ID;
+  const reviewedTransferFacts = options.reviewedTransferFacts ?? SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS;
   const registryFingerprint = options.registryFingerprint ?? computeReportCardsRegistryFingerprint();
   if (registryFingerprint !== fixedInput.registryFingerprint) {
     throw new Error(
@@ -1430,9 +1551,10 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     pegDataById: fixedInput.pegDataById,
     activeDepegPeakBpsById: fixedInput.activeDepegPeakBpsById,
   });
-  const researchOverlaysGenerationDigest = digest("safety-score-v9.research-overlays.v2", {
+  const researchOverlaysGenerationDigest = digest("safety-score-v9.research-overlays.v3", {
     registryRevision: fixedInput.registryRevision,
     mechanismReviewOverlaysDigest: SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
+    reviewedTransferFactsDigest: computeSafetyScoreV9ReviewedTransferFactsDigest(reviewedTransferFacts.values()),
   });
   const sources = {
     registryObservedAtSec,
@@ -1456,7 +1578,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       maxAgeSec: CRON_INTERVALS["sync-stablecoins"] * 2,
     },
     researchOverlays: {
-      generationId: `research-overlays:v2:${researchOverlaysGenerationDigest}`,
+      generationId: `research-overlays:v3:${researchOverlaysGenerationDigest}`,
       observedAtSec: registryObservedAtSec,
       // Curated mechanism/reserve/route overlays re-bound after twelve months,
       // consistent with the D1 overlay standard and the mechanism-overlay
@@ -1512,7 +1634,14 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       const controls = [...mint.controls, ...bridge.controls].sort((left, right) =>
         compareText(left.controlKey, right.controlKey),
       );
-      const accessReview = adaptAccessReview(meta, metaById, reviewEvidence);
+      const accessReview = adaptAccessReview(
+        meta,
+        metaById,
+        reviewEvidence,
+        reviewedTransferFacts.get(assetId),
+        transferMaterialScope(fixedInput, assetId, meta),
+        clockSec,
+      );
       const reviewedEvidence = reviewEvidence.finish();
       const controlsFullyResolved =
         controls.length > 0 &&

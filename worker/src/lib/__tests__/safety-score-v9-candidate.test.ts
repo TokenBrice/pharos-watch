@@ -353,12 +353,17 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
     expect(left.compilerFactSchemaIdentity.compiledFactSchemaCapabilities).toEqual([
       "canonical-chain-supply-distribution.v1",
       "exit-route-modeled-confidence.v1",
+      "reviewed-transfer-deployments.v1",
     ]);
     expect(left.producerCapabilityIdentity.sourceAdapters.dexExitRoutes).toBe("fixed-input.dex-exit-observations.v2");
     expect(left.producerCapabilityIdentity.sourceAdapters.redemptionExitRoutes).toBe(
       "fixed-input.redemption-exit-observations.v2",
     );
     expect(left.producerCapabilityIdentity.sourceAdapters.chainSupply).toBe("fixed-input.usd-circulating-supply.v2");
+    expect(left.producerCapabilityIdentity.sourceAdapters.researchOverlays).toBe(
+      "v9-fact-extension.review-overlays.v3",
+    );
+    expect(left.producerCapabilityIdentity.freshnessPolicySec.accessReviews).toBe(31_536_000);
     expect(
       left.compiledFacts.assets.every((asset) =>
         Object.prototype.hasOwnProperty.call(asset.supply, "chainDistribution"),

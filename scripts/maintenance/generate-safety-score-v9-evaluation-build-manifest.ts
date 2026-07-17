@@ -89,6 +89,7 @@ export const V9_FACT_PRODUCER_SOURCE_PATHS = [
   "worker/src/lib/safety-score-v9-extension-reserves.ts",
   "worker/src/lib/safety-score-v9-extension-routes.ts",
   "worker/src/lib/safety-score-v9-extension-supply.ts",
+  "worker/src/lib/safety-score-v9-extension-transfer.ts",
   "worker/src/lib/safety-score-v9-fact-set.ts",
   "worker/src/lib/safety-score-v9-fact-set-boundary.ts",
 ] as const;

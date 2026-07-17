@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "note": "V9-only reviewed transfer-posture facts. Rows are added only after deployment-scoped primary-source review.",
+  "reviews": []
+}
