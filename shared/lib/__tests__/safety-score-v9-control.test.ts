@@ -291,7 +291,7 @@ describe("Safety Score v9 economic control", () => {
     );
   });
 
-  it("graduates a reconciled unbounded mint by prudential-supervision evidence", () => {
+  it("applies the R3 reconciled-mint ladder by reviewed supervision", () => {
     const mintControl = control("mint:hot-wallet", "mint", {
       authority: { authorityKey: "authority:issuer", model: "eoa", threshold: null },
       capSemantics: { kind: "unbounded", bound: null },
@@ -309,8 +309,8 @@ describe("Safety Score v9 economic control", () => {
     const severityFor = (supervision: V9MintSupervision) =>
       resultFor(supervision).structuralFailures.find((failure) => failure.kind === "centralized-mint");
 
-    // The reconciled unbounded mint is its own posture, scored at 55 (not the
-    // 25 unbounded-or-compromised rung), so the ruled tier ceilings are reachable.
+    // R3/R4 keep unknown supervision conservative while grading reviewed
+    // supervision inside the control pillar.
     const unknownResult = resultFor("unknown");
     expect(unknownResult.components.find((component) => component.kind === "mint")).toMatchObject({
       posture: "unbounded-reconciled",
@@ -322,13 +322,17 @@ describe("Safety Score v9 economic control", () => {
       severity: "high",
       reason: "Minting is economically unbounded but supply is reconciled against reserves.",
     });
-    expect(severityFor("attestation-only")).toMatchObject({ severity: "high" });
+    expect(severityFor("attestation-only")).toMatchObject({ severity: "low" });
     expect(severityFor("none")).toMatchObject({ severity: "high" });
 
-    // A reviewed prudential-supervision fact graduates one further rung to moderate.
-    expect(severityFor("prudential")).toMatchObject({
-      severity: "moderate",
-      reason: "Minting is economically unbounded but reconciled and prudentially supervised.",
+    expect(severityFor("prudential")).toBeUndefined();
+    expect(resultFor("prudential").components.find((component) => component.kind === "mint")).toMatchObject({
+      posture: "unbounded-reconciled",
+      score: 80,
+    });
+    expect(resultFor("attestation-only").components.find((component) => component.kind === "mint")).toMatchObject({
+      posture: "unbounded-reconciled",
+      score: 70,
     });
   });
 

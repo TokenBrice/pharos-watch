@@ -204,7 +204,7 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     expect(mintControl?.capSemantics.kind).toBe("raiseable");
   });
 
-  it("drives the reviewed profile end-to-end to posture unbounded-reconciled and moderate severity", () => {
+  it("applies R3 to a prudential reconciled mint without a centralized-mint cap", () => {
     const input = fixedInput();
     const extension = buildSafetyScoreV9BaselineExtension(input, {
       metaById: metaWith(AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE),
@@ -214,10 +214,8 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     const asset = evaluated.assets.find((candidate) => candidate.assetId === ASSET_ID)!;
 
     const mintComponent = asset.control.components.find((component) => component.kind === "mint");
-    expect(mintComponent).toMatchObject({ posture: "unbounded-reconciled", score: 55 });
-    expect(asset.control.structuralFailures).toContainEqual(
-      expect.objectContaining({ kind: "centralized-mint", severity: "moderate" }),
-    );
+    expect(mintComponent).toMatchObject({ posture: "unbounded-reconciled", score: 80 });
+    expect(asset.control.structuralFailures).not.toContainEqual(expect.objectContaining({ kind: "centralized-mint" }));
   });
 
   it("compiles LUSD's reviewed immutable mint logic without an unresolved mint-authority reason", () => {

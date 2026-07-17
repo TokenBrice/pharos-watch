@@ -57,8 +57,8 @@ interface MintControlPostureFacts {
   openLegalEvents: "none" | "open" | "unknown";
 }
 
-const gradeV9MintControlPosture = (controlModule as unknown as Record<string, unknown>)
-  .gradeV9MintControlPosture as ((posture: V9MintPosture, facts: MintControlPostureFacts) => number) | undefined;
+const gradeV9MintControlPosture = (controlModule as unknown as Record<string, unknown>).gradeV9MintControlPosture as
+  ((posture: V9MintPosture, facts: MintControlPostureFacts) => number) | undefined;
 
 function requiredKnown(rule = "fixture.required"): V9FactStatusV2 {
   return {
@@ -189,8 +189,7 @@ describe("R4 conservative fallback — active (TUSD/USDD shapes must NOT lift)",
   });
 });
 
-// STAGE B: un-skip once the graded control posture rubric exists.
-describe.skip("R4 ruled grading table — pending Stage B implementation", () => {
+describe("R4 ruled grading table — Stage B", () => {
   it("exposes the Stage B grading seam", () => {
     expect(typeof gradeV9MintControlPosture).toBe("function");
   });

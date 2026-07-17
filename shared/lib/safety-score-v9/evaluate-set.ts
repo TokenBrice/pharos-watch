@@ -304,6 +304,25 @@ export interface V9CommonModeContext {
   bridgeExposureByDomain: ReadonlyMap<string, V9BridgeDomainExposure>;
 }
 
+export interface V9MintControlGroupIssuerFacts {
+  controllerIssuerKey: string | null;
+  members: readonly {
+    assetId: string;
+    pathKey: string;
+    assetIssuerKey: string | null;
+  }[];
+}
+
+/** Same-issuer mint groups are diagnostic; every unresolved or crossed join fails closed. */
+export function resolveV9MintControlGroupSeverity(group: V9MintControlGroupIssuerFacts): V9Severity {
+  if (group.controllerIssuerKey === null || group.members.length === 0) return "high";
+  return group.members.every(
+    (member) => member.assetIssuerKey !== null && member.assetIssuerKey === group.controllerIssuerKey,
+  )
+    ? "low"
+    : "high";
+}
+
 const SUPPLY_USD_RECONCILIATION_TOLERANCE = 0.01;
 const SHARE_RECONCILIATION_TOLERANCE = 0.000001;
 
@@ -685,9 +704,31 @@ function commonModeSignalsByAsset(
       continue;
     }
     const key = domainKey(group.failureDomain);
+    const mintControlSeverity = (() => {
+      if (group.failureDomain.kind !== "mint-control") return null;
+      const members = assetIds.map((assetId) => {
+        const assetMembers = effectiveMembers.filter((member) => member.assetId === assetId);
+        return {
+          assetId,
+          pathKey: assetMembers[0]?.pathKey ?? key,
+          assetIssuerKey: assetsById.get(assetId)?.assetIssuerKey ?? null,
+        };
+      });
+      // The accepted D2 matrix has no separate controller-entity fact. Its
+      // bounded proxy is the common member issuer: unresolved or mixed member
+      // identities still fail closed in resolveV9MintControlGroupSeverity.
+      return resolveV9MintControlGroupSeverity({
+        controllerIssuerKey: members[0]?.assetIssuerKey ?? null,
+        members,
+      });
+    })();
     for (const assetId of assetIds) {
-      const severity = commonModeSignalSeverity(group.failureDomain, contextFor(assetId), materiality);
-      const qualifier = commonModeReasonQualifier(group.failureDomain.kind, severity);
+      const severity =
+        mintControlSeverity ?? commonModeSignalSeverity(group.failureDomain, contextFor(assetId), materiality);
+      const qualifier =
+        mintControlSeverity === "low"
+          ? "same-issuer controller, diagnostic only"
+          : commonModeReasonQualifier(group.failureDomain.kind, severity);
       const signal: V9StructuralSignal = {
         ...materiality.commonModeSignal,
         severity,

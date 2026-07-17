@@ -227,6 +227,7 @@ describe("commonModeSignalSeverity proportional materiality", () => {
   it("normalizes DefiLlama display-name chain keys to their canonical slug before matching", () => {
     for (const [displayName, slug] of [
       ["Ethereum", "ethereum"],
+      ["Hyperliquid L1", "hyperliquid"],
       ["OP Mainnet", "optimism"],
       ["Solana", "solana"],
     ] as const) {
@@ -273,7 +274,7 @@ describe("commonModeSignalSeverity proportional materiality", () => {
     expect(commonModeSignalSeverity({ kind: "chain", key: "unknown-l2" }, context({}, 0.36), materiality)).toBe("high");
   });
 
-  it("maps retained USDC non-mature chain exposure into the proportional tiers", () => {
+  it("keeps retained USDC Hyperliquid exposure diagnostic under R2 maturity", () => {
     const circulatingUsd = 73_162_245_998.21791;
     const fantomShare = 181_391_703.16336077 / circulatingUsd;
     const hyperliquidShare = 6_113_271_468.09971 / circulatingUsd;
@@ -284,16 +285,16 @@ describe("commonModeSignalSeverity proportional materiality", () => {
     expect(hyperliquidShare * 100).toBeCloseTo(8.3557733701, 9);
     expect(unattributedShare * 100).toBeCloseTo(0.0812, 9);
     expect(commonModeSignalSeverity({ kind: "chain", key: "Fantom" }, exactUsdc, materiality)).toBe("low");
-    expect(commonModeSignalSeverity({ kind: "chain", key: "Hyperliquid L1" }, exactUsdc, materiality)).toBe("moderate");
+    expect(commonModeSignalSeverity({ kind: "chain", key: "Hyperliquid L1" }, exactUsdc, materiality)).toBe("low");
     expect(commonModeSignalSeverity({ kind: "chain", key: "0g" }, exactUsdc, materiality)).toBe("low");
   });
 
   it("grades DEX common mode on conservative capacity bounds while mature venues stay diagnostic", () => {
-    expect(materiality.matureVenues).toEqual(expect.arrayContaining(["curve", "balancer", "uniswap"]));
-    for (const venue of ["curve", "balancer", "uniswap", "Curve", "UNISWAP"]) {
+    expect(materiality.matureVenues).toEqual(expect.arrayContaining(["curve", "balancer", "raydium", "uniswap"]));
+    for (const venue of ["curve", "balancer", "raydium", "uniswap", "Curve", "RAYDIUM", "UNISWAP"]) {
       expect(commonModeSignalSeverity({ kind: "dex-protocol", key: venue }, failClosed, materiality)).toBe("low");
     }
-    const key = "dex-protocol:raydium";
+    const key = "dex-protocol:futuredex";
     for (const [share, severity] of [
       [0.0499, "low"],
       [0.05, "moderate"],
@@ -302,7 +303,7 @@ describe("commonModeSignalSeverity proportional materiality", () => {
     ] as const) {
       expect(
         commonModeSignalSeverity(
-          { kind: "dex-protocol", key: "raydium" },
+          { kind: "dex-protocol", key: "futuredex" },
           context({}, 0, { [key]: { lower: share, upper: share } }),
           materiality,
         ),
@@ -310,14 +311,14 @@ describe("commonModeSignalSeverity proportional materiality", () => {
     }
     expect(
       commonModeSignalSeverity(
-        { kind: "dex-protocol", key: "raydium" },
+        { kind: "dex-protocol", key: "futuredex" },
         context({}, 0, {
           [key]: { lower: 0.0499, upper: 1 },
         }),
         materiality,
       ),
     ).toBe("high");
-    expect(commonModeSignalSeverity({ kind: "dex-protocol", key: "raydium" }, failClosed, materiality)).toBe("high");
+    expect(commonModeSignalSeverity({ kind: "dex-protocol", key: "futuredex" }, failClosed, materiality)).toBe("high");
   });
 
   it("grades bridge common mode by reviewed exposure without tier overrides", () => {

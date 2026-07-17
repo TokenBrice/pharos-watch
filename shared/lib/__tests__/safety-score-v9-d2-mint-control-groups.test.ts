@@ -46,9 +46,8 @@ interface MintControlGroupIssuerFacts {
   members: readonly { assetId: string; pathKey: string; assetIssuerKey: string | null }[];
 }
 
-const resolveV9MintControlGroupSeverity = (
-  evaluateSet as unknown as Record<string, unknown>
-).resolveV9MintControlGroupSeverity as ((group: MintControlGroupIssuerFacts) => V9Severity) | undefined;
+const resolveV9MintControlGroupSeverity = (evaluateSet as unknown as Record<string, unknown>)
+  .resolveV9MintControlGroupSeverity as ((group: MintControlGroupIssuerFacts) => V9Severity) | undefined;
 
 const EMPTY_CONTEXT: V9CommonModeContext = {
   supplyExposure: { shareBySlug: new Map<string, number>(), unattributedShare: 1, complete: false },
@@ -109,9 +108,7 @@ describe("D2 fail-closed baseline — active (must hold pre- and post-Stage-B)",
   });
 });
 
-// STAGE B: un-skip once resolveV9MintControlGroupSeverity (or the equivalent
-// issuer-scoped grouping in evaluate-set.ts/dependencies.ts) exists.
-describe.skip("D2 ruled issuer-scoped grouping — pending Stage B implementation", () => {
+describe("D2 ruled issuer-scoped grouping — Stage B", () => {
   it("exposes the Stage B seam", () => {
     expect(typeof resolveV9MintControlGroupSeverity).toBe("function");
   });
@@ -158,9 +155,7 @@ describe.skip("D2 ruled issuer-scoped grouping — pending Stage B implementatio
 
   it("is score-neutral under split/merge of an identical same-issuer group", () => {
     const merged = resolveV9MintControlGroupSeverity!(sameIssuerGroup(4));
-    const split = [sameIssuerGroup(2), sameIssuerGroup(2)].map((group) =>
-      resolveV9MintControlGroupSeverity!(group),
-    );
+    const split = [sameIssuerGroup(2), sameIssuerGroup(2)].map((group) => resolveV9MintControlGroupSeverity!(group));
     expect(merged).toBe("low");
     expect(split).toEqual([merged, merged]);
   });

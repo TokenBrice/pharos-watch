@@ -421,9 +421,11 @@ export function evaluateV9ReserveExposures(
     const upstream = upstreamByExposure.get(exposure.exposureKey);
     const materialityWeight = materialityWeightFor(exposure);
     const requiredUnknown = exposure.status.applicability.state === "unresolved";
+    const confidenceMultiplier =
+      exposure.evidenceClass === "issuer-attested" ? backing.reserve.issuerAttestedConfidenceMultiplier : 1;
     let score =
       state === "known" || state === "stale"
-        ? scoreV9ReserveExposureClassification(exposure, policy)
+        ? scoreV9ReserveExposureClassification(exposure, policy) * confidenceMultiplier
         : backing.boundedUnknownQuality;
     // The availability materiality is decided HERE from the aggregate root
     // weight and never read from the projected reason codes: a split that reads

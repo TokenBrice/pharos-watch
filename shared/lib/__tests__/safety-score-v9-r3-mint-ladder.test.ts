@@ -177,7 +177,7 @@ describe("R3 kept rungs — active fail-closed baseline (must hold pre- and post
 // STAGE B: un-skip once the R3 policy/engine batch lands (policy
 // signalLimits["centralized-mint"].low = 83; control.ts emits no failure for
 // prudential+reconciled and the low rung for attestation-only+reconciled).
-describe.skip("R3 ruled ladder — pending Stage B implementation", () => {
+describe("R3 ruled ladder — Stage B", () => {
   it("emits NO centralized-mint structural failure for prudential + reconciled mints", () => {
     for (const reconciliation of ["continuous", "periodic"] as const) {
       expect(centralizedMintSeverity("prudential", reconciliation), reconciliation).toBeNull();
@@ -221,7 +221,9 @@ describe.skip("R3 ruled ladder — pending Stage B implementation", () => {
     );
     expect(trace.bindingCap).toMatchObject({ kind: "signal:centralized-mint:low", limit: 83 });
     expect(trace.finalScore).toBe(83);
-    expect(trace.finalGrade).toBe("A-");
+    // The cap limits the score; it does not override the policy's 83-point A
+    // threshold. The real flagship can remain A- when its pre-cap score is <83.
+    expect(trace.finalGrade).toBe("A");
   });
 
   it("keeps the full ruled ladder ordered: uncapped > 83 > 59 > 39", () => {

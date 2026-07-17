@@ -278,6 +278,7 @@ const V9ReserveExposureFactV2Schema = z
     classificationKey: CanonicalTextSchema,
     sourceGenerationId: CanonicalTextSchema,
     provenance: z.enum(["live", "curated", "curated-fallback"]),
+    evidenceClass: z.enum(["independent", "issuer-attested"]).optional(),
     status: V9FactStatusV2Schema,
     name: CanonicalTextSchema,
     weight: PositiveFractionSchema,
@@ -658,10 +659,10 @@ const V9MintMechanismReviewV2Schema = z
     status: V9FactStatusV2Schema,
     controlKey: CanonicalTextSchema.nullable(),
     reconciliation: z.enum(["continuous", "periodic", "not-applicable", "unknown"]),
-    // Prudential supervision is a reviewed fact, never inferred: it graduates a
-    // reconciled-but-unbounded mint from a "high" to a "moderate" severity only
-    // when a per-coin review establishes an NYDFS/SEC-class supervisory regime.
-    // It defaults to "unknown" everywhere so the rung stays inert until curated.
+    // Prudential supervision is a reviewed fact, never inferred. Under R3 a
+    // reconciled unbounded mint emits no centralized-mint cap only when a
+    // per-coin review establishes a prudential supervisory regime; unknown
+    // supervision remains on the fail-closed high rung.
     supervision: z.enum(["prudential", "attestation-only", "none", "unknown"]).default("unknown"),
     upgrade: V9UpgradeControlReviewV2Schema,
   })
@@ -1046,6 +1047,7 @@ export type V9MechanismRiskReviewFactV2 = z.infer<typeof V9MechanismRiskReviewFa
 const V9AssetFactsV2Schema = z
   .object({
     assetId: CanonicalTextSchema,
+    assetIssuerKey: CanonicalTextSchema.nullable().optional(),
     archetype: V9ResolvedMechanismArchetypeSchema,
     evidence: canonicalArrayBy(V9EvidenceReferenceV2Schema, (reference) => reference.evidenceId),
     gaps: canonicalArrayBy(V9FactGapV2Schema, (gap) => gap.gapId),

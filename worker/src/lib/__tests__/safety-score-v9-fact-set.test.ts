@@ -83,6 +83,7 @@ function exactFixedInput(
     activeDepeg?: boolean;
     activeDepegPeakBps?: number;
     routeChain?: string;
+    omitLiveReserve?: boolean;
     chainSupplyByChain?: Record<
       string,
       {
@@ -184,10 +185,12 @@ function exactFixedInput(
     redemptionBackstopMap: {},
     bluechipMap: {},
     resolvedBlacklistStatuses: { alpha: false },
-    liveReserveMap: { alpha: [reserve] },
-    liveReserveProvenanceMap: {
-      alpha: { source: "fixture-reserve-api", fetchedAt: OBSERVED_AT_SEC },
-    },
+    liveReserveMap: args.omitLiveReserve ? {} : { alpha: [reserve] },
+    liveReserveProvenanceMap: args.omitLiveReserve
+      ? {}
+      : {
+          alpha: { source: "fixture-reserve-api", fetchedAt: OBSERVED_AT_SEC },
+        },
     chainCirculatingById: {
       alpha: args.chainSupplyByChain ?? {
         ethereum: {
@@ -683,6 +686,95 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         issueCodes: ["collateral-edge-exposure-unmapped:beta"],
       },
     });
+  });
+
+  it("compiles eligible issuer-attested reserves and gives live rows precedence", () => {
+    const meta: V9ExtensionRegistryMeta = {
+      id: "alpha",
+      mechanismArchetype: "fiat-cash",
+      launchDate: "1970-01-01",
+      reserves: [
+        {
+          name: "Treasury bills",
+          pct: 70.01,
+          risk: "very-low",
+          assetClass: "treasury-bill",
+          issuerOrObligor: "United States Treasury",
+          riskFactors: ["duration", "liquidity", "custody"],
+          liquidityHorizon: "one-day",
+          maturityDaysMax: 30,
+        },
+        {
+          name: "Cash",
+          pct: 30,
+          risk: "very-low",
+          assetClass: "bank-deposit",
+          issuerOrObligor: "Commercial banks",
+          riskFactors: ["counterparty", "custody"],
+          liquidityHorizon: "immediate",
+        },
+      ],
+      reserveReview: {
+        reviewedAt: "1970-01-01",
+        reviewer: "Fixture reviewer",
+        confidence: "verified",
+        sources: [{ label: "Composition", url: "https://example.com/composition" }],
+        rationale: "Complete composition from the signed report.",
+        compositionBasis: "Signed report",
+        compositionAsOf: "1970-01-01",
+        scope: "full-composition",
+        knownUnknownExposure: "None",
+        knownUnknownExposurePct: 0,
+      },
+      proofOfReserves: {
+        type: "independent-audit",
+        url: "https://example.com/transparency",
+        provider: "Independent LLP",
+        attestorTier: "regional",
+        cadence: "monthly",
+        latestReport: {
+          periodEnd: "1970-01-01",
+          publishedAt: "1970-01-01",
+          assuranceMethod: "examination",
+          scope: "assets-and-liabilities",
+          liabilityReconciliation: "full",
+          reviewer: "Fixture reviewer",
+          confidence: "verified",
+          sources: [{ label: "Signed report", url: "https://example.com/report.pdf" }],
+        },
+      },
+      mintAuthority: {
+        mintPath: "issuer-direct-mint",
+        authorityPosture: "concentrated-admin",
+        confidence: "verified",
+        summary: "Prudential issuer fixture.",
+        supervision: "prudential",
+        review: {
+          sources: [{ label: "Supervisor", url: "https://example.com/supervisor" }],
+          evidence: "The issuer is prudentially supervised.",
+          reviewer: "Fixture reviewer",
+          reviewedAt: "1970-01-01",
+        },
+      },
+    };
+    const metaById = new Map([["alpha", meta]]);
+    const noLive = exactFixedInput({ omitLiveReserve: true });
+    const issuerAttested = buildSafetyScoreV9BaselineExtension(noLive, { metaById });
+    expect(issuerAttested.assets[0]!.issuerAttestedReserveRows).toMatchObject({
+      evidenceClass: "issuer-attested",
+      confidenceMultiplier: 0.8,
+    });
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(noLive, issuerAttested).assets[0]!;
+    expect(compiled.reserveExposures).toHaveLength(2);
+    expect(compiled.reserveExposures.every((exposure) => exposure.evidenceClass === "issuer-attested")).toBe(true);
+    expect(compiled.reserveExposures.reduce((sum, exposure) => sum + exposure.weight, 0)).toBeCloseTo(1, 12);
+
+    const withLive = exactFixedInput();
+    const liveFirst = buildSafetyScoreV9BaselineExtension(withLive, { metaById });
+    expect(liveFirst.assets[0]!.issuerAttestedReserveRows).toBeNull();
+    const liveExposures = compileSafetyScoreV9FactSetFromFixedInput(withLive, liveFirst).assets[0]!.reserveExposures;
+    expect(liveExposures).toEqual([expect.objectContaining({ provenance: "live", weight: 1 })]);
+    expect(liveExposures[0]).not.toHaveProperty("evidenceClass");
   });
 
   it("compiles exact base facts and explicit reviews without consulting v8 score outputs", () => {

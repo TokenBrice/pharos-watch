@@ -22,7 +22,11 @@ import type {
   StablecoinMeta,
 } from "@shared/types/core";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
-import type { ReserveSlice } from "@shared/types/reserves";
+import {
+  RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT,
+  validateReserveCompositionTotal,
+  type ReserveSlice,
+} from "@shared/types/reserves";
 import {
   computeSafetyScoreV9ReserveExposureKey,
   type SafetyScoreV9FactSetExtensionV2,
@@ -60,6 +64,7 @@ export type V9ExtensionRegistryMeta = Pick<
   | "reserveReview"
   | "custodyProfile"
   | "proofOfReserves"
+  | "genius"
   | "dependencies"
   | "dependencyReview"
   | "mintAuthority"
@@ -98,6 +103,86 @@ const DEPLOYMENT_MATERIAL_SHARE_THRESHOLD =
 
 function digest(domain: string, payload: unknown): string {
   return sha256Hex(stableJsonStringifyV1({ domain, payload }));
+}
+
+const ISSUER_ENTITY_STOPWORDS = new Set([
+  "llc",
+  "ltd",
+  "limited",
+  "ltda",
+  "inc",
+  "corp",
+  "corporation",
+  "company",
+  "co",
+  "trust",
+  "bank",
+  "n",
+  "a",
+  "s",
+  "de",
+  "c",
+  "v",
+  "cv",
+  "sa",
+  "sas",
+  "gmbh",
+  "ag",
+  "pte",
+  "pty",
+  "bv",
+  "je",
+  "the",
+  "of",
+  "and",
+  "by",
+  "dba",
+  "dao",
+  "llp",
+  "plc",
+  "se",
+  "oy",
+  "ab",
+  "as",
+]);
+
+function normalizedIssuerEntity(value: string): string | null {
+  const tokens = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(" ")
+    .filter((token) => token.length > 0 && !ISSUER_ENTITY_STOPWORDS.has(token));
+  return tokens[0] ?? null;
+}
+
+function rawIssuerKey(assetId: string, meta: V9ExtensionRegistryMeta): string | null {
+  const geniusEntity = meta.genius?.issuerEntity;
+  if (typeof geniusEntity === "string" && geniusEntity.trim().length > 0) {
+    const normalized = normalizedIssuerEntity(geniusEntity);
+    if (normalized) return normalized;
+  }
+  const dash = assetId.indexOf("-");
+  const slug = dash >= 0 ? assetId.slice(dash + 1) : "";
+  return slug.length > 0 ? slug : null;
+}
+
+/** Mirrors the accepted D2 matrix issuer join, including its five-hop bound. */
+export function resolveSafetyScoreV9AssetIssuerKey(
+  assetId: string,
+  metaById: ReadonlyMap<string, V9ExtensionRegistryMeta>,
+): string | null {
+  const seen = new Set([assetId]);
+  let current = assetId;
+  for (let hop = 0; hop < 5; hop += 1) {
+    const meta = metaById.get(current);
+    if (!meta) return null;
+    const next = meta.mintAuthority?.inheritedFrom ?? meta.variantOf ?? null;
+    if (next === null) return rawIssuerKey(current, meta);
+    if (seen.has(next)) return null;
+    seen.add(next);
+    current = next;
+  }
+  return null;
 }
 
 function normalizedReserveName(value: string): string {
@@ -204,6 +289,114 @@ export function buildReviewedReserveClassifications(
     return live && reviewed
       ? overlayReviewedReserveClassification(classification, live, reviewed, reviewKey)
       : classification;
+  });
+}
+
+type IssuerAttestedReserveRows = NonNullable<ExtensionAsset["issuerAttestedReserveRows"]>;
+
+const INDEPENDENT_ASSURANCE_METHODS = new Set([
+  "audit",
+  "examination",
+  "review",
+  "agreed-upon-procedures",
+  "attestation",
+]);
+const ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC = 31_536_000;
+
+function normalizeIssuerAttestedReserveRows(rows: readonly ReserveSlice[]): ReserveSlice[] {
+  const sorted = [...rows].sort(
+    (left, right) =>
+      compareText(computeSafetyScoreV9ReserveExposureKey(left), computeSafetyScoreV9ReserveExposureKey(right)) ||
+      compareText(stableJsonStringifyV1(left), stableJsonStringifyV1(right)),
+  );
+  const totalPct = sorted.reduce((sum, row) => sum + row.pct, 0);
+  if (totalPct === 100) return sorted;
+  if (Math.abs(totalPct - 100) > RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT) {
+    throw new Error("Issuer-attested reserve normalization exceeded the approved composition tolerance");
+  }
+  const scale = 100 / totalPct;
+  let normalizedPct = 0;
+  return sorted.map((row, index) => {
+    const pct = index === sorted.length - 1 ? 100 - normalizedPct : row.pct * scale;
+    normalizedPct += pct;
+    return { ...row, pct };
+  });
+}
+
+/** D6: admit reviewed issuer rows only when an independent attestor corroborates a prudential issuer. */
+export function buildSafetyScoreV9IssuerAttestedReserveRows(
+  meta: V9ExtensionRegistryMeta,
+  clockSec: number,
+): IssuerAttestedReserveRows | null {
+  const rows = meta.reserves ?? [];
+  const review = meta.reserveReview;
+  const proof = meta.proofOfReserves;
+  const report = proof?.latestReport;
+  const attestorIndependent =
+    proof?.attestorTier === "big4" || proof?.attestorTier === "regional" || proof?.attestorTier === "niche";
+  const reviewAtSec = review ? conservativeDateEndSec(review.reviewedAt, clockSec) : null;
+  const compositionAtSec = conservativeDateEndSec(review?.compositionAsOf, clockSec);
+  const reportAtSec = report ? conservativeDateEndSec(report.publishedAt, clockSec) : null;
+  const periodEndSec = report ? conservativeDateEndSec(report.periodEnd, clockSec) : null;
+  if (
+    rows.length === 0 ||
+    review?.scope !== "full-composition" ||
+    review.confidence === "unknown" ||
+    review.sources.length === 0 ||
+    reviewAtSec === null ||
+    compositionAtSec === null ||
+    !validateReserveCompositionTotal(rows, "full") ||
+    meta.mintAuthority?.supervision !== "prudential" ||
+    proof?.type !== "independent-audit" ||
+    !attestorIndependent ||
+    !proof.provider?.trim() ||
+    report === undefined ||
+    report.confidence === "unknown" ||
+    report.sources.length === 0 ||
+    reportAtSec === null ||
+    periodEndSec === null ||
+    compositionAtSec !== periodEndSec ||
+    reportAtSec < periodEndSec ||
+    clockSec - compositionAtSec > ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC ||
+    !INDEPENDENT_ASSURANCE_METHODS.has(report.assuranceMethod)
+  ) {
+    return null;
+  }
+  return {
+    rows: normalizeIssuerAttestedReserveRows(rows),
+    evidenceClass: "issuer-attested",
+    confidenceMultiplier: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.issuerAttestedConfidenceMultiplier,
+  };
+}
+
+function addIssuerAttestedReserveEvidence(
+  meta: V9ExtensionRegistryMeta,
+  admitted: IssuerAttestedReserveRows | null,
+  evidence: ReviewEvidenceBuilder,
+): void {
+  const review = meta.reserveReview;
+  const report = meta.proofOfReserves?.latestReport;
+  if (!admitted || !review || !report) return;
+  const sources = [...review.sources, ...report.sources].filter(
+    (source, index, all) => all.findIndex((candidate) => candidate.url === source.url) === index,
+  );
+  evidence.add({
+    componentKeys: [
+      "issuer-attested-reserves",
+      ...admitted.rows.map((row) => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}`),
+    ],
+    sourceId: "stablecoin-meta.issuer-attested-reserves",
+    reviewedAt: report.periodEnd,
+    confidence: confidenceForResearch(report.confidence),
+    sources,
+    payload: {
+      reserveReview: review,
+      reserves: admitted.rows,
+      proofOfReserves: meta.proofOfReserves,
+      evidenceClass: admitted.evidenceClass,
+      confidenceMultiplier: admitted.confidenceMultiplier,
+    },
+    maxAgeSec: ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC,
   });
 }
 
@@ -1289,6 +1482,9 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       const cycle = cycleByAsset.get(assetId);
       const archetype = resolveMechanismArchetype(meta, metaById) ?? "unresolved";
       const liveReserves = fixedInput.liveReserveMap[assetId] ?? [];
+      const issuerAttestedReserveRows =
+        liveReserves.length === 0 ? buildSafetyScoreV9IssuerAttestedReserveRows(meta, clockSec) : null;
+      const reserveRows = issuerAttestedReserveRows?.rows ?? liveReserves;
       const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec);
       const mechanismRiskReview = buildSafetyScoreV9MechanismReview(fixedInput, meta, archetype);
       const mechanismOverlayEvidence = getSafetyScoreV9MechanismOverlayEvidence(assetId, archetype, clockSec);
@@ -1303,11 +1499,13 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
           maxAgeSec: mechanismOverlayEvidence.maxAgeSec,
         });
       }
-      const reserveClassifications = buildReviewedReserveClassifications(liveReserves, meta, clockSec);
+      const reserveClassifications = buildReviewedReserveClassifications(reserveRows, meta, clockSec);
       addReserveClassificationEvidence(meta, reserveClassifications, reviewEvidence);
+      addIssuerAttestedReserveEvidence(meta, issuerAttestedReserveRows, reviewEvidence);
       addDependencyEvidence(meta, reviewEvidence);
       const supplyReview = buildSafetyScoreV9SupplyReview(fixedInput, assetId, meta.bridgeRouteRisk);
       const deployedChainCount = Object.keys(fixedInput.chainCirculatingById[assetId] ?? {}).length;
+      const assetIssuerKey = resolveSafetyScoreV9AssetIssuerKey(assetId, metaById);
       const mint = adaptMintReview(meta, reviewEvidence);
       const oracle = adaptOracleReview(meta, archetype, reviewEvidence);
       const bridge = adaptBridgeReview(meta, supplyReview, deployedChainCount, reviewEvidence);
@@ -1333,6 +1531,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         );
       return {
         assetId,
+        assetIssuerKey,
         archetype,
         launchedAtSec: conservativeDateEndSec(meta.implementationLaunchDate ?? meta.launchDate, clockSec),
         mechanismRiskReview,
@@ -1348,6 +1547,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         },
         reserveApplicability: { state: "required" },
         reserveClassifications,
+        issuerAttestedReserveRows,
         routeReviews: buildSafetyScoreV9RouteReviews(fixedInput, assetId),
         retainedRoutes: buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, assetId),
         controlReview:

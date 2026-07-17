@@ -1,17 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 import type { V9FailureDomainRef } from "../../types/safety-score-v9-facts";
-import {
-  commonModeSignalSeverity,
-  type V9CommonModeContext,
-} from "../safety-score-v9/evaluate-set";
+import { commonModeSignalSeverity, type V9CommonModeContext } from "../safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
 /**
  * STAGE A pin for owner rulings R2 + D1 (2026-07-17, provisional pending the
  * V8 counterfactual-matrix review):
  *
- *   R2: add "tron" and "hyperliquid" to semantic.materiality.matureChains
+ *   R2/D5: add "tron", "hyperliquid", and "xrpl" to matureChains
  *   D1: add "raydium" to semantic.materiality.matureVenues
  *
  * The proportional common-mode thresholds themselves shipped in PR #530 and do
@@ -22,7 +19,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
  * The ACTIVE tables pin those threshold semantics at the 4.99/5/9.99/10%
  * boundaries and at unknown share for BOTH domains, using a test-local
  * materiality fixture that already lists the ruled new members — this proves
- * the membership semantics generalize to tron/hyperliquid/raydium the moment
+ * the membership semantics generalize to tron/hyperliquid/xrpl/raydium the moment
  * the policy lists them, and it must pass before AND after Stage B. The
  * `describe.skip` block pins the ruled policy membership against the LIVE
  * candidate policy; it fails today by construction and is enabled by Stage B.
@@ -35,7 +32,7 @@ const CANDIDATE_MATERIALITY = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality
 /** Test-local materiality with the R2/D1 membership already applied. */
 const STAGE_B_MATERIALITY: V9Materiality = {
   ...CANDIDATE_MATERIALITY,
-  matureChains: [...CANDIDATE_MATERIALITY.matureChains, "tron", "hyperliquid"],
+  matureChains: [...CANDIDATE_MATERIALITY.matureChains, "tron", "hyperliquid", "xrpl"],
   matureVenues: [...CANDIDATE_MATERIALITY.matureVenues, "raydium"],
 };
 
@@ -92,7 +89,7 @@ describe("R2/D1 threshold boundary semantics — active (PR #530 behavior must s
   });
 
   it("keeps mature chains diagnostic at every boundary, including >=10% and unknown share", () => {
-    for (const chainId of ["tron", "hyperliquid"] as const) {
+    for (const chainId of ["tron", "hyperliquid", "xrpl"] as const) {
       const domain: V9FailureDomainRef = { kind: "chain", key: chainId };
       for (const { share } of CHAIN_BOUNDARIES) {
         expect(
@@ -126,9 +123,7 @@ describe("R2/D1 threshold boundary semantics — active (PR #530 behavior must s
   it("keeps the previously mature chains/venues diagnostic under the extended fixture", () => {
     for (const chainId of CANDIDATE_MATERIALITY.matureChains) {
       const domain: V9FailureDomainRef = { kind: "chain", key: chainId };
-      expect(commonModeSignalSeverity(domain, contextForChain(chainId, 0.5), STAGE_B_MATERIALITY), chainId).toBe(
-        "low",
-      );
+      expect(commonModeSignalSeverity(domain, contextForChain(chainId, 0.5), STAGE_B_MATERIALITY), chainId).toBe("low");
     }
     for (const venue of CANDIDATE_MATERIALITY.matureVenues) {
       const domain: V9FailureDomainRef = { kind: "dex-protocol", key: venue };
@@ -139,10 +134,11 @@ describe("R2/D1 threshold boundary semantics — active (PR #530 behavior must s
 
 // STAGE B: un-skip once the R2/D1 policy membership lands in
 // shared/data/safety-score-v9/methodology-policy-candidate-v1.json.
-describe.skip("R2/D1 ruled policy membership — pending Stage B implementation", () => {
-  it("lists tron and hyperliquid in semantic.materiality.matureChains", () => {
+describe("R2/D1/D5 ruled policy membership — Stage B", () => {
+  it("lists tron, hyperliquid, and xrpl in semantic.materiality.matureChains", () => {
     expect(CANDIDATE_MATERIALITY.matureChains).toContain("tron");
     expect(CANDIDATE_MATERIALITY.matureChains).toContain("hyperliquid");
+    expect(CANDIDATE_MATERIALITY.matureChains).toContain("xrpl");
   });
 
   it("lists raydium in semantic.materiality.matureVenues", () => {
@@ -156,13 +152,9 @@ describe.skip("R2/D1 ruled policy membership — pending Stage B implementation"
   });
 
   it("grades the new members diagnostic under the live candidate policy", () => {
-    for (const chainId of ["tron", "hyperliquid"] as const) {
+    for (const chainId of ["tron", "hyperliquid", "xrpl"] as const) {
       expect(
-        commonModeSignalSeverity(
-          { kind: "chain", key: chainId },
-          contextForChain(chainId, 0.5),
-          CANDIDATE_MATERIALITY,
-        ),
+        commonModeSignalSeverity({ kind: "chain", key: chainId }, contextForChain(chainId, 0.5), CANDIDATE_MATERIALITY),
         chainId,
       ).toBe("low");
     }
