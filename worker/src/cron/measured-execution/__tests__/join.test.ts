@@ -16,14 +16,14 @@ import {
   encodeCurveCryptoSwapGetDy,
 } from "../curve-cryptoswap";
 
-function target(): DexMeasuredExecutionTarget {
+function target(chain: string = "ethereum"): DexMeasuredExecutionTarget {
   const input = {
     schemaVersion: "dex-measured-target-v1" as const,
     stablecoinId: "usdc-circle",
     adapterProfileId: "uniswap-v3-quoter-v2",
     protocol: "uniswap-v3",
-    chain: "ethereum",
-    poolId: "ethereum:0x3333333333333333333333333333333333333333",
+    chain,
+    poolId: `${chain}:0x3333333333333333333333333333333333333333`,
     poolTokenAddresses: [
       "0x1111111111111111111111111111111111111111",
       "0x2222222222222222222222222222222222222222",
@@ -65,9 +65,11 @@ function target(): DexMeasuredExecutionTarget {
 
 describe("measured execution join activation", () => {
   it("keeps a valid QuoterV2 profile score-ineligible while its cohort is in shadow", () => {
-    const measuredTarget = target();
+    // Optimism is a pinned deployment outside the 2026-07-17 ratified cohort,
+    // so it exercises the activation-pending gate.
+    const measuredTarget = target("optimism");
     const deployment = getDexMeasuredExecutionDeployment(measuredTarget.adapterProfileId, measuredTarget.chain);
-    if (deployment == null) throw new Error("missing Ethereum QuoterV2 deployment");
+    if (deployment == null) throw new Error("missing Optimism QuoterV2 deployment");
     const profile = buildDexMeasuredExecutionProfile({
       target: measuredTarget,
       targetGenerationId: "target-generation",
