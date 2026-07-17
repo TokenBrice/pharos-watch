@@ -13,7 +13,6 @@ import { z } from "zod";
 import {
   compileSafetyScoreV9FactSetFromNormalizedInput,
   materializeSafetyScoreV9FactSetExtension,
-  SafetyScoreV9FactSetExtensionV2Schema,
   type SafetyScoreV9FactSetExtensionV2,
 } from "./safety-score-v9-fact-set";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "./safety-score-v9-extension";
