@@ -10,6 +10,11 @@ import {
   validateFluidResolverProfileProof,
   FLUID_RESOLVER_ADAPTER_PROFILE_ID,
 } from "./fluid-resolver";
+import {
+  CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
+  getCurveCryptoSwapShadowPolicy,
+  validateCurveCryptoSwapProfileProof,
+} from "./curve-cryptoswap";
 import { loadLatestPublishedDexMeasuredQuoteEvidence, type LoadedDexMeasuredQuoteEvidence } from "./persistence";
 import { validateQuoterV2ProfileProof } from "./quoter-v2";
 import { getDexMeasuredExecutionDeployment, isDexMeasuredExecutionDeploymentScoreEligible } from "./registry";
@@ -60,6 +65,15 @@ function deploymentIssues(profile: DexMeasuredExecutionProfile): string[] {
     if (profile.executionEndpoint.address !== deployment.endpointAddress) issues.push("endpoint-address-mismatch");
     if (profile.executionEndpoint.codeHash !== deployment.expectedCodeHash) issues.push("endpoint-code-hash-mismatch");
     issues.push(...validateFluidResolverProfileProof(profile));
+    return issues;
+  }
+  if (profile.adapterProfileId === CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID) {
+    const policy = getCurveCryptoSwapShadowPolicy(profile.chain, profile.executionEndpoint.address);
+    if (!policy) return ["deployment-missing"];
+    const issues: string[] = [];
+    if (profile.executionEndpoint.address !== policy.poolAddress) issues.push("endpoint-address-mismatch");
+    if (profile.executionEndpoint.codeHash !== policy.expectedPoolCodeHash) issues.push("endpoint-code-hash-mismatch");
+    issues.push(...validateCurveCryptoSwapProfileProof(profile));
     return issues;
   }
   return ["adapter-profile-unsupported"];
@@ -136,9 +150,15 @@ export function joinDexMeasuredExecutionEvidence(input: {
         continue;
       }
       pool.extra.measuredExecution = toDexMeasuredExecutionPublicProfile(quote.profile);
+      const curvePolicy =
+        quote.profile.adapterProfileId === CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID
+          ? getCurveCryptoSwapShadowPolicy(quote.profile.chain, quote.profile.executionEndpoint.address)
+          : null;
       const activationPending =
         quote.profile.adapterProfileId === FLUID_RESOLVER_ADAPTER_PROFILE_ID ||
-        !isDexMeasuredExecutionDeploymentScoreEligible(quote.profile.adapterProfileId, quote.profile.chain);
+        (quote.profile.adapterProfileId === CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID
+          ? !curvePolicy?.scoreEligible
+          : !isDexMeasuredExecutionDeploymentScoreEligible(quote.profile.adapterProfileId, quote.profile.chain));
       if (activationPending) {
         pool.extra.executionCapabilityGate = gate("activation-pending");
         pool.extra.measuredExecutionDiagnostic = {

@@ -71,8 +71,12 @@ export function classifyDexDeploymentOutcomes(params: {
 
   return params.deployments.map((deployment) => {
     const providers = getDexDiscoveryProviders(deployment.chain);
-    const observedPoolCount = params.pools.filter((pool) => matchesDeployment(pool, deployment)).length;
     const key = deploymentKey(deployment.chain, deployment.address);
+    const stagedPoolCount = params.pools.filter((pool) => matchesDeployment(pool, deployment)).length;
+    const providerObservedPoolCount = params.providerChecks
+      .filter((check) => check.status === "success" && deploymentKey(check.chain, check.address) === key)
+      .reduce((max, check) => Math.max(max, check.observedPoolCount ?? 0), 0);
+    const observedPoolCount = Math.max(stagedPoolCount, providerObservedPoolCount);
     if (observedPoolCount > 0) {
       return {
         stablecoinId: params.stablecoinId,

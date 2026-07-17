@@ -250,7 +250,12 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.CG_ONCHAIN, true);
     expect(crawlTokenPools).not.toHaveBeenCalled();
     expect(fetchDsTokenPoolsWithStatus).not.toHaveBeenCalled();
-    expect(fetchJsonWithRetry).not.toHaveBeenCalled();
+    expect(fetchJsonWithRetry).toHaveBeenCalledWith(
+      "https://api.curve.finance/v1/getPools/all/ethereum",
+      expect.anything(),
+      1,
+      { timeoutMs: 8_000 },
+    );
   });
 
   it("preserves non-EVM CoinGecko pool and token identities from provider ingress", async () => {
@@ -525,9 +530,13 @@ describe("crawlCoin DexScreener hardening", () => {
       events.push(`ds:${chain}`);
       return { ok: true, pairs: [] };
     });
-    vi.mocked(fetchJsonWithRetry).mockImplementation(async () => {
-      events.push("tickers");
-      return { response: new Response(null, { status: 200 }), body: { tickers: [] } };
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url) => {
+      const isCurve = String(url).includes("api.curve.finance");
+      events.push(isCurve ? "curve" : "tickers");
+      return {
+        response: new Response(null, { status: 200 }),
+        body: isCurve ? { data: { poolData: [] } } : { tickers: [] },
+      };
     });
 
     const result = await crawlCoin(
@@ -545,7 +554,7 @@ describe("crawlCoin DexScreener hardening", () => {
       pools: [],
       unresolvedChains: [],
     });
-    expect(events).toEqual(["cg:eth", "gt", "ds:ethereum", "ds:plasma", "tickers"]);
+    expect(events).toEqual(["cg:eth", "gt", "ds:ethereum", "ds:plasma", "tickers", "curve"]);
     expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('Chain "plasma"'));
   });
 

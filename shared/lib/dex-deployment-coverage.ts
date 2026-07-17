@@ -1,10 +1,18 @@
 import { CG_CHAIN_MAP, DS_CHAIN_MAP, GT_CHAIN_MAP } from "./chains";
 
-export type DexDeploymentOutcome =
-  | "observed_pools"
-  | "verified_no_pools"
-  | "provider_inaccessible";
-export type DexDiscoveryProvider = "coingecko" | "geckoterminal" | "dexscreener";
+export type DexDeploymentOutcome = "observed_pools" | "verified_no_pools" | "provider_inaccessible";
+export type DexDiscoveryProvider = "coingecko" | "geckoterminal" | "dexscreener" | "curve";
+
+const CURVE_NATIVE_DISCOVERY_CHAINS = new Set([
+  "ethereum",
+  "base",
+  "arbitrum",
+  "polygon",
+  "fraxtal",
+  "sonic",
+  "taiko",
+  "zksync",
+]);
 
 export interface DexCoverageWaiver {
   stablecoinId: string;
@@ -60,6 +68,7 @@ export function getDexDiscoveryProviders(chain: string): DexDiscoveryProvider[] 
   if (CG_CHAIN_MAP[chain]) providers.push("coingecko");
   if (GT_CHAIN_MAP[chain]) providers.push("geckoterminal");
   if (DS_CHAIN_MAP[chain]) providers.push("dexscreener");
+  if (CURVE_NATIVE_DISCOVERY_CHAINS.has(chain)) providers.push("curve");
   return providers;
 }
 
@@ -68,11 +77,13 @@ export function getActiveDexCoverageWaiver(
   chain: string,
   nowSec: number,
 ): DexCoverageWaiver | null {
-  return DEX_COVERAGE_WAIVERS.find(
-    (waiver) =>
-      waiver.stablecoinId === stablecoinId &&
-      waiver.chain === chain &&
-      waiver.expiresAt > nowSec &&
-      waiver.owner.trim().length > 0,
-  ) ?? null;
+  return (
+    DEX_COVERAGE_WAIVERS.find(
+      (waiver) =>
+        waiver.stablecoinId === stablecoinId &&
+        waiver.chain === chain &&
+        waiver.expiresAt > nowSec &&
+        waiver.owner.trim().length > 0,
+    ) ?? null
+  );
 }

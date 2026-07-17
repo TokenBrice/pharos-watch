@@ -37,6 +37,15 @@ import {
   verifyFluidResolverDeployment,
   type FluidResolverDeployment,
 } from "./fluid-resolver";
+import {
+  CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
+  getCurveCryptoSwapShadowPolicy,
+  quoteCurveCryptoSwapRequests,
+  validateCurveCryptoSwapProfileProof,
+  verifyCurveCryptoSwapDeployment,
+  type CurveCryptoSwapPoolPolicy,
+  type CurveCryptoSwapRuntimeEvidence,
+} from "./curve-cryptoswap";
 
 const MAX_QUOTE_CALLS = 6_400;
 const MAX_RPC_REQUESTS = 800;
@@ -46,7 +55,11 @@ export const MEASURED_EXECUTION_ADMISSION_SOURCE_KEY = "measured-execution:quote
 
 type TargetDeployment =
   | { kind: "quoter-v2"; config: DexMeasuredExecutionDeployment }
-  | { kind: "fluid-resolver"; config: FluidResolverDeployment };
+  | { kind: "fluid-resolver"; config: FluidResolverDeployment }
+  | {
+      kind: "curve-cryptoswap";
+      config: CurveCryptoSwapPoolPolicy & { endpointAddress: `0x${string}` };
+    };
 
 interface TargetQuoteState {
   target: DexMeasuredExecutionTarget;
@@ -54,6 +67,7 @@ interface TargetQuoteState {
   blockNumber: number | null;
   blockObservedAt: number | null;
   endpointCodeHash: `0x${string}` | null;
+  curveRuntimeEvidence: CurveCryptoSwapRuntimeEvidence | null;
   poolBindingProof: DexMeasuredExecutionPoolBindingProof | null;
   points: DexMeasuredRawQuotePoint[];
   failedReason: string | null;
@@ -81,6 +95,15 @@ function deploymentForTarget(target: DexMeasuredExecutionTarget): TargetDeployme
   if (target.adapterProfileId === FLUID_RESOLVER_ADAPTER_PROFILE_ID) {
     const deployment = getFluidResolverDeployment(target.chain);
     return deployment ? { kind: "fluid-resolver", config: deployment } : null;
+  }
+  if (target.adapterProfileId === CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID) {
+    const prefix = `${target.chain.trim().toLowerCase()}:`;
+    if (!target.poolId.toLowerCase().startsWith(prefix)) return null;
+    const endpointAddress = target.poolId.slice(prefix.length).toLowerCase();
+    const policy = getCurveCryptoSwapShadowPolicy(target.chain, endpointAddress);
+    return policy?.scoreEligible && policy.mode === "active"
+      ? { kind: "curve-cryptoswap", config: { ...policy, endpointAddress: policy.poolAddress } }
+      : null;
   }
   const deployment = getDexMeasuredExecutionDeployment(target.adapterProfileId, target.chain);
   return deployment ? { kind: "quoter-v2", config: deployment } : null;
@@ -204,6 +227,7 @@ export async function syncDexMeasuredExecution(
     blockNumber: null,
     blockObservedAt: null,
     endpointCodeHash: null,
+    curveRuntimeEvidence: null,
     poolBindingProof: null,
     points: [],
     failedReason: deferred.has(target.targetId) ? "budget-deferred" : null,
@@ -276,7 +300,7 @@ export async function syncDexMeasuredExecution(
           continue;
         }
         for (const state of deploymentRows) state.endpointCodeHash = verified.codeHash;
-      } else {
+      } else if (deployment.kind === "fluid-resolver") {
         const verified = await verifyFluidResolverDeployment({
           deployment: deployment.config,
           blockNumber,
@@ -290,6 +314,23 @@ export async function syncDexMeasuredExecution(
           continue;
         }
         for (const state of deploymentRows) state.endpointCodeHash = verified.codeHash;
+      } else {
+        const verified = await verifyCurveCryptoSwapDeployment({
+          policy: deployment.config,
+          blockNumber,
+          chainRpcs,
+          signal,
+          rpcBudget,
+        });
+        if (!verified.ok) {
+          if (rpcBudget.stopReason) markBudgetStop(deploymentRows, rpcBudget.stopReason);
+          else for (const state of deploymentRows) state.failedReason = verified.reason;
+          continue;
+        }
+        for (const state of deploymentRows) {
+          state.endpointCodeHash = verified.codeHash;
+          state.curveRuntimeEvidence = verified.runtimeEvidence;
+        }
       }
       if (rpcBudget.stopReason) {
         markBudgetStop(deploymentRows, rpcBudget.stopReason);
@@ -398,7 +439,7 @@ export async function syncDexMeasuredExecution(
             rpcBudget,
           });
           outcomes.forEach((outcome, index) => applyQuoteOutcome(adapterRequests[index]!.state, outcome));
-        } else {
+        } else if (kind === "fluid-resolver") {
           const outcomes = await quoteFluidResolverRequests({
             requests: adapterRequests.map(({ state, inputUsd }) => ({
               target: state.target,
@@ -410,6 +451,20 @@ export async function syncDexMeasuredExecution(
             signal,
             rpcBudget,
             deploymentVerified: true,
+          });
+          outcomes.forEach((outcome, index) => applyQuoteOutcome(adapterRequests[index]!.state, outcome));
+        } else {
+          const outcomes = await quoteCurveCryptoSwapRequests({
+            requests: adapterRequests.map(({ state, inputUsd }) => ({
+              target: state.target,
+              inputUsd,
+              blockNumber: state.blockNumber!,
+              endpointAddress: state.deployment!.config.endpointAddress,
+              runtimeEvidence: state.curveRuntimeEvidence ?? undefined,
+            })),
+            chainRpcs,
+            signal,
+            rpcBudget,
           });
           outcomes.forEach((outcome, index) => applyQuoteOutcome(adapterRequests[index]!.state, outcome));
         }
@@ -498,7 +553,9 @@ export async function syncDexMeasuredExecution(
       const adapterIssues =
         state.deployment.kind === "quoter-v2"
           ? validateQuoterV2ProfileProof(profile)
-          : validateFluidResolverProfileProof(profile);
+          : state.deployment.kind === "fluid-resolver"
+            ? validateFluidResolverProfileProof(profile)
+            : validateCurveCryptoSwapProfileProof(profile);
       if (genericIssues.length > 0 || adapterIssues.length > 0) {
         throw new Error([...genericIssues, ...adapterIssues].join(","));
       }

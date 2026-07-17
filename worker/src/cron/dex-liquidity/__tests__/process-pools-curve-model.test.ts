@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DexAmmExecutionModelSchema } from "@shared/types/market";
 import {
+  buildCurveCryptoSwapMeasuredExecutionTarget,
   buildCurveStableswapExecutionCapability,
   buildCurveStableswapExecutionModel,
 } from "../process-pools";
@@ -8,6 +9,8 @@ import type { CurvePoolEntry } from "../types";
 
 const USDC = "0x00000000000000000000000000000000000000c1";
 const USDT = "0x00000000000000000000000000000000000000c2";
+const CRVUSD = "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e";
+const WBTC = "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599";
 
 function entry(overrides: Partial<CurvePoolEntry> = {}): CurvePoolEntry {
   return {
@@ -109,6 +112,36 @@ describe("buildCurveStableswapExecutionModel", () => {
         chainAddressToId,
       ),
     ).toBeNull();
+  });
+
+  it("builds an exact measured target for an activated crvUSD TwoCrypto pool", () => {
+    const poolAddress = "0x313698667d7fdd6789a9bc70821309ff891e729a";
+    const target = buildCurveCryptoSwapMeasuredExecutionTarget({
+      curveData: entry({
+        poolAddress,
+        apiIsBroken: false,
+        registryId: "factory-twocrypto",
+        executionCoins: [
+          { address: CRVUSD, symbol: "crvUSD", decimals: 18, balance: 20_000_000, usdPrice: 1 },
+          { address: WBTC, symbol: "WBTC", decimals: 8, balance: 400, usdPrice: 65_000 },
+        ],
+      }),
+      chain: "ethereum",
+      stablecoinId: "crvusd-curve",
+      chainAddressToId: new Map([[`ethereum:${CRVUSD}`, "crvusd-curve"]]),
+      stablecoinPriceById: new Map([["crvusd-curve", 0.9998]]),
+      retainedTvlUsd: 45_000_000,
+      capturedAt: 1_752_500_000,
+    });
+
+    expect(target).toMatchObject({
+      adapterProfileId: "curve-cryptoswap-get-dy-v1",
+      stablecoinId: "crvusd-curve",
+      poolId: `ethereum:${poolAddress}`,
+      retainedPoolPriceUsd: 0.9998,
+      tokenIn: { address: CRVUSD, trackedAssetId: "crvusd-curve" },
+      tokenOut: { address: WBTC, referencePriceUsd: 65_000 },
+    });
   });
 
   it("fails closed on rate-bearing pools via the coin price spread gate", () => {
