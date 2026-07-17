@@ -78,15 +78,27 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-17",
+    "reviewer": "Kimi FIAT-CTRL V9 R4 evidence review",
     "confidence": "verified",
     "sources": [
       {
         "label": "Anchorage USDGO Reserve Report - May 31, 2026",
         "url": "https://learn.anchorage.com/05.31.26_USDGO_Stablecoin_Attestation_Report_signed.pdf"
+      },
+      {
+        "label": "USDGO transparency page (names reserve fund issuers, accessed 2026-07-17)",
+        "url": "https://www.usdgo.com/transparency"
+      },
+      {
+        "label": "Goldman Sachs Stablecoin Reserves Fund (STBXX, CUSIP 38151N205)",
+        "url": "https://am.gs.com/en-us/advisors/funds/detail/PV109514/38151N205/stablecoin-reserves-fund"
+      },
+      {
+        "label": "JPMorgan OnChain Liquidity-Token Money Market Fund (JLTXX, CUSIP 46655R119)",
+        "url": "https://am.jpmorgan.com/us/en/asset-management/adv/products/jpmorgan-onchain-liquidity-token-money-market-fund-token-class-46655r119"
       }
     ],
-    "uncertainty": "The report says reserve assets are held in segregated fiduciary trust accounts for token holders and identifies Anchorage as the issuer and qualified custodian. It does not state a general rehypothecation prohibition."
+    "uncertainty": "The report says reserve assets are held in segregated fiduciary trust accounts for token holders and identifies Anchorage as the issuer and qualified custodian. It does not state a general rehypothecation prohibition. It also does not name the FDIC-insured banks holding the $1.6M cash slice or any money-market-fund subcustodian; the issuer transparency page (accessed 2026-07-17) identifies the two money market funds as the Goldman Sachs Stablecoin Reserves Fund and the JPMorgan OnChain Liquidity-Token Money Market Fund, but their underlying fund custodians remain undisclosed. Anchorage self-custodies the BUIDL slice in segregated wallets (Avalanche 0xC1d56E817d8f6C53D42eD50Ed0D789eEb1495b5e per the May 31, 2026 report)."
   }
 }

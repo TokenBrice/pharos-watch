@@ -121,5 +121,44 @@
         "rationale": "sTRX is a TRON staking receipt and not a tracked stablecoin dependency."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "TRON DAO Reserve / USDD protocol contracts (self-custodied; no third-party custodian)",
+        "role": "other",
+        "sharePct": 100,
+        "jurisdiction": "Dominica"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "none",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-17",
+    "reviewer": "Kimi FIAT-CTRL shard-12 R4 custody review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USDD Smart Allocator documentation",
+        "url": "https://docs.usdd.io/system-architecture/smart-allocator"
+      },
+      {
+        "label": "USDD Terms of Use (last updated 2025-01-04)",
+        "url": "https://docs.usdd.io/legals/terms-of-use"
+      },
+      {
+        "label": "USDD Data Platform latest Tron collateral (fetched 2026-07-17)",
+        "url": "https://app-api.usdd.io/data-platform/latest-collateral?chain=tron"
+      },
+      {
+        "label": "USDD system architecture",
+        "url": "https://docs.usdd.io/system-architecture/system-architecture"
+      },
+      {
+        "label": "USDD deployment addresses",
+        "url": "https://docs.usdd.io/developers/deployment-addresses"
+      }
+    ],
+    "uncertainty": "No third-party custodian exists: reserves sit in USDD protocol contracts (CDP vaults, PSM-USDT vault TSUYvQ5tdd3DijCD1uGunGLpftHuSZ12sQ, Smart Allocator vault TYyC3kxzMYC1sGKpui79VAzwn992jCA6fN per the issuer API on 2026-07-17) whose governance resolves to single-key accounts documented in the mint-authority review (2026-07-13/2026-07-14). Smart Allocator documentation states the USDD team selects platforms (Aave named) and deploys 'USDD's cash reserve' under team monitoring, so reserve redeployment is discretionary and ongoing; constituent Smart Allocator positions and weights are unpublished. No trust, SPV, segregation vehicle, or holder claim appears in the Terms of Use (2025-01-04) or any docs.usdd.io page reviewed 2026-07-17, so no bankruptcy-remoteness structure is documented. Precedent for unilateral reserve control: roughly 12,000 BTC removed from collateral in August 2024 without prior DAO approval (existing coin notice). TRX, 57.7% of reviewed reserves (2026-07-15), is the subject of the open Clifford et al. v. Tron Foundation et al. class action (SDNY 1:20-cv-2804; discovery hearing calendared 2026-04-28)."
   }
 }

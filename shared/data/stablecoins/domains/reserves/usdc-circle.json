@@ -70,6 +70,7 @@
       {
         "name": "The Bank of New York Mellon",
         "role": "custodian",
+        "sharePct": 88,
         "jurisdiction": "United States"
       },
       {
@@ -79,11 +80,19 @@
     ],
     "segregation": "segregated",
     "bankruptcyRemoteness": "contractual-only",
-    "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-13",
-    "reviewer": "OpenAI Codex backing review",
+    "rehypothecation": "prohibited",
+    "reviewedAt": "2026-07-17",
+    "reviewer": "Kimi FIAT-CTRL shard-11 (V9 anchor-coherence sprint)",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Circle Internet Group 2025 Form 10-K (FY ended 2025-12-31) - reserve custody, FBO-titled accounts, no-lend/no-encumber policy, ~88% Circle Reserve Fund at BNY",
+        "url": "https://www.sec.gov/Archives/edgar/data/1876042/000187604226000062/crcl-20251231.htm"
+      },
+      {
+        "label": "Circle USDC Terms (Segregated Accounts held on behalf of and for the benefit of users)",
+        "url": "https://www.circle.com/legal/usdc-terms"
+      },
       {
         "label": "Deloitte USDC examination report - May 2026",
         "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20May%2026.pdf"
@@ -93,6 +102,6 @@
         "url": "https://www.circle.com/transparency"
       }
     ],
-    "uncertainty": "Circle identifies BNY Mellon for the majority fund custody and describes remaining cash at regulated banks, but does not publish provider-level reserve shares or every bank name. Segregated-account language is explicit; statutory bankruptcy remoteness and rehypothecation terms were not established in the reviewed public sources."
+    "uncertainty": "Circle's 2025 Form 10-K states approximately 88% of USDC reserves sat in the BlackRock-managed Circle Reserve Fund (SEC-registered 2a-7 government money market fund) whose assets are held in the custody of BNY as of 2025-12-31; the remainder is cash at global banks, primarily systemically important institutions, whose individual names and shares are undisclosed. The 10-K states reserves are held in accounts titled FBO holders of USDC and that Circle does not lend, borrow against, or encumber the reserves, with applicable state regimes prohibiting lending, pledging, rehypothecating, or otherwise encumbering them. The same filing cautions that no court has ruled on stablecoin reserve treatment in an issuer bankruptcy, so bankruptcy remoteness stays contractual-only; custodian-failure replacement terms remain undisclosed."
   }
 }

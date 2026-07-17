@@ -180,16 +180,24 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-13",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-17",
+    "reviewer": "Kimi FIAT-CTRL shard-16 custody review",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "Tether Q1 2026 reports and reserves",
-        "url": "https://tether.to/transparency/?tab=reports"
+        "label": "BDO ISAE 3000R assurance report on Tether International financial figures and reserves as of 2026-03-31 (signed Milan, 2026-04-30)",
+        "url": "https://assets.ctfassets.net/vyse88cgwfbl/6crn1tXbl6AtWZBWucZnfg/c4ff472d70c1b48c2f689f27b54c84f5/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_31-03-2026.pdf"
+      },
+      {
+        "label": "Tether International Relevant Information Document filed with CNAD (2026-02-20), Safeguarding Arrangements section",
+        "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+      },
+      {
+        "label": "Tether token terms",
+        "url": "https://tether.to/en/legal/"
       }
     ],
-    "uncertainty": "The public report identifies asset categories and counterparties only in aggregate; custodian names, provider shares, legal segregation, and reuse restrictions are not disclosed.",
+    "uncertainty": "The Q1 2026 BDO report identifies reserve asset categories only in aggregate and names no custodians (BDO obtained confirmations directly from unnamed banks and depositaries). The CNAD-filed Relevant Information Document (2026-02-20) states reserves are held with various unidentified third parties including banks and licensed financial institutions, and documents no trust, SPV, segregation vehicle, bankruptcy-remoteness, or reuse restrictions; the Terms grant holders only a personal contractual redemption right. Custodian names, provider shares, legal segregation, and reuse restrictions remain undisclosed in every available primary source.",
     "knownUnknownExposurePct": 100
   }
 }

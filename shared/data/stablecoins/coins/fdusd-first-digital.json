@@ -671,6 +671,33 @@
     "knownUnknownExposure": "The reserve asset classes are fully classified, but First Digital does not identify the financial institutions or their shares in the cash and fixed-deposit categories.",
     "knownUnknownExposurePct": 0
   },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "First Digital Trust Limited",
+        "role": "custodian",
+        "sharePct": 100,
+        "jurisdiction": "Hong Kong"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-17",
+    "reviewer": "Kimi FIAT-CTRL shard-04 custody review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "AOGB FDUSD reserves attestation - June 2026",
+        "url": "https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/6a55fa3b263f9436c944049d_ISAE3000%20-%20Attestation%20Report%20on%20Reserves%20Account%20%28June%202026%29.pdf"
+      },
+      {
+        "label": "First Digital Labs transparency",
+        "url": "https://www.firstdigitallabs.com/transparency"
+      }
+    ],
+    "uncertainty": "AOGB's June 2026 attestation (Note 2) states that all FDUSD Reserves Accounts are held and managed by a single related-party custodian, First Digital Trust Limited, a Hong Kong-registered public trust company: the main Custody Account plus distinct accounts at unnamed financial institutions across Hong Kong (including an affiliated trust company), Singapore, Australia, Canada, Luxembourg, the United States, the United Kingdom, Bahrain, and Georgia, held under the Custodian's name for the benefit of FD121 (BVI) Limited and segregated from the Custody Account. First Digital's transparency page states reserve assets are fully segregated from the trust company's own assets to isolate its bankruptcy. No reviewed source names the sub-account institutions or their shares, documents a statutory trust or holder-level bankruptcy-remoteness structure (the documented benefit runs to the issuer, not directly to token holders), or addresses rehypothecation of reserve assets."
+  },
   "liveReservesConfig": {
     "adapter": "fdusd-transparency",
     "version": 1,

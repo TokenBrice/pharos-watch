@@ -175,11 +175,23 @@
         {
           "label": "Solana M mint on Solscan",
           "url": "https://solscan.io/token/mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo"
+        },
+        {
+          "label": "M0 protocol roles (Minters, Validators, Earners)",
+          "url": "https://docs.m0.org/protocol/roles"
+        },
+        {
+          "label": "M0 Adopted Guidance — Validators",
+          "url": "https://docs.m0.org/home/fundamentals/adopted-guidance/validators"
+        },
+        {
+          "label": "M0 Research — approved collateral structures for Minters (2024-11-20)",
+          "url": "https://research.m0.org/research/expanding-available-collateral-structures-for-minters"
         }
       ],
-      "evidence": "At Ethereum block 25530270, verified MinterGateway and MToken contracts had zero EIP-1967 implementation/admin slots; MToken.minterGateway() resolved to the reviewed gateway. Gateway reads returned TTG Registrar 0x119F..., mint ratio 9950, mint delay 300 seconds, and validator threshold 1. At finalized Solana slot 432835922, the Portal program was upgradeable through the explicitly reviewed 9QpF8a9T... authority. Contract and validator-attested issuance is continuously constrained onchain; no mint-authority incident is recorded in the reviewed sources. On 2026-07-15, the current M0 minting specification was rechecked: collateral values require approved validator signatures, expire on a governance-set interval that is typically daily, and bound mint execution to the verified collateral ratio after a delay. Because that third-party validator constraint is independent of a minter's signing path, the economic cap remains raiseable rather than unbounded; there is no unified prudential supervisor.",
-      "reviewer": "Codex V9 control curation / SOL-IV calibration",
-      "reviewedAt": "2026-07-15"
+      "evidence": "At Ethereum block 25530270, verified MinterGateway and MToken contracts had zero EIP-1967 implementation/admin slots; MToken.minterGateway() resolved to the reviewed gateway. Gateway reads returned TTG Registrar 0x119F..., mint ratio 9950, mint delay 300 seconds, and validator threshold 1. At finalized Solana slot 432835922, the Portal program was upgradeable through the explicitly reviewed 9QpF8a9T... authority. Contract and validator-attested issuance is continuously constrained onchain; no mint-authority incident is recorded in the reviewed sources. On 2026-07-15, the current M0 minting specification was rechecked: collateral values require approved validator signatures, expire on a governance-set interval that is typically daily, and bound mint execution to the verified collateral ratio after a delay. Because that third-party validator constraint is independent of a minter's signing path, the economic cap remains raiseable rather than unbounded; there is no unified prudential supervisor. On 2026-07-17 the supervision and reconciliation facts were re-verified against first-party sources: M0's roles and MinterGateway documentation describe independent permissioned Validators signing minter collateral updates under the Adopted Guidance's independence and licensing criteria, and no prudential supervisor (NYDFS/OCC/SEC/MiCA-class) was located for the M issuance regime, so supervision remains attestation-only. The Protocol API configuration history (queried 2026-07-17) shows update_collateral_interval 108000 seconds (30 hours, unchanged since 2024-05-15), update_collateral_threshold 1, mint_delay 300, and mint_ratio 9950; expired collateral counts as zero and minting is bounded by the verified collateral ratio, so supply-vs-reserve verification remains a periodic (30-hour) attestation cycle rather than per-transaction reconciliation. The M0 Foundation research post of 2024-11-20 documents the approved collateral custody structures (CrossLend GmbH / Asset Repository S.a.r.l / DEKA Bank, and Superstate Inc. / Superstate Asset Trust / UMB Bank, N.A.). No open enforcement action, lawsuit, or consent order naming M0 Foundation or the M token was located in 2026-07-17 searches, consistent with the 2026-06-18 GENIUS negative-evidence review.",
+      "reviewer": "Kimi V9 FIAT-CTRL evidence (shard-06)",
+      "reviewedAt": "2026-07-17"
     }
   },
   "infrastructures": [

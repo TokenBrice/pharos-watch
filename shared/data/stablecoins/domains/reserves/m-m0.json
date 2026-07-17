@@ -71,27 +71,62 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Permissioned M0 issuers and their collateral arrangements",
-        "role": "other"
-      }
-    ],
-    "segregation": "unknown",
-    "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "owner-triage",
-    "confidence": "manual-review",
-    "sources": [
-      {
-        "label": "M0 platform mechanics and eligible collateral",
-        "url": "https://docs.m0.org/get-started/protocol-mechanics"
+        "name": "UMB Bank, N.A.",
+        "role": "custodian",
+        "sharePct": 97.9,
+        "jurisdiction": "USA"
       },
       {
-        "label": "M0 issuer overview",
-        "url": "https://docs.m0.org/issuers/overview"
+        "name": "DEKA Bank",
+        "role": "custodian",
+        "jurisdiction": "Germany"
+      },
+      {
+        "name": "Superstate Inc.",
+        "role": "other",
+        "jurisdiction": "USA"
+      },
+      {
+        "name": "Superstate Asset Trust",
+        "role": "other",
+        "jurisdiction": "USA"
+      },
+      {
+        "name": "CrossLend GmbH",
+        "role": "other",
+        "jurisdiction": "Germany"
+      },
+      {
+        "name": "Asset Repository S.a.r.l",
+        "role": "other",
+        "jurisdiction": "Luxembourg"
       }
     ],
-    "uncertainty": "M0 assigns reserve management to permissioned issuers but the reviewed public materials do not identify current providers, provider shares, segregation, bankruptcy remoteness, or a general rehypothecation prohibition.",
-    "knownUnknownExposurePct": 100
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-17",
+    "reviewer": "Kimi V9 FIAT-CTRL evidence (shard-06)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "M0 Research — approved collateral structures for Minters (2024-11-20)",
+        "url": "https://research.m0.org/research/expanding-available-collateral-structures-for-minters"
+      },
+      {
+        "label": "M0 protocol roles (Minters, Validators, Earners)",
+        "url": "https://docs.m0.org/protocol/roles"
+      },
+      {
+        "label": "M0 Adopted Guidance — Validators",
+        "url": "https://docs.m0.org/home/fundamentals/adopted-guidance/validators"
+      },
+      {
+        "label": "M0 Protocol API GraphQL endpoint",
+        "url": "https://protocol-api.m0.org/graphql"
+      }
+    ],
+    "uncertainty": "M0 Foundation documentation (2024-11-20) names the approved collateral structures — Superstate Inc. (investment manager) / Superstate Asset Trust (Delaware collateral storage vehicle) / UMB Bank, N.A. (custodian), and CrossLend GmbH (SPV operator) / Asset Repository S.a.r.l (Luxembourg SPV) / DEKA Bank (custodian) — with asset segregation under the Delaware Statutory Trust Act and bankruptcy-remoteness stated as a required structural property. The 97.9% UMB share maps the 2026-07-15 first-party collateral capture (97.9% USTB, sole eligible on-chain collateral token) to the USTB structure's documented custodian, so one structure/custodian chain concentrates >90% of collateral. Current minter-level allocation across the two structures, the ~2.1% cash custody arrangements, and a general rehypothecation prohibition are not publicly documented.",
+    "knownUnknownExposurePct": 2.1
   }
 }

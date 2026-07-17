@@ -348,11 +348,19 @@
         {
           "label": "Agora GitHub",
           "url": "https://github.com/agora-finance"
+        },
+        {
+          "label": "Agora Bermuda Limited Terms of Use (as of 2026-05-27)",
+          "url": "https://static.agora.finance/termsofuse.pdf"
+        },
+        {
+          "label": "Grant Thornton Agora Dollar Reserve Report - May 31, 2026",
+          "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf"
         }
       ],
-      "evidence": "Ethereum RPC at block 25530324 enumerated one MINTER_ROLE holder, one BRIDGE_MINTER_ROLE holder, one RATE_LIMIT_MANAGER_ROLE holder, and one ACCESS_CONTROL_MANAGER_ROLE holder. The custom proxy getter and verified AgoraProxyAdmin establish the upgrade path through the same access-control EOA. The Solana Token-2022 mint authority remains the separately reviewed EARe2... account. On 2026-07-15, Agora's transparency index was rechecked and listed Grant Thornton monthly reserve attestations through May 2026. The OCC registry still listed Agora National Trust Bank only as a pending application received April 20, 2026; no operative prudential charter was found. AUSD therefore earns attestation-only periodic reconciliation, not the proposed prudential tier, and its issuer-controlled rate limits and mint roles are economically unbounded.",
-      "reviewer": "Codex Safety Score V9 CTRL curation / SOL-IV calibration",
-      "reviewedAt": "2026-07-15",
+      "evidence": "Ethereum RPC at block 25530324 enumerated one MINTER_ROLE holder, one BRIDGE_MINTER_ROLE holder, one RATE_LIMIT_MANAGER_ROLE holder, and one ACCESS_CONTROL_MANAGER_ROLE holder. The custom proxy getter and verified AgoraProxyAdmin establish the upgrade path through the same access-control EOA. The Solana Token-2022 mint authority remains the separately reviewed EARe2... account. On 2026-07-15, Agora's transparency index was rechecked and listed Grant Thornton monthly reserve attestations through May 2026. Re-verified 2026-07-17: the OCC digital-asset licensing registry still lists Agora National Trust Bank only as a pending application received 2026-04-20, so no operative prudential charter exists. The Agora Bermuda Limited Terms of Use dated 2026-05-27 state that the issuer is regulated and licensed by the Bermuda Monetary Authority under the Digital Asset Business Act 2018 with a Class F license to issue, sell, or redeem digital assets; that is a licensing/conduct regime, not a prudential-class stablecoin regime. The Grant Thornton May 2026 report examines management's assertion that the fair value of reserve assets equals or exceeds AUSD in Circulation as of both 2026-05-17 and 2026-05-31, including per-network supply reconciliation tables, which confirms periodic (monthly, dual observation dates) supply-versus-reserve reconciliation. AUSD therefore earns attestation-only supervision with periodic reconciliation, not the proposed prudential tier, and its issuer-controlled rate limits and mint roles are economically unbounded.",
+      "reviewer": "Kimi FIAT-CTRL shard-01 (V9 anchor-coherence swarm)",
+      "reviewedAt": "2026-07-17",
       "disposition": "scoreable"
     }
   },

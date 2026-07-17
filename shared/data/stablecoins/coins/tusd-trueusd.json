@@ -27,17 +27,17 @@
     "attestorJurisdiction": "Hong Kong",
     "attestorLicense": "HK CPA",
     "latestReport": {
-      "periodEnd": "2026-07-14",
-      "publishedAt": "2026-07-14",
+      "periodEnd": "2026-07-16",
+      "publishedAt": "2026-07-16",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "Kimi FIAT-CTRL shard-09 control-evidence review",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Moore CPA TUSD Consolidated Reserves Report - July 14, 2026",
-          "url": "https://widget.verinumus.io/api/v1/tusd/report?tokens=%5BTrueUSD%5D"
+          "label": "Moore CPA Independent Assurance Report on the TUSD Consolidated Reserves Report - July 16, 2026",
+          "url": "https://widget.verinumus.io/api/v1/tusd/report"
         }
       ]
     }
@@ -476,7 +476,7 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
       "sources": [
@@ -486,7 +486,7 @@
         },
         {
           "label": "Moore CPA TrueUSD reserve report, July 2026",
-          "url": "https://widget.verinumus.io/api/v1/tusd/report?tokens=%5BTrueUSD%5D"
+          "url": "https://widget.verinumus.io/api/v1/tusd/report"
         },
         {
           "label": "TrueUSD supported contracts and native deployments",

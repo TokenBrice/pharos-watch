@@ -1,0 +1,89 @@
+{
+  "id": "eurc-circle",
+  "reserves": [
+    {
+      "name": "Other Bank Deposits",
+      "pct": 98,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Other regulated financial institutions in the EEA",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Deposits at Systemically Important Institutions",
+      "pct": 2,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Systemically important financial institutions in the EEA",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Circle transparency",
+        "url": "https://www.circle.com/transparency"
+      },
+      {
+        "label": "Circle EURC reserve overview",
+        "url": "https://www.circle.com/eurc"
+      },
+      {
+        "label": "Circle EURC terms",
+        "url": "https://www.circle.com/legal/eurc-terms"
+      }
+    ],
+    "rationale": "Circle's July 9 weekly disclosure reports EUR 369.85 million of other bank deposits and EUR 7.38 million of deposits at systemically important institutions. Percentages normalize those two disclosed amounts to their EUR 377.23 million total and preserve the live Circle adapter's reserve identities.",
+    "compositionBasis": "Circle weekly EURC reserve composition disclosure",
+    "compositionAsOf": "2026-07-09",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No material unclassified reserve exposure is present in Circle's two-category disclosure; individual deposit institutions are not named.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Systemically important and other regulated financial institutions in the EEA (not individually disclosed)",
+        "role": "bank"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-17",
+    "reviewer": "Kimi FIAT-CTRL shard-03 control-evidence review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Circle EURC Terms (Segregated Accounts held on behalf of and for the benefit of users)",
+        "url": "https://www.circle.com/legal/eurc-terms"
+      },
+      {
+        "label": "Circle EURC MiCA white paper (ACPR-filed; section D.3 insolvency creditor protection)",
+        "url": "https://www.circle.com/fr/legal/mica-eurc-whitepaper"
+      },
+      {
+        "label": "Deloitte EURC examination report - May 2026 (unencumbered Segregated Accounts definition)",
+        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20May%2026.pdf"
+      },
+      {
+        "label": "Circle EURC reserve and bankruptcy-remoteness disclosure",
+        "url": "https://www.circle.com/eurc"
+      }
+    ],
+    "uncertainty": "Circle's ACPR-filed MiCA white paper (section D.3) states that funds received in exchange for EURC are protected against any recourse by other creditors of Circle Internet Financial Europe SAS, including in enforcement or insolvency proceedings, and the EURC Terms and Deloitte's May 2026 examination define reserves as unencumbered segregated accounts apart from corporate funds, held on behalf of and for the benefit of holders. Bank identities, institution count, provider-level shares, custodian-replacement arrangements, and rehypothecation terms are not published; the May 2026 report shows the reserve is 100% cash at regulated financial institutions. Issuer pages describe the reserve banks as regulated financial institutions in the EEA, while one circle.com/eurc footnote states cash is held at US financial institutions; account-level placement is not public."
+  }
+}

@@ -56,10 +56,10 @@
       }
     ],
     "segregation": "segregated",
-    "bankruptcyRemoteness": "unknown",
+    "bankruptcyRemoteness": "structured",
     "rehypothecation": "conditional",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-17",
+    "reviewer": "Kimi FIAT-CTRL shard-07 evidence review",
     "confidence": "verified",
     "sources": [
       {
@@ -67,10 +67,14 @@
         "url": "https://framerusercontent.com/assets/99N5QwJCmGdSIzUsGoGdLXxYI0.pdf"
       },
       {
+        "label": "Paxos USD stablecoin custody terms",
+        "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
+      },
+      {
         "label": "PayPal Cryptocurrency Terms - PYUSD reserves",
         "url": "https://www.paypal.com/us/legalhub/paypal/cryptocurrencies-tnc?locale.x=en_US%5C"
       }
     ],
-    "uncertainty": "The report establishes segregated, unencumbered redemption assets held for PYUSD token holders and prohibits selling or repledging the securities collateralizing the repo agreements. It does not identify every custodian or counterparty or establish bankruptcy remoteness for each reserve account; the custody posture is therefore conditional for the mixed cash and repo envelope."
+    "uncertainty": "The KPMG-examined report establishes segregated, unencumbered redemption assets held on behalf of PYUSD token holders by Paxos Trust Company, N.A., an OCC-supervised national trust bank, and prohibits selling or repledging the securities collateralizing the repo agreements. The Paxos USD Stablecoin Terms (last modified June 30, 2026, section 3.2.3.1) state that assets held with Paxos Trust are held bankruptcy remote and would not be used to satisfy Paxos Trust debts in insolvency; that fiduciary custody structure supports the structured bankruptcy-remoteness grade. Individual banks, the qualified custodian, and repo counterparties are not named, per-account placement is not published, and rehypothecation terms for cash deposits are not established, so the mixed cash and repo envelope stays conditional."
   }
 }

@@ -260,15 +260,39 @@
   "deploymentModel": "canonical-bridge",
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
-    "summary": "LUSD can only be minted on Ethereum mainnet and L2 deployments rely on official rollup bridges for routes such as Arbitrum and Optimism, so the reviewed cross-chain exposure is canonical bridge risk rather than an external token bridge.",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-1 bridge-route evidence review",
+    "summary": "LUSD can only be minted on Ethereum mainnet. The Arbitrum One, OP Mainnet, Base, and zkSync Era deployments are canonical-bridge representations whose mint controllers were verified on-chain 2026-07-17 at pinned finalized blocks (Arbitrum ERC-20 gateway, OP Mainnet and Base L2StandardBridge, zkSync Era shared bridge). The Polygon deployment's route semantics remain unresolved at a negligible measured supply share.",
+    "reviewedAt": "2026-07-17",
+    "reviewer": "KIMI-1 bridge-route evidence review",
     "confidence": "verified",
     "protocols": [
       {
         "source": "l2beat",
         "name": "Arbitrum One",
         "url": "https://l2beat.com/scaling/projects/arbitrum",
+        "bridgeTypes": [
+          "canonical"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "OP Mainnet",
+        "url": "https://l2beat.com/scaling/projects/optimism",
+        "bridgeTypes": [
+          "canonical"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "Base",
+        "url": "https://l2beat.com/scaling/projects/base",
+        "bridgeTypes": [
+          "canonical"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "ZKsync Era",
+        "url": "https://l2beat.com/scaling/projects/zksync-era",
         "bridgeTypes": [
           "canonical"
         ]
@@ -286,6 +310,22 @@
       {
         "label": "L2BEAT Arbitrum One",
         "url": "https://l2beat.com/scaling/projects/arbitrum"
+      },
+      {
+        "label": "Arbitrum LUSD token l1Address() = L1 LUSD and L2ERC20Gateway.calculateL2TokenAddress(L1 LUSD) = this token at finalized block 484731559 (2026-07-17)",
+        "url": "https://arbiscan.io/address/0x93b346b6bc2548da6a1e7d98e9a421b42541425b"
+      },
+      {
+        "label": "OP Mainnet LUSD token l2Bridge() = L2StandardBridge 0x4200000000000000000000000000000000000010 at finalized block 154337509 (2026-07-17)",
+        "url": "https://optimistic.etherscan.io/address/0xc40f949f8a4e094d1b49a23ea9241d289b7b2819"
+      },
+      {
+        "label": "Base LUSD token l2Bridge() = L2StandardBridge 0x4200000000000000000000000000000000000010 at finalized block 48742240 (2026-07-17)",
+        "url": "https://basescan.org/address/0x368181499736d0c0cc614dbb145e2ec1ac86b8c6"
+      },
+      {
+        "label": "zkSync Era L2SharedBridge.l2TokenAddress(L1 LUSD) = this token at finalized block 71198927 (2026-07-17)",
+        "url": "https://explorer.zksync.io/address/0x503234f203fc7eb888eec8513210612a43cf6115"
       }
     ],
     "routes": [
@@ -324,27 +364,38 @@
         "destinationChain": "optimism",
         "canonicalChain": "ethereum",
         "contractAddress": "0xc40f949f8a4e094d1b49a23ea9241d289b7b2819",
-        "protocol": "Canonical rollup bridge",
+        "protocol": "OP Mainnet Standard Bridge",
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
         "riskTier": "canonical-rollup-bridge",
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "controllerChain": "optimism",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:optimism-canonical-messaging",
+          "contract:optimism:0x4200000000000000000000000000000000000010"
+        ],
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-17",
+        "observedBlock": 154337509,
         "sources": [
           {
             "label": "Liquity LUSD x-chain strategy",
             "url": "https://www.liquity.org/blog/liquity-lusd-x-chain-strategy"
           },
           {
-            "label": "Liquity LUSD on Arbitrum",
-            "url": "https://www.liquity.org/blog/liquitys-lusd-emerges-as-a-growing-force-on-arbitrum"
+            "label": "L2BEAT OP Mainnet",
+            "url": "https://l2beat.com/scaling/projects/optimism"
           },
           {
-            "label": "L2BEAT Arbitrum One",
-            "url": "https://l2beat.com/scaling/projects/arbitrum"
+            "label": "Optimism LUSD token l2Bridge() = L2StandardBridge 0x4200000000000000000000000000000000000010 at finalized block 154337509 (2026-07-17)",
+            "url": "https://optimistic.etherscan.io/address/0xc40f949f8a4e094d1b49a23ea9241d289b7b2819"
+          },
+          {
+            "label": "OP Mainnet L2StandardBridge contract",
+            "url": "https://optimistic.etherscan.io/address/0x4200000000000000000000000000000000000010"
           }
         ]
       },
@@ -354,15 +405,22 @@
         "destinationChain": "arbitrum",
         "canonicalChain": "ethereum",
         "contractAddress": "0x93b346b6bc2548da6a1e7d98e9a421b42541425b",
-        "protocol": "Canonical rollup bridge",
+        "protocol": "Arbitrum One ERC-20 Gateway",
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
         "riskTier": "canonical-rollup-bridge",
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x09e9222E96E7B4AE2a407B98d48e330053351EEe",
+        "failureDomainKeys": [
+          "protocol:arbitrum-canonical-messaging",
+          "contract:arbitrum:0x09e9222e96e7b4ae2a407b98d48e330053351eee"
+        ],
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-17",
+        "observedBlock": 484731559,
         "sources": [
           {
             "label": "Liquity LUSD x-chain strategy",
@@ -375,38 +433,82 @@
           {
             "label": "L2BEAT Arbitrum One",
             "url": "https://l2beat.com/scaling/projects/arbitrum"
+          },
+          {
+            "label": "Arbitrum LUSD token l1Address() = L1 LUSD and L2ERC20Gateway.calculateL2TokenAddress(L1 LUSD) = this token at finalized block 484731559 (2026-07-17)",
+            "url": "https://arbiscan.io/address/0x93b346b6bc2548da6a1e7d98e9a421b42541425b"
+          },
+          {
+            "label": "Arbitrum One L2ERC20Gateway contract",
+            "url": "https://arbiscan.io/address/0x09e9222e96e7b4ae2a407b98d48e330053351eee"
           }
         ]
       },
       {
         "id": "zksync:0x503234f203fc7eb888eec8513210612a43cf6115",
+        "sourceChain": "ethereum",
         "destinationChain": "zksync",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x503234f203fc7eb888eec8513210612a43cf6115",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "zkSync Era Shared Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "zksync",
+        "controllerAddress": "0x11f943b2c77b743AB90f4A0Ae7d5A4e7FCA3E102",
+        "failureDomainKeys": [
+          "protocol:zksync-canonical-messaging",
+          "contract:zksync:0x11f943b2c77b743ab90f4a0ae7d5a4e7fca3e102"
+        ],
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-17",
+        "observedBlock": 71198927,
+        "sources": [
+          {
+            "label": "zkSync Era L2SharedBridge.l2TokenAddress(L1 LUSD 0x5f98805A4E8be255a32880FDeC7F6728C6568bA0) = this token at finalized block 71198927 (2026-07-17)",
+            "url": "https://explorer.zksync.io/address/0x503234f203fc7eb888eec8513210612a43cf6115"
+          },
+          {
+            "label": "zkSync Era L2SharedBridge contract",
+            "url": "https://explorer.zksync.io/address/0x11f943b2c77b743ab90f4a0ae7d5a4e7fca3e102"
+          }
+        ]
       },
       {
         "id": "base:0x368181499736d0c0cc614dbb145e2ec1ac86b8c6",
+        "sourceChain": "ethereum",
         "destinationChain": "base",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x368181499736d0c0cc614dbb145e2ec1ac86b8c6",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Base Standard Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "base",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:base-canonical-messaging",
+          "contract:base:0x4200000000000000000000000000000000000010"
+        ],
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-17",
+        "observedBlock": 48742240,
+        "sources": [
+          {
+            "label": "Base LUSD token l2Bridge() = L2StandardBridge 0x4200000000000000000000000000000000000010 at finalized block 48742240 (2026-07-17)",
+            "url": "https://basescan.org/address/0x368181499736d0c0cc614dbb145e2ec1ac86b8c6"
+          },
+          {
+            "label": "Base L2StandardBridge contract",
+            "url": "https://basescan.org/address/0x4200000000000000000000000000000000000010"
+          }
+        ]
       },
       {
         "id": "polygon:0x23001f892c0c82b79303edc9b9033cd190bb21c7",
