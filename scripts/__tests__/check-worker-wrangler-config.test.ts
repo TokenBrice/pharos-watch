@@ -10,7 +10,7 @@ routes = [
 ]
 
 [vars]
-ADDRESS_PRICE_PROVIDERS_ENABLED = "dexpaprika-address,coingecko-onchain-address,alchemy-address,moralis-address"
+ADDRESS_PRICE_PROVIDERS_ENABLED = "none"
 
 [[rules]]
 type = "Data"
@@ -89,17 +89,17 @@ fallthrough = true
     );
   });
 
-  it("rejects re-enabling the quota-exhausted Birdeye provider in production", () => {
+  it("rejects re-enabling address-price providers in production", () => {
     const report = evaluateWorkerWranglerConfig(
       VALID_CONFIG.replace(
-        "dexpaprika-address,coingecko-onchain-address,alchemy-address,moralis-address",
-        "dexpaprika-address,coingecko-onchain-address,alchemy-address,moralis-address,birdeye-address",
+        'ADDRESS_PRICE_PROVIDERS_ENABLED = "none"',
+        'ADDRESS_PRICE_PROVIDERS_ENABLED = "dexpaprika-address"',
       ),
     );
 
     expect(report.failed).toBe(true);
     expect(report.issues).toContain(
-      "Production address-price providers must be exactly dexpaprika-address, coingecko-onchain-address, alchemy-address, moralis-address; found dexpaprika-address, coingecko-onchain-address, alchemy-address, moralis-address, birdeye-address.",
+      'Production address-price providers must stay disabled with ADDRESS_PRICE_PROVIDERS_ENABLED="none"; found dexpaprika-address.',
     );
   });
 });

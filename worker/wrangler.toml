@@ -96,7 +96,8 @@ namespace_id = "2026071003"
 [vars]
 CORS_ORIGIN = "https://pharos.watch,https://ops.pharos.watch"
 SELF_URL = "https://api.pharos.watch"
-ADDRESS_PRICE_PROVIDERS_ENABLED = "dexpaprika-address,coingecko-onchain-address,alchemy-address,moralis-address"
+# Exact-address augmentation is disabled while the quarter-hour stablecoin sync is under Worker heap pressure.
+ADDRESS_PRICE_PROVIDERS_ENABLED = "none"
 CF_ACCESS_TEAM_DOMAIN = "pharos-watch"
 CF_ACCESS_OPS_API_AUD = "72e74ead7cedf76e5c79f2bd0dd999aecd7d5b4e05fa1f9d696aed6a2cd31869"
 WORKER_JOB_LEDGER_MODE = "shadow"

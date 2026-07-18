@@ -698,9 +698,9 @@ export async function collectPrimaryProviderQuotes(params: {
     );
   }
 
-  // Cap primary-provider fetches at 4 inside the repo's six-request trigger
-  // budget, leaving headroom for alerts, audit writes, and provider follow-ups.
-  await mapWithConcurrency(fetches, 4, (run) => run());
+  // Keep primary-provider fetches below the repo's six-request trigger budget
+  // and reserve heap headroom for consensus assembly and fallback passes.
+  await mapWithConcurrency(fetches, 2, (run) => run());
   throwIfAborted(signal);
 
   if (plan.addressProviders.length > 0 && plan.addressProviderConfig) {
