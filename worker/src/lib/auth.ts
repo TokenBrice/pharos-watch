@@ -1,6 +1,6 @@
 import { OPS_API_HOSTNAME, SITE_API_HOSTNAME } from "@shared/lib/runtime-origins";
 import { verifyAccessJwt } from "@shared/lib/cloudflare-access-jwt";
-import { errorResponse } from "./api-utils";
+import { errorResponse } from "./api-response";
 
 /** Env fields relevant to admin auth — avoids importing the full Env type. */
 export interface AdminAuthEnv {

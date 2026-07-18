@@ -12,8 +12,10 @@ import { getCache } from "./db-cache";
 import { parseRiskFreeRatesCache } from "../cron/yield-sync/cache";
 import { loadPublishedStressSignalGeneration } from "./stress-signals-current-rows";
 import { isCurrentSafetyScoreV8Identity } from "./safety-score-current-identity";
+import type { WorkerCanaryMode } from "./worker-canary-mode";
 
-export type WorkerCanaryMode = "off" | "shadow" | "status" | "alert";
+export { normalizeWorkerCanaryMode } from "./worker-canary-mode";
+export type { WorkerCanaryMode } from "./worker-canary-mode";
 
 export interface CanaryCheckResult {
   checkId: string;
@@ -118,12 +120,6 @@ const DEWS_MAX_AGE_SEC = 4 * 3600;
 const GBP_BENCHMARK_MAX_FETCH_AGE_SEC = 48 * 3600;
 const GBP_BENCHMARK_MAX_RECORD_AGE_SEC = 7 * 24 * 3600;
 const GBP_BENCHMARK_FRESH_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";
-
-export function normalizeWorkerCanaryMode(value: string | undefined): WorkerCanaryMode {
-  const normalized = value?.trim().toLowerCase();
-  if (normalized === "shadow" || normalized === "status" || normalized === "alert") return normalized;
-  return "off";
-}
 
 function nowSec(): number {
   return Math.floor(Date.now() / 1000);

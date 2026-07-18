@@ -1,6 +1,6 @@
 import { withAdmin } from "./auth";
 import { runIdempotentAdminAction } from "./idempotency";
-import { errorResponse, jsonResponse, noStoreResponse, withErrorHandler } from "./api-utils";
+import { errorResponse, jsonResponse, noStoreResponse, withErrorHandler } from "./api-response";
 import { logWorkerEvent } from "./structured-log";
 import type { JsonResponseOptions } from "./api-response";
 

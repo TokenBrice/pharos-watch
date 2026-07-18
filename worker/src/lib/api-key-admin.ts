@@ -25,7 +25,7 @@ import {
   type ApiKeyDb,
   type ApiKeyPublicRow,
 } from "./api-key-core";
-import { errorResponse } from "./api-utils";
+import { errorResponse } from "./api-response";
 
 function apiKeyPostWriteReadbackFailure(action: "create" | "activate" | "update" | "deactivate" | "rotate"): Response {
   const recovery =

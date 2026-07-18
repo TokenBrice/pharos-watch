@@ -92,6 +92,7 @@ The active frontend operator mode is now:
 - `src/hooks/api-hooks.ts`
   - Owns the shared low-friction query wrappers for `GET /api/health`, `GET /api/peg-summary`, `GET /api/dex-liquidity`, `GET /api/report-cards`, `GET /api/yield-rankings`, and related read endpoints
   - This is the live source of truth for `useHealth()` / `usePegSummary()` and the other cache-backed read hooks used by the dashboard model
+  - The desktop lighthouse menu enables `useHealth()` only while the menu is open. Its status link reflects the live public verdict and uses neutral `Checking Status` / `Status Unavailable` labels when no verdict is available; it never defaults to a healthy claim.
 - `src/hooks/use-endpoint-probes.ts`
   - Probes **public + admin** endpoint probe groups with `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0`
   - Public probes use the same-origin `/_site-data/*` website lane; admin probes use same-origin `/api/admin/*` on the ops host
@@ -326,6 +327,8 @@ Ratio-based on-chain stale/degraded thresholds are also gated until the active m
 - `degraded -> healthy`: requires 3 consecutive raw healthy checks (+ dwell)
 - `stale -> degraded`: requires 2 consecutive raw degraded checks (+ stale dwell)
 - `stale -> healthy`: requires 3 consecutive raw healthy checks (+ stale dwell)
+
+`/api/health` evaluates current public-impact evidence directly and fails closed when required evidence is unreadable; it does not reuse the persisted effective state. A newly degraded sample can therefore make `/api/health` and the public `/status/` page degraded while `/api/status.overallStatus` remains healthy until the second consecutive status self-check. The desktop lighthouse menu follows `/api/health`, while operator diagnostics expose both the raw and effective states.
 
 Additional response fields:
 

@@ -132,6 +132,8 @@ export type RouteContextFor<Deps extends readonly RouteDependency[]> =
 
 export type StaticRouteHandler<K extends EndpointKey> = (context: RouteContextFor<EndpointDependenciesForKey<K>>) => Promise<Response>;
 
+export type StaticRouteHandlerLoader<K extends EndpointKey> = () => Promise<StaticRouteHandler<K>>;
+
 export interface StaticRouteDefinition {
   endpoint: EndpointDefinition;
   handler: (context: FullRouteContext) => Promise<Response>;
@@ -169,6 +171,17 @@ export function defineStaticRoute<K extends EndpointKey>(key: K, handler: Static
     endpoint: requireEndpoint(key),
     handler: handler as StaticRouteDefinition["handler"],
   };
+}
+
+/** Keep route modules out of the isolate until their endpoint is actually invoked. */
+export function defineLazyStaticRoute<K extends EndpointKey>(
+  key: K,
+  loadHandler: StaticRouteHandlerLoader<K>,
+): StaticRouteDefinition {
+  return defineStaticRoute(key, async (context) => {
+    const handler = await loadHandler();
+    return handler(context);
+  });
 }
 
 export function defineDynamicRoute<const Deps extends readonly RouteDependency[]>(

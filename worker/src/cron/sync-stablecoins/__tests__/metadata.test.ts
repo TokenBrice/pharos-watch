@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildPricingSourceAuditReport, buildStablecoinsSyncResult } from "../metadata";
 import type { PeggedAsset } from "../enrich-prices";
+import { mergeCronMetadataWithLease, normalizeCronMetadata } from "../../../lib/cron-metadata";
+import {
+  compactCronMetadataForPersistence,
+  MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES,
+} from "../../../lib/cron-metadata-persistence";
 
 describe("stablecoins pricing metadata", () => {
   it("summarizes weak source coverage and provider rejection counts", () => {
@@ -84,8 +89,11 @@ describe("stablecoins pricing metadata", () => {
     expect(report.assetsWithoutIndependentHardSource).toEqual(["cached", "low", "search"]);
   });
 
-  it("keeps persisted metadata below 64 KiB without serializing deduped assets", () => {
+  it("keeps health evidence intact after scheduler metadata enrichment", () => {
     const sentinel = "full-asset-payload-must-not-be-persisted";
+    const diagnosticFields = (count: number) => Object.fromEntries(
+      Array.from({ length: count }, (_, index) => [`diagnostic${index}`, "x".repeat(500)]),
+    );
     const assets = ACTIVE_STABLECOINS.map((stablecoin) => ({
       id: stablecoin.id,
       name: stablecoin.name,
@@ -105,9 +113,17 @@ describe("stablecoins pricing metadata", () => {
         duplicateRows: 1,
         affectedIds: assets.map((asset) => asset.id),
       },
-      enrichStats: { oversizedDiagnostics: Array.from({ length: 500 }, (_, index) => ({ index, text: "x".repeat(1_000) })) },
+      enrichStats: diagnosticFields(36),
       priceValidationStats: { rejected: [] },
-      providerDiagnostics: [],
+      providerDiagnostics: (["binance", "kraken"] as const).map((source) => ({
+        source,
+        stage: "primary" as const,
+        endpoint: `${source}.example.com`,
+        status: 200,
+        ok: true,
+        success: true,
+        ...diagnosticFields(40),
+      })),
       rejectedCount: 0,
       stalenessWarning: false,
       stalenessCheckFailed: false,
@@ -117,10 +133,36 @@ describe("stablecoins pricing metadata", () => {
       syncStartSec: 1_777_000_000,
     });
 
-    expect(new TextEncoder().encode(result.metadata ?? "").byteLength).toBeLessThan(64 * 1024);
+    expect(new TextEncoder().encode(result.metadata ?? "").byteLength).toBeLessThan(
+      MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES,
+    );
     expect(result.metadata).not.toContain(sentinel);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    const enrichedMetadata = mergeCronMetadataWithLease(normalizeCronMetadata(result), {
+      leaseOwner: "sync-stablecoins:scheduled:00000000-0000-4000-8000-000000000000",
+      renewFailures: 0,
+      leaseLost: false,
+      leaseTtlSec: 600,
+      leaseHeartbeatSec: 30,
+      leaseMaxRenewFailures: 3,
+      leaseRenewAttempts: 4,
+      leaseRenewSuccesses: 4,
+      leaseRenewFailuresTotal: 0,
+      leaseLastRenewedAt: 1_777_000_120,
+      slotStartedAt: 1_777_000_000,
+      scheduleKey: "*/15 * * * *",
+      producerPath: "worker/src/cron/sync-stablecoins/index.ts",
+      invocationId: "00000000-0000-4000-8000-000000000001",
+      workerVersion: "test-version",
+      attemptNo: 1,
+      producerKind: "scheduled",
+    });
+    const persisted = compactCronMetadataForPersistence(enrichedMetadata);
+
+    expect(persisted.compacted).toBe(false);
+    const metadata = JSON.parse(persisted.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.metadataCompactedBySizeGuard).toBe(true);
     expect(metadata.canonicalDeduplication).not.toHaveProperty("dedupedAssets");
+    expect(metadata.activePublicationCoverage).toMatchObject({ complete: true });
     expect(metadata.activePriceCoverage).toMatchObject({
       complete: true,
       pricedActiveCount: ACTIVE_STABLECOINS.length,

@@ -1,6 +1,6 @@
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { API_HOSTNAME } from "@shared/lib/runtime-origins";
-import { jsonResponse } from "../../lib/api-utils";
+import { jsonResponse } from "../../lib/api-response";
 import { logWorkerEvent } from "../../lib/structured-log";
 
 export type TelegramIngressRoute = "webhook" | "mini_app_session" | "mini_app_mutation";

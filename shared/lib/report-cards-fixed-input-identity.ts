@@ -6,10 +6,9 @@ import {
 } from "../types/market";
 import type { RedemptionBackstopMap } from "../types/redemption";
 import { ReportCardsResponseSchema, type ReportCard, type ReportCardsResponse } from "../types/report-cards";
-import { DEAD_STABLECOINS } from "./dead-stablecoins";
+import { REPORT_CARDS_REGISTRY_FINGERPRINT } from "../data/stablecoins/report-card-registry-fingerprint.generated";
 import { sha256Hex } from "./sha256";
 import { stableJsonStringifyV1 } from "./stable-json";
-import { ACTIVE_STABLECOINS, FROZEN_STABLECOINS } from "./stablecoins/registry";
 
 export const FixedDexLiquidityRowSchema = z
   .object({
@@ -184,14 +183,7 @@ export function normalizeFixedRedemptionBackstopMap(record: RedemptionBackstopMa
 }
 
 export function computeReportCardsRegistryFingerprint(): string {
-  return sha256Hex(
-    stableJsonStringifyV1({
-      domain: "report-cards.fixed-input.registry.v1",
-      activeStablecoins: [...ACTIVE_STABLECOINS].sort((left, right) => left.id.localeCompare(right.id)),
-      frozenStablecoins: [...FROZEN_STABLECOINS].sort((left, right) => left.id.localeCompare(right.id)),
-      deadStablecoins: [...DEAD_STABLECOINS].sort((left, right) => left.id.localeCompare(right.id)),
-    }),
-  );
+  return REPORT_CARDS_REGISTRY_FINGERPRINT;
 }
 
 export function computeDexLiquidityPayloadFingerprint(

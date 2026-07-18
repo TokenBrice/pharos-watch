@@ -20,9 +20,12 @@ vi.mock("@shared/lib/cloudflare-access-jwt", async (importOriginal) => {
   return { ...actual, verifyAccessJwt };
 });
 
-vi.mock("../../../lib/api-keys", () => ({
+vi.mock("../../../lib/api-key-auth", () => ({
   authenticateApiKey: apiKeyMocks.authenticateApiKey,
   authenticateApiKeyFromFreshCache: apiKeyMocks.authenticateApiKeyFromFreshCache,
+}));
+
+vi.mock("../../../lib/api-key-rate-limit", () => ({
   checkApiKeyRateLimit: apiKeyMocks.checkApiKeyRateLimit,
   checkIsolateLocalApiKeyRateLimit: apiKeyMocks.checkIsolateLocalApiKeyRateLimit,
   isApiKeyRateLimitDependencyCircuitOpen: apiKeyMocks.isApiKeyRateLimitDependencyCircuitOpen,

@@ -10,7 +10,7 @@ import {
   API_KEY_MAX_RATE_LIMIT_PER_MINUTE,
   API_KEY_MIN_RATE_LIMIT_PER_MINUTE,
 } from "@shared/lib/ops-limits";
-import { errorResponse } from "./api-utils";
+import { errorResponse } from "./api-response";
 import { bytesToHex } from "./hash";
 import { bytesToBase64Url } from "./base64url";
 import { IsolateLocalState } from "./isolate-local-state";

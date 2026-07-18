@@ -21,10 +21,35 @@ import {
   type NavGroup,
   type NavItem,
 } from "@/lib/nav-config";
+import { useHealth } from "@/hooks/api-hooks";
 import { cn } from "@/lib/utils";
 
 const TOP_MENUS: readonly NavGroup[] = NAV_GROUPS;
 const OVERFLOW_MENU_KEY = "overflow";
+const HEALTH_STATUS_MENU = {
+  healthy: {
+    label: "Pharos is Healthy",
+    dotClassName: "bg-[var(--severity-healthy)]",
+  },
+  degraded: {
+    label: "Pharos is Degraded",
+    dotClassName: "bg-[var(--severity-mild)]",
+  },
+  stale: {
+    label: "Pharos is Stale",
+    dotClassName: "bg-[var(--severity-severe)]",
+  },
+} as const;
+
+const CHECKING_STATUS_MENU = {
+  label: "Checking Status",
+  dotClassName: "bg-muted-foreground/50",
+} as const;
+
+const UNAVAILABLE_STATUS_MENU = {
+  label: "Status Unavailable",
+  dotClassName: "bg-muted-foreground/50",
+} as const;
 
 function LighthouseIcon(props: SVGProps<SVGSVGElement>) {
   return (
@@ -123,6 +148,13 @@ export function TopNav() {
   const [hoverCapable, setHoverCapable] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hoverOpenRef = useRef(false);
+  const statusMenuOpen = openMenu === OVERFLOW_MENU_KEY;
+  const { data: healthData, isError: healthError } = useHealth({ enabled: statusMenuOpen });
+  const healthMenu = healthData
+    ? HEALTH_STATUS_MENU[healthData.status]
+    : healthError
+      ? UNAVAILABLE_STATUS_MENU
+      : CHECKING_STATUS_MENU;
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -236,7 +268,7 @@ export function TopNav() {
 
         <DropdownMenu
           modal={false}
-          open={openMenu === OVERFLOW_MENU_KEY}
+          open={statusMenuOpen}
           onOpenChange={(next) => {
             cancelClose();
             setOpenMenu(next ? OVERFLOW_MENU_KEY : null);
@@ -291,8 +323,8 @@ export function TopNav() {
             <DropdownMenuItem asChild className="gap-2.5 rounded-lg px-2.5 py-2">
               <Link href="/status/" prefetch={false}>
                 <Activity className="size-4 text-muted-foreground" aria-hidden />
-                <span className="text-sm font-medium">Pharos is Healthy</span>
-                <span className="ml-auto size-2 rounded-full bg-[var(--severity-healthy)]" aria-hidden />
+                <span className="text-sm font-medium">{healthMenu.label}</span>
+                <span className={cn("ml-auto size-2 rounded-full", healthMenu.dotClassName)} aria-hidden />
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />

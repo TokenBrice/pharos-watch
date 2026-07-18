@@ -325,6 +325,8 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 | No-store           | `no-store`                                                     | admin GETs, bypassed status/control routes, and per-coin stale fallback responses                                                                                                                           |
 | Immutable snapshot | `public, s-maxage=31536000, max-age=31536000, immutable`       | route-local dated public snapshot payloads and per-stablecoin projections (`/api/snapshots/:date.json`, `/api/snapshot/:date/stablecoin/:id`)                                                               |
 
+The top-level `fetch` and `scheduled` handlers load their dispatchers lazily. The HTTP route catalog keeps only endpoint metadata and loader closures eager, then initializes an API implementation module only when its endpoint is invoked; scheduled slots likewise load only their selected runner. This prevents unrelated HTTP and cron object graphs from being retained in a fresh isolate. `worker/src/routes/__tests__/lazy-route-loading.test.ts` enforces these import boundaries.
+
 Admin `GET` routes are forced to `Cache-Control: no-store` either by `addAdminGetNoStoreHeader()` in `worker/src/router.ts` for registry-dispatched routes or by the admin route wrapper for dynamic admin handlers.
 
 ### D1 Read Snapshots And Pagination
@@ -560,7 +562,7 @@ async function logCronRun(
 - On error: inserts a terminal row, awaits the direct webhook attempt, and re-throws a typed aggregate through the slot fence
 - On completion/error of a progress-reporting job: clears the corresponding `cron_run_progress` row
 - Returns the job's `CronResult` when the handler provides one
-- Persisted cron metadata is compacted globally below 64 KiB; rich in-process results are not copied wholesale into `cron_runs`.
+- Persisted cron metadata is compacted globally below 64 KiB; rich in-process results are not copied wholesale into `cron_runs`. The stablecoin producer applies its domain-aware compaction below 60 KiB, reserving 4 KiB for wrapper-owned lease and slot enrichment so publication and active-price coverage remain top-level health evidence.
 - `worker_producer_history` and `worker_producer_heads` distinguish invocation completion from productive output and publication for every schedule/job/path/kind, including shared paths and budget-only surfaces. Calendar work keeps its UTC-month identity.
 - History pruning is handled by the daily `prune-cron-history` job. It retains regular producer history for 30 days, budget-only history for 90 days, and calendar-keyed history for 550 days in addition to the existing cron/slot/attempt retention.
 
