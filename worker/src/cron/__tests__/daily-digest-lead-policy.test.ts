@@ -336,3 +336,35 @@ describe("next-trigger lifecycle (Batch 4)", () => {
     expect(liquidityTrigger?.thresholdValue).toBe(36);
   });
 });
+
+describe("depeg lifecycle flags (Batch 5)", () => {
+  it("flags stalled collapses and chronic shallow events from the Jul 18 replay", async () => {
+    const { classifyDepegLifecycle } = await import("../../lib/depeg-lifecycle");
+    const fixture = loadFixture("2026-07-18");
+    const { topDepegs } = await replayCollector(seedsFromFixture(fixture.inputData), generatedAt(fixture.inputData));
+    const flags = classifyDepegLifecycle(
+      topDepegs.map((depeg) => ({
+        stablecoinId: depeg.stablecoinId ?? depeg.symbol,
+        symbol: depeg.symbol,
+        ageHours: depeg.ageHours,
+        currentBps: depeg.currentBps,
+        mcapUsd: depeg.mcapUsd,
+      })),
+    );
+    const byId = new Map(flags.map((flag) => [flag.stablecoinId, flag.kind]));
+    // pmUSD: $0.705 live, event ~80 days old -> a stalled collapse awaiting review.
+    expect(byId.get("pmusd-precious-metals")).toBe("stalled-collapse");
+    // usda-avalon: -179 bps live, open since December -> chronic shallow, not a crisis.
+    expect(byId.get("usda-avalon")).toBe("chronic-shallow");
+    // apxUSD: -1,570 bps live -> neither shallow nor >=2,500; needs no ruling.
+    expect(byId.has("apxusd-apyx")).toBe(false);
+  });
+
+  it("never flags rows without a live deviation", async () => {
+    const { classifyDepegLifecycle } = await import("../../lib/depeg-lifecycle");
+    const flags = classifyDepegLifecycle([
+      { stablecoinId: "x", symbol: "X", ageHours: 24 * 40, currentBps: undefined, mcapUsd: 5e7 },
+    ]);
+    expect(flags).toHaveLength(0);
+  });
+});

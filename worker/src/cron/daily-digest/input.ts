@@ -28,6 +28,7 @@ import {
   type CollectorResult,
 } from "./collectors";
 import { markCollectorDegraded } from "./collectors-shared";
+import type { DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
 import { buildRecentDigestMeta, type RecentDigestMetaEntry } from "./runtime-helpers";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "./shared";
 import { buildEditorialCandidates } from "./editorial-candidates";
@@ -48,6 +49,8 @@ export interface DailyDigestInputBuildResult {
   previousInputData: DigestInputData | null;
   /** leadSignalIds of recent editions (newest first), for the lead quota. */
   recentLeadSignalIds: (string | null)[];
+  /** Owner-review lifecycle flags over the full open depeg-event set. */
+  lifecycleFlags: DepegLifecycleFlag[];
   stablecoinsCacheReason: string | null;
   llmSignals: {
     activeDepegCount: number;
@@ -117,6 +120,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
       recentMeta,
       previousInputData,
       recentLeadSignalIds,
+      lifecycleFlags: [],
       stablecoinsCacheReason: stablecoinsCacheResult.reason,
       llmSignals: {
         activeDepegCount: 0,
@@ -195,7 +199,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     markCollectorDegraded(degradedReasons, "stablecoins-cache-stale");
   }
 
-  const { activeDepegCount, topDepegs } = consumeCollectorResult(await collectActiveDepegs(ctx), degradedReasons);
+  const { activeDepegCount, topDepegs, lifecycleFlags } = consumeCollectorResult(await collectActiveDepegs(ctx), degradedReasons);
 
   const [latestSample, latestDaily, avg24hRow, yesterdayRow] = await Promise.all([
     db
@@ -364,6 +368,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     recentMeta,
     previousInputData,
     recentLeadSignalIds,
+    lifecycleFlags,
     stablecoinsCacheReason: null,
     llmSignals: {
       activeDepegCount,

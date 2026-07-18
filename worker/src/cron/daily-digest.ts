@@ -5,7 +5,8 @@ import type { TelegramCreds } from "../lib/telegram";
 import { SECONDS } from "../lib/time-constants";
 import { formatIsoDate } from "@shared/lib/format";
 import { CIRCUIT_SOURCE } from "../lib/constants";
-import { deleteCache } from "../lib/db-cache";
+import { deleteCache, setCache } from "../lib/db-cache";
+import { DEPEG_LIFECYCLE_FLAGS_CACHE_KEY } from "../lib/depeg-lifecycle";
 import { runWithOverloadRetry } from "../lib/cron-lease";
 import { prepareTelegramDigestAppendices, type PreparedTelegramDigestAppendices } from "../lib/telegram-digest-appendices";
 import {
@@ -125,7 +126,7 @@ export async function generateDailyDigest(
     itemsTotal: 1,
   });
   const digestInput = await buildDailyDigestInput(db);
-  const { inputData, degradedReasons, recentMeta, previousInputData, recentLeadSignalIds, llmSignals, stablecoinsCacheReason } = digestInput;
+  const { inputData, degradedReasons, recentMeta, previousInputData, recentLeadSignalIds, lifecycleFlags, llmSignals, stablecoinsCacheReason } = digestInput;
   if (stablecoinsCacheReason) {
     await reportDigestProgress(reportProgress, {
       stage: "input-unavailable",
@@ -400,6 +401,19 @@ export async function generateDailyDigest(
   if (degradedReasons.includes("telegram-outbox-write")) {
     throw new Error("Telegram daily digest outbox write failed");
   }
+  // Persist owner-review lifecycle flags (stalled collapses / chronic shallow
+  // pegs needing a manual freeze-or-close ruling). Best-effort: a cache write
+  // failure must not degrade an otherwise successful digest run.
+  try {
+    await setCache(
+      db,
+      DEPEG_LIFECYCLE_FLAGS_CACHE_KEY,
+      JSON.stringify({ updatedAt: now, flags: lifecycleFlags }),
+      signal,
+    );
+  } catch (err) {
+    console.error("[daily-digest] Failed to persist depeg lifecycle flags:", err);
+  }
   const qualityMetadata = formatQualityMetadata(digestCopy.qualityIssues);
   await reportDigestProgress(reportProgress, {
     stage: "complete",
@@ -414,15 +428,19 @@ export async function generateDailyDigest(
         extendedChars: digestCopy.digestExtended.length,
         degradedReasons: degradedReasons.length,
         qualityIssues: digestCopy.qualityIssues.length,
+        lifecycleFlags: lifecycleFlags.length,
       },
       twitterStatus: tweetStatus,
       telegramStatus,
     },
   });
   console.log(`[daily-digest] Generated and stored digest: "${digestCopy.digestTitle}" (${digestCopy.digestText.length} chars + ${digestCopy.digestExtended.length} extended), tweet: ${tweetStatus}, telegram: ${telegramStatus}${qualityMetadata}`);
+  const lifecycleMetadata = lifecycleFlags.length > 0
+    ? `, lifecycle-review: ${lifecycleFlags.map((flag) => `${flag.symbol}:${flag.kind}`).join("|")}`
+    : "";
   return {
     itemCount: 1,
     ...(degradedReasons.length > 0 || digestCopy.hasBlockingQualityIssues ? { status: "degraded" as const } : {}),
-    metadata: `${digestCopy.digestText.length} chars, tweet: ${tweetStatus}, telegram: ${telegramStatus}${degradedReasons.length > 0 ? `, degraded: ${degradedReasons.join("|")}` : ""}${qualityMetadata}`,
+    metadata: `${digestCopy.digestText.length} chars, tweet: ${tweetStatus}, telegram: ${telegramStatus}${degradedReasons.length > 0 ? `, degraded: ${degradedReasons.join("|")}` : ""}${qualityMetadata}${lifecycleMetadata}`,
   };
 }

@@ -1,5 +1,6 @@
 import type { DigestInputData } from "@shared/types/digest";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
+import { classifyDepegLifecycle, type DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { ACTIVE_DEPEG_PROMPT_LIMIT, getDepegMarketImpactScore, isCriticalDepegRisk } from "@shared/lib/digest-risk";
 import { buildInClause } from "../../lib/db";
@@ -51,7 +52,13 @@ function getActiveDepegSuppressReason(params: { mcapUsd: number; ageHours: numbe
 
 export async function collectActiveDepegs(
   ctx: CollectorContext,
-): Promise<CollectorResult<{ activeDepegCount: number; topDepegs: DigestInputData["topDepegs"] }>> {
+): Promise<
+  CollectorResult<{
+    activeDepegCount: number;
+    topDepegs: DigestInputData["topDepegs"];
+    lifecycleFlags: DepegLifecycleFlag[];
+  }>
+> {
   try {
     const activeDepegs = await ctx.db
       .prepare(
@@ -155,10 +162,14 @@ export async function collectActiveDepegs(
         }),
       );
 
-    return collectorOk({ activeDepegCount: withImpact.length, topDepegs });
+    // Lifecycle review runs over the FULL open-event set, not the top-8 slice:
+    // a stalled collapse must not escape review by ranking ninth.
+    const lifecycleFlags = classifyDepegLifecycle(withImpact);
+
+    return collectorOk({ activeDepegCount: withImpact.length, topDepegs, lifecycleFlags });
   } catch (error) {
     console.error("[daily-digest] Failed to query active depegs:", error);
-    return collectorDegraded({ activeDepegCount: 0, topDepegs: [] }, "active-depegs-query");
+    return collectorDegraded({ activeDepegCount: 0, topDepegs: [], lifecycleFlags: [] }, "active-depegs-query");
   }
 }
 
