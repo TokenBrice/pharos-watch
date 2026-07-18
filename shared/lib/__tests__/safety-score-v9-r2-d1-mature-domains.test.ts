@@ -120,6 +120,27 @@ describe("R2/D1 threshold boundary semantics — active (PR #530 behavior must s
     }
   });
 
+  it("resolves versioned measured-execution protocol keys to their venue family", () => {
+    // 2026-07-18 regression: CL activation registers "uniswap-v3" /
+    // "pancakeswap-v3"; maturity is a family property (D14 later ruled
+    // pancakeswap mature as well). An unruled versioned venue stays
+    // fail-closed at unknown share.
+    for (const key of ["uniswap-v3", "pancakeswap-v3"]) {
+      const domain: V9FailureDomainRef = { kind: "dex-protocol", key };
+      for (const { share } of CHAIN_BOUNDARIES) {
+        expect(
+          commonModeSignalSeverity(domain, contextForVenue(key, share), STAGE_B_MATERIALITY),
+          `${key} share=${share}`,
+        ).toBe("low");
+      }
+    }
+    const unruled: V9FailureDomainRef = { kind: "dex-protocol", key: "futuredex-v2" };
+    expect(commonModeSignalSeverity(unruled, contextForVenue("futuredex-v2", null), STAGE_B_MATERIALITY)).toBe("high");
+    expect(commonModeSignalSeverity(unruled, contextForVenue("futuredex-v2", 0.07), STAGE_B_MATERIALITY)).toBe(
+      "moderate",
+    );
+  });
+
   it("keeps the previously mature chains/venues diagnostic under the extended fixture", () => {
     for (const chainId of CANDIDATE_MATERIALITY.matureChains) {
       const domain: V9FailureDomainRef = { kind: "chain", key: chainId };
