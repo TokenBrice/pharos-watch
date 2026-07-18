@@ -37,6 +37,15 @@ export function createKnownPoolIdentityIndex(): KnownPoolIdentityIndex {
   };
 }
 
+export function clearKnownPoolIdentityIndex(known: KnownPoolIdentityIndex): void {
+  known.exactKeys.clear();
+  known.derivedKeyCounts.clear();
+  known.derivedToExactKeys.clear();
+  known.wildcardKeyCounts.clear();
+  known.wildcardToExactKeys.clear();
+  known.concreteFeeVariantKeys.clear();
+}
+
 function isUniswapV4PoolId(poolId: string, protocol?: string | null): boolean {
   return normalizeProtocol(protocol ?? "") === "uniswap-v4" && /^0x[a-f0-9]{64}$/i.test(poolId);
 }

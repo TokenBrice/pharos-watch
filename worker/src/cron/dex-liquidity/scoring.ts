@@ -335,7 +335,7 @@ export async function computeStablecoinScores(
     protocolCapDiagnostics.cappedProtocols += capResult.cappedProtocols;
     protocolCapDiagnostics.reducedTvlUsd += capResult.reducedTvlUsd;
 
-    const retainedPools = [...m.topPools];
+    const retainedPools = m.topPools;
     for (const pool of retainedPools) {
       const existingTarget = pool.extra?.measuredExecutionTarget;
       const candidate = pool.project === "pancakeswap" && pool.poolType.startsWith("pancakeswap-v3")
@@ -383,6 +383,7 @@ export async function computeStablecoinScores(
     evidence: joinEvidence,
     nowSec: routeObservedAt,
   });
+  joinEvidence?.byTargetId.clear();
   const targetInventoryById = new Map<string, DexMeasuredExecutionTarget>();
   for (const pools of preparedRetainedPools.values()) {
     for (const pool of pools) {
@@ -401,13 +402,12 @@ export async function computeStablecoinScores(
       observedAt: routeObservedAt,
     });
     stripDexMeasuredExecutionInternalFields(retainedPools);
-    retainedPoolsByStablecoin.set(
-      id,
-      retainedPools.map((pool) => ({
-        ...pool,
-        extra: pool.extra ? { ...pool.extra } : undefined,
-      })),
-    );
+    // Persistence and price publication are read-only consumers of the same
+    // sanitized pool graph. Sharing it avoids cloning thousands of rich pool
+    // objects at the scoring peak.
+    retainedPoolsByStablecoin.set(id, retainedPools);
+    preparedRetainedPools.delete(id);
+    p4OnlyRetainedPools.delete(id);
 
     applyRebuiltMetrics(m, rebuilt);
     const globalDelta = accumulateGlobalAggregate(
