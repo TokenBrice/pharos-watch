@@ -21,6 +21,8 @@ import donationsData from "@shared/data/funding/donations.json";
 import type { CostsFile, DonationsFile } from "@shared/lib/funding/types";
 import { changelogs } from "@/data/changelogs";
 import {
+  COLLIDING_DEPEG_EVENT_SLUGS,
+  DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
   DEPEG_EVENT_ENTRIES,
   INDEXABLE_DEPEG_EVENT_ENTRIES,
 } from "@/app/depeg/[event]/page-data";
@@ -220,7 +222,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const depegEventPages: MetadataRoute.Sitemap = indexableDepegEventEntries.map((e) => ({
     url: `${SITE_URL}/depeg/${e.slug}/`,
-    lastModified: new Date((e.endedAt ?? e.startedAt) * 1000),
+    lastModified: new Date(
+      Math.max(
+        e.endedAt ?? e.startedAt,
+        COLLIDING_DEPEG_EVENT_SLUGS.has(e.slug) ? DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS : 0,
+      ) * 1000,
+    ),
     changeFrequency: (e.endedAt ? "never" : "daily") as "never" | "daily",
     priority: 0.55,
   }));

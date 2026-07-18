@@ -11,6 +11,11 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { CASE_STUDY_LIST } from "@/app/learn/case-studies/content";
 import sitemap, { METHODOLOGY_CHANGELOG_SITEMAP_PATHS } from "../sitemap";
 import digests from "../../../data/digests.json";
+import {
+  COLLIDING_DEPEG_EVENT_SLUGS,
+  DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
+  INDEXABLE_DEPEG_EVENT_ENTRIES,
+} from "@/app/depeg/[event]/page-data";
 
 describe("sitemap", () => {
   it("includes every frozen detail page (TRACKED source preserves indexability)", () => {
@@ -90,6 +95,30 @@ describe("sitemap", () => {
       expect(entry?.lastModified).toEqual(new Date(digest.generatedAt * 1000));
       expect(entry?.changeFrequency).toBe("never");
     }
+  });
+
+  it("marks only collision-differentiated depeg pages with the reviewed content revision", () => {
+    const entriesByUrl = new Map(sitemap().map((entry) => [entry.url, entry]));
+    const collision = INDEXABLE_DEPEG_EVENT_ENTRIES.find((event) =>
+      COLLIDING_DEPEG_EVENT_SLUGS.has(event.slug),
+    );
+    const ordinary = INDEXABLE_DEPEG_EVENT_ENTRIES.find(
+      (event) => !COLLIDING_DEPEG_EVENT_SLUGS.has(event.slug),
+    );
+
+    expect(collision).toBeDefined();
+    expect(ordinary).toBeDefined();
+    expect(entriesByUrl.get(`${SITE_ORIGIN}/depeg/${collision!.slug}/`)?.lastModified).toEqual(
+      new Date(
+        Math.max(
+          collision!.endedAt ?? collision!.startedAt,
+          DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
+        ) * 1000,
+      ),
+    );
+    expect(entriesByUrl.get(`${SITE_ORIGIN}/depeg/${ordinary!.slug}/`)?.lastModified).toEqual(
+      new Date((ordinary!.endedAt ?? ordinary!.startedAt) * 1000),
+    );
   });
 
   it("stamps every case-study detail page from generated per-study dates", () => {

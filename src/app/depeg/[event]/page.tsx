@@ -9,7 +9,7 @@ import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
 import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
-import { formatDeviationBps, formatIsoDate } from "@shared/lib/format";
+import { formatDeviationBps } from "@shared/lib/format";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
@@ -22,12 +22,24 @@ import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { EDITORIAL_BODY_STYLE, splitDigestParagraphs } from "@/lib/digest";
 import { digestDisplay } from "@/lib/fonts/digest";
 import {
+  COLLIDING_DEPEG_EVENT_SLUGS,
+  DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
   DEPEG_EVENT_ENTRIES,
   INDEXABLE_DEPEG_EVENT_SLUGS,
   eventBySlug,
   formatIncidentNumber,
   type DepegEventEntry,
 } from "./page-data";
+import {
+  buildDepegEventDescription,
+  buildDepegEventSynopsis,
+  buildDepegEventTitle,
+  depegDirectionLabel,
+  formatEventNavigationLabel,
+  formatEventPrice,
+  formatEventTimestamp,
+  formatEventUtcTime,
+} from "./event-display";
 import { getDepegEditorial, qualifiesForEditorialBriefing } from "./editorials";
 import { CASE_STUDY_BY_DEPEG_SLUG } from "@/app/learn/case-studies/content";
 
@@ -66,37 +78,6 @@ function findCuratedAnnotation(event: DepegEventEntry): CuratedMatch | null {
   return { label: top.label, href: top.href, severity: top.severity };
 }
 
-function formatLongDate(seconds: number): string {
-  return new Date(seconds * 1000).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
-  });
-}
-
-function formatPrice(value: number | null): string | null {
-  if (value == null || !Number.isFinite(value)) return null;
-  if (value < 0.01) return `$${value.toFixed(6)}`;
-  if (value < 1) return `$${value.toFixed(4)}`;
-  return `$${value.toFixed(2)}`;
-}
-
-function directionLabel(direction: "above" | "below"): string {
-  return direction === "below" ? "below peg" : "above peg";
-}
-
-function buildHeroTitle(event: DepegEventEntry, coinName: string | null): string {
-  const base = coinName ?? event.symbol;
-  return `${base} depeg ${directionLabel(event.direction)} — ${formatLongDate(event.startedAt)}`;
-}
-
-function buildHeroDescription(event: DepegEventEntry): string {
-  const status = event.endedAt ? "Recovered" : "Ongoing";
-  const dev = formatDeviationBps(event.peakDeviationBps);
-  return `${event.symbol} traded ${directionLabel(event.direction)} with a peak deviation of ${dev} starting ${formatIsoDate(event.startedAt)}. Confirmed ${status.toLowerCase()} depeg event with timeline, severity, recovery, and Pharos methodology context.`;
-}
-
 export async function generateMetadata(
   { params }: { params: Promise<{ event: string }> },
 ): Promise<Metadata> {
@@ -106,8 +87,9 @@ export async function generateMetadata(
     return { title: "Depeg Event Not Found", robots: { index: false } };
   }
   const coin = TRACKED_META_BY_ID.get(event.stablecoinId);
-  const title = buildHeroTitle(event, coin?.name ?? null);
-  const description = buildHeroDescription(event);
+  const isCollision = COLLIDING_DEPEG_EVENT_SLUGS.has(event.slug);
+  const title = buildDepegEventTitle(event, coin?.name ?? null, isCollision);
+  const description = buildDepegEventDescription(event, isCollision);
   return buildPageMetadata({
     title,
     description,
@@ -130,16 +112,16 @@ function ProvenanceLine({ event }: { event: DepegEventEntry }) {
   return <p className="text-sm text-muted-foreground">{parts.join(" · ")}</p>;
 }
 
-function RecoveryPanel({ event }: { event: DepegEventEntry }) {
-  const startPrice = formatPrice(event.startPrice);
-  const peakPrice = formatPrice(event.peakPrice);
-  const recoveryPrice = formatPrice(event.recoveryPrice);
+function RecoveryPanel({ event, includeTime }: { event: DepegEventEntry; includeTime: boolean }) {
+  const startPrice = formatEventPrice(event.startPrice);
+  const peakPrice = formatEventPrice(event.peakPrice);
+  const recoveryPrice = formatEventPrice(event.recoveryPrice);
   const durationSec = event.endedAt ? event.endedAt - event.startedAt : null;
   return (
     <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
       <div>
         <dt className="text-xs uppercase tracking-wide text-muted-foreground">Direction</dt>
-        <dd className="font-medium text-foreground">{directionLabel(event.direction)}</dd>
+        <dd className="font-medium text-foreground">{depegDirectionLabel(event.direction)}</dd>
       </div>
       <div>
         <dt className="text-xs uppercase tracking-wide text-muted-foreground">Peak deviation</dt>
@@ -147,12 +129,14 @@ function RecoveryPanel({ event }: { event: DepegEventEntry }) {
       </div>
       <div>
         <dt className="text-xs uppercase tracking-wide text-muted-foreground">Started</dt>
-        <dd className="pharos-numeric font-medium text-foreground">{formatLongDate(event.startedAt)}</dd>
+        <dd className="pharos-numeric font-medium text-foreground">
+          {formatEventTimestamp(event.startedAt, includeTime)}
+        </dd>
       </div>
       <div>
         <dt className="text-xs uppercase tracking-wide text-muted-foreground">Ended</dt>
         <dd className="pharos-numeric font-medium text-foreground">
-          {event.endedAt ? formatLongDate(event.endedAt) : "Ongoing"}
+          {event.endedAt ? formatEventTimestamp(event.endedAt, includeTime) : "Ongoing"}
         </dd>
       </div>
       <div>
@@ -163,7 +147,9 @@ function RecoveryPanel({ event }: { event: DepegEventEntry }) {
       </div>
       <div>
         <dt className="text-xs uppercase tracking-wide text-muted-foreground">Peg reference</dt>
-        <dd className="pharos-numeric font-medium text-foreground">{formatPrice(event.pegReference) ?? "—"}</dd>
+        <dd className="pharos-numeric font-medium text-foreground">
+          {formatEventPrice(event.pegReference) ?? "—"}
+        </dd>
       </div>
       {startPrice ? (
         <div>
@@ -196,8 +182,13 @@ export default async function DepegEventPage(
 
   const coin = TRACKED_META_BY_ID.get(event.stablecoinId);
   const curated = findCuratedAnnotation(event);
-  const heroTitle = curated?.label ?? buildHeroTitle(event, coin?.name ?? null);
-  const heroDescription = buildHeroDescription(event);
+  const isCollision = COLLIDING_DEPEG_EVENT_SLUGS.has(event.slug);
+  const baseHeroTitle = buildDepegEventTitle(event, coin?.name ?? null, isCollision);
+  const heroTitle = curated?.label
+    ? `${curated.label}${isCollision ? ` — ${formatEventUtcTime(event.startedAt)}` : ""}`
+    : baseHeroTitle;
+  const heroDescription = buildDepegEventDescription(event, isCollision);
+  const eventSynopsis = isCollision ? buildDepegEventSynopsis(event) : null;
   const methodologyVersion = getDepegDewsMethodologyVersionAt(event.startedAt);
   const versionLabel = toMethodologyVersionLabel(methodologyVersion);
   const canonicalUrl = `${SITE_URL}/depeg/${event.slug}/`;
@@ -219,7 +210,7 @@ export default async function DepegEventPage(
   const incidentNumber = formatIncidentNumber(event.slug);
   const coinDisplayName = coin?.name ?? event.symbol;
   const incidentKicker = incidentNumber
-    ? `Incident ${incidentNumber} · ${event.symbol} · ${formatLongDate(event.startedAt)}`
+    ? `Incident ${incidentNumber} · ${event.symbol} · ${formatEventTimestamp(event.startedAt, isCollision)}`
     : null;
   const timelineParagraphs = editorial ? splitDigestParagraphs(editorial.timeline) : [];
 
@@ -230,15 +221,19 @@ export default async function DepegEventPage(
   const older = sameCoinIdx >= 0 && sameCoinIdx < sameCoin.length - 1 ? sameCoin[sameCoinIdx + 1] : null;
 
   const startedIso = new Date(event.startedAt * 1000).toISOString();
-  const endedIso = event.endedAt ? new Date(event.endedAt * 1000).toISOString() : null;
+  const modifiedAtSeconds = isCollision
+    ? Math.max(event.endedAt ?? event.startedAt, DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS)
+    : (event.endedAt ?? event.startedAt);
+  const modifiedIso = new Date(modifiedAtSeconds * 1000).toISOString();
 
   const newsArticleJsonLd = {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
+    "@id": canonicalUrl,
     headline: heroTitle,
     description: heroDescription,
     datePublished: startedIso,
-    dateModified: endedIso ?? startedIso,
+    dateModified: modifiedIso,
     image: [`${SITE_URL}/og-editorial-depeg.png`],
     author: { "@type": "Organization", name: "Pharos", url: SITE_URL },
     publisher: {
@@ -280,6 +275,9 @@ export default async function DepegEventPage(
           {heroTitle}
         </h1>
         <ProvenanceLine event={event} />
+        {eventSynopsis ? (
+          <p className="max-w-[72ch] text-sm leading-6 text-muted-foreground">{eventSynopsis}</p>
+        ) : null}
       </div>
 
       {editorial && timelineParagraphs.length > 0 ? (
@@ -310,7 +308,7 @@ export default async function DepegEventPage(
 
       <section className="pharos-card-shell space-y-4 px-5 py-5">
         <p className="pharos-kicker">Event summary</p>
-        <RecoveryPanel event={event} />
+        <RecoveryPanel event={event} includeTime={isCollision} />
       </section>
 
       <RelatedIncidentsRail
@@ -369,10 +367,10 @@ export default async function DepegEventPage(
           {older ? (
             <Link
               href={`/depeg/${older.slug}/`}
-              aria-label={`Older ${older.symbol} depeg: ${formatIsoDate(older.startedAt)}`}
+              aria-label={`Older ${formatEventNavigationLabel(older, COLLIDING_DEPEG_EVENT_SLUGS.has(older.slug))} depeg`}
               className="pharos-focus-ring text-muted-foreground transition-colors hover:text-foreground"
             >
-              ← {older.symbol} {formatIsoDate(older.startedAt)}
+              ← {formatEventNavigationLabel(older, COLLIDING_DEPEG_EVENT_SLUGS.has(older.slug))}
             </Link>
           ) : (
             <span />
@@ -380,10 +378,10 @@ export default async function DepegEventPage(
           {newer ? (
             <Link
               href={`/depeg/${newer.slug}/`}
-              aria-label={`Newer ${newer.symbol} depeg: ${formatIsoDate(newer.startedAt)}`}
+              aria-label={`Newer ${formatEventNavigationLabel(newer, COLLIDING_DEPEG_EVENT_SLUGS.has(newer.slug))} depeg`}
               className="pharos-focus-ring text-muted-foreground transition-colors hover:text-foreground"
             >
-              {newer.symbol} {formatIsoDate(newer.startedAt)} →
+              {formatEventNavigationLabel(newer, COLLIDING_DEPEG_EVENT_SLUGS.has(newer.slug))} →
             </Link>
           ) : (
             <span />

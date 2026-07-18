@@ -6,6 +6,10 @@ import {
   selectIndexableDepegEvents,
   selectStaticDepegEventPages,
 } from "./config";
+import {
+  buildSameDayDirectionCollisionSlugs,
+  DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
+} from "./event-display";
 
 /**
  * Event payload as written by scripts/maintenance/sync-depeg-events.ts.
@@ -39,6 +43,11 @@ export const INDEXABLE_DEPEG_EVENT_ENTRIES: readonly DepegEventEntry[] =
 export const INDEXABLE_DEPEG_EVENT_SLUGS: ReadonlySet<string> = new Set(
   INDEXABLE_DEPEG_EVENT_ENTRIES.map((event) => event.slug),
 );
+
+export const COLLIDING_DEPEG_EVENT_SLUGS: ReadonlySet<string> =
+  buildSameDayDirectionCollisionSlugs(INDEXABLE_DEPEG_EVENT_ENTRIES);
+
+export { DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS };
 
 export const eventBySlug: ReadonlyMap<string, DepegEventEntry> = new Map(
   DEPEG_EVENT_ENTRIES.map((event) => [event.slug, event] as const),

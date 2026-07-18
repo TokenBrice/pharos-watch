@@ -205,7 +205,7 @@ const STRUCTURED_DATA_ROUTE_MATRIX = [
     pattern: /^\/depeg\/[^/]+\/$/,
     nodes: [
       { type: "BreadcrumbList", requiredPaths: ["itemListElement.0.name", "itemListElement.0.item"] },
-      { type: "NewsArticle", requiredPaths: ["headline", "datePublished", "dateModified", "mainEntityOfPage"] },
+      { type: "NewsArticle", requiredPaths: ["@id", "headline", "datePublished", "dateModified", "mainEntityOfPage"] },
     ],
   },
   {
