@@ -97,11 +97,10 @@ export function PricingPipelineMethodologySection() {
         <p>
           <strong className="text-foreground">Recovery scope.</strong> Live protocol-override work is limited to the exact
           active registry, so frozen and quarantined assets cannot consume the shared recovery budget. If PHPm&apos;s
-          preferred Mento Broker route does not produce an accepted quote and its price is otherwise missing, the worker
-          can use two exact, factory-bound Celo Uniswap V3 routes only when fresh 1,000- and 10,000-token quotes have
-          bounded impact and agree after trusted USDT/USDC normalization. The non-replay-safe fallback cannot replace an
-          existing usable price or independently confirm a depeg, and optional refresh failures do not poison its recovery
-          circuit. KRWO remains fail-closed because its current pools do not meet executable-depth requirements.
+          Mento Broker route does not produce an accepted quote, the worker does not publish an authoritative PHPm
+          override and leaves the asset explicitly missing until another pricing lane resolves it. Optional Broker refresh
+          failures do not poison its recovery circuit while a usable incumbent price exists. KRWO remains fail-closed
+          because its current pools do not meet executable-depth requirements.
         </p>
 
         <p>

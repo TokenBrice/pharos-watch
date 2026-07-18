@@ -674,7 +674,7 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `JUSD_CITREA_BRIDGE`                 | `jusd-citrea-bridge`          | `enrich-prices` exact Citrea JUSD bridge route                                                                            |
 | `USX_STABLE_POOLS`                   | `usx-stable-pools`            | `enrich-prices` exact Base/Optimism USX pool routes                                                                       |
 | `AZND_CURVE_POOL`                    | `aznd-curve-pool`             | `enrich-prices` exact thin AZND Curve route                                                                               |
-| `PHPM_PRICE_ROUTE`                   | `phpm-price-route`            | `enrich-prices` preferred Mento quote and missing-only exact dual-pool Uniswap fallback                                   |
+| `PHPM_PRICE_ROUTE`                   | `phpm-price-route`            | `enrich-prices` exact PHPm/USDm Mento Broker quote                                                                        |
 | `PROTOCOL_REDEEM`                    | `protocol-redeem`             | External live RPC-backed authoritative `protocol-redeem` overrides                                                        |
 | `CURVE_ONCHAIN`                      | `curve-onchain`               | `enrich-prices` primary consensus                                                                                         |
 | `CURVE_ORACLE`                       | `curve-oracle`                | `enrich-prices` crvUSD Curve oracle consensus                                                                             |
