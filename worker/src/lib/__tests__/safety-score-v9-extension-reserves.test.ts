@@ -83,9 +83,11 @@ describe("buildReviewedReserveClassifications", () => {
 
   it("leaves mismatched, ambiguous, and unreviewed live rows source-native", () => {
     const live = [{ name: "Cash", pct: 15, risk: "very-low" as const }];
+    // 22 vs 15 sits beyond the 5pp drift tolerance, so the weight mismatch
+    // is gross rather than normal rebalancing and the join must fail.
     const structuredCash: ReserveSlice = {
       name: "Cash",
-      pct: 16,
+      pct: 22,
       risk: "very-low",
       assetClass: "bank-deposit",
       issuerOrObligor: "Reserve bank",
@@ -173,6 +175,45 @@ describe("buildReviewedReserveClassifications", () => {
       riskFactors: ["custody", "liquidity", "market"],
       liquidityHorizon: "seven-days",
     });
+  });
+
+  it("keeps reviewed classifications joined across normal live composition drift", () => {
+    // 2026-07-18 regression: Circle's T-bill share moved 2.0pp in two days,
+    // which severed every USDC classification under the old 0.5pp bound and
+    // collapsed backing. Identity is the bijective name match; weight drift
+    // within 5pp must not destroy the slice's class.
+    const reviewed = reviewedMeta([
+      {
+        name: "<3-Month U.S. Treasuries",
+        pct: 73.7,
+        risk: "very-low",
+        assetClass: "treasury-bill",
+        issuerOrObligor: "United States Treasury",
+      },
+      {
+        name: "Other Bank Deposits",
+        pct: 14.8,
+        risk: "very-low",
+        assetClass: "bank-deposit",
+        issuerOrObligor: "Other regulated financial institutions",
+      },
+    ]);
+    const drifted = buildReviewedReserveClassifications(
+      [
+        { name: "<3-Month U.S. Treasuries", pct: 71.7, risk: "very-low" },
+        { name: "Other Bank Deposits", pct: 15.9, risk: "very-low" },
+      ],
+      reviewed,
+      CLOCK_SEC,
+    );
+    expect(drifted.every((row) => !row.classificationKey.startsWith("source-native:"))).toBe(true);
+
+    const grosslyDifferent = buildReviewedReserveClassifications(
+      [{ name: "<3-Month U.S. Treasuries", pct: 62, risk: "very-low" }],
+      reviewed,
+      CLOCK_SEC,
+    );
+    expect(grosslyDifferent.every((row) => row.classificationKey.startsWith("source-native:"))).toBe(true);
   });
 
   it("rejects the current USDC repartition and USD1 aggregate basket as non-identical", () => {

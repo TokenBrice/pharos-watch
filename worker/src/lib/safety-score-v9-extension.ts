@@ -108,7 +108,14 @@ type ControlOverlay = NonNullable<
 >["controls"][number];
 type ReserveClassification = ReturnType<typeof buildSafetyScoreV9ReserveClassifications>[number];
 
-const RESERVE_WEIGHT_MATCH_TOLERANCE_PCT = 0.5;
+// Identity tolerance for joining a live reserve slice to its reviewed
+// classification. Name equality (with the surrounding 1:1 bijection guards)
+// carries slice identity; the weight check only rejects gross mismatches.
+// Live compositions drift daily (2026-07-18: USDC T-bills moved 2.0pp in two
+// days, severing every fiat classification under the prior 0.5), so the
+// bound must tolerate normal rebalancing. Weights used for scoring always
+// come from the live row, never the reviewed one.
+const RESERVE_WEIGHT_MATCH_TOLERANCE_PCT = 5;
 const DEPLOYMENT_MATERIAL_SHARE_THRESHOLD =
   V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100;
 
