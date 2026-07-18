@@ -605,6 +605,9 @@ describe("validate-ci parity", () => {
       PUBLIC_DATASETS_API_URL: "https://stablecoin-dashboard.pages.dev/_site-data",
       PUBLIC_DATASETS_REQUIRE_API: "1",
     });
+    expect(refresh?.run).toContain("sync-digests.ts");
+    expect(refresh?.run).toContain("sync-depeg-events.ts");
+    expect(refresh?.run).not.toContain("--allow-archive-shrink");
     expect(refresh?.run).toContain("npm run generate:public-datasets");
     expect(build?.run).toContain("npm run build");
     expect(build?.env?.PUBLIC_DATASETS_API_URL).toBe("");

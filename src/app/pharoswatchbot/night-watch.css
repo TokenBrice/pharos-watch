@@ -115,6 +115,46 @@
   transform-origin: 1182px 216px;
 }
 
+.pharos-night-water,
+.pharos-night-beam-anchor,
+.pharos-night-lighthouse {
+  transform-box: view-box;
+}
+
+.pharos-night-lighthouse {
+  transform-origin: 1182px 470px;
+}
+
+/* Once the hero is wider than the 2:1 scene, keep its horizon low and scale
+   the landmark around its base instead of letting SVG cover-cropping lift it. */
+@media (min-width: 1536px) and (max-width: 1799px) {
+  .pharos-night-water {
+    transform: translateY(58px);
+  }
+
+  .pharos-night-beam-anchor {
+    transform: translateY(113px);
+  }
+
+  .pharos-night-lighthouse {
+    transform: translateY(58px) scale(0.78);
+  }
+}
+
+@media (min-width: 1800px) {
+  .pharos-night-water {
+    transform: translateY(91px);
+  }
+
+  .pharos-night-beam-anchor {
+    transform: translateY(182px);
+  }
+
+  .pharos-night-lighthouse {
+    transform: translateY(91px) scale(0.64);
+  }
+}
+
 /* Stars belong to the night sky only. */
 .pharos-night-stars {
   display: none;
@@ -176,6 +216,24 @@
   left: 11.5px;
   width: 1px;
   background: color-mix(in oklab, var(--foreground) 12%, transparent);
+}
+
+.pharos-signals-shell {
+  max-width: 72rem;
+}
+
+.pharos-signal-copy {
+  max-width: 42rem;
+}
+
+@media (min-width: 1536px) {
+  .pharos-signals-shell {
+    max-width: 96rem;
+  }
+
+  .pharos-signal-copy {
+    max-width: none;
+  }
 }
 
 .pharos-signal-card {

@@ -218,6 +218,8 @@ export interface PriceSourceProvider {
   liveMissingOnly?: boolean;
   liveCircuitSource?: string;
   recordNullLiveResultAsCircuitFailure?: boolean;
+  /** Do not let optional refresh failures poison a recovery circuit while the input price remains usable. */
+  recordLiveCircuitFailuresOnlyWhenMissing?: boolean;
   matches(stablecoinId: string): boolean;
   matchesHistoricalPrices?(stablecoinId: string): boolean;
   fetchLivePrice?(

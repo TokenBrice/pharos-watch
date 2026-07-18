@@ -54,59 +54,65 @@ function NightScene() {
         </g>
 
         {/* Water */}
-        <rect x="0" y="470" width="1440" height="250" fill="var(--night-water)" />
-        <g stroke="var(--night-line)" strokeWidth="1">
-          <line x1="0" y1="470" x2="1440" y2="470" strokeOpacity="0.14" />
-          <line x1="180" y1="520" x2="700" y2="520" strokeOpacity="0.08" />
-          <line x1="60" y1="575" x2="520" y2="575" strokeOpacity="0.06" />
-          <line x1="820" y1="540" x2="1300" y2="540" strokeOpacity="0.08" />
-          <line x1="360" y1="640" x2="900" y2="640" strokeOpacity="0.06" />
+        <g className="pharos-night-water">
+          <rect x="0" y="470" width="1440" height="250" fill="var(--night-water)" />
+          <g stroke="var(--night-line)" strokeWidth="1">
+            <line x1="0" y1="470" x2="1440" y2="470" strokeOpacity="0.14" />
+            <line x1="180" y1="520" x2="700" y2="520" strokeOpacity="0.08" />
+            <line x1="60" y1="575" x2="520" y2="575" strokeOpacity="0.06" />
+            <line x1="820" y1="540" x2="1300" y2="540" strokeOpacity="0.08" />
+            <line x1="360" y1="640" x2="900" y2="640" strokeOpacity="0.06" />
+          </g>
         </g>
 
         {/* The beam — a bright shaft plus its tight core, sweeping ±8° around
             the lamp every 16s. */}
-        <g className="pharos-night-beam">
-          <polygon points="1182,216 40,150 40,380" fill="url(#nw-beam)" />
-          <polygon points="1182,216 40,190 40,325" fill="url(#nw-beam-core)" />
+        <g className="pharos-night-beam-anchor">
+          <g className="pharos-night-beam">
+            <polygon points="1182,216 40,150 40,380" fill="url(#nw-beam)" />
+            <polygon points="1182,216 40,190 40,325" fill="url(#nw-beam-core)" />
+          </g>
         </g>
 
         {/* The lighthouse — drawn silhouette: rock ridge, plinth, tapered
             tower with window slits, railed gallery, glazed lamp room, dome
             and finial. The lamp is the only lit element. */}
-        <g fill="var(--lighthouse-ink)">
-          <polygon points="1106,470 1144,434 1188,448 1228,436 1258,470" />
-          <rect x="1146" y="456" width="72" height="14" />
-          <path d="M1154 456 L1163 246 L1201 246 L1210 456 Z" />
-          <rect x="1146" y="234" width="72" height="10" />
-          <rect x="1152" y="222" width="3" height="12" />
-          <rect x="1164" y="222" width="3" height="12" />
-          <rect x="1176" y="222" width="3" height="12" />
-          <rect x="1188" y="222" width="3" height="12" />
-          <rect x="1200" y="222" width="3" height="12" />
-          <rect x="1209" y="222" width="3" height="12" />
-          <rect x="1162" y="202" width="40" height="32" />
-          <polygon points="1158,202 1206,202 1182,182" />
-          <rect x="1180.5" y="174" width="3" height="8" />
-          <circle cx="1182" cy="172" r="2.5" />
+        <g className="pharos-night-lighthouse">
+          <g fill="var(--lighthouse-ink)">
+            <polygon points="1106,470 1144,434 1188,448 1228,436 1258,470" />
+            <rect x="1146" y="456" width="72" height="14" />
+            <path d="M1154 456 L1163 246 L1201 246 L1210 456 Z" />
+            <rect x="1146" y="234" width="72" height="10" />
+            <rect x="1152" y="222" width="3" height="12" />
+            <rect x="1164" y="222" width="3" height="12" />
+            <rect x="1176" y="222" width="3" height="12" />
+            <rect x="1188" y="222" width="3" height="12" />
+            <rect x="1200" y="222" width="3" height="12" />
+            <rect x="1209" y="222" width="3" height="12" />
+            <rect x="1162" y="202" width="40" height="32" />
+            <polygon points="1158,202 1206,202 1182,182" />
+            <rect x="1180.5" y="174" width="3" height="8" />
+            <circle cx="1182" cy="172" r="2.5" />
+          </g>
+          {/* Glazing + window slits carved in the sky tone so they read in both
+              themes */}
+          <g fill="var(--night-sky-bottom)">
+            <rect x="1167" y="207" width="30" height="22" />
+            <rect x="1176" y="300" width="4" height="14" />
+            <rect x="1184" y="300" width="4" height="14" />
+            <rect x="1178" y="360" width="4" height="14" />
+            <rect x="1186" y="360" width="4" height="14" />
+          </g>
+          {/* Lamp room mullions over the glazing */}
+          <g fill="var(--lighthouse-ink)">
+            <rect x="1176" y="207" width="2.5" height="22" />
+            <rect x="1185.5" y="207" width="2.5" height="22" />
+          </g>
+          <circle cx="1182" cy="219" r="60" fill="var(--frost-blue)" opacity="var(--lamp-halo)" />
+          <circle cx="1182" cy="219" r="17" fill="var(--frost-blue)" opacity="var(--lamp-mid)" />
+          <circle cx="1182" cy="219" r="6.5" fill="var(--frost-blue)" />
+          <circle cx="1182" cy="219" r="2.5" fill="var(--lamp-core)" />
         </g>
-        {/* Glazing + window slits carved in the sky tone so they read in both
-            themes */}
-        <g fill="var(--night-sky-bottom)">
-          <rect x="1167" y="207" width="30" height="22" />
-          <rect x="1176" y="300" width="4" height="14" />
-          <rect x="1184" y="300" width="4" height="14" />
-          <rect x="1178" y="360" width="4" height="14" />
-          <rect x="1186" y="360" width="4" height="14" />
-        </g>
-        {/* Lamp room mullions over the glazing */}
-        <g fill="var(--lighthouse-ink)">
-          <rect x="1176" y="207" width="2.5" height="22" />
-          <rect x="1185.5" y="207" width="2.5" height="22" />
-        </g>
-        <circle cx="1182" cy="219" r="60" fill="var(--frost-blue)" opacity="var(--lamp-halo)" />
-        <circle cx="1182" cy="219" r="17" fill="var(--frost-blue)" opacity="var(--lamp-mid)" />
-        <circle cx="1182" cy="219" r="6.5" fill="var(--frost-blue)" />
-        <circle cx="1182" cy="219" r="2.5" fill="var(--lamp-core)" />
       </svg>
     </div>
   );
@@ -124,7 +130,7 @@ export function NightWatchHero() {
             "radial-gradient(ellipse 62% 68% at 32% 52%, color-mix(in oklab, var(--night-abyss) 88%, transparent) 25%, transparent 72%)",
         }}
       />
-      <div className="relative mx-auto flex min-h-[calc(100svh-9.5rem)] max-w-6xl flex-col justify-center px-4 py-16 sm:py-20 lg:px-5 xl:px-9">
+      <div className="relative mx-auto flex max-w-6xl flex-col px-4 py-16 sm:py-20 lg:px-5 xl:px-9">
         <p className="text-sm text-muted-foreground">
           Free Telegram alerts for {TRACKED_STABLECOIN_COUNT.toLocaleString("en-US")} tracked stablecoins
         </p>
@@ -135,8 +141,8 @@ export function NightWatchHero() {
           Stablecoin alerts, before you have to check.
         </h1>
         <p className="mt-5 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-          Six alert families watch every tracked peg through the night — from depeg events to issuer freezes — and
-          land in your Telegram chat only when something changes. Start with one preset; tune later.
+          Six alert families watch every tracked peg through the night — from depeg events to issuer freezes — and land
+          in your Telegram chat only when something changes. Start with one preset; tune later.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Button asChild size="lg" className="gap-2">

@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.19",
+    title: "Fail-closed capacity for mixed reserve buckets",
+    date: "2026-07-18",
+    effectiveAt: 1784382725,
+    summary:
+      "Live reserve metadata now qualifies as executable redemption capacity only when the adapter isolates assets that are immediately available to the holder route. Ethena's aggregate Liquid Cash accounting bucket does not make that distinction, so USDe retains its reviewed 0.5% hot-buffer fallback instead of treating the full mixed bucket as current capacity.",
+    impact: [
+      "`usde-ethena` no longer promotes Ethena's mixed Liquid Cash aggregate into live-proxy executable capacity",
+      "USDe continues to use the reviewed 0.5% hot-buffer fallback and documented fixed 10 bps fee; its reserve composition remains visible as backing evidence",
+      "The generic reserve-sync contract is unchanged for adapters that isolate route-executable assets; aggregate accounting categories must now remain contextual rather than scoring capacity",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.18",
     title: "Bounded exit-route observations for documented full-supply routes",
     date: "2026-07-13",

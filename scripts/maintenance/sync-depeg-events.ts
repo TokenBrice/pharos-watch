@@ -15,6 +15,7 @@ import type { DepegEvent } from "@shared/types/market";
 import { formatIsoDate } from "@shared/lib/format";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { selectStaticDepegEventPages } from "@/app/depeg/[event]/config";
 
 import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -33,6 +34,8 @@ Options:
   --api-url <url>   Depeg API base or endpoint (overrides environment)
   --output <path>   Output path (default: data/depeg-events.json)
   --allow-empty     Permit an empty response to replace a non-empty snapshot
+  --allow-archive-shrink
+                   Permit published depeg page slugs to disappear from the snapshot
   --allow-existing-on-fetch-failure
                    Preserve a valid existing output file if the live fetch fails
   --dry-run         Fetch and validate without writing the output file
@@ -44,11 +47,12 @@ interface DepegEventsResponse {
   nextCursor?: string | null;
 }
 
-interface DepegEventEntry extends DepegEvent {
+export interface DepegEventEntry extends DepegEvent {
   slug: string;
 }
 
 export interface DepegSyncCliOptions {
+  allowArchiveShrink: boolean;
   allowEmpty: boolean;
   allowExistingOnFetchFailure: boolean;
   apiUrl: string | null;
@@ -60,6 +64,7 @@ export interface DepegSyncCliOptions {
 export function parseDepegSyncArgs(argv: string[]): DepegSyncCliOptions {
   const { values } = parseStrictCliArgs(argv, {
     options: {
+      "allow-archive-shrink": { type: "boolean" },
       "allow-empty": { type: "boolean" },
       "allow-existing-on-fetch-failure": { type: "boolean" },
       "api-url": { type: "string" },
@@ -68,6 +73,7 @@ export function parseDepegSyncArgs(argv: string[]): DepegSyncCliOptions {
     },
   });
   return {
+    allowArchiveShrink: values["allow-archive-shrink"] === true,
     allowEmpty: values["allow-empty"] === true,
     allowExistingOnFetchFailure: values["allow-existing-on-fetch-failure"] === true,
     apiUrl: typeof values["api-url"] === "string" ? values["api-url"] : null,
@@ -75,6 +81,42 @@ export function parseDepegSyncArgs(argv: string[]): DepegSyncCliOptions {
     help: values.help === true,
     output: typeof values.output === "string" ? values.output : null,
   };
+}
+
+function readExistingDepegEntries(outputPath: URL): readonly DepegEventEntry[] {
+  const outputFile = fileURLToPath(outputPath);
+  if (!existsSync(outputFile)) return [];
+  const parsed: unknown = JSON.parse(readFileSync(outputFile, "utf8"));
+  if (!Array.isArray(parsed)) {
+    throw new Error(`Existing depeg snapshot is not an array: ${outputFile}`);
+  }
+  return parsed as DepegEventEntry[];
+}
+
+export function findMissingStaticDepegArchiveSlugs(
+  previous: readonly DepegEventEntry[],
+  current: readonly DepegEventEntry[],
+): string[] {
+  const currentSlugs = new Set(selectStaticDepegEventPages(current).map((event) => event.slug));
+  return selectStaticDepegEventPages(previous)
+    .map((event) => event.slug)
+    .filter((slug) => !currentSlugs.has(slug));
+}
+
+export function assertStaticDepegArchivePreserved(
+  previous: readonly DepegEventEntry[],
+  current: readonly DepegEventEntry[],
+  allowShrink = false,
+): void {
+  const missing = findMissingStaticDepegArchiveSlugs(previous, current);
+  if (missing.length === 0) return;
+  const sample = missing.slice(0, 10).join(", ");
+  const suffix = missing.length > 10 ? ` (+${missing.length - 10} more)` : "";
+  const message = `Depeg static archive lost ${missing.length} published slug(s): ${sample}${suffix}`;
+  if (!allowShrink) {
+    throw new Error(`${message}. Pass --allow-archive-shrink only for an explicitly reviewed removal.`);
+  }
+  console.warn(`[sync-depeg-events] WARNING: ${message}`);
 }
 
 function symbolToSlugPart(symbol: string): string {
@@ -139,6 +181,7 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
     scriptName: "sync-depeg-events",
   });
   const outputPath = resolveOutputPath(options.output);
+  const previousEntries = readExistingDepegEntries(outputPath);
   const headers = new Headers(apiFetchHeaders(["DEPEG_EVENTS_API_KEY", "SMOKE_API_KEY"], { url: apiUrl }));
 
   console.log(`[sync-depeg-events] Source: ${apiUrl}`);
@@ -205,24 +248,17 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
         // existing file as a hard error rather than a silent overwrite.
         if (computedEntries.length === 0) {
           const existingFile = fileURLToPath(outputPath);
-          if (existsSync(existingFile)) {
-            let previous: unknown;
-            try {
-              previous = JSON.parse(readFileSync(existingFile, "utf8"));
-            } catch {
-              previous = null;
-            }
-            if (Array.isArray(previous) && previous.length > 0) {
-              console.error(
-                `[sync-depeg-events] API returned 0 events but ${existingFile} currently holds ${previous.length}. ` +
-                  `Refusing to overwrite — pass --allow-empty to override (e.g. when the API is intentionally drained).`,
-              );
-              if (!options.allowEmpty)
-                throw new Error("Refusing to replace a non-empty depeg snapshot with an empty response");
-            }
+          if (previousEntries.length > 0) {
+            console.error(
+              `[sync-depeg-events] API returned 0 events but ${existingFile} currently holds ${previousEntries.length}. ` +
+                `Refusing to overwrite — pass --allow-empty to override (e.g. when the API is intentionally drained).`,
+            );
+            if (!options.allowEmpty)
+              throw new Error("Refusing to replace a non-empty depeg snapshot with an empty response");
           }
         }
 
+        assertStaticDepegArchivePreserved(previousEntries, computedEntries, options.allowArchiveShrink);
         return computedEntries;
       },
       write: !options.dryRun,

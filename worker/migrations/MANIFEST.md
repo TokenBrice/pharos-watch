@@ -155,6 +155,9 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0209     | `0209_cngn_ddr_event_90599_link.sql`                      | Link reviewed cNGN reopen 90599 to the active unsealed incident, advance lineage from event 90584, and close its durable DDR repair task                  |
 | 0210     | `0210_cngn_ddr_events_90604_90608_link.sql`               | Link four reviewed cNGN live flaps to the active unsealed incident, advance ordered lineage, and close their durable DDR repair tasks                    |
 | 0211     | `0211_safety_score_v9_release_cohorts.sql`                | Add owner-ratified frozen V9-9 release cohort records keyed by sealed release candidate                                                                  |
+| 0212     | `0212_cngn_ddr_events_90638_90658_link.sql`               | Link two reviewed cNGN live flaps to the active unsealed incident, advance ordered lineage, and close their durable DDR repair tasks                     |
+| 0213     | `0213_terminalize_published_dex_attempt_1784229000.sql`     | Terminalize one reviewed stale DEX job-attempt row after exact generation evidence proves all expected rows were published                              |
+| 0214     | `0214_dex_price_publication_staging.sql`                    | Add generation-keyed, retention-indexed DEX price staging so replay-safe bounded batches can replace the public price table atomically                  |
 
 ## Retired Individual Migrations
 
@@ -249,6 +252,9 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0209_cngn_ddr_event_90599_link.sql`: roll back DDR publication behavior by restoring the prior Worker. Keep the append-only repair authorizations, consumptions, link, and revision as reviewed provenance; do not recreate the closed task or detach event 90599 without a separate corrective migration.
 - `0210_cngn_ddr_events_90604_90608_link.sql`: roll back DDR publication behavior by restoring the prior Worker. Keep the append-only repair authorizations, consumptions, links, and ordered revisions as reviewed provenance; do not recreate the closed tasks or detach events 90604, 90606, 90607, and 90608 without a separate corrective migration.
 - `0211_safety_score_v9_release_cohorts.sql`: roll back release-cohort gating by restoring the prior Worker; the ratified-release-coverage floor fails closed without a readable cohort, and older Workers ignore the table. Keep ratified cohort rows as counted release evidence; do not edit or delete them without a new ratification under a fresh release-candidate ID.
+- `0212_cngn_ddr_events_90638_90658_link.sql`: roll back DDR publication behavior by restoring the prior Worker. Keep the append-only repair authorizations, consumptions, links, and ordered revisions as reviewed provenance; do not recreate the closed tasks or detach events 90638 and 90658 without a separate corrective migration.
+- `0213_terminalize_published_dex_attempt_1784229000.sql`: keep the reviewed terminal ledger repair during rollback. The row records a generation already proven fully published and changes no DEX payload or slot artifact; reopening it would recreate false active-attempt telemetry and requires a new evidence-backed corrective migration.
+- `0214_dex_price_publication_staging.sql`: roll back publication behavior by restoring the prior Worker. The additive staging table is ignored by older Workers and can remain in place; do not drop it in a normal deploy migration.
 
 ## Rollback Procedure
 

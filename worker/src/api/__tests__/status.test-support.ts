@@ -201,8 +201,9 @@ function fixtureMockD1(
   tables: Parameters<typeof mockD1>[0] = [],
   options: Parameters<typeof mockD1>[1] = {},
 ): ReturnType<typeof mockD1> {
+  const activeIds = ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.id);
   const hasPublicationFixture = tables.some((table) =>
-    table.match.includes("job = 'sync-stablecoins' AND metadata IS NOT NULL")
+    table.match.includes("job = 'sync-stablecoins' AND metadata IS NOT NULL"),
   );
   const publicationFixture = {
     match: "job = 'sync-stablecoins' AND metadata IS NOT NULL",
@@ -219,12 +220,25 @@ function fixtureMockD1(
           waivedActiveIds: [],
           expiredWaiverIds: [],
         },
+        activePriceCoverage: {
+          complete: true,
+          expectedActiveCount: activeIds.length,
+          presentActiveCount: activeIds.length,
+          pricedActiveCount: activeIds.length,
+          pricedActiveIds: activeIds,
+          missingPriceCount: 0,
+          missingActiveIds: [],
+          missingActiveAssets: [],
+          missingActiveState: [],
+          affectedMarketCapUsd: 0,
+          alertEligibleCount: 0,
+          alertEligibleIds: [],
+          maxConsecutiveMissingGenerations: 0,
+        },
       }),
     },
   };
-  const hasDewsPointerFixture = tables.some((table) =>
-    table.matchBinds?.includes("dews:published-generation")
-  );
+  const hasDewsPointerFixture = tables.some((table) => table.matchBinds?.includes("dews:published-generation"));
   const dewsPointer = makeDewsPublicationPointerRow(Math.floor(Date.now() / 1000));
   const dewsPointerFixture = {
     match: "FROM cache WHERE key = ?",
@@ -232,11 +246,14 @@ function fixtureMockD1(
     rows: [dewsPointer],
     first: dewsPointer,
   };
-  return mockD1([
-    ...(hasPublicationFixture ? [] : [publicationFixture]),
-    ...(hasDewsPointerFixture ? [] : [dewsPointerFixture]),
-    ...tables,
-  ], options);
+  return mockD1(
+    [
+      ...(hasPublicationFixture ? [] : [publicationFixture]),
+      ...(hasDewsPointerFixture ? [] : [dewsPointerFixture]),
+      ...tables,
+    ],
+    options,
+  );
 }
 const fixtureMakeApiRequest = makeApiRequest;
 const fixtureMockFetch = mockFetch;

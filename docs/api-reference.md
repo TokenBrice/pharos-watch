@@ -2100,7 +2100,7 @@ Blacklist amount-gap severity is intentionally tolerant of isolated parser/provi
 **Overall status logic:**
 
 - `healthy` — every cache impact is healthy, the public mint/burn lane is healthy, fewer than 3 public-impact circuit groups are open, and the health subqueries all resolved cleanly
-- `degraded` — any cache impact is degraded (including FX cached-fallback or source-cadence lag), any of the blacklist/mint-burn/circuit health subqueries failed, the public mint/burn lane is warning-only, or 3+ public-impact circuit groups are open
+- `degraded` — any cache impact is degraded (including FX cached-fallback or source-cadence lag), any of the blacklist/mint-burn/circuit health subqueries failed, exact active-price or stablecoin-publication coverage is incomplete/unavailable, the public mint/burn lane is warning-only, or 3+ public-impact circuit groups are open
 - `stale` — any cache impact is stale, or the public mint/burn lane is stale versus its critical-lane cadence
 
 `/api/health` still emits every circuit record under `circuits`, including dynamic per-coin `live-reserves:*` scopes, but those reserve-specific breakers do not change the top-level public status on their own; reserve sync health is evaluated on the dedicated reserve/data-quality lanes instead.
@@ -2144,14 +2144,14 @@ Public transition history for the read-only `/status/` page. Returns the current
 | --------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | `timestamp`     | `number`                             | Unix seconds at time of response                                                                             |
 | `currentStatus` | `"healthy" \| "degraded" \| "stale"` | Current public status, sourced from `assessPublicHealth` (matches the `status` field from `GET /api/health`) |
-| `lastChangedAt` | `number \| null`                     | Unix seconds for the latest admin status-machine change, if known                                            |
+| `lastChangedAt` | `number \| null`                     | Unix seconds for the newest retained public transition when it ends in `currentStatus`; otherwise `null`     |
 | `transitions`   | `PublicStatusTransition[]`           | Recent public-impact incident transitions, inside the requested window, newest first                         |
 
 This endpoint powers two separate public `/status/` views: the hero `Status runway` always uses `window=30d`, while the transition table owns its own user-selected `24h` / `7d` / `30d` filter.
 
 Browser consumers on `pharos.watch` and `ops.pharos.watch` should use same-origin `/_site-data/public-status-history`, which proxies onto the internal website lane instead of calling the external API host directly.
 
-**Public-impact filtering (2026-04-13):** The endpoint filters the admin state-machine transitions down to incidents opened by at least one public-facing impact code (`cache_ratio_*`, `cache_freshness_query_failed`, `cache_warning`, `fx_cached_fallback`, `mint_burn_public_*`, `mint_burn_health_query_failed`, `open_circuit_groups`, `circuit_query_failed`, `cron_error_runs`, `multiple_unhealthy_crons`, `unhealthy_crons_present`, `db_unhealthy`). Producer-only source freshness causes such as `fx_source_*`, admin-only data-quality causes (`missing_prices_*`, `blacklist_gaps_*`, `reserve_sync_*`, `onchain_*`, `watch_*`), and `info`-severity causes cannot open a public incident. Once a public-impact incident is retained, the endpoint also retains the recovery path needed to return that incident to `healthy`, even when those recovery rows only carry info-level causes. This ensures the public `/status/` hero (driven by `/api/health`) and the uptime bar / transition timeline (driven by this endpoint) always agree. The unfiltered admin view is still available via the admin `/api/status` endpoint.
+**Public-impact filtering (2026-04-13; active-price coverage added 2026-07-18):** The endpoint filters the admin state-machine transitions down to incidents opened by at least one public-facing impact code (`cache_ratio_*`, `cache_freshness_query_failed`, `cache_warning`, `fx_cached_fallback`, `mint_burn_public_*`, `mint_burn_health_query_failed`, `active_price_coverage_incomplete`, `active_price_coverage_unknown`, `open_circuit_groups`, `circuit_query_failed`, `cron_error_runs`, `multiple_unhealthy_crons`, `unhealthy_crons_present`, `db_unhealthy`). Producer-only source freshness causes such as `fx_source_*`, admin-only aggregate data-quality causes (`missing_prices_*`, `blacklist_gaps_*`, `reserve_sync_*`, `onchain_*`, `watch_*`), and `info`-severity causes cannot open a public incident. Once a public-impact incident is retained, the endpoint also retains the recovery path needed to return that incident to `healthy`, even when those recovery rows only carry info-level causes. Live public health is authoritative for `currentStatus` and today's uptime segment; when no matching public transition proves when that state began, `lastChangedAt` is `null` and earlier runway days remain unknown. The unfiltered admin view is still available via the admin `/api/status` endpoint.
 
 ---
 
@@ -2553,14 +2553,14 @@ Rows written by the current worker are grouped by a completed snapshot run manif
       "feeBps": null,
       "queueEnabled": false,
       "updatedAt": 1773350400,
-      "methodologyVersion": "4.18"
+      "methodologyVersion": "4.19"
     }
   },
   "methodology": {
-    "version": "4.18",
-    "versionLabel": "v4.18",
-    "currentVersion": "4.18",
-    "currentVersionLabel": "v4.18",
+    "version": "4.19",
+    "versionLabel": "v4.19",
+    "currentVersion": "4.19",
+    "currentVersionLabel": "v4.19",
     "changelogPath": "/methodology/#safety-scores-methodology",
     "asOf": 1773350400,
     "isCurrent": true,

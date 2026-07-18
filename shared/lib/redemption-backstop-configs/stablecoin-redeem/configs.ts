@@ -142,11 +142,10 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
         "fees",
         "access",
       ]),
-      sourceRef("Ethena collateral API", "https://app.ethena.fi/api/positions/current/collateral", ["capacity"]),
       sourceRef("Ethena API documentation overview", "https://docs.ethena.fi/api-documentation/overview", ["fees"]),
     ],
     notes: [
-      "Fresh live reserve metadata scores against Ethena's current Liquid Cash bucket, while the 0.5% fallback ratio reflects the smaller hot-contract stable buffer documented for on-demand redemptions",
+      "Ethena's collateral API does not isolate immediately liquid assets within Liquid Cash, so live reserve metadata does not override the reviewed 0.5% hot-buffer fallback",
     ],
   }),
   "zchf-frankencoin": defineStablecoinRedeemConfig({

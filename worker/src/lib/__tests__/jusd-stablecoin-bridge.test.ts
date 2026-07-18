@@ -8,13 +8,17 @@ vi.mock("../fetch-retry", () => ({
   fetchJsonWithRetry: (...args: unknown[]) => fetchJsonWithRetryMock(...args),
 }));
 
-vi.mock("viem/utils", () => ({
-  keccak256: (code: string) => {
-    if (code === "0x6000") return "0xf822bbd111d9275ce9d4e62bfff5f45932618ab55960e4c8fadfc9d7f0ca4265";
-    if (code === "0x6001") return "0x3aaff2c68217cc43382a63e0e583b4049d374e4261f22f10b5c636fa2a468605";
-    return "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
-  },
-}));
+vi.mock("viem/utils", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("viem/utils")>();
+  return {
+    ...actual,
+    keccak256: (code: string) => {
+      if (code === "0x6000") return "0xf822bbd111d9275ce9d4e62bfff5f45932618ab55960e4c8fadfc9d7f0ca4265";
+      if (code === "0x6001") return "0x3aaff2c68217cc43382a63e0e583b4049d374e4261f22f10b5c636fa2a468605";
+      return "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+    },
+  };
+});
 
 import { fetchAuthoritativeLivePriceOverrides } from "../authoritative-price-sources";
 import { jusdStablecoinBridgeProvider } from "../authoritative-price-sources/jusd-stablecoin-bridge";

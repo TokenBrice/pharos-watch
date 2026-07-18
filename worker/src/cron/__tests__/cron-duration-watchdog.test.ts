@@ -1,5 +1,7 @@
+import { DatabaseSync } from "node:sqlite";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { CRON_TIMEOUT_MS } from "../../lib/cron-lease";
 import { runCronDurationWatchdog } from "../cron-duration-watchdog";
 
@@ -441,6 +443,114 @@ describe("runCronDurationWatchdog", () => {
     });
     expect(db.getHistory().some((entry) => entry.binds.includes(STALE_SLOT_ERROR))).toBe(true);
     expect(db.getHistory().every((entry) => !entry.sql.includes("LIKE"))).toBe(true);
+  });
+
+  it("separates publication failures, terminal-accounting gaps, and preserved child success", async () => {
+    const db = mockD1([
+      slotStatsMatcher([{
+        slot_key: "halfHourlyOffset",
+        slots: 142,
+        error_slots: 12,
+        abandoned_slots: 37,
+        not_started_slots: 3,
+        publication_failure_slots: 2,
+        terminal_accounting_unknown_slots: 10,
+        real_child_failure_slots: 1,
+        successful_child_terminal_slots: 24,
+        latest_abandoned_at: NOW_SEC - 60,
+      }]),
+    ]);
+
+    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      slotStats: expect.arrayContaining([
+        expect.objectContaining({
+          scheduleKey: "halfHourlyOffset",
+          abandonedSlots: 37,
+          notStartedSlots: 3,
+          publicationFailureSlots: 2,
+          terminalAccountingUnknownSlots: 10,
+          realChildFailureSlots: 1,
+          successfulChildTerminalSlots: 24,
+        }),
+      ]),
+    });
+    expect(String(vi.mocked(fetch).mock.calls[0]?.[1]?.body)).toContain("3 not-started slot(s)");
+  });
+
+  it("executes lifecycle classification against SQLite and fails legacy ambiguity closed", async () => {
+    const sqlite = new DatabaseSync(":memory:");
+    sqlite.exec(`
+      CREATE TABLE cron_runs (
+        job TEXT NOT NULL,
+        started_at INTEGER NOT NULL,
+        duration_ms INTEGER NOT NULL,
+        status TEXT,
+        error TEXT,
+        metadata TEXT
+      );
+      CREATE TABLE cron_slot_executions (
+        slot_key TEXT NOT NULL,
+        slot_started_at INTEGER NOT NULL,
+        result_status TEXT,
+        metadata TEXT
+      );
+      CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL);
+    `);
+    const insertSlot = sqlite.prepare(
+      "INSERT INTO cron_slot_executions (slot_key, slot_started_at, result_status, metadata) VALUES (?, ?, ?, ?)",
+    );
+    for (let index = 0; index < 20; index++) {
+      insertSlot.run("halfHourlyOffset", NOW_SEC - index * 60, "ok", null);
+    }
+    insertSlot.run("halfHourlyOffset", NOW_SEC - 30, "degraded", JSON.stringify({
+      error: STALE_SLOT_ERROR,
+      staleSlotReconciliation: {
+        publicationFailures: 0,
+        terminalAccountingUnknown: 1,
+        realChildFailures: 0,
+        successfulChildTerminals: 0,
+        notStartedCronRuns: 0,
+      },
+    }));
+    insertSlot.run("halfHourlyOffset", NOW_SEC - 20, "error", JSON.stringify({
+      error: STALE_SLOT_ERROR,
+      staleSlotReconciliation: {
+        publicationFailures: 1,
+        terminalAccountingUnknown: 0,
+        realChildFailures: 0,
+        successfulChildTerminals: 0,
+        notStartedCronRuns: 0,
+      },
+    }));
+    insertSlot.run("halfHourlyOffset", NOW_SEC - 10, "error", JSON.stringify({ error: STALE_SLOT_ERROR }));
+    insertSlot.run("halfHourlyOffset", NOW_SEC - 5, "error", JSON.stringify({
+      error: STALE_SLOT_ERROR,
+      staleSlotReconciliation: {
+        publicationFailures: 0,
+        terminalAccountingUnknown: 0,
+        realChildFailures: 0,
+        successfulChildTerminals: 0,
+        notStartedCronRuns: 1,
+      },
+    }));
+
+    const result = await runCronDurationWatchdog(createSqliteD1(sqlite), null);
+    const metadata = JSON.parse(String(result.metadata));
+
+    expect(result.status).toBe("degraded");
+    expect(metadata.slotStats).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        scheduleKey: "halfHourlyOffset",
+        abandonedSlots: 4,
+        notStartedSlots: 1,
+        publicationFailureSlots: 1,
+        terminalAccountingUnknownSlots: 2,
+      }),
+    ]));
+    sqlite.close();
   });
 
   it("keeps recovered slot abandonment history visible without degrading", async () => {

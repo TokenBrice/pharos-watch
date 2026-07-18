@@ -5,6 +5,7 @@ import { fetchAccountableReserves } from "../accountable";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
 import apxusd from "@shared/data/stablecoins/coins/apxusd-apyx.json";
+import usdu from "@shared/data/stablecoins/coins/usdu-unitas.json";
 import yusd from "@shared/data/stablecoins/coins/yusd-aegis.json";
 import yzusd from "@shared/data/stablecoins/coins/yzusd-yuzu.json";
 import nusd from "@shared/data/stablecoins/coins/nusd-neutrl.json";
@@ -333,7 +334,7 @@ describe("adaptAccountableDashboard", () => {
     });
   });
 
-  it("maps the current Apyx Accountable reserves_split into STRC-heavy apxUSD slices", async () => {
+  it("maps the reviewed Apyx Accountable reserves_split into STRC-heavy apxUSD slices", async () => {
     const config = apxusd.liveReservesConfig as LiveReservesConfig;
     const primary = config.inputs.primary;
     if (primary.kind !== "http-json") {
@@ -350,17 +351,17 @@ describe("adaptAccountableDashboard", () => {
           [`json-get:${url}:12000:null`, Promise.resolve({
             res: "ok",
             data: {
-              collateralization: 1.001022,
-              ts: "1780583904415",
+              collateralization: 0.881615,
+              ts: "1784376607058",
               reserves: {
                 interval: "live",
                 verifiability: "100",
-                total_reserves: { value: 476_302_149.26, name: "Total Reserves" },
+                total_reserves: { value: 1_000, name: "Total Reserves" },
                 reserves_split: [
-                  { value: 296_181_048.36, name: "STRC" },
-                  { value: 180_040_870.38, name: "Cash & Equivalents" },
-                  { value: 48_748.50, name: "SATA" },
-                  { value: 31_482.01, name: "Other" },
+                  { value: 623, name: "STRC" },
+                  { value: 137, name: "Protocol Owned Liquidity" },
+                  { value: 128, name: "Cash & Equivalents" },
+                  { value: 112, name: "Inventory" },
                 ],
               },
             },
@@ -369,23 +370,73 @@ describe("adaptAccountableDashboard", () => {
       },
     );
 
-    expect(result.warnings).toBeUndefined();
+    expect(result.warnings).toEqual([{
+      code: "reserve-undercollateralized",
+      message: "Accountable dashboard reports 88.16% collateralization",
+      severity: "warning",
+      effect: "degraded",
+    }]);
     expect(result.metadata).toMatchObject({
       bucket: "reserves_split",
       breakdownCount: 4,
       mappedBucketCount: 4,
-      totalReserves: 476_302_149.26,
+      totalReserves: 1_000,
+      collateralization: 0.881615,
+      collateralizationRatio: 0.881615,
     });
     expect(result.slices).toEqual([
-      { name: "STRC (Strategy preferred equity, BTC-linked)", pct: 62.2, risk: "high" },
-      { name: "Cash & Equivalents (USDC, U.S. Treasury Bills)", pct: 37.8, risk: "very-low" },
+      { name: "STRC (Strategy preferred equity, BTC-linked)", pct: 62.3, risk: "high" },
+      { name: "Protocol Owned Liquidity", pct: 13.7, risk: "high" },
+      { name: "Cash & Equivalents (USDC, U.S. Treasury Bills)", pct: 12.8, risk: "very-low" },
+      { name: "Inventory", pct: 11.2, risk: "high" },
     ]);
+    expect(apxusd.reserves.map(({ name, pct, risk }) => ({ name, pct, risk }))).toEqual(result.slices);
     expect(validateAdapterOutput(result, {
       adapter: getReserveAdapter("accountable") ?? undefined,
-      now: Date.UTC(2026, 5, 4, 15) / 1000,
+      now: Date.UTC(2026, 6, 18, 14) / 1000,
     }).valid).toBe(true);
   });
 
+  it("treats Unitas deployment buckets as the same high-risk strategy basket", async () => {
+    const config = usdu.liveReservesConfig as LiveReservesConfig;
+    const primary = config.inputs.primary;
+    if (primary.kind !== "http-json") {
+      throw new Error("expected Unitas Accountable primary input to be http-json");
+    }
+
+    const result = await fetchAccountableReserves(
+      {} as never,
+      config,
+      signal,
+      {
+        requestCache: new Map([
+          [`json-get:${primary.url}:12000:null`, Promise.resolve({
+            res: "ok",
+            data: {
+              collateralization: 1.059395,
+              ts: "1784376513803",
+              reserves: {
+                interval: "live",
+                verifiability: "100",
+                total_reserves: { value: 100, name: "Total Reserves" },
+                reserves_split: [
+                  { value: 50.6, name: "Binance" },
+                  { value: 48.3, name: "Solana" },
+                  { value: 1.1, name: "Bnb_smartchain" },
+                ],
+              },
+            },
+          })],
+        ]),
+      },
+    );
+
+    expect(result.slices).toEqual([
+      { name: "Binance", pct: 50.6, risk: "high" },
+      { name: "Solana", pct: 48.3, risk: "high" },
+      { name: "Bnb_smartchain", pct: 1.1, risk: "high" },
+    ]);
+  });
 
   it("rejects poisoned Apyx Accountable mapped buckets before reserve slice normalization", async () => {
     const config = apxusd.liveReservesConfig as LiveReservesConfig;

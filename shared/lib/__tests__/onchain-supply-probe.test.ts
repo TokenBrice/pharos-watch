@@ -97,6 +97,20 @@ describe("curated on-chain supply paths", () => {
       ethereumContract,
     ], "ftusd-flying-tulip"))).toBeNull();
   });
+
+  it("admits the reviewed Celo PHPm deployment for zero-supply repair", () => {
+    const celoContract = {
+      chain: "celo",
+      address: "0x105d4a9306d2e55a71d2eb95b81553ae1dc20d7b",
+      decimals: 18,
+    };
+
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(
+      makeMeta([celoContract], "phpm-mento"),
+    );
+
+    expect(selected?.map((entry) => entry.contract)).toEqual([celoContract]);
+  });
 });
 
 describe("hasRuntimeOnchainSupplyPath", () => {

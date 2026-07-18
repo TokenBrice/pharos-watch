@@ -531,21 +531,8 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "Cash & Equivalents (USDC, U.S. Treasury Bills)",
-      "pct": 37.8,
-      "risk": "very-low",
-      "assetClass": "other",
-      "issuerOrObligor": "USDC issuer and United States Treasury; split undisclosed",
-      "riskFactors": [
-        "counterparty",
-        "custody",
-        "liquidity"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
       "name": "STRC (Strategy preferred equity, BTC-linked)",
-      "pct": 62.18,
+      "pct": 62.3,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Strategy, Inc.",
@@ -558,28 +545,33 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "SATA (Strive preferred equity, BTC-linked)",
-      "pct": 0.01,
-      "risk": "high",
+      "name": "Protocol Owned Liquidity",
+      "pct": 13.7,
+      "risk": "high"
+    },
+    {
+      "name": "Cash & Equivalents (USDC, U.S. Treasury Bills)",
+      "pct": 12.8,
+      "risk": "very-low",
       "assetClass": "other",
-      "issuerOrObligor": "Strive, Inc.",
+      "issuerOrObligor": "USDC issuer and United States Treasury; split undisclosed",
       "riskFactors": [
-        "market",
-        "credit",
-        "liquidity",
-        "concentration"
+        "counterparty",
+        "custody",
+        "liquidity"
       ],
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "Other",
-      "pct": 0.01,
-      "risk": "high"
+      "name": "Inventory",
+      "pct": 11.2,
+      "risk": "high",
+      "assetClass": "other"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG Safety Score V9 reserve review",
+    "reviewedAt": "2026-07-18",
+    "reviewer": "OpenAI Codex reserve-drift audit",
     "confidence": "verified",
     "sources": [
       {
@@ -587,29 +579,51 @@
         "url": "https://accountable.apyx.fi/"
       },
       {
-        "label": "Apyx STRC collateral documentation",
-        "url": "https://docs.apyx.fi/solution-overview/example-collateral-allocation/strc"
+        "label": "APYX Accountable reserve API",
+        "url": "https://api.accountable.apyx.fi/dashboard"
       },
       {
-        "label": "Apyx SATA collateral documentation",
-        "url": "https://docs.apyx.fi/solution-overview/example-collateral-allocation/sata"
+        "label": "Apyx STRC collateral documentation",
+        "url": "https://docs.apyx.fi/solution-overview/example-collateral-allocation/strc"
       }
     ],
-    "rationale": "The cash-equivalents category mixes USDC with Treasury bills and does not publish their internal allocation.",
-    "compositionBasis": "Accountable reserves_split categories",
-    "scope": "selected-slices",
-    "knownUnknownExposure": "USDC cannot be isolated from exogenous Treasury backing in the aggregate bucket. The live Accountable feed additionally emits dynamic Inventory and Protocol Owned Liquidity categories not reconciled to a dated issuer composition disclosure; no asset-class, obligor, or failure-domain attributes are inferred for those runtime-only slices.",
-    "knownUnknownExposurePct": 37.8,
+    "rationale": "The timestamped July 18 Accountable snapshot reports 62.3% STRC, 13.7% Protocol Owned Liquidity, 12.8% Cash & Equivalents, and 11.2% Inventory, normalized across the disclosed reserves. The same snapshot reports a 0.881615 collateralization ratio, a material 11.8385% deficit against full backing; the normalized composition must not be read as evidence of 100% liability coverage. The source does not disclose the internal assets or failure domains for the protocol-liquidity and inventory buckets, so both retain the conservative high-risk tier already used by the live adapter.",
+    "compositionBasis": "Timestamped Accountable reserves_split snapshot",
+    "compositionAsOf": "2026-07-18",
+    "scope": "full-composition",
+    "knownUnknownExposure": "USDC cannot be isolated from Treasury backing in Cash & Equivalents, while the source-native Protocol Owned Liquidity and Inventory buckets do not disclose their constituent assets, obligors, or failure domains.",
+    "knownUnknownExposurePct": 37.7,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
+        "reserveName": "STRC (Strategy preferred equity, BTC-linked)",
+        "pct": 62.3,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "STRC is preferred equity issued by Strategy rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Protocol Owned Liquidity",
+        "pct": 13.7,
+        "disposition": "insufficient-evidence",
+        "rationale": "The Accountable snapshot names the bucket but does not disclose its constituent assets or failure domains."
+      },
+      {
+        "reserveIndex": 2,
         "reserveName": "Cash & Equivalents (USDC, U.S. Treasury Bills)",
-        "pct": 37.8,
+        "pct": 12.8,
         "disposition": "basket-needs-split",
         "rationale": "The source reports one combined cash-and-Treasury category.",
         "candidateCoinIds": [
           "usdc-circle"
         ]
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "Inventory",
+        "pct": 11.2,
+        "disposition": "insufficient-evidence",
+        "rationale": "The Accountable snapshot names the bucket but does not disclose its constituent assets or failure domains."
       }
     ]
   },

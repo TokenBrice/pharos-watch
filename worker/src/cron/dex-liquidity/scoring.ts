@@ -1,10 +1,9 @@
-import { ACTIVE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { roundTo } from "@shared/lib/math";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
 import type { ExitRouteObservation, ExitRouteObservationCoverage } from "@shared/types/market";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
-import { batchExecute } from "../../lib/db";
-import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
+import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexPriceObs, LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
@@ -31,6 +30,155 @@ import {
   filterRetainedPools,
   rebuildMetricsFromPools,
 } from "./scoring-helpers";
+
+/** Limit the lifetime of prepared statements carrying serialized price/depth data. */
+export const DEX_LIQUIDITY_SCORING_BATCH_SIZE = 25;
+
+const DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS = ACTIVE_STABLECOINS.length + 1;
+const DEX_PRICE_STAGE_RETENTION_SEC = 7 * 24 * 60 * 60;
+export const DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN = 8;
+
+const DEX_PRICE_EXACT_CURRENT_GENERATION_SQL = `
+  SELECT generation.generation_id
+  FROM dex_liquidity_publication_generations generation
+  WHERE generation.generation_id = ?
+    AND generation.state = 'published'
+    AND generation.expected_row_count = ?
+    AND generation.current_row_count = ?
+    AND (SELECT COUNT(*)
+         FROM dex_liquidity_run_rows staged
+         WHERE staged.generation_id = generation.generation_id) = ?
+    AND (SELECT COUNT(*)
+         FROM dex_liquidity current
+         WHERE current.publication_generation_id = generation.generation_id
+           AND current.publication_state = 'published') = ?
+    AND EXISTS (
+      SELECT 1
+      FROM dex_liquidity current_global
+      WHERE current_global.stablecoin_id = '__global__'
+        AND current_global.publication_generation_id = generation.generation_id
+        AND current_global.publication_state = 'published'
+    )
+    AND (SELECT COUNT(*)
+         FROM dex_price_run_rows price_stage
+         WHERE price_stage.generation_id = generation.generation_id) = ?`;
+
+function dexPriceExactCurrentGenerationBinds(generationId: string, priceRowCount: number): unknown[] {
+  return [
+    generationId,
+    DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS,
+    DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS,
+    DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS,
+    DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS,
+    priceRowCount,
+  ];
+}
+
+interface DexScoringGenerationCoverage {
+  state: string;
+  expected_row_count: number;
+  current_row_count: number | null;
+  staged_row_count: number;
+  public_row_count: number;
+}
+
+async function assertCurrentDexScoringGeneration(
+  db: D1Database,
+  generationId: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  throwIfAborted(signal);
+  const coverage = await db
+    .prepare(
+      `/* pharos:dex-scoring:current-generation */
+       SELECT generation.state,
+              generation.expected_row_count,
+              generation.current_row_count,
+              (SELECT COUNT(*)
+               FROM dex_liquidity_run_rows staged
+               WHERE staged.generation_id = generation.generation_id) AS staged_row_count,
+              (SELECT COUNT(*)
+               FROM dex_liquidity current
+               WHERE current.publication_generation_id = generation.generation_id
+                 AND current.publication_state = 'published') AS public_row_count
+       FROM dex_liquidity_publication_generations generation
+       WHERE generation.generation_id = ?`,
+    )
+    .bind(generationId)
+    .first<DexScoringGenerationCoverage>();
+  throwIfAborted(signal);
+
+  if (
+    coverage?.state !== "published" ||
+    coverage.expected_row_count !== DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS ||
+    coverage.current_row_count !== DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS ||
+    coverage.staged_row_count !== DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS ||
+    coverage.public_row_count !== DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS
+  ) {
+    throw new Error(
+      `DEX scoring generation ${generationId} is not the complete current publication` +
+        ` (state=${coverage?.state ?? "missing"}, expected=${coverage?.expected_row_count ?? 0},` +
+        ` current=${coverage?.current_row_count ?? 0}, staged=${coverage?.staged_row_count ?? 0},` +
+        ` public=${coverage?.public_row_count ?? 0})`,
+    );
+  }
+}
+
+/** @internal Exported for focused retention tests. */
+export async function pruneExpiredDexPriceStages(
+  db: D1Database,
+  protectedGenerationId: string,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<number> {
+  throwIfAborted(signal);
+  const result = await db
+    .prepare(
+      `/* pharos:dex-scoring:price-stage-retention */
+       DELETE FROM dex_price_run_rows
+       WHERE generation_id IN (
+         SELECT candidate.generation_id
+         FROM dex_price_run_rows candidate
+         WHERE candidate.generation_id != ?
+           AND NOT EXISTS (
+             SELECT 1
+             FROM dex_liquidity current_global
+             WHERE current_global.stablecoin_id = '__global__'
+               AND current_global.publication_state = 'published'
+               AND current_global.publication_generation_id = candidate.generation_id
+           )
+         GROUP BY candidate.generation_id
+         HAVING MAX(candidate.updated_at) < ?
+         ORDER BY MIN(candidate.updated_at), candidate.generation_id
+         LIMIT ?
+       )`,
+    )
+    .bind(
+      protectedGenerationId,
+      Math.max(0, Math.floor(nowSec) - DEX_PRICE_STAGE_RETENTION_SEC),
+      DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN,
+    )
+    .run();
+  throwIfAborted(signal);
+  return Number(result.meta?.changes ?? 0);
+}
+
+async function flushScoringStatements(
+  db: D1Database,
+  statements: D1PreparedStatement[],
+  signal?: AbortSignal,
+): Promise<void> {
+  if (statements.length === 0) return;
+  let batch: D1PreparedStatement[] | null = statements.splice(0, statements.length);
+  try {
+    await batchExecute(db, batch, {
+      chunkSize: DEX_LIQUIDITY_SCORING_BATCH_SIZE,
+      signal,
+    });
+  } finally {
+    batch = null;
+  }
+}
 
 const HISTORY_CONFIDENCE_MIN = 0.75;
 const MIN_STABILITY_SAMPLES = 7;
@@ -405,33 +553,96 @@ export async function computeStablecoinScores(
 /** Compute depth stability (CV-based) and persist to D1. Accepts pre-loaded data to avoid redundant DB scan. */
 export async function computeDepthStability(
   db: D1Database,
-  preloadedTvlStabilityMap?: Map<string, number>,
+  preloadedTvlStabilityMap: Map<string, number> | undefined,
+  generationId: string,
   signal?: AbortSignal,
 ): Promise<void> {
-  try {
-    throwIfAborted(signal);
-    const tvlStabilityMap = preloadedTvlStabilityMap ?? (await loadConfidentHistoryStability(db)).tvlStabilityMap;
-    throwIfAborted(signal);
+  if (!generationId.trim()) throw new Error("DEX depth stability requires a publication generation id");
+  throwIfAborted(signal);
+  const tvlStabilityMap = preloadedTvlStabilityMap ?? (await loadConfidentHistoryStability(db)).tvlStabilityMap;
+  await assertCurrentDexScoringGeneration(db, generationId, signal);
 
-    const stabilityStmts: D1PreparedStatement[] = [];
-    stabilityStmts.push(
-      db.prepare(
-        `UPDATE dex_liquidity SET depth_stability = NULL WHERE stablecoin_id != '__global__' AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
-      ),
+  const stabilityStmts: D1PreparedStatement[] = [];
+  const queueStabilityStatement = async (statement: D1PreparedStatement): Promise<void> => {
+    stabilityStmts.push(statement);
+    if (stabilityStmts.length >= DEX_LIQUIDITY_SCORING_BATCH_SIZE) {
+      await flushScoringStatements(db, stabilityStmts, signal);
+    }
+  };
+  await queueStabilityStatement(
+    db
+      .prepare(
+        `UPDATE dex_liquidity_run_rows
+         SET depth_stability = NULL
+         WHERE generation_id = ? AND stablecoin_id != '__global__'`,
+      )
+      .bind(generationId),
+  );
+  let stagedStabilityCount = 0;
+  for (const [id, stability] of tvlStabilityMap) {
+    throwIfAborted(signal);
+    if (!ACTIVE_IDS.has(id)) continue;
+    stagedStabilityCount++;
+    await queueStabilityStatement(
+      db
+        .prepare(
+          `UPDATE dex_liquidity_run_rows
+           SET depth_stability = ?
+           WHERE stablecoin_id = ? AND generation_id = ?`,
+        )
+        .bind(stability, id, generationId),
     );
-    for (const [id, stability] of tvlStabilityMap) {
-      stabilityStmts.push(
-        db.prepare("UPDATE dex_liquidity SET depth_stability = ? WHERE stablecoin_id = ?").bind(stability, id),
-      );
-    }
-    if (stabilityStmts.length > 0) {
-      await batchExecute(db, stabilityStmts, { signal });
-      console.log(`[dex-liquidity] Updated depth stability for ${tvlStabilityMap.size} coins`);
-    }
-  } catch (err) {
-    rethrowIfAborted(err, signal);
-    console.warn("[dex-liquidity] Depth stability computation failed:", err);
   }
+  await flushScoringStatements(db, stabilityStmts, signal);
+
+  const staged = await db
+    .prepare(
+      `/* pharos:dex-scoring:depth-stage-coverage */
+       SELECT COUNT(*) AS row_count,
+              COALESCE(SUM(CASE WHEN depth_stability IS NOT NULL THEN 1 ELSE 0 END), 0) AS stability_count
+       FROM dex_liquidity_run_rows
+       WHERE generation_id = ? AND stablecoin_id != '__global__'`,
+    )
+    .bind(generationId)
+    .first<{ row_count: number; stability_count: number }>();
+  if (
+    staged?.row_count !== ACTIVE_STABLECOINS.length ||
+    staged.stability_count !== stagedStabilityCount
+  ) {
+    throw new Error(
+      `Incomplete DEX depth stability stage for ${generationId}` +
+        ` (rows=${staged?.row_count ?? 0}/${ACTIVE_STABLECOINS.length},` +
+        ` values=${staged?.stability_count ?? 0}/${stagedStabilityCount})`,
+    );
+  }
+
+  await assertCurrentDexScoringGeneration(db, generationId, signal);
+  const publishedChanges = await executeAtomicBatch(
+    db,
+    [
+      db
+        .prepare(
+          `UPDATE dex_liquidity
+           SET depth_stability = (
+             SELECT staged.depth_stability
+             FROM dex_liquidity_run_rows staged
+             WHERE staged.generation_id = ?
+               AND staged.stablecoin_id = dex_liquidity.stablecoin_id
+           )
+           WHERE publication_generation_id = ?
+             AND publication_state = 'published'
+             AND stablecoin_id != '__global__'`,
+        )
+        .bind(generationId, generationId),
+    ],
+    { signal },
+  );
+  if (publishedChanges !== ACTIVE_STABLECOINS.length) {
+    throw new Error(
+      `DEX depth stability publication changed ${publishedChanges}/${ACTIVE_STABLECOINS.length} current rows`,
+    );
+  }
+  console.log(`[dex-liquidity] Published depth stability for ${stagedStabilityCount} coins from ${generationId}`);
 }
 
 /** Compute DEX-implied prices from the final retained pool set and persist to dex_prices. */
@@ -463,50 +674,59 @@ export async function computeDexPrices(
   references?: PriceValidationReferences,
   signal?: AbortSignal,
   exactPriceEvidenceByStablecoin?: Map<string, DexPriceObs[]>,
+  generationId = `dex-liquidity-${nowSec}`,
 ): Promise<DexPricePersistenceDiagnostics> {
+  if (!generationId.trim()) throw new Error("DEX price publication requires a generation id");
   throwIfAborted(signal);
-  const priceObservations = buildDexPriceObservationsFromRetainedPools(
-    retainedPoolsByStablecoin,
-    exactPriceEvidenceByStablecoin,
-  );
+  await assertCurrentDexScoringGeneration(db, generationId, signal);
+  try {
+    await pruneExpiredDexPriceStages(db, generationId, nowSec, signal);
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    console.warn(`[dex-liquidity] Failed to prune expired DEX price stages: ${String(error)}`);
+  }
   const existingRows = await db.prepare("SELECT stablecoin_id FROM dex_prices").all<{ stablecoin_id: string }>();
   const existingIds = new Set((existingRows.results ?? []).map((row) => row.stablecoin_id));
   throwIfAborted(signal);
+  await db.prepare("DELETE FROM dex_price_run_rows WHERE generation_id = ?").bind(generationId).run();
+  throwIfAborted(signal);
 
-  if (priceObservations.size === 0) {
-    if (existingIds.size === 0) {
-      return { rejectedObservationCount: 0, rejectedByStablecoin: [], truncatedStablecoins: 0 };
-    }
-
-    const retireStmts = Array.from(existingIds, (stablecoinId) =>
-      db.prepare("DELETE FROM dex_prices WHERE stablecoin_id = ?").bind(stablecoinId),
-    );
-    await batchExecute(db, retireStmts, { signal });
-    console.log(`[dex-liquidity] Retired ${retireStmts.length} DEX price rows with no current observations`);
-    return { rejectedObservationCount: 0, rejectedByStablecoin: [], truncatedStablecoins: 0 };
-  }
-
-  // Load primary prices from stablecoins cache for comparison
-  const primaryPrices = new Map<string, number>();
-  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
-  if (stablecoinsCache.kind === "ok") {
-    for (const asset of stablecoinsCache.payload.peggedAssets) {
-      if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
-        primaryPrices.set(asset.id, asset.price);
+  let primaryPrices: Map<string, number> | null = null;
+  const loadPrimaryPrices = async (): Promise<Map<string, number>> => {
+    if (primaryPrices != null) return primaryPrices;
+    primaryPrices = new Map<string, number>();
+    const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
+    if (stablecoinsCache.kind === "ok") {
+      for (const asset of stablecoinsCache.payload.peggedAssets) {
+        if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
+          primaryPrices.set(asset.id, asset.price);
+        }
       }
     }
-  }
+    return primaryPrices;
+  };
 
   const priceStmts: D1PreparedStatement[] = [];
+  const queuePriceStatement = async (statement: D1PreparedStatement): Promise<void> => {
+    priceStmts.push(statement);
+    if (priceStmts.length >= DEX_LIQUIDITY_SCORING_BATCH_SIZE) {
+      await flushScoringStatements(db, priceStmts, signal);
+    }
+  };
   const observedIds = new Set<string>();
   let collapsedDuplicateGroups = 0;
   let collapsedDuplicateObservations = 0;
   let rejectedObservationCount = 0;
   let rejectedStablecoinCount = 0;
   const rejectedByStablecoin: DexPricePersistenceDiagnostics["rejectedByStablecoin"] = [];
-  for (const [id, observations] of priceObservations) {
+  for (const [id, retainedPools] of retainedPoolsByStablecoin) {
     throwIfAborted(signal);
+    const observations = buildDexPriceObservationsFromRetainedPools(
+      new Map([[id, retainedPools]]),
+      exactPriceEvidenceByStablecoin,
+    ).get(id) ?? [];
     if (observations.length === 0) continue;
+    const prices = await loadPrimaryPrices();
 
     const {
       collapsed: collapsedObservations,
@@ -551,7 +771,7 @@ export async function computeDexPrices(
     observedIds.add(id);
 
     // Look up primary price early — used for outlier filtering and deviation calc
-    const primaryPrice = primaryPrices.get(id);
+    const primaryPrice = prices.get(id);
 
     // Filter extreme outliers relative to primary price before computing median.
     // When a source (e.g. CoinGecko aggregate) reports a price near peg for a severely
@@ -615,14 +835,14 @@ export async function computeDexPrices(
     const meta = TRACKED_META_BY_ID.get(id);
     const symbol = meta?.symbol ?? id;
 
-    priceStmts.push(
+    await queuePriceStatement(
       db
         .prepare(
-          `INSERT INTO dex_prices
+          `INSERT INTO dex_price_run_rows
             (stablecoin_id, symbol, dex_price_usd, source_pool_count, source_total_tvl,
-             deviation_from_primary_bps, primary_price_at_calc, price_sources_json, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT(stablecoin_id) DO UPDATE SET
+             deviation_from_primary_bps, primary_price_at_calc, price_sources_json, updated_at, generation_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(generation_id, stablecoin_id) DO UPDATE SET
             symbol = excluded.symbol,
             dex_price_usd = excluded.dex_price_usd,
             source_pool_count = excluded.source_pool_count,
@@ -630,8 +850,7 @@ export async function computeDexPrices(
             deviation_from_primary_bps = excluded.deviation_from_primary_bps,
             primary_price_at_calc = excluded.primary_price_at_calc,
             price_sources_json = excluded.price_sources_json,
-            updated_at = excluded.updated_at
-          WHERE dex_prices.updated_at <= excluded.updated_at`,
+            updated_at = excluded.updated_at`,
         )
         .bind(
           id,
@@ -643,6 +862,7 @@ export async function computeDexPrices(
           primaryPrice ?? null,
           JSON.stringify(protocolSources),
           nowSec,
+          generationId,
         ),
     );
   }
@@ -651,12 +871,110 @@ export async function computeDexPrices(
   for (const existingId of existingIds) {
     throwIfAborted(signal);
     if (observedIds.has(existingId)) continue;
-    priceStmts.push(db.prepare("DELETE FROM dex_prices WHERE stablecoin_id = ?").bind(existingId));
     retiredCount++;
   }
 
-  if (priceStmts.length > 0) {
-    await batchExecute(db, priceStmts, { signal });
+  await flushScoringStatements(db, priceStmts, signal);
+  const staged = await db
+    .prepare(
+      `/* pharos:dex-scoring:price-stage-coverage */
+       SELECT COUNT(*) AS row_count
+       FROM dex_price_run_rows
+       WHERE generation_id = ?`,
+    )
+    .bind(generationId)
+    .first<{ row_count: number }>();
+  if (staged?.row_count !== observedIds.size) {
+    throw new Error(
+      `Incomplete DEX price stage for ${generationId} (rows=${staged?.row_count ?? 0}/${observedIds.size})`,
+    );
+  }
+
+  await assertCurrentDexScoringGeneration(db, generationId, signal);
+  const exactGenerationBinds = dexPriceExactCurrentGenerationBinds(generationId, observedIds.size);
+  const publishedChanges = await executeAtomicBatch(
+    db,
+    [
+      db
+        .prepare(
+          `/* pharos:dex-scoring:price-publication-fence */
+           UPDATE dex_liquidity_publication_generations
+           SET written_row_count = written_row_count
+           WHERE generation_id = (${DEX_PRICE_EXACT_CURRENT_GENERATION_SQL})`,
+        )
+        .bind(...exactGenerationBinds),
+      db
+        .prepare(
+          `DELETE FROM dex_prices
+           WHERE EXISTS (${DEX_PRICE_EXACT_CURRENT_GENERATION_SQL})`,
+        )
+        .bind(...exactGenerationBinds),
+      db
+        .prepare(
+          `INSERT INTO dex_prices
+            (stablecoin_id, symbol, dex_price_usd, source_pool_count, source_total_tvl,
+             deviation_from_primary_bps, primary_price_at_calc, price_sources_json, updated_at)
+           SELECT stablecoin_id, symbol, dex_price_usd, source_pool_count, source_total_tvl,
+                  deviation_from_primary_bps, primary_price_at_calc, price_sources_json, updated_at
+           FROM dex_price_run_rows staged_price
+           WHERE staged_price.generation_id = ?
+             AND EXISTS (${DEX_PRICE_EXACT_CURRENT_GENERATION_SQL})
+           ORDER BY staged_price.stablecoin_id`,
+        )
+        .bind(generationId, ...exactGenerationBinds),
+    ],
+    { signal },
+  );
+  const allowedPublishedChanges = new Set([
+    1 + existingIds.size + observedIds.size,
+    1 + observedIds.size * 2,
+  ]);
+  if (!allowedPublishedChanges.has(publishedChanges)) {
+    throw new Error(
+      `DEX price publication fence/replacement changed ${publishedChanges} rows for ${generationId}` +
+        ` (expected one of ${[...allowedPublishedChanges].join(", ")})`,
+    );
+  }
+
+  const published = await db
+    .prepare(
+      `/* pharos:dex-scoring:price-publication-coverage */
+       SELECT (SELECT COUNT(*) FROM dex_prices) AS public_row_count,
+              (SELECT COUNT(*) FROM dex_prices WHERE updated_at = ?) AS generation_row_count,
+              (SELECT COUNT(*) FROM dex_price_run_rows WHERE generation_id = ?) AS staged_row_count`,
+    )
+    .bind(nowSec, generationId)
+    .first<{ public_row_count: number; generation_row_count: number; staged_row_count: number }>();
+  if (
+    published?.public_row_count !== observedIds.size ||
+    published.generation_row_count !== observedIds.size ||
+    published.staged_row_count !== observedIds.size
+  ) {
+    throw new Error(
+      `Incomplete DEX price publication for ${generationId}` +
+        ` (public=${published?.public_row_count ?? 0}/${observedIds.size},` +
+        ` generation=${published?.generation_row_count ?? 0}/${observedIds.size},` +
+        ` staged=${published?.staged_row_count ?? 0}/${observedIds.size})`,
+    );
+  }
+
+  try {
+    const cleanup = await db
+      .prepare("DELETE FROM dex_price_run_rows WHERE generation_id = ?")
+      .bind(generationId)
+      .run();
+    const cleanedRows = Number(cleanup.meta?.changes ?? 0);
+    if (cleanedRows !== observedIds.size) {
+      console.warn(
+        `[dex-liquidity] DEX price stage cleanup removed ${cleanedRows}/${observedIds.size} rows for ${generationId}`,
+      );
+    }
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    console.warn(`[dex-liquidity] Failed to clean published DEX price stage ${generationId}: ${String(error)}`);
+  }
+
+  if (observedIds.size > 0 || retiredCount > 0) {
     console.log(
       `[dex-liquidity] Wrote ${observedIds.size} DEX price observations to dex_prices` +
         (collapsedDuplicateGroups > 0

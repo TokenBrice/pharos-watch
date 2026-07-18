@@ -13,6 +13,8 @@ import { toErrorMessage } from "../../lib/error-utils";
 const DEX_AGGREGATE_PRESERVE_IDS = new Set(["__global__"]);
 const DEX_LIQUIDITY_GENERATION_RETENTION_SEC = 7 * DAY_SECONDS;
 const DEX_LIQUIDITY_HISTORY_RETENTION_SEC = 365 * DAY_SECONDS;
+/** Keep large bound JSON payloads from accumulating across a full generation. */
+export const DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE = 25;
 const DEX_LIQUIDITY_HISTORY_INSERT_SQL = `INSERT INTO dex_liquidity_history
   (stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date,
    coverage_class, coverage_confidence, source_mix_json, methodology_version,
@@ -488,15 +490,20 @@ export async function persistScores(
   nowSec: number,
   signal?: AbortSignal,
 ): Promise<PersistScoresResult> {
-  const stmts: D1PreparedStatement[] = [];
   let placeholderCount = 0;
   let orphanRowsDeleted = 0;
   let orphanCleanupFailed = false;
   const generationId = buildDexLiquidityPublicationGenerationId(nowSec);
   const expectedRowCount = ACTIVE_STABLECOINS.length + 1;
-  const activeMetrics = new Map([...metrics].filter(([id]) => ACTIVE_IDS.has(id)));
-  const activeScoreResults = new Map([...scoreResults].filter(([id]) => ACTIVE_IDS.has(id)));
   const inactiveMetricIdsSkipped = [...metrics.keys()].filter((id) => !ACTIVE_IDS.has(id)).sort();
+  let activeMetricsCount = 0;
+  let activeScoredCount = 0;
+  for (const id of metrics.keys()) {
+    if (ACTIVE_IDS.has(id)) activeMetricsCount++;
+  }
+  for (const id of scoreResults.keys()) {
+    if (ACTIVE_IDS.has(id)) activeScoredCount++;
+  }
 
   await stageDexLiquidityPublicationGeneration(db, {
     generationId,
@@ -504,168 +511,187 @@ export async function persistScores(
     expectedRowCount,
     metricsCount: metrics.size,
     scoredCount: scoreResults.size,
-    activeMetricsCount: activeMetrics.size,
-    activeScoredCount: activeScoreResults.size,
+    activeMetricsCount,
+    activeScoredCount,
     inactiveMetricRowsSkipped: inactiveMetricIdsSkipped.length,
     inactiveMetricIdsSkipped,
     signal,
   });
 
-  for (const [id, m] of activeMetrics) {
-    const sr = activeScoreResults.get(id);
-    if (!sr) continue;
+  const pendingStatements: D1PreparedStatement[] = [];
+  const flushPendingStatements = async (): Promise<void> => {
+    if (pendingStatements.length === 0) return;
+    let batch: D1PreparedStatement[] | null = pendingStatements.splice(0, pendingStatements.length);
+    try {
+      await batchExecute(db, batch, {
+        chunkSize: DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE,
+        signal,
+      });
+    } finally {
+      batch = null;
+    }
+  };
+  const queueStatement = async (statement: D1PreparedStatement): Promise<void> => {
+    pendingStatements.push(statement);
+    if (pendingStatements.length >= DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE) {
+      await flushPendingStatements();
+    }
+  };
 
-    stmts.push(
-      db
-        .prepare(DEX_LIQUIDITY_RUN_ROW_UPSERT_SQL)
-        .bind(
-          generationId,
-          id,
-          m.symbol,
-          m.totalTvlUsd,
-          m.totalVolume24hUsd,
-          m.totalVolume7dUsd,
-          m.poolCount,
-          m.pairs.size,
-          m.chains.size,
-          JSON.stringify(m.protocolTvl),
-          JSON.stringify(m.chainTvl),
-          JSON.stringify(m.topPools),
-          sr.score,
-          sr.hhi,
-          sr.avgStress,
-          sr.weightedBalanceRatio,
-          sr.organicFrac,
-          Math.round(m.effectiveTvl),
-          sr.durability,
-          buildDexScoreDetailsJson(sr),
-          sr.lockedLiqPct,
-          sr.coverageClass,
-          sr.coverageConfidence,
-          JSON.stringify(sr.sourceMix),
-          sr.balanceMeasuredTvlUsd,
-          sr.organicMeasuredTvlUsd,
-          LIQUIDITY_METHODOLOGY_VERSION,
-          nowSec,
-        ),
-    );
-  }
+  let candidateRowsWritten = 0;
+  let currentGenerationRows = 0;
+  try {
+    for (const [id, m] of metrics) {
+      if (!ACTIVE_IDS.has(id)) continue;
+      const sr = scoreResults.get(id);
+      if (!sr) continue;
 
-  // Write placeholder rows for tracked stablecoins with no DEX presence
-  // liquidity_score = NULL so report cards treat them as NR (not rated)
-  for (const meta of ACTIVE_STABLECOINS) {
-    if (!activeMetrics.has(meta.id)) {
-      placeholderCount++;
-      stmts.push(
+      await queueStatement(
         db
           .prepare(DEX_LIQUIDITY_RUN_ROW_UPSERT_SQL)
           .bind(
             generationId,
-            meta.id,
-            meta.symbol,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            0,
-            null,
-            null,
-            null,
-            "unobserved",
-            0,
-            null,
-            0,
-            0,
+            id,
+            m.symbol,
+            m.totalTvlUsd,
+            m.totalVolume24hUsd,
+            m.totalVolume7dUsd,
+            m.poolCount,
+            m.pairs.size,
+            m.chains.size,
+            JSON.stringify(m.protocolTvl),
+            JSON.stringify(m.chainTvl),
+            JSON.stringify(m.topPools),
+            sr.score,
+            sr.hhi,
+            sr.avgStress,
+            sr.weightedBalanceRatio,
+            sr.organicFrac,
+            Math.round(m.effectiveTvl),
+            sr.durability,
+            buildDexScoreDetailsJson(sr),
+            sr.lockedLiqPct,
+            sr.coverageClass,
+            sr.coverageConfidence,
+            JSON.stringify(sr.sourceMix),
+            sr.balanceMeasuredTvlUsd,
+            sr.organicMeasuredTvlUsd,
             LIQUIDITY_METHODOLOGY_VERSION,
             nowSec,
           ),
       );
     }
-  }
 
-  // Write __global__ sentinel row with deduped cross-stablecoin aggregates
-  stmts.push(
-    db
-      .prepare(DEX_LIQUIDITY_RUN_ROW_UPSERT_SQL)
-      .bind(
-        generationId,
-        "__global__",
-        "__global__",
-        globalAgg.totalTvl,
-        globalAgg.totalVol24h,
-        globalAgg.totalVol7d,
-        globalAgg.poolCount,
-        0,
-        globalAgg.chainCount,
-        JSON.stringify(globalAgg.protocolTvl),
-        JSON.stringify(globalAgg.chainTvl),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        0,
-        null,
-        null,
-        null,
-        "unobserved",
-        0,
-        null,
-        0,
-        0,
-        LIQUIDITY_METHODOLOGY_VERSION,
-        nowSec,
-      ),
-  );
-
-  // Clean up orphaned rows from stablecoins no longer in the tracked set.
-  // Preserve the complete tracked catalog plus the `__global__` aggregate so
-  // non-active records keep any historical DEX rows.
-  const DEX_LIQUIDITY_TABLES = ["dex_liquidity", "dex_liquidity_history", "dex_discovery_meta"] as const;
-  try {
-    for (const table of DEX_LIQUIDITY_TABLES) {
-      throwIfAborted(signal);
-      const existingRows = await db
-        // SAFETY: validated against DEX_LIQUIDITY_TABLES allowlist above.
-        .prepare(
-          table === "dex_liquidity"
-            ? `SELECT DISTINCT stablecoin_id FROM ${table} WHERE ${DEX_LIQUIDITY_CURRENT_PUBLISHED_FILTER}`
-            : `SELECT DISTINCT stablecoin_id FROM ${table}`,
-        )
-        .all<{ stablecoin_id: string }>();
-      throwIfAborted(signal);
-      const tableIds = new Set((existingRows.results ?? []).map((row) => row.stablecoin_id));
-      const pruneIds = computeDexPruneSet(tableIds);
-      for (const id of pruneIds) {
-        orphanRowsDeleted++;
-        stmts.push(
-          // SAFETY: validated against DEX_LIQUIDITY_TABLES allowlist above.
-          db.prepare(`DELETE FROM ${table} WHERE stablecoin_id = ?`).bind(id),
+    // Write placeholder rows for tracked stablecoins with no DEX presence.
+    // liquidity_score = NULL so report cards treat them as NR (not rated).
+    for (const meta of ACTIVE_STABLECOINS) {
+      if (!metrics.has(meta.id)) {
+        placeholderCount++;
+        await queueStatement(
+          db
+            .prepare(DEX_LIQUIDITY_RUN_ROW_UPSERT_SQL)
+            .bind(
+              generationId,
+              meta.id,
+              meta.symbol,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              0,
+              null,
+              null,
+              null,
+              "unobserved",
+              0,
+              null,
+              0,
+              0,
+              LIQUIDITY_METHODOLOGY_VERSION,
+              nowSec,
+            ),
         );
       }
     }
-  } catch (err) {
-    rethrowIfAborted(err, signal);
-    orphanCleanupFailed = true;
-    console.warn("[dex-liquidity] Failed to check for orphaned rows:", err);
-  }
 
-  let candidateRowsWritten = 0;
-  let currentGenerationRows = 0;
-  try {
-    // D1 batch limit — chunk candidate rows before a single current-table publish.
-    await batchExecute(db, stmts, { signal });
+    // Write __global__ sentinel row with deduped cross-stablecoin aggregates.
+    await queueStatement(
+      db
+        .prepare(DEX_LIQUIDITY_RUN_ROW_UPSERT_SQL)
+        .bind(
+          generationId,
+          "__global__",
+          "__global__",
+          globalAgg.totalTvl,
+          globalAgg.totalVol24h,
+          globalAgg.totalVol7d,
+          globalAgg.poolCount,
+          0,
+          globalAgg.chainCount,
+          JSON.stringify(globalAgg.protocolTvl),
+          JSON.stringify(globalAgg.chainTvl),
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          0,
+          null,
+          null,
+          null,
+          "unobserved",
+          0,
+          null,
+          0,
+          0,
+          LIQUIDITY_METHODOLOGY_VERSION,
+          nowSec,
+        ),
+    );
+    await flushPendingStatements();
+
+    // Preserve historical rows for the complete tracked catalog while pruning orphans.
+    const DEX_LIQUIDITY_TABLES = ["dex_liquidity", "dex_liquidity_history", "dex_discovery_meta"] as const;
+    try {
+      for (const table of DEX_LIQUIDITY_TABLES) {
+        throwIfAborted(signal);
+        const existingRows = await db
+          // SAFETY: validated against DEX_LIQUIDITY_TABLES allowlist above.
+          .prepare(
+            table === "dex_liquidity"
+              ? `SELECT DISTINCT stablecoin_id FROM ${table} WHERE ${DEX_LIQUIDITY_CURRENT_PUBLISHED_FILTER}`
+              : `SELECT DISTINCT stablecoin_id FROM ${table}`,
+          )
+          .all<{ stablecoin_id: string }>();
+        throwIfAborted(signal);
+        const tableIds = new Set((existingRows.results ?? []).map((row) => row.stablecoin_id));
+        const pruneIds = computeDexPruneSet(tableIds);
+        for (const id of pruneIds) {
+          orphanRowsDeleted++;
+          await queueStatement(
+            // SAFETY: validated against DEX_LIQUIDITY_TABLES allowlist above.
+            db.prepare(`DELETE FROM ${table} WHERE stablecoin_id = ?`).bind(id),
+          );
+        }
+      }
+    } catch (err) {
+      rethrowIfAborted(err, signal);
+      orphanCleanupFailed = true;
+      console.warn("[dex-liquidity] Failed to check for orphaned rows:", err);
+    }
+    await flushPendingStatements();
+
     throwIfAborted(signal);
     const coverage = await loadCandidateGenerationCoverage(db, generationId, signal);
     assertCandidateGenerationComplete(coverage, expectedRowCount);
@@ -692,7 +718,7 @@ export async function persistScores(
   }
 
   console.log(
-    `[dex-liquidity] Published ${currentGenerationRows} current rows from ${generationId} (${activeMetrics.size} active with data, ${placeholderCount} zero, ${inactiveMetricIdsSkipped.length} inactive skipped, 1 global)`,
+    `[dex-liquidity] Published ${currentGenerationRows} current rows from ${generationId} (${activeMetricsCount} active with data, ${placeholderCount} zero, ${inactiveMetricIdsSkipped.length} inactive skipped, 1 global)`,
   );
   return {
     generationId,

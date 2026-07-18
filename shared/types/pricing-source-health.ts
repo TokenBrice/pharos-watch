@@ -24,6 +24,7 @@ export const PRICE_SOURCE_HEALTH_BUCKET_KEYS = [
   "curve-dex",
   "curve-thin-onchain",
   "uniswap-v3-dex",
+  "uniswap-v3-exact",
   "uniswap-v4-dex",
   "raydium-dex",
   "orca-dex",

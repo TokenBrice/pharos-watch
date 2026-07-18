@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { adaptM0Collateral, adaptM0Current } from "../m0";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
@@ -20,6 +21,15 @@ const SAMPLE_PAYLOAD = {
 };
 
 describe("adaptM0Current", () => {
+  it("keeps M0-backed curated tokenized collateral on the canonical low tier", () => {
+    for (const coinId of ["musd-metamask", "ctusd-citrea", "usdat-saturn"]) {
+      const tokenizedCollateral = TRACKED_META_BY_ID.get(coinId)?.reserves?.find(
+        ({ name }) => name === "Tokenized treasury collateral",
+      );
+      expect(tokenizedCollateral, coinId).toMatchObject({ pct: 97.9, risk: "low" });
+    }
+  });
+
   it("converts the current collateral query into reserve slices", () => {
     const slices = adaptM0Current(SAMPLE_PAYLOAD);
 

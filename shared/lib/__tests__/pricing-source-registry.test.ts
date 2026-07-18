@@ -44,6 +44,7 @@ describe("pricing source registry", () => {
       "curve-dex",
       "curve-thin-onchain",
       "uniswap-v3-dex",
+      "uniswap-v3-exact",
       "uniswap-v4-dex",
       "raydium-dex",
       "orca-dex",
@@ -197,6 +198,18 @@ describe("pricing source registry", () => {
       depegSourceFamily: "dex:uniswap-v3",
       maxTrustedAgeSec: 35 * 60,
       defaultWeight: 2,
+      requiresObservedAt: true,
+    });
+
+    expect(getPricingSourceRegistryEntry("uniswap-v3-exact")).toMatchObject({
+      key: "uniswap-v3-exact",
+      trustTier: "soft_dex",
+      depegSourceFamily: "dex:uniswap-v3",
+      maxTrustedAgeSec: 5 * 60,
+      defaultWeight: 1,
+      isReplaySafe: false,
+      freshnessKind: "upstream",
+      defaultObservedAtMode: "upstream",
       requiresObservedAt: true,
     });
 

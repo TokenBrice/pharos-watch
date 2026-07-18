@@ -23,9 +23,7 @@ export function maxPublicStatus(...statuses: PublicStatusTone[]): PublicStatusTo
   return result;
 }
 
-export function getPublicMintBurnStatus(
-  sync: HealthResponse["mintBurn"]["sync"],
-): PublicStatusTone {
+export function getPublicMintBurnStatus(sync: HealthResponse["mintBurn"]["sync"]): PublicStatusTone {
   if (sync.freshnessStatus === "stale") return "stale";
   if (sync.freshnessStatus === "degraded" || !sync.criticalLaneHealthy || sync.warning != null) {
     return "degraded";
@@ -33,9 +31,7 @@ export function getPublicMintBurnStatus(
   return "healthy";
 }
 
-export function getOverallCacheImpactStatus(
-  caches: Record<string, CacheStatus>,
-): PublicStatusTone {
+export function getOverallCacheImpactStatus(caches: Record<string, CacheStatus>): PublicStatusTone {
   let worstStatus: PublicStatusTone = "healthy";
 
   for (const cache of Object.values(caches)) {
@@ -61,13 +57,11 @@ export function isPublicImpactCircuitKey(key: string): boolean {
   if (key === "usx-stable-pools") return false;
   if (key === "aznd-curve-pool") return false;
   if (key === "mento-broker") return false;
+  if (key === "phpm-price-route") return false;
   return true;
 }
 
-export function countPublicImpactOpenCircuits(
-  circuits: Record<string, CircuitRecord>,
-): number {
-  return Object.entries(circuits).filter(
-    ([key, circuit]) => isPublicImpactCircuitKey(key) && circuit.state === "open",
-  ).length;
+export function countPublicImpactOpenCircuits(circuits: Record<string, CircuitRecord>): number {
+  return Object.entries(circuits).filter(([key, circuit]) => isPublicImpactCircuitKey(key) && circuit.state === "open")
+    .length;
 }

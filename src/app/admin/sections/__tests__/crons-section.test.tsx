@@ -136,6 +136,56 @@ describe("CronsSection", () => {
     expect(rowIds).toEqual(["cron-row-sync-stablecoins", "cron-row-snapshot-chain-supply", "cron-row-sync-fx-rates"]);
   });
 
+  it("shows neutral skips that inherit a degraded required outcome in the attention view", () => {
+    const neutralRun = { startedAt: 1_699_999_940, durationMs: 200, status: "skipped_neutral" as const };
+    const degradedRun = { startedAt: 1_699_999_000, durationMs: 500, status: "degraded" as const };
+    renderCrons({
+      groups: [
+        makeGroup([
+          [
+            "discovery-scan",
+            makeCronStatus({
+              lastRun: neutralRun,
+              recentRuns: [neutralRun, degradedRun],
+              healthy: true,
+            }),
+          ],
+        ]),
+      ],
+    });
+
+    const row = screen.getByTestId("cron-row-discovery-scan");
+    expect(within(row).getByText("Degraded")).toBeTruthy();
+    expect(within(row).getByText("Completed with warnings (latest required run)")).toBeTruthy();
+    const warningBadge = screen
+      .getAllByText("Completed with warnings")
+      .find((element) => element.getAttribute("data-slot") === "badge");
+    expect(warningBadge?.className).toContain("whitespace-normal");
+  });
+
+  it("labels a neutral skip after a failed required run as unhealthy", () => {
+    const neutralRun = { startedAt: 1_699_999_940, durationMs: 200, status: "skipped_neutral" as const };
+    const failedRun = { startedAt: 1_699_999_000, durationMs: 500, status: "error" as const };
+    renderCrons({
+      groups: [
+        makeGroup([
+          [
+            "discovery-scan",
+            makeCronStatus({
+              lastRun: neutralRun,
+              recentRuns: [neutralRun, failedRun],
+              healthy: false,
+            }),
+          ],
+        ]),
+      ],
+    });
+
+    const row = screen.getByTestId("cron-row-discovery-scan");
+    expect(within(row).getByText("Unhealthy")).toBeTruthy();
+    expect(within(row).getByText("Failed (latest required run)")).toBeTruthy();
+  });
+
   it("combines state, impact, trigger-group, running, and search filters", () => {
     renderCrons({
       groups: [
@@ -317,11 +367,18 @@ describe("CronsSection", () => {
 
   it("distinguishes scoped-out attempt telemetry and unreported item counts", () => {
     renderCrons({
-      groups: [makeGroup([["snapshot-supply", makeCronStatus({
-        attemptTelemetry: "scoped-out",
-        lastRun: { startedAt: 1_699_999_940, durationMs: 200, status: "degraded" },
-        recentRuns: [{ startedAt: 1_699_999_940, durationMs: 200, status: "degraded" }],
-      })]])],
+      groups: [
+        makeGroup([
+          [
+            "snapshot-supply",
+            makeCronStatus({
+              attemptTelemetry: "scoped-out",
+              lastRun: { startedAt: 1_699_999_940, durationMs: 200, status: "degraded" },
+              recentRuns: [{ startedAt: 1_699_999_940, durationMs: 200, status: "degraded" }],
+            }),
+          ],
+        ]),
+      ],
     });
 
     expect(screen.getByText("Attempt ledger is not enabled for this job.")).toBeTruthy();

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { hasDepegAuthoritativeSource, isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
 import { validateFallbackPriceCandidate, validatePrimaryPriceCandidate } from "../price-publish-policy";
 import type { PriceValidationContext } from "../price-validation";
 
@@ -21,13 +22,15 @@ describe("validatePrimaryPriceCandidate — severe downside with directional cor
 
     expect(decision.accepted).toBe(true);
 
-    expect(validatePrimaryPriceCandidate({
-      price: 0.38,
-      source: "curve-thin-onchain",
-      confidence: "fallback",
-      agreeSources: ["curve-thin-onchain"],
-      validationContext: { ...USD_CONTEXT, stablecoinId: "another-stablecoin" },
-    }).reason).toBe("severe_downside_requires_corroboration");
+    expect(
+      validatePrimaryPriceCandidate({
+        price: 0.38,
+        source: "curve-thin-onchain",
+        confidence: "fallback",
+        agreeSources: ["curve-thin-onchain"],
+        validationContext: { ...USD_CONTEXT, stablecoinId: "another-stablecoin" },
+      }).reason,
+    ).toBe("severe_downside_requires_corroboration");
   });
 
   it("rejects severe downside with single source and no corroboration", () => {
@@ -109,7 +112,7 @@ describe("validatePrimaryPriceCandidate — severe downside with directional cor
 
   it("still allows exempt sources without candidatePrices", () => {
     const decision = validatePrimaryPriceCandidate({
-      price: 0.30,
+      price: 0.3,
       source: "pool-tvl-weighted",
       confidence: "low",
       agreeSources: ["pool-tvl-weighted"],
@@ -137,7 +140,7 @@ describe("validatePrimaryPriceCandidate — severe downside with directional cor
       agreeSources: ["pyth"],
       validationContext: USD_CONTEXT,
       previousTrustedPrice: {
-        price: 0.40,
+        price: 0.4,
         source: "coingecko",
         confidence: "low",
         observedAt: null,
@@ -153,7 +156,7 @@ describe("validatePrimaryPriceCandidate — severe downside with directional cor
       source: "pyth",
       confidence: "low",
       agreeSources: ["pyth"],
-      candidatePrices: { coingecko: 0.30, pyth: 0.85 },
+      candidatePrices: { coingecko: 0.3, pyth: 0.85 },
       validationContext: USD_CONTEXT,
     });
     // price 0.85 is NOT severe downside, so the check doesn't trigger at all
@@ -162,6 +165,32 @@ describe("validatePrimaryPriceCandidate — severe downside with directional cor
 });
 
 describe("validatePrimaryPriceCandidate — weak fallback fixed-peg depegs", () => {
+  it("accepts the bounded PHPm Uniswap display route without granting depeg authority", () => {
+    const decision = validatePrimaryPriceCandidate({
+      price: 0.01621,
+      source: "uniswap-v3-exact",
+      confidence: "fallback",
+      agreeSources: ["uniswap-v3-exact"],
+      validationContext: {
+        stablecoinId: "phpm-mento",
+        pegCurrency: "PHP",
+        pegType: "peggedPHP",
+        pegClass: "fiat_fx",
+        navToken: false,
+        tracked: true,
+      },
+      validationReferences: {
+        rates: { peggedPHP: 0.01755 },
+        type: "fresh",
+        updatedAt: Math.floor(Date.now() / 1000),
+      },
+    });
+
+    expect(decision.accepted).toBe(true);
+    expect(hasDepegAuthoritativeSource(["uniswap-v3-exact"])).toBe(false);
+    expect(isReplaySafePriceSource("uniswap-v3-exact")).toBe(false);
+  });
+
   it("rejects a depeg-sized single-source address-provider quote", () => {
     const decision = validatePrimaryPriceCandidate({
       price: 0.9459920248,

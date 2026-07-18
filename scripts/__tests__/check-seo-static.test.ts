@@ -614,7 +614,16 @@ describe("check-seo-static", () => {
     const root = await makeOutDir();
     await writePage(root, "/", {
       h1: "Home",
-      links: ["/stability-index/", "/blacklist/usdt-tether?view=issuer#top", "https://pharos.watch/tape?event=depeg"],
+      links: [
+        "/stability-index/",
+        "/blacklist/usdt-tether?view=issuer#top",
+        "https://pharos.watch/tape?event=depeg",
+        "/mica/",
+        "/telegram/install/",
+        "/stablecoins/protocol/liquity-v2/risks/",
+        "/about/editorial/history/",
+        "/feed/digest/",
+      ],
     });
     await writePage(root, "/stability-index/", { h1: "Stability Index" });
     await writeSitemap(root, ["/", "/stability-index/"]);
@@ -629,6 +638,37 @@ describe("check-seo-static", () => {
         expect.stringContaining(
           "/: internal anchor href points to retired route prefix /tape: https://pharos.watch/tape?event=depeg (use /timeline/)",
         ),
+        expect.stringContaining(
+          "/: internal anchor href points to retired route prefix /mica: /mica/ (use /compliance/)",
+        ),
+        expect.stringContaining(
+          "/: internal anchor href points to retired route prefix /telegram: /telegram/install/ (use /pharoswatchbot/)",
+        ),
+        expect.stringContaining(
+          "/: internal anchor href points to retired route prefix /stablecoins/protocol/liquity-v2: /stablecoins/protocol/liquity-v2/risks/ (use /stablecoins/infrastructure/liquity-v2/)",
+        ),
+        expect.stringContaining(
+          "/: internal anchor href points to retired route prefix /about/editorial: /about/editorial/history/ (use /about/)",
+        ),
+        expect.stringContaining(
+          "/: internal anchor href points to retired route prefix /feed/digest: /feed/digest/ (use /feed/digest.xml)",
+        ),
+      ]),
+    );
+  });
+
+  it("fails internal redirect chains and non-permanent internal redirects", async () => {
+    const root = await makeOutDir();
+    await writeBaselinePages(root);
+    await writeFile(path.join(root, "_redirects"), "/legacy /middle/ 302\n/middle /final/ 301\n");
+    await writeSitemap(root, ["/", "/stability-index/"]);
+
+    const result = collectFixtureSeoResult(root);
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        "_redirects internal rule must be permanent (301): /legacy /middle/ 302",
+        "_redirects source /legacy targets another redirect source /middle via /middle/; collapse to one hop",
       ]),
     );
   });
@@ -641,6 +681,9 @@ describe("check-seo-static", () => {
         "/stability-index/",
         "/freezewatch/",
         "/timeline/",
+        "/compliance/",
+        "/feed/digest.xml",
+        "/pharoswatchbot/",
         "/blacklist-report/",
         "https://docs.example.com/blacklist/",
         "https://example.com/tape/",

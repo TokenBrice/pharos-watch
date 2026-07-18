@@ -99,14 +99,16 @@ export const FRED_SONIA_COMPOUNDED_INDEX_CSV_URL = "https://fred.stlouisfed.org/
 /** ALFRED graph CSV mirror of the same Bank of England SONIA Compounded Index series. */
 export const ALFRED_SONIA_COMPOUNDED_INDEX_CSV_URL = "https://alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2";
 /** Official ECB data API endpoint for 3-month compounded €STR. */
-export const ECB_ESTR_3M_CSV_URL = "https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2QQF32.CR?lastNObservations=5&format=csvdata";
+export const ECB_ESTR_3M_CSV_URL =
+  "https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2QQF32.CR?lastNObservations=5&format=csvdata";
 export const TREASURY_YIELD_XML_URL = "https://home.treasury.gov/sites/default/files/interest-rates/yield.xml";
 /** SIX public OAuth endpoint used to fetch delayed SARON compound-rate downloads as a guest client. */
 export const SIX_OAUTH_TOKEN_URL = "https://indexdata.six-group.com/pro/oauth/token";
 /** SIX public download broker endpoint for delayed index and rate files. */
 export const SIX_REPORT_DOWNLOAD_URL = "https://indexdata.six-group.com/pro/api/report-download";
 /** Public browser route used as the referer/origin context for delayed SARON downloads. */
-export const SIX_SARON_COMPOUND_RATES_REFERER_URL = "https://indexdata.six-group.com/swiss_reference_rates/compound_rates.html";
+export const SIX_SARON_COMPOUND_RATES_REFERER_URL =
+  "https://indexdata.six-group.com/swiss_reference_rates/compound_rates.html";
 /** Full delayed public CSV URL for the 3-month compounded SARON series (SAR3MC). */
 export const SIX_SARON_3M_CSV_URL = "https://indexdata.six-group.com/download/saron/h_sar3mc_delayed.csv";
 /** SIX guest token and report-download endpoints reject the Pharos UA; use a browser-compatible UA instead. */
@@ -184,7 +186,7 @@ export const CIRCUIT_SOURCE = {
   JUSD_CITREA_BRIDGE: "jusd-citrea-bridge",
   USX_STABLE_POOLS: "usx-stable-pools",
   AZND_CURVE_POOL: "aznd-curve-pool",
-  MENTO_BROKER: "mento-broker",
+  PHPM_PRICE_ROUTE: "phpm-price-route",
   PROTOCOL_REDEEM: "protocol-redeem",
   CURVE_ONCHAIN: "curve-onchain",
   CURVE_ORACLE: "curve-oracle",

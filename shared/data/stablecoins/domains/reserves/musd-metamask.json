@@ -4,7 +4,7 @@
     {
       "name": "Tokenized treasury collateral",
       "pct": 97.9,
-      "risk": "very-low",
+      "risk": "low",
       "assetClass": "tokenized-security",
       "issuerOrObligor": "M0 Protocol and underlying U.S. Treasury reserve providers",
       "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "smart-contract", "concentration"],

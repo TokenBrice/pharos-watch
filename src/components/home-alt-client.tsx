@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 import { HomeAltUpcomingHorizonConstellation } from "@/components/home-alt-upcoming-horizon-constellation";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
@@ -18,6 +20,8 @@ import {
   TableSkeletonRows,
   type TableSkeletonColumn,
 } from "@/components/table";
+import { buildStablecoinUrl } from "@/lib/urls";
+import { HOMEPAGE_TOP_CORE_STABLECOINS } from "@/lib/stablecoin-static-data";
 
 function MiniCardGridFallback() {
   return (
@@ -65,16 +69,58 @@ const RANKINGS_HEADER_VISIBILITY: Record<string, string> = {
   Grade: "hidden md:table-cell",
 };
 
+const STATIC_PROFILE_LINKS = HOMEPAGE_TOP_CORE_STABLECOINS.slice(0, 8);
+
+export function HomepageStaticProfileDirectory(): React.JSX.Element {
+  return (
+    <nav aria-label="Leading stablecoin profiles" className="space-y-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-medium text-foreground">Market leaders</p>
+        <Link
+          href="/screener/"
+          className="pharos-focus-ring inline-flex min-h-9 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+        >
+          Open full screener
+          <ArrowRight aria-hidden="true" className="size-3.5" />
+        </Link>
+      </div>
+      <ul className="grid grid-cols-2 overflow-hidden rounded-lg border border-border/70 sm:grid-cols-4">
+        {STATIC_PROFILE_LINKS.map((coin) => (
+          <li
+            key={coin.id}
+            className="min-w-0 border-b border-r border-border/70 even:border-r-0 [&:nth-last-child(-n+2)]:border-b-0 sm:even:border-r sm:[&:nth-child(4n)]:border-r-0 sm:[&:nth-last-child(-n+4)]:border-b-0"
+          >
+            <Link
+              href={buildStablecoinUrl(coin.id)}
+              className="pharos-focus-ring flex min-h-14 min-w-0 flex-col justify-center px-3 py-2 transition-colors hover:bg-muted/40"
+            >
+              <span className="truncate text-sm font-medium text-foreground">{coin.symbol}</span>
+              <span className="truncate text-xs text-muted-foreground">{coin.name}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
 /* Mirrors the loaded section's order — header, external toolbar, table shell,
  * peg browse strip beneath — so content doesn't jump when the chunk mounts. */
-function RankingsSectionFallback() {
+export function RankingsSectionFallback() {
   return (
     <div className="space-y-5">
-      {/* Section header placeholder (title + subhead) */}
       <div className="space-y-1.5">
-        <Skeleton className="h-8 w-64 max-w-full" />
-        <Skeleton className="h-4 w-80 max-w-full" />
+        <h2
+          id="home-alt-rankings-title"
+          className="pharos-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
+        >
+          Stablecoin Overview
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Compare market size, peg health, liquidity, and safety across the stablecoin market.
+        </p>
       </div>
+      <HomepageStaticProfileDirectory />
       <div className="space-y-3">
         {/* External toolbar placeholder (figmaOverview renders it above the shell) */}
         <div className="flex flex-wrap items-center justify-between gap-3">

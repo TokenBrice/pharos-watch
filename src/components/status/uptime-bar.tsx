@@ -49,7 +49,8 @@ function buildDaySegments(
   }
 
   if (transitions.length === 0) {
-    for (const day of segments) day.status = currentStatus;
+    const today = segments.at(-1);
+    if (today) today.status = currentStatus;
     return segments;
   }
 
@@ -61,7 +62,7 @@ function buildDaySegments(
   let runningStatus: DaySegment["status"] =
     sorted[0].transitionType === "init"
       ? (sorted[0].to as DaySegment["status"])
-      : (sorted[0].from as DaySegment["status"]) ?? "unknown";
+      : ((sorted[0].from as DaySegment["status"]) ?? "unknown");
 
   let transitionIndex = 0;
   for (const day of segments) {
@@ -77,15 +78,16 @@ function buildDaySegments(
     day.status = runningStatus;
   }
 
+  // History can omit a current degradation that comes from a public-health
+  // signal rather than a persisted status transition. The live assessment is
+  // authoritative for today's segment.
+  const today = segments.at(-1);
+  if (today) today.status = currentStatus;
+
   return segments;
 }
 
-export function UptimeBar({
-  transitions,
-  currentStatus,
-  lastChangedAt,
-  days = 30,
-}: UptimeBarProps) {
+export function UptimeBar({ transitions, currentStatus, lastChangedAt, days = 30 }: UptimeBarProps) {
   const segments = useMemo(
     () => buildDaySegments(transitions, currentStatus, days),
     [currentStatus, days, transitions],

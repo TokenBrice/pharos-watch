@@ -24,8 +24,28 @@ const EMPTY_BAILOUT_TEMPLATE_PATTERN = /<template\s+data-dgst=(["'])BAILOUT_TO_C
 const PHAROS_ORIGIN = "https://pharos.watch";
 const PHAROS_HOSTNAME = new URL(PHAROS_ORIGIN).hostname;
 const RETIRED_INTERNAL_ROUTE_PREFIXES = [
+  { prefix: "/telegram", replacement: "/pharoswatchbot/" },
+  { prefix: "/screener/selector", replacement: "/screener/picker/" },
+  { prefix: "/mica", replacement: "/compliance/" },
   { prefix: "/blacklist", replacement: "/freezewatch/" },
+  { prefix: "/report-cards", replacement: "/safety-scores/" },
+  { prefix: "/risk-lab", replacement: "/safety-scores/" },
+  { prefix: "/peg-tracker", replacement: "/" },
+  { prefix: "/stability-index-alt", replacement: "/stability-index/" },
   { prefix: "/tape", replacement: "/timeline/" },
+  { prefix: "/stablecoins/protocol/liquity-v1", replacement: "/stablecoins/infrastructure/liquity-v1/" },
+  { prefix: "/stablecoins/protocol/liquity-v2", replacement: "/stablecoins/infrastructure/liquity-v2/" },
+  { prefix: "/stablecoins/protocol/liquity", replacement: "/stablecoins/infrastructure/liquity-v1/" },
+  { prefix: "/about/principles", replacement: "/about/" },
+  { prefix: "/about/editorial", replacement: "/about/" },
+  { prefix: "/about/style", replacement: "/about/" },
+  { prefix: "/stablecoin/pusd-pleasing", replacement: "/coverage/" },
+  { prefix: "/stablecoin/phpc-coins-ph", replacement: "/coverage/" },
+  { prefix: "/feed/digest", replacement: "/feed/digest.xml" },
+  { prefix: "/feed/depeg", replacement: "/feed/depeg.xml" },
+  { prefix: "/feed/methodology", replacement: "/feed/methodology.xml" },
+  { prefix: "/feed/cemetery", replacement: "/feed/cemetery.xml" },
+  { prefix: "/methodology/pdf", replacement: "/methodology/" },
 ];
 const RICHNESS_CHECKS = [
   {
@@ -185,7 +205,7 @@ const STRUCTURED_DATA_ROUTE_MATRIX = [
     pattern: /^\/depeg\/[^/]+\/$/,
     nodes: [
       { type: "BreadcrumbList", requiredPaths: ["itemListElement.0.name", "itemListElement.0.item"] },
-      { type: "NewsArticle", requiredPaths: ["headline", "datePublished", "dateModified", "mainEntityOfPage"] },
+      { type: "NewsArticle", requiredPaths: ["@id", "headline", "datePublished", "dateModified", "mainEntityOfPage"] },
     ],
   },
   {
@@ -378,6 +398,52 @@ function collectRedirectSources(outDir) {
     if (key) sources.push({ key, source });
   }
   return sources;
+}
+
+function collectRedirectRules(outDir) {
+  const redirectsPath = path.join(outDir, "_redirects");
+  if (!fs.existsSync(redirectsPath)) return [];
+
+  const rules = [];
+  for (const line of fs.readFileSync(redirectsPath, "utf8").split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const [source, destination, status] = trimmed.split(/\s+/);
+    if (source && destination) rules.push({ source, destination, status: status ?? "" });
+  }
+  return rules;
+}
+
+function redirectPathTemplate(value) {
+  if (!value.startsWith("/")) return null;
+  const pathname = value.split(/[?#]/)[0];
+  const withoutSplat = pathname.replace(/\/:splat$/, "").replace(/\/\*$/, "");
+  return withoutSplat === "/" ? "/" : withoutSplat.replace(/\/+$/, "");
+}
+
+function redirectSourceMatchesPath(source, pathname) {
+  const sourcePath = redirectPathTemplate(source);
+  if (!sourcePath) return false;
+  const wildcard = source.includes("*") || source.includes(":splat");
+  if (!wildcard) return sourcePath === pathname;
+  return sourcePath === "/" || pathname === sourcePath || pathname.startsWith(`${sourcePath}/`);
+}
+
+function validateStaticRedirects(outDir, errors) {
+  const rules = collectRedirectRules(outDir);
+  for (const rule of rules) {
+    const destinationPath = redirectPathTemplate(rule.destination);
+    if (!destinationPath) continue;
+    if (rule.status !== "301") {
+      errors.push(`_redirects internal rule must be permanent (301): ${rule.source} ${rule.destination} ${rule.status}`);
+    }
+    const nextRule = rules.find((candidate) => redirectSourceMatchesPath(candidate.source, destinationPath));
+    if (nextRule) {
+      errors.push(
+        `_redirects source ${rule.source} targets another redirect source ${nextRule.source} via ${rule.destination}; collapse to one hop`,
+      );
+    }
+  }
 }
 
 function validateStaticHeaders(outDir, errors) {
@@ -744,6 +810,7 @@ export function collectSeoStaticCheckResult({
   });
 
   validateStaticHeaders(outDir, errors);
+  validateStaticRedirects(outDir, errors);
 
   for (const record of pageRecords) {
     if (hasFatalCsrBailoutMarker(record.html)) {

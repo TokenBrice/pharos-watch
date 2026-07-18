@@ -5,7 +5,7 @@ import { RefreshControl } from "@/components/status/refresh-countdown";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import type { BrowserProbeSummary } from "@/lib/status-dashboard-model";
 import { formatTimestampMs, formatTimestampSeconds, getStatusTone } from "@/lib/status-dashboard-model";
-import { getPublicMintBurnStatus } from "@/lib/status/public-status";
+import { getPublicHealthWarningPresentation, getPublicMintBurnStatus } from "@/lib/status/public-status";
 import { cn } from "@/lib/utils";
 
 /** Mark data stale when older than 3 min (>3x our 60s refresh cadence). */
@@ -82,9 +82,10 @@ function MetaRow({
   );
 }
 
-function getHeroLeadWarning(status: HealthResponse["status"], warnings: string[]): string {
+function getHeroLeadWarning(healthData: HealthResponse): string {
+  const { status, warnings } = healthData;
   const firstWarning = warnings[0];
-  if (firstWarning) return firstWarning;
+  if (firstWarning) return getPublicHealthWarningPresentation(firstWarning, healthData).detail;
   if (status === "healthy") return "No public warnings are active right now.";
   if (status === "degraded") return "Some data pipelines are experiencing delays. Check the sections below for details.";
   return "System health data is outdated. Check the sections below for current status.";
@@ -103,7 +104,7 @@ export function PublicStatusHero({
 }: PublicStatusHeroProps) {
   const hero = HERO_COPY[healthData.status];
   const statusTone = getStatusTone(healthData.status);
-  const warningLine = getHeroLeadWarning(healthData.status, healthData.warnings);
+  const warningLine = getHeroLeadWarning(healthData);
   const probeValue = probeSummary ? `${probeSummary.passCount}/${probeSummary.sampleCount}` : "—";
   const circuitValue =
     openCircuits > 0 ? `${openCircuits} open` : halfOpenCircuits > 0 ? `${halfOpenCircuits} half-open` : "All closed";

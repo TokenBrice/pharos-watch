@@ -364,8 +364,8 @@
       "bucket": "reserves_split",
       "riskMap": {
         "Binance": "high",
-        "Solana": "low",
-        "Bnb_smartchain": "low",
+        "Solana": "high",
+        "Bnb_smartchain": "high",
         "Aster": "high"
       }
     }

@@ -16,6 +16,85 @@ export interface PublicImpactedSurface {
   tone: "degraded" | "stale";
 }
 
+export interface PublicHealthWarningPresentation {
+  title: string;
+  detail: string;
+}
+
+type ActivePriceCoverage = NonNullable<HealthResponse["activePriceCoverage"]>;
+
+const ACTIVE_PRICE_INCOMPLETE_PREFIX = "active-price-coverage-incomplete:";
+
+function formatList(items: readonly string[]): string {
+  if (items.length === 0) return "";
+  if (items.length === 1) return items[0]!;
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, and ${items.at(-1)}`;
+}
+
+function getActivePriceAssetLabels(
+  coverage: ActivePriceCoverage | undefined,
+  fallbackIds: readonly string[],
+): string[] {
+  const symbolById = new Map(
+    coverage?.missingActiveAssets.map((asset) => [asset.stablecoinId, asset.symbol] as const) ?? [],
+  );
+  const ids = coverage?.missingActiveIds.length ? coverage.missingActiveIds : fallbackIds;
+  const labels = ids.map((id) => {
+    const symbol = symbolById.get(id);
+    return symbol && symbol !== "unknown" ? symbol : id;
+  });
+  return [...new Set(labels)];
+}
+
+function formatAffectedAssets(count: number, labels: readonly string[]): string {
+  const effectiveCount = Math.max(count, labels.length);
+  const visibleLabels = labels.slice(0, 6);
+  const hiddenCount = Math.max(0, effectiveCount - visibleLabels.length);
+  const displayLabels = hiddenCount > 0 ? [...visibleLabels, `${hiddenCount} more`] : visibleLabels;
+  const countLabel = effectiveCount === 1
+    ? "1 active asset"
+    : effectiveCount > 1
+      ? `${effectiveCount} active assets`
+      : "active assets";
+  return displayLabels.length > 0 ? `${countLabel}: ${formatList(displayLabels)}` : countLabel;
+}
+
+export function getActivePriceCoverageImpactDetail(coverage: ActivePriceCoverage): string {
+  const labels = getActivePriceAssetLabels(coverage, coverage.missingActiveIds);
+  const affectedAssets = formatAffectedAssets(coverage.missingPriceCount, labels);
+  return `Live prices are unavailable for ${affectedAssets}. Stablecoin listings and price-dependent analytics may be incomplete until coverage recovers.`;
+}
+
+export function getPublicHealthWarningPresentation(
+  warning: string,
+  healthData: HealthResponse,
+): PublicHealthWarningPresentation {
+  if (warning.startsWith(ACTIVE_PRICE_INCOMPLETE_PREFIX)) {
+    const fallbackIds = warning
+      .slice(ACTIVE_PRICE_INCOMPLETE_PREFIX.length)
+      .split(",")
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0 && id !== "count-mismatch");
+    const coverage = healthData.activePriceCoverage;
+    const detail =
+      coverage?.status === "incomplete"
+        ? getActivePriceCoverageImpactDetail(coverage)
+        : `Live prices are unavailable for ${formatAffectedAssets(fallbackIds.length, fallbackIds)}. Stablecoin listings and price-dependent analytics may be incomplete until coverage recovers.`;
+    return { title: "Stablecoin price coverage", detail };
+  }
+
+  if (warning === "active-price-coverage-unknown") {
+    return {
+      title: "Stablecoin price coverage",
+      detail:
+        "Exact live-price coverage is unavailable. Stablecoin listings and price-dependent analytics may be incomplete until telemetry recovers.",
+    };
+  }
+
+  return { title: "Health warning", detail: warning };
+}
+
 export { getPublicMintBurnStatus };
 
 const CACHE_IMPACT_COPY: Partial<Record<string, { title: string; detail: string }>> = {
@@ -122,6 +201,23 @@ export function getImpactedPublicSurfaces(
     missingRatio: healthData.blacklist.missingRatio,
     recentMissingAmounts: healthData.blacklist.recentMissingAmounts,
   });
+
+  if (healthData.activePriceCoverage?.status === "incomplete") {
+    items.push({
+      id: "active-price-coverage",
+      title: "Stablecoin prices and dependent analytics",
+      detail: getActivePriceCoverageImpactDetail(healthData.activePriceCoverage),
+      tone: "degraded",
+    });
+  } else if (healthData.activePriceCoverage?.status === "unknown") {
+    items.push({
+      id: "active-price-coverage",
+      title: "Stablecoin prices and dependent analytics",
+      detail:
+        "Exact live-price coverage is unavailable. Stablecoin listings and price-dependent analytics may be incomplete until telemetry recovers.",
+      tone: "degraded",
+    });
+  }
 
   if (mintBurnStatus !== "healthy" || healthData.mintBurn.majorStaleCount > 0) {
     items.push({

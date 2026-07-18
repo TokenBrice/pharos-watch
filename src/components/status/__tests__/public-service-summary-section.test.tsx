@@ -79,4 +79,20 @@ describe("PublicServiceSummarySection", () => {
     expect(screen.getByText("Blacklist risk context")).toBeTruthy();
     expect(screen.getAllByText("Missing Amounts").length).toBeGreaterThan(0);
   });
+
+  it("omits the hourly mint/burn rollup when no rollup has been recorded", () => {
+    render(
+      <PublicServiceSummarySection
+        healthData={makeHealthResponse({
+          mintBurn: {
+            ...makeHealthResponse().mintBurn,
+            latestHourlyTs: null,
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Last Successful Sync")).toBeTruthy();
+    expect(screen.queryByText("Latest Hourly Rollup")).toBeNull();
+  });
 });

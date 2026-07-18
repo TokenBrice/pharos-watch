@@ -4,7 +4,6 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   accumulateBucketedExposure,
   buildBucketSlices,
-  buildRedemptionSnapshotMetadata,
   fetchJsonWithRetry,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
@@ -59,7 +58,7 @@ export function listUnexpectedEthenaAssets(payload: EthenaCollateralResponse): s
 
 export function adaptEthenaCollateral(
   payload: EthenaCollateralResponse,
-  sourceUrl: string,
+  _sourceUrl?: string,
 ): AdapterResult {
   const knownAssets = new Set([
     ...ETHENA_STABLE_ASSETS,
@@ -88,13 +87,13 @@ export function adaptEthenaCollateral(
     );
   }
 
-  const { slices, immediateRedeemableUsd: stableBucketUsd } = buildBucketSlices(
+  const { slices } = buildBucketSlices(
     bucketTotals,
     [
       {
-        name: "Liquid stables / cash equivalents",
+        name: "Liquid Cash strategy basket",
         bucket: "stable",
-        risk: "low",
+        risk: "medium",
       },
       {
         name: "BTC collateral",
@@ -140,10 +139,6 @@ export function adaptEthenaCollateral(
       assetCount,
       computedTotalBackingAssetsInUsd,
       totalBackingAssetsInUsd: payload.totalBackingAssetsInUsd,
-      immediateRedeemableUsd: stableBucketUsd,
-      ...(computedTotalBackingAssetsInUsd > 0
-        ? { immediateRedeemableRatio: stableBucketUsd / computedTotalBackingAssetsInUsd }
-        : {}),
       lastUpdatedAt,
       ...(timestampSummary
         ? {
@@ -160,16 +155,6 @@ export function adaptEthenaCollateral(
         computedTotalBackingAssetsInUsd > 0
           ? (unknownExposureUsd / computedTotalBackingAssetsInUsd) * 100
           : 0,
-      ...buildRedemptionSnapshotMetadata({
-        capacityUsd: stableBucketUsd,
-        capacityKind: "live-proxy-validated",
-        freshnessKind: lastUpdatedAt > 0 ? "verified-source-timestamp" : "unverified",
-        ...(lastUpdatedAt > 0 ? { sourceTimestamp: lastUpdatedAt } : {}),
-        routeStatus: "open",
-        routeStatusSource: "protocol-api",
-        holderEligibility: "whitelisted-primary",
-        sourceUrls: [sourceUrl],
-      }),
     },
   };
 }

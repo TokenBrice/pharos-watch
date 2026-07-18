@@ -58,6 +58,10 @@ export const PRICING_SOURCE_CIRCUIT_METADATA: Record<string, PricingCircuitMetad
   "uniswap-v3-dex": synthesized(
     "Synthesized from DEX liquidity producer output; no dedicated Uniswap V3 breaker is registered.",
   ),
+  "uniswap-v3-exact": direct(
+    CIRCUIT_SOURCE.PHPM_PRICE_ROUTE,
+    "Exact Celo PHPm dual-pool quote route; separate from the synthesized DEX liquidity producer source.",
+  ),
   "uniswap-v4-dex": synthesized(
     "Synthesized from DEX liquidity producer output; no dedicated Uniswap V4 breaker is registered.",
   ),
@@ -70,12 +74,24 @@ export const PRICING_SOURCE_CIRCUIT_METADATA: Record<string, PricingCircuitMetad
   jupiter: direct(CIRCUIT_SOURCE.JUPITER_PRICES, "Jupiter fallback fetch is directly circuit-gated."),
   coinmarketcap: direct(CIRCUIT_SOURCE.CMC_PRICES, "CoinMarketCap category fallback fetch is directly circuit-gated."),
   "dexscreener-exact": direct(CIRCUIT_SOURCE.DEXSCREENER_PRICES, "DexScreener exact token-address fallback."),
-  "dexscreener-address": direct(CIRCUIT_SOURCE.DEXSCREENER_ADDRESS_PRICES, "DexScreener exact token-address primary augmentation."),
-  "dexpaprika-address": direct(CIRCUIT_SOURCE.DEXPAPRIKA_PRICES, "DexPaprika exact token-address primary augmentation."),
+  "dexscreener-address": direct(
+    CIRCUIT_SOURCE.DEXSCREENER_ADDRESS_PRICES,
+    "DexScreener exact token-address primary augmentation.",
+  ),
+  "dexpaprika-address": direct(
+    CIRCUIT_SOURCE.DEXPAPRIKA_PRICES,
+    "DexPaprika exact token-address primary augmentation.",
+  ),
   "alchemy-address": direct(CIRCUIT_SOURCE.ALCHEMY_PRICES, "Alchemy Prices exact token-address primary augmentation."),
-  "moralis-address": direct(CIRCUIT_SOURCE.MORALIS_PRICES, "Moralis token-price exact token-address primary augmentation."),
+  "moralis-address": direct(
+    CIRCUIT_SOURCE.MORALIS_PRICES,
+    "Moralis token-price exact token-address primary augmentation.",
+  ),
   "birdeye-address": direct(CIRCUIT_SOURCE.BIRDEYE_PRICES, "Birdeye exact token-address primary augmentation."),
-  "coingecko-onchain-address": direct(CIRCUIT_SOURCE.CG_ONCHAIN, "CoinGecko Pro onchain tokens/multi exact-address augmentation."),
+  "coingecko-onchain-address": direct(
+    CIRCUIT_SOURCE.CG_ONCHAIN,
+    "CoinGecko Pro onchain tokens/multi exact-address augmentation.",
+  ),
   "dexscreener-search": direct(CIRCUIT_SOURCE.DEXSCREENER_SEARCH, "Legacy DexScreener symbol-search fallback."),
   // market-feeds
   "cg-ticker": direct(CIRCUIT_SOURCE.CG_TICKER, "CoinGecko ticker fetch is directly circuit-gated."),

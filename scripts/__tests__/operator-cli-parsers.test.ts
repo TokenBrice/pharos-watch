@@ -55,10 +55,10 @@ describe("priority operator CLI parsers", () => {
   });
 
   it("strictly parses digest and depeg sync controls", () => {
-    expect(parseDigestSyncArgs(["--api-url", "https://api.test", "--output=data/d.json", "--dry-run"]))
-      .toMatchObject({ apiUrl: "https://api.test", output: "data/d.json", dryRun: true });
-    expect(parseDepegSyncArgs(["--allow-empty", "--dry-run"]))
-      .toMatchObject({ allowEmpty: true, dryRun: true });
+    expect(parseDigestSyncArgs(["--api-url", "https://api.test", "--output=data/d.json", "--allow-archive-shrink", "--dry-run"]))
+      .toMatchObject({ allowArchiveShrink: true, apiUrl: "https://api.test", output: "data/d.json", dryRun: true });
+    expect(parseDepegSyncArgs(["--allow-empty", "--allow-archive-shrink", "--dry-run"]))
+      .toMatchObject({ allowArchiveShrink: true, allowEmpty: true, dryRun: true });
     expect(() => parseDigestSyncArgs(["--output"])).toThrow("argument missing");
     expect(() => parseDepegSyncArgs(["--allow-empty", "--allow-empty"])).toThrow(
       "may only be specified once",

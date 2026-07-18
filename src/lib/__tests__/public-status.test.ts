@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { HealthResponse } from "@shared/types";
-import {
-  countPublicImpactOpenCircuits,
-  isPublicImpactCircuitKey,
-} from "@shared/lib/public-health";
+import { countPublicImpactOpenCircuits, isPublicImpactCircuitKey } from "@shared/lib/public-health";
 import {
   getImpactedPublicSurfaces,
   getPublicDivergenceNotice,
+  getPublicHealthWarningPresentation,
   getPublicMintBurnStatus,
   getPublicWorstCacheSummary,
 } from "@/lib/status/public-status";
@@ -41,6 +39,73 @@ const BASE_HEALTH: HealthResponse = {
 };
 
 describe("public status helpers", () => {
+  it("renders active-price warnings with impacted assets and public surfaces", () => {
+    const health: HealthResponse = {
+      ...BASE_HEALTH,
+      status: "degraded",
+      warnings: ["active-price-coverage-incomplete:mnee-mnee,phpm-pharos"],
+      activePriceCoverage: {
+        status: "incomplete",
+        expectedActiveCount: 190,
+        presentActiveCount: 190,
+        pricedActiveCount: 188,
+        missingPriceCount: 2,
+        pricedActiveIds: [],
+        missingActiveIds: ["mnee-mnee", "phpm-pharos"],
+        affectedMarketCapUsd: 2_000_000,
+        missingActiveAssets: [
+          {
+            stablecoinId: "mnee-mnee",
+            symbol: "MNEE",
+            marketCapUsd: 1_500_000,
+            currentPrice: null,
+            currentSource: null,
+            currentObservedAt: null,
+            currentConfidence: null,
+            consecutiveMissingGenerations: 2,
+            lastAcceptedPrice: 1,
+            lastAcceptedSource: "coingecko",
+            lastAcceptedObservedAt: 1_699_999_000,
+            rejectionReason: "no-accepted-price",
+            alertEligible: true,
+          },
+          {
+            stablecoinId: "phpm-pharos",
+            symbol: "PHPm",
+            marketCapUsd: 500_000,
+            currentPrice: null,
+            currentSource: null,
+            currentObservedAt: null,
+            currentConfidence: null,
+            consecutiveMissingGenerations: 1,
+            lastAcceptedPrice: null,
+            lastAcceptedSource: null,
+            lastAcceptedObservedAt: null,
+            rejectionReason: "no-accepted-price",
+            alertEligible: false,
+          },
+        ],
+        alertEligibleCount: 1,
+        alertEligibleIds: ["mnee-mnee"],
+        maxConsecutiveMissingGenerations: 2,
+        observedAt: 1_700_000_000,
+      },
+    };
+
+    expect(getPublicHealthWarningPresentation(health.warnings[0]!, health)).toEqual({
+      title: "Stablecoin price coverage",
+      detail:
+        "Live prices are unavailable for 2 active assets: MNEE and PHPm. Stablecoin listings and price-dependent analytics may be incomplete until coverage recovers.",
+    });
+    expect(getImpactedPublicSurfaces(health)).toContainEqual({
+      id: "active-price-coverage",
+      title: "Stablecoin prices and dependent analytics",
+      detail:
+        "Live prices are unavailable for 2 active assets: MNEE and PHPm. Stablecoin listings and price-dependent analytics may be incomplete until coverage recovers.",
+      tone: "degraded",
+    });
+  });
+
   it("degrades mint/burn status when the critical writer lane is unhealthy despite fresh sync age", () => {
     const sync = {
       ...BASE_HEALTH.mintBurn.sync,
@@ -116,6 +181,7 @@ describe("public status helpers", () => {
     expect(isPublicImpactCircuitKey("usx-stable-pools")).toBe(false);
     expect(isPublicImpactCircuitKey("aznd-curve-pool")).toBe(false);
     expect(isPublicImpactCircuitKey("mento-broker")).toBe(false);
+    expect(isPublicImpactCircuitKey("phpm-price-route")).toBe(false);
     expect(isPublicImpactCircuitKey("kava-pricefeed")).toBe(false);
     expect(isPublicImpactCircuitKey("jusd-citrea-bridge")).toBe(false);
     expect(isPublicImpactCircuitKey("defillama-stablecoins")).toBe(true);
@@ -128,17 +194,20 @@ describe("public status helpers", () => {
       openedAt: 1_700_000_000,
     } as const;
 
-    expect(countPublicImpactOpenCircuits({
-      "live-reserves:ousg-ondo": circuit,
-      "live-reserves:mtbill-midas": circuit,
-      "dexscreener-liquidity": circuit,
-      "dexscreener-search": circuit,
-      "usx-stable-pools": circuit,
-      "aznd-curve-pool": circuit,
-      "mento-broker": circuit,
-      "kava-pricefeed": circuit,
-      "jusd-citrea-bridge": circuit,
-    })).toBe(0);
+    expect(
+      countPublicImpactOpenCircuits({
+        "live-reserves:ousg-ondo": circuit,
+        "live-reserves:mtbill-midas": circuit,
+        "dexscreener-liquidity": circuit,
+        "dexscreener-search": circuit,
+        "usx-stable-pools": circuit,
+        "aznd-curve-pool": circuit,
+        "mento-broker": circuit,
+        "phpm-price-route": circuit,
+        "kava-pricefeed": circuit,
+        "jusd-citrea-bridge": circuit,
+      }),
+    ).toBe(0);
   });
 });
 

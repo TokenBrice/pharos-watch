@@ -2,7 +2,7 @@
   "id": "usde-ethena",
   "reserves": [
     {
-      "name": "Liquid stables / cash equivalents",
+      "name": "Liquid Cash strategy basket",
       "pct": 99,
       "risk": "medium",
       "assetClass": "other",
@@ -69,7 +69,7 @@
         "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail"
       }
     ],
-    "rationale": "The exact source-native adapter output is retained at 99.0% Liquid stables / cash equivalents, 0.6% BTC collateral, and 0.4% ETH / liquid staking collateral from the July 15 issuer snapshot. Ethena's same-day strategy breakdown shows that the adapter's Liquid Cash identity is a mixed accounting basket spanning liquid stables, DeFi lending, RWA, institutional lending, and crypto-basis strategies, so it is classified as a mixed basket rather than falsely treated as pure stablecoin exposure.",
+    "rationale": "The exact source-native adapter output is retained at 99.0% Liquid Cash strategy basket, 0.6% BTC collateral, and 0.4% ETH / liquid staking collateral from the July 15 issuer snapshot. Ethena's same-day strategy breakdown shows that the Liquid Cash identity is a mixed accounting basket spanning liquid stables, DeFi lending, RWA, institutional lending, and crypto-basis strategies, so it is classified as medium risk rather than falsely treated as pure stablecoin exposure.",
     "compositionBasis": "Exact Ethena live-reserve adapter identities and rounded weights, interpreted with the same-day issuer strategy breakdown",
     "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
@@ -78,7 +78,7 @@
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Liquid stables / cash equivalents",
+        "reserveName": "Liquid Cash strategy basket",
         "pct": 99,
         "disposition": "basket-needs-split",
         "rationale": "The scored live identity aggregates stablecoins, lending strategies, RWA, institutional lending, and crypto-basis positions without a compatible constituent and failure-domain allocation.",

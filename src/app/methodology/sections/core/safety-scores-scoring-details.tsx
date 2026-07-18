@@ -125,6 +125,12 @@ export function SafetyScoresScoringDetails() {
           rail is independent from the DEX liquidity path, such as an issuer primary-market rail.
         </p>
         <p>
+          Live reserve metadata counts as executable capacity only when it isolates assets immediately available to the
+          holder route. Mixed reserve or accounting buckets remain backing context and cannot override a reviewed
+          fallback; for example, USDe retains its 0.5% hot-buffer fallback because Ethena&apos;s aggregate Liquid Cash
+          category does not isolate route-executable assets.
+        </p>
+        <p>
           If only DEX liquidity exists, it is used directly. Eligible immediate, live, or queue-style redemption can
           stand alone when DEX liquidity is absent, with route family caps and component scoring as guardrails.
           Documented offchain issuer routes with eventual-only capacity do not replace missing DEX liquidity; they can

@@ -56,6 +56,8 @@ interface DexPriceChallengerSqlStatement {
 
 const CHALLENGER_COVERAGE_TARGET = 0.95;
 const CHALLENGER_HARD_CAP = 50;
+/** Bound prepared challenger rows independently of the full active asset set. */
+export const DEX_PRICE_CHALLENGER_BATCH_SIZE = 25;
 
 /** Return the writable publication sequence with payload rows first and snapshot metadata last. */
 export function getDexPriceChallengerPublicationStatements(
@@ -242,7 +244,25 @@ export async function publishDexPriceChallengerSnapshots(
     };
   }
 
-  const statements: D1PreparedStatement[] = [];
+  const pendingStatements: D1PreparedStatement[] = [];
+  const flushPendingStatements = async (): Promise<void> => {
+    if (pendingStatements.length === 0) return;
+    let batch: D1PreparedStatement[] | null = pendingStatements.splice(0, pendingStatements.length);
+    try {
+      await batchExecute(db, batch, {
+        chunkSize: DEX_PRICE_CHALLENGER_BATCH_SIZE,
+        signal,
+      });
+    } finally {
+      batch = null;
+    }
+  };
+  const queueStatement = async (statement: DexPriceChallengerSqlStatement): Promise<void> => {
+    pendingStatements.push(db.prepare(statement.sql).bind(...statement.binds));
+    if (pendingStatements.length >= DEX_PRICE_CHALLENGER_BATCH_SIZE) {
+      await flushPendingStatements();
+    }
+  };
   let publishedStablecoins = 0;
   let skippedStablecoins = 0;
 
@@ -266,17 +286,18 @@ export async function publishDexPriceChallengerSnapshots(
     }
 
     publishedStablecoins++;
-    for (const stmt of getDexPriceChallengerPublicationStatements(plan)) {
-      statements.push(db.prepare(stmt.sql).bind(...stmt.binds));
+    for (const stmt of plan.payloadStatements) {
+      await queueStatement(stmt);
+    }
+    if (plan.snapshotStatement != null) {
+      await queueStatement(plan.snapshotStatement);
     }
     for (const stmt of plan.cleanupStatements) {
-      statements.push(db.prepare(stmt.sql).bind(...stmt.binds));
+      await queueStatement(stmt);
     }
   }
 
-  if (statements.length > 0) {
-    await batchExecute(db, statements, { signal });
-  }
+  await flushPendingStatements();
 
   return {
     publishedStablecoins,

@@ -1,7 +1,40 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../lib/db", () => ({
-  batchExecute: vi.fn(async (_db: D1Database, stmts: D1PreparedStatement[]) => stmts.length),
+  batchExecute: vi.fn(async (db: D1Database, stmts: D1PreparedStatement[]) => {
+    const state = (db as unknown as { scoringTestState?: { stagedDepthValues: number; stagedPriceRows: number } })
+      .scoringTestState;
+    if (state) {
+      for (const statement of stmts) {
+        const sql = (statement as unknown as { sql?: string }).sql ?? "";
+        if (sql.includes("SET depth_stability = ?")) state.stagedDepthValues++;
+        if (sql.includes("INSERT INTO dex_price_run_rows")) state.stagedPriceRows++;
+      }
+    }
+    return stmts.length;
+  }),
+  executeAtomicBatch: vi.fn(async (db: D1Database, stmts: D1PreparedStatement[]) => {
+    const state = (db as unknown as {
+      scoringTestState?: {
+        expectedDepthRows: number;
+        existingPriceRows: number;
+        stagedPriceRows: number;
+        publishedPriceRows: number;
+      };
+    }).scoringTestState;
+    const sql = stmts.map((statement) => (statement as unknown as { sql?: string }).sql ?? "").join("\n");
+    if (!state) return stmts.length;
+    if (sql.includes("UPDATE dex_liquidity") && sql.includes("depth_stability")) {
+      return state.expectedDepthRows;
+    }
+    if (sql.includes("DELETE FROM dex_prices")) {
+      const stagedPriceRows = state.stagedPriceRows;
+      const changes = 1 + state.existingPriceRows + stagedPriceRows;
+      state.publishedPriceRows = stagedPriceRows;
+      return changes;
+    }
+    return stmts.length;
+  }),
   isMissingTableError: (error: unknown) => String(error).toLowerCase().includes("no such table"),
   isMissingColumnError: (error: unknown) => String(error).toLowerCase().includes("no such column"),
 }));
@@ -10,11 +43,17 @@ vi.mock("../../lib/db-cache", () => ({
   getCache: vi.fn(),
 }));
 
-import { batchExecute } from "../../lib/db";
+import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { getCache } from "../../lib/db-cache";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { initMetrics } from "../dex-liquidity/pool-helpers";
-import { computeDepthStability, computeDexPrices, computeStablecoinScores } from "../dex-liquidity/scoring";
+import {
+  computeDepthStability,
+  computeDexPrices,
+  computeStablecoinScores,
+  DEX_LIQUIDITY_SCORING_BATCH_SIZE,
+} from "../dex-liquidity/scoring";
 import type { PoolEntry } from "../dex-liquidity/types";
 
 interface QueryConfig {
@@ -29,12 +68,27 @@ interface PreparedStatementWithMeta extends D1PreparedStatement {
   boundValues: unknown[];
 }
 
+interface ScoringTestState {
+  expectedDepthRows: number;
+  stagedDepthValues: number;
+  existingPriceRows: number;
+  stagedPriceRows: number;
+  publishedPriceRows: number;
+}
+
 function toError(value: unknown): Error {
   return value instanceof Error ? value : new Error(String(value));
 }
 
 function makeQueryDb(configs: QueryConfig[]): D1Database & { history: Array<{ sql: string; binds: unknown[] }> } {
   const history: Array<{ sql: string; binds: unknown[] }> = [];
+  const scoringTestState: ScoringTestState = {
+    expectedDepthRows: ACTIVE_STABLECOINS.length,
+    stagedDepthValues: 0,
+    existingPriceRows: 0,
+    stagedPriceRows: 0,
+    publishedPriceRows: 0,
+  };
 
   function createStatement(sql: string, boundValues: unknown[] = []): PreparedStatementWithMeta {
     const config = configs.find((entry) => sql.includes(entry.match));
@@ -46,8 +100,12 @@ function makeQueryDb(configs: QueryConfig[]): D1Database & { history: Array<{ sq
       all: async <T>() => {
         history.push({ sql, binds: [...boundValues] });
         if (config?.throwError != null) throw toError(config.throwError);
+        const results = config?.all ?? [];
+        if (sql.includes("SELECT stablecoin_id FROM dex_prices")) {
+          scoringTestState.existingPriceRows = results.length;
+        }
         return {
-          results: (config?.all ?? []) as T[],
+          results: results as T[],
           success: true,
           meta: {},
         };
@@ -55,12 +113,43 @@ function makeQueryDb(configs: QueryConfig[]): D1Database & { history: Array<{ sq
       first: async <T>() => {
         history.push({ sql, binds: [...boundValues] });
         if (config?.throwError != null) throw toError(config.throwError);
+        if (config?.first !== undefined) return config.first as T | null;
+        if (sql.includes("pharos:dex-scoring:current-generation")) {
+          return {
+            state: "published",
+            expected_row_count: ACTIVE_STABLECOINS.length + 1,
+            current_row_count: ACTIVE_STABLECOINS.length + 1,
+            staged_row_count: ACTIVE_STABLECOINS.length + 1,
+            public_row_count: ACTIVE_STABLECOINS.length + 1,
+          } as T;
+        }
+        if (sql.includes("pharos:dex-scoring:depth-stage-coverage")) {
+          return {
+            row_count: ACTIVE_STABLECOINS.length,
+            stability_count: scoringTestState.stagedDepthValues,
+          } as T;
+        }
+        if (sql.includes("pharos:dex-scoring:price-stage-coverage")) {
+          return { row_count: scoringTestState.stagedPriceRows } as T;
+        }
+        if (sql.includes("pharos:dex-scoring:price-publication-coverage")) {
+          return {
+            public_row_count: scoringTestState.publishedPriceRows,
+            generation_row_count: scoringTestState.publishedPriceRows,
+            staged_row_count: scoringTestState.stagedPriceRows,
+          } as T;
+        }
         return (config?.first ?? null) as T | null;
       },
       run: async () => {
         history.push({ sql, binds: [...boundValues] });
         if (config?.throwError != null) throw toError(config.throwError);
-        return { success: true, meta: { changes: 1 } };
+        if (sql.includes("DELETE FROM dex_price_run_rows WHERE generation_id = ?")) {
+          const changes = scoringTestState.stagedPriceRows;
+          scoringTestState.stagedPriceRows = 0;
+          return { success: true, meta: { changes } };
+        }
+        return { success: true, meta: { changes: 0 } };
       },
     } as unknown as PreparedStatementWithMeta;
   }
@@ -71,6 +160,7 @@ function makeQueryDb(configs: QueryConfig[]): D1Database & { history: Array<{ sq
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
     history,
+    scoringTestState,
   } as unknown as D1Database & { history: Array<{ sql: string; binds: unknown[] }> };
 }
 
@@ -626,7 +716,7 @@ describe("dex-liquidity scoring", () => {
     });
   });
 
-  it("persists only eligible depth-stability rows and logs DB failures", async () => {
+  it("publishes only eligible depth-stability rows and propagates DB failures", async () => {
     const nowMs = Date.UTC(2026, 0, 1);
     vi.spyOn(Date, "now").mockReturnValue(nowMs);
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
@@ -659,29 +749,47 @@ describe("dex-liquidity scoring", () => {
       },
     ]);
 
-    await computeDepthStability(db);
+    await computeDepthStability(db, undefined, "dex-liquidity-test");
 
     expect(batchExecute).toHaveBeenCalledTimes(1);
     const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
     const upserts = statements as PreparedStatementWithMeta[];
     expect(upserts).toHaveLength(2);
-    expect(upserts[0]?.boundValues).toEqual([]);
-    expect(upserts[1]?.boundValues).toEqual([1, "usdt-tether"]);
-    expect(logSpy).toHaveBeenCalledWith("[dex-liquidity] Updated depth stability for 1 coins");
+    expect(upserts[0]?.boundValues).toEqual(["dex-liquidity-test"]);
+    expect(upserts[1]?.boundValues).toEqual([1, "usdt-tether", "dex-liquidity-test"]);
+    expect(executeAtomicBatch).toHaveBeenCalledTimes(1);
+    expect(logSpy).toHaveBeenCalledWith(
+      "[dex-liquidity] Published depth stability for 1 coins from dex-liquidity-test",
+    );
 
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.mocked(batchExecute).mockClear();
 
     await expect(
       computeDepthStability(
         makeQueryDb([{ match: "FROM dex_liquidity_history", throwError: new Error("db down") }]),
+        undefined,
+        "dex-liquidity-test",
       ),
-    ).resolves.toBeUndefined();
+    ).rejects.toThrow("db down");
     expect(batchExecute).not.toHaveBeenCalled();
-    expect(warnSpy).toHaveBeenCalledWith("[dex-liquidity] Depth stability computation failed:", expect.any(Error));
   });
 
-  it("returns early on empty observations and persists weighted-median DEX prices", async () => {
+  it("constructs depth updates in bounded order", async () => {
+    const stabilityRows = new Map(
+      ACTIVE_STABLECOINS.slice(0, 60).map((coin, index) => [coin.id, index / 100] as const),
+    );
+
+    await computeDepthStability(makeQueryDb([]), stabilityRows, "dex-liquidity-test");
+
+    const calls = vi.mocked(batchExecute).mock.calls;
+    expect(calls.map(([, statements]) => statements.length)).toEqual([25, 25, 11]);
+    expect(calls.every(([, statements]) => statements.length <= DEX_LIQUIDITY_SCORING_BATCH_SIZE)).toBe(true);
+    const prepared = calls.flatMap(([, statements]) => statements as PreparedStatementWithMeta[]);
+    expect(prepared[0]?.sql).toContain("SET depth_stability = NULL");
+    expect(prepared.slice(1).map((statement) => statement.boundValues[1])).toEqual([...stabilityRows.keys()]);
+  });
+
+  it("atomically publishes an empty or weighted-median DEX price generation", async () => {
     await computeDexPrices(makeQueryDb([]), new Map<string, PoolEntry[]>(), 1_700_000_000);
 
     expect(getCache).not.toHaveBeenCalled();
@@ -762,7 +870,58 @@ describe("dex-liquidity scoring", () => {
         { protocol: "uniswap-v3", chain: "Base", price: 1.02, tvl: 250_000, sourceFamily: "direct_api" },
       ]),
       1_700_000_001,
+      "dex-liquidity-1700000001",
     ]);
+  });
+
+  it("constructs DEX price writes in bounded stablecoin order", async () => {
+    const coins = ACTIVE_STABLECOINS.slice(0, 30);
+    const retainedPools = new Map<string, PoolEntry[]>(coins.map((coin, index) => [
+      coin.id,
+      [makeDexPricePool({
+        poolId: `ethereum:pool-${index}`,
+        project: "curve",
+        chain: "Ethereum",
+        tvlUsd: 100_000,
+        price: 1,
+        source: "dl",
+      })],
+    ]));
+
+    await computeDexPrices(makeQueryDb([]), retainedPools, 1_700_000_000);
+
+    const calls = vi.mocked(batchExecute).mock.calls;
+    expect(calls.map(([, statements]) => statements.length)).toEqual([25, 5]);
+    expect(calls.every(([, statements]) => statements.length <= DEX_LIQUIDITY_SCORING_BATCH_SIZE)).toBe(true);
+    const prepared = calls.flatMap(([, statements]) => statements as PreparedStatementWithMeta[]);
+    expect(prepared.map((statement) => statement.boundValues[0])).toEqual(coins.map((coin) => coin.id));
+  });
+
+  it("stops constructing DEX prices after a bounded write aborts", async () => {
+    const controller = new AbortController();
+    const abortReason = new Error("DEX price publication timed out");
+    const coins = ACTIVE_STABLECOINS.slice(0, 30);
+    const retainedPools = new Map<string, PoolEntry[]>(coins.map((coin, index) => [
+      coin.id,
+      [makeDexPricePool({
+        poolId: `ethereum:pool-${index}`,
+        project: "curve",
+        chain: "Ethereum",
+        tvlUsd: 100_000,
+        price: 1,
+      })],
+    ]));
+    vi.mocked(batchExecute).mockImplementationOnce(async (_db, statements) => {
+      controller.abort(abortReason);
+      return statements.length;
+    });
+
+    await expect(
+      computeDexPrices(makeQueryDb([]), retainedPools, 1_700_000_000, undefined, controller.signal),
+    ).rejects.toThrow("DEX price publication timed out");
+
+    expect(batchExecute).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(batchExecute).mock.calls[0]?.[1]).toHaveLength(DEX_LIQUIDITY_SCORING_BATCH_SIZE);
   });
 
   it("rejects a peg-impossible KRWO price before replacing dex_prices", async () => {
@@ -781,11 +940,12 @@ describe("dex-liquidity scoring", () => {
       1_700_000_001,
     );
 
-    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
-    const prepared = statements as PreparedStatementWithMeta[];
-    expect(prepared).toHaveLength(1);
-    expect(prepared[0]?.sql).toContain("DELETE FROM dex_prices");
-    expect(prepared[0]?.boundValues).toEqual(["krwo-gimswap"]);
+    expect(batchExecute).not.toHaveBeenCalled();
+    const [, atomicStatements] = vi.mocked(executeAtomicBatch).mock.calls[0]!;
+    const prepared = atomicStatements as PreparedStatementWithMeta[];
+    expect(prepared).toHaveLength(3);
+    expect(prepared[0]?.sql).toContain("price-publication-fence");
+    expect(prepared[1]?.sql).toContain("DELETE FROM dex_prices");
     expect(diagnostics).toEqual({
       rejectedObservationCount: 1,
       rejectedByStablecoin: [{
@@ -824,7 +984,7 @@ describe("dex-liquidity scoring", () => {
     const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
     const prepared = statements as PreparedStatementWithMeta[];
     expect(prepared).toHaveLength(1);
-    expect(prepared[0]?.sql).toContain("INSERT INTO dex_prices");
+    expect(prepared[0]?.sql).toContain("INSERT INTO dex_price_run_rows");
     expect(prepared[0]?.boundValues.slice(0, 5)).toEqual([
       "krwo-gimswap",
       "KRWO",
@@ -906,6 +1066,7 @@ describe("dex-liquidity scoring", () => {
         { protocol: "curve", chain: "Ethereum", price: 1, tvl: 100_000, sourceFamily: "dl" },
       ]),
       1_700_000_001,
+      "dex-liquidity-1700000001",
     ]);
   });
 
@@ -967,6 +1128,7 @@ describe("dex-liquidity scoring", () => {
         { protocol: "uniswap-v3", chain: "Base", price: 0.31, tvl: 100_000, sourceFamily: "direct_api" },
       ]),
       1_700_000_001,
+      "dex-liquidity-1700000001",
     ]);
   });
 
@@ -1035,13 +1197,14 @@ describe("dex-liquidity scoring", () => {
       1_700_000_003,
     );
 
-    const latestBatchCall = vi.mocked(batchExecute).mock.calls[vi.mocked(batchExecute).mock.calls.length - 1]!;
-    const [, statements] = latestBatchCall;
+    const latestAtomicCall = vi.mocked(executeAtomicBatch).mock.calls[vi.mocked(executeAtomicBatch).mock.calls.length - 1]!;
+    const [, statements] = latestAtomicCall;
     const prepared = statements as PreparedStatementWithMeta[];
-    const deleteStmt = prepared.find((stmt) => stmt.sql.includes("DELETE FROM dex_prices"));
 
-    expect(prepared).toHaveLength(2);
-    expect(deleteStmt?.boundValues).toEqual(["usdc-circle"]);
+    expect(prepared).toHaveLength(3);
+    expect(prepared[0]?.sql).toContain("price-publication-fence");
+    expect(prepared[1]?.sql).toContain("DELETE FROM dex_prices");
+    expect(prepared[2]?.sql).toContain("INSERT INTO dex_prices");
   });
 
   it("clears stale dex price rows when the latest sync has no observations", async () => {
@@ -1060,12 +1223,15 @@ describe("dex-liquidity scoring", () => {
     );
 
     expect(getCache).not.toHaveBeenCalled();
-    const latestBatchCall = vi.mocked(batchExecute).mock.calls[vi.mocked(batchExecute).mock.calls.length - 1]!;
-    const [, statements] = latestBatchCall;
+    const latestAtomicCall = vi.mocked(executeAtomicBatch).mock.calls[vi.mocked(executeAtomicBatch).mock.calls.length - 1]!;
+    const [, statements] = latestAtomicCall;
     const prepared = statements as PreparedStatementWithMeta[];
 
-    expect(prepared).toHaveLength(2);
-    expect(prepared.every((stmt) => stmt.sql.includes("DELETE FROM dex_prices"))).toBe(true);
+    expect(batchExecute).not.toHaveBeenCalled();
+    expect(prepared).toHaveLength(3);
+    expect(prepared[0]?.sql).toContain("price-publication-fence");
+    expect(prepared[1]?.sql).toContain("DELETE FROM dex_prices");
+    expect(prepared[2]?.sql).toContain("INSERT INTO dex_prices");
   });
 
   it("publishes dex prices from retained priced pools instead of pre-retention discovery observations", async () => {
@@ -1119,6 +1285,7 @@ describe("dex-liquidity scoring", () => {
         { protocol: "curve", chain: "Ethereum", price: 0.1152, tvl: 64_711, sourceFamily: "dl" },
       ]),
       1_700_000_005,
+      "dex-liquidity-1700000005",
     ]);
   });
 
@@ -1172,6 +1339,7 @@ describe("dex-liquidity scoring", () => {
         { protocol: "curve", chain: "Ethereum", price: 0.1152, tvl: 64_711, sourceFamily: "dl" },
       ]),
       1_700_000_006,
+      "dex-liquidity-1700000006",
     ]);
   });
 });

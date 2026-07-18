@@ -880,6 +880,19 @@ async function persistDexLiquidityScoreState(
     orphanRowsDeleted: 0,
     orphanCleanupFailed: false,
   };
+  const publicationGenerationId = persistence.generationId;
+  if (!publicationGenerationId) {
+    throw new Error("DEX liquidity persistence completed without a publication generation id");
+  }
+  poolState.metrics.clear();
+  await reportDexLiquidityProgress(ctx, {
+    stage: "persistence-generation-complete",
+    message: "Published bounded DEX liquidity generation batches",
+    providerFamily: "d1",
+    itemsDone: persistence.candidateRowsWritten ?? 0,
+    itemsTotal: persistence.expectedRowCount ?? scoreState.scoreResults.size,
+    metadata: { generationId: persistence.generationId },
+  });
   const hasCriticalSourceFailure = sourceState.criticalSourceFailures.length > 0;
   const sourceCoverageCompleteByStablecoin = new Map<string, boolean>(
     ACTIVE_STABLECOINS.map((meta) => {
@@ -904,6 +917,14 @@ async function persistDexLiquidityScoreState(
     },
     ctx.signal,
   );
+  sourceCoverageCompleteByStablecoin.clear();
+  await reportDexLiquidityProgress(ctx, {
+    stage: "persistence-challengers-complete",
+    message: "Published bounded DEX challenger batches",
+    providerFamily: "d1",
+    itemsDone: challengerPublication.publishedStablecoins,
+    itemsTotal: ACTIVE_STABLECOINS.length,
+  });
   const dexPriceDiagnostics = await computeDexPrices(
     ctx.db,
     scoreState.retainedPoolsByStablecoin,
@@ -911,7 +932,17 @@ async function persistDexLiquidityScoreState(
     sourceState.validationReferences,
     ctx.signal,
     sourceState.priceObservations,
+    publicationGenerationId,
   );
+  scoreState.retainedPoolsByStablecoin.clear();
+  sourceState.priceObservations.clear();
+  await reportDexLiquidityProgress(ctx, {
+    stage: "persistence-prices-complete",
+    message: "Atomically published the staged DEX price generation",
+    providerFamily: "d1",
+    itemsDone: scoreState.scoreResults.size,
+    itemsTotal: scoreState.scoreResults.size,
+  });
 
   const historicalSnapshot = (await writeHistoricalSnapshots(
     ctx.db,
@@ -925,8 +956,23 @@ async function persistDexLiquidityScoreState(
     historyRowsPruned: 0,
     retentionPruneFailed: false,
   };
+  await reportDexLiquidityProgress(ctx, {
+    stage: "persistence-history-complete",
+    message: "Reconciled DEX liquidity history",
+    providerFamily: "d1",
+    itemsDone: historicalSnapshot.snapshotRowsWritten,
+    itemsTotal: ACTIVE_STABLECOINS.length,
+  });
 
-  await computeDepthStability(ctx.db, scoreState.tvlStabilityMap, ctx.signal);
+  await computeDepthStability(ctx.db, scoreState.tvlStabilityMap, publicationGenerationId, ctx.signal);
+  scoreState.tvlStabilityMap.clear();
+  await reportDexLiquidityProgress(ctx, {
+    stage: "persistence-depth-complete",
+    message: "Atomically published staged DEX depth stability",
+    providerFamily: "d1",
+    itemsDone: scoreState.scoreResults.size,
+    itemsTotal: scoreState.scoreResults.size,
+  });
   await reportDexLiquidityProgress(ctx, {
     stage: "persistence-complete",
     message: "Published DEX liquidity generation",

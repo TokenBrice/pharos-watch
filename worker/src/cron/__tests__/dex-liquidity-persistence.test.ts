@@ -15,6 +15,7 @@ import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { initMetrics } from "../dex-liquidity/pool-helpers";
 import {
   buildDexLiquidityPublicationGenerationId,
+  DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE,
   persistScores,
   writeHistoricalSnapshots,
 } from "../dex-liquidity/persistence";
@@ -130,6 +131,12 @@ function extractHistoryInsertRows(statements: readonly PreparedStatementWithMeta
   return rows;
 }
 
+function getPreparedBatchStatements(sqlFragment: string): PreparedStatementWithMeta[] {
+  return vi.mocked(batchExecute).mock.calls.flatMap(([, statements]) =>
+    (statements as PreparedStatementWithMeta[]).filter((statement) => statement.sql.includes(sqlFragment))
+  );
+}
+
 function makeFullScoreResult(overrides: Partial<FullScoreResult> = {}): FullScoreResult {
   return {
     tvl: 1,
@@ -161,7 +168,8 @@ function makeFullScoreResult(overrides: Partial<FullScoreResult> = {}): FullScor
 describe("dex-liquidity persistence", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    vi.clearAllMocks();
+    vi.mocked(batchExecute).mockReset().mockImplementation(async (_db, statements) => statements.length);
+    vi.mocked(executeAtomicBatch).mockReset().mockImplementation(async (_db, statements) => statements.length);
   });
 
   it("persists scored rows, placeholders, and the global sentinel row", async () => {
@@ -246,10 +254,21 @@ describe("dex-liquidity persistence", () => {
       inactiveMetricIdsSkipped: [],
     });
 
-    expect(batchExecute).toHaveBeenCalledTimes(3);
-    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
-    const prepared = statements as PreparedStatementWithMeta[];
+    const prepared = getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows");
     expect(prepared).toHaveLength(ACTIVE_STABLECOINS.length + 1);
+    expect(prepared.map((statement) => statement.boundValues[1])).toEqual([
+      "usdt-tether",
+      ...ACTIVE_STABLECOINS.filter((coin) => coin.id !== "usdt-tether").map((coin) => coin.id),
+      "__global__",
+    ]);
+    const candidateCalls = vi.mocked(batchExecute).mock.calls.filter(([, statements]) =>
+      (statements as PreparedStatementWithMeta[]).some((statement) =>
+        statement.sql.includes("INSERT OR REPLACE INTO dex_liquidity_run_rows")
+      )
+    );
+    expect(candidateCalls.length).toBeGreaterThan(1);
+    expect(candidateCalls.every(([, statements]) => statements.length <= DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE))
+      .toBe(true);
 
     const usdtRow = prepared.find((stmt) => stmt.boundValues[1] === "usdt-tether");
     const usdcPlaceholder = prepared.find((stmt) => stmt.boundValues[1] === "usdc-circle");
@@ -355,8 +374,7 @@ describe("dex-liquidity persistence", () => {
       1_700_000_000,
     ]);
 
-    const publishStatements = vi.mocked(batchExecute).mock.calls[1]?.[1] as PreparedStatementWithMeta[] | undefined;
-    expect(publishStatements?.some((stmt) => stmt.sql.includes("INSERT INTO dex_liquidity"))).toBe(true);
+    expect(getPreparedBatchStatements("INSERT INTO dex_liquidity").length).toBeGreaterThan(0);
   });
 
   it("skips tracked inactive metrics when staging the active current generation", async () => {
@@ -402,8 +420,7 @@ describe("dex-liquidity persistence", () => {
       inactiveMetricIdsSkipped: [INACTIVE_TRACKED_STABLECOIN.id],
     });
 
-    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
-    const prepared = statements as PreparedStatementWithMeta[];
+    const prepared = getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows");
     expect(prepared.some((stmt) => stmt.boundValues[1] === INACTIVE_TRACKED_STABLECOIN.id)).toBe(false);
     expect(prepared.some((stmt) => stmt.boundValues[1] === "usdt-tether")).toBe(true);
     expect(prepared).toHaveLength(ACTIVE_STABLECOINS.length + 1);
@@ -519,6 +536,81 @@ describe("dex-liquidity persistence", () => {
     expect(vi.mocked(batchExecute).mock.calls).toHaveLength(1);
     expect(db.getHistory().some((entry) => entry.binds.includes("freshness:dex-liquidity"))).toBe(false);
     expect(db.getHistory().some((entry) => entry.sql.includes("state = 'failed'"))).toBe(true);
+  });
+
+  it("keeps current publication fail-closed after a later candidate batch fails", async () => {
+    const metrics = initMetrics("usdt-tether", "USDT");
+    const db = makeDb();
+
+    vi.mocked(batchExecute)
+      .mockImplementationOnce(async (_db, statements) => statements.length)
+      .mockRejectedValueOnce(new Error("second candidate batch failed"));
+
+    await expect(
+      persistScores(
+        db,
+        new Map([["usdt-tether", metrics]]),
+        new Map([["usdt-tether", makeFullScoreResult()]]),
+        {
+          totalTvl: 1,
+          totalVol24h: 1,
+          totalVol7d: 1,
+          poolCount: 1,
+          chainCount: 1,
+          protocolTvl: {},
+          chainTvl: {},
+        },
+        1_700_000_000,
+      ),
+    ).rejects.toThrow("second candidate batch failed");
+
+    expect(batchExecute).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(batchExecute).mock.calls.every(([, statements]) =>
+      statements.length <= DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE
+    )).toBe(true);
+    expect(getPreparedBatchStatements("INSERT INTO dex_liquidity")).toHaveLength(0);
+    expect(db.getHistory().some((entry) => entry.sql.includes("state = 'failed'"))).toBe(true);
+    expect(db.getHistory().some((entry) => entry.binds.includes("freshness:dex-liquidity"))).toBe(false);
+  });
+
+  it("does not advance freshness when the atomic current-generation batch fails", async () => {
+    const metrics = initMetrics("usdt-tether", "USDT");
+    const db = makeDb();
+    vi.mocked(batchExecute).mockImplementation(async (_db, statements) => {
+      if ((statements as PreparedStatementWithMeta[]).some((statement) =>
+        statement.sql.includes("INSERT INTO dex_liquidity")
+      )) {
+        throw new Error("atomic generation publish failed");
+      }
+      return statements.length;
+    });
+
+    await expect(
+      persistScores(
+        db,
+        new Map([["usdt-tether", metrics]]),
+        new Map([["usdt-tether", makeFullScoreResult()]]),
+        {
+          totalTvl: 1,
+          totalVol24h: 1,
+          totalVol7d: 1,
+          poolCount: 1,
+          chainCount: 1,
+          protocolTvl: {},
+          chainTvl: {},
+        },
+        1_700_000_000,
+      ),
+    ).rejects.toThrow("atomic generation publish failed");
+
+    const publishCall = vi.mocked(batchExecute).mock.calls.find(([, statements]) =>
+      (statements as PreparedStatementWithMeta[]).some((statement) =>
+        statement.sql.includes("INSERT INTO dex_liquidity")
+      )
+    );
+    expect(publishCall?.[1]).toHaveLength(2);
+    expect(db.getHistory().some((entry) => entry.sql.includes("state = 'failed'"))).toBe(true);
+    expect(db.getHistory().some((entry) => entry.binds.includes("freshness:dex-liquidity"))).toBe(false);
   });
 
   it("keeps an already-published generation published when restaging a retry", async () => {

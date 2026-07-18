@@ -12,6 +12,8 @@
 1d7549e868b49aabc4aa6b355e8c729e97386670:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:376
 1d7549e868b49aabc4aa6b355e8c729e97386670:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:841
 1d7549e868b49aabc4aa6b355e8c729e97386670:worker/src/test-helpers/__shared/fixtures.ts:generic-api-key:197
+2315439438d6679bbf80560ded33a1d481a166cd:shared/lib/__tests__/pricing-source-registry.test.ts:generic-api-key:205
+2315439438d6679bbf80560ded33a1d481a166cd:shared/lib/pricing-source-registry-dex-search.ts:generic-api-key:58
 2439593bc6e905a33967fe8df7342beea3a02788:agents/plans/2026-04-24-tighten-public-api-gate-plan.md:curl-auth-header:1480
 2543020623535ecdf515b4086b3ee39f775ee57e:src/app/learn/case-studies/content/buidl-tokenized-tbill-2025.ts:generic-api-key:145
 25e832f563fce12b4552824dc9850178acd778d9:agents/research/2026-04-15-pmusd-custody-recheck.md:generic-api-key:57

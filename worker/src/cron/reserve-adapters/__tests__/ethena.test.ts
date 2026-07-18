@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { adaptEthenaCollateral, listUnexpectedEthenaAssets, type EthenaCollateralResponse } from "../ethena";
 
-const DEFAULT_ETHENA_URL = "https://app.ethena.fi/api/positions/current/collateral";
-
 describe("adaptEthenaCollateral", () => {
   it("groups Ethena collateral into reserve buckets", () => {
     const payload: EthenaCollateralResponse = {
@@ -16,10 +14,10 @@ describe("adaptEthenaCollateral", () => {
       ],
     };
 
-    const result = adaptEthenaCollateral(payload, DEFAULT_ETHENA_URL);
+    const result = adaptEthenaCollateral(payload);
 
     expect(result.slices).toEqual([
-      { name: "Liquid stables / cash equivalents", pct: 35, risk: "low" },
+      { name: "Liquid Cash strategy basket", pct: 35, risk: "medium" },
       { name: "ETH / liquid staking collateral", pct: 30, risk: "medium" },
       { name: "BTC collateral", pct: 20, risk: "medium" },
       { name: "Other crypto collateral", pct: 15, risk: "high" },
@@ -27,12 +25,13 @@ describe("adaptEthenaCollateral", () => {
     expect(result.metadata).toMatchObject({
       assetCount: 5,
       totalBackingAssetsInUsd: 100,
-      immediateRedeemableUsd: 35,
-      immediateRedeemableRatio: 0.35,
       lastUpdatedAt: 1,
       sourceTimestamp: 1,
       freshnessMode: "verified",
     });
+    expect(result.metadata?.immediateRedeemableUsd).toBeUndefined();
+    expect(result.metadata?.immediateRedeemableRatio).toBeUndefined();
+    expect(result.metadata?.redemption).toBeUndefined();
   });
 
   it("does not warn for known alt-collateral already bucketed into other", () => {
@@ -72,7 +71,7 @@ describe("adaptEthenaCollateral", () => {
       ],
     };
 
-    const result = adaptEthenaCollateral(payload, DEFAULT_ETHENA_URL);
+    const result = adaptEthenaCollateral(payload);
 
     expect(result.metadata).toMatchObject({
       sourceTimestamp: 1_000,
@@ -84,7 +83,7 @@ describe("adaptEthenaCollateral", () => {
     expect(result.warnings?.some((warning) => warning.code === "source-timestamp-spread")).toBe(true);
   });
 
-  it("records the active collateral API URL in redemption telemetry", () => {
+  it("does not treat the mixed Liquid Cash bucket as redemption capacity", () => {
     const payload: EthenaCollateralResponse = {
       totalBackingAssetsInUsd: 100,
       collateral: [
@@ -92,13 +91,10 @@ describe("adaptEthenaCollateral", () => {
       ],
     };
 
-    const result = adaptEthenaCollateral(
-      payload,
-      "https://ethena.fi/api/positions/current/collateral",
-    );
+    const result = adaptEthenaCollateral(payload);
 
-    expect(result.metadata?.redemption).toMatchObject({
-      sourceUrls: ["https://ethena.fi/api/positions/current/collateral"],
-    });
+    expect(result.metadata).not.toHaveProperty("immediateRedeemableUsd");
+    expect(result.metadata).not.toHaveProperty("immediateRedeemableRatio");
+    expect(result.metadata).not.toHaveProperty("redemption");
   });
 });
