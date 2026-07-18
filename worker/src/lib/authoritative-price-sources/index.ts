@@ -139,9 +139,16 @@ export function prioritizeAuthoritativeLivePriceCandidates<T extends Authoritati
     return prioritized;
   };
 
-  const missing = candidates.filter((candidate) => !hasUsableLivePrice(candidate.asset));
-  const priced = candidates.filter((candidate) => hasUsableLivePrice(candidate.asset));
-  return [...interleaveProviders(missing), ...interleaveProviders(priced)];
+  const circuitBacked = candidates.filter((candidate) => Boolean(candidate.provider.liveCircuitSource));
+  const ordinary = candidates.filter((candidate) => !candidate.provider.liveCircuitSource);
+  const missing = (partition: readonly T[]) => partition.filter((candidate) => !hasUsableLivePrice(candidate.asset));
+  const priced = (partition: readonly T[]) => partition.filter((candidate) => hasUsableLivePrice(candidate.asset));
+  return [
+    ...interleaveProviders(missing(circuitBacked)),
+    ...interleaveProviders(priced(circuitBacked)),
+    ...interleaveProviders(missing(ordinary)),
+    ...interleaveProviders(priced(ordinary)),
+  ];
 }
 
 export function createAuthoritativeLivePriceOverrideStats(
@@ -332,6 +339,10 @@ export async function fetchAuthoritativeLivePriceOverrides(
           rejectionClass: "timeout",
           candidateAt,
         });
+        if (circuitSource && options?.db) {
+          await recordOutcomeSafe(options.db, circuitSource, false);
+          circuitAttempts.delete(circuitSource);
+        }
         recordSkippedBudget(index + 1);
         console.warn(`[authoritative-price-sources] live override budget exhausted after ${budgetMs}ms`);
         break;

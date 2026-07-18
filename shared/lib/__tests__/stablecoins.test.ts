@@ -65,6 +65,14 @@ function makeStablecoinAsset(overrides: Record<string, unknown> = {}): Record<st
 }
 
 describe("tracked stablecoin metadata", () => {
+  it("keeps dEURO on CoinGecko admission while retaining its DefiLlama capture identity", () => {
+    expect(TRACKED_META_BY_ID.get("deuro-deuro")).toMatchObject({
+      detailProvider: "coingecko",
+      geckoId: "decentralized-euro",
+      llamaId: "423",
+    });
+  });
+
   it("loads all JSON registry assets through the shared schemas", () => {
     const usdMajor = parseStablecoinMetaAssets(usdMajorAsset, "usd-major");
     const usdMinor = parseStablecoinMetaAssets(usdMinorAsset, "usd-minor");

@@ -71,11 +71,12 @@ export function isEligibleDirectApiPool(
 }
 
 export function isPreferredDirectApiPool(
-  pool: Pick<DexApiPool, "source" | "tvlUsd" | "volume24hUsd">,
+  pool: Pick<DexApiPool, "source" | "tvlUsd" | "volume24hUsd" | "tokens">,
   minTvlUsd = DIRECT_API_POOL_MIN_TVL_USD,
 ): boolean {
   if (!isEligibleDirectApiPool(pool, minTvlUsd)) return false;
   if (Number.isFinite(pool.volume24hUsd) && pool.volume24hUsd > 0) return true;
+  if (pool.tokens.some((token) => token.priceUsdDependency != null)) return true;
   return pool.source === "aerodrome-slipstream" || pool.source === "velodrome-slipstream";
 }
 

@@ -50,7 +50,7 @@ vi.mock("../../../lib/circuit-breaker", () => ({
 import { crawlCoin } from "../crawl-sources";
 import { knownPoolIdKey } from "../staged-pool";
 import { crawlTokenPools } from "../../dex-liquidity/crawl-helpers";
-import { fetchDsTokenPoolsWithStatus } from "../../../lib/dexscreener";
+import { dsRateLimit, fetchDsTokenPoolsWithStatus } from "../../../lib/dexscreener";
 import { fetchCgTokenPoolsWithStatus } from "../../../lib/coingecko-onchain";
 import { fetchJsonWithRetry } from "../../../lib/fetch-retry";
 import { shouldAttemptFetch, recordOutcome } from "../../../lib/circuit-breaker";
@@ -80,6 +80,8 @@ describe("crawlCoin DexScreener hardening", () => {
     vi.mocked(crawlTokenPools).mockReset();
     vi.mocked(crawlTokenPools).mockResolvedValue({ stoppedEarly: false });
     vi.mocked(fetchDsTokenPoolsWithStatus).mockReset();
+    vi.mocked(dsRateLimit).mockReset();
+    vi.mocked(dsRateLimit).mockResolvedValue(undefined);
     vi.mocked(fetchCgTokenPoolsWithStatus).mockReset();
     vi.mocked(fetchJsonWithRetry).mockReset();
     vi.mocked(shouldAttemptFetch).mockReset();
@@ -188,6 +190,35 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(result).toMatchObject({ pools: [], unresolvedChains: [] });
     expect(recordOutcome).toHaveBeenCalledTimes(1);
     expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY, true);
+  });
+
+  it("paces every DexScreener request across consecutive one-target coin crawls", async () => {
+    const events: string[] = [];
+    vi.mocked(dsRateLimit).mockImplementation(async () => {
+      events.push("pace");
+    });
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockImplementation(async () => {
+      events.push("fetch");
+      return { ok: true, pairs: [] };
+    });
+
+    await crawlCoin(
+      createMockDb(),
+      "first-test-coin",
+      [{ chain: "ethereum", address: "0xabc", decimals: 18 }],
+      null,
+      new Set(),
+    );
+    await crawlCoin(
+      createMockDb(),
+      "second-test-coin",
+      [{ chain: "bsc", address: "0xdef", decimals: 18 }],
+      null,
+      new Set(),
+    );
+
+    expect(events).toEqual(["pace", "fetch", "pace", "fetch"]);
+    expect(dsRateLimit).toHaveBeenCalledTimes(2);
   });
 
   it("keeps CoinGecko onchain staging output aligned with current discovery rows", async () => {

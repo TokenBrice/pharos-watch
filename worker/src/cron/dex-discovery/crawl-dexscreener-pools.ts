@@ -97,9 +97,9 @@ export async function crawlDexScreenerPoolsStage({
     const dsChain = DS_CHAIN_MAP[chain];
     if (!dsChain) continue;
 
-    if (dsRequests > 0) {
-      await dependencies.dsRateLimit(context.signal);
-    }
+    // Each stage invocation is scoped to one coin, so a local request counter
+    // cannot pace the boundary between consecutive one-target coin crawls.
+    await dependencies.dsRateLimit(context.signal);
     dsRequests++;
 
     try {

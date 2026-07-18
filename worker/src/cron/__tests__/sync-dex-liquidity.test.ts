@@ -1136,6 +1136,55 @@ describe("filterPrimaryPoolsPreferDirectApi", () => {
     expect(result.skippedByOptionalWildcardIdentity).toBe(0);
   });
 
+  it("prefers the exact reviewed USP quote when the DL duplicate has only derived identity", () => {
+    const USP = "0x97ccc1c046d067ab945d3cf3cc6920d3b1e54c88";
+    const WA_ETH_USDC = "0xd4fa2d31b7968e448877f69a96de69f5de8cd23e";
+    const pools: LlamaPool[] = [{
+      pool: "97baf242-a56a-4ad9-896d-f548b9756ff4",
+      chain: "Ethereum",
+      project: "balancer-v3",
+      symbol: "USP-WAETHUSDC",
+      tvlUsd: 52_660,
+      volumeUsd1d: null,
+      volumeUsd7d: null,
+      stablecoin: true,
+      underlyingTokens: [USP, WA_ETH_USDC],
+      apyBase: null,
+      apyReward: null,
+      apy: 0,
+      sigma: 0,
+      exposure: "multi",
+      count: 180,
+    }];
+    const directApiPools: DexApiPool[] = [{
+      source: "balancer",
+      chain: "ethereum",
+      poolAddress: "0x114907c2a07978c38ebb9f9f6a5261a846b79521",
+      poolType: "balancer-stable",
+      tokens: [
+        {
+          address: USP,
+          symbol: "USP",
+          decimals: 18,
+          priceUsd: null,
+          priceUsdDependency: { stablecoinId: "usdc-circle", multiplier: 0.9999 },
+        },
+        { address: WA_ETH_USDC, symbol: "waEthUSDC", decimals: 6, priceUsd: null },
+      ],
+      price: null,
+      tvlUsd: 52_659,
+      volume24hUsd: 0,
+      feeRate: 0.0001,
+      balances: [27_000, 21_700],
+    }];
+    const chainAddressToId = new Map([[`ethereum:${USP}`, "usp-pareto-credit"]]);
+
+    const result = filterPrimaryPoolsPreferDirectApi(pools, directApiPools, chainAddressToId);
+
+    expect(result.filteredPools).toHaveLength(0);
+    expect(result.skippedByUniqueDerivedIdentity).toBe(1);
+  });
+
   it("deduplicates a DL raydium-amm stable pair against the direct Raydium pool via the tracked-pair stability hint", () => {
     // Live duplicate observed in production: DL marks USDS-USDC stable
     // (pool.stablecoin) while the direct Raydium pool type carries no

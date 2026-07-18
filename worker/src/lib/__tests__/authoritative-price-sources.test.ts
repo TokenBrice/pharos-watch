@@ -129,11 +129,12 @@ type LivePriceProvider = PriceSourceProvider & {
   fetchLivePrice: NonNullable<PriceSourceProvider["fetchLivePrice"]>;
 };
 
-function makePriorityProvider(livePriority?: number): LivePriceProvider {
+function makePriorityProvider(livePriority?: number, liveCircuitSource?: string): LivePriceProvider {
   const baseProvider: LivePriceProvider = {
     source: "protocol-redeem",
     matches: () => true,
     fetchLivePrice: async () => null,
+    ...(liveCircuitSource ? { liveCircuitSource } : {}),
   };
   return livePriority == null ? baseProvider : { ...baseProvider, livePriority };
 }
@@ -264,7 +265,7 @@ describe("authoritative-price-sources", () => {
       expect.stringMatching(/^0xb7c4a6bf/),
       "latest",
       expect.objectContaining({
-        extraRpcUrls: ["https://ethereum-rpc.publicnode.com"],
+        extraRpcUrls: ["https://ethereum-rpc.publicnode.com", "https://eth.llamarpc.com"],
       }),
     );
 
@@ -617,6 +618,34 @@ describe("authoritative-price-sources", () => {
     ]);
   });
 
+  it("prioritizes circuit-backed probes ahead of ordinary candidates", () => {
+    const ordinaryProvider = makePriorityProvider(0);
+    const circuitProvider = makePriorityProvider(10, "fixture-circuit");
+    const candidates: AuthoritativeLivePriceCandidate[] = [
+      {
+        asset: { id: "ordinary-missing", price: null } as PeggedAsset,
+        provider: ordinaryProvider,
+        originalIndex: 0,
+      },
+      {
+        asset: { id: "circuit-missing", price: null } as PeggedAsset,
+        provider: circuitProvider,
+        originalIndex: 1,
+      },
+      {
+        asset: { id: "circuit-priced", price: 1 } as PeggedAsset,
+        provider: circuitProvider,
+        originalIndex: 2,
+      },
+    ];
+
+    expect(prioritizeAuthoritativeLivePriceCandidates(candidates).map((entry) => entry.asset.id)).toEqual([
+      "circuit-missing",
+      "circuit-priced",
+      "ordinary-missing",
+    ]);
+  });
+
   it("stops live RPC protocol-redeem overrides when the wall-clock budget expires", async () => {
     fetchEvmCallHexAtBlockMock.mockImplementation(
       (_chain: string, _to: string, _data: string, _block: number | "latest", options?: { signal?: AbortSignal }) =>
@@ -663,6 +692,74 @@ describe("authoritative-price-sources", () => {
     ]);
   });
 
+  it("reopens an actually started half-open circuit probe when the shared budget aborts it", async () => {
+    fetchEvmCallHexAtBlockMock.mockImplementation(
+      (_chain: string, _to: string, _data: string, _block: number | "latest", options?: { signal?: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          options?.signal?.addEventListener(
+            "abort",
+            () => reject(options.signal?.reason ?? new DOMException("Aborted", "AbortError")),
+            { once: true },
+          );
+        }),
+    );
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`],
+        rows: [
+          {
+            key: `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
+            value: JSON.stringify({
+              state: "half-open",
+              consecutiveFailures: 3,
+              lastFailureAt: nowSec - 1_800,
+              lastSuccessAt: null,
+              openedAt: nowSec - 1_800,
+            }),
+            updated_at: nowSec,
+          },
+        ],
+      },
+    ]);
+    const stats = createAuthoritativeLivePriceOverrideStats(5);
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [
+        { id: "cusd-cap", price: null } as PeggedAsset,
+        { id: "iusd-infinifi", price: null } as PeggedAsset,
+      ],
+      undefined,
+      undefined,
+      { db, wallClockBudgetMs: 5, stats },
+    );
+
+    expect(overrides.size).toBe(0);
+    expect(stats).toMatchObject({
+      candidateCount: 2,
+      attemptedCount: 1,
+      skippedBudget: 1,
+      timedOut: true,
+    });
+    expect(stats.assetAttempts).toEqual([
+      expect.objectContaining({ assetId: "cusd-cap", state: "attempted", result: "failed" }),
+      expect.objectContaining({ assetId: "iusd-infinifi", state: "skipped", skipReason: "budget" }),
+    ]);
+    const circuitWrites = db
+      .getHistory()
+      .filter(
+        (entry) =>
+          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PROTOCOL_REDEEM}`,
+      );
+    expect(circuitWrites).toHaveLength(1);
+    expect(JSON.parse(String(circuitWrites[0]?.binds[1]))).toMatchObject({
+      state: "open",
+      consecutiveFailures: 4,
+    });
+  });
+
   it("replays historical cUSD prices through the same authoritative provider", async () => {
     resolveClosestBlockAtOrBeforeTimestampMock.mockResolvedValueOnce(22_874_100).mockResolvedValueOnce(22_875_000);
     fetchEvmCallHexAtBlockMock.mockResolvedValue(QUOTE_HEX);
@@ -707,7 +804,7 @@ describe("authoritative-price-sources", () => {
       expect.stringMatching(/^0xb7c4a6bf/),
       22_874_100,
       expect.objectContaining({
-        extraRpcUrls: ["https://ethereum-rpc.publicnode.com"],
+        extraRpcUrls: ["https://ethereum-rpc.publicnode.com", "https://eth.llamarpc.com"],
       }),
     );
   });
@@ -767,7 +864,7 @@ describe("authoritative-price-sources", () => {
       expect.stringMatching(/^0xf308cf65/),
       "latest",
       expect.objectContaining({
-        extraRpcUrls: ["https://ethereum-rpc.publicnode.com"],
+        extraRpcUrls: ["https://ethereum-rpc.publicnode.com", "https://eth.llamarpc.com"],
       }),
     );
 
@@ -1233,7 +1330,7 @@ describe("authoritative-price-sources", () => {
       expect.stringMatching(/^0xf308cf65/),
       24_133_673,
       expect.objectContaining({
-        extraRpcUrls: ["https://ethereum-rpc.publicnode.com"],
+        extraRpcUrls: ["https://ethereum-rpc.publicnode.com", "https://eth.llamarpc.com"],
       }),
     );
   });
