@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.196",
+    title: "Active-scope pricing and deterministic PHPm recovery",
+    date: "2026-07-18",
+    effectiveAt: 1784380961,
+    summary:
+      "Live recovery budgets now serve only active assets, while a reviewed dual-pool Celo route restores PHPm when its preferred Mento quote is unavailable without weakening price provenance or depeg guardrails.",
+    impact: [
+      "Authoritative live-override candidates are restricted to the exact active registry, so frozen or quarantined assets cannot consume the shared ten-second budget ahead of active missing-price work",
+      "When the preferred PHPm Mento Broker route does not produce an accepted quote and no usable price already exists, the worker binds the exact PHPm/USDT and PHPm/USDC pools through the official Celo Uniswap V3 factory and quotes both routes at one fresh block",
+      "Both PHPm routes must pass 1,000- and 10,000-token impact checks and agree after trusted USDT/USDC normalization; the `uniswap-v3-exact` result remains fallback-confidence, non-replay-safe, and non-depeg-authoritative",
+      "The combined PHPm route uses its own recovery circuit, and optional refresh failures remain neutral while an incumbent price is usable so they cannot suppress later missing-price recovery",
+      "PHPm zero-supply collapse can use the reviewed Celo total-supply repair only after a successful on-chain read and current PHP FX normalization; MNEE, VEUR, and KRWO remain explicit fail-closed coverage gaps",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.195",
     title: "Reviewed-route recovery and long-tail provider repair",
     date: "2026-07-18",

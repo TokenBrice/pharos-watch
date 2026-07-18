@@ -120,7 +120,7 @@ function bucketYieldToken(asset: NestYieldAsset, token: NestPositionToken): Slic
     return {
       value,
       name: "Janus Henderson Anemoy Treasury Fund (JTRSY)",
-      risk: "very-low",
+      risk: "low",
       coinId: "jtrsy-anemoy",
     };
   }
@@ -128,7 +128,7 @@ function bucketYieldToken(asset: NestYieldAsset, token: NestPositionToken): Slic
     return {
       value,
       name: "Superstate USTB Treasury Fund",
-      risk: "very-low",
+      risk: "low",
       coinId: "ustb-superstate",
     };
   }

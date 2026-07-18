@@ -102,6 +102,7 @@ const SOURCE_LOGO_PATHS: Record<string, string> = {
   "balancer-dex": PROTOCOL_LOGOS.balancer,
   "curve-dex": PROTOCOL_LOGOS.curve,
   "uniswap-v3-dex": PROTOCOL_LOGOS["uniswap-v3"],
+  "uniswap-v3-exact": PROTOCOL_LOGOS["uniswap-v3"],
   "uniswap-v4-dex": PROTOCOL_LOGOS["uniswap-v4"],
   "raydium-dex": PROTOCOL_LOGOS.raydium,
   "orca-dex": PROTOCOL_LOGOS.orca,

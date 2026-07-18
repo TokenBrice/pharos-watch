@@ -3,6 +3,7 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  buildCoverageShortfallWarnings,
   buildUnknownExposureWarning,
   computeUnknownExposurePct,
   fetchJsonWithRetry,
@@ -255,6 +256,15 @@ export function adaptAccountableDashboard(
   const totalValue = positiveBreakdown.reduce((sum, entry) => sum + entry.value, 0);
   const unknownValue = unknown.reduce((sum, entry) => sum + entry.value, 0);
   const unknownExposurePct = computeUnknownExposurePct(unknownValue, totalValue);
+  const collateralizationRatio = toFiniteNumber(payload.data.collateralization);
+  if (collateralizationRatio == null || collateralizationRatio < 0) {
+    throw new Error(`Accountable dashboard returned invalid collateralization: ${String(payload.data.collateralization)}`);
+  }
+  const collateralizationWarnings = buildCoverageShortfallWarnings({
+    code: "reserve-undercollateralized",
+    message: (pct) => `Accountable dashboard reports ${pct}% collateralization`,
+    coverageRatio: collateralizationRatio,
+  });
 
   const slices = slicesFromValues(
     [
@@ -285,7 +295,7 @@ export function adaptAccountableDashboard(
 
   return {
     slices,
-    ...((unknownExposurePct > 0 || signedBuckets.length > 0 || totalValidationWarning)
+    ...((unknownExposurePct > 0 || signedBuckets.length > 0 || totalValidationWarning || collateralizationWarnings.length > 0)
       ? {
           warnings: [
             ...(unknownExposurePct > 0
@@ -297,6 +307,7 @@ export function adaptAccountableDashboard(
               : []),
             ...(signedBuckets.length > 0 ? [buildSignedBucketWarning(signedBuckets, totalValue)] : []),
             ...(totalValidationWarning ? [totalValidationWarning] : []),
+            ...collateralizationWarnings,
           ],
         }
       : {}),
@@ -308,6 +319,7 @@ export function adaptAccountableDashboard(
       ...(unknown.length > 0 ? { unknownBucketNames: unknown.map((entry) => entry.name).sort() } : {}),
       ...(unknownExposurePct > 0 ? { unknownExposurePct } : {}),
       collateralization: payload.data.collateralization,
+      collateralizationRatio,
       interval: payload.data.reserves.interval,
       verifiability: payload.data.reserves.verifiability,
       totalReserves,

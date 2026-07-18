@@ -38,6 +38,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // leaves it stale; aggregate the verified native Ethereum + Sonic supplies.
   "ftusd-flying-tulip": [{ chain: "ethereum" }, { chain: "sonic" }],
   "jpym-mento": [{ chain: "celo" }],
+  "phpm-mento": [{ chain: "celo" }],
   "zarm-mento": [{ chain: "celo" }],
   "xofm-mento": [{ chain: "celo" }],
 };

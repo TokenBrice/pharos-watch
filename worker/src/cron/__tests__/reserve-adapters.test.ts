@@ -100,13 +100,13 @@ describe("adaptEthenaCollateral", () => {
     expect(result.slices.length).toBe(4);
 
     // Find individual slices
-    const stableSlice = result.slices.find((s) => s.name.includes("stables"));
+    const liquidCashSlice = result.slices.find((s) => s.name.includes("Liquid Cash"));
     const btcSlice = result.slices.find((s) => s.name.includes("BTC"));
     const ethSlice = result.slices.find((s) => s.name.includes("ETH"));
     const otherSlice = result.slices.find((s) => s.name.includes("Other"));
 
-    expect(stableSlice).toBeDefined();
-    expect(stableSlice!.risk).toBe("low");
+    expect(liquidCashSlice).toBeDefined();
+    expect(liquidCashSlice!.risk).toBe("medium");
 
     expect(btcSlice).toBeDefined();
     expect(btcSlice!.risk).toBe("medium");
@@ -125,6 +125,9 @@ describe("adaptEthenaCollateral", () => {
 
     expect(result.metadata!.assetCount).toBe(5);
     expect(result.metadata!.totalBackingAssetsInUsd).toBe(5_000_000_000);
+    expect(result.metadata).not.toHaveProperty("immediateRedeemableUsd");
+    expect(result.metadata).not.toHaveProperty("immediateRedeemableRatio");
+    expect(result.metadata).not.toHaveProperty("redemption");
   });
 
   it("skips collateral rows with zero or negative usdAmount", () => {

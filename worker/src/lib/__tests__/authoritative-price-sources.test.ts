@@ -2,10 +2,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 
 const fetchEvmCallHexAtBlockMock = vi.fn();
+const fetchEvmBlockNumberMock = vi.fn();
+const fetchEvmBlockTimestampMock = vi.fn();
 const resolveClosestBlockAtOrBeforeTimestampMock = vi.fn();
 const fetchMarketBackfillPriceSeriesMock = vi.fn();
 
 vi.mock("@shared/lib/stablecoins/registry", () => ({
+  ACTIVE_IDS: {
+    has: (stablecoinId: string) => stablecoinId !== "sofid-sofi" && stablecoinId !== "usx-dforce",
+  },
   TRACKED_META_BY_ID: new Map([
     [
       "cusd-cap",
@@ -96,6 +101,8 @@ vi.mock("@shared/lib/stablecoins/registry", () => ({
 
 vi.mock("../evm-rpc", () => ({
   fetchEvmCallHexAtBlock: (...args: unknown[]) => fetchEvmCallHexAtBlockMock(...args),
+  fetchEvmBlockNumber: (...args: unknown[]) => fetchEvmBlockNumberMock(...args),
+  fetchEvmBlockTimestamp: (...args: unknown[]) => fetchEvmBlockTimestampMock(...args),
   resolveClosestBlockAtOrBeforeTimestamp: (...args: unknown[]) => resolveClosestBlockAtOrBeforeTimestampMock(...args),
 }));
 
@@ -155,6 +162,8 @@ function makePriorityCandidate(
 describe("authoritative-price-sources", () => {
   beforeEach(() => {
     fetchEvmCallHexAtBlockMock.mockReset();
+    fetchEvmBlockNumberMock.mockReset().mockResolvedValue(33_333_333);
+    fetchEvmBlockTimestampMock.mockReset().mockImplementation(async () => Math.floor(Date.now() / 1_000) - 30);
     resolveClosestBlockAtOrBeforeTimestampMock.mockReset();
     fetchMarketBackfillPriceSeriesMock.mockReset();
   });
@@ -173,6 +182,62 @@ describe("authoritative-price-sources", () => {
     expect(stats.attemptedCount).toBe(0);
     expect(stats.assetAttempts).toEqual([]);
     expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+  });
+
+  it("excludes frozen assets before authoritative candidate accounting and still processes active assets", async () => {
+    fetchEvmCallHexAtBlockMock.mockResolvedValue(QUOTE_HEX);
+    const stats = createAuthoritativeLivePriceOverrideStats();
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [
+        {
+          id: "usx-dforce",
+          name: "dForce USD",
+          symbol: "USX",
+          circulating: { peggedUSD: 1_000_000 },
+        },
+        {
+          id: "cusd-cap",
+          name: "Cap cUSD",
+          symbol: "CUSD",
+          circulating: { peggedUSD: 114_000_000 },
+        },
+      ],
+      undefined,
+      undefined,
+      { stats },
+    );
+
+    expect(overrides.has("usx-dforce")).toBe(false);
+    expect(overrides.get("cusd-cap")).toMatchObject({
+      price: 0.99999266,
+      source: "protocol-redeem",
+    });
+    expect(stats).toMatchObject({
+      candidateCount: 1,
+      attemptedCount: 1,
+      successCount: 1,
+      failedCount: 0,
+      emptyCount: 0,
+      skippedCircuitOpen: 0,
+      skippedBudget: 0,
+      timedOut: false,
+    });
+    expect(stats.assetAttempts).toEqual([
+      expect.objectContaining({
+        assetId: "cusd-cap",
+        state: "attempted",
+        result: "resolved",
+      }),
+    ]);
+    expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledTimes(1);
+    expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledWith(
+      "ethereum",
+      "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+      expect.stringMatching(/^0xb7c4a6bf/),
+      "latest",
+      expect.any(Object),
+    );
   });
 
   describe("fetchVaultAssetsPerShareViaSelector", () => {
@@ -492,6 +557,104 @@ describe("authoritative-price-sources", () => {
     warnSpy.mockRestore();
   });
 
+  it.each([
+    ["empty", null],
+    ["failed", new Error("broker unavailable")],
+  ] as const)("does not record an optional PHPm %s refresh as a recovery-circuit failure", async (_result, outcome) => {
+    if (outcome instanceof Error) {
+      fetchEvmCallHexAtBlockMock.mockRejectedValue(outcome);
+    } else {
+      fetchEvmCallHexAtBlockMock.mockResolvedValue(outcome);
+    }
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.PHPM_PRICE_ROUTE}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+    const nowSec = Math.floor(Date.now() / 1_000);
+
+    await fetchAuthoritativeLivePriceOverrides(
+      [
+        {
+          id: "phpm-mento",
+          symbol: "PHPm",
+          price: 0.0162,
+        } as PeggedAsset,
+        {
+          id: "cusd-celo",
+          symbol: "USDm",
+          price: 1,
+          priceSource: "coingecko+defillama-list",
+          priceConfidence: "high",
+          priceObservedAt: nowSec,
+          priceObservedAtMode: "local_fetch",
+          priceSyncedAt: nowSec,
+        } as PeggedAsset,
+      ],
+      undefined,
+      undefined,
+      { db },
+    );
+
+    expect(
+      db
+        .getHistory()
+        .filter(
+          (entry) =>
+            entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+            entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PHPM_PRICE_ROUTE}`,
+        ),
+    ).toHaveLength(0);
+    warnSpy.mockRestore();
+  });
+
+  it("records a failed PHPm recovery route when the input price is missing", async () => {
+    fetchEvmCallHexAtBlockMock.mockResolvedValue(null);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.PHPM_PRICE_ROUTE}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+    const nowSec = Math.floor(Date.now() / 1_000);
+
+    await fetchAuthoritativeLivePriceOverrides(
+      [
+        { id: "phpm-mento", symbol: "PHPm", price: null } as PeggedAsset,
+        {
+          id: "cusd-celo",
+          symbol: "USDm",
+          price: 1,
+          priceSource: "coingecko+defillama-list",
+          priceConfidence: "high",
+          priceObservedAt: nowSec,
+          priceObservedAtMode: "local_fetch",
+          priceSyncedAt: nowSec,
+        } as PeggedAsset,
+      ],
+      undefined,
+      undefined,
+      { db },
+    );
+
+    const circuitWrite = db
+      .getHistory()
+      .find(
+        (entry) =>
+          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+          entry.binds[0] === `circuit:${CIRCUIT_SOURCE.PHPM_PRICE_ROUTE}`,
+      );
+    expect(JSON.parse(String(circuitWrite?.binds[1]))).toMatchObject({ consecutiveFailures: 1 });
+    warnSpy.mockRestore();
+  });
+
   it("records parent-derived live RPC nulls as grouped protocol-redeem failures", async () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValue(null);
     const db = mockD1([
@@ -726,10 +889,7 @@ describe("authoritative-price-sources", () => {
     const stats = createAuthoritativeLivePriceOverrideStats(5);
 
     const overrides = await fetchAuthoritativeLivePriceOverrides(
-      [
-        { id: "cusd-cap", price: null } as PeggedAsset,
-        { id: "iusd-infinifi", price: null } as PeggedAsset,
-      ],
+      [{ id: "cusd-cap", price: null } as PeggedAsset, { id: "iusd-infinifi", price: null } as PeggedAsset],
       undefined,
       undefined,
       { db, wallClockBudgetMs: 5, stats },
@@ -1071,7 +1231,7 @@ describe("authoritative-price-sources", () => {
     });
   });
 
-  it("returns protocol-par live overrides for direct-redeem fiat assets", async () => {
+  it("returns protocol-par live overrides only for active direct-redeem fiat assets", async () => {
     const overrides = await fetchAuthoritativeLivePriceOverrides(
       [
         {
@@ -1151,11 +1311,7 @@ describe("authoritative-price-sources", () => {
       },
     );
 
-    expect(overrides.get("sofid-sofi")).toMatchObject({
-      price: 1,
-      source: "protocol-redeem",
-      confidence: "high",
-    });
+    expect(overrides.has("sofid-sofi")).toBe(false);
     expect(overrides.get("usbd-bima")).toMatchObject({
       price: 1,
       source: "protocol-redeem",

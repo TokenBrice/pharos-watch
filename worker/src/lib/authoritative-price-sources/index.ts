@@ -1,3 +1,4 @@
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { rethrowIfAborted } from "../abort";
@@ -87,6 +88,10 @@ function getProviderLivePriority(provider: PriceSourceProvider): number {
 
 function hasUsableLivePrice(asset: PeggedAsset): boolean {
   return typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0;
+}
+
+function shouldRecordLiveCircuitFailure(provider: PriceSourceProvider, asset: PeggedAsset): boolean {
+  return !provider.recordLiveCircuitFailuresOnlyWhenMissing || !hasUsableLivePrice(asset);
 }
 
 export function prioritizeAuthoritativeLivePriceCandidates<T extends AuthoritativeLivePriceCandidate>(
@@ -215,6 +220,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
     validationReferences,
   };
   const candidates = assets
+    .filter((asset) => ACTIVE_IDS.has(asset.id))
     .map((asset, originalIndex) => ({
       asset,
       originalIndex,
@@ -241,19 +247,28 @@ export async function fetchAuthoritativeLivePriceOverrides(
   const recordAttempt = (
     asset: PeggedAsset,
     provider: LivePriceProvider,
-    input: Omit<Parameters<typeof createPricingAssetAttempt>[0], "assetId" | "adapter" | "source" | "chain" | "target" | "replaySafe"> & {
+    input: Omit<
+      Parameters<typeof createPricingAssetAttempt>[0],
+      "assetId" | "adapter" | "source" | "chain" | "target" | "replaySafe"
+    > & {
       source?: string;
     },
   ): void => {
     if (!stats) return;
     const target = getRegistryLivePriceDiagnosticTarget(asset.id);
-    appendPricingAssetAttempts(stats.assetAttempts, [createPricingAssetAttempt({
-      assetId: asset.id,
-      adapter: provider.source,
-      source: input.source ?? provider.source,
-      ...(target ?? {}),
-      ...input,
-    })], MAX_AUTHORITATIVE_ASSET_ATTEMPTS);
+    appendPricingAssetAttempts(
+      stats.assetAttempts,
+      [
+        createPricingAssetAttempt({
+          assetId: asset.id,
+          adapter: provider.source,
+          source: input.source ?? provider.source,
+          ...(target ?? {}),
+          ...input,
+        }),
+      ],
+      MAX_AUTHORITATIVE_ASSET_ATTEMPTS,
+    );
   };
 
   const recordSkippedBudget = (startIndex: number): void => {
@@ -321,7 +336,12 @@ export async function fetchAuthoritativeLivePriceOverrides(
           rejectionClass: "missing-quote",
           candidateAt,
         });
-        if (circuitSource && options?.db && provider.recordNullLiveResultAsCircuitFailure) {
+        if (
+          circuitSource &&
+          options?.db &&
+          provider.recordNullLiveResultAsCircuitFailure &&
+          shouldRecordLiveCircuitFailure(provider, asset)
+        ) {
           await recordOutcomeSafe(options.db, circuitSource, false);
           circuitAttempts.delete(circuitSource);
         }
@@ -339,7 +359,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
           rejectionClass: "timeout",
           candidateAt,
         });
-        if (circuitSource && options?.db) {
+        if (circuitSource && options?.db && shouldRecordLiveCircuitFailure(provider, asset)) {
           await recordOutcomeSafe(options.db, circuitSource, false);
           circuitAttempts.delete(circuitSource);
         }
@@ -354,7 +374,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
         rejectionClass: errorClassFor(error),
         candidateAt,
       });
-      if (circuitSource && options?.db) {
+      if (circuitSource && options?.db && shouldRecordLiveCircuitFailure(provider, asset)) {
         await recordOutcomeSafe(options.db, circuitSource, false);
         circuitAttempts.delete(circuitSource);
       }

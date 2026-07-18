@@ -95,6 +95,16 @@ export function PricingPipelineMethodologySection() {
         </p>
 
         <p>
+          <strong className="text-foreground">Recovery scope.</strong> Live protocol-override work is limited to the exact
+          active registry, so frozen and quarantined assets cannot consume the shared recovery budget. If PHPm&apos;s
+          preferred Mento Broker route does not produce an accepted quote and its price is otherwise missing, the worker
+          can use two exact, factory-bound Celo Uniswap V3 routes only when fresh 1,000- and 10,000-token quotes have
+          bounded impact and agree after trusted USDT/USDC normalization. The non-replay-safe fallback cannot replace an
+          existing usable price or independently confirm a depeg, and optional refresh failures do not poison its recovery
+          circuit. KRWO remains fail-closed because its current pools do not meet executable-depth requirements.
+        </p>
+
+        <p>
           <strong className="text-foreground">Native-peg corroboration.</strong>{" "}
           For supported non-USD fiat assets with a reliable native-market quote, the pipeline now derives a fresh{" "}
           <code className="mx-1 text-xs">native quote × FX reference</code> USD mark during post-enrichment. That lane can

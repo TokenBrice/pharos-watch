@@ -64,11 +64,11 @@ describe("fetchNestVaultPositionsReserves", () => {
     );
 
     expect(result.slices).toEqual([
-      { name: "Superstate USTB Treasury Fund", pct: 30, risk: "very-low", coinId: "ustb-superstate" },
+      { name: "Superstate USTB Treasury Fund", pct: 30, risk: "low", coinId: "ustb-superstate" },
       { name: "Nest private and structured credit vaults", pct: 30, risk: "high" },
       { name: "Nest Treasury vault (nTBILL)", pct: 12.5, risk: "low", coinId: "ntbill-nest" },
       { name: "Liquid USDC balances", pct: 10, risk: "low", coinId: "usdc-circle" },
-      { name: "Janus Henderson Anemoy Treasury Fund (JTRSY)", pct: 10, risk: "very-low", coinId: "jtrsy-anemoy" },
+      { name: "Janus Henderson Anemoy Treasury Fund (JTRSY)", pct: 10, risk: "low", coinId: "jtrsy-anemoy" },
       { name: "Liquid USDT balances", pct: 5, risk: "low", coinId: "usdt-tether" },
       { name: "pUSD liquid balance", pct: 2.5, risk: "high", coinId: "pusd-plume" },
     ]);
