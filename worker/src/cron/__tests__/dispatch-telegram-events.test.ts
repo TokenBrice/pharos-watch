@@ -224,6 +224,73 @@ describe("buildTelegramDispatchEvents", () => {
     expect(events.depegTriggered[0].reopenedAfterMinutes).toBe(10);
   });
 
+  it("emits depeg worsening only when a supported subscriber step is crossed", async () => {
+    const events = await buildTelegramDispatchEvents(
+      {} as D1Database,
+      {
+        dewsRows: [],
+        activeDepegRows: [
+          {
+            stablecoin_id: "coin-no-step",
+            symbol: "NO",
+            direction: "below",
+            peak_deviation_bps: 150,
+            start_price: 0.985,
+            peg_reference: 1,
+            event_id: 1,
+          },
+          {
+            stablecoin_id: "coin-step",
+            symbol: "YES",
+            direction: "below",
+            peak_deviation_bps: 251,
+            start_price: 0.9749,
+            peg_reference: 1,
+            event_id: 2,
+          },
+        ],
+      } as never,
+      {
+        currentSafetySnapshot: {},
+        previousSafetySnapshot: null,
+        safeSafetySnapshot: {},
+        safeDewsAlertable: {},
+        safeDewsSnapshot: {},
+        safeDepegSnapshot: {
+          "coin-no-step": {
+            symbol: "NO",
+            direction: "below",
+            deviationBps: 101,
+            price: 0.9899,
+            pegReference: 1,
+            eventId: 1,
+          },
+          "coin-step": {
+            symbol: "YES",
+            direction: "below",
+            deviationBps: 249,
+            price: 0.9751,
+            pegReference: 1,
+            eventId: 2,
+          },
+        },
+        safetySnapshotNeedsSeed: false,
+        dewsSnapshotNeedsSeed: false,
+        depegSnapshotNeedsSeed: false,
+        launchSnapshotNeedsSeed: false,
+      } as never,
+      (id) => id,
+    );
+
+    expect(events.depegWorsening).toEqual([
+      expect.objectContaining({
+        stablecoinId: "coin-step",
+        previousDeviationBps: 249,
+        currentDeviationBps: 251,
+      }),
+    ]);
+  });
+
   it("does not emit resolved lines for coverage-loss closures", async () => {
     const db = {
       prepare: vi.fn(() => ({

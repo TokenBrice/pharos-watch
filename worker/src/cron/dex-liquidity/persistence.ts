@@ -542,6 +542,7 @@ export async function persistScores(
   let currentGenerationRows = 0;
   try {
     for (const [id, m] of metrics) {
+      throwIfAborted(signal);
       if (!ACTIVE_IDS.has(id)) continue;
       const sr = scoreResults.get(id);
       if (!sr) continue;
@@ -585,6 +586,7 @@ export async function persistScores(
     // Write placeholder rows for tracked stablecoins with no DEX presence.
     // liquidity_score = NULL so report cards treat them as NR (not rated).
     for (const meta of ACTIVE_STABLECOINS) {
+      throwIfAborted(signal);
       if (!metrics.has(meta.id)) {
         placeholderCount++;
         await queueStatement(

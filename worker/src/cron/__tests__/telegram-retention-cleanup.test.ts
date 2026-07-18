@@ -271,30 +271,28 @@ describe("runTelegramRetentionCleanup", () => {
     const state = makeState();
     for (let i = 0; i < 10_001; i += 1) {
       state.usageDaily.push({ day: "2024-01-01" });
-      state.jobTargets.push({ created_at: 1 });
+      state.diagnostics.push({ updated_at: 1 });
     }
     const db = createStubDb(state);
 
     const result = await runTelegramRetentionCleanup(db);
 
     expect(state.usageDaily).toHaveLength(1);
-    expect(state.jobTargets).toHaveLength(1);
+    expect(state.diagnostics).toHaveLength(1);
     const metadata = JSON.parse(result.metadata!) as {
       deleteBatchLimit: number;
       usageDailyPruned: number;
-      jobTargetsPruned: number;
+      diagnosticsPruned: number;
       cappedAtLimit: {
         usageDaily: boolean;
-        jobTargets: boolean;
-        jobs: boolean;
+        diagnostics: boolean;
       };
     };
     expect(metadata.deleteBatchLimit).toBe(10_000);
     expect(metadata.usageDailyPruned).toBe(10_000);
-    expect(metadata.jobTargetsPruned).toBe(10_000);
+    expect(metadata.diagnosticsPruned).toBe(10_000);
     expect(metadata.cappedAtLimit.usageDaily).toBe(true);
-    expect(metadata.cappedAtLimit.jobTargets).toBe(true);
-    expect(metadata.cappedAtLimit.jobs).toBe(false);
+    expect(metadata.cappedAtLimit.diagnostics).toBe(true);
   });
 
   it("caps processed-update retention to one bounded run and reports a lower-bound backlog", async () => {
