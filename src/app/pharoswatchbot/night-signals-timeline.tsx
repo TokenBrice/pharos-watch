@@ -41,7 +41,7 @@ function SignalRow({ alert }: { alert: AlertExample }) {
             {alert.key}
           </code>
         </div>
-        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">{alert.tagline}</p>
+        <p className="pharos-signal-copy mt-3 text-sm leading-relaxed text-muted-foreground">{alert.tagline}</p>
         <div className="mt-4 rounded-lg border border-border/50 bg-background/70 p-3">
           <div className="flex items-center gap-2 border-b border-border/40 pb-2">
             <Image src="/pharos-icon.png" alt="" width={20} height={20} className="rounded-full" />
@@ -63,8 +63,8 @@ function SignalRow({ alert }: { alert: AlertExample }) {
 export function NightSignalsTimeline() {
   return (
     <section id="signals" className="pharos-night-deep scroll-mt-20" aria-labelledby="signals-title">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:py-24 lg:px-5 xl:px-9">
-        <div className="max-w-2xl">
+      <div className="pharos-signals-shell mx-auto px-4 py-16 sm:py-24 lg:px-5 xl:px-9">
+        <div className="pharos-signal-copy">
           <h2 id="signals-title" className="pharos-display text-foreground">
             What lands in your chat
           </h2>
