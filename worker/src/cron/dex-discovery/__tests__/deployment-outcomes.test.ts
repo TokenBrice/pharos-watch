@@ -80,8 +80,8 @@ describe("DEX deployment outcomes", () => {
 
   it("materializes every audited unsupported deployment", () => {
     const outcomes = buildStaticInaccessibleDeploymentOutcomes(100);
-    expect(outcomes).toHaveLength(250);
-    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(117);
+    expect(outcomes).toHaveLength(249);
+    expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(116);
   });
 
   it("matches non-EVM deployments case-sensitively while retaining EVM normalization", () => {

@@ -41,12 +41,14 @@ describe("selectDigestIntelligence", () => {
       nextTriggers: null,
       forwardLookOutcomes: null,
       riskTape: null,
+      standingConditions: null,
     });
     expect(selectDigestIntelligence("garbage")).toEqual({
       changeSummary: null,
       nextTriggers: null,
       forwardLookOutcomes: null,
       riskTape: null,
+      standingConditions: null,
     });
   });
 

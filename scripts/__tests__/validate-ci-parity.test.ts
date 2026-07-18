@@ -569,7 +569,9 @@ describe("validate-ci parity", () => {
     const pages = workflow.jobs["pages-release"];
     expect(pages.needs).toEqual(["plan", "deploy-worker"]);
     expect(pages.uses).toBe("./.github/workflows/pages-release.yml");
-    expect(pages.with).toEqual({ refresh_data: false });
+    // Code deploys refresh digest/depeg/dataset snapshots (fail-open) so digest
+    // surfaces stop regressing to the committed snapshot on every merge.
+    expect(pages.with).toEqual({ refresh_data: true });
     expect(Object.keys(pages.secrets ?? {}).sort()).toEqual([
       "CLOUDFLARE_ACCOUNT_ID",
       "CLOUDFLARE_API_TOKEN",
