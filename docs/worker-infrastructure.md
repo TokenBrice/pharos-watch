@@ -635,7 +635,7 @@ Most high-risk external integrations are protected by per-source circuit breaker
 - **Open threshold**: 3 consecutive failures
 - **Probe interval**: 30 minutes (one request allowed to test recovery)
 - **Alerts**: Webhook alert fires on open and close transitions
-- **Health impact**: 3 or more public-impact open circuits degrade `/api/health`; scoped `live-reserves:*`, optional `dexscreener-liquidity` / `dexscreener-search`, and single-asset `kava-pricefeed`, `jusd-citrea-bridge`, `usx-stable-pools`, `aznd-curve-pool`, and `phpm-price-route` breakers are excluded from that source-wide count. They remain in admin provider diagnostics, while reserve and exact active-price coverage own their public impact. The retired `mento-broker` cache key is no longer an active source and is filtered from Worker diagnostics.
+- **Health impact**: 3 or more public-impact open circuits degrade `/api/health`; scoped `live-reserves:*`, optional `dexscreener-liquidity` / `dexscreener-search`, and single-asset `kava-pricefeed`, `jusd-citrea-bridge`, `usx-stable-pools`, and `aznd-curve-pool` breakers are excluded from that source-wide count. They remain in admin provider diagnostics, while reserve and exact active-price coverage own their public impact. The retired `mento-broker` cache key is no longer an active source and is filtered from Worker diagnostics.
 
 Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 
@@ -674,7 +674,6 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `JUSD_CITREA_BRIDGE`                 | `jusd-citrea-bridge`          | `enrich-prices` exact Citrea JUSD bridge route                                                                            |
 | `USX_STABLE_POOLS`                   | `usx-stable-pools`            | `enrich-prices` exact Base/Optimism USX pool routes                                                                       |
 | `AZND_CURVE_POOL`                    | `aznd-curve-pool`             | `enrich-prices` exact thin AZND Curve route                                                                               |
-| `PHPM_PRICE_ROUTE`                   | `phpm-price-route`            | `enrich-prices` exact PHPm/USDm Mento Broker quote                                                                        |
 | `PROTOCOL_REDEEM`                    | `protocol-redeem`             | External live RPC-backed authoritative `protocol-redeem` overrides                                                        |
 | `CURVE_ONCHAIN`                      | `curve-onchain`               | `enrich-prices` primary consensus                                                                                         |
 | `CURVE_ORACLE`                       | `curve-oracle`                | `enrich-prices` crvUSD Curve oracle consensus                                                                             |

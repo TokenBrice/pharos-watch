@@ -20,12 +20,9 @@ const COINGECKO_LOW_VOLUME_SOURCE = "coingecko-low-volume";
 // Membership is guarded by enrich-prices-coingecko-low-volume-pass.test.ts, which
 // fails if any ID here is no longer present in the active registry (ACTIVE_META_BY_ID).
 export const LOW_VOLUME_CG_FALLBACK_IDS = new Set([
-  "mnee-mnee",
-  "veur-vnx",
   "deuro-deuro",
   "usdn-smardex",
   "cadm-mento",
-  "usp-pareto-credit",
   "tryb-bilira",
   "btcusd-btcfi",
   "dllr-sovryn",

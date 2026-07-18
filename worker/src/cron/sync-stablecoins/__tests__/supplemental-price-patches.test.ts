@@ -20,15 +20,15 @@ describe("runCoingeckoLowVolumePass", () => {
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
       if (url.includes("coingecko.com")) {
         return new Response(JSON.stringify({
-          "pareto-usp": { usd: 0.911, last_updated_at: observedAt },
+          "sovryn-dollar": { usd: 0.998, last_updated_at: observedAt },
         }), { status: 200 });
       }
       return new Response("Not found", { status: 404 });
     }));
 
     const primary = asset({
-      id: "usp-pareto-credit",
-      symbol: "USP",
+      id: "dllr-sovryn",
+      symbol: "DLLR",
       price: null,
       priceSource: "defillama",
       priceConfidence: null,
@@ -40,7 +40,7 @@ describe("runCoingeckoLowVolumePass", () => {
 
     expect(result).toEqual({ resolved: 1, failures: [] });
     expect(primary).toMatchObject({
-      price: 0.911,
+      price: 0.998,
       priceSource: "coingecko-low-volume",
       priceSelectedSource: "coingecko-low-volume",
       priceConfidence: "fallback",
@@ -54,35 +54,34 @@ describe("runCoingeckoLowVolumePass", () => {
     });
   });
 
-  it("includes audited MNEE, VEUR, and dEURO production gaps in the relaxed fallback allowlist", async () => {
+  it("includes audited dEURO, DLLR, and ebUSD production gaps in the relaxed fallback allowlist", async () => {
     const observedAt = Math.floor(Date.now() / 1000) - 6 * 3600;
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
       if (url.includes("coingecko.com")) {
         return new Response(JSON.stringify({
-          "mnee-usd-stablecoin": { usd: 0.9996, last_updated_at: observedAt },
-          "vnx-euro": { usd: 1.16, last_updated_at: observedAt },
           "decentralized-euro": { usd: 1.14, last_updated_at: observedAt },
+          "sovryn-dollar": { usd: 0.998, last_updated_at: observedAt },
+          "ebusd-stablecoin": { usd: 1.001, last_updated_at: observedAt },
         }), { status: 200 });
       }
       return new Response("Not found", { status: 404 });
     }));
 
-    const mnee = asset({
-      id: "mnee-mnee",
-      symbol: "MNEE",
+    const dllr = asset({
+      id: "dllr-sovryn",
+      symbol: "DLLR",
       price: null,
       priceSource: "defillama",
       supplySource: "defillama",
       circulating: { peggedUSD: 100_000_000 },
     });
-    const veur = asset({
-      id: "veur-vnx",
-      symbol: "VEUR",
-      pegType: "peggedEUR",
+    const ebusd = asset({
+      id: "ebusd-ebisu",
+      symbol: "ebUSD",
       price: null,
       priceSource: "coingecko",
       supplySource: "defillama-history-gap-fill",
-      circulating: { peggedEUR: 3_200_000 },
+      circulating: { peggedUSD: 3_200_000 },
     });
     const deuro = asset({
       id: "deuro-deuro",
@@ -94,17 +93,17 @@ describe("runCoingeckoLowVolumePass", () => {
       circulating: { peggedEUR: 1_600_000 },
     });
 
-    const result = await runCoingeckoLowVolumePass([mnee, veur, deuro], null, { peggedEUR: 1.16 });
+    const result = await runCoingeckoLowVolumePass([dllr, ebusd, deuro], null, { peggedEUR: 1.16 });
 
     expect(result).toEqual({ resolved: 3, failures: [] });
-    expect(mnee).toMatchObject({
-      price: 0.9996,
+    expect(dllr).toMatchObject({
+      price: 0.998,
       priceSource: "coingecko-low-volume",
       priceConfidence: "fallback",
       supplySource: "defillama",
     });
-    expect(veur).toMatchObject({
-      price: 1.16,
+    expect(ebusd).toMatchObject({
+      price: 1.001,
       priceSource: "coingecko-low-volume",
       priceConfidence: "fallback",
       supplySource: "defillama-history-gap-fill",
@@ -259,13 +258,13 @@ describe("runCoingeckoLowVolumePass", () => {
   it("ignores malformed CoinGecko simple-price payloads", async () => {
     vi.stubGlobal("fetch", vi.fn(async () =>
       new Response(JSON.stringify({
-        "pareto-usp": { usd: "0.911" },
+        "sovryn-dollar": { usd: "0.998" },
       }), { status: 200 })
     ));
 
     const primary = asset({
-      id: "usp-pareto-credit",
-      symbol: "USP",
+      id: "dllr-sovryn",
+      symbol: "DLLR",
       price: null,
       priceSource: "defillama",
       supplySource: "defillama",

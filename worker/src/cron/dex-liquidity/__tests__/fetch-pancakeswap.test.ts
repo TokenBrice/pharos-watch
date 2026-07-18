@@ -103,18 +103,18 @@ describe("fetchPancakeSwapPools", () => {
   });
 
   it("maps Pancake's asymmetric token1Price to the token0/token1 pool ratio", async () => {
-    const krwoPool = makePool("0xkrwo-usdt");
-    krwoPool.token0 = {
+    const wonPool = makePool("0xwon-usdt");
+    wonPool.token0 = {
       id: "0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1",
-      symbol: "KRWO",
+      symbol: "WON",
       decimals: "6",
     };
-    krwoPool.token1 = { id: "0xusdt", symbol: "USDT", decimals: "18" };
-    krwoPool.token0Price = "1349.284";
-    krwoPool.token1Price = "0.00074113379";
+    wonPool.token1 = { id: "0xusdt", symbol: "USDT", decimals: "18" };
+    wonPool.token0Price = "1349.284";
+    wonPool.token1Price = "0.00074113379";
 
     vi.mocked(fetchTextWithRetry)
-      .mockImplementationOnce(async () => textResult(response({ data: { pools: [krwoPool] } })))
+      .mockImplementationOnce(async () => textResult(response({ data: { pools: [wonPool] } })))
       .mockImplementationOnce(async () => textResult(response({ data: { poolHourDatas: [] } })))
       .mockImplementation(async () => textResult(response({ data: { pools: [] } })));
 

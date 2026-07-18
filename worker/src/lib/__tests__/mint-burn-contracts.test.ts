@@ -217,7 +217,6 @@ describe("mint-burn-contracts top-50 Ethereum additions", () => {
     { stablecoinId: "avusd-avant", symbol: "avUSD", address: "0xf4c13d631450de6b12a19829e37c8e2826891dc4", decimals: 18 },
     { stablecoinId: "pmusd-precious-metals", symbol: "pmUSD", address: "0xc0c17dd08263c16f6b64e772fb9b723bf1344ddf", decimals: 18 },
     { stablecoinId: "usdz-anzen", symbol: "USDz", address: "0xa469b7ee9ee773642b3e93e842e5d9b5baa10067", decimals: 18 },
-    { stablecoinId: "mnee-mnee", symbol: "MNEE", address: "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf", decimals: 18 },
     { stablecoinId: "tbill-openeden", symbol: "TBILL", address: "0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a", decimals: 6 },
   ];
 
@@ -397,7 +396,6 @@ describe("mint-burn-contracts top-200 Ethereum additions", () => {
     { stablecoinId: "vchf-vnx", symbol: "VCHF", address: "0x79d4f0232a66c4c91b89c76362016a1707cfbf4f", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "ussd-sonic-labs", symbol: "USSD", address: "0x000000000eccff26b795f73fb0a70d48da657fef", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "cadc-cad-coin", symbol: "CADC", address: "0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef", decimals: 18, dustThreshold: 10_000 },
-    { stablecoinId: "veur-vnx", symbol: "VEUR", address: "0x6ba75d640bebfe5da1197bb5a2aff3327789b5d3", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "dusd-dtrinity", symbol: "dUSD", address: "0x07fff99e1664d9b116fbc158c0e99785f81ca236", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "usdaf-asymmetry", symbol: "USDaf", address: "0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "eurau-allunity", symbol: "EURAU", address: "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2", decimals: 6, dustThreshold: 10_000 },

@@ -411,7 +411,6 @@ describe("yield config registry", () => {
       "usda-avalon",
       "usdcx-movement",
       "usdx-kava",
-      "usp-pareto-credit",
       "usx-dforce",
       "vusd-virtue",
       "xusd-straitsx",

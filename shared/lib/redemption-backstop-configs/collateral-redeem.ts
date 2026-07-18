@@ -142,7 +142,7 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     sourceFilePath: SOURCE_FILE_PATH,
   }),
   ...defineBatch(
-    ["audm-mento", "brlm-mento", "cadm-mento", "copm-mento", "ghsm-mento", "kesm-mento", "phpm-mento", "zarm-mento"],
+    ["audm-mento", "brlm-mento", "cadm-mento", "copm-mento", "ghsm-mento", "kesm-mento", "zarm-mento"],
     mentoBrokerPoolRedeemConfig,
     { sourceFilePath: SOURCE_FILE_PATH },
   ),

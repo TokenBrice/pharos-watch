@@ -146,7 +146,6 @@ describe("report-card blacklist authority", () => {
       expect(resolved.get(id)).toBe("inherited");
     }
 
-    expect(resolved.get("krwo-gimswap")).toBe("inherited");
     expect(resolved.get("luausd-lumi-finance")).toBe("inherited");
     // usdn-smardex: TERRA re-review of the verified Ethereum USDN source found no
     // direct holder freeze/blacklist and added a reviewed suppression (same-symbol

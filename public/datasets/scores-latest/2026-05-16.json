@@ -4,7 +4,7 @@
     "asOfISO": "2026-05-16T21:20:16.676Z",
     "sourceUrl": "https://pharos.watch/datasets/scores-latest/latest.json",
     "methodologyLabel": "safety-score v7.25 | dews v6.0 | liquidity v5.6",
-    "rowCount": 547,
+    "rowCount": 542,
     "freshnessContract": "point-in-time sample; not guaranteed to track production freshness"
   },
   "rows": [
@@ -449,17 +449,6 @@
       "coverageClass": "fallback"
     },
     {
-      "stablecoinId": "usp-pareto-credit",
-      "symbol": "USP",
-      "pegScore": 100,
-      "safetyScore": null,
-      "safetyGrade": "NR",
-      "dewsScore": 46,
-      "dewsBand": "ALERT",
-      "liquidityScore": 21,
-      "coverageClass": "primary"
-    },
-    {
       "stablecoinId": "usdq-quill",
       "symbol": "USDQ",
       "pegScore": 100,
@@ -612,17 +601,6 @@
       "dewsBand": "WATCH",
       "liquidityScore": 54,
       "coverageClass": "primary"
-    },
-    {
-      "stablecoinId": "phpm-mento",
-      "symbol": "PHPm",
-      "pegScore": 100,
-      "safetyScore": null,
-      "safetyGrade": "NR",
-      "dewsScore": 11,
-      "dewsBand": "CALM",
-      "liquidityScore": 64,
-      "coverageClass": "mixed"
     },
     {
       "stablecoinId": "cadm-mento",
@@ -1593,17 +1571,6 @@
       "coverageClass": "fallback"
     },
     {
-      "stablecoinId": "krwo-gimswap",
-      "symbol": "KRWO",
-      "pegScore": 100,
-      "safetyScore": null,
-      "safetyGrade": "NR",
-      "dewsScore": 10,
-      "dewsBand": "CALM",
-      "liquidityScore": 39,
-      "coverageClass": "fallback"
-    },
-    {
       "stablecoinId": "sofid-sofi",
       "symbol": "SOFID",
       "pegScore": 100,
@@ -1832,17 +1799,6 @@
       "dewsScore": 4,
       "dewsBand": "CALM",
       "liquidityScore": 50,
-      "coverageClass": "mixed"
-    },
-    {
-      "stablecoinId": "veur-vnx",
-      "symbol": "VEUR",
-      "pegScore": 99,
-      "safetyScore": 71,
-      "safetyGrade": "B",
-      "dewsScore": 7,
-      "dewsBand": "CALM",
-      "liquidityScore": 63,
       "coverageClass": "mixed"
     },
     {
@@ -2097,17 +2053,6 @@
       "dewsBand": "WATCH",
       "liquidityScore": 77,
       "coverageClass": "mixed"
-    },
-    {
-      "stablecoinId": "mnee-mnee",
-      "symbol": "MNEE",
-      "pegScore": 97,
-      "safetyScore": 61,
-      "safetyGrade": "C+",
-      "dewsScore": 3,
-      "dewsBand": "CALM",
-      "liquidityScore": 43,
-      "coverageClass": "fallback"
     },
     {
       "stablecoinId": "xusd-straitsx",

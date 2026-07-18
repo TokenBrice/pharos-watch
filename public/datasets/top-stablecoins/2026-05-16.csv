@@ -91,7 +91,6 @@ gtusdcp-gauntlet,gtUSDCp,Gauntlet USDC Prime,peggedUSD,crypto-backed,1.021977809
 usdat-saturn,USDat,Saturn USDat,peggedUSD,rwa-backed,0.9989660777204402,104434893.5966411,1,Ethereum
 stac-securitize,STAC,Securitize Tokenized AAA CLO Fund,peggedUSD,rwa-backed,1017.7825763973831,101879725.14087734,1,Ethereum
 stcusd-cap,stcUSD,Staked Cap USD,peggedUSD,rwa-backed,1.0622310763571257,101700876.10438107,1,Ethereum
-mnee-mnee,MNEE,MNEE USD,peggedUSD,fiat-backed,1.00020001,101407188.54819955,1,Ethereum
 dusd-standx,DUSD,StandX DUSD,peggedUSD,crypto-backed,0.999306,100686274.32493159,2,BSC;Solana
 sofid-sofi,SOFID,SoFiUSD,peggedUSD,rwa-backed,1,100011704,1,Ethereum
 uusd-anything-labs,UUSD,Unity USD,peggedUSD,crypto-backed,0.999273,99927273.77657166,1,BSC
@@ -291,7 +290,6 @@ audf-forte,AUDF,Forte AUD,peggedAUD,rwa-backed,0.720533,3656771.787841578,4,Ethe
 xagm-matrixdock,XAGm,Matrixdock Silver,peggedSILVER,rwa-backed,78.94,3629155.429354413,1,Ethereum
 pht-pht,PHT,PHT Stablecoin,peggedPHP,crypto-backed,0.016112421450387247,3625486.5603063777,3,Ethereum;Tron;Polygon
 djed-coti,DJED,Djed StableCoin,peggedUSD,algorithmic,1.000644796829843,3275233.6412712513,1,Cardano
-veur-vnx,VEUR,VNX EURO,peggedEUR,fiat-backed,1.1647049902974498,3217235.5974140423,13,Solana;Avalanche;Base;Stellar;Ethereum;Celo;Fraxtal;Polygon;Arbitrum;Tezos;Q Protocol;XRP Ledger;Internet Computer
 26,MUSD,mStable USD,peggedUSD,crypto-backed,1.0000989616443103,3207542.9631165024,3,Ethereum;Polygon;Gnosis
 usdxl-last,USDXL,Last USD,peggedUSD,crypto-backed,0.998216,3192171.138127118,2,Hyperliquid L1;HyperEVM
 usr-resolv,USR,Resolv USD,peggedUSD,crypto-backed,,3123169.3274418106,6,Ethereum;Base;BSC;Soneium;Hyperliquid L1;Berachain
@@ -359,7 +357,6 @@ srusd-reservoir,srUSD,Savings rUSD,peggedUSD,rwa-backed,1.14,918849.2764467461,2
 107,CZUSD,Czodiac USD,peggedUSD,crypto-backed,0.9998795904917785,906476.3158216582,1,BSC
 ftusd-flying-tulip,ftUSD,Flying Tulip USD,peggedUSD,crypto-backed,0.999988,868459.9588768134,2,Ethereum;Sonic
 xmd-metal-dollar,XMD,Metal Dollar,peggedUSD,crypto-backed,1.009,846035.2311692478,0,
-usp-pareto-credit,USP,Pareto USP,peggedUSD,crypto-backed,0.998253,815058.5698157966,1,Ethereum
 gbpe-monerium,GBPe,Monerium GBP emoney,peggedGBP,rwa-backed,1.35,783651.2623904493,5,Ethereum;Gnosis;Linea;Arbitrum;Base
 ntbill-nest,nTBILL,Nest Treasury Vault,peggedUSD,rwa-backed,1.045094,765639.2648672869,2,Ethereum;Plume
 usdaf-asymmetry,USDaf,Asymmetry USDaf V2,peggedUSD,crypto-backed,0.9891108333451187,736039.3019058653,1,Ethereum
@@ -436,7 +433,6 @@ usdq-quill,USDQ,Quill USD,peggedUSD,crypto-backed,1,132307.89839452127,1,Scroll
 ebusd-ebisu,EBUSD,EBUSD,peggedUSD,crypto-backed,0.9979367137474362,128099.55349524422,2,Ethereum;Plasma
 euroe-membrane,EUROe,EUROe Stablecoin,peggedEUR,fiat-backed,0.9998795904917785,122645.09253134471,7,Solana;Polygon;Ethereum;Arbitrum;Avalanche;OP Mainnet;Concordium
 144,HYUSD,High Yield USD,peggedUSD,algorithmic,0.9998795904917785,116561.39496311198,2,Base;Ethereum
-phpm-mento,PHPm,Mento Philippine Peso,peggedPHP,crypto-backed,0.01620920543419551,112412.60426892951,1,Celo
 124,peUSD,peg-eUSD,peggedUSD,crypto-backed,0.9998795904917785,108913.81764012504,2,Ethereum;Arbitrum
 jpym-mento,JPYm,Mento Japanese Yen,peggedJPY,crypto-backed,0.00630791,104059.8621313449,1,Celo
 233,USDS,TheStandard USD,peggedUSD,crypto-backed,1,100771.7492615901,1,Arbitrum
@@ -499,7 +495,6 @@ euro3-3a-dao,EURO3,EURO3,peggedEUR,crypto-backed,0.9998795904917785,22863.467806
 207,DYAD,Dyad,peggedUSD,crypto-backed,,16644.631395030392,1,Ethereum
 189,btcUSD,btcUSD,peggedUSD,crypto-backed,0.9998795904917785,14681.024176925615,1,Ethereum
 169,GAI,GAI Stablecoin,peggedUSD,crypto-backed,0.9998795904917785,14297.328062721686,1,Manta
-krwo-gimswap,KRWO,KRWO,peggedKRW,rwa-backed,0.00067296,13661.168273100917,2,Klaytn;BSC
 338,FUSD,Fuse Dollar V3,peggedUSD,crypto-backed,0.991174,13386.963845328357,1,Fuse
 137,CDT,Collateralized Debt Token,peggedVAR,crypto-backed,1.002,12937.120031891554,1,Osmosis
 163,ULTRA,PrismaLRT Ultra,peggedUSD,crypto-backed,0.9998795904917785,12912.979418560457,1,Ethereum

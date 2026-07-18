@@ -61,7 +61,6 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   { stablecoinId: "ussd-sonic-labs", dustThreshold: 10_000 },
   { stablecoinId: "cadc-cad-coin", dustThreshold: 10_000 },
   { stablecoinId: "cadd-cad-digital", dustThreshold: 10_000 },
-  { stablecoinId: "veur-vnx", dustThreshold: 10_000 },
   { stablecoinId: "dusd-dtrinity", dustThreshold: 10_000 },
   { stablecoinId: "usdaf-asymmetry", dustThreshold: 10_000 },
   { stablecoinId: "eurau-allunity", dustThreshold: 10_000 },
@@ -105,7 +104,6 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   },
   { stablecoinId: "pmusd-precious-metals", dustThreshold: 10_000 },
   { stablecoinId: "usdz-anzen", dustThreshold: 10_000 },
-  { stablecoinId: "mnee-mnee", dustThreshold: 10_000 },
   { stablecoinId: "tbill-openeden", dustThreshold: 10_000 },
   // --- Top-100 supported expansion (Ethereum only) ---
   {

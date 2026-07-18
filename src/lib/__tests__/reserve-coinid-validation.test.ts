@@ -197,7 +197,6 @@ describe("reserve coinId validation", () => {
       "copm-mento",
       "ghsm-mento",
       "kesm-mento",
-      "phpm-mento",
       "zarm-mento",
       "dusd-dtrinity",
       "buck-buck-assets",

@@ -86,9 +86,9 @@ describe("PRICING_SOURCE_TO_CIRCUIT contract", () => {
       enforcementPath: "direct-provider",
     });
     expect(PRICING_SOURCE_CIRCUIT_METADATA["uniswap-v3-exact"]).toMatchObject({
-      circuit: CIRCUIT_SOURCE.PHPM_PRICE_ROUTE,
-      enforced: true,
-      enforcementPath: "direct-provider",
+      circuit: null,
+      enforced: false,
+      enforcementPath: "synthesized",
     });
     expect(PRICING_SOURCE_CIRCUIT_METADATA.cached).toMatchObject({
       circuit: null,

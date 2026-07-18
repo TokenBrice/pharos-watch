@@ -88,7 +88,6 @@ Explicit current limitations also remain source-tested:
 
 - RLUSD clawbacks are not event-covered because the verified ABI has no dedicated clawback event. Supporting them would require transaction-input classification.
 - USDA role-gated burns are not mapped to destroy rows because the contract does not emit the configured Tether destroy event.
-- MNEE freeze/unfreeze and confiscation/burn events are tracked, but its independent blacklist/delist state needs a separate restriction-state key before it can be added without state collisions.
 
 Canonical coverage and parser tests live in:
 

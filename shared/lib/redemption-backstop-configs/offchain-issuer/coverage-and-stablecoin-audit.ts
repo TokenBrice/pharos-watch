@@ -253,26 +253,6 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "Modeled as verified Bridge/Tempo primary-market redeemability into USDC rather than independently measured instant on-chain liquidity",
     ],
   },
-  "usp-pareto-credit": {
-    ...issuerBase,
-    ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
-    routeStatus: "open",
-    costModel: undisclosedReviewedFee(
-      "Pareto docs describe verified-user USP mint/redeem flow; public materials reviewed do not publish a single fixed redemption fee",
-    ),
-    docs: [
-      sourceRef("Pareto USP docs", "https://docs.pareto.credit/product/usp", [
-        "route",
-        "access",
-        "capacity",
-        "fees",
-        "settlement",
-      ]),
-    ],
-    notes: [
-      "Modeled for verified primary-market users; unverified secondary-market holders still depend on market liquidity or onboarding before direct redemption",
-    ],
-  },
   "gbpe-monerium": {
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),

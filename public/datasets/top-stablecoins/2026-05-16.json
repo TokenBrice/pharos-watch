@@ -4,7 +4,7 @@
     "asOfISO": "2026-05-16T21:20:16.676Z",
     "sourceUrl": "https://pharos.watch/datasets/top-stablecoins/latest.json",
     "methodologyLabel": "safety-score v7.25",
-    "rowCount": 547,
+    "rowCount": 542,
     "freshnessContract": "point-in-time sample; not guaranteed to track production freshness"
   },
   "rows": [
@@ -1006,17 +1006,6 @@
       "pegMechanism": "rwa-backed",
       "price": 1.0622310763571257,
       "circulatingUsd": 101700876.10438107,
-      "chainCount": 1,
-      "chains": "Ethereum"
-    },
-    {
-      "id": "mnee-mnee",
-      "symbol": "MNEE",
-      "name": "MNEE USD",
-      "pegType": "peggedUSD",
-      "pegMechanism": "fiat-backed",
-      "price": 1.00020001,
-      "circulatingUsd": 101407188.54819955,
       "chainCount": 1,
       "chains": "Ethereum"
     },
@@ -3210,17 +3199,6 @@
       "chains": "Cardano"
     },
     {
-      "id": "veur-vnx",
-      "symbol": "VEUR",
-      "name": "VNX EURO",
-      "pegType": "peggedEUR",
-      "pegMechanism": "fiat-backed",
-      "price": 1.1647049902974498,
-      "circulatingUsd": 3217235.5974140423,
-      "chainCount": 13,
-      "chains": "Solana;Avalanche;Base;Stellar;Ethereum;Celo;Fraxtal;Polygon;Arbitrum;Tezos;Q Protocol;XRP Ledger;Internet Computer"
-    },
-    {
       "id": "26",
       "symbol": "MUSD",
       "name": "mStable USD",
@@ -3956,17 +3934,6 @@
       "circulatingUsd": 846035.2311692478,
       "chainCount": 0,
       "chains": ""
-    },
-    {
-      "id": "usp-pareto-credit",
-      "symbol": "USP",
-      "name": "Pareto USP",
-      "pegType": "peggedUSD",
-      "pegMechanism": "crypto-backed",
-      "price": 0.998253,
-      "circulatingUsd": 815058.5698157966,
-      "chainCount": 1,
-      "chains": "Ethereum"
     },
     {
       "id": "gbpe-monerium",
@@ -4805,17 +4772,6 @@
       "chains": "Base;Ethereum"
     },
     {
-      "id": "phpm-mento",
-      "symbol": "PHPm",
-      "name": "Mento Philippine Peso",
-      "pegType": "peggedPHP",
-      "pegMechanism": "crypto-backed",
-      "price": 0.01620920543419551,
-      "circulatingUsd": 112412.60426892951,
-      "chainCount": 1,
-      "chains": "Celo"
-    },
-    {
       "id": "124",
       "symbol": "peUSD",
       "name": "peg-eUSD",
@@ -5496,17 +5452,6 @@
       "circulatingUsd": 14297.328062721686,
       "chainCount": 1,
       "chains": "Manta"
-    },
-    {
-      "id": "krwo-gimswap",
-      "symbol": "KRWO",
-      "name": "KRWO",
-      "pegType": "peggedKRW",
-      "pegMechanism": "rwa-backed",
-      "price": 0.00067296,
-      "circulatingUsd": 13661.168273100917,
-      "chainCount": 2,
-      "chains": "Klaytn;BSC"
     },
     {
       "id": "338",

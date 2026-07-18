@@ -5,7 +5,7 @@
     "sourceUrl": "https://pharos.watch/datasets/scores-latest/latest.json",
     "methodologyLabel": "safety-score v8.13 | dews v6.095 | liquidity v5.84",
     "freshnessContract": "point-in-time sample; not guaranteed to track production freshness",
-    "rowCount": 567
+    "rowCount": 562
   },
   "rows": [
     {
@@ -568,17 +568,6 @@
       "dewsBand": "CALM",
       "liquidityScore": 14,
       "coverageClass": "fallback"
-    },
-    {
-      "stablecoinId": "mnee-mnee",
-      "symbol": "MNEE",
-      "pegScore": null,
-      "safetyScore": 63,
-      "safetyGrade": "C+",
-      "dewsScore": 33,
-      "dewsBand": "WATCH",
-      "liquidityScore": null,
-      "coverageClass": "unobserved"
     },
     {
       "stablecoinId": "dola-inverse-finance",
@@ -2053,17 +2042,6 @@
       "dewsBand": null,
       "liquidityScore": null,
       "coverageClass": null
-    },
-    {
-      "stablecoinId": "usp-pareto-credit",
-      "symbol": "USP",
-      "pegScore": null,
-      "safetyScore": null,
-      "safetyGrade": null,
-      "dewsScore": 20,
-      "dewsBand": "WATCH",
-      "liquidityScore": 40,
-      "coverageClass": "primary"
     },
     {
       "stablecoinId": "scusd-rings",
@@ -3815,17 +3793,6 @@
       "coverageClass": "mixed"
     },
     {
-      "stablecoinId": "veur-vnx",
-      "symbol": "VEUR",
-      "pegScore": null,
-      "safetyScore": 64,
-      "safetyGrade": "C+",
-      "dewsScore": 24,
-      "dewsBand": "WATCH",
-      "liquidityScore": 39,
-      "coverageClass": "primary"
-    },
-    {
       "stablecoinId": "161",
       "symbol": "EURD",
       "pegScore": null,
@@ -4142,17 +4109,6 @@
       "dewsScore": 21,
       "dewsBand": "WATCH",
       "liquidityScore": 50,
-      "coverageClass": "primary"
-    },
-    {
-      "stablecoinId": "phpm-mento",
-      "symbol": "PHPm",
-      "pegScore": null,
-      "safetyScore": null,
-      "safetyGrade": null,
-      "dewsScore": 10,
-      "dewsBand": "CALM",
-      "liquidityScore": 65,
       "coverageClass": "primary"
     },
     {
@@ -6177,17 +6133,6 @@
       "dewsScore": 14,
       "dewsBand": "CALM",
       "liquidityScore": 43,
-      "coverageClass": "fallback"
-    },
-    {
-      "stablecoinId": "krwo-gimswap",
-      "symbol": "KRWO",
-      "pegScore": null,
-      "safetyScore": null,
-      "safetyGrade": null,
-      "dewsScore": 17,
-      "dewsBand": "WATCH",
-      "liquidityScore": 39,
       "coverageClass": "fallback"
     },
     {

@@ -830,17 +830,17 @@ describe("enrichMissingPrices", () => {
     });
   });
 
-  it("retrieves an exact MNEE slug through targeted quotes when the category page is truncated", async () => {
+  it("retrieves an exact slug through targeted quotes when the category page is truncated", async () => {
     const assets: PeggedAsset[] = [{
-      id: "mnee-mnee",
-      name: "MNEE USD",
-      symbol: "MNEE",
+      id: "test-dollar",
+      name: "Test Dollar",
+      symbol: "TUSD",
       price: 0,
-      cmcSlug: "mnee",
+      cmcSlug: "test-dollar",
       pegType: "peggedUSD",
       contracts: [{
         chain: "ethereum",
-        address: "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf",
+        address: "0x1111111111111111111111111111111111111111",
         decimals: 18,
       }],
       circulating: {},
@@ -850,13 +850,13 @@ describe("enrichMissingPrices", () => {
       {
         match: "/v3/cryptocurrency/quotes/latest",
         body: { data: [{
-          id: 32878,
-          slug: "mnee",
-          symbol: "MNEE",
+          id: 123,
+          slug: "test-dollar",
+          symbol: "TUSD",
           is_active: 1,
           platform: {
             slug: "ethereum",
-            token_address: "0x8cCeDbaE4916B79dA7f3F612eFb2Eb93A2bFD6Cf",
+            token_address: "0x1111111111111111111111111111111111111111",
           },
           quote: [{ symbol: "USD", ...cmcUsdQuote(0.9998), volume_24h: 143_000 }],
         }] },
@@ -870,7 +870,7 @@ describe("enrichMissingPrices", () => {
     expect(assets[0].priceSource).toBe("coinmarketcap");
     expect(fetchSpy.getHistory().map((entry) => entry.url)).toEqual([
       expect.stringContaining("/v1/cryptocurrency/category"),
-      expect.stringContaining("/v3/cryptocurrency/quotes/latest?slug=mnee&convert=USD"),
+      expect.stringContaining("/v3/cryptocurrency/quotes/latest?slug=test-dollar&convert=USD"),
     ]);
     expect(result.diagnostics).toEqual(expect.arrayContaining([
       expect.objectContaining({
@@ -884,10 +884,10 @@ describe("enrichMissingPrices", () => {
         matchedCount: 1,
         resolvedCount: 1,
         assetAttempts: [expect.objectContaining({
-          assetId: "mnee-mnee",
+          assetId: "test-dollar",
           adapter: "coinmarketcap",
           chain: "ethereum",
-          target: "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf",
+          target: "0x1111111111111111111111111111111111111111",
           state: "attempted",
           result: "resolved",
           replaySafe: false,
@@ -1050,23 +1050,23 @@ describe("enrichMissingPrices", () => {
   });
 
   it.each([
-    ["wrong contract", "MNEE", "0x0000000000000000000000000000000000000001", undefined, 1, 143_000],
-    ["missing contract", "MNEE", null, undefined, 1, 143_000],
-    ["symbol collision", "MNEE2", "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf", undefined, 1, 143_000],
-    ["stale quote", "MNEE", "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf", staleIsoTimestamp(), 1, 143_000],
-    ["inactive quote", "MNEE", "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf", undefined, 0, 143_000],
-    ["zero-volume quote", "MNEE", "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf", undefined, 1, 0],
+    ["wrong contract", "TUSD", "0x0000000000000000000000000000000000000001", undefined, 1, 143_000],
+    ["missing contract", "TUSD", null, undefined, 1, 143_000],
+    ["symbol collision", "TUSD2", "0x1111111111111111111111111111111111111111", undefined, 1, 143_000],
+    ["stale quote", "TUSD", "0x1111111111111111111111111111111111111111", staleIsoTimestamp(), 1, 143_000],
+    ["inactive quote", "TUSD", "0x1111111111111111111111111111111111111111", undefined, 0, 143_000],
+    ["zero-volume quote", "TUSD", "0x1111111111111111111111111111111111111111", undefined, 1, 0],
   ])("rejects a targeted CMC %s", async (_name, symbol, tokenAddress, lastUpdated, isActive, volume24h) => {
     const assets: PeggedAsset[] = [{
-      id: "mnee-mnee",
-      name: "MNEE USD",
-      symbol: "MNEE",
+      id: "test-dollar",
+      name: "Test Dollar",
+      symbol: "TUSD",
       price: 0,
-      cmcSlug: "mnee",
+      cmcSlug: "test-dollar",
       pegType: "peggedUSD",
       contracts: [{
         chain: "ethereum",
-        address: "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf",
+        address: "0x1111111111111111111111111111111111111111",
         decimals: 18,
       }],
       circulating: {},
@@ -1076,8 +1076,8 @@ describe("enrichMissingPrices", () => {
       {
         match: "/v3/cryptocurrency/quotes/latest",
         body: { data: [{
-          id: 32878,
-          slug: "mnee",
+          id: 123,
+          slug: "test-dollar",
           symbol,
           is_active: isActive,
           platform: tokenAddress == null ? null : { slug: "ethereum", token_address: tokenAddress },

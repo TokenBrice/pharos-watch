@@ -972,12 +972,12 @@ describe("dex-liquidity scoring", () => {
     expect(vi.mocked(batchExecute).mock.calls[0]?.[1]).toHaveLength(DEX_LIQUIDITY_SCORING_BATCH_SIZE);
   });
 
-  it("rejects a peg-impossible KRWO price before replacing dex_prices", async () => {
+  it("rejects a peg-impossible KRW price before replacing dex_prices", async () => {
     const diagnostics = await computeDexPrices(
-      makeQueryDb([{ match: "SELECT stablecoin_id FROM dex_prices", all: [{ stablecoin_id: "krwo-gimswap" }] }]),
+      makeQueryDb([{ match: "SELECT stablecoin_id FROM dex_prices", all: [{ stablecoin_id: "krwq-iq" }] }]),
       new Map([
-        ["krwo-gimswap", [makeDexPricePool({
-          poolId: "bsc:pancakeswap-krwo-usdt",
+        ["krwq-iq", [makeDexPricePool({
+          poolId: "bsc:pancakeswap-krwq-usdt",
           project: "pancakeswap",
           chain: "BSC",
           tvlUsd: 82_806,
@@ -997,12 +997,12 @@ describe("dex-liquidity scoring", () => {
     expect(diagnostics).toEqual({
       rejectedObservationCount: 1,
       rejectedByStablecoin: [{
-        stablecoinId: "krwo-gimswap",
+        stablecoinId: "krwq-iq",
         reason: "peg-impossible",
         observations: [{
           chain: "BSC",
           protocol: "pancakeswap",
-          poolKey: "bsc:pancakeswap-krwo-usdt",
+          poolKey: "bsc:pancakeswap-krwq-usdt",
           price: 1349.284,
           tvl: 82_806,
           sourceFamily: "direct_api",
@@ -1013,12 +1013,12 @@ describe("dex-liquidity scoring", () => {
     });
   });
 
-  it("persists a correctly oriented KRWO price inside the KRW peg band", async () => {
+  it("persists a correctly oriented KRW price inside the KRW peg band", async () => {
     await computeDexPrices(
       makeQueryDb([]),
       new Map([
-        ["krwo-gimswap", [makeDexPricePool({
-          poolId: "bsc:pancakeswap-krwo-usdt",
+        ["krwq-iq", [makeDexPricePool({
+          poolId: "bsc:pancakeswap-krwq-usdt",
           project: "pancakeswap",
           chain: "BSC",
           tvlUsd: 82_806,
@@ -1034,8 +1034,8 @@ describe("dex-liquidity scoring", () => {
     expect(prepared).toHaveLength(1);
     expect(prepared[0]?.sql).toContain("INSERT INTO dex_price_run_rows");
     expect(prepared[0]?.boundValues.slice(0, 5)).toEqual([
-      "krwo-gimswap",
-      "KRWO",
+      "krwq-iq",
+      "KRWQ",
       0.000741,
       1,
       82_806,

@@ -318,7 +318,6 @@ describe("getRedemptionBackstopConfig", () => {
       "eurs-stasis",
       "gyen-gyen",
       "cadc-cad-coin",
-      "veur-vnx",
       "vchf-vnx",
       "vgbp-vnx",
       "tryb-bilira",
@@ -379,7 +378,6 @@ describe("getRedemptionBackstopConfig", () => {
   it("marks reviewed lower-cap issuer routes as documented-bound", () => {
     const reviewedIssuerIds = [
       "cash-phantom",
-      "mnee-mnee",
       "xusd-straitsx",
       "xsgd-straitsx",
       "usdq-quantoz",

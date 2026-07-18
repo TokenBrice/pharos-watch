@@ -585,15 +585,8 @@ describe("fetchBalancerPools", () => {
 
     const pools = await fetchBalancerPools();
     expect(pools.pools.length).toBe(1001);
-    // Pagination uses two list requests; the reviewed USP route adds one pool
-    // admission request and fails closed before its quote requests on non-OK.
-    expect(mockFetch).toHaveBeenCalledTimes(3);
-    const reviewedPoolRequest = JSON.parse(String(mockFetch.mock.calls[2]?.[1]?.body));
-    expect(reviewedPoolRequest.query).toContain("poolGetPool");
-    expect(reviewedPoolRequest.variables).toEqual({
-      id: "0x114907c2a07978c38ebb9f9f6a5261a846b79521",
-      chain: "MAINNET",
-    });
+    // Pagination uses two list requests.
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
   it("skips pools with unknown chain", async () => {

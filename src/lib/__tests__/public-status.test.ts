@@ -43,7 +43,7 @@ describe("public status helpers", () => {
     const health: HealthResponse = {
       ...BASE_HEALTH,
       status: "degraded",
-      warnings: ["active-price-coverage-incomplete:mnee-mnee,phpm-pharos"],
+      warnings: ["active-price-coverage-incomplete:nxusd-nereus,test-dollar"],
       activePriceCoverage: {
         status: "incomplete",
         expectedActiveCount: 190,
@@ -51,12 +51,12 @@ describe("public status helpers", () => {
         pricedActiveCount: 188,
         missingPriceCount: 2,
         pricedActiveIds: [],
-        missingActiveIds: ["mnee-mnee", "phpm-pharos"],
+        missingActiveIds: ["nxusd-nereus", "test-dollar"],
         affectedMarketCapUsd: 2_000_000,
         missingActiveAssets: [
           {
-            stablecoinId: "mnee-mnee",
-            symbol: "MNEE",
+            stablecoinId: "nxusd-nereus",
+            symbol: "NXUSD",
             marketCapUsd: 1_500_000,
             currentPrice: null,
             currentSource: null,
@@ -70,8 +70,8 @@ describe("public status helpers", () => {
             alertEligible: true,
           },
           {
-            stablecoinId: "phpm-pharos",
-            symbol: "PHPm",
+            stablecoinId: "test-dollar",
+            symbol: "TUSD",
             marketCapUsd: 500_000,
             currentPrice: null,
             currentSource: null,
@@ -86,7 +86,7 @@ describe("public status helpers", () => {
           },
         ],
         alertEligibleCount: 1,
-        alertEligibleIds: ["mnee-mnee"],
+        alertEligibleIds: ["nxusd-nereus"],
         maxConsecutiveMissingGenerations: 2,
         observedAt: 1_700_000_000,
       },
@@ -95,13 +95,13 @@ describe("public status helpers", () => {
     expect(getPublicHealthWarningPresentation(health.warnings[0]!, health)).toEqual({
       title: "Stablecoin price coverage",
       detail:
-        "Live prices are unavailable for 2 active assets: MNEE and PHPm. Stablecoin listings and price-dependent analytics may be incomplete until coverage recovers.",
+        "Live prices are unavailable for 2 active assets: NXUSD and TUSD. Stablecoin listings and price-dependent analytics may be incomplete until coverage recovers.",
     });
     expect(getImpactedPublicSurfaces(health)).toContainEqual({
       id: "active-price-coverage",
       title: "Stablecoin prices and dependent analytics",
       detail:
-        "Live prices are unavailable for 2 active assets: MNEE and PHPm. Stablecoin listings and price-dependent analytics may be incomplete until coverage recovers.",
+        "Live prices are unavailable for 2 active assets: NXUSD and TUSD. Stablecoin listings and price-dependent analytics may be incomplete until coverage recovers.",
       tone: "degraded",
     });
   });
@@ -181,7 +181,6 @@ describe("public status helpers", () => {
     expect(isPublicImpactCircuitKey("usx-stable-pools")).toBe(false);
     expect(isPublicImpactCircuitKey("aznd-curve-pool")).toBe(false);
     expect(isPublicImpactCircuitKey("mento-broker")).toBe(false);
-    expect(isPublicImpactCircuitKey("phpm-price-route")).toBe(false);
     expect(isPublicImpactCircuitKey("kava-pricefeed")).toBe(false);
     expect(isPublicImpactCircuitKey("jusd-citrea-bridge")).toBe(false);
     expect(isPublicImpactCircuitKey("defillama-stablecoins")).toBe(true);
@@ -203,7 +202,6 @@ describe("public status helpers", () => {
         "usx-stable-pools": circuit,
         "aznd-curve-pool": circuit,
         "mento-broker": circuit,
-        "phpm-price-route": circuit,
         "kava-pricefeed": circuit,
         "jusd-citrea-bridge": circuit,
       }),

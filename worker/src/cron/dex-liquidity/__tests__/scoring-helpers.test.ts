@@ -266,24 +266,24 @@ describe("collapseDuplicateObservations", () => {
 describe("buildDexPriceObservationsFromRetainedPools", () => {
   it("joins exact direct evidence to an unpriced retained primary pool", () => {
     const pool = makePool({
-      poolId: "ethereum:0xusp",
+      poolId: "ethereum:0xtest",
       project: "balancer",
       tvlUsd: 52_000,
       price: undefined,
       source: "dl",
     });
     const result = buildDexPriceObservationsFromRetainedPools(
-      new Map([["usp-pareto-credit", [pool]]]),
+      new Map([["test-dollar", [pool]]]),
       new Map([
         [
-          "usp-pareto-credit",
+          "test-dollar",
           [
             makeObs({
               price: 0.919816,
               tvl: 53_000,
               chain: "ethereum",
               protocol: "balancer",
-              poolKey: "ethereum:0xusp",
+              poolKey: "ethereum:0xtest",
               identityConfidence: "exact",
               sourceFamily: "direct_api",
             }),
@@ -292,11 +292,11 @@ describe("buildDexPriceObservationsFromRetainedPools", () => {
       ]),
     );
 
-    expect(result.get("usp-pareto-credit")).toEqual([
+    expect(result.get("test-dollar")).toEqual([
       expect.objectContaining({
         price: 0.919816,
         tvl: 52_000,
-        poolKey: "ethereum:0xusp",
+        poolKey: "ethereum:0xtest",
         sourceFamily: "direct_api",
       }),
     ]);
@@ -305,10 +305,10 @@ describe("buildDexPriceObservationsFromRetainedPools", () => {
   it("does not join derived, mismatched, or sub-threshold evidence", () => {
     const pool = makePool({ poolId: "ethereum:0xretained", tvlUsd: 52_000, price: undefined });
     const result = buildDexPriceObservationsFromRetainedPools(
-      new Map([["usp-pareto-credit", [pool]]]),
+      new Map([["test-dollar", [pool]]]),
       new Map([
         [
-          "usp-pareto-credit",
+          "test-dollar",
           [
             makeObs({
               poolKey: "ethereum:0xretained",
@@ -328,7 +328,7 @@ describe("buildDexPriceObservationsFromRetainedPools", () => {
       ]),
     );
 
-    expect(result.has("usp-pareto-credit")).toBe(false);
+    expect(result.has("test-dollar")).toBe(false);
   });
 });
 

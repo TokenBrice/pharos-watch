@@ -404,29 +404,6 @@ const FRAX_FREEZE_FAMILY = defineEventFamily("frax-freeze", [
   },
 ]);
 
-// --- MNEE freeze/confiscation event definitions ---
-
-const MNEE_FUNDS_CONFISCATED_TOPIC = "0x5a592536e075e29026312219123e24de374314962469686d4c992d3c7292c1b4"; // FundsConfiscated(address indexed,uint256 indexed,address indexed)
-const MNEE_HOLDINGS_BURNT_TOPIC = "0x1b560ad975f2a2685fce792af7ad191c5f1c0bfbbf108c676319be3ccb014ddf"; // HoldingsBurnt(address indexed,uint256 indexed)
-
-const MNEE_EVENT_FAMILY = defineEventFamily("mnee-freeze-confiscation", [
-  ...ACCOUNT_FREEZE_EVENT_FAMILY.events,
-  {
-    signature: "FundsConfiscated(address indexed,uint256 indexed,address indexed)",
-    topicHash: MNEE_FUNDS_CONFISCATED_TOPIC,
-    eventType: "destroy",
-    hasAmount: true,
-    amountTopicIndex: 2,
-  },
-  {
-    signature: "HoldingsBurnt(address indexed,uint256 indexed)",
-    topicHash: MNEE_HOLDINGS_BURNT_TOPIC,
-    eventType: "destroy",
-    hasAmount: true,
-    amountTopicIndex: 2,
-  },
-]);
-
 // --- OpenEden / tokenized issuer account ban events ---
 
 const ACCOUNT_BANNED_TOPIC = "0xf5ccd95e2294edead25b59a71c189b3543cffbde2ec0d763800bdcc8807c7c3e"; // AccountBanned(address)
@@ -769,7 +746,6 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   { chain: GNOSIS, stablecoinId: "brz-transfero", stablecoin: "BRZ", startBlock: 33_257_603, events: USDC_EVENT_FAMILY.events },
   { chain: ARBITRUM, stablecoinId: "ausd-agora", stablecoin: "AUSD", startBlock: 342_153_906, events: ACCOUNT_FREEZE_EVENT_FAMILY.events },
   { chain: BASE, stablecoinId: "ausd-agora", stablecoin: "AUSD", startBlock: 35_760_121, events: ACCOUNT_FREEZE_EVENT_FAMILY.events },
-  { chain: ETHEREUM, stablecoinId: "mnee-mnee", stablecoin: "MNEE", startBlock: 19_482_225, events: MNEE_EVENT_FAMILY.events },
   { chain: ETHEREUM, stablecoinId: "euri-banking-circle", stablecoin: "EURI", startBlock: 20_217_556, events: DUAL_INDEX_FREEZE_EVENT_FAMILY.events },
   { chain: BSC, stablecoinId: "euri-banking-circle", stablecoin: "EURI", startBlock: 40_115_386, events: DUAL_INDEX_FREEZE_EVENT_FAMILY.events },
   { chain: ETHEREUM, stablecoinId: "usdq-quantoz", stablecoin: "USDQ", startBlock: 21_179_575, events: USDT0_EVENT_FAMILY.events },

@@ -146,9 +146,6 @@ export const AUTO_LENDING_COLLISION_BLOCKLIST: Record<string, readonly AutoLendi
       reason: "Flare USDX is Hex Trust USDX, not Kava USDX",
     },
   ],
-  "usp-pareto-credit": [
-    { project: "pendle", symbol: "USP", reason: "Pendle USP market is PikuDAO USP, not Pareto Credit USP" },
-  ],
   "usx-dforce": [
     { project: "kamino-lend", chain: "Solana", symbol: "USX", reason: "Kamino USX is Solana USX, not dForce USX" },
   ],

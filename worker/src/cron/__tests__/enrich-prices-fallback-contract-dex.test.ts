@@ -396,12 +396,12 @@ describe("enrichMissingPrices", () => {
     const observedAt = nowSec - 3600;
     const assets: PeggedAsset[] = [
       {
-        id: "usp-pareto-credit",
-        name: "Pareto USP",
-        symbol: "USP",
+        id: "dllr-sovryn",
+        name: "DLLR",
+        symbol: "DLLR",
         price: null,
         priceSource: "defillama",
-        geckoId: "pareto-usp",
+        geckoId: "sovryn-dollar",
         pegType: "peggedUSD",
         circulating: { peggedUSD: 2_000_000 },
       },
@@ -419,7 +419,7 @@ describe("enrichMissingPrices", () => {
         if (url.includes("coingecko.com")) {
           return new Response(
             JSON.stringify({
-              "pareto-usp": { usd: 0.911, last_updated_at: observedAt },
+            "sovryn-dollar": { usd: 0.998, last_updated_at: observedAt },
             }),
             { status: 200 },
           );
@@ -434,7 +434,7 @@ describe("enrichMissingPrices", () => {
     expect(stats.passCgLowVolume).toBe(1);
     expect(stats.finalMissing).toBe(0);
     expect(assets[0]).toMatchObject({
-      price: 0.911,
+      price: 0.998,
       priceSource: "coingecko-low-volume",
       priceSelectedSource: "coingecko-low-volume",
       priceConfidence: "fallback",
@@ -632,9 +632,9 @@ describe("enrichMissingPrices", () => {
   it("uses tracked contract metadata for addressless DexScreener exact fallback targets", async () => {
     const assets: PeggedAsset[] = [
       {
-        id: "usp-pareto-credit",
-        name: "Pareto USP",
-        symbol: "USP",
+        id: "gusd-gate",
+        name: "GUSD",
+        symbol: "GUSD",
         price: 0,
         pegType: "peggedUSD",
         circulating: {},
@@ -642,17 +642,17 @@ describe("enrichMissingPrices", () => {
     ];
 
     const fetchSpy = vi.fn(async (url: string) => {
-      if (url.includes("api.dexscreener.com/tokens/v1/ethereum/0x97ccc1c046d067ab945d3cf3cc6920d3b1e54c88")) {
+      if (url.includes("api.dexscreener.com/tokens/v1/ethereum/0xaf6186b3521b60e27396b5d23b48abc34bf585c5")) {
         return new Response(
           JSON.stringify([
             {
               chainId: "ethereum",
               dexId: "curve",
               pairAddress: "0xpair",
-              baseToken: { address: "0x97ccc1c046d067ab945d3cf3cc6920d3b1e54c88", name: "Pareto USP", symbol: "USP" },
+              baseToken: { address: "0xaf6186b3521b60e27396b5d23b48abc34bf585c5", name: "GUSD", symbol: "GUSD" },
               quoteToken: { address: "0xdef", name: "USD Coin", symbol: "USDC" },
-              priceUsd: "0.911",
-              priceNative: "0.911",
+              priceUsd: "0.999",
+              priceNative: "0.999",
               liquidity: { usd: 250_000, base: 125_000, quote: 125_000 },
               volume: { h24: 1_000, h6: 500, h1: 100, m5: 10 },
               pairCreatedAt: Date.now(),
@@ -668,10 +668,10 @@ describe("enrichMissingPrices", () => {
     const result = await fixtureRunDexScreenerPass(assets, undefined, undefined);
 
     expect(result.resolved).toBe(1);
-    expect(assets[0].price).toBe(0.911);
+    expect(assets[0].price).toBe(0.999);
     expect(assets[0].priceSource).toBe("dexscreener-exact");
     expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining("api.dexscreener.com/tokens/v1/ethereum/0x97ccc1c046d067ab945d3cf3cc6920d3b1e54c88"),
+      expect.stringContaining("api.dexscreener.com/tokens/v1/ethereum/0xaf6186b3521b60e27396b5d23b48abc34bf585c5"),
       expect.anything(),
     );
   });
@@ -1014,7 +1014,7 @@ describe("enrichMissingPrices", () => {
       {
         id: "usdx-1",
         name: "USDX 1",
-        symbol: "MNEE",
+        symbol: "TEST",
         price: 0,
         pegType: "peggedUSD",
         circulating: { total: 30 },
@@ -1046,7 +1046,7 @@ describe("enrichMissingPrices", () => {
         url.includes("q=USDN") ||
         url.includes("q=CTUSD") ||
         url.includes("q=USBD") ||
-        url.includes("q=MNEE") ||
+        url.includes("q=TEST") ||
         url.includes("q=CASH")
       ) {
         return new Response("upstream error", { status: 500 });

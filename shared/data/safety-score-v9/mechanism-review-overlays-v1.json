@@ -768,69 +768,6 @@
       }
     },
     {
-      "assetId": "phpm-mento",
-      "archetype": "cdp",
-      "reviewedAt": "2026-07-15",
-      "sources": [
-        {
-          "label": "Mento BiPoolManager and FPMM conversion state on Celo",
-          "url": "https://celoscan.io/address/0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901"
-        },
-        {
-          "label": "Mento V3 reserve conversion documentation",
-          "url": "https://docs.mento.org/mento-v3"
-        }
-      ],
-      "notes": "Pinned Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/phpm-mento/2026-07-15-block-72202985.json. The producer enumerated all 16 live exchange IDs, found the configured token/USDm pair exactly once, and measured 10000000 USDm of counter-bucket capacity at the journaled 30 bps fee. Conversion capacity is an analogous exit metric rather than dedicated liquidation capital. The bounded virtual USDm counter-bucket provides limited conversion support; pair buckets limit flow but Broker, USDm, reserve, and oracle failure domains remain shared; BreakerBox and trading limits can halt unsafe conversion without supplying an unconditional residual-deficit recapitalization path. Backstop, branch isolation, and shutdown/bad-debt handling are therefore limited.",
-      "metrics": {
-        "collateralizationRatio": null,
-        "liquidationCapacityRatio": null
-      },
-      "metricApplicability": {
-        "collateralizationRatio": {
-          "state": "not-applicable",
-          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
-        },
-        "liquidationCapacityRatio": {
-          "state": "not-applicable",
-          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
-        }
-      },
-      "analogousMetrics": {
-        "conversionCapacityCounterUnits": 10000000
-      },
-      "components": {
-        "collateralizationParameters": {
-          "applicability": "not-applicable",
-          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
-        },
-        "liquidationMechanics": {
-          "applicability": "not-applicable",
-          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
-        },
-        "backstop": {
-          "applicability": "measured",
-          "quality": "limited"
-        },
-        "branchIsolation": {
-          "applicability": "measured",
-          "quality": "limited"
-        },
-        "shutdownAndBadDebt": {
-          "applicability": "measured",
-          "quality": "limited"
-        },
-        "structuralRedemption": {
-          "applicability": "measured",
-          "quality": "adequate"
-        }
-      }
-    },
-    {
       "assetId": "zarm-mento",
       "archetype": "cdp",
       "reviewedAt": "2026-07-15",
@@ -2312,32 +2249,6 @@
       }
     },
     {
-      "assetId": "mnee-mnee",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-15",
-      "sources": [
-        {
-          "label": "MNEE terms (issuer-held discretionary reserves and customer-only redemption)",
-          "url": "https://www.mnee.io/terms"
-        },
-        {
-          "label": "MNEE transparency disclosure",
-          "url": "https://www.mnee.io/transparency"
-        },
-        {
-          "label": "Wolf & Company MNEE examination report for May 2026",
-          "url": "https://mnee.ghost.io/content/files/2026/06/MNEE---Attestation-Opinion--May-2026--Final.pdf"
-        }
-      ],
-      "notes": "MNEE's terms state that MNEE holds the reserve assets, controls their composition at its sole discretion, and grants a personal redemption contract only to verified customers. Wolf & Company's May 2026 report says assets are held with regulated custodians on behalf of token holders, but does not establish a holder trust, reserve-property interest, or insolvency priority. The governing issuer-held structure contradicts a direct segregated holder claim, so claim and segregation is weak. Custodian identities and shares, non-rehypothecation, and replacement continuity were not established, so custody continuity remains uncurated.",
-      "metrics": {},
-      "components": {
-        "claimAndSegregation": {
-          "quality": "weak"
-        }
-      }
-    },
-    {
       "assetId": "usdsui-sui",
       "archetype": "fiat-cash",
       "reviewedAt": "2026-07-15",
@@ -3645,31 +3556,6 @@
       }
     },
     {
-      "assetId": "veur-vnx",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-15",
-      "sources": [
-        {
-          "label": "AREVA VNX reserve report as of December 31, 2023",
-          "url": "https://vnx.li/wp-content/uploads/2024/01/VNX-COMMODITIES-AG_Reserve-Report-31.12.2023.pdf"
-        },
-        {
-          "label": "AREVA VNX reserve report as of December 31, 2024",
-          "url": "https://vnx.li/wp-content/uploads/2025/02/VNX-COMMODITIES-AG_Report-per-31.12.2024_comp.pdf"
-        }
-      ],
-      "notes": "AREVA's published VEUR procedures expressly state that reserve accounts and assets belong on VNX Commodities AG's balance sheet and that issuer-bankruptcy segregation and effective contractual holder recovery are legally undefined. This affirmative contrary evidence supports weak claim and segregation and weak custody continuity; the ratings are not inferred from a missing document. The reports are point-in-time agreed-upon procedures, do not name the bank or custodian, and provide no assurance conclusion.",
-      "metrics": {},
-      "components": {
-        "claimAndSegregation": {
-          "quality": "weak"
-        },
-        "custodyContinuity": {
-          "quality": "weak"
-        }
-      }
-    },
-    {
       "assetId": "usx-solstice",
       "archetype": "fiat-cash",
       "reviewedAt": "2026-07-15",
@@ -3769,32 +3655,6 @@
         }
       ],
       "notes": "Gold DAO's binding terms expressly state that GLDT is not legal ownership of gold and that Gold DAO does not guarantee redemption or conversion; a holder must reverse-swap GLDT to a GLD NFT, which alone is described as a deed to a bar. This affirmative contradiction supports weak claim and segregation. The March 2025 KPMG agreed-upon-procedures report is over twelve months old, gives no assurance conclusion, and does not establish current inventory allocation, anti-encumbrance, insurance beneficiary status, alternate vaults, or failure recovery, so custody continuity remains uncurated.",
-      "metrics": {},
-      "components": {
-        "claimAndSegregation": {
-          "quality": "weak"
-        }
-      }
-    },
-    {
-      "assetId": "krwo-gimswap",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-15",
-      "sources": [
-        {
-          "label": "Gimswap KRWO documentation",
-          "url": "https://docs.gimswap.com/gimswap-guide/what-is-krwo"
-        },
-        {
-          "label": "Open Asset Voucher binding terms, effective August 1, 2024",
-          "url": "https://victorious-lawyer-65b.notion.site/English-Open-Voucher-Terms-and-Conditions-49f8464e1ec842f7b377b7236eaa1505"
-        },
-        {
-          "label": "Open Voucher service-closure notice",
-          "url": "https://www.openvoucher.co.kr/ko"
-        }
-      ],
-      "notes": "Gimswap documents Open Voucher as KRWO's collateral and redemption route. Binding Open Asset Voucher terms establish the upstream voucher as unsecured issuer credit with no separate guarantee or compensation insurance, and the service ended May 25, 2026. That affirmative adverse upstream structure supports weak KRWO claim and segregation. No named reserve bank or custodian, allocation, independent current report, reserve-wide anti-rehypothecation, or closure and replacement recovery establishes custody continuity.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
