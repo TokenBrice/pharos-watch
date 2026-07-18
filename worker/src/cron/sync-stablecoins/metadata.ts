@@ -319,7 +319,6 @@ export function buildStablecoinsSyncResult(input: {
     input.depegErrorCount > 0
       || input.stalenessCheckFailed
       || !publicationCoverage.complete
-      || !activePriceCoverage.complete
       ? "degraded"
       : "ok";
 

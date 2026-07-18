@@ -128,7 +128,7 @@ describe("stablecoins pricing metadata", () => {
     });
   });
 
-  it("degrades missing active prices without blocking complete row publication", () => {
+  it("reports missing active prices without downgrading a complete row publication", () => {
     const missingId = ACTIVE_STABLECOINS[0]!.id;
     const assets = ACTIVE_STABLECOINS.map((stablecoin) => ({
       id: stablecoin.id,
@@ -194,7 +194,7 @@ describe("stablecoins pricing metadata", () => {
       };
       capabilities: { stablecoinsCache: boolean };
     };
-    expect(result.status).toBe("degraded");
+    expect(result.status).toBe("ok");
     expect(metadata.activePublicationCoverage.complete).toBe(true);
     expect(metadata.capabilities.stablecoinsCache).toBe(true);
     expect(metadata.activePriceCoverage).toMatchObject({
