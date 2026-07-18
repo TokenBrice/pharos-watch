@@ -152,12 +152,12 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 3. `pages-release`
    - calls the reusable Pages workflow only when `pages_required=true`;
    - uses native `needs: [plan, deploy-worker]` ordering. Pages proceeds when Worker was legitimately skipped, and stops when a required Worker deployment failed;
-   - passes `refresh_data: false`, so ordinary code releases build committed data without making pre-publish requests to the existing production site or API.
+   - passes `refresh_data: true`, so ordinary code releases refresh digest, depeg, and public-dataset snapshots before building rather than regressing static archive routes to the committed snapshot's age.
 
 Reusable Pages sequence in `.github/workflows/pages-release.yml`:
 
 1. Check out at the default shallow depth and install the workspace without a browser.
-2. When `refresh_data=true`, refresh digests, confirmed depeg events, and public dataset mirrors through the Origin-gated `https://stablecoin-dashboard.pages.dev/_site-data` proxy into `site-api.pharos.watch`; invalid or missing inputs fail before build and publish.
+2. When `refresh_data=true`, refresh digests, confirmed depeg events, and public dataset mirrors through the Origin-gated `https://stablecoin-dashboard.pages.dev/_site-data` proxy into `site-api.pharos.watch`. The digest and depeg syncs reject removal of any previously published static-route slug. A failed fetch, invalid input, or archive shrink restores the committed snapshots and continues fail-open with a job-summary warning; it never publishes the partial refresh.
 3. Clear `.next`, build once with the production feature-flag environment, and preserve the selected committed or freshly refreshed data through the prebuild hook.
 4. Run artifact-specific checks: feature-flag inlining, build size, build attribution, and static SEO.
 5. Write `out/__pharos_release.json`, publish that exact `out/` directory with one `wrangler pages deploy` command, resolve the latest production deployment through `wrangler pages deployment list --json`, and require one cache-busted target-SHA marker match from that immutable `pages.dev` deployment URL within the bounded polling window.

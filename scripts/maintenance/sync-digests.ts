@@ -5,6 +5,8 @@
  */
 
 import { formatIsoDate } from "@shared/lib/format";
+import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import {
@@ -21,6 +23,8 @@ const USAGE = `Usage: npx tsx scripts/maintenance/sync-digests.ts [options]
 Options:
   --api-url <url>   Digest API base or endpoint (overrides environment)
   --output <path>   Output path (default: data/digests.json)
+  --allow-archive-shrink
+                   Permit published digest slugs to disappear from the snapshot
   --dry-run         Fetch and validate without writing the output file
   --allow-existing-on-fetch-failure
                    Preserve a valid existing output file if the live fetch fails
@@ -36,7 +40,7 @@ interface ApiDigest {
   editionNumber?: number;
 }
 
-interface DigestEntry {
+export interface DigestEntry {
   date: string;
   title: string;
   text: string;
@@ -47,6 +51,7 @@ interface DigestEntry {
 }
 
 export interface DigestSyncCliOptions {
+  allowArchiveShrink: boolean;
   allowExistingOnFetchFailure: boolean;
   apiUrl: string | null;
   check: boolean;
@@ -59,6 +64,7 @@ export function parseDigestSyncArgs(argv: string[]): DigestSyncCliOptions {
   const { values } = parseStrictCliArgs(argv, {
     conflicts: [["check", "dry-run"]],
     options: {
+      "allow-archive-shrink": { type: "boolean" },
       "api-url": { type: "string" },
       "allow-existing-on-fetch-failure": { type: "boolean" },
       check: { type: "boolean" },
@@ -67,6 +73,7 @@ export function parseDigestSyncArgs(argv: string[]): DigestSyncCliOptions {
     },
   });
   return {
+    allowArchiveShrink: values["allow-archive-shrink"] === true,
     allowExistingOnFetchFailure: values["allow-existing-on-fetch-failure"] === true,
     apiUrl: typeof values["api-url"] === "string" ? values["api-url"] : null,
     check: values.check === true,
@@ -74,6 +81,40 @@ export function parseDigestSyncArgs(argv: string[]): DigestSyncCliOptions {
     help: values.help === true,
     output: typeof values.output === "string" ? values.output : null,
   };
+}
+
+function readExistingDigestEntries(outputPath: URL): readonly DigestEntry[] {
+  const outputFile = fileURLToPath(outputPath);
+  if (!existsSync(outputFile)) return [];
+  const parsed: unknown = JSON.parse(readFileSync(outputFile, "utf8"));
+  if (!Array.isArray(parsed)) {
+    throw new Error(`Existing digest snapshot is not an array: ${outputFile}`);
+  }
+  return parsed as DigestEntry[];
+}
+
+export function findMissingDigestArchiveDates(
+  previous: readonly DigestEntry[],
+  current: readonly DigestEntry[],
+): string[] {
+  const currentDates = new Set(current.map((entry) => entry.date));
+  return previous.map((entry) => entry.date).filter((date) => !currentDates.has(date));
+}
+
+export function assertDigestArchivePreserved(
+  previous: readonly DigestEntry[],
+  current: readonly DigestEntry[],
+  allowShrink = false,
+): void {
+  const missing = findMissingDigestArchiveDates(previous, current);
+  if (missing.length === 0) return;
+  const sample = missing.slice(0, 10).join(", ");
+  const suffix = missing.length > 10 ? ` (+${missing.length - 10} more)` : "";
+  const message = `Digest archive lost ${missing.length} published slug(s): ${sample}${suffix}`;
+  if (!allowShrink) {
+    throw new Error(`${message}. Pass --allow-archive-shrink only for an explicitly reviewed removal.`);
+  }
+  console.warn(`[sync-digests] WARNING: ${message}`);
 }
 
 function resolveOutputPath(explicitOutput: string | null): URL {
@@ -108,6 +149,7 @@ export async function runDigestSync(argv = process.argv.slice(2)) {
     scriptName: "sync-digests",
   });
   const outputPath = resolveOutputPath(options.output);
+  const previousEntries = readExistingDigestEntries(outputPath);
   console.log("Fetching digest archive...");
   console.log(`Digest source: ${apiUrl}`);
   const fetchUrl = cacheBustedUrl(apiUrl);
@@ -131,7 +173,7 @@ export async function runDigestSync(argv = process.argv.slice(2)) {
         if (!res.ok) throw new Error(`API returned ${res.status}`);
         const { digests } = (await res.json()) as { digests: ApiDigest[] };
         console.log(`Fetched ${digests.length} digests`);
-        return digests
+        const entries = digests
           .map((d) => ({
             date: formatIsoDate(d.generatedAt) + (d.digestType === "weekly" ? "-weekly" : ""),
             title: d.digestTitle || "Signal & Noise",
@@ -142,6 +184,8 @@ export async function runDigestSync(argv = process.argv.slice(2)) {
             editionNumber: d.editionNumber ?? 0,
           }))
           .sort((a, b) => b.generatedAt - a.generatedAt);
+        assertDigestArchivePreserved(previousEntries, entries, options.allowArchiveShrink);
+        return entries;
       },
       write: !options.dryRun,
     });
