@@ -132,7 +132,7 @@ export const content: CaseStudy = {
   ],
   crossLinks: [
     { href: "/learn/mechanisms/fiat-cash/", label: "Mechanism: fiat-cash stablecoins" },
-    { href: "/mica/", label: "MiCA compliance tracker" },
+    { href: "/compliance/", label: "MiCA compliance tracker" },
     { href: "/cemetery/", label: "Stablecoin cemetery" },
     { href: "/stablecoin/eurc-circle/", label: "EURC — Circle's MiCA-compliant euro stablecoin" },
     { href: "/stablecoin/eure-monerium/", label: "EURe — Monerium's regulated euro e-money token" },
