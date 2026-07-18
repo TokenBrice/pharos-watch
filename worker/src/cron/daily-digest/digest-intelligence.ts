@@ -79,6 +79,14 @@ function buildEditorialAudit(params: {
   const usedCandidateIds = unique(normalizeStringArray(meta?.usedCandidateIds) ?? []);
   const modelSuppressedCandidateIds = unique(normalizeStringArray(meta?.suppressedCandidateIds) ?? []);
   const requiredLeadCandidateIds = unique((params.leadRequirements ?? []).flatMap((requirement) => requirement.candidateIds));
+  const leadRequirementReasons = unique(
+    (params.leadRequirements ?? []).map((requirement) => `${requirement.severity}: ${requirement.reason}`),
+  );
+  const demotedLeadMentionTokens = unique(
+    (params.leadRequirements ?? [])
+      .filter((requirement) => requirement.severity === "soft" && requirement.candidateIds.length === 0)
+      .flatMap((requirement) => requirement.mentionTokens ?? []),
+  );
 
   return {
     topCandidateIds: candidates.slice(0, 8).map((candidate) => candidate.id),
@@ -86,6 +94,8 @@ function buildEditorialAudit(params: {
     suppressedCandidateIds: suppressed.slice(0, 8).map((candidate) => candidate.id),
     momentumCandidateIds: momentum.map((candidate) => candidate.id),
     ...(requiredLeadCandidateIds.length > 0 ? { requiredLeadCandidateIds } : {}),
+    ...(leadRequirementReasons.length > 0 ? { leadRequirementReasons } : {}),
+    ...(demotedLeadMentionTokens.length > 0 ? { demotedLeadMentionTokens } : {}),
     leadCandidateId,
     leadCandidateTitle: leadCandidate?.title ?? null,
     ...(usedCandidateIds.length > 0 ? { usedCandidateIds } : {}),

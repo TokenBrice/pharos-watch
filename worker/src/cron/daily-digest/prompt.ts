@@ -1,5 +1,6 @@
 import type { DigestInputData } from "@shared/types/digest";
 import { formatCurrency } from "@shared/lib/format";
+import { computeLeadStreak } from "@shared/lib/digest-lead-policy";
 import { round1 } from "@shared/lib/math";
 import { classifyRegime } from "./prompt/regime";
 import {
@@ -25,11 +26,22 @@ export interface DigestMeta {
 export function buildUserPrompt(
   data: DigestInputData,
   recentMeta: { meta: DigestMeta | null; rawText: string | null; title: string | null }[] = [],
+  options: {
+    leadRequirements?: readonly {
+      candidateIds: readonly string[];
+      severity: "hard" | "soft";
+      reason: string;
+      mentionTokens?: readonly string[];
+    }[];
+    recentLeadSignalIds?: readonly (string | null | undefined)[];
+  } = {},
 ): string {
   const regime = classifyRegime(data);
   const lines: string[] = [`Market regime: ${regime}`];
 
   pushDataQualityLines(lines, data);
+  pushLeadRequirementLines(lines, options.leadRequirements);
+  pushOngoingStoryLines(lines, data, options.recentLeadSignalIds);
   pushEditorialCandidateLines(lines, data);
   pushMomentumLines(lines, data);
   pushDigestIntelligenceLines(lines, data);
@@ -299,4 +311,55 @@ export function buildUserPrompt(
   }
 
   return lines.join("\n");
+}
+
+function pushLeadRequirementLines(
+  lines: string[],
+  leadRequirements?: readonly {
+    candidateIds: readonly string[];
+    severity: "hard" | "soft";
+    reason: string;
+    mentionTokens?: readonly string[];
+  }[],
+): void {
+  for (const requirement of leadRequirements ?? []) {
+    if (requirement.severity === "hard" && requirement.candidateIds.length > 0) {
+      lines.push(
+        "",
+        `REQUIRED LEAD TODAY: ${requirement.candidateIds.join(", ")} — ${requirement.reason}.`,
+        "Declare this candidate id as meta.leadSignalId and open with its story. This overrides variety preferences for the lead only.",
+      );
+    } else if (requirement.mentionTokens && requirement.mentionTokens.length > 0) {
+      lines.push(
+        "",
+        `REQUIRED MENTION (not the lead): ${requirement.mentionTokens.join(", ")} — ${requirement.reason}.`,
+        "Cover it in at most one sentence; do NOT lead with it. Choose today's lead from the other top candidates.",
+      );
+    }
+  }
+}
+
+function pushOngoingStoryLines(
+  lines: string[],
+  data: DigestInputData,
+  recentLeadSignalIds?: readonly (string | null | undefined)[],
+): void {
+  if (!recentLeadSignalIds || recentLeadSignalIds.length === 0) return;
+  const streakEntries: string[] = [];
+  for (const depeg of data.topDepegs) {
+    const candidateId = `depeg:${depeg.stablecoinId ?? depeg.symbol}:active`;
+    const streak = computeLeadStreak(recentLeadSignalIds, candidateId);
+    if (streak.inWindow === 0) continue;
+    const severityBps = depeg.currentBps ?? depeg.bps;
+    streakEntries.push(
+      `  ${depeg.symbol}: led ${streak.consecutive} consecutive edition${streak.consecutive === 1 ? "" : "s"} (${streak.inWindow} of the last 7); now ${Math.abs(severityBps)} bps, day ${Math.round((depeg.ageHours ?? 0) / 24)}`,
+    );
+  }
+  if (streakEntries.length === 0) return;
+  lines.push(
+    "",
+    "ONGOING STORIES (lead-streak ledger — the reader has already seen these as headlines):",
+    ...streakEntries,
+    "  Do not re-lead an unchanged ongoing story. Day-counting is not news; only a material change re-qualifies it.",
+  );
 }

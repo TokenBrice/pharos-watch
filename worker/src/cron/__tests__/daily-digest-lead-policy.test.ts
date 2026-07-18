@@ -132,6 +132,25 @@ describe("daily-digest lead policy (golden replay of the July 2026 USX era)", ()
     expect(requiredIds).not.toContain("depeg:usda-avalon:active");
   });
 
+  it("demotes the day-N chronic critical to a mention-only soft requirement", async () => {
+    // Replaying Jul 18: the top eligible critical is pmUSD ($0.705 live on
+    // $66M), weeks old and moving under the re-escalation threshold. Before
+    // the lead quota, it would have been a hard pin every day — the exact
+    // mechanism of the USX era.
+    const current = await replayCollector(seedsFromFixture(fixture.inputData), nowSec);
+    const previous = await replayCollector(seedsFromFixture(fixture.prevInputData as DigestInputData), nowSec - 86_400);
+    const replayedInput: DigestInputData = { ...fixture.inputData, topDepegs: current.topDepegs };
+    replayedInput.editorialCandidates = buildEditorialCandidates(replayedInput, fixture.prevInputData);
+    const requirements = buildCriticalDailyLeadRequirements(replayedInput, {
+      previousInputData: { ...(fixture.prevInputData as DigestInputData), topDepegs: previous.topDepegs },
+      recentLeadSignalIds: ["depeg:pmusd-precious-metals:active", "depeg:pmusd-precious-metals:active"],
+    });
+    expect(requirements).toHaveLength(1);
+    expect(requirements?.[0]?.severity).toBe("soft");
+    expect(requirements?.[0]?.candidateIds).toEqual([]);
+    expect(requirements?.[0]?.mentionTokens).toEqual(["PMUSD"]);
+  });
+
   it("a fresh day-0 crash still produces a hard critical lead", async () => {
     const seeds: DepegEventSeed[] = [
       {
@@ -150,6 +169,37 @@ describe("daily-digest lead policy (golden replay of the July 2026 USX era)", ()
     const requirements = buildCriticalDailyLeadRequirements(input);
     expect(requirements?.[0]?.severity).toBe("hard");
     expect(requirements?.[0]?.candidateIds).toContain("depeg:synthetic-crash:active");
+  });
+
+  it("re-escalation overrides the lead quota; unchanged day-2 does not", async () => {
+    const makeSeeds = (price: number): DepegEventSeed[] => [
+      {
+        stablecoinId: "synthetic-crash",
+        symbol: "CRSH",
+        peakBps: 5100,
+        startedAt: nowSec - 40 * 3_600,
+        mcapUsd: 60_000_000,
+        currentPriceUsd: price,
+      },
+    ];
+    const streakedHistory = ["depeg:synthetic-crash:active", "depeg:synthetic-crash:active"];
+    const current = await replayCollector(makeSeeds(0.42), nowSec);
+    const previousWorse = await replayCollector(makeSeeds(0.49), nowSec - 86_400);
+    const input: DigestInputData = { ...fixture.inputData, topDepegs: current.topDepegs };
+    input.editorialCandidates = buildEditorialCandidates(input, null);
+    // Worsened 700 bps overnight: hard again despite the exhausted quota.
+    const escalated = buildCriticalDailyLeadRequirements(input, {
+      previousInputData: { ...fixture.inputData, topDepegs: previousWorse.topDepegs },
+      recentLeadSignalIds: streakedHistory,
+    });
+    expect(escalated?.[0]?.severity).toBe("hard");
+    // Unchanged since yesterday: quota applies, demoted to mention-only.
+    const unchanged = buildCriticalDailyLeadRequirements(input, {
+      previousInputData: { ...fixture.inputData, topDepegs: current.topDepegs },
+      recentLeadSignalIds: streakedHistory,
+    });
+    expect(unchanged?.[0]?.severity).toBe("soft");
+    expect(unchanged?.[0]?.mentionTokens).toEqual(["CRSH"]);
   });
 
   it("change summary no longer fabricates cross-coin USDA movement", () => {

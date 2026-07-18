@@ -32,8 +32,9 @@ export function validateDigestLeadRequirements(params: {
 
   for (const requirement of params.leadRequirements ?? []) {
     const candidateIds = normalizeCandidateIds(requirement.candidateIds);
-    if (candidateIds.length === 0) continue;
-    if (!leadSignalId || !candidateIds.includes(leadSignalId)) {
+    // A requirement with no candidateIds is mention-only (a demoted ongoing
+    // story): the coin must appear, but no lead is pinned.
+    if (candidateIds.length > 0 && (!leadSignalId || !candidateIds.includes(leadSignalId))) {
       issues.push({
         code: "lead-candidate-mismatch",
         severity: requirement.severity,

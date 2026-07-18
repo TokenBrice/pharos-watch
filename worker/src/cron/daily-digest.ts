@@ -125,7 +125,7 @@ export async function generateDailyDigest(
     itemsTotal: 1,
   });
   const digestInput = await buildDailyDigestInput(db);
-  const { inputData, degradedReasons, recentMeta, llmSignals, stablecoinsCacheReason } = digestInput;
+  const { inputData, degradedReasons, recentMeta, previousInputData, recentLeadSignalIds, llmSignals, stablecoinsCacheReason } = digestInput;
   if (stablecoinsCacheReason) {
     await reportDigestProgress(reportProgress, {
       stage: "input-unavailable",
@@ -147,8 +147,11 @@ export async function generateDailyDigest(
       }),
     };
   }
-  const userPromptContent = buildUserPrompt(inputData, recentMeta);
-  const leadRequirements = buildCriticalDailyLeadRequirements(inputData);
+  const leadRequirements = buildCriticalDailyLeadRequirements(inputData, {
+    previousInputData,
+    recentLeadSignalIds,
+  });
+  const userPromptContent = buildUserPrompt(inputData, recentMeta, { leadRequirements, recentLeadSignalIds });
   await reportDigestProgress(reportProgress, {
     stage: "input-collected",
     message: "Collected daily digest context",

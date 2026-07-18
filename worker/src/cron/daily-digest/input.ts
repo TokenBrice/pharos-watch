@@ -44,6 +44,10 @@ export interface DailyDigestInputBuildResult {
   inputData: DigestInputData;
   degradedReasons: string[];
   recentMeta: RecentDigestMetaEntry[];
+  /** Parsed previous edition input, for lead re-escalation checks. */
+  previousInputData: DigestInputData | null;
+  /** leadSignalIds of recent editions (newest first), for the lead quota. */
+  recentLeadSignalIds: (string | null)[];
   stablecoinsCacheReason: string | null;
   llmSignals: {
     activeDepegCount: number;
@@ -71,6 +75,24 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     }>();
   const recentMeta = buildRecentDigestMeta(recentRows.results ?? []);
   const previousInputData = parseStoredDigestInput(recentRows.results?.[0]?.input_data ?? null);
+  // Lead-quota history is wider than the 7-edition variety window; a separate
+  // meta-only query keeps the variety semantics untouched.
+  const leadHistoryRows = await db
+    .prepare(
+      `SELECT digest_meta FROM daily_digest
+       WHERE ${NON_WEEKLY_DIGEST_SQL_FILTER}
+       ORDER BY generated_at DESC LIMIT 14`,
+    )
+    .all<{ digest_meta: string | null }>();
+  const recentLeadSignalIds = (leadHistoryRows.results ?? []).map((row) => {
+    if (!row.digest_meta) return null;
+    try {
+      const parsed = JSON.parse(row.digest_meta) as { leadSignalId?: unknown };
+      return typeof parsed.leadSignalId === "string" ? parsed.leadSignalId : null;
+    } catch {
+      return null;
+    }
+  });
   const degradedReasons: string[] = [];
 
   const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
@@ -93,6 +115,8 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
       },
       degradedReasons,
       recentMeta,
+      previousInputData,
+      recentLeadSignalIds,
       stablecoinsCacheReason: stablecoinsCacheResult.reason,
       llmSignals: {
         activeDepegCount: 0,
@@ -338,6 +362,8 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     inputData,
     degradedReasons,
     recentMeta,
+    previousInputData,
+    recentLeadSignalIds,
     stablecoinsCacheReason: null,
     llmSignals: {
       activeDepegCount,

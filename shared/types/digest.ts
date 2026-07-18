@@ -76,6 +76,10 @@ export interface DigestEditorialAudit {
   suppressedCandidateIds: string[];
   momentumCandidateIds: string[];
   requiredLeadCandidateIds?: string[];
+  /** "hard:/soft:" prefixed reasons for today's lead requirements. */
+  leadRequirementReasons?: string[];
+  /** Symbols demoted from hard lead to mention-only by the lead quota. */
+  demotedLeadMentionTokens?: string[];
   leadCandidateId?: string | null;
   leadCandidateTitle?: string | null;
   usedCandidateIds?: string[];
