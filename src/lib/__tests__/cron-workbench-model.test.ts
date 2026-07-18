@@ -152,6 +152,70 @@ describe("cron workbench model", () => {
     );
   });
 
+  it("keeps a degraded required outcome in attention after a neutral skip", () => {
+    const neutralRun = { startedAt: 1_700_000_000, durationMs: 200, status: "skipped_neutral" as const };
+    const degradedRun = { startedAt: 1_699_999_000, durationMs: 800, status: "degraded" as const };
+    const cron = makeCron({
+      lastRun: neutralRun,
+      recentRuns: [neutralRun, degradedRun],
+      healthy: true,
+    });
+
+    expect(classifyCronWorkbenchState(cron)).toBe("degraded");
+
+    const model = buildCronWorkbenchModel(
+      [
+        {
+          key: "weekly",
+          title: "Weekly",
+          badge: "weekly",
+          description: "Weekly maintenance jobs.",
+          entries: [["discovery-scan", cron]],
+        },
+      ],
+      { ...DEFAULT_CRON_WORKBENCH_FILTERS },
+    );
+
+    expect(model.rows).toHaveLength(1);
+    expect(model.rows[0]).toMatchObject({
+      job: "discovery-scan",
+      state: "degraded",
+      rawStatus: "skipped_neutral",
+      statusLabel: "Completed with warnings (latest required run)",
+    });
+  });
+
+  it("keeps a failed required outcome unhealthy after a neutral skip", () => {
+    const neutralRun = { startedAt: 1_700_000_000, durationMs: 200, status: "skipped_neutral" as const };
+    const failedRun = { startedAt: 1_699_999_000, durationMs: 800, status: "error" as const };
+    const cron = makeCron({
+      lastRun: neutralRun,
+      recentRuns: [neutralRun, failedRun],
+      healthy: false,
+    });
+
+    expect(classifyCronWorkbenchState(cron)).toBe("unhealthy");
+
+    const model = buildCronWorkbenchModel(
+      [
+        {
+          key: "weekly",
+          title: "Weekly",
+          badge: "weekly",
+          description: "Weekly maintenance jobs.",
+          entries: [["discovery-scan", cron]],
+        },
+      ],
+      { ...DEFAULT_CRON_WORKBENCH_FILTERS },
+    );
+
+    expect(model.rows[0]).toMatchObject({
+      state: "unhealthy",
+      rawStatus: "skipped_neutral",
+      statusLabel: "Failed (latest required run)",
+    });
+  });
+
   it("formats raw run and attempt values into readable labels", () => {
     expect(formatCronRunStatus("skipped_neutral")).toBe("Skipped: no work required");
     expect(formatCronRunStatus("skipped_locked")).toBe("Skipped: lease held");
@@ -241,10 +305,7 @@ describe("cron workbench model", () => {
     expect(groups.map((group) => group.scheduleKey)).toEqual(["fiveMinuteTelegramAlerts", "digestTriggerPoll"]);
     expect(groups[0]?.rows.map((row) => row.job)).toEqual(["telegram-registration-reconciliation"]);
     expect(groups[0]?.summary).toMatchObject({ total: 1, stale: 1, errors: 0 });
-    expect(groups[1]?.rows.map((row) => row.job)).toEqual([
-      "telegram-digest-outbox-drain",
-      "digest-trigger-poll",
-    ]);
+    expect(groups[1]?.rows.map((row) => row.job)).toEqual(["telegram-digest-outbox-drain", "digest-trigger-poll"]);
     expect(groups[1]?.summary).toMatchObject({ total: 2, stale: 2, errors: 0 });
   });
 

@@ -15,7 +15,11 @@ import { useHealth } from "@/hooks/api-hooks";
 import { usePublicEndpointProbes } from "@/hooks/use-endpoint-probes";
 import { usePublicStatusHistory } from "@/hooks/use-public-status-history";
 import { buildBrowserProbeSummary, type DashboardNotice } from "@/lib/status-dashboard-model";
-import { getPublicDivergenceNotice, getPublicWorstCacheSummary } from "@/lib/status/public-status";
+import {
+  getPublicDivergenceNotice,
+  getPublicHealthWarningPresentation,
+  getPublicWorstCacheSummary,
+} from "@/lib/status/public-status";
 import type { FaqItem } from "@/lib/faq";
 
 const RUNWAY_WINDOW: PublicStatusHistoryWindow = "30d";
@@ -55,12 +59,15 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
   const notices = useMemo(() => {
     if (!healthData) return [];
 
-    const items: DashboardNotice[] = healthData.warnings.map((warning, index) => ({
-      id: `health-warning-${index}`,
-      title: "Health warning",
-      detail: warning,
-      tone: healthData.status === "stale" ? "critical" : "warning",
-    }));
+    const items: DashboardNotice[] = healthData.warnings.map((warning, index) => {
+      const presentation = getPublicHealthWarningPresentation(warning, healthData);
+      return {
+        id: `health-warning-${index}`,
+        title: presentation.title,
+        detail: presentation.detail,
+        tone: healthData.status === "stale" ? "critical" : "warning",
+      };
+    });
 
     if (healthError) {
       items.unshift({

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { DataQuality, StatusResponse } from "@shared/types/status";
+import type { DataQuality, StatusCause, StatusResponse } from "@shared/types/status";
 import type { PublicHealthAssessment } from "../public-health-assessment";
-import { buildAvailabilityCauses, buildDataQualityCauses } from "../status/evaluation-causes";
+import { buildAvailabilityCauses, buildDataQualityCauses, synthesizeOverallCauses } from "../status/evaluation-causes";
 import {
   deriveAvailabilityStatus,
   deriveDataQualityStatus,
@@ -359,6 +359,32 @@ describe("status evaluation policy", () => {
 });
 
 describe("status cause text", () => {
+  it.each(["active_price_coverage_incomplete", "active_price_coverage_unknown"])(
+    "reserves persistence capacity for %s",
+    (code) => {
+      const criticalCauses: StatusCause[] = Array.from({ length: 12 }, (_, index) => ({
+        code: `critical-${index}`,
+        layer: "data-quality",
+        severity: "critical",
+        message: `Critical cause ${index}`,
+      }));
+      const activePriceCause: StatusCause = {
+        code,
+        layer: "data-quality",
+        severity: "warning",
+        message: "Exact active-price coverage is incomplete.",
+      };
+
+      const selected = synthesizeOverallCauses(criticalCauses, [activePriceCause]);
+
+      expect(selected).toHaveLength(12);
+      expect(selected.map((cause) => cause.code)).toEqual([
+        ...criticalCauses.slice(0, 11).map((cause) => cause.code),
+        code,
+      ]);
+    },
+  );
+
   it("warns when DEX data is display-valid but stale for live pricing", () => {
     const causes = buildAvailabilityCauses(
       makeAvailabilityCauseInput(
@@ -497,6 +523,7 @@ describe("status cause text", () => {
 
     const causes = buildDataQualityCauses({
       dataQuality: makeDataQuality(),
+      activePriceCoverage: makePublicHealth().activePriceCoverage,
       missingPriceRatio: 0,
       blacklistMissingRatio: 0,
       blacklistRecentMissing: 0,
@@ -527,6 +554,7 @@ describe("status cause text", () => {
 
     const causes = buildDataQualityCauses({
       dataQuality: makeDataQuality(),
+      activePriceCoverage: makePublicHealth().activePriceCoverage,
       missingPriceRatio: 0,
       blacklistMissingRatio: 0,
       blacklistRecentMissing: 0,
@@ -555,6 +583,7 @@ describe("status cause text", () => {
           { eventId: 43, reason: "incident-conflict" },
         ],
       }),
+      activePriceCoverage: makePublicHealth().activePriceCoverage,
       missingPriceRatio: 0,
       blacklistMissingRatio: 0,
       blacklistRecentMissing: 0,
@@ -588,6 +617,7 @@ describe("status cause text", () => {
     });
     const status = deriveDataQualityStatus({
       dataQuality,
+      activePriceCoverageImpactStatus: "healthy",
       missingPriceRatio: 0,
       blacklistMissingRatio: 0,
       blacklistRecentMissing: 0,
@@ -596,6 +626,7 @@ describe("status cause text", () => {
     });
     const causes = buildDataQualityCauses({
       dataQuality,
+      activePriceCoverage: makePublicHealth().activePriceCoverage,
       missingPriceRatio: 0,
       blacklistMissingRatio: 0,
       blacklistRecentMissing: 0,
@@ -609,6 +640,82 @@ describe("status cause text", () => {
       expect.objectContaining({
         code: "stablecoin_publication_unknown",
         severity: "warning",
+      }),
+    );
+  });
+
+  it("degrades and emits a durable public cause for incomplete active-price coverage", () => {
+    const activePriceCoverage = {
+      ...makePublicHealth().activePriceCoverage,
+      status: "incomplete" as const,
+      expectedActiveCount: 3,
+      presentActiveCount: 3,
+      pricedActiveCount: 1,
+      missingPriceCount: 2,
+      pricedActiveIds: ["coin-a"],
+      missingActiveIds: ["coin-b", "coin-c"],
+      missingActiveAssets: [
+        {
+          stablecoinId: "coin-b",
+          symbol: "B",
+          marketCapUsd: 20_000_000,
+          currentPrice: null,
+          currentSource: null,
+          currentObservedAt: null,
+          currentConfidence: null,
+          consecutiveMissingGenerations: 2,
+          lastAcceptedPrice: null,
+          lastAcceptedSource: null,
+          lastAcceptedObservedAt: null,
+          rejectionReason: "missing",
+          alertEligible: true,
+        },
+        {
+          stablecoinId: "coin-c",
+          symbol: "C",
+          marketCapUsd: 10_000_000,
+          currentPrice: null,
+          currentSource: null,
+          currentObservedAt: null,
+          currentConfidence: null,
+          consecutiveMissingGenerations: 1,
+          lastAcceptedPrice: null,
+          lastAcceptedSource: null,
+          lastAcceptedObservedAt: null,
+          rejectionReason: "missing",
+          alertEligible: false,
+        },
+      ],
+    };
+
+    const status = deriveDataQualityStatus({
+      dataQuality: makeDataQuality(),
+      activePriceCoverageImpactStatus: "degraded",
+      missingPriceRatio: 0,
+      blacklistMissingRatio: 0,
+      blacklistRecentMissing: 0,
+      onchainAssessment: { status: "healthy", causes: [], representative: false },
+      reserveCompositionStatus: "healthy",
+    });
+    const causes = buildDataQualityCauses({
+      dataQuality: makeDataQuality(),
+      activePriceCoverage,
+      missingPriceRatio: 0,
+      blacklistMissingRatio: 0,
+      blacklistRecentMissing: 0,
+      onchainAssessmentCauses: [],
+      reserveCompositionQueryFailed: false,
+      reserveComposition: makeReserveComposition(),
+    });
+
+    expect(status).toBe("degraded");
+    expect(causes).toContainEqual(
+      expect.objectContaining({
+        code: "active_price_coverage_incomplete",
+        severity: "warning",
+        metric: "missingActivePrices",
+        value: 2,
+        message: expect.stringContaining("coin-b, coin-c"),
       }),
     );
   });
@@ -638,6 +745,7 @@ describe("status cause text", () => {
 
     const causes = buildDataQualityCauses({
       dataQuality: makeDataQuality(),
+      activePriceCoverage: makePublicHealth().activePriceCoverage,
       missingPriceRatio: 0,
       blacklistMissingRatio: 0,
       blacklistRecentMissing: 0,

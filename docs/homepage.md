@@ -54,6 +54,10 @@ The hero's first-paint text summary is server-rendered from `getHomepageHeroSnap
 - `useReportCards()`
 - `useStressSignals()`
 
+Before the client-only rankings workbench hydrates, its server-rendered fallback exposes a visible directory of the
+first eight `HOMEPAGE_TOP_CORE_STABLECOINS` profiles plus the full screener. This keeps the Stablecoin Overview useful
+and crawlable when JavaScript is unavailable while the live table remains the hydrated interaction surface.
+
 Derived helpers:
 
 - `buildHomepageCriticalViewModel(...)` and `buildHomepageOptionalViewModel(...)` in `src/components/homepage-client-view-model.ts` (the critical builder derives `pegRates`, `pegScores`, and `filteredRowCount`; the optional builder derives `reportCardMap` and `dewsRiskLevel`)
@@ -157,6 +161,9 @@ The heavier homepage sections are client-only dynamic imports in `src/components
 - `HomeAltDdrOverview`
 - `HomeAltYieldOverview`
 - `HomeAltStatusTelegram`
+
+The `HomeAltRankingsSection` fallback is progressive content rather than a skeleton-only shell: it renders the real
+section heading, summary, and leading stablecoin profile links alongside the shape-matched table placeholder.
 
 `DailyDigest` is imported statically inside the dynamically loaded `HomeAltMiniCardGrid`; it is not a separate dynamic import.
 

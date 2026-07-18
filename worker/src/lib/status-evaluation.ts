@@ -184,6 +184,7 @@ export async function computeRawStatus(db: D1Database, now: number, options: Sta
     blacklistRecentMissing,
     onchainAssessment,
     reserveCompositionStatus: reserveAssessment.status,
+    activePriceCoverageImpactStatus: publicHealth.activePriceCoverageImpactStatus,
   });
 
   const rawOverallStatus = maxStatus(availabilityStatus, dataQualityStatus);
@@ -201,6 +202,7 @@ export async function computeRawStatus(db: D1Database, now: number, options: Sta
   });
   const dataQualityCauses = buildDataQualityCauses({
     dataQuality,
+    activePriceCoverage: publicHealth.activePriceCoverage,
     missingPriceRatio,
     blacklistMissingRatio,
     blacklistRecentMissing,

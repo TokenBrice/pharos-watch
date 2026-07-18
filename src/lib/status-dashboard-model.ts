@@ -10,6 +10,7 @@ import { buildCommsWorkbenchModel, type CommsWorkbenchModel } from "@/lib/comms-
 import { CRON_1MIN } from "@/lib/cron-intervals";
 import { deriveStatusActionRecommendations } from "@/lib/status/action-recommendations";
 import { getStatusCronDisplay } from "@/lib/status/cron-config";
+import { getActivePriceCoverageImpactDetail, getPublicHealthWarningPresentation } from "@/lib/status/public-status";
 import { CRON_GROUPS } from "@shared/lib/cron-jobs";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { transitionHasPublicImpact } from "@shared/lib/status-public-impact";
@@ -165,6 +166,9 @@ const ISSUE_KIND_RANK: Record<DashboardIssueKind, number> = {
 const MAINTENANCE_CAUSE_CODES = new Set(["ddr_repair_debt_present", "reserve_sync_history_write_gap"]);
 
 const PUBLICATION_BLOCKING_CAUSE_CODES = new Set(["stablecoin_publication_incomplete"]);
+
+const ACTIVE_PRICE_COVERAGE_CAUSE_CODE = "active_price_coverage_incomplete";
+const ACTIVE_PRICE_COVERAGE_CAUSE_CODES = new Set([ACTIVE_PRICE_COVERAGE_CAUSE_CODE, "active_price_coverage_unknown"]);
 
 const MULTI_INSTANCE_CAUSE_CODES = new Set(["cache_warning"]);
 
@@ -349,6 +353,7 @@ function getIssueKind(cause: StatusCause, publicImpacting: boolean): DashboardIs
 }
 
 function getAffectedSurface(cause: StatusCause, publicImpacting: boolean): string {
+  if (ACTIVE_PRICE_COVERAGE_CAUSE_CODES.has(cause.code)) return "Stablecoin prices";
   if (publicImpacting) return "Public service";
   if (PUBLICATION_BLOCKING_CAUSE_CODES.has(cause.code)) return "Publication";
   if (cause.layer === "data-quality") return "Data pipeline";
@@ -363,14 +368,55 @@ function getIssueImpactLabel(kind: DashboardIssueKind): string {
   return "Informational watch";
 }
 
-export function normalizeStatusIssues(causes: StatusResponse["causes"]): DashboardIssue[] {
+export function buildPublicHealthStatusCauses(healthData: HealthResponse | null | undefined): StatusCause[] {
+  if (!healthData) return [];
+  const coverage = healthData.activePriceCoverage;
+  const warning = healthData.warnings.find((item) => item.startsWith("active-price-coverage-incomplete:"));
+  if (coverage?.status !== "incomplete" && !warning) return [];
+
+  const message =
+    coverage?.status === "incomplete"
+      ? getActivePriceCoverageImpactDetail(coverage)
+      : getPublicHealthWarningPresentation(warning!, healthData).detail;
+
+  return [
+    {
+      code: ACTIVE_PRICE_COVERAGE_CAUSE_CODE,
+      layer: "data-quality",
+      severity: "warning",
+      message,
+      metric: "missingActivePrices",
+      value: coverage?.missingPriceCount,
+      threshold: 1,
+    },
+  ];
+}
+
+export function normalizeStatusIssues(
+  causes: StatusResponse["causes"],
+  additionalCauses: readonly StatusCause[] = [],
+): DashboardIssue[] {
   const deduped = new Map<string, StatusCause>();
 
-  for (const cause of [...causes.overall, ...causes.availability, ...causes.dataQuality]) {
+  for (const cause of [...causes.overall, ...causes.availability, ...causes.dataQuality, ...additionalCauses]) {
     const id = getIssueIdentity(cause);
     const existing = deduped.get(id);
+    const isRicherActivePriceCause =
+      existing != null &&
+      cause.code === ACTIVE_PRICE_COVERAGE_CAUSE_CODE &&
+      additionalCauses.includes(cause) &&
+      SEVERITY_RANK[cause.severity] === SEVERITY_RANK[existing.severity];
     if (!existing || SEVERITY_RANK[cause.severity] < SEVERITY_RANK[existing.severity]) {
       deduped.set(id, cause);
+    } else if (isRicherActivePriceCause) {
+      deduped.set(id, {
+        ...existing,
+        ...cause,
+        metric: cause.metric ?? existing.metric,
+        value: cause.value ?? existing.value,
+        threshold: cause.threshold ?? existing.threshold,
+        runbookUrl: cause.runbookUrl ?? existing.runbookUrl,
+      });
     }
   }
 
@@ -726,8 +772,7 @@ function buildSectionPriority({
         : data.summary.degradedCrons > 0 || data.summary.watchUnhealthyCrons > 0
           ? 1
           : 0;
-  const commsStatus =
-    commsModel.delivery.health === "failed" ? 2 : commsModel.delivery.health === "degraded" ? 1 : 0;
+  const commsStatus = commsModel.delivery.health === "failed" ? 2 : commsModel.delivery.health === "degraded" ? 1 : 0;
   const pipelineIssues = [...issueGroups.impacting, ...issueGroups.warnings, ...issueGroups.maintenance].filter(
     (issue) => issue.layer === "data-quality",
   );
@@ -754,7 +799,9 @@ function buildSectionPriority({
       active: cronStatus > 0,
       severity: cronStatus,
       publicImpact:
-        data.summary.availabilityImpactingUnhealthyCrons > 0 || data.summary.availabilityImpactingCronErrors > 0 ? 1 : 0,
+        data.summary.availabilityImpactingUnhealthyCrons > 0 || data.summary.availabilityImpactingCronErrors > 0
+          ? 1
+          : 0,
       evidenceRisk: 0,
       persistence: data.summary.availabilityImpactingConsecutiveCronErrors,
       count:
@@ -1070,7 +1117,7 @@ export function buildStatusDashboardData({
   const allTransitions = historyTransitions ?? data.timeline;
   const latestTransition = allTransitions[0] ?? null;
   const recommendedActions = deriveStatusActionRecommendations({ causes: data.causes, crons: data.crons });
-  const normalizedIssues = normalizeStatusIssues(data.causes);
+  const normalizedIssues = normalizeStatusIssues(data.causes, buildPublicHealthStatusCauses(healthData));
   const issueGroups = groupDashboardIssues(normalizedIssues);
   const decision = buildDashboardDecision({ data, healthData, evidence, issueGroups, recommendedActions });
   const blockerCauses = issueGroups.impacting;

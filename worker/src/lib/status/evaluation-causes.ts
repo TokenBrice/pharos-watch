@@ -40,6 +40,8 @@ export const RUNBOOK_BY_CODE: Record<string, string> = {
   stablecoins_cache_degraded: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   stablecoin_publication_incomplete: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   stablecoin_publication_unknown: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  active_price_coverage_incomplete: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  active_price_coverage_unknown: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   blacklist_gaps_degraded: `${RUNBOOK_BASE}/blacklist-sync.md`,
   blacklist_gaps_stale: `${RUNBOOK_BASE}/blacklist-sync.md`,
   onchain_integrity_degraded: `${RUNBOOK_BASE}/mint-burn-integrity.md`,
@@ -64,12 +66,25 @@ function pushCause(bucket: StatusCause[], cause: StatusCause): void {
   bucket.push(withRunbook(cause));
 }
 
+const OVERALL_CAUSE_PERSISTENCE_LIMIT = 12;
+const DURABLE_PUBLIC_CAUSE_CODES = new Set(["active_price_coverage_incomplete", "active_price_coverage_unknown"]);
+
 export function synthesizeOverallCauses(availability: StatusCause[], dataQuality: StatusCause[]): StatusCause[] {
-  const sorted = [...availability, ...dataQuality].sort((a, b) => {
-    const severityOrder = { critical: 0, warning: 1, info: 2 };
-    return severityOrder[a.severity] - severityOrder[b.severity];
-  });
-  return sorted.slice(0, 12);
+  const severityOrder = { critical: 0, warning: 1, info: 2 } as const;
+  const ranked = [...availability, ...dataQuality].map((cause, sourceIndex) => ({ cause, sourceIndex }));
+  const compareRanked = (a: (typeof ranked)[number], b: (typeof ranked)[number]) =>
+    severityOrder[a.cause.severity] - severityOrder[b.cause.severity] || a.sourceIndex - b.sourceIndex;
+  const durablePublic = ranked.filter(({ cause }) => DURABLE_PUBLIC_CAUSE_CODES.has(cause.code)).sort(compareRanked);
+  const remainingCapacity = Math.max(0, OVERALL_CAUSE_PERSISTENCE_LIMIT - durablePublic.length);
+  const selected = [
+    ...durablePublic.slice(0, OVERALL_CAUSE_PERSISTENCE_LIMIT),
+    ...ranked
+      .filter(({ cause }) => !DURABLE_PUBLIC_CAUSE_CODES.has(cause.code))
+      .sort(compareRanked)
+      .slice(0, remainingCapacity),
+  ];
+
+  return selected.sort(compareRanked).map(({ cause }) => cause);
 }
 
 export function buildAvailabilityCauses(input: {
@@ -389,6 +404,7 @@ export function buildAvailabilityCauses(input: {
 
 export function buildDataQualityCauses(input: {
   dataQuality: DataQuality;
+  activePriceCoverage: PublicHealthAssessment["activePriceCoverage"];
   missingPriceRatio: number;
   blacklistMissingRatio: number;
   blacklistRecentMissing: number;
@@ -434,6 +450,29 @@ export function buildDataQualityCauses(input: {
       layer: "data-quality",
       severity: "warning",
       message: "Exact stablecoin publication coverage evidence is unavailable.",
+    });
+  }
+
+  if (input.activePriceCoverage.status === "incomplete") {
+    const missing = input.activePriceCoverage.missingActiveIds;
+    const examples = missing.slice(0, 12).join(", ");
+    pushCause(dataQualityCauses, {
+      code: "active_price_coverage_incomplete",
+      layer: "data-quality",
+      severity: "warning",
+      message:
+        `Live prices are missing for ${input.activePriceCoverage.missingPriceCount} active asset(s)` +
+        (examples ? `: ${examples}${missing.length > 12 ? ", ..." : ""}.` : "."),
+      metric: "missingActivePrices",
+      value: input.activePriceCoverage.missingPriceCount,
+      threshold: 1,
+    });
+  } else if (input.activePriceCoverage.status === "unknown") {
+    pushCause(dataQualityCauses, {
+      code: "active_price_coverage_unknown",
+      layer: "data-quality",
+      severity: "warning",
+      message: "Exact active stablecoin live-price coverage evidence is unavailable.",
     });
   }
 

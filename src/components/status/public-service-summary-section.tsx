@@ -97,12 +97,14 @@ export function PublicServiceSummarySection({
                 {formatTimestampSeconds(healthData.mintBurn.sync.lastSuccessfulSyncAt)}
               </div>
             </div>
-            <div className="border-t border-border/60 pt-3">
-              <div className="pharos-kicker">Latest Hourly Rollup</div>
-              <div className="mt-1.5 pharos-numeric text-sm text-foreground">
-                {formatTimestampSeconds(healthData.mintBurn.latestHourlyTs)}
+            {healthData.mintBurn.latestHourlyTs != null ? (
+              <div className="border-t border-border/60 pt-3">
+                <div className="pharos-kicker">Latest Hourly Rollup</div>
+                <div className="mt-1.5 pharos-numeric text-sm text-foreground">
+                  {formatTimestampSeconds(healthData.mintBurn.latestHourlyTs)}
+                </div>
               </div>
-            </div>
+            ) : null}
           </div>
           {healthData.mintBurn.staleMajorSymbols.length > 0 ? (
             <div className="rounded-[1rem] border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-relaxed text-amber-700 dark:text-amber-300">

@@ -218,6 +218,16 @@ function getRunningState(cron: CronStatus): Exclude<CronRunningFilter, "all"> {
   return cron.inFlight.stale ? "stale" : "running";
 }
 
+type InheritedRequiredOutcome = Extract<CronRunStatus, "degraded" | "error"> | null;
+
+function getInheritedRequiredOutcome(cron: CronStatus): InheritedRequiredOutcome {
+  if (cron.lastRun?.status !== "skipped_neutral") return null;
+  const latestRequiredRun = cron.recentRuns.find((run) => run.status !== "skipped_neutral");
+  return latestRequiredRun?.status === "degraded" || latestRequiredRun?.status === "error"
+    ? latestRequiredRun.status
+    : null;
+}
+
 function matchesSearch(row: CronWorkbenchRow, normalizedSearch: string): boolean {
   if (!normalizedSearch) return true;
   const attempt = row.cron.latestAttempt;
@@ -277,8 +287,16 @@ function summarizeGroup(allRows: CronWorkbenchRow[], visibleRows: CronWorkbenchR
 
 export function classifyCronWorkbenchState(cron: CronStatus): CronWorkbenchState {
   if (cron.telemetryUnknown) return "unknown";
-  if (!cron.healthy || cron.lastRun?.status === "error" || cron.inFlight?.stale) return "unhealthy";
-  if (cron.lastRun?.status === "degraded") return "degraded";
+  const inheritedRequiredOutcome = getInheritedRequiredOutcome(cron);
+  if (
+    !cron.healthy ||
+    cron.lastRun?.status === "error" ||
+    inheritedRequiredOutcome === "error" ||
+    cron.inFlight?.stale
+  ) {
+    return "unhealthy";
+  }
+  if (cron.lastRun?.status === "degraded" || inheritedRequiredOutcome === "degraded") return "degraded";
   if (cron.inFlight && !cron.inFlight.stale) return "running";
   return "healthy";
 }
@@ -342,6 +360,7 @@ export function buildCronWorkbenchModel(
     };
     const rows = group.entries.map(([job, cron]) => {
       const state = classifyCronWorkbenchState(cron);
+      const inheritedRequiredOutcome = getInheritedRequiredOutcome(cron);
       const impactClass: CronImpactClass = getCronStatusImpact(job) === "critical" ? "public-critical" : "admin-watch";
       const rawStatus = cron.lastRun?.status ?? null;
       const row: CronWorkbenchRow = {
@@ -356,7 +375,13 @@ export function buildCronWorkbenchModel(
         impactLabel: impactClass === "public-critical" ? "Public critical" : "Admin watch",
         runningState: getRunningState(cron),
         rawStatus,
-        statusLabel: cron.telemetryUnknown ? "Telemetry unknown" : formatCronRunStatus(rawStatus),
+        statusLabel: cron.telemetryUnknown
+          ? "Telemetry unknown"
+          : inheritedRequiredOutcome === "error"
+            ? "Failed (latest required run)"
+            : inheritedRequiredOutcome === "degraded"
+              ? "Completed with warnings (latest required run)"
+              : formatCronRunStatus(rawStatus),
         registryIndex: getRegistryIndex(job),
         sourceIndex,
       };

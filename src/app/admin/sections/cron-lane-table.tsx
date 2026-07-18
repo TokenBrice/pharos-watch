@@ -235,7 +235,9 @@ function CronRunHistoryPanel({ runs }: { runs: CronRun[] }) {
                 className="grid min-w-0 gap-2 px-3 py-2 text-xs sm:grid-cols-[minmax(7rem,0.8fr)_minmax(5rem,0.5fr)_minmax(0,1.7fr)]"
               >
                 <span className="min-w-0">
-                  <Badge className={`max-w-full text-[11px] ${getCronStatusColor(run.status)}`}>
+                  <Badge
+                    className={`max-w-full whitespace-normal break-words text-left text-[11px] leading-tight ${getCronStatusColor(run.status)}`}
+                  >
                     {formatCronRunStatus(run.status)}
                   </Badge>
                   <span className="mt-1 block break-all font-mono text-[10px] text-muted-foreground">{run.status}</span>
@@ -754,7 +756,11 @@ function BudgetSurfaceStatus({ row }: { row: BudgetOnlySurfaceRow }) {
             >
               {row.telemetryLabel} telemetry
             </Badge>
-            <Badge className={`text-[11px] ${getCronStatusColor(surface.outcome)}`}>{row.outcomeLabel}</Badge>
+            <Badge
+              className={`max-w-full whitespace-normal break-words text-left text-[11px] leading-tight ${getCronStatusColor(surface.outcome)}`}
+            >
+              {row.outcomeLabel}
+            </Badge>
           </span>
         </summary>
       }

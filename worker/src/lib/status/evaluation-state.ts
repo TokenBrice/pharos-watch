@@ -109,15 +109,18 @@ export function deriveDataQualityStatus(input: {
   blacklistRecentMissing: number;
   onchainAssessment: OnchainDataQualityAssessment;
   reserveCompositionStatus: StatusResponse["reserveComposition"]["status"];
+  activePriceCoverageImpactStatus: PublicHealthAssessment["activePriceCoverageImpactStatus"];
 }): StatusResponse["dataQualityStatus"] {
   return input.dataQuality.stablecoinsCacheStatus === "error" ||
+    input.activePriceCoverageImpactStatus === "stale" ||
     input.missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioStale ||
     input.blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale ||
     input.blacklistRecentMissing >= STATUS_BLACKLIST_THRESHOLDS.missingRecentStale ||
     input.onchainAssessment.status === "stale" ||
     input.reserveCompositionStatus === "stale"
-    ? "stale"
-    : input.dataQuality.stablecoinsCacheStatus === "degraded" ||
+      ? "stale"
+      : input.dataQuality.stablecoinsCacheStatus === "degraded" ||
+        input.activePriceCoverageImpactStatus === "degraded" ||
         (input.dataQuality.stablecoinPublication != null &&
           input.dataQuality.stablecoinPublication.status !== "complete") ||
         input.missingPriceRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded ||

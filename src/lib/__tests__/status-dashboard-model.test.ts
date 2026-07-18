@@ -14,6 +14,7 @@ import {
   buildBrowserProbeSummary,
   buildDashboardEvidence,
   buildStatusDashboardData,
+  normalizeStatusIssues,
 } from "../status-dashboard-model";
 
 const BASE_STATUS = makeHealthyStatusResponse();
@@ -343,6 +344,110 @@ describe("status dashboard model", () => {
       hasPublicAdminDivergence: true,
     });
     expect(model.decision.summary).toBe("Public service degraded. Admin state healthy. Evidence current. Investigate.");
+  });
+
+  it("creates an impacting triage issue for incomplete active-price coverage", () => {
+    const rawActivePriceCause: StatusCause = {
+      code: "active_price_coverage_incomplete",
+      layer: "data-quality",
+      severity: "warning",
+      message: "Live prices are missing for 1 active asset(s): mnee-mnee.",
+      metric: "missingActivePrices",
+      value: 1,
+      threshold: 1,
+      runbookUrl: "https://example.com/stablecoins-cache",
+    };
+    const statusData = {
+      ...BASE_STATUS,
+      causes: {
+        overall: [rawActivePriceCause],
+        availability: [],
+        dataQuality: [rawActivePriceCause],
+      },
+    };
+    const healthData = {
+      ...BASE_HEALTH,
+      status: "degraded" as const,
+      warnings: ["active-price-coverage-incomplete:mnee-mnee"],
+      activePriceCoverage: {
+        status: "incomplete" as const,
+        expectedActiveCount: 190,
+        presentActiveCount: 190,
+        pricedActiveCount: 189,
+        missingPriceCount: 1,
+        pricedActiveIds: [],
+        missingActiveIds: ["mnee-mnee"],
+        affectedMarketCapUsd: 1_500_000,
+        missingActiveAssets: [
+          {
+            stablecoinId: "mnee-mnee",
+            symbol: "MNEE",
+            marketCapUsd: 1_500_000,
+            currentPrice: null,
+            currentSource: null,
+            currentObservedAt: null,
+            currentConfidence: null,
+            consecutiveMissingGenerations: 2,
+            lastAcceptedPrice: 1,
+            lastAcceptedSource: "coingecko",
+            lastAcceptedObservedAt: BASE_HEALTH.timestamp - 900,
+            rejectionReason: "no-accepted-price",
+            alertEligible: true,
+          },
+        ],
+        alertEligibleCount: 1,
+        alertEligibleIds: ["mnee-mnee"],
+        maxConsecutiveMissingGenerations: 2,
+        observedAt: BASE_HEALTH.timestamp,
+      },
+    };
+
+    const model = buildStatusDashboardData({
+      data: statusData,
+      healthData,
+      probes: [],
+      querySyncs: BASE_QUERY_SYNCS,
+      nowMs: 1_000_000,
+      healthError: null,
+      probesError: null,
+      historyError: null,
+      requestSourceError: null,
+      historyTransitions: undefined,
+    });
+
+    expect(model.issueGroups.impacting).toHaveLength(1);
+    expect(model.issueGroups.impacting[0]).toMatchObject({
+      code: "active_price_coverage_incomplete",
+      publicImpacting: true,
+      affectedSurface: "Stablecoin prices",
+      value: 1,
+    });
+    expect(model.issueGroups.impacting[0]?.message).toBe(
+      "Live prices are unavailable for 1 active asset: MNEE. Stablecoin listings and price-dependent analytics may be incomplete until coverage recovers.",
+    );
+    expect(model.issueGroups.impacting[0]?.runbookUrl).toBe("https://example.com/stablecoins-cache");
+    expect(model.overallCauseCount).toBe(1);
+    expect(model.decision.nextStep).toBe("investigate");
+  });
+
+  it("maps unknown exact active-price coverage to the stablecoin price surface", () => {
+    const issues = normalizeStatusIssues({
+      overall: [
+        {
+          code: "active_price_coverage_unknown",
+          layer: "data-quality",
+          severity: "warning",
+          message: "Exact active stablecoin live-price coverage evidence is unavailable.",
+        },
+      ],
+      availability: [],
+      dataQuality: [],
+    });
+
+    expect(issues[0]).toMatchObject({
+      publicImpacting: true,
+      affectedSurface: "Stablecoin prices",
+    });
   });
 
   it("surfaces public health divergence with mint/burn context", () => {

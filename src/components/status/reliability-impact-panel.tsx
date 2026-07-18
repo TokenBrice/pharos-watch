@@ -1,5 +1,6 @@
 import type { HealthResponse, StatusResponse } from "@shared/types";
 import type { ReliabilityIssue, ReliabilityIssueKind } from "@/lib/reliability-workspace-model";
+import { getPublicHealthWarningPresentation } from "@/lib/status/public-status";
 import { cn } from "@/lib/utils";
 
 const KIND_CLASS: Record<ReliabilityIssueKind, string> = {
@@ -33,7 +34,9 @@ export function ReliabilityImpactPanel({
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             {healthData
               ? healthData.warnings.length > 0
-                ? healthData.warnings.join(" ")
+                ? healthData.warnings
+                    .map((warning) => getPublicHealthWarningPresentation(warning, healthData).detail)
+                    .join(" ")
                 : "No public health warning is active."
               : "Public health evidence has not loaded; no healthy state is inferred."}
           </p>

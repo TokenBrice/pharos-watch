@@ -3,9 +3,11 @@ import type { StatusCause } from "../types/status";
 /**
  * Cause codes that correspond to things a public /status/ page viewer will
  * actually notice in the user-facing product. Admin-only data-quality
- * concerns (missing prices, blacklist ratio drift, reserve coverage,
- * on-chain monitor) are intentionally excluded so the public transition
- * history and the `/api/health`-backed hero badge tell one coherent story.
+ * concerns (aggregate missing-price ratios, blacklist ratio drift, reserve
+ * coverage, on-chain monitor) are intentionally excluded so the public
+ * transition history and the `/api/health`-backed hero badge tell one
+ * coherent story. Exact active-price coverage is included because missing
+ * live prices are visible on public stablecoin and analytics surfaces.
  *
  * The 2026-04-13 status-stability hardening defined the included/excluded
  * code list.
@@ -19,6 +21,8 @@ const PUBLIC_IMPACT_CODES: ReadonlySet<string> = new Set([
   "mint_burn_public_stale",
   "mint_burn_public_degraded",
   "mint_burn_health_query_failed",
+  "active_price_coverage_incomplete",
+  "active_price_coverage_unknown",
   "open_circuit_groups",
   "circuit_query_failed",
   "cron_error_runs",

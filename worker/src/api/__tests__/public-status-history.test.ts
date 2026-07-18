@@ -301,10 +301,12 @@ describe("handlePublicStatusHistory", () => {
       const body = (await res.json()) as {
         currentStatus: string;
         transitions: Array<{ to: string }>;
+        lastChangedAt: number | null;
       };
       expect(body.transitions).toHaveLength(1);
       expect(body.transitions[0].to).toBe("stale");
       expect(body.currentStatus).toBe("stale");
+      expect(body.lastChangedAt).toBe(now - 3600);
     });
 
     it("retains transitions whose causes mix public and admin codes", async () => {
@@ -387,7 +389,7 @@ describe("handlePublicStatusHistory", () => {
       expect(body.currentStatus).toBe("healthy");
     });
 
-    it("sources currentStatus from assessPublicHealth even when admin state is degraded", async () => {
+    it("does not reuse the admin state timestamp when public history has no matching transition", async () => {
       // Admin state says 'degraded' (hysteresis-smoothed global, likely
       // driven by missing_prices_degraded), but the public health assessment
       // says 'healthy' because /api/health does not include data-quality
@@ -409,9 +411,42 @@ describe("handlePublicStatusHistory", () => {
         lastChangedAt: number | null;
       };
       expect(body.currentStatus).toBe("healthy");
-      // lastChangedAt still comes from the admin state row (that's the
-      // timestamp the state machine last flipped).
-      expect(body.lastChangedAt).toBe(now - 3600);
+      expect(body.lastChangedAt).toBeNull();
+    });
+
+    it("omits lastChangedAt when the latest public transition does not match live health", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const db = makeDb({
+        transitions: [
+          {
+            id: 1,
+            previous_status: "healthy",
+            next_status: "stale",
+            raw_status: "stale",
+            transition_type: "degrade",
+            reason: "raw-stale-immediate-escalation",
+            causes: [
+              {
+                code: "cache_ratio_stale",
+                layer: "availability",
+                severity: "critical",
+                message: "Cache freshness exceeded stale threshold.",
+              },
+            ],
+            created_at: now - 3600,
+          },
+        ],
+      });
+      assessPublicHealthMock.mockResolvedValue(stubPublicHealth("degraded"));
+
+      const res = await handlePublicStatusHistory(
+        db,
+        new Request("https://pharos.watch/api/public-status-history?window=24h"),
+      );
+      const body = (await res.json()) as { currentStatus: string; lastChangedAt: number | null };
+
+      expect(body.currentStatus).toBe("degraded");
+      expect(body.lastChangedAt).toBeNull();
     });
 
     it("keeps info-only recovery rows that close a public-impact incident", async () => {

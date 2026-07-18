@@ -26,6 +26,7 @@ import {
   STATUS_DASHBOARD_FRESHNESS_POLICY,
   buildDashboardDecision,
   buildDashboardEvidence,
+  buildPublicHealthStatusCauses,
   formatTransitionLabel,
   formatTimestampSeconds,
   getIssueKindBadgeClass,
@@ -99,7 +100,8 @@ export function TriageSummary({
   const [areIssuesExpanded, setAreIssuesExpanded] = useState(false);
   const topFoldCopy = getTopFoldCopy(data.overallStatus, data.rawOverallStatus);
   const isRecoveryHold = isRecoveryHoldState(data.overallStatus, data.rawOverallStatus);
-  const resolvedIssueGroups = issueGroups ?? groupDashboardIssues(normalizeStatusIssues(data.causes));
+  const resolvedIssueGroups =
+    issueGroups ?? groupDashboardIssues(normalizeStatusIssues(data.causes, buildPublicHealthStatusCauses(healthData)));
   const resolvedEvidence = evidence ?? buildDashboardEvidence(querySyncs);
   const resolvedDecision =
     decision ??

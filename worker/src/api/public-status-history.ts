@@ -1,13 +1,5 @@
-import {
-  parseEnumParam,
-  parseQueryParams,
-  withErrorHandler,
-  jsonResponse,
-} from "../lib/api-utils";
-import {
-  getStatusStateSnapshot,
-  listRecentStatusTransitions,
-} from "../lib/status-reliability";
+import { parseEnumParam, parseQueryParams, withErrorHandler, jsonResponse } from "../lib/api-utils";
+import { listRecentStatusTransitions } from "../lib/status-reliability";
 import { CACHE_PROFILES } from "../lib/constants";
 import { assessPublicHealth } from "../lib/public-health-assessment";
 import { transitionHasPublicImpact } from "@shared/lib/status-public-impact";
@@ -55,6 +47,18 @@ function filterPublicStatusTransitions(transitions: StatusTransition[]): StatusT
   return transitions.filter((transition) => includedIds.has(transition.id));
 }
 
+function getPublicLastChangedAt(
+  transitions: StatusTransition[],
+  currentStatus: PublicStatusHistoryResponse["currentStatus"],
+): number | null {
+  const latest = transitions.reduce<StatusTransition | null>((candidate, transition) => {
+    if (!candidate || transition.at > candidate.at) return transition;
+    if (transition.at === candidate.at && transition.id > candidate.id) return transition;
+    return candidate;
+  }, null);
+  return latest?.to === currentStatus ? latest.at : null;
+}
+
 export const handlePublicStatusHistory = withErrorHandler(
   "public-status-history",
   async (db: D1Database, request: Request): Promise<Response> => {
@@ -69,14 +73,11 @@ export const handlePublicStatusHistory = withErrorHandler(
 
     const from = now - WINDOW_TO_SECONDS[window];
 
-    // Three parallel loads:
-    //   1. the hysteresis state (used only for lastChangedAt — NOT for
-    //      currentStatus, see Workstream 4 of the status stability plan)
-    //   2. the full transition list in the window (will be filtered below)
-    //   3. the public health assessment — same function /api/health uses,
+    // Two parallel loads:
+    //   1. the full transition list in the window (will be filtered below)
+    //   2. the public health assessment — same function /api/health uses,
     //      so the hero badge and this endpoint stay in sync
-    const [{ state }, allTransitions, publicHealth] = await Promise.all([
-      getStatusStateSnapshot(db, now),
+    const [allTransitions, publicHealth] = await Promise.all([
       listRecentStatusTransitions(db, parsed.limit, { from }),
       assessPublicHealth(db, now, { logPrefix: "public-status-history" }),
     ]);
@@ -95,7 +96,7 @@ export const handlePublicStatusHistory = withErrorHandler(
     const body: PublicStatusHistoryResponse = {
       timestamp: now,
       currentStatus: publicCurrentStatus,
-      lastChangedAt: state?.lastChangedAt ?? null,
+      lastChangedAt: getPublicLastChangedAt(filteredTransitions, publicCurrentStatus),
       transitions: filteredTransitions.map(toPublicTransition),
     };
 
