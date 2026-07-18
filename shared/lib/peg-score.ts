@@ -141,7 +141,7 @@ export function computeRecentPegStats(
   const recentEvents = events.filter((event) => {
     if (isExcludedByAudit(event)) return false;
     const eventEndSec = event.endedAt ?? nowSec;
-    return event.startedAt <= nowSec && eventEndSec >= observedStartSec;
+    return event.startedAt <= nowSec && eventEndSec > observedStartSec;
   });
   const depegSec = mergeDepegSeconds(recentEvents, observedStartSec, nowSec);
 
@@ -151,10 +151,7 @@ export function computeRecentPegStats(
     coverageLimited: observedStartSec > nominalStartSec,
     pegPct: Math.max(0, (1 - depegSec / observedSpanSec) * 100),
     incidentCount: recentEvents.length,
-    thresholdCrossingCount: recentEvents.reduce(
-      (sum, event) => sum + Math.max(1, event.constituentEventCount ?? 1),
-      0,
-    ),
+    thresholdCrossingCount: recentEvents.reduce((sum, event) => sum + Math.max(1, event.constituentEventCount ?? 1), 0),
     worstDeviationBps: worstDeviation(recentEvents),
   };
 }
@@ -176,9 +173,8 @@ export function computePegScore(
 
   // Determine tracking window start
   // Only compute earliestEvent when trackingStartSec is absent (all production callers supply it).
-  const earliestEvent = trackingStartSec == null && events.length > 0
-    ? events.reduce((m, e) => Math.min(m, e.startedAt), Infinity)
-    : null;
+  const earliestEvent =
+    trackingStartSec == null && events.length > 0 ? events.reduce((m, e) => Math.min(m, e.startedAt), Infinity) : null;
   const startSec = trackingStartSec ?? earliestEvent;
 
   // No events and no known tracking start -> assume stable, default score
@@ -189,8 +185,12 @@ export function computePegScore(
   const spanSec = Math.max(now - startSec, 1);
   const spanDays = spanSec / DAY_SECONDS;
   const insufficientData = spanDays < 7;
-  const scoringEvents = events.filter((event) => !isExcludedByAudit(event));
-  const excludedEventCount = events.length - scoringEvents.length;
+  const coverageEvents = events.filter((event) => {
+    const eventEndSec = event.endedAt ?? now;
+    return event.startedAt <= now && eventEndSec > startSec;
+  });
+  const scoringEvents = coverageEvents.filter((event) => !isExcludedByAudit(event));
+  const excludedEventCount = coverageEvents.length - scoringEvents.length;
   const lowConfidenceEventCount = scoringEvents.filter((event) => eventSeverityWeight(event) < 1).length;
   const qualityAdjusted = excludedEventCount > 0 || lowConfidenceEventCount > 0;
 
@@ -208,9 +208,10 @@ export function computePegScore(
   for (const e of scoringEvents) {
     const rawBps = Math.abs(e.peakDeviationBps);
     const peakBps = Number.isFinite(rawBps) ? rawBps : 0;
-    const endSec = e.endedAt ?? now;
-    const durationDays = Math.min((endSec - e.startedAt) / DAY_SECONDS, 90);
-    const yearsAgo = (now - e.startedAt) / (365.25 * DAY_SECONDS);
+    const observedStartSec = Math.max(e.startedAt, startSec);
+    const endSec = Math.min(e.endedAt ?? now, now);
+    const durationDays = Math.max(0, Math.min((endSec - observedStartSec) / DAY_SECONDS, 90));
+    const yearsAgo = (now - observedStartSec) / (365.25 * DAY_SECONDS);
     const recencyWeight = 1 / (1 + yearsAgo);
 
     const durationPenalty = (peakBps / 100) * (durationDays / 30) * recencyWeight;
@@ -254,11 +255,7 @@ export function computePegScore(
   }
 
   // --- Composite ---
-  const raw =
-    PEG_COMPOSITE_WEIGHT * pegPct +
-    PEG_COMPOSITE_WEIGHT * severityScore -
-    activeDepegPenalty -
-    spreadPenalty;
+  const raw = PEG_COMPOSITE_WEIGHT * pegPct + PEG_COMPOSITE_WEIGHT * severityScore - activeDepegPenalty - spreadPenalty;
   const pegScore = insufficientData ? null : Math.max(0, Math.min(100, Math.round(raw)));
 
   // --- Worst deviation ---
@@ -269,16 +266,14 @@ export function computePegScore(
     pegPct,
     severityScore,
     spreadPenalty,
-    eventCount: events.length,
+    eventCount: coverageEvents.length,
     scoredEventCount: scoringEvents.length,
     excludedEventCount,
     lowConfidenceEventCount,
     qualityAdjusted,
     worstDeviationBps,
     activeDepeg: scoringEvents.some((e) => e.endedAt === null),
-    lastEventAt: scoringEvents.length > 0
-      ? scoringEvents.reduce((m, e) => Math.max(m, e.startedAt), -Infinity)
-      : null,
+    lastEventAt: scoringEvents.length > 0 ? scoringEvents.reduce((m, e) => Math.max(m, e.startedAt), -Infinity) : null,
     trackingSpanDays: Math.floor(spanDays),
   };
 }
