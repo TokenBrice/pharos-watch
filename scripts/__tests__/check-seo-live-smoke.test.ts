@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { checkSitemapUrls, isMainEntrypoint } from "../ci/check-seo-live-smoke.mjs";
+import { checkSitemap, checkSitemapUrls, isMainEntrypoint } from "../ci/check-seo-live-smoke.mjs";
 
 function responseWithBody(status: number, contentType = "text/plain") {
   const cancel = vi.fn(async () => {});
@@ -22,6 +22,21 @@ afterEach(() => {
 });
 
 describe("check-seo-live-smoke sitemap URL checks", () => {
+  it("rejects duplicate locations in the live sitemap", async () => {
+    const sitemap = responseWithBody(200, "application/xml");
+    sitemap.text.mockResolvedValue(
+      "<urlset><url><loc>https://pharos.watch/</loc></url><url><loc>https://pharos.watch/</loc></url></urlset>",
+    );
+    vi.stubGlobal("fetch", vi.fn(async () => sitemap));
+    const errors: string[] = [];
+
+    await checkSitemap(new URL("https://pharos.watch/"), errors);
+
+    expect(errors).toEqual([
+      "sitemap.xml contains duplicate <loc> entries: https://pharos.watch/",
+    ]);
+  });
+
   it("cancels response bodies on early-return and non-html paths", async () => {
     const redirect = responseWithBody(301);
     const notFound = responseWithBody(404);

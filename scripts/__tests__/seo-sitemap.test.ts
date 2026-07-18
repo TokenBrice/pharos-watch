@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseSitemapLocs } from "../lib/seo-sitemap.mjs";
+import { findDuplicateSitemapLocs, parseSitemapLocs } from "../lib/seo-sitemap.mjs";
 
 describe("seo sitemap helpers", () => {
   it("extracts loc values as an ordered array by default", () => {
@@ -18,5 +18,16 @@ describe("seo sitemap helpers", () => {
     );
 
     expect(locs).toEqual(new Set(["https://pharos.watch/"]));
+  });
+
+  it("reports each duplicated loc once", () => {
+    expect(
+      findDuplicateSitemapLocs([
+        "https://pharos.watch/",
+        "https://pharos.watch/digest/2026-07-18/",
+        "https://pharos.watch/digest/2026-07-18/",
+        "https://pharos.watch/digest/2026-07-18/",
+      ]),
+    ).toEqual(["https://pharos.watch/digest/2026-07-18/"]);
   });
 });

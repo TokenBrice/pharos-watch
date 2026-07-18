@@ -18,6 +18,12 @@ import {
 } from "@/app/depeg/[event]/page-data";
 
 describe("sitemap", () => {
+  it("emits each canonical URL exactly once", () => {
+    const urls = sitemap().map((entry) => entry.url);
+
+    expect(new Set(urls).size).toBe(urls.length);
+  });
+
   it("includes every frozen detail page (TRACKED source preserves indexability)", () => {
     const entries = sitemap();
     const urls = new Set(entries.map((entry) => entry.url));
