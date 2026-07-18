@@ -88,7 +88,10 @@ jobs:
       - run: npm run check:feature-flag-inlining
       - run: npm run check:build-size
       - run: npm run check:build-attribution
-      - run: npm run seo:check
+      - name: Validate static SEO and published archive continuity
+        env:
+          SEO_PREVIOUS_SITEMAP_URL: https://stablecoin-dashboard.pages.dev/sitemap.xml
+        run: npm run seo:check
       - name: Write release marker
         run: |
           cat > out/__pharos_release.json <<EOF

@@ -9,10 +9,11 @@ describe("handleDepegEvents", () => {
 
   it("returns 200 with events and total", async () => {
     const db = mockD1([
+      { match: "threshold-crossing-count", rows: [{ total: 13 }], first: { total: 13 } },
       { match: "COUNT", rows: [{ total: 1 }] },
       { match: "depeg_events", rows: [row] },
     ]);
-    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
+    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=usdt-tether"));
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       events: unknown[];
@@ -21,6 +22,7 @@ describe("handleDepegEvents", () => {
     };
     expect(body.events).toHaveLength(1);
     expect(body.total).toBe(1);
+    expect(body).toMatchObject({ counts: { incidents: 1, thresholdCrossings: 13 } });
     expect(body.methodology).toHaveProperty("version");
     expect(body.methodology).toHaveProperty("changelogPath");
   });
@@ -160,6 +162,7 @@ describe("handleDepegEvents", () => {
             first_started_at: 1_780_437_028,
             first_start_price: 0.9893,
             first_peg_reference: 1,
+            constituent_event_count: 4,
           },
         ],
       },
@@ -176,6 +179,7 @@ describe("handleDepegEvents", () => {
       startedAt: 1_780_437_028,
       startPrice: 0.9893,
       pegReference: 1,
+      constituentEventCount: 4,
     });
   });
 
@@ -225,6 +229,22 @@ describe("handleDepegEvents", () => {
     expect(body.total).toBe(1);
     expect(body.totalExact).toBe(false);
     expect(db.getHistory().some((entry) => entry.sql.includes("COUNT(*) as total"))).toBe(false);
+  });
+
+  it("omits incident and crossing counts when the exact total is skipped", async () => {
+    const db = mockD1([
+      { match: "depeg_events", rows: [row] },
+    ]) as MockD1Database;
+
+    const res = await handleDepegEvents(
+      db,
+      new URL("https://x/api/depeg-events?stablecoin=usdt-tether&includeTotal=false"),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body).not.toHaveProperty("counts");
+    expect(db.getHistory().some((entry) => entry.sql.includes("threshold-crossing-count"))).toBe(false);
   });
 
   it("emits and accepts a keyset cursor", async () => {

@@ -36,6 +36,7 @@ import {
 import { compactDirectApiFetchPhasePools, type DirectApiPoolCompactionCounts } from "./orchestrator-phases/direct-api";
 import {
   buildPoolIdentity,
+  clearKnownPoolIdentityIndex,
   countPoolIdentityKeys,
   createKnownPoolIdentityIndex,
   getIdentityDedupReason,
@@ -124,6 +125,11 @@ export function filterPrimaryPoolsPreferDirectApi(
 
     filteredPools.push(pool);
   }
+
+  clearKnownPoolIdentityIndex(directApiKnown);
+  primaryIdentities.length = 0;
+  primaryIdentityCounts.derived.clear();
+  primaryIdentityCounts.wildcard.clear();
 
   return {
     filteredPools,
@@ -628,6 +634,10 @@ async function buildDexLiquidityPoolState(
     sourceState.authoritativeConfirmation,
   );
   mergeDexPriceObservationMap(sourceState.priceObservations, staged.priceObservations);
+  staged.priceObservations.clear();
+  // Staged dedup is the final identity consumer. Release its multi-map index
+  // before the optional telemetry await and the allocation-heavy scoring pass.
+  clearKnownPoolIdentityIndex(knownPoolIndex);
   sourceState.authoritativeConfirmation = {
     enforcedChainsByProtocol: new Map(),
     confirmedExactKeysByProtocol: new Map(),

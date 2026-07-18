@@ -198,6 +198,16 @@ const StablecoinMetaAssetSchemaShape = {
     .optional(),
   obituary: obituarySchema.optional(),
   launchDate: FuzzyDateSchema.optional(),
+  pegScoreCoverage: z
+    .object({
+      startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      basis: z.literal("audited-replay-and-live"),
+      reviewedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      replayRunId: z.string().trim().min(1).optional(),
+      notes: z.string().trim().min(1),
+    })
+    .strict()
+    .optional(),
   announcedDate: FuzzyDateSchema.optional(),
   expectedLaunchDate: FuzzyDateSchema.optional(),
   launchPhase: StablecoinMetaEnumSchemas.launchPhase.optional(),

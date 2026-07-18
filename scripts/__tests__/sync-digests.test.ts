@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   assertDigestArchivePreserved,
+  deduplicateDigestEntries,
   findMissingDigestArchiveDates,
   type DigestEntry,
 } from "../maintenance/sync-digests";
@@ -35,5 +36,24 @@ describe("sync-digests archive guard", () => {
 
     expect(() => assertDigestArchivePreserved(previous, current)).not.toThrow();
     expect(() => assertDigestArchivePreserved(previous, [], true)).not.toThrow();
+  });
+
+  it("publishes only the latest digest when an upstream rerun reuses a route date", () => {
+    const original = digest("2026-07-18");
+    const replacement = {
+      ...original,
+      title: "Revised digest",
+      generatedAt: original.generatedAt + 60 * 60,
+      editionNumber: 2,
+    };
+
+    expect(deduplicateDigestEntries([original, replacement, digest("2026-07-17")])).toEqual([
+      replacement,
+      digest("2026-07-17"),
+    ]);
+  });
+
+  it("keeps daily and weekly editions on separate durable routes", () => {
+    expect(deduplicateDigestEntries([digest("2026-07-18"), digest("2026-07-18-weekly")])).toHaveLength(2);
   });
 });

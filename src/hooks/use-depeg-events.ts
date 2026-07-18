@@ -111,10 +111,11 @@ export function useInfiniteDepegEvents({
   const totalExact = useMemo(() => pages?.[0]?.data.totalExact ?? true, [pages]);
   const nextCursor = useMemo(() => pages?.[pages.length - 1]?.data.nextCursor ?? null, [pages]);
   const pending = useMemo(() => pages?.[0]?.data.pending ?? [], [pages]);
+  const counts = useMemo(() => pages?.[0]?.data.counts ?? null, [pages]);
   const meta = useMemo(() => pages?.[0]?.meta ?? null, [pages]);
   const data = useMemo(
-    () => ({ events, total, totalExact, nextCursor, pending }),
-    [events, nextCursor, pending, total, totalExact],
+    () => ({ events, total, totalExact, nextCursor, pending, counts }),
+    [counts, events, nextCursor, pending, total, totalExact],
   );
 
   return {

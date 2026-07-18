@@ -36,9 +36,9 @@ function buildPegScoreEventLine(
   const scoreWindowCount = pegScoreResult.eventCount;
   const totalRecorded = recordedDepegEventCount;
   if (totalRecorded == null || totalRecorded === scoreWindowCount) {
-    return `${scoreWindowCount.toLocaleString()} event${scoreWindowCount !== 1 ? "s" : ""}`;
+    return `${scoreWindowCount.toLocaleString()} incident${scoreWindowCount !== 1 ? "s" : ""}`;
   }
-  return `${totalRecorded.toLocaleString()} recorded · ${scoreWindowCount.toLocaleString()} in 4y window`;
+  return `${totalRecorded.toLocaleString()} recorded · ${scoreWindowCount.toLocaleString()} scored incidents`;
 }
 
 export function buildPegScoreDisplay(

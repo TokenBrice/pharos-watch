@@ -25,7 +25,7 @@ import { deviationColorClass } from "@/lib/severity-colors";
 import { CLIENT_TRACKED_STABLECOINS as TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { computePegStability } from "@/lib/peg-stability";
 import { cn } from "@/lib/utils";
-import type { DepegEvent } from "@shared/types";
+import type { DepegEvent, PegSummaryCoin } from "@shared/types";
 
 function sortEvents(events: DepegEvent[]): DepegEvent[] {
   return [...events].sort((a, b) => {
@@ -40,7 +40,7 @@ function sortEvents(events: DepegEvent[]): DepegEvent[] {
 const DEPEG_HISTORY_PAGE_SIZE = 25;
 const EMPTY_EVENTS: DepegEvent[] = [];
 const DEPEG_HISTORY_DESCRIPTION =
-  "Recorded depeg detections for this stablecoin, sorted newest first. Peg score uses a rolling 4-year window.";
+  "Recorded depeg incidents for this stablecoin, sorted newest first. One incident can contain multiple threshold crossings.";
 const DEPEG_HISTORY_COLUMNS: readonly DataTableColumn[] = [
   { id: "date", label: "Date" },
   { id: "direction", label: "Direction" },
@@ -70,11 +70,15 @@ export function DepegHistory({
   earliestTrackingDate,
   hasPriceData = true,
   depegEventCoverageLimited = false,
+  historyCoverage = null,
+  recent90d = null,
 }: {
   stablecoinId: string;
   earliestTrackingDate?: number | null;
   hasPriceData?: boolean;
   depegEventCoverageLimited?: boolean;
+  historyCoverage?: PegSummaryCoin["historyCoverage"];
+  recent90d?: PegSummaryCoin["recent90d"];
 }) {
   const { data, isLoading, error, refetch, isFetchingNextPage, loadedCount, isFullyLoaded } = useInfiniteDepegEvents({
     stablecoinId,
@@ -83,13 +87,16 @@ export function DepegHistory({
   const meta = TRACKED_STABLECOINS.find((s) => s.id === stablecoinId);
   const pegCurrency = meta?.flags.pegCurrency ?? "USD";
   const events = data?.events ?? EMPTY_EVENTS;
-  const totalEvents = data?.total ?? events.length;
+  const totalIncidents = data?.counts?.incidents ?? data?.total ?? events.length;
+  const thresholdCrossings = data?.counts?.thresholdCrossings ?? (
+    isFullyLoaded ? events.reduce((sum, event) => sum + (event.constituentEventCount ?? 1), 0) : null
+  );
   const sorted = useMemo(() => sortEvents(events), [events]);
   const metrics = isFullyLoaded ? computePegStability(sorted, earliestTrackingDate ?? null) : null;
   const worstDeviationBps = metrics?.worstDeviationBps ?? null;
   const { effectivePage, totalPages, paginatedRows, rangeStart, rangeEnd, onPreviousPage, onNextPage } =
     useTablePagination(sorted, { pageSize: DEPEG_HISTORY_PAGE_SIZE });
-  const isHydratingFullHistory = totalEvents > loadedCount;
+  const isHydratingFullHistory = totalIncidents > loadedCount;
 
   if (isLoading) {
     return (
@@ -118,13 +125,13 @@ export function DepegHistory({
         {noData ? (
           <div className="rounded-lg border border-border/60 bg-muted/30 px-4 py-3">
             <p className="text-sm text-muted-foreground">
-              No depeg events recorded. No price data available to verify peg status.
+              No depeg incidents recorded. No price data available to verify peg status.
             </p>
           </div>
         ) : depegEventCoverageLimited ? (
           <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3">
             <p className="text-sm text-amber-700 dark:text-amber-400">
-              No depeg events recorded. This coin is currently below the {formatCurrency(DEPEG_EVENT_MIN_SUPPLY_USD)}{" "}
+              No depeg incidents recorded. This coin is currently below the {formatCurrency(DEPEG_EVENT_MIN_SUPPLY_USD)}{" "}
               live depeg-event floor, so Pharos shows the price deviation but does not open live depeg events at this
               size.
             </p>
@@ -132,7 +139,7 @@ export function DepegHistory({
         ) : (
           <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
             <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
-              No depeg events recorded. This stablecoin has maintained its peg.
+              No depeg incidents are recorded in the observed coverage window.
             </p>
           </div>
         )}
@@ -149,9 +156,15 @@ export function DepegHistory({
       ) : null}
       <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
         <div>
-          <span className="text-muted-foreground">Events </span>
-          <span className="font-mono font-semibold">{totalEvents.toLocaleString()}</span>
+          <span className="text-muted-foreground">Incidents </span>
+          <span className="font-mono font-semibold">{totalIncidents.toLocaleString()}</span>
         </div>
+        {thresholdCrossings != null ? (
+          <div>
+            <span className="text-muted-foreground">Threshold crossings </span>
+            <span className="font-mono font-semibold">{thresholdCrossings.toLocaleString()}</span>
+          </div>
+        ) : null}
         {worstDeviationBps != null && (
           <div>
             <span className="text-muted-foreground">Worst Depeg </span>
@@ -181,9 +194,25 @@ export function DepegHistory({
           </div>
         ) : null}
       </div>
+      {recent90d ? (
+        <div className="border-t border-border/50 pt-3 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">Recent 90d: </span>
+          <span className="font-mono">{recent90d.pegPct.toFixed(1)}%</span> at peg across{" "}
+          <span className="font-mono">{Math.floor(recent90d.observedDays)}d</span> observed, with{" "}
+          <span className="font-mono">{recent90d.incidentCount}</span> incidents and{" "}
+          <span className="font-mono">{recent90d.thresholdCrossingCount}</span> threshold crossings
+          {recent90d.coverageLimited ? " (partial 90-day coverage)" : ""}.
+        </div>
+      ) : null}
+      {historyCoverage ? (
+        <p className="text-xs text-muted-foreground">
+          Score coverage: {historyCoverage.status === "verified" ? "replay-verified" : "age-anchored"} since{" "}
+          <span className="font-mono">{formatEventDate(historyCoverage.startedAt)}</span>.
+        </p>
+      ) : null}
       {isHydratingFullHistory ? (
         <p className="mb-3 text-xs text-muted-foreground">
-          Loading full history... {loadedCount.toLocaleString()} / {totalEvents.toLocaleString()} events
+          Loading full history... {loadedCount.toLocaleString()} / {totalIncidents.toLocaleString()} incidents
           {isFetchingNextPage ? "" : " loaded"}
         </p>
       ) : null}
@@ -192,16 +221,16 @@ export function DepegHistory({
           <DepegEventCard key={event.id} event={event} pegCurrency={pegCurrency} />
         ))}
       </ol>
-      {isFullyLoaded && totalEvents > 0 ? (
+      {isFullyLoaded && totalIncidents > 0 ? (
         <TablePagination
           page={effectivePage}
           totalPages={totalPages}
           rangeStart={rangeStart}
           rangeEnd={rangeEnd}
-          total={totalEvents}
+          total={totalIncidents}
           onPrevious={onPreviousPage}
           onNext={onNextPage}
-          noun="events"
+          noun="incidents"
           className="mt-3 rounded-xl border border-border/60 md:hidden"
         />
       ) : null}
@@ -212,16 +241,16 @@ export function DepegHistory({
         containerClassName="hidden rounded-xl border overflow-hidden md:block"
         tableClassName="min-w-[420px]"
         pagination={
-          isFullyLoaded && totalEvents > 0
+          isFullyLoaded && totalIncidents > 0
             ? {
                 page: effectivePage,
                 totalPages,
                 rangeStart,
                 rangeEnd,
-                total: totalEvents,
+                total: totalIncidents,
                 onPrevious: onPreviousPage,
                 onNext: onNextPage,
-                noun: "events",
+                noun: "incidents",
               }
             : undefined
         }
@@ -256,7 +285,10 @@ function DepegEventCard({ event, pegCurrency }: { event: DepegEvent; pegCurrency
             >
               {event.direction === "below" ? "Below" : "Above"}
             </Badge>
-            <span className="text-[11px] text-muted-foreground">{event.source}</span>
+            <span className="text-[11px] text-muted-foreground">
+              {event.source}
+              {(event.constituentEventCount ?? 1) > 1 ? ` · ${event.constituentEventCount} crossings` : ""}
+            </span>
           </div>
         </div>
         <div className="shrink-0 text-right">
@@ -322,6 +354,11 @@ function DepegRow({ event, pegCurrency }: { event: DepegEvent; pegCurrency: stri
           source={event.source}
           reasonLeadingClass="ml-2"
         />
+        {(event.constituentEventCount ?? 1) > 1 ? (
+          <span className="ml-2 text-xs text-muted-foreground">
+            {event.constituentEventCount} crossings
+          </span>
+        ) : null}
       </TableCell>
       <TableCell className={`text-right font-mono tabular-nums text-sm ${devColor}`}>
         {event.peakDeviationBps > 0 ? "+" : ""}

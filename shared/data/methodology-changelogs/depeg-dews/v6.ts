@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.097",
+    title: "Fiat FX references and PegScore coverage become explicit",
+    date: "2026-07-18",
+    effectiveAt: 1784395800,
+    summary:
+      "Fiat peg monitoring now anchors current deviation to live FX instead of same-peg peer drift, while PegScore and detail surfaces expose the observed coverage and distinguish public incidents from raw threshold crossings.",
+    impact: [
+      "Live fiat FX references take precedence over peer medians for detector, peg-summary, detail, and feedback-verification paths; peer medians remain a fail-closed fallback requiring at least three contributors",
+      "Feedback verification uses the same 100 bps USD and 150 bps non-USD threshold policy as live depeg detection",
+      "Reviewed replay coverage can explicitly set a coin's PegScore denominator; BRLA coverage begins at the audited 2026-06-28 replay window instead of implying stable history before Pharos observation",
+      "Peg summary publishes current reference evidence, coverage provenance, and a coverage-aware recent 90-day view",
+      "Stablecoin history and API responses distinguish public incidents from their constituent threshold-crossing rows",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.096",
     title: "Native-peg events preserve one quote domain",
     date: "2026-07-11",

@@ -36,6 +36,7 @@ vi.mock("../dex-liquidity/fetch-primary", () => ({
     derivedToExactKeys: new Map<string, Set<string>>(),
     wildcardKeyCounts: new Map<string, number>(),
     wildcardToExactKeys: new Map<string, Set<string>>(),
+    concreteFeeVariantKeys: new Map<string, Set<string>>(),
   })),
 }));
 
@@ -142,6 +143,7 @@ import { buildSymbolLookups } from "../dex-liquidity/pool-helpers";
 import { processPoolMetrics } from "../dex-liquidity/process-pools";
 import { mergeStagedPools } from "../dex-liquidity/staging-merge";
 import { fetchCgTickersFallback, fetchDsFallbackPools } from "../dex-liquidity/fetch-fallbacks";
+import { fetchMajorStablecoinOrderbookDepthSummary } from "../../lib/cex-orderbooks";
 
 const db = {
   prepare: () => ({
@@ -384,6 +386,49 @@ describe("syncDexLiquidity", () => {
     expect(metadata.sourceCoverage?.protocolCapReductions?.reducedTvlUsd).toBe(0);
     expect(fetchDsFallbackPools).not.toHaveBeenCalled();
     expect(fetchCgTickersFallback).not.toHaveBeenCalled();
+  });
+
+  it("releases identity and staged-observation graphs before bounded market telemetry", async () => {
+    const knownPoolIndex = {
+      exactKeys: new Set(["ethereum:0xpool"]),
+      derivedKeyCounts: new Map([["derived", 1]]),
+      derivedToExactKeys: new Map([["derived", new Set(["ethereum:0xpool"])]]),
+      wildcardKeyCounts: new Map([["wildcard", 1]]),
+      wildcardToExactKeys: new Map([["wildcard", new Set(["ethereum:0xpool"])]]),
+      concreteFeeVariantKeys: new Map([["variant", new Set(["derived"])]]),
+    };
+    const stagedPriceObservations = new Map([
+      ["usdt-tether", [{ price: 1, tvl: 1_000_000, chain: "Ethereum", protocol: "curve", sourceFamily: "cg_onchain" }]],
+    ]);
+    vi.mocked(buildKnownPoolAddresses).mockReturnValueOnce(knownPoolIndex);
+    vi.mocked(mergeStagedPools).mockResolvedValueOnce({
+      mergedCount: 0,
+      skippedCount: 0,
+      skippedByExactIdentityCount: 0,
+      skippedByUniqueDerivedIdentityCount: 0,
+      skippedByOptionalWildcardIdentityCount: 0,
+      skippedByAuthoritativeProtocolCount: 0,
+      skipDimensions: [],
+      priceObservations: stagedPriceObservations,
+    });
+    vi.mocked(fetchMajorStablecoinOrderbookDepthSummary).mockImplementationOnce(async () => {
+      expect(knownPoolIndex.exactKeys.size).toBe(0);
+      expect(knownPoolIndex.derivedKeyCounts.size).toBe(0);
+      expect(knownPoolIndex.derivedToExactKeys.size).toBe(0);
+      expect(knownPoolIndex.wildcardKeyCounts.size).toBe(0);
+      expect(knownPoolIndex.wildcardToExactKeys.size).toBe(0);
+      expect(knownPoolIndex.concreteFeeVariantKeys.size).toBe(0);
+      expect(stagedPriceObservations.size).toBe(0);
+      return {
+        checkedSymbols: 0,
+        venueCount: 0,
+        observations: 0,
+        maxDepthDown2PctUsdBySymbol: {},
+        maxDepthUp2PctUsdBySymbol: {},
+      };
+    });
+
+    await syncDexLiquidity(db, "graph-key");
   });
 
   it("finishes direct providers before loading primary sources", async () => {

@@ -3,7 +3,10 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { collectSeoStaticCheckResult } from "../ci/check-seo-static.mjs";
+import {
+  collectSeoStaticCheckResult,
+  findPublishedArchiveContinuityErrors,
+} from "../ci/check-seo-static.mjs";
 
 const roots: string[] = [];
 const BASELINE_HEADERS = `/*
@@ -149,6 +152,40 @@ async function writeBaselinePages(root: string, rootLinks: string[] = []) {
 }
 
 describe("check-seo-static", () => {
+  it("rejects a previously published archive URL that disappears without a canonical redirect", () => {
+    const previous = `
+      <urlset>
+        <url><loc>https://pharos.watch/digest/2026-07-17/</loc></url>
+        <url><loc>https://pharos.watch/depeg/apxusd-2026-06-16/</loc></url>
+      </urlset>`;
+    const current = `
+      <urlset>
+        <url><loc>https://pharos.watch/digest/2026-07-17/</loc></url>
+        <url><loc>https://pharos.watch/depeg/apxusd-2026-06-02/</loc></url>
+      </urlset>`;
+
+    expect(findPublishedArchiveContinuityErrors(previous, current)).toEqual([
+      "published archive URLs missing from the current sitemap without a direct 301 to a submitted URL: https://pharos.watch/depeg/apxusd-2026-06-16/",
+    ]);
+  });
+
+  it("accepts an explicit one-hop consolidation into a submitted archive URL", () => {
+    const previous =
+      "<urlset><url><loc>https://pharos.watch/depeg/apxusd-2026-06-16/</loc></url></urlset>";
+    const current =
+      "<urlset><url><loc>https://pharos.watch/depeg/apxusd-2026-06-02/</loc></url></urlset>";
+
+    expect(
+      findPublishedArchiveContinuityErrors(previous, current, [
+        {
+          source: "/depeg/apxusd-2026-06-16/",
+          destination: "/depeg/apxusd-2026-06-02/",
+          status: "301",
+        },
+      ]),
+    ).toEqual([]);
+  });
+
   it("fails invalid application/ld+json blocks", async () => {
     const root = await makeOutDir();
     await writePage(root, "/", {
@@ -570,6 +607,18 @@ describe("check-seo-static", () => {
           error.startsWith("sitemap.xml URL https://pharos.watch/stability-index/") && error.includes("conflicts"),
       ),
     ).toBe(false);
+  });
+
+  it("fails duplicate sitemap locations", async () => {
+    const root = await makeOutDir();
+    await writeBaselinePages(root);
+    await writeSitemap(root, ["/", "/stability-index/", "/stability-index/"]);
+
+    const result = collectFixtureSeoResult(root);
+
+    expect(result.errors).toContain(
+      "sitemap.xml contains duplicate <loc> entries: https://pharos.watch/stability-index/",
+    );
   });
 
   it("fails sitemap URLs that conflict with _redirects sources", async () => {

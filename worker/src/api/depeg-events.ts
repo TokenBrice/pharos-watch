@@ -184,6 +184,25 @@ async function loadPendingIncidents(
   });
 }
 
+async function loadThresholdCrossingCount(db: D1Database, stablecoinId: string): Promise<number | null> {
+  try {
+    const row = await db
+      .prepare(
+        `SELECT /* pharos:depeg-events:threshold-crossing-count */ COUNT(*) AS total
+           FROM depeg_events_with_provenance
+          WHERE stablecoin_id = ?`,
+      )
+      .bind(stablecoinId)
+      .first<{ total: number }>();
+    return typeof row?.total === "number" && Number.isFinite(row.total) ? Math.max(0, row.total) : null;
+  } catch (err) {
+    if (!isMissingTableError(err)) {
+      console.error("[depeg-events] Unexpected error loading threshold-crossing count:", toErrorMessage(err));
+    }
+    return null;
+  }
+}
+
 export const handleDepegEvents = withErrorHandler(
   "depeg-events",
   async (db: D1Database, url: URL): Promise<Response> => {
@@ -237,9 +256,17 @@ export const handleDepegEvents = withErrorHandler(
         fallbackTimestamp: (events) => (events.length > 0 ? events[0].startedAt : Math.floor(Date.now() / 1000)),
       },
       cacheControl: CACHE_PROFILES.producerBacked,
-      buildExtraBody: async (_events, _total, latestEventTs) => {
+      buildExtraBody: async (_events, total, latestEventTs) => {
         const methodologyVersion = getDepegDewsMethodologyVersionAt(latestEventTs);
+        const thresholdCrossingCount = stablecoinId != null &&
+          active !== "true" &&
+          params.get("includeTotal") !== "false"
+          ? await loadThresholdCrossingCount(db, stablecoinId)
+          : null;
         return {
+          ...(thresholdCrossingCount != null
+            ? { counts: { incidents: total, thresholdCrossings: thresholdCrossingCount } }
+            : {}),
           ...(includePending ? { pending: await loadPendingIncidents(db, stablecoinId) } : {}),
           methodology: buildMethodologyEnvelope({
             version: methodologyVersion,

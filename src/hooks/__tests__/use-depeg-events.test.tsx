@@ -31,6 +31,7 @@ describe("useInfiniteDepegEvents", () => {
               totalExact: false,
               nextCursor: "cursor-2",
               pending: [{ stablecoinId: "coin-a" }],
+              counts: { incidents: 3, thresholdCrossings: 5 },
             },
             meta: { status: "fresh" },
           },
@@ -66,6 +67,7 @@ describe("useInfiniteDepegEvents", () => {
       totalExact: false,
       nextCursor: null,
       pending: [{ stablecoinId: "coin-a" }],
+      counts: { incidents: 3, thresholdCrossings: 5 },
     });
     expect(result.current.loadedCount).toBe(3);
     expect(result.current.isFullyLoaded).toBe(true);

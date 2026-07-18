@@ -166,7 +166,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/core.ts",
-      "sha256": "c435eb124e979c5bebfe785f500919148fe0e56ada178ee7f7c45d265d94479c"
+      "sha256": "c220101dd4f75a8c40e4decb0c1f37f61e9d42bd996ca5635cd3cb2b0602b893"
     },
     {
       "path": "shared/types/dependency-types.ts",
@@ -178,7 +178,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/market.ts",
-      "sha256": "3a1b44c662fcf2addd5ff2dc685aa7a8b21d2cd054ff69375c61aa6574477690"
+      "sha256": "545fc4a2617e57aa1a7d35f9366da0b9d7b7ca0e7f88b611ef48704300851c41"
     },
     {
       "path": "shared/types/measured-execution.ts",
@@ -265,7 +265,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "232d2a97f1a3a073587b51e3f3744667f4b6e7ca53319150578cf7827d6e8e5a"
     }
   ],
-  "digest": "93b5677d730ec161e7efc1d69df6e4421d39797fc1c1905dc45b71d07104339b"
+  "digest": "8ebd92ca024555a6d88b4bf4990639cbe4468ef355fbf08c32207229ca459294"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

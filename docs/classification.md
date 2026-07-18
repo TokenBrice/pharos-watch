@@ -89,6 +89,7 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 - `priceBasis?: "contractual-par"` / `exitMechanism?: "ordinary-redemption" | "discretionary"` — sourced delisting evidence only; CI forbids these fields on non-delisted rows
 - `frozenAt?: string` / `obituary?: StablecoinObituary` — freeze date and cemetery/detail-page obituary content required for frozen tracked coins
 - `launchDate?`, `announcedDate?`, `expectedLaunchDate?`, `launchPhase?`, `launchPhaseDetail?`, `featuredContent?`, `milestones?`, `dateHistory?` — launch/upcoming timeline metadata for pre-launch and newly launched assets
+- `pegScoreCoverage?` — reviewed lower bound for PegScore and recent-window observation. Author only after replay plus continuous live coverage has been audited; record the exact `startDate`, `reviewedAt`, optional `replayRunId`, and a note describing the verified boundary. It takes precedence over age-derived tracking anchors and must not imply coverage before the reviewed date.
 - `mintAuthority?: MintAuthorityProfile` — reviewed mint/burn authority posture used by the Mint Authority Score and detail-page authority summaries; profiles can also carry structured upgradeability, active/resolved incident state, observation points, and reviewed common failure-domain keys
 - `tags?: string[]` — freeform tag array for filtering and categorization
 

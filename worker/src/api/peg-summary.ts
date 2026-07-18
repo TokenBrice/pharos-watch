@@ -232,6 +232,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       pegCurrency: meta.flags.pegCurrency,
       governance: meta.flags.governance,
       currentDeviationBps: currentBps,
+      pegReference: pegData.pegReference,
       pegReferenceUnavailable: pegData.pegReferenceUnavailable,
       depegEventCoverageLimited: pegData.depegEventCoverageLimited,
       pegScore: pegData.pegScore,
@@ -252,6 +253,8 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       activeDepeg: pegData.activeDepeg,
       lastEventAt: pegData.lastEventAt,
       trackingSpanDays: pegData.trackingSpanDays,
+      historyCoverage: pegData.historyCoverage,
+      recent90d: pegData.recent90d,
       methodologyVersion,
       dexPriceCheck: dexPriceCheck ?? undefined,
     });
@@ -278,6 +281,9 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
   const fallbackPegTypes = Object.entries(pegRateSources)
     .filter(([, src]) => src === "fallback")
     .map(([peg]) => peg);
+  const fxPegTypes = Object.entries(pegRateSources)
+    .filter(([, src]) => src === "fx")
+    .map(([peg]) => peg);
 
   return jsonResponse({
     coins,
@@ -290,6 +296,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       depegEventsToday,
       depegEventsYesterday,
       ...(fallbackPegTypes.length > 0 ? { fallbackPegRates: fallbackPegTypes } : {}),
+      ...(fxPegTypes.length > 0 ? { fxPegRates: fxPegTypes } : {}),
     },
     methodology: buildMethodologyEnvelope({
       version: methodologyVersion,

@@ -262,7 +262,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "peg-summary",
     summary: "Peg summary",
-    description: "Per-coin peg scores plus aggregate peg-monitoring summary.",
+    description: "Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggregate peg-monitoring summary.",
     tags: ["Peg Monitoring"],
     postman: {
       folder: "Risk and market structure",
@@ -270,8 +270,8 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "depeg-events",
-    summary: "Depeg events",
-    description: "Historical and active depeg events, filterable by stablecoin.",
+    summary: "Depeg incidents",
+    description: "Historical and active depeg incidents with constituent threshold-crossing counts, filterable by stablecoin.",
     tags: ["Peg Monitoring"],
     parameters: [
       STABLECOIN_QUERY_PARAM,

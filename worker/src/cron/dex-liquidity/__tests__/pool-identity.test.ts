@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPoolIdentity,
+  clearKnownPoolIdentityIndex,
   countPoolIdentityKeys,
   createKnownPoolIdentityIndex,
   getIdentityDedupReason,
@@ -8,6 +9,25 @@ import {
 } from "../pool-identity";
 
 describe("pool identity dedup", () => {
+  it("releases every identity collection after the dedup phase", () => {
+    const known = createKnownPoolIdentityIndex();
+    known.exactKeys.add("ethereum:0xpool");
+    known.derivedKeyCounts.set("derived", 1);
+    known.derivedToExactKeys.set("derived", new Set(["ethereum:0xpool"]));
+    known.wildcardKeyCounts.set("wildcard", 1);
+    known.wildcardToExactKeys.set("wildcard", new Set(["ethereum:0xpool"]));
+    known.concreteFeeVariantKeys.set("variant", new Set(["derived"]));
+
+    clearKnownPoolIdentityIndex(known);
+
+    expect(known.exactKeys.size).toBe(0);
+    expect(known.derivedKeyCounts.size).toBe(0);
+    expect(known.derivedToExactKeys.size).toBe(0);
+    expect(known.wildcardKeyCounts.size).toBe(0);
+    expect(known.wildcardToExactKeys.size).toBe(0);
+    expect(known.concreteFeeVariantKeys.size).toBe(0);
+  });
+
   it("preserves case-distinct Solana pool and token identities", () => {
     const upper = buildPoolIdentity({
       chain: "Solana",

@@ -327,7 +327,7 @@ Total documented public operations: **40**.
 | GET | `/api/bluechip-ratings` | Bluechip ratings | Risk | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/chains` | Chains | Chains | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/daily-digest` | Daily digest | Digest | X-API-Key | — | 200, 400, 401, 429, 503 |
-| GET | `/api/depeg-events` | Depeg events | Peg Monitoring | X-API-Key | `stablecoin?`, `limit?`, `offset?`, `cursor?`, `active?`, `includeTotal?`, `includePending?` | 200, 400, 401, 429, 503 |
+| GET | `/api/depeg-events` | Depeg incidents | Peg Monitoring | X-API-Key | `stablecoin?`, `limit?`, `offset?`, `cursor?`, `active?`, `includeTotal?`, `includePending?` | 200, 400, 401, 429, 503 |
 | GET | `/api/depeg-resolver` | Depeg Duration Resolver | Risk, Peg Monitoring | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/depeg-resolver-review` | Depeg Duration Resolver Reviewer | Risk, Peg Monitoring | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/dex-liquidity` | DEX liquidity | Liquidity | X-API-Key | — | 200, 400, 401, 429, 503 |
@@ -1035,14 +1035,15 @@ Peg deviation events (≥ 100 bps for USD-pegged, ≥ 150 bps for non-USD pegs).
 {
   "events": [DepegEvent, ...],
   "pending": [DepegPendingIncident, ...],
-  "total": 4080,
+  "total": 6,
   "totalExact": true,
-  "nextCursor": "eyJ2IjoxLCJ2YWx1ZXMiOlsxNzcyNjA2NDAwLDQwODBdfQ",
+  "counts": { "incidents": 6, "thresholdCrossings": 13 },
+  "nextCursor": null,
   "methodology": {
-    "version": "6.096",
-    "versionLabel": "v6.096",
-    "currentVersion": "6.096",
-    "currentVersionLabel": "v6.096",
+    "version": "6.097",
+    "versionLabel": "v6.097",
+    "currentVersion": "6.097",
+    "currentVersionLabel": "v6.097",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -1050,7 +1051,7 @@ Peg deviation events (≥ 100 bps for USD-pegged, ≥ 150 bps for non-USD pegs).
 }
 ```
 
-Results are ordered by `startedAt DESC, id DESC`. Prefer `cursor`/`nextCursor` for deep pagination; offset pagination is retained for shallow compatibility only.
+Results are ordered by `startedAt DESC, id DESC`. Prefer cursor pagination; offsets remain for shallow compatibility. `total` counts public incidents. Filtered historical exact-total responses also include incident and raw threshold-crossing counts; other modes omit `counts`.
 
 When the Depeg Duration Resolver has linked multiple raw event rows into one active repaired incident, this endpoint returns only the incident's current event row, excludes superseded source rows from the active projection, and projects the public `startedAt`/`startPrice` from the first linked row.
 
@@ -1074,6 +1075,7 @@ When the Depeg Duration Resolver has linked multiple raw event rows into one act
 | `confirmationSources` | `string \| null`       | Composite provenance tag recorded when a pending depeg was promoted. Components (joined with `+`): the off-chain source label (`CoinGecko`, `DefiLlama`, or `NativePeg(<currency>)`), `DEX`, `CEX`, `Pool`. Example: `"DEX+CEX"` or `"CoinGecko+Pool"`. `null` for events that bypassed the pending lane (small-cap authoritative direct-insert and historical backfill rows). |
 | `pendingReason`       | `string \| null`       | Composite reason the incident entered the pending lane, e.g. `"large-cap"`, `"low-confidence"`, `"large-cap+low-confidence"`, `"extreme-move"`. `null` when the event did not enter pending.                                                                                                                                                                                   |
 | `closeReason`         | `string \| null`       | Why an ended live row closed. Recovery values are `"recovered-primary"`, `"recovered-dex"`, and `"recovered-native"`; non-recovery terminal values are `"coverage-lost-supply"`, `"superseded-direction"`, and `"orphan-tracking-removed"`. `null` for open rows and legacy/backfill rows without a classified terminal reason.                                                |
+| `constituentEventCount` | `number \| undefined` | Raw threshold crossings grouped into this incident; `1` for ungrouped rows. |
 | `provenance`          | `object \| null`       | Public replay/audit metadata when available: `sourceKind`, `replayRunId`, `replayVersion`, `sourcePriceProviders`, `quoteMode`, `pegReferenceSource`, `supplySource`, `confirmationPolicy`, `confirmationPointCount`, `confidenceTier`, `auditVerdict`, `pegScoreEligible`, and `updatedAt`. Legacy rows return `null`.                                                        |
 
 **`DepegPendingIncident`** — returned only when `includePending=true`
@@ -1236,7 +1238,7 @@ Cache-backed Depeg Duration Resolver Reviewer snapshot. DDRR reviews frozen publ
 
 ### `GET /api/peg-summary`
 
-Composite peg scores and aggregate statistics for tracked stablecoins. Scores are computed over a 4-year window from live depeg events, DEX prices, and current prices. The `coins` array can still include NAV / other non-peg rows with `currentDeviationBps = null`, while the summary counters only cover rows with a live peg-status deviation.
+Composite peg scores and aggregate statistics. Score history begins at each coin's reviewed coverage anchor or age-derived fallback. `coins` may include NAV / non-peg rows with `currentDeviationBps = null`; summary counters exclude them.
 
 **Cache:** producer-backed
 
@@ -1247,10 +1249,10 @@ Composite peg scores and aggregate statistics for tracked stablecoins. Scores ar
   "coins": [PegSummaryCoin, ...],
   "summary": PegSummaryStats,
   "methodology": {
-    "version": "6.096",
-    "versionLabel": "v6.096",
-    "currentVersion": "6.096",
-    "currentVersionLabel": "v6.096",
+    "version": "6.097",
+    "versionLabel": "v6.097",
+    "currentVersion": "6.097",
+    "currentVersionLabel": "v6.097",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -1278,6 +1280,7 @@ Composite peg scores and aggregate statistics for tracked stablecoins. Scores ar
 | `priceObservedAtMode`       | `"upstream" \| "local_fetch" \| "unknown" \| null`         | Whether `priceObservedAt` came from source-native freshness metadata, local fetch time, or legacy/unknown provenance                                                                                                                                                                                                                                                |
 | `priceSyncedAt`             | `number \| null`                                           | Unix seconds when Pharos selected and wrote the primary price during the sync                                                                                                                                                                                                                                                                                       |
 | `primaryTrust`              | `"authoritative" \| "confirm_required" \| "unusable"`      | Whether the current primary price is trusted to mutate live depeg state directly                                                                                                                                                                                                                                                                                    |
+| `pegReference`              | `object \| undefined`                                       | Peg value/source evidence, contributor count, and `asOf`; live fiat FX precedes peer medians. |
 | `pegScore`                  | `number \| null`                                           | Composite peg score 0–100 (higher = more stable)                                                                                                                                                                                                                                                                                                                    |
 | `pegPct`                    | `number`                                                   | % of tracked time within ±100 bps                                                                                                                                                                                                                                                                                                                                   |
 | `severityScore`             | `number`                                                   | Severity sub-score (0–100)                                                                                                                                                                                                                                                                                                                                          |
@@ -1287,6 +1290,7 @@ Composite peg scores and aggregate statistics for tracked stablecoins. Scores ar
 | `activeDepeg`               | `boolean`                                                  | Whether a depeg event is currently open                                                                                                                                                                                                                                                                                                                             |
 | `lastEventAt`               | `number \| null`                                           | Unix seconds of most recent depeg event                                                                                                                                                                                                                                                                                                                             |
 | `trackingSpanDays`          | `number`                                                   | Days of history used for score computation                                                                                                                                                                                                                                                                                                                          |
+| `historyCoverage` / `recent90d` | `object \| undefined`                                  | Coverage anchor (`startedAt`, source, verification) and 90-day observed days, limited flag, peg percentage, incident/crossing counts, and worst deviation, respectively. |
 | `methodologyVersion`        | `string`                                                   | Methodology version attributed to this coin snapshot                                                                                                                                                                                                                                                                                                                |
 | `dexPriceCheck`             | `DexPriceCheck \| null`                                    | Optional cross-validation against DEX price (shown when coin supply is at or above the live depeg-event floor, DEX data is ≤ 60 minutes old, and aggregate source TVL is ≥ $250K)                                                                                                                                                                                   |
 | `consensusSources`          | `string[]`                                                 | Source names that returned a valid price for this coin. Defaults to `[]` when absent.                                                                                                                                                                                                                                                                               |
@@ -1313,7 +1317,8 @@ Composite peg scores and aggregate statistics for tracked stablecoins. Scores ar
 | `totalTracked`         | `number`                      | Rows included in the live peg-status aggregate (`currentDeviationBps !== null`)                                               |
 | `depegEventsToday`     | `number`                      | Number of depeg events whose `startedAt` is in the current UTC day                                                            |
 | `depegEventsYesterday` | `number`                      | Number of depeg events whose `startedAt` is in the previous UTC day                                                           |
-| `fallbackPegRates`     | `string[]`                    | _(optional)_ pegType keys using stale FX fallback rates                                                                       |
+| `fxPegRates`           | `string[]`                    | _(optional)_ peg types using live FX                                                                                           |
+| `fallbackPegRates`     | `string[]`                    | _(optional)_ peg types using non-FX references                                                                                |
 
 **`methodology`** — same fields and semantics as `/api/depeg-events`
 
@@ -3316,17 +3321,17 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
       },
       "amplifiers": { "psi": 1, "contagion": 1 },
       "computedAt": 1740000000,
-      "methodologyVersion": "6.096"
+      "methodologyVersion": "6.097"
     }
   },
   "updatedAt": 1740000000,
   "oldestComputedAt": 1740000000,
   "malformedRows": 0,
   "methodology": {
-    "version": "6.096",
-    "versionLabel": "v6.096",
-    "currentVersion": "6.096",
-    "currentVersionLabel": "v6.096",
+    "version": "6.097",
+    "versionLabel": "v6.097",
+    "currentVersion": "6.097",
+    "currentVersionLabel": "v6.097",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true
@@ -3347,7 +3352,7 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
     },
     "amplifiers": { "psi": 1, "contagion": 1 },
     "computedAt": 1740000000,
-    "methodologyVersion": "6.096"
+    "methodologyVersion": "6.097"
   },
   "history": [
     {
@@ -3364,10 +3369,10 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
   ],
   "malformedRows": 0,
   "methodology": {
-    "version": "6.096",
-    "versionLabel": "v6.096",
-    "currentVersion": "6.096",
-    "currentVersionLabel": "v6.096",
+    "version": "6.097",
+    "versionLabel": "v6.097",
+    "currentVersion": "6.097",
+    "currentVersionLabel": "v6.097",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true

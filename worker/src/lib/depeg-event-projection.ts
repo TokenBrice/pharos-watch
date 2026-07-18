@@ -27,12 +27,14 @@ interface ActiveIncidentProjectionRow {
   first_started_at: number | null;
   first_start_price: number | null;
   first_peg_reference: number | null;
+  constituent_event_count: number | null;
 }
 
 interface ActiveIncidentProjection {
   startedAt: number;
   startPrice: number | null;
   pegReference: number | null;
+  constituentEventCount: number;
 }
 
 export interface ActiveIncidentProjectionLoad {
@@ -63,6 +65,10 @@ function normalizeActiveIncidentProjection(row: ActiveIncidentProjectionRow): [n
         typeof row.first_peg_reference === "number" && Number.isFinite(row.first_peg_reference)
           ? row.first_peg_reference
           : null,
+      constituentEventCount:
+        typeof row.constituent_event_count === "number" && Number.isFinite(row.constituent_event_count)
+          ? Math.max(1, Math.floor(row.constituent_event_count))
+          : 1,
     },
   ];
 }
@@ -79,20 +85,26 @@ export async function loadActiveIncidentProjections(
           incidents.current_event_id,
           incidents.first_started_at,
           first_event.start_price AS first_start_price,
-          first_event.peg_reference AS first_peg_reference
+          first_event.peg_reference AS first_peg_reference,
+          COUNT(DISTINCT links.event_id) AS constituent_event_count
          FROM depeg_resolver_incidents incidents
          JOIN depeg_events first_event
            ON first_event.id = incidents.first_event_id
          JOIN depeg_events current_event
            ON current_event.id = incidents.current_event_id
+         LEFT JOIN depeg_resolver_incident_event_links links
+           ON links.incident_key = incidents.incident_key
         WHERE incidents.incident_state = 'active'
           AND incidents.current_event_id != incidents.first_event_id${activeStablecoinFilter}
+        GROUP BY incidents.current_event_id, incidents.first_started_at,
+                 first_event.start_price, first_event.peg_reference
        UNION ALL
        SELECT
           alias.current_event_id,
           canonical.first_started_at,
           first_event.start_price AS first_start_price,
-          first_event.peg_reference AS first_peg_reference
+          first_event.peg_reference AS first_peg_reference,
+          COUNT(DISTINCT links.event_id) AS constituent_event_count
          FROM depeg_resolver_incidents alias
          JOIN depeg_resolver_incidents canonical
            ON canonical.incident_key = alias.superseded_by_incident_key
@@ -100,10 +112,14 @@ export async function loadActiveIncidentProjections(
            ON first_event.id = canonical.first_event_id
          JOIN depeg_events alias_current_event
            ON alias_current_event.id = alias.current_event_id
+         LEFT JOIN depeg_resolver_incident_event_links links
+           ON links.incident_key = canonical.incident_key
         WHERE alias.incident_state = 'superseded'
           AND canonical.incident_state = 'active'
           AND alias.current_event_id != canonical.current_event_id
-          AND alias.current_event_id != canonical.first_event_id${aliasStablecoinFilter}`,
+          AND alias.current_event_id != canonical.first_event_id${aliasStablecoinFilter}
+        GROUP BY alias.current_event_id, canonical.first_started_at,
+                 first_event.start_price, first_event.peg_reference`,
     );
     const result = stablecoinId
       ? await stmt.bind(stablecoinId, stablecoinId).all<ActiveIncidentProjectionRow>()
@@ -128,11 +144,14 @@ export function rowToPublicDepegEvent(
   projections: Map<number, ActiveIncidentProjection>,
 ): DepegEvent {
   const projection = projections.get(row.id);
-  if (!projection) return rowToDepegEvent(row);
-  return rowToDepegEvent({
-    ...row,
-    started_at: projection.startedAt,
-    start_price: projection.startPrice ?? row.start_price,
-    peg_reference: projection.pegReference ?? row.peg_reference,
-  });
+  if (!projection) return { ...rowToDepegEvent(row), constituentEventCount: 1 };
+  return {
+    ...rowToDepegEvent({
+      ...row,
+      started_at: projection.startedAt,
+      start_price: projection.startPrice ?? row.start_price,
+      peg_reference: projection.pegReference ?? row.peg_reference,
+    }),
+    constituentEventCount: projection.constituentEventCount,
+  };
 }

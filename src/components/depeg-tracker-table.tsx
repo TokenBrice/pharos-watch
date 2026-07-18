@@ -12,7 +12,6 @@ import {
 import { StablecoinIdentity } from "@/components/stablecoin-identity";
 import { DEWSBadge } from "@/components/dews-badge";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
-import { RowSparkline } from "@/components/row-sparkline";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import { deviationColorClass, pegScoreColor } from "@/lib/severity-colors";
@@ -53,21 +52,14 @@ const DEPEG_TRACKER_COLUMNS: readonly DataTableColumn<DepegTableSortKey>[] = [
   { id: "dewsScore", label: "DEWS", headerAdornment: <MethodologyHint topic="dews" />, sortKey: "dewsScore", className: "text-right hidden sm:table-cell" },
   { id: "currentDeviationBps", label: "Deviation", sortKey: "currentDeviationBps", className: "text-right" },
   { id: "pegPct", label: "Peg %", sortKey: "pegPct", className: "text-right hidden md:table-cell" },
-  { id: "eventCount", label: "Events", sortKey: "eventCount", className: "text-right hidden md:table-cell" },
+  { id: "eventCount", label: "Incidents", sortKey: "eventCount", className: "text-right hidden md:table-cell" },
   { id: "worstDeviationBps", label: "Worst", sortKey: "worstDeviationBps", className: "text-right hidden lg:table-cell" },
   { id: "dexAgrees", label: "DEX Cross-check", sortKey: "dexAgrees", className: "text-center hidden xl:table-cell" },
   { id: "trackingSpanDays", label: "Tracking", sortKey: "trackingSpanDays", className: "text-right hidden xl:table-cell" },
-  { id: "peg30d", label: "30d Peg", className: "text-right w-[112px] hidden xl:table-cell" },
+  { id: "peg30d", label: "90d Peg", className: "text-right w-[112px] hidden xl:table-cell" },
 ] as const;
 
 const DEWS_STALE_AFTER_SECONDS = CRON_30MIN / 1000;
-
-// W4-A row sparklines: render `null`-array placeholder until a precomputed
-// 30d peg-deviation series lands on `PegSummaryCoin`. RowSparkline downgrades
-// to a "—" inline fallback when not enough samples are present.
-const PEG_DEVIATION_PLACEHOLDER: ReadonlyArray<number | null> = Object.freeze(
-  Array<null>(30).fill(null),
-);
 
 function StatusBadge({ row }: { row: DepegTrackerRow }) {
   if (row.coin.activeDepeg) {
@@ -289,14 +281,16 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                   data-column-id="peg30d"
                   className="text-right w-[112px] hidden xl:table-cell"
                 >
-                  <RowSparkline
-                    data={PEG_DEVIATION_PLACEHOLDER}
-                    signed
-                    referenceValue={0}
-                    ariaLabel={`30-day peg deviation for ${coin.symbol}`}
-                    width={96}
-                    height={16}
-                  />
+                  {coin.recent90d ? (
+                    <span
+                      className="font-mono text-sm tabular-nums"
+                      title={`${coin.recent90d.incidentCount} incidents, ${coin.recent90d.thresholdCrossingCount} threshold crossings across ${Math.floor(coin.recent90d.observedDays)} observed days${coin.recent90d.coverageLimited ? " (partial coverage)" : ""}`}
+                    >
+                      {formatPercent(coin.recent90d.pegPct, 1)}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
                 </TableCell>
               </InteractiveTableRow>
             );

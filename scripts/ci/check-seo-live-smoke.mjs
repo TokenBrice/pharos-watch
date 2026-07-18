@@ -2,7 +2,7 @@
 
 import { realpathSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { parseSitemapLocs } from "../lib/seo-sitemap.mjs";
+import { findDuplicateSitemapLocs, parseSitemapLocs } from "../lib/seo-sitemap.mjs";
 import { parseCliOptions, parseNonNegativeInt, readEnvFirst } from "../lib/smoke-runtime.mjs";
 
 const SITEMAP_CONCURRENCY = 8;
@@ -98,7 +98,7 @@ async function mapWithConcurrency(items, limit, mapper) {
   return results;
 }
 
-async function checkSitemap(baseUrl, errors) {
+export async function checkSitemap(baseUrl, errors) {
   const sitemapUrl = resolveRoute(baseUrl, "/sitemap.xml");
   const sitemapResponse = await fetchManual(sitemapUrl, {
     headers: { Accept: "application/xml,text/xml;q=0.9,*/*;q=0.8" },
@@ -111,6 +111,12 @@ async function checkSitemap(baseUrl, errors) {
   const locs = parseSitemapLocs(await sitemapResponse.text());
   if (locs.length === 0) {
     errors.push("sitemap.xml has no <loc> entries");
+  }
+  const duplicateLocs = findDuplicateSitemapLocs(locs);
+  if (duplicateLocs.length > 0) {
+    errors.push(
+      `sitemap.xml contains duplicate <loc> entries: ${duplicateLocs.slice(0, 10).join(", ")}${duplicateLocs.length > 10 ? " ..." : ""}`,
+    );
   }
   return locs;
 }

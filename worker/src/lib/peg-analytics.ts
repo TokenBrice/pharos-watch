@@ -1,6 +1,7 @@
 import { TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   computePegScore,
+  computeRecentPegStats,
   coinTrackingStart,
   NULL_PEG_SCORE_RESULT,
   PEG_SCORE_LOOKBACK_SEC,
@@ -38,6 +39,38 @@ function parseLaunchDateSec(dateText: string | undefined): number | null {
   if (!dateText) return null;
   const parsedMs = Date.parse(`${dateText}T00:00:00Z`);
   return Number.isFinite(parsedMs) ? Math.floor(parsedMs / 1000) : null;
+}
+
+type PegHistoryCoverage = NonNullable<PegSummaryCoin["historyCoverage"]>;
+
+function resolveTrackingAnchor(
+  meta: (typeof ACTIVE_STABLECOINS)[number],
+  events: DepegEvent[],
+  firstObservedAtSec: number | undefined,
+  fourYearsAgoSec: number,
+): { trackingStart: number | null; coverage: PegHistoryCoverage | null } {
+  const auditedCoverageStart = parseLaunchDateSec(meta.pegScoreCoverage?.startDate);
+  const launchStart = parseLaunchDateSec(meta.launchDate);
+  const anchor = auditedCoverageStart ?? launchStart ?? firstObservedAtSec ?? null;
+  const trackingStart = coinTrackingStart(events, fourYearsAgoSec, anchor);
+  if (trackingStart == null) return { trackingStart: null, coverage: null };
+
+  const source: PegHistoryCoverage["source"] = auditedCoverageStart != null
+    ? "audited-replay"
+    : launchStart != null
+      ? "asset-age"
+      : firstObservedAtSec != null
+        ? "first-observation"
+        : "first-event";
+
+  return {
+    trackingStart,
+    coverage: {
+      startedAt: trackingStart,
+      source,
+      status: auditedCoverageStart != null ? "verified" : "assumed",
+    },
+  };
 }
 
 function hasUsableCurrentPrice(asset: StablecoinData): asset is StablecoinData & { price: number } {
@@ -122,6 +155,7 @@ export async function derivePegAnalyticsSnapshot(
 
     let currentDeviationBps: number | null = null;
     let pegReferenceUnavailable = false;
+    let pegReference: PegSummaryCoin["pegReference"] = null;
     if (!meta.flags.navToken && asset && hasUsableCurrentPrice(asset)) {
       if (supply >= DEPEG_EVENT_MIN_SUPPLY_USD) {
         // Same authority gate as the depeg detection engine: a thin non-USD
@@ -140,6 +174,15 @@ export async function derivePegAnalyticsSnapshot(
           pegReferenceUnavailable = true;
         } else {
           const pegRef = getPegReference(pegType, pegRates, meta.commodityOunces);
+          const pegRateSource = pegType ? pegRateSources[pegType] : undefined;
+          if (pegRef != null && Number.isFinite(pegRef) && pegRef > 0 && pegRateSource) {
+            pegReference = {
+              valueUsd: pegRef,
+              source: pegRateSource,
+              contributorCount: pegType ? pegRateCounts[pegType] ?? 0 : 0,
+              asOf: options.methodologyAsOf,
+            };
+          }
           currentDeviationBps =
             pegRef != null && Number.isFinite(pegRef) && pegRef > 0
               ? deriveDepegSignal(asset.price, pegRef)?.bps ?? null
@@ -148,11 +191,16 @@ export async function derivePegAnalyticsSnapshot(
       }
     }
 
-    const trackingAnchorSec = parseLaunchDateSec(meta.launchDate) ?? firstSeenMap.get(meta.id) ?? null;
-    const trackingStart = coinTrackingStart(events, trackingFallbackStart, trackingAnchorSec);
+    const { trackingStart, coverage: historyCoverage } = resolveTrackingAnchor(
+      meta,
+      events,
+      firstSeenMap.get(meta.id),
+      trackingFallbackStart,
+    );
     const scoreResult = meta.flags.navToken
       ? { ...NULL_PEG_SCORE_RESULT }
       : computePegScore(events, trackingStart, nowSec);
+    const recent90d = meta.flags.navToken ? null : computeRecentPegStats(events, trackingStart, nowSec);
 
     pegDataById.set(meta.id, {
       id: meta.id,
@@ -162,6 +210,7 @@ export async function derivePegAnalyticsSnapshot(
       pegCurrency: meta.flags.pegCurrency,
       governance: meta.flags.governance,
       currentDeviationBps,
+      pegReference,
       ...(pegReferenceUnavailable ? { pegReferenceUnavailable } : {}),
       depegEventCoverageLimited,
       pegScore: scoreResult.pegScore,
@@ -173,6 +222,8 @@ export async function derivePegAnalyticsSnapshot(
       activeDepeg: scoreResult.activeDepeg,
       lastEventAt: scoreResult.lastEventAt,
       trackingSpanDays: scoreResult.trackingSpanDays,
+      historyCoverage: meta.flags.navToken ? null : historyCoverage,
+      recent90d,
       methodologyVersion,
     });
   }

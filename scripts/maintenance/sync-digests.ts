@@ -117,6 +117,26 @@ export function assertDigestArchivePreserved(
   console.warn(`[sync-digests] WARNING: ${message}`);
 }
 
+/** Keep one published route per digest date. A same-day editorial rerun can
+ * leave multiple archive rows upstream, but the static route and sitemap have
+ * only one canonical URL for that date. */
+export function deduplicateDigestEntries(entries: readonly DigestEntry[]): DigestEntry[] {
+  const latestByDate = new Map<string, DigestEntry>();
+  for (const entry of entries) {
+    const existing = latestByDate.get(entry.date);
+    if (
+      !existing
+      || entry.generatedAt > existing.generatedAt
+      || (entry.generatedAt === existing.generatedAt && entry.editionNumber > existing.editionNumber)
+    ) {
+      latestByDate.set(entry.date, entry);
+    }
+  }
+  return [...latestByDate.values()].sort(
+    (left, right) => right.generatedAt - left.generatedAt || left.date.localeCompare(right.date),
+  );
+}
+
 function resolveOutputPath(explicitOutput: string | null): URL {
   if (!explicitOutput) {
     return new URL("../../data/digests.json", import.meta.url);
@@ -173,17 +193,22 @@ export async function runDigestSync(argv = process.argv.slice(2)) {
         if (!res.ok) throw new Error(`API returned ${res.status}`);
         const { digests } = (await res.json()) as { digests: ApiDigest[] };
         console.log(`Fetched ${digests.length} digests`);
-        const entries = digests
-          .map((d) => ({
-            date: formatIsoDate(d.generatedAt) + (d.digestType === "weekly" ? "-weekly" : ""),
-            title: d.digestTitle || "Signal & Noise",
-            text: d.digestText,
-            extended: d.digestExtended || "",
-            generatedAt: d.generatedAt,
-            digestType: d.digestType ?? ("daily" as const),
-            editionNumber: d.editionNumber ?? 0,
-          }))
-          .sort((a, b) => b.generatedAt - a.generatedAt);
+        const mappedEntries = digests.map((d) => ({
+          date: formatIsoDate(d.generatedAt) + (d.digestType === "weekly" ? "-weekly" : ""),
+          title: d.digestTitle || "Signal & Noise",
+          text: d.digestText,
+          extended: d.digestExtended || "",
+          generatedAt: d.generatedAt,
+          digestType: d.digestType ?? ("daily" as const),
+          editionNumber: d.editionNumber ?? 0,
+        }));
+        const entries = deduplicateDigestEntries(mappedEntries);
+        const duplicateCount = mappedEntries.length - entries.length;
+        if (duplicateCount > 0) {
+          console.warn(
+            `[sync-digests] Deduplicated ${duplicateCount} superseded same-slug digest row(s); latest publication wins.`,
+          );
+        }
         assertDigestArchivePreserved(previousEntries, entries, options.allowArchiveShrink);
         return entries;
       },

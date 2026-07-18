@@ -118,7 +118,7 @@ export const PEGSCORE_DEWS_SECTION_CONTENT = defineMethodologySectionContent({
   id: "pegscore-dews-methodology",
   title: "PegScore and Depeg Early Warning Score (DEWS)",
   markdownParagraphs: [
-    "PegScore measures historical peg quality from time-at-peg and event severity. The tracking window is capped by asset age and uses curated launch dates when available.",
+    "PegScore measures historical peg quality from time-at-peg and event severity. The tracking window starts at a reviewed replay-coverage date when one exists, otherwise it is capped by asset age or the earliest durable observation. Pharos also publishes a coverage-aware recent 90-day companion without treating unobserved days as stable.",
     "DEWS is a forward-looking stress score. It combines price deviation, source divergence, liquidity erosion, pool imbalance, supply velocity, blacklist activity, mint/burn pressure, and yield anomalies into a 0-100 warning signal.",
     "Pending depegs require source-family-aware corroboration before promotion. Pharos treats contradictory evidence as a reason to hold or reject an event, not as weak support, and it records canonical source keys behind every confirmed mutation.",
   ],

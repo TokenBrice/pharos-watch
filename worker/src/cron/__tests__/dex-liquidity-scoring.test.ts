@@ -565,6 +565,54 @@ describe("dex-liquidity scoring", () => {
     });
   });
 
+  it("reuses the full sanitized retained pool graph while metrics expose only the top ten", async () => {
+    const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
+    const metrics = initMetrics("usdc-circle", "USDC");
+    const originalPools = Array.from({ length: 12 }, (_, index): PoolEntry => ({
+      poolId: `ethereum:pool-${index}`,
+      project: "curve",
+      chain: "Ethereum",
+      tvlUsd: 100_000 - index,
+      symbol: "USDC-USDT",
+      volumeUsd1d: 10_000,
+      volumeUsd7d: 70_000,
+      poolType: "curve-stableswap",
+      source: "dl",
+      extra: {
+        balanceRatio: 0.99,
+        balanceDetails: [{ symbol: "USDC", balancePct: 50, isTracked: true }],
+        measurement: { tvlMeasured: true, balanceMeasured: true },
+        measuredExecutionTarget: undefined,
+        measuredExecutionProfile: {} as NonNullable<PoolEntry["extra"]>["measuredExecutionProfile"],
+        measuredExecutionPhysicalPoolId: `pool-${index}`,
+        measuredExecutionDiagnostic: { adapterProfileId: "test-adapter", targetId: `target-${index}` },
+      },
+    }));
+    metrics.topPools = originalPools;
+
+    const result = await computeStablecoinScores(
+      db,
+      new Map([["usdc-circle", metrics]]),
+      new Map(),
+    );
+    const retainedPools = result.retainedPoolsByStablecoin.get("usdc-circle") ?? [];
+
+    expect(retainedPools).toHaveLength(12);
+    expect(metrics.topPools).toHaveLength(10);
+    retainedPools.forEach((pool, index) => {
+      expect(pool).toBe(originalPools[index]);
+      expect(pool.extra).toMatchObject({
+        balanceRatio: 0.99,
+        balanceDetails: [{ symbol: "USDC", balancePct: 50, isTracked: true }],
+        measurement: { tvlMeasured: true, balanceMeasured: true },
+      });
+      expect(pool.extra).not.toHaveProperty("measuredExecutionTarget");
+      expect(pool.extra).not.toHaveProperty("measuredExecutionProfile");
+      expect(pool.extra).not.toHaveProperty("measuredExecutionPhysicalPoolId");
+      expect(pool.extra).not.toHaveProperty("measuredExecutionDiagnostic");
+    });
+  });
+
   it("treats missing stability and volume-history tables as first-run state", async () => {
     const db = makeQueryDb([
       { match: "depth_stability", throwError: new Error("no such table: dex_liquidity") },

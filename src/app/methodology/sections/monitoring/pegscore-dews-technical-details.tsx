@@ -87,12 +87,13 @@ function PegScoreTechnicalDetails() {
         <h3 className="text-foreground font-medium">PegScore</h3>
         <p>
           Composite 0&ndash;100 score measuring how faithfully a stablecoin holds its peg. The tracking window
-          spans up to 4 years but is capped at the coin&apos;s actual age. PegScore now prefers a curated
-          launch date when one is available, then the earliest supply snapshot, then the first durable Pharos
-          valid-price observation for priced assets without supply-history coverage. Young coins are not diluted
-          across history they didn&apos;t exist for, and priced assets no longer stay unrated solely because no supply
-          snapshot has been written. Requires at least 7 days of tracking data; returns null otherwise. Scores based
-          on 7&ndash;30 days are marked as &ldquo;Early score&rdquo; to signal limited history.
+          spans up to 4 years and first honors a reviewed replay-coverage anchor when one is curated for the asset.
+          Without that verified anchor, PegScore prefers a curated launch date, then the earliest supply snapshot,
+          then the first durable Pharos valid-price observation for priced assets without supply-history coverage.
+          Young coins are not diluted across history they didn&apos;t exist for, and unobserved pre-coverage days are not
+          silently treated as stable. Requires at least 7 days of tracking data; returns null otherwise. Scores based
+          on 7&ndash;30 days are marked as &ldquo;Early score&rdquo; to signal limited history. The API additionally publishes a
+          coverage-aware 90-day view with observed days, incidents, constituent threshold crossings, and peg percentage.
         </p>
       </div>
 

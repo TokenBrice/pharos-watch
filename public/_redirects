@@ -16,6 +16,19 @@
 /screener/selector/ /screener/picker/ 301
 /screener/selector /screener/picker/ 301
 
+# Static comparison slugs use the reviewed pair ordering.
+/compare/pyusd-paypal-vs-usdc-circle/ /compare/usdc-circle-vs-pyusd-paypal/ 301
+/compare/pyusd-paypal-vs-usdc-circle /compare/usdc-circle-vs-pyusd-paypal/ 301
+
+# The resolver consolidated these transient apxUSD fragments into the durable
+# June 2 incident. Preserve already-crawled event URLs as one-hop canonicals.
+/depeg/apxusd-2026-06-03/ /depeg/apxusd-2026-06-02/ 301
+/depeg/apxusd-2026-06-03 /depeg/apxusd-2026-06-02/ 301
+/depeg/apxusd-2026-06-05/ /depeg/apxusd-2026-06-02/ 301
+/depeg/apxusd-2026-06-05 /depeg/apxusd-2026-06-02/ 301
+/depeg/apxusd-2026-06-16/ /depeg/apxusd-2026-06-02/ 301
+/depeg/apxusd-2026-06-16 /depeg/apxusd-2026-06-02/ 301
+
 # MiCA tracker moved to Compliance; /compliance/ is canonical.
 /mica/* /compliance/:splat 301
 /mica/ /compliance/ 301
@@ -90,6 +103,8 @@
 
 # Coins removed from the tracked catalog (bed599cc4); /coverage/ documents
 # what Pharos tracks and why. Old detail URLs still earn search impressions.
+/stablecoin/341/ /coverage/ 301
+/stablecoin/341 /coverage/ 301
 /stablecoin/pusd-pleasing/* /coverage/ 301
 /stablecoin/pusd-pleasing /coverage/ 301
 /stablecoin/phpc-coins-ph/* /coverage/ 301

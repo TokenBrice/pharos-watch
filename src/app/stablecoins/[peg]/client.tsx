@@ -15,9 +15,9 @@ export function PegLandingClient({ pegCurrency }: { pegCurrency: PegCurrency }) 
       <StablecoinFilteredTable
         activeFilters={activeFilters}
         renderNotice={({ pegRateSources }) =>
-          pegRateSources[`pegged${pegCurrency}`] === "fallback" ? (
+          pegRateSources[`pegged${pegCurrency}`] === "fx" ? (
             <p className="text-xs text-[color:var(--severity-mild)]">
-              Peg reference uses ECB FX rate (not market-derived) — fewer than 3 coins tracked for {pegCurrency}.
+              Peg reference uses the live fiat FX rate rather than a stablecoin peer median.
             </p>
           ) : null
         }

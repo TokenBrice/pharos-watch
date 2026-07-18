@@ -143,4 +143,28 @@ describe("Pages legacy redirects", () => {
       ]),
     );
   });
+
+  it("preserves consolidated depeg incidents and canonical comparison ordering", () => {
+    const lines = activeRedirectLines();
+
+    expect(lines).toEqual(
+      expect.arrayContaining([
+        "/compare/pyusd-paypal-vs-usdc-circle/ /compare/usdc-circle-vs-pyusd-paypal/ 301",
+        "/depeg/apxusd-2026-06-03/ /depeg/apxusd-2026-06-02/ 301",
+        "/depeg/apxusd-2026-06-05/ /depeg/apxusd-2026-06-02/ 301",
+        "/depeg/apxusd-2026-06-16/ /depeg/apxusd-2026-06-02/ 301",
+      ]),
+    );
+  });
+
+  it("collapses the retired PUSD numeric alias directly to coverage", () => {
+    const lines = activeRedirectLines();
+
+    expect(lines).toEqual(
+      expect.arrayContaining([
+        "/stablecoin/341/ /coverage/ 301",
+        "/stablecoin/341 /coverage/ 301",
+      ]),
+    );
+  });
 });

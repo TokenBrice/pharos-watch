@@ -91,7 +91,6 @@ const FREEZE_TONE_CLEAR = "text-emerald-700 dark:text-emerald-400";
 
 // A clean peg record earns the same emerald as a reviewed clear freeze status;
 // a non-zero count stays default foreground — it is history, not an alarm.
-const PEG_RECORD_TONE_CLEAN = "text-emerald-700 dark:text-emerald-400";
 
 // Passport-short country forms (Figma coin template shows "USA" + tooltip).
 // Only unambiguous common abbreviations — everything else keeps the curated
@@ -240,9 +239,8 @@ export function buildHeroPassportItems({
 
   items.push(buildFreezePassportItem(coin, blacklistStatus, mintAuthorityReviewed));
 
-  // Peg track record — the passport-stamp analogue. Omitted for NAV tokens
-  // (no DepegHistory section) and when event coverage is limited (cannot
-  // honestly claim a record). The 4-year window mirrors the peg-score window.
+  // Peg track record — the passport-stamp analogue. Counts are public incident
+  // projections; the history surface exposes their constituent crossings.
   if (
     !isNavToken &&
     pegScoreResult &&
@@ -255,17 +253,16 @@ export function buildHeroPassportItems({
         ? {
             key: "record",
             category: "Record",
-            value: "Clean",
+            value: "0 recorded",
             href: "#depeg-history",
-            valueClass: PEG_RECORD_TONE_CLEAN,
-            ariaLabel: "Peg record: clean — no depeg events over the last 4 years of tracking — jump to Depeg History",
+            ariaLabel: "Peg record: no depeg incidents recorded in the score coverage window — jump to Depeg History",
           }
         : {
             key: "record",
             category: "Record",
-            value: `${eventCount} depeg${eventCount === 1 ? "" : "s"}`,
+            value: `${eventCount} incident${eventCount === 1 ? "" : "s"}`,
             href: "#depeg-history",
-            ariaLabel: `Peg record: ${eventCount} depeg event${eventCount === 1 ? "" : "s"} over the last 4 years of tracking — jump to Depeg History`,
+            ariaLabel: `Peg record: ${eventCount} depeg incident${eventCount === 1 ? "" : "s"} in the score coverage window — jump to Depeg History`,
           },
     );
   }

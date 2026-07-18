@@ -16,7 +16,7 @@ import {
   wordCount,
 } from "../lib/seo-html-parse.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
-import { parseSitemapLocs, walkOutFiles } from "../lib/seo-sitemap.mjs";
+import { findDuplicateSitemapLocs, parseSitemapLocs, walkOutFiles } from "../lib/seo-sitemap.mjs";
 
 const DEFAULT_OUT_DIR = path.resolve("out");
 const BAILOUT_PATTERN = /BAILOUT_TO_CLIENT_SIDE_RENDERING|next-dynamic-bailout-to-csr/;
@@ -412,6 +412,47 @@ function collectRedirectRules(outDir) {
     if (source && destination) rules.push({ source, destination, status: status ?? "" });
   }
   return rules;
+}
+
+const DURABLE_ARCHIVE_ROUTE_PATTERN = /^\/(?:depeg|digest)\/[^/]+\/$/;
+
+function normalizeSitemapUrl(value) {
+  try {
+    const url = new URL(value);
+    if (url.hostname !== PHAROS_HOSTNAME || url.search || url.hash) return null;
+    const pathname = url.pathname.endsWith("/") ? url.pathname : `${url.pathname}/`;
+    return `${PHAROS_ORIGIN}${pathname}`;
+  } catch {
+    return null;
+  }
+}
+
+export function findPublishedArchiveContinuityErrors(
+  previousSitemapXml,
+  currentSitemapXml,
+  redirectRules = [],
+) {
+  const previousUrls = new Set(parseSitemapLocs(previousSitemapXml).map(normalizeSitemapUrl).filter(Boolean));
+  const currentUrls = new Set(parseSitemapLocs(currentSitemapXml).map(normalizeSitemapUrl).filter(Boolean));
+  const missing = [];
+
+  for (const previousUrl of previousUrls) {
+    const pathname = new URL(previousUrl).pathname;
+    if (!DURABLE_ARCHIVE_ROUTE_PATTERN.test(pathname) || currentUrls.has(previousUrl)) continue;
+
+    const sourceKey = redirectSourceKey(pathname);
+    const hasCanonicalRedirect = redirectRules.some((rule) => {
+      if (rule.status !== "301" || redirectSourceKey(rule.source) !== sourceKey) return false;
+      const destination = normalizeSitemapUrl(new URL(rule.destination, PHAROS_ORIGIN).toString());
+      return destination !== null && currentUrls.has(destination);
+    });
+    if (!hasCanonicalRedirect) missing.push(previousUrl);
+  }
+
+  if (missing.length === 0) return [];
+  return [
+    `published archive URLs missing from the current sitemap without a direct 301 to a submitted URL: ${missing.slice(0, 10).join(", ")}${missing.length > 10 ? " ..." : ""}`,
+  ];
 }
 
 function redirectPathTemplate(value) {
@@ -999,7 +1040,14 @@ export function collectSeoStaticCheckResult({
     errors.push("out/sitemap.xml missing");
   } else {
     const sitemapXml = fs.readFileSync(sitemapPath, "utf8");
-    const locs = parseSitemapLocs(sitemapXml, { asSet: true });
+    const locList = parseSitemapLocs(sitemapXml);
+    const duplicateLocs = findDuplicateSitemapLocs(locList);
+    if (duplicateLocs.length > 0) {
+      errors.push(
+        `sitemap.xml contains duplicate <loc> entries: ${duplicateLocs.slice(0, 10).join(", ")}${duplicateLocs.length > 10 ? " ..." : ""}`,
+      );
+    }
+    const locs = new Set(locList);
     const stabilityIndexUrl = `${PHAROS_ORIGIN}/stability-index/`;
     const alternateStabilityIndexUrl = `${PHAROS_ORIGIN}/stability-index-alt/`;
     if (!locs.has(stabilityIndexUrl)) {
@@ -1099,8 +1147,34 @@ function fail(errors, warning = []) {
   process.exit(1);
 }
 
-function main() {
+async function main() {
   const { errors, warnings } = collectSeoStaticCheckResult();
+
+  const previousSitemapUrl = process.env.SEO_PREVIOUS_SITEMAP_URL?.trim();
+  if (previousSitemapUrl) {
+    try {
+      const url = new URL(previousSitemapUrl);
+      url.searchParams.set("archiveContinuity", String(Date.now()));
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(20_000),
+        headers: { "Cache-Control": "no-cache", "User-Agent": "PharosSeoArchiveContinuity/1.0" },
+      });
+      if (!response.ok) throw new Error(`returned ${response.status}`);
+      const previousSitemapXml = await response.text();
+      const currentSitemapXml = fs.readFileSync(path.join(DEFAULT_OUT_DIR, "sitemap.xml"), "utf8");
+      errors.push(
+        ...findPublishedArchiveContinuityErrors(
+          previousSitemapXml,
+          currentSitemapXml,
+          collectRedirectRules(DEFAULT_OUT_DIR),
+        ),
+      );
+    } catch (error) {
+      errors.push(
+        `failed to verify published archive continuity from ${previousSitemapUrl}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
 
   if (errors.length > 0) {
     fail(errors, warnings);
@@ -1113,5 +1187,5 @@ function main() {
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {
-  main();
+  void main();
 }

@@ -10,7 +10,7 @@ import { sumPegBuckets } from "./supply";
  */
 export const COMMODITY_MEDIAN_EXCLUDES = new Set(["dgld-gold-token-sa"]);
 
-export type PegRateSource = "median" | "fallback";
+export type PegRateSource = "median" | "fx" | "fallback";
 
 export interface PegRatesResult {
   rates: Record<string, number>;
@@ -49,9 +49,9 @@ function addPegRateAliases(result: PegRatesResult): void {
  * the commodityOunces field from StablecoinMeta, since some tokens represent
  * 1 gram (KAU) while others represent 1 troy ounce (XAUT, PAXG).
  *
- * @param fallbackRates  Optional live FX rates (from sync-fx-rates cron).
- *                       If provided, used instead of hardcoded defaults for
- *                       thin peg group validation.
+ * @param fallbackRates  Optional live FX/commodity rates from sync-fx-rates.
+ *                       Fiat rates are authoritative current references;
+ *                       commodity rates remain fallbacks for thin groups.
  *
  * Returns a map of pegType -> USD value of 1 unit of the peg currency.
  */
@@ -100,17 +100,20 @@ export function derivePegRates(
     const median = medianOf(prices);
     if (median == null) continue;
 
-    // For thin fiat peg groups (<3 coins), use ECB FX rate instead of
-    // unreliable median (1 coin = own price, 2 coins = mirror deviations).
+    // A live FX rate is authoritative for fiat pegs regardless of peer count.
+    // Peer medians remain a fallback only when an FX rate is unavailable.
+    // This prevents a broad peer group, including the evaluated asset itself,
+    // from shifting the displayed peg away from the actual fiat unit.
     // Commodity pegs (gold/silver) use peer median — XAUT/PAXG are arbitraged
     // against spot within seconds, so the median is a live reference. metals.dev
     // spot is only fetched once per day and can be >1.5% stale, causing false depegs.
     const fallback = Object.prototype.hasOwnProperty.call(mergedFallbacks, peg)
       ? mergedFallbacks[peg]
       : undefined;
-    if (fallback && prices.length < 3) {
+    const isCommodityPeg = peg === "peggedGOLD" || peg === "peggedSILVER";
+    if (fallback && (!isCommodityPeg || prices.length < 3)) {
       rates[peg] = fallback;
-      sources[peg] = "fallback";
+      sources[peg] = isCommodityPeg ? "fallback" : "fx";
       counts[peg] = prices.length;
       continue;
     }
@@ -124,7 +127,7 @@ export function derivePegRates(
     if (peg in rates) continue;
     if (typeof fallback !== "number" || !Number.isFinite(fallback) || fallback <= 0) continue;
     rates[peg] = fallback;
-    sources[peg] = "fallback";
+    sources[peg] = peg === "peggedGOLD" || peg === "peggedSILVER" ? "fallback" : "fx";
     counts[peg] = 0;
   }
 

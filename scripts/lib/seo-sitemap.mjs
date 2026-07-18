@@ -30,3 +30,13 @@ export function parseSitemapLocs(xml, { asSet = false } = {}) {
   }
   return asSet ? new Set(locs) : locs;
 }
+
+export function findDuplicateSitemapLocs(locs) {
+  const seen = new Set();
+  const duplicates = new Set();
+  for (const loc of locs) {
+    if (seen.has(loc)) duplicates.add(loc);
+    else seen.add(loc);
+  }
+  return [...duplicates];
+}
