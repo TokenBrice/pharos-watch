@@ -234,3 +234,105 @@ describe("daily-digest lead policy (golden replay of the July 2026 USX era)", ()
     expect(alphaPartner?.novelty).not.toBe("worsening");
   });
 });
+
+describe("next-trigger lifecycle (Batch 4)", () => {
+  const fixture18 = loadFixture("2026-07-18");
+
+  // Strip candidates so the fallback path (top depeg + PSI) arms deterministically
+  // within TRIGGER_LIMIT regardless of what the fixture's candidate set produces.
+  const bareInput: DigestInputData = { ...fixture18.inputData, editorialCandidates: [] };
+
+  function inputWithTriggers(triggers: DigestInputData["nextTriggers"]): DigestInputData {
+    return { ...bareInput, nextTriggers: triggers };
+  }
+
+  it("keeps an armed threshold sticky instead of chasing the metric", async () => {
+    const { buildNextTriggers } = await import("../daily-digest/digest-next-triggers");
+    const psi = (fixture18.inputData.stabilityIndex?.score ?? 90);
+    // A deterioration target below the current score is genuinely pending.
+    const previous = inputWithTriggers([
+      {
+        id: "trigger:psi-score",
+        label: "PSI threshold",
+        metric: "psi-score",
+        comparator: "lte",
+        thresholdValue: psi - 5,
+        thresholdLabel: `${psi - 5} PSI`,
+        rationale: "r",
+        detail: "d",
+      },
+    ]);
+    const triggers = buildNextTriggers(bareInput, previous);
+    const psiTrigger = triggers.find((trigger) => trigger.id === "trigger:psi-score");
+    expect(psiTrigger?.thresholdValue).toBe(psi - 5);
+    expect(psiTrigger?.repeatedCount).toBe(1);
+  });
+
+  it("expires a perpetually-pending trigger after three editions and frees its slot", async () => {
+    const { buildNextTriggers, buildForwardLookOutcomes } = await import("../daily-digest/digest-next-triggers");
+    // The real corpus shape: the apxUSD widening trigger sat pending for 20
+    // consecutive editions because its threshold could never be reached.
+    const staleTrigger = {
+      id: "trigger:depeg:apxusd-apyx",
+      label: "APXUSD depeg widening",
+      metric: "depeg-bps" as const,
+      comparator: "abs-gte" as const,
+      thresholdValue: 3650,
+      thresholdLabel: "3650 bps off peg",
+      symbol: "APXUSD",
+      stablecoinId: "apxusd-apyx",
+      rationale: "r",
+      detail: "d",
+      repeatedCount: 2,
+    };
+    const previous = inputWithTriggers([staleTrigger]);
+    const triggers = buildNextTriggers(bareInput, previous);
+    expect(triggers.find((trigger) => trigger.id === "trigger:depeg:apxusd-apyx")).toBeUndefined();
+    const outcomes = buildForwardLookOutcomes(bareInput, previous);
+    expect(outcomes.find((outcome) => outcome.triggerId === "trigger:depeg:apxusd-apyx")?.status).toBe("expired");
+  });
+
+  it("builds evaluatable triggers for yield and liquidity candidates", async () => {
+    const { buildNextTriggers } = await import("../daily-digest/digest-next-triggers");
+    const input: DigestInputData = {
+      ...fixture18.inputData,
+      yieldAnomalies: [{ symbol: "USD1", currentApy: 25.6, apy7d: 9.1, apy30d: 8.4, warnings: ["spike"], mcapUsd: 2e9 }],
+      liquidityShifts: [
+        { symbol: "USDF", currentScore: 44, previousScore: 60, scoreDelta: -16, currentTvl: 1e8, previousTvl: 2e8, mcapUsd: 1.4e9 },
+      ],
+      editorialCandidates: [
+        {
+          id: "yield:usd1",
+          kind: "yield",
+          title: "USD1 APY spike",
+          symbols: ["USD1"],
+          impactScore: 900,
+          novelty: "new",
+          confidence: "high",
+          artifactRisk: "medium",
+          headlineFacts: [],
+          whyItMatters: "w",
+        },
+        {
+          id: "liquidity:usdf",
+          kind: "liquidity",
+          title: "USDF depth loss",
+          symbols: ["USDF"],
+          impactScore: 800,
+          novelty: "worsening",
+          confidence: "medium",
+          artifactRisk: "medium",
+          headlineFacts: [],
+          whyItMatters: "w",
+        },
+      ],
+    };
+    const triggers = buildNextTriggers(input, null);
+    const yieldTrigger = triggers.find((trigger) => trigger.metric === "yield-apy");
+    expect(yieldTrigger?.symbol).toBe("USD1");
+    expect(yieldTrigger?.comparator).toBe("lte");
+    const liquidityTrigger = triggers.find((trigger) => trigger.metric === "liquidity-score");
+    expect(liquidityTrigger?.symbol).toBe("USDF");
+    expect(liquidityTrigger?.thresholdValue).toBe(36);
+  });
+});

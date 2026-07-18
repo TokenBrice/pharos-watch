@@ -17,7 +17,9 @@ export const WEEKLY_SYSTEM_PROMPT = [
   "Find the week's narrative arc: what started, what ended, what is building.",
   "A weekly recap that reads like seven daily digests stapled together has failed.",
   "Do not turn seven observations of the same chronic active depeg into seven events. Separate active observations from unique signals.",
+  "STANDING CONDITIONS get one line each at most and never the headline; NEW THIS WEEK signals are the story.",
   "Do not dramatize suppressed, stale, zero-dollar, tiny, or artifact-prone signals. If the week was genuinely calm, say so clearly.",
+  "Synthesize causally: reuse at most two numbers verbatim from the daily copy, and never quote or cite a daily headline as evidence of anything.",
   "",
   "FORWARD-LOOK MANDATE.",
   "The last paragraph must contain an anticipatory sentence about next week. Acceptable: 'next week will decide whether X', 'watch the Y threshold if Z continues', 'the next trigger is W crossing V'.",
@@ -124,13 +126,23 @@ export function buildWeeklyPrompt(
 
   lines.push("", "Weekly Risk Leaderboard (P1 lead must be the top unsuppressed item):");
   if (data.weeklySignals.riskLeaderboard.length > 0) {
-    for (const signal of data.weeklySignals.riskLeaderboard) {
+    const freshSignals = data.weeklySignals.riskLeaderboard.filter((signal) => !signal.carriedOver);
+    const standingSignals = data.weeklySignals.riskLeaderboard.filter((signal) => signal.carriedOver);
+    const renderSignal = (signal: (typeof data.weeklySignals.riskLeaderboard)[number]): void => {
       const critical = signal.critical ? " | critical" : "";
       const suppression = signal.suppressReason ? ` | suppress: ${signal.suppressReason}` : "";
       lines.push(
         `  ${signal.id} | ${signal.kind} | severity=${round1(signal.severityScore)} | impact=${round1(signal.impactScore)}${critical}${suppression}`,
       );
       lines.push(`    ${signal.label}`);
+    };
+    if (freshSignals.length > 0) {
+      lines.push("  NEW THIS WEEK:");
+      freshSignals.forEach(renderSignal);
+    }
+    if (standingSignals.length > 0) {
+      lines.push("  STANDING CONDITIONS (carried over from prior weeks — one line each at most, never the headline):");
+      standingSignals.forEach(renderSignal);
     }
   } else {
     lines.push("  No material risk signals reconstructed from daily inputs.");
@@ -231,7 +243,11 @@ export function buildWeeklyPrompt(
 }
 
 export function buildWeeklyLeadRequirements(data: WeeklyInputData): DigestValidationProfile["leadRequirements"] {
-  const topCritical = data.weeklySignals.riskLeaderboard.find((signal) => !signal.suppressReason && signal.critical);
+  // Only a critical that is NEW this week may hard-pin the weekly lead; a
+  // carried-over chronic critical already headlined prior recaps.
+  const topCritical = data.weeklySignals.riskLeaderboard.find(
+    (signal) => !signal.suppressReason && signal.critical && !signal.carriedOver,
+  );
   if (!topCritical) return undefined;
   return [
     {

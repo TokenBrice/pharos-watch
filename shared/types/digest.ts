@@ -60,7 +60,7 @@ export interface DigestDataQuality {
 export type DigestRiskTapeTone = "critical" | "warning" | "neutral" | "positive";
 
 export type DigestNextTriggerMetric =
-  "depeg-bps" | "supply-1d-usd" | "supply-7d-usd" | "bank-run-gauge" | "dews-band" | "psi-score";
+  "depeg-bps" | "supply-1d-usd" | "supply-7d-usd" | "bank-run-gauge" | "dews-band" | "psi-score" | "yield-apy" | "liquidity-score";
 
 export type DigestNextTriggerComparator = "abs-gte" | "gte" | "lte" | "band-gte";
 
@@ -334,13 +334,15 @@ export type DigestChangeSummary = z.infer<typeof DigestChangeSummarySchema>;
 export const DigestNextTriggerSchema = z.object({
   id: z.string(),
   label: z.string(),
-  metric: z.enum(["depeg-bps", "supply-1d-usd", "supply-7d-usd", "bank-run-gauge", "dews-band", "psi-score"]),
+  metric: z.enum(["depeg-bps", "supply-1d-usd", "supply-7d-usd", "bank-run-gauge", "dews-band", "psi-score", "yield-apy", "liquidity-score"]),
   comparator: z.enum(["abs-gte", "gte", "lte", "band-gte"]),
   thresholdLabel: z.string(),
   thresholdValue: z.number().optional(),
   symbol: z.string().optional(),
   stablecoinId: z.string().optional(),
   candidateId: z.string().optional(),
+  /** Consecutive prior editions that carried this trigger unchanged (TTL input). */
+  repeatedCount: z.number().optional(),
   rationale: z.string(),
   detail: z.string(),
 });
@@ -350,7 +352,7 @@ export const DigestForwardLookOutcomeSchema = z.object({
   id: z.string(),
   triggerId: z.string(),
   label: z.string(),
-  status: z.enum(["hit", "missed", "pending"]),
+  status: z.enum(["hit", "missed", "pending", "expired"]),
   detail: z.string(),
   sourceDate: z.string().nullable().optional(),
 });

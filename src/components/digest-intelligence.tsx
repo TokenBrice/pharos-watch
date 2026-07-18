@@ -20,6 +20,7 @@ const OUTCOME_CLASSES: Record<DigestForwardLookOutcome["status"], string> = {
   hit: "border-emerald-500/35 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300",
   missed: "border-border/70 bg-muted/35 text-muted-foreground",
   pending: "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300",
+  expired: "border-border/70 bg-muted/35 text-muted-foreground",
 };
 
 interface DigestIntelligencePanelProps {

@@ -73,7 +73,7 @@ The digest intelligence pass runs after editorial candidates are built and befor
 - `riskTape`: compact reader-facing state for PSI, active depegs, Bank Run Gauge, DEWS, and the largest supply mover.
 - `changeSummary`: deterministic "what changed since yesterday" buckets (`newSignals`, `worsenedSignals`, `improvedSignals`, `resolvedSignals`, `repeatedSignals`) derived from the previous archived input.
 - `forwardLookOutcomes`: evaluation of yesterday's `nextTriggers` against today's input (`hit`, `missed`, `pending`).
-- `nextTriggers`: structured threshold checks the next digest can evaluate, such as depeg bps, supply velocity, DEWS band, Bank Run Gauge, or PSI thresholds.
+- `nextTriggers`: structured threshold checks the next digest can evaluate — depeg bps, supply velocity, DEWS band, Bank Run Gauge, PSI, yield-anomaly cooling (`yield-apy`), and DEX liquidity follow-through (`liquidity-score`). Triggers have a lifecycle: an armed threshold is **sticky** (never re-derived toward the metric's drift — the PSI goalpost once moved 89→93 chasing the index), a trigger that fires re-arms fresh, and a trigger pending for 3 consecutive editions **expires** (recorded as an `expired` forward-look outcome) and cedes its slot. Depeg thresholds arm off the live deviation, not the stored peak.
 - `calmNarrativeFrame`: a fallback editorial frame for calm regimes so quiet days can explain what changed, what did not happen, and what would make the next day less calm.
 - `editorialAudit`: added after the LLM response is parsed; stores top/usable/suppressed/momentum candidate ids, required lead ids, declared `leadSignalId`, used candidate ids, and quality issue codes.
 
@@ -278,7 +278,7 @@ Fetches the last 15 daily digests (`LIMIT 15`, cutoff `now - 15d`, excluding wee
 | Active depeg observations | Sum of `activeDepegCount` across all days; explicitly not described as unique events |
 | Unique depeg signals | Reconstructed from `stablecoinId` + `startedAt` where present, with symbol/direction/bps fallback for legacy rows |
 | Top depeg signals | Active and resolved signals sorted by absolute market impact |
-| Weekly risk leaderboard | Unified cross-signal ranking across depegs, DEWS, mint/burn pressure, blacklist, grade, yield, liquidity, and supply contraction; unsuppressed critical depegs outrank smoothed regime averages |
+| Weekly risk leaderboard | Unified cross-signal ranking across depegs, DEWS, mint/burn pressure, blacklist, grade, yield, liquidity, and supply contraction. Depeg severity uses the live deviation when the daily rows carry it. Signals whose event predates the week window are flagged `carriedOver`, get halved severity, render under a **STANDING CONDITIONS** split (one line each, never the headline), and cannot hard-pin the weekly lead — only unsuppressed criticals that are **new this week** outrank everything else |
 | Spike metrics | Worst PSI day, lowest Bank Run Gauge day, worst depeg by bps, and largest depeg market impact |
 | Supply signals | Biggest weekly movers and daily velocity reversals/acceleration/deceleration |
 | DEWS signals | Top band changes and max ALERT+ mcap |

@@ -87,6 +87,7 @@ function buildWeeklyRiskLeaderboard(params: {
       impactScore: depeg.impactScore,
       severityScore: depeg.severityScore,
       critical: depeg.critical,
+      ...(depeg.carriedOver ? { carriedOver: true } : {}),
       ...(depeg.suppressReason ? { suppressReason: depeg.suppressReason } : {}),
     });
   }
@@ -185,7 +186,12 @@ function buildWeeklyRiskLeaderboard(params: {
   return rows
     .sort((a, b) => {
       const suppressionDelta = Number(Boolean(a.suppressReason)) - Number(Boolean(b.suppressReason));
-      const criticalDelta = Number(Boolean(b.critical)) - Number(Boolean(a.critical));
+      // Only criticals that are NEW this week outrank everything; a chronic
+      // critical carried over from prior weeks competes on decayed severity
+      // (the "Four Names Share The Critical Shelf" fix).
+      const freshCritical = (row: WeeklyRiskLeaderboardSignal): boolean =>
+        Boolean(row.critical) && !row.carriedOver;
+      const criticalDelta = Number(freshCritical(b)) - Number(freshCritical(a));
       return suppressionDelta || criticalDelta || b.severityScore - a.severityScore || b.impactScore - a.impactScore;
     })
     .slice(0, 7);
@@ -220,20 +226,31 @@ interface WeeklyTopSignals extends Omit<WeeklyInputData["weeklySignals"], "riskL
 }
 
 function collectWeeklyTopSignals(parsed: WeeklyParsedRow[]): WeeklyTopSignals {
+  const weekWindowStartSec = parsed[0]?.date
+    ? Math.floor(Date.parse(`${parsed[0].date}T00:00:00Z`) / 1000)
+    : 0;
   const allDepegSignals = parsed.flatMap((d) => [
     ...(d.inputData.topDepegs ?? []).map((depeg) => {
-      const impactScore = depeg.impactScore ?? getDepegMarketImpactScore(depeg.bps, depeg.mcapUsd);
+      // Post-truth-layer dailies carry the live deviation; archived rows fall
+      // back to the stored peak.
+      const severityBps = depeg.currentBps ?? depeg.bps;
+      const impactScore = depeg.impactScore ?? getDepegMarketImpactScore(severityBps, depeg.mcapUsd);
+      // An event that predates the week window is a standing condition the
+      // reader has already seen in prior recaps, not fresh weekly news.
+      const carriedOver = depeg.startedAt != null && depeg.startedAt < weekWindowStartSec;
+      const severityScore = getDepegEditorialImpactScore(severityBps, depeg.mcapUsd) * (carriedOver ? 0.5 : 1);
       return {
         id: weeklySignalId("depeg", [depeg.stablecoinId ?? depeg.symbol, String(depeg.startedAt ?? d.date), "active"]),
         symbol: depeg.symbol,
-        label: `${Math.abs(depeg.bps)} bps active ${depeg.direction ?? (depeg.bps >= 0 ? "above" : "below")} peg`,
+        label: `${Math.abs(severityBps)} bps active ${severityBps >= 0 ? "above" : "below"} peg${carriedOver ? " (carried over from before this week)" : ""}`,
         impactScore,
-        severityScore: getDepegEditorialImpactScore(depeg.bps, depeg.mcapUsd),
+        severityScore,
         mcapUsd: depeg.mcapUsd,
-        bps: Math.abs(depeg.bps),
+        bps: Math.abs(severityBps),
         date: d.date,
         kind: "active" as const,
-        critical: isCriticalDepegRisk(depeg),
+        critical: isCriticalDepegRisk({ bps: severityBps, mcapUsd: depeg.mcapUsd }),
+        carriedOver,
         suppressReason: depeg.suppressReason,
       };
     }),

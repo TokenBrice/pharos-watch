@@ -39,7 +39,7 @@ export function buildDigestIntelligence(
 > {
   return {
     changeSummary: buildChangeSummary(data, previousData),
-    nextTriggers: buildNextTriggers(data),
+    nextTriggers: buildNextTriggers(data, previousData),
     forwardLookOutcomes: buildForwardLookOutcomes(data, previousData),
     riskTape: buildRiskTape(data),
     calmNarrativeFrame: buildCalmNarrativeFrame(data),

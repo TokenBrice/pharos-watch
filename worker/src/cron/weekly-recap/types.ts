@@ -13,6 +13,8 @@ export interface WeeklyDepegSignal {
   date: string;
   kind: "active" | "resolved";
   critical: boolean;
+  /** Event started before this week's window — a standing condition, not fresh weekly news. */
+  carriedOver?: boolean;
   suppressReason?: string;
 }
 
@@ -30,6 +32,8 @@ export interface WeeklyRiskLeaderboardSignal {
   severityScore: number;
   date?: string;
   critical?: boolean;
+  /** Signal predates this week's window — a standing condition, not fresh news. */
+  carriedOver?: boolean;
   suppressReason?: string;
 }
 
