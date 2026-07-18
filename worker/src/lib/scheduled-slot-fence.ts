@@ -1,23 +1,18 @@
-import type { CronScheduleKey } from "@shared/lib/cron-jobs";
-import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { createLeaseOwner } from "./cron-lease-primitives";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "./error-utils";
-import type {
-  ScheduledSlotReconciliationFence,
-  StaleSlotExecutionArtifact,
-  StaleSlotReconciliationSummary,
+import {
+  reconcileStaleSlotArtifactsAndRecordEvent,
+  hasActiveChildLeaseForScheduledSlot,
+  type StaleSlotExecutionArtifact,
+  type StaleSlotReconciliationSummary,
 } from "./scheduled-slot-reconciliation";
 
 export {
   cacheKeySegment,
   STALE_SLOT_ABANDONED_EVENT_TYPE,
   staleSlotEventCacheKey,
-} from "./scheduled-slot-reconciliation-keys";
-
-async function loadScheduledSlotReconciliation() {
-  return import("./scheduled-slot-reconciliation");
-}
+} from "./scheduled-slot-reconciliation";
 
 export interface ScheduledSlotExecutionOptions {
   slotStartedAt: number;
@@ -54,15 +49,12 @@ const SLOT_EXECUTION_HEARTBEAT_SEC = 3 * 60;
 
 type SlotExecutionRow = {
   state: string;
-  result_status: string | null;
   execution_owner: string;
   execution_generation: number;
   invocation_id: string | null;
   worker_version: string | null;
   started_at: number;
-  finished_at: number | null;
   updated_at: number;
-  metadata: string | null;
 };
 
 type StaleSlotExecutionRow = StaleSlotExecutionArtifact;
@@ -103,17 +95,10 @@ export interface ScheduledSlotSweepSummary {
   slotsReconciled: number;
   syntheticCronRuns: number;
   jobAttemptsAbandoned: number;
-  jobAttemptsTerminalized: number;
   progressRowsCleared: number;
   leasesCleared: number;
   recoveryCheckpointsPrepared: number;
   notStartedCronRuns: number;
-  successfulChildTerminals: number;
-  skippedLockedChildTerminals: number;
-  derivedPublishedChildTerminals: number;
-  publicationFailures: number;
-  terminalAccountingUnknown: number;
-  realChildFailures: number;
   abandonedSlots: Array<{
     slotKey: string;
     slotStartedAt: number;
@@ -133,8 +118,7 @@ async function getScheduledSlotExecution(
   return runWithOverloadRetry(() =>
     db
       .prepare(
-        `SELECT state, result_status, execution_owner, execution_generation, invocation_id, worker_version,
-                started_at, finished_at, updated_at, metadata
+        `SELECT state, execution_owner, execution_generation, invocation_id, worker_version, started_at, updated_at
            FROM cron_slot_executions
            WHERE slot_key = ? AND slot_started_at = ?`,
       )
@@ -186,34 +170,12 @@ async function finishStaleScheduledSlotExecution(
   nowSec: number,
   reconciliation: StaleSlotReconciliationSummary,
 ): Promise<boolean> {
-  const slotPlan = SCHEDULED_SLOT_PLANS[slot.slot_key as CronScheduleKey];
-  const expectedJobs = slotPlan ? flattenScheduledSlotPlanJobs(slotPlan) : [];
-  const progressAbsencePredicate =
-    expectedJobs.length === 0
-      ? ""
-      : `
-           AND NOT EXISTS (
-             SELECT 1
-               FROM cron_run_progress
-              WHERE slot_started_at = ?
-                AND job IN (${expectedJobs.map(() => "?").join(", ")})
-           )`;
-  const hasDataFailure =
-    reconciliation.publicationFailures > 0 ||
-    reconciliation.realChildFailures > 0 ||
-    reconciliation.notStartedCronRuns > 0 ||
-    reconciliation.terminalAccountingUnknown > reconciliation.derivedPublishedChildTerminals;
-  const resultStatus = hasDataFailure ? "error" : "degraded";
-  const metadata = JSON.stringify({
-    error: STALE_SLOT_ERROR,
-    staleSlotReconciliation: reconciliation,
-  });
   const result = await runWithOverloadRetry(() =>
     db
       .prepare(
         `UPDATE cron_slot_executions
          SET state = 'finished',
-             result_status = ?,
+             result_status = 'error',
              finished_at = ?,
              updated_at = ?,
              metadata = ?
@@ -221,48 +183,23 @@ async function finishStaleScheduledSlotExecution(
            AND slot_started_at = ?
            AND state = 'reconciling'
            AND execution_owner = ?
-           AND execution_generation = ?${progressAbsencePredicate}`,
+           AND execution_generation = ?`,
       )
       .bind(
-        resultStatus,
         nowSec,
         nowSec,
-        metadata,
+        JSON.stringify({
+          error: STALE_SLOT_ERROR,
+          staleSlotReconciliation: reconciliation,
+        }),
         slot.slot_key,
         slot.slot_started_at,
         reconciliationOwner,
         reconciliationGeneration,
-        ...(expectedJobs.length > 0 ? [slot.slot_started_at, ...expectedJobs] : []),
       )
       .run(),
   );
-  if ((result.meta.changes ?? 0) === 1) return true;
-  const current = await getScheduledSlotExecution(db, slot.slot_key, slot.slot_started_at);
-  const remainingProgress =
-    expectedJobs.length === 0
-      ? null
-      : await runWithOverloadRetry(() =>
-          db
-            .prepare(
-              `SELECT 1 AS present
-                 FROM cron_run_progress
-                WHERE slot_started_at = ?
-                  AND job IN (${expectedJobs.map(() => "?").join(", ")})
-                LIMIT 1`,
-            )
-            .bind(slot.slot_started_at, ...expectedJobs)
-            .first<{ present: number }>(),
-        );
-  return (
-    remainingProgress == null &&
-    current?.state === "finished" &&
-    current.result_status === resultStatus &&
-    current.execution_owner === reconciliationOwner &&
-    current.execution_generation === reconciliationGeneration &&
-    current.finished_at === nowSec &&
-    current.updated_at === nowSec &&
-    current.metadata === metadata
-  );
+  return (result.meta.changes ?? 0) === 1;
 }
 
 async function claimStaleScheduledSlotForReconciliation(
@@ -303,14 +240,7 @@ async function claimStaleScheduledSlotForReconciliation(
       )
       .run(),
   );
-  if ((result.meta.changes ?? 0) === 1) return nextGeneration;
-  const current = await getScheduledSlotExecution(db, slot.slot_key, slot.slot_started_at);
-  return current?.state === "reconciling" &&
-    current.execution_owner === reconciliationOwner &&
-    current.execution_generation === nextGeneration &&
-    current.updated_at === nowSec
-    ? nextGeneration
-    : null;
+  return (result.meta.changes ?? 0) === 1 ? nextGeneration : null;
 }
 
 export async function sweepStaleScheduledSlotExecutions(
@@ -334,23 +264,12 @@ export async function sweepStaleScheduledSlotExecutions(
     slotsReconciled: 0,
     syntheticCronRuns: 0,
     jobAttemptsAbandoned: 0,
-    jobAttemptsTerminalized: 0,
     progressRowsCleared: 0,
     leasesCleared: 0,
     recoveryCheckpointsPrepared: 0,
     notStartedCronRuns: 0,
-    successfulChildTerminals: 0,
-    skippedLockedChildTerminals: 0,
-    derivedPublishedChildTerminals: 0,
-    publicationFailures: 0,
-    terminalAccountingUnknown: 0,
-    realChildFailures: 0,
     abandonedSlots: [],
   };
-  if (staleSlots.length === 0) return summary;
-
-  const { hasActiveChildLeaseForScheduledSlot, reconcileStaleSlotArtifactsAndRecordEvent } =
-    await loadScheduledSlotReconciliation();
 
   for (const staleSlot of staleSlots) {
     if (options.signal?.aborted) {
@@ -370,54 +289,25 @@ export async function sweepStaleScheduledSlotExecutions(
     if (reconciliationGeneration == null) {
       continue;
     }
-    const reconciliationFence: ScheduledSlotReconciliationFence = {
-      slotKey: staleSlot.slot_key,
-      slotStartedAt: staleSlot.slot_started_at,
-      state: "reconciling",
-      owner: reconciliationOwner,
-      generation: reconciliationGeneration,
-    };
-    let reconciliation: StaleSlotReconciliationSummary | null = null;
-    let finished = false;
-    for (let reconciliationAttempt = 0; reconciliationAttempt < 3; reconciliationAttempt++) {
-      reconciliation = await reconcileStaleSlotArtifactsAndRecordEvent(db, staleSlot, nowSec, reconciliationFence);
-      finished = await finishStaleScheduledSlotExecution(
-        db,
-        staleSlot,
-        reconciliationOwner,
-        reconciliationGeneration,
-        nowSec,
-        reconciliation,
-      );
-      if (finished) break;
-      const current = await getScheduledSlotExecution(db, staleSlot.slot_key, staleSlot.slot_started_at);
-      if (
-        current?.state !== "reconciling" ||
-        current.execution_owner !== reconciliationOwner ||
-        current.execution_generation !== reconciliationGeneration
-      ) {
-        throw new ScheduledSlotOwnershipLostError(staleSlot.slot_key, staleSlot.slot_started_at);
-      }
-    }
-    if (!finished || reconciliation == null) {
-      throw new Error(
-        `reconciliation progress did not stabilize for ${staleSlot.slot_key}@${staleSlot.slot_started_at}`,
-      );
+    const reconciliation = await reconcileStaleSlotArtifactsAndRecordEvent(db, staleSlot, nowSec);
+    const finished = await finishStaleScheduledSlotExecution(
+      db,
+      staleSlot,
+      reconciliationOwner,
+      reconciliationGeneration,
+      nowSec,
+      reconciliation,
+    );
+    if (!finished) {
+      throw new ScheduledSlotOwnershipLostError(staleSlot.slot_key, staleSlot.slot_started_at);
     }
     summary.slotsReconciled++;
     summary.syntheticCronRuns += reconciliation.syntheticCronRuns;
     summary.jobAttemptsAbandoned += reconciliation.jobAttemptsAbandoned;
-    summary.jobAttemptsTerminalized += reconciliation.jobAttemptsTerminalized;
     summary.progressRowsCleared += reconciliation.progressRowsCleared;
     summary.leasesCleared += reconciliation.leasesCleared;
     summary.recoveryCheckpointsPrepared += reconciliation.recoveryCheckpointsPrepared;
     summary.notStartedCronRuns += reconciliation.notStartedCronRuns;
-    summary.successfulChildTerminals += reconciliation.successfulChildTerminals;
-    summary.skippedLockedChildTerminals += reconciliation.skippedLockedChildTerminals;
-    summary.derivedPublishedChildTerminals += reconciliation.derivedPublishedChildTerminals;
-    summary.publicationFailures += reconciliation.publicationFailures;
-    summary.terminalAccountingUnknown += reconciliation.terminalAccountingUnknown;
-    summary.realChildFailures += reconciliation.realChildFailures;
     summary.abandonedSlots.push({
       slotKey: staleSlot.slot_key,
       slotStartedAt: staleSlot.slot_started_at,
@@ -468,8 +358,6 @@ async function claimScheduledSlotExecution(
   }
 
   if (existing.updated_at < staleBefore) {
-    const { hasActiveChildLeaseForScheduledSlot, reconcileStaleSlotArtifactsAndRecordEvent } =
-      await loadScheduledSlotReconciliation();
     const staleSlot: StaleSlotExecutionRow = {
       slot_key: slotKey,
       slot_started_at: slotStartedAt,
@@ -491,8 +379,6 @@ async function claimScheduledSlotExecution(
     if (await hasActiveChildLeaseForScheduledSlot(db, slotKey, slotStartedAt, nowSec)) {
       return { status: "running" };
     }
-    const nextGeneration = existing.execution_generation + 1;
-    const takeoverMetadata = JSON.stringify({ staleSlotTakeover });
     const takeover = await runWithOverloadRetry(() =>
       db
         .prepare(
@@ -520,7 +406,7 @@ async function claimScheduledSlotExecution(
           workerVersion,
           nowSec,
           nowSec,
-          takeoverMetadata,
+          JSON.stringify({ staleSlotTakeover }),
           slotKey,
           slotStartedAt,
           existing.execution_owner,
@@ -530,37 +416,10 @@ async function claimScheduledSlotExecution(
         )
         .run(),
     );
-    const takeoverApplied = (takeover.meta.changes ?? 0) > 0;
-    const currentAfterTakeover = takeoverApplied ? null : await getScheduledSlotExecution(db, slotKey, slotStartedAt);
-    const exactTakeoverApplied =
-      takeoverApplied ||
-      (currentAfterTakeover?.state === "running" &&
-        currentAfterTakeover.result_status == null &&
-        currentAfterTakeover.execution_owner === owner &&
-        currentAfterTakeover.execution_generation === nextGeneration &&
-        currentAfterTakeover.invocation_id === invocationId &&
-        currentAfterTakeover.worker_version === workerVersion &&
-        currentAfterTakeover.started_at === nowSec &&
-        currentAfterTakeover.finished_at == null &&
-        currentAfterTakeover.updated_at === nowSec &&
-        currentAfterTakeover.metadata === takeoverMetadata);
-    if (exactTakeoverApplied) {
-      const reconciliationFence: ScheduledSlotReconciliationFence = {
-        slotKey,
-        slotStartedAt,
-        state: "running",
-        owner,
-        generation: nextGeneration,
-      };
-      const reconciliation = await reconcileStaleSlotArtifactsAndRecordEvent(
-        db,
-        staleSlot,
-        nowSec,
-        reconciliationFence,
-      );
+    if ((takeover.meta.changes ?? 0) > 0) {
+      const reconciliation = await reconcileStaleSlotArtifactsAndRecordEvent(db, staleSlot, nowSec);
       staleSlotTakeover.reconciliation = reconciliation;
-      const reconciledMetadata = JSON.stringify({ staleSlotTakeover });
-      const metadataUpdate = await runWithOverloadRetry(() =>
+      await runWithOverloadRetry(() =>
         db
           .prepare(
             `UPDATE cron_slot_executions
@@ -571,23 +430,12 @@ async function claimScheduledSlotExecution(
                AND execution_generation = ?
                AND state = 'running'`,
           )
-          .bind(reconciledMetadata, slotKey, slotStartedAt, owner, nextGeneration)
+          .bind(JSON.stringify({ staleSlotTakeover }), slotKey, slotStartedAt, owner, existing.execution_generation + 1)
           .run(),
       );
-      if ((metadataUpdate.meta.changes ?? 0) !== 1) {
-        const current = await getScheduledSlotExecution(db, slotKey, slotStartedAt);
-        const exactMetadataApplied =
-          current?.state === "running" &&
-          current.execution_owner === owner &&
-          current.execution_generation === nextGeneration &&
-          current.metadata === reconciledMetadata;
-        if (!exactMetadataApplied) {
-          throw new ScheduledSlotOwnershipLostError(slotKey, slotStartedAt);
-        }
-      }
       return {
         status: "claimed",
-        executionGeneration: nextGeneration,
+        executionGeneration: existing.execution_generation + 1,
         staleSlotTakeover,
       };
     }
@@ -649,17 +497,7 @@ async function finishScheduledSlotExecution(
       .bind(resultStatus, nowSec, nowSec, metadata, slotKey, slotStartedAt, owner, executionGeneration)
       .run(),
   );
-  if ((result.meta.changes ?? 0) === 1) return true;
-  const current = await getScheduledSlotExecution(db, slotKey, slotStartedAt);
-  return (
-    current?.state === "finished" &&
-    current.result_status === resultStatus &&
-    current.execution_owner === owner &&
-    current.execution_generation === executionGeneration &&
-    current.finished_at === nowSec &&
-    current.updated_at === nowSec &&
-    current.metadata === metadata
-  );
+  return (result.meta.changes ?? 0) === 1;
 }
 
 function attachSlotRuntimeMetadata<T>(

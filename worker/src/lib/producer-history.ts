@@ -45,15 +45,6 @@ export interface RecordProducerOutcomeInput extends ProducerIdentity {
   metadata?: string | null;
   error?: string | null;
   productivity?: CronProductivity | null;
-  writeFence?: ProducerOutcomeWriteFence;
-}
-
-export interface ProducerOutcomeWriteFence {
-  slotKey: string;
-  slotStartedAt: number;
-  state: "running" | "reconciling";
-  owner: string;
-  generation: number;
 }
 
 export interface ProducerHead {
@@ -100,58 +91,6 @@ const REGULAR_HISTORY_RETENTION_SEC = 30 * 24 * 60 * 60;
 const BUDGET_HISTORY_RETENTION_SEC = 90 * 24 * 60 * 60;
 const CALENDAR_HISTORY_RETENTION_SEC = 550 * 24 * 60 * 60;
 
-function producerOutcomeWriteValues(values: string, fence?: ProducerOutcomeWriteFence): string {
-  if (!fence) return `VALUES (${values})`;
-  return `SELECT ${values}
-    WHERE EXISTS (
-      SELECT 1
-        FROM cron_slot_executions producer_fence_slot
-       WHERE producer_fence_slot.slot_key = ?
-         AND producer_fence_slot.slot_started_at = ?
-         AND producer_fence_slot.state = ?
-         AND producer_fence_slot.execution_owner = ?
-         AND producer_fence_slot.execution_generation = ?
-    )`;
-}
-
-function producerOutcomeWriteFenceBinds(fence?: ProducerOutcomeWriteFence): Array<string | number> {
-  return fence ? [fence.slotKey, fence.slotStartedAt, fence.state, fence.owner, fence.generation] : [];
-}
-
-async function assertProducerOutcomeWriteFence(db: D1Database, fence: ProducerOutcomeWriteFence): Promise<void> {
-  const row = await runWithOverloadRetry(() =>
-    db
-      .prepare(
-        `SELECT 1 AS owned
-         FROM cron_slot_executions
-        WHERE slot_key = ?
-          AND slot_started_at = ?
-          AND state = ?
-          AND execution_owner = ?
-          AND execution_generation = ?
-        LIMIT 1`,
-      )
-      .bind(...producerOutcomeWriteFenceBinds(fence))
-      .first<{ owned: number }>(),
-  );
-  if (row?.owned !== 1) {
-    throw new Error(`producer outcome write ownership lost for ${fence.slotKey}@${fence.slotStartedAt}`);
-  }
-}
-
-async function requireGuardedProducerWrite(
-  db: D1Database,
-  fence: ProducerOutcomeWriteFence | undefined,
-  result: D1Result<unknown>,
-): Promise<void> {
-  if ((result.meta.changes ?? 0) > 0) return;
-  if (fence) {
-    await assertProducerOutcomeWriteFence(db, fence);
-    throw new Error(`guarded producer outcome write did not apply for ${fence.slotKey}@${fence.slotStartedAt}`);
-  }
-  throw new Error("producer outcome write did not apply");
-}
-
 function normalizeMetadata(metadata: string | null | undefined): string | null {
   if (!metadata) return null;
   const parsed = parseObjectMetadata(metadata);
@@ -191,7 +130,7 @@ async function recordGenericSurfacePublications(
   publications: readonly CronPublicationRecord[],
 ): Promise<void> {
   for (const publication of publications) {
-    const result = await runWithOverloadRetry(() =>
+    await runWithOverloadRetry(() =>
       db
         .prepare(
           `INSERT INTO surface_publication_generations (
@@ -200,10 +139,7 @@ async function recordGenericSurfacePublications(
            validation_summary_json, artifact_checksum, artifact_cache_key,
            producer_schedule_key, producer_job, producer_path, producer_kind,
            invocation_id, worker_version
-         ) ${producerOutcomeWriteValues(
-           "?, ?, ?, ?, ?, 'published', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?",
-           input.writeFence,
-         )}
+         ) VALUES (?, ?, ?, ?, ?, 'published', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(surface, generation_id) DO UPDATE SET
            validated_at = COALESCE(surface_publication_generations.validated_at, excluded.validated_at),
            published_at = COALESCE(surface_publication_generations.published_at, excluded.published_at),
@@ -244,11 +180,9 @@ async function recordGenericSurfacePublications(
           input.producerKind,
           input.invocationId,
           input.workerVersion ?? null,
-          ...producerOutcomeWriteFenceBinds(input.writeFence),
         )
         .run(),
     );
-    await requireGuardedProducerWrite(db, input.writeFence, result);
   }
 }
 
@@ -265,7 +199,7 @@ export async function recordProducerOutcome(db: D1Database, input: RecordProduce
   const metadataJson = normalizeMetadata(input.metadata);
   const error = input.error?.slice(0, MAX_HISTORY_ERROR_CHARS) ?? null;
 
-  const historyResult = await runWithOverloadRetry(() =>
+  await runWithOverloadRetry(() =>
     db
       .prepare(
         `INSERT INTO worker_producer_history (
@@ -273,7 +207,7 @@ export async function recordProducerOutcome(db: D1Database, input: RecordProduce
          invocation_id, worker_version, slot_started_at, invoked_at, completed_at,
          outcome, productive, item_count, publication_count, publications_json,
          calendar_period, metadata_json, error, created_at
-       ) ${producerOutcomeWriteValues(Array.from({ length: 19 }, () => "?").join(", "), input.writeFence)}
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(idempotency_key) DO UPDATE SET
          completed_at = excluded.completed_at,
          outcome = excluded.outcome,
@@ -283,27 +217,7 @@ export async function recordProducerOutcome(db: D1Database, input: RecordProduce
          publications_json = excluded.publications_json,
          calendar_period = COALESCE(excluded.calendar_period, worker_producer_history.calendar_period),
          metadata_json = excluded.metadata_json,
-         error = excluded.error
-       WHERE worker_producer_history.schedule_key = excluded.schedule_key
-         AND worker_producer_history.job = excluded.job
-         AND worker_producer_history.producer_path = excluded.producer_path
-         AND worker_producer_history.producer_kind = excluded.producer_kind
-         AND worker_producer_history.invocation_id = excluded.invocation_id
-       ON CONFLICT(schedule_key, job, producer_path, producer_kind, invocation_id) DO UPDATE SET
-         idempotency_key = excluded.idempotency_key,
-         worker_version = excluded.worker_version,
-         slot_started_at = excluded.slot_started_at,
-         invoked_at = excluded.invoked_at,
-         completed_at = excluded.completed_at,
-         outcome = excluded.outcome,
-         productive = excluded.productive,
-         item_count = excluded.item_count,
-         publication_count = excluded.publication_count,
-         publications_json = excluded.publications_json,
-         calendar_period = COALESCE(excluded.calendar_period, worker_producer_history.calendar_period),
-         metadata_json = excluded.metadata_json,
-         error = excluded.error
-       ${input.writeFence ? "WHERE worker_producer_history.idempotency_key LIKE 'scheduled-slot-%'" : ""}`,
+         error = excluded.error`,
       )
       .bind(
         input.idempotencyKey,
@@ -325,13 +239,11 @@ export async function recordProducerOutcome(db: D1Database, input: RecordProduce
         metadataJson,
         error,
         input.completedAt,
-        ...producerOutcomeWriteFenceBinds(input.writeFence),
       )
       .run(),
   );
-  await requireGuardedProducerWrite(db, input.writeFence, historyResult);
 
-  const headResult = await runWithOverloadRetry(() =>
+  await runWithOverloadRetry(() =>
     db
       .prepare(
         `INSERT INTO worker_producer_heads (
@@ -340,7 +252,7 @@ export async function recordProducerOutcome(db: D1Database, input: RecordProduce
          last_outcome, last_error, last_productive_invocation_id,
          last_productive_at, last_productive_item_count, last_publication_at,
          last_publications_json, invocation_count, productive_count, updated_at
-       ) ${producerOutcomeWriteValues("?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?", input.writeFence)}
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
        ON CONFLICT(schedule_key, job, producer_path, producer_kind) DO UPDATE SET
          last_invocation_id = CASE
            WHEN excluded.last_completed_at >= worker_producer_heads.last_completed_at
@@ -417,11 +329,9 @@ export async function recordProducerOutcome(db: D1Database, input: RecordProduce
         publicationsJson,
         productive ? 1 : 0,
         input.completedAt,
-        ...producerOutcomeWriteFenceBinds(input.writeFence),
       )
       .run(),
   );
-  await requireGuardedProducerWrite(db, input.writeFence, headResult);
 
   if (publications.length > 0) {
     await recordGenericSurfacePublications(db, input, publications);
