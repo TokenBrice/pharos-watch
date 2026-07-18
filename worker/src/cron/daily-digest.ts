@@ -200,7 +200,7 @@ export async function generateDailyDigest(
     anthropicApiKey,
     systemPrompt: SYSTEM_PROMPT,
     userPrompt: userPromptContent,
-    // Opus 4.7 xhigh needs this floor; see digest/platform.ts for the effort rationale.
+    // Opus xhigh needs this floor; see digest/platform.ts for the effort rationale.
     maxTokens: 64000,
     signal,
     logPrefix: "daily-digest",
