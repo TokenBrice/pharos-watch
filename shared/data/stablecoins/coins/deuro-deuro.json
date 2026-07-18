@@ -16,7 +16,7 @@
   "pegMechanism": "Overcollateralized CDP with automated liquidation; no oracle dependency (same architecture as Frankencoin ZCHF)",
   "mechanismArchetype": "cdp",
   "llamaId": "423",
-  "detailProvider": "defillama",
+  "detailProvider": "coingecko",
   "geckoId": "decentralized-euro",
   "oracleRisk": {
     "tier": "oracleless-or-internal",

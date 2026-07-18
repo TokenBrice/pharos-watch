@@ -56,6 +56,11 @@ export function isPublicImpactCircuitKey(key: string): boolean {
   if (key.startsWith("live-reserves:")) return false;
   if (key === "dexscreener-liquidity") return false;
   if (key === "dexscreener-search") return false;
+  if (key === "kava-pricefeed") return false;
+  if (key === "jusd-citrea-bridge") return false;
+  if (key === "usx-stable-pools") return false;
+  if (key === "aznd-curve-pool") return false;
+  if (key === "mento-broker") return false;
   return true;
 }
 

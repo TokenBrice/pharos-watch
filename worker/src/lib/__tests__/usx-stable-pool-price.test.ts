@@ -65,6 +65,20 @@ describe("USX exact stable-pool price", () => {
       observedAtMode: "upstream",
     });
     expect(fetchEvmBlockNumberMock).toHaveBeenCalledTimes(2);
+    expect(fetchEvmBlockNumberMock).toHaveBeenNthCalledWith(
+      1,
+      "optimism",
+      expect.objectContaining({
+        extraRpcUrls: ["https://mainnet.optimism.io", "https://optimism-rpc.publicnode.com"],
+      }),
+    );
+    expect(fetchEvmBlockNumberMock).toHaveBeenNthCalledWith(
+      2,
+      "base",
+      expect.objectContaining({
+        extraRpcUrls: ["https://mainnet.base.org", "https://base-rpc.publicnode.com"],
+      }),
+    );
     expect(fetchEvmBlockTimestampMock).toHaveBeenCalledTimes(2);
     expect(fetchEvmCallHexAtBlockMock.mock.calls.every((call) => call[3] === 123_456)).toBe(true);
   });

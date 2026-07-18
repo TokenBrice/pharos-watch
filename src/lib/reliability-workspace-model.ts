@@ -1,4 +1,5 @@
 import { getCacheFreshnessRatio } from "@shared/lib/cache-health";
+import { isPublicImpactCircuitKey } from "@shared/lib/public-health";
 import { STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
 import type {
   ApiRequestAttributionResponse,
@@ -257,7 +258,7 @@ function buildDependenciesModel(input: ReliabilityWorkspaceInput): ReliabilityDe
     return stateRank[right.state] - stateRank[left.state] || right.consecutiveFailures - left.consecutiveFailures;
   });
   const publicCircuits = Object.entries(input.healthData?.circuits ?? {})
-    .filter(([, circuit]) => circuit.state !== "closed")
+    .filter(([key, circuit]) => isPublicImpactCircuitKey(key) && circuit.state !== "closed")
     .sort((left, right) => {
       const stateRank = { open: 2, "half-open": 1, closed: 0 } as const;
       return stateRank[right[1].state] - stateRank[left[1].state] || left[0].localeCompare(right[0]);

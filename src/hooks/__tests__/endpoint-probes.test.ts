@@ -168,6 +168,70 @@ describe("collectEndpointProbes", () => {
     );
   });
 
+  it("treats a newly scheduled stablecoin-detail refresh as expected stale-while-revalidate", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("{}", {
+        status: 200,
+        headers: {
+          Warning: '110 - "Stablecoin detail cache is stale; refresh scheduled"',
+          "X-Data-Age": "301",
+        },
+      }),
+    );
+
+    const result = await collectEndpointProbes(["/api/stablecoin/pyusd-paypal"]);
+
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        path: "/api/stablecoin/pyusd-paypal",
+        status: 200,
+      }),
+    );
+    expect(result[0]).not.toHaveProperty("semanticStatus");
+  });
+
+  it("classifies a persistently aging scheduled detail refresh as stale", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("{}", {
+        status: 200,
+        headers: {
+          Warning: '110 - "Stablecoin detail cache is stale; refresh scheduled"',
+          "X-Data-Age": "601",
+        },
+      }),
+    );
+
+    const result = await collectEndpointProbes(["/api/stablecoin/pyusd-paypal"]);
+
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        semanticStatus: "stale",
+        semanticScope: "freshness",
+      }),
+    );
+  });
+
+  it("keeps failed stablecoin-detail refresh warnings stale inside the scheduled-refresh grace", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("{}", {
+        status: 200,
+        headers: {
+          Warning: '110 - "Stablecoin detail cache is stale; refresh failed"',
+          "X-Data-Age": "301",
+        },
+      }),
+    );
+
+    const result = await collectEndpointProbes(["/api/stablecoin/pyusd-paypal"]);
+
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        semanticStatus: "stale",
+        semanticScope: "freshness",
+      }),
+    );
+  });
+
   it("preserves degraded freshness Warning severity on 200 responses", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response("{}", {

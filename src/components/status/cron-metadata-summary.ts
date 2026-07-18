@@ -44,6 +44,10 @@ function formatStringList(value: unknown): string | null {
   return items && items.length > 0 ? items.join(", ") : null;
 }
 
+function readStringArray(value: unknown): string[] {
+  return readArray(value)?.filter((item): item is string => typeof item === "string" && item.length > 0) ?? [];
+}
+
 function formatTierBreakdown(value: unknown): string | null {
   const record = readRecord(value);
   if (!record) return null;
@@ -361,6 +365,48 @@ function summarizeTelegramAlerts(metadata: Record<string, unknown>): string[] {
   ].filter((line): line is string => line != null);
 }
 
+function summarizeSnapshotSupply(metadata: Record<string, unknown>): string[] {
+  const reason = readString(metadata.reason);
+  const validRows = readNumber(metadata.validRows);
+  const expectedCount = readNumber(metadata.expectedCount);
+  const invalidSupplyIds = readStringArray(metadata.invalidSupplyIds);
+  const missingActiveIds = readStringArray(metadata.missingActiveIds);
+
+  return [
+    reason ? `reason ${reason}` : null,
+    validRows != null && expectedCount != null ? `active supply coverage ${validRows}/${expectedCount}` : null,
+    invalidSupplyIds.length > 0 ? `invalid supply ${invalidSupplyIds.join(", ")}` : null,
+    missingActiveIds.length > 0 ? `missing active ${missingActiveIds.join(", ")}` : null,
+  ].filter((line): line is string => line != null);
+}
+
+function summarizeTelegramWatchdog(metadata: Record<string, unknown>): string[] {
+  const pending = readRecord(metadata.pendingBacklog);
+  const safety = readRecord(metadata.safetySource);
+  const zeroSend = readRecord(metadata.zeroSend);
+  const executionUnknown = readNumber(pending?.executionUnknown);
+  const oldestUnknownAgeSec = readNumber(pending?.oldestExecutionUnknownAgeSec);
+
+  return [
+    pending && readBoolean(pending.triggered) ? "pending-delivery incident triggered" : null,
+    executionUnknown != null && executionUnknown > 0 ? `execution unknown ${executionUnknown}` : null,
+    oldestUnknownAgeSec != null ? `oldest ambiguous effect ${oldestUnknownAgeSec}s` : null,
+    pending ? readString(pending.detail) : null,
+    safety && readBoolean(safety.triggered) ? "safety-source incident triggered" : null,
+    zeroSend && readBoolean(zeroSend.triggered) ? "zero-send incident triggered" : null,
+  ].filter((line): line is string => line != null);
+}
+
+function summarizeCronDurationWatchdog(metadata: Record<string, unknown>): string[] {
+  const runtimeBreaching = readStringArray(metadata.runtimeBreaching);
+  const slotBreaching = readStringArray(metadata.slotAbandonmentBreaching);
+
+  return [
+    runtimeBreaching.length > 0 ? `runtime breaches ${runtimeBreaching.join(", ")}` : "runtime breaches none",
+    slotBreaching.length > 0 ? `slot abandonment ${slotBreaching.join(", ")}` : "slot abandonment none",
+  ];
+}
+
 const SUMMARIZER_BY_JOB: Record<string, (metadata: Record<string, unknown>) => string[]> = {
   "status-self-check": summarizeStatusSelfCheck,
   "sync-dex-discovery": summarizeDexDiscovery,
@@ -371,6 +417,9 @@ const SUMMARIZER_BY_JOB: Record<string, (metadata: Record<string, unknown>) => s
   "sync-live-reserves": summarizeLiveReserves,
   "sync-redemption-backstops": summarizeRedemptionBackstops,
   "dispatch-telegram-alerts": summarizeTelegramAlerts,
+  "snapshot-supply": summarizeSnapshotSupply,
+  "telegram-degradation-watchdog": summarizeTelegramWatchdog,
+  "cron-duration-watchdog": summarizeCronDurationWatchdog,
 };
 
 export function summarizeCronMetadata(job: string, metadata: Record<string, unknown> | undefined): string[] {

@@ -113,6 +113,11 @@ describe("public status helpers", () => {
     expect(isPublicImpactCircuitKey("live-reserves:ousg-ondo")).toBe(false);
     expect(isPublicImpactCircuitKey("dexscreener-liquidity")).toBe(false);
     expect(isPublicImpactCircuitKey("dexscreener-search")).toBe(false);
+    expect(isPublicImpactCircuitKey("usx-stable-pools")).toBe(false);
+    expect(isPublicImpactCircuitKey("aznd-curve-pool")).toBe(false);
+    expect(isPublicImpactCircuitKey("mento-broker")).toBe(false);
+    expect(isPublicImpactCircuitKey("kava-pricefeed")).toBe(false);
+    expect(isPublicImpactCircuitKey("jusd-citrea-bridge")).toBe(false);
     expect(isPublicImpactCircuitKey("defillama-stablecoins")).toBe(true);
 
     const circuit = {
@@ -128,6 +133,11 @@ describe("public status helpers", () => {
       "live-reserves:mtbill-midas": circuit,
       "dexscreener-liquidity": circuit,
       "dexscreener-search": circuit,
+      "usx-stable-pools": circuit,
+      "aznd-curve-pool": circuit,
+      "mento-broker": circuit,
+      "kava-pricefeed": circuit,
+      "jusd-citrea-bridge": circuit,
     })).toBe(0);
   });
 });

@@ -235,6 +235,66 @@ describe("reliability issue model", () => {
     expect(model.issues.filter((issue) => issue.id === "circuit:fixture-provider-a")).toHaveLength(1);
   });
 
+  it("keeps advisory provider circuits out of the public-service circuit model", () => {
+    const base = completeStatus();
+    const data = degraded(base, {
+      providerCircuitHealth: {
+        checkedAt: base.timestamp,
+        status: "stale",
+        totalTracked: 1,
+        closedCount: 0,
+        halfOpenCount: 0,
+        openCount: 1,
+        openProviders: [
+          {
+            providerId: "dexscreener-liquidity",
+            family: "dex-liquidity",
+            state: "open",
+            consecutiveFailures: 3,
+            openedAt: base.timestamp - 600,
+            openAgeSec: 600,
+            lastFailureAt: base.timestamp - 30,
+            lastSuccessAt: base.timestamp - 3_600,
+          },
+        ],
+        byFamily: {
+          "dex-liquidity": { total: 1, closed: 0, halfOpen: 0, open: 1 },
+        },
+      },
+    });
+    const healthData: HealthResponse = {
+      ...makeHealthyHealthResponse(),
+      circuits: {
+        "dexscreener-liquidity": {
+          state: "open",
+          consecutiveFailures: 3,
+          lastFailureAt: base.timestamp - 30,
+          lastSuccessAt: base.timestamp - 3_600,
+          openedAt: base.timestamp - 600,
+        },
+        "defillama-stablecoins": {
+          state: "half-open",
+          consecutiveFailures: 4,
+          lastFailureAt: base.timestamp - 60,
+          lastSuccessAt: base.timestamp - 7_200,
+          openedAt: base.timestamp - 900,
+        },
+      },
+    };
+
+    const model = buildReliabilityWorkspaceModel(input({ data, healthData }));
+
+    expect(model.dependencies.providerCircuits.map((circuit) => circuit.providerId)).toContain(
+      "dexscreener-liquidity",
+    );
+    expect(model.dependencies.publicCircuits.map(([name]) => name)).toEqual(["defillama-stablecoins"]);
+    expect(
+      model.issues.some(
+        (issue) => issue.label === "dexscreener-liquidity" && issue.rawCode === "public_health_circuit",
+      ),
+    ).toBe(false);
+  });
+
   it("builds copy diagnostics from allowlisted fields without probe errors or query strings", () => {
     const secret = "Bearer should-never-copy";
     const data = completeStatus();

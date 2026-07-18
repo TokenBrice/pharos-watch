@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.195",
+    title: "Reviewed-route recovery and long-tail provider repair",
+    date: "2026-07-18",
+    effectiveAt: 1784363901,
+    summary:
+      "Reviewed exact-market quotes and circuit-backed protocol probes now retain priority over lower-fidelity duplicate rows and shared-budget starvation, while dEURO returns to its positive CoinGecko supply and bounded low-volume price path.",
+    impact: [
+      "An eligible exact direct-API pool with a reviewed quote dependency can replace a unique derived-identity DefiLlama duplicate even when the hosted API reports zero 24-hour volume, so the exact USP Balancer quote reaches retained-pool pricing without double-counting liquidity",
+      "Circuit-backed live routes run before ordinary authoritative candidates and started probes finalize their circuit outcome on shared-budget abort, preventing recovered half-open routes from remaining stranded behind unrelated work",
+      "USX on-chain quotes use independent Optimism and Base RPC fallbacks while preserving the existing two-route agreement, reserve-depth, block-freshness, and trusted-USDC dependency checks",
+      "dEURO uses CoinGecko as its runtime admission provider while retaining its DefiLlama identity for capture, and its audited CoinGecko row can fill a still-missing price through the existing fallback-confidence seven-day low-volume lane",
+      "AZND and Mento continue to fail closed when their reviewed market depth or protocol oracle is unavailable; no threshold, freshness window, or nominal peg fill was relaxed",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.194",
     title: "Exact retained-pool price evidence join",
     date: "2026-07-17",

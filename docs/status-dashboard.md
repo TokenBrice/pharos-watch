@@ -80,7 +80,7 @@ The active frontend operator mode is now:
 - The public blacklist-ingestion card keeps historical low-ratio amount gaps visible, but only recent or threshold-crossing gaps inherit warning/stale treatment; this matches the shared blacklist gap thresholds instead of flagging any non-zero backlog as degraded
 - Public cache freshness tables show the shared cache-age ratio bands (`>8x` degraded, `>12x` stale), while the hero and impacted-surface callouts follow the full shared cache-impact floor: missing cache rows and stale cache age remain stale, and cached-fallback mode degrades a lane even when the age ratio is still inside target. Stale or degraded producer-source freshness can still appear as an admin `/api/status` warning cause without becoming a public impacted-surface callout by itself until the public availability budget is breached.
 - The public mint/burn card, hero tile, and impacted-surface callout now follow the same backend lane contract as `/api/health`: sync freshness is primary, but a fresh cache still degrades publicly when the critical mint/burn lane's latest run is unhealthy
-- The public circuit-breaker hero tile, reliability summary badge, and public breaker table use the same public-impact circuit key filter as `/api/health`: `live-reserves:*`, `dexscreener-liquidity`, and `dexscreener-search` breaker states remain available in the raw health payload and admin reliability view, but they do not make the public `/status/` surface report an open public-impact breaker
+- The public circuit-breaker hero tile, reliability summary badge, and public breaker table use the same public-impact circuit key filter as `/api/health`: `live-reserves:*`, optional `dexscreener-liquidity` / `dexscreener-search`, and the asset-scoped `kava-pricefeed`, `jusd-citrea-bridge`, `usx-stable-pools`, `aznd-curve-pool`, and `mento-broker` breakers remain available in raw health and admin provider diagnostics, but they do not make the public `/status/` surface report a source-wide outage. Missing output from an asset-scoped route is owned by exact active-price coverage instead.
 - Public `Overview` and `Reliability` lane shells use theme-aware tinted gradients with elevated inner cards so light mode keeps the same hierarchy without inheriting the dark-only monitor slabs
 
 ### Data hooks
@@ -159,7 +159,7 @@ The active frontend operator mode is now:
   - `Triage`: current incident state, blockers, watch count, recommended action, last transition, query freshness, raw diagnostics, and a counts-only credential lifecycle summary linking to API Management
   - `Pipeline`: URL-backed tab inspection for `Quality`, `Markets`, `Reserves`, `Yield`, `Storage`, `Integrity`, and `Discovery`; inactive modes are not mounted
   - Mint/burn reconciliation now defaults to the six highest-severity rows and exposes the long insufficient-source tail behind a `See all` disclosure button
-  - `Reliability`: URL-backed `Impact`, `Endpoints`, `Dependencies`, `Demand`, and `Cache` modes; manual mutation routes are excluded from default probe noise
+  - `Reliability`: URL-backed `Impact`, `Endpoints`, `Dependencies`, `Demand`, and `Cache` modes; manual mutation routes are excluded from default probe noise, and the Dependencies public-service breaker list uses the same public-impact filter as `/api/health` while retaining excluded breakers in provider diagnostics
   - `Crons`: grouped, filterable attention workbench with a sticky selected-row evidence panel and separately grouped budget-only surfaces
   - `Actions`: searchable intent/risk catalog with one shared execution dialog, direct dry runs where supported, structured results, and persistent action history
   - `Comms`: delivery-first Telegram operations followed by separate audience coverage
@@ -248,7 +248,7 @@ Computed from public cache impact, public mint/burn impact, circuit health, and 
 
 `degraded` cron runs are counted separately in `summary.degradedCrons` and shown in the cron UI, but they do not by themselves mark availability degraded.
 
-`openCircuitGroups` here means public-impact circuit groups only. Dynamic per-coin `live-reserves:*` breakers still render in the reliability tables, but they do not degrade availability on their own because reserve sync already has its own data-quality lane and thresholds.
+`openCircuitGroups` here means public-impact circuit groups only. Dynamic per-coin `live-reserves:*` and dedicated single-asset pricing-route breakers still render in the reliability tables, but they do not degrade availability on their own because reserve sync and exact active-price coverage already own those asset-scoped failures.
 
 Runbook links are intentionally sparse. `worker/src/lib/status/evaluation-causes.ts` attaches `runbookUrl` only for cause codes with maintained operator runbooks; public-impact causes such as `cache_ratio_*`, `cache_freshness_query_failed`, `mint_burn_public_*`, `open_circuit_groups`, `circuit_query_failed`, and `cron_error_runs` can appear without a Runbook link until a dedicated runbook is written.
 
@@ -510,7 +510,7 @@ Source: `src/hooks/use-endpoint-probes.ts`
 - Admin probe paths are now same-origin `/api/admin/*` calls on the ops host
 - The dashboard labels these as **browser-origin probes** to distinguish them from the worker-origin `status-self-check` synthetic probe stored in `/api/status`
 - Parameterized routes should probe `probePath` values from registry (for example `/api/mint-burn-events?stablecoin=usdt-tether`) to avoid expected `400` validation responses. `GET /api/status-probe-history` uses `/api/status-probe-history?path=%2Fapi%2Fhealth` as its stable admin canary so the browser probe loop validates the route without hitting the endpoint's required-query guard.
-- The stablecoin-detail probe also uses a curated canary `probePath` rather than the heaviest history payload, so route-health checks are less sensitive to oversized per-coin datasets.
+- The stablecoin-detail probe also uses a curated canary `probePath` rather than the heaviest history payload, so route-health checks are less sensitive to oversized per-coin datasets. Its expected `refresh scheduled` stale-while-revalidate warning remains transport-healthy for at most two cache TTLs when `X-Data-Age` is valid; older scheduled refreshes, missing age evidence, explicit `refresh failed` warnings, and other freshness warnings remain stale.
 - Routes without a stable canary URL are intentionally excluded from automatic probe coverage. `GET /api/digest-snapshot` is omitted because it requires a valid `date` that must map to a real stored digest; dated public snapshot detail routes are omitted because valid dates come from `GET /api/snapshots/index`.
 - Returned result shape: `{ path, status, latencyMs, error? }`
 

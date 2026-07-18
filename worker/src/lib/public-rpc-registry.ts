@@ -23,6 +23,8 @@ const PUBLIC_RPC_URLS: Record<string, string> = {
 
 const EXTRA_FALLBACK_RPC_URLS: Record<string, string[]> = {
   ethereum: ["https://eth.llamarpc.com"],
+  base: ["https://base-rpc.publicnode.com"],
+  optimism: ["https://optimism-rpc.publicnode.com"],
   blast: ["https://blast.blockpi.network/v1/rpc/public"],
   manta: ["https://manta-pacific.drpc.org"],
   // dRPC as an independent second operator behind publicnode; polygon-rpc.com
@@ -36,7 +38,7 @@ export function getPublicRpcUrl(chainId: string): string | undefined {
 
 export function getPublicFallbackRpcUrls(chainId: string): string[] {
   const primary = getPublicRpcUrl(chainId);
-  return primary ? [primary] : [];
+  return [...(primary ? [primary] : []), ...(EXTRA_FALLBACK_RPC_URLS[chainId] ?? [])];
 }
 
 export function getSecondaryFallbackRpcUrl(chainId: string): string | undefined {

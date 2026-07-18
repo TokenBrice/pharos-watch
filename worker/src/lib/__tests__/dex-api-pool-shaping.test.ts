@@ -45,6 +45,20 @@ describe("isPreferredDirectApiPool", () => {
       volume24hUsd: 0,
     }))).toBe(false);
   });
+
+  it("prefers a zero-volume exact pool with a reviewed executable quote dependency", () => {
+    expect(isPreferredDirectApiPool(makeDirectPool({
+      source: "balancer",
+      volume24hUsd: 0,
+      tokens: [{
+        address: "0xusp",
+        symbol: "USP",
+        decimals: 18,
+        priceUsd: null,
+        priceUsdDependency: { stablecoinId: "usdc-circle", multiplier: 0.9999 },
+      }],
+    }))).toBe(true);
+  });
 });
 
 describe("Balancer stableswap execution model", () => {

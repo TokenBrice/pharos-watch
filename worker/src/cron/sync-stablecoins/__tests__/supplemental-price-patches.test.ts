@@ -54,13 +54,14 @@ describe("runCoingeckoLowVolumePass", () => {
     });
   });
 
-  it("includes audited MNEE and VEUR production gaps in the relaxed fallback allowlist", async () => {
+  it("includes audited MNEE, VEUR, and dEURO production gaps in the relaxed fallback allowlist", async () => {
     const observedAt = Math.floor(Date.now() / 1000) - 6 * 3600;
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
       if (url.includes("coingecko.com")) {
         return new Response(JSON.stringify({
           "mnee-usd-stablecoin": { usd: 0.9996, last_updated_at: observedAt },
           "vnx-euro": { usd: 1.16, last_updated_at: observedAt },
+          "decentralized-euro": { usd: 1.14, last_updated_at: observedAt },
         }), { status: 200 });
       }
       return new Response("Not found", { status: 404 });
@@ -83,10 +84,19 @@ describe("runCoingeckoLowVolumePass", () => {
       supplySource: "defillama-history-gap-fill",
       circulating: { peggedEUR: 3_200_000 },
     });
+    const deuro = asset({
+      id: "deuro-deuro",
+      symbol: "DEURO",
+      pegType: "peggedEUR",
+      price: null,
+      priceSource: "coingecko",
+      supplySource: "coingecko-fallback",
+      circulating: { peggedEUR: 1_600_000 },
+    });
 
-    const result = await runCoingeckoLowVolumePass([mnee, veur], null, { peggedEUR: 1.16 });
+    const result = await runCoingeckoLowVolumePass([mnee, veur, deuro], null, { peggedEUR: 1.16 });
 
-    expect(result).toEqual({ resolved: 2, failures: [] });
+    expect(result).toEqual({ resolved: 3, failures: [] });
     expect(mnee).toMatchObject({
       price: 0.9996,
       priceSource: "coingecko-low-volume",
@@ -98,6 +108,12 @@ describe("runCoingeckoLowVolumePass", () => {
       priceSource: "coingecko-low-volume",
       priceConfidence: "fallback",
       supplySource: "defillama-history-gap-fill",
+    });
+    expect(deuro).toMatchObject({
+      price: 1.14,
+      priceSource: "coingecko-low-volume",
+      priceConfidence: "fallback",
+      supplySource: "coingecko-fallback",
     });
   });
 

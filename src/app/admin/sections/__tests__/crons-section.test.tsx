@@ -315,6 +315,20 @@ describe("CronsSection", () => {
     expect(screen.getByText("Queued / claimed / started")).toBeTruthy();
   });
 
+  it("distinguishes scoped-out attempt telemetry and unreported item counts", () => {
+    renderCrons({
+      groups: [makeGroup([["snapshot-supply", makeCronStatus({
+        attemptTelemetry: "scoped-out",
+        lastRun: { startedAt: 1_699_999_940, durationMs: 200, status: "degraded" },
+        recentRuns: [{ startedAt: 1_699_999_940, durationMs: 200, status: "degraded" }],
+      })]])],
+    });
+
+    expect(screen.getByText("Attempt ledger is not enabled for this job.")).toBeTruthy();
+    expect(screen.getByText("Last completed")).toBeTruthy();
+    expect(screen.getAllByText("N/A").length).toBeGreaterThan(0);
+  });
+
   it("renders budget-only trigger groups from top-level telemetry with outcome, counts, duration, and budget", async () => {
     const data = makeData({
       budgetOnlySurfaces: [makeBudgetSurface()],
