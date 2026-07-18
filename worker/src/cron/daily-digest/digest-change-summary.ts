@@ -47,27 +47,34 @@ function buildWorsenedImprovedSignals(
 ): DigestSignalChange[] {
   if (!previousData) return [];
   const out: DigestSignalChange[] = [];
-  const currentDepegs = new Map(data.topDepegs.map((depeg) => [depeg.symbol.toUpperCase(), depeg]));
+  // Key by stablecoinId — two tracked coins can share a symbol (usda-avalon vs
+  // usda-alpha-partner both print "USDA"), and a symbol-keyed match fabricates
+  // cross-coin movement. Symbol keys remain only for archived rows without ids.
+  const depegKey = (depeg: DigestInputData["topDepegs"][number]): string =>
+    depeg.stablecoinId ?? `symbol:${depeg.symbol.toUpperCase()}`;
+  const depegBps = (depeg: DigestInputData["topDepegs"][number]): number =>
+    Math.abs(depeg.currentBps ?? depeg.bps);
+  const currentDepegs = new Map(data.topDepegs.map((depeg) => [depegKey(depeg), depeg]));
   for (const previous of previousData.topDepegs ?? []) {
-    const current = currentDepegs.get(previous.symbol.toUpperCase());
+    const current = currentDepegs.get(depegKey(previous));
     if (!current) continue;
-    const delta = Math.abs(current.bps) - Math.abs(previous.bps);
+    const delta = depegBps(current) - depegBps(previous);
     if (direction === "worsened" && delta >= 25) {
       out.push({
-        id: `change:depeg:${current.symbol.toLowerCase()}:worsened`,
+        id: `change:depeg:${(current.stablecoinId ?? current.symbol).toLowerCase()}:worsened`,
         label: `${current.symbol} depeg widened`,
         kind: "depeg",
         symbols: [current.symbol],
-        detail: `${Math.abs(previous.bps)} bps to ${Math.abs(current.bps)} bps off peg.`,
+        detail: `${depegBps(previous)} bps to ${depegBps(current)} bps off peg.`,
       });
     }
     if (direction === "improved" && delta <= -25) {
       out.push({
-        id: `change:depeg:${current.symbol.toLowerCase()}:improved`,
+        id: `change:depeg:${(current.stablecoinId ?? current.symbol).toLowerCase()}:improved`,
         label: `${current.symbol} depeg narrowed`,
         kind: "depeg",
         symbols: [current.symbol],
-        detail: `${Math.abs(previous.bps)} bps to ${Math.abs(current.bps)} bps off peg.`,
+        detail: `${depegBps(previous)} bps to ${depegBps(current)} bps off peg.`,
       });
     }
   }

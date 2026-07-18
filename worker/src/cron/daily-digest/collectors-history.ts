@@ -4,7 +4,10 @@ import { SECONDS } from "../../lib/time-constants";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./shared";
 import { logCollectorParseFailure, markCollectorDegraded, type CollectorContext } from "./collectors-shared";
 
-export async function collectTotalMcapAth(ctx: CollectorContext): Promise<DigestInputData["totalMcapAth"]> {
+export async function collectTotalMcapAth(
+  ctx: CollectorContext,
+  degradedReasons?: string[],
+): Promise<DigestInputData["totalMcapAth"]> {
   try {
     const row = await ctx.db
       .prepare(
@@ -26,16 +29,26 @@ export async function collectTotalMcapAth(ctx: CollectorContext): Promise<Digest
     };
   } catch (error) {
     console.error("[daily-digest] Failed to collect total mcap ATH:", error);
+    markCollectorDegraded(degradedReasons, "total-mcap-ath-query");
     return undefined;
   }
 }
 
-export async function collectPsiContributors(ctx: CollectorContext): Promise<DigestInputData["psiContributors"]> {
+export async function collectPsiContributors(
+  ctx: CollectorContext,
+  degradedReasons?: string[],
+): Promise<DigestInputData["psiContributors"]> {
   try {
     const latestSample = await ctx.db
-      .prepare("SELECT input_snapshot FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
-      .first<{ input_snapshot: string }>();
+      .prepare("SELECT input_snapshot, stored_at FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
+      .first<{ input_snapshot: string; stored_at: number }>();
     if (!latestSample || typeof latestSample.input_snapshot !== "string") return undefined;
+    // A stale sample's per-coin attribution presented as current is worse
+    // than no attribution at all; drop it and record the degradation.
+    if (ctx.nowSec - latestSample.stored_at > 2 * SECONDS.ONE_HOUR) {
+      markCollectorDegraded(degradedReasons, "psi-contributors-stale");
+      return undefined;
+    }
 
     const snapshot = JSON.parse(latestSample.input_snapshot) as {
       contributors?: { id: string; symbol: string; bps: number; mcapUsd: number; ageDays: number; factor: number }[];
@@ -63,6 +76,7 @@ export async function collectPsiContributors(ctx: CollectorContext): Promise<Dig
       .slice(0, 3);
   } catch (error) {
     console.error("[daily-digest] Failed to collect PSI contributors:", error);
+    markCollectorDegraded(degradedReasons, "psi-contributors-query");
     return undefined;
   }
 }
@@ -72,6 +86,7 @@ export async function collectHistoricalContext(
   displayScore: number | null,
   displayBand: string | null,
   biggestSupplyChange: DigestInputData["biggestSupplyChange"],
+  degradedReasons?: string[],
 ): Promise<DigestInputData["historicalContext"]> {
   try {
     const histDepth = await ctx.db.prepare("SELECT COUNT(*) as cnt FROM stability_index").first<{ cnt: number }>();
@@ -170,6 +185,7 @@ export async function collectHistoricalContext(
     }
   } catch (error) {
     console.error("[daily-digest] Failed to collect historical context:", error);
+    markCollectorDegraded(degradedReasons, "historical-context-query");
   }
   return undefined;
 }
@@ -233,6 +249,7 @@ export async function collectCrossDayTrends(
     };
   } catch (error) {
     console.error("[daily-digest] Failed to collect cross-day trends:", error);
+    markCollectorDegraded(degradedReasons, "cross-day-trends-query");
   }
   return undefined;
 }

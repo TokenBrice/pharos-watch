@@ -163,6 +163,7 @@ import {
   collectCrossDayTrends,
   collectDewsStress,
   collectActiveDepegs,
+  collectResolvedDepegs,
   collectSupplyVelocity,
   type CollectorContext,
 } from "../daily-digest/collectors";
@@ -2449,8 +2450,9 @@ describe("collectPsiContributors", () => {
   it("returns top 3 contributors sorted by marketImpact", async () => {
     const db = mockD1([
       {
-        match: "SELECT input_snapshot FROM stability_index_samples",
+        match: "SELECT input_snapshot, stored_at FROM stability_index_samples",
         first: {
+          stored_at: Math.floor(Date.now() / 1000) - 600,
           input_snapshot: JSON.stringify({
             contributors: [
               { id: "usdt-tether", symbol: "USDT", bps: 10, mcapUsd: 100_000_000_000, ageDays: 1, factor: 1.5 },
@@ -2479,7 +2481,7 @@ describe("collectPsiContributors", () => {
   it("returns undefined when no input_snapshot exists", async () => {
     const db = mockD1([
       {
-        match: "SELECT input_snapshot FROM stability_index_samples",
+        match: "SELECT input_snapshot, stored_at FROM stability_index_samples",
         first: null,
         rows: [],
       },
@@ -2493,8 +2495,8 @@ describe("collectPsiContributors", () => {
   it("returns undefined when contributors array is empty", async () => {
     const db = mockD1([
       {
-        match: "SELECT input_snapshot FROM stability_index_samples",
-        first: { input_snapshot: JSON.stringify({ contributors: [] }) },
+        match: "SELECT input_snapshot, stored_at FROM stability_index_samples",
+        first: { stored_at: Math.floor(Date.now() / 1000) - 600, input_snapshot: JSON.stringify({ contributors: [] }) },
         rows: [],
       },
     ]);
@@ -2502,6 +2504,68 @@ describe("collectPsiContributors", () => {
     const ctx = makeCollectorCtx(db);
     const result = await collectPsiContributors(ctx);
     expect(result).toBeUndefined();
+  });
+
+  it("drops a stale sample and records the degradation instead of presenting old attribution", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT input_snapshot, stored_at FROM stability_index_samples",
+        first: {
+          stored_at: Math.floor(Date.now() / 1000) - 3 * 3600,
+          input_snapshot: JSON.stringify({
+            contributors: [{ id: "usdt-tether", symbol: "USDT", bps: 10, mcapUsd: 1e9, ageDays: 1, factor: 1 }],
+          }),
+        },
+        rows: [],
+      },
+    ]);
+
+    const degradedReasons: string[] = [];
+    const result = await collectPsiContributors(makeCollectorCtx(db), degradedReasons);
+    expect(result).toBeUndefined();
+    expect(degradedReasons).toContain("psi-contributors-stale");
+  });
+
+  it("marks the collector degraded when the query throws", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT input_snapshot, stored_at FROM stability_index_samples",
+        rows: [],
+        throwError: new Error("d1 unavailable"),
+      },
+    ]);
+
+    const degradedReasons: string[] = [];
+    const result = await collectPsiContributors(makeCollectorCtx(db), degradedReasons);
+    expect(result).toBeUndefined();
+    expect(degradedReasons).toContain("psi-contributors-query");
+  });
+});
+
+describe("silent-failure collectors mark degradedReasons", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("collectResolvedDepegs records resolved-depegs-query on failure", async () => {
+    const db = mockD1([{ match: "depeg_events", rows: [], throwError: new Error("boom") }]);
+    const degradedReasons: string[] = [];
+    const result = await collectResolvedDepegs(makeCollectorCtx(db), degradedReasons);
+    expect(result).toBeUndefined();
+    expect(degradedReasons).toContain("resolved-depegs-query");
+  });
+
+  it("collectLiquidityShifts records liquidity-shifts-query on failure", async () => {
+    const db = mockD1([{ match: "dex_liquidity", rows: [], throwError: new Error("boom") }]);
+    const degradedReasons: string[] = [];
+    const result = await collectLiquidityShifts(makeCollectorCtx(db), degradedReasons);
+    expect(result).toBeUndefined();
+    expect(degradedReasons).toContain("liquidity-shifts-query");
   });
 });
 
@@ -2576,17 +2640,19 @@ describe("collectYieldAnomalies", () => {
           apy_30d REAL NOT NULL,
           warning_signals TEXT,
           publication_generation_id TEXT,
-          publication_state TEXT
+          publication_state TEXT,
+          updated_at INTEGER NOT NULL DEFAULT 0
         );
       `);
+      const freshUpdatedAt = Math.floor(Date.now() / 1000) - 600;
       const insertYield = sqlite.prepare(
         `INSERT INTO yield_data (
           stablecoin_id, symbol, is_best, current_apy, apy_7d, apy_30d,
-          warning_signals, publication_generation_id, publication_state
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          warning_signals, publication_generation_id, publication_state, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       );
-      insertYield.run("usdt-tether", "USDT", 1, 12, 5, 4, JSON.stringify(["spike"]), "gen-failed", "failed");
-      insertYield.run("dai-makerdao", "DAI", 1, 11, 4, 3, JSON.stringify(["spike"]), "gen-staged", "staged");
+      insertYield.run("usdt-tether", "USDT", 1, 12, 5, 4, JSON.stringify(["spike"]), "gen-failed", "failed", freshUpdatedAt);
+      insertYield.run("dai-makerdao", "DAI", 1, 11, 4, 3, JSON.stringify(["spike"]), "gen-staged", "staged", freshUpdatedAt);
       insertYield.run(
         "usdc-circle",
         "USDC",
@@ -2597,6 +2663,7 @@ describe("collectYieldAnomalies", () => {
         JSON.stringify(["tvl-outflow"]),
         "gen-published",
         "published",
+        freshUpdatedAt,
       );
 
       const result = await collectYieldAnomalies(makeCollectorCtx(createSqliteD1(sqlite)));

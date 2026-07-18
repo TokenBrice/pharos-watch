@@ -70,7 +70,12 @@ function triggerForCandidate(
 ): DigestNextTrigger | null {
   const symbol = candidate.symbols[0]?.toUpperCase();
   if (candidate.kind === "depeg" && symbol) {
-    const depeg = data.topDepegs.find((entry) => entry.symbol.toUpperCase() === symbol);
+    // Candidate ids embed the stablecoinId ("depeg:<id>:active"); prefer it so
+    // same-symbol coins (the two USDAs) cannot cross-match.
+    const candidateCoinId = candidate.id.split(":")[1];
+    const depeg =
+      data.topDepegs.find((entry) => entry.stablecoinId != null && entry.stablecoinId === candidateCoinId) ??
+      data.topDepegs.find((entry) => entry.symbol.toUpperCase() === symbol);
     return depeg ? depegTrigger(depeg, candidate.id) : null;
   }
   if (candidate.kind === "supply" && symbol) {
@@ -100,11 +105,14 @@ function depegTrigger(
   depeg: DigestInputData["topDepegs"][number],
   candidateId?: string,
 ): DigestNextTrigger {
-  const absBps = Math.abs(depeg.bps);
+  // Threshold arms off the live deviation; a peak-derived threshold can sit
+  // permanently above a static live price and never fire.
+  const absBps = Math.abs(depeg.currentBps ?? depeg.bps);
   const threshold = roundToStep(Math.max(absBps + 25, absBps * 1.15), 25, "up");
   const symbol = depeg.symbol.toUpperCase();
   return {
-    id: `trigger:depeg:${symbol.toLowerCase()}`,
+    id: `trigger:depeg:${(depeg.stablecoinId ?? symbol).toLowerCase()}`,
+    ...(depeg.stablecoinId != null ? { stablecoinId: depeg.stablecoinId } : {}),
     label: `${symbol} depeg widening`,
     metric: "depeg-bps",
     comparator: "abs-gte",
@@ -220,11 +228,15 @@ function triggerHit(
 }
 
 function depegOutcome(trigger: DigestNextTrigger, data: DigestInputData, threshold: number) {
-  const depeg = data.topDepegs.find((entry) => entry.symbol.toUpperCase() === trigger.symbol?.toUpperCase());
+  const depeg =
+    (trigger.stablecoinId != null
+      ? data.topDepegs.find((entry) => entry.stablecoinId === trigger.stablecoinId)
+      : undefined) ?? data.topDepegs.find((entry) => entry.symbol.toUpperCase() === trigger.symbol?.toUpperCase());
   if (!depeg) return { status: "missed" as const, detail: `${trigger.symbol} is no longer in the active depeg set.` };
+  const absBps = Math.abs(depeg.currentBps ?? depeg.bps);
   return {
-    status: Math.abs(depeg.bps) >= threshold ? "hit" as const : "pending" as const,
-    detail: `${trigger.symbol} is now ${Math.abs(depeg.bps)} bps off peg versus ${trigger.thresholdLabel}.`,
+    status: absBps >= threshold ? "hit" as const : "pending" as const,
+    detail: `${trigger.symbol} is now ${absBps} bps off peg versus ${trigger.thresholdLabel}.`,
   };
 }
 

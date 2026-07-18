@@ -4,6 +4,7 @@ import { DEWS_SIGNAL_LABELS, type DewsSignalKey } from "@shared/lib/dews-config"
 import { THREAT_BAND_ORDER, isDewsAlertBand, isThreatBand } from "@shared/lib/classification";
 import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
 import { loadActiveV8SafetyScoreHistorySource } from "../../lib/safety-score-history-v2";
+import { SECONDS } from "../../lib/time-constants";
 import {
   logCollectorParseFailure,
   markCollectorDegraded,
@@ -355,14 +356,18 @@ export async function collectYieldAnomalies(
   try {
     const rows = await ctx.db
       .prepare(
+        // Rows older than 24h describe a market that may no longer exist;
+        // stale anomaly prints repeated across editions were a corpus defect.
         `SELECT stablecoin_id, symbol, current_apy, apy_7d, apy_30d, warning_signals
          FROM yield_data
          WHERE is_best = 1
            AND (publication_generation_id IS NULL OR publication_state = 'published')
            AND warning_signals IS NOT NULL
            AND warning_signals != '[]'
+           AND updated_at > ?
          ORDER BY current_apy DESC`,
       )
+      .bind(ctx.nowSec - SECONDS.ONE_DAY)
       .all<{
         stablecoin_id: string;
         symbol: string;

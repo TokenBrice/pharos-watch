@@ -106,6 +106,7 @@ export interface DigestInputData {
   topDepegs: {
     stablecoinId?: string;
     symbol: string;
+    /** Signed peak deviation of the open event (kept for archived-row compatibility). */
     bps: number;
     direction?: DepegDirection;
     mcapUsd: number;
@@ -115,6 +116,10 @@ export interface DigestInputData {
     peakBps?: number;
     peakPriceUsd?: number;
     currentPriceUsd?: number;
+    /** Signed deviation computed from the live price vs the event's peg reference. */
+    currentBps?: number;
+    /** Which deviation severity decisions were made on: live price ("current") or the stored peak ("peak-fallback"). */
+    severityBasis?: "current" | "peak-fallback";
     suppressReason?: string;
   }[];
   biggestSupplyChange: {
@@ -330,6 +335,7 @@ export const DigestNextTriggerSchema = z.object({
   thresholdLabel: z.string(),
   thresholdValue: z.number().optional(),
   symbol: z.string().optional(),
+  stablecoinId: z.string().optional(),
   candidateId: z.string().optional(),
   rationale: z.string(),
   detail: z.string(),
@@ -431,6 +437,8 @@ const DigestSnapshotInputDataSchema = z
             direction: z.string().optional(),
             mcapUsd: z.number(),
             startedAt: z.number().optional(),
+            currentBps: z.number().optional(),
+            severityBasis: z.enum(["current", "peak-fallback"]).optional(),
           })
           .passthrough(),
       )

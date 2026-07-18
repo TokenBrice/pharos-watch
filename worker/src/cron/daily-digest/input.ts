@@ -27,6 +27,7 @@ import {
   type CollectorContext,
   type CollectorResult,
 } from "./collectors";
+import { markCollectorDegraded } from "./collectors-shared";
 import { buildRecentDigestMeta, type RecentDigestMetaEntry } from "./runtime-helpers";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./shared";
 import { buildEditorialCandidates } from "./editorial-candidates";
@@ -163,6 +164,13 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     yesterdayTs,
   };
 
+  // A cache older than an hour means sync-stablecoins has missed at least one
+  // cycle; prices/mcaps presented as current are aging. Record it so the
+  // prompt's degraded-collectors block reflects reality.
+  if (stablecoinsCacheResult.updatedAt != null && nowSec - stablecoinsCacheResult.updatedAt > SECONDS.ONE_HOUR) {
+    markCollectorDegraded(degradedReasons, "stablecoins-cache-stale");
+  }
+
   const { activeDepegCount, topDepegs } = consumeCollectorResult(await collectActiveDepegs(ctx), degradedReasons);
 
   const [latestSample, latestDaily, avg24hRow, yesterdayRow] = await Promise.all([
@@ -183,6 +191,9 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
       .bind(yesterdayTs)
       .first<{ score: number; band: string }>(),
   ]);
+  if (latestSample && nowSec - latestSample.stored_at > 2 * SECONDS.ONE_HOUR) {
+    markCollectorDegraded(degradedReasons, "psi-sample-stale");
+  }
   const currentPsiSource = latestSample ?? latestDaily;
 
   const avg24h = avg24hRow?.avg != null ? round1(avg24hRow.avg) : null;
@@ -243,16 +254,16 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     crossDayTrends,
     totalMcapAth,
   ] = await Promise.all([
-    collectResolvedDepegs(ctx),
+    collectResolvedDepegs(ctx, degradedReasons),
     collectMintBurnFlows(ctx, degradedReasons),
     collectDewsStress(ctx, degradedReasons),
-    collectPsiContributors(ctx),
+    collectPsiContributors(ctx, degradedReasons),
     collectYieldAnomalies(ctx, degradedReasons),
-    collectLiquidityShifts(ctx),
+    collectLiquidityShifts(ctx, degradedReasons),
     collectCrossDayTrends(ctx, degradedReasons),
-    collectTotalMcapAth(ctx),
+    collectTotalMcapAth(ctx, degradedReasons),
   ]);
-  const historicalContext = await collectHistoricalContext(ctx, displayScore, displayBand, biggestSupplyChange);
+  const historicalContext = await collectHistoricalContext(ctx, displayScore, displayBand, biggestSupplyChange, degradedReasons);
   const gradeTransitions = await collectGradeTransitions(ctx, safetyGrades, safetyIdentity, degradedReasons);
 
   const inputData: DigestInputData = {
@@ -320,7 +331,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     liquidityShifts,
     crossDayTrends,
   };
-  inputData.editorialCandidates = buildEditorialCandidates(inputData);
+  inputData.editorialCandidates = buildEditorialCandidates(inputData, previousInputData);
   Object.assign(inputData, buildDigestIntelligence(inputData, previousInputData));
 
   return {

@@ -3,9 +3,19 @@ import { isCriticalDepegRisk } from "@shared/lib/digest-risk";
 import type { DigestLeadRequirement } from "./lead-requirements";
 
 export function buildCriticalDailyLeadRequirements(inputData: DigestInputData): DigestLeadRequirement[] | undefined {
+  // Criticality runs on the live deviation (currentBps) when available; the
+  // stored peak is only a fallback for rows captured before the live price
+  // was collected.
   const criticalDepeg = inputData.topDepegs
-    .filter((depeg) => !depeg.suppressReason && isCriticalDepegRisk(depeg))
-    .sort((a, b) => Math.abs(b.bps) - Math.abs(a.bps) || (b.impactScore ?? 0) - (a.impactScore ?? 0))[0];
+    .filter(
+      (depeg) =>
+        !depeg.suppressReason && isCriticalDepegRisk({ bps: depeg.currentBps ?? depeg.bps, mcapUsd: depeg.mcapUsd }),
+    )
+    .sort(
+      (a, b) =>
+        Math.abs(b.currentBps ?? b.bps) - Math.abs(a.currentBps ?? a.bps) ||
+        (b.impactScore ?? 0) - (a.impactScore ?? 0),
+    )[0];
   if (!criticalDepeg) return undefined;
 
   const symbol = criticalDepeg.symbol.toUpperCase();

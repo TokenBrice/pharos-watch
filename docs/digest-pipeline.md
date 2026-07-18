@@ -43,7 +43,7 @@ All ecosystem monetary aggregates use the `core-stablecoins-v1` universe: active
 |----------|--------|-------------|
 | Market metrics | stablecoins cache + listing governance registry | Core-universe total mcap, 7d delta, biggest supply mover (>$1M), cache age |
 | Editorial candidates | derived from all collected signals | Pre-ranked lead candidates with impact, novelty, confidence, artifact risk, and suppression reasons |
-| Depeg events | `depeg_events` table + current `stablecoins` cache price as display context | Active count and active depeg inclusion follow open `depeg_events` rows (the canonical detector closes recovered events); top 8 are ranked by critical severity then recorded event impact (\|event bps\| × mcap), with cache price shown only as supplemental context, active age/chronic suppression with critical-depeg override, historical peak context, and resolved depegs by absolute impact |
+| Depeg events | `depeg_events` table + current `stablecoins` cache price and the event's `peg_reference` | Active count and active depeg inclusion follow open `depeg_events` rows (the canonical detector closes recovered events). Severity decisions — criticality, suppression, sort order, impact score, candidate titles — run on the **live deviation** (`currentBps`, computed from the cache price vs the event's peg reference); the stored peak is carried separately as context (`peakBps`) and used only as a flagged fallback (`severityBasis: "peak-fallback"`) when no live price resolves. Top 8 are ranked by critical severity then impact (\|live bps\| × mcap), with active age/chronic suppression and the critical-depeg override evaluated on the live basis |
 | Stability Index | `stability_index_samples` + `stability_index` | Current PSI from latest 30-minute sample, yesterday's from daily table |
 | Blacklist activity | `blacklist_events` (rolling last 24h) | Event count, total USD affected; threshold: ≥2 events OR >$10M single; zero-value bursts are artifact-risk candidates |
 | Supply velocity | top 10 coins by mcap | 1d vs 7d changes; signals: "reversed", "accelerating", "decelerating" with material daily/weekly thresholds |
@@ -117,11 +117,15 @@ Digest generation now fails closed on stablecoins-cache availability: if the cac
 
 Safety-score enrichment also uses explicit degraded semantics. When `computeSafetyScoresSnapshot()` returns a degraded result, the digest still renders from the remaining inputs, but the safety section is omitted and the cron metadata records the degraded reason rather than fabricating distribution stats from an empty score set.
 
-The early collectors now distinguish "no signal" from "collector failed". If the active-depeg, blacklist-activity, or supply-velocity queries error, `generateDailyDigest()` still stores the digest but:
+All collectors now distinguish "no signal" from "collector failed". If the active-depeg, blacklist-activity, supply-velocity, resolved-depeg, mint-burn, liquidity-shift, PSI-contributor, total-mcap-ATH, historical-context, or cross-day-trend queries error, `generateDailyDigest()` still stores the digest but:
 
 - returns cron `status: "degraded"`
 - appends the collector key to the cron metadata string
 - stores the collector keys in `input_data.degradedSources`
+
+Staleness is also degradation, not silent currency: a PSI sample older than 2h (`psi-sample-stale`), a PSI-contributor snapshot older than 2h (`psi-contributors-stale`, dropped rather than displayed), a stablecoins cache older than 1h (`stablecoins-cache-stale`), and yield rows older than 24h (filtered out in SQL) are all treated as degraded or excluded rather than presented as current observations.
+
+Change detection and trigger matching key depegs by `stablecoinId` (falling back to symbol only for archived rows without ids), so two tracked coins sharing a symbol can no longer produce fabricated cross-coin movement in `changeSummary` or forward-look outcomes. Depeg candidate `novelty` is computed from the day-over-day live-deviation delta (`new` ≤24h, `worsening`/`improving` at ±100 bps, `chronic` when old and unchanged) instead of labeling every unsuppressed depeg "worsening".
 
 ---
 
