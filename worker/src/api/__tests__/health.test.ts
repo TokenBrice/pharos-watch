@@ -272,7 +272,7 @@ describe("handleHealth", () => {
     expect(body.warnings.join(" ")).not.toContain("75");
   });
 
-  it("degrades when a complete active publication has missing prices", async () => {
+  it("keeps low-ratio missing prices advisory when active publication is complete", async () => {
     const now = Math.floor(Date.now() / 1000);
     const activeIds = [...ACTIVE_IDS];
     const missingId = activeIds[0]!;
@@ -313,7 +313,7 @@ describe("handleHealth", () => {
       };
     };
 
-    expect(body.status).toBe("degraded");
+    expect(body.status).toBe("healthy");
     expect(body.stablecoinPublication.status).toBe("complete");
     expect(body.activePriceCoverage).toMatchObject({
       status: "incomplete",

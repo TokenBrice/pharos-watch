@@ -251,7 +251,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     expect(result.warnings).toContain("stablecoin-publication-unknown");
   });
 
-  it("degrades health for missing active prices while row publication remains complete", async () => {
+  it("keeps low-ratio active price gaps visible without degrading public health", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const activeIds = [...ACTIVE_IDS];
     const missingId = activeIds[0]!;
@@ -315,9 +315,58 @@ describe("assessPublicHealth upstream provider enrichment", () => {
       rejectionReason: "no-accepted-price",
       alertEligible: true,
     });
-    expect(result.activePriceCoverageImpactStatus).toBe("degraded");
-    expect(result.overallStatus).not.toBe("healthy");
+    expect(result.activePriceCoverageImpactStatus).toBe("healthy");
     expect(result.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
+  });
+
+  it("degrades public health when active price gaps exceed the ratio threshold", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const activeIds = [...ACTIVE_IDS];
+    const missingIds = activeIds.slice(0, 2);
+    const db = makeMinimalDb(nowSec, undefined, {
+      activePublicationCoverage: {
+        complete: true,
+        expectedActiveCount: 10,
+        presentActiveCount: 10,
+        waivedActiveCount: 0,
+        missingActiveIds: [],
+        waivedActiveIds: [],
+        expiredWaiverIds: [],
+      },
+      activePriceCoverage: {
+        complete: false,
+        expectedActiveCount: 10,
+        presentActiveCount: 10,
+        pricedActiveCount: 8,
+        missingPriceCount: 2,
+        pricedActiveIds: activeIds.slice(2, 10),
+        missingActiveIds: missingIds,
+        affectedMarketCapUsd: 88_000_000,
+        missingActiveAssets: missingIds.map((stablecoinId) => ({
+          stablecoinId,
+          symbol: "MISS",
+          marketCapUsd: 44_000_000,
+          currentPrice: null,
+          currentSource: null,
+          currentObservedAt: null,
+          currentConfidence: null,
+          consecutiveMissingGenerations: 2,
+          lastAcceptedPrice: null,
+          lastAcceptedSource: null,
+          lastAcceptedObservedAt: null,
+          rejectionReason: "no-accepted-price",
+          alertEligible: true,
+        })),
+        alertEligibleCount: 2,
+        alertEligibleIds: missingIds,
+        maxConsecutiveMissingGenerations: 2,
+      },
+    });
+
+    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+
+    expect(result.activePriceCoverageImpactStatus).toBe("degraded");
+    expect(result.warnings).toContain(`active-price-coverage-incomplete:${missingIds.join(",")}`);
   });
 
   it("reconstructs alertable gaps from compacted cron state", async () => {

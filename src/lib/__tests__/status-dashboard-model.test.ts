@@ -175,6 +175,7 @@ describe("status dashboard model", () => {
     expect(model.issueGroups.maintenance.map((issue) => issue.code)).toEqual(["ddr_repair_debt_present"]);
     expect(model.issueGroups.watches.map((issue) => issue.code)).toEqual(["missing_prices_elevated"]);
     expect(model.overallCauseCount).toBe(1);
+    expect(model.warningCauseCount).toBe(1);
   });
 
   it("keeps a healthy system healthy when only planned maintenance remains", () => {
@@ -346,7 +347,7 @@ describe("status dashboard model", () => {
     expect(model.decision.summary).toBe("Public service degraded. Admin state healthy. Evidence current. Investigate.");
   });
 
-  it("creates an impacting triage issue for incomplete active-price coverage", () => {
+  it("creates a warning triage issue for low-ratio incomplete active-price coverage", () => {
     const rawActivePriceCause: StatusCause = {
       code: "active_price_coverage_incomplete",
       layer: "data-quality",
@@ -367,7 +368,7 @@ describe("status dashboard model", () => {
     };
     const healthData = {
       ...BASE_HEALTH,
-      status: "degraded" as const,
+      status: "healthy" as const,
       warnings: ["active-price-coverage-incomplete:mnee-mnee"],
       activePriceCoverage: {
         status: "incomplete" as const,
@@ -415,19 +416,20 @@ describe("status dashboard model", () => {
       historyTransitions: undefined,
     });
 
-    expect(model.issueGroups.impacting).toHaveLength(1);
-    expect(model.issueGroups.impacting[0]).toMatchObject({
+    expect(model.issueGroups.warnings).toHaveLength(1);
+    expect(model.issueGroups.warnings[0]).toMatchObject({
       code: "active_price_coverage_incomplete",
-      publicImpacting: true,
+      publicImpacting: false,
       affectedSurface: "Stablecoin prices",
       value: 1,
     });
-    expect(model.issueGroups.impacting[0]?.message).toBe(
+    expect(model.issueGroups.warnings[0]?.message).toBe(
       "Live prices are unavailable for 1 active asset: MNEE. Stablecoin listings and price-dependent analytics may be incomplete until coverage recovers.",
     );
-    expect(model.issueGroups.impacting[0]?.runbookUrl).toBe("https://example.com/stablecoins-cache");
-    expect(model.overallCauseCount).toBe(1);
-    expect(model.decision.nextStep).toBe("investigate");
+    expect(model.issueGroups.warnings[0]?.runbookUrl).toBe("https://example.com/stablecoins-cache");
+    expect(model.overallCauseCount).toBe(0);
+    expect(model.warningCauseCount).toBe(1);
+    expect(model.decision.nextStep).toBe("observe-next-run");
   });
 
   it("maps unknown exact active-price coverage to the stablecoin price surface", () => {

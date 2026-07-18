@@ -98,9 +98,9 @@ export function PricingPipelineMethodologySection() {
           <strong className="text-foreground">Recovery scope.</strong> Live protocol-override work is limited to the exact
           active registry, so frozen and quarantined assets cannot consume the shared recovery budget. If PHPm&apos;s
           Mento Broker route does not produce an accepted quote, the worker does not publish an authoritative PHPm
-          override and leaves the asset explicitly missing until another pricing lane resolves it. Optional Broker refresh
-          failures do not poison its recovery circuit while a usable incumbent price exists. KRWO remains fail-closed
-          because its current pools do not meet executable-depth requirements.
+          override; a fresh peg-valid CoinGecko row can still recover PHPm through the audited low-volume fallback.
+          Optional Broker refresh failures do not poison its recovery circuit while a usable incumbent price exists.
+          KRWO remains fail-closed because its current pools do not meet executable-depth requirements.
         </p>
 
         <p>

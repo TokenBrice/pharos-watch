@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.199",
+    title: "PHPm fallback and price-gap health bands",
+    date: "2026-07-18",
+    effectiveAt: 1784412913,
+    summary:
+      "PHPm joins the audited low-volume CoinGecko fallback when its Celo Broker oracle route has no valid median, and public health now treats exact active-price gaps by the same missing-price ratio bands used by the status dashboard.",
+    impact: [
+      "PHPm still prefers the exact Celo Mento Broker route and remains fail-closed when that route cannot quote, but a fresh peg-valid CoinGecko simple-price row can now recover display pricing through `coingecko-low-volume` after stricter fallback passes fail",
+      "MNEE, VEUR, and KRWO remain explicit missing-price rows while admitted providers are stale, inactive, depleted, or non-executable",
+      "`activePriceCoverage` warnings, per-asset streaks, webhook alerts, and active-price coverage details remain unchanged",
+      "`/api/health` now escalates active price gaps only when their missing-price ratio crosses the documented degraded or stale bands, while unreadable coverage evidence still fails closed",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.198",
     title: "Quarter-hour pricing headroom guard",
     date: "2026-07-18",

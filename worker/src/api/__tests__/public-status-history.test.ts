@@ -236,13 +236,14 @@ describe("handlePublicStatusHistory", () => {
   //
   // The public transition history should only surface transitions whose
   // causes include at least one public-facing impact (cache ratio, FX source,
-  // mint/burn, circuit breakers, critical cron errors, db_unhealthy). Admin-
-  // only data-quality causes (missing prices, blacklist ratio drift, reserve
-  // sync, onchain monitor) are filtered out. Additionally, the public
+  // mint/burn, missing-price ratio, circuit breakers, critical cron errors,
+  // db_unhealthy). Admin-only data-quality causes (low-ratio price gaps,
+  // blacklist ratio drift, reserve sync, onchain monitor) are filtered out.
+  // Additionally, the public
   // currentStatus is sourced from assessPublicHealth — not the hysteresis-
   // smoothed status_state.current_status — so the hero and uptime bar agree.
   describe("public-impact filter + currentStatus alignment", () => {
-    it("omits transitions whose only cause is missing_prices_degraded", async () => {
+    it("retains transitions whose only cause is missing_prices_degraded", async () => {
       const now = Math.floor(Date.now() / 1000);
       const db = makeDb({
         transitions: [{
@@ -270,7 +271,7 @@ describe("handlePublicStatusHistory", () => {
         currentStatus: string;
         transitions: unknown[];
       };
-      expect(body.transitions).toHaveLength(0);
+      expect(body.transitions).toHaveLength(1);
       expect(body.currentStatus).toBe("healthy");
     });
 
@@ -390,10 +391,9 @@ describe("handlePublicStatusHistory", () => {
     });
 
     it("does not reuse the admin state timestamp when public history has no matching transition", async () => {
-      // Admin state says 'degraded' (hysteresis-smoothed global, likely
-      // driven by missing_prices_degraded), but the public health assessment
-      // says 'healthy' because /api/health does not include data-quality
-      // signals. The public history endpoint must report the public view so
+      // Admin state says 'degraded' (hysteresis-smoothed global), but the
+      // public health assessment says 'healthy'. The public history endpoint
+      // must report the public view so
       // the hero badge and uptime bar agree.
       const now = Math.floor(Date.now() / 1000);
       const db = makeDb({
@@ -546,10 +546,10 @@ describe("handlePublicStatusHistory", () => {
             transition_type: "degrade",
             reason: "raw-degraded-consecutive-threshold",
             causes: [{
-              code: "missing_prices_degraded",
+              code: "blacklist_gaps_degraded",
               layer: "data-quality",
               severity: "warning",
-              message: "Missing price ratio is degraded.",
+              message: "Blacklist amount gap ratio is degraded.",
             }],
             created_at: now - 3600,
           },

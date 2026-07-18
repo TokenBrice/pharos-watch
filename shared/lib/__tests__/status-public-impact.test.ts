@@ -13,8 +13,8 @@ function cause(overrides: Partial<StatusCause> = {}): StatusCause {
 }
 
 describe("transitionHasPublicImpact", () => {
-  it("treats incomplete active-price coverage as public impact", () => {
-    expect(transitionHasPublicImpact([cause()])).toBe(true);
+  it("keeps low-ratio incomplete active-price coverage advisory", () => {
+    expect(transitionHasPublicImpact([cause()])).toBe(false);
   });
 
   it("treats unknown exact active-price coverage as public impact", () => {
@@ -25,7 +25,8 @@ describe("transitionHasPublicImpact", () => {
     expect(transitionHasPublicImpact([cause({ severity: "info" })])).toBe(false);
   });
 
-  it("keeps aggregate missing-price drift admin-only", () => {
-    expect(transitionHasPublicImpact([cause({ code: "missing_prices_degraded" })])).toBe(false);
+  it("treats degraded or stale missing-price ratios as public impact", () => {
+    expect(transitionHasPublicImpact([cause({ code: "missing_prices_degraded" })])).toBe(true);
+    expect(transitionHasPublicImpact([cause({ code: "missing_prices_stale", severity: "critical" })])).toBe(true);
   });
 });

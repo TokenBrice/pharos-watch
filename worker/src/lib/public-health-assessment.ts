@@ -1,4 +1,4 @@
-import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
+import { getBlacklistGapStatus, STATUS_MISSING_PRICE_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { getD1CapacityImpactStatus } from "@shared/lib/d1-capacity";
 import {
   countPublicImpactOpenCircuits,
@@ -144,6 +144,26 @@ function completeCircuitStates(
   }
 
   return completed;
+}
+
+function getActivePriceCoverageImpactStatus(
+  activePriceCoverage: ActivePriceCoverageHealth,
+): HealthResponse["status"] {
+  if (activePriceCoverage.status === "complete") return "healthy";
+  if (activePriceCoverage.status === "unknown") return "degraded";
+
+  const denominatorCandidates = [
+    activePriceCoverage.expectedActiveCount,
+    activePriceCoverage.presentActiveCount,
+    activePriceCoverage.pricedActiveCount + activePriceCoverage.missingPriceCount,
+  ];
+  const denominator = denominatorCandidates.find((value) => Number.isFinite(value) && value > 0);
+  if (denominator == null) return "degraded";
+
+  const missingRatio = activePriceCoverage.missingPriceCount / denominator;
+  if (missingRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioStale) return "stale";
+  if (missingRatio > STATUS_MISSING_PRICE_THRESHOLDS.ratioDegraded) return "degraded";
+  return "healthy";
 }
 
 async function checkDbHealth(
@@ -501,9 +521,7 @@ export async function assessPublicHealth(
     warnings.push("stablecoin-publication-unknown");
   }
 
-  const activePriceCoverageImpactStatus = activePriceCoverage.status === "complete"
-    ? "healthy"
-    : "degraded";
+  const activePriceCoverageImpactStatus = getActivePriceCoverageImpactStatus(activePriceCoverage);
   if (activePriceCoverage.status === "incomplete") {
     warnings.push(
       `active-price-coverage-incomplete:${activePriceCoverage.missingActiveIds.join(",") || "count-mismatch"}`,

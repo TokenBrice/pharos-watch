@@ -30,6 +30,7 @@ export const LOW_VOLUME_CG_FALLBACK_IDS = new Set([
   "btcusd-btcfi",
   "dllr-sovryn",
   "ebusd-ebisu",
+  "phpm-mento",
   "gbpm-mento",
   "audm-mento",
   "copm-mento",

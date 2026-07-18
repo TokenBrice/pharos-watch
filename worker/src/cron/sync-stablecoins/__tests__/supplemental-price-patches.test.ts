@@ -164,7 +164,7 @@ describe("runCoingeckoLowVolumePass", () => {
     });
   });
 
-  it("recovers the audited July production cohort with fresh peg-valid rows", async () => {
+  it("recovers the audited July production cohort with fresh peg-valid rows, including PHPm", async () => {
     const observedAt = Math.floor(Date.now() / 1000) - 3600;
     const quotes = {
       "bitcoin-usd-btcfi": 0.9727,
@@ -174,6 +174,7 @@ describe("runCoingeckoLowVolumePass", () => {
       "celo-australian-dollar": 0.695,
       ccop: 0.00029996,
       cchf: 1.24,
+      puso: 0.00995542,
     } as const;
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
       if (!url.includes("coingecko.com")) return new Response("Not found", { status: 404 });
@@ -190,6 +191,7 @@ describe("runCoingeckoLowVolumePass", () => {
       asset({ id: "audm-mento", symbol: "AUDm", price: null, pegType: "peggedAUD" }),
       asset({ id: "copm-mento", symbol: "COPm", price: null, pegType: "peggedCOP" }),
       asset({ id: "chfm-mento", symbol: "CHFm", price: null, pegType: "peggedCHF" }),
+      asset({ id: "phpm-mento", symbol: "PHPm", price: null, pegType: "peggedPHP" }),
     ];
 
     const result = await runCoingeckoLowVolumePass(assets, null, {
@@ -197,9 +199,10 @@ describe("runCoingeckoLowVolumePass", () => {
       peggedAUD: quotes["celo-australian-dollar"],
       peggedCOP: quotes.ccop,
       peggedCHF: quotes.cchf,
+      peggedPHP: quotes.puso,
     });
 
-    expect(result).toEqual({ resolved: 7, failures: [] });
+    expect(result).toEqual({ resolved: 8, failures: [] });
     expect(assets.map(({ price }) => price)).toEqual(Object.values(quotes));
     expect(assets.every(({ priceSource }) => priceSource === "coingecko-low-volume")).toBe(true);
   });
