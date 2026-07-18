@@ -111,7 +111,9 @@ The digest's Flight-to-Quality collector now uses `buildFlightToQualityClassific
 
 ### Failure handling
 
-If JSON parsing or quality validation fails, the worker sends one corrective retry to Opus with the failed checks. If the retry still has hard quality issues, the digest row is stored as degraded for operator inspection, but external delivery is skipped as `quality-gate`. Soft-only quality issues remain visible in run metadata without changing cron health.
+If quality validation fails with **hard** issues, the worker sends one corrective retry to Opus containing the hard checks plus the failed response itself, so the model fixes the flagged problems instead of regenerating blind. Soft-only issues never trigger a retry (during the July 2026 forced-lead streak, unfixable soft variety issues burned a second full Opus call every day). A `stop_reason=max_tokens` stream is treated as a hard failure before parsing — truncated output can no longer flow into the raw-text fallback.
+
+If the retry still has hard quality issues, the digest row is stored with `digest_meta.qualityGate = "blocked"` for operator inspection: blocked rows are excluded from every public read endpoint, from edition numbering, from recent-copy variety context, and from lead-streak history (they never reached readers), and external delivery is skipped as `quality-gate`. Soft-only quality issues remain visible in run metadata without changing cron health. Forbidden throat-clearing phrases are now flagged as a soft `forbidden-phrase` issue rather than silently stripped (which left grammar fragments), and `meta.coins` labels are cross-checked against the copy (`meta-coins-mismatch`).
 
 Digest generation now fails closed on stablecoins-cache availability: if the cached stablecoin payload is missing, malformed, or otherwise non-`ok`, the cron returns `status: "degraded"` and skips regeneration instead of synthesizing a false zero-mcap digest.
 

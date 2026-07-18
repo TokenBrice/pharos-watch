@@ -3,6 +3,7 @@ import { CACHE_PROFILES } from "../lib/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { DigestForwardLookOutcome, DigestNextTrigger, DigestRiskSignal, DigestRiskTapeItem } from "@shared/types/digest";
 import { decodeJsonString } from "../lib/cache-json";
+import { NON_BLOCKED_DIGEST_SQL_FILTER } from "../cron/daily-digest/shared";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { selectDigestRiskSignal } from "./digest-risk-summary";
 import { selectDigestIntelligence } from "./digest-intelligence-summary";
@@ -84,7 +85,9 @@ function decodeDigestMeta(value: string | null, generatedAt: number) {
 
 export const handleDigestArchive = withErrorHandler("digest-archive", async (db: D1Database): Promise<Response> => {
   const rows = await db.prepare(
-    "SELECT digest_text, digest_title, generated_at, digest_extended, input_data, digest_meta FROM daily_digest ORDER BY generated_at DESC LIMIT 365"
+    // Blocked rows never published and get no edition number, so a SQL filter
+    // is safe here; internal sentinel rows are numbered first and hidden in JS.
+    `SELECT digest_text, digest_title, generated_at, digest_extended, input_data, digest_meta FROM daily_digest WHERE ${NON_BLOCKED_DIGEST_SQL_FILTER} ORDER BY generated_at DESC LIMIT 365`
   ).all<{ digest_text: string; digest_title: string | null; generated_at: number; digest_extended: string | null; input_data: string | null; digest_meta: string | null }>();
 
   const digests = (rows.results ?? []).map((r) => {

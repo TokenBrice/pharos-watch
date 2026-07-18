@@ -38,7 +38,7 @@ interface RequestDigestCopyResult {
   digestExtended: string;
   digestMeta: string | null;
   strippedDashCount: number;
-  strippedForbiddenCharCount: number;
+  forbiddenPhraseHits: string[];
   usedRawTextFallback: boolean;
   qualityIssues: DigestValidationIssue[];
   hasBlockingQualityIssues: boolean;
@@ -106,7 +106,7 @@ export async function requestDigestCopy(
       digestExtended: "",
       digestMeta: "",
       strippedDashCount: 0,
-      strippedForbiddenCharCount: 0,
+      forbiddenPhraseHits: [],
       usedRawTextFallback: false,
       qualityIssues: [],
       hasBlockingQualityIssues: false,
@@ -182,24 +182,37 @@ export async function requestDigestCopy(
     ? validateDigestModelOutput(parsed, options.validationProfile)
     : [];
 
-  if (qualityIssues.length > 0) {
+  // Retry only on HARD issues. Soft variety issues used to trigger a second
+  // full Opus call every day of a forced-lead streak, instructing the model to
+  // fix repetition the hard lead requirement made unfixable.
+  const hardIssues = qualityIssues.filter((issue) => issue.severity === "hard");
+  if (hardIssues.length > 0) {
     const elapsedMs = Date.now() - started;
     const budgetMs = ANTHROPIC_TIMEOUT_MS * CORRECTIVE_RETRY_BUDGET_FRACTION;
     if (elapsedMs >= budgetMs) {
       console.warn(
-        `[${options.logPrefix}] Digest quality checks failed but skipping corrective retry: elapsed ${elapsedMs}ms >= ${budgetMs}ms (${CORRECTIVE_RETRY_BUDGET_FRACTION * 100}% of budget). Issues: ${formatDigestValidationIssues(qualityIssues)}`,
+        `[${options.logPrefix}] Digest quality checks failed but skipping corrective retry: elapsed ${elapsedMs}ms >= ${budgetMs}ms (${CORRECTIVE_RETRY_BUDGET_FRACTION * 100}% of budget). Issues: ${formatDigestValidationIssues(hardIssues)}`,
       );
     } else {
       console.warn(
-        `[${options.logPrefix}] Digest quality checks failed, retrying once (elapsed ${elapsedMs}ms): ${formatDigestValidationIssues(qualityIssues)}`,
+        `[${options.logPrefix}] Digest quality checks failed, retrying once (elapsed ${elapsedMs}ms): ${formatDigestValidationIssues(hardIssues)}`,
       );
       prompt = [
         options.userPrompt,
         "",
         "REVISION REQUIRED:",
-        "Your previous response failed these quality checks:",
-        formatDigestValidationIssues(qualityIssues),
-        "Return ONLY corrected JSON with the same schema. Do not add markdown fences or commentary.",
+        "Your previous response (below) failed these quality checks:",
+        formatDigestValidationIssues(hardIssues),
+        "",
+        "PREVIOUS RESPONSE:",
+        JSON.stringify({
+          title: parsed.digestTitle,
+          text: parsed.digestText,
+          extended: parsed.digestExtended,
+          meta: parsed.digestMeta ? JSON.parse(parsed.digestMeta) : null,
+        }),
+        "",
+        "Fix ONLY what the quality checks flag; keep everything else. Return ONLY corrected JSON with the same schema. Do not add markdown fences or commentary.",
       ].join("\n");
       parsed = parseDigestModelResponse(await requestClaude(prompt), options.parseOptions);
       qualityIssues = options.validationProfile
@@ -214,9 +227,9 @@ export async function requestDigestCopy(
   if (parsed.strippedDashCount > 0) {
     console.log(`[${options.logPrefix}] Prompt compliance: ${parsed.strippedDashCount} forbidden dashes stripped`);
   }
-  if (parsed.strippedForbiddenCharCount > 0) {
+  if (parsed.forbiddenPhraseHits.length > 0) {
     console.warn(
-      `[${options.logPrefix}] Prompt compliance: stripped ${parsed.strippedForbiddenCharCount} chars of forbidden phrases`,
+      `[${options.logPrefix}] Prompt compliance: forbidden phrase(s) present: ${parsed.forbiddenPhraseHits.map((phrase) => phrase.trim()).join(", ")}`,
     );
   }
   if (qualityIssues.length > 0) {
@@ -229,6 +242,25 @@ export async function requestDigestCopy(
     qualityIssues,
     hasBlockingQualityIssues: hasBlockingDigestQualityIssues(qualityIssues),
   };
+}
+
+/**
+ * Flag a digest_meta payload as blocked by the quality gate. Blocked rows are
+ * stored for operator inspection but excluded from every public read surface
+ * and from edition numbering (see NON_BLOCKED_DIGEST_SQL_FILTER).
+ */
+export function markDigestMetaBlocked(digestMeta: string | null): string {
+  let parsed: Record<string, unknown> = {};
+  if (digestMeta) {
+    try {
+      const decoded = JSON.parse(digestMeta) as unknown;
+      if (decoded && typeof decoded === "object") parsed = decoded as Record<string, unknown>;
+    } catch {
+      // Unparseable meta still gets a valid blocked wrapper.
+    }
+  }
+  parsed.qualityGate = "blocked";
+  return JSON.stringify(parsed);
 }
 
 export async function insertDigestRecord(options: InsertDigestRecordOptions): Promise<void> {

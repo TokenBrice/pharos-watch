@@ -272,7 +272,8 @@ describe("generateWeeklyRecap", () => {
       { botToken: "bot", chatId: "chat" },
     );
 
-    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
+    // Soft-only issues no longer trigger the corrective retry (hard-only policy).
+    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
     expect(result.status).toBeUndefined();
     expect(result.metadata).toContain("quality: repeated-primary-coin:soft");
     expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);

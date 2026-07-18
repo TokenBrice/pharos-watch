@@ -218,7 +218,7 @@ function makeParsedFixture(
       coins: ["USDT"],
     }),
     strippedDashCount: 0,
-    strippedForbiddenCharCount: 0,
+    forbiddenPhraseHits: [],
     usedRawTextFallback: false,
   };
 }
@@ -689,7 +689,8 @@ describe("generateDailyDigest", () => {
     expect(result.itemCount).toBe(1);
     expect(result.status).toBeUndefined();
     expect(result.metadata).toContain("quality: title-word-count:soft");
-    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
+    // Soft-only issues no longer trigger the corrective retry (hard-only policy).
+    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
     expect(postDigestTweet).toHaveBeenCalledTimes(1);
     expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
   });
@@ -1572,7 +1573,7 @@ describe("lead family variety check", () => {
       digestExtended: "T. T. T.\n\nT. T. T.\n\nT. T. T.",
       digestMeta: JSON.stringify({ lead: currentLead, tone: "dry", coins: ["USDT"] }),
       strippedDashCount: 0,
-      strippedForbiddenCharCount: 0,
+      forbiddenPhraseHits: [],
       usedRawTextFallback: false,
     };
     const recentMeta = recentLeads.map((l) => ({
@@ -3125,5 +3126,56 @@ describe("collectDewsStress — topSignals enrichment", () => {
     const flat = await collectDewsStress(makeCollectorCtx(flatDb));
     const wrapped = await collectDewsStress(makeCollectorCtx(wrappedDb));
     expect(wrapped!.elevatedCoins[0].topSignals).toEqual(flat!.elevatedCoins[0].topSignals);
+  });
+});
+
+describe("gate/retry correctness (Batch 3)", () => {
+  it("flags forbidden phrases as a soft issue instead of silently stripping them", () => {
+    const parsed = makeParsedFixture({
+      extended: "Meanwhile, USDT sits still at 3 bps. Watch for USDC next session if flows reverse hard tomorrow. The market held its line through the close today quietly.\n\nSupply held flat for a third session running now. Depth on the majors stayed intact through both sessions. Nothing in the flow data suggests stress building yet.\n\nDEWS stayed green across every tracked name today. The gauge sat at plus twelve through the close. Nobody moved more than ten million on the day.",
+    });
+    parsed.forbiddenPhraseHits = ["Meanwhile, "];
+    const issues = validateDigestModelOutput(parsed, { kind: "daily", recentMeta: [] });
+    const hit = issues.find((issue) => issue.code === "forbidden-phrase");
+    expect(hit?.severity).toBe("soft");
+    expect(parsed.digestExtended).toContain("Meanwhile, ");
+  });
+
+  it("flags meta.coins entries the copy never mentions", () => {
+    const parsed = makeParsedFixture({});
+    parsed.digestMeta = JSON.stringify({ lead: "depeg", tone: "dry", coins: ["USDT", "GHOST"] });
+    parsed.digestText = "USDT held its peg with room to spare. Watch for tomorrow's flows next session.";
+    const issues = validateDigestModelOutput(parsed, { kind: "daily", recentMeta: [] });
+    const hit = issues.find((issue) => issue.code === "meta-coins-mismatch");
+    expect(hit?.severity).toBe("soft");
+    expect(hit?.message).toContain("GHOST");
+    expect(hit?.message).not.toContain("USDT,");
+  });
+
+  it("validates mention-only requirements without pinning a lead", () => {
+    const parsed = makeParsedFixture({ leadSignalId: "yield:usdc" });
+    parsed.digestExtended = `PMUSD remains 2,950 bps under peg, unchanged. ${parsed.digestExtended}`;
+    const issues = validateDigestModelOutput(parsed, {
+      kind: "daily",
+      recentMeta: [],
+      leadRequirements: [
+        { candidateIds: [], severity: "soft", mentionTokens: ["PMUSD"], reason: "ongoing critical, demoted" },
+      ],
+    });
+    expect(issues.some((issue) => issue.code === "required-lead-missing")).toBe(false);
+    expect(issues.some((issue) => issue.code === "lead-candidate-mismatch")).toBe(false);
+  });
+
+  it("flags a missing mention-only token as a soft issue", () => {
+    const parsed = makeParsedFixture({ leadSignalId: "yield:usdc" });
+    const issues = validateDigestModelOutput(parsed, {
+      kind: "daily",
+      recentMeta: [],
+      leadRequirements: [
+        { candidateIds: [], severity: "soft", mentionTokens: ["PMUSD"], reason: "ongoing critical, demoted" },
+      ],
+    });
+    expect(issues.some((issue) => issue.code === "required-lead-missing" && issue.severity === "soft")).toBe(true);
+    expect(issues.some((issue) => issue.code === "lead-candidate-mismatch")).toBe(false);
   });
 });

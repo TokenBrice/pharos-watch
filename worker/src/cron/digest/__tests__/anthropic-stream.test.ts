@@ -152,7 +152,10 @@ describe("accumulateAnthropicStream", () => {
     await expect(accumulateAnthropicStream(response)).rejects.toThrow(/empty/i);
   });
 
-  it("includes stopReason + event/delta histograms in empty-text error for diagnosability", async () => {
+  it("reports a runaway-thinking max_tokens stop as truncation with token diagnostics", async () => {
+    // Runaway thinking consuming the whole budget (stop_reason=max_tokens with
+    // no text) now fails via the dedicated truncation guard rather than the
+    // generic empty-text error; the stop reason and token count stay visible.
     const response = sseResponse([
       { event: "message_start", data: { type: "message_start", message: { id: "msg_mt" } } },
       { event: "content_block_start", data: { type: "content_block_start", index: 0, content_block: { type: "thinking", thinking: "" } } },
@@ -164,13 +167,45 @@ describe("accumulateAnthropicStream", () => {
     const err = await accumulateAnthropicStream(response).catch((e: unknown) => e as Error);
     expect(err).toBeInstanceOf(Error);
     const msg = (err as Error).message;
-    expect(msg).toMatch(/stopReason=max_tokens/);
+    expect(msg).toMatch(/max_tokens/);
     expect(msg).toMatch(/outputTokens=15999/);
+  });
+
+  it("still reports stop reason and delta histograms for a non-truncated empty stream", async () => {
+    const response = sseResponse([
+      { event: "message_start", data: { type: "message_start", message: { id: "msg_empty2" } } },
+      { event: "content_block_start", data: { type: "content_block_start", index: 0, content_block: { type: "thinking", thinking: "" } } },
+      { event: "content_block_delta", data: { type: "content_block_delta", index: 0, delta: { type: "thinking_delta", thinking: "reasoning..." } } },
+      { event: "content_block_stop", data: { type: "content_block_stop", index: 0 } },
+      { event: "message_delta", data: { type: "message_delta", delta: { stop_reason: "end_turn" }, usage: { output_tokens: 42 } } },
+      { event: "message_stop", data: { type: "message_stop" } },
+    ]);
+    const err = await accumulateAnthropicStream(response).catch((e: unknown) => e as Error);
+    expect(err).toBeInstanceOf(Error);
+    const msg = (err as Error).message;
+    expect(msg).toMatch(/stopReason=end_turn/);
     expect(msg).toMatch(/thinking_delta/);
   });
 
   it("throws when the response has no body", async () => {
     const bodiless = new Response(null, { status: 200 });
     await expect(accumulateAnthropicStream(bodiless)).rejects.toThrow(/body/i);
+  });
+});
+
+describe("max_tokens truncation", () => {
+  it("throws when the stream stops at max_tokens instead of returning truncated text", async () => {
+    const events: SseEvent[] = [
+      { event: "message_start", data: { type: "message_start", message: { id: "msg_test", role: "assistant", content: [] } } },
+      { event: "content_block_start", data: { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } } },
+      {
+        event: "content_block_delta",
+        data: { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: '{"title":"Truncated mid' } },
+      },
+      { event: "content_block_stop", data: { type: "content_block_stop", index: 0 } },
+      { event: "message_delta", data: { type: "message_delta", delta: { stop_reason: "max_tokens", stop_sequence: null } } },
+      { event: "message_stop", data: { type: "message_stop" } },
+    ];
+    await expect(accumulateAnthropicStream(sseResponse(events))).rejects.toThrow(/max_tokens/);
   });
 });

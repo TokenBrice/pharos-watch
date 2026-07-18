@@ -14,7 +14,7 @@ import {
 } from "../lib/telegram-digest-outbox";
 import { buildDailyDigestInput } from "./daily-digest/input";
 import { buildUserPrompt, SYSTEM_PROMPT } from "./daily-digest/prompt";
-import { insertDigestRecord, requestDigestCopy, runDigestChannelDelivery } from "./digest/platform";
+import { insertDigestRecord, markDigestMetaBlocked, requestDigestCopy, runDigestChannelDelivery } from "./digest/platform";
 import { reportDigestProgress } from "./digest/progress";
 import { formatQualityMetadata } from "./digest/quality-metadata";
 import { logDailyDigestLlmCall } from "./daily-digest/runtime-helpers";
@@ -258,7 +258,11 @@ export async function generateDailyDigest(
     digestTitle: digestCopy.digestTitle || null,
     inputData: storedInputData,
     digestExtended: digestCopy.digestExtended || null,
-    digestMeta: digestCopy.digestMeta,
+    // Hard quality failures are stored for inspection but never published:
+    // the blocked flag keeps the row out of public reads and numbering.
+    digestMeta: digestCopy.hasBlockingQualityIssues
+      ? markDigestMetaBlocked(digestCopy.digestMeta)
+      : digestCopy.digestMeta,
     signal,
   });
   throwIfAborted(signal);

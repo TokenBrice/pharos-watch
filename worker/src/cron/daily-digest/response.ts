@@ -18,7 +18,7 @@ export interface ParsedDigestResponse {
   digestExtended: string;
   digestMeta: string | null;
   strippedDashCount: number;
-  strippedForbiddenCharCount: number;
+  forbiddenPhraseHits: string[];
   usedRawTextFallback: boolean;
 }
 
@@ -45,12 +45,10 @@ export interface DigestModelResponseParseOptions {
   }) => Record<string, unknown> | null;
 }
 
-function stripForbiddenPhrases(value: string): string {
-  let result = value;
-  for (const phrase of FORBIDDEN_PHRASES) {
-    result = result.replaceAll(phrase, "");
-  }
-  return result;
+// Detection only — silently deleting phrases left capitalization and grammar
+// fragments mid-sentence. Hits become a soft quality issue instead.
+function detectForbiddenPhrases(value: string): string[] {
+  return FORBIDDEN_PHRASES.filter((phrase) => value.includes(phrase));
 }
 
 function stripForbiddenDashes(value: string): string {
@@ -222,10 +220,9 @@ export function parseDigestModelResponse(
   digestExtended = stripForbiddenDashes(digestExtended);
   digestText = stripRepeatedTitlePrefix(digestTitle, digestText);
 
-  const forbiddenBefore = [digestText, digestExtended].join("").length;
-  digestText = stripForbiddenPhrases(digestText);
-  digestExtended = stripForbiddenPhrases(digestExtended);
-  const strippedForbiddenCharCount = forbiddenBefore - [digestText, digestExtended].join("").length;
+  const forbiddenPhraseHits = [
+    ...new Set([...detectForbiddenPhrases(digestText), ...detectForbiddenPhrases(digestExtended)]),
+  ];
 
   return {
     digestTitle,
@@ -233,7 +230,7 @@ export function parseDigestModelResponse(
     digestExtended,
     digestMeta,
     strippedDashCount,
-    strippedForbiddenCharCount,
+    forbiddenPhraseHits,
     usedRawTextFallback,
   };
 }
@@ -273,6 +270,13 @@ export function validateDigestModelOutput(
 
   if (parsed.usedRawTextFallback) {
     issues.push({ code: "raw-text-fallback", severity: "hard", message: "Model response was not valid digest JSON." });
+  }
+  if (parsed.forbiddenPhraseHits.length > 0) {
+    issues.push({
+      code: "forbidden-phrase",
+      severity: "soft",
+      message: `Copy contains forbidden throat-clearing phrase(s): ${parsed.forbiddenPhraseHits.map((phrase) => phrase.trim()).join(", ")}.`,
+    });
   }
   if (!parsed.digestTitle.trim()) {
     issues.push({ code: "missing-title", severity: "hard", message: "Title is missing." });
@@ -400,6 +404,18 @@ export function validateDigestModelOutput(
     const recentCoins = new Set(recentThree.flatMap((entry) => getMetaCoins(entry.meta)));
     if (coins.some((coin) => recentCoins.has(coin))) {
       issues.push({ code: "repeated-primary-coin", severity: "soft", message: "Featured coin overlaps with recent digests." });
+    }
+    // meta.coins is self-reported; the variety machinery validates whatever
+    // labels the model declares. Cross-check the labels against the copy so
+    // declared-but-absent coins are caught.
+    const copyUpper = `${parsed.digestTitle}\n${parsed.digestText}\n${parsed.digestExtended}`.toUpperCase();
+    const ghostCoins = coins.filter((coin) => !copyUpper.includes(coin.toUpperCase()));
+    if (ghostCoins.length > 0) {
+      issues.push({
+        code: "meta-coins-mismatch",
+        severity: "soft",
+        message: `meta.coins lists ${ghostCoins.join(", ")} but the copy never mentions ${ghostCoins.length === 1 ? "it" : "them"}.`,
+      });
     }
   }
 

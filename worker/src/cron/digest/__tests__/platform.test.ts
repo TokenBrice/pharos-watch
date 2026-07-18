@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it, vi } from "vitest";
-import { insertDigestRecord } from "../platform";
+import { insertDigestRecord, markDigestMetaBlocked } from "../platform";
 
 describe("insertDigestRecord", () => {
   function makeOptions(db: D1Database, signal?: AbortSignal) {
@@ -130,5 +130,21 @@ describe("insertDigestRecord", () => {
 
     await expect(insertDigestRecord(makeOptions(db, controller.signal))).rejects.toThrow("stop-after-insert");
     expect(prepare).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("markDigestMetaBlocked", () => {
+  it("preserves existing meta fields and adds the blocked flag", () => {
+    const marked = JSON.parse(
+      markDigestMetaBlocked(JSON.stringify({ type: "weekly", leadSignalId: "depeg:x:active" })),
+    ) as Record<string, unknown>;
+    expect(marked.qualityGate).toBe("blocked");
+    expect(marked.type).toBe("weekly");
+    expect(marked.leadSignalId).toBe("depeg:x:active");
+  });
+
+  it("wraps null and unparseable meta in a valid blocked payload", () => {
+    expect(JSON.parse(markDigestMetaBlocked(null))).toEqual({ qualityGate: "blocked" });
+    expect(JSON.parse(markDigestMetaBlocked("not-json{"))).toEqual({ qualityGate: "blocked" });
   });
 });

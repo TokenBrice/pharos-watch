@@ -29,7 +29,7 @@ import {
 } from "./collectors";
 import { markCollectorDegraded } from "./collectors-shared";
 import { buildRecentDigestMeta, type RecentDigestMetaEntry } from "./runtime-helpers";
-import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./shared";
+import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "./shared";
 import { buildEditorialCandidates } from "./editorial-candidates";
 import { buildDigestIntelligence, parseStoredDigestInput } from "./digest-intelligence";
 
@@ -63,7 +63,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     .prepare(
       `SELECT digest_title, digest_text, digest_extended, digest_meta, input_data
        FROM daily_digest
-       WHERE ${NON_WEEKLY_DIGEST_SQL_FILTER}
+       WHERE (${NON_WEEKLY_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})
        ORDER BY generated_at DESC LIMIT 7`,
     )
     .all<{
@@ -80,7 +80,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   const leadHistoryRows = await db
     .prepare(
       `SELECT digest_meta FROM daily_digest
-       WHERE ${NON_WEEKLY_DIGEST_SQL_FILTER}
+       WHERE (${NON_WEEKLY_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})
        ORDER BY generated_at DESC LIMIT 14`,
     )
     .all<{ digest_meta: string | null }>();
