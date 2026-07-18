@@ -163,6 +163,7 @@ import {
   collectCrossDayTrends,
   collectDewsStress,
   collectActiveDepegs,
+  collectResolvedDepegs,
   collectSupplyVelocity,
   type CollectorContext,
 } from "../daily-digest/collectors";
@@ -217,7 +218,7 @@ function makeParsedFixture(
       coins: ["USDT"],
     }),
     strippedDashCount: 0,
-    strippedForbiddenCharCount: 0,
+    forbiddenPhraseHits: [],
     usedRawTextFallback: false,
   };
 }
@@ -688,7 +689,8 @@ describe("generateDailyDigest", () => {
     expect(result.itemCount).toBe(1);
     expect(result.status).toBeUndefined();
     expect(result.metadata).toContain("quality: title-word-count:soft");
-    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
+    // Soft-only issues no longer trigger the corrective retry (hard-only policy).
+    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
     expect(postDigestTweet).toHaveBeenCalledTimes(1);
     expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
   });
@@ -1571,7 +1573,7 @@ describe("lead family variety check", () => {
       digestExtended: "T. T. T.\n\nT. T. T.\n\nT. T. T.",
       digestMeta: JSON.stringify({ lead: currentLead, tone: "dry", coins: ["USDT"] }),
       strippedDashCount: 0,
-      strippedForbiddenCharCount: 0,
+      forbiddenPhraseHits: [],
       usedRawTextFallback: false,
     };
     const recentMeta = recentLeads.map((l) => ({
@@ -2449,8 +2451,9 @@ describe("collectPsiContributors", () => {
   it("returns top 3 contributors sorted by marketImpact", async () => {
     const db = mockD1([
       {
-        match: "SELECT input_snapshot FROM stability_index_samples",
+        match: "SELECT input_snapshot, stored_at FROM stability_index_samples",
         first: {
+          stored_at: Math.floor(Date.now() / 1000) - 600,
           input_snapshot: JSON.stringify({
             contributors: [
               { id: "usdt-tether", symbol: "USDT", bps: 10, mcapUsd: 100_000_000_000, ageDays: 1, factor: 1.5 },
@@ -2479,7 +2482,7 @@ describe("collectPsiContributors", () => {
   it("returns undefined when no input_snapshot exists", async () => {
     const db = mockD1([
       {
-        match: "SELECT input_snapshot FROM stability_index_samples",
+        match: "SELECT input_snapshot, stored_at FROM stability_index_samples",
         first: null,
         rows: [],
       },
@@ -2493,8 +2496,8 @@ describe("collectPsiContributors", () => {
   it("returns undefined when contributors array is empty", async () => {
     const db = mockD1([
       {
-        match: "SELECT input_snapshot FROM stability_index_samples",
-        first: { input_snapshot: JSON.stringify({ contributors: [] }) },
+        match: "SELECT input_snapshot, stored_at FROM stability_index_samples",
+        first: { stored_at: Math.floor(Date.now() / 1000) - 600, input_snapshot: JSON.stringify({ contributors: [] }) },
         rows: [],
       },
     ]);
@@ -2502,6 +2505,68 @@ describe("collectPsiContributors", () => {
     const ctx = makeCollectorCtx(db);
     const result = await collectPsiContributors(ctx);
     expect(result).toBeUndefined();
+  });
+
+  it("drops a stale sample and records the degradation instead of presenting old attribution", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT input_snapshot, stored_at FROM stability_index_samples",
+        first: {
+          stored_at: Math.floor(Date.now() / 1000) - 3 * 3600,
+          input_snapshot: JSON.stringify({
+            contributors: [{ id: "usdt-tether", symbol: "USDT", bps: 10, mcapUsd: 1e9, ageDays: 1, factor: 1 }],
+          }),
+        },
+        rows: [],
+      },
+    ]);
+
+    const degradedReasons: string[] = [];
+    const result = await collectPsiContributors(makeCollectorCtx(db), degradedReasons);
+    expect(result).toBeUndefined();
+    expect(degradedReasons).toContain("psi-contributors-stale");
+  });
+
+  it("marks the collector degraded when the query throws", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT input_snapshot, stored_at FROM stability_index_samples",
+        rows: [],
+        throwError: new Error("d1 unavailable"),
+      },
+    ]);
+
+    const degradedReasons: string[] = [];
+    const result = await collectPsiContributors(makeCollectorCtx(db), degradedReasons);
+    expect(result).toBeUndefined();
+    expect(degradedReasons).toContain("psi-contributors-query");
+  });
+});
+
+describe("silent-failure collectors mark degradedReasons", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("collectResolvedDepegs records resolved-depegs-query on failure", async () => {
+    const db = mockD1([{ match: "depeg_events", rows: [], throwError: new Error("boom") }]);
+    const degradedReasons: string[] = [];
+    const result = await collectResolvedDepegs(makeCollectorCtx(db), degradedReasons);
+    expect(result).toBeUndefined();
+    expect(degradedReasons).toContain("resolved-depegs-query");
+  });
+
+  it("collectLiquidityShifts records liquidity-shifts-query on failure", async () => {
+    const db = mockD1([{ match: "dex_liquidity", rows: [], throwError: new Error("boom") }]);
+    const degradedReasons: string[] = [];
+    const result = await collectLiquidityShifts(makeCollectorCtx(db), degradedReasons);
+    expect(result).toBeUndefined();
+    expect(degradedReasons).toContain("liquidity-shifts-query");
   });
 });
 
@@ -2576,17 +2641,19 @@ describe("collectYieldAnomalies", () => {
           apy_30d REAL NOT NULL,
           warning_signals TEXT,
           publication_generation_id TEXT,
-          publication_state TEXT
+          publication_state TEXT,
+          updated_at INTEGER NOT NULL DEFAULT 0
         );
       `);
+      const freshUpdatedAt = Math.floor(Date.now() / 1000) - 600;
       const insertYield = sqlite.prepare(
         `INSERT INTO yield_data (
           stablecoin_id, symbol, is_best, current_apy, apy_7d, apy_30d,
-          warning_signals, publication_generation_id, publication_state
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          warning_signals, publication_generation_id, publication_state, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       );
-      insertYield.run("usdt-tether", "USDT", 1, 12, 5, 4, JSON.stringify(["spike"]), "gen-failed", "failed");
-      insertYield.run("dai-makerdao", "DAI", 1, 11, 4, 3, JSON.stringify(["spike"]), "gen-staged", "staged");
+      insertYield.run("usdt-tether", "USDT", 1, 12, 5, 4, JSON.stringify(["spike"]), "gen-failed", "failed", freshUpdatedAt);
+      insertYield.run("dai-makerdao", "DAI", 1, 11, 4, 3, JSON.stringify(["spike"]), "gen-staged", "staged", freshUpdatedAt);
       insertYield.run(
         "usdc-circle",
         "USDC",
@@ -2597,6 +2664,7 @@ describe("collectYieldAnomalies", () => {
         JSON.stringify(["tvl-outflow"]),
         "gen-published",
         "published",
+        freshUpdatedAt,
       );
 
       const result = await collectYieldAnomalies(makeCollectorCtx(createSqliteD1(sqlite)));
@@ -3058,5 +3126,139 @@ describe("collectDewsStress — topSignals enrichment", () => {
     const flat = await collectDewsStress(makeCollectorCtx(flatDb));
     const wrapped = await collectDewsStress(makeCollectorCtx(wrappedDb));
     expect(wrapped!.elevatedCoins[0].topSignals).toEqual(flat!.elevatedCoins[0].topSignals);
+  });
+});
+
+describe("gate/retry correctness (Batch 3)", () => {
+  it("flags forbidden phrases as a soft issue instead of silently stripping them", () => {
+    const parsed = makeParsedFixture({
+      extended: "Meanwhile, USDT sits still at 3 bps. Watch for USDC next session if flows reverse hard tomorrow. The market held its line through the close today quietly.\n\nSupply held flat for a third session running now. Depth on the majors stayed intact through both sessions. Nothing in the flow data suggests stress building yet.\n\nDEWS stayed green across every tracked name today. The gauge sat at plus twelve through the close. Nobody moved more than ten million on the day.",
+    });
+    parsed.forbiddenPhraseHits = ["Meanwhile, "];
+    const issues = validateDigestModelOutput(parsed, { kind: "daily", recentMeta: [] });
+    const hit = issues.find((issue) => issue.code === "forbidden-phrase");
+    expect(hit?.severity).toBe("soft");
+    expect(parsed.digestExtended).toContain("Meanwhile, ");
+  });
+
+  it("flags meta.coins entries the copy never mentions", () => {
+    const parsed = makeParsedFixture({});
+    parsed.digestMeta = JSON.stringify({ lead: "depeg", tone: "dry", coins: ["USDT", "GHOST"] });
+    parsed.digestText = "USDT held its peg with room to spare. Watch for tomorrow's flows next session.";
+    const issues = validateDigestModelOutput(parsed, { kind: "daily", recentMeta: [] });
+    const hit = issues.find((issue) => issue.code === "meta-coins-mismatch");
+    expect(hit?.severity).toBe("soft");
+    expect(hit?.message).toContain("GHOST");
+    expect(hit?.message).not.toContain("USDT,");
+  });
+
+  it("validates mention-only requirements without pinning a lead", () => {
+    const parsed = makeParsedFixture({ leadSignalId: "yield:usdc" });
+    parsed.digestExtended = `PMUSD remains 2,950 bps under peg, unchanged. ${parsed.digestExtended}`;
+    const issues = validateDigestModelOutput(parsed, {
+      kind: "daily",
+      recentMeta: [],
+      leadRequirements: [
+        { candidateIds: [], severity: "soft", mentionTokens: ["PMUSD"], reason: "ongoing critical, demoted" },
+      ],
+    });
+    expect(issues.some((issue) => issue.code === "required-lead-missing")).toBe(false);
+    expect(issues.some((issue) => issue.code === "lead-candidate-mismatch")).toBe(false);
+  });
+
+  it("flags a missing mention-only token as a soft issue", () => {
+    const parsed = makeParsedFixture({ leadSignalId: "yield:usdc" });
+    const issues = validateDigestModelOutput(parsed, {
+      kind: "daily",
+      recentMeta: [],
+      leadRequirements: [
+        { candidateIds: [], severity: "soft", mentionTokens: ["PMUSD"], reason: "ongoing critical, demoted" },
+      ],
+    });
+    expect(issues.some((issue) => issue.code === "required-lead-missing" && issue.severity === "soft")).toBe(true);
+    expect(issues.some((issue) => issue.code === "lead-candidate-mismatch")).toBe(false);
+  });
+});
+
+describe("editorial guards (Batch 7)", () => {
+  it("flags a price/bps contradiction in one sentence", () => {
+    const parsed = makeParsedFixture({});
+    parsed.digestExtended = `USX sits 5,783 bps below peg while the quote reads $0.997 as a courtesy. ${parsed.digestExtended}`;
+    const issues = validateDigestModelOutput(parsed, {
+      kind: "daily",
+      recentMeta: [],
+      depegFacts: [{ symbol: "USX", currentPriceUsd: 0.4217, currentBps: -5783 }],
+    });
+    const hit = issues.find((issue) => issue.code === "price-bps-mismatch");
+    expect(hit?.severity).toBe("soft");
+    expect(hit?.message).toContain("USX");
+  });
+
+  it("accepts a consistent price/bps pairing", () => {
+    const parsed = makeParsedFixture({});
+    parsed.digestExtended = `USX sits 5,783 bps below peg at $0.42 with no bid in sight. ${parsed.digestExtended}`;
+    const issues = validateDigestModelOutput(parsed, {
+      kind: "daily",
+      recentMeta: [],
+      depegFacts: [{ symbol: "USX", currentPriceUsd: 0.4217, currentBps: -5783 }],
+    });
+    expect(issues.some((issue) => issue.code === "price-bps-mismatch")).toBe(false);
+  });
+
+  it("flags fabricated movement claims against previous-edition facts", () => {
+    const parsed = makeParsedFixture({});
+    parsed.digestExtended = `APXUSD narrowed from 3,650 bps yesterday, a recovery nobody measured. ${parsed.digestExtended}`;
+    const issues = validateDigestModelOutput(parsed, {
+      kind: "daily",
+      recentMeta: [],
+      prevDepegFacts: [{ symbol: "APXUSD", currentBps: -3159, bps: -3159 }],
+    });
+    expect(issues.some((issue) => issue.code === "unverifiable-movement-claim")).toBe(true);
+  });
+
+  it("accepts movement claims the previous edition supports", () => {
+    const parsed = makeParsedFixture({});
+    parsed.digestExtended = `APXUSD widened from 3,159 bps to 3,410 bps overnight. ${parsed.digestExtended}`;
+    const issues = validateDigestModelOutput(parsed, {
+      kind: "daily",
+      recentMeta: [],
+      prevDepegFacts: [{ symbol: "APXUSD", currentBps: -3159 }],
+    });
+    expect(issues.some((issue) => issue.code === "unverifiable-movement-claim")).toBe(false);
+  });
+
+  it("flags the same coin in three consecutive titles and day-count titles", () => {
+    const parsed = makeParsedFixture({});
+    parsed.digestTitle = "USX Enters Week Four";
+    const recentMeta = [
+      { meta: null, title: "USX Turns Twenty Days Old" },
+      { meta: null, title: "USX Passes 450 Hours Broken" },
+    ];
+    const issues = validateDigestModelOutput(parsed, { kind: "daily", recentMeta });
+    expect(issues.some((issue) => issue.code === "title-symbol-streak")).toBe(true);
+    expect(issues.some((issue) => issue.code === "title-day-counting")).toBe(true);
+  });
+
+  it("does not flag a fresh subject or a first-day duration title", () => {
+    const parsed = makeParsedFixture({});
+    parsed.digestTitle = "RLUSD Finds A Deeper Bid";
+    const recentMeta = [
+      { meta: null, title: "USX Turns Twenty Days Old" },
+      { meta: null, title: "USX Passes 450 Hours Broken" },
+    ];
+    const issues = validateDigestModelOutput(parsed, { kind: "daily", recentMeta });
+    expect(issues.some((issue) => issue.code === "title-symbol-streak")).toBe(false);
+    expect(issues.some((issue) => issue.code === "title-day-counting")).toBe(false);
+  });
+
+  it("dedupes titles against the extended trailing window", () => {
+    const parsed = makeParsedFixture({});
+    parsed.digestTitle = "USDC Touches Its Ceiling";
+    const issues = validateDigestModelOutput(parsed, {
+      kind: "daily",
+      recentMeta: [],
+      recentTitles: ["USDC Touches Its Ceiling"],
+    });
+    expect(issues.some((issue) => issue.code === "repeated-title")).toBe(true);
   });
 });

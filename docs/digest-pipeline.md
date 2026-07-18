@@ -43,7 +43,7 @@ All ecosystem monetary aggregates use the `core-stablecoins-v1` universe: active
 |----------|--------|-------------|
 | Market metrics | stablecoins cache + listing governance registry | Core-universe total mcap, 7d delta, biggest supply mover (>$1M), cache age |
 | Editorial candidates | derived from all collected signals | Pre-ranked lead candidates with impact, novelty, confidence, artifact risk, and suppression reasons |
-| Depeg events | `depeg_events` table + current `stablecoins` cache price as display context | Active count and active depeg inclusion follow open `depeg_events` rows (the canonical detector closes recovered events); top 8 are ranked by critical severity then recorded event impact (\|event bps\| × mcap), with cache price shown only as supplemental context, active age/chronic suppression with critical-depeg override, historical peak context, and resolved depegs by absolute impact |
+| Depeg events | `depeg_events` table + current `stablecoins` cache price and the event's `peg_reference` | Active count and active depeg inclusion follow open `depeg_events` rows (the canonical detector closes recovered events). Severity decisions — criticality, suppression, sort order, impact score, candidate titles — run on the **live deviation** (`currentBps`, computed from the cache price vs the event's peg reference); the stored peak is carried separately as context (`peakBps`) and used only as a flagged fallback (`severityBasis: "peak-fallback"`) when no live price resolves. Top 8 are ranked by critical severity then impact (\|live bps\| × mcap), with active age/chronic suppression and the critical-depeg override evaluated on the live basis |
 | Stability Index | `stability_index_samples` + `stability_index` | Current PSI from latest 30-minute sample, yesterday's from daily table |
 | Blacklist activity | `blacklist_events` (rolling last 24h) | Event count, total USD affected; threshold: ≥2 events OR >$10M single; zero-value bursts are artifact-risk candidates |
 | Supply velocity | top 10 coins by mcap | 1d vs 7d changes; signals: "reversed", "accelerating", "decelerating" with material daily/weekly thresholds |
@@ -60,6 +60,8 @@ All ecosystem monetary aggregates use the `core-stablecoins-v1` universe: active
 | Cross-day trends | `daily_digest` (archived input_data) | 7-day trajectories for PSI score/band, total mcap, and Bank Run Gauge; requires >=3 days of history |
 | Data quality | collector status + window metadata | Degraded collectors, cache age, PSI source time, mint/burn and blacklist windows |
 | Recent digests | last 7 non-weekly rows from `daily_digest` | Passed to LLM to enforce daily variety |
+| Cause context | `shared/data/annotations/curated-annotations.ts` | Curated, primary-sourced cause annotations for coins in the depeg set (annotation `ts` within 90d before event start), rendered as a `CAUSE CONTEXT` prompt block so coverage can say *why* a coin broke; the model is instructed never to invent causes beyond the curated list |
+| Standing conditions | derived from `topDepegs` | Chronic ledger: ongoing depegs ≥48h old (`standingConditions[]`) with day counts and live deviation — served through `/api/daily-digest`/snapshot, rendered as a compact "Standing:" strip on digest pages, and appended as one deterministic line to the Telegram edition, so demoted stories stay visible without narrated day-count headlines |
 | Digest intelligence | current `DigestInputData` + latest archived `input_data` | Deterministic risk tape, what changed since yesterday, prior next-trigger outcomes, next triggers, calm-day frame, and editorial audit |
 
 `DigestInputData` is defined in `shared/types/digest.ts` (re-exported via `shared/types/index.ts`) and imported by the digest cron, digest snapshot API, and frontend snapshot hook. Its optional `aggregateUniverse` marker preserves compatibility with archived pre-cutover rows.
@@ -73,7 +75,7 @@ The digest intelligence pass runs after editorial candidates are built and befor
 - `riskTape`: compact reader-facing state for PSI, active depegs, Bank Run Gauge, DEWS, and the largest supply mover.
 - `changeSummary`: deterministic "what changed since yesterday" buckets (`newSignals`, `worsenedSignals`, `improvedSignals`, `resolvedSignals`, `repeatedSignals`) derived from the previous archived input.
 - `forwardLookOutcomes`: evaluation of yesterday's `nextTriggers` against today's input (`hit`, `missed`, `pending`).
-- `nextTriggers`: structured threshold checks the next digest can evaluate, such as depeg bps, supply velocity, DEWS band, Bank Run Gauge, or PSI thresholds.
+- `nextTriggers`: structured threshold checks the next digest can evaluate — depeg bps, supply velocity, DEWS band, Bank Run Gauge, PSI, yield-anomaly cooling (`yield-apy`), and DEX liquidity follow-through (`liquidity-score`). Triggers have a lifecycle: an armed threshold is **sticky** (never re-derived toward the metric's drift — the PSI goalpost once moved 89→93 chasing the index), a trigger that fires re-arms fresh, and a trigger pending for 3 consecutive editions **expires** (recorded as an `expired` forward-look outcome) and cedes its slot. Depeg thresholds arm off the live deviation, not the stored peak.
 - `calmNarrativeFrame`: a fallback editorial frame for calm regimes so quiet days can explain what changed, what did not happen, and what would make the next day less calm.
 - `editorialAudit`: added after the LLM response is parsed; stores top/usable/suppressed/momentum candidate ids, required lead ids, declared `leadSignalId`, used candidate ids, and quality issue codes.
 
@@ -83,15 +85,15 @@ The digest's Flight-to-Quality collector now uses `buildFlightToQualityClassific
 
 ### LLM call
 
-- **Model:** `claude-opus-4-7` via `https://api.anthropic.com/v1/messages`, with adaptive thinking (`thinking.type = "adaptive"`) and `xhigh` reasoning effort (`output_config.effort = "xhigh"`)
-- **Reasoning:** adaptive thinking is on by default with omitted display; no `budget_tokens` is needed (and is rejected on Opus 4.7). Sampling parameters (`temperature` / `top_p` / `top_k`) are not sent (also rejected on Opus 4.7). `xhigh` is Opus 4.7's recommended level for complex editorial work; `max` was dropped on 2026-04-18 after a second runaway-thinking failure (`stopReason=max_tokens, outputTokens=32000`, only a `signature_delta` emitted) — `max` has no constraint on thinking depth.
+- **Model:** `claude-opus-4-8` (swapped from Opus 4.7 on 2026-07-18; identical price and API contract, watch the first ~5-7 editions for voice drift) via `https://api.anthropic.com/v1/messages`, with adaptive thinking (`thinking.type = "adaptive"`) and `xhigh` reasoning effort (`output_config.effort = "xhigh"`)
+- **Reasoning:** adaptive thinking is on by default with omitted display; no `budget_tokens` is needed (and is rejected on Opus 4.7+). Sampling parameters (`temperature` / `top_p` / `top_k`) are not sent (also rejected). `xhigh` is Opus's recommended level for complex editorial work; `max` was dropped on 2026-04-18 after a second runaway-thinking failure (`stopReason=max_tokens, outputTokens=32000`, only a `signature_delta` emitted) — `max` has no constraint on thinking depth.
 - **Timeout:** 12-minute Anthropic outer timeout with an 11-minute per-attempt fetch timeout. The daily digest cron wrapper allows 14 minutes total, which stays below Cloudflare's 15-minute scheduled-trigger wall-clock ceiling while leaving tail room for persistence, logging, and channel delivery.
-- **Streaming:** Requests set `Accept: text/event-stream` and `stream: true`. This is part of the Worker runtime contract because Opus 4.7 adaptive thinking can take minutes before emitting text; streaming keeps the subrequest active with early headers / ping events during long thinking phases.
-- **Max tokens:** 64000 daily, 64000 weekly (max_tokens covers thinking + output). Anthropic's documented floor for Opus 4.7 at xhigh/max effort. Earlier bumps to 16k → 32k at `effort: "max"` both hit `stop_reason=max_tokens` with no text emitted; the root-cause fix on 2026-04-18 was lowering effort to `xhigh` and raising the ceiling per Anthropic's guidance in one change.
+- **Streaming:** Requests set `Accept: text/event-stream` and `stream: true`. This is part of the Worker runtime contract because Opus adaptive thinking can take minutes before emitting text; streaming keeps the subrequest active with early headers / ping events during long thinking phases.
+- **Max tokens:** 64000 daily, 64000 weekly (max_tokens covers thinking + output). Anthropic's documented floor for Opus at xhigh/max effort. Earlier bumps to 16k → 32k at `effort: "max"` both hit `stop_reason=max_tokens` with no text emitted; the root-cause fix on 2026-04-18 was lowering effort to `xhigh` and raising the ceiling per Anthropic's guidance in one change.
 - **Overload retries:** Anthropic `529 Overloaded` responses retry at most 2 times (3 attempts total), bounded by the 12-minute outer timeout
 - **Voice:** sardonic financial columnist — dry, precise, no emojis, no exclamation marks, with a compact few-shot EXEMPLAR embedded in the system prompt to anchor voice and structure
 - **Priority rule:** lead from the highest-impact unsuppressed editorial candidate. Raw evidence sections are supporting material, not the lead-selection source.
-- **Critical depeg override:** active depegs at or above 2,500 bps on at least $50M mcap, or 5,000 bps on at least $10M mcap, bypass stale/chronic suppression and create a hard lead-validation requirement. If Opus declares another `leadSignalId`, the quality gate retries and then blocks external delivery if unresolved.
+- **Critical depeg override (novelty-gated with a lead quota):** active depegs at or above 2,500 bps on at least $50M mcap, or 5,000 bps on at least $10M mcap — measured on the **live deviation** — bypass stale/chronic suppression. The top eligible critical is ranked by impact score (not raw bps) and produces a **hard** lead-validation requirement only when it is newly critical (event ≤48h old) or worsened ≥500 bps since the previous edition. One event may hard-lead at most 2 consecutive editions and 3 per trailing 7 (`shared/lib/digest-lead-policy.ts`, owner-ratified constants); past quota, and for older unchanged criticals, the requirement demotes to a **soft mention-only** rule (the symbol must appear, the lead is free). A material worsening re-qualifies the story regardless of quota. The prompt receives an explicit `REQUIRED LEAD TODAY` or `REQUIRED MENTION` line plus an `ONGOING STORIES` lead-streak ledger, and `editorialAudit` records `leadRequirementReasons` and `demotedLeadMentionTokens`. If Opus ignores a hard requirement, the quality gate retries and then blocks external delivery if unresolved.
 - **Momentum candidates:** a separate in-prompt block surfaces candidates with `novelty ∈ {new, accelerating, reversal}` so the model has explicit forward-watch material upstream of the regex-based forward-look validator.
 - **Deterministic next triggers:** the prompt receives `nextTriggers` with concrete thresholds. The model should use one for the required forward-look line instead of writing vague "watch this" closers.
 - **Change/outcome context:** the prompt receives `changeSummary` plus `forwardLookOutcomes`, allowing the digest to say what changed since yesterday and whether prior forward-look checks hit, missed, or remain pending.
@@ -100,28 +102,36 @@ The digest's Flight-to-Quality collector now uses `buildFlightToQualityClassific
 - **Calm-day storytelling:** in CALM regimes without a critical lead, the prompt uses `calmNarrativeFrame` to frame documented quiet, supply rotation, issuer concentration, liquidity divergence, chronic risk boundaries, or explicit non-events without manufacturing menace.
 - **Spice budget:** the prompt allows one sharp sentence per digest (named analogy, historical parallel, concrete-stakes observation, or ironic contrast); over-reach is discouraged by the forbidden-tic list.
 - **Artifact policy:** candidates can be marked high-risk or suppressed for chronic small depegs, zero-value blacklist bursts, thin-liquidity artifacts, very high APY anomalies, or other weak evidence. The prompt explicitly tells Opus not to dramatize these.
-- **Regime classification:** a `classifyRegime()` function labels each day as CRISIS, TENSION, WATCHFUL, or CALM based on PSI band, impact-weighted active depeg pressure, gauge score, FTQ status, and ALERT+ mcap rather than raw coin counts alone.
+- **Regime classification:** a `classifyRegime()` function labels each day as CRISIS, TENSION, WATCHFUL, or CALM based on PSI band, impact-weighted active depeg pressure, gauge score, FTQ status, and ALERT+ mcap rather than raw coin counts alone. Depegs older than 7 days contribute to regime pressure only when they worsened since the previous edition, so chronic standing conditions cannot pin the register at TENSION indefinitely (which had made the calm-day machinery unreachable).
 - **Narrative structure:** regime-aware P1/P2/P3 paragraph structure; PSI is always referenced but doesn't have to open; max 3 data categories per digest
 - **Density contract:** 40–70 words per paragraph, 150–280 words total for the extended field
 - **Structured sections:** When the digest covers two distinct stories, the LLM may use bold inline headers (e.g., `**Peg Watch**`, `**Capital Flows**`) to separate paragraphs. P1 (the lead) never has a header. The frontend renders these as styled inline spans.
 - **Variety enforcement:** normalized structured `meta` field (lead signal id, lead type, tone, featured coins, used/suppressed candidate ids) from recent non-weekly digests replaces raw text dump; falls back to raw text for pre-meta entries. A coarse `leadFamily` mapper (psi, depeg, dews, flow, risk, macro) drives `repeated-lead-family` so variety enforcement survives the 28-token allowed-leads enum.
 - **Voice guards:** a forbidden-tic list (plumbing, beneath the calm, restless depths, calm surfaces,, surface calm, serene, moving underneath, plus closer-position bans on "worth watching / monitoring / bears watching") fires a soft issue when hit. Opening-pattern fingerprint blocks repeated "PSI [verb]" openings. Forward-look cue detector flags retrospective-only digests. Tone-cluster detector flags a register appearing 3+ times in the last 5 digests.
-- **Quality gate:** parsed LLM output is validated for required fields, paragraph/word budget, title+text length, code fences, forbidden tics, opening-pattern repetition, missing forward-look, repeated lead-family, tone-cluster, and recent title/tone/coin repetition. The worker retries once with validation errors before accepting the copy. If hard issues remain after retry, the digest is stored as degraded and social posting is skipped. Soft-only residual issues stay in cron metadata but do not mark the operational cron lane degraded.
+- **Quality gate:** parsed LLM output is validated for required fields, paragraph/word budget, title+text length, code fences, forbidden tics, opening-pattern repetition, missing forward-look, repeated lead-family, tone-cluster, and recent title/tone/coin repetition. Editorial-consistency lints (all soft): `price-bps-mismatch` (a sentence quoting a coin's dollar price and a bps figure must have the two agree within 150 bps against the coin's live facts), `unverifiable-movement-claim` ("narrowed/widened from N bps" must trace to a previous-edition depeg fact), `title-symbol-streak` (same coin in three consecutive titles), `title-day-counting` (day/hour-count titles on repeat coverage), and title dedupe against a 30-edition trailing window. Sub-$50M depegs are suppressed as lead material after 48h (break-day-only coverage, owner-ratified floor). The worker retries once with validation errors before accepting the copy. If hard issues remain after retry, the digest is stored as degraded and social posting is skipped. Soft-only residual issues stay in cron metadata but do not mark the operational cron lane degraded.
 - **Output:** raw JSON `{ "title": "...", "extended": "...", "text": "...", "meta": { "lead": "...", "tone": "...", "coins": [...] } }` — no markdown fences
 
 ### Failure handling
 
-If JSON parsing or quality validation fails, the worker sends one corrective retry to Opus with the failed checks. If the retry still has hard quality issues, the digest row is stored as degraded for operator inspection, but external delivery is skipped as `quality-gate`. Soft-only quality issues remain visible in run metadata without changing cron health.
+If quality validation fails with **hard** issues, the worker sends one corrective retry to Opus containing the hard checks plus the failed response itself, so the model fixes the flagged problems instead of regenerating blind. Soft-only issues never trigger a retry (during the July 2026 forced-lead streak, unfixable soft variety issues burned a second full Opus call every day). A `stop_reason=max_tokens` stream is treated as a hard failure before parsing — truncated output can no longer flow into the raw-text fallback.
+
+If the retry still has hard quality issues, the digest row is stored with `digest_meta.qualityGate = "blocked"` for operator inspection: blocked rows are excluded from every public read endpoint, from edition numbering, from recent-copy variety context, and from lead-streak history (they never reached readers), and external delivery is skipped as `quality-gate`. Soft-only quality issues remain visible in run metadata without changing cron health. Forbidden throat-clearing phrases are now flagged as a soft `forbidden-phrase` issue rather than silently stripped (which left grammar fragments), and `meta.coins` labels are cross-checked against the copy (`meta-coins-mismatch`).
+
+The active-depeg collector also computes **lifecycle review flags** over the full open-event set (`worker/src/lib/depeg-lifecycle.ts`): `stalled-collapse` (open ≥21d at ≥2,500 bps live deviation) and `chronic-shallow` (open ≥30d under 300 bps). Flags are persisted to the `depeg:lifecycle-flags` cache entry and appended to cron metadata as `lifecycle-review: SYMBOL:kind|…` for owner review — see [`runbooks/depeg-lifecycle-review.md`](./runbooks/depeg-lifecycle-review.md). Flagging never freezes or closes anything automatically.
 
 Digest generation now fails closed on stablecoins-cache availability: if the cached stablecoin payload is missing, malformed, or otherwise non-`ok`, the cron returns `status: "degraded"` and skips regeneration instead of synthesizing a false zero-mcap digest.
 
 Safety-score enrichment also uses explicit degraded semantics. When `computeSafetyScoresSnapshot()` returns a degraded result, the digest still renders from the remaining inputs, but the safety section is omitted and the cron metadata records the degraded reason rather than fabricating distribution stats from an empty score set.
 
-The early collectors now distinguish "no signal" from "collector failed". If the active-depeg, blacklist-activity, or supply-velocity queries error, `generateDailyDigest()` still stores the digest but:
+All collectors now distinguish "no signal" from "collector failed". If the active-depeg, blacklist-activity, supply-velocity, resolved-depeg, mint-burn, liquidity-shift, PSI-contributor, total-mcap-ATH, historical-context, or cross-day-trend queries error, `generateDailyDigest()` still stores the digest but:
 
 - returns cron `status: "degraded"`
 - appends the collector key to the cron metadata string
 - stores the collector keys in `input_data.degradedSources`
+
+Staleness is also degradation, not silent currency: a PSI sample older than 2h (`psi-sample-stale`), a PSI-contributor snapshot older than 2h (`psi-contributors-stale`, dropped rather than displayed), a stablecoins cache older than 1h (`stablecoins-cache-stale`), and yield rows older than 24h (filtered out in SQL) are all treated as degraded or excluded rather than presented as current observations.
+
+Change detection and trigger matching key depegs by `stablecoinId` (falling back to symbol only for archived rows without ids), so two tracked coins sharing a symbol can no longer produce fabricated cross-coin movement in `changeSummary` or forward-look outcomes. Depeg candidate `novelty` is computed from the day-over-day live-deviation delta (`new` ≤24h, `worsening`/`improving` at ±100 bps, `chronic` when old and unchanged) instead of labeling every unsuppressed depeg "worsening".
 
 ---
 
@@ -272,7 +282,7 @@ Fetches the last 15 daily digests (`LIMIT 15`, cutoff `now - 15d`, excluding wee
 | Active depeg observations | Sum of `activeDepegCount` across all days; explicitly not described as unique events |
 | Unique depeg signals | Reconstructed from `stablecoinId` + `startedAt` where present, with symbol/direction/bps fallback for legacy rows |
 | Top depeg signals | Active and resolved signals sorted by absolute market impact |
-| Weekly risk leaderboard | Unified cross-signal ranking across depegs, DEWS, mint/burn pressure, blacklist, grade, yield, liquidity, and supply contraction; unsuppressed critical depegs outrank smoothed regime averages |
+| Weekly risk leaderboard | Unified cross-signal ranking across depegs, DEWS, mint/burn pressure, blacklist, grade, yield, liquidity, and supply contraction. Depeg severity uses the live deviation when the daily rows carry it. Signals whose event predates the week window are flagged `carriedOver`, get halved severity, render under a **STANDING CONDITIONS** split (one line each, never the headline), and cannot hard-pin the weekly lead — only unsuppressed criticals that are **new this week** outrank everything else |
 | Spike metrics | Worst PSI day, lowest Bank Run Gauge day, worst depeg by bps, and largest depeg market impact |
 | Supply signals | Biggest weekly movers and daily velocity reversals/acceleration/deceleration |
 | DEWS signals | Top band changes and max ALERT+ mcap |
@@ -280,13 +290,14 @@ Fetches the last 15 daily digests (`LIMIT 15`, cutoff `now - 15d`, excluding wee
 | Grade transitions | Sum of `gradeTransitions.length` across all days |
 | Gauge range | Min/max `mintBurnFlows.gaugeScore` (null if <3 data points) |
 | Other anomalies | Top mint/burn pressure, yield anomalies, and liquidity shifts |
+| Forward-look scoreboard | sum of daily `forwardLookOutcomes` statuses | `{hit, missed, pending, expired}` across the week's editions; the prompt instructs the recap to publish the score and own the misses |
 | Week-over-week deltas | prior 7 daily rows (same aggregation shape) produce `{ current, prior }` values for mcap end, PSI midpoint, PSI dominant band, active-depeg observations, unique depeg signals, blacklist events/USD, grade transitions, gauge midpoint; `null` when prior-week coverage is below 5 daily rows |
 
 Requires >=5 current-week daily digests to proceed. Prior-week coverage below 5 is tolerated; `weekOverWeekDeltas` is then `null` and the prompt notes the gap instead.
 
 ### LLM call
 
-- **Model:** `claude-opus-4-7` with adaptive thinking + `xhigh` effort (identical contract to the daily digest)
+- **Model:** `claude-opus-4-8` with adaptive thinking + `xhigh` effort (identical contract to the daily digest)
 - **Timeout:** shared 12-minute Anthropic request cap; the scheduled weekly wrapper also has a 12-minute cron lease, so the lease can abort slow Monday recap runs
 - **max_tokens:** 64000
 - **Voice:** Same sardonic columnist, but synthesizing rather than reporting; rewritten system prompt adds arc framing, forward-look mandate on the last paragraph, tic list, and explicit week-over-week references
@@ -368,11 +379,22 @@ npx tsx scripts/maintenance/sync-digests.ts --api-url https://ops-api.example.co
 
 The scheduled/manual Pages refresh runs digest sync inside `.github/workflows/pages-release.yml`:
 
-1. When `refresh_data=true`, the `pages-release` job fetches `GET /api/digest-archive` once and writes normalized `data/digests.json` before `next build`. Ordinary code releases use the committed snapshot.
-2. The refresh calls `https://stablecoin-dashboard.pages.dev/_site-data`, whose Pages Function authenticates upstream requests to `site-api.pharos.watch`; it does not depend on the custom-domain edge path used by public traffic.
-3. The scheduled `Rebuild Pages` workflow runs once at 08:17 UTC after the 08:05 UTC daily digest slot.
+1. When `refresh_data=true`, the `pages-release` job fetches `GET /api/digest-archive` once and writes normalized `data/digests.json` before `next build`. Code releases via `deploy-cloudflare.yml` now also pass `refresh_data: true`, so a merge no longer regresses digest detail pages, the sitemap, and the RSS feed to the committed snapshot's age until the next scheduled rebuild.
+2. The refresh step is fail-open: if any sync command fails, or the refreshed digest archive has fewer entries than the committed snapshot (grow-only guard), the job restores the committed `data/digests.json`, `data/depeg-events.json`, and `public/datasets` and continues the build with a step-summary warning instead of failing the deploy.
+3. The refresh calls `https://stablecoin-dashboard.pages.dev/_site-data`, whose Pages Function authenticates upstream requests to `site-api.pharos.watch`; it does not depend on the custom-domain edge path used by public traffic.
+4. The scheduled `Rebuild Pages` workflow runs once at 08:17 UTC after the 08:05 UTC daily digest slot and remains the safety net if a fail-open deploy shipped the committed snapshot.
 
-This keeps the Pages build itself network-independent once the digest snapshot has been fetched and avoids hard-coding `https://api.pharos.watch` into the build path.
+Because the committed snapshot is the fail-open fallback, refresh it roughly monthly (`npx tsx scripts/maintenance/sync-digests.ts --api-url https://api.pharos.watch --output data/digests.json` with `DIGEST_API_KEY` set, then commit) so a fallback build is never more than a few weeks stale.
+
+### Internal sentinel rows
+
+`daily_digest` rows flagged with `digest_meta.internal = true` (operational sentinel artifacts such as the `__bluechip_replay_guard__` weekly replay-guard row) are hidden from `GET /api/daily-digest`, `GET /api/digest-archive`, and `GET /api/digest-snapshot`. The archive endpoint still counts hidden rows when assigning per-type edition numbers, so edition numbers already published on socials and detail pages do not shift. Flag a row with:
+
+```sql
+UPDATE daily_digest
+SET digest_meta = json_set(COALESCE(digest_meta, '{}'), '$.internal', json('true'))
+WHERE id = <row id>;
+```
 
 ---
 

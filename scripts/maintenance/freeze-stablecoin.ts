@@ -127,8 +127,11 @@ async function fetchPeakMcap(coinId: string): Promise<number> {
   if (!apiKey) throw new Error("PHAROS_API_KEY env var required");
   const res = await fetch(`${API_BASE}/supply-history?stablecoin=${coinId}&days=1825`, { headers: { "X-API-Key": apiKey } });
   if (!res.ok) throw new Error(`/api/supply-history returned ${res.status}`);
-  const body = (await res.json()) as { history?: Array<{ circulatingUsd?: number | null }> };
-  const max = Math.max(...((body.history ?? []).map((p) => p.circulatingUsd ?? 0)));
+  const body = (await res.json()) as
+    | Array<{ circulatingUsd?: number | null }>
+    | { history?: Array<{ circulatingUsd?: number | null }> };
+  const rows = Array.isArray(body) ? body : body.history ?? [];
+  const max = Math.max(...rows.map((p) => p.circulatingUsd ?? 0));
   if (!Number.isFinite(max) || max <= 0) {
     throw new Error(`unable to compute peakMcap from supply-history for ${coinId}`);
   }

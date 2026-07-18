@@ -27,9 +27,12 @@ import {
   type CollectorContext,
   type CollectorResult,
 } from "./collectors";
+import { markCollectorDegraded } from "./collectors-shared";
+import type { DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
 import { buildRecentDigestMeta, type RecentDigestMetaEntry } from "./runtime-helpers";
-import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./shared";
+import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "./shared";
 import { buildEditorialCandidates } from "./editorial-candidates";
+import { buildStandingConditions, collectCauseContext } from "./cause-context";
 import { buildDigestIntelligence, parseStoredDigestInput } from "./digest-intelligence";
 
 function consumeCollectorResult<T>(result: CollectorResult<T>, degradedReasons: string[]): T {
@@ -43,6 +46,14 @@ export interface DailyDigestInputBuildResult {
   inputData: DigestInputData;
   degradedReasons: string[];
   recentMeta: RecentDigestMetaEntry[];
+  /** Parsed previous edition input, for lead re-escalation checks. */
+  previousInputData: DigestInputData | null;
+  /** leadSignalIds of recent editions (newest first), for the lead quota. */
+  recentLeadSignalIds: (string | null)[];
+  /** Owner-review lifecycle flags over the full open depeg-event set. */
+  lifecycleFlags: DepegLifecycleFlag[];
+  /** Trailing titles (newest first, up to 30) for long-window title dedupe. */
+  recentTitles: string[];
   stablecoinsCacheReason: string | null;
   llmSignals: {
     activeDepegCount: number;
@@ -58,7 +69,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     .prepare(
       `SELECT digest_title, digest_text, digest_extended, digest_meta, input_data
        FROM daily_digest
-       WHERE ${NON_WEEKLY_DIGEST_SQL_FILTER}
+       WHERE (${NON_WEEKLY_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})
        ORDER BY generated_at DESC LIMIT 7`,
     )
     .all<{
@@ -70,6 +81,36 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     }>();
   const recentMeta = buildRecentDigestMeta(recentRows.results ?? []);
   const previousInputData = parseStoredDigestInput(recentRows.results?.[0]?.input_data ?? null);
+  // Lead-quota history is wider than the 7-edition variety window; a separate
+  // meta-only query keeps the variety semantics untouched.
+  const leadHistoryRows = await db
+    .prepare(
+      `SELECT digest_meta FROM daily_digest
+       WHERE (${NON_WEEKLY_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})
+       ORDER BY generated_at DESC LIMIT 14`,
+    )
+    .all<{ digest_meta: string | null }>();
+  // Trailing titles for the 30-edition title-dedupe window (titles only; the
+  // 7-edition variety window and 14-edition lead history stay separate).
+  const recentTitleRows = await db
+    .prepare(
+      `SELECT digest_title FROM daily_digest
+       WHERE (${NON_WEEKLY_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})
+       ORDER BY generated_at DESC LIMIT 30`,
+    )
+    .all<{ digest_title: string | null }>();
+  const recentTitles = (recentTitleRows.results ?? [])
+    .map((row) => row.digest_title)
+    .filter((title): title is string => Boolean(title));
+  const recentLeadSignalIds = (leadHistoryRows.results ?? []).map((row) => {
+    if (!row.digest_meta) return null;
+    try {
+      const parsed = JSON.parse(row.digest_meta) as { leadSignalId?: unknown };
+      return typeof parsed.leadSignalId === "string" ? parsed.leadSignalId : null;
+    } catch {
+      return null;
+    }
+  });
   const degradedReasons: string[] = [];
 
   const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
@@ -92,6 +133,10 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
       },
       degradedReasons,
       recentMeta,
+      previousInputData,
+      recentLeadSignalIds,
+      lifecycleFlags: [],
+      recentTitles,
       stablecoinsCacheReason: stablecoinsCacheResult.reason,
       llmSignals: {
         activeDepegCount: 0,
@@ -163,7 +208,14 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     yesterdayTs,
   };
 
-  const { activeDepegCount, topDepegs } = consumeCollectorResult(await collectActiveDepegs(ctx), degradedReasons);
+  // A cache older than an hour means sync-stablecoins has missed at least one
+  // cycle; prices/mcaps presented as current are aging. Record it so the
+  // prompt's degraded-collectors block reflects reality.
+  if (stablecoinsCacheResult.updatedAt != null && nowSec - stablecoinsCacheResult.updatedAt > SECONDS.ONE_HOUR) {
+    markCollectorDegraded(degradedReasons, "stablecoins-cache-stale");
+  }
+
+  const { activeDepegCount, topDepegs, lifecycleFlags } = consumeCollectorResult(await collectActiveDepegs(ctx), degradedReasons);
 
   const [latestSample, latestDaily, avg24hRow, yesterdayRow] = await Promise.all([
     db
@@ -183,6 +235,9 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
       .bind(yesterdayTs)
       .first<{ score: number; band: string }>(),
   ]);
+  if (latestSample && nowSec - latestSample.stored_at > 2 * SECONDS.ONE_HOUR) {
+    markCollectorDegraded(degradedReasons, "psi-sample-stale");
+  }
   const currentPsiSource = latestSample ?? latestDaily;
 
   const avg24h = avg24hRow?.avg != null ? round1(avg24hRow.avg) : null;
@@ -243,16 +298,16 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     crossDayTrends,
     totalMcapAth,
   ] = await Promise.all([
-    collectResolvedDepegs(ctx),
+    collectResolvedDepegs(ctx, degradedReasons),
     collectMintBurnFlows(ctx, degradedReasons),
     collectDewsStress(ctx, degradedReasons),
-    collectPsiContributors(ctx),
+    collectPsiContributors(ctx, degradedReasons),
     collectYieldAnomalies(ctx, degradedReasons),
-    collectLiquidityShifts(ctx),
+    collectLiquidityShifts(ctx, degradedReasons),
     collectCrossDayTrends(ctx, degradedReasons),
-    collectTotalMcapAth(ctx),
+    collectTotalMcapAth(ctx, degradedReasons),
   ]);
-  const historicalContext = await collectHistoricalContext(ctx, displayScore, displayBand, biggestSupplyChange);
+  const historicalContext = await collectHistoricalContext(ctx, displayScore, displayBand, biggestSupplyChange, degradedReasons);
   const gradeTransitions = await collectGradeTransitions(ctx, safetyGrades, safetyIdentity, degradedReasons);
 
   const inputData: DigestInputData = {
@@ -320,13 +375,19 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     liquidityShifts,
     crossDayTrends,
   };
-  inputData.editorialCandidates = buildEditorialCandidates(inputData);
+  inputData.causeContext = collectCauseContext(topDepegs, nowSec);
+  inputData.standingConditions = buildStandingConditions(topDepegs);
+  inputData.editorialCandidates = buildEditorialCandidates(inputData, previousInputData);
   Object.assign(inputData, buildDigestIntelligence(inputData, previousInputData));
 
   return {
     inputData,
     degradedReasons,
     recentMeta,
+    previousInputData,
+    recentLeadSignalIds,
+    lifecycleFlags,
+    recentTitles,
     stablecoinsCacheReason: null,
     llmSignals: {
       activeDepegCount,

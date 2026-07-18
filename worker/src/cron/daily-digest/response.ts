@@ -18,7 +18,7 @@ export interface ParsedDigestResponse {
   digestExtended: string;
   digestMeta: string | null;
   strippedDashCount: number;
-  strippedForbiddenCharCount: number;
+  forbiddenPhraseHits: string[];
   usedRawTextFallback: boolean;
 }
 
@@ -36,6 +36,20 @@ export interface DigestValidationProfile {
     rawText?: string | null;
   }>;
   leadRequirements?: DigestLeadRequirement[];
+  /** Per-coin depeg truth for the price/bps consistency lint. */
+  depegFacts?: DigestDepegFact[];
+  /** Previous edition's depeg facts, for movement-claim verification. */
+  prevDepegFacts?: DigestDepegFact[];
+  /** Trailing titles (up to ~30 editions) for long-window title dedupe. */
+  recentTitles?: string[];
+}
+
+export interface DigestDepegFact {
+  symbol: string;
+  currentPriceUsd?: number;
+  currentBps?: number;
+  bps?: number;
+  peakBps?: number;
 }
 
 export interface DigestModelResponseParseOptions {
@@ -45,12 +59,10 @@ export interface DigestModelResponseParseOptions {
   }) => Record<string, unknown> | null;
 }
 
-function stripForbiddenPhrases(value: string): string {
-  let result = value;
-  for (const phrase of FORBIDDEN_PHRASES) {
-    result = result.replaceAll(phrase, "");
-  }
-  return result;
+// Detection only — silently deleting phrases left capitalization and grammar
+// fragments mid-sentence. Hits become a soft quality issue instead.
+function detectForbiddenPhrases(value: string): string[] {
+  return FORBIDDEN_PHRASES.filter((phrase) => value.includes(phrase));
 }
 
 function stripForbiddenDashes(value: string): string {
@@ -222,10 +234,9 @@ export function parseDigestModelResponse(
   digestExtended = stripForbiddenDashes(digestExtended);
   digestText = stripRepeatedTitlePrefix(digestTitle, digestText);
 
-  const forbiddenBefore = [digestText, digestExtended].join("").length;
-  digestText = stripForbiddenPhrases(digestText);
-  digestExtended = stripForbiddenPhrases(digestExtended);
-  const strippedForbiddenCharCount = forbiddenBefore - [digestText, digestExtended].join("").length;
+  const forbiddenPhraseHits = [
+    ...new Set([...detectForbiddenPhrases(digestText), ...detectForbiddenPhrases(digestExtended)]),
+  ];
 
   return {
     digestTitle,
@@ -233,7 +244,7 @@ export function parseDigestModelResponse(
     digestExtended,
     digestMeta,
     strippedDashCount,
-    strippedForbiddenCharCount,
+    forbiddenPhraseHits,
     usedRawTextFallback,
   };
 }
@@ -273,6 +284,13 @@ export function validateDigestModelOutput(
 
   if (parsed.usedRawTextFallback) {
     issues.push({ code: "raw-text-fallback", severity: "hard", message: "Model response was not valid digest JSON." });
+  }
+  if (parsed.forbiddenPhraseHits.length > 0) {
+    issues.push({
+      code: "forbidden-phrase",
+      severity: "soft",
+      message: `Copy contains forbidden throat-clearing phrase(s): ${parsed.forbiddenPhraseHits.map((phrase) => phrase.trim()).join(", ")}.`,
+    });
   }
   if (!parsed.digestTitle.trim()) {
     issues.push({ code: "missing-title", severity: "hard", message: "Title is missing." });
@@ -360,8 +378,40 @@ export function validateDigestModelOutput(
     }
   }
   const titleFingerprint = normalizeTitleFingerprint(parsed.digestTitle);
-  if (titleFingerprint && recent.some((entry) => entry.title && normalizeTitleFingerprint(entry.title) === titleFingerprint)) {
+  const dedupeTitles = [
+    ...recent.map((entry) => entry.title),
+    ...(profile.recentTitles ?? []),
+  ].filter((title): title is string => Boolean(title));
+  if (titleFingerprint && dedupeTitles.some((title) => normalizeTitleFingerprint(title) === titleFingerprint)) {
     issues.push({ code: "repeated-title", severity: "soft", message: "Title repeats a recent digest title." });
+  }
+
+  // Title anti-monotony: the same coin in three consecutive titles, and
+  // day/hour-count constructions on a repeat-coverage coin, were the visible
+  // face of the July 2026 streak ("USX at Day Twenty-Six" et al).
+  const currentTitleSymbols = titleSymbols(parsed.digestTitle);
+  if (currentTitleSymbols.length > 0) {
+    const lastTwoTitles = recent.slice(0, 2).map((entry) => entry.title ?? "");
+    const streakSymbol = currentTitleSymbols.find(
+      (symbol) => lastTwoTitles.length === 2 && lastTwoTitles.every((title) => titleSymbols(title).includes(symbol)),
+    );
+    if (streakSymbol) {
+      issues.push({
+        code: "title-symbol-streak",
+        severity: "soft",
+        message: `${streakSymbol} appears in three consecutive titles; rotate the headline subject.`,
+      });
+    }
+    const repeatCoverageSymbol = currentTitleSymbols.find((symbol) =>
+      lastTwoTitles.some((title) => titleSymbols(title).includes(symbol)),
+    );
+    if (repeatCoverageSymbol && DURATION_TITLE_PATTERN.test(parsed.digestTitle)) {
+      issues.push({
+        code: "title-day-counting",
+        severity: "soft",
+        message: `Title counts elapsed time on repeat coverage of ${repeatCoverageSymbol}; elapsed time alone is not news.`,
+      });
+    }
   }
 
   const lead = getMetaString(parsedMeta, "lead");
@@ -401,9 +451,116 @@ export function validateDigestModelOutput(
     if (coins.some((coin) => recentCoins.has(coin))) {
       issues.push({ code: "repeated-primary-coin", severity: "soft", message: "Featured coin overlaps with recent digests." });
     }
+    // meta.coins is self-reported; the variety machinery validates whatever
+    // labels the model declares. Cross-check the labels against the copy so
+    // declared-but-absent coins are caught.
+    const copyUpper = `${parsed.digestTitle}\n${parsed.digestText}\n${parsed.digestExtended}`.toUpperCase();
+    const ghostCoins = coins.filter((coin) => !copyUpper.includes(coin.toUpperCase()));
+    if (ghostCoins.length > 0) {
+      issues.push({
+        code: "meta-coins-mismatch",
+        severity: "soft",
+        message: `meta.coins lists ${ghostCoins.join(", ")} but the copy never mentions ${ghostCoins.length === 1 ? "it" : "them"}.`,
+      });
+    }
+  }
+
+  const fullCopy = `${parsed.digestTitle}\n${parsed.digestText}\n${parsed.digestExtended}`;
+  if (profile.depegFacts && profile.depegFacts.length > 0) {
+    issues.push(...lintPriceBpsConsistency(fullCopy, profile.depegFacts));
+  }
+  if (profile.prevDepegFacts && profile.prevDepegFacts.length > 0) {
+    issues.push(...lintMovementClaims(fullCopy, profile.prevDepegFacts));
   }
 
   return issues;
+}
+
+const LINT_PRICE_BPS_TOLERANCE = 150;
+
+function sentenceMentionsSymbol(sentence: string, symbol: string): boolean {
+  return sentence
+    .toUpperCase()
+    .split(/[^A-Z0-9]+/)
+    .includes(symbol.toUpperCase());
+}
+
+/**
+ * Price/bps consistency lint. The July 2026 corpus shipped "5,783 bps below
+ * peg" beside "$0.997" in one sentence — the peak and the live price from two
+ * different fields, laundered into a contradiction. Any sentence that quotes a
+ * coin's dollar price AND a bps figure must have the two agree.
+ */
+function lintPriceBpsConsistency(
+  copy: string,
+  facts: readonly DigestDepegFact[],
+): DigestValidationIssue[] {
+  const issues: DigestValidationIssue[] = [];
+  const sentences = copy.split(/(?<=[.!?])\s+/);
+  for (const sentence of sentences) {
+    const priceMatch = sentence.match(/\$([\d.]+)/);
+    const bpsMatch = sentence.match(/([0-9][\d,]*) ?(?:bps|basis points)/i);
+    if (!priceMatch || !bpsMatch) continue;
+    const fact = facts.find(
+      (entry) =>
+        entry.currentPriceUsd != null && entry.currentBps != null && sentenceMentionsSymbol(sentence, entry.symbol),
+    );
+    if (!fact || fact.currentPriceUsd == null || fact.currentBps == null) continue;
+    const quotedPrice = Number(priceMatch[1]);
+    const quotedBps = Number(bpsMatch[1].replaceAll(",", ""));
+    if (!Number.isFinite(quotedPrice) || !Number.isFinite(quotedBps) || quotedPrice <= 0) continue;
+    // Recover the peg reference from the fact so non-USD pegs stay lintable.
+    const pegReference = fact.currentPriceUsd / (1 + fact.currentBps / 10_000);
+    if (!Number.isFinite(pegReference) || pegReference <= 0) continue;
+    const impliedBps = Math.abs(((quotedPrice - pegReference) / pegReference) * 10_000);
+    // Prices quoted to fewer decimals than the deviation warrants are fine;
+    // only a genuine cross-field contradiction should fire.
+    if (Math.abs(impliedBps - quotedBps) > LINT_PRICE_BPS_TOLERANCE) {
+      issues.push({
+        code: "price-bps-mismatch",
+        severity: "soft",
+        message: `${fact.symbol}: quoted price $${quotedPrice} implies ~${Math.round(impliedBps)} bps but the copy claims ${quotedBps} bps.`,
+      });
+    }
+  }
+  return issues;
+}
+
+/**
+ * Movement-claim lint: "narrowed/widened from N bps" must trace to a number
+ * that actually existed in the previous edition's depeg facts (the Jul 16
+ * edition invented "narrowed from 3,650 yesterday" when both days read 3,159).
+ */
+function lintMovementClaims(
+  copy: string,
+  prevFacts: readonly DigestDepegFact[],
+): DigestValidationIssue[] {
+  if (prevFacts.length === 0) return [];
+  const issues: DigestValidationIssue[] = [];
+  const knownPrevBps = prevFacts
+    .flatMap((fact) => [fact.currentBps, fact.bps, fact.peakBps])
+    .filter((value): value is number => typeof value === "number")
+    .map((value) => Math.abs(value));
+  for (const match of copy.matchAll(/\b(?:narrowed|widened|worsened|improved|tightened)\b[^.!?]{0,60}?\bfrom\s+([0-9][\d,]*)\s*(?:bps|basis points)/gi)) {
+    const claimedOrigin = Number(match[1].replaceAll(",", ""));
+    if (!Number.isFinite(claimedOrigin)) continue;
+    const supported = knownPrevBps.some((value) => Math.abs(value - claimedOrigin) <= LINT_PRICE_BPS_TOLERANCE);
+    if (!supported) {
+      issues.push({
+        code: "unverifiable-movement-claim",
+        severity: "soft",
+        message: `Copy claims movement "from ${claimedOrigin} bps" but no previous-edition depeg fact is near that value.`,
+      });
+    }
+  }
+  return issues;
+}
+
+const DURATION_TITLE_PATTERN =
+  /\b(?:day|hour|week|month|morning)s?\b/i;
+
+function titleSymbols(title: string): string[] {
+  return [...title.matchAll(/\b[A-Z][A-Z0-9]{1,9}\b/g)].map((match) => match[0]);
 }
 
 export function hasBlockingDigestQualityIssues(issues: readonly DigestValidationIssue[]): boolean {

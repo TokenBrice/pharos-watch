@@ -4,7 +4,18 @@
   "detailProvider": "defillama",
   "name": "dForce USD",
   "symbol": "USX",
-  "oneLiner": "USX is dForce's CDP-style stablecoin currently trading at a deep discount to USD, reflecting legacy debt on the dForce/Unitus lending protocol.",
+  "oneLiner": "USX was dForce's CDP-style stablecoin, frozen in July 2026 after legacy dForce/Unitus debt left it near $0.39 with no credible par-redemption route.",
+  "status": "frozen",
+  "frozenAt": "2026-07-18",
+  "obituary": {
+    "causeOfDeath": "counterparty-failure",
+    "deathDate": "2026-02",
+    "epitaph": "Overcollateralized on paper, unredeemable in practice",
+    "obituary": "USX was dForce's CDP-style stablecoin, launched in 2021 and peaking above $205M in mid-2022. It never fully recovered the peg after the 2022 bear market: legacy debt positions on the dForce/Unitus lending protocol left circulating USX without a credible par-redemption route, and the discount widened from cents to a chasm. The terminal slide came in early 2026 — below $0.75 in February, below $0.45 by April, and roughly $0.39 by July — with on-chain liquidity measured in tens of thousands of dollars and daily volume under $10. With the DF governance token near zero, no published remediation plan, and no redemption at par, Pharos froze USX as a collapsed archive asset.",
+    "peakMcap": 205982075,
+    "sourceUrl": "https://www.coingecko.com/en/coins/dforce-usd",
+    "sourceLabel": "CoinGecko USX market data"
+  },
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -380,28 +391,11 @@
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [{"reserveIndex": 0, "reserveName": "dForce crypto collateral and major-stablecoin reserve pool", "pct": 100, "disposition": "basket-needs-split", "rationale": "The issuer identifies broad crypto collateral and USDT, USDC, and DAI mint/redemption rails without publishing current reserve weights."}]
   },
-  "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "usx-dforce",
-    "display": {
-      "url": "https://docs.dforce.network/ecosystem/usx-stablecoin",
-      "label": "dForce USX docs"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
-    }
-  },
   "notices": [
     {
-      "type": "warning",
-      "title": "Active depeg risk",
-      "message": "USX is trading at approximately $0.41 (~59% discount to USD), reflecting legacy debt positions on the dForce/Unitus protocol. The configured reserve view is a collateral classification, not live redemption assurance."
+      "type": "danger",
+      "title": "Frozen after irrecoverable depeg",
+      "message": "USX collapsed to roughly $0.39 with negligible on-chain liquidity, reflecting legacy debt positions on the dForce/Unitus protocol with no credible par-redemption route. Pharos froze USX on 2026-07-18; data below is a read-only archive."
     }
   ],
   "launchDate": "2021-05-17"

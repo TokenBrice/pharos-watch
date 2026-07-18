@@ -18,11 +18,14 @@ export function buildRiskTape(data: DigestInputData): DigestRiskTapeItem[] {
   }
 
   const topDepeg = data.topDepegs.find((depeg) => !depeg.suppressReason) ?? data.topDepegs[0];
+  const topDepegBps = topDepeg ? topDepeg.currentBps ?? topDepeg.bps : null;
   items.push({
     id: "risk-tape:depegs",
     label: "Depegs",
-    value: topDepeg ? `${topDepeg.symbol} ${Math.abs(topDepeg.bps)}bps` : "None active",
-    tone: topDepeg ? (isCriticalDepegRisk(topDepeg) ? "critical" : "warning") : "positive",
+    value: topDepeg && topDepegBps != null ? `${topDepeg.symbol} ${Math.abs(topDepegBps)}bps` : "None active",
+    tone: topDepeg && topDepegBps != null
+      ? (isCriticalDepegRisk({ bps: topDepegBps, mcapUsd: topDepeg.mcapUsd }) ? "critical" : "warning")
+      : "positive",
     detail: topDepeg
       ? `${data.activeDepegCount} active; ${formatCurrency(topDepeg.mcapUsd, 0)} mcap on top signal.`
       : "No active peg breaks in the digest input.",

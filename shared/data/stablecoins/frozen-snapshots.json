@@ -926,5 +926,155 @@
       "chainCirculating": {},
       "chains": ["BSC", "Ethereum"]
     }
+  },
+  {
+    "id": "usx-dforce",
+    "capturedAt": "2026-07-18T09:33:35Z",
+    "peggedAssetRow": {
+      "id": "usx-dforce",
+      "name": "dForce USD",
+      "symbol": "USX",
+      "geckoId": "token-dforce-usd",
+      "pegType": "peggedUSD",
+      "pegMechanism": "crypto-backed",
+      "price": 0.378099,
+      "priceSource": "coingecko",
+      "priceConfidence": "low",
+      "priceUpdatedAt": 1784366107,
+      "priceObservedAt": 1784366107,
+      "priceObservedAtMode": "upstream",
+      "priceSyncedAt": 1784366108,
+      "consensusSources": [
+        "coingecko",
+        "moralis-address",
+        "coingecko-onchain-address",
+        "geckoterminal"
+      ],
+      "agreeSources": [
+        "coingecko"
+      ],
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 20814226.948400192
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 20814234.483977623
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 20811012.24606181
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 20814216.227136746
+      },
+      "chainCirculating": {
+        "BSC": {
+          "current": 117322.95821570791,
+          "circulatingPrevDay": 117322.95821570791,
+          "circulatingPrevWeek": 119313.23170542499,
+          "circulatingPrevMonth": 119269.61398873919
+        },
+        "OP Mainnet": {
+          "current": 7837667.18146909,
+          "circulatingPrevDay": 7837667.18146909,
+          "circulatingPrevWeek": 7833596.2213121075,
+          "circulatingPrevMonth": 7833748.298147226
+        },
+        "Ethereum": {
+          "current": 1249431.4434151798,
+          "circulatingPrevDay": 1249438.9789926112,
+          "circulatingPrevWeek": 1251331.0273886174,
+          "circulatingPrevMonth": 1251327.501147136
+        },
+        "Kava": {
+          "current": 1365.2012440657445,
+          "circulatingPrevDay": 1365.2012440657445,
+          "circulatingPrevWeek": 1365.2012440657445,
+          "circulatingPrevMonth": 1365.2012440657445
+        },
+        "Polygon": {
+          "current": 63921.20281569818,
+          "circulatingPrevDay": 63921.20281569818,
+          "circulatingPrevWeek": 64001.014765141,
+          "circulatingPrevMonth": 63882.54255612219
+        },
+        "Avalanche": {
+          "current": 3946.4479294354096,
+          "circulatingPrevDay": 3946.4479294354096,
+          "circulatingPrevWeek": 3946.4479294354096,
+          "circulatingPrevMonth": 3946.4479294354096
+        },
+        "Conflux": {
+          "current": 3629.08932238129,
+          "circulatingPrevDay": 3629.08932238129,
+          "circulatingPrevWeek": 3707.465649123389,
+          "circulatingPrevMonth": 3707.465649123389
+        },
+        "Arbitrum": {
+          "current": 10991560.305114374,
+          "circulatingPrevDay": 10991560.305114374,
+          "circulatingPrevWeek": 10994342.694401368,
+          "circulatingPrevMonth": 10997560.214808375
+        },
+        "Base": {
+          "current": 545383.1188742601,
+          "circulatingPrevDay": 545383.1188742601,
+          "circulatingPrevWeek": 539408.9416665232,
+          "circulatingPrevMonth": 539408.9416665232
+        }
+      },
+      "chains": [
+        "Arbitrum",
+        "OP Mainnet",
+        "Ethereum",
+        "Base",
+        "BSC",
+        "Polygon",
+        "Avalanche",
+        "Conflux",
+        "Kava"
+      ],
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x0a5e677a6a24b2f1a2bf4f3bffc443231d2fdec8",
+          "decimals": 18
+        },
+        {
+          "chain": "bsc",
+          "address": "0xb5102cee1528ce2c760893034a4603663495fd72",
+          "decimals": 18
+        },
+        {
+          "chain": "arbitrum",
+          "address": "0x641441c631e2f909700d2f41fd87f0aa6a6b4edb",
+          "decimals": 18
+        },
+        {
+          "chain": "optimism",
+          "address": "0xbfd291da8a403daaf7e5e9dc1ec0aceacd4848b9",
+          "decimals": 18
+        },
+        {
+          "chain": "base",
+          "address": "0xc142171b138db17a1b7cb999c44526094a4dae05",
+          "decimals": 18
+        },
+        {
+          "chain": "polygon",
+          "address": "0xcf66eb3d546f0415b368d98a95eaf56ded7aa752",
+          "decimals": 18
+        },
+        {
+          "chain": "kava",
+          "address": "0xdb0e1e86b01c4ad25241b1843e407efc4d615248",
+          "decimals": 18
+        },
+        {
+          "chain": "avalanche",
+          "address": "0x853ea32391aaa14c112c645fd20ba389ab25c5e0",
+          "decimals": 18
+        }
+      ]
+    }
   }
 ]

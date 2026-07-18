@@ -85,6 +85,14 @@ export async function accumulateAnthropicStream(response: Response): Promise<str
 
   if (streamError) throw streamError;
 
+  // A max_tokens stop means the output was cut mid-stream. Truncated JSON
+  // must fail here rather than flow into the parser's raw-text fallback.
+  if (stopReason === "max_tokens") {
+    throw new Error(
+      `Anthropic stream: response truncated at max_tokens (outputTokens=${outputTokens ?? "null"}, accumulatedChars=${accumulated.length})`,
+    );
+  }
+
   if (!accumulated) {
     const detail = [
       `stopReason=${stopReason ?? "null"}`,

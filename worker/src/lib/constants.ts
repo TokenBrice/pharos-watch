@@ -266,4 +266,4 @@ export const ANTHROPIC_TIMEOUT_MS = 12 * 60_000;
  * Single source of truth shared by the implementation and its tests so a model
  * upgrade is a one-line change. A deliberate product decision, not an env var.
  */
-export const DIGEST_MODEL = "claude-opus-4-7";
+export const DIGEST_MODEL = "claude-opus-4-8";

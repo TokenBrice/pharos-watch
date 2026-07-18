@@ -127,6 +127,7 @@ type DigestRow = {
   generated_at: number;
   digest_extended: string | null;
   input_data: string | null;
+  digest_meta?: string | null;
 };
 
 type ApiKeyFixtureRow = ApiKeyRow & Record<string, unknown>;

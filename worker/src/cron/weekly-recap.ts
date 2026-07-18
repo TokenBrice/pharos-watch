@@ -13,12 +13,13 @@ import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import {
   didDigestChannelDeliver,
   insertDigestRecord,
+  markDigestMetaBlocked,
   requestDigestCopy,
   runDigestChannelDelivery,
 } from "./digest/platform";
 import { reportDigestProgress } from "./digest/progress";
 import { formatQualityMetadata } from "./digest/quality-metadata";
-import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
+import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
 import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";
 import { getMetaString } from "./daily-digest/digest-intelligence-utils";
 import { buildWeeklyInputData } from "./weekly-recap/input-data";
@@ -328,7 +329,7 @@ export async function generateWeeklyRecap(
                   ORDER BY generated_at DESC
                 ) AS row_rank
          FROM daily_digest
-         WHERE generated_at >= ? AND (${NON_WEEKLY_DIGEST_SQL_FILTER})
+         WHERE generated_at >= ? AND (${NON_WEEKLY_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})
        )
        SELECT generated_at, digest_title, digest_text, digest_extended, input_data
        FROM latest_daily
@@ -504,7 +505,10 @@ export async function generateWeeklyRecap(
     digestTitle: digestCopy.digestTitle || null,
     inputData: weeklyData,
     digestExtended: digestCopy.digestExtended || null,
-    digestMeta: initialDigestMeta,
+    // Hard quality failures are stored for inspection but never published.
+    digestMeta: digestCopy.hasBlockingQualityIssues
+      ? markDigestMetaBlocked(initialDigestMeta)
+      : initialDigestMeta,
     signal,
   });
   throwIfAborted(signal);

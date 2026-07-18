@@ -480,9 +480,9 @@ describe("handleTelegramWebhook", () => {
 
   it("preserves the pending initiator on chained ambiguous ticker selections", async () => {
     const firstAmbiguous = resolveTicker("USDF");
-    const nextAmbiguous = resolveTicker("USX");
+    const nextAmbiguous = resolveTicker("USDA");
     if (firstAmbiguous.status !== "ambiguous" || nextAmbiguous.status !== "ambiguous") {
-      throw new Error("Expected USDF and USX to be ambiguous for chained disambiguation test");
+      throw new Error("Expected USDF and USDA to be ambiguous for chained disambiguation test");
     }
 
     const db = fixtureMockD1([
@@ -496,7 +496,7 @@ describe("handleTelegramWebhook", () => {
           resolved_ids: JSON.stringify([]),
           ambiguous_ticker: "USDF",
           candidates: JSON.stringify(firstAmbiguous.matches),
-          remaining_tickers: JSON.stringify(["USX"]),
+          remaining_tickers: JSON.stringify(["USDA"]),
           expires_at: Math.floor(Date.now() / 1000) + 60,
           initiator_user_id: "999",
         },

@@ -60,7 +60,7 @@ export interface DigestDataQuality {
 export type DigestRiskTapeTone = "critical" | "warning" | "neutral" | "positive";
 
 export type DigestNextTriggerMetric =
-  "depeg-bps" | "supply-1d-usd" | "supply-7d-usd" | "bank-run-gauge" | "dews-band" | "psi-score";
+  "depeg-bps" | "supply-1d-usd" | "supply-7d-usd" | "bank-run-gauge" | "dews-band" | "psi-score" | "yield-apy" | "liquidity-score";
 
 export type DigestNextTriggerComparator = "abs-gte" | "gte" | "lte" | "band-gte";
 
@@ -76,6 +76,10 @@ export interface DigestEditorialAudit {
   suppressedCandidateIds: string[];
   momentumCandidateIds: string[];
   requiredLeadCandidateIds?: string[];
+  /** "hard:/soft:" prefixed reasons for today's lead requirements. */
+  leadRequirementReasons?: string[];
+  /** Symbols demoted from hard lead to mention-only by the lead quota. */
+  demotedLeadMentionTokens?: string[];
   leadCandidateId?: string | null;
   leadCandidateTitle?: string | null;
   usedCandidateIds?: string[];
@@ -102,10 +106,29 @@ export interface DigestInputData {
   calmNarrativeFrame?: DigestCalmNarrativeFrame;
   editorialAudit?: DigestEditorialAudit;
   degradedSources?: string[];
+  /** Curated cause annotations for coins in the depeg set (why it broke). */
+  causeContext?: {
+    stablecoinId: string;
+    symbol: string;
+    kind: string;
+    label: string;
+    date: string;
+    href?: string;
+  }[];
+  /** Chronic ledger: ongoing depegs the reader has already seen as headlines. */
+  standingConditions?: {
+    stablecoinId?: string;
+    symbol: string;
+    ageDays: number;
+    currentBps?: number;
+    peakBps?: number;
+    mcapUsd?: number;
+  }[];
   activeDepegCount: number;
   topDepegs: {
     stablecoinId?: string;
     symbol: string;
+    /** Signed peak deviation of the open event (kept for archived-row compatibility). */
     bps: number;
     direction?: DepegDirection;
     mcapUsd: number;
@@ -115,6 +138,10 @@ export interface DigestInputData {
     peakBps?: number;
     peakPriceUsd?: number;
     currentPriceUsd?: number;
+    /** Signed deviation computed from the live price vs the event's peg reference. */
+    currentBps?: number;
+    /** Which deviation severity decisions were made on: live price ("current") or the stored peak ("peak-fallback"). */
+    severityBasis?: "current" | "peak-fallback";
     suppressReason?: string;
   }[];
   biggestSupplyChange: {
@@ -325,22 +352,35 @@ export type DigestChangeSummary = z.infer<typeof DigestChangeSummarySchema>;
 export const DigestNextTriggerSchema = z.object({
   id: z.string(),
   label: z.string(),
-  metric: z.enum(["depeg-bps", "supply-1d-usd", "supply-7d-usd", "bank-run-gauge", "dews-band", "psi-score"]),
+  metric: z.enum(["depeg-bps", "supply-1d-usd", "supply-7d-usd", "bank-run-gauge", "dews-band", "psi-score", "yield-apy", "liquidity-score"]),
   comparator: z.enum(["abs-gte", "gte", "lte", "band-gte"]),
   thresholdLabel: z.string(),
   thresholdValue: z.number().optional(),
   symbol: z.string().optional(),
+  stablecoinId: z.string().optional(),
   candidateId: z.string().optional(),
+  /** Consecutive prior editions that carried this trigger unchanged (TTL input). */
+  repeatedCount: z.number().optional(),
   rationale: z.string(),
   detail: z.string(),
 });
 export type DigestNextTrigger = z.infer<typeof DigestNextTriggerSchema>;
 
+export const DigestStandingConditionSchema = z.object({
+  stablecoinId: z.string().optional(),
+  symbol: z.string(),
+  ageDays: z.number(),
+  currentBps: z.number().optional(),
+  peakBps: z.number().optional(),
+  mcapUsd: z.number().optional(),
+});
+export type DigestStandingCondition = z.infer<typeof DigestStandingConditionSchema>;
+
 export const DigestForwardLookOutcomeSchema = z.object({
   id: z.string(),
   triggerId: z.string(),
   label: z.string(),
-  status: z.enum(["hit", "missed", "pending"]),
+  status: z.enum(["hit", "missed", "pending", "expired"]),
   detail: z.string(),
   sourceDate: z.string().nullable().optional(),
 });
@@ -369,6 +409,7 @@ export const DailyDigestResponseSchema = z
     nextTriggers: z.array(DigestNextTriggerSchema).nullable().optional(),
     forwardLookOutcomes: z.array(DigestForwardLookOutcomeSchema).nullable().optional(),
     riskTape: z.array(DigestRiskTapeItemSchema).nullable().optional(),
+    standingConditions: z.array(DigestStandingConditionSchema).nullable().optional(),
   })
   .transform((value) => ({
     digest: value.digest,
@@ -381,6 +422,7 @@ export const DailyDigestResponseSchema = z
     nextTriggers: value.nextTriggers ?? null,
     forwardLookOutcomes: value.forwardLookOutcomes ?? null,
     riskTape: value.riskTape ?? null,
+    standingConditions: value.standingConditions ?? null,
   }));
 export type DailyDigestResponse = z.infer<typeof DailyDigestResponseSchema>;
 
@@ -431,10 +473,13 @@ const DigestSnapshotInputDataSchema = z
             direction: z.string().optional(),
             mcapUsd: z.number(),
             startedAt: z.number().optional(),
+            currentBps: z.number().optional(),
+            severityBasis: z.enum(["current", "peak-fallback"]).optional(),
           })
           .passthrough(),
       )
       .optional(),
+    standingConditions: z.array(DigestStandingConditionSchema).optional(),
     stabilityIndex: z
       .object({
         score: z.number(),

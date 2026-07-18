@@ -5,7 +5,8 @@ import type { TelegramCreds } from "../lib/telegram";
 import { SECONDS } from "../lib/time-constants";
 import { formatIsoDate } from "@shared/lib/format";
 import { CIRCUIT_SOURCE } from "../lib/constants";
-import { deleteCache } from "../lib/db-cache";
+import { deleteCache, setCache } from "../lib/db-cache";
+import { DEPEG_LIFECYCLE_FLAGS_CACHE_KEY } from "../lib/depeg-lifecycle";
 import { runWithOverloadRetry } from "../lib/cron-lease";
 import { prepareTelegramDigestAppendices, type PreparedTelegramDigestAppendices } from "../lib/telegram-digest-appendices";
 import {
@@ -13,8 +14,9 @@ import {
   enqueueTelegramDigestEdition,
 } from "../lib/telegram-digest-outbox";
 import { buildDailyDigestInput } from "./daily-digest/input";
+import { formatStandingConditionsLine } from "./daily-digest/cause-context";
 import { buildUserPrompt, SYSTEM_PROMPT } from "./daily-digest/prompt";
-import { insertDigestRecord, requestDigestCopy, runDigestChannelDelivery } from "./digest/platform";
+import { insertDigestRecord, markDigestMetaBlocked, requestDigestCopy, runDigestChannelDelivery } from "./digest/platform";
 import { reportDigestProgress } from "./digest/progress";
 import { formatQualityMetadata } from "./digest/quality-metadata";
 import { logDailyDigestLlmCall } from "./daily-digest/runtime-helpers";
@@ -125,7 +127,7 @@ export async function generateDailyDigest(
     itemsTotal: 1,
   });
   const digestInput = await buildDailyDigestInput(db);
-  const { inputData, degradedReasons, recentMeta, llmSignals, stablecoinsCacheReason } = digestInput;
+  const { inputData, degradedReasons, recentMeta, previousInputData, recentLeadSignalIds, lifecycleFlags, recentTitles, llmSignals, stablecoinsCacheReason } = digestInput;
   if (stablecoinsCacheReason) {
     await reportDigestProgress(reportProgress, {
       stage: "input-unavailable",
@@ -147,8 +149,11 @@ export async function generateDailyDigest(
       }),
     };
   }
-  const userPromptContent = buildUserPrompt(inputData, recentMeta);
-  const leadRequirements = buildCriticalDailyLeadRequirements(inputData);
+  const leadRequirements = buildCriticalDailyLeadRequirements(inputData, {
+    previousInputData,
+    recentLeadSignalIds,
+  });
+  const userPromptContent = buildUserPrompt(inputData, recentMeta, { leadRequirements, recentLeadSignalIds });
   await reportDigestProgress(reportProgress, {
     stage: "input-collected",
     message: "Collected daily digest context",
@@ -195,7 +200,7 @@ export async function generateDailyDigest(
     anthropicApiKey,
     systemPrompt: SYSTEM_PROMPT,
     userPrompt: userPromptContent,
-    // Opus 4.7 xhigh needs this floor; see digest/platform.ts for the effort rationale.
+    // Opus xhigh needs this floor; see digest/platform.ts for the effort rationale.
     maxTokens: 64000,
     signal,
     logPrefix: "daily-digest",
@@ -207,6 +212,9 @@ export async function generateDailyDigest(
         rawText: entry.rawText,
       })),
       leadRequirements,
+      depegFacts: llmSignals.topDepegs,
+      prevDepegFacts: previousInputData?.topDepegs ?? [],
+      recentTitles,
     },
   });
   if (digestCopy.kind === "circuit-open") {
@@ -255,7 +263,11 @@ export async function generateDailyDigest(
     digestTitle: digestCopy.digestTitle || null,
     inputData: storedInputData,
     digestExtended: digestCopy.digestExtended || null,
-    digestMeta: digestCopy.digestMeta,
+    // Hard quality failures are stored for inspection but never published:
+    // the blocked flag keeps the row out of public reads and numbering.
+    digestMeta: digestCopy.hasBlockingQualityIssues
+      ? markDigestMetaBlocked(digestCopy.digestMeta)
+      : digestCopy.digestMeta,
     signal,
   });
   throwIfAborted(signal);
@@ -343,7 +355,12 @@ export async function generateDailyDigest(
         digestGeneratedAt: now,
         targetChatId: telegramCreds.chatId,
         title: digestCopy.digestTitle,
-        extended: digestCopy.digestExtended,
+        // The chronic ledger keeps demoted ongoing stories visible as one
+        // deterministic line instead of another narrated day-count headline.
+        extended: (() => {
+          const standingLine = formatStandingConditionsLine(inputData.standingConditions);
+          return standingLine ? `${digestCopy.digestExtended}\n\n${standingLine}` : digestCopy.digestExtended;
+        })(),
         date: digestDate,
         editionNumber,
         appendixHtml: telegramAppendices?.appendixHtml ?? null,
@@ -393,6 +410,19 @@ export async function generateDailyDigest(
   if (degradedReasons.includes("telegram-outbox-write")) {
     throw new Error("Telegram daily digest outbox write failed");
   }
+  // Persist owner-review lifecycle flags (stalled collapses / chronic shallow
+  // pegs needing a manual freeze-or-close ruling). Best-effort: a cache write
+  // failure must not degrade an otherwise successful digest run.
+  try {
+    await setCache(
+      db,
+      DEPEG_LIFECYCLE_FLAGS_CACHE_KEY,
+      JSON.stringify({ updatedAt: now, flags: lifecycleFlags }),
+      signal,
+    );
+  } catch (err) {
+    console.error("[daily-digest] Failed to persist depeg lifecycle flags:", err);
+  }
   const qualityMetadata = formatQualityMetadata(digestCopy.qualityIssues);
   await reportDigestProgress(reportProgress, {
     stage: "complete",
@@ -407,15 +437,19 @@ export async function generateDailyDigest(
         extendedChars: digestCopy.digestExtended.length,
         degradedReasons: degradedReasons.length,
         qualityIssues: digestCopy.qualityIssues.length,
+        lifecycleFlags: lifecycleFlags.length,
       },
       twitterStatus: tweetStatus,
       telegramStatus,
     },
   });
   console.log(`[daily-digest] Generated and stored digest: "${digestCopy.digestTitle}" (${digestCopy.digestText.length} chars + ${digestCopy.digestExtended.length} extended), tweet: ${tweetStatus}, telegram: ${telegramStatus}${qualityMetadata}`);
+  const lifecycleMetadata = lifecycleFlags.length > 0
+    ? `, lifecycle-review: ${lifecycleFlags.map((flag) => `${flag.symbol}:${flag.kind}`).join("|")}`
+    : "";
   return {
     itemCount: 1,
     ...(degradedReasons.length > 0 || digestCopy.hasBlockingQualityIssues ? { status: "degraded" as const } : {}),
-    metadata: `${digestCopy.digestText.length} chars, tweet: ${tweetStatus}, telegram: ${telegramStatus}${degradedReasons.length > 0 ? `, degraded: ${degradedReasons.join("|")}` : ""}${qualityMetadata}`,
+    metadata: `${digestCopy.digestText.length} chars, tweet: ${tweetStatus}, telegram: ${telegramStatus}${degradedReasons.length > 0 ? `, degraded: ${degradedReasons.join("|")}` : ""}${qualityMetadata}${lifecycleMetadata}`,
   };
 }

@@ -3,6 +3,7 @@ import { CACHE_PROFILES } from "../lib/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { DigestForwardLookOutcome, DigestNextTrigger, DigestRiskSignal, DigestRiskTapeItem } from "@shared/types/digest";
 import { decodeJsonString } from "../lib/cache-json";
+import { NON_BLOCKED_DIGEST_SQL_FILTER } from "../cron/daily-digest/shared";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { selectDigestRiskSignal } from "./digest-risk-summary";
 import { selectDigestIntelligence } from "./digest-intelligence-summary";
@@ -54,7 +55,7 @@ function decodeDigestInputData(value: string | null, generatedAt: number) {
 }
 
 function decodeDigestMeta(value: string | null, generatedAt: number) {
-  const decoded = decodeJsonString<{ type?: string }, "missing" | "json-parse-failed" | "invalid-shape">(
+  const decoded = decodeJsonString<{ type?: string; internal?: unknown }, "missing" | "json-parse-failed" | "invalid-shape">(
     value,
     {
       mode: "best-effort",
@@ -65,7 +66,7 @@ function decodeDigestMeta(value: string | null, generatedAt: number) {
         if (typeof parsed !== "object" || parsed === null) {
           return { ok: false, reason: "invalid-shape" };
         }
-        return { ok: true, payload: parsed as { type?: string } };
+        return { ok: true, payload: parsed as { type?: string; internal?: unknown } };
       },
     },
   );
@@ -84,7 +85,9 @@ function decodeDigestMeta(value: string | null, generatedAt: number) {
 
 export const handleDigestArchive = withErrorHandler("digest-archive", async (db: D1Database): Promise<Response> => {
   const rows = await db.prepare(
-    "SELECT digest_text, digest_title, generated_at, digest_extended, input_data, digest_meta FROM daily_digest ORDER BY generated_at DESC LIMIT 365"
+    // Blocked rows never published and get no edition number, so a SQL filter
+    // is safe here; internal sentinel rows are numbered first and hidden in JS.
+    `SELECT digest_text, digest_title, generated_at, digest_extended, input_data, digest_meta FROM daily_digest WHERE ${NON_BLOCKED_DIGEST_SQL_FILTER} ORDER BY generated_at DESC LIMIT 365`
   ).all<{ digest_text: string; digest_title: string | null; generated_at: number; digest_extended: string | null; input_data: string | null; digest_meta: string | null }>();
 
   const digests = (rows.results ?? []).map((r) => {
@@ -111,7 +114,9 @@ export const handleDigestArchive = withErrorHandler("digest-archive", async (db:
     if (meta?.type === "weekly") {
       digestType = "weekly";
     }
+    const isInternal = meta?.internal === true || meta?.internal === 1 || meta?.internal === "true";
     return {
+      isInternal,
       digestText: r.digest_text,
       digestTitle: r.digest_title ?? null,
       digestExtended: r.digest_extended ?? null,
@@ -128,7 +133,9 @@ export const handleDigestArchive = withErrorHandler("digest-archive", async (db:
     };
   });
 
-  // Assign sequential edition numbers per type (oldest first)
+  // Assign sequential edition numbers per type (oldest first). Internal
+  // sentinel rows are numbered too — hiding them below must not shift the
+  // edition numbers already published on socials and detail pages.
   let dailyCount = 0;
   let weeklyCount = 0;
   const chronological = [...digests].sort((a, b) => a.generatedAt - b.generatedAt);
@@ -140,9 +147,13 @@ export const handleDigestArchive = withErrorHandler("digest-archive", async (db:
     }
   }
 
-  const latestTs = digests.length > 0 ? digests[0].generatedAt : Math.floor(Date.now() / 1000);
+  const publicDigests = digests
+    .filter((d) => !d.isInternal)
+    .map(({ isInternal: _isInternal, ...rest }) => rest);
 
-  return jsonFreshResponse({ digests }, {
+  const latestTs = publicDigests.length > 0 ? publicDigests[0].generatedAt : Math.floor(Date.now() / 1000);
+
+  return jsonFreshResponse({ digests: publicDigests }, {
     cacheControl: CACHE_PROFILES.standard,
     updatedAt: latestTs,
     maxAgeSec: DAY_SECONDS,

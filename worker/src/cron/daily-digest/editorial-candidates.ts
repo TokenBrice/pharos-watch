@@ -55,25 +55,57 @@ function sign(value: number): string {
   return value >= 0 ? "+" : "";
 }
 
-function addActiveDepegCandidates(candidates: DigestEditorialCandidate[], data: DigestInputData): void {
+function depegSeverityBps(depeg: DigestInputData["topDepegs"][number]): number {
+  return depeg.currentBps ?? depeg.bps;
+}
+
+function activeDepegNovelty(
+  depeg: DigestInputData["topDepegs"][number],
+  previousData: DigestInputData | null,
+): DigestEditorialCandidate["novelty"] {
+  if (depeg.suppressReason) return "chronic";
+  if (depeg.ageHours != null && depeg.ageHours <= 24) return "new";
+  const previous = (previousData?.topDepegs ?? []).find((entry) =>
+    depeg.stablecoinId != null && entry.stablecoinId != null
+      ? entry.stablecoinId === depeg.stablecoinId
+      : entry.symbol.toUpperCase() === depeg.symbol.toUpperCase(),
+  );
+  // Without a prior observation to diff against, a multi-day depeg is a
+  // standing condition, not a developing story.
+  if (!previous) return "chronic";
+  const delta = Math.abs(depegSeverityBps(depeg)) - Math.abs(depegSeverityBps(previous));
+  if (delta >= 100) return "worsening";
+  if (delta <= -100) return "improving";
+  return depeg.ageHours != null && depeg.ageHours >= 72 ? "chronic" : "recurring";
+}
+
+function addActiveDepegCandidates(
+  candidates: DigestEditorialCandidate[],
+  data: DigestInputData,
+  previousData: DigestInputData | null,
+): void {
   for (const depeg of data.topDepegs) {
-    const marketImpactScore = depeg.impactScore ?? getDepegMarketImpactScore(depeg.bps, depeg.mcapUsd);
-    const impactScore = getDepegEditorialImpactScore(depeg.bps, depeg.mcapUsd);
-    const isCritical = isCriticalDepegRisk(depeg);
+    const severityBps = depegSeverityBps(depeg);
+    const marketImpactScore = depeg.impactScore ?? getDepegMarketImpactScore(severityBps, depeg.mcapUsd);
+    const impactScore = getDepegEditorialImpactScore(severityBps, depeg.mcapUsd);
+    const isCritical = isCriticalDepegRisk({ bps: severityBps, mcapUsd: depeg.mcapUsd });
     const age = depeg.ageHours != null ? `${depeg.ageHours}h old` : "age unknown";
+    const severityDirection = severityBps >= 0 ? "above" : "below";
     addCandidate(candidates, {
       id: candidateId("depeg", [depeg.stablecoinId ?? depeg.symbol, "active"]),
       kind: "depeg",
-      title: `${depeg.symbol} active ${Math.abs(depeg.bps)} bps ${depeg.direction ?? (depeg.bps >= 0 ? "above" : "below")} peg`,
+      title: `${depeg.symbol} active ${Math.abs(severityBps)} bps ${severityDirection} peg`,
       symbols: [depeg.symbol],
       impactScore,
-      novelty: depeg.suppressReason ? "chronic" : "worsening",
+      novelty: activeDepegNovelty(depeg, previousData),
       confidence: "high",
       artifactRisk: artifactRiskForSuppression(depeg.suppressReason, depeg.mcapUsd < 50_000_000 ? "medium" : "low"),
       headlineFacts: [
-        `${Math.abs(depeg.bps)} bps ${depeg.direction ?? (depeg.bps >= 0 ? "above" : "below")} peg`,
+        `${Math.abs(severityBps)} bps ${severityDirection} peg${depeg.severityBasis === "peak-fallback" ? " (stored peak; live price unavailable)" : ""}`,
         depeg.currentPriceUsd != null ? `current price $${depeg.currentPriceUsd.toFixed(3)}` : "",
-        depeg.peakBps != null && depeg.peakBps !== depeg.bps ? `peak was ${Math.abs(depeg.peakBps)} bps` : "",
+        depeg.peakBps != null && Math.abs(depeg.peakBps) !== Math.abs(severityBps)
+          ? `peak was ${Math.abs(depeg.peakBps)} bps`
+          : "",
         `${formatCurrency(depeg.mcapUsd)} market cap`,
         `${age}`,
         `market impact score ${marketImpactScore}`,
@@ -366,10 +398,13 @@ export function selectMomentumCandidates(candidates: DigestEditorialCandidate[])
     .slice(0, 4);
 }
 
-export function buildEditorialCandidates(data: DigestInputData): DigestEditorialCandidate[] {
+export function buildEditorialCandidates(
+  data: DigestInputData,
+  previousData: DigestInputData | null = null,
+): DigestEditorialCandidate[] {
   const candidates: DigestEditorialCandidate[] = [];
 
-  addActiveDepegCandidates(candidates, data);
+  addActiveDepegCandidates(candidates, data, previousData);
   addResolvedDepegCandidates(candidates, data);
   addSupplyCandidates(candidates, data);
   addMintBurnCandidates(candidates, data);

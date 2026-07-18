@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 344 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 343 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -16,7 +16,7 @@
 - [FreezeWatch](https://pharos.watch/freezewatch/): Issuer freeze events and exposure.
 - [Dependency Map](https://pharos.watch/dependency-map/): Inter-stablecoin dependency graph.
 - [Coverage](https://pharos.watch/coverage/): What Pharos tracks and what it does not.
-- [Cemetery](https://pharos.watch/cemetery/): 105 defunct stablecoins and their causes of death.
+- [Cemetery](https://pharos.watch/cemetery/): 106 defunct stablecoins and their causes of death.
 - [Stablecoin Cemetery dataset (JSON)](https://pharos.watch/datasets/stablecoin-cemetery.json): Citation-ready dataset of failed, discontinued, and abandoned stablecoins.
 - [Stablecoin Cemetery dataset (CSV)](https://pharos.watch/datasets/stablecoin-cemetery.csv): Tabular export of the Stablecoin Cemetery dataset.
 - [Upcoming](https://pharos.watch/upcoming/): Pre-launch stablecoins Pharos is tracking.
@@ -131,26 +131,26 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 
 ## Digest
 
-- [SUSD Trades Like A 28-Cent Dollar](https://pharos.watch/digest/2026-06-15-weekly/): SUSD touched 7,233 bps below par on $14.55M float while pmUSD held a 3,400 bps marathon for seven straight sessions. USDC bled $819M, USDT shed $2.44B across two days, PSI stayed BEDROCK. The week's stablecoins were neither.
-- [USDC Bleeds $819M In A Week](https://pharos.watch/digest/2026-06-15/): $819M out of Circle in seven days, $74.86B left on the books, 6% below April's ATH. Yield pages flag USDG, JTRSY, PAXG without corroboration. PMUSD still 3,464 bps underwater.
-- [SUSD Claws Back 710 Basis Points](https://pharos.watch/digest/2026-06-14/): SUSD trimmed 710 bps off its 65% discount to par; calling that a recovery requires generous accounting on $18M of float, while USDS, USDY, PYUSD and XAUT all lost DEX depth in one session.
-- [YLDS Loses 82% Of DEX Depth](https://pharos.watch/digest/2026-06-13/): $554M of YLDS float now sits on $7M of DEX depth, an 82% overnight haircut; four other names thinned in sympathy while PSI still prints BEDROCK.
-- [PMUSD Gives Back Yesterday's Gains](https://pharos.watch/digest/2026-06-12/): PMUSD widened back to 3227 bps overnight, erasing yesterday's narrowing. DEWS holds 6 coins ALERT on $2.69B mcap; XAUT decides tomorrow whether the metals stress is signal or noise.
-- [PMUSD Narrows, Still Underwater](https://pharos.watch/digest/2026-06-11/): PMUSD tightened 250 bps to 2998 off peg after 967 hours below par; RLUSD lost ten liquidity points while TVL ticked higher, and PSI at 89.4 still missed yesterday's break below 88.
-- [PMUSD Drifts, Yield Pages Stir](https://pharos.watch/digest/2026-06-10/): PMUSD narrows to 3248 bps, but the real noise is USDG at 5.13% APY with TVL leaving, JTRSY at 12.53% versus a 4.13% baseline, and PAXG collapsing from 12.92% to 1.18% inside a week.
-- [PMUSD Stalls Near 3,500](https://pharos.watch/digest/2026-06-09/): PMUSD held 3470 bps below peg as RLUSD and USDTB liquidity scores jumped to 70 while USD0 and bUSD0 lost double digits. Next trigger: 4000 bps off peg.
-- [pmUSD Climbs as USDT Drains](https://pharos.watch/digest/2026-06-08-weekly/): pmUSD widened from 2,872 to 3,497 bps across the week on a $65M float while USDT shed $10.7B in net outflows. PSI dropped 3.8 points but BEDROCK held for the 76th day.
-- [pmUSD Carves Toward 3,500](https://pharos.watch/digest/2026-06-08/): pmUSD widened to 3,497 bps off peg while U lost 99% of its DEX TVL on a $1B float. Two different ways to lose exit capacity in one snapshot.
-- [PMUSD Pushes Past 3,200](https://pharos.watch/digest/2026-06-07/): PMUSD widened another 366 bps to 3238 off peg on $67.59M mcap; the next deterministic trigger sits at 3725. PSI carved its lowest STEADY reading in 61 days.
-- [pmUSD Slides Toward Three Thousand](https://pharos.watch/digest/2026-06-06/): pmUSD widened to 2872 bps off peg overnight on $71.5M mcap, joining 11 other active depegs while DEWS holds 15 names at ALERT or worse on $4.54B of affected market cap.
-- [RLUSD Sheds Twelve Points](https://pharos.watch/digest/2026-06-05/): Liquidity score 70 to 58 on $1.70B float while TVL rose. syrupUSDC and sUSDai improved; CUSD jumped WATCH to ALERT on erosion=99. PSI's 73-day BEDROCK streak holds at 90.8, but bent from 94.5 in seven days.
-- [Gold Twins, Fifteenfold Gap](https://pharos.watch/digest/2026-06-04/): PAXG pays 12.92% APY, XAUT pays 0.87%, both backed by the same metal. USDG joins the anomaly list at 12.52% versus its 6.05% 30-day. PSI at 90.1, the lowest in 58 days.
-- [apxUSD Earns Its ALERT](https://pharos.watch/digest/2026-06-03/): apxUSD: 147 bps off peg, DEWS jumped to ALERT, 26.51% APY against a 19.57% baseline, TVL leaving. Three stress vectors on $491M of float. 175 bps is the next line.
-- [Gauge Inverts, PSI Yawns](https://pharos.watch/digest/2026-06-02/): Bank Run Gauge fell from +4.3 to -49.7 overnight as Ethereum lost $522.72M net; PSI held BEDROCK for the 70th day. One of those two readings is wrong about tomorrow.
-- [DAI Flickers as USDT Sheds Billions](https://pharos.watch/digest/2026-06-01-weekly/): DAI cycled back into WATCH at $4.60B mcap while USDT printed -$3.87B across three sessions; spUSDT and WTGXX absorbed the rotation. PSI midpoint slid to 95.1, BEDROCK held for a 65th day.
-- [Four Pools, One Direction](https://pharos.watch/digest/2026-06-01/): USDS dropped 8 liquidity points on $8.82B mcap, PYUSD shed 8 on $3.04B, RLUSD fell 10 on $1.70B. The model is reading second-tier pool stress across $14.9B, not capital flight. Next trigger: USDA crossing 200 bps off peg.
-- [SyrupUSDC Gains Depth Mid-Burn](https://pharos.watch/digest/2026-05-31/): syrupUSDC's liquidity score climbed 46 to 60 while $8.26M burned and mint pressure scored -100; FDUSD inverted, score dropped 42 to 24 on fresh TVL.
-- [U's Pool Carries A Billion](https://pharos.watch/digest/2026-05-30/): U's liquidity score fell from 55 to 33 on a $21K TVL move, with $1.07B market cap sitting above the pool. Watch USDA at 225 bps and PSI at 93.
+- [Small Peg, Larger Weight](https://pharos.watch/digest/2026-07-18/): USX has held $0.378 for 645 hours on $20.81M mcap; apxUSD carries fourteen times the float at similar deviation. The peg tape is patient, not calm.
+- [USX at Day Twenty-Six](https://pharos.watch/digest/2026-07-17/): 621 hours below peg, $20.81M mcap, 13 other active depegs stacked behind it while PSI still reads 95.1 BEDROCK. Next trigger: APXUSD at 3650 bps.
+- [USX Nears Six Hundred Hours](https://pharos.watch/digest/2026-07-16/): USX enters hour 597 at $0.42 while USD1 quotes 25.57% APY against a 5.76% monthly average. PSI holds 95.3 through eleven active depegs the aggregate refuses to notice.
+- [USX at Thirty-Nine Cents](https://pharos.watch/digest/2026-07-15/): USX prints $0.391 on day twenty-four, 5,783 bps under peg with $20.81M stranded. PSI still reads 93.7 BEDROCK. APXUSD at 3,159 bps on $305.90M is where tomorrow's story lives.
+- [USX's Twenty-Third Day](https://pharos.watch/digest/2026-07-14/): USX at 549 hours and $0.392 is no longer alone; apxUSD, USDA, and pmUSD share the sub-peg roster on $541M of impaired mcap against a $333.92B market.
+- [Four Names Share The Critical Shelf](https://pharos.watch/digest/2026-07-13-weekly/): pmUSD held the leaderboard at 5,568 bps while USX, apxUSD, and USDA joined critical severity by 07-13. PSI climbed 91 to 93.4 in BEDROCK; mcap slipped 0.26% to $336.66B.
+- [USX Isn't Alone Anymore](https://pharos.watch/digest/2026-07-13/): USX opens at $0.391, 5,783 bps down and 525 hours in. pmUSD, apxUSD, and USDA now sit at critical severity alongside it. Four names, one list.
+- [USX Enters Week Four](https://pharos.watch/digest/2026-07-12/): 501 hours off peg, 5,783 bps below par on $20.8M. USDT and USDC both flagged for yield anomalies on $257B combined float. PSI holds 92.2 for a nineteenth BEDROCK day.
+- [USX Turns Twenty Days Old](https://pharos.watch/digest/2026-07-11/): USX enters day twenty at 5,783 bps below peg while USDf loses 11 liquidity points on $1.42B of float. Three exit-capacity warnings landed on the same tape.
+- [USX Passes 450 Hours Broken](https://pharos.watch/digest/2026-07-10/): USX sits 5,783 bps under peg for 453 hours; pmUSD makes that look brisk at 1,663 hours. Thirteen depegs active while PSI extends its BEDROCK streak to 17 days.
+- [USX's Eighteenth Morning](https://pharos.watch/digest/2026-07-09/): USX at 5,783 bps below peg for the 429th hour, while DAI graduated back to CALM at $4.87B mcap. One depeg refuses to resolve; the rest of the tape moves without it.
+- [Four Pegs Break Past 3,000 BPS](https://pharos.watch/digest/2026-07-08/): USX at 5,783 bps for 405 hours, pmUSD at 5,568, apxUSD widening to 3,159. USDT burned $1.15B alongside; four active depegs now clear 3,000 bps.
+- [USX Ages While CASH Bleeds](https://pharos.watch/digest/2026-07-07/): Day sixteen for USX at 5,783 bps. CASH lost 58% of DEX TVL overnight, score 59 to 33. PAXG prints 10.88% APY against a 2.66% baseline. PSI still 91, for now.
+- [USDT Drains $8B As Depegs Freeze](https://pharos.watch/digest/2026-07-06-weekly/): pmUSD locked at 5568 bps all week, USX at 5783, and USDT still drained $8.6B across seven days. The chronic depegs became furniture; the money moved anyway.
+- [USX Grinds On As Depth Thins](https://pharos.watch/digest/2026-07-06/): USX at 5,783 bps for hour 357; the day's new signal is $11.8B across sUSDS, USD1 and RLUSD watching DEX liquidity scores slip together while TVLs barely moved.
+- [USX Grinds Into Day Fourteen](https://pharos.watch/digest/2026-07-05/): USX at 5,783 bps below peg on $20.81M mcap, day fourteen and improving in liquidity depth while still broken. YLDS lost $40M TVL overnight. If APXUSD widens back to 3,650 bps next session, treat it as fresh stress.
+- [USX Frozen, USDf Thins Out](https://pharos.watch/digest/2026-07-04/): USX sits 5,783 bps off peg for a fifth straight digest; USDf shed 16 liquidity points on $1.42B mcap with TVL flat. Two depegs became fixtures while exit capacity quietly migrated elsewhere.
+- [USX Stays Broken At 5,783 BPS](https://pharos.watch/digest/2026-07-03/): Twelve days under peg on $20.81M mcap, safety score F. Ten other depegs share the board while USDT quietly shed $2.08B and USDS prints a 10.06% APY that begs corroboration.
+- [USX Holds At 5,783 BPS](https://pharos.watch/digest/2026-07-02/): USX still 5,783 bps below peg on $20.81M mcap after 261 hours; the $0.997 quote is a courtesy, not a market, with F-grade liquidity underneath.
+- [USX And PMUSD Stay Underwater](https://pharos.watch/digest/2026-07-01/): USX at 5,783 bps below peg on $20.81M, ten days in; PMUSD 60 days deep at 5,568 bps on $65.66M. Nine active depegs, PSI holds 90.1 for an eighth day, Bank Run Gauge disagrees at -40.6.
 
 ## Stablecoins Index
 
@@ -437,7 +437,6 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [LeverUp USD (lvUSD)](https://pharos.watch/stablecoin/lvusd-leverup/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Metal Dollar (XMD)](https://pharos.watch/stablecoin/xmd-metal-dollar/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [HeLa USD (HLUSD)](https://pharos.watch/stablecoin/hlusd-hela/): centralized stablecoin backed by real-world assets pegged to US Dollar.
-- [dForce USD (USX)](https://pharos.watch/stablecoin/usx-dforce/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Solayer USD (sUSD)](https://pharos.watch/stablecoin/susd-solayer/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [HomeCoin (HOME)](https://pharos.watch/stablecoin/home-homecoin/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [USDX (USDX)](https://pharos.watch/stablecoin/usdx-kava/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.

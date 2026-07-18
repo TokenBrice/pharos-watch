@@ -16,6 +16,7 @@ import type {
   DigestNextTrigger,
   DigestRiskSignal,
   DigestRiskTapeItem,
+  DigestStandingCondition,
 } from "@shared/types";
 
 function formatMasthead(ts: number): string {
@@ -63,6 +64,7 @@ interface DigestFullDisplayProps {
   nextTriggers?: DigestNextTrigger[] | null;
   forwardLookOutcomes?: DigestForwardLookOutcome[] | null;
   riskTape?: DigestRiskTapeItem[] | null;
+  standingConditions?: DigestStandingCondition[] | null;
 }
 
 interface DigestParagraphListProps {
@@ -106,6 +108,7 @@ function DigestFullDisplay({
   nextTriggers,
   forwardLookOutcomes,
   riskTape,
+  standingConditions,
 }: DigestFullDisplayProps) {
   return (
     <div className="animate-in fade-in duration-300 mx-auto max-w-[68ch]">
@@ -124,6 +127,7 @@ function DigestFullDisplay({
           nextTriggers={nextTriggers}
           forwardLookOutcomes={forwardLookOutcomes}
           riskTape={riskTape}
+          standingConditions={standingConditions}
         />
 
         <DigestParagraphList
@@ -269,6 +273,7 @@ export function DailyDigest({ variant = "full", detailHref, hideMasthead = false
         nextTriggers={data?.nextTriggers}
         forwardLookOutcomes={data?.forwardLookOutcomes}
         riskTape={data?.riskTape}
+        standingConditions={data?.standingConditions}
       />
     );
   }

@@ -13,6 +13,8 @@ export interface WeeklyDepegSignal {
   date: string;
   kind: "active" | "resolved";
   critical: boolean;
+  /** Event started before this week's window — a standing condition, not fresh weekly news. */
+  carriedOver?: boolean;
   suppressReason?: string;
 }
 
@@ -30,6 +32,8 @@ export interface WeeklyRiskLeaderboardSignal {
   severityScore: number;
   date?: string;
   critical?: boolean;
+  /** Signal predates this week's window — a standing condition, not fresh news. */
+  carriedOver?: boolean;
   suppressReason?: string;
 }
 
@@ -66,6 +70,8 @@ export interface WeeklyInputData {
     topYieldAnomalies: { symbol: string; apy: number; warnings: string[]; mcapUsd: number; date: string }[];
     topLiquidityShifts: { symbol: string; scoreDelta: number; mcapUsd: number; date: string }[];
   };
+  /** Aggregate forward-look accountability across the week's daily editions. */
+  forwardLookScoreboard: { hit: number; missed: number; pending: number; expired: number } | null;
   weekOverWeekDeltas: {
     mcap: { current: number; prior: number; deltaPct: number | null };
     psi: { current: number; prior: number; delta: number };

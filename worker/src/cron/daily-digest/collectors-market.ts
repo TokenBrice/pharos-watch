@@ -1,5 +1,6 @@
 import type { DigestInputData } from "@shared/types/digest";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
+import { classifyDepegLifecycle, type DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { ACTIVE_DEPEG_PROMPT_LIMIT, getDepegMarketImpactScore, isCriticalDepegRisk } from "@shared/lib/digest-risk";
 import { buildInClause } from "../../lib/db";
@@ -37,11 +38,13 @@ function getActiveDepegSuppressReason(params: { mcapUsd: number; ageHours: numbe
   if (params.mcapUsd < 20_000_000) {
     return "sub-$20M active depeg, too small for a lead unless nothing larger moved";
   }
+  // Coin-significance floor (owner-ratified 2026-07-18): sub-$50M coins lead
+  // only on break day; after 48h they are one-line coverage at most.
+  if (params.ageHours >= 48 && params.mcapUsd < 50_000_000) {
+    return "sub-$50M depeg past its break day, lead only on break or resolution day";
+  }
   if (params.ageHours >= 168 && params.mcapUsd < 250_000_000) {
     return "week-old mid/small-cap depeg, treat as chronic unless it worsened today";
-  }
-  if (params.ageHours >= 72 && params.mcapUsd < 50_000_000) {
-    return "multi-day small-cap depeg, likely background condition";
   }
   if (Math.abs(params.bps) < 50 && params.mcapUsd < 250_000_000) {
     return "low-deviation smaller-cap depeg, weak lead material";
@@ -51,7 +54,13 @@ function getActiveDepegSuppressReason(params: { mcapUsd: number; ageHours: numbe
 
 export async function collectActiveDepegs(
   ctx: CollectorContext,
-): Promise<CollectorResult<{ activeDepegCount: number; topDepegs: DigestInputData["topDepegs"] }>> {
+): Promise<
+  CollectorResult<{
+    activeDepegCount: number;
+    topDepegs: DigestInputData["topDepegs"];
+    lifecycleFlags: DepegLifecycleFlag[];
+  }>
+> {
   try {
     const activeDepegs = await ctx.db
       .prepare(
@@ -80,7 +89,21 @@ export async function collectActiveDepegs(
         typeof asset?.price === "number" && Number.isFinite(asset.price) && asset.price > 0 ? asset.price : null;
       const direction = row.direction;
       const bps = direction === "below" ? -Math.abs(row.peak_deviation_bps) : Math.abs(row.peak_deviation_bps);
-      const impactScore = getDepegMarketImpactScore(bps, mcapUsd);
+      // Severity decisions run on the live deviation vs the event's peg
+      // reference; the stored peak is context only. Without a usable live
+      // price the peak remains the basis, flagged so downstream consumers
+      // never mistake it for a current observation.
+      const pegReference =
+        typeof row.peg_reference === "number" && Number.isFinite(row.peg_reference) && row.peg_reference > 0
+          ? row.peg_reference
+          : null;
+      const currentBps =
+        livePrice != null && pegReference != null
+          ? Math.round(((livePrice - pegReference) / pegReference) * 10_000)
+          : null;
+      const severityBps = currentBps ?? bps;
+      const severityBasis: "current" | "peak-fallback" = currentBps != null ? "current" : "peak-fallback";
+      const impactScore = getDepegMarketImpactScore(severityBps, mcapUsd);
       return {
         stablecoinId: row.stablecoin_id,
         symbol: row.symbol,
@@ -91,14 +114,19 @@ export async function collectActiveDepegs(
         ageHours,
         impactScore,
         peakBps: row.peak_deviation_bps,
+        severityBps,
+        severityBasis,
+        ...(currentBps != null ? { currentBps } : {}),
         ...(row.peak_price != null ? { peakPriceUsd: row.peak_price } : {}),
         ...(livePrice != null ? { currentPriceUsd: livePrice } : {}),
-        suppressReason: getActiveDepegSuppressReason({ mcapUsd, ageHours, bps }),
+        suppressReason: getActiveDepegSuppressReason({ mcapUsd, ageHours, bps: severityBps }),
       };
     });
     withImpact.sort((a, b) => {
-      const criticalDelta = Number(isCriticalDepegRisk(b)) - Number(isCriticalDepegRisk(a));
-      return criticalDelta || b.impactScore - a.impactScore || Math.abs(b.bps) - Math.abs(a.bps);
+      const criticalDelta =
+        Number(isCriticalDepegRisk({ bps: b.severityBps, mcapUsd: b.mcapUsd })) -
+        Number(isCriticalDepegRisk({ bps: a.severityBps, mcapUsd: a.mcapUsd }));
+      return criticalDelta || b.impactScore - a.impactScore || Math.abs(b.severityBps) - Math.abs(a.severityBps);
     });
     const topDepegs = withImpact
       .slice(0, ACTIVE_DEPEG_PROMPT_LIMIT)
@@ -113,6 +141,8 @@ export async function collectActiveDepegs(
           ageHours,
           impactScore,
           peakBps,
+          severityBasis,
+          currentBps,
           peakPriceUsd,
           currentPriceUsd,
           suppressReason,
@@ -126,16 +156,22 @@ export async function collectActiveDepegs(
           ageHours,
           impactScore,
           peakBps,
+          severityBasis,
+          ...(currentBps != null ? { currentBps } : {}),
           ...(peakPriceUsd != null ? { peakPriceUsd } : {}),
           ...(currentPriceUsd != null ? { currentPriceUsd } : {}),
           ...(suppressReason ? { suppressReason } : {}),
         }),
       );
 
-    return collectorOk({ activeDepegCount: withImpact.length, topDepegs });
+    // Lifecycle review runs over the FULL open-event set, not the top-8 slice:
+    // a stalled collapse must not escape review by ranking ninth.
+    const lifecycleFlags = classifyDepegLifecycle(withImpact);
+
+    return collectorOk({ activeDepegCount: withImpact.length, topDepegs, lifecycleFlags });
   } catch (error) {
     console.error("[daily-digest] Failed to query active depegs:", error);
-    return collectorDegraded({ activeDepegCount: 0, topDepegs: [] }, "active-depegs-query");
+    return collectorDegraded({ activeDepegCount: 0, topDepegs: [], lifecycleFlags: [] }, "active-depegs-query");
   }
 }
 
@@ -248,7 +284,10 @@ export async function collectSupplyVelocity(
   return collectorOk(undefined);
 }
 
-export async function collectResolvedDepegs(ctx: CollectorContext): Promise<DigestInputData["resolvedDepegs"]> {
+export async function collectResolvedDepegs(
+  ctx: CollectorContext,
+  degradedReasons?: string[],
+): Promise<DigestInputData["resolvedDepegs"]> {
   try {
     const cutoff48h = ctx.nowSec - SECONDS.TWO_DAYS;
     const resolvedRows = await ctx.db
@@ -293,6 +332,7 @@ export async function collectResolvedDepegs(ctx: CollectorContext): Promise<Dige
     }
   } catch (error) {
     console.error("[daily-digest] Failed to query resolved depegs:", error);
+    markCollectorDegraded(degradedReasons, "resolved-depegs-query");
   }
   return undefined;
 }
@@ -438,11 +478,15 @@ export async function collectMintBurnFlows(
     }
   } catch (error) {
     console.error("[daily-digest] Failed to collect mint-burn flows:", error);
+    markCollectorDegraded(degradedReasons, "mint-burn-flows-query");
   }
   return undefined;
 }
 
-export async function collectLiquidityShifts(ctx: CollectorContext): Promise<DigestInputData["liquidityShifts"]> {
+export async function collectLiquidityShifts(
+  ctx: CollectorContext,
+  degradedReasons?: string[],
+): Promise<DigestInputData["liquidityShifts"]> {
   try {
     const lookbackStart = ctx.yesterdayTs - 2 * SECONDS.ONE_DAY;
     const rows = await ctx.db
@@ -492,6 +536,7 @@ export async function collectLiquidityShifts(ctx: CollectorContext): Promise<Dig
     return shifts.length > 0 ? shifts.slice(0, 5) : undefined;
   } catch (error) {
     console.error("[daily-digest] Failed to collect liquidity shifts:", error);
+    markCollectorDegraded(degradedReasons, "liquidity-shifts-query");
   }
   return undefined;
 }

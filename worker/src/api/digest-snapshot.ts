@@ -1,7 +1,7 @@
 import { withErrorHandler, safeJsonParse, errorResponse, jsonResponse } from "../lib/api-utils";
 import type { DigestInputData } from "@shared/types/digest";
 import { isRecord } from "@shared/lib/type-guards";
-import { NON_WEEKLY_DIGEST_SQL_FILTER } from "../cron/daily-digest/shared";
+import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_INTERNAL_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../cron/daily-digest/shared";
 import { CACHE_PROFILES } from "../lib/constants";
 
 interface DigestRow {
@@ -72,7 +72,7 @@ export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
   const targetRow = await db
     .prepare(
       `SELECT generated_at, input_data FROM daily_digest
-       WHERE generated_at >= ? AND generated_at < ? AND (${targetFilter})
+       WHERE generated_at >= ? AND generated_at < ? AND (${targetFilter}) AND (${NON_INTERNAL_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})
        ORDER BY generated_at DESC LIMIT 1`,
     )
     .bind(dayStart, dayEnd)
@@ -87,7 +87,7 @@ export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
     : await db
       .prepare(
         `SELECT generated_at, input_data FROM daily_digest
-         WHERE generated_at < ? AND (${NON_WEEKLY_DIGEST_SQL_FILTER})
+         WHERE generated_at < ? AND (${NON_WEEKLY_DIGEST_SQL_FILTER}) AND (${NON_INTERNAL_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})
          ORDER BY generated_at DESC LIMIT 1`,
       )
       .bind(dayStart)

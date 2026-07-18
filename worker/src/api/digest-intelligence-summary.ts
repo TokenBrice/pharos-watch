@@ -3,10 +3,12 @@ import {
   DigestForwardLookOutcomeSchema,
   DigestNextTriggerSchema,
   DigestRiskTapeItemSchema,
+  DigestStandingConditionSchema,
   type DigestChangeSummary,
   type DigestForwardLookOutcome,
   type DigestNextTrigger,
   type DigestRiskTapeItem,
+  type DigestStandingCondition,
 } from "@shared/types/digest";
 import { isRecord } from "@shared/lib/type-guards";
 import type { ZodType } from "zod";
@@ -16,6 +18,7 @@ export interface DigestIntelligenceSummary {
   nextTriggers: DigestNextTrigger[] | null;
   forwardLookOutcomes: DigestForwardLookOutcome[] | null;
   riskTape: DigestRiskTapeItem[] | null;
+  standingConditions: DigestStandingCondition[] | null;
 }
 
 // Validate each element against its schema and drop malformed entries so the
@@ -39,6 +42,7 @@ export function selectDigestIntelligence(input: unknown): DigestIntelligenceSumm
       nextTriggers: null,
       forwardLookOutcomes: null,
       riskTape: null,
+      standingConditions: null,
     };
   }
 
@@ -49,5 +53,6 @@ export function selectDigestIntelligence(input: unknown): DigestIntelligenceSumm
     nextTriggers: parseArray(input.nextTriggers, DigestNextTriggerSchema),
     forwardLookOutcomes: parseArray(input.forwardLookOutcomes, DigestForwardLookOutcomeSchema),
     riskTape: parseArray(input.riskTape, DigestRiskTapeItemSchema),
+    standingConditions: parseArray(input.standingConditions, DigestStandingConditionSchema),
   };
 }
