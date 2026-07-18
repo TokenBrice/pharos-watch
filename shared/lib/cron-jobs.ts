@@ -169,7 +169,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
     statusImpact: "critical",
-    maxConnections: 4, // Intake overlaps one DL fetch with serialized supplemental families; primary price providers are capped at 4.
+    maxConnections: 4, // Intake and supplemental families retain the slot reservation; primary provider fanout is lower for Worker heap headroom.
     connectionGroup: "quarter-hourly-chain",
   },
   {

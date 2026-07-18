@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.198",
+    title: "Quarter-hour pricing headroom guard",
+    date: "2026-07-18",
+    effectiveAt: 1784411291,
+    summary:
+      "Production stablecoin pricing now disables optional exact-address primary augmentation and lowers primary-provider fanout so the quarter-hour Worker can complete core price publication under heap pressure.",
+    impact: [
+      "Checked-in production Worker config pins `ADDRESS_PRICE_PROVIDERS_ENABLED=none`; exact-address providers remain documented and available only through an explicit future re-enable",
+      "Primary provider collection now runs two provider fetches concurrently instead of four, preserving connection-budget compliance while reducing simultaneous response and consensus assembly memory",
+      "The late bounded fallback passes, authoritative live routes, DEX bridge, CEX/oracle/aggregator providers, and depeg guardrails remain unchanged",
+      "This trades optional source-depth augmentation for reliable active-price publication until Worker memory headroom is re-audited",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.197",
     title: "PHPm Broker-only recovery",
     date: "2026-07-18",

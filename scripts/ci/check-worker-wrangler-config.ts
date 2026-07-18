@@ -4,12 +4,7 @@ import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const EXPECTED_CUSTOM_DOMAINS = ["api.pharos.watch", "ops-api.pharos.watch", "site-api.pharos.watch"] as const;
 const EXPECTED_RULE_TYPES = ["CompiledWasm", "Data"] as const;
-const EXPECTED_ADDRESS_PRICE_PROVIDERS = [
-  "dexpaprika-address",
-  "coingecko-onchain-address",
-  "alchemy-address",
-  "moralis-address",
-] as const;
+const EXPECTED_ADDRESS_PRICE_PROVIDER_SETTING = "none";
 
 interface TomlAssignment {
   key: string;
@@ -186,17 +181,14 @@ export function evaluateWorkerWranglerConfig(toml: string): WorkerWranglerConfig
   const addressPriceProviderVars = assignments.filter(
     ({ key, section }) => key === "ADDRESS_PRICE_PROVIDERS_ENABLED" && section === "vars",
   );
-  const configuredAddressPriceProviders = unquote(addressPriceProviderVars[0]?.value)
-    ?.split(",")
-    .map((provider) => provider.trim())
-    .filter(Boolean);
+  const configuredAddressPriceProviderSetting = unquote(addressPriceProviderVars[0]?.value)?.trim();
   if (
     addressPriceProviderVars.length !== 1 ||
-    JSON.stringify(configuredAddressPriceProviders) !== JSON.stringify(EXPECTED_ADDRESS_PRICE_PROVIDERS)
+    configuredAddressPriceProviderSetting !== EXPECTED_ADDRESS_PRICE_PROVIDER_SETTING
   ) {
     issues.push(
-      `Production address-price providers must be exactly ${EXPECTED_ADDRESS_PRICE_PROVIDERS.join(", ")}; ` +
-      `found ${configuredAddressPriceProviders?.join(", ") || "none"}.`,
+      `Production address-price providers must stay disabled with ADDRESS_PRICE_PROVIDERS_ENABLED="${EXPECTED_ADDRESS_PRICE_PROVIDER_SETTING}"; ` +
+      `found ${configuredAddressPriceProviderSetting || "unset"}.`,
     );
   }
 
@@ -205,7 +197,9 @@ export function evaluateWorkerWranglerConfig(toml: string): WorkerWranglerConfig
 
 export function printWorkerWranglerConfigReport(report: WorkerWranglerConfigReport): void {
   if (!report.failed) {
-    console.log("Worker Wrangler configuration check passed (3 root custom domains, 2 fallthrough asset rules, 4 address-price providers).");
+    console.log(
+      "Worker Wrangler configuration check passed (3 root custom domains, 2 fallthrough asset rules, address-price providers disabled).",
+    );
     return;
   }
 
