@@ -589,6 +589,10 @@ function buildCommonModeContext(
  * is diagnostic, 5%-<10% is moderate, and >=10% or unknown is high. Serial
  * control domains do not enter this proportional path and remain fail-closed.
  */
+function venueFamilyKey(key: string): string {
+  return key.toLowerCase().replace(/-v\d+$/u, "");
+}
+
 function proportionalCommonModeSeverity(
   share: number | null,
   mature: boolean,
@@ -622,7 +626,11 @@ export function commonModeSignalSeverity(
     case "dex-protocol":
       return proportionalCommonModeSeverity(
         context.dexExposureByDomain.get(domainKey(failureDomain))?.upper ?? null,
-        materiality.matureVenues.includes(failureDomain.key.toLowerCase()),
+        // Measured-execution routes carry versioned protocol keys
+        // ("uniswap-v3", "pancakeswap-v3"); venue maturity is a property of
+        // the venue family, so membership is tested on the version-stripped
+        // family key.
+        materiality.matureVenues.includes(venueFamilyKey(failureDomain.key)),
         materiality,
       );
     case "bridge-route": {
@@ -702,7 +710,12 @@ function commonModeSignalsByAsset(
     }
     const key = domainKey(group.failureDomain);
     const mintControlSeverity = (() => {
-      if (group.failureDomain.kind !== "mint-control") return null;
+      // D2 (mint-control) extended by D15 (2026-07-18) to upgrade-control:
+      // an issuer's own controller shared across its own products is the
+      // issuer itself, not an external dependency. Cross-issuer and
+      // unresolved-identity groups still fail closed in
+      // resolveV9MintControlGroupSeverity.
+      if (group.failureDomain.kind !== "mint-control" && group.failureDomain.kind !== "upgrade-control") return null;
       const members = assetIds.map((assetId) => {
         const assetMembers = effectiveMembers.filter((member) => member.assetId === assetId);
         return {
