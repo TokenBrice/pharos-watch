@@ -25,12 +25,13 @@ import {
   type StablecoinActivePriceCoverage,
 } from "../../lib/stablecoin-publication-coverage";
 import type { StablecoinPriceCoverageAlertResult } from "../../lib/stablecoin-publication-alerts";
+import { MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES } from "../../lib/cron-metadata-persistence";
 
 const MAX_DIAGNOSTIC_ARRAY_ITEMS = 20;
 const MAX_DIAGNOSTIC_OBJECT_KEYS = 40;
 const MAX_DIAGNOSTIC_STRING_CHARS = 500;
 const MAX_DIAGNOSTIC_DEPTH = 4;
-const MAX_STABLECOINS_CRON_METADATA_BYTES = 64 * 1024;
+const MAX_STABLECOINS_CRON_METADATA_BYTES = MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES;
 const MAX_PRICE_SOURCE_ATTEMPT_LEDGER_RECORDS = 100;
 
 export interface PriceSourceAttemptLedger {

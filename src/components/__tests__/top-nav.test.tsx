@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createContext, useContext, type ReactNode } from "react";
 import { cleanupFrontendTest, installMatchMediaMock } from "@/test-utils/frontend";
+import { makeHealthyHealthResponse } from "@/test-utils/status-fixtures";
 import { TopNav } from "@/components/top-nav";
+
+const { useHealthMock } = vi.hoisted(() => ({ useHealthMock: vi.fn() }));
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/",
@@ -20,6 +23,10 @@ vi.mock("@/components/pharos-logo", () => ({
 
 vi.mock("@/lib/command-palette", () => ({
   openCommandPalette: vi.fn(),
+}));
+
+vi.mock("@/hooks/api-hooks", () => ({
+  useHealth: useHealthMock,
 }));
 
 const DropdownOpenContext = createContext(false);
@@ -54,6 +61,13 @@ afterEach(() => {
 });
 
 describe("TopNav", () => {
+  beforeEach(() => {
+    useHealthMock.mockReturnValue({
+      data: makeHealthyHealthResponse(),
+      isError: false,
+    });
+  });
+
   it("opens the lighthouse overflow on desktop hover and places API Access before status", async () => {
     const matchMedia = installMatchMediaMock(true);
 
@@ -71,5 +85,30 @@ describe("TopNav", () => {
 
     expect(whatsNew.compareDocumentPosition(apiAccess) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(apiAccess.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(useHealthMock).toHaveBeenLastCalledWith({ enabled: true });
+  });
+
+  it("reports degraded public health instead of a static healthy claim", async () => {
+    installMatchMediaMock(true);
+    useHealthMock.mockReturnValue({
+      data: { ...makeHealthyHealthResponse(), status: "degraded" },
+      isError: false,
+    });
+
+    render(<TopNav />);
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "More" }));
+
+    const status = await screen.findByText("Pharos is Degraded");
+    expect(status.nextElementSibling?.classList.contains("bg-[var(--severity-mild)]")).toBe(true);
+  });
+
+  it("uses a neutral label when public health cannot be loaded", async () => {
+    installMatchMediaMock(true);
+    useHealthMock.mockReturnValue({ data: undefined, isError: true });
+
+    render(<TopNav />);
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "More" }));
+
+    expect(await screen.findByText("Status Unavailable")).not.toBeNull();
   });
 });
