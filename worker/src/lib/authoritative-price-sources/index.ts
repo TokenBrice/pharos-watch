@@ -112,16 +112,31 @@ export function prioritizeAuthoritativeLivePriceCandidates<T extends Authoritati
       });
 
     const prioritized: T[] = [];
-    for (let round = 0; ; round += 1) {
-      let added = false;
-      for (const group of groups) {
-        const candidate = group.entries[round];
-        if (!candidate) continue;
-        prioritized.push(candidate);
-        added = true;
+    for (let tierStart = 0; tierStart < groups.length;) {
+      const firstTierGroup = groups[tierStart];
+      if (!firstTierGroup) break;
+      const tierPriority = getProviderLivePriority(firstTierGroup.provider);
+      let tierEnd = tierStart + 1;
+      while (tierEnd < groups.length) {
+        const nextGroup = groups[tierEnd];
+        if (!nextGroup || getProviderLivePriority(nextGroup.provider) !== tierPriority) break;
+        tierEnd += 1;
       }
-      if (!added) return prioritized;
+
+      const tierGroups = groups.slice(tierStart, tierEnd);
+      for (let round = 0; ; round += 1) {
+        let added = false;
+        for (const group of tierGroups) {
+          const candidate = group.entries[round];
+          if (!candidate) continue;
+          prioritized.push(candidate);
+          added = true;
+        }
+        if (!added) break;
+      }
+      tierStart = tierEnd;
     }
+    return prioritized;
   };
 
   const missing = candidates.filter((candidate) => !hasUsableLivePrice(candidate.asset));

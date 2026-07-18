@@ -179,7 +179,6 @@ export async function syncViaCoingeckoFallback(
       depegErrorCount > 0
         || stalenessCheckFailed
         || !publicationCoverage.complete
-        || !activePriceCoverage.complete
         ? "degraded"
         : "ok",
     itemCount: assets.length,

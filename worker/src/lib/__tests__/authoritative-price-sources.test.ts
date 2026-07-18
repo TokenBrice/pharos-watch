@@ -569,9 +569,33 @@ describe("authoritative-price-sources", () => {
     ]);
   });
 
-  it("round-robins missing candidates across providers within the shared budget", () => {
+  it("exhausts cheaper provider tiers before starting slower providers", () => {
     const firstProvider = makePriorityProvider(1);
     const secondProvider = makePriorityProvider(10);
+    const candidates: AuthoritativeLivePriceCandidate[] = [
+      ...[0, 1, 2].map((originalIndex) => ({
+        asset: { id: `first-${originalIndex}`, price: null } as PeggedAsset,
+        provider: firstProvider,
+        originalIndex,
+      })),
+      {
+        asset: { id: "second-0", price: null } as PeggedAsset,
+        provider: secondProvider,
+        originalIndex: 3,
+      },
+    ];
+
+    expect(prioritizeAuthoritativeLivePriceCandidates(candidates).map((entry) => entry.asset.id)).toEqual([
+      "first-0",
+      "first-1",
+      "first-2",
+      "second-0",
+    ]);
+  });
+
+  it("round-robins provider families within the same priority tier", () => {
+    const firstProvider = makePriorityProvider(1);
+    const secondProvider = makePriorityProvider(1);
     const candidates: AuthoritativeLivePriceCandidate[] = [
       ...[0, 1, 2].map((originalIndex) => ({
         asset: { id: `first-${originalIndex}`, price: null } as PeggedAsset,
