@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
-import { decodeFunctionData, parseAbi } from "viem/utils";
 
 const fetchEvmCallHexAtBlockMock = vi.fn();
 const fetchEvmBlockNumberMock = vi.fn();
@@ -18,15 +17,6 @@ import { CIRCUIT_SOURCE } from "../constants";
 const word = (value: bigint) => value.toString(16).padStart(64, "0");
 const addressWord = (address: string) => address.slice(2).toLowerCase().padStart(64, "0");
 const uintResult = (value: bigint) => `0x${word(value)}` as `0x${string}`;
-const addressResult = (address: string) => `0x${addressWord(address)}` as `0x${string}`;
-const quoterResult = (amountOut: bigint) =>
-  `0x${[word(amountOut), word(1n), word(1n), word(100_000n)].join("")}` as `0x${string}`;
-const FACTORY_ABI = parseAbi([
-  "function getPool(address tokenA,address tokenB,uint24 fee) view returns (address pool)",
-]);
-const QUOTER_ABI = parseAbi([
-  "function quoteExactInputSingle((address tokenIn,address tokenOut,uint256 amountIn,uint24 fee,uint160 sqrtPriceLimitX96) params) returns (uint256 amountOut,uint160 sqrtPriceX96After,uint32 initializedTicksCrossed,uint256 gasEstimate)",
-]);
 
 function poolResult(
   input: {
@@ -65,16 +55,6 @@ function trustedUsdM(): PeggedAsset {
   return trustedAsset("cusd-celo", "USDm");
 }
 
-function phpmPriceContext(): { assetsById: Map<string, PeggedAsset> } {
-  return {
-    assetsById: new Map([
-      ["cusd-celo", trustedUsdM()],
-      ["usdt-tether", trustedAsset("usdt-tether", "USDT")],
-      ["usdc-circle", trustedAsset("usdc-circle", "USDC")],
-    ]),
-  };
-}
-
 describe("Mento PHPm protocol price", () => {
   it("uses a dedicated recovery circuit without poisoning it during optional refreshes", () => {
     expect(mentoPhpmProvider.liveCircuitSource).toBe(CIRCUIT_SOURCE.PHPM_PRICE_ROUTE);
@@ -105,144 +85,14 @@ describe("Mento PHPm protocol price", () => {
     expect(fetchEvmCallHexAtBlockMock.mock.calls.every((call) => call[3] === 33_333_333)).toBe(true);
   });
 
-  it("falls back to two exact, factory-bound Uniswap routes when the Broker has no executable median", async () => {
-    fetchEvmCallHexAtBlockMock
-      .mockResolvedValueOnce(poolResult())
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(addressResult("0x87dec9a2589d9e6511df84c193561b3a16cf6238"))
-      .mockResolvedValueOnce(addressResult("0xb466d5429d6ad9999bf112c225d9d7b15e96c658"))
-      .mockResolvedValueOnce(quoterResult(16_261_724n))
-      .mockResolvedValueOnce(quoterResult(162_579_057n))
-      .mockResolvedValueOnce(quoterResult(16_251_313n))
-      .mockResolvedValueOnce(quoterResult(162_381_368n));
-
-    const result = await fetchMentoPhpmPrice(phpmPriceContext());
-
-    expect(result).toMatchObject({
-      price: (0.016261724 + 0.016251313) / 2,
-      source: "uniswap-v3-exact",
-      confidence: "fallback",
-      observedAtMode: "upstream",
-    });
-    expect(
-      fetchEvmCallHexAtBlockMock.mock.calls.filter((call) => call[1] === "0xafe208a311b21f13ef87e33a90049fc17a7acdec"),
-    ).toHaveLength(2);
-    expect(
-      fetchEvmCallHexAtBlockMock.mock.calls.filter((call) => call[1] === "0x82825d0554fa07f7fc52ab63c961f330fdefa8e8"),
-    ).toHaveLength(4);
-    expect(fetchEvmCallHexAtBlockMock.mock.calls.every((call) => call[3] === 33_333_333)).toBe(true);
-
-    const factoryArgs = fetchEvmCallHexAtBlockMock.mock.calls.slice(2, 4).map((call) => {
-      const decoded = decodeFunctionData({
-        abi: FACTORY_ABI,
-        data: call[2] as `0x${string}`,
-      });
-      return {
-        ...decoded,
-        args: [decoded.args[0].toLowerCase(), decoded.args[1].toLowerCase(), decoded.args[2]],
-      };
-    });
-    expect(factoryArgs).toEqual([
-      {
-        functionName: "getPool",
-        args: ["0x105d4a9306d2e55a71d2eb95b81553ae1dc20d7b", "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e", 100],
-      },
-      {
-        functionName: "getPool",
-        args: ["0x105d4a9306d2e55a71d2eb95b81553ae1dc20d7b", "0xceba9300f2b948710d2653dd7b07f33a8b32118c", 100],
-      },
-    ]);
-
-    const quoteParams = fetchEvmCallHexAtBlockMock.mock.calls.slice(4).map((call) => {
-      const decoded = decodeFunctionData({
-        abi: QUOTER_ABI,
-        data: call[2] as `0x${string}`,
-      });
-      expect(decoded.functionName).toBe("quoteExactInputSingle");
-      return {
-        ...decoded.args[0],
-        tokenIn: decoded.args[0].tokenIn.toLowerCase(),
-        tokenOut: decoded.args[0].tokenOut.toLowerCase(),
-      };
-    });
-    expect(quoteParams).toEqual([
-      {
-        tokenIn: "0x105d4a9306d2e55a71d2eb95b81553ae1dc20d7b",
-        tokenOut: "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e",
-        amountIn: 1_000n * 10n ** 18n,
-        fee: 100,
-        sqrtPriceLimitX96: 0n,
-      },
-      {
-        tokenIn: "0x105d4a9306d2e55a71d2eb95b81553ae1dc20d7b",
-        tokenOut: "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e",
-        amountIn: 10_000n * 10n ** 18n,
-        fee: 100,
-        sqrtPriceLimitX96: 0n,
-      },
-      {
-        tokenIn: "0x105d4a9306d2e55a71d2eb95b81553ae1dc20d7b",
-        tokenOut: "0xceba9300f2b948710d2653dd7b07f33a8b32118c",
-        amountIn: 1_000n * 10n ** 18n,
-        fee: 100,
-        sqrtPriceLimitX96: 0n,
-      },
-      {
-        tokenIn: "0x105d4a9306d2e55a71d2eb95b81553ae1dc20d7b",
-        tokenOut: "0xceba9300f2b948710d2653dd7b07f33a8b32118c",
-        amountIn: 10_000n * 10n ** 18n,
-        fee: 100,
-        sqrtPriceLimitX96: 0n,
-      },
-    ]);
-  });
-
-  it("fails the Uniswap fallback closed when the exact factory binding changes", async () => {
-    fetchEvmCallHexAtBlockMock
-      .mockResolvedValueOnce(poolResult())
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(addressResult("0x0000000000000000000000000000000000000001"))
-      .mockResolvedValueOnce(addressResult("0xb466d5429d6ad9999bf112c225d9d7b15e96c658"));
-
-    await expect(fetchMentoPhpmPrice(phpmPriceContext())).resolves.toBeNull();
-    expect(
-      fetchEvmCallHexAtBlockMock.mock.calls.filter((call) => call[1] === "0x82825d0554fa07f7fc52ab63c961f330fdefa8e8"),
-    ).toHaveLength(0);
-  });
-
-  it("fails the Uniswap fallback closed when either route has excessive quote impact", async () => {
-    fetchEvmCallHexAtBlockMock
-      .mockResolvedValueOnce(poolResult())
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(addressResult("0x87dec9a2589d9e6511df84c193561b3a16cf6238"))
-      .mockResolvedValueOnce(addressResult("0xb466d5429d6ad9999bf112c225d9d7b15e96c658"))
-      .mockResolvedValueOnce(quoterResult(16_261_724n))
-      .mockResolvedValueOnce(quoterResult(100_000_000n))
-      .mockResolvedValueOnce(quoterResult(16_251_313n))
-      .mockResolvedValueOnce(quoterResult(162_381_368n));
-
-    await expect(fetchMentoPhpmPrice(phpmPriceContext())).resolves.toBeNull();
-  });
-
-  it("fails the Uniswap fallback closed when the two bounded routes diverge", async () => {
-    fetchEvmCallHexAtBlockMock
-      .mockResolvedValueOnce(poolResult())
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(addressResult("0x87dec9a2589d9e6511df84c193561b3a16cf6238"))
-      .mockResolvedValueOnce(addressResult("0xb466d5429d6ad9999bf112c225d9d7b15e96c658"))
-      .mockResolvedValueOnce(quoterResult(16_200_000n))
-      .mockResolvedValueOnce(quoterResult(162_000_000n))
-      .mockResolvedValueOnce(quoterResult(15_000_000n))
-      .mockResolvedValueOnce(quoterResult(150_000_000n));
-
-    await expect(fetchMentoPhpmPrice(phpmPriceContext())).resolves.toBeNull();
-  });
-
-  it("does not let the DEX fallback replace an already usable input price", async () => {
+  it("does not attempt a DEX fallback when the Broker has no executable median", async () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(poolResult()).mockResolvedValueOnce(null);
-    const asset = trustedAsset("phpm-mento", "PHPm", 0.0162);
 
-    await expect(mentoPhpmProvider.fetchLivePrice!(asset, phpmPriceContext())).resolves.toBeNull();
+    await expect(
+      fetchMentoPhpmPrice({
+        assetsById: new Map([["cusd-celo", trustedUsdM()]]),
+      }),
+    ).resolves.toBeNull();
 
     expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledTimes(2);
   });

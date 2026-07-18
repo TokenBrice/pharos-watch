@@ -31,7 +31,7 @@ Every published main and CoinGecko-supply-fallback `sync-stablecoins` run writes
 
 ## Versioning
 
-- **Current methodology version:** `v6.196`
+- **Current methodology version:** `v6.197`
 - **Canonical version module:** `shared/lib/methodology-versions/pricing-pipeline.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -274,7 +274,7 @@ After market/oracle consensus, the provider registry under `worker/src/lib/autho
 | `ybold-yearn`            | ERC-4626 `convertToAssets(1 share)` × tracked `bold-liquity` price              |
 | `said-gaib`              | registry ERC-4626 `convertToAssets(1 share)` × tracked `aid-gaib` price         |
 | `usdx-kava`              | exact Kava `usdx:usd` aggregate plus authorized raw-oracle validation          |
-| `phpm-mento`             | Celo Mento Broker quote; missing-only dual Uniswap PHPm/USDT+USDC fallback               |
+| `phpm-mento`             | Celo Mento Broker PHPm/USDm quote with fresh USDm dependency                    |
 | `usx-dforce`             | agreeing exact Optimism Velodrome and Base Aerodrome USX -> USDC quotes         |
 | `aznd-mu-digital`        | fresh exact Ethereum Curve AZND -> USDC quote with balance and impact checks    |
 | `jusd-juicedollar`       | funded public Citrea StablecoinBridge burn path × trusted redeem-asset price    |
@@ -334,7 +334,7 @@ Live parent-derived overrides normally require a replay-safe parent source. A na
 The deterministic recovery routes are deliberately asset-specific and fail closed:
 
 - **Kava USDX:** the worker requires a fresh `kava_2222-10` head, exactly one active `usdx:usd` market with authorized oracles, an aggregate price, and at least one authorized raw price whose expiry covers the 30-minute cache trust window. Excessive raw-oracle dispersion or aggregate-to-median disagreement rejects the route.
-- **PHPm:** the preferred Celo Mento route pins the Broker, BiPool Manager, exchange ID, PHPm/USDm token identities, and a 1,000 PHPm quote. Pool state and the Broker quote use the same Celo block, that block must be no older than five minutes, the USDm counter bucket must hold at least 1 million units, and the trusted USDm dependency must be current. If the preferred route does not produce an accepted quote and PHPm is otherwise missing, a fallback pins the official Celo Uniswap V3 factory and Quoter V2 plus the exact PHPm/USDT and PHPm/USDC 0.01% pools at that same fresh block. Both factory bindings must match; each route must execute 1,000- and 10,000-PHPm quotes with at most 1% unit-price movement; the two trusted-parent-normalized route prices must agree within 1%. The mean publishes as `uniswap-v3-exact` with `fallback` confidence and the shared block timestamp as upstream observation time; it cannot replace an existing usable price, enter replay continuity, or independently confirm a depeg. Transport and empty-result failures use the dedicated `phpm-price-route` circuit only when recovery is required, so a routine optional Broker miss cannot disable a later missing-price fallback.
+- **PHPm:** the Celo Mento route pins the Broker, BiPool Manager, exchange ID, PHPm/USDm token identities, and a 1,000 PHPm quote. Pool state and the Broker quote use the same Celo block, that block must be no older than five minutes, the USDm counter bucket must hold at least 1 million units, and the trusted USDm dependency must be current. If the Broker route does not produce an accepted quote, PHPm receives no authoritative override and remains explicitly missing until another pricing lane resolves it. Transport and empty-result failures use the dedicated `phpm-price-route` circuit only when recovery is required, so a routine optional Broker miss cannot disable a later missing-price recovery.
 - **USX:** both the reviewed Optimism Velodrome and Base Aerodrome USX/USDC pools must return a 1,000 USX quote, expose exactly the configured token pair, hold at least $25,000 of quote reserves each, and agree within 5%. Each chain's state is pinned to one fresh block and the older of the two block timestamps becomes the observation time. The final mark is their mean multiplied by the trusted USDC price, and failures use the dedicated `usx-stable-pools` circuit.
 - **AZND:** the exact Ethereum Curve pool must match the configured AZND/USDC order at a block no older than five minutes, meet the 1,000 AZND and 100 USDC balance floors, and keep the 10-AZND quote within 5% of the 1-AZND quote. The result is `curve-thin-onchain` with `fallback` confidence and is neither replay-safe nor independently depeg-authoritative.
 - **JUSD:** the Citrea route pins chain ID, JUSD, bridge and redeem-token identities, and runtime code hashes at one fresh block. It additionally requires exact decimals, JUSD minter authorization, at least 1,000 redeemable JUSD, reserve coverage and allowance, and a successful public one-JUSD burn simulation before inheriting a trusted USDT, USDC, or ctUSD parent price. The reviewed StablecoinBridge v4.0.2 `stopped` and `horizon` controls gate minting rather than `_burn`; their values are read but do not invalidate an otherwise funded public burn proof. JUSD transport and null-result failures use the dedicated `jusd-citrea-bridge` breaker.

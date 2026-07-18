@@ -165,7 +165,7 @@ describe("validatePrimaryPriceCandidate — severe downside with directional cor
 });
 
 describe("validatePrimaryPriceCandidate — weak fallback fixed-peg depegs", () => {
-  it("accepts the bounded PHPm Uniswap display route without granting depeg authority", () => {
+  it("accepts a legacy PHPm exact-pool display route without granting depeg authority", () => {
     const decision = validatePrimaryPriceCandidate({
       price: 0.01621,
       source: "uniswap-v3-exact",

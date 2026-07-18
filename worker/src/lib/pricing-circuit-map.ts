@@ -60,7 +60,7 @@ export const PRICING_SOURCE_CIRCUIT_METADATA: Record<string, PricingCircuitMetad
   ),
   "uniswap-v3-exact": direct(
     CIRCUIT_SOURCE.PHPM_PRICE_ROUTE,
-    "Exact Celo PHPm dual-pool quote route; separate from the synthesized DEX liquidity producer source.",
+    "Legacy exact Celo PHPm dual-pool quote route; retained for historical source diagnostics.",
   ),
   "uniswap-v4-dex": synthesized(
     "Synthesized from DEX liquidity producer output; no dedicated Uniswap V4 breaker is registered.",

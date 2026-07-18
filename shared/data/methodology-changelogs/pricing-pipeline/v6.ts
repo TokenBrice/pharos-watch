@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.197",
+    title: "PHPm Broker-only recovery",
+    date: "2026-07-18",
+    effectiveAt: 1784410000,
+    summary:
+      "PHPm live recovery returns to the exact Celo Mento Broker route only, retiring the heavier dual-pool DEX fallback while keeping dedicated circuit isolation and fail-closed coverage.",
+    impact: [
+      "The PHPm authoritative provider no longer imports the Celo Uniswap V3 factory and Quoter path into the quarter-hour stablecoin pricing sync",
+      "PHPm still requires one fresh Celo block, exact Broker and BiPool identities, a 1,000 PHPm quote, at least 1 million USDm of counter-bucket capacity, and a current trusted USDm dependency",
+      "If the Broker route fails or returns no accepted quote, PHPm receives no authoritative override and remains an explicit active-price coverage gap instead of falling through to a secondary DEX route",
+      "The dedicated `phpm-price-route` circuit remains isolated from the grouped `protocol-redeem` breaker, and optional refresh failures stay neutral while a usable incumbent price exists",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.196",
     title: "Active-scope pricing and deterministic PHPm recovery",
     date: "2026-07-18",
