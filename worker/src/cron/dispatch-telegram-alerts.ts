@@ -329,6 +329,7 @@ export async function dispatchTelegramAlerts(
         reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
         reserveSourceAssessment: snapshotState.reserveSourceAssessment,
         safetySourceAssessment,
+        safetySnapshotNeedsSeed,
         suppressedMethodologyChanges,
         suppressedSafetyChangesAtSeed,
         pendingCapacityBefore,

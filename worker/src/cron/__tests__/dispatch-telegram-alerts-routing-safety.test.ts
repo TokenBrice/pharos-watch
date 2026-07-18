@@ -160,9 +160,14 @@ describe("dispatchTelegramAlerts", () => {
       eventlessFastPath: true,
       eventsDetected: { safety: 0 },
       safetyAlertSourceState: "wrong-generation",
+      safetyAlertsSuppressed: true,
       messagesSent: 0,
     });
-    expect(second).toMatchObject({ eventlessFastPath: true, messagesSent: 0 });
+    expect(second).toMatchObject({
+      eventlessFastPath: true,
+      safetyAlertsSuppressed: true,
+      messagesSent: 0,
+    });
     expect(
       harness.sqlite
         .prepare(

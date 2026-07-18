@@ -95,6 +95,7 @@ export interface EventlessFastPathContext {
   reserveSourceUnavailable: boolean;
   reserveSourceAssessment: AlertReserveSourceAssessment;
   safetySourceAssessment: AlertSafetySourceAssessment;
+  safetySnapshotNeedsSeed: boolean;
   suppressedMethodologyChanges: number;
   suppressedSafetyChangesAtSeed: number;
   pendingCapacityBefore: PendingCapacitySnapshot;
@@ -201,6 +202,7 @@ export async function executeEventlessFastPath({
   reserveSourceUnavailable,
   reserveSourceAssessment,
   safetySourceAssessment,
+  safetySnapshotNeedsSeed,
   suppressedMethodologyChanges,
   suppressedSafetyChangesAtSeed,
   pendingCapacityBefore,
@@ -280,7 +282,10 @@ export async function executeEventlessFastPath({
     pendingCapacityAfter,
     freshOverflow: overflowDeliveryResult?.freshOverflow ?? 0,
     chatsWithActiveSnooze,
-    ...safetySourceFields(safetySourceAssessment, false),
+    ...safetySourceFields(
+      safetySourceAssessment,
+      safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed,
+    ),
     perAlertType: overflowDeliveryResult?.perAlertType ?? base.perAlertType,
     suppressedSafetyChangesAtSeed,
     eventlessFastPath: true,
