@@ -58,11 +58,11 @@ describe("derivePegRates", () => {
     expect(result.sources.peggedEUR).toBeUndefined();
   });
 
-  it("uses fallback rates for empty peg groups", () => {
+  it("uses authoritative FX rates for empty fiat peg groups", () => {
     const result = derivePegRates([], new Map(), { peggedTRY: 0.022417 });
 
     expect(result.rates.peggedTRY).toBe(0.022417);
-    expect(result.sources.peggedTRY).toBe("fallback");
+    expect(result.sources.peggedTRY).toBe("fx");
     expect(result.counts.peggedTRY).toBe(0);
   });
 
@@ -110,7 +110,7 @@ describe("derivePegRates", () => {
     expect(result.counts.peggedGOLD).toBe(2);
   });
 
-  it("uses fallback rates for groups with fewer than 3 eligible coins", () => {
+  it("uses authoritative FX rates for fiat groups with fewer than 3 eligible coins", () => {
     const result = derivePegRates(
       [
         asset("usd-eur-a", "peggedEUR", 1.1, 2_000_000),
@@ -121,7 +121,24 @@ describe("derivePegRates", () => {
     );
 
     expect(result.rates.peggedEUR).toBe(1.2);
-    expect(result.sources.peggedEUR).toBe("fallback");
+    expect(result.sources.peggedEUR).toBe("fx");
+  });
+
+  it("prefers an authoritative fiat FX rate over a broad peer median", () => {
+    const result = derivePegRates(
+      [
+        asset("brl-a", "peggedREAL", 0.1950, 2_000_000),
+        asset("brl-b", "peggedREAL", 0.1953, 3_000_000),
+        asset("brl-c", "peggedREAL", 0.1928, 4_000_000),
+        asset("brl-d", "peggedREAL", 0.1932, 5_000_000),
+      ],
+      undefined,
+      { peggedREAL: 0.19504 },
+    );
+
+    expect(result.rates.peggedREAL).toBe(0.19504);
+    expect(result.sources.peggedREAL).toBe("fx");
+    expect(result.counts.peggedREAL).toBe(4);
   });
 
   it("keeps BRL alias maps compatible with raw peggedBRL consumers", () => {
@@ -138,7 +155,7 @@ describe("derivePegRates", () => {
 
     expect(result.rates.peggedREAL).toBe(0.2);
     expect(result.rates.peggedBRL).toBe(0.2);
-    expect(result.sources.peggedBRL).toBe("fallback");
+    expect(result.sources.peggedBRL).toBe("fx");
     expect(result.counts.peggedBRL).toBe(0);
   });
 });

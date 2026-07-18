@@ -55,6 +55,15 @@ vi.mock("@shared/lib/peg-score", () => ({
     lastEventAt: null,
     trackingSpanDays: 120,
   })),
+  computeRecentPegStats: vi.fn(() => ({
+    windowDays: 90,
+    observedDays: 90,
+    coverageLimited: false,
+    pegPct: 99,
+    incidentCount: 1,
+    thresholdCrossingCount: 1,
+    worstDeviationBps: 35,
+  })),
   coinTrackingStart: vi.fn(() => 0),
 }));
 
@@ -297,5 +306,40 @@ describe("derivePegAnalyticsSnapshot", () => {
       expect.any(Number),
       1_563_494_400,
     );
+  });
+
+  it("uses an audited replay coverage start instead of pre-coverage asset age", async () => {
+    const coin = STABLECOINS_MOCK[0] as typeof STABLECOINS_MOCK[0] & {
+      pegScoreCoverage?: { startDate: string };
+    };
+    coin.pegScoreCoverage = { startDate: "2026-06-28" };
+
+    try {
+      const snapshot = await derivePegAnalyticsSnapshot(db, {
+        peggedAssets: [
+          {
+            id: "usdt-tether",
+            symbol: "AAA",
+            name: "AAA Stable",
+            pegType: "peggedUSD",
+            price: 1,
+            circulating: { peggedUSD: 2_000_000 },
+          } as never,
+        ],
+        methodologyAsOf: 1_783_000_000,
+      });
+
+      expect(vi.mocked(coinTrackingStart)).toHaveBeenLastCalledWith(
+        expect.any(Array),
+        expect.any(Number),
+        1_782_604_800,
+      );
+      expect(snapshot.pegDataById.get("usdt-tether")?.historyCoverage).toMatchObject({
+        source: "audited-replay",
+        status: "verified",
+      });
+    } finally {
+      delete coin.pegScoreCoverage;
+    }
   });
 });

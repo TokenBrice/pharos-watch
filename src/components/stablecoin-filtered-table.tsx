@@ -8,10 +8,11 @@ import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { StablecoinTable } from "@/components/stablecoin-table";
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
 import type { FilterTag } from "@shared/types";
+import type { PegRateSource } from "@shared/lib/peg-rates";
 
 interface StablecoinFilteredTableProps {
   activeFilters: readonly FilterTag[];
-  renderNotice?: (context: { pegRateSources: Record<string, "median" | "fallback"> }) => React.ReactNode;
+  renderNotice?: (context: { pegRateSources: Record<string, PegRateSource> }) => React.ReactNode;
 }
 
 export function StablecoinFilteredTable({ activeFilters, renderNotice }: StablecoinFilteredTableProps) {

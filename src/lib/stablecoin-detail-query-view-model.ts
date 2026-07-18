@@ -141,10 +141,11 @@ export function buildDetailPegPriceSnapshot(
     fallbackRates: listData.fxFallbackRates,
     metaById: CLIENT_TRACKED_META_BY_ID,
   });
-  const deviationBps = deriveDeviationBps(coinData.price, pegContext.pegReference);
   const pegScoreResult = pegSummaryData?.coins.find((candidate) => candidate.id === id) ?? null;
+  const pegRef = pegScoreResult?.pegReference?.valueUsd ?? pegContext.pegReference;
+  const deviationBps = deriveDeviationBps(coinData.price, pegRef);
   return {
-    pegRef: pegContext.pegReference,
+    pegRef,
     deviationBps,
     gaugeDeviationBps: deriveGaugeDeviationBps(deviationBps, isNavToken),
     pegReferenceUnavailable: !isNavToken && pegScoreResult?.pegReferenceUnavailable === true,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computePegScore, coinTrackingStart, PEG_SCORE_LOOKBACK_SEC } from "../peg-score";
+import { computePegScore, computeRecentPegStats, coinTrackingStart, PEG_SCORE_LOOKBACK_SEC } from "../peg-score";
 
 const NOW = Math.floor(Date.now() / 1000);
 const DAY = 86400;
@@ -220,5 +220,44 @@ describe("computePegScore", () => {
       );
       expect(result.spreadPenalty).toBe(15);
     });
+  });
+});
+
+describe("computeRecentPegStats", () => {
+  it("uses only observed coverage and exposes grouped threshold crossings", () => {
+    const coverageStart = NOW - 20 * DAY;
+    const result = computeRecentPegStats([
+      {
+        startedAt: NOW - 10 * DAY,
+        endedAt: NOW - 8 * DAY,
+        peakDeviationBps: -220,
+        constituentEventCount: 4,
+        direction: "below" as const,
+      },
+    ] as never, coverageStart, NOW);
+
+    expect(result).toMatchObject({
+      windowDays: 90,
+      observedDays: 20,
+      coverageLimited: true,
+      pegPct: 90,
+      incidentCount: 1,
+      thresholdCrossingCount: 4,
+      worstDeviationBps: -220,
+    });
+  });
+
+  it("excludes audited false positives from the recent window", () => {
+    const result = computeRecentPegStats([
+      {
+        startedAt: NOW - 5 * DAY,
+        endedAt: NOW - 4 * DAY,
+        peakDeviationBps: -500,
+        direction: "below" as const,
+        provenance: { auditVerdict: "false_positive" },
+      },
+    ] as never, NOW - 90 * DAY, NOW);
+
+    expect(result).toMatchObject({ pegPct: 100, incidentCount: 0, thresholdCrossingCount: 0 });
   });
 });

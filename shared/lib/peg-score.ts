@@ -3,6 +3,7 @@ import { mergeDepegSeconds, worstDeviation } from "./peg-utils";
 import { DAY_SECONDS } from "./time-constants";
 
 export const PEG_SCORE_LOOKBACK_SEC = Math.ceil(4 * 365.25 * DAY_SECONDS);
+export const RECENT_PEG_WINDOW_DAYS = 90;
 const LOW_CONFIDENCE_WEIGHT = 0.5;
 const MAGNITUDE_FLOOR_DIVISOR = 2000;
 const ACTIVE_DEPEG_FLOOR = 5;
@@ -86,6 +87,16 @@ export interface PegScoreResult {
   trackingSpanDays: number;
 }
 
+export interface RecentPegStats {
+  windowDays: typeof RECENT_PEG_WINDOW_DAYS;
+  observedDays: number;
+  coverageLimited: boolean;
+  pegPct: number;
+  incidentCount: number;
+  thresholdCrossingCount: number;
+  worstDeviationBps: number | null;
+}
+
 export const NULL_PEG_SCORE_RESULT: PegScoreResult = {
   pegScore: null,
   pegPct: 100,
@@ -111,6 +122,41 @@ function eventSeverityWeight(event: DepegEvent): number {
   const confidenceTier = event.provenance?.confidenceTier;
   if (confidenceTier === "low") return LOW_CONFIDENCE_WEIGHT;
   return 1;
+}
+
+/**
+ * Summarize recent realized peg behavior without treating time before the
+ * verified/assumed tracking anchor as observed stability.
+ */
+export function computeRecentPegStats(
+  events: DepegEvent[],
+  trackingStartSec: number | null,
+  nowSec: number,
+): RecentPegStats | null {
+  if (trackingStartSec == null || trackingStartSec >= nowSec) return null;
+
+  const nominalStartSec = nowSec - RECENT_PEG_WINDOW_DAYS * DAY_SECONDS;
+  const observedStartSec = Math.max(trackingStartSec, nominalStartSec);
+  const observedSpanSec = Math.max(nowSec - observedStartSec, 1);
+  const recentEvents = events.filter((event) => {
+    if (isExcludedByAudit(event)) return false;
+    const eventEndSec = event.endedAt ?? nowSec;
+    return event.startedAt <= nowSec && eventEndSec >= observedStartSec;
+  });
+  const depegSec = mergeDepegSeconds(recentEvents, observedStartSec, nowSec);
+
+  return {
+    windowDays: RECENT_PEG_WINDOW_DAYS,
+    observedDays: observedSpanSec / DAY_SECONDS,
+    coverageLimited: observedStartSec > nominalStartSec,
+    pegPct: Math.max(0, (1 - depegSec / observedSpanSec) * 100),
+    incidentCount: recentEvents.length,
+    thresholdCrossingCount: recentEvents.reduce(
+      (sum, event) => sum + Math.max(1, event.constituentEventCount ?? 1),
+      0,
+    ),
+    worstDeviationBps: worstDeviation(recentEvents),
+  };
 }
 
 /**

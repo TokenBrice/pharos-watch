@@ -515,6 +515,8 @@ export const DepegEventSchema = z.object({
   recoveryPrice: z.number().nullable(),
   pegReference: z.number(),
   source: z.enum(["live", "backfill"]),
+  /** Raw threshold-crossing rows grouped into this public incident. */
+  constituentEventCount: z.number().int().positive().optional(),
   confirmationSources: z.string().nullable().optional().default(null),
   pendingReason: z.string().nullable().optional().default(null),
   closeReason: DepegEventCloseReasonSchema.nullable().optional().default(null),
@@ -561,6 +563,12 @@ export const DepegEventsResponseSchema = z.object({
   events: z.array(DepegEventSchema),
   total: z.number(),
   totalExact: z.boolean().optional(),
+  counts: z
+    .object({
+      incidents: z.number().int().nonnegative(),
+      thresholdCrossings: z.number().int().nonnegative(),
+    })
+    .optional(),
   nextCursor: z.string().nullable().optional(),
   pending: z.array(DepegPendingIncidentSchema).optional(),
   methodology: MethodologyEnvelopeSchema.optional(),
@@ -577,6 +585,15 @@ export const PegSummaryCoinSchema = z.object({
   pegCurrency: z.string(),
   governance: z.string(),
   currentDeviationBps: z.number().nullable(),
+  pegReference: z
+    .object({
+      valueUsd: z.number().positive(),
+      source: z.enum(["median", "fx", "fallback"]),
+      contributorCount: z.number().int().nonnegative(),
+      asOf: z.number().int().positive(),
+    })
+    .nullable()
+    .optional(),
   /**
    * True when the coin's peg reference is not authoritative (thin non-USD
    * peer group with no live FX fallback) — deviation is withheld rather than
@@ -602,6 +619,26 @@ export const PegSummaryCoinSchema = z.object({
   activeDepeg: z.boolean(),
   lastEventAt: z.number().nullable(),
   trackingSpanDays: z.number(),
+  historyCoverage: z
+    .object({
+      startedAt: z.number().int().nonnegative(),
+      source: z.enum(["audited-replay", "asset-age", "first-observation", "first-event"]),
+      status: z.enum(["verified", "assumed"]),
+    })
+    .nullable()
+    .optional(),
+  recent90d: z
+    .object({
+      windowDays: z.literal(90),
+      observedDays: z.number().nonnegative(),
+      coverageLimited: z.boolean(),
+      pegPct: z.number().min(0).max(100),
+      incidentCount: z.number().int().nonnegative(),
+      thresholdCrossingCount: z.number().int().nonnegative(),
+      worstDeviationBps: z.number().nullable(),
+    })
+    .nullable()
+    .optional(),
   methodologyVersion: z.string(),
   dexPriceCheck: z
     .object({
@@ -625,6 +662,7 @@ export const PegSummaryStatsSchema = z.object({
   depegEventsToday: z.number(),
   depegEventsYesterday: z.number(),
   fallbackPegRates: z.array(z.string()).optional(),
+  fxPegRates: z.array(z.string()).optional(),
 });
 export type PegSummaryStats = z.infer<typeof PegSummaryStatsSchema>;
 

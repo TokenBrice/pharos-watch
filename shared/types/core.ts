@@ -1046,6 +1046,14 @@ export interface StablecoinMeta {
   /** Obituary content surfaced on the detail page banner and cemetery tombstone; required when status === "frozen". */
   obituary?: StablecoinObituary;
   launchDate?: string;
+  /** Reviewed lower bound for depeg-event coverage used as the PegScore denominator. */
+  pegScoreCoverage?: {
+    startDate: string;
+    basis: "audited-replay-and-live";
+    reviewedAt: string;
+    replayRunId?: string;
+    notes: string;
+  };
   announcedDate?: string;
   expectedLaunchDate?: string;
   launchPhase?: LaunchPhase;

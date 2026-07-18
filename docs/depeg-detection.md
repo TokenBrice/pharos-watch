@@ -157,7 +157,7 @@ Validation gates (skip if any fail):
 - Price valid: non-null, is a number, not NaN, > 0
 - Supply >= $1M (via `sumPegBuckets`) for live event recording; if an existing open event later falls below this floor while the coin remains tracked, the live row closes with `close_reason = 'coverage-lost-supply'` and `recovery_price = NULL` because coverage left the live-event universe rather than proving a price recovery
 - Peg reference valid: finite and > 0
-- Non-USD fiat peg references only mutate live state when they come from cached FX fallback or a median built from at least 3 live contributors; thin peer medians and empty live peer sets fail closed for that cycle
+- Non-USD fiat peg references use the live FX rate whenever it is available. A peer median is only a fallback when at least 3 live contributors remain; thin peer medians and empty live peer sets fail closed for that cycle
 - Supported non-USD fiat pegs with reliable CoinGecko native pairs also consult a fresh direct native-peg quote before mutating live state; a native quote back inside threshold or pointing the other way vetoes the derived USD/FX move for that cycle, while a threshold-crossing native quote can initiate a live event when the primary USD-vs-reference path is still inside threshold
 
 Primary-price trust gates:
@@ -189,7 +189,7 @@ direction = bps >= 0 ? "above" : "below"
 
 **Path B -- Deviation >= threshold AND no event open**
 
-- If the peg reference is a thin non-USD fiat peer median without FX fallback: skip live-state mutation for this cycle
+- If the peg reference is a thin non-USD fiat peer median without live FX: skip live-state mutation for this cycle
 - If a supported direct native-peg quote is back inside threshold or shows the opposite side of the peg: suppress the new event for this cycle
 - If the primary USD-vs-reference deviation is still inside threshold but a fresh supported direct native-peg quote crosses threshold, use that native quote against a `1.0` peg reference to open or queue the new event
 - If supply >= $1B: insert into `depeg_pending` for multi-source confirmation (`reason = "large-cap"` unless another reason is more specific). The same large-cap confirmation lane also catches near-large-cap cases: >= $750M when source depth is below 2 or severity is >= 2x the peg threshold, and >= $500M only when both source depth is below 2 and severity is >= 2x threshold.
@@ -428,13 +428,16 @@ Response:
   "events": [{ "...DepegEvent fields..." }],
   "total": 42,
   "totalExact": true,
+  "counts": { "incidents": 42, "thresholdCrossings": 57 },
   "nextCursor": "..." | null,
   "pending": [{ "...DepegPendingIncident fields (only when includePending=true)..." }],
   "methodology": { "version": "...", "versionLabel": "...", "currentVersion": "...", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000, "isCurrent": true }
 }
 ```
 
-When DDR has linked multiple raw rows into one active repaired incident, the endpoint returns the incident's current event row, excludes superseded source rows from the active projection, and projects the public `startedAt`/`startPrice` from the first linked row.
+`total` counts public incident rows, not necessarily individual threshold crossings. Exact `counts` are included only for a stablecoin-filtered historical request with `includeTotal=true`; `counts.incidents` matches `total`, while `counts.thresholdCrossings` counts the stored detector/replay rows before DDR projection.
+
+When DDR has linked multiple raw rows into one active repaired incident, the endpoint returns the incident's current event row, excludes superseded source rows from the active projection, projects the public `startedAt`/`startPrice` from the first linked row, and reports the number of linked rows in `constituentEventCount`. Unprojected rows use `constituentEventCount = 1`.
 
 Rows may include a nullable `provenance` object with public replay/audit metadata (`sourceKind`, `replayRunId`, `replayVersion`, `sourcePriceProviders`, `quoteMode`, `pegReferenceSource`, `supplySource`, `confirmationPolicy`, `confirmationPointCount`, `confidenceTier`, `auditVerdict`, `pegScoreEligible`, `updatedAt`). Legacy rows return `provenance: null`.
 
@@ -466,9 +469,11 @@ Cache: producer-backed profile (`s-maxage=300`, `max-age=60`, `stale-while-reval
 ### Component: DepegHistory (`depeg-history.tsx`)
 
 - Stablecoin-detail depeg history table backed by the filtered infinite hook
-- Hero peg-score card now shows the full recorded-event count from the `GET /api/depeg-events` response field `total`; when that differs from the peg-score window count, the UI explicitly labels the 4-year score-window subset
+- Separates public incidents from raw threshold crossings using the filtered API counts and per-incident `constituentEventCount`
+- Shows a coverage-aware recent 90-day peg percentage alongside observed days, incident count, and threshold-crossing count; pre-coverage days are not silently treated as stable
+- Shows the PegScore coverage anchor and whether it came from a reviewed replay or an assumed asset-age/first-observation fallback
 - Background-hydrates the full per-coin history, then paginates the rendered table client-side at 25 rows per page
-- Summary metrics: recorded event count, worst deviation, current streak (days at peg or "Depegged now")
+- Summary metrics: recorded incidents, threshold crossings, worst deviation, current streak (days at peg or "Depegged now")
 - Table columns: Date, Direction (badge), Peak Deviation (signed, colored), Duration (or "Ongoing"), Start Price, Peak Price, Recovery Price
 - Uses `computePegStability()` once the full per-coin history has loaded
 
@@ -500,12 +505,17 @@ pegScore = max(0, min(100, round(0.5*pegPct + 0.5*severityScore - activeDepegPen
 
 v6.0 quality gate: events with provenance `auditVerdict` of `false_positive` or `disputed` are excluded from PegScore inputs. Included events with `confidenceTier = "low"` retain time-at-peg impact but receive a 0.5 severity/spread weight. The result includes quality counters so consumers can tell when provenance changed the score inputs.
 
-**Tracking window**: `coinTrackingStart()` prefers a curated launch date when one is available, then falls back to the
-coin's earliest `supply_history` snapshot, then to the first durable Pharos valid-price observation persisted through
+**Tracking window**: `coinTrackingStart()` first honors a reviewed `pegScoreCoverage.startDate` when an operator has
+verified replay plus continuous live coverage. Otherwise it prefers a curated launch date, then the coin's earliest
+`supply_history` snapshot, then the first durable Pharos valid-price observation persisted through
 `getFirstSeenDates()`. This gives priced assets without supply-history coverage a real age anchor instead of leaving
-them unrated indefinitely, while still requiring at least 7 days of tracking before PegScore is rated. If none of those
-anchors exists, a coin with depeg events falls back to the earliest event; a coin with no anchor and no events returns
-`pegScore = null`.
+them unrated indefinitely without claiming that unverified pre-observation time was incident-free. PegScore still
+requires at least 7 days of tracking. If none of those anchors exists, a coin with depeg events falls back to the
+earliest event; a coin with no anchor and no events returns `pegScore = null`.
+
+The API also computes a coverage-aware 90-day companion window. Its denominator starts at the later of 90 days ago
+or the tracking anchor, and it excludes replay rows audited as false positives or disputed. The result reports
+observed days, incident count, raw threshold-crossing count, peg percentage, and whether the window is coverage-limited.
 
 **Magnitude floor**: Every depeg event carries a minimum severity penalty proportional
 to its peak deviation, regardless of how brief. This prevents hundreds of short

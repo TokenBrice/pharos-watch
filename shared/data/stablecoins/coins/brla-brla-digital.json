@@ -202,6 +202,13 @@
     }
   },
   "launchDate": "2023-04-18",
+  "pegScoreCoverage": {
+    "startDate": "2026-06-28",
+    "basis": "audited-replay-and-live",
+    "reviewedAt": "2026-07-18",
+    "replayRunId": "brla-brla-digital:1783504710664:wr49mh",
+    "notes": "Native-BRL replay was completed for June 28 through July 8, 2026, followed by live native-quote monitoring under depeg methodology v6.095. Earlier native-BRL event coverage has not been verified and is excluded from the PegScore denominator."
+  },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "BRLA is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
