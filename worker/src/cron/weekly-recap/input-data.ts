@@ -521,6 +521,18 @@ export function buildWeeklyInputData(
   });
 
   const weekOverWeekDeltas = buildWeeklyWowDeltas(current, priorParsed);
+  // Forward-look accountability: publishing the hit rate creates pressure
+  // toward falsifiable near-term triggers (the corpus ran at ~4% hits).
+  const outcomeCounts = { hit: 0, missed: 0, pending: 0, expired: 0 };
+  for (const day of parsed) {
+    for (const outcome of day.inputData.forwardLookOutcomes ?? []) {
+      if (outcome.status in outcomeCounts) outcomeCounts[outcome.status as keyof typeof outcomeCounts] += 1;
+    }
+  }
+  const forwardLookScoreboard =
+    outcomeCounts.hit + outcomeCounts.missed + outcomeCounts.pending + outcomeCounts.expired > 0
+      ? outcomeCounts
+      : null;
 
   return {
     weekStartDate: parsed[0].date,
@@ -559,6 +571,7 @@ export function buildWeeklyInputData(
       topYieldAnomalies,
       topLiquidityShifts,
     },
+    forwardLookScoreboard,
     weekOverWeekDeltas,
   };
 }

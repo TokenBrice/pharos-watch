@@ -6,6 +6,7 @@ import type {
   DigestNextTrigger,
   DigestRiskTapeItem,
   DigestSignalChange,
+  DigestStandingCondition,
 } from "@shared/types";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +29,23 @@ interface DigestIntelligencePanelProps {
   nextTriggers?: DigestNextTrigger[] | null;
   forwardLookOutcomes?: DigestForwardLookOutcome[] | null;
   riskTape?: DigestRiskTapeItem[] | null;
+  standingConditions?: DigestStandingCondition[] | null;
   compact?: boolean;
+}
+
+function StandingConditionsStrip({ conditions }: { conditions: DigestStandingCondition[] }) {
+  return (
+    <p className="text-xs leading-relaxed text-muted-foreground">
+      <span className="font-mono font-semibold uppercase tracking-[0.16em]">Standing:</span>{" "}
+      {conditions.slice(0, 5).map((condition, index) => (
+        <span key={condition.stablecoinId ?? condition.symbol}>
+          {index > 0 && " · "}
+          {condition.symbol} d{condition.ageDays}
+          {condition.currentBps != null && ` ${Math.abs(condition.currentBps).toLocaleString()}bps`}
+        </span>
+      ))}
+    </p>
+  );
 }
 
 function hasChanges(changeSummary: DigestChangeSummary | null | undefined): boolean {
@@ -151,17 +168,20 @@ export function DigestIntelligencePanel({
   nextTriggers,
   forwardLookOutcomes,
   riskTape,
+  standingConditions,
   compact = false,
 }: DigestIntelligencePanelProps) {
   const riskTapeItems = riskTape ?? [];
   const outcomeItems = forwardLookOutcomes ?? [];
   const triggerItems = nextTriggers ?? [];
+  const standingItems = standingConditions ?? [];
   const hasRiskTape = riskTapeItems.length > 0;
   const hasOutcomes = outcomeItems.length > 0;
   const hasNextTriggers = triggerItems.length > 0;
+  const hasStanding = standingItems.length > 0;
   const hasChangeSummary = hasChanges(changeSummary);
 
-  if (!hasRiskTape && !hasOutcomes && !hasNextTriggers && !hasChangeSummary) return null;
+  if (!hasRiskTape && !hasOutcomes && !hasNextTriggers && !hasChangeSummary && !hasStanding) return null;
 
   if (compact) {
     return (
@@ -180,6 +200,7 @@ export function DigestIntelligencePanel({
   return (
     <div className="space-y-3">
       {hasRiskTape && <RiskTape items={riskTapeItems} />}
+      {hasStanding && <StandingConditionsStrip conditions={standingItems} />}
       {hasOutcomes && <OutcomeStrip outcomes={outcomeItems} />}
       {hasChangeSummary && changeSummary && <WhatChanged changeSummary={changeSummary} />}
       {hasNextTriggers && <NextTriggers triggers={triggerItems} />}

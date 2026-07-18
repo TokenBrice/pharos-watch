@@ -60,6 +60,8 @@ All ecosystem monetary aggregates use the `core-stablecoins-v1` universe: active
 | Cross-day trends | `daily_digest` (archived input_data) | 7-day trajectories for PSI score/band, total mcap, and Bank Run Gauge; requires >=3 days of history |
 | Data quality | collector status + window metadata | Degraded collectors, cache age, PSI source time, mint/burn and blacklist windows |
 | Recent digests | last 7 non-weekly rows from `daily_digest` | Passed to LLM to enforce daily variety |
+| Cause context | `shared/data/annotations/curated-annotations.ts` | Curated, primary-sourced cause annotations for coins in the depeg set (annotation `ts` within 90d before event start), rendered as a `CAUSE CONTEXT` prompt block so coverage can say *why* a coin broke; the model is instructed never to invent causes beyond the curated list |
+| Standing conditions | derived from `topDepegs` | Chronic ledger: ongoing depegs ≥48h old (`standingConditions[]`) with day counts and live deviation — served through `/api/daily-digest`/snapshot, rendered as a compact "Standing:" strip on digest pages, and appended as one deterministic line to the Telegram edition, so demoted stories stay visible without narrated day-count headlines |
 | Digest intelligence | current `DigestInputData` + latest archived `input_data` | Deterministic risk tape, what changed since yesterday, prior next-trigger outcomes, next triggers, calm-day frame, and editorial audit |
 
 `DigestInputData` is defined in `shared/types/digest.ts` (re-exported via `shared/types/index.ts`) and imported by the digest cron, digest snapshot API, and frontend snapshot hook. Its optional `aggregateUniverse` marker preserves compatibility with archived pre-cutover rows.
@@ -288,6 +290,7 @@ Fetches the last 15 daily digests (`LIMIT 15`, cutoff `now - 15d`, excluding wee
 | Grade transitions | Sum of `gradeTransitions.length` across all days |
 | Gauge range | Min/max `mintBurnFlows.gaugeScore` (null if <3 data points) |
 | Other anomalies | Top mint/burn pressure, yield anomalies, and liquidity shifts |
+| Forward-look scoreboard | sum of daily `forwardLookOutcomes` statuses | `{hit, missed, pending, expired}` across the week's editions; the prompt instructs the recap to publish the score and own the misses |
 | Week-over-week deltas | prior 7 daily rows (same aggregation shape) produce `{ current, prior }` values for mcap end, PSI midpoint, PSI dominant band, active-depeg observations, unique depeg signals, blacklist events/USD, grade transitions, gauge midpoint; `null` when prior-week coverage is below 5 daily rows |
 
 Requires >=5 current-week daily digests to proceed. Prior-week coverage below 5 is tolerated; `weekOverWeekDeltas` is then `null` and the prompt notes the gap instead.

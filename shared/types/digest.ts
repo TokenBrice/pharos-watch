@@ -106,6 +106,24 @@ export interface DigestInputData {
   calmNarrativeFrame?: DigestCalmNarrativeFrame;
   editorialAudit?: DigestEditorialAudit;
   degradedSources?: string[];
+  /** Curated cause annotations for coins in the depeg set (why it broke). */
+  causeContext?: {
+    stablecoinId: string;
+    symbol: string;
+    kind: string;
+    label: string;
+    date: string;
+    href?: string;
+  }[];
+  /** Chronic ledger: ongoing depegs the reader has already seen as headlines. */
+  standingConditions?: {
+    stablecoinId?: string;
+    symbol: string;
+    ageDays: number;
+    currentBps?: number;
+    peakBps?: number;
+    mcapUsd?: number;
+  }[];
   activeDepegCount: number;
   topDepegs: {
     stablecoinId?: string;
@@ -348,6 +366,16 @@ export const DigestNextTriggerSchema = z.object({
 });
 export type DigestNextTrigger = z.infer<typeof DigestNextTriggerSchema>;
 
+export const DigestStandingConditionSchema = z.object({
+  stablecoinId: z.string().optional(),
+  symbol: z.string(),
+  ageDays: z.number(),
+  currentBps: z.number().optional(),
+  peakBps: z.number().optional(),
+  mcapUsd: z.number().optional(),
+});
+export type DigestStandingCondition = z.infer<typeof DigestStandingConditionSchema>;
+
 export const DigestForwardLookOutcomeSchema = z.object({
   id: z.string(),
   triggerId: z.string(),
@@ -381,6 +409,7 @@ export const DailyDigestResponseSchema = z
     nextTriggers: z.array(DigestNextTriggerSchema).nullable().optional(),
     forwardLookOutcomes: z.array(DigestForwardLookOutcomeSchema).nullable().optional(),
     riskTape: z.array(DigestRiskTapeItemSchema).nullable().optional(),
+    standingConditions: z.array(DigestStandingConditionSchema).nullable().optional(),
   })
   .transform((value) => ({
     digest: value.digest,
@@ -393,6 +422,7 @@ export const DailyDigestResponseSchema = z
     nextTriggers: value.nextTriggers ?? null,
     forwardLookOutcomes: value.forwardLookOutcomes ?? null,
     riskTape: value.riskTape ?? null,
+    standingConditions: value.standingConditions ?? null,
   }));
 export type DailyDigestResponse = z.infer<typeof DailyDigestResponseSchema>;
 
@@ -449,6 +479,7 @@ const DigestSnapshotInputDataSchema = z
           .passthrough(),
       )
       .optional(),
+    standingConditions: z.array(DigestStandingConditionSchema).optional(),
     stabilityIndex: z
       .object({
         score: z.number(),

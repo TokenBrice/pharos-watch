@@ -32,6 +32,7 @@ import type { DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
 import { buildRecentDigestMeta, type RecentDigestMetaEntry } from "./runtime-helpers";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "./shared";
 import { buildEditorialCandidates } from "./editorial-candidates";
+import { buildStandingConditions, collectCauseContext } from "./cause-context";
 import { buildDigestIntelligence, parseStoredDigestInput } from "./digest-intelligence";
 
 function consumeCollectorResult<T>(result: CollectorResult<T>, degradedReasons: string[]): T {
@@ -374,6 +375,8 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     liquidityShifts,
     crossDayTrends,
   };
+  inputData.causeContext = collectCauseContext(topDepegs, nowSec);
+  inputData.standingConditions = buildStandingConditions(topDepegs);
   inputData.editorialCandidates = buildEditorialCandidates(inputData, previousInputData);
   Object.assign(inputData, buildDigestIntelligence(inputData, previousInputData));
 

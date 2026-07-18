@@ -42,6 +42,7 @@ export function buildUserPrompt(
   pushDataQualityLines(lines, data);
   pushLeadRequirementLines(lines, options.leadRequirements);
   pushOngoingStoryLines(lines, data, options.recentLeadSignalIds);
+  pushCauseContextLines(lines, data);
   pushEditorialCandidateLines(lines, data);
   pushMomentumLines(lines, data);
   pushDigestIntelligenceLines(lines, data);
@@ -337,6 +338,15 @@ function pushLeadRequirementLines(
       );
     }
   }
+}
+
+function pushCauseContextLines(lines: string[], data: DigestInputData): void {
+  if (!data.causeContext || data.causeContext.length === 0) return;
+  lines.push("", "CAUSE CONTEXT (curated, primary-sourced — cite when covering the coin):");
+  for (const entry of data.causeContext) {
+    lines.push(`  ${entry.symbol} | ${entry.date} | ${entry.kind} | ${entry.label}`);
+  }
+  lines.push("  When a cause is documented here, the first mention of that coin should carry it; never invent causes beyond this list.");
 }
 
 function pushOngoingStoryLines(

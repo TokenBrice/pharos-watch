@@ -124,6 +124,15 @@ export function buildWeeklyPrompt(
     lines.push("", "Week-over-week deltas: unavailable (insufficient prior-week history).");
   }
 
+  if (data.forwardLookScoreboard) {
+    const scoreboard = data.forwardLookScoreboard;
+    lines.push(
+      "",
+      `Forward-look scoreboard (this week's daily trigger outcomes): ${scoreboard.hit} hit / ${scoreboard.missed} missed / ${scoreboard.expired} expired / ${scoreboard.pending} pending.`,
+      "Include this score in the recap when any triggers resolved; own the misses plainly.",
+    );
+  }
+
   lines.push("", "Weekly Risk Leaderboard (P1 lead must be the top unsuppressed item):");
   if (data.weeklySignals.riskLeaderboard.length > 0) {
     const freshSignals = data.weeklySignals.riskLeaderboard.filter((signal) => !signal.carriedOver);

@@ -70,6 +70,8 @@ export interface WeeklyInputData {
     topYieldAnomalies: { symbol: string; apy: number; warnings: string[]; mcapUsd: number; date: string }[];
     topLiquidityShifts: { symbol: string; scoreDelta: number; mcapUsd: number; date: string }[];
   };
+  /** Aggregate forward-look accountability across the week's daily editions. */
+  forwardLookScoreboard: { hit: number; missed: number; pending: number; expired: number } | null;
   weekOverWeekDeltas: {
     mcap: { current: number; prior: number; deltaPct: number | null };
     psi: { current: number; prior: number; delta: number };

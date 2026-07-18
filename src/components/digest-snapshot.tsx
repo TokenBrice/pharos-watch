@@ -156,6 +156,7 @@ export function DigestSnapshot({ date }: { date: string }) {
         changeSummary={inputData.changeSummary}
         nextTriggers={inputData.nextTriggers}
         forwardLookOutcomes={inputData.forwardLookOutcomes}
+        standingConditions={inputData.standingConditions}
         riskTape={inputData.riskTape}
       />
 

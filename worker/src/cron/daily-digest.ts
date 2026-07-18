@@ -14,6 +14,7 @@ import {
   enqueueTelegramDigestEdition,
 } from "../lib/telegram-digest-outbox";
 import { buildDailyDigestInput } from "./daily-digest/input";
+import { formatStandingConditionsLine } from "./daily-digest/cause-context";
 import { buildUserPrompt, SYSTEM_PROMPT } from "./daily-digest/prompt";
 import { insertDigestRecord, markDigestMetaBlocked, requestDigestCopy, runDigestChannelDelivery } from "./digest/platform";
 import { reportDigestProgress } from "./digest/progress";
@@ -354,7 +355,12 @@ export async function generateDailyDigest(
         digestGeneratedAt: now,
         targetChatId: telegramCreds.chatId,
         title: digestCopy.digestTitle,
-        extended: digestCopy.digestExtended,
+        // The chronic ledger keeps demoted ongoing stories visible as one
+        // deterministic line instead of another narrated day-count headline.
+        extended: (() => {
+          const standingLine = formatStandingConditionsLine(inputData.standingConditions);
+          return standingLine ? `${digestCopy.digestExtended}\n\n${standingLine}` : digestCopy.digestExtended;
+        })(),
         date: digestDate,
         editionNumber,
         appendixHtml: telegramAppendices?.appendixHtml ?? null,

@@ -368,3 +368,35 @@ describe("depeg lifecycle flags (Batch 5)", () => {
     expect(flags).toHaveLength(0);
   });
 });
+
+describe("cause context + chronic ledger (Batch 8)", () => {
+  it("attaches curated cause annotations for depeg coins within the lookback window", async () => {
+    const { collectCauseContext } = await import("../daily-digest/cause-context");
+    const nowSec = 1_784_361_907;
+    // usdc-circle has curated depeg annotations (SVB 2023-03-11); an event
+    // starting near that date picks them up, one starting years later does not.
+    const svbEra = collectCauseContext(
+      [{ stablecoinId: "usdc-circle", symbol: "USDC", bps: -1300, mcapUsd: 4e10, startedAt: Math.floor(Date.UTC(2023, 2, 12) / 1000) }],
+      nowSec,
+    );
+    expect(svbEra?.some((entry) => entry.label.toLowerCase().includes("svb"))).toBe(true);
+    const recent = collectCauseContext(
+      [{ stablecoinId: "usdc-circle", symbol: "USDC", bps: -100, mcapUsd: 4e10, startedAt: nowSec - 86_400 }],
+      nowSec,
+    );
+    expect(recent?.some((entry) => entry.label.toLowerCase().includes("svb")) ?? false).toBe(false);
+  });
+
+  it("builds the chronic ledger from multi-day depegs and formats the Telegram line", async () => {
+    const { buildStandingConditions, formatStandingConditionsLine } = await import("../daily-digest/cause-context");
+    const fixture = loadFixture("2026-07-18");
+    const { topDepegs } = await replayCollector(seedsFromFixture(fixture.inputData), generatedAt(fixture.inputData));
+    const conditions = buildStandingConditions(topDepegs);
+    expect(conditions?.length).toBeGreaterThan(0);
+    expect(conditions?.every((row) => row.ageDays >= 2)).toBe(true);
+    const line = formatStandingConditionsLine(conditions);
+    expect(line).toMatch(/^Standing: /);
+    expect(line).toContain("pmUSD d");
+    expect(formatStandingConditionsLine(undefined)).toBeNull();
+  });
+});
