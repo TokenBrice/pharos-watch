@@ -38,11 +38,13 @@ function getActiveDepegSuppressReason(params: { mcapUsd: number; ageHours: numbe
   if (params.mcapUsd < 20_000_000) {
     return "sub-$20M active depeg, too small for a lead unless nothing larger moved";
   }
+  // Coin-significance floor (owner-ratified 2026-07-18): sub-$50M coins lead
+  // only on break day; after 48h they are one-line coverage at most.
+  if (params.ageHours >= 48 && params.mcapUsd < 50_000_000) {
+    return "sub-$50M depeg past its break day, lead only on break or resolution day";
+  }
   if (params.ageHours >= 168 && params.mcapUsd < 250_000_000) {
     return "week-old mid/small-cap depeg, treat as chronic unless it worsened today";
-  }
-  if (params.ageHours >= 72 && params.mcapUsd < 50_000_000) {
-    return "multi-day small-cap depeg, likely background condition";
   }
   if (Math.abs(params.bps) < 50 && params.mcapUsd < 250_000_000) {
     return "low-deviation smaller-cap depeg, weak lead material";

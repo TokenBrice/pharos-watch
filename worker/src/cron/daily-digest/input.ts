@@ -51,6 +51,8 @@ export interface DailyDigestInputBuildResult {
   recentLeadSignalIds: (string | null)[];
   /** Owner-review lifecycle flags over the full open depeg-event set. */
   lifecycleFlags: DepegLifecycleFlag[];
+  /** Trailing titles (newest first, up to 30) for long-window title dedupe. */
+  recentTitles: string[];
   stablecoinsCacheReason: string | null;
   llmSignals: {
     activeDepegCount: number;
@@ -87,6 +89,18 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
        ORDER BY generated_at DESC LIMIT 14`,
     )
     .all<{ digest_meta: string | null }>();
+  // Trailing titles for the 30-edition title-dedupe window (titles only; the
+  // 7-edition variety window and 14-edition lead history stay separate).
+  const recentTitleRows = await db
+    .prepare(
+      `SELECT digest_title FROM daily_digest
+       WHERE (${NON_WEEKLY_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})
+       ORDER BY generated_at DESC LIMIT 30`,
+    )
+    .all<{ digest_title: string | null }>();
+  const recentTitles = (recentTitleRows.results ?? [])
+    .map((row) => row.digest_title)
+    .filter((title): title is string => Boolean(title));
   const recentLeadSignalIds = (leadHistoryRows.results ?? []).map((row) => {
     if (!row.digest_meta) return null;
     try {
@@ -121,6 +135,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
       previousInputData,
       recentLeadSignalIds,
       lifecycleFlags: [],
+      recentTitles,
       stablecoinsCacheReason: stablecoinsCacheResult.reason,
       llmSignals: {
         activeDepegCount: 0,
@@ -369,6 +384,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     previousInputData,
     recentLeadSignalIds,
     lifecycleFlags,
+    recentTitles,
     stablecoinsCacheReason: null,
     llmSignals: {
       activeDepegCount,

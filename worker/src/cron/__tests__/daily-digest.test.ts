@@ -3179,3 +3179,86 @@ describe("gate/retry correctness (Batch 3)", () => {
     expect(issues.some((issue) => issue.code === "lead-candidate-mismatch")).toBe(false);
   });
 });
+
+describe("editorial guards (Batch 7)", () => {
+  it("flags a price/bps contradiction in one sentence", () => {
+    const parsed = makeParsedFixture({});
+    parsed.digestExtended = `USX sits 5,783 bps below peg while the quote reads $0.997 as a courtesy. ${parsed.digestExtended}`;
+    const issues = validateDigestModelOutput(parsed, {
+      kind: "daily",
+      recentMeta: [],
+      depegFacts: [{ symbol: "USX", currentPriceUsd: 0.4217, currentBps: -5783 }],
+    });
+    const hit = issues.find((issue) => issue.code === "price-bps-mismatch");
+    expect(hit?.severity).toBe("soft");
+    expect(hit?.message).toContain("USX");
+  });
+
+  it("accepts a consistent price/bps pairing", () => {
+    const parsed = makeParsedFixture({});
+    parsed.digestExtended = `USX sits 5,783 bps below peg at $0.42 with no bid in sight. ${parsed.digestExtended}`;
+    const issues = validateDigestModelOutput(parsed, {
+      kind: "daily",
+      recentMeta: [],
+      depegFacts: [{ symbol: "USX", currentPriceUsd: 0.4217, currentBps: -5783 }],
+    });
+    expect(issues.some((issue) => issue.code === "price-bps-mismatch")).toBe(false);
+  });
+
+  it("flags fabricated movement claims against previous-edition facts", () => {
+    const parsed = makeParsedFixture({});
+    parsed.digestExtended = `APXUSD narrowed from 3,650 bps yesterday, a recovery nobody measured. ${parsed.digestExtended}`;
+    const issues = validateDigestModelOutput(parsed, {
+      kind: "daily",
+      recentMeta: [],
+      prevDepegFacts: [{ symbol: "APXUSD", currentBps: -3159, bps: -3159 }],
+    });
+    expect(issues.some((issue) => issue.code === "unverifiable-movement-claim")).toBe(true);
+  });
+
+  it("accepts movement claims the previous edition supports", () => {
+    const parsed = makeParsedFixture({});
+    parsed.digestExtended = `APXUSD widened from 3,159 bps to 3,410 bps overnight. ${parsed.digestExtended}`;
+    const issues = validateDigestModelOutput(parsed, {
+      kind: "daily",
+      recentMeta: [],
+      prevDepegFacts: [{ symbol: "APXUSD", currentBps: -3159 }],
+    });
+    expect(issues.some((issue) => issue.code === "unverifiable-movement-claim")).toBe(false);
+  });
+
+  it("flags the same coin in three consecutive titles and day-count titles", () => {
+    const parsed = makeParsedFixture({});
+    parsed.digestTitle = "USX Enters Week Four";
+    const recentMeta = [
+      { meta: null, title: "USX Turns Twenty Days Old" },
+      { meta: null, title: "USX Passes 450 Hours Broken" },
+    ];
+    const issues = validateDigestModelOutput(parsed, { kind: "daily", recentMeta });
+    expect(issues.some((issue) => issue.code === "title-symbol-streak")).toBe(true);
+    expect(issues.some((issue) => issue.code === "title-day-counting")).toBe(true);
+  });
+
+  it("does not flag a fresh subject or a first-day duration title", () => {
+    const parsed = makeParsedFixture({});
+    parsed.digestTitle = "RLUSD Finds A Deeper Bid";
+    const recentMeta = [
+      { meta: null, title: "USX Turns Twenty Days Old" },
+      { meta: null, title: "USX Passes 450 Hours Broken" },
+    ];
+    const issues = validateDigestModelOutput(parsed, { kind: "daily", recentMeta });
+    expect(issues.some((issue) => issue.code === "title-symbol-streak")).toBe(false);
+    expect(issues.some((issue) => issue.code === "title-day-counting")).toBe(false);
+  });
+
+  it("dedupes titles against the extended trailing window", () => {
+    const parsed = makeParsedFixture({});
+    parsed.digestTitle = "USDC Touches Its Ceiling";
+    const issues = validateDigestModelOutput(parsed, {
+      kind: "daily",
+      recentMeta: [],
+      recentTitles: ["USDC Touches Its Ceiling"],
+    });
+    expect(issues.some((issue) => issue.code === "repeated-title")).toBe(true);
+  });
+});

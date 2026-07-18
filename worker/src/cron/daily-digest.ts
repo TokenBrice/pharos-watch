@@ -126,7 +126,7 @@ export async function generateDailyDigest(
     itemsTotal: 1,
   });
   const digestInput = await buildDailyDigestInput(db);
-  const { inputData, degradedReasons, recentMeta, previousInputData, recentLeadSignalIds, lifecycleFlags, llmSignals, stablecoinsCacheReason } = digestInput;
+  const { inputData, degradedReasons, recentMeta, previousInputData, recentLeadSignalIds, lifecycleFlags, recentTitles, llmSignals, stablecoinsCacheReason } = digestInput;
   if (stablecoinsCacheReason) {
     await reportDigestProgress(reportProgress, {
       stage: "input-unavailable",
@@ -211,6 +211,9 @@ export async function generateDailyDigest(
         rawText: entry.rawText,
       })),
       leadRequirements,
+      depegFacts: llmSignals.topDepegs,
+      prevDepegFacts: previousInputData?.topDepegs ?? [],
+      recentTitles,
     },
   });
   if (digestCopy.kind === "circuit-open") {
