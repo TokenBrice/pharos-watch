@@ -7,6 +7,13 @@ import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { parseObjectMetadata } from "./json-metadata";
 import { recordProducerOutcome } from "./producer-history";
+import { STALE_SLOT_ABANDONED_EVENT_TYPE, staleSlotEventCacheKey } from "./scheduled-slot-reconciliation-keys";
+
+export {
+  cacheKeySegment,
+  STALE_SLOT_ABANDONED_EVENT_TYPE,
+  staleSlotEventCacheKey,
+} from "./scheduled-slot-reconciliation-keys";
 
 export interface StaleSlotExecutionArtifact {
   slot_key: string;
@@ -152,21 +159,8 @@ export interface StaleSlotReconciliationSummary {
   }>;
 }
 
-export const STALE_SLOT_ABANDONED_EVENT_TYPE = "scheduled-slot-abandoned";
 const STALE_SLOT_ERROR = "scheduled slot heartbeat stale; marked expired by later invocation";
 const DEX_GENERATION_FALLBACK_WINDOW_SEC = 13 * 60;
-
-export function cacheKeySegment(value: string): string {
-  const normalized = value
-    .toLowerCase()
-    .replace(/[^a-z0-9:-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return (normalized || "unknown").slice(0, 96);
-}
-
-export function staleSlotEventCacheKey(scheduleKey: string): string {
-  return `cron:event:${cacheKeySegment(scheduleKey)}:${cacheKeySegment(STALE_SLOT_ABANDONED_EVENT_TYPE)}`;
-}
 
 async function listProgressRowsForStaleSlot(
   db: D1Database,

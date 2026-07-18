@@ -465,6 +465,8 @@ Fetch-heavy lanes are split across the expressions in `worker/wrangler.toml` so 
 
 Cron expressions are source-owned in `worker/wrangler.toml`. The canonical schedule-key mapping, status-tracked jobs, and connection-budget metadata live in `shared/lib/cron-jobs.ts`; dispatch chains live in `shared/lib/scheduled-runner-registry.ts`. `runScheduledSlotWithFence()` in `worker/src/lib/scheduled-slot-fence.ts` owns claim, heartbeat, takeover, and terminal ownership fencing. Stale child progress/lease cleanup, synthetic run persistence, attempt abandonment, and the operator event marker live behind the narrow `scheduled-slot-reconciliation.ts` internal stage. The fence stores compact child-job summaries in `cron_slot_executions.metadata` (`jobsRun`, `jobsSkipped`, `jobsNeutralSkipped`, `jobsDegraded`, `jobsErrored`, `budgetOnlyJobs`, and per-job outcomes) and marks the slot `degraded` or `error` when children skip/degrade/fail even if best-effort execution lets later jobs continue. Neutral expected no-op children, such as an empty manual digest poll, are counted separately so they do not make a healthy slot look skipped. Run `npm run check:cron-sync` and `npm run check:cron-connections` after schedule or job-chain changes.
 
+Normal fresh-slot claims keep the reconciliation implementation lazily unloaded. The larger recovery module initializes only after a stale candidate or takeover is observed, preserving isolate memory headroom for ordinary API and scheduled work without changing stale-slot recovery semantics.
+
 ### Deployed Trigger Topology
 
 Do not maintain a second schedule table in this document:

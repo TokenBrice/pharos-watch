@@ -3,19 +3,21 @@ import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/
 import { createLeaseOwner } from "./cron-lease-primitives";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "./error-utils";
-import {
-  reconcileStaleSlotArtifactsAndRecordEvent,
-  hasActiveChildLeaseForScheduledSlot,
-  type ScheduledSlotReconciliationFence,
-  type StaleSlotExecutionArtifact,
-  type StaleSlotReconciliationSummary,
+import type {
+  ScheduledSlotReconciliationFence,
+  StaleSlotExecutionArtifact,
+  StaleSlotReconciliationSummary,
 } from "./scheduled-slot-reconciliation";
 
 export {
   cacheKeySegment,
   STALE_SLOT_ABANDONED_EVENT_TYPE,
   staleSlotEventCacheKey,
-} from "./scheduled-slot-reconciliation";
+} from "./scheduled-slot-reconciliation-keys";
+
+async function loadScheduledSlotReconciliation() {
+  return import("./scheduled-slot-reconciliation");
+}
 
 export interface ScheduledSlotExecutionOptions {
   slotStartedAt: number;
@@ -345,6 +347,10 @@ export async function sweepStaleScheduledSlotExecutions(
     realChildFailures: 0,
     abandonedSlots: [],
   };
+  if (staleSlots.length === 0) return summary;
+
+  const { hasActiveChildLeaseForScheduledSlot, reconcileStaleSlotArtifactsAndRecordEvent } =
+    await loadScheduledSlotReconciliation();
 
   for (const staleSlot of staleSlots) {
     if (options.signal?.aborted) {
@@ -462,6 +468,8 @@ async function claimScheduledSlotExecution(
   }
 
   if (existing.updated_at < staleBefore) {
+    const { hasActiveChildLeaseForScheduledSlot, reconcileStaleSlotArtifactsAndRecordEvent } =
+      await loadScheduledSlotReconciliation();
     const staleSlot: StaleSlotExecutionRow = {
       slot_key: slotKey,
       slot_started_at: slotStartedAt,
