@@ -302,12 +302,17 @@ function StaleArtifactEvidence({ artifacts }: { artifacts: CronStaleArtifact[] }
 function LatestAttemptEvidence({ row }: { row: CronWorkbenchRow }) {
   const attempt = row.cron.latestAttempt;
   if (!attempt) {
+    const emptyMessage = row.cron.attemptTelemetry === "scoped-out"
+      ? "Attempt ledger is not enabled for this job."
+      : row.cron.attemptTelemetry === "disabled"
+        ? "Attempt ledger is disabled."
+        : "No attempt has been recorded yet.";
     return (
       <section className="mt-4 border-t border-border/60 pt-4" aria-labelledby="cron-latest-attempt-heading">
         <h4 id="cron-latest-attempt-heading" className="text-xs font-semibold text-foreground">
           Latest attempt
         </h4>
-        <p className="mt-2 text-xs text-muted-foreground">No attempt evidence was reported.</p>
+        <p className="mt-2 text-xs text-muted-foreground">{emptyMessage}</p>
       </section>
     );
   }
@@ -380,7 +385,7 @@ function LatestAttemptEvidence({ row }: { row: CronWorkbenchRow }) {
         </div>
         <div className="min-w-0">
           <dt className="text-muted-foreground">Items</dt>
-          <dd className="mt-1 font-mono tabular-nums text-foreground">{attempt.itemCount ?? "Unknown"}</dd>
+          <dd className="mt-1 font-mono tabular-nums text-foreground">{attempt.itemCount ?? "N/A"}</dd>
         </div>
       </dl>
       <details className="mt-3 text-xs">
@@ -482,7 +487,7 @@ function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; nowSecond
           <dd className="mt-1 font-mono tabular-nums text-foreground">{formatLastRun(row, nowSeconds)}</dd>
         </div>
         <div className="min-w-0">
-          <dt className="text-muted-foreground">Last good</dt>
+          <dt className="text-muted-foreground">Last completed</dt>
           <dd className="mt-1 font-mono tabular-nums text-foreground">{formatLastGood(row, nowSeconds)}</dd>
         </div>
         <div className="min-w-0">
@@ -943,7 +948,7 @@ export function CronLaneTable({ groups, budgetOnlySurfaces, nowSeconds }: CronLa
                 <TableHead className="px-3 py-2">Job</TableHead>
                 <TableHead className="px-3 py-2">Impact</TableHead>
                 <TableHead className="px-3 py-2">Trigger</TableHead>
-                <TableHead className="px-3 py-2">Last / good</TableHead>
+                <TableHead className="px-3 py-2">Last / completed</TableHead>
                 <TableHead className="px-3 py-2">Runtime</TableHead>
                 <TableHead className="px-3 py-2">Items</TableHead>
                 <TableHead className="px-3 py-2">Evidence</TableHead>
@@ -1042,13 +1047,13 @@ export function CronLaneTable({ groups, budgetOnlySurfaces, nowSeconds }: CronLa
                       </TableCell>
                       <TableCell className="px-3 py-2 align-top font-mono tabular-nums">
                         <div className="text-foreground">{formatLastRun(row, nowSeconds)}</div>
-                        <div className="text-muted-foreground">good {formatLastGood(row, nowSeconds)}</div>
+                        <div className="text-muted-foreground">completed {formatLastGood(row, nowSeconds)}</div>
                       </TableCell>
                       <TableCell className="px-3 py-2 align-top font-mono tabular-nums text-muted-foreground">
                         {formatDurationValue(duration)}
                       </TableCell>
                       <TableCell className="px-3 py-2 align-top font-mono tabular-nums text-muted-foreground">
-                        {lastRun?.itemCount ?? "Unknown"}
+                        {lastRun ? (lastRun.itemCount ?? "N/A") : (row.cron.telemetryUnknown ? "Unknown" : "N/A")}
                       </TableCell>
                       <TableCell className="px-3 py-2 align-top text-muted-foreground">
                         {row.runningState === "running" ? <div>running now</div> : null}

@@ -378,6 +378,7 @@ export async function loadCronHealth(
   const ledgerJobs = workerJobLedgerAllowlist.length === 0 || workerJobLedgerAllowlist.includes("*")
     ? cronJobs
     : cronJobs.filter((job) => workerJobLedgerAllowlist.includes(job));
+  const ledgerJobSet = new Set(ledgerJobs);
   const cronJobInClause = buildInClause(cronJobs);
   const scheduleKeys = Object.keys(SCHEDULED_SLOT_PLANS) as Array<keyof typeof SCHEDULED_SLOT_PLANS>;
   const eventKeys = scheduleKeys.map(staleSlotEventCacheKey);
@@ -637,6 +638,12 @@ export async function loadCronHealth(
         };
       })(),
       ...(latestAttempt ? { latestAttempt } : {}),
+      attemptTelemetry:
+        workerJobLedgerMode === "off"
+          ? "disabled"
+          : ledgerJobSet.has(job)
+            ? "enabled"
+            : "scoped-out",
       ...(staleArtifactsByJob.has(job) ? { staleArtifacts: staleArtifactsByJob.get(job) } : {}),
       ...(latestEventByJob.has(job) ? { latestEvent: latestEventByJob.get(job) } : {}),
       ...(watchBootstrap ? { bootstrap: true } : {}),

@@ -10,6 +10,7 @@ import {
   type EndpointDefinition,
   type EndpointProbeGroup,
 } from "@shared/lib/api-endpoints";
+import { PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
 import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
 import type { EndpointProbeResult } from "@shared/types";
 import { usePollingQuery } from "./use-api-query";
@@ -33,6 +34,7 @@ const CRITICAL_ENDPOINTS = [...getEndpointProbeDescriptors("public"), ...getEndp
 const ADMIN_PATHS = new Set<string>([...ENDPOINT_GROUPS.admin]);
 const PUBLIC_PROBE_TIMEOUT_MS = 5_000;
 const ADMIN_PROBE_TIMEOUT_MS = 20_000;
+const SCHEDULED_DETAIL_REFRESH_GRACE_SECONDS = 2 * PER_COIN_CACHE_TTL_SECONDS;
 export const ENDPOINT_PROBE_CONCURRENCY = 6;
 
 type ProbeSemanticKind = NonNullable<EndpointDefinition["probeSemanticKind"]>;
@@ -72,6 +74,17 @@ const SEMANTIC_STATUS_RANK: Record<NonNullable<EndpointProbeResult["semanticStat
 function extractFreshnessWarningSemantics(response: Response): Partial<EndpointProbeResult> | null {
   const warning = typeof response.headers?.get === "function" ? response.headers.get("Warning") : null;
   if (!warning) return null;
+  if (warning.trim() === '110 - "Stablecoin detail cache is stale; refresh scheduled"') {
+    const rawDataAge = response.headers.get("X-Data-Age");
+    const dataAge = rawDataAge != null && rawDataAge.trim() !== "" ? Number(rawDataAge) : Number.NaN;
+    if (
+      Number.isFinite(dataAge) &&
+      dataAge >= 0 &&
+      dataAge <= SCHEDULED_DETAIL_REFRESH_GRACE_SECONDS
+    ) {
+      return null;
+    }
+  }
   const isFreshnessWarning = /(?:^|,\s*)110\b/.test(warning) || /Response is (?:degraded|stale)/i.test(warning);
   if (!isFreshnessWarning) return null;
 

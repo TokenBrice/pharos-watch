@@ -53,6 +53,16 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
   // (Math.floor(Date.now() / 1000)).
   const NOW = 1_775_890_000;
 
+  it("reports whether attempt telemetry is enabled, scoped out, or disabled per job", async () => {
+    const rows = seedWithOverrides(NOW, []);
+    const scoped = await loadCronHealth(makeDb(NOW, rows), NOW, "shadow", ["sync-stablecoins"]);
+    const disabled = await loadCronHealth(makeDb(NOW, rows), NOW, "off");
+
+    expect(scoped.crons["sync-stablecoins"]?.attemptTelemetry).toBe("enabled");
+    expect(scoped.crons["snapshot-supply"]?.attemptTelemetry).toBe("scoped-out");
+    expect(disabled.crons["sync-stablecoins"]?.attemptTelemetry).toBe("disabled");
+  });
+
   it("returns 0 when a critical cron has only one error run followed by ok", async () => {
     // After the base ok row is cleared (because sync-stablecoins appears in
     // overrides), we explicitly seed an earlier ok run so the streak check

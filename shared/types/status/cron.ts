@@ -115,6 +115,7 @@ export interface CronStatus {
   telemetryUnknown?: boolean;
   inFlight?: CronInFlight | null;
   latestAttempt?: WorkerJobAttemptStatus;
+  attemptTelemetry?: "enabled" | "scoped-out" | "disabled";
   staleArtifacts?: CronStaleArtifact[];
   latestEvent?: CronEvent;
   /**

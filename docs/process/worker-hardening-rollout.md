@@ -27,7 +27,7 @@ window, status snapshots, relevant `cron_runs` metadata, and the rollback value.
 | Control                        | Checked-in mode | Promotion evidence                                                                                                                                                                        | Immediate rollback                                   |
 | ------------------------------ | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
 | `WORKER_JOB_LEDGER_MODE`       | `shadow`        | Two clean producer cycles with no ledger bootstrap, lease-state, progress-heartbeat, terminal-write, status-loader, or prune failures                                                     | `shadow`, then `off` if writes themselves are unsafe |
-| `WORKER_CANARY_MODE`           | `shadow`        | Two clean status-self-check cycles at each stage and all findings explained; promotion currently stops at `status`                                                                        | Previous stage, or `off`                             |
+| `WORKER_CANARY_MODE`           | `status`        | Consecutive current 7/7 clean cycles with no persistence failures; promotion currently stops at `status` until alert routing has separate acceptance evidence                              | `shadow`, then `off`                                 |
 | `WORKER_RESERVE_RECOVERY_MODE` | `shadow`        | Eligibility has no unexplained blockers, two preview cancellations reconcile exactly, and a preview recovery completes the suffix and all sidecars without duplicate authoritative writes | `reconcile`, `shadow`, or `off`; retain checkpoints  |
 
 ## Job Attempt Ledger
@@ -115,8 +115,10 @@ Activation sequence:
    telemetry remain additive in D1.
 
 `prune-cron-history` owns canary retention and deletes rows older than 90 days.
-The checked-in Worker config is currently at step 2 (`shadow`) so the next
-action is observation, not promotion.
+The checked-in Worker config completed the shadow observation stage with more
+than two consecutive clean 7/7 cycles and is currently at step 3 (`status`).
+The next action is status-mode observation; do not promote to `alert` without a
+separate alert-routing acceptance test and review.
 
 ## Repair Task Ledger
 

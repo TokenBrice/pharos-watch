@@ -68,6 +68,48 @@ describe("summarizeCronMetadata", () => {
     expect(summary).toContain("source age 420s");
   });
 
+  it("surfaces snapshot supply coverage blockers", () => {
+    expect(summarizeCronMetadata("snapshot-supply", {
+      reason: "partial_snapshot_blocked",
+      validRows: 343,
+      expectedCount: 344,
+      invalidSupplyIds: ["deuro-deuro"],
+      missingActiveIds: ["deuro-deuro"],
+    })).toEqual([
+      "reason partial_snapshot_blocked",
+      "active supply coverage 343/344",
+      "invalid supply deuro-deuro",
+      "missing active deuro-deuro",
+    ]);
+  });
+
+  it("surfaces ambiguous Telegram effects and their age", () => {
+    const summary = summarizeCronMetadata("telegram-degradation-watchdog", {
+      pendingBacklog: {
+        triggered: true,
+        executionUnknown: 15,
+        oldestExecutionUnknownAgeSec: 65_203,
+        detail: "executionUnknown=15, sustainedSec=61200",
+      },
+      safetySource: { triggered: false },
+      zeroSend: { triggered: false },
+    });
+
+    expect(summary).toContain("pending-delivery incident triggered");
+    expect(summary).toContain("execution unknown 15");
+    expect(summary).toContain("oldest ambiguous effect 65203s");
+  });
+
+  it("separates runtime pressure from scheduled-slot abandonment", () => {
+    expect(summarizeCronMetadata("cron-duration-watchdog", {
+      runtimeBreaching: [],
+      slotAbandonmentBreaching: ["halfHourlyOffset"],
+    })).toEqual([
+      "runtime breaches none",
+      "slot abandonment halfHourlyOffset",
+    ]);
+  });
+
   it("surfaces live-reserve artifact cleanup counts and warnings", () => {
     const summary = summarizeCronMetadata("sync-live-reserves", {
       synced: 100,
