@@ -1,13 +1,13 @@
-import { handleHttpRequestImpl as handleHttpRequest } from "./handlers/http/request-dispatch";
-import { handleScheduledEvent } from "./handlers/scheduled";
 import type { Env } from "./lib/env";
 
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    return handleHttpRequest(request, env, ctx);
+    const { handleHttpRequestImpl } = await import("./handlers/http/request-dispatch");
+    return handleHttpRequestImpl(request, env, ctx);
   },
 
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    const { handleScheduledEvent } = await import("./handlers/scheduled");
     return handleScheduledEvent(event, env, ctx);
   },
 };

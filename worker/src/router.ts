@@ -5,7 +5,7 @@ import {
   type EndpointMethodValidationError,
 } from "@shared/lib/api-endpoints";
 
-import { errorResponse, jsonResponse, methodNotAllowedResponse, noStoreResponse } from "./lib/api-utils";
+import { errorResponse, jsonResponse, methodNotAllowedResponse, noStoreResponse } from "./lib/api-response";
 import {
   getRouteMatch,
   ROUTER_STATIC_PATHS,

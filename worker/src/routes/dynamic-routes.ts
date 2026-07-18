@@ -5,16 +5,7 @@ import {
   type DynamicAdminEndpointMatch,
   type EndpointMethod,
 } from "@shared/lib/api-endpoints";
-import { handleStablecoinDetail } from "../api/stablecoin-detail";
-import { handleStablecoinSummary } from "../api/stablecoin-summary";
-import { handleStablecoinReserves } from "../api/stablecoin-reserves";
-import { handleSnapshotCoin, handleSnapshotDay } from "../api/snapshot";
-import { handleOg } from "../api/og";
-import { handleDiscoveryCandidateDismiss } from "../api/admin-actions";
-import { handleApiKeyDeactivateRoute, handleApiKeyRotateRoute, handleApiKeyUpdateRoute } from "../api/api-keys";
-import { handleApiKeyRequestRejectRoute, handleApiKeyRequestReleaseClaimRoute } from "../api/api-key-requests";
-import { handleAdminTelegramChat } from "../api/admin-telegram-chat";
-import { errorResponse, resolveOrReject } from "../lib/api-utils";
+import { errorResponse } from "../lib/api-response";
 import {
   defineDynamicRoute,
   type DynamicRouteDefinition,
@@ -25,24 +16,25 @@ import {
 
 /** Decode a raw URI segment and resolve it to a canonical stablecoin id.
  * Returns `{ canonicalId }` on success or a ready `Response` on failure. */
-function decodeAndResolveStablecoinId(
+async function decodeAndResolveStablecoinId(
   raw: string,
   malformedMessage: string,
-): { canonicalId: string } | Response {
+): Promise<{ canonicalId: string } | Response> {
   let id: string;
   try {
     id = decodeURIComponent(raw);
   } catch {
     return errorResponse(400, malformedMessage);
   }
+  const { resolveOrReject } = await import("../lib/api-params");
   return resolveOrReject(id);
 }
 
-function resolveDynamicStablecoinRoute(
+async function resolveDynamicStablecoinRoute(
   match: RegExpMatchArray,
   handler: (canonicalId: string) => Promise<Response>,
 ): Promise<Response> {
-  const resolved = decodeAndResolveStablecoinId(match[1], "Malformed URI");
+  const resolved = await decodeAndResolveStablecoinId(match[1], "Malformed URI");
   if (resolved instanceof Response) {
     return Promise.resolve(resolved);
   }
@@ -90,30 +82,42 @@ function defineDynamicRouteFromDescriptor(
 
 const DYNAMIC_ROUTE_DEFINITIONS = [
   defineDynamicRouteFromDescriptor("stablecoin-summary", (routeCtx, match) =>
-    resolveDynamicStablecoinRoute(match, (canonicalId) => handleStablecoinSummary(routeCtx.db, canonicalId)),
+    resolveDynamicStablecoinRoute(match, async (canonicalId) => {
+      const { handleStablecoinSummary } = await import("../api/stablecoin-summary");
+      return handleStablecoinSummary(routeCtx.db, canonicalId);
+    }),
   ),
   defineDynamicRouteFromDescriptor("stablecoin-reserves", (routeCtx, match) =>
-    resolveDynamicStablecoinRoute(match, (canonicalId) => handleStablecoinReserves(routeCtx.db, canonicalId)),
+    resolveDynamicStablecoinRoute(match, async (canonicalId) => {
+      const { handleStablecoinReserves } = await import("../api/stablecoin-reserves");
+      return handleStablecoinReserves(routeCtx.db, canonicalId);
+    }),
   ),
   defineDynamicRouteFromDescriptor("stablecoin-detail", (routeCtx, match) =>
-    resolveDynamicStablecoinRoute(match, (canonicalId) =>
-      handleStablecoinDetail(routeCtx.db, canonicalId, routeCtx.execCtx, routeCtx.coingeckoApiKey),
-    ),
+    resolveDynamicStablecoinRoute(match, async (canonicalId) => {
+      const { handleStablecoinDetail } = await import("../api/stablecoin-detail");
+      return handleStablecoinDetail(routeCtx.db, canonicalId, routeCtx.execCtx, routeCtx.coingeckoApiKey);
+    }),
   ),
-  defineDynamicRouteFromDescriptor("og-image", (routeCtx) =>
-    handleOg(routeCtx.db, routeCtx.url.pathname, routeCtx.request.method).then(
+  defineDynamicRouteFromDescriptor("og-image", async (routeCtx) => {
+    const { handleOg } = await import("../api/og");
+    return handleOg(routeCtx.db, routeCtx.url.pathname, routeCtx.request.method).then(
       (response) => response ?? errorResponse(404, "Unknown OG route"),
-    ),
-  ),
-  defineDynamicRouteFromDescriptor("snapshot-day", (routeCtx, match) => handleSnapshotDay(routeCtx.db, match[1])),
-  defineDynamicRouteFromDescriptor("snapshot-coin", (routeCtx, match) => {
+    );
+  }),
+  defineDynamicRouteFromDescriptor("snapshot-day", async (routeCtx, match) => {
+    const { handleSnapshotDay } = await import("../api/snapshot");
+    return handleSnapshotDay(routeCtx.db, match[1]);
+  }),
+  defineDynamicRouteFromDescriptor("snapshot-coin", async (routeCtx, match) => {
     // Resolve alias ids so /api/snapshot/<date>/stablecoin/<alias> 404s
     // consistently with sibling /api/stablecoin/<id> endpoints rather
     // than misattributing the snapshot row to the wrong canonical id.
-    const resolved = decodeAndResolveStablecoinId(match[2], "Malformed stablecoin id");
+    const resolved = await decodeAndResolveStablecoinId(match[2], "Malformed stablecoin id");
     if (resolved instanceof Response) {
       return Promise.resolve(resolved);
     }
+    const { handleSnapshotCoin } = await import("../api/snapshot");
     return handleSnapshotCoin(routeCtx.db, match[1], resolved.canonicalId);
   }),
 ] as const satisfies readonly DynamicRouteDefinition[];
@@ -138,27 +142,43 @@ function defineDynamicAdminRouteBinding<Key extends DynamicAdminEndpointKey>(
 const DYNAMIC_ADMIN_ROUTE_BINDINGS = {
   "discovery-candidate-dismiss": defineDynamicAdminRouteBinding(
     "discovery-candidate-dismiss",
-    (routeCtx, dynamicAdminEndpoint) => handleDiscoveryCandidateDismiss(routeCtx, dynamicAdminEndpoint.candidateId),
+    async (routeCtx, dynamicAdminEndpoint) => {
+      const { handleDiscoveryCandidateDismiss } = await import("../api/admin-actions");
+      return handleDiscoveryCandidateDismiss(routeCtx, dynamicAdminEndpoint.candidateId);
+    },
   ),
-  "api-key-update": defineDynamicAdminRouteBinding("api-key-update", (routeCtx, dynamicAdminEndpoint) =>
-    handleApiKeyUpdateRoute({ ...routeCtx, apiKeyId: dynamicAdminEndpoint.apiKeyId }),
-  ),
-  "api-key-deactivate": defineDynamicAdminRouteBinding("api-key-deactivate", (routeCtx, dynamicAdminEndpoint) =>
-    handleApiKeyDeactivateRoute({ ...routeCtx, apiKeyId: dynamicAdminEndpoint.apiKeyId }),
-  ),
-  "api-key-rotate": defineDynamicAdminRouteBinding("api-key-rotate", (routeCtx, dynamicAdminEndpoint) =>
-    handleApiKeyRotateRoute({ ...routeCtx, apiKeyId: dynamicAdminEndpoint.apiKeyId }),
-  ),
-  "api-key-request-reject": defineDynamicAdminRouteBinding("api-key-request-reject", (routeCtx, dynamicAdminEndpoint) =>
-    handleApiKeyRequestRejectRoute({ ...routeCtx, requestId: dynamicAdminEndpoint.requestId }),
+  "api-key-update": defineDynamicAdminRouteBinding("api-key-update", async (routeCtx, dynamicAdminEndpoint) => {
+    const { handleApiKeyUpdateRoute } = await import("../api/api-keys");
+    return handleApiKeyUpdateRoute({ ...routeCtx, apiKeyId: dynamicAdminEndpoint.apiKeyId });
+  }),
+  "api-key-deactivate": defineDynamicAdminRouteBinding("api-key-deactivate", async (routeCtx, dynamicAdminEndpoint) => {
+    const { handleApiKeyDeactivateRoute } = await import("../api/api-keys");
+    return handleApiKeyDeactivateRoute({ ...routeCtx, apiKeyId: dynamicAdminEndpoint.apiKeyId });
+  }),
+  "api-key-rotate": defineDynamicAdminRouteBinding("api-key-rotate", async (routeCtx, dynamicAdminEndpoint) => {
+    const { handleApiKeyRotateRoute } = await import("../api/api-keys");
+    return handleApiKeyRotateRoute({ ...routeCtx, apiKeyId: dynamicAdminEndpoint.apiKeyId });
+  }),
+  "api-key-request-reject": defineDynamicAdminRouteBinding(
+    "api-key-request-reject",
+    async (routeCtx, dynamicAdminEndpoint) => {
+      const { handleApiKeyRequestRejectRoute } = await import("../api/api-key-requests");
+      return handleApiKeyRequestRejectRoute({ ...routeCtx, requestId: dynamicAdminEndpoint.requestId });
+    },
   ),
   "api-key-request-release-claim": defineDynamicAdminRouteBinding(
     "api-key-request-release-claim",
-    (routeCtx, dynamicAdminEndpoint) =>
-      handleApiKeyRequestReleaseClaimRoute({ ...routeCtx, requestId: dynamicAdminEndpoint.requestId }),
+    async (routeCtx, dynamicAdminEndpoint) => {
+      const { handleApiKeyRequestReleaseClaimRoute } = await import("../api/api-key-requests");
+      return handleApiKeyRequestReleaseClaimRoute({ ...routeCtx, requestId: dynamicAdminEndpoint.requestId });
+    },
   ),
-  "admin-telegram-chat": defineDynamicAdminRouteBinding("admin-telegram-chat", (routeCtx, dynamicAdminEndpoint) =>
-    handleAdminTelegramChat(routeCtx.db, dynamicAdminEndpoint.chatId, routeCtx.trustedAdmin, routeCtx.request),
+  "admin-telegram-chat": defineDynamicAdminRouteBinding(
+    "admin-telegram-chat",
+    async (routeCtx, dynamicAdminEndpoint) => {
+      const { handleAdminTelegramChat } = await import("../api/admin-telegram-chat");
+      return handleAdminTelegramChat(routeCtx.db, dynamicAdminEndpoint.chatId, routeCtx.trustedAdmin, routeCtx.request);
+    },
   ),
 } satisfies DynamicAdminRouteBindingMap;
 

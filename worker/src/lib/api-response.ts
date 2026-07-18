@@ -1,4 +1,4 @@
-import { addFreshnessHeaders } from "./api-freshness";
+import { addFreshnessHeaders } from "./api-freshness-headers";
 import { CACHE_PROFILES } from "./constants";
 import { logWorkerEvent } from "./structured-log";
 

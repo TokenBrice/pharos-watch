@@ -1,121 +1,195 @@
-import { handleBackfillDepegsTrusted } from "../api/backfill-depegs";
-import { handleBackfillSupplyHistoryTrusted } from "../api/backfill-supply-history";
-import { handleBackfillStabilityIndex } from "../api/backfill-stability-index";
-import { handleBackfillYieldHistory } from "../api/backfill-yield-history";
-import { handleAuditDepegHistoryTrusted } from "../api/audit-depeg-history";
-import { handleBackfillCgPricesTrusted } from "../api/backfill-cg-prices";
-import { handleBackfillMintBurnPrices } from "../api/backfill-mint-burn-prices";
-import { handleBackfillMintBurn } from "../api/backfill-mint-burn";
-import { handleBackfillTape } from "../api/backfill-tape";
-import { handleReclassifyAtomicRoundtripsTrusted } from "../api/reclassify-atomic-roundtrips";
-import { handleBackfillDEWS } from "../api/backfill-dews";
-import { handleRemediateBlacklistAmountGapsTrusted } from "../api/remediate-blacklist-amount-gaps";
-import { handleBackfillBlacklistCurrentBalances } from "../api/backfill-blacklist-current-balances";
-import { handleResetCronLease } from "../api/admin-reset-cron-lease";
-import { handleResetCircuitBreaker } from "../api/admin-reset-circuit-breaker";
-import { handleKillCronInFlight } from "../api/admin-kill-cron-in-flight";
-import { handleBulkDismissDiscoveryCandidates } from "../api/admin-bulk-dismiss-discovery-candidates";
-import { handleClearTelegramPending } from "../api/admin-telegram-pending";
-import { handleAdminTelegramResend } from "../api/admin-telegram-resend";
-import { handleAdminTelegramBroadcast } from "../api/admin-telegram-broadcast";
-import { handleAdminTelegramDeliveryControl } from "../api/admin-telegram-delivery-control";
-import { handleAdminTelegramAdoptionReport } from "../api/admin-telegram-adoption-report";
-import {
-  handleAdminSafetyScoreV9,
-  handleAdminSafetyScoreV9MovementReview,
-} from "../api/admin-safety-score-v9";
-import { handleAlertBrokerCanary } from "../api/admin-alert-broker-canary";
-import { handleStatusProbeHistory } from "../api/status-probe-history";
-import { handleArmReserveRecoveryFaultInjection } from "../api/admin-reserve-recovery-fault-injection";
 import { makeAdminRoute, makeConditionalIdempotentAdminRoute, makeIdempotentAdminRoute } from "../lib/route-wrappers";
-import { defineStaticRoute, type StaticRouteDefinition, type StaticRouteHandler } from "./shared";
+import {
+  defineLazyStaticRoute,
+  defineStaticRoute,
+  type StaticRouteDefinition,
+  type StaticRouteHandler,
+  type StaticRouteHandlerLoader,
+} from "./shared";
 import type { EndpointKey } from "@shared/lib/api-endpoints";
 
 function defineIdempotentAdminRoute<K extends EndpointKey>(
   key: K,
-  handler: StaticRouteHandler<K>,
+  loadHandler: StaticRouteHandlerLoader<K>,
 ): StaticRouteDefinition {
-  return defineStaticRoute(key, makeIdempotentAdminRoute(key, key, handler));
+  return defineStaticRoute(
+    key,
+    makeIdempotentAdminRoute(key, key, async (context) => {
+      const handler = await loadHandler();
+      return handler(context);
+    }),
+  );
 }
 
 function defineConditionalIdempotentAdminRoute<K extends EndpointKey>(
   key: K,
   shouldUseIdempotency: (context: Parameters<StaticRouteHandler<K>>[0]) => boolean,
-  handler: StaticRouteHandler<K>,
+  loadHandler: StaticRouteHandlerLoader<K>,
 ): StaticRouteDefinition {
-  return defineStaticRoute(key, makeConditionalIdempotentAdminRoute(key, key, shouldUseIdempotency, handler));
+  return defineStaticRoute(
+    key,
+    makeConditionalIdempotentAdminRoute(key, key, shouldUseIdempotency, async (context) => {
+      const handler = await loadHandler();
+      return handler(context);
+    }),
+  );
 }
 
 export const ADMIN_STATIC_ROUTES = [
-  defineIdempotentAdminRoute("backfill-depegs", handleBackfillDepegsTrusted),
-  defineIdempotentAdminRoute("backfill-supply-history", handleBackfillSupplyHistoryTrusted),
-  defineIdempotentAdminRoute("backfill-stability-index", ({ db, trustedAdmin, request }) =>
-    handleBackfillStabilityIndex(db, trustedAdmin, request),
+  defineIdempotentAdminRoute("backfill-depegs", () =>
+    import("../api/backfill-depegs").then(({ handleBackfillDepegsTrusted }) => handleBackfillDepegsTrusted),
+  ),
+  defineIdempotentAdminRoute("backfill-supply-history", () =>
+    import("../api/backfill-supply-history").then(
+      ({ handleBackfillSupplyHistoryTrusted }) => handleBackfillSupplyHistoryTrusted,
+    ),
+  ),
+  defineIdempotentAdminRoute("backfill-stability-index", () =>
+    import("../api/backfill-stability-index").then(
+      ({ handleBackfillStabilityIndex }) =>
+        ({ db, trustedAdmin, request }) =>
+          handleBackfillStabilityIndex(db, trustedAdmin, request),
+    ),
   ),
   defineConditionalIdempotentAdminRoute(
     "audit-depeg-history",
     ({ request }) => request.method === "POST",
-    ({ db, url, request }) => handleAuditDepegHistoryTrusted(db, url, request),
+    () =>
+      import("../api/audit-depeg-history").then(
+        ({ handleAuditDepegHistoryTrusted }) =>
+          ({ db, url, request }) =>
+            handleAuditDepegHistoryTrusted(db, url, request),
+      ),
   ),
-  defineIdempotentAdminRoute("backfill-cg-prices", handleBackfillCgPricesTrusted),
-  defineIdempotentAdminRoute("backfill-yield-history", ({ db, url, trustedAdmin, request }) =>
-    handleBackfillYieldHistory(db, url, trustedAdmin, request),
+  defineIdempotentAdminRoute("backfill-cg-prices", () =>
+    import("../api/backfill-cg-prices").then(({ handleBackfillCgPricesTrusted }) => handleBackfillCgPricesTrusted),
+  ),
+  defineIdempotentAdminRoute("backfill-yield-history", () =>
+    import("../api/backfill-yield-history").then(
+      ({ handleBackfillYieldHistory }) =>
+        ({ db, url, trustedAdmin, request }) =>
+          handleBackfillYieldHistory(db, url, trustedAdmin, request),
+    ),
   ),
   defineConditionalIdempotentAdminRoute(
     "backfill-mint-burn-prices",
     ({ url }) => url.searchParams.get("dry-run") === "false" || url.searchParams.get("dryRun") === "false",
-    ({ db, url, trustedAdmin, request, coingeckoApiKey }) =>
-      handleBackfillMintBurnPrices(db, url, trustedAdmin, request, { coingeckoApiKey }),
+    () =>
+      import("../api/backfill-mint-burn-prices").then(
+        ({ handleBackfillMintBurnPrices }) =>
+          ({ db, url, trustedAdmin, request, coingeckoApiKey }) =>
+            handleBackfillMintBurnPrices(db, url, trustedAdmin, request, { coingeckoApiKey }),
+      ),
   ),
-  defineIdempotentAdminRoute("backfill-mint-burn", ({ db, url, trustedAdmin, request, alchemyApiKey }) =>
-    handleBackfillMintBurn(db, url, trustedAdmin, request, alchemyApiKey ?? null),
+  defineIdempotentAdminRoute("backfill-mint-burn", () =>
+    import("../api/backfill-mint-burn").then(
+      ({ handleBackfillMintBurn }) =>
+        ({ db, url, trustedAdmin, request, alchemyApiKey }) =>
+          handleBackfillMintBurn(db, url, trustedAdmin, request, alchemyApiKey ?? null),
+    ),
   ),
-  defineIdempotentAdminRoute("backfill-tape", ({ db, url, trustedAdmin, request }) =>
-    handleBackfillTape(db, url, trustedAdmin, request),
+  defineIdempotentAdminRoute("backfill-tape", () =>
+    import("../api/backfill-tape").then(
+      ({ handleBackfillTape }) =>
+        ({ db, url, trustedAdmin, request }) =>
+          handleBackfillTape(db, url, trustedAdmin, request),
+    ),
   ),
-  defineIdempotentAdminRoute("reclassify-atomic-roundtrips", ({ db, url }) =>
-    handleReclassifyAtomicRoundtripsTrusted(db, url),
+  defineIdempotentAdminRoute("reclassify-atomic-roundtrips", () =>
+    import("../api/reclassify-atomic-roundtrips").then(
+      ({ handleReclassifyAtomicRoundtripsTrusted }) =>
+        ({ db, url }) =>
+          handleReclassifyAtomicRoundtripsTrusted(db, url),
+    ),
   ),
   defineConditionalIdempotentAdminRoute(
     "backfill-dews",
     ({ request }) => request.method === "POST",
-    ({ db, url, trustedAdmin, request }) => handleBackfillDEWS(db, url, trustedAdmin, request),
+    () =>
+      import("../api/backfill-dews").then(
+        ({ handleBackfillDEWS }) =>
+          ({ db, url, trustedAdmin, request }) =>
+            handleBackfillDEWS(db, url, trustedAdmin, request),
+      ),
   ),
-  defineIdempotentAdminRoute("remediate-blacklist-amount-gaps", ({ db, url, request, chainRpcs }) =>
-    handleRemediateBlacklistAmountGapsTrusted(db, url, request, chainRpcs),
+  defineIdempotentAdminRoute("remediate-blacklist-amount-gaps", () =>
+    import("../api/remediate-blacklist-amount-gaps").then(
+      ({ handleRemediateBlacklistAmountGapsTrusted }) =>
+        ({ db, url, request, chainRpcs }) =>
+          handleRemediateBlacklistAmountGapsTrusted(db, url, request, chainRpcs),
+    ),
   ),
-  defineIdempotentAdminRoute("backfill-blacklist-current-balances", ({ db, url, trustedAdmin, request, chainRpcs }) =>
-    handleBackfillBlacklistCurrentBalances(db, url, trustedAdmin, request, chainRpcs),
+  defineIdempotentAdminRoute("backfill-blacklist-current-balances", () =>
+    import("../api/backfill-blacklist-current-balances").then(
+      ({ handleBackfillBlacklistCurrentBalances }) =>
+        ({ db, url, trustedAdmin, request, chainRpcs }) =>
+          handleBackfillBlacklistCurrentBalances(db, url, trustedAdmin, request, chainRpcs),
+    ),
   ),
-  defineStaticRoute("reset-cron-lease", handleResetCronLease),
-  defineStaticRoute("reset-circuit-breaker", handleResetCircuitBreaker),
-  defineStaticRoute("kill-cron-in-flight", handleKillCronInFlight),
+  defineLazyStaticRoute("reset-cron-lease", () =>
+    import("../api/admin-reset-cron-lease").then(({ handleResetCronLease }) => handleResetCronLease),
+  ),
+  defineLazyStaticRoute("reset-circuit-breaker", () =>
+    import("../api/admin-reset-circuit-breaker").then(({ handleResetCircuitBreaker }) => handleResetCircuitBreaker),
+  ),
+  defineLazyStaticRoute("kill-cron-in-flight", () =>
+    import("../api/admin-kill-cron-in-flight").then(({ handleKillCronInFlight }) => handleKillCronInFlight),
+  ),
   defineStaticRoute(
     "reserve-recovery-fault-injection",
     makeAdminRoute(
       "reserve-recovery-fault-injection",
-      ({ db, request, trustedAdmin, workerVersion, reserveRecoveryFaultInjectionEnabled }) =>
-        handleArmReserveRecoveryFaultInjection(
+      async ({ db, request, trustedAdmin, workerVersion, reserveRecoveryFaultInjectionEnabled }) => {
+        const { handleArmReserveRecoveryFaultInjection } =
+          await import("../api/admin-reserve-recovery-fault-injection");
+        return handleArmReserveRecoveryFaultInjection(
           db,
           request,
           trustedAdmin,
           workerVersion,
           reserveRecoveryFaultInjectionEnabled,
-        ),
+        );
+      },
     ),
   ),
-  defineStaticRoute("bulk-dismiss-discovery-candidates", handleBulkDismissDiscoveryCandidates),
-  defineStaticRoute("clear-telegram-pending", handleClearTelegramPending),
+  defineLazyStaticRoute("bulk-dismiss-discovery-candidates", () =>
+    import("../api/admin-bulk-dismiss-discovery-candidates").then(
+      ({ handleBulkDismissDiscoveryCandidates }) => handleBulkDismissDiscoveryCandidates,
+    ),
+  ),
+  defineLazyStaticRoute("clear-telegram-pending", () =>
+    import("../api/admin-telegram-pending").then(({ handleClearTelegramPending }) => handleClearTelegramPending),
+  ),
   defineConditionalIdempotentAdminRoute(
     "alert-broker-canary",
     ({ url }) => url.searchParams.get("execute") === "true",
-    handleAlertBrokerCanary,
+    () => import("../api/admin-alert-broker-canary").then(({ handleAlertBrokerCanary }) => handleAlertBrokerCanary),
   ),
-  defineStaticRoute("admin-telegram-resend", handleAdminTelegramResend),
-  defineStaticRoute("admin-telegram-broadcast", handleAdminTelegramBroadcast),
-  defineStaticRoute("admin-telegram-delivery-control", handleAdminTelegramDeliveryControl),
-  defineStaticRoute("admin-telegram-adoption-report", handleAdminTelegramAdoptionReport),
-  defineStaticRoute("admin-safety-score-v9", handleAdminSafetyScoreV9),
-  defineStaticRoute("admin-safety-score-v9-review", handleAdminSafetyScoreV9MovementReview),
-  defineStaticRoute("status-probe-history", handleStatusProbeHistory),
+  defineLazyStaticRoute("admin-telegram-resend", () =>
+    import("../api/admin-telegram-resend").then(({ handleAdminTelegramResend }) => handleAdminTelegramResend),
+  ),
+  defineLazyStaticRoute("admin-telegram-broadcast", () =>
+    import("../api/admin-telegram-broadcast").then(({ handleAdminTelegramBroadcast }) => handleAdminTelegramBroadcast),
+  ),
+  defineLazyStaticRoute("admin-telegram-delivery-control", () =>
+    import("../api/admin-telegram-delivery-control").then(
+      ({ handleAdminTelegramDeliveryControl }) => handleAdminTelegramDeliveryControl,
+    ),
+  ),
+  defineLazyStaticRoute("admin-telegram-adoption-report", () =>
+    import("../api/admin-telegram-adoption-report").then(
+      ({ handleAdminTelegramAdoptionReport }) => handleAdminTelegramAdoptionReport,
+    ),
+  ),
+  defineLazyStaticRoute("admin-safety-score-v9", () =>
+    import("../api/admin-safety-score-v9").then(({ handleAdminSafetyScoreV9 }) => handleAdminSafetyScoreV9),
+  ),
+  defineLazyStaticRoute("admin-safety-score-v9-review", () =>
+    import("../api/admin-safety-score-v9").then(
+      ({ handleAdminSafetyScoreV9MovementReview }) => handleAdminSafetyScoreV9MovementReview,
+    ),
+  ),
+  defineLazyStaticRoute("status-probe-history", () =>
+    import("../api/status-probe-history").then(({ handleStatusProbeHistory }) => handleStatusProbeHistory),
+  ),
 ] as const satisfies readonly StaticRouteDefinition[];

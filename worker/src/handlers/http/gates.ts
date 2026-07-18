@@ -6,11 +6,13 @@ import {
   isSiteDataAllowedApiPath,
   isSiteDataAllowedMethod,
 } from "@shared/lib/site-data-lane";
-import { errorResponse, methodNotAllowedResponse } from "../../lib/api-utils";
+import { errorResponse, methodNotAllowedResponse } from "../../lib/api-response";
 import {
   authenticateApiKeyFromFreshCache,
   authenticateApiKey,
-  type AuthenticatedApiKey,
+} from "../../lib/api-key-auth";
+import type { AuthenticatedApiKey } from "../../lib/api-key-core";
+import {
   checkApiKeyRateLimit,
   checkIsolateLocalApiKeyRateLimit,
   isApiKeyRateLimitDependencyCircuitOpen,
@@ -18,7 +20,7 @@ import {
   recordApiKeyRateLimitDependencySuccess,
   recordApiKeyUsage,
   resolveIsolateFallbackApiKeyRateLimit,
-} from "../../lib/api-keys";
+} from "../../lib/api-key-rate-limit";
 import {
   hasValidAdminCredential,
   hasValidSiteProxyCredential,

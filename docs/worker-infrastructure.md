@@ -325,6 +325,8 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 | No-store           | `no-store`                                                     | admin GETs, bypassed status/control routes, and per-coin stale fallback responses                                                                                                                           |
 | Immutable snapshot | `public, s-maxage=31536000, max-age=31536000, immutable`       | route-local dated public snapshot payloads and per-stablecoin projections (`/api/snapshots/:date.json`, `/api/snapshot/:date/stablecoin/:id`)                                                               |
 
+The top-level `fetch` and `scheduled` handlers load their dispatchers lazily. The HTTP route catalog keeps only endpoint metadata and loader closures eager, then initializes an API implementation module only when its endpoint is invoked; scheduled slots likewise load only their selected runner. This prevents unrelated HTTP and cron object graphs from being retained in a fresh isolate. `worker/src/routes/__tests__/lazy-route-loading.test.ts` enforces these import boundaries.
+
 Admin `GET` routes are forced to `Cache-Control: no-store` either by `addAdminGetNoStoreHeader()` in `worker/src/router.ts` for registry-dispatched routes or by the admin route wrapper for dynamic admin handlers.
 
 ### D1 Read Snapshots And Pagination

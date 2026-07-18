@@ -8,7 +8,7 @@ import { buildTelegramCreds } from "../lib/runtime-credentials";
 import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import type { FullRouteContext } from "./shared";
 import { normalizeWorkerJobLedgerMode } from "../lib/job-ledger";
-import { normalizeWorkerCanaryMode } from "../lib/canary-checks";
+import { normalizeWorkerCanaryMode } from "../lib/worker-canary-mode";
 
 type RouteDependencyHydrator = (routeCtx: FullRouteContext, env: Env) => void;
 
