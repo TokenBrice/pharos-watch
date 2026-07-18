@@ -155,7 +155,12 @@ jobs:
       }}
     uses: ./.github/workflows/pages-release.yml
     with:
-      refresh_data: false
+      # Code deploys refresh digest/depeg/public-dataset snapshots so digest
+      # detail pages, sitemap, and RSS do not regress to the committed
+      # snapshot's age on every merge. The refresh step is fail-open: on
+      # fetch failure or a shrinking archive it falls back to the committed
+      # snapshot instead of failing the deploy.
+      refresh_data: true
     secrets:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

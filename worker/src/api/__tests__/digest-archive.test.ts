@@ -76,4 +76,37 @@ describe("handleDigestArchive", () => {
     const res = await handleDigestArchive(db);
     expect(res.headers.has("X-Data-Age")).toBe(true);
   });
+
+  it("hides internal sentinel rows without shifting edition numbers", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const weekly1 = makeDigestRow({
+      id: 1,
+      generated_at: now - 3 * 86_400,
+      digest_title: "First Weekly",
+      digest_meta: JSON.stringify({ type: "weekly" }),
+    });
+    const sentinel = makeDigestRow({
+      id: 2,
+      generated_at: now - 2 * 86_400,
+      digest_title: "__bluechip_replay_guard__",
+      digest_text: "placeholder",
+      digest_meta: JSON.stringify({ type: "weekly", internal: true }),
+    });
+    const weekly2 = makeDigestRow({
+      id: 3,
+      generated_at: now - 86_400,
+      digest_title: "Second Public Weekly",
+      digest_meta: JSON.stringify({ type: "weekly" }),
+    });
+    const db = mockD1([{ match: "daily_digest", rows: [weekly2, sentinel, weekly1] }]);
+    const res = await handleDigestArchive(db);
+    const body = (await res.json()) as {
+      digests: Array<{ digestTitle: string | null; editionNumber: number; isInternal?: unknown }>;
+    };
+    expect(body.digests.map((d) => d.digestTitle)).toEqual(["Second Public Weekly", "First Weekly"]);
+    // The hidden sentinel occupied weekly edition 2, so the later public
+    // weekly keeps its published number 3.
+    expect(body.digests.map((d) => d.editionNumber)).toEqual([3, 1]);
+    expect(body.digests[0]).not.toHaveProperty("isInternal");
+  });
 });

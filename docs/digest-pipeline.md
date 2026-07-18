@@ -368,11 +368,22 @@ npx tsx scripts/maintenance/sync-digests.ts --api-url https://ops-api.example.co
 
 The scheduled/manual Pages refresh runs digest sync inside `.github/workflows/pages-release.yml`:
 
-1. When `refresh_data=true`, the `pages-release` job fetches `GET /api/digest-archive` once and writes normalized `data/digests.json` before `next build`. Ordinary code releases use the committed snapshot.
-2. The refresh calls `https://stablecoin-dashboard.pages.dev/_site-data`, whose Pages Function authenticates upstream requests to `site-api.pharos.watch`; it does not depend on the custom-domain edge path used by public traffic.
-3. The scheduled `Rebuild Pages` workflow runs once at 08:17 UTC after the 08:05 UTC daily digest slot.
+1. When `refresh_data=true`, the `pages-release` job fetches `GET /api/digest-archive` once and writes normalized `data/digests.json` before `next build`. Code releases via `deploy-cloudflare.yml` now also pass `refresh_data: true`, so a merge no longer regresses digest detail pages, the sitemap, and the RSS feed to the committed snapshot's age until the next scheduled rebuild.
+2. The refresh step is fail-open: if any sync command fails, or the refreshed digest archive has fewer entries than the committed snapshot (grow-only guard), the job restores the committed `data/digests.json`, `data/depeg-events.json`, and `public/datasets` and continues the build with a step-summary warning instead of failing the deploy.
+3. The refresh calls `https://stablecoin-dashboard.pages.dev/_site-data`, whose Pages Function authenticates upstream requests to `site-api.pharos.watch`; it does not depend on the custom-domain edge path used by public traffic.
+4. The scheduled `Rebuild Pages` workflow runs once at 08:17 UTC after the 08:05 UTC daily digest slot and remains the safety net if a fail-open deploy shipped the committed snapshot.
 
-This keeps the Pages build itself network-independent once the digest snapshot has been fetched and avoids hard-coding `https://api.pharos.watch` into the build path.
+Because the committed snapshot is the fail-open fallback, refresh it roughly monthly (`npx tsx scripts/maintenance/sync-digests.ts --api-url https://api.pharos.watch --output data/digests.json` with `DIGEST_API_KEY` set, then commit) so a fallback build is never more than a few weeks stale.
+
+### Internal sentinel rows
+
+`daily_digest` rows flagged with `digest_meta.internal = true` (operational sentinel artifacts such as the `__bluechip_replay_guard__` weekly replay-guard row) are hidden from `GET /api/daily-digest`, `GET /api/digest-archive`, and `GET /api/digest-snapshot`. The archive endpoint still counts hidden rows when assigning per-type edition numbers, so edition numbers already published on socials and detail pages do not shift. Flag a row with:
+
+```sql
+UPDATE daily_digest
+SET digest_meta = json_set(COALESCE(digest_meta, '{}'), '$.internal', json('true'))
+WHERE id = <row id>;
+```
 
 ---
 

@@ -1,16 +1,18 @@
 import { withErrorHandler, addFreshnessHeaders, jsonResponse, safeJsonParse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { NON_WEEKLY_DIGEST_SQL_FILTER } from "../cron/daily-digest/shared";
+import { NON_INTERNAL_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../cron/daily-digest/shared";
 import { selectDigestRiskSignal } from "./digest-risk-summary";
 import { selectDigestIntelligence } from "./digest-intelligence-summary";
 
 export const handleDailyDigest = withErrorHandler("daily-digest", async (db: D1Database): Promise<Response> => {
   const [digestResult, countResult] = await db.batch([
     db.prepare(
-      `SELECT digest_text, digest_title, generated_at, digest_extended, input_data FROM daily_digest WHERE ${NON_WEEKLY_DIGEST_SQL_FILTER} ORDER BY generated_at DESC LIMIT 1`
+      `SELECT digest_text, digest_title, generated_at, digest_extended, input_data FROM daily_digest WHERE (${NON_WEEKLY_DIGEST_SQL_FILTER}) AND (${NON_INTERNAL_DIGEST_SQL_FILTER}) ORDER BY generated_at DESC LIMIT 1`
     ),
     db.prepare(
+      // Edition numbering intentionally counts internal rows so published (#N)
+      // suffixes stay stable when a sentinel row is hidden from output.
       `SELECT COUNT(*) as cnt FROM daily_digest WHERE ${NON_WEEKLY_DIGEST_SQL_FILTER}`
     ),
   ]);
