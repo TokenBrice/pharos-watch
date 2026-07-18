@@ -44,7 +44,7 @@ describe("stablecoin detail derivations", () => {
   });
 
   describe("derivePegReferenceContext", () => {
-    it("uses fallback FX rates for thin peg groups and reports fallback source", () => {
+    it("uses live FX rates for thin fiat peg groups and reports the FX source", () => {
       const assets = [
         { id: "usdt-tether", symbol: "AAA", pegType: "peggedEUR", price: 1.25, circulating: { peggedEUR: 2_000_000 } },
         { id: "usdc-circle", symbol: "BBB", pegType: "peggedEUR", price: 1.24, circulating: { peggedEUR: 3_000_000 } },
@@ -57,7 +57,7 @@ describe("stablecoin detail derivations", () => {
       });
 
       expect(result.pegReference).toBe(1.1);
-      expect(result.pegRateSource).toBe("fallback");
+      expect(result.pegRateSource).toBe("fx");
     });
 
     it("falls back to 1 when peg type is missing", () => {

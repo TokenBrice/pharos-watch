@@ -1395,7 +1395,7 @@ describe("stablecoin detail hero view-model builder", () => {
     const pegMetric = hero.tertiaryMetrics.find((metric) => metric.key === "peg-score");
     expect(pegMetric?.display).toMatchObject({
       value: "45",
-      sub: "3 recorded · 2 in 4y window",
+      sub: "3 recorded · 2 scored incidents",
     });
     expect(pegMetric?.accentClass).toBe("border-l-2 border-l-red-500");
 
@@ -1829,29 +1829,30 @@ describe("stablecoin detail hero view-model builder", () => {
   });
 
   it("builds the peg Record field with honest omissions", () => {
-    expect(
-      buildPassportHero({ pegRecord: { eventCount: 0 } }).passportItems.find((item) => item.key === "record"),
-    ).toMatchObject({
+    const zeroRecorded = buildPassportHero({ pegRecord: { eventCount: 0 } }).passportItems.find(
+      (item) => item.key === "record",
+    );
+    expect(zeroRecorded).toMatchObject({
       category: "Record",
-      value: "Clean",
+      value: "0 recorded",
       href: "#depeg-history",
-      valueClass: "text-emerald-700 dark:text-emerald-400",
-      ariaLabel: "Peg record: clean — no depeg events over the last 4 years of tracking — jump to Depeg History",
+      ariaLabel: "Peg record: no depeg incidents recorded in the score coverage window — jump to Depeg History",
     });
+    expect(zeroRecorded?.valueClass).toBeUndefined();
 
     expect(
       buildPassportHero({ pegRecord: { eventCount: 1 } }).passportItems.find((item) => item.key === "record"),
     ).toMatchObject({
-      value: "1 depeg",
-      ariaLabel: "Peg record: 1 depeg event over the last 4 years of tracking — jump to Depeg History",
+      value: "1 incident",
+      ariaLabel: "Peg record: 1 depeg incident in the score coverage window — jump to Depeg History",
     });
     // History, not an alarm: a non-zero count keeps the default foreground tone.
     const several = buildPassportHero({ pegRecord: { eventCount: 3 } }).passportItems.find(
       (item) => item.key === "record",
     );
     expect(several).toMatchObject({
-      value: "3 depegs",
-      ariaLabel: "Peg record: 3 depeg events over the last 4 years of tracking — jump to Depeg History",
+      value: "3 incidents",
+      ariaLabel: "Peg record: 3 depeg incidents in the score coverage window — jump to Depeg History",
     });
     expect(several?.valueClass).toBeUndefined();
 
