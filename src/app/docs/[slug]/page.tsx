@@ -11,21 +11,16 @@ import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
 import ReactMarkdown from "react-markdown";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
+import { TableBody, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { safeJsonLd } from "@/lib/json-ld";
 import { cn } from "@/lib/utils";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import {
-  PUBLIC_DOC_BY_SLUG,
-  preparePublicDocMarkdown,
-  resolvePublicDocHref,
-} from "@shared/lib/public-docs";
+import { PUBLIC_DOC_BY_SLUG, preparePublicDocMarkdown, resolvePublicDocHref } from "@shared/lib/public-docs";
 import docsMetadata from "@/generated/docs-metadata.json";
 
 const DOCS_DIR = path.join(process.cwd(), "docs");
-type MarkdownComponentProps<T extends keyof React.JSX.IntrinsicElements> =
-  React.ComponentProps<T> & { node?: unknown };
+type MarkdownComponentProps<T extends keyof React.JSX.IntrinsicElements> = React.ComponentProps<T> & { node?: unknown };
 interface MarkdownAstNode {
   tagName?: string;
   value?: string;
@@ -47,9 +42,7 @@ function buildDocMetadataTitle(doc: { slug: string; title: string; group: string
 function getMarkdownNodeText(node: MarkdownAstNode | undefined): string {
   if (!node) return "";
   if (typeof node.value === "string") return node.value;
-  return (node.children ?? [])
-    .map((child) => getMarkdownNodeText(child))
-    .join(" ");
+  return (node.children ?? []).map((child) => getMarkdownNodeText(child)).join(" ");
 }
 
 function findFirstMarkdownNodeByTag(node: MarkdownAstNode | undefined, tagName: string): MarkdownAstNode | undefined {
@@ -73,9 +66,7 @@ function getMarkdownTableLabel(node: unknown): string {
   const headerText = headers.join(", ");
   const line = tableNode?.position?.start?.line;
   const lineText = typeof line === "number" ? ` (line ${line})` : "";
-  return headerText
-    ? `Documentation table: ${headerText}${lineText}`
-    : `Documentation table${lineText}`;
+  return headerText ? `Documentation table: ${headerText}${lineText}` : `Documentation table${lineText}`;
 }
 
 const mdxComponents = {
@@ -123,7 +114,7 @@ const mdxComponents = {
     />
   ),
   td: ({ node: _node, className, ...props }: MarkdownComponentProps<"td">) => (
-    <TableCell className={cn("whitespace-normal px-3 py-2 align-top", className)} {...props} />
+    <td {...props} data-slot="table-cell" className={cn("whitespace-normal px-3 py-2 align-top", className)} />
   ),
 };
 
@@ -131,11 +122,7 @@ export function generateStaticParams() {
   return Array.from(PUBLIC_DOC_BY_SLUG.keys()).map((slug) => ({ slug }));
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const doc = PUBLIC_DOC_BY_SLUG.get(slug);
   if (!doc) return { title: "Doc Not Found" };
@@ -147,19 +134,15 @@ export async function generateMetadata({
   });
 }
 
-export default async function DocPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function DocPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const doc = PUBLIC_DOC_BY_SLUG.get(slug);
   if (!doc) notFound();
 
-  const source = preparePublicDocMarkdown(
-    fs.readFileSync(path.join(DOCS_DIR, doc.source), "utf-8"),
-    { source: doc.source, stripTitle: true },
-  );
+  const source = preparePublicDocMarkdown(fs.readFileSync(path.join(DOCS_DIR, doc.source), "utf-8"), {
+    source: doc.source,
+    stripTitle: true,
+  });
   const meta = (docsMetadata as Record<string, { dateModified: string; dateCreated: string }>)[slug];
 
   return (
