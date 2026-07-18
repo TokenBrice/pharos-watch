@@ -1,12 +1,13 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-17",
+  "generatedAt": "2026-07-18",
   "files": {
     "src/lib/api.ts": 95.4,
     "worker/src/api/safety-score-history-v2.ts": 100,
     "worker/src/lib/safety-score-current-identity.ts": 100,
     "worker/src/lib/api-cache-read.ts": 95.5,
-    "worker/src/lib/api-freshness.ts": 97.4,
+    "worker/src/lib/api-freshness.ts": 97.3,
+    "worker/src/lib/api-freshness-headers.ts": 100,
     "worker/src/lib/freshness-sentinels.ts": 78.3,
     "worker/src/lib/api-history.ts": 95.5,
     "worker/src/lib/api-pagination.ts": 98.3,
