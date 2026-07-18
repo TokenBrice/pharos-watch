@@ -321,7 +321,7 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["lvusd-leverup", "LeverUp USD", "lvUSD"],
   ["xmd-metal-dollar", "Metal Dollar", "XMD"],
   ["hlusd-hela", "HeLa USD", "HLUSD"],
-  ["usx-dforce", "dForce USD", "USX"],
+  ["usx-dforce", "dForce USD", "USX", "frozen", "2026-07-18"],
   ["susd-solayer", "Solayer USD", "sUSD"],
   ["home-homecoin", "HomeCoin", "HOME"],
   ["usdx-kava", "USDX", "USDX"],
