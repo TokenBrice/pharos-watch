@@ -4,13 +4,7 @@ import { runWithOverloadRetry } from "./d1-overload-retry";
 import { boundedJson, parseObjectMetadata } from "./json-metadata";
 
 export type ProducerOutcome =
-  | "ok"
-  | "degraded"
-  | "error"
-  | "skipped_locked"
-  | "skipped_neutral"
-  | "not_started"
-  | "abandoned";
+  "ok" | "degraded" | "error" | "skipped_locked" | "skipped_neutral" | "not_started" | "abandoned";
 
 export interface CronPublicationRecord {
   surface: PublicationSurfaceId;
@@ -51,6 +45,15 @@ export interface RecordProducerOutcomeInput extends ProducerIdentity {
   metadata?: string | null;
   error?: string | null;
   productivity?: CronProductivity | null;
+  writeFence?: ProducerOutcomeWriteFence;
+}
+
+export interface ProducerOutcomeWriteFence {
+  slotKey: string;
+  slotStartedAt: number;
+  state: "running" | "reconciling";
+  owner: string;
+  generation: number;
 }
 
 export interface ProducerHead {
@@ -97,13 +100,62 @@ const REGULAR_HISTORY_RETENTION_SEC = 30 * 24 * 60 * 60;
 const BUDGET_HISTORY_RETENTION_SEC = 90 * 24 * 60 * 60;
 const CALENDAR_HISTORY_RETENTION_SEC = 550 * 24 * 60 * 60;
 
+function producerOutcomeWriteValues(values: string, fence?: ProducerOutcomeWriteFence): string {
+  if (!fence) return `VALUES (${values})`;
+  return `SELECT ${values}
+    WHERE EXISTS (
+      SELECT 1
+        FROM cron_slot_executions producer_fence_slot
+       WHERE producer_fence_slot.slot_key = ?
+         AND producer_fence_slot.slot_started_at = ?
+         AND producer_fence_slot.state = ?
+         AND producer_fence_slot.execution_owner = ?
+         AND producer_fence_slot.execution_generation = ?
+    )`;
+}
+
+function producerOutcomeWriteFenceBinds(fence?: ProducerOutcomeWriteFence): Array<string | number> {
+  return fence ? [fence.slotKey, fence.slotStartedAt, fence.state, fence.owner, fence.generation] : [];
+}
+
+async function assertProducerOutcomeWriteFence(db: D1Database, fence: ProducerOutcomeWriteFence): Promise<void> {
+  const row = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT 1 AS owned
+         FROM cron_slot_executions
+        WHERE slot_key = ?
+          AND slot_started_at = ?
+          AND state = ?
+          AND execution_owner = ?
+          AND execution_generation = ?
+        LIMIT 1`,
+      )
+      .bind(...producerOutcomeWriteFenceBinds(fence))
+      .first<{ owned: number }>(),
+  );
+  if (row?.owned !== 1) {
+    throw new Error(`producer outcome write ownership lost for ${fence.slotKey}@${fence.slotStartedAt}`);
+  }
+}
+
+async function requireGuardedProducerWrite(
+  db: D1Database,
+  fence: ProducerOutcomeWriteFence | undefined,
+  result: D1Result<unknown>,
+): Promise<void> {
+  if ((result.meta.changes ?? 0) > 0) return;
+  if (fence) {
+    await assertProducerOutcomeWriteFence(db, fence);
+    throw new Error(`guarded producer outcome write did not apply for ${fence.slotKey}@${fence.slotStartedAt}`);
+  }
+  throw new Error("producer outcome write did not apply");
+}
+
 function normalizeMetadata(metadata: string | null | undefined): string | null {
   if (!metadata) return null;
   const parsed = parseObjectMetadata(metadata);
-  return boundedJson(
-    parsed ?? { raw: metadata.slice(0, MAX_HISTORY_METADATA_CHARS) },
-    MAX_HISTORY_METADATA_CHARS,
-  );
+  return boundedJson(parsed ?? { raw: metadata.slice(0, MAX_HISTORY_METADATA_CHARS) }, MAX_HISTORY_METADATA_CHARS);
 }
 
 function normalizePublications(
@@ -111,11 +163,12 @@ function normalizePublications(
 ): CronPublicationRecord[] {
   if (!publications) return [];
   return publications
-    .filter((publication) => (
-      publication.generationId.trim().length > 0
-      && Number.isFinite(publication.publishedAt)
-      && publication.publishedAt > 0
-    ))
+    .filter(
+      (publication) =>
+        publication.generationId.trim().length > 0 &&
+        Number.isFinite(publication.publishedAt) &&
+        publication.publishedAt > 0,
+    )
     .slice(0, 12)
     .map((publication) => ({
       ...publication,
@@ -127,7 +180,7 @@ function normalizePublications(
 
 function latestPublicationAt(publications: readonly CronPublicationRecord[]): number | null {
   return publications.reduce<number | null>(
-    (latest, publication) => latest == null ? publication.publishedAt : Math.max(latest, publication.publishedAt),
+    (latest, publication) => (latest == null ? publication.publishedAt : Math.max(latest, publication.publishedAt)),
     null,
   );
 }
@@ -138,15 +191,19 @@ async function recordGenericSurfacePublications(
   publications: readonly CronPublicationRecord[],
 ): Promise<void> {
   for (const publication of publications) {
-    await runWithOverloadRetry(() =>
-      db.prepare(
-        `INSERT INTO surface_publication_generations (
+    const result = await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `INSERT INTO surface_publication_generations (
            surface, generation_id, started_at, validated_at, published_at, state,
            candidate_rows, published_rows, expected_rows, input_watermarks_json,
            validation_summary_json, artifact_checksum, artifact_cache_key,
            producer_schedule_key, producer_job, producer_path, producer_kind,
            invocation_id, worker_version
-         ) VALUES (?, ?, ?, ?, ?, 'published', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ) ${producerOutcomeWriteValues(
+           "?, ?, ?, ?, ?, 'published', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?",
+           input.writeFence,
+         )}
          ON CONFLICT(surface, generation_id) DO UPDATE SET
            validated_at = COALESCE(surface_publication_generations.validated_at, excluded.validated_at),
            published_at = COALESCE(surface_publication_generations.published_at, excluded.published_at),
@@ -167,27 +224,31 @@ async function recordGenericSurfacePublications(
            producer_kind = COALESCE(excluded.producer_kind, surface_publication_generations.producer_kind),
            invocation_id = COALESCE(excluded.invocation_id, surface_publication_generations.invocation_id),
            worker_version = COALESCE(excluded.worker_version, surface_publication_generations.worker_version)`,
-      ).bind(
-        publication.surface,
-        publication.generationId,
-        input.invokedAt,
-        publication.publishedAt,
-        publication.publishedAt,
-        publication.candidateRows ?? null,
-        publication.publishedRows ?? null,
-        publication.expectedRows ?? null,
-        publication.inputWatermarks ? boundedJson(publication.inputWatermarks, 4_000) : null,
-        publication.validationSummary ? boundedJson(publication.validationSummary, 4_000) : null,
-        publication.artifactChecksum ?? null,
-        publication.artifactCacheKey ?? null,
-        input.scheduleKey,
-        input.job,
-        input.producerPath,
-        input.producerKind,
-        input.invocationId,
-        input.workerVersion ?? null,
-      ).run(),
+        )
+        .bind(
+          publication.surface,
+          publication.generationId,
+          input.invokedAt,
+          publication.publishedAt,
+          publication.publishedAt,
+          publication.candidateRows ?? null,
+          publication.publishedRows ?? null,
+          publication.expectedRows ?? null,
+          publication.inputWatermarks ? boundedJson(publication.inputWatermarks, 4_000) : null,
+          publication.validationSummary ? boundedJson(publication.validationSummary, 4_000) : null,
+          publication.artifactChecksum ?? null,
+          publication.artifactCacheKey ?? null,
+          input.scheduleKey,
+          input.job,
+          input.producerPath,
+          input.producerKind,
+          input.invocationId,
+          input.workerVersion ?? null,
+          ...producerOutcomeWriteFenceBinds(input.writeFence),
+        )
+        .run(),
     );
+    await requireGuardedProducerWrite(db, input.writeFence, result);
   }
 }
 
@@ -196,29 +257,23 @@ async function recordGenericSurfacePublications(
  * are derived from the idempotent history table so retrying a partial write
  * cannot double count an invocation.
  */
-export async function recordProducerOutcome(
-  db: D1Database,
-  input: RecordProducerOutcomeInput,
-): Promise<void> {
+export async function recordProducerOutcome(db: D1Database, input: RecordProducerOutcomeInput): Promise<void> {
   const productive = input.productivity?.productive === true;
-  const publications = productive
-    ? normalizePublications(input.productivity?.publications)
-    : [];
-  const publicationsJson = publications.length > 0
-    ? boundedJson(publications, MAX_HISTORY_METADATA_CHARS)
-    : null;
+  const publications = productive ? normalizePublications(input.productivity?.publications) : [];
+  const publicationsJson = publications.length > 0 ? boundedJson(publications, MAX_HISTORY_METADATA_CHARS) : null;
   const publicationAt = latestPublicationAt(publications);
   const metadataJson = normalizeMetadata(input.metadata);
   const error = input.error?.slice(0, MAX_HISTORY_ERROR_CHARS) ?? null;
 
-  await runWithOverloadRetry(() =>
-    db.prepare(
-      `INSERT INTO worker_producer_history (
+  const historyResult = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `INSERT INTO worker_producer_history (
          idempotency_key, schedule_key, job, producer_path, producer_kind,
          invocation_id, worker_version, slot_started_at, invoked_at, completed_at,
          outcome, productive, item_count, publication_count, publications_json,
          calendar_period, metadata_json, error, created_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ) ${producerOutcomeWriteValues(Array.from({ length: 19 }, () => "?").join(", "), input.writeFence)}
        ON CONFLICT(idempotency_key) DO UPDATE SET
          completed_at = excluded.completed_at,
          outcome = excluded.outcome,
@@ -228,39 +283,64 @@ export async function recordProducerOutcome(
          publications_json = excluded.publications_json,
          calendar_period = COALESCE(excluded.calendar_period, worker_producer_history.calendar_period),
          metadata_json = excluded.metadata_json,
-         error = excluded.error`,
-    ).bind(
-      input.idempotencyKey,
-      input.scheduleKey,
-      input.job,
-      input.producerPath,
-      input.producerKind,
-      input.invocationId,
-      input.workerVersion ?? null,
-      input.slotStartedAt ?? null,
-      input.invokedAt,
-      input.completedAt,
-      input.outcome,
-      productive ? 1 : 0,
-      input.itemCount ?? null,
-      publications.length,
-      publicationsJson,
-      input.calendarPeriod ?? null,
-      metadataJson,
-      error,
-      input.completedAt,
-    ).run(),
+         error = excluded.error
+       WHERE worker_producer_history.schedule_key = excluded.schedule_key
+         AND worker_producer_history.job = excluded.job
+         AND worker_producer_history.producer_path = excluded.producer_path
+         AND worker_producer_history.producer_kind = excluded.producer_kind
+         AND worker_producer_history.invocation_id = excluded.invocation_id
+       ON CONFLICT(schedule_key, job, producer_path, producer_kind, invocation_id) DO UPDATE SET
+         idempotency_key = excluded.idempotency_key,
+         worker_version = excluded.worker_version,
+         slot_started_at = excluded.slot_started_at,
+         invoked_at = excluded.invoked_at,
+         completed_at = excluded.completed_at,
+         outcome = excluded.outcome,
+         productive = excluded.productive,
+         item_count = excluded.item_count,
+         publication_count = excluded.publication_count,
+         publications_json = excluded.publications_json,
+         calendar_period = COALESCE(excluded.calendar_period, worker_producer_history.calendar_period),
+         metadata_json = excluded.metadata_json,
+         error = excluded.error
+       ${input.writeFence ? "WHERE worker_producer_history.idempotency_key LIKE 'scheduled-slot-%'" : ""}`,
+      )
+      .bind(
+        input.idempotencyKey,
+        input.scheduleKey,
+        input.job,
+        input.producerPath,
+        input.producerKind,
+        input.invocationId,
+        input.workerVersion ?? null,
+        input.slotStartedAt ?? null,
+        input.invokedAt,
+        input.completedAt,
+        input.outcome,
+        productive ? 1 : 0,
+        input.itemCount ?? null,
+        publications.length,
+        publicationsJson,
+        input.calendarPeriod ?? null,
+        metadataJson,
+        error,
+        input.completedAt,
+        ...producerOutcomeWriteFenceBinds(input.writeFence),
+      )
+      .run(),
   );
+  await requireGuardedProducerWrite(db, input.writeFence, historyResult);
 
-  await runWithOverloadRetry(() =>
-    db.prepare(
-      `INSERT INTO worker_producer_heads (
+  const headResult = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `INSERT INTO worker_producer_heads (
          schedule_key, job, producer_path, producer_kind,
          last_invocation_id, last_worker_version, last_invoked_at, last_completed_at,
          last_outcome, last_error, last_productive_invocation_id,
          last_productive_at, last_productive_item_count, last_publication_at,
          last_publications_json, invocation_count, productive_count, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+       ) ${producerOutcomeWriteValues("?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?", input.writeFence)}
        ON CONFLICT(schedule_key, job, producer_path, producer_kind) DO UPDATE SET
          last_invocation_id = CASE
            WHEN excluded.last_completed_at >= worker_producer_heads.last_completed_at
@@ -318,26 +398,30 @@ export async function recordProducerOutcome(
               AND history.productive = 1
          ),
          updated_at = MAX(worker_producer_heads.updated_at, excluded.updated_at)`,
-    ).bind(
-      input.scheduleKey,
-      input.job,
-      input.producerPath,
-      input.producerKind,
-      input.invocationId,
-      input.workerVersion ?? null,
-      input.invokedAt,
-      input.completedAt,
-      input.outcome,
-      error,
-      productive ? input.invocationId : null,
-      productive ? input.completedAt : null,
-      productive ? input.itemCount ?? null : null,
-      publicationAt,
-      publicationsJson,
-      productive ? 1 : 0,
-      input.completedAt,
-    ).run(),
+      )
+      .bind(
+        input.scheduleKey,
+        input.job,
+        input.producerPath,
+        input.producerKind,
+        input.invocationId,
+        input.workerVersion ?? null,
+        input.invokedAt,
+        input.completedAt,
+        input.outcome,
+        error,
+        productive ? input.invocationId : null,
+        productive ? input.completedAt : null,
+        productive ? (input.itemCount ?? null) : null,
+        publicationAt,
+        publicationsJson,
+        productive ? 1 : 0,
+        input.completedAt,
+        ...producerOutcomeWriteFenceBinds(input.writeFence),
+      )
+      .run(),
   );
+  await requireGuardedProducerWrite(db, input.writeFence, headResult);
 
   if (publications.length > 0) {
     await recordGenericSurfacePublications(db, input, publications);
@@ -349,8 +433,9 @@ export async function loadProducerHeads(
   identities?: readonly Pick<ProducerIdentity, "scheduleKey" | "job" | "producerPath" | "producerKind">[],
 ): Promise<ProducerHead[]> {
   const rows = await runWithOverloadRetry(() =>
-    db.prepare(
-      `SELECT schedule_key, job, producer_path, producer_kind,
+    db
+      .prepare(
+        `SELECT schedule_key, job, producer_path, producer_kind,
               last_invocation_id, last_worker_version, last_invoked_at,
               last_completed_at, last_outcome, last_error,
               last_productive_invocation_id, last_productive_at,
@@ -358,17 +443,23 @@ export async function loadProducerHeads(
               invocation_count, productive_count
          FROM worker_producer_heads
         ORDER BY schedule_key, producer_path, job, producer_kind`,
-    ).all<ProducerHeadRow>(),
+      )
+      .all<ProducerHeadRow>(),
   );
   const identityKeys = identities
-    ? new Set(identities.map((identity) => (
-        `${identity.scheduleKey}\u0000${identity.job}\u0000${identity.producerPath}\u0000${identity.producerKind}`
-      )))
+    ? new Set(
+        identities.map(
+          (identity) =>
+            `${identity.scheduleKey}\u0000${identity.job}\u0000${identity.producerPath}\u0000${identity.producerKind}`,
+        ),
+      )
     : null;
   return (rows.results ?? [])
-    .filter((row) => !identityKeys || identityKeys.has(
-      `${row.schedule_key}\u0000${row.job}\u0000${row.producer_path}\u0000${row.producer_kind}`,
-    ))
+    .filter(
+      (row) =>
+        !identityKeys ||
+        identityKeys.has(`${row.schedule_key}\u0000${row.job}\u0000${row.producer_path}\u0000${row.producer_kind}`),
+    )
     .map((row) => ({
       scheduleKey: row.schedule_key,
       job: row.job,
@@ -389,23 +480,23 @@ export async function loadProducerHeads(
     }));
 }
 
-export async function pruneProducerHistory(
-  db: D1Database,
-  nowSec: number,
-  signal?: AbortSignal,
-): Promise<number> {
+export async function pruneProducerHistory(db: D1Database, nowSec: number, signal?: AbortSignal): Promise<number> {
   throwIfAborted(signal);
-  const result = await runWithOverloadRetry(() =>
-    db.prepare(
-      `DELETE FROM worker_producer_history
+  const result = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `DELETE FROM worker_producer_history
         WHERE (calendar_period IS NOT NULL AND completed_at < ?)
            OR (calendar_period IS NULL AND producer_kind = 'budget-only' AND completed_at < ?)
            OR (calendar_period IS NULL AND producer_kind != 'budget-only' AND completed_at < ?)`,
-    ).bind(
-      nowSec - CALENDAR_HISTORY_RETENTION_SEC,
-      nowSec - BUDGET_HISTORY_RETENTION_SEC,
-      nowSec - REGULAR_HISTORY_RETENTION_SEC,
-    ).run(),
+        )
+        .bind(
+          nowSec - CALENDAR_HISTORY_RETENTION_SEC,
+          nowSec - BUDGET_HISTORY_RETENTION_SEC,
+          nowSec - REGULAR_HISTORY_RETENTION_SEC,
+        )
+        .run(),
     3,
     signal,
   );

@@ -71,7 +71,9 @@ vi.mock("../dex-liquidity/scoring", () => ({
 }));
 
 vi.mock("../dex-liquidity/persistence", () => ({
-  persistScores: vi.fn(async () => {}),
+  persistScores: vi.fn(async (_db, _metrics, _scores, _globalAgg, nowSec: number) => ({
+    generationId: `dex-liquidity-${nowSec}`,
+  })),
   writeHistoricalSnapshots: vi.fn(async () => {}),
 }));
 

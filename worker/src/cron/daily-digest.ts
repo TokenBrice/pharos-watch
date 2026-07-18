@@ -366,7 +366,7 @@ export async function generateDailyDigest(
         appendixHtml: telegramAppendices?.appendixHtml ?? null,
         successActions: telegramAppendices?.successActions ?? [],
       }, signal);
-      if (!enqueueResult.payloadMatched) {
+      if (!enqueueResult.payloadMatched && enqueueResult.state !== "sent") {
         degradedReasons.push("telegram-outbox-payload-mismatch");
         recordCronFailure("daily-digest", new Error("Immutable Telegram digest edition differs"), {
           metadata: { stage: "telegram-outbox-payload-mismatch", editionKey: telegramEditionKey },

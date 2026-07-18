@@ -234,6 +234,8 @@ Appendix snapshot writes are stored with the immutable edition and committed ato
 
 Telegram delivery is keyed by immutable daily or weekly edition. The outbox stores the target chat, exact ordered chunk array, accepted-chunk cursor, and owner/generation-fenced state. Confirmed retryable HTTP responses return the edition to `pending` with bounded exponential or Telegram `retry_after` backoff. A timeout/network failure, expired `sending` owner, or persistence failure after acceptance becomes `execution_unknown` and is never replayed automatically. Confirmed permanent rejection becomes `failed_permanent`. The five-minute digest-trigger slot drains due `pending` editions without rerunning Anthropic or re-rendering copy; operator reconciliation for terminal states is documented in [`runbooks/telegram-digest-outbox.md`](./runbooks/telegram-digest-outbox.md).
 
+A same-day forced regeneration can render different copy after that immutable Telegram edition is already `sent`. The enqueue result reports the payload mismatch for auditability, but the digest cron treats the already-sent state as an idempotent skip instead of a delivery warning because no pending payload can be replaced and no resend is allowed. A mismatch while the edition is still pending remains degraded and operator-visible.
+
 **Required secrets:**
 
 | Variable | Description |

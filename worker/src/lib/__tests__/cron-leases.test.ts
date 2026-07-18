@@ -47,16 +47,20 @@ type ProgressRow = {
   stage: string | null;
   lease_owner: string | null;
   slot_started_at: number | null;
+  metadata?: string | null;
 };
 
 type CronRunRow = {
+  id?: number;
   job: string;
   started_at: number;
   duration_ms: number;
   status: string;
   error: string | null;
+  item_count?: number | null;
   metadata: string | null;
   slot_started_at: number | null;
+  idempotency_key?: string | null;
 };
 
 type CacheRow = {
@@ -67,9 +71,17 @@ type CacheRow = {
 
 type JobAttemptRow = {
   attempt_id: string;
+  idempotency_key?: string;
   schedule_key: string;
   job: string;
   slot_started_at: number | null;
+  producer_kind?: string;
+  producer_path?: string | null;
+  invocation_id?: string | null;
+  attempt_no?: number;
+  owner?: string | null;
+  started_at?: number | null;
+  item_count?: number | null;
   state: string;
   status_class: string | null;
   finished_at: number | null;
@@ -135,10 +147,39 @@ function makeLeaseDb(seed?: {
     jobAttempts.set(attempt.attempt_id, attempt);
   }
 
+  function hasMatchingEmbeddedSlotFence(args: readonly unknown[]): boolean {
+    for (let index = 0; index <= args.length - 5; index++) {
+      const [slotKey, slotStartedAt, state, owner, generation] = args.slice(index, index + 5);
+      if (
+        typeof slotKey !== "string" ||
+        typeof slotStartedAt !== "number" ||
+        (state !== "running" && state !== "reconciling") ||
+        typeof owner !== "string" ||
+        typeof generation !== "number"
+      ) {
+        continue;
+      }
+      const slot = slots.get(makeSlotMapKey(slotKey, slotStartedAt));
+      if (slot?.state === state && slot.execution_owner === owner && (slot.execution_generation ?? 1) === generation) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function guardedWriteAllowed(sql: string, args: readonly unknown[]): boolean {
+    const isGuarded = sql.includes("reconciliation_slot") || sql.includes("producer_fence_slot");
+    return !isGuarded || hasMatchingEmbeddedSlotFence(args);
+  }
+
   function stmt(sql: string) {
     return {
       bind: (...args: unknown[]) => ({
         run: async () => {
+          if (!guardedWriteAllowed(sql, args)) {
+            return { success: true, meta: { changes: 0 } };
+          }
+
           if (sql.includes("INSERT INTO cron_leases")) {
             const [job, owner, leaseUntil, heartbeatAt, updatedAt, nowSec] = args as [
               string,
@@ -194,13 +235,56 @@ function makeLeaseDb(seed?: {
           }
 
           if (sql.includes("DELETE FROM cron_leases")) {
-            const [job, owner, nowSec] = args as [string, string, number | undefined];
+            const [job, owner] = args as [string, string];
             const existing = leases.get(job);
             if (!existing || existing.lease_owner !== owner) {
               return { success: true, meta: { changes: 0 } };
             }
-            if (sql.includes("lease_until < ?") && !(typeof nowSec === "number" && existing.lease_until < nowSec)) {
-              return { success: true, meta: { changes: 0 } };
+            if (sql.includes("lease_until = ?")) {
+              const [, , expectedLeaseUntil, nowSec, scheduleKey, slotStartedAt, attemptJob, attemptOwner] = args as [
+                string,
+                string,
+                number,
+                number,
+                string,
+                number,
+                string,
+                string | null,
+              ];
+              const hasTerminalAttemptFence = sql.includes("WHERE attempt_id = ?");
+              const [terminalAttemptId, terminalIdempotencyKey, terminalState, terminalFinishedAt, terminalUpdatedAt] =
+                hasTerminalAttemptFence
+                  ? (args.slice(8, 13) as [string, string, string, number, number])
+                  : [undefined, undefined, undefined, undefined, undefined];
+              const hasActiveAttempt = [...jobAttempts.values()].some(
+                (attempt) =>
+                  attempt.schedule_key === scheduleKey &&
+                  attempt.slot_started_at === slotStartedAt &&
+                  attempt.job === attemptJob &&
+                  (attempt.owner ?? null) === attemptOwner &&
+                  ["queued", "claimed", "running"].includes(attempt.state),
+              );
+              const terminalAttempt = terminalAttemptId == null ? null : jobAttempts.get(terminalAttemptId);
+              const terminalFenceMatches =
+                terminalAttemptId == null ||
+                (terminalAttempt != null &&
+                  (terminalAttempt.idempotency_key ?? terminalAttempt.attempt_id) === terminalIdempotencyKey &&
+                  terminalAttempt.state === terminalState &&
+                  terminalAttempt.finished_at === terminalFinishedAt &&
+                  terminalAttempt.updated_at === terminalUpdatedAt);
+              if (
+                existing.lease_until !== expectedLeaseUntil ||
+                existing.lease_until >= nowSec ||
+                hasActiveAttempt ||
+                !terminalFenceMatches
+              ) {
+                return { success: true, meta: { changes: 0 } };
+              }
+            } else if (sql.includes("lease_until < ?")) {
+              const nowSec = args[2];
+              if (!(typeof nowSec === "number" && existing.lease_until < nowSec)) {
+                return { success: true, meta: { changes: 0 } };
+              }
             }
             leases.delete(job);
             return { success: true, meta: { changes: 1 } };
@@ -218,11 +302,13 @@ function makeLeaseDb(seed?: {
               string | null,
             ];
             cronRuns.push({
+              id: cronRuns.length + 1,
               job,
               started_at: startedAt,
               duration_ms: durationMs,
               status,
               error,
+              item_count: itemCount,
               metadata,
               slot_started_at: slotStartedAt,
             });
@@ -240,6 +326,7 @@ function makeLeaseDb(seed?: {
             const metadata = args[literalErrorStatus ? 4 : 5] as string | null;
             const slotStartedAt = args[literalErrorStatus ? 5 : 6] as number | null;
             cronRuns.push({
+              id: cronRuns.length + 1,
               job,
               started_at: startedAt,
               duration_ms: durationMs,
@@ -253,26 +340,35 @@ function makeLeaseDb(seed?: {
 
           if (sql.includes("INSERT INTO cron_runs") && sql.includes("status, error, item_count")) {
             const isNotStarted = sql.includes("SELECT ?, ?, 0, 'error'");
+            const isPublished = sql.includes("'degraded', NULL");
             const job = args[0] as string;
             const startedAt = args[1] as number;
             const durationMs = isNotStarted ? 0 : args[2] as number;
-            const error = args[isNotStarted ? 2 : 3] as string | null;
-            const metadata = args[isNotStarted ? 3 : 4] as string | null;
-            const slotStartedAt = args[isNotStarted ? 4 : 5] as number | null;
+            const error = isPublished ? null : args[isNotStarted ? 2 : 3] as string | null;
+            const itemCount = isPublished ? args[3] as number | null : isNotStarted ? 0 : null;
+            const metadata = args[isPublished ? 4 : isNotStarted ? 3 : 4] as string | null;
+            const slotStartedAt = args[isPublished ? 5 : isNotStarted ? 4 : 5] as number | null;
+            const idempotencyKey = args[isPublished ? 6 : isNotStarted ? 5 : 6] as string | null;
+            if (cronRuns.some((run) => run.job === job && run.slot_started_at === slotStartedAt)) {
+              return { success: true, meta: { changes: 0 } };
+            }
             cronRuns.push({
+              id: cronRuns.length + 1,
               job,
               started_at: startedAt,
               duration_ms: durationMs,
-              status: "error",
+              status: isPublished ? "degraded" : "error",
               error,
+              item_count: itemCount,
               metadata,
               slot_started_at: slotStartedAt,
+              idempotency_key: idempotencyKey,
             });
             return { success: true, meta: { changes: 1 } };
           }
 
           if (sql.includes("DELETE FROM cron_run_progress")) {
-            const [job, slotStartedAt, owner] = args as [string, number, string | undefined];
+            const [job, slotStartedAt] = args as [string, number];
             const existing = progressRows.get(job);
             if (
               !existing ||
@@ -280,17 +376,39 @@ function makeLeaseDb(seed?: {
             ) {
               return { success: true, meta: { changes: 0 } };
             }
-            if (owner !== undefined && existing.lease_owner !== owner) {
-              return { success: true, meta: { changes: 0 } };
-            }
-            if (owner === undefined && existing.lease_owner != null && existing.lease_owner !== "") {
-              return { success: true, meta: { changes: 0 } };
+            if (sql.includes("started_at = ?")) {
+              const [, , startedAt, updatedAt, stage, leaseOwner, metadata] = args as [
+                string,
+                number,
+                number,
+                number,
+                string | null,
+                string | null,
+                string | null,
+              ];
+              if (
+                existing.started_at !== startedAt ||
+                existing.updated_at !== updatedAt ||
+                existing.stage !== stage ||
+                existing.lease_owner !== leaseOwner ||
+                (existing.metadata ?? null) !== metadata
+              ) {
+                return { success: true, meta: { changes: 0 } };
+              }
+            } else {
+              const owner = args[2] as string | undefined;
+              if (owner !== undefined && existing.lease_owner !== owner) {
+                return { success: true, meta: { changes: 0 } };
+              }
+              if (owner === undefined && existing.lease_owner != null && existing.lease_owner !== "") {
+                return { success: true, meta: { changes: 0 } };
+              }
             }
             progressRows.delete(job);
             return { success: true, meta: { changes: 1 } };
           }
 
-          if (sql.includes("INSERT OR REPLACE INTO cache")) {
+          if (sql.includes("INSERT OR REPLACE INTO cache") || sql.includes("INSERT INTO cache")) {
             const [key, value, updatedAt] = args as [string, string, number];
             cacheRows.set(key, {
               key,
@@ -300,7 +418,107 @@ function makeLeaseDb(seed?: {
             return { success: true, meta: { changes: 1 } };
           }
 
+          if (
+            sql.includes("INSERT INTO worker_producer_history") ||
+            sql.includes("INSERT INTO worker_producer_heads") ||
+            sql.includes("INSERT INTO surface_publication_generations")
+          ) {
+            return { success: true, meta: { changes: 1 } };
+          }
+
           if (sql.includes("UPDATE worker_job_attempts")) {
+            if (sql.includes("WHERE attempt_id = ?")) {
+              const [
+                state,
+                statusClass,
+                finishedAt,
+                durationAt,
+                itemCount,
+                error,
+                metadata,
+                updatedAt,
+                attemptId,
+                idempotencyKey,
+                scheduleKey,
+                slotStartedAt,
+                job,
+                producerKind,
+                producerPath,
+                invocationId,
+                attemptNo,
+                owner,
+                expectedState,
+                expectedUpdatedAt,
+                expectedLeaseJob,
+                expectedLeaseOwner,
+                expectedLeaseUntil,
+                leaseExpiredBefore,
+              ] = args as [
+                string,
+                string,
+                number,
+                number,
+                number | null,
+                string | null,
+                string,
+                number,
+                string,
+                string,
+                string,
+                number,
+                string,
+                string,
+                string | null,
+                string | null,
+                number,
+                string | null,
+                string,
+                number,
+                string?,
+                string?,
+                number?,
+                number?,
+              ];
+              const attempt = jobAttempts.get(attemptId);
+              const hasLeaseFence = sql.includes("FROM cron_leases");
+              const expectedLease = !hasLeaseFence || expectedLeaseJob == null ? null : leases.get(expectedLeaseJob);
+              if (
+                !attempt ||
+                (attempt.idempotency_key ?? attempt.attempt_id) !== idempotencyKey ||
+                attempt.schedule_key !== scheduleKey ||
+                attempt.slot_started_at !== slotStartedAt ||
+                attempt.job !== job ||
+                (attempt.producer_kind ?? "scheduled-job") !== producerKind ||
+                (attempt.producer_path ?? attempt.schedule_key) !== producerPath ||
+                (attempt.invocation_id ?? null) !== invocationId ||
+                (attempt.attempt_no ?? 1) !== attemptNo ||
+                (attempt.owner ?? null) !== owner ||
+                attempt.state !== expectedState ||
+                attempt.updated_at !== expectedUpdatedAt ||
+                (hasLeaseFence &&
+                  expectedLeaseJob != null &&
+                  (!expectedLease ||
+                    expectedLease.lease_owner !== expectedLeaseOwner ||
+                    expectedLease.lease_until !== expectedLeaseUntil ||
+                    expectedLease.lease_until >= (leaseExpiredBefore ?? Number.NEGATIVE_INFINITY)))
+              ) {
+                return { success: true, meta: { changes: 0 } };
+              }
+              jobAttempts.set(attemptId, {
+                ...attempt,
+                state,
+                status_class: statusClass,
+                finished_at: finishedAt,
+                updated_at: updatedAt,
+                item_count: itemCount ?? attempt.item_count,
+                error,
+                result_metadata_json: metadata,
+                ...(attempt.started_at != null
+                  ? { duration_ms: Math.max(0, durationAt - attempt.started_at) * 1000 }
+                  : {}),
+              });
+              return { success: true, meta: { changes: 1 } };
+            }
             const [finishedAt, error, metadata, updatedAt, scheduleKey, slotStartedAt, ...rest] = args as [
               number,
               string,
@@ -412,8 +630,13 @@ function makeLeaseDb(seed?: {
             return { success: true, meta: { changes: 1 } };
           }
 
-          if (sql.includes("UPDATE cron_slot_executions") && sql.includes("result_status = 'error'")) {
-            const [finishedAt, updatedAt, metadata, slotKey, slotStartedAt, owner, generation] = args as [
+          if (
+            sql.includes("UPDATE cron_slot_executions") &&
+            sql.includes("state = 'reconciling'") &&
+            sql.includes("result_status = ?")
+          ) {
+            const [resultStatus, finishedAt, updatedAt, metadata, slotKey, slotStartedAt, owner, generation] = args as [
+              string,
               number,
               number,
               string,
@@ -434,7 +657,7 @@ function makeLeaseDb(seed?: {
                 slots.set(key, {
                   ...existing,
                   state: "finished",
-                  result_status: "error",
+                  result_status: resultStatus,
                   finished_at: finishedAt,
                   updated_at: updatedAt,
                   metadata,
@@ -588,6 +811,15 @@ function makeLeaseDb(seed?: {
           return { success: true, meta: { changes: 0 } };
         },
         first: async () => {
+          if (sql.includes("SELECT 1 AS owned") && sql.includes("FROM cron_slot_executions")) {
+            const [slotKey, slotStartedAt, state, owner, generation] = args as [string, number, string, string, number];
+            const slot = slots.get(makeSlotMapKey(slotKey, slotStartedAt));
+            return slot?.state === state &&
+              slot.execution_owner === owner &&
+              (slot.execution_generation ?? 1) === generation
+              ? { owned: 1 }
+              : null;
+          }
           if (sql.includes("SELECT 1 AS active") && sql.includes("JOIN cron_leases")) {
             const [slotStartedAt, ...jobAndNow] = args as [number, ...(string | number)[]];
             const activeAt = Number(jobAndNow[jobAndNow.length - 1]);
@@ -601,18 +833,21 @@ function makeLeaseDb(seed?: {
             });
             return active ? { active: 1 } : null;
           }
-          if (sql.includes("SELECT state, execution_owner, execution_generation") && sql.includes("FROM cron_slot_executions")) {
+          if (sql.includes("FROM cron_slot_executions") && sql.includes("WHERE slot_key = ?")) {
             const [slotKey, slotStartedAt] = args as [string, number];
             const row = slots.get(makeSlotMapKey(slotKey, slotStartedAt));
             if (!row) return null;
             return {
               state: row.state,
+              result_status: row.result_status,
               execution_owner: row.execution_owner,
               execution_generation: row.execution_generation ?? 1,
               invocation_id: row.invocation_id ?? null,
               worker_version: row.worker_version ?? null,
               started_at: row.started_at,
+              finished_at: row.finished_at,
               updated_at: row.updated_at,
+              metadata: row.metadata,
             };
           }
           if (sql.includes("SELECT lease_owner, lease_until FROM cron_leases")) {
@@ -624,10 +859,33 @@ function makeLeaseDb(seed?: {
               lease_until: lease.lease_until,
             };
           }
-          if (sql.includes("SELECT id FROM cron_runs")) {
+          if (sql.includes("FROM cron_runs") && sql.includes("ORDER BY started_at DESC")) {
             const [job, slotStartedAt] = args as [string, number];
-            const index = cronRuns.findIndex((run) => run.job === job && run.slot_started_at === slotStartedAt);
-            return index >= 0 ? { id: index + 1 } : null;
+            const indexedRuns = cronRuns
+              .map((run, index) => ({ run, id: run.id ?? index + 1 }))
+              .filter(({ run }) => run.job === job && run.slot_started_at === slotStartedAt)
+              .sort((left, right) => right.run.started_at - left.run.started_at || right.id - left.id);
+            const latest = indexedRuns[0];
+            if (!latest) return null;
+            return {
+              id: latest.id,
+              started_at: latest.run.started_at,
+              status: latest.run.status,
+              error: latest.run.error,
+              item_count: latest.run.item_count ?? null,
+              idempotency_key: latest.run.idempotency_key ?? null,
+              metadata: latest.run.metadata,
+            };
+          }
+          if (sql.includes("SELECT id") && sql.includes("FROM cron_runs")) {
+            const [job, slotStartedAt, idempotencyKey] = args as [string, number, string?];
+            const index = cronRuns.findIndex(
+              (run) =>
+                run.job === job &&
+                run.slot_started_at === slotStartedAt &&
+                (idempotencyKey == null || run.idempotency_key === idempotencyKey),
+            );
+            return index >= 0 ? { id: cronRuns[index].id ?? index + 1 } : null;
           }
           return null;
         },
@@ -670,10 +928,39 @@ function makeLeaseDb(seed?: {
             }
             const [slotStartedAt, ...jobs] = args as [number, ...string[]];
             return {
-              results: [...progressRows.values()].filter((progress) =>
-                progress.slot_started_at === slotStartedAt &&
-                (jobs.length === 0 || jobs.includes(progress.job)),
-              ),
+              results: [...progressRows.values()]
+                .filter((progress) =>
+                  progress.slot_started_at === slotStartedAt &&
+                  (jobs.length === 0 || jobs.includes(progress.job)),
+                )
+                .map((progress) => ({ ...progress, metadata: progress.metadata ?? null })),
+              success: true,
+              meta: {},
+            };
+          }
+          if (sql.includes("FROM worker_job_attempts") && sql.includes("state IN ('queued', 'claimed', 'running')")) {
+            const [scheduleKey, slotStartedAt, job] = args as [string, number, string];
+            return {
+              results: [...jobAttempts.values()]
+                .filter((attempt) =>
+                  attempt.schedule_key === scheduleKey &&
+                  attempt.slot_started_at === slotStartedAt &&
+                  attempt.job === job &&
+                  ["queued", "claimed", "running"].includes(attempt.state),
+                )
+                .sort((left, right) => (right.attempt_no ?? 1) - (left.attempt_no ?? 1))
+                .slice(0, 2)
+                .map((attempt) => ({
+                  ...attempt,
+                  idempotency_key: attempt.idempotency_key ?? attempt.attempt_id,
+                  producer_kind: attempt.producer_kind ?? "scheduled-job",
+                  producer_path: attempt.producer_path ?? attempt.schedule_key,
+                  invocation_id: attempt.invocation_id ?? null,
+                  attempt_no: attempt.attempt_no ?? 1,
+                  owner: attempt.owner ?? null,
+                  started_at: attempt.started_at ?? null,
+                  item_count: attempt.item_count ?? null,
+                })),
               success: true,
               meta: {},
             };
@@ -689,7 +976,11 @@ function makeLeaseDb(seed?: {
 
   return {
     prepare: (sql: string) => stmt(sql),
-    batch: async () => [],
+    batch: async (statements: D1PreparedStatement[]) => {
+      const results = [];
+      for (const statement of statements) results.push(await statement.run());
+      return results;
+    },
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
     getSlot: (slotKey: string, slotStartedAt: number) => slots.get(makeSlotMapKey(slotKey, slotStartedAt)),
@@ -2103,6 +2394,7 @@ describe("runScheduledSlotWithFence", () => {
         slot_started_at: staleSlotStartedAt,
         state: "running",
         status_class: null,
+        owner: null,
         finished_at: null,
         updated_at: now - 1700,
         error: null,
@@ -2180,6 +2472,7 @@ describe("runScheduledSlotWithFence", () => {
         slot_started_at: staleSlotStartedAt,
         state: "running",
         status_class: null,
+        owner: null,
         finished_at: null,
         updated_at: now - 1700,
         error: null,
@@ -2191,14 +2484,20 @@ describe("runScheduledSlotWithFence", () => {
 
     expect(summary).toMatchObject({
       slotsReconciled: 1,
-      syntheticCronRuns: 0,
+      syntheticCronRuns: 1,
       notStartedCronRuns: 0,
       jobAttemptsAbandoned: 1,
       progressRowsCleared: 1,
       leasesCleared: 0,
     });
     expect(db.getProgress("sync-yield-data")).toBeUndefined();
-    expect(db.getRuns()).toEqual([]);
+    expect(db.getRuns()).toEqual([
+      expect.objectContaining({
+        job: "sync-yield-data",
+        status: "error",
+        slot_started_at: staleSlotStartedAt,
+      }),
+    ]);
     expect(db.getJobAttempt(attemptId)).toMatchObject({
       state: "abandoned",
       status_class: "abandoned",

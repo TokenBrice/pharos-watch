@@ -1407,6 +1407,37 @@ describe("generateDailyDigest", () => {
     failureSpy.mockRestore();
   });
 
+  it("does not degrade a forced rerun when the immutable Telegram edition is already sent", async () => {
+    vi.mocked(enqueueTelegramDigestEdition).mockResolvedValueOnce({
+      created: false,
+      payloadMatched: false,
+      editionKey: "daily:2026-03-06",
+      state: "sent",
+      chunks: ["previous exact edition"],
+    });
+    vi.mocked(deliverTelegramDigestEdition).mockResolvedValueOnce({
+      editionKey: "daily:2026-03-06",
+      state: "sent",
+      outcome: "skipped",
+      chunksSent: 0,
+      nextChunkIndex: 1,
+      chunkCount: 1,
+      errorClass: null,
+      retryAfterSec: null,
+    });
+    const db = mockD1(makeBaseTables());
+
+    const result = await generateDailyDigest(db, "anthropic-key", null, true, {
+      botToken: "tg-token",
+      chatId: "tg-chat",
+    });
+
+    expect(result.status).toBeUndefined();
+    expect(result.metadata).toContain("telegram: skipped: already-sent");
+    expect(result.metadata).not.toContain("telegram-outbox-payload-mismatch");
+    expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
+  });
+
   it("stores appendix copy and success actions in the immutable Telegram edition", async () => {
     const successActions = [{ key: "telegram:tracked-stablecoins-snapshot", value: '["example"]' }];
     vi.mocked(prepareTelegramDigestAppendices).mockResolvedValueOnce({
