@@ -285,7 +285,7 @@ describe("detectDepegEvents", () => {
         pegType: "peggedUSD",
         price: 0.9992,
         priceSource: "coingecko+defillama-list",
-        priceConfidence: "single-source",
+        priceConfidence: "high",
         priceObservedAt: now - 60,
         priceObservedAtMode: "unknown",
         agreeSources: ["coingecko", "defillama-list"],

@@ -370,6 +370,36 @@ describe("generateWeeklyRecap", () => {
     expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
   });
 
+  it("preserves blocked quality-gate metadata when Telegram delivery is skipped", async () => {
+    const db = mockD1(makeTables(), { requireMatch: true });
+    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse({
+      text: "PSI softened by 4 points while USDT stayed near peg and blacklist activity kept tapping the glass, but this hook deliberately runs long enough to trip the hard tweet length validator so the weekly recap remains stored only for operator inspection and must not be published publicly from archive reads.",
+    }));
+
+    const result = await generateWeeklyRecap(
+      db,
+      "anthropic-key",
+      { botToken: "bot", chatId: "chat" },
+    );
+
+    expect(result.status).toBe("degraded");
+    expect(result.metadata).toContain("telegram: skipped: quality-gate");
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+
+    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    const insertedMeta = JSON.parse(String(insert?.binds[5])) as Record<string, unknown>;
+    expect(insertedMeta.qualityGate).toBe("blocked");
+
+    const update = db.getHistory().find((entry) => entry.sql.includes("SET digest_meta = ?"));
+    const finalMeta = JSON.parse(String(update?.binds[0])) as Record<string, unknown>;
+    expect(finalMeta).toMatchObject({
+      qualityGate: "blocked",
+      telegramDelivered: false,
+      telegramDeliveryStatus: "skipped: quality-gate",
+    });
+  });
+
   it("stores failed Telegram delivery state so the weekly row can be retried", async () => {
     const db = mockD1(makeTables(), { requireMatch: true });
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());

@@ -27,12 +27,20 @@ function makeDexScreenerTarget(index: number, overrides: Partial<AddressPriceTar
     address: `0x${index.toString(16).padStart(40, "0")}`,
     origin: "contracts",
     previousSourceDepth: 1,
+    previousMissingGenerations: 0,
+    alertEligibleMissingPrice: false,
+    recentlyMissingPrice: false,
     missingPrice: false,
     expiresBeforeNextGeneration: false,
     circulatingUsd: 1_000_000 - index,
     ...overrides,
   };
 }
+
+const PUBLISHABLE_PRICE_META = {
+  priceSource: "coingecko",
+  priceObservedAt: 1_800_000_000,
+} as const;
 
 describe("address price providers", () => {
   it("auto-enables the stable no-key provider plus configured key-backed providers", () => {
@@ -75,6 +83,7 @@ describe("address price providers", () => {
           address: "base:0x0000000000000000000000000000000000000001",
           chains: ["Base"],
           price: 1,
+          ...PUBLISHABLE_PRICE_META,
         },
         {
           id: "covered",
@@ -82,6 +91,7 @@ describe("address price providers", () => {
           address: "base:0x0000000000000000000000000000000000000002",
           chains: ["Base"],
           price: 1,
+          ...PUBLISHABLE_PRICE_META,
         },
       ],
     });
@@ -134,6 +144,7 @@ describe("address price providers", () => {
           symbol: "LDS",
           address: "base:0x0000000000000000000000000000000000000001",
           price: 1,
+          ...PUBLISHABLE_PRICE_META,
           circulating: { base: 100_000 },
         },
         {
@@ -148,6 +159,7 @@ describe("address price providers", () => {
           symbol: "LDL",
           address: "base:0x0000000000000000000000000000000000000003",
           price: 1,
+          ...PUBLISHABLE_PRICE_META,
           circulating: { base: 10_000_000 },
         },
       ],
@@ -157,6 +169,45 @@ describe("address price providers", () => {
       "missing",
       "low-depth-large",
       "low-depth-small",
+    ]);
+  });
+
+  it("treats positive prices without publication provenance as missing exact-address targets", () => {
+    const targets = buildAddressPriceTargetsByProvider({
+      providers: ["dexpaprika-address"],
+      previousAssetsById: new Map([
+        ["numeric-without-source", {
+          id: "numeric-without-source",
+          symbol: "NWS",
+          consensusSources: ["coingecko", "defillama-list", "coinbase"],
+        }],
+        ["refresh", { id: "refresh", symbol: "REF", consensusSources: ["coingecko"] }],
+      ]),
+      assets: [
+        {
+          id: "refresh",
+          symbol: "REF",
+          address: "base:0x0000000000000000000000000000000000000001",
+          price: 1,
+          ...PUBLISHABLE_PRICE_META,
+          circulating: { base: 10_000_000 },
+        },
+        {
+          id: "numeric-without-source",
+          symbol: "NWS",
+          address: "base:0x0000000000000000000000000000000000000002",
+          price: 1,
+          circulating: { base: 100_000 },
+        },
+      ],
+    });
+
+    expect(targets.get("dexpaprika-address")?.map((target) => ({
+      id: target.stablecoinId,
+      missing: target.missingPrice,
+    }))).toEqual([
+      { id: "numeric-without-source", missing: true },
+      { id: "refresh", missing: false },
     ]);
   });
 
@@ -181,12 +232,14 @@ describe("address price providers", () => {
           symbol: "LOW",
           address: "base:0x0000000000000000000000000000000000000001",
           price: 1,
+          ...PUBLISHABLE_PRICE_META,
         },
         {
           id: "expiring",
           symbol: "EXP",
           address: "base:0x0000000000000000000000000000000000000002",
           price: 1,
+          ...PUBLISHABLE_PRICE_META,
         },
       ],
     });
@@ -197,6 +250,64 @@ describe("address price providers", () => {
     }))).toEqual([
       { id: "expiring", expiring: true },
       { id: "low-depth", expiring: false },
+    ]);
+  });
+
+  it("pins persistent active price gaps ahead of broader exact-address refresh targets", () => {
+    const targets = buildAddressPriceTargetsByProvider({
+      providers: ["dexpaprika-address"],
+      previousAssetsById: new Map([
+        ["persistent-gap", {
+          id: "persistent-gap",
+          symbol: "GAP",
+          consensusSources: ["coingecko", "defillama-list", "coinbase"],
+        }],
+        ["new-gap", {
+          id: "new-gap",
+          symbol: "NEW",
+          consensusSources: ["coingecko", "defillama-list", "coinbase"],
+        }],
+        ["refresh", {
+          id: "refresh",
+          symbol: "REF",
+          consensusSources: ["coingecko"],
+        }],
+      ]),
+      previousMissingGenerationsById: new Map([["persistent-gap", 1]]),
+      assets: [
+        {
+          id: "refresh",
+          symbol: "REF",
+          address: "base:0x0000000000000000000000000000000000000001",
+          price: 1,
+          ...PUBLISHABLE_PRICE_META,
+          circulating: { base: 10_000_000 },
+        },
+        {
+          id: "new-gap",
+          symbol: "NEW",
+          address: "base:0x0000000000000000000000000000000000000002",
+          price: null,
+          circulating: { base: 100_000_000 },
+        },
+        {
+          id: "persistent-gap",
+          symbol: "GAP",
+          address: "base:0x0000000000000000000000000000000000000003",
+          price: null,
+          circulating: { base: 10_000 },
+        },
+      ],
+    });
+
+    expect(targets.get("dexpaprika-address")?.map((target) => ({
+      id: target.stablecoinId,
+      previousMissingGenerations: target.previousMissingGenerations,
+      alertEligibleMissingPrice: target.alertEligibleMissingPrice,
+    }))).toEqual([
+      { id: "persistent-gap", previousMissingGenerations: 1, alertEligibleMissingPrice: true },
+      { id: "new-gap", previousMissingGenerations: 0, alertEligibleMissingPrice: false },
+      { id: "refresh", previousMissingGenerations: 0, alertEligibleMissingPrice: false },
     ]);
   });
 
@@ -218,6 +329,22 @@ describe("address price providers", () => {
     ]);
   });
 
+  it("keeps alert-eligible gaps pinned ahead of rotated missing cohorts", () => {
+    const targets = [
+      makeDexScreenerTarget(1, { stablecoinId: "alert-gap", missingPrice: true, previousMissingGenerations: 1, alertEligibleMissingPrice: true, recentlyMissingPrice: true }),
+      makeDexScreenerTarget(2, { stablecoinId: "missing-large", missingPrice: true }),
+      makeDexScreenerTarget(3, { stablecoinId: "missing-small", missingPrice: true }),
+      makeDexScreenerTarget(4, { stablecoinId: "priced-low-depth", previousSourceDepth: 1 }),
+    ];
+
+    expect(rotateAddressPriceTargets(targets, 2).map((target) => target.stablecoinId)).toEqual([
+      "alert-gap",
+      "missing-large",
+      "missing-small",
+      "priced-low-depth",
+    ]);
+  });
+
   it("keeps Birdeye targeting scoped to Solana deployments", () => {
     const targets = buildAddressPriceTargetsByProvider({
       providers: ["birdeye-address"],
@@ -232,6 +359,7 @@ describe("address price providers", () => {
           address: "base:0x0000000000000000000000000000000000000001",
           chains: ["Base"],
           price: 1,
+          ...PUBLISHABLE_PRICE_META,
         },
         {
           id: "solana-only",
@@ -239,6 +367,7 @@ describe("address price providers", () => {
           address: "solana:So11111111111111111111111111111111111111112",
           chains: ["Solana"],
           price: 1,
+          ...PUBLISHABLE_PRICE_META,
         },
       ],
     });

@@ -70,14 +70,32 @@ describe("classifyPrimaryDepegTrust", () => {
 describe("hasFreshMultiSourcePrimaryAgreement", () => {
   const nowSec = 1_700_000_000;
 
-  it("accepts fresh corroborated multi-source agreement", () => {
+  it("accepts fresh high-confidence corroborated independent-family agreement", () => {
     expect(hasFreshMultiSourcePrimaryAgreement({
       price: 0.999,
       priceSource: "coingecko+defillama-list",
-      priceConfidence: "single-source",
+      priceConfidence: "high",
       priceObservedAt: nowSec - 60,
       agreeSources: ["coingecko", "defillama-list"],
     }, nowSec)).toBe(true);
+  });
+
+  it("rejects non-high-confidence or fallback-only agreement", () => {
+    expect(hasFreshMultiSourcePrimaryAgreement({
+      price: 0.42,
+      priceSource: "dexscreener-address+alchemy-address",
+      priceConfidence: "single-source",
+      priceObservedAt: nowSec - 60,
+      agreeSources: ["dexscreener-address", "alchemy-address"],
+    }, nowSec)).toBe(false);
+
+    expect(hasFreshMultiSourcePrimaryAgreement({
+      price: 0.42,
+      priceSource: "dexscreener-address+alchemy-address",
+      priceConfidence: "high",
+      priceObservedAt: nowSec - 60,
+      agreeSources: ["dexscreener-address", "alchemy-address"],
+    }, nowSec)).toBe(false);
   });
 
   it("rejects stale or low-confidence clusters", () => {

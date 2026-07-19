@@ -100,7 +100,17 @@ describe("AZND exact Curve pool price", () => {
   });
 
   it("does not replace an existing usable market price with the thin fallback", async () => {
-    const asset = { id: "aznd-mu-digital", symbol: "AZND", price: 0.31 } as PeggedAsset;
+    const now = Math.floor(Date.now() / 1000);
+    const asset = {
+      id: "aznd-mu-digital",
+      symbol: "AZND",
+      price: 0.31,
+      priceSource: "coingecko",
+      priceConfidence: "high",
+      priceObservedAt: now - 60,
+      priceObservedAtMode: "upstream",
+      priceSyncedAt: now,
+    } as PeggedAsset;
 
     await expect(azndCurvePoolProvider.fetchLivePrice?.(asset, {
       assetsById: new Map([

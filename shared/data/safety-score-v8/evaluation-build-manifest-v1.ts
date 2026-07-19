@@ -86,7 +86,7 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/report-card-peg-liquidity.ts",
-      "sha256": "757179cf0e4f91f1aaed37bd648314bc78da3390b5e153510ed8046f0e2aecdb"
+      "sha256": "3cd171f83555c9bc25b40c9d065405ce49b20b0d6798f48473bad47de438faf9"
     },
     {
       "path": "shared/lib/report-card-policy.ts",
@@ -122,11 +122,11 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/exit-route.ts",
-      "sha256": "fa739842e1a987cdf1f2d6bdfdc896414f65f9796b1225f0a56a2fd0c69f3d77"
+      "sha256": "f5b821a73eee229d35d24ffa1e1bedb4b92b7e275df321d6c8a1757507d83880"
     },
     {
       "path": "shared/types/market.ts",
-      "sha256": "fc93318ee3af8df249a72836a3485f78d74eaea1121df91cd09659913a257d81"
+      "sha256": "eaf6db43dd21396937c456f8f0f268e75080430d8b244502b1c8221ddacfe7ca"
     },
     {
       "path": "shared/types/redemption.ts",
@@ -149,7 +149,7 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
       "sha256": "e70bfddf6d253f0d37ed74449dff45e9af02858d80c0ca0931579796c080b85e"
     }
   ],
-  "digest": "9aa129969dc05e8cf0335dd8b8d95e3dac2c20a519bffeddfdec456898a6f85e"
+  "digest": "6fcc431ad84fac11052cd59a972c648641debb46fc4169611eff980bde92c06d"
 } as const;
 
 export const SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST =

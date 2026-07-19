@@ -39,10 +39,10 @@ const BASE_HEALTH: HealthResponse = {
 };
 
 describe("public status helpers", () => {
-  it("renders active-price warnings with impacted assets and public surfaces", () => {
+  it("renders active-price warnings with impacted assets without a public surface incident", () => {
     const health: HealthResponse = {
       ...BASE_HEALTH,
-      status: "degraded",
+      status: "healthy",
       warnings: ["active-price-coverage-incomplete:nxusd-nereus,test-dollar"],
       activePriceCoverage: {
         status: "incomplete",
@@ -97,13 +97,7 @@ describe("public status helpers", () => {
       detail:
         "Live prices are unavailable for 2 active assets: NXUSD and TUSD. Stablecoin listings and price-dependent analytics may be incomplete until coverage recovers.",
     });
-    expect(getImpactedPublicSurfaces(health)).toContainEqual({
-      id: "active-price-coverage",
-      title: "Stablecoin prices and dependent analytics",
-      detail:
-        "Live prices are unavailable for 2 active assets: NXUSD and TUSD. Stablecoin listings and price-dependent analytics may be incomplete until coverage recovers.",
-      tone: "degraded",
-    });
+    expect(getImpactedPublicSurfaces(health).some((surface) => surface.id === "active-price-coverage")).toBe(false);
   });
 
   it("degrades mint/burn status when the critical writer lane is unhealthy despite fresh sync age", () => {
@@ -257,10 +251,10 @@ describe("getImpactedPublicSurfaces", () => {
     expect(getImpactedPublicSurfaces(transient).some((s) => s.id === "active-price-coverage")).toBe(false);
   });
 
-  it("surfaces the price-coverage callout once a miss is alert-eligible", () => {
+  it("keeps alert-eligible incomplete price coverage warning-only", () => {
     const alertEligible: HealthResponse = {
       ...BASE_HEALTH,
-      status: "degraded",
+      status: "healthy",
       warnings: ["active-price-coverage-incomplete:test-dollar"],
       activePriceCoverage: {
         status: "incomplete",
@@ -278,9 +272,7 @@ describe("getImpactedPublicSurfaces", () => {
         observedAt: 1_700_000_000,
       },
     };
-    expect(getImpactedPublicSurfaces(alertEligible)).toContainEqual(
-      expect.objectContaining({ id: "active-price-coverage", tone: "degraded" }),
-    );
+    expect(getImpactedPublicSurfaces(alertEligible).some((surface) => surface.id === "active-price-coverage")).toBe(false);
   });
 
   it("surfaces mint-burn when critical lane is unhealthy", () => {

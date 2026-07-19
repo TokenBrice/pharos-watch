@@ -229,10 +229,7 @@ describe("generate-public-datasets", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const inputs = await loadPublicDatasetLiveInputs(
-      "https://stablecoin-dashboard.pages.dev/_site-data",
-      "2026-05-16",
-    );
+    const inputs = await loadPublicDatasetLiveInputs("https://stablecoin-dashboard.pages.dev/_site-data", "2026-05-16");
 
     expect(fetchMock).toHaveBeenCalledWith(
       "https://stablecoin-dashboard.pages.dev/_site-data/snapshots/2026-05-16.json",
@@ -419,6 +416,48 @@ describe("generate-public-datasets", () => {
     expect(testExports.checkTopic("top-stablecoins", { datasetsDir, sheetsDir })).toEqual({
       ok: false,
       reason: expect.stringContaining("rowCount 0 below required floor 493"),
+    });
+  });
+
+  it("rejects checked depeg-history mirrors below the artifact floor", async () => {
+    const root = await makeRoot();
+    const datasetsDir = path.join(root, "datasets");
+    const sheetsDir = path.join(root, "sheets");
+    const topicDir = path.join(datasetsDir, "depeg-history");
+    await mkdir(topicDir, { recursive: true });
+    await mkdir(sheetsDir, { recursive: true });
+    await writeFile(path.join(topicDir, "latest.csv"), "# Pharos pharos.watch\nid\n42\n");
+    await writeFile(
+      path.join(topicDir, "latest.json"),
+      JSON.stringify({ _meta: { endpoint: "depeg-history", rowCount: 1 }, rows: [{ id: "42" }] }, null, 2),
+    );
+    await writeFile(path.join(topicDir, "latest.ndjson"), '{"_meta":{"endpoint":"depeg-history"}}\n{"id":"42"}\n');
+    await writeFile(path.join(sheetsDir, "depeg-history.csv"), "# Pharos pharos.watch\nid\n42\n");
+
+    expect(testExports.checkTopic("depeg-history", { datasetsDir, sheetsDir })).toEqual({
+      ok: false,
+      reason: expect.stringContaining("rowCount 1 below required floor 300"),
+    });
+  });
+
+  it("rejects checked artifacts whose JSON rowCount does not match rows length", async () => {
+    const root = await makeRoot();
+    const datasetsDir = path.join(root, "datasets");
+    const sheetsDir = path.join(root, "sheets");
+    const topicDir = path.join(datasetsDir, "depeg-history");
+    await mkdir(topicDir, { recursive: true });
+    await mkdir(sheetsDir, { recursive: true });
+    await writeFile(path.join(topicDir, "latest.csv"), "# Pharos pharos.watch\nid\n");
+    await writeFile(
+      path.join(topicDir, "latest.json"),
+      JSON.stringify({ _meta: { endpoint: "depeg-history", rowCount: 300 }, rows: [] }, null, 2),
+    );
+    await writeFile(path.join(topicDir, "latest.ndjson"), '{"_meta":{"endpoint":"depeg-history"}}\n');
+    await writeFile(path.join(sheetsDir, "depeg-history.csv"), "# Pharos pharos.watch\nid\n");
+
+    expect(testExports.checkTopic("depeg-history", { datasetsDir, sheetsDir })).toEqual({
+      ok: false,
+      reason: expect.stringContaining("rowCount 300 does not match rows length 0"),
     });
   });
 });

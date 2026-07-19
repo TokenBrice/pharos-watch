@@ -163,8 +163,9 @@ export async function getTelegramRecapPreference(
 }
 
 /**
- * Set recap intent and bump the shared subscriber generation in one atomic
- * transaction. A stale expected generation is a no-op, never a lost update.
+ * Set recap intent and bump the shared subscriber generation behind the
+ * shared generation fence. A stale expected generation is a no-op, never a
+ * lost update, and never commits cleanup or webhook effect-fence side effects.
  */
 export async function setTelegramRecapPreference(
   db: D1Database,
@@ -176,7 +177,7 @@ export async function setTelegramRecapPreference(
   const generationGuard = expected == null ? "1 = 1" : "s.preference_generation = ?";
   const generationBinds = expected == null ? [] : [expected];
   const nextGeneration = expected == null ? null : expected + 1;
-  const statements: D1PreparedStatement[] = [
+  const preferenceStatements: D1PreparedStatement[] = [
     db.prepare(`
       INSERT INTO telegram_recap_preferences (
         chat_id, chat_kind, enabled, cadence, delivery_hour_local, next_due_at,
@@ -208,16 +209,35 @@ export async function setTelegramRecapPreference(
          AND ${expected == null ? "1 = 1" : "preference_generation = ?"}
     `).bind(input.chatId, ...(expected == null ? [] : [expected])),
   ];
+  await executeAtomicBatch(db, preferenceStatements);
+  // The first statement is deliberately guarded by the old generation. The
+  // second statement's changes count is not portable across D1 mocks, so read
+  // back the row and verify the requested state plus the expected bump before
+  // committing cleanup or effect-fence side effects.
+  const current = await getTelegramRecapPreference(db, input.chatId);
+  if (!current) return false;
+  const generationMatches = expected == null || current.preferenceGeneration === nextGeneration;
+  const applied = generationMatches && current.enabled === input.enabled &&
+    current.deliveryHourLocal === input.deliveryHourLocal && current.nextDueAt === input.nextDueAt;
+  if (!applied) return false;
+
+  const sideEffectStatements: D1PreparedStatement[] = [];
   if (!input.enabled) {
     // A disabled recap must not be delivered after the acknowledgement has
     // been sent. Keep the audit target, but cancel only intents that have not
     // crossed the Telegram effect boundary.
-    statements.push(
+    sideEffectStatements.push(
       db.prepare(`
         UPDATE telegram_recap_targets
            SET status = 'cancelled', terminal_reason = 'recap_disabled',
                completed_at = ?, updated_at = ?
          WHERE chat_id = ? AND status IN ('planned', 'queued')
+           AND EXISTS (
+             SELECT 1
+               FROM telegram_recap_preferences p
+              WHERE p.chat_id = telegram_recap_targets.chat_id
+                AND p.enabled = 0
+           )
       `).bind(input.nowSec, input.nowSec, input.chatId),
       db.prepare(`
         DELETE FROM telegram_pending_alerts
@@ -226,19 +246,18 @@ export async function setTelegramRecapPreference(
              SELECT recap_key FROM telegram_recap_targets
               WHERE chat_id = ? AND status = 'cancelled'
            )
+           AND EXISTS (
+             SELECT 1
+               FROM telegram_recap_preferences p
+              WHERE p.chat_id = telegram_pending_alerts.chat_id
+                AND p.enabled = 0
+           )
       `).bind(input.chatId, input.chatId),
     );
   }
-  statements.push(...(options.operationStatements ?? []));
-  await executeAtomicBatch(db, statements);
-  // The first statement is deliberately guarded by the old generation. The
-  // second statement's changes count is not portable across D1 mocks, so read
-  // back the row and verify the requested state plus the expected bump.
-  const current = await getTelegramRecapPreference(db, input.chatId);
-  if (!current) return false;
-  const generationMatches = expected == null || current.preferenceGeneration === nextGeneration;
-  return generationMatches && current.enabled === input.enabled &&
-    current.deliveryHourLocal === input.deliveryHourLocal && current.nextDueAt === input.nextDueAt;
+  sideEffectStatements.push(...(options.operationStatements ?? []));
+  await executeAtomicBatch(db, sideEffectStatements);
+  return true;
 }
 
 /** Return a bounded due page. Pagination is schedule-based, so no cursor is needed. */
@@ -623,21 +642,33 @@ export async function projectTelegramRecapTerminalOutcome(
 
 export interface TelegramRecapRetentionResult {
   deletedTargets: number;
+  cappedAtLimit: boolean;
 }
 
 /** Delete only bounded recap audit rows; pending delivery retention remains owned by its queue. */
 export async function pruneTelegramRecapTargets(
   db: D1Database,
   nowSec: number,
-  options: { aggregateRetentionSec?: number; terminalRetentionSec?: number } = {},
+  options: { aggregateRetentionSec?: number; terminalRetentionSec?: number; limit?: number } = {},
 ): Promise<TelegramRecapRetentionResult> {
   const aggregateCutoff = nowSec - (options.aggregateRetentionSec ?? 30 * 86400);
   const terminalCutoff = nowSec - (options.terminalRetentionSec ?? 90 * 86400);
+  const limit = options.limit;
+  if (limit != null && (!Number.isInteger(limit) || limit <= 0)) {
+    throw new RangeError("Telegram recap target prune limit must be a positive integer.");
+  }
   const result = await db.prepare(`
     DELETE FROM telegram_recap_targets
-     WHERE (status IN ('sent', 'skipped_no_changes', 'skipped_paused', 'skipped_stale')
-            AND updated_at < ?)
-        OR (status IN ('cancelled', 'expired', 'execution_unknown', 'failed_permanent') AND updated_at < ?)
-  `).bind(aggregateCutoff, terminalCutoff).run();
-  return { deletedTargets: Number(result.meta?.changes ?? 0) };
+     WHERE rowid IN (
+       SELECT rowid
+         FROM telegram_recap_targets
+        WHERE (status IN ('sent', 'skipped_no_changes', 'skipped_paused', 'skipped_stale')
+               AND updated_at < ?)
+           OR (status IN ('cancelled', 'expired', 'execution_unknown', 'failed_permanent') AND updated_at < ?)
+        ORDER BY updated_at ASC, recap_key ASC
+        LIMIT ?
+     )
+  `).bind(aggregateCutoff, terminalCutoff, limit ?? 10_000).run();
+  const deletedTargets = Number(result.meta?.changes ?? 0);
+  return { deletedTargets, cappedAtLimit: deletedTargets >= (limit ?? 10_000) };
 }

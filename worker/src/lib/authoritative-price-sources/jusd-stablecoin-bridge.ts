@@ -345,6 +345,7 @@ export const jusdStablecoinBridgeProvider: PriceSourceProvider = {
   source: PROTOCOL_REDEEM_SOURCE,
   liveCircuitSource: CIRCUIT_SOURCE.JUSD_CITREA_BRIDGE,
   livePriority: 1,
+  liveTimeoutMs: 5_000,
   recordNullLiveResultAsCircuitFailure: true,
   matches(stablecoinId: string): boolean {
     return stablecoinId === JUSD_ID;

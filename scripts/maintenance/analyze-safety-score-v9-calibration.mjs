@@ -1048,7 +1048,7 @@ export function repeatedRealAAssetIds(candidateRealAIds, qualifyingByCapture) {
     .sort(compareText);
 }
 
-function validateFreshCaptureSeries(values, candidateRealAIds) {
+function validateFreshCaptureSeries(values, candidateAssetIds, candidateRealAIds) {
   const captures = Array.isArray(values) ? values : [];
   for (const [index, capture] of captures.entries()) {
     assertReplay(capture, `fresh capture ${index + 1}`);
@@ -1066,12 +1066,12 @@ function validateFreshCaptureSeries(values, candidateRealAIds) {
       (capture) =>
         stableStringify(capture.pipeline.candidateIdentity) === stableStringify(ordered[0].pipeline.candidateIdentity),
     );
+  const expectedAssetSet = stableStringify([...candidateAssetIds].sort(compareText));
   const assetSetsMatch =
     ordered.length > 0 &&
     ordered.every(
       (capture) =>
-        stableStringify([...capture.pipeline.fixedInput.activeAssetIds].sort(compareText)) ===
-        stableStringify([...ordered[0].pipeline.fixedInput.activeAssetIds].sort(compareText)),
+        stableStringify([...capture.pipeline.fixedInput.activeAssetIds].sort(compareText)) === expectedAssetSet,
     );
   const distinctAndOrdered =
     new Set(baseIds).size === 3 &&
@@ -1362,6 +1362,7 @@ export function analyzeV9Calibration(baseline, candidate, fridayEvidence = {}) {
   const changes = changesFromBaseline(baseline, candidate);
   const captureSeries = validateFreshCaptureSeries(
     fridayEvidence.freshCaptures,
+    candidate.pipeline.fixedInput.activeAssetIds,
     realA.map((entry) => entry.assetId),
   );
   const composite = evaluateCompositeReplay(fridayEvidence.composite);

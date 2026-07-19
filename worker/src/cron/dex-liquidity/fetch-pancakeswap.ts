@@ -48,8 +48,8 @@ type V3Pool = {
   totalValueLockedToken1: string;
   token0Price: string;
   token1Price: string;
-  token0: { id: string; symbol: string; decimals: string };
-  token1: { id: string; symbol: string; decimals: string };
+  token0: { id: string; symbol: string; decimals: unknown };
+  token1: { id: string; symbol: string; decimals: unknown };
 };
 
 type PoolHourData = {
@@ -58,8 +58,9 @@ type PoolHourData = {
   pool: { id: string };
 };
 
-function parseTokenDecimals(value: string): number {
-  if (value.trim() === "") return 18;
+function parseTokenDecimals(value: unknown): number {
+  if (typeof value === "string" && value.trim() === "") return 18;
+  if (typeof value !== "string" && typeof value !== "number") return 18;
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed >= 0 && parsed <= 255 ? parsed : 18;
 }

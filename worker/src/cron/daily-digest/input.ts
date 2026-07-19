@@ -1,4 +1,5 @@
 import type { DigestInputData } from "@shared/types/digest";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { round1 } from "@shared/lib/math";
 import type { StablecoinData } from "@shared/types/market";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
@@ -203,15 +204,19 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     coreAggregateStablecoinIds: CORE_AGGREGATE_ACTIVE_IDS,
     stablecoinAssetById,
     mcapById,
+    stablecoinsCacheIsFresh:
+      stablecoinsCacheResult.updatedAt != null &&
+      nowSec - stablecoinsCacheResult.updatedAt <= API_FRESHNESS_MAX_AGE_SEC.stablecoins,
     nowSec,
     todayTs,
     yesterdayTs,
   };
 
-  // A cache older than an hour means sync-stablecoins has missed at least one
-  // cycle; prices/mcaps presented as current are aging. Record it so the
-  // prompt's degraded-collectors block reflects reality.
-  if (stablecoinsCacheResult.updatedAt != null && nowSec - stablecoinsCacheResult.updatedAt > SECONDS.ONE_HOUR) {
+  // Stablecoins prices are quoted as live/current in the digest. Use the same
+  // public freshness budget as /api/stablecoins and the depeg resolver; once
+  // stale, collectors may still use market-cap context but must not treat the
+  // cached price as a current depeg-severity signal.
+  if (!ctx.stablecoinsCacheIsFresh) {
     markCollectorDegraded(degradedReasons, "stablecoins-cache-stale");
   }
 

@@ -266,6 +266,7 @@ export async function buildPrimaryPricePlan(
   dlListPrices?: Map<string, number | DlListQuote>,
   options?: {
     previousAssetsById?: Map<string, PeggedAsset>;
+    previousMissingGenerationsById?: ReadonlyMap<string, number>;
     addressProvider?: AddressPriceProviderRuntimeConfig;
   },
 ): Promise<PrimaryPricePlan> {
@@ -278,6 +279,7 @@ export async function buildPrimaryPricePlan(
   const addressProviderTargets = buildAddressPriceTargetsByProvider({
     assets,
     previousAssetsById: options?.previousAssetsById,
+    previousMissingGenerationsById: options?.previousMissingGenerationsById,
     providers: addressProviders,
   });
   const addressProviderCandidateIds = new Set<string>();
@@ -721,8 +723,13 @@ export async function collectPrimaryProviderQuotes(params: {
       await recordOutcomeDecision(db, ADDRESS_PROVIDER_CIRCUIT_SOURCE[provider], outcome);
     }
   }
-  if (!plan.addressProviders.includes("dexscreener-address")) {
-    await recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.DEXSCREENER_ADDRESS_PRICES);
+  for (const [provider, source] of Object.entries(ADDRESS_PROVIDER_CIRCUIT_SOURCE) as Array<[
+    AddressPriceProviderKey,
+    string,
+  ]>) {
+    if (!plan.addressProviders.includes(provider)) {
+      await recoverBreakerOnNoCandidate(db, source);
+    }
   }
 
   return {

@@ -1,10 +1,13 @@
 import { resolveTicker } from "../lib/telegram-alerts";
 import { answerInlineQuery, type TelegramInlineQueryResultArticle } from "../lib/telegram";
+import { CHAT_COMMAND_FLOOD_LIMIT, CHAT_COMMAND_FLOOD_WINDOW_SEC } from "../lib/telegram-constants";
 import { recordTelegramUsageEvent } from "../lib/telegram-usage-analytics";
+import { logTelegramWebhookWarning } from "./telegram-webhook-ingress-policy";
 import { buildStatusMessage } from "./telegram-webhook-messages";
 import type { TelegramWebhookEffectFence } from "./telegram-webhook-effect-fence";
 import type { TelegramWebhookUpdate } from "./telegram-webhook-shared";
 import { loadStatusForCoin } from "./telegram-webhook-status";
+import { acquireTelegramCommandCooldown, recordTelegramChatCommandFlood, unixNow } from "./telegram-webhook-store";
 
 // Inline queries are intentionally exact-match only. This prevents a typed
 // prefix from fanning out into an unbounded read/result set on every keystroke.
@@ -13,6 +16,7 @@ const INLINE_STATUS_CACHE_TIME_SEC = 30;
 const EMPTY_INLINE_STATUS_CACHE_TIME_SEC = 5;
 const INLINE_STATUS_RESULT_ID_PREFIX = "status:";
 const TELEGRAM_INLINE_RESULT_ID_MAX_BYTES = 64;
+const INLINE_STATUS_COOLDOWN_SEC = 20;
 
 type InlineQuery = NonNullable<TelegramWebhookUpdate["inline_query"]>;
 
@@ -70,6 +74,41 @@ function inlineStatusResultId(coinId: string): string {
   return `${INLINE_STATUS_RESULT_ID_PREFIX}${(hash >>> 0).toString(16)}`;
 }
 
+async function enforceInlineStatusReadLimit(
+  db: D1Database,
+  input: { actorUserId: number | undefined; coinId: string },
+): Promise<"allowed" | "rate_limited" | "failure"> {
+  const actorKey = input.actorUserId == null ? "unknown" : String(input.actorUserId);
+  const limitKey = `inline:${actorKey}`;
+  const nowSec = unixNow();
+
+  try {
+    const flood = await recordTelegramChatCommandFlood(db, {
+      chatId: limitKey,
+      nowSec,
+      windowSec: CHAT_COMMAND_FLOOD_WINDOW_SEC,
+      limit: CHAT_COMMAND_FLOOD_LIMIT,
+    });
+    if (!flood.allowed) return "rate_limited";
+  } catch (err) {
+    logTelegramWebhookWarning("inline query flood check failed", "inline-query-flood", err);
+    return "failure";
+  }
+
+  try {
+    const cooldown = await acquireTelegramCommandCooldown(db, {
+      chatId: limitKey,
+      commandKey: `/status:${input.coinId}`,
+      nowSec,
+      cooldownSec: INLINE_STATUS_COOLDOWN_SEC,
+    });
+    return cooldown.allowed ? "allowed" : "rate_limited";
+  } catch (err) {
+    logTelegramWebhookWarning("inline query cooldown check failed", "inline-query-cooldown", err);
+    return "failure";
+  }
+}
+
 /**
  * Serve a single shared, read-only status card. The raw query and Telegram
  * sender are deliberately discarded; telemetry is an aggregate outcome only.
@@ -89,17 +128,25 @@ export async function handleTelegramInlineQueryUpdate(args: {
   let cacheTimeSec = EMPTY_INLINE_STATUS_CACHE_TIME_SEC;
 
   if (classified.kind === "resolved" && classified.coinId && classified.symbol && classified.name) {
-    const status = await loadStatusForCoin(args.db, classified.coinId);
-    results = [
-      buildInlineStatusResult({
-        coinId: classified.coinId,
-        symbol: classified.symbol,
-        name: classified.name,
-        status,
-      }),
-    ];
-    outcome = "served";
-    cacheTimeSec = INLINE_STATUS_CACHE_TIME_SEC;
+    const limitOutcome = await enforceInlineStatusReadLimit(args.db, {
+      actorUserId: args.inlineQuery.from?.id,
+      coinId: classified.coinId,
+    });
+    if (limitOutcome === "allowed") {
+      const status = await loadStatusForCoin(args.db, classified.coinId);
+      results = [
+        buildInlineStatusResult({
+          coinId: classified.coinId,
+          symbol: classified.symbol,
+          name: classified.name,
+          status,
+        }),
+      ];
+      outcome = "served";
+      cacheTimeSec = INLINE_STATUS_CACHE_TIME_SEC;
+    } else {
+      outcome = limitOutcome;
+    }
   }
 
   await args.effectFence?.beforeIrreversibleEffect("inline-query-answer");

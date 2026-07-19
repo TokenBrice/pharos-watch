@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "@shared/types/market";
 import { normalizeDexScoreDetails } from "../dex-liquidity-response";
 
 describe("P4 route observation API compatibility", () => {
@@ -83,6 +84,46 @@ describe("P4 route observation API compatibility", () => {
     );
 
     expect(result.scoreComponents).toBeNull();
+    expect(result.exitRouteObservations).toBeNull();
+    expect(result.exitRouteObservationCoverage.status).toBe("unknown");
+  });
+  it("quarantines oversized observation envelopes", () => {
+    const observation = {
+      routeId: "dex:usdc:cg-tickers:coinbase",
+      routeFamily: "dex-orderbook" as const,
+      scope: { kind: "venue" as const, venue: "coinbase", protocol: "coinbase" },
+      requestedNotionalUsd: 1_000_000,
+      settlementHorizonSec: 300,
+      maxCostBps: 200,
+      executableUsd: 500_000,
+      completionRatio: 0.5,
+      output: { kind: "fiat" as const, currency: "USD" },
+      evidenceKind: "direct-orderbook-depth" as const,
+      confidence: "medium" as const,
+      scoreEligible: false,
+      observedAt: 1_720_000_000,
+      freshnessSeconds: 0,
+      commonModeKeys: ["protocol:coinbase", "fiat:usd"],
+      capacityCurve: [
+        {
+          requestedNotionalUsd: 1_000_000,
+          maxCostBps: 200,
+          executableUsd: 500_000,
+          completionRatio: 0.5,
+        },
+      ],
+    };
+
+    const result = normalizeDexScoreDetails(
+      JSON.stringify({
+        tvlDepth: 10,
+        exitRouteObservations: Array.from({ length: MAX_DEX_EXIT_ROUTE_OBSERVATIONS + 1 }, (_, index) => ({
+          ...observation,
+          routeId: `${observation.routeId}:${index}`,
+        })),
+      }),
+    );
+
     expect(result.exitRouteObservations).toBeNull();
     expect(result.exitRouteObservationCoverage.status).toBe("unknown");
   });

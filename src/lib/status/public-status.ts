@@ -202,22 +202,10 @@ export function getImpactedPublicSurfaces(
     recentMissingAmounts: healthData.blacklist.recentMissingAmounts,
   });
 
-  // Mirror the worker's public-impact gate (public-health-assessment.ts): a merely
-  // un-repriced (transient fallback-rotation) miss keeps activePriceCoverage.status
-  // "incomplete" for observability but is not alert-eligible, so it must not render
-  // a degraded surface while the hero stays healthy. Only persistent (alert-eligible)
-  // misses — or "unknown" coverage, which fails closed — degrade this surface.
-  if (
-    healthData.activePriceCoverage?.status === "incomplete"
-    && healthData.activePriceCoverage.alertEligibleCount > 0
-  ) {
-    items.push({
-      id: "active-price-coverage",
-      title: "Stablecoin prices and dependent analytics",
-      detail: getActivePriceCoverageImpactDetail(healthData.activePriceCoverage),
-      tone: "degraded",
-    });
-  } else if (healthData.activePriceCoverage?.status === "unknown") {
+  // Mirror the worker's public-impact gate (public-health-assessment.ts):
+  // missing active prices remain warning-only. Unknown exact coverage still
+  // fails closed because the public surface cannot prove its own price coverage.
+  if (healthData.activePriceCoverage?.status === "unknown") {
     items.push({
       id: "active-price-coverage",
       title: "Stablecoin prices and dependent analytics",

@@ -479,6 +479,43 @@ describe("scoreLiquidity", () => {
     expect(result.score).toBe(53);
   });
 
+  it("keeps deployment supply coverage out of legacy redemption capacity scoring", () => {
+    const result = scoreLiquidity(
+      {
+        ...dexLiquidity(10),
+        deploymentSupplyCoverage: {
+          totalSupplyUsd: 100_000_000,
+          observedSupplyUsd: 100_000_000,
+          verifiedNoPoolsSupplyUsd: 0,
+          providerInaccessibleSupplyUsd: 0,
+          unknownSupplyUsd: 0,
+          observedSupplyRatio: 1,
+          verifiedNoPoolsSupplyRatio: 0,
+          providerInaccessibleSupplyRatio: 0,
+          unknownSupplyRatio: 0,
+          unknownChains: [],
+        },
+      },
+      {
+        score: 100,
+        routeFamily: "stablecoin-redeem",
+        immediateCapacityUsd: 1_000_000,
+        immediateCapacityRatio: 0.01,
+        resolutionState: "resolved",
+        modelConfidence: "high",
+        capacitySemantics: "immediate-bounded",
+        capacityProfile: {
+          scoringUsd: 1_000_000,
+          scoringHorizon: "immediate",
+          capacityProfileConfidence: "live-direct",
+        },
+      },
+    );
+
+    expect(result.score).toBe(100);
+    expect(result.detail).toContain("Redemption backstop 100/100");
+  });
+
   it("keeps supply-weighted deployment materiality behind explicit activation", () => {
     const liq: DexLiquidityInput = {
       ...dexLiquidity(95),

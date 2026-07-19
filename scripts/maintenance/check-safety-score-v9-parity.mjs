@@ -60,7 +60,10 @@ let justified = 0;
 const violations = [];
 for (const v8Card of v8Graded) {
   const v9Card = v9ById.get(v8Card.id);
-  if (!v9Card) continue; // active-set drift between captures is not a parity violation
+  if (!v9Card) {
+    violations.push({ id: v8Card.id, v8Grade: v8Card.grade, unjustified: ["missing-v9-card"] });
+    continue;
+  }
   if (v9Card.grade !== "NR") continue;
   const codes = (v9Card.nrReasons ?? []).map((reason) => reason.code);
   const unjustified = codes.filter((code) => !STAYS_NR.has(code));

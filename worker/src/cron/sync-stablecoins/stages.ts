@@ -225,6 +225,7 @@ export async function runStablecoinsPricingStage(
     undefined,
     {
       previousAssetsById: options.previousAssetsById,
+      previousMissingGenerationsById: options.previousMissingGenerationsById,
       addressProvider: options.addressPriceProvider,
       binanceSession: options.binanceSession,
     },
@@ -272,7 +273,11 @@ export async function runStablecoinsPricingStage(
     options.assets,
     options.signal,
     options.validationReferences,
-    { db: options.db, stats: authoritativeOverrideStats },
+    {
+      db: options.db,
+      stats: authoritativeOverrideStats,
+      previousMissingGenerationsById: options.previousMissingGenerationsById,
+    },
   );
   applyProtocolPriceOverrides({
     assets: options.assets,
@@ -281,6 +286,7 @@ export async function runStablecoinsPricingStage(
     validationContexts,
     validationReferences: options.validationReferences,
     syncStartSec: options.syncStartSec,
+    authoritativeOverrideStats,
   });
   const enrichmentPhase = await runMissingPriceEnrichmentPhase({
     assets: options.assets,
@@ -399,6 +405,7 @@ export async function runStablecoinsPricingStage(
     previousTrustedPrices,
     authoritativeOverrides,
     authoritativeOverrideStats,
+    previousMissingGenerationsById: options.previousMissingGenerationsById,
     returnIfAborted,
     abortResult,
   }, "");

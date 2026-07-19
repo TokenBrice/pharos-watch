@@ -86,7 +86,12 @@ export async function collectActiveDepegs(
       const ageHours = Math.max(0, Math.round((ctx.nowSec - row.started_at) / SECONDS.ONE_HOUR));
       const asset = ctx.stablecoinAssetById.get(row.stablecoin_id);
       const livePrice =
-        typeof asset?.price === "number" && Number.isFinite(asset.price) && asset.price > 0 ? asset.price : null;
+        ctx.stablecoinsCacheIsFresh &&
+        typeof asset?.price === "number" &&
+        Number.isFinite(asset.price) &&
+        asset.price > 0
+          ? asset.price
+          : null;
       const direction = row.direction;
       const bps = direction === "below" ? -Math.abs(row.peak_deviation_bps) : Math.abs(row.peak_deviation_bps);
       // Severity decisions run on the live deviation vs the event's peg

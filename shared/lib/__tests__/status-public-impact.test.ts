@@ -13,8 +13,8 @@ function cause(overrides: Partial<StatusCause> = {}): StatusCause {
 }
 
 describe("transitionHasPublicImpact", () => {
-  it("treats incomplete active-price coverage as public impact", () => {
-    expect(transitionHasPublicImpact([cause()])).toBe(true);
+  it("keeps incomplete active-price coverage warning-only", () => {
+    expect(transitionHasPublicImpact([cause()])).toBe(false);
   });
 
   it("treats unknown exact active-price coverage as public impact", () => {

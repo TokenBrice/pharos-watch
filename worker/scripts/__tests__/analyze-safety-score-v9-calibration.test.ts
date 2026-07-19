@@ -349,6 +349,24 @@ describe("Safety Score V9 calibration analysis", { timeout: 30_000 }, () => {
     expect(report.gates.threeFreshCaptures).toBe(false);
   });
 
+  it("rejects fresh captures that omit candidate assets", () => {
+    const activeAssetIds = ["usdc-circle", "usdt-tether"];
+    const baseline = productionReplay(BASE_CLOCK_SEC, { activeAssetIds });
+    const candidate = productionReplay(BASE_CLOCK_SEC, { activeAssetIds });
+    const captures = [0, 100, 200].map((offset) =>
+      productionReplay(BASE_CLOCK_SEC + offset, { activeAssetIds: ["usdc-circle"] }),
+    );
+
+    const report = analyzeV9Calibration(baseline, candidate, { freshCaptures: captures });
+
+    expect(report.fridayEvidence.freshCaptures).toMatchObject({
+      providedCount: 3,
+      distinctAndOrdered: true,
+      assetSetsMatch: false,
+    });
+    expect(report.gates.threeFreshCaptures).toBe(false);
+  });
+
   it("rejects a stale capture even when all three generations are distinct", () => {
     const replay = productionReplay();
     const captures = [0, 100, 200].map((offset) => productionReplay(BASE_CLOCK_SEC + offset));

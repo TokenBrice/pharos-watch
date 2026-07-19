@@ -19,6 +19,7 @@ import type { DexMeasuredExecutionAdapter, DexMeasuredExecutionRpcBudget, DexMea
 
 const CURVE_CRYPTOSWAP_ABI = parseAbi(["function get_dy(uint256 i,uint256 j,uint256 dx) view returns (uint256)"]);
 const CURVE_CRYPTOSWAP_DEPENDENCY_ABI = parseAbi([
+  "function coins(uint256) view returns (address)",
   "function factory() view returns (address)",
   "function MATH() view returns (address)",
   "function is_killed() view returns (bool)",
@@ -178,6 +179,7 @@ export interface CurveCryptoSwapRuntimeEvidence {
   legacyIsKilled?: boolean;
   ngKillMethodUnavailable?: boolean;
   transferSemanticsReviewed?: boolean;
+  onChainPoolTokenAddresses?: readonly `0x${string}`[];
 }
 
 export type CurveCryptoSwapEligibilityFailure =
@@ -194,6 +196,7 @@ export type CurveCryptoSwapEligibilityFailure =
   | "dependency-identity-mismatch"
   | "dependency-code-hash-mismatch"
   | "transfer-semantics-unreviewed"
+  | "pool-token-order-unverified"
   | "shadow-score-ineligible";
 
 export type CurveCryptoSwapEligibility = { ok: true } | { ok: false; reason: CurveCryptoSwapEligibilityFailure };
@@ -277,6 +280,9 @@ export function evaluateCurveCryptoSwapEligibility(input: {
   if (!policy.transferSemanticsReviewed || evidence.transferSemanticsReviewed !== true) {
     return { ok: false, reason: "transfer-semantics-unreviewed" };
   }
+  if (policy.scoreEligible && (evidence.onChainPoolTokenAddresses?.length ?? 0) < 2) {
+    return { ok: false, reason: "pool-token-order-unverified" };
+  }
   if (!policy.scoreEligible) return { ok: false, reason: "shadow-score-ineligible" };
   return { ok: true };
 }
@@ -325,6 +331,26 @@ export async function verifyCurveCryptoSwapDeployment(input: {
     }
   };
 
+  const readCoin = async (index: number): Promise<`0x${string}` | null> => {
+    if (rpcBudget && !rpcBudget.canRequestChain(policy.chain)) return null;
+    const raw = await fetchEvmCallHexAtBlock(
+      policy.chain,
+      policy.poolAddress,
+      encodeFunctionData({ abi: CURVE_CRYPTOSWAP_DEPENDENCY_ABI, functionName: "coins", args: [BigInt(index)] }),
+      input.blockNumber,
+      requestOptions,
+    );
+    rpcBudget?.recordChainResult(policy.chain, raw != null);
+    if (raw == null) return null;
+    try {
+      return canonicalAddress(
+        decodeFunctionResult({ abi: CURVE_CRYPTOSWAP_DEPENDENCY_ABI, functionName: "coins", data: raw }),
+      );
+    } catch {
+      return null;
+    }
+  };
+
   const poolCodeHash = await readCodeHash(policy.poolAddress);
   if (poolCodeHash == null) return { ok: false, reason: "runtime-code-unavailable" };
   const factoryAddress = await readAddress(policy.poolAddress, "factory");
@@ -335,6 +361,7 @@ export async function verifyCurveCryptoSwapDeployment(input: {
   const factoryCodeHash = await readCodeHash(factoryAddress);
   const viewsCodeHash = await readCodeHash(viewsAddress);
   const mathCodeHash = await readCodeHash(mathAddress);
+  const onChainPoolTokenAddresses = [await readCoin(0), await readCoin(1)];
 
   const killedRaw = await fetchEvmCallHexAtBlock(
     policy.chain,
@@ -354,6 +381,9 @@ export async function verifyCurveCryptoSwapDeployment(input: {
     ...(mathCodeHash ? { mathCodeHash } : {}),
     ngKillMethodUnavailable: killedRaw == null,
     transferSemanticsReviewed: policy.transferSemanticsReviewed,
+    ...(onChainPoolTokenAddresses.every((address) => address != null)
+      ? { onChainPoolTokenAddresses: onChainPoolTokenAddresses as [`0x${string}`, `0x${string}`] }
+      : {}),
   };
   const eligibility = evaluateCurveCryptoSwapEligibility({
     chain: policy.chain,
@@ -373,6 +403,7 @@ export type CurveCryptoSwapQuoteFailure =
   | "invalid-pool-token-order"
   | "ambiguous-token-index"
   | "token-index-mismatch"
+  | "pool-token-order-mismatch"
   | "pool-revert"
   | "malformed-pool-return";
 
@@ -565,6 +596,18 @@ function prepareRequest(
   });
   if (request.target.targetId !== expectedTargetId) {
     return { failureReason: "invalid-curve-cryptoswap-target", eligibility };
+  }
+  if (eligibility.ok) {
+    const onChainPoolTokenAddresses = request.runtimeEvidence?.onChainPoolTokenAddresses?.map(canonicalAddress) ?? [];
+    const targetPoolTokenAddresses = request.target.poolTokenAddresses?.map(canonicalAddress) ?? [];
+    if (
+      onChainPoolTokenAddresses.length < targetPoolTokenAddresses.length ||
+      targetPoolTokenAddresses.some(
+        (address, tokenIndex) => address == null || address !== onChainPoolTokenAddresses[tokenIndex],
+      )
+    ) {
+      return { failureReason: "pool-token-order-mismatch", eligibility };
+    }
   }
   const amountInRaw = usdToRawAmount(
     request.inputUsd,

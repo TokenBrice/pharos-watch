@@ -2,6 +2,53 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.201",
+    title: "Fair active-price recovery scheduling",
+    date: "2026-07-19",
+    effectiveAt: 1784472643,
+    summary:
+      "Live recovery now treats provenance-less numeric prices as unresolved and bounds each override candidate so one stalled wrapper cannot consume the full active-price repair budget.",
+    impact: [
+      "Authoritative live overrides and exact-address augmentation classify a current price as usable only when it is positive and carries publishable source plus observation-time provenance",
+      "Missing-only routes such as AZND can still run when an incumbent numeric value lacks provenance that would survive publication",
+      "Each live override candidate receives a bounded timeout inside the unchanged ten-second shared budget, so a slow protocol-redeem candidate fails its own attempt instead of skipping the remaining active gaps",
+      "Candidate-local timeout failures are recorded as asset-attributable timeout attempts without exhausting the shared stage budget or poisoning the grouped recovery circuit",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "6.200",
+    title: "Persistent active-price recovery priority",
+    date: "2026-07-19",
+    effectiveAt: 1784469026,
+    summary:
+      "Persistent active price gaps now run ahead of refresh-oriented pricing work, and reviewed AZND Curve exact-pool quotes can publish after route-level checks pass.",
+    impact: [
+      "Authoritative live overrides schedule alert-eligible current missing assets first and keep every current missing candidate ahead of already-priced refresh candidates",
+      "Exact-address provider targeting now uses previous active-price coverage streaks, pinning alert-eligible gaps ahead of current misses, recent misses, expiring observations, low-depth priced rows, and broad priced refreshes",
+      "`curve-thin-onchain` remains fallback-confidence, non-replay-safe, and non-depeg-authoritative, but it bypasses generic soft-source publication corroboration after the identity-bound Curve route has passed freshness, balance, and impact checks",
+      "Authoritative override candidates that resolve but fail publication validation now append asset-attributable rejection records to the existing price-source attempt ledger",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "6.199",
+    title: "CMC truncated-category validation hardening",
+    date: "2026-07-19",
+    effectiveAt: 1784456877,
+    summary:
+      "CoinMarketCap fallback now ignores truncated category rows and requires unresolved configured slugs to pass the exact targeted quote validation lane.",
+    impact: [
+      "CMC category responses with an unseen tail remain visible as truncated-response diagnostics, but their returned rows no longer resolve prices",
+      "Configured CMC slugs that remain missing after a truncated category response must pass exact slug and symbol, active-record, positive-volume, configured-contract, freshness, and peg-aware checks before publishing",
+      "This preserves complete-category fallback behavior while preventing spoofed truncated category rows from suppressing the safer targeted quote path",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.198",
     title: "Quarter-hour pricing headroom guard",
     date: "2026-07-18",

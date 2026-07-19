@@ -10,7 +10,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { SITE_DATA_PATH_PREFIX, SITE_DATA_PROXY_SECRET_HEADER, toSiteDataPath } from "@shared/lib/site-data-lane";
-import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import { SITE_API_ORIGIN, SITE_ORIGIN } from "@shared/lib/runtime-origins";
 
 import { sleep } from "./smoke-runtime.mjs";
 
@@ -180,13 +180,34 @@ function isSiteDataBase(rawUrl: string): boolean {
   }
 }
 
-function isSiteDataRequestUrl(rawUrl: string | undefined): boolean {
-  if (!rawUrl) return false;
+function parseFetchUrl(rawUrl: string | undefined): URL | null {
+  if (!rawUrl) return null;
   try {
-    return new URL(rawUrl).pathname.startsWith(`${SITE_DATA_PATH_PREFIX}/`);
+    return new URL(rawUrl);
   } catch {
-    return false;
+    return null;
   }
+}
+
+function isSiteDataRequestUrl(url: URL | null): boolean {
+  return url?.pathname.startsWith(`${SITE_DATA_PATH_PREFIX}/`) === true;
+}
+
+function configuredTrustedSiteApiSecretOrigins(): Set<string> {
+  const configured = process.env.SITE_API_SHARED_SECRET_TRUSTED_ORIGINS?.split(",") ?? [];
+  const origins = new Set([SITE_API_ORIGIN]);
+  for (const rawOrigin of configured) {
+    const origin = parseFetchUrl(rawOrigin.trim());
+    if (origin?.protocol === "https:" && origin.hostname.endsWith(".workers.dev")) {
+      origins.add(origin.origin);
+    }
+  }
+  return origins;
+}
+
+function isTrustedSiteApiSecretUrl(url: URL | null): boolean {
+  if (!url || url.protocol !== "https:" || url.username || url.password) return false;
+  return configuredTrustedSiteApiSecretOrigins().has(url.origin);
 }
 
 /**
@@ -215,13 +236,14 @@ export function resolveApiPathUrl(apiBaseOrEndpoint: string, apiPath: string): s
 export function apiFetchHeaders(envNames: readonly string[], options: { url?: string } = {}): Record<string, string> {
   const apiKey = envNames.map((name) => process.env[name]?.trim()).find((value) => value);
   const siteApiSharedSecret = process.env.SITE_API_SHARED_SECRET?.trim();
-  const isSiteDataRequest = isSiteDataRequestUrl(options.url);
-  const siteDataOrigin = isSiteDataRequest ? SITE_ORIGIN : null;
+  const fetchUrl = parseFetchUrl(options.url);
+  const isSiteDataRequest = isSiteDataRequestUrl(fetchUrl);
+  const shouldSendSiteApiSecret = !isSiteDataRequest && isTrustedSiteApiSecretUrl(fetchUrl);
   return {
     Accept: "application/json",
-    ...(siteDataOrigin ? { Origin: siteDataOrigin } : {}),
-    ...(apiKey && !isSiteDataRequest ? { "X-API-Key": apiKey } : {}),
-    ...(siteApiSharedSecret && !isSiteDataRequest ? { [SITE_DATA_PROXY_SECRET_HEADER]: siteApiSharedSecret } : {}),
+    ...(isSiteDataRequest ? { Origin: SITE_ORIGIN } : {}),
+    ...(apiKey && !isSiteDataRequest && !shouldSendSiteApiSecret ? { "X-API-Key": apiKey } : {}),
+    ...(siteApiSharedSecret && shouldSendSiteApiSecret ? { [SITE_DATA_PROXY_SECRET_HEADER]: siteApiSharedSecret } : {}),
   };
 }
 

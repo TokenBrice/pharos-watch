@@ -94,6 +94,18 @@ describe("applyProtocolPriceOverrides", () => {
   it("leaves the asset untouched when the candidate validation rejects the override", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     validatePrimaryPriceCandidateMock.mockReturnValue({ accepted: false, reason: "bounds_exceeded" });
+    const authoritativeOverrideStats = {
+      budgetMs: 10_000,
+      candidateCount: 0,
+      attemptedCount: 0,
+      successCount: 0,
+      failedCount: 0,
+      emptyCount: 0,
+      skippedCircuitOpen: 0,
+      skippedBudget: 0,
+      timedOut: false,
+      assetAttempts: [],
+    };
     const assets = [
       makeAsset({
         price: 1.0,
@@ -109,6 +121,7 @@ describe("applyProtocolPriceOverrides", () => {
       overrides,
       validationContexts: createValidationContextResolver(),
       syncStartSec: 1_800_000_000,
+      authoritativeOverrideStats,
     });
 
     expect(applied).toBe(0);
@@ -119,6 +132,17 @@ describe("applyProtocolPriceOverrides", () => {
       (call) => typeof call[0] === "string" && call[0].includes("Rejected protocol-backed override"),
     );
     expect(rejectWarn).toBeDefined();
+    expect(authoritativeOverrideStats.assetAttempts).toEqual([
+      expect.objectContaining({
+        assetId: "mkusd-prisma",
+        adapter: "protocol-redeem",
+        source: "protocol-redeem",
+        state: "attempted",
+        result: "rejected",
+        rejectionClass: "bounds_exceeded",
+        candidateAt: 1_800_000_000,
+      }),
+    ]);
   });
 
   it("stamps accepted override with priceObservedAt = syncStartSec and priceObservedAtMode = 'local_fetch'", () => {
