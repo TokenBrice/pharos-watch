@@ -18,7 +18,7 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/chains/index.ts",
-      "sha256": "730529f2bfcbe43ed9a71fa824cd91d9ad2405a13b3b9b50b4dc247809d683a6"
+      "sha256": "43350c8903ef9e3fb5f122b3196fe80162b304e45f17e62940d9544fc7eee787"
     },
     {
       "path": "shared/lib/dependency-derivation.ts",
@@ -142,14 +142,14 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/stablecoin-taxonomy.ts",
-      "sha256": "839d436006a9467140684be9de6f2e839f00d1530c70975d0c78ea9ad31b4d58"
+      "sha256": "562323191ea4e263db74f20653dd36565c7a019a1972df1d3216c83c1392c170"
     },
     {
       "path": "worker/src/lib/report-cards-snapshot-card.ts",
       "sha256": "e70bfddf6d253f0d37ed74449dff45e9af02858d80c0ca0931579796c080b85e"
     }
   ],
-  "digest": "24133c71fe495f69e3091081e1e0843eef0feb743bd54697783d7eedbc3e7832"
+  "digest": "9aa129969dc05e8cf0335dd8b8d95e3dac2c20a519bffeddfdec456898a6f85e"
 } as const;
 
 export const SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST =
