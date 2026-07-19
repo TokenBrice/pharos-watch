@@ -217,7 +217,23 @@ export async function recordProducerOutcome(db: D1Database, input: RecordProduce
          publications_json = excluded.publications_json,
          calendar_period = COALESCE(excluded.calendar_period, worker_producer_history.calendar_period),
          metadata_json = excluded.metadata_json,
-         error = excluded.error`,
+         error = excluded.error
+       ON CONFLICT(schedule_key, job, producer_path, producer_kind, invocation_id) DO UPDATE SET
+         idempotency_key = excluded.idempotency_key,
+         worker_version = excluded.worker_version,
+         slot_started_at = excluded.slot_started_at,
+         invoked_at = excluded.invoked_at,
+         completed_at = excluded.completed_at,
+         outcome = excluded.outcome,
+         productive = excluded.productive,
+         item_count = excluded.item_count,
+         publication_count = excluded.publication_count,
+         publications_json = excluded.publications_json,
+         calendar_period = COALESCE(excluded.calendar_period, worker_producer_history.calendar_period),
+         metadata_json = excluded.metadata_json,
+         error = excluded.error,
+         created_at = MIN(worker_producer_history.created_at, excluded.created_at)
+       WHERE worker_producer_history.outcome IN ('abandoned', 'not_started')`,
       )
       .bind(
         input.idempotencyKey,

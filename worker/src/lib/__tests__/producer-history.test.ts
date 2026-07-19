@@ -3,19 +3,16 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import {
-  loadProducerHeads,
-  pruneProducerHistory,
-  recordProducerOutcome,
-  utcCalendarMonth,
-} from "../producer-history";
+import { loadProducerHeads, pruneProducerHistory, recordProducerOutcome, utcCalendarMonth } from "../producer-history";
 import { recordBudgetSurfaceTelemetry } from "../budget-surface-telemetry";
 
 const MIGRATIONS_DIR = join(process.cwd(), "worker/migrations");
 
 function createMigratedDb(): { sqlite: DatabaseSync; db: D1Database } {
   const sqlite = new DatabaseSync(":memory:");
-  for (const file of readdirSync(MIGRATIONS_DIR).filter((entry) => entry.endsWith(".sql")).sort()) {
+  for (const file of readdirSync(MIGRATIONS_DIR)
+    .filter((entry) => entry.endsWith(".sql"))
+    .sort()) {
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-owned migration fixture
     sqlite.exec(readFileSync(join(MIGRATIONS_DIR, file), "utf8"));
   }
@@ -43,14 +40,16 @@ describe("producer history", () => {
       itemCount: 364,
       productivity: {
         productive: true,
-        publications: [{
-          surface: "stablecoins",
-          generationId: "stablecoins:100",
-          publishedAt: 108,
-          publishedRows: 364,
-          expectedRows: 364,
-          artifactCacheKey: "stablecoins",
-        }],
+        publications: [
+          {
+            surface: "stablecoins",
+            generationId: "stablecoins:100",
+            publishedAt: 108,
+            publishedRows: 364,
+            expectedRows: 364,
+            artifactCacheKey: "stablecoins",
+          },
+        ],
       },
     });
     await recordProducerOutcome(db, {
@@ -86,11 +85,13 @@ describe("producer history", () => {
       invocationCount: 2,
       productiveCount: 1,
     });
-    const publication = sqlite.prepare(
-      `SELECT state, producer_job, producer_path, invocation_id, worker_version
+    const publication = sqlite
+      .prepare(
+        `SELECT state, producer_job, producer_path, invocation_id, worker_version
          FROM surface_publication_generations
         WHERE surface = 'stablecoins' AND generation_id = 'stablecoins:100'`,
-    ).get() as Record<string, unknown>;
+      )
+      .get() as Record<string, unknown>;
     expect(publication).toMatchObject({
       state: "published",
       producer_job: "sync-stablecoins",
@@ -193,11 +194,13 @@ describe("producer history", () => {
       producer,
     });
 
-    const history = sqlite.prepare(
-      `SELECT outcome, productive, error
+    const history = sqlite
+      .prepare(
+        `SELECT outcome, productive, error
          FROM worker_producer_history
         WHERE idempotency_key = ?`,
-    ).all("budget-surface:budget-invocation-1:digest-trigger-poll");
+      )
+      .all("budget-surface:budget-invocation-1:digest-trigger-poll");
     expect(history).toEqual([{ outcome: "ok", productive: 1, error: null }]);
     expect(await loadProducerHeads(db)).toEqual([
       expect.objectContaining({
@@ -207,11 +210,70 @@ describe("producer history", () => {
         productiveCount: 1,
       }),
     ]);
-    const cache = sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+    const cache = sqlite
+      .prepare("SELECT value FROM cache WHERE key = ?")
       .get("cron:budget-surface:digest-trigger-poll") as { value: string };
     const payload = JSON.parse(cache.value) as Record<string, unknown>;
     expect(payload).toMatchObject({ outcome: "ok", processedCount: 1 });
     expect(payload).not.toHaveProperty("error");
+    sqlite.close();
+  });
+
+  it("lets a late real completion replace reconciliation-owned synthetic history", async () => {
+    const { sqlite, db } = createMigratedDb();
+    const identity = {
+      scheduleKey: "halfHourlyOffset",
+      job: "sync-dex-liquidity",
+      producerPath: "halfHourlyOffset",
+      producerKind: "scheduled-job",
+      invocationId: "shared-invocation",
+      workerVersion: "version-d",
+      slotStartedAt: 1_772_000_000,
+      invokedAt: 1_772_000_000,
+    } as const;
+
+    await recordProducerOutcome(db, {
+      ...identity,
+      idempotencyKey: "synthetic-abandoned",
+      completedAt: 1_772_000_100,
+      outcome: "abandoned",
+      itemCount: null,
+      error: "scheduled slot heartbeat stale",
+      productivity: { productive: false, reason: "platform-abandoned" },
+    });
+    await recordProducerOutcome(db, {
+      ...identity,
+      idempotencyKey: "real-completion",
+      completedAt: 1_772_000_120,
+      outcome: "ok",
+      itemCount: 42,
+      productivity: { productive: true },
+    });
+
+    expect(
+      sqlite
+        .prepare(
+          `SELECT idempotency_key, outcome, productive, item_count, error
+             FROM worker_producer_history`,
+        )
+        .all(),
+    ).toEqual([
+      {
+        idempotency_key: "real-completion",
+        outcome: "ok",
+        productive: 1,
+        item_count: 42,
+        error: null,
+      },
+    ]);
+    expect(await loadProducerHeads(db)).toEqual([
+      expect.objectContaining({
+        lastInvocationId: "shared-invocation",
+        lastOutcome: "ok",
+        invocationCount: 1,
+        productiveCount: 1,
+      }),
+    ]);
     sqlite.close();
   });
 
@@ -230,8 +292,10 @@ describe("producer history", () => {
     insert.run("monthly-old", "monthly", "scheduled-job", "m", now - 400 * 86_400, now - 400 * 86_400, "2025-01", now);
 
     expect(await pruneProducerHistory(db, now)).toBe(1);
-    const ids = sqlite.prepare("SELECT idempotency_key FROM worker_producer_history ORDER BY idempotency_key")
-      .all().map((row) => String((row as { idempotency_key: string }).idempotency_key));
+    const ids = sqlite
+      .prepare("SELECT idempotency_key FROM worker_producer_history ORDER BY idempotency_key")
+      .all()
+      .map((row) => String((row as { idempotency_key: string }).idempotency_key));
     expect(ids).toEqual(["budget-old", "monthly-old"]);
     sqlite.close();
   });
