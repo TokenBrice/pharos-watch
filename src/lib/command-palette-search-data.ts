@@ -277,7 +277,7 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["audx-aussie-dollar-token", "Aussie Dollar Token", "AUDX"],
   ["chfau-allunity", "AllUnity CHF", "CHFAU"],
   ["vchf-vnx", "VNX Swiss Franc", "VCHF"],
-  ["vgbp-vnx", "VNX British Pound", "VGBP"],
+  ["vgbp-vnx", "VNX British Pound", "VGBP", "quarantined"],
   ["tgbp-tokenised", "Tokenised GBP", "tGBP"],
   ["zarp-zarp", "ZARP Stablecoin", "ZARP"],
   ["isc-international-stable-currency", "International Stable Currency", "ISC"],

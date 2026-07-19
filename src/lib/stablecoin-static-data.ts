@@ -3,8 +3,8 @@ import type { PegCurrency } from "@shared/types";
 // Static projection of the stablecoin registry for global shell and metadata copy.
 // Keep in sync with shared/lib/stablecoins via src/lib/__tests__/stablecoin-static-data.test.ts.
 export const TRACKED_STABLECOIN_COUNT = 406;
-export const ACTIVE_STABLECOIN_COUNT = 338;
-export const CORE_AGGREGATE_STABLECOIN_COUNT = 262;
+export const ACTIVE_STABLECOIN_COUNT = 337;
+export const CORE_AGGREGATE_STABLECOIN_COUNT = 261;
 export const ACTIVE_VARIANT_STABLECOIN_COUNT = 47;
 export const ACTIVE_STABLE_VALUE_INVESTMENT_COUNT = 29;
 export const PRE_LAUNCH_STABLECOIN_COUNT = 33;
@@ -18,7 +18,7 @@ export const ACTIVE_PEG_CURRENCY_COUNTS = {
   BRL: 6,
   VAR: 3,
   CHF: 5,
-  GBP: 6,
+  GBP: 5,
   SGD: 1,
   JPY: 4,
   AUD: 5,
@@ -495,6 +495,7 @@ const NON_ACTIVE_STABLECOIN_ID_SET: ReadonlySet<string> = new Set([
   "tbill-openeden",
   "gramg-token-teknoloji",
   "grams-token-teknoloji",
+  "vgbp-vnx",
   "cetes-etherfuse",
   "jusd-jusd-stable-token",
   "vndc-jade-labs",
