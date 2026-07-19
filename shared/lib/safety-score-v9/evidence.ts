@@ -7,6 +7,14 @@ import {
   type V9ObservationState,
 } from "../../types/safety-score-v9-facts";
 
+/**
+ * Reviewed research evidence (bridge-route, mint-authority, and oracle
+ * reviews, plus route output valuations) stays current on the D11 review
+ * cadence: 365 days, the same window D11 ratified for access evidence and the
+ * documentedTermsMaxAgeSec precedent.
+ */
+export const V9_REVIEW_EVIDENCE_MAX_AGE_SEC = 31_536_000;
+
 export interface CreateV9EvidenceReferenceArgs {
   evidenceId: string;
   sourceId: string;

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v8/evaluation-build-manifest-v1";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
+import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { buildV9DependencyEvaluationPlan } from "@shared/lib/safety-score-v9/dependencies";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
@@ -14,6 +15,7 @@ import {
   type SafetyScoreV9FactSetExtensionV2,
 } from "../safety-score-v9-fact-set";
 import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../safety-score-v9-extension";
+import { selectSafetyScoreV9CdpShockMeasurement } from "../safety-score-v9-extension-shock";
 import type { SafetyScoreV9ReviewedTransferFact } from "../safety-score-v9-extension-transfer";
 
 const AS_OF_SEC = 10_000;
