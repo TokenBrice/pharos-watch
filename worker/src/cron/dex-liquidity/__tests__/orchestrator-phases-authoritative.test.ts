@@ -22,7 +22,7 @@ describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
     expect(index.confirmedExactKeysByProtocol.get("balancer")).toEqual(new Set());
   });
 
-  it("fails open for warning-only authoritative protocol fetches", () => {
+  it("enforces confirmation for warning-only authoritative protocol fetches", () => {
     const index = buildAuthoritativeStagedPoolConfirmationIndex([
       {
         name: "Meteora",
@@ -39,8 +39,8 @@ describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
       },
     ]);
 
-    expect(index.enforcedChainsByProtocol.size).toBe(0);
-    expect(index.confirmedExactKeysByProtocol.size).toBe(0);
+    expect(index.enforcedChainsByProtocol.get("meteora")).toEqual(new Set(["solana"]));
+    expect(index.confirmedExactKeysByProtocol.get("meteora")).toEqual(new Set());
   });
 
   it("fails open when the authoritative fetch has a real failure", () => {
