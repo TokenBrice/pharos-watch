@@ -47,6 +47,7 @@ export async function enrichMissingPrices(
   jupiterApiKey?: string | null,
   coingeckoApiKey?: string | null,
   onProgress?: EnrichmentProgressReporter,
+  previousMissingGenerationsById?: ReadonlyMap<string, number>,
 ): Promise<EnrichmentStats> {
   throwIfAborted(signal);
   const totalMissing = assets.filter(hasMissingPrice).length;
@@ -77,6 +78,7 @@ export async function enrichMissingPrices(
     db,
     fxRates,
     signal,
+    previousMissingGenerationsById,
     onProgress: async (progress) => {
       await onProgress?.({
         phase: progress.phase,

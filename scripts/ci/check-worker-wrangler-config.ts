@@ -4,7 +4,7 @@ import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const EXPECTED_CUSTOM_DOMAINS = ["api.pharos.watch", "ops-api.pharos.watch", "site-api.pharos.watch"] as const;
 const EXPECTED_RULE_TYPES = ["CompiledWasm", "Data"] as const;
-const EXPECTED_ADDRESS_PRICE_PROVIDER_SETTING = "none";
+const EXPECTED_ADDRESS_PRICE_PROVIDER_SETTING = "coingecko-onchain-address";
 
 interface TomlAssignment {
   key: string;
@@ -187,7 +187,7 @@ export function evaluateWorkerWranglerConfig(toml: string): WorkerWranglerConfig
     configuredAddressPriceProviderSetting !== EXPECTED_ADDRESS_PRICE_PROVIDER_SETTING
   ) {
     issues.push(
-      `Production address-price providers must stay disabled with ADDRESS_PRICE_PROVIDERS_ENABLED="${EXPECTED_ADDRESS_PRICE_PROVIDER_SETTING}"; ` +
+      `Production address-price providers must be exactly ADDRESS_PRICE_PROVIDERS_ENABLED="${EXPECTED_ADDRESS_PRICE_PROVIDER_SETTING}"; ` +
       `found ${configuredAddressPriceProviderSetting || "unset"}.`,
     );
   }
@@ -198,7 +198,7 @@ export function evaluateWorkerWranglerConfig(toml: string): WorkerWranglerConfig
 export function printWorkerWranglerConfigReport(report: WorkerWranglerConfigReport): void {
   if (!report.failed) {
     console.log(
-      "Worker Wrangler configuration check passed (3 root custom domains, 2 fallthrough asset rules, address-price providers disabled).",
+      "Worker Wrangler configuration check passed (3 root custom domains, 2 fallthrough asset rules, address-price providers pinned to coingecko-onchain-address).",
     );
     return;
   }

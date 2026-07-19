@@ -74,10 +74,16 @@ export async function syncStablecoins(
   }
   const { assets, rawAssetCount, droppedMalformedAssets, canonicalDeduplication, supplyGapReconciliation, trackedCoverage } = intake;
   const previousActivePriceCoverage = await loadPreviousStablecoinActivePriceCoverage(db, syncStartSec);
+  const previousMissingGenerationsById = new Map(
+    (previousActivePriceCoverage?.missingActiveAssets ?? []).map(
+      (detail) => [detail.stablecoinId, detail.consecutiveMissingGenerations] as const,
+    ),
+  );
   const pricingStage = await runStablecoinsPricingStage({
     db,
     assets,
     previousAssetsById: intake.previousAssetsById,
+    previousMissingGenerationsById,
     syncStartSec,
     fxFallbackRates: intake.fxFallbackRates,
     validationReferences: intake.validationReferences,

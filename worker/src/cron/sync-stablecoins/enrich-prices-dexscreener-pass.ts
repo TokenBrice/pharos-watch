@@ -46,15 +46,6 @@ function rotateValues<T>(values: readonly T[], offset: number): T[] {
   return [...values.slice(normalizedOffset), ...values.slice(0, normalizedOffset)];
 }
 
-function stableStringHash(value: string): number {
-  let hash = 2166136261;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return hash >>> 0;
-}
-
 async function abortable<T>(operation: Promise<T>, signal: AbortSignal): Promise<T> {
   throwIfAborted(signal);
 
@@ -170,6 +161,7 @@ export async function runDexScreenerPass(
   fxRates: Record<string, number> | undefined,
   db: D1Database | undefined,
   signal?: AbortSignal,
+  previousMissingGenerationsById?: ReadonlyMap<string, number>,
 ): Promise<EnrichPassResult> {
   let resolved = 0;
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
@@ -185,19 +177,20 @@ export async function runDexScreenerPass(
     );
   }
 
-  const rotationCycle = Math.floor(Date.now() / DEXSCREENER_ROTATION_INTERVAL_MS);
+  // Priority order: assets that have gone unpriced across the most prior
+  // generations first (so a persistent gap never starves under the request
+  // cap), then the existing circulating-desc + id tiebreak.
   const rankedDexCandidates = [...stillMissing]
-    .map((entry) => {
-      const exactTargets = rotateValues(
-        buildDexScreenerTargets(entry.asset),
-        stableStringHash(entry.asset.id) + rotationCycle,
-      );
-      return {
-        ...entry,
-        exactTargets,
-      };
-    })
+    .map((entry) => ({
+      ...entry,
+      exactTargets: buildDexScreenerTargets(entry.asset),
+      missingGenerations: previousMissingGenerationsById?.get(entry.asset.id) ?? 0,
+    }))
     .sort((left, right) => {
+      if (right.missingGenerations !== left.missingGenerations) {
+        return right.missingGenerations - left.missingGenerations;
+      }
+
       const leftCirculating = sumCirculatingValue(left.asset);
       const rightCirculating = sumCirculatingValue(right.asset);
       if (rightCirculating !== leftCirculating) {
@@ -206,11 +199,30 @@ export async function runDexScreenerPass(
 
       return left.asset.id.localeCompare(right.asset.id);
     });
-  const candidateRotation =
-    rankedDexCandidates.length > DEXSCREENER_MAX_REQUESTS
-      ? (rotationCycle * DEXSCREENER_MAX_REQUESTS) % rankedDexCandidates.length
-      : 0;
-  const dexCandidates = rotateValues(rankedDexCandidates, candidateRotation);
+
+  // Within each equal-streak group, rotate by the 15-minute window so equal
+  // priority candidates share the request cap across cycles instead of the same
+  // deterministic head winning every cycle and starving the tail. An undefined
+  // coverage map collapses every asset into one streak-0 group, restoring the
+  // original pure-rotation behavior.
+  const rotationCycle = Math.floor(Date.now() / DEXSCREENER_ROTATION_INTERVAL_MS);
+  const dexCandidates: typeof rankedDexCandidates = [];
+  for (let groupStart = 0; groupStart < rankedDexCandidates.length; ) {
+    let groupEnd = groupStart + 1;
+    while (
+      groupEnd < rankedDexCandidates.length &&
+      rankedDexCandidates[groupEnd].missingGenerations === rankedDexCandidates[groupStart].missingGenerations
+    ) {
+      groupEnd += 1;
+    }
+    const group = rankedDexCandidates.slice(groupStart, groupEnd);
+    const groupRotation =
+      group.length > DEXSCREENER_MAX_REQUESTS
+        ? (rotationCycle * DEXSCREENER_MAX_REQUESTS) % group.length
+        : 0;
+    dexCandidates.push(...rotateValues(group, groupRotation));
+    groupStart = groupEnd;
+  }
 
   const exactCandidateCount = dexCandidates.filter((entry) => entry.exactTargets.length > 0).length;
 
@@ -316,13 +328,11 @@ export async function runDexScreenerPass(
             }
           } catch (error) {
             if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
-            if (passTimeout.signal.aborted && passTimeout.isTimedOut()) {
-              console.warn(
-                `[enrich] DexScreener pass timed out after ${dexExactAttempts}/${DEXSCREENER_MAX_REQUESTS} requests`,
-              );
-              pushExactFailure("TimeoutError", errorMessageFor(error));
-              break requestRounds;
-            }
+            // A per-request timeout (or transient error) skips only this
+            // request; remaining candidates are still attempted while the
+            // overall pass budget allows. Budget exhaustion is handled at the
+            // top of the loop (throwIfAborted → outer catch) and by the
+            // remaining-budget guard, which stop the pass cleanly.
             console.warn(
               `[enrich] DexScreener exact lookup threw for ${entry.asset.symbol} (${target.chain}:${target.address}):`,
               error,

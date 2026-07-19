@@ -25,6 +25,7 @@ interface EnrichmentPassContext {
   db?: D1Database;
   fxRates?: Record<string, number>;
   signal?: AbortSignal;
+  previousMissingGenerationsById?: ReadonlyMap<string, number>;
   onProgress?: EnrichmentPassProgressReporter;
 }
 
@@ -98,8 +99,8 @@ const FALLBACK_PRICE_PASSES: readonly EnrichmentPassDefinition[] = [
     key: "passDex",
     label: "DexScreener",
     failureLabel: "dexscreener",
-    run: async ({ assets, fxRates, db, signal }) => {
-      const result = await runDexScreenerPass(assets, fxRates, db, signal);
+    run: async ({ assets, fxRates, db, signal, previousMissingGenerationsById }) => {
+      const result = await runDexScreenerPass(assets, fxRates, db, signal, previousMissingGenerationsById);
       return {
         counts: {
           passDex: result.resolved,
