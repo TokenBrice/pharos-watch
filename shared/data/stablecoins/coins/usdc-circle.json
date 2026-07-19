@@ -268,7 +268,7 @@
     },
     {
       "chain": "moonriver",
-      "address": "0xffffffff7d2b0b761af01ca8e25242976ac0ad7d",
+      "address": "0xe3f5a90f9cb311505cd691a46596599aa1a0ad7d",
       "decimals": 6
     },
     {
@@ -379,6 +379,191 @@
     {
       "chain": "morph-l2",
       "address": "0xcfb1186f4e93d60e60a8bdd997427d1f33bc372b",
+      "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+      "decimals": 18
+    },
+    {
+      "chain": "fantom",
+      "address": "0x04068da6c83afcfa0e13ba15a6696662335d5b75",
+      "decimals": 6
+    },
+    {
+      "chain": "tempo",
+      "address": "0x20c000000000000000000000b9537d11c60e8b50",
+      "decimals": 6
+    },
+    {
+      "chain": "stacks",
+      "address": "SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx",
+      "decimals": 6
+    },
+    {
+      "chain": "xlayer",
+      "address": "0x74b7f16337b8972027f6196a17a631ac6de26d22",
+      "decimals": 6
+    },
+    {
+      "chain": "kava",
+      "address": "0xfa9343c3897324496a05fc75abed6bac29f8a40f",
+      "decimals": 6
+    },
+    {
+      "chain": "metis",
+      "address": "0xea32a96608495e54156ae48931a7c20f0dcc1a21",
+      "decimals": 6
+    },
+    {
+      "chain": "flow",
+      "address": "0xf1815bd50389c46847f0bda824ec8da914045d14",
+      "decimals": 6
+    },
+    {
+      "chain": "flare",
+      "address": "0xfbda5f676cb37624f28265a144a48b0d6e87d3b6",
+      "decimals": 6
+    },
+    {
+      "chain": "klaytn",
+      "address": "0x754288077d0ff82af7a5317c7cb8c444d421d103",
+      "decimals": 6
+    },
+    {
+      "chain": "immutable-zkevm",
+      "address": "0x6de8acc0d406837030ce4dd28e7c08c5a96a30d2",
+      "decimals": 6
+    },
+    {
+      "chain": "soneium",
+      "address": "0xba9986d2381edf1da03b0b9c1f8b00dc4aacc369",
+      "decimals": 6
+    },
+    {
+      "chain": "aurora",
+      "address": "0xb12bfca5a55806aaf64e99521918a4bf0fc40802",
+      "decimals": 6
+    },
+    {
+      "chain": "manta",
+      "address": "0xb73603c5d87fa094b7314c74ace2e64d165016fb",
+      "decimals": 6
+    },
+    {
+      "chain": "moonbeam",
+      "address": "0x818ec0a7fe18ff94269904fced6ae3dae6d6dc0b",
+      "decimals": 6
+    },
+    {
+      "chain": "boba",
+      "address": "0x66a2a913e447d6b4bf33efbec43aaef87890fbbc",
+      "decimals": 6
+    },
+    {
+      "chain": "iota-evm",
+      "address": "0xfbda5f676cb37624f28265a144a48b0d6e87d3b6",
+      "decimals": 6
+    },
+    {
+      "chain": "harmony",
+      "address": "0xbc594cabd205bd993e7ffa6f3e9cea75c1110da5",
+      "decimals": 6
+    },
+    {
+      "chain": "hemi",
+      "address": "0xad11a8beb98bbf61dbb1aa0f6d6f2ecd87b35afa",
+      "decimals": 6
+    },
+    {
+      "chain": "mode",
+      "address": "0xd988097fb8612cc24eec14542bc03424c656005f",
+      "decimals": 6
+    },
+    {
+      "chain": "movement",
+      "address": "0x83121c9f9b0527d1f056e21a950d6bf3b9e9e2e8353d0e95ccea726713cbea39",
+      "decimals": 6
+    },
+    {
+      "chain": "nibiru",
+      "address": "0x0829f361a05d993d5ceb035ca6df3446b060970b",
+      "decimals": 6
+    },
+    {
+      "chain": "taiko",
+      "address": "0x07d83526730c7438048d55a4fc0b850e2aab6f0b",
+      "decimals": 6
+    },
+    {
+      "chain": "mantra",
+      "address": "0x5e76be0f4e09057d75140216f70fd4ce3365bb29",
+      "decimals": 6
+    },
+    {
+      "chain": "stable",
+      "address": "0x8a2b28364102bea189d99a475c494330ef2bdd0b",
+      "decimals": 6
+    },
+    {
+      "chain": "viction",
+      "address": "0xcca4e6302510d555b654b3eab9c0fcb223bcfdf0",
+      "decimals": 6
+    },
+    {
+      "chain": "apechain",
+      "address": "0xf1815bd50389c46847f0bda824ec8da914045d14",
+      "decimals": 6
+    },
+    {
+      "chain": "bitlayer",
+      "address": "0xf8c374ce88a3be3d374e8888349c7768b607c755",
+      "decimals": 6
+    },
+    {
+      "chain": "bob",
+      "address": "0xe75d0fb2c24a55ca1e3f96781a2bcc7bdba058f0",
+      "decimals": 6
+    },
+    {
+      "chain": "bsquared",
+      "address": "0xe544e8a38add9b1abf21922090445ba93f74b9e5",
+      "decimals": 6
+    },
+    {
+      "chain": "citrea",
+      "address": "0xe045e6c36cf77faa2cfb54466d71a3aef7bbe839",
+      "decimals": 6
+    },
+    {
+      "chain": "redbelly",
+      "address": "0xe08ded898d7782b085cd240d7b234063696765ad",
+      "decimals": 6
+    },
+    {
+      "chain": "rootstock",
+      "address": "0x74c9f2b00581f1b11aa7ff05aa9f608b7389de67",
+      "decimals": 6
+    },
+    {
+      "chain": "zircuit",
+      "address": "0x3b952c8c9c44e8fe201e2b26f6b2200203214cff",
+      "decimals": 6
+    },
+    {
+      "chain": "astar",
+      "address": "0x6a2d262d56735dba19dd70682b39f6be9a931d98",
+      "decimals": 6
+    },
+    {
+      "chain": "corn",
+      "address": "0xdf0b24095e15044538866576754f3c964e902ee6",
+      "decimals": 6
+    },
+    {
+      "chain": "polygon-zkevm",
+      "address": "0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035",
       "decimals": 6
     }
   ],
@@ -520,8 +705,8 @@
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Circle's contract registry identifies the reviewed native USDC deployments below, while Circle documents CCTP as native USDC burn/mint infrastructure. Hyperliquid's official bridge documentation identifies its HyperCore USDC as an Arbitrum lock-and-mint representation controlled by the stake-weighted validator set. Deployments not supported by these primary sources remain unresolved.",
-    "reviewedAt": "2026-07-16",
-    "reviewer": "SOL-FEEDER primary-source deployment review",
+    "reviewedAt": "2026-07-19",
+    "reviewer": "SOL-FEEDER primary-source deployment review; Kimi USDC controller curation (2026-07-19)",
     "confidence": "verified",
     "protocols": [
       {
@@ -757,16 +942,31 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-19: owner() of the USDC.e token (name USD//C on xDai, symbol USDC, 6 decimals, supply 16,431,899.63) returns the OmniBridge home mediator 0xf6A78083ca3e2a662D6dd1703c939c8aCE2e268d, the mint authority for this OmniBridge-minted representation (same controller convention as the reviewed Gnosis OmniBridge row in dai-makerdao.json). The home mediator's mediatorContractOnOtherSide() returns the Ethereum-side foreign mediator 0x88ad09518695c6c3712AC10a214bE5109a655671, which escrows 17,140,494.07 USDC on Ethereum, covering the 16.43M USDC.e supply.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-17",
+        "controllerChain": "gnosis",
+        "controllerAddress": "0xf6A78083ca3e2a662D6dd1703c939c8aCE2e268d",
+        "failureDomainKeys": [
+          "protocol:gnosis-omnibridge",
+          "contract:gnosis:0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d"
+        ],
+        "observedAt": "2026-07-19",
         "sources": [
           {
             "label": "Gnosis OmniBridge documentation",
             "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/omnibridge"
           },
           {
+            "label": "Gnosis bridge contract addresses",
+            "url": "https://docs.gnosischain.com/developers/Usefulcontracts"
+          },
+          {
             "label": "Bridged USDC (USDC.e) token on Gnosisscan",
             "url": "https://gnosisscan.io/address/0xddafbb505ad214d7b80b1f830fccc89b60fb7a83"
+          },
+          {
+            "label": "OmniBridge home mediator on Gnosisscan (owner() of the USDC.e token, observed 2026-07-19)",
+            "url": "https://gnosisscan.io/address/0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d"
           }
         ]
       },
@@ -1096,9 +1296,9 @@
         ]
       },
       {
-        "id": "moonriver:0xffffffff7d2b0b761af01ca8e25242976ac0ad7d",
+        "id": "moonriver:0xe3f5a90f9cb311505cd691a46596599aa1a0ad7d",
         "destinationChain": "moonriver",
-        "contractAddress": "0xffffffff7d2b0b761af01ca8e25242976ac0ad7d",
+        "contractAddress": "0xe3f5a90f9cb311505cd691a46596599aa1a0ad7d",
         "protocol": "unresolved route",
         "issuanceModel": "unknown",
         "routeClass": "unknown",
@@ -1106,9 +1306,9 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "Row contract is inert on Moonriver: name()/symbol()/decimals()/totalSupply() all return empty via rpc.api.moonriver.moonbeam.network and publicnode (2026-07-19). The same address is live on Moonbeam as xcUSDC (Polkadot Asset Hub USDC via XCM), so the row likely maps a Moonbeam asset to Moonriver. DefiLlama attributes Moonriver USDC to the Multichain-bridged token 0xE3F5a90F9cb311505cd691a46596599aA1A0AD7D (verified live on Moonriver: name 'USD Coin', symbol USDC, 6 decimals, totalSupply ~3.9M). Needs coordinator decision on correcting the contract before review can complete.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "observedAt": "2026-07-19"
       },
       {
         "id": "plume:0x222365ef19f7947e5484218551b56bb3965aa7af",
@@ -1256,18 +1456,35 @@
       },
       {
         "id": "mantle:0x09bc4e0d864854c6afb6eb9a9cdf58ac190d0df9",
+        "sourceChain": "ethereum",
         "destinationChain": "mantle",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x09bc4e0d864854c6afb6eb9a9cdf58ac190d0df9",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Mantle canonical bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x95fc37a27a2f68e3a647cdc081f0a89bb47c3012",
+        "failureDomainKeys": [
+          "protocol:mantle-canonical-bridge",
+          "contract:ethereum:0x95fc37a27a2f68e3a647cdc081f0a89bb47c3012"
+        ],
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "USDC token on Mantle explorer",
+            "url": "https://explorer.mantle.xyz/token/0x09bc4e0d864854c6afb6eb9a9cdf58ac190d0df9"
+          },
+          {
+            "label": "Mantle Bridged USDC (CoinGecko)",
+            "url": "https://www.coingecko.com/en/coins/mantle-bridged-usdc-mantle"
+          }
+        ]
       },
       {
         "id": "linea:0x176211869ca2b568f2a7d4ee941e073a821ee1ff",
@@ -1291,18 +1508,39 @@
       },
       {
         "id": "scroll:0x06efdbff2a14a7c8e15944d1f4a48f9f95f663a4",
+        "sourceChain": "ethereum",
         "destinationChain": "scroll",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x06efdbff2a14a7c8e15944d1f4a48f9f95f663a4",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Scroll canonical bridge (bridged USDC standard)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xf1af3b23de0a5ca3cab7261cb0061c0d779a5c7b",
+        "failureDomainKeys": [
+          "protocol:scroll-canonical-bridge",
+          "contract:ethereum:0xf1af3b23de0a5ca3cab7261cb0061c0d779a5c7b"
+        ],
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Scroll contracts (L1 gateways)",
+            "url": "https://docs.scroll.io/en/developers/scroll-contracts/"
+          },
+          {
+            "label": "Circle Bridged USDC Standard (Scroll adopter)",
+            "url": "https://www.circle.com/bridged-usdc"
+          },
+          {
+            "label": "USDC token on Scrollscan",
+            "url": "https://scrollscan.com/token/0x06efdbff2a14a7c8e15944d1f4a48f9f95f663a4"
+          }
+        ]
       },
       {
         "id": "osmosis:ibc/498A0751C798A0D9A389AA3691123DADA57DAA4FE165D5C75894505B876BA6E4",
@@ -1317,8 +1555,15 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "reviewNote": "IBC voucher path verified 2026-07-19: sha256(\"transfer/channel-750/uusdc\") equals this row's denom hash, matching the ACTIVE preferred Noble channel-1 to Osmosis channel-750 ics20-1 channel in the chain-registry. The controller is the Noble-side ICS-20 escrow account noble1kq2rzz6fq2q7fsu75a9g7cpzjeanmk68qxshr6, derived per ibc-go GetEscrowAddress(\"transfer\", \"channel-1\") and verified against live chain state: it holds 13,071,021.92 uusdc against an Osmosis voucher supply of 13,071,111.70 (99.9993% match; the small residual is vouchers in flight or forwarded onward from Osmosis).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-17",
+        "controllerChain": "noble",
+        "controllerAddress": "noble1kq2rzz6fq2q7fsu75a9g7cpzjeanmk68qxshr6",
+        "failureDomainKeys": [
+          "protocol:ibc-ics20",
+          "contract:noble:noble1kq2rzz6fq2q7fsu75a9g7cpzjeanmk68qxshr6"
+        ],
+        "observedAt": "2026-07-19",
         "sources": [
           {
             "label": "Cosmos chain-registry Osmosis assetlist (USDC = Noble uusdc via IBC channel-750)",
@@ -1327,98 +1572,221 @@
           {
             "label": "Circle USDC mainnet contract addresses (Noble native issuance)",
             "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          },
+          {
+            "label": "Cosmos chain-registry Noble-Osmosis IBC channel (noble channel-1 / osmosis channel-750, ics20-1, ACTIVE)",
+            "url": "https://github.com/cosmos/chain-registry/blob/master/_IBC/noble-osmosis.json"
+          },
+          {
+            "label": "ibc-go GetEscrowAddress (ICS-20 escrow address derivation)",
+            "url": "https://github.com/cosmos/ibc-go/blob/main/modules/apps/transfer/types/keys.go"
+          },
+          {
+            "label": "Noble IBC transfer escrow for channel-1 on Mintscan (13,071,021.92 uusdc ~= Osmosis voucher supply 13,071,111.70, observed 2026-07-19)",
+            "url": "https://www.mintscan.io/noble/address/noble1kq2rzz6fq2q7fsu75a9g7cpzjeanmk68qxshr6"
           }
         ]
       },
       {
         "id": "etherlink:0x796ea11fa2dd751ed01b53c372ffdb4aaa8f00f9",
+        "sourceChain": "ethereum",
         "destinationChain": "etherlink",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x796ea11fa2dd751ed01b53c372ffdb4aaa8f00f9",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero Wrapped Asset Bridge (WAB)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x1f8e735f424b7a49a885571a2fa104e8c13c26c7",
+        "failureDomainKeys": [
+          "protocol:layerzero-wab",
+          "contract:ethereum:0x1f8e735f424b7a49a885571a2fa104e8c13c26c7"
+        ],
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Etherlink docs: bridging between EVM networks (LayerZero WAB)",
+            "url": "https://docs.etherlink.com/bridging/bridging-evm"
+          },
+          {
+            "label": "Etherlink docs: token addresses (USDC)",
+            "url": "https://docs.etherlink.com/building-on-etherlink/tokens"
+          }
+        ]
       },
       {
         "id": "cardano:1f3aec8bfe7ea4fe14c5f121e2a92e301afe414147860d557cac7e345553444378",
+        "sourceChain": "ethereum",
         "destinationChain": "cardano",
+        "canonicalChain": "ethereum",
         "contractAddress": "1f3aec8bfe7ea4fe14c5f121e2a92e301afe414147860d557cac7e345553444378",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Circle xReserve (USDCx)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x8888888199b2df864bf678259607d6d5ebb4e3ce",
+        "failureDomainKeys": [
+          "protocol:circle-xreserve",
+          "contract:ethereum:0x8888888199b2df864bf678259607d6d5ebb4e3ce"
+        ],
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Circle: USDCx on Cardano now available via Circle xReserve",
+            "url": "https://www.circle.com/blog/usdcx-on-cardano-now-available-via-circle-xreserve"
+          },
+          {
+            "label": "Circle xReserve supported blockchains and domains",
+            "url": "https://developers.circle.com/xreserve/references/supported-blockchains-and-domains"
+          }
+        ]
       },
       {
         "id": "pulsechain:0x15d38573d2feeb82e7ad5187ab8c1d52810b1f07",
+        "sourceChain": "ethereum",
         "destinationChain": "pulsechain",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x15d38573d2feeb82e7ad5187ab8c1d52810b1f07",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "PulseChain Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "controllerChain": "pulsechain",
+        "controllerAddress": "0x4fd0aaa7506f3d9cb8274bdb946ec42a1b8751ef",
+        "failureDomainKeys": [
+          "protocol:pulsechain-bridge",
+          "contract:pulsechain:0x4fd0aaa7506f3d9cb8274bdb946ec42a1b8751ef"
+        ],
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "PulseChain bridge",
+            "url": "https://bridge.pulsechain.com/"
+          },
+          {
+            "label": "USDC from Ethereum on PulseChain explorer",
+            "url": "https://scan.pulsechain.com/token/0x15d38573d2feeb82e7ad5187ab8c1d52810b1f07"
+          },
+          {
+            "label": "PulseChain token bridge controller",
+            "url": "https://api.scan.pulsechain.com/address/0x4fd0aaa7506f3d9cb8274bdb946ec42a1b8751ef"
+          }
+        ]
       },
       {
         "id": "abstract:0x84a71ccd554cc1b02749b35d22f684cc8ec987e1",
+        "sourceChain": "ethereum",
         "destinationChain": "abstract",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x84a71ccd554cc1b02749b35d22f684cc8ec987e1",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Stargate (LayerZero) bridged USDC",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "controllerChain": "abstract",
+        "controllerAddress": "0x84a71ccd554cc1b02749b35d22f684cc8ec987e1",
+        "failureDomainKeys": [
+          "protocol:stargate",
+          "layerzero:oft:stargate-usdc"
+        ],
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Abstract contracts and endpoints (Mainnet USDC)",
+            "url": "https://docs.abs.xyz/ai-agents/resources/contracts-and-endpoints"
+          },
+          {
+            "label": "Stargate bridged USDC (CoinGecko)",
+            "url": "https://www.coingecko.com/en/coins/stargate-bridged-usdc"
+          }
+        ]
       },
       {
         "id": "berachain:0x549943e04f40284185054145c6e4e9568c1d3241",
+        "sourceChain": "ethereum",
         "destinationChain": "berachain",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x549943e04f40284185054145c6e4e9568c1d3241",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Stargate (LayerZero) bridged USDC",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "controllerChain": "berachain",
+        "controllerAddress": "0x549943e04f40284185054145c6e4e9568c1d3241",
+        "failureDomainKeys": [
+          "protocol:stargate",
+          "layerzero:oft:stargate-usdc"
+        ],
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Berachain token metadata (USDC.e = Bridged USDC (Stargate))",
+            "url": "https://github.com/berachain/metadata/blob/main/src/tokens/mainnet.json"
+          },
+          {
+            "label": "Stargate bridged USDC (CoinGecko)",
+            "url": "https://www.coingecko.com/en/coins/stargate-bridged-usdc"
+          }
+        ]
       },
       {
         "id": "katana:0x203a662b0bd271a6ed5a60edfbd04bfce608fd36",
+        "sourceChain": "ethereum",
         "destinationChain": "katana",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x203a662b0bd271a6ed5a60edfbd04bfce608fd36",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Katana Vault Bridge (Agglayer)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-12"
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x53e82abbb12638f09d9e624578ccb666217a765e",
+        "failureDomainKeys": [
+          "protocol:katana-vault-bridge",
+          "contract:ethereum:0x53e82abbb12638f09d9e624578ccb666217a765e",
+          "protocol:agglayer"
+        ],
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Katana docs: Vault Bridge",
+            "url": "https://docs.katana.network/katana/core-concepts/vault-bridge/"
+          },
+          {
+            "label": "Katana docs: contract addresses (vbUSDC)",
+            "url": "https://docs.katana.network/katana/technical-reference/contract-addresses/"
+          },
+          {
+            "label": "Katana tokenlist (vbUSDC, origin L1 USDC)",
+            "url": "https://github.com/katana-network/tokenlist"
+          }
+        ]
       },
       {
         "id": "codex:0xd996633a415985dbd7d6d12f4a4343e31f5037cf",
@@ -1528,6 +1896,1279 @@
           {
             "label": "Circle USDC mainnet contract addresses",
             "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+        "sourceChain": "ethereum",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+        "protocol": "Binance-Peg authority unresolved",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Binance-Peg USDC: getOwner() returns 0xF68a4b64162906efF0fF6aE34E2bB1Cd42FEf62d, which has no BSC bytecode (eth_getCode = 0x). The bridge-route model cannot honestly encode this EOA as a contract controller, and no separate route-specific mint-controller contract was established.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "observedBlock": 110867836,
+        "sources": [
+          {
+            "label": "BscScan Binance-Peg USDC token",
+            "url": "https://bscscan.com/token/0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d"
+          },
+          {
+            "label": "Binance-Peg token collateralization info",
+            "url": "https://www.binance.com/en/proof-of-reserves"
+          }
+        ]
+      },
+      {
+        "id": "fantom:0x04068da6c83afcfa0e13ba15a6696662335d5b75",
+        "sourceChain": "ethereum",
+        "destinationChain": "fantom",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x04068da6c83afcfa0e13ba15a6696662335d5b75",
+        "protocol": "Multichain authority unresolved",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Multichain-bridged USDC ($181.1M of Fantom's attributed supply): owner() returns 0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE, which has no Fantom bytecode (eth_getCode = 0x). The bridge-route model cannot honestly encode this EOA as a contract controller, and no separate route-specific mint-controller contract was established.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "observedBlock": 122571308,
+        "sources": [
+          {
+            "label": "FtmScan Multichain USDC token",
+            "url": "https://ftmscan.com/token/0x04068da6c83afcfa0e13ba15a6696662335d5b75"
+          },
+          {
+            "label": "Multichain bridge repository",
+            "url": "https://github.com/anyswap/CrossChain-Router"
+          }
+        ]
+      },
+      {
+        "id": "tempo:0x20c000000000000000000000b9537d11c60e8b50",
+        "sourceChain": "ethereum",
+        "destinationChain": "tempo",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x20c000000000000000000000b9537d11c60e8b50",
+        "protocol": "Stargate V2 Hydra (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xc026395860db2d07ee33e05fe50ed7bd583189c7",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0xc026395860db2d07ee33e05fe50ed7bd583189c7",
+          "contract:tempo:0x20c000000000000000000000b9537d11c60e8b50"
+        ],
+        "observedAt": "2026-07-19",
+        "observedBlock": 30689161,
+        "sources": [
+          {
+            "label": "Tempo explorer Bridged USDC (Stargate) token",
+            "url": "https://explorer.tempo.xyz/address/0x20c000000000000000000000b9537d11c60e8b50"
+          },
+          {
+            "label": "Stargate V2 mainnet contracts (StargatePoolUSDC escrow)",
+            "url": "https://stargateprotocol.gitbook.io/stargate/v2-developer-docs/technical-reference/mainnet-contracts"
+          }
+        ]
+      },
+      {
+        "id": "stacks:SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx",
+        "sourceChain": "ethereum",
+        "destinationChain": "stacks",
+        "canonicalChain": "ethereum",
+        "contractAddress": "SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx",
+        "protocol": "Circle xReserve (USDCx)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "stacks",
+        "controllerAddress": "SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx-v1",
+        "failureDomainKeys": [
+          "protocol:circle-xreserve",
+          "contract:stacks:SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx-v1"
+        ],
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Circle blog: USDCx on Stacks now available via Circle xReserve",
+            "url": "https://www.circle.com/blog/usdcx-on-stacks-now-available-via-circle-xreserve"
+          },
+          {
+            "label": "Hiro explorer usdcx token contract",
+            "url": "https://explorer.hiro.so/txid/SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx?chain=mainnet"
+          },
+          {
+            "label": "Hiro explorer usdcx-v1 protocol contract (mint role per usdcx source)",
+            "url": "https://explorer.hiro.so/txid/SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx-v1?chain=mainnet"
+          }
+        ]
+      },
+      {
+        "id": "xlayer:0x74b7f16337b8972027f6196a17a631ac6de26d22",
+        "sourceChain": "ethereum",
+        "destinationChain": "xlayer",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x74b7f16337b8972027f6196a17a631ac6de26d22",
+        "protocol": "X Layer USDC authority unresolved",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "X Layer USDC: owner() and masterMinter() both return 0xA07Ae4BDFA7ba8BC0e8a8525bCC768300a8970BB, an EOA with no bytecode on X Layer or Ethereum. The AggLayer shared bridge 0x2a3DD3EB832aF982ec71669E178424b10Dca2EDe (X Layer's only canonical escrow per L2BEAT) is not a configured minter (isMinter = false) and holds less USDC than the token supply; the mint controller/escrow for this deployment could not be established.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "observedBlock": 65680938,
+        "sources": [
+          {
+            "label": "OKLink X Layer USDC token",
+            "url": "https://www.oklink.com/xlayer/token/0x74b7f16337b8972027f6196a17a631ac6de26d22"
+          },
+          {
+            "label": "L2BEAT X Layer (AggLayer shared bridge escrow)",
+            "url": "https://l2beat.com/scaling/projects/xlayer"
+          }
+        ]
+      },
+      {
+        "id": "kava:0xfa9343c3897324496a05fc75abed6bac29f8a40f",
+        "sourceChain": "ethereum",
+        "destinationChain": "kava",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xfa9343c3897324496a05fc75abed6bac29f8a40f",
+        "protocol": "Multichain",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "kava",
+        "controllerAddress": "0x639a647fbe20b6c8ac19e48e2de44ea792c62c5c",
+        "failureDomainKeys": [
+          "protocol:multichain",
+          "contract:kava:0x639a647fbe20b6c8ac19e48e2de44ea792c62c5c"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "observedBlock": 21704719,
+        "sources": [
+          {
+            "label": "Kava explorer Multichain USDC token",
+            "url": "https://kavascan.com/address/0xfA9343C3897324496A05fC75abeD6bAC29f8A40f"
+          },
+          {
+            "label": "Kava Multichain router (token owner, verified bytecode)",
+            "url": "https://kavascan.com/address/0x639A647fbe20b6c8ac19E48E2de44ea792c62c5C"
+          },
+          {
+            "label": "Multichain bridge repository",
+            "url": "https://github.com/anyswap/CrossChain-Router"
+          }
+        ]
+      },
+      {
+        "id": "metis:0xea32a96608495e54156ae48931a7c20f0dcc1a21",
+        "sourceChain": "ethereum",
+        "destinationChain": "metis",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xea32a96608495e54156ae48931a7c20f0dcc1a21",
+        "protocol": "Metis Andromeda canonical bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "metis",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:metis-canonical-messaging",
+          "contract:metis:0x4200000000000000000000000000000000000010"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "observedBlock": 22918902,
+        "sources": [
+          {
+            "label": "Metis Andromeda explorer m.USDC token (l2Bridge = 0x4200...0010 on-chain)",
+            "url": "https://andromeda-explorer.metis.io/address/0xea32a96608495e54156ae48931a7c20f0dcc1a21"
+          },
+          {
+            "label": "L2BEAT Metis Andromeda",
+            "url": "https://l2beat.com/scaling/projects/metis"
+          }
+        ]
+      },
+      {
+        "id": "flow:0xf1815bd50389c46847f0bda824ec8da914045d14",
+        "sourceChain": "ethereum",
+        "destinationChain": "flow",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xf1815bd50389c46847f0bda824ec8da914045d14",
+        "protocol": "Stargate V2 Hydra (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xc026395860db2d07ee33e05fe50ed7bd583189c7",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0xc026395860db2d07ee33e05fe50ed7bd583189c7",
+          "contract:flow:0xf1815bd50389c46847f0bda824ec8da914045d14"
+        ],
+        "observedAt": "2026-07-19",
+        "observedBlock": 72543907,
+        "sources": [
+          {
+            "label": "Flow EVM explorer Bridged USDC (Stargate) token",
+            "url": "https://evm.flowscan.io/token/0xF1815bd50389c46847f0Bda824eC8da914045D14"
+          },
+          {
+            "label": "Stargate V2 mainnet contracts (StargatePoolUSDC escrow)",
+            "url": "https://stargateprotocol.gitbook.io/stargate/v2-developer-docs/technical-reference/mainnet-contracts"
+          }
+        ]
+      },
+      {
+        "id": "flare:0xfbda5f676cb37624f28265a144a48b0d6e87d3b6",
+        "sourceChain": "ethereum",
+        "destinationChain": "flare",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xfbda5f676cb37624f28265a144a48b0d6e87d3b6",
+        "protocol": "Stargate V2 Hydra (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xc026395860db2d07ee33e05fe50ed7bd583189c7",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0xc026395860db2d07ee33e05fe50ed7bd583189c7",
+          "contract:flare:0xfbda5f676cb37624f28265a144a48b0d6e87d3b6"
+        ],
+        "observedAt": "2026-07-19",
+        "observedBlock": 65410425,
+        "sources": [
+          {
+            "label": "Flare explorer Bridged USDC (Stargate) token",
+            "url": "https://flarescan.com/token/0xfbda5f676cb37624f28265a144a48b0d6e87d3b6"
+          },
+          {
+            "label": "Stargate V2 mainnet contracts (StargatePoolUSDC escrow)",
+            "url": "https://stargateprotocol.gitbook.io/stargate/v2-developer-docs/technical-reference/mainnet-contracts"
+          }
+        ]
+      },
+      {
+        "id": "klaytn:0x754288077d0ff82af7a5317c7cb8c444d421d103",
+        "sourceChain": "ethereum",
+        "destinationChain": "klaytn",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x754288077d0ff82af7a5317c7cb8c444d421d103",
+        "protocol": "Orbit Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "klaytn",
+        "controllerAddress": "0x60070f5d2e1c1001400a04f152e7abd43410f7b9",
+        "failureDomainKeys": [
+          "protocol:orbit-bridge",
+          "contract:klaytn:0x60070f5d2e1c1001400a04f152e7abd43410f7b9"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "observedBlock": 222252271,
+        "sources": [
+          {
+            "label": "Klaytnscope Orbit Bridge Klaytn USD Coin (oUSDC) token",
+            "url": "https://klaytnscope.com/token/0x754288077d0ff82af7a5317c7cb8c444d421d103"
+          },
+          {
+            "label": "Orbit Bridge contract addresses",
+            "url": "https://bridge-docs.orbitchain.io/faq/integration-guide/2.-contract-addresses"
+          },
+          {
+            "label": "Orbit Bridge architecture",
+            "url": "https://medium.com/orbit-chain/announcing-orbit-bridge-the-worlds-first-decentralized-open-ibc-platform-90216aed4384"
+          }
+        ]
+      },
+      {
+        "id": "immutable-zkevm:0x6de8acc0d406837030ce4dd28e7c08c5a96a30d2",
+        "sourceChain": "ethereum",
+        "destinationChain": "immutable-zkevm",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x6de8acc0d406837030ce4dd28e7c08c5a96a30d2",
+        "protocol": "Immutable zkEVM canonical bridge (Axelar GMP)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "immutable-zkevm",
+        "controllerAddress": "0xba5e35e26ae59c7aea6f029b68c6460de2d13eb6",
+        "failureDomainKeys": [
+          "protocol:axelar-gmp",
+          "contract:immutable-zkevm:0xba5e35e26ae59c7aea6f029b68c6460de2d13eb6"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "observedBlock": 41083752,
+        "sources": [
+          {
+            "label": "Immutable zkEVM explorer USDC token (bridge() = 0xBa5E...3eB6 on-chain)",
+            "url": "https://explorer.immutable.com/token/0x6de8aCC0D406837030CE4dd28e7c08C5a96a30d2"
+          },
+          {
+            "label": "Axelar blog: Immutable selects Axelar for canonical bridge to Ethereum",
+            "url": "https://www.axelar.network/blog/immutable-selects-axelar-for-canonical-bridge-to-ethereum"
+          },
+          {
+            "label": "Immutable zkEVM bridge contracts repository",
+            "url": "https://github.com/immutable/zkevm-bridge-contracts"
+          }
+        ]
+      },
+      {
+        "id": "soneium:0xba9986d2381edf1da03b0b9c1f8b00dc4aacc369",
+        "sourceChain": "ethereum",
+        "destinationChain": "soneium",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xba9986d2381edf1da03b0b9c1f8b00dc4aacc369",
+        "protocol": "Soneium canonical bridge (Bridged USDC Standard)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "soneium",
+        "controllerAddress": "0x8be79275fcfd08a931087ecf70ba8a99aee3ac59",
+        "failureDomainKeys": [
+          "protocol:soneium-canonical-messaging",
+          "contract:soneium:0x8be79275fcfd08a931087ecf70ba8a99aee3ac59"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "observedBlock": 25657537,
+        "sources": [
+          {
+            "label": "Soneium Blockscout Bridged USDC (Soneium) token",
+            "url": "https://soneium.blockscout.com/token/0xbA9986D2381edf1DA03B0B9c1f8b00dc4AacC369"
+          },
+          {
+            "label": "Soneium Blockscout L2OpUSDCBridgeAdapter (verified minter)",
+            "url": "https://soneium.blockscout.com/address/0x8be79275FCfD08A931087ECf70Ba8a99aee3AC59"
+          },
+          {
+            "label": "Circle blog: Introducing Bridged USDC Standard",
+            "url": "https://www.circle.com/blog/bridged-usdc-standard"
+          }
+        ]
+      },
+      {
+        "id": "aurora:0xb12bfca5a55806aaf64e99521918a4bf0fc40802",
+        "sourceChain": "ethereum",
+        "destinationChain": "aurora",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xb12bfca5a55806aaf64e99521918a4bf0fc40802",
+        "protocol": "Rainbow Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x23ddd3e3692d1861ed57ede224608875809e127f",
+        "failureDomainKeys": [
+          "protocol:rainbow-bridge",
+          "contract:ethereum:0x23ddd3e3692d1861ed57ede224608875809e127f"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "observedBlock": 207613454,
+        "sources": [
+          {
+            "label": "Aurora explorer Bridged USDC (USDC.e) token",
+            "url": "https://explorer.aurora.dev/token/0xB12BFcA5A55806AaF64E99521918A4bf0fC40802"
+          },
+          {
+            "label": "NEAR omni-bridge contract addresses (Rainbow)",
+            "url": "https://github.com/Near-One/omni-bridge#contract-addresses"
+          },
+          {
+            "label": "Rainbow Bridge",
+            "url": "https://rainbowbridge.app/transfer"
+          }
+        ]
+      },
+      {
+        "id": "manta:0xb73603c5d87fa094b7314c74ace2e64d165016fb",
+        "sourceChain": "ethereum",
+        "destinationChain": "manta",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xb73603c5d87fa094b7314c74ace2e64d165016fb",
+        "protocol": "Manta Pacific canonical bridge (OP Standard Bridge)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "manta",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:manta-canonical-messaging",
+          "contract:manta:0x4200000000000000000000000000000000000010"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "observedBlock": 9022586,
+        "sources": [
+          {
+            "label": "Manta Pacific explorer USDC token (l2Bridge = 0x4200...0010, remoteToken = L1 USDC on-chain)",
+            "url": "https://pacific-explorer.manta.network/token/0xb73603C5d87fA094B7314C74ACE2e64D165016fb"
+          },
+          {
+            "label": "L2BEAT Manta Pacific",
+            "url": "https://l2beat.com/scaling/projects/manta"
+          }
+        ]
+      },
+      {
+        "id": "moonbeam:0x818ec0a7fe18ff94269904fced6ae3dae6d6dc0b",
+        "sourceChain": "ethereum",
+        "destinationChain": "moonbeam",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x818ec0a7fe18ff94269904fced6ae3dae6d6dc0b",
+        "protocol": "Multichain",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "DefiLlama counts three Moonbeam USDC representations (Multichain $1.265M, Axelar $35k, Celer $3.7k of the $1.304M total); the Multichain deployment dominates and is authored here. The Multichain MPC bridge ceased operations in July 2023, so this representation has no active issuer redemption path; token owner() resolves to the Multichain MPC custody address (EOA, no Moonbeam bytecode), which also custodies the Ethereum-side escrow per the DefiLlama pegged-assets config.",
+        "controllerChain": "moonbeam",
+        "controllerAddress": "0xec4486a90371c9b66f499ff3936f29f0d5af8b7e",
+        "failureDomainKeys": [
+          "protocol:multichain"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "DefiLlama pegged-assets USDC config (moonbeam multichain/celer/axelar entries)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/config.ts"
+          },
+          {
+            "label": "Moonbeam USDC token on Moonscan (name USD Coin, symbol USDC, 6 decimals, totalSupply 1,265,466.22 matching DefiLlama; owner() = 0xec4486a90371c9b66f499ff3936f29f0d5af8b7e observed 2026-07-19)",
+            "url": "https://moonbeam.moonscan.io/token/0x818ec0a7fe18ff94269904fced6ae3dae6d6dc0b"
+          }
+        ]
+      },
+      {
+        "id": "boba:0x66a2a913e447d6b4bf33efbec43aaef87890fbbc",
+        "sourceChain": "ethereum",
+        "destinationChain": "boba",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x66a2a913e447d6b4bf33efbec43aaef87890fbbc",
+        "protocol": "Boba Network L2 Standard Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "boba",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:boba-canonical-messaging",
+          "contract:boba:0x4200000000000000000000000000000000000010"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "DefiLlama pegged-assets USDC config (boba bridgedFromETH entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/config.ts"
+          },
+          {
+            "label": "Boba USDC token l2Bridge() = L2StandardBridge 0x4200000000000000000000000000000000000010, totalSupply 1,051,286.32 matching DefiLlama (observed 2026-07-19)",
+            "url": "https://bobascan.com/token/0x66a2a913e447d6b4bf33efbec43aaef87890fbbc"
+          }
+        ]
+      },
+      {
+        "id": "iota-evm:0xfbda5f676cb37624f28265a144a48b0d6e87d3b6",
+        "sourceChain": "ethereum",
+        "destinationChain": "iota-evm",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xfbda5f676cb37624f28265a144a48b0d6e87d3b6",
+        "protocol": "Stargate Hydra USDC.e (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "iota-evm",
+        "controllerAddress": "0x8e8539e4cc69123c623a106773f2b0cbbc58746",
+        "failureDomainKeys": [
+          "protocol:stargate-hydra-usdc",
+          "contract:iota-evm:0x8e8539e4cc69123c623a106773f2b0cbbc58746"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Stargate v2 deployment registry (iota-mainnet StargateOFTUSDC 0x8e8539e4CcD69123c623a106773F2b0cbbc58746; on-chain token() = this USDC.e and isMinter(adapter) = true, observed 2026-07-19)",
+            "url": "https://github.com/stargate-protocol/stargate-v2/tree/main/packages/stg-evm-v2/deployments/iota-mainnet"
+          },
+          {
+            "label": "DefiLlama USDC layerzeroConfig (iotaevm HydraOFT USDC.e entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/layerzeroConfig.ts"
+          },
+          {
+            "label": "Bridged USDC (Stargate) USDC.e on IOTA EVM explorer (totalSupply 557,721.91 matching DefiLlama)",
+            "url": "https://explorer.evm.iota.org/token/0xFbDa5F676cB37624f28265A144A48B0d6e87d3b6"
+          }
+        ]
+      },
+      {
+        "id": "harmony:0xbc594cabd205bd993e7ffa6f3e9cea75c1110da5",
+        "sourceChain": "ethereum",
+        "destinationChain": "harmony",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xbc594cabd205bd993e7ffa6f3e9cea75c1110da5",
+        "protocol": "Harmony Horizon 2.0 bridge (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "DefiLlama's Harmony USDC total ($220,089.09) is the sum of three Horizon 2.0 relaunch tokens tracked in its layerzeroConfig: 1USDC from Ethereum ($162,611.16, authored here as the dominant 74%), arbUSDC ($13,029.56), and bscUSDC ($44,448.37). The pre-hack Horizon 1USDC (0x985458E523dB3d53125813eD68c274899e9DfAb4, exploited 2022-06-23) is not counted by DefiLlama. Controller established 2026-07-19: the token's isMinter() returns true only for the Horizon 2.0 bridgeManager contract 0x2fBBCEF71544C461EDfC311F42e3583d5F9675D1 (its slot-2 admin is the bridge multisig 0x0C1310BBD93c6977fde20dC813CFf8236BA1f0Dd). The Harmony-side LayerZero proxy 0xB2238ca2E9704128ee24490ee774820735b57Caa (mapped to 1USDC in the official harmony-one bridge frontend config) has token() = 1USDC, bridgeManager() = the same contract, circulatingSupply() exactly equal to the token totalSupply, and its LayerZero trusted remote on Ethereum is the escrow proxy 0x4f52b41a778761bd2eea5b7b7ed8cbdaa02cef3e, which holds 162,624.78 USDC against a 1USDC supply of 162,611.16.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "harmony",
+        "controllerAddress": "0x2fbbcef71544c461edfc311f42e3583d5f9675d1",
+        "failureDomainKeys": [
+          "protocol:harmony-horizon-2",
+          "contract:harmony:0x2fbbcef71544c461edfc311f42e3583d5f9675d1"
+        ],
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Harmony announcement: Horizon bridge relaunched with LayerZero (Oct 2022, post-exploit)",
+            "url": "https://www.prnewswire.com/news-releases/resuming-harmony-cross-chain-bridge-with-layerzero-301661524.html"
+          },
+          {
+            "label": "DefiLlama USDC layerzeroConfig (three harmony entries; on-chain supplies sum to DefiLlama total)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/layerzeroConfig.ts"
+          },
+          {
+            "label": "1USDC token on Harmony explorer (name USD Coin, symbol 1USDC, 6 decimals, totalSupply 162,611.16 observed 2026-07-19)",
+            "url": "https://explorer.harmony.one/token/0xbc594cabd205bd993e7ffa6f3e9cea75c1110da5"
+          },
+          {
+            "label": "Harmony LayerZero bridge frontend token config (official harmony-one repo: 1USDC paired with proxyHRC20 0xB2238ca2E9704128ee24490ee774820735b57Caa and proxyERC20 0x4f52b41a778761bd2eea5b7b7ed8cbdaa02cef3e)",
+            "url": "https://github.com/harmony-one/layerzero-bridge.frontend/blob/main/src/configs/tokens.ts"
+          },
+          {
+            "label": "Horizon 2.0 bridgeManager on Harmony explorer (1USDC isMinter(bridgeManager) = true, observed 2026-07-19)",
+            "url": "https://explorer.harmony.one/address/0x2fBBCEF71544C461EDfC311F42e3583d5F9675D1"
+          }
+        ]
+      },
+      {
+        "id": "hemi:0xad11a8beb98bbf61dbb1aa0f6d6f2ecd87b35afa",
+        "sourceChain": "ethereum",
+        "destinationChain": "hemi",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xad11a8beb98bbf61dbb1aa0f6d6f2ecd87b35afa",
+        "protocol": "Stargate Hydra USDC.e (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "hemi",
+        "controllerAddress": "0x45f1a95a4d3f3836523f5c83673c797f4d4d263b",
+        "failureDomainKeys": [
+          "protocol:stargate-hydra-usdc",
+          "contract:hemi:0x45f1a95a4d3f3836523f5c83673c797f4d4d263b"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Stargate v2 deployment registry (hemi-mainnet StargateOFTUSDC 0x45f1A95A4D3f3836523F5c83673c797f4d4d263B; on-chain token() = this USDC.e and isMinter(adapter) = true, observed 2026-07-19)",
+            "url": "https://github.com/stargate-protocol/stargate-v2/tree/main/packages/stg-evm-v2/deployments/hemi-mainnet"
+          },
+          {
+            "label": "DefiLlama USDC layerzeroConfig (hemi HydraOFT USDC.e entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/layerzeroConfig.ts"
+          },
+          {
+            "label": "Bridged USDC (Stargate) USDC.e on Hemi explorer (totalSupply 346,000.26 matching DefiLlama $345.0k)",
+            "url": "https://explorer.hemi.xyz/token/0xad11a8BEb98bbf61dbb1aa0F6d6F2ECD87b35afA"
+          }
+        ]
+      },
+      {
+        "id": "mode:0xd988097fb8612cc24eec14542bc03424c656005f",
+        "sourceChain": "ethereum",
+        "destinationChain": "mode",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xd988097fb8612cc24eec14542bc03424c656005f",
+        "protocol": "Mode L2 Standard Bridge (OP Stack)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "mode",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:mode-canonical-messaging",
+          "contract:mode:0x4200000000000000000000000000000000000010"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "DefiLlama pegged-assets USDC config (mode bridgedFromETH entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/config.ts"
+          },
+          {
+            "label": "Mode USDC token l2Bridge() = L2StandardBridge 0x4200000000000000000000000000000000000010, totalSupply 695,054.58 matching DefiLlama (observed 2026-07-19)",
+            "url": "https://modescan.io/token/0xd988097fb8612cc24eec14542bc03424c656005f"
+          }
+        ]
+      },
+      {
+        "id": "movement:0x83121c9f9b0527d1f056e21a950d6bf3b9e9e2e8353d0e95ccea726713cbea39",
+        "sourceChain": "ethereum",
+        "destinationChain": "movement",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x83121c9f9b0527d1f056e21a950d6bf3b9e9e2e8353d0e95ccea726713cbea39",
+        "protocol": "Movement canonical bridge (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "movement",
+        "controllerAddress": "0x4d2969d384e440db9f1a51391cfc261d1ec08ee1bdf7b9711a6c05d485a4110a",
+        "failureDomainKeys": [
+          "protocol:movement-canonical-bridge",
+          "contract:movement:0x4d2969d384e440db9f1a51391cfc261d1ec08ee1bdf7b9711a6c05d485a4110a"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Movement Network Foundation: public mainnet beta launches with the canonical Movement bridge powered by LayerZero (Mar 2025)",
+            "url": "https://www.prnewswire.com/apac/news-releases/movement-network-foundation-announces-public-mainnet-beta-now-live-with-250m-tvl-302396420.html"
+          },
+          {
+            "label": "Movement node API: USDC.e fungible-asset metadata (name/symbol USDC.e, 6 decimals, supply 589,166.09 matching DefiLlama; icon served from bridge.movementnetwork.xyz; ObjectCore owner = controller, observed 2026-07-19)",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x83121c9f9b0527d1f056e21a950d6bf3b9e9e2e8353d0e95ccea726713cbea39/resources"
+          },
+          {
+            "label": "DefiLlama pegged-assets USDC config (move OFT native bridge entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/config.ts"
+          }
+        ]
+      },
+      {
+        "id": "nibiru:0x0829f361a05d993d5ceb035ca6df3446b060970b",
+        "sourceChain": "ethereum",
+        "destinationChain": "nibiru",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x0829f361a05d993d5ceb035ca6df3446b060970b",
+        "protocol": "Stargate Hydra USDC.e (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "nibiru",
+        "controllerAddress": "0x12a272a581fee5577a5dfa371afeb4b2f3a8c2f8",
+        "failureDomainKeys": [
+          "protocol:stargate-hydra-usdc",
+          "contract:nibiru:0x12a272a581fee5577a5dfa371afeb4b2f3a8c2f8"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Stargate v2 deployment registry (nibiru-mainnet StargateOFTUSDC 0x12a272A581feE5577A5dFa371afEB4b2F3a8C2F8; on-chain token() = this USDC.e and isMinter(adapter) = true, observed 2026-07-19)",
+            "url": "https://github.com/stargate-protocol/stargate-v2/tree/main/packages/stg-evm-v2/deployments/nibiru-mainnet"
+          },
+          {
+            "label": "DefiLlama USDC layerzeroConfig (nibiru HydraOFT USDC.e entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/layerzeroConfig.ts"
+          },
+          {
+            "label": "Bridged USDC (Stargate) USDC.e on Nibiru explorer (totalSupply 239,493.92 matching DefiLlama)",
+            "url": "https://explorer.nibiru.fi/token/0x0829F361A05D993d5CEb035cA6DF3446b060970b"
+          }
+        ]
+      },
+      {
+        "id": "taiko:0x07d83526730c7438048d55a4fc0b850e2aab6f0b",
+        "sourceChain": "ethereum",
+        "destinationChain": "taiko",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x07d83526730c7438048d55a4fc0b850e2aab6f0b",
+        "protocol": "Taiko Alethia canonical bridge (ERC20Vault)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "taiko",
+        "controllerAddress": "0x1670000000000000000000000000000000000002",
+        "failureDomainKeys": [
+          "protocol:taiko-canonical-messaging",
+          "contract:taiko:0x1670000000000000000000000000000000000002"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Taiko Alethia contract addresses (L2 BridgedUSDCToken (Native) = this token; L2 ERC20Vault = 0x1670000000000000000000000000000000000002)",
+            "url": "https://docs.taiko.xyz/network-reference/contract-addresses"
+          },
+          {
+            "label": "DefiLlama pegged-assets USDC config (taiko bridgedFromETH entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/config.ts"
+          },
+          {
+            "label": "Taiko USDC token on Taikoscan (name USD Coin, totalSupply 379,193.84 matching DefiLlama, observed 2026-07-19)",
+            "url": "https://taikoscan.io/token/0x07d83526730c7438048D55A4fc0b850e2aaB6f0b"
+          }
+        ]
+      },
+      {
+        "id": "mantra:0x5e76be0f4e09057d75140216f70fd4ce3365bb29",
+        "sourceChain": "ethereum",
+        "destinationChain": "mantra",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x5e76be0f4e09057d75140216f70fd4ce3365bb29",
+        "protocol": "Hyperlane Nexus bridge (MANTRA)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "mantra",
+        "controllerAddress": "0x66b6ff38b988759e57509f00c7b9717b1a94da4d",
+        "failureDomainKeys": [
+          "protocol:hyperlane-nexus",
+          "contract:mantra:0x66b6ff38b988759e57509f00c7b9717b1a94da4d"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "MANTRA announcement: bridging USDC to MANTRA EVM via the Hyperlane Nexus bridge",
+            "url": "https://mantrachain.io/resources/announcements/how-to-bridge-usdc-to-mantra-evm-via-hyperlane-nexus-bridge"
+          },
+          {
+            "label": "DefiLlama USDC hyperlaneConfig (mantra EvmHypSynthetic USDC entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/hyperlaneConfig.ts"
+          },
+          {
+            "label": "MANTRA USDC token on Mantrascan (name USD Coin, 6 decimals, totalSupply 153,738.00 matching DefiLlama; owner() = controller, a proxy contract, observed 2026-07-19)",
+            "url": "https://blockscout.mantrascan.io/token/0x5E76be0F4e09057D75140216F70fd4cE3365bb29"
+          }
+        ]
+      },
+      {
+        "id": "stable:0x8a2b28364102bea189d99a475c494330ef2bdd0b",
+        "sourceChain": "ethereum",
+        "destinationChain": "stable",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x8a2b28364102bea189d99a475c494330ef2bdd0b",
+        "protocol": "Stargate Hydra USDC.e (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "stable",
+        "controllerAddress": "0x31eef89d5215c305304a2fa5376a1f1b6c5dc477",
+        "failureDomainKeys": [
+          "protocol:stargate-hydra-usdc",
+          "contract:stable:0x31eef89d5215c305304a2fa5376a1f1b6c5dc477"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Stargate v2 deployment registry (stable-mainnet StargateOFTUSDC 0x31EEf89D5215C305304a2fA5376a1f1b6C5dc477; on-chain token() = this USDC.e and isMinter(adapter) = true, observed 2026-07-19)",
+            "url": "https://github.com/stargate-protocol/stargate-v2/tree/main/packages/stg-evm-v2/deployments/stable-mainnet"
+          },
+          {
+            "label": "DefiLlama USDC layerzeroConfig (stable HydraOFT USDC.e entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/layerzeroConfig.ts"
+          },
+          {
+            "label": "Bridged USDC (Stargate) USDC.e on Stablescan (totalSupply 2,180.07 matching DefiLlama)",
+            "url": "https://stablescan.xyz/token/0x8a2b28364102bea189d99a475c494330ef2bdd0b"
+          }
+        ]
+      },
+      {
+        "id": "viction:0xcca4e6302510d555b654b3eab9c0fcb223bcfdf0",
+        "sourceChain": "ethereum",
+        "destinationChain": "viction",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xcca4e6302510d555b654b3eab9c0fcb223bcfdf0",
+        "protocol": "Viction Bridge (canonical)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "viction",
+        "controllerAddress": "0x3ee54c35793c769d4b4cfd8e3063a97beb02f0ba",
+        "failureDomainKeys": [
+          "protocol:viction-bridge"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Viction documentation: Viction Bridge (supports bridging USDC to Viction)",
+            "url": "https://docs.viction.xyz/victionbridge"
+          },
+          {
+            "label": "DefiLlama pegged-assets USDC config (tomochain bridgedFromETH entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/config.ts"
+          },
+          {
+            "label": "Viction USDC token on TomoScan (VRC21 USD Coin, 6 decimals, supply 171.64 matching DefiLlama; issuer() = 0x3eE54C35793C769D4B4Cfd8e3063A97beb02F0ba, an EOA, observed on-chain 2026-07-19)",
+            "url": "https://tomoscan.io/token/0xcca4e6302510d555b654b3eab9c0fcb223bcfdf0"
+          }
+        ]
+      },
+      {
+        "id": "apechain:0xf1815bd50389c46847f0bda824ec8da914045d14",
+        "sourceChain": "ethereum",
+        "destinationChain": "apechain",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xf1815bd50389c46847f0bda824ec8da914045d14",
+        "protocol": "Stargate Hydra USDC.e (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "apechain",
+        "controllerAddress": "0x2086f755a6d9254045c257ea3d382ef854849b0f",
+        "failureDomainKeys": [
+          "protocol:stargate-hydra-usdc",
+          "contract:apechain:0x2086f755a6d9254045c257ea3d382ef854849b0f"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Stargate v2 deployment registry (ape-mainnet StargateOFTUSDC 0x2086f755A6d9254045C257ea3d382ef854849B0f; on-chain token() = this USDC.e and isMinter(adapter) = true, observed 2026-07-19)",
+            "url": "https://github.com/stargate-protocol/stargate-v2/tree/main/packages/stg-evm-v2/deployments/ape-mainnet"
+          },
+          {
+            "label": "DefiLlama USDC layerzeroConfig (apechain HydraOFT USDC.e entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/layerzeroConfig.ts"
+          },
+          {
+            "label": "Bridged USDC (Stargate) USDC.e on Apescan (totalSupply 204,480.44 matching DefiLlama, observed on-chain 2026-07-19)",
+            "url": "https://apescan.io/token/0xf1815bd50389c46847f0bda824ec8da914045d14"
+          }
+        ]
+      },
+      {
+        "id": "bitlayer:0xf8c374ce88a3be3d374e8888349c7768b607c755",
+        "sourceChain": "ethereum",
+        "destinationChain": "bitlayer",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xf8c374ce88a3be3d374e8888349c7768b607c755",
+        "protocol": "Bitlayer bridge (bridged USDC standard)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "bitlayer",
+        "controllerAddress": "0x0687175df0b510fdb2948b7bd2a078e3e6877629",
+        "failureDomainKeys": [
+          "protocol:bitlayer-bridge",
+          "contract:bitlayer:0x0687175df0b510fdb2948b7bd2a078e3e6877629"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Bitlayer announcement: USDC token contract swap to 0xf8c374ce88a3be3d374e8888349c7768b607c755 per Circle's protocol (bridged USDC standard), supported by the Bitlayer official bridge (Sep 2024)",
+            "url": "https://blog.bitlayer.org/_bl_announcement/en/2024-09-11-Bitlayer_USDC_Official_Token_Swap_Announcement/"
+          },
+          {
+            "label": "DefiLlama pegged-assets USDC config (btr bridgedFromETH entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/config.ts"
+          },
+          {
+            "label": "Bitlayer USDC token on BtrScan (name USDC, 6 decimals, totalSupply 63,138.43 matching DefiLlama; masterMinter() = controller contract, observed 2026-07-19)",
+            "url": "https://www.btrscan.com/token/0xf8c374ce88a3be3d374e8888349c7768b607c755"
+          }
+        ]
+      },
+      {
+        "id": "bob:0xe75d0fb2c24a55ca1e3f96781a2bcc7bdba058f0",
+        "sourceChain": "ethereum",
+        "destinationChain": "bob",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe75d0fb2c24a55ca1e3f96781a2bcc7bdba058f0",
+        "protocol": "Chainlink CCIP (BOB canonical)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "bob",
+        "controllerAddress": "0x554652e7f10fb8aa3e12226213c6826f98b09cf0",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:bob:0x554652e7f10fb8aa3e12226213c6826f98b09cf0"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "BOB announcement: USDC on BOB upgraded to Chainlink CCIP as canonical cross-chain infrastructure",
+            "url": "https://www.gobob.xyz/blog/usdc-ccip-upgrade"
+          },
+          {
+            "label": "BOB explorer: token MasterMinter MinterConfigured minter = 0x554652E7F10fB8aa3e12226213c6826F98B09CF0, verified contract BurnMintWithLockReleaseFlagTokenPool (CCIP token pool); token isMinter(pool) relationship per MasterMinter logs (observed 2026-07-19)",
+            "url": "https://explorer.gobob.xyz/address/0x554652E7F10fB8aa3e12226213c6826F98B09CF0"
+          },
+          {
+            "label": "DefiLlama pegged-assets USDC config (bob bridgedFromETH entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/config.ts"
+          }
+        ]
+      },
+      {
+        "id": "bsquared:0xe544e8a38add9b1abf21922090445ba93f74b9e5",
+        "sourceChain": "ethereum",
+        "destinationChain": "bsquared",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe544e8a38add9b1abf21922090445ba93f74b9e5",
+        "protocol": "B² bridge (bridged USDC standard)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The token is a FiatToken-style deployment (name USDC, 6 decimals) with a MasterMinter controller contract, matching the bridged USDC standard pattern used by the chain's official bridge; DefiLlama classifies it as bridged from Ethereum and the on-chain supply matches exactly. The MasterMinter's configured minter could not be enumerated (chain RPC blocks eth_getLogs), so the MasterMinter itself is recorded as the mint-permission controller.",
+        "controllerChain": "bsquared",
+        "controllerAddress": "0xb1ffa4e7a11988c7aa685b9c3e4ff8f159b62875",
+        "failureDomainKeys": [
+          "protocol:b2-bridge-usdc",
+          "contract:bsquared:0xb1ffa4e7a11988c7aa685b9c3e4ff8f159b62875"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "DefiLlama pegged-assets USDC config (bsquared bridgedFromETH entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/config.ts"
+          },
+          {
+            "label": "B² Network documentation: official bridge",
+            "url": "https://docs.bsquared.network/for-users/bridge"
+          },
+          {
+            "label": "B² USDC token on explorer (name USDC, 6 decimals, totalSupply 177,874.89 matching DefiLlama; masterMinter() = controller contract, observed 2026-07-19)",
+            "url": "https://explorer.bsquared.network/token/0xE544e8a38aDD9B1ABF21922090445Ba93f74B9E5"
+          }
+        ]
+      },
+      {
+        "id": "citrea:0xe045e6c36cf77faa2cfb54466d71a3aef7bbe839",
+        "sourceChain": "ethereum",
+        "destinationChain": "citrea",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe045e6c36cf77faa2cfb54466d71a3aef7bbe839",
+        "protocol": "Citrea USDC.e bridge (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "citrea",
+        "controllerAddress": "0x41710804cab0974638e1504db723d7bddec22e30",
+        "failureDomainKeys": [
+          "protocol:citrea-usdc-e-bridge",
+          "contract:citrea:0x41710804cab0974638e1504db723d7bddec22e30"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Citrea documentation: Bridge to Citrea (USDC.e 0xE045e6c36cF77FAA2CfB54466D71A3aEF7bbE839 natively maintained by Citrea, bridged from Ethereum powered by LayerZero)",
+            "url": "https://docs.citrea.xyz/welcome/bridge-to-citrea"
+          },
+          {
+            "label": "Citrea explorer: FiatTokenProxy USDC.e with MasterMinter; MinterConfigured minter = 0x41710804caB0974638E1504DB723D7bddec22e30 (proxy), and isMinter(minter) = true on the token (observed 2026-07-19)",
+            "url": "https://explorer.mainnet.citrea.xyz/token/0xE045e6c36cF77FAA2CfB54466D71A3aEF7bbE839"
+          },
+          {
+            "label": "DefiLlama USDC layerzeroConfig (citrea entry; on-chain supply 132,635.73 matches DefiLlama $132.4k)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/layerzeroConfig.ts"
+          }
+        ]
+      },
+      {
+        "id": "redbelly:0xe08ded898d7782b085cd240d7b234063696765ad",
+        "sourceChain": "ethereum",
+        "destinationChain": "redbelly",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe08ded898d7782b085cd240d7b234063696765ad",
+        "protocol": "Stargate Hydra USDC.e (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain totalSupply is 80,874.58 USDC.e at 2026-07-19 while DefiLlama reports $136.0k circulating; the address is verified against Stargate's deployment registry and DefiLlama's layerzeroConfig (rbn), so the gap is supply drift or a stale DefiLlama snapshot, not an address mismatch.",
+        "controllerChain": "redbelly",
+        "controllerAddress": "0xf07de8b1e1983f008cf9426773fd442cf21319ac",
+        "failureDomainKeys": [
+          "protocol:stargate-hydra-usdc",
+          "contract:redbelly:0xf07de8b1e1983f008cf9426773fd442cf21319ac"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Stargate v2 deployment registry (redbelly-mainnet StargateOFTUSDC 0xF07De8B1e1983F008Cf9426773Fd442cF21319aC; on-chain token() = this USDC.e and isMinter(adapter) = true, observed 2026-07-19)",
+            "url": "https://github.com/stargate-protocol/stargate-v2/tree/main/packages/stg-evm-v2/deployments/redbelly-mainnet"
+          },
+          {
+            "label": "DefiLlama USDC layerzeroConfig (rbn HydraOFT USDC.e entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/layerzeroConfig.ts"
+          },
+          {
+            "label": "Bridged USDC (Stargate) USDC.e on Redbelly explorer",
+            "url": "https://redbelly.routescan.io/token/0xE08DED898D7782B085cD240d7B234063696765aD"
+          }
+        ]
+      },
+      {
+        "id": "rootstock:0x74c9f2b00581f1b11aa7ff05aa9f608b7389de67",
+        "sourceChain": "ethereum",
+        "destinationChain": "rootstock",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x74c9f2b00581f1b11aa7ff05aa9f608b7389de67",
+        "protocol": "Stargate Hydra USDC.e (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "DefiLlama's Rootstock USDC total ($191,372) is dominated by this Stargate USDC.e ($190,313.73, matching its on-chain totalSupply exactly); the legacy 18-decimal rUSDC (0x1bda44fda023f2af8280a16fd1b01d1a493ba6c4, $1,058) is not authored.",
+        "controllerChain": "rootstock",
+        "controllerAddress": "0xaf54be5b6eec24d6bfacf1cce4eaf680a8239398",
+        "failureDomainKeys": [
+          "protocol:stargate-hydra-usdc",
+          "contract:rootstock:0xaf54be5b6eec24d6bfacf1cce4eaf680a8239398"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Stargate v2 deployment registry (rootstock-mainnet StargateOFTUSDC 0xAF54BE5B6eEc24d6BFACf1cce4eaF680A8239398; on-chain token() = this USDC.e and isMinter(adapter) = true, observed 2026-07-19)",
+            "url": "https://github.com/stargate-protocol/stargate-v2/tree/main/packages/stg-evm-v2/deployments/rootstock-mainnet"
+          },
+          {
+            "label": "DefiLlama USDC layerzeroConfig (rsk HydraOFT USDC.e entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/layerzeroConfig.ts"
+          },
+          {
+            "label": "Bridged USDC (Stargate) USDC.e on Rootstock explorer (totalSupply 190,313.73 matching DefiLlama)",
+            "url": "https://rootstock.blockscout.com/token/0x74c9f2b00581f1b11aa7ff05aa9f608b7389de67"
+          }
+        ]
+      },
+      {
+        "id": "zircuit:0x3b952c8c9c44e8fe201e2b26f6b2200203214cff",
+        "sourceChain": "ethereum",
+        "destinationChain": "zircuit",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x3b952c8c9c44e8fe201e2b26f6b2200203214cff",
+        "protocol": "VIA Labs bridge (bridged USDC standard)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "zircuit",
+        "controllerAddress": "0x1cab1576350d745eb82a7c6bf94949869d1329c9",
+        "failureDomainKeys": [
+          "protocol:via-labs-bridge",
+          "contract:zircuit:0x1cab1576350d745eb82a7c6bf94949869d1329c9"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "L2BEAT Zircuit TVS breakdown: Bridged USDC (VIA Labs) USDC.e 0x3b952c8C9C44e8Fe201e2b26F6B2200203214cfF, externally bridged (Proto-CCTP, not Circle), $282.8k",
+            "url": "https://l2beat.com/scaling/projects/zircuit/tvs-breakdown"
+          },
+          {
+            "label": "DefiLlama pegged-assets USDC config (zircuit bridgedFromETH entry; on-chain totalSupply 282,871.29 matches)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/config.ts"
+          },
+          {
+            "label": "Zircuit USDC.e token on explorer (name Bridged USDC (VIA Labs), 6 decimals; masterMinter() = controller proxy contract, observed 2026-07-19)",
+            "url": "https://explorer.zircuit.com/token/0x3b952c8C9C44e8Fe201e2b26F6B2200203214cfF"
+          }
+        ]
+      },
+      {
+        "id": "astar:0x6a2d262d56735dba19dd70682b39f6be9a931d98",
+        "sourceChain": "ethereum",
+        "destinationChain": "astar",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x6a2d262d56735dba19dd70682b39f6be9a931d98",
+        "protocol": "Celer cBridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "DefiLlama shows zero Astar USDC supply today. Of the two DefiLlama-configured Astar USDC tokens, the Multichain contract (0xfa9343c3897324496a05fc75abed6bac29f8a40f) carries no on-chain code, so the live Celer-bridged token (verified on-chain as USD Coin/USDC, 6 decimals) is authored; supply being zero today does not affect the join.",
+        "controllerChain": "astar",
+        "controllerAddress": "0xb26258c7a4371026f0b6f122ac0c93a6cfd8a1be",
+        "failureDomainKeys": [
+          "protocol:celer-cbridge",
+          "contract:astar:0xb26258c7a4371026f0b6f122ac0c93a6cfd8a1be"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "DefiLlama pegged-assets USDC config (astar multichain/celer bridgedFromETH entries)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/config.ts"
+          },
+          {
+            "label": "Astar USDC token on Blockscout (name USD Coin, 6 decimals; owner() = 0xb26258c7a4371026f0b6f122ac0c93a6cfd8a1be observed 2026-07-19)",
+            "url": "https://astar.blockscout.com/token/0x6a2d262D56735DbA19Dd70682B39F6bE9a931D98"
+          }
+        ]
+      },
+      {
+        "id": "corn:0xdf0b24095e15044538866576754f3c964e902ee6",
+        "destinationChain": "corn",
+        "contractAddress": "0xdf0b24095e15044538866576754f3c964e902ee6",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "DefiLlama's USDC config lists 0xDF0B24095e15044538866576754F3C964e902Ee6 as Corn's Ethereum-bridged USDC, but that address holds no contract code on Corn mainnet (chainId 21000000, verified via two independent RPCs on 2026-07-19) and DefiLlama shows zero supply. No alternative USDC deployment on Corn could be verified from primary sources, so the route is unresolved with the best-known (DefiLlama-configured) address.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19"
+      },
+      {
+        "id": "polygon-zkevm:0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035",
+        "sourceChain": "ethereum",
+        "destinationChain": "polygon-zkevm",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035",
+        "protocol": "Polygon zkEVM canonical bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "DefiLlama shows zero Polygon zkEVM USDC supply today (chain deprecated), but the bridged USDC.e contract is live on-chain (name USD Coin, 6 decimals, totalSupply 868,626.30 at 2026-07-19); supply being zero in DefiLlama today does not affect the join.",
+        "controllerChain": "polygon-zkevm",
+        "controllerAddress": "0x2a3dd3eb832af982ec71669e178424b10dca2ede",
+        "failureDomainKeys": [
+          "protocol:polygon-zkevm-canonical-messaging",
+          "contract:polygon-zkevm:0x2a3dd3eb832af982ec71669e178424b10dca2ede"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "DefiLlama pegged-assets USDC config (polygon_zkevm bridgeOnETH/bridgedFromETH entries naming PolygonZkEVMBridge 0x2a3DD3EB832aF982ec71669E178424b10DcA2EDe)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/config.ts"
+          },
+          {
+            "label": "Polygon zkEVM USDC.e token on Polygonscan (contract verified live on-chain 2026-07-19; bridge contract bytecode present at the canonical bridge address)",
+            "url": "https://zkevm.polygonscan.com/token/0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035"
           }
         ]
       }
