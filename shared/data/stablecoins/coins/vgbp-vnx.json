@@ -2,6 +2,16 @@
   "id": "vgbp-vnx",
   "name": "VNX British Pound",
   "symbol": "VGBP",
+  "status": "quarantined",
+  "listingStatusReview": {
+    "changedAt": "2026-07-19",
+    "reason": "DefiLlama's stablecoin supply feed currently reports no circulating VGBP supply, so VGBP cannot satisfy Pharos' exact active supply-publication contract without an ad hoc supply override.",
+    "reviewBy": "2026-08-19",
+    "source": {
+      "label": "DefiLlama stablecoin detail for VGBP",
+      "url": "https://stablecoins.llama.fi/stablecoin/292"
+    }
+  },
   "oneLiner": "VGBP is VNX's issuer-redeemable pound sterling token, backed at the latest published report date by an aggregate GBP-value reserve of undisclosed composition.",
   "flags": {
     "backing": "rwa-backed",
