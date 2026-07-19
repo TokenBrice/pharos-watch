@@ -2,7 +2,10 @@ import { recordOutcome } from "../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../lib/stablecoins-cache";
-import { createTelegramAuthoritativePlanningCallbacks } from "./dispatch-telegram-authoritative-planning";
+import {
+  createTelegramAuthoritativePlanningCallbacks,
+  type TelegramAuthoritativePlanningCallbacks,
+} from "./dispatch-telegram-authoritative-planning";
 import type { buildTelegramDispatchEvents } from "./dispatch-telegram-events";
 import { pendingCapacityFields } from "./dispatch-telegram-alerts-fanout";
 import {
@@ -76,6 +79,18 @@ export function hasDeferredTelegramAuthoritativeWork(
   return true;
 }
 
+function sourceEventFamilies(events: DispatchEvents): string[] {
+  return [
+    events.dewsChanges.length > 0 ? "dews" : null,
+    events.depegTriggered.length + events.depegResolved.length + events.depegWorsening.length > 0
+      ? "depeg"
+      : null,
+    events.safetyChanges.length > 0 ? "safety" : null,
+    events.launchPromoted.length > 0 ? "launch" : null,
+    events.reservePromoted.length > 0 ? "reserve" : null,
+  ].filter((family): family is string => family != null);
+}
+
 export async function executeAuthoritativeFanoutPath(
   context: AuthoritativeFanoutPathContext,
   hooks: AuthoritativeFanoutPathHooks,
@@ -87,14 +102,24 @@ export async function executeAuthoritativeFanoutPath(
     nowSec,
     snapshotState,
   } = context;
+  let pendingDrainSendMs = 0;
+  const timedPendingDrain = async () => {
+    const startedAtMs = Date.now();
+    try {
+      return await drainPendingQueue(db, context.botToken, TELEGRAM_PENDING_DRAIN_BUDGET, context.signal, {
+        softDeadlineAtMs: context.dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
+        markTelegramDeliveryStarted: context.markTelegramDeliveryStarted,
+      });
+    } finally {
+      pendingDrainSendMs += Math.max(0, Date.now() - startedAtMs);
+    }
+  };
   const prePlanDrainResult = context.pendingCapacityBefore.due > 0
-    ? await drainPendingQueue(db, context.botToken, TELEGRAM_PENDING_DRAIN_BUDGET, context.signal, {
-      softDeadlineAtMs: context.dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
-      markTelegramDeliveryStarted: context.markTelegramDeliveryStarted,
-    })
+    ? await timedPendingDrain()
     : null;
   const fanoutStartedAtMs = Date.now();
   let cacheResult: Promise<StablecoinsCacheLoadResult> | null = null;
+  const sourceResolutionStartedAtMs = Date.now();
   const sourceResolution = await resolveTelegramAlertSourcePresetPages(db, sourceEvent, nowSec, {
     getStablecoinsCacheResult: () => {
       cacheResult ??= loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
@@ -102,11 +127,13 @@ export async function executeAuthoritativeFanoutPath(
     },
     includeSubscriberMaps: false,
   });
+  const sourcePresetResolutionMs = Math.max(0, Date.now() - sourceResolutionStartedAtMs);
   await hooks.updatePresetFailureState(
     sourceResolution.queryFailures > 0 || sourceResolution.resolutionFailures > 0,
   );
 
   let planner: Awaited<ReturnType<typeof runTelegramTargetPlanCoordinator>> | null = null;
+  let planningCallbacks: TelegramAuthoritativePlanningCallbacks | null = null;
   if (sourceResolution.allComplete) {
     const handoffAllowance = await readTelegramFreshHandoffAllowance(
       db,
@@ -114,6 +141,27 @@ export async function executeAuthoritativeFanoutPath(
       Number.MAX_SAFE_INTEGER,
     );
     await markTelegramAlertSourceEventPlanned(db, sourceEvent.sourceEventId, nowSec);
+    planningCallbacks = createTelegramAuthoritativePlanningCallbacks({
+      db,
+      sourceEventId: sourceEvent.sourceEventId,
+      nowSec,
+      events: {
+        dewsChanges: events.dewsChanges,
+        depegTriggered: events.depegTriggered,
+        depegResolved: events.depegResolved,
+        depegWorsening: events.depegWorsening,
+        safetyChanges: events.safetyChanges,
+        launchPromoted: events.launchPromoted,
+        reservePromoted: events.reservePromoted,
+      },
+      stablecoinIds: {
+        dewsIds: events.dewsIds,
+        depegIds: events.depegIds,
+        safetyIds: events.safetyIds,
+        launchIds: events.launchIds,
+        reserveIds: events.reserveIds,
+      },
+    });
     planner = await runTelegramTargetPlanCoordinator({
       db,
       sourceEventId: sourceEvent.sourceEventId,
@@ -121,27 +169,22 @@ export async function executeAuthoritativeFanoutPath(
       signal: context.signal,
       maxSteps: TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN,
       deliveryHandoffLimit: handoffAllowance.maxTargets,
-      callbacks: createTelegramAuthoritativePlanningCallbacks({
-        db,
-        sourceEventId: sourceEvent.sourceEventId,
-        nowSec,
-        events: {
-          dewsChanges: events.dewsChanges,
-          depegTriggered: events.depegTriggered,
-          depegResolved: events.depegResolved,
-          depegWorsening: events.depegWorsening,
-          safetyChanges: events.safetyChanges,
-          launchPromoted: events.launchPromoted,
-          reservePromoted: events.reservePromoted,
-        },
-        stablecoinIds: {
-          dewsIds: events.dewsIds,
-          depegIds: events.depegIds,
-          safetyIds: events.safetyIds,
-          launchIds: events.launchIds,
-          reserveIds: events.reserveIds,
-        },
-      }),
+      callbacks: planningCallbacks,
+      onStep: async (step) => {
+        if (step.step !== 1 && step.step % 8 !== 0) return;
+        await reportDigestProgress(context.reportProgress, {
+          stage: "target-plan-progress",
+          message: `Advancing Telegram target plan (${step.state})`,
+          providerFamily: "telegram-dispatch",
+          itemsDone: step.step,
+          itemsTotal: TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN,
+          metadata: {
+            sourceEventId: step.sourceEventId,
+            plannerGeneration: step.generation,
+            plannerState: step.state,
+          },
+        });
+      },
     });
   }
   const progress = await loadTelegramTargetPlanProgress(db, sourceEvent.sourceEventId);
@@ -164,10 +207,7 @@ export async function executeAuthoritativeFanoutPath(
   });
 
   const drainResult = prePlanDrainResult ?? ((planner?.enqueued ?? 0) > 0
-    ? await drainPendingQueue(db, context.botToken, TELEGRAM_PENDING_DRAIN_BUDGET, context.signal, {
-      softDeadlineAtMs: context.dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
-      markTelegramDeliveryStarted: context.markTelegramDeliveryStarted,
-    })
+    ? await timedPendingDrain()
     : emptyDrainResult());
   const archivedUnknown = await archiveAgedExecutionUnknownPendingAlerts(db, nowSec);
   const expiredCount = await cleanupExpiredPendingAlerts(db, nowSec);
@@ -185,6 +225,7 @@ export async function executeAuthoritativeFanoutPath(
   }
 
   const base = emptyResult(false, context.chatsWithActiveSnooze);
+  const planningTelemetry = planningCallbacks?.getTelemetry();
   const result: DispatchResult = {
     ...base,
     eventsDetected: {
@@ -216,6 +257,35 @@ export async function executeAuthoritativeFanoutPath(
     fanoutQueryMs: fanoutMs,
     fanoutBuildMs: 0,
     fanoutTotalMs: fanoutMs,
+    authoritativePlanning: {
+      sourceEventId: sourceEvent.sourceEventId,
+      sourceEventFamilies: sourceEventFamilies(events),
+      sourcePresetResolutionMs,
+      sourcePresetPagesCompleted: sourceResolution.pagesCompletedThisRun,
+      candidateHorizonQueryMs: planningTelemetry?.candidateHorizonQueryMs ?? 0,
+      captureEligibilityMs: planningTelemetry?.captureEligibilityMs ?? 0,
+      fanoutInputLoadMs: planningTelemetry?.fanoutInputLoadMs ?? 0,
+      directSubscriberLoadMs: planningTelemetry?.directSubscriberLoadMs ?? 0,
+      presetSubscriberLoadMs: planningTelemetry?.presetSubscriberLoadMs ?? 0,
+      globalSubscriberLoadMs: planningTelemetry?.globalSubscriberLoadMs ?? 0,
+      snoozeExplicitOffLoadMs: planningTelemetry?.snoozeExplicitOffLoadMs ?? 0,
+      preferenceGenerationValidationMs: planningTelemetry?.preferenceGenerationValidationMs ?? 0,
+      routingEvaluationMs: planningTelemetry?.routingEvaluationMs ?? 0,
+      targetMaterializationD1Ms: planner?.targetMaterializationMs ?? 0,
+      enqueueHandoffMs: planner?.targetHandoffMs ?? 0,
+      duplicatePriorDeliverySuppressionMs: planner?.duplicateSuppressionMs ?? 0,
+      pendingDrainSendMs,
+      capturedSubscriberCount: progress.capturedSubscribers,
+      capturePageCount: planner?.capturePages ?? 0,
+      planningPageCount: planner?.planningPages ?? 0,
+      fanoutInputLoadCallCount: planningTelemetry?.fanoutInputLoadCalls ?? 0,
+      fanoutInputCacheHitCount: planningTelemetry?.fanoutInputCacheHits ?? 0,
+      plannedTargetCount: progress.targets,
+      duplicateSuppressedTargetCount: planner?.duplicateSuppressed ?? 0,
+      handoffEnqueuedCount: planner?.enqueued ?? 0,
+      handoffPageCount: planner?.handoffPages ?? 0,
+      coordinatorStepCount: planner?.steps ?? 0,
+    },
     reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
     ...reserveSourceFields(snapshotState.reserveSourceAssessment),
     ...safetySourceFields(

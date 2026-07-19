@@ -227,6 +227,56 @@ describe("runFiveMinuteTelegramSlot", () => {
     }));
   });
 
+  it("defers recap planning when the risk-dispatch lease is locked", async () => {
+    const runtime = buildRuntime("token");
+    vi.mocked(runtime.runLeasedCron).mockImplementation(async (job, fn) => {
+      if (job === "dispatch-telegram-alerts") return { status: "skipped_locked" } as never;
+      return fn(new AbortController().signal, vi.fn());
+    });
+
+    const summary = await runFiveMinuteTelegramSlot(runtime);
+
+    expect(dispatchTelegramAlerts).not.toHaveBeenCalled();
+    expect(planTelegramPersonalizedRecaps).not.toHaveBeenCalled();
+    expect(summary.jobs.find((job) => job.job === "telegram-personalized-recap-planner")).toMatchObject({
+      outcome: "skipped",
+      reason: "risk-dispatch-locked-or-incomplete",
+      neutral: true,
+    });
+  });
+
+  it("defers recap planning when risk dispatch consumes the shared slot budget", async () => {
+    vi.mocked(Date.now)
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(280_000)
+      .mockReturnValue(280_000);
+
+    const summary = await runFiveMinuteTelegramSlot(buildRuntime("token"));
+
+    expect(dispatchTelegramAlerts).toHaveBeenCalledOnce();
+    expect(planTelegramPersonalizedRecaps).not.toHaveBeenCalled();
+    expect(summary.jobs.find((job) => job.job === "telegram-personalized-recap-planner")).toMatchObject({
+      outcome: "skipped",
+      reason: "risk-dispatch-consumed-slot-budget",
+      neutral: true,
+    });
+  });
+
+  it("defers recap planning after a risk-dispatch failure", async () => {
+    vi.mocked(dispatchTelegramAlerts).mockRejectedValue(new Error("dispatch failed"));
+
+    const summary = await runFiveMinuteTelegramSlot(buildRuntime("token"));
+
+    expect(planTelegramPersonalizedRecaps).not.toHaveBeenCalled();
+    expect(summary.jobs.find((job) => job.job === "dispatch-telegram-alerts")?.outcome).toBe("error");
+    expect(summary.jobs.find((job) => job.job === "telegram-personalized-recap-planner")).toMatchObject({
+      outcome: "skipped",
+      reason: "risk-dispatch-failed",
+      neutral: true,
+    });
+  });
+
   it("does not refresh registration success when every unit is skipped", async () => {
     const skipped = {
       attempted: false,

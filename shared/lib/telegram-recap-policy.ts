@@ -15,6 +15,9 @@ export const TELEGRAM_RECAP_MAX_RECIPIENTS_PER_RUN =
   TELEGRAM_RECAP_DUE_PAGE_SIZE * TELEGRAM_RECAP_MAX_PAGES_PER_RUN;
 /** Stop DB-only planning before it can crowd the shared five-minute cron slot. */
 export const TELEGRAM_RECAP_PLANNER_SOFT_DEADLINE_MS = 3 * 60 * 1_000;
+/** Keep recap work inside the shared five-minute lane after risk dispatch. */
+export const TELEGRAM_RECAP_SHARED_SLOT_BUDGET_MS = 5 * 60 * 1_000;
+export const TELEGRAM_RECAP_SLOT_RESERVE_MS = 30 * 1_000;
 /** Shared Tape rows loaded per due page; planner reads one extra row to detect truncation. */
 export const TELEGRAM_RECAP_TAPE_PAGE_LIMIT = 1_500;
 export const TELEGRAM_RECAP_MAX_COINS = 8;

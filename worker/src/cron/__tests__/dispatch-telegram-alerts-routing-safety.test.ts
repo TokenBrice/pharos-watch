@@ -78,9 +78,13 @@ describe("dispatchTelegramAlerts", () => {
       dews: [{ stablecoinId: "usdc-circle", signals: { supply: { value: 45, available: true } } }],
       depegs: [{ stablecoinId: "usdc-circle" }],
       safety: [{ stablecoinId: "usdc-circle", grade: "C", score: 61 }],
-      subscribers: [{ chatId: "12345", lastActiveAt: now }],
+      subscribers: [
+        { chatId: "12345", lastActiveAt: now },
+        { chatId: "unrelated", lastActiveAt: now },
+      ],
       subscriptions: [
         { chatId: "12345", stablecoinId: "usdc-circle", alerts: { dews: true, depeg: true, safety: true } },
+        { chatId: "unrelated", stablecoinId: "usdt-tether", alerts: { dews: true, depeg: true, safety: true } },
       ],
     });
     const result = await dispatchTelegramAlerts(harness.db, "bot-token");
@@ -96,6 +100,20 @@ describe("dispatchTelegramAlerts", () => {
       suppressedMethodologyChanges: 0,
     });
     expect(metadata).toMatchObject({ subscribersNotified: 1, messagesSent: 1 });
+    expect(metadata.authoritativePlanning).toMatchObject({
+      sourceEventId: expect.stringMatching(/^telegram-source:/),
+      sourceEventFamilies: ["dews", "depeg", "safety"],
+      capturedSubscriberCount: 1,
+      capturePageCount: 1,
+      planningPageCount: 1,
+      fanoutInputLoadCallCount: 1,
+      fanoutInputCacheHitCount: 1,
+      handoffEnqueuedCount: 1,
+      handoffPageCount: 1,
+    });
+    expect(
+      harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_planning_subscribers").get(),
+    ).toEqual({ count: 1 });
     expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "12345" })]);
   });
 

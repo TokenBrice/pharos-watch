@@ -8,7 +8,7 @@ Detection signals:
 
 - Admin `/api/status` `crons["dispatch-telegram-alerts"].lastRun.metadata` shows zero `messagesSent` while `eventsDetected > 0` across consecutive runs. (These per-run counters are dispatch-cron metadata; the `telegramBot` block does not carry them.)
 - `crons["dispatch-telegram-alerts"].lastRun.metadata` reports `snapshotSeeded: true` repeatedly.
-- `crons["dispatch-telegram-alerts"].lastRun.metadata` includes capacity fields: `freshCandidateCount`, `freshOverflow`, `pendingAttempted`, `pendingSent`, `pendingRetryQueued`, `pendingExpired`, `oldestPendingAgeSec`, `estimatedDrainTimeSec`, `perAlertTypeTargets`, and fan-out timing (`fanoutQueryMs`, `fanoutBuildMs`, `fanoutTotalMs`).
+- `crons["dispatch-telegram-alerts"].lastRun.metadata` includes capacity fields: `freshCandidateCount`, `freshOverflow`, `pendingAttempted`, `pendingSent`, `pendingRetryQueued`, `pendingExpired`, `oldestPendingAgeSec`, `estimatedDrainTimeSec`, `perAlertTypeTargets`, and fan-out timing (`fanoutQueryMs`, `fanoutBuildMs`, `fanoutTotalMs`). For source-event runs, `authoritativePlanning` splits source-preset, candidate-horizon, capture/fan-out loader, preference validation, routing, materialization, duplicate suppression, handoff, and pending-drain time and includes page/load/cache/target counts.
 - `retryErrorClassCounts` dominated by a single runtime class (`rate_limit`, `blocked`, `bad_request`, `auth_error`, `server_error`, `timeout`, `network`, or `unknown`).
 - A specific user reports silence: pull their per-chat state via the admin endpoint below.
 
@@ -18,8 +18,9 @@ Detection signals:
 2. **D1 healthy?** Cross-check with [`db-connectivity.md`](./db-connectivity.md). Preset query/resolution failures degrade preset delivery only; direct and global delivery should continue with `presetFailure`, `presetQueryFailures`, and `presetResolutionFailures` set in dispatch metadata.
 3. **Pending queue draining?** `/api/status` -> `telegramBot.pendingDeliveries`, `pendingDeliveryBacklog`, and `oldestPendingDeliveryAgeSec`. A growing backlog points to a rate-limit storm or expiration risk — see [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md) and [`telegram-backlog-expiration.md`](./telegram-backlog-expiration.md).
    If `pendingDeliveryBacklog.executionUnknown > 0`, inspect both pending rows and fresh target effects with [`telegram-operator-queries.md`](./telegram-operator-queries.md). Do not retry an unknown target until an operator has reconciled whether Telegram accepted it.
-4. **Snapshot seeded?** `snapshotSeeded: true` for the last run means no alerts will be sent (24h staleness gate; see [`docs/telegram-alerts.md`](../telegram-alerts.md) section First-Run / Stale-Snapshot Behavior).
-5. **Single chat affected?** Inspect the chat's full state:
+4. **Source planning slow?** Inspect `authoritativePlanning`. A high `candidateHorizonQueryMs` points to candidate/index work; high direct/preset/global/snooze loader fields point to fan-out input reads; `fanoutInputLoadCallCount` above `capturePageCount` without preference-generation churn indicates lost page reuse; high `targetMaterializationD1Ms` or `enqueueHandoffMs` isolates the manifest or handoff phase. Compare `capturedSubscriberCount` with the source's actual target scope before treating a large cohort as expected.
+5. **Snapshot seeded?** `snapshotSeeded: true` for the last run means no alerts will be sent (24h staleness gate; see [`docs/telegram-alerts.md`](../telegram-alerts.md) section First-Run / Stale-Snapshot Behavior).
+6. **Single chat affected?** Inspect the chat's full state:
 
    ```bash
    curl -H "CF-Access-Client-Id: $CF_ID" \
@@ -34,7 +35,7 @@ Detection signals:
    - `subscriber.deliveryControls.blockStrikes.count >= 2` (subscriber auto-disabled after repeated Telegram 403s)
    - empty subscriptions / global flags all 0
    - `subscriber: null` with retained pending/dead-letter/target history, which means registration was deleted but bounded operational evidence remains
-6. **Webhook secret valid?** Failed validations return `200 ok` silently. Check Cloudflare logs for `telegram-webhook` requests against the configured `TELEGRAM_WEBHOOK_SECRET`, especially if the secret was recently rotated.
+7. **Webhook secret valid?** Failed validations return `200 ok` silently. Check Cloudflare logs for `telegram-webhook` requests against the configured `TELEGRAM_WEBHOOK_SECRET`, especially if the secret was recently rotated.
 
 ## Remediation
 

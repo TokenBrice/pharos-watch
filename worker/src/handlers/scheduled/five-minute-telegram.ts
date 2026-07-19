@@ -15,6 +15,11 @@ import {
   type TelegramRecapRolloutCleanupResult,
 } from "../../cron/telegram-recap-store";
 import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
+import {
+  TELEGRAM_RECAP_PLANNER_SOFT_DEADLINE_MS,
+  TELEGRAM_RECAP_SHARED_SLOT_BUDGET_MS,
+  TELEGRAM_RECAP_SLOT_RESERVE_MS,
+} from "@shared/lib/telegram-recap-policy";
 import { publishTelegramPulseSnapshotWithOutcome } from "../../api/telegram-pulse";
 import { runTelegramDegradationWatchdog } from "../../cron/telegram-degradation-watchdog";
 import { cleanExpiredDisambiguations } from "../../api/telegram-store/disambiguation";
@@ -134,13 +139,28 @@ function buildTelegramSlotGroups(
       errorMessage: "[cron] dispatch-telegram-alerts failed:",
       run: async (signal, reportProgress) => {
         await ensureRecapRolloutCleanup();
-        return dispatchTelegramAlerts(
-          runtime.db,
-          botToken,
-          signal,
-          sharedTelegramState,
-          reportProgress,
-        );
+        const startedAtMs = Date.now();
+        Object.assign(sharedTelegramState, {
+          dispatchStartedAtMs: startedAtMs,
+          dispatchCompleted: false,
+          dispatchFailed: false,
+          dispatchDurationMs: 0,
+        });
+        try {
+          return await dispatchTelegramAlerts(
+            runtime.db,
+            botToken,
+            signal,
+            sharedTelegramState,
+            reportProgress,
+          );
+        } catch (error) {
+          sharedTelegramState.dispatchFailed = true;
+          throw error;
+        } finally {
+          sharedTelegramState.dispatchCompleted = true;
+          sharedTelegramState.dispatchDurationMs = Math.max(0, Date.now() - startedAtMs);
+        }
       },
     });
   }
@@ -172,12 +192,53 @@ function buildTelegramSlotGroups(
             }),
           };
         }
-        const planned = await planTelegramPersonalizedRecaps(runtime.db, signal, { rolloutPolicy: recapRollout });
+        if (botToken && (
+          sharedTelegramState.dispatchStartedAtMs == null ||
+          sharedTelegramState.dispatchCompleted !== true ||
+          sharedTelegramState.dispatchFailed === true
+        )) {
+          return {
+            status: "skipped_neutral" as const,
+            metadata: JSON.stringify({
+              rollout: { mode: recapRollout.mode, pendingEffects: true },
+              cleanup,
+              skipped: sharedTelegramState.dispatchFailed
+                ? "risk-dispatch-failed"
+                : "risk-dispatch-locked-or-incomplete",
+            }),
+          };
+        }
+        const riskDispatchDurationMs = botToken
+          ? Math.max(0, sharedTelegramState.dispatchDurationMs ?? TELEGRAM_RECAP_SHARED_SLOT_BUDGET_MS)
+          : 0;
+        const recapBudgetMs = Math.min(
+          TELEGRAM_RECAP_PLANNER_SOFT_DEADLINE_MS,
+          TELEGRAM_RECAP_SHARED_SLOT_BUDGET_MS - riskDispatchDurationMs - TELEGRAM_RECAP_SLOT_RESERVE_MS,
+        );
+        if (recapBudgetMs <= 0) {
+          return {
+            status: "skipped_neutral" as const,
+            metadata: JSON.stringify({
+              rollout: { mode: recapRollout.mode, pendingEffects: true },
+              cleanup,
+              skipped: "risk-dispatch-consumed-slot-budget",
+              riskDispatchDurationMs,
+              sharedSlotBudgetMs: TELEGRAM_RECAP_SHARED_SLOT_BUDGET_MS,
+              slotReserveMs: TELEGRAM_RECAP_SLOT_RESERVE_MS,
+            }),
+          };
+        }
+        const planned = await planTelegramPersonalizedRecaps(runtime.db, signal, {
+          rolloutPolicy: recapRollout,
+          softDeadlineMs: recapBudgetMs,
+        });
         return {
           ...planned,
           metadata: JSON.stringify({
             ...(parseJsonObject<Record<string, unknown>>(planned.metadata, "five-minute-telegram:recap-planner") ?? {}),
             cleanup,
+            riskDispatchDurationMs,
+            recapBudgetMs,
           }),
         };
       },

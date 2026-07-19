@@ -22,6 +22,10 @@ import type {
 } from "./types";
 
 export interface TelegramTargetPlanCoordinatorCallbacks {
+  loadCaptureSubscribers?: (
+    claim: TelegramTargetPlanningClaim,
+    limit: number,
+  ) => Promise<readonly Omit<TelegramPlanningSubscriber, "initiallyEligible">[]>;
   resolveInitialEligibility: (
     subscribers: readonly Omit<TelegramPlanningSubscriber, "initiallyEligible">[],
   ) => Promise<ReadonlyMap<string, { eligible: boolean; observedPreferenceGeneration: number }>>;
@@ -38,6 +42,13 @@ export interface TelegramTargetPlanCoordinatorResult {
   enqueued: number;
   remainingTargets: number;
   expiryComplete: boolean;
+  capturePages: number;
+  planningPages: number;
+  handoffPages: number;
+  targetMaterializationMs: number;
+  targetHandoffMs: number;
+  duplicateSuppressed: number;
+  duplicateSuppressionMs: number;
 }
 
 export { estimateTelegramTargetPlanCoordinatorBound };
@@ -69,6 +80,12 @@ export async function runTelegramTargetPlanCoordinator(args: {
   maxSteps?: number;
   /** Total target rows this run may hand off to pending; zero holds delivery-open targets untouched. */
   deliveryHandoffLimit?: number;
+  onStep?: (progress: {
+    step: number;
+    state: TelegramTargetPlanningClaim["state"];
+    sourceEventId: string;
+    generation: number;
+  }) => Promise<void> | void;
   signal?: AbortSignal;
 }): Promise<TelegramTargetPlanCoordinatorResult> {
   const maxSteps = Math.max(
@@ -101,6 +118,13 @@ export async function runTelegramTargetPlanCoordinator(args: {
         enqueued: 0,
         remainingTargets: 0,
         expiryComplete: expiry?.state === "complete",
+        capturePages: 0,
+        planningPages: 0,
+        handoffPages: 0,
+        targetMaterializationMs: 0,
+        targetHandoffMs: 0,
+        duplicateSuppressed: 0,
+        duplicateSuppressionMs: 0,
       };
     }
     throw new Error("Telegram target plan source is owned by another worker");
@@ -108,6 +132,13 @@ export async function runTelegramTargetPlanCoordinator(args: {
   let enqueued = 0;
   let remainingTargets = 0;
   let steps = 0;
+  let capturePages = 0;
+  let planningPages = 0;
+  let handoffPages = 0;
+  let targetMaterializationMs = 0;
+  let targetHandoffMs = 0;
+  let duplicateSuppressed = 0;
+  let duplicateSuppressionMs = 0;
   let remainingHandoffBudget = args.deliveryHandoffLimit == null
     ? Number.POSITIVE_INFINITY
     : Math.max(0, Math.floor(args.deliveryHandoffLimit));
@@ -115,6 +146,12 @@ export async function runTelegramTargetPlanCoordinator(args: {
   while (steps < maxSteps) {
     throwIfAborted(args.signal);
     steps += 1;
+    await args.onStep?.({
+      step: steps,
+      state: claim.state,
+      sourceEventId: claim.sourceEventId,
+      generation: claim.generation,
+    });
     if (claim.state === "degraded") {
       if (!await reopenTelegramTargetPlanDeliveryAfterIdentityCollision(args.db, claim, args.nowSec)) break;
       const refreshed = await claimTelegramTargetPlanning(
@@ -135,7 +172,9 @@ export async function runTelegramTargetPlanCoordinator(args: {
         claim,
         args.nowSec,
         args.callbacks.resolveInitialEligibility,
+        args.callbacks.loadCaptureSubscribers,
       );
+      capturePages += 1;
     } else if (claim.state === "planning" || claim.state === "materializing") {
       const incompletePage = await reconcileIncompleteTelegramTargetPlanPage(args.db, claim, args.nowSec);
       if (incompletePage.complete) {
@@ -167,6 +206,7 @@ export async function runTelegramTargetPlanCoordinator(args: {
         if (decisions.length !== subscribers.length) {
           throw new Error("Telegram target planner did not return one decision per captured subscriber");
         }
+        const materializationStartedAtMs = Date.now();
         await materializeTelegramTargetPlanPage(
           args.db,
           claim,
@@ -174,6 +214,8 @@ export async function runTelegramTargetPlanCoordinator(args: {
           decisions,
           args.nowSec,
         );
+        targetMaterializationMs += Math.max(0, Date.now() - materializationStartedAtMs);
+        planningPages += 1;
       }
     } else if (claim.state === "ready") {
       if (!await openTelegramTargetPlanDelivery(args.db, claim, args.nowSec)) {
@@ -181,6 +223,7 @@ export async function runTelegramTargetPlanCoordinator(args: {
       }
     } else if (claim.state === "delivery_open") {
       if (remainingHandoffBudget <= 0) break;
+      const handoffStartedAtMs = Date.now();
       const result = await enqueueTelegramAuthoritativeTargets(
         args.db,
         claim.sourceEventId,
@@ -188,6 +231,10 @@ export async function runTelegramTargetPlanCoordinator(args: {
         args.nowSec,
         Math.min(TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE, remainingHandoffBudget),
       );
+      targetHandoffMs += Math.max(0, Date.now() - handoffStartedAtMs);
+      handoffPages += 1;
+      duplicateSuppressed += result.duplicateSuppressed;
+      duplicateSuppressionMs += result.duplicateSuppressionMs;
       enqueued += result.enqueued;
       remainingHandoffBudget -= result.processed;
       remainingTargets = result.remaining;
@@ -228,5 +275,12 @@ export async function runTelegramTargetPlanCoordinator(args: {
     enqueued,
     remainingTargets,
     expiryComplete: false,
+    capturePages,
+    planningPages,
+    handoffPages,
+    targetMaterializationMs,
+    targetHandoffMs,
+    duplicateSuppressed,
+    duplicateSuppressionMs,
   };
 }

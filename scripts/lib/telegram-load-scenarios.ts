@@ -13,6 +13,8 @@ import {
   TELEGRAM_MAX_MESSAGES_PER_RUN,
   TELEGRAM_PENDING_DRAIN_BUDGET,
   TELEGRAM_PENDING_PRIORITY,
+  TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE,
+  TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE,
 } from "../../shared/lib/telegram-delivery-policy";
 type AlertType = "depeg" | "dews" | "safety" | "launch" | "reserve" | "freeze";
 type ScenarioId = "single-depeg" | "market-wide-burst" | "dews-safety-burst" | "freeze-event" | "admin-broadcast" | "telegram-429-storm";
@@ -111,6 +113,23 @@ export interface LoadScenarioResult {
   sloStatus: SloStatus;
   exploratory: boolean;
 }
+
+export interface ProductionCalibratedDispatchScenario {
+  subscriberCount: number;
+  candidateSubscriberCount: number;
+  targetCount: number;
+  sourceEventCount: number;
+  capturePageCount: number;
+  planningPageCount: number;
+  fanoutInputLoadCallCount: number;
+  duplicatedFanoutInputLoadCallCount: number;
+  handoffPageCount: number;
+  handoffOperationCount: number;
+  maxHandoffOperationsPerPage: number;
+  coordinatorStepCount: number;
+  estimatedInvocationWallMs: number;
+  maxInvocationWallMs: number;
+}
 export const {
   watcherTargets: WATCHER_TARGETS,
   requiredTarget: REQUIRED_TARGET,
@@ -126,6 +145,15 @@ export const {
   cpuBudgetSafetyFraction: CPU_BUDGET_SAFETY_FRACTION,
   formatCpuMsPerChat: FORMAT_CPU_MS_PER_CHAT,
   sendCpuMsPerMessage: SEND_CPU_MS_PER_MESSAGE,
+  productionDispatchSubscribers: PRODUCTION_DISPATCH_SUBSCRIBERS,
+  productionDispatchCandidateSubscribers: PRODUCTION_DISPATCH_CANDIDATE_SUBSCRIBERS,
+  productionDispatchTargets: PRODUCTION_DISPATCH_TARGETS,
+  productionFanoutInputPageWallMs: PRODUCTION_FANOUT_INPUT_PAGE_WALL_MS,
+  productionPlanningPageWallMs: PRODUCTION_PLANNING_PAGE_WALL_MS,
+  productionHandoffOperationsPerPage: PRODUCTION_HANDOFF_OPERATIONS_PER_PAGE,
+  productionHandoffOperationWallMs: PRODUCTION_HANDOFF_OPERATION_WALL_MS,
+  productionSourcePresetWallMs: PRODUCTION_SOURCE_PRESET_WALL_MS,
+  productionDispatchWallBudgetMs: PRODUCTION_DISPATCH_WALL_BUDGET_MS,
 } = TELEGRAM_LOAD_GUARD_ASSUMPTIONS;
 
 export const FRESH_ATTEMPTS_PER_RUN = TELEGRAM_MAX_MESSAGES_PER_RUN;
@@ -138,6 +166,46 @@ export const CRON_INTERVAL_SECONDS = TELEGRAM_DISPATCH_INTERVAL_SEC;
 export const PENDING_TTL_SECONDS = PENDING_TTL_SEC;
 export const ADMIN_PENDING_TTL_SECONDS = TELEGRAM_ALERT_TTL_SEC.adminBroadcast;
 const ALERTS_PER_MESSAGE_CHUNK = TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE;
+
+export function simulateProductionCalibratedDispatch(): ProductionCalibratedDispatchScenario {
+  const capturePageCount = Math.ceil(
+    PRODUCTION_DISPATCH_CANDIDATE_SUBSCRIBERS / TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE,
+  );
+  const planningPageCount = capturePageCount;
+  const fanoutInputLoadCallCount = capturePageCount;
+  const handoffPageCount = Math.ceil(
+    PRODUCTION_DISPATCH_TARGETS / TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE,
+  );
+  // Includes fixed source/expiry/selection/counter/remainder reads around the
+  // set-based suppression, atomic handoff batch, and page confirmation.
+  const handoffOperationCount = handoffPageCount * PRODUCTION_HANDOFF_OPERATIONS_PER_PAGE;
+  const coordinatorStepCount = capturePageCount + planningPageCount + handoffPageCount + 2;
+  const pendingDrainWallMs = Math.ceil(
+    PRODUCTION_DISPATCH_TARGETS / EFFECTIVE_SEND_MESSAGES_PER_SECOND,
+  ) * 1_000;
+  const estimatedInvocationWallMs =
+    PRODUCTION_SOURCE_PRESET_WALL_MS +
+    fanoutInputLoadCallCount * PRODUCTION_FANOUT_INPUT_PAGE_WALL_MS +
+    planningPageCount * PRODUCTION_PLANNING_PAGE_WALL_MS +
+    handoffOperationCount * PRODUCTION_HANDOFF_OPERATION_WALL_MS +
+    pendingDrainWallMs;
+  return {
+    subscriberCount: PRODUCTION_DISPATCH_SUBSCRIBERS,
+    candidateSubscriberCount: PRODUCTION_DISPATCH_CANDIDATE_SUBSCRIBERS,
+    targetCount: PRODUCTION_DISPATCH_TARGETS,
+    sourceEventCount: 1,
+    capturePageCount,
+    planningPageCount,
+    fanoutInputLoadCallCount,
+    duplicatedFanoutInputLoadCallCount: Math.max(0, fanoutInputLoadCallCount - capturePageCount),
+    handoffPageCount,
+    handoffOperationCount,
+    maxHandoffOperationsPerPage: PRODUCTION_HANDOFF_OPERATIONS_PER_PAGE,
+    coordinatorStepCount,
+    estimatedInvocationWallMs,
+    maxInvocationWallMs: PRODUCTION_DISPATCH_WALL_BUDGET_MS,
+  };
+}
 
 // ---------- C102: per-invocation CPU budget modelling ----------
 

@@ -25,12 +25,14 @@ import {
   SEND_CPU_MS_PER_MESSAGE,
   SEND_LOOP_SOFT_DEADLINE_SECONDS,
   simulateLoadScenarios,
+  simulateProductionCalibratedDispatch,
   SPIKE_MAX_SECONDS,
   summarizeFixture,
   TELEGRAM_BROADCAST_MESSAGES_PER_SECOND,
   TELEGRAM_P95_SEND_LATENCY_MS,
   WATCHER_TARGETS,
   type LoadScenarioResult,
+  type ProductionCalibratedDispatchScenario,
   type SyntheticFixtureSummary,
   type SyntheticTelegramFixture,
 } from "../lib/telegram-load-scenarios";
@@ -41,10 +43,16 @@ import {
 } from "../lib/telegram-recap-load-scenarios";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
-export { buildSyntheticTelegramFixture, simulateLoadScenarios, summarizeFixture } from "../lib/telegram-load-scenarios";
+export {
+  buildSyntheticTelegramFixture,
+  simulateLoadScenarios,
+  simulateProductionCalibratedDispatch,
+  summarizeFixture,
+} from "../lib/telegram-load-scenarios";
 export { simulateTelegramRecapLoadScenarios } from "../lib/telegram-recap-load-scenarios";
 export type {
   LoadScenarioResult,
+  ProductionCalibratedDispatchScenario,
   SyntheticFixtureSummary,
   SyntheticTelegramFixture,
 } from "../lib/telegram-load-scenarios";
@@ -140,8 +148,35 @@ export interface TelegramLoadCheckReport {
   fixtureSummaries: SyntheticFixtureSummary[];
   scenarios: LoadScenarioResult[];
   recapScenarios: TelegramRecapLoadScenarioResult[];
+  productionDispatchScenario: ProductionCalibratedDispatchScenario;
   queryPlans: QueryPlanCheckResult[];
   statusPathBudgets: StatusPathBudgetResult[];
+}
+
+export function findProductionDispatchBreaches(
+  report: TelegramLoadCheckReport,
+): string[] {
+  const scenario = report.productionDispatchScenario;
+  const breaches: string[] = [];
+  if (scenario.candidateSubscriberCount >= scenario.subscriberCount) {
+    breaches.push("candidate-horizon-not-reduced");
+  }
+  if (scenario.fanoutInputLoadCallCount > scenario.capturePageCount) {
+    breaches.push("fanout-input-pages-reloaded");
+  }
+  if (scenario.duplicatedFanoutInputLoadCallCount > 0) {
+    breaches.push("duplicated-fanout-input-loads");
+  }
+  if (
+    scenario.handoffOperationCount >
+      scenario.handoffPageCount * scenario.maxHandoffOperationsPerPage
+  ) {
+    breaches.push("target-oriented-handoff-operations");
+  }
+  if (scenario.estimatedInvocationWallMs > scenario.maxInvocationWallMs) {
+    breaches.push("invocation-wall-budget");
+  }
+  return breaches;
 }
 /**
  * Required-target scenarios whose modeled per-invocation CPU exceeds the safety
@@ -274,7 +309,33 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
           AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)
           AND (sub.alert_snooze_until_ts IS NULL OR sub.alert_snooze_until_ts <= ?)`,
       binds: ["usdc-circle", "usdt-tether", "dai-makerdao", 1_800_000_000, 1_800_000_000],
-      requiredDetails: ["idx_tg_sub_coin", "sqlite_autoindex_telegram_subscribers_1"],
+      requiredDetails: ["idx_tg_sub_depeg_coin_chat", "sqlite_autoindex_telegram_subscribers_1"],
+    },
+    {
+      id: "fanout-direct-dews",
+      category: "fan-out",
+      sql: `SELECT sub.stablecoin_id, sub.chat_id, u.last_active_at
+         FROM telegram_subscriptions sub
+         JOIN telegram_subscribers u ON u.chat_id = sub.chat_id
+        WHERE sub.stablecoin_id IN (?, ?, ?)
+          AND sub.alert_dews = 1
+          AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)
+          AND (sub.alert_snooze_until_ts IS NULL OR sub.alert_snooze_until_ts <= ?)`,
+      binds: ["usdc-circle", "usdt-tether", "dai-makerdao", 1_800_000_000, 1_800_000_000],
+      requiredDetails: ["idx_tg_sub_dews_coin_chat", "sqlite_autoindex_telegram_subscribers_1"],
+    },
+    {
+      id: "fanout-direct-safety",
+      category: "fan-out",
+      sql: `SELECT sub.stablecoin_id, sub.chat_id, u.last_active_at
+         FROM telegram_subscriptions sub
+         JOIN telegram_subscribers u ON u.chat_id = sub.chat_id
+        WHERE sub.stablecoin_id IN (?, ?, ?)
+          AND sub.alert_safety = 1
+          AND (u.alert_snooze_until_ts IS NULL OR u.alert_snooze_until_ts <= ?)
+          AND (sub.alert_snooze_until_ts IS NULL OR sub.alert_snooze_until_ts <= ?)`,
+      binds: ["usdc-circle", "usdt-tether", "dai-makerdao", 1_800_000_000, 1_800_000_000],
+      requiredDetails: ["idx_tg_sub_safety_coin_chat", "sqlite_autoindex_telegram_subscribers_1"],
     },
     {
       id: "fanout-global-depeg",
@@ -761,6 +822,7 @@ export function buildTelegramLoadCheckReport(
     fixtureSummaries: fixtures.map(summarizeFixture),
     scenarios,
     recapScenarios,
+    productionDispatchScenario: simulateProductionCalibratedDispatch(),
     queryPlans: options.skipQueryPlans ? [] : runQueryPlanChecks(options.migrationsDir),
     statusPathBudgets: options.skipQueryPlans ? [] : runStatusPathBudgetChecks(options.migrationsDir),
   };
@@ -801,6 +863,7 @@ function main(): void {
   const cpuBudgetBreaches = findCpuBudgetBreaches(report);
   const ttlMarginBreaches = enforceTargetSlo ? findTtlMarginBreaches(report) : [];
   const recapLoadBreaches = enforceTargetSlo ? findRecapLoadBreaches(report) : [];
+  const productionDispatchBreaches = findProductionDispatchBreaches(report);
 
   if (
     failedPlans.length > 0 ||
@@ -809,7 +872,8 @@ function main(): void {
     spikeTargetSloBreaches.length > 0 ||
     cpuBudgetBreaches.length > 0 ||
     ttlMarginBreaches.length > 0 ||
-    recapLoadBreaches.length > 0
+    recapLoadBreaches.length > 0 ||
+    productionDispatchBreaches.length > 0
   ) {
     if (failedPlans.length > 0) {
       console.error(`\n${failedPlans.length} query-plan check(s) failed.`);
@@ -850,6 +914,11 @@ function main(): void {
         `\n${recapLoadBreaches.length} required ${REQUIRED_TARGET.toLocaleString()}-recipient recap scenario(s) failed the TTL, CPU, priority, or zero-call boundary: ${recapLoadBreaches
           .map((scenario) => scenario.scenarioId)
           .join(", ")}.`,
+      );
+    }
+    if (productionDispatchBreaches.length > 0) {
+      console.error(
+        `\nProduction-calibrated Telegram dispatch failed: ${productionDispatchBreaches.join(", ")}.`,
       );
     }
     process.exit(1);

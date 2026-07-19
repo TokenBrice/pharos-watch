@@ -6,7 +6,14 @@ type LegacyFanoutAlertType = Exclude<TelegramAlertType, "freeze">;
 
 interface FanoutSubscriberLoadOptions {
   chatIds?: readonly string[];
+  onLoaderTiming?: (family: FanoutLoaderFamily, durationMs: number) => void;
 }
+
+export type FanoutLoaderFamily =
+  | "direct"
+  | "preset"
+  | "global"
+  | "snooze-explicit-off";
 
 export interface AlertStablecoinIds {
   dewsIds: string[];
@@ -119,6 +126,16 @@ export async function loadFanoutSubscriptionInputs(
     launchIds,
     reserveIds,
   } = ids;
+  const timed = async <T>(family: FanoutLoaderFamily, load: () => Promise<T>): Promise<T> => {
+    const startedAtMs = Date.now();
+    try {
+      return await load();
+    } finally {
+      options.onLoaderTiming?.(family, Math.max(0, Date.now() - startedAtMs));
+    }
+  };
+  const emptyPresetResult = (): PresetSubscriberLoadResult => ({ kind: "ok", rows: new Map() });
+  const allStablecoinIds = [...dewsIds, ...depegIds, ...safetyIds, ...launchIds, ...reserveIds];
   const [
     directDewsSubs,
     directDepegSubs,
@@ -140,25 +157,64 @@ export async function loadFanoutSubscriptionInputs(
     perCoinLaunchExplicitlyOffMap,
     perCoinReserveExplicitlyOffMap,
   ] = await Promise.all([
-    loaders.loadSubscriberRowsBatch(db, dewsIds, "dews", nowSec, options),
-    loaders.loadSubscriberRowsBatch(db, depegIds, "depeg", nowSec, options),
-    loaders.loadSubscriberRowsBatch(db, safetyIds, "safety", nowSec, options),
-    loaders.loadSubscriberRowsBatch(db, launchIds, "launch", nowSec, options),
-    loaders.loadSubscriberRowsBatch(db, reserveIds, "reserve", nowSec, options),
-    loaders.loadPresetSubscriberRowsBatch(db, dewsIds, "dews", nowSec),
-    loaders.loadPresetSubscriberRowsBatch(db, depegIds, "depeg", nowSec),
-    loaders.loadPresetSubscriberRowsBatch(db, safetyIds, "safety", nowSec),
-    loaders.loadGlobalSubscriberRows(db, "dews", nowSec, options),
-    loaders.loadGlobalSubscriberRows(db, "depeg", nowSec, options),
-    loaders.loadGlobalSubscriberRows(db, "safety", nowSec, options),
-    loaders.loadGlobalSubscriberRows(db, "launch", nowSec, options),
-    loaders.loadGlobalSubscriberRows(db, "reserve", nowSec, options),
-    loaders.loadPerCoinSnoozeMap(db, [...dewsIds, ...depegIds, ...safetyIds, ...launchIds, ...reserveIds], nowSec, options),
-    loaders.loadPerCoinExplicitlyOffMap(db, dewsIds, "dews", options),
-    loaders.loadPerCoinExplicitlyOffMap(db, depegIds, "depeg", options),
-    loaders.loadPerCoinExplicitlyOffMap(db, safetyIds, "safety", options),
-    loaders.loadPerCoinExplicitlyOffMap(db, launchIds, "launch", options),
-    loaders.loadPerCoinExplicitlyOffMap(db, reserveIds, "reserve", options),
+    dewsIds.length > 0
+      ? timed("direct", () => loaders.loadSubscriberRowsBatch(db, dewsIds, "dews", nowSec, options))
+      : new Map(),
+    depegIds.length > 0
+      ? timed("direct", () => loaders.loadSubscriberRowsBatch(db, depegIds, "depeg", nowSec, options))
+      : new Map(),
+    safetyIds.length > 0
+      ? timed("direct", () => loaders.loadSubscriberRowsBatch(db, safetyIds, "safety", nowSec, options))
+      : new Map(),
+    launchIds.length > 0
+      ? timed("direct", () => loaders.loadSubscriberRowsBatch(db, launchIds, "launch", nowSec, options))
+      : new Map(),
+    reserveIds.length > 0
+      ? timed("direct", () => loaders.loadSubscriberRowsBatch(db, reserveIds, "reserve", nowSec, options))
+      : new Map(),
+    dewsIds.length > 0
+      ? timed("preset", () => loaders.loadPresetSubscriberRowsBatch(db, dewsIds, "dews", nowSec))
+      : emptyPresetResult(),
+    depegIds.length > 0
+      ? timed("preset", () => loaders.loadPresetSubscriberRowsBatch(db, depegIds, "depeg", nowSec))
+      : emptyPresetResult(),
+    safetyIds.length > 0
+      ? timed("preset", () => loaders.loadPresetSubscriberRowsBatch(db, safetyIds, "safety", nowSec))
+      : emptyPresetResult(),
+    dewsIds.length > 0
+      ? timed("global", () => loaders.loadGlobalSubscriberRows(db, "dews", nowSec, options))
+      : [],
+    depegIds.length > 0
+      ? timed("global", () => loaders.loadGlobalSubscriberRows(db, "depeg", nowSec, options))
+      : [],
+    safetyIds.length > 0
+      ? timed("global", () => loaders.loadGlobalSubscriberRows(db, "safety", nowSec, options))
+      : [],
+    launchIds.length > 0
+      ? timed("global", () => loaders.loadGlobalSubscriberRows(db, "launch", nowSec, options))
+      : [],
+    reserveIds.length > 0
+      ? timed("global", () => loaders.loadGlobalSubscriberRows(db, "reserve", nowSec, options))
+      : [],
+    allStablecoinIds.length > 0
+      ? timed("snooze-explicit-off", () =>
+        loaders.loadPerCoinSnoozeMap(db, allStablecoinIds, nowSec, options))
+      : new Map(),
+    dewsIds.length > 0
+      ? timed("snooze-explicit-off", () => loaders.loadPerCoinExplicitlyOffMap(db, dewsIds, "dews", options))
+      : new Map(),
+    depegIds.length > 0
+      ? timed("snooze-explicit-off", () => loaders.loadPerCoinExplicitlyOffMap(db, depegIds, "depeg", options))
+      : new Map(),
+    safetyIds.length > 0
+      ? timed("snooze-explicit-off", () => loaders.loadPerCoinExplicitlyOffMap(db, safetyIds, "safety", options))
+      : new Map(),
+    launchIds.length > 0
+      ? timed("snooze-explicit-off", () => loaders.loadPerCoinExplicitlyOffMap(db, launchIds, "launch", options))
+      : new Map(),
+    reserveIds.length > 0
+      ? timed("snooze-explicit-off", () => loaders.loadPerCoinExplicitlyOffMap(db, reserveIds, "reserve", options))
+      : new Map(),
   ]);
 
   return {

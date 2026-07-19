@@ -11,7 +11,7 @@ import {
   type TelegramTargetPlanningClaim,
 } from "./types";
 
-interface SubscriberHorizonRow {
+export interface SubscriberHorizonRow {
   chat_id: string;
   preference_generation: number;
   last_active_at: number;
@@ -24,35 +24,53 @@ export async function captureTelegramPlanningSubscriberPage(
   resolveInitialEligibility: (
     subscribers: readonly Omit<TelegramPlanningSubscriber, "initiallyEligible">[],
   ) => Promise<ReadonlyMap<string, { eligible: boolean; observedPreferenceGeneration: number }>>,
+  loadSubscribers?: (
+    claim: TelegramTargetPlanningClaim,
+    limit: number,
+  ) => Promise<readonly Omit<TelegramPlanningSubscriber, "initiallyEligible">[]>,
 ): Promise<{ captured: TelegramPlanningSubscriber[]; complete: boolean }> {
   if (claim.state !== "capturing") return { captured: [], complete: true };
-  const rows = claim.highWaterChatId == null
-    ? []
-    : (await db
-      .prepare(
-        `SELECT chat_id, preference_generation, last_active_at
-           FROM telegram_subscribers
-          WHERE created_at <= ?
-            AND chat_id <= ?
-            AND (? IS NULL OR chat_id > ?)
-          ORDER BY chat_id
-          LIMIT ?`,
-      )
-      .bind(
-        claim.horizonAt,
-        claim.highWaterChatId,
-        claim.subscriberCursorChatId,
-        claim.subscriberCursorChatId,
-        TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE,
-      )
-      .all<SubscriberHorizonRow>()).results ?? [];
-
-  const capturedWithoutEligibility = rows.map((row) => ({
-    chatId: row.chat_id,
-    preferenceGeneration: Math.max(0, Math.floor(row.preference_generation ?? 0)),
-    lastActiveAt: Number(row.last_active_at),
-  }));
-  const initialEligibility = rows.length > 0
+  const capturedWithoutEligibility = loadSubscribers
+    ? [...await loadSubscribers(claim, TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE)]
+    : claim.highWaterChatId == null
+      ? []
+      : ((await db
+        .prepare(
+          `SELECT chat_id, preference_generation, last_active_at
+             FROM telegram_subscribers
+            WHERE created_at <= ?
+              AND chat_id <= ?
+              AND (? IS NULL OR chat_id > ?)
+            ORDER BY chat_id
+            LIMIT ?`,
+        )
+        .bind(
+          claim.horizonAt,
+          claim.highWaterChatId,
+          claim.subscriberCursorChatId,
+          claim.subscriberCursorChatId,
+          TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE,
+        )
+        .all<SubscriberHorizonRow>()).results ?? []).map((row) => ({
+          chatId: row.chat_id,
+          preferenceGeneration: Math.max(0, Math.floor(row.preference_generation ?? 0)),
+          lastActiveAt: Number(row.last_active_at),
+        }));
+  if (capturedWithoutEligibility.length > TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE) {
+    throw new Error("Telegram subscriber horizon loader exceeded its page bound");
+  }
+  for (let index = 0; index < capturedWithoutEligibility.length; index += 1) {
+    const subscriber = capturedWithoutEligibility[index];
+    const previous = capturedWithoutEligibility[index - 1];
+    if (
+      (claim.subscriberCursorChatId != null && subscriber.chatId <= claim.subscriberCursorChatId) ||
+      (claim.highWaterChatId != null && subscriber.chatId > claim.highWaterChatId) ||
+      (previous && subscriber.chatId <= previous.chatId)
+    ) {
+      throw new Error("Telegram subscriber horizon loader returned an invalid cursor page");
+    }
+  }
+  const initialEligibility = capturedWithoutEligibility.length > 0
     ? await resolveInitialEligibility(capturedWithoutEligibility)
     : new Map<string, { eligible: boolean; observedPreferenceGeneration: number }>();
   for (const subscriber of capturedWithoutEligibility) {
@@ -82,22 +100,24 @@ export async function captureTelegramPlanningSubscriberPage(
       throw new Error("Telegram subscriber preference changed while its horizon snapshot was captured");
     }
   }
-  const lastChatId = rows.length > 0 ? rows[rows.length - 1].chat_id : claim.subscriberCursorChatId;
-  const complete = rows.length < TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE;
+  const lastChatId = capturedWithoutEligibility.length > 0
+    ? capturedWithoutEligibility[capturedWithoutEligibility.length - 1].chatId
+    : claim.subscriberCursorChatId;
+  const complete = capturedWithoutEligibility.length < TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE;
   const statements = prepareMultiRowInsertStatements(
     db,
     `INSERT OR IGNORE INTO telegram_alert_planning_subscribers (
        source_event_id, plan_generation, chat_id, preference_generation,
        last_active_at, captured_at, initially_eligible
      )`,
-    rows.map((row) => [
+    capturedWithoutEligibility.map((row) => [
       claim.sourceEventId,
       claim.generation,
-      row.chat_id,
-      Math.max(0, Math.floor(row.preference_generation ?? 0)),
-      row.last_active_at,
+      row.chatId,
+      Math.max(0, Math.floor(row.preferenceGeneration ?? 0)),
+      row.lastActiveAt,
       nowSec,
-      initialEligibility.get(row.chat_id)?.eligible ? 1 : 0,
+      initialEligibility.get(row.chatId)?.eligible ? 1 : 0,
     ]),
   );
   statements.push(db

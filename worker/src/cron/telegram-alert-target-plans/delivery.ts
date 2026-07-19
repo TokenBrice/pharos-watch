@@ -1,11 +1,7 @@
 import type { TelegramAlertType } from "@shared/types/status";
 import { executeAtomicBatch } from "../../lib/db";
-import { PENDING_TTL_SEC } from "../../lib/telegram-constants";
-import { buildPendingAlertEnqueueStatement } from "../telegram-pending/enqueue";
-import {
-  parseTelegramTargetPlan,
-  targetPlanMessageToBatchMessage,
-} from "../telegram-alert-target-plan-contract";
+import { PENDING_TTL_SEC, TELEGRAM_PENDING_PRIORITY } from "../../lib/telegram-constants";
+import { parseTelegramTargetPlan } from "../telegram-alert-target-plan-contract";
 import { reconcileTelegramAlertJobCounters } from "../telegram-alert-job-target-outcomes";
 import { markTelegramTargetPlanDegraded } from "./source-state";
 import {
@@ -49,13 +45,14 @@ const PRIOR_TERMINAL_DEDUPE_REASONS = [
   "duplicate_prior_execution_unknown",
 ] as const;
 
-async function suppressPriorTerminalDedupeCollision(
+async function suppressPriorTerminalDedupeCollisions(
   db: D1Database,
-  row: ReadyTargetRow,
   sourceEventId: string,
   generation: number,
   nowSec: number,
-): Promise<boolean> {
+  targetKeys: readonly string[],
+): Promise<number> {
+  if (targetKeys.length === 0) return 0;
   const result = await db
     .prepare(
       `UPDATE telegram_alert_job_targets
@@ -120,8 +117,8 @@ async function suppressPriorTerminalDedupeCollision(
                   ELSE 'duplicate_prior_execution_unknown'
                 END
               )
-        WHERE job_id = ? AND target_key = ? AND source_event_id = ?
-          AND plan_generation = ? AND status = 'planned'
+        WHERE source_event_id = ? AND plan_generation = ? AND status = 'planned'
+          AND target_key IN (SELECT value FROM json_each(?))
           AND final_delivery_state IS NULL
           AND EXISTS (
             SELECT 1 FROM telegram_pending_alerts pending
@@ -135,9 +132,162 @@ async function suppressPriorTerminalDedupeCollision(
                AND pending.delivery_state IN ('sent', 'execution_unknown')
           )`,
     )
-    .bind(nowSec, nowSec, row.job_id, row.target_key, sourceEventId, generation)
+    .bind(nowSec, nowSec, sourceEventId, generation, JSON.stringify(targetKeys))
     .run();
-  return Number(result.meta?.changes ?? 0) === 1;
+  return Number(result.meta?.changes ?? 0);
+}
+
+function pendingPrioritySql(): string {
+  return `CASE target.alert_type
+    WHEN 'depeg' THEN ${TELEGRAM_PENDING_PRIORITY.depeg}
+    WHEN 'dews' THEN ${TELEGRAM_PENDING_PRIORITY.dews}
+    WHEN 'safety' THEN ${TELEGRAM_PENDING_PRIORITY.safety}
+    WHEN 'launch' THEN ${TELEGRAM_PENDING_PRIORITY.launch}
+    WHEN 'reserve' THEN ${TELEGRAM_PENDING_PRIORITY.reserve}
+    ELSE ${TELEGRAM_PENDING_PRIORITY.riskAlert}
+  END`;
+}
+
+function buildSetBasedPendingHandoffStatements(
+  db: D1Database,
+  sourceEventId: string,
+  generation: number,
+  nowSec: number,
+  targetKeys: readonly string[],
+): D1PreparedStatement[] {
+  const targetKeysJson = JSON.stringify(targetKeys);
+  const refreshPredicate = `COALESCE(
+      telegram_pending_alerts.expires_at,
+      telegram_pending_alerts.created_at + ${PENDING_TTL_SEC}
+    ) <= excluded.created_at
+    OR telegram_pending_alerts.created_at < excluded.created_at - ${PENDING_TTL_SEC}`;
+  return [
+    db
+      .prepare(
+        `INSERT INTO telegram_pending_alerts (
+           chat_id, message_html, disable_notification, created_at, not_before_at,
+           last_error_class, retry_after_sec, updated_at, dedupe_key, chunk_index,
+           priority, source_type, alert_type, expires_at, source_event_id,
+           alert_scope_json, preference_generation, markup_policy_json
+         )
+         SELECT target.chat_id, target.message_html, target.disable_notification,
+                ?, NULL, NULL, NULL, ?, target.pending_dedupe_key,
+                target.chunk_index, ${pendingPrioritySql()}, 'risk_alert',
+                target.alert_type, target.target_expires_at, target.source_event_id,
+                target.alert_scope_json, target.preference_generation,
+                target.markup_policy_json
+           FROM telegram_alert_job_targets target
+          WHERE target.source_event_id = ? AND target.plan_generation = ?
+            AND target.status = 'planned'
+            AND target.target_key IN (SELECT value FROM json_each(?))
+         ON CONFLICT(dedupe_key) DO UPDATE SET
+           message_html = excluded.message_html,
+           disable_notification = excluded.disable_notification,
+           created_at = CASE WHEN ${refreshPredicate}
+             THEN excluded.created_at ELSE telegram_pending_alerts.created_at END,
+           attempts = CASE WHEN ${refreshPredicate}
+             THEN 0 ELSE telegram_pending_alerts.attempts END,
+           not_before_at = CASE
+             WHEN ${refreshPredicate} THEN excluded.not_before_at
+             WHEN excluded.not_before_at IS NULL THEN telegram_pending_alerts.not_before_at
+             WHEN telegram_pending_alerts.not_before_at IS NULL THEN excluded.not_before_at
+             ELSE MAX(telegram_pending_alerts.not_before_at, excluded.not_before_at)
+           END,
+           last_error_class = COALESCE(excluded.last_error_class, telegram_pending_alerts.last_error_class),
+           retry_after_sec = COALESCE(excluded.retry_after_sec, telegram_pending_alerts.retry_after_sec),
+           updated_at = excluded.updated_at,
+           chunk_index = excluded.chunk_index,
+           priority = MIN(COALESCE(telegram_pending_alerts.priority, excluded.priority), excluded.priority),
+           source_type = CASE
+             WHEN excluded.priority < COALESCE(telegram_pending_alerts.priority, excluded.priority)
+             THEN excluded.source_type ELSE telegram_pending_alerts.source_type END,
+           alert_type = COALESCE(excluded.alert_type, telegram_pending_alerts.alert_type),
+           expires_at = CASE WHEN ${refreshPredicate}
+             THEN excluded.expires_at
+             ELSE COALESCE(telegram_pending_alerts.expires_at, excluded.expires_at) END,
+           processing_owner = CASE WHEN ${refreshPredicate}
+             THEN NULL ELSE telegram_pending_alerts.processing_owner END,
+           processing_started_at = CASE WHEN ${refreshPredicate}
+             THEN NULL ELSE telegram_pending_alerts.processing_started_at END,
+           processing_expires_at = CASE WHEN ${refreshPredicate}
+             THEN NULL ELSE telegram_pending_alerts.processing_expires_at END,
+           delivery_owner = CASE WHEN ${refreshPredicate}
+             THEN NULL ELSE telegram_pending_alerts.delivery_owner END,
+           delivery_started_at = CASE WHEN ${refreshPredicate}
+             THEN NULL ELSE telegram_pending_alerts.delivery_started_at END,
+           delivery_completed_at = CASE WHEN ${refreshPredicate}
+             THEN NULL ELSE telegram_pending_alerts.delivery_completed_at END,
+           delivery_claim_expires_at = CASE WHEN ${refreshPredicate}
+             THEN NULL ELSE telegram_pending_alerts.delivery_claim_expires_at END,
+           source_event_id = CASE WHEN ${refreshPredicate}
+             THEN excluded.source_event_id ELSE telegram_pending_alerts.source_event_id END,
+           alert_scope_json = CASE WHEN ${refreshPredicate}
+             THEN excluded.alert_scope_json ELSE telegram_pending_alerts.alert_scope_json END,
+           preference_generation = CASE WHEN ${refreshPredicate}
+             THEN excluded.preference_generation ELSE telegram_pending_alerts.preference_generation END,
+           markup_policy_json = CASE WHEN ${refreshPredicate}
+             THEN excluded.markup_policy_json ELSE telegram_pending_alerts.markup_policy_json END
+         WHERE telegram_pending_alerts.delivery_state = 'pending'
+           AND (
+             telegram_pending_alerts.processing_owner IS NULL
+             OR telegram_pending_alerts.processing_expires_at IS NULL
+             OR telegram_pending_alerts.processing_expires_at <= excluded.created_at
+             OR ${refreshPredicate}
+           )`,
+      )
+      .bind(nowSec, nowSec, sourceEventId, generation, targetKeysJson),
+    db
+      .prepare(
+        `UPDATE telegram_pending_alerts AS pending
+            SET not_before_at = CASE
+              WHEN pending.not_before_at IS NULL THEN (
+                SELECT MAX(existing.not_before_at)
+                  FROM telegram_pending_alerts existing
+                 WHERE existing.chat_id = pending.chat_id
+                   AND existing.id <> pending.id
+                   AND existing.delivery_state = 'pending'
+                   AND COALESCE(existing.expires_at, existing.created_at + ?) > ?
+                   AND existing.not_before_at > ?
+              )
+              ELSE MAX(pending.not_before_at, COALESCE((
+                SELECT MAX(existing.not_before_at)
+                  FROM telegram_pending_alerts existing
+                 WHERE existing.chat_id = pending.chat_id
+                   AND existing.id <> pending.id
+                   AND existing.delivery_state = 'pending'
+                   AND COALESCE(existing.expires_at, existing.created_at + ?) > ?
+                   AND existing.not_before_at > ?
+              ), pending.not_before_at))
+            END
+          WHERE pending.source_event_id = ?
+            AND pending.dedupe_key IN (SELECT value FROM json_each(?))
+            AND pending.delivery_state = 'pending'`,
+      )
+      .bind(
+        PENDING_TTL_SEC,
+        nowSec,
+        nowSec,
+        PENDING_TTL_SEC,
+        nowSec,
+        nowSec,
+        sourceEventId,
+        targetKeysJson,
+      ),
+    db
+      .prepare(
+        `UPDATE telegram_alert_job_targets
+            SET status = 'queued', enqueued_at = COALESCE(enqueued_at, ?)
+          WHERE source_event_id = ? AND plan_generation = ? AND status = 'planned'
+            AND target_key IN (SELECT value FROM json_each(?))
+            AND EXISTS (
+              SELECT 1 FROM telegram_pending_alerts pending
+               WHERE pending.dedupe_key = telegram_alert_job_targets.pending_dedupe_key
+                 AND pending.source_event_id = telegram_alert_job_targets.source_event_id
+                 AND pending.preference_generation = telegram_alert_job_targets.preference_generation
+            )`,
+      )
+      .bind(nowSec, sourceEventId, generation, targetKeysJson),
+  ];
 }
 
 export async function expireTelegramAuthoritativeTargets(
@@ -310,7 +460,14 @@ export async function enqueueTelegramAuthoritativeTargets(
   generation: number,
   nowSec: number,
   limit = TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE,
-): Promise<{ enqueued: number; processed: number; remaining: number; jobIds: string[] }> {
+): Promise<{
+  enqueued: number;
+  processed: number;
+  remaining: number;
+  jobIds: string[];
+  duplicateSuppressed: number;
+  duplicateSuppressionMs: number;
+}> {
   const boundedLimit = Math.max(1, Math.min(TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE, Math.floor(limit)));
   const source = await db
     .prepare(
@@ -346,9 +503,7 @@ export async function enqueueTelegramAuthoritativeTargets(
     .all<ReadyTargetRow>();
   const targets = rows.results ?? [];
   const jobIds = [...new Set(targets.map((row) => row.job_id))];
-  let enqueued = 0;
-  let processed = 0;
-  for (const row of targets) {
+  await Promise.all(targets.map(async (row) => {
     const parsed = await parseTelegramTargetPlan(row.plan_payload_json, row.plan_payload_digest);
     if (!readyTargetMatchesPlan(row, parsed) || parsed.kind !== "ok") {
       await markTelegramTargetPlanDegraded(
@@ -361,119 +516,56 @@ export async function enqueueTelegramAuthoritativeTargets(
     }
     const messageSpec = parsed.value.messages.find((message) => message.targetKey === row.target_key);
     if (!messageSpec) throw new Error("Telegram target message disappeared after validation");
-    const message = targetPlanMessageToBatchMessage(parsed.value, messageSpec);
-    const guard = {
-      sql: `EXISTS (
-        SELECT 1 FROM telegram_alert_job_targets target
-         WHERE target.job_id = ? AND target.target_key = ?
-           AND target.source_event_id = ? AND target.plan_generation = ?
-           AND target.status = 'planned'
-      )`,
-      binds: [row.job_id, row.target_key, sourceEventId, generation],
-    };
-    await executeAtomicBatch(db, [
-      buildPendingAlertEnqueueStatement(
-        db,
-        message,
-        nowSec,
-        {
-          sourceType: "risk_alert",
-          ttlSec: Math.max(1, row.target_expires_at - nowSec),
-        },
-        guard,
-      ),
-      db
-        .prepare(
-          `WITH inserted AS (
-             SELECT id, chat_id, dedupe_key, not_before_at
-               FROM telegram_pending_alerts
-              WHERE dedupe_key = ? AND source_event_id = ?
-           ), chat_backoff AS (
-             SELECT MAX(existing.not_before_at) AS not_before_at
-               FROM inserted
-               JOIN telegram_pending_alerts existing
-                 ON existing.chat_id = inserted.chat_id
-                AND existing.id <> inserted.id
-              WHERE existing.delivery_state = 'pending'
-                AND COALESCE(existing.expires_at, existing.created_at + ?) > ?
-                AND existing.not_before_at IS NOT NULL
-                AND existing.not_before_at > ?
-           )
-           UPDATE telegram_pending_alerts
-              SET not_before_at = CASE
-                    WHEN (SELECT not_before_at FROM chat_backoff) IS NULL THEN not_before_at
-                    WHEN not_before_at IS NULL THEN (SELECT not_before_at FROM chat_backoff)
-                    ELSE MAX(not_before_at, (SELECT not_before_at FROM chat_backoff))
-                  END
-            WHERE dedupe_key = ? AND source_event_id = ?
-              AND delivery_state = 'pending'
-              AND EXISTS (
-                SELECT 1 FROM telegram_alert_job_targets target
-                 WHERE target.job_id = ? AND target.target_key = ?
-                   AND target.source_event_id = ? AND target.plan_generation = ?
-                   AND target.status = 'planned'
-              )`,
-        )
-        .bind(
-          row.target_key,
-          sourceEventId,
-          PENDING_TTL_SEC,
-          nowSec,
-          nowSec,
-          row.target_key,
-          sourceEventId,
-          row.job_id,
-          row.target_key,
-          sourceEventId,
-          generation,
-        ),
-      db
-        .prepare(
-          `UPDATE telegram_alert_job_targets
-              SET status = 'queued', enqueued_at = COALESCE(enqueued_at, ?)
-            WHERE job_id = ? AND target_key = ? AND source_event_id = ?
-              AND plan_generation = ? AND status = 'planned'
-              AND EXISTS (
-                SELECT 1 FROM telegram_pending_alerts pending
-                 WHERE pending.dedupe_key = telegram_alert_job_targets.pending_dedupe_key
-                   AND pending.source_event_id = telegram_alert_job_targets.source_event_id
-                   AND pending.preference_generation = telegram_alert_job_targets.preference_generation
-              )`,
-        )
-        .bind(nowSec, row.job_id, row.target_key, sourceEventId, generation),
-    ]);
-    let confirmed = await db
-      .prepare("SELECT status FROM telegram_alert_job_targets WHERE job_id = ? AND target_key = ?")
-      .bind(row.job_id, row.target_key)
-      .first<TargetHandoffStateRow>();
-    if (confirmed?.status === "queued") {
+  }));
+  const targetKeys = targets.map((row) => row.target_key);
+  const duplicateSuppressionStartedAtMs = Date.now();
+  const duplicateSuppressed = await suppressPriorTerminalDedupeCollisions(
+    db,
+    sourceEventId,
+    generation,
+    nowSec,
+    targetKeys,
+  );
+  const duplicateSuppressionMs = Math.max(0, Date.now() - duplicateSuppressionStartedAtMs);
+  if (targetKeys.length > 0) {
+    await executeAtomicBatch(
+      db,
+      buildSetBasedPendingHandoffStatements(db, sourceEventId, generation, nowSec, targetKeys),
+    );
+  }
+  const confirmedRows = targetKeys.length === 0
+    ? []
+    : (await db
+      .prepare(
+        `SELECT target_key, status, final_delivery_state, cancellation_reason
+           FROM telegram_alert_job_targets
+          WHERE source_event_id = ? AND plan_generation = ?
+            AND target_key IN (SELECT value FROM json_each(?))`,
+      )
+      .bind(sourceEventId, generation, JSON.stringify(targetKeys))
+      .all<TargetHandoffStateRow & { target_key: string }>()).results ?? [];
+  let enqueued = 0;
+  let processed = 0;
+  for (const confirmed of confirmedRows) {
+    if (confirmed.status === "queued") {
       enqueued += 1;
       processed += 1;
-      continue;
-    }
-    if (await suppressPriorTerminalDedupeCollision(db, row, sourceEventId, generation, nowSec)) {
-      confirmed = await db
-        .prepare(
-          `SELECT status, final_delivery_state, cancellation_reason
-             FROM telegram_alert_job_targets WHERE job_id = ? AND target_key = ?`,
-        )
-        .bind(row.job_id, row.target_key)
-        .first<TargetHandoffStateRow>();
-      if (
-        confirmed?.status === "expired" &&
-        confirmed.final_delivery_state === "cancelled" &&
-        PRIOR_TERMINAL_DEDUPE_REASONS.includes(
-          confirmed.cancellation_reason as (typeof PRIOR_TERMINAL_DEDUPE_REASONS)[number],
-        )
-      ) {
-        processed += 1;
-        continue;
-      }
-    }
-    if (confirmed?.status !== "queued") {
+    } else if (
+      confirmed.status === "expired" &&
+      confirmed.final_delivery_state === "cancelled" &&
+      PRIOR_TERMINAL_DEDUPE_REASONS.includes(
+        confirmed.cancellation_reason as (typeof PRIOR_TERMINAL_DEDUPE_REASONS)[number],
+      )
+    ) {
+      processed += 1;
+    } else {
       await markTelegramTargetPlanDegraded(db, { sourceEventId, generation }, "pending_identity_collision", nowSec);
       throw new Error("Telegram authoritative target pending handoff was not confirmed");
     }
+  }
+  if (confirmedRows.length !== targets.length || processed !== targets.length) {
+    await markTelegramTargetPlanDegraded(db, { sourceEventId, generation }, "pending_identity_collision", nowSec);
+    throw new Error("Telegram authoritative target handoff page did not reconcile");
   }
   await reconcileTelegramAlertJobCounters(db, jobIds, nowSec);
   const remainingRow = await db
@@ -483,5 +575,12 @@ export async function enqueueTelegramAuthoritativeTargets(
     )
     .bind(sourceEventId, generation)
     .first<{ count: number }>();
-  return { enqueued, processed, remaining: Number(remainingRow?.count ?? 0), jobIds };
+  return {
+    enqueued,
+    processed,
+    remaining: Number(remainingRow?.count ?? 0),
+    jobIds,
+    duplicateSuppressed,
+    duplicateSuppressionMs,
+  };
 }
