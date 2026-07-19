@@ -141,6 +141,20 @@ describe("validatePrimaryPriceCandidate — severe downside with directional cor
     expect(decision.accepted).toBe(true);
   });
 
+  it("rejects severe downside corroborated only by correlated CoinGecko paths", () => {
+    const decision = validatePrimaryPriceCandidate({
+      price: 0.38,
+      source: "coingecko+coingecko-onchain-address",
+      confidence: "high",
+      agreeSources: ["coingecko", "coingecko-onchain-address"],
+      candidatePrices: { coingecko: 0.38, "coingecko-onchain-address": 0.38 },
+      validationContext: USD_CONTEXT,
+    });
+
+    expect(decision.accepted).toBe(false);
+    expect(decision.reason).toBe("severe_downside_requires_corroboration");
+  });
+
   it("still allows when previous trusted price was also severe downside", () => {
     const decision = validatePrimaryPriceCandidate({
       price: 0.38,

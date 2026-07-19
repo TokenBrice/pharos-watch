@@ -110,6 +110,25 @@ describe("computePriceConsensus", () => {
     });
   });
 
+  it("treats CoinGecko list and onchain address quotes as one independent family", () => {
+    const result = computePriceConsensus(
+      [
+        { source: "coingecko", price: 0.38, weight: 2 },
+        { source: "coingecko-onchain-address", price: 0.38, weight: 1 },
+      ],
+      1.0,
+      50,
+    );
+
+    expect(result).toMatchObject({
+      price: 0.38,
+      source: "coingecko",
+      selectedSource: "coingecko",
+      confidence: "single-source",
+      agreeSources: ["coingecko"],
+    });
+  });
+
   it("selects price closest to peg reference when diverging", () => {
     const sources: SourcePrice[] = [
       { source: "coingecko", price: 1.05, weight: 1 },

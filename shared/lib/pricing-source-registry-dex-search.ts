@@ -204,7 +204,7 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     key: "coingecko-onchain-address",
     label: "CoinGecko Onchain (address)",
     shortLabel: "CG-onchain",
-    depegSourceFamily: "fallback:coingecko-onchain-address",
+    depegSourceFamily: "coingecko",
     maxTrustedAgeSec: 15 * 60,
     defaultWeight: 1,
     isSearchDerived: false,
