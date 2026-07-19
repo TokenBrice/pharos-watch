@@ -2193,6 +2193,7 @@ function makeCollectorCtx(db: D1Database): CollectorContext {
     coreAggregateStablecoinIds: new Set(trackedStablecoinAssets.map((asset) => asset.id)),
     stablecoinAssetById,
     mcapById,
+    stablecoinsCacheIsFresh: true,
     nowSec,
     todayTs,
     yesterdayTs,
@@ -2434,6 +2435,42 @@ describe("collectActiveDepegs", () => {
       peakPriceUsd: 0.95,
       currentPriceUsd: 0.9975,
     });
+  });
+
+  it("falls back to stored peak severity when stablecoins cache freshness is expired", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM depeg_events WHERE ended_at IS NULL",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            symbol: "USDC",
+            peg_type: "peggedUSD",
+            direction: "below",
+            peak_deviation_bps: -3000,
+            peak_price: 0.7,
+            peg_reference: 1,
+            started_at: nowSec - 3600,
+          },
+        ],
+      },
+    ]);
+    const ctx = makeCollectorCtx(db);
+    ctx.stablecoinAssetById.set("usdc-circle", { ...ctx.stablecoinAssetById.get("usdc-circle")!, price: 0.999 });
+    ctx.stablecoinsCacheIsFresh = false;
+
+    const result = await collectActiveDepegs(ctx);
+
+    expect(result.value.topDepegs[0]).toMatchObject({
+      stablecoinId: "usdc-circle",
+      bps: -3000,
+      peakBps: -3000,
+      severityBasis: "peak-fallback",
+    });
+    expect(result.value.topDepegs[0].currentBps).toBeUndefined();
+    expect(result.value.topDepegs[0].currentPriceUsd).toBeUndefined();
+    expect(result.value.topDepegs[0].suppressReason).toBeUndefined();
   });
 });
 

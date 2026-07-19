@@ -77,6 +77,7 @@ async function replayCollector(seeds: DepegEventSeed[], nowSec: number) {
     coreAggregateStablecoinIds: new Set(),
     stablecoinAssetById,
     mcapById: new Map(seeds.map((seed) => [seed.stablecoinId, seed.mcapUsd])),
+    stablecoinsCacheIsFresh: true,
     nowSec,
     todayTs: nowSec - (nowSec % 86_400),
     yesterdayTs: nowSec - (nowSec % 86_400) - 86_400,
