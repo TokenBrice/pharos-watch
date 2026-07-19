@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { DatasetFreshnessTable } from "@/components/status/dataset-freshness-table";
 
 describe("DatasetFreshnessTable", () => {
-  it("uses writer-oriented copy and discovery expectations", () => {
+  it("uses writer-oriented copy and schedule expectations", () => {
     const nowSeconds = 2_000_000;
     const getDomainRow = (label: string) =>
       screen
@@ -26,7 +26,6 @@ describe("DatasetFreshnessTable", () => {
           depegs: nowSeconds - 120,
           dews: nowSeconds - 300,
           digest: nowSeconds - 86_400,
-          discoveryCandidates: nowSeconds - 600,
         }}
       />,
     );
@@ -37,11 +36,6 @@ describe("DatasetFreshnessTable", () => {
     const tableShell = screen.getByTestId("dataset-freshness-table");
     expect(tableShell.getAttribute("data-table-id")).toBe("dataset-freshness");
     expect(screen.getByRole("table", { name: /pipeline freshness/i })).toBeTruthy();
-
-    const discoveryRow = getDomainRow("Coverage discovery");
-    expect(discoveryRow).not.toBeNull();
-    expect(within(discoveryRow as HTMLTableRowElement).getByText("7d")).toBeTruthy();
-    expect(within(discoveryRow as HTMLTableRowElement).getByText("14d")).toBeTruthy();
 
     const blacklistRow = getDomainRow("Blacklist sync");
     expect(blacklistRow).not.toBeNull();

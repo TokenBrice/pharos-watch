@@ -269,7 +269,7 @@ Possible channel values include `"no-creds"`, `"ok"`, `"failed: <truncated error
 ## Weekly Recap
 
 **File:** `worker/src/cron/weekly-recap.ts`
-**Schedule:** Mondays only in the `daily-0810` slot (`"10 8 * * *"`), in parallel with `discovery-scan`
+**Schedule:** Mondays only in the `daily-0810` slot (`"10 8 * * *"`)
 **Dedup guard:** returns `skipped_neutral` outside Monday UTC or when a recent weekly row is already delivered; retries a recent row with `digest_meta.telegramDelivered = false` unless its delivery status is `skipped: quality-gate`
 **Period semantics:** trailing daily editions available at the Monday 08:10 UTC start, not a strict Monday-Sunday calendar week. `digest_meta.periodType` is `"trailing-daily-editions"`.
 

@@ -84,7 +84,6 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/lib/__tests__/jusd-stablecoin-bridge.test.ts",
   "worker/src/lib/__tests__/kava-pricefeed.test.ts",
   "worker/src/lib/__tests__/stablecoin-publication-alerts.test.ts",
-  "worker/src/lib/__tests__/usx-stable-pool-price.test.ts",
   "worker/src/lib/__tests__/live-reserves-store.test.ts",
   "worker/src/api/__tests__/cache-passthrough.test.ts",
   "worker/src/api/__tests__/discovery.test.ts",

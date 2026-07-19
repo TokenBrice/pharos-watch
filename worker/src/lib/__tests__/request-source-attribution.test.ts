@@ -104,14 +104,14 @@ describe("request-source-attribution", () => {
     expect(findDynamicEndpointDescriptor("/api/og/stablecoin/usdt-tether")?.requestAttribution).toEqual(
       resolveApiRequestRouteMetric("/api/og/stablecoin/usdt-tether"),
     );
-    expect(findDynamicEndpointDescriptor("/api/discovery-candidates/42/dismiss")?.requestAttribution).toBeNull();
+    expect(findDynamicEndpointDescriptor("/api/api-keys/7/update")?.requestAttribution).toBeNull();
   });
 
   it("skips admin and webhook routes from attribution", () => {
     expect(resolveApiRequestRouteMetric("/api/status")).toBeNull();
     expect(resolveApiRequestRouteMetric("/api/request-source-stats")).toBeNull();
     expect(resolveApiRequestRouteMetric("/api/telegram-webhook")).toBeNull();
-    expect(resolveApiRequestRouteMetric("/api/discovery-candidates/42/dismiss")).toBeNull();
+    expect(resolveApiRequestRouteMetric("/api/api-keys/7/update")).toBeNull();
   });
 
   it("falls back to an unknown public bucket for unmatched public paths", () => {

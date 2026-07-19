@@ -385,6 +385,29 @@ describe("status cause text", () => {
     },
   );
 
+  it("excludes an info-severity durable-code cause from durable retention", () => {
+    // A transient active_price_coverage_incomplete is emitted at info severity; it
+    // must not reserve or displace a durable slot the way its warning form does.
+    const criticalCauses: StatusCause[] = Array.from({ length: 12 }, (_, index) => ({
+      code: `critical-${index}`,
+      layer: "data-quality",
+      severity: "critical",
+      message: `Critical cause ${index}`,
+    }));
+    const infoPriceCause: StatusCause = {
+      code: "active_price_coverage_incomplete",
+      layer: "data-quality",
+      severity: "info",
+      message: "Transient live-price miss; not degrading public status.",
+    };
+
+    const selected = synthesizeOverallCauses(criticalCauses, [infoPriceCause]);
+
+    expect(selected).toHaveLength(12);
+    expect(selected.map((cause) => cause.code)).toEqual(criticalCauses.map((cause) => cause.code));
+    expect(selected.some((cause) => cause.code === "active_price_coverage_incomplete")).toBe(false);
+  });
+
   it("warns when DEX data is display-valid but stale for live pricing", () => {
     const causes = buildAvailabilityCauses(
       makeAvailabilityCauseInput(
@@ -409,6 +432,72 @@ describe("status cause text", () => {
         threshold: 2_100,
       }),
     );
+  });
+
+  it("emits a warning cache cause when an override-tightened cache breaches its degraded band below the global threshold", () => {
+    const causes = buildAvailabilityCauses(
+      makeAvailabilityCauseInput(
+        makePublicHealth({
+          // yield-data override bands are 2x/4x, so 2.1x degrades it even though
+          // the global 8x band is untouched. A non-overridden cache at the same
+          // 2.1x ratio stays healthy, proving per-key override resolution.
+          caches: {
+            "yield-data": { ageSeconds: 7_560, maxAge: 3_600, healthy: false },
+            stablecoins: { ageSeconds: 7_560, maxAge: 3_600, healthy: true },
+          },
+          worstCacheRatio: 2.1,
+        }),
+      ),
+    );
+
+    expect(causes).toContainEqual(
+      expect.objectContaining({
+        code: "cache_ratio_degraded",
+        severity: "warning",
+        message: expect.stringContaining("yield-data"),
+        threshold: 2,
+      }),
+    );
+    expect(causes.some((cause) => cause.code === "cache_ratio_stale")).toBe(false);
+  });
+
+  it("escalates an override-tightened cache to a critical stale cause past its stale band", () => {
+    const causes = buildAvailabilityCauses(
+      makeAvailabilityCauseInput(
+        makePublicHealth({
+          caches: {
+            "yield-data": { ageSeconds: 14_760, maxAge: 3_600, healthy: false },
+          },
+          worstCacheRatio: 4.1,
+        }),
+      ),
+    );
+
+    expect(causes).toContainEqual(
+      expect.objectContaining({
+        code: "cache_ratio_stale",
+        severity: "critical",
+        message: expect.stringContaining("yield-data"),
+        threshold: 4,
+      }),
+    );
+  });
+
+  it("does not emit a cache-ratio cause when a non-overridden cache is within the global band", () => {
+    const causes = buildAvailabilityCauses(
+      makeAvailabilityCauseInput(
+        makePublicHealth({
+          caches: {
+            stablecoins: { ageSeconds: 18_000, maxAge: 3_600, healthy: true },
+          },
+          worstCacheRatio: 5,
+        }),
+      ),
+    );
+
+    expect(
+      causes.some((cause) => cause.code === "cache_ratio_degraded" || cause.code === "cache_ratio_stale"),
+    ).toBe(false);
   });
 
   it("groups DEWS stale health downstream of DEX liquidity", () => {
@@ -686,6 +775,8 @@ describe("status cause text", () => {
           alertEligible: false,
         },
       ],
+      alertEligibleCount: 1,
+      alertEligibleIds: ["coin-b"],
     };
 
     const status = deriveDataQualityStatus({
@@ -716,6 +807,72 @@ describe("status cause text", () => {
         metric: "missingActivePrices",
         value: 2,
         message: expect.stringContaining("coin-b, coin-c"),
+      }),
+    );
+  });
+
+  it("emits an info-severity, non-degrading cause for a transient non-alert-eligible price miss", () => {
+    const activePriceCoverage = {
+      ...makePublicHealth().activePriceCoverage,
+      status: "incomplete" as const,
+      expectedActiveCount: 3,
+      presentActiveCount: 3,
+      pricedActiveCount: 2,
+      missingPriceCount: 1,
+      pricedActiveIds: ["coin-a", "coin-c"],
+      missingActiveIds: ["coin-b"],
+      missingActiveAssets: [
+        {
+          stablecoinId: "coin-b",
+          symbol: "B",
+          marketCapUsd: 20_000_000,
+          currentPrice: null,
+          currentSource: null,
+          currentObservedAt: null,
+          currentConfidence: null,
+          consecutiveMissingGenerations: 1,
+          lastAcceptedPrice: null,
+          lastAcceptedSource: null,
+          lastAcceptedObservedAt: null,
+          rejectionReason: "missing",
+          alertEligible: false,
+        },
+      ],
+      alertEligibleCount: 0,
+      alertEligibleIds: [],
+    };
+
+    // Realistic wiring: the gated public impact status is "healthy" for a
+    // transient miss, so the admin dataQualityStatus floor no longer degrades on
+    // it either. The cause is still emitted for observability, but at info
+    // severity so it is neither public-impacting nor durable.
+    const status = deriveDataQualityStatus({
+      dataQuality: makeDataQuality(),
+      activePriceCoverageImpactStatus: "healthy",
+      missingPriceRatio: 0,
+      blacklistMissingRatio: 0,
+      blacklistRecentMissing: 0,
+      onchainAssessment: { status: "healthy", causes: [], representative: false },
+      reserveCompositionStatus: "healthy",
+    });
+    const causes = buildDataQualityCauses({
+      dataQuality: makeDataQuality(),
+      activePriceCoverage,
+      missingPriceRatio: 0,
+      blacklistMissingRatio: 0,
+      blacklistRecentMissing: 0,
+      onchainAssessmentCauses: [],
+      reserveCompositionQueryFailed: false,
+      reserveComposition: makeReserveComposition(),
+    });
+
+    expect(status).toBe("healthy");
+    expect(causes).toContainEqual(
+      expect.objectContaining({
+        code: "active_price_coverage_incomplete",
+        severity: "info",
+        metric: "missingActivePrices",
+        value: 1,
       }),
     );
   });

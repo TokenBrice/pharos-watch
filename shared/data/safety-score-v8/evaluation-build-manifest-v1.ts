@@ -142,14 +142,14 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/stablecoin-taxonomy.ts",
-      "sha256": "839d436006a9467140684be9de6f2e839f00d1530c70975d0c78ea9ad31b4d58"
+      "sha256": "562323191ea4e263db74f20653dd36565c7a019a1972df1d3216c83c1392c170"
     },
     {
       "path": "worker/src/lib/report-cards-snapshot-card.ts",
       "sha256": "e70bfddf6d253f0d37ed74449dff45e9af02858d80c0ca0931579796c080b85e"
     }
   ],
-  "digest": "24133c71fe495f69e3091081e1e0843eef0feb743bd54697783d7eedbc3e7832"
+  "digest": "509927f3126fc0e858d1e5119c033879b24b44fd0ecb424d217cb519c12f6839"
 } as const;
 
 export const SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST =

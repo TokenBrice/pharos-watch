@@ -28,11 +28,6 @@ const DATASET_META: Record<
   depegs: { label: "Depeg pipeline", owners: ["sync-stablecoins"] },
   dews: { label: "DEWS signals", owners: ["compute-dews"] },
   digest: { label: "Daily digest", owners: ["daily-digest"] },
-  discoveryCandidates: {
-    label: "Coverage discovery",
-    owners: ["sync-stablecoins", "discovery-scan"],
-    expectedOwners: ["discovery-scan"],
-  },
 };
 
 function getExpectedFreshnessSec(owners: readonly string[]): number | null {

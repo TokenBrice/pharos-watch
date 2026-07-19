@@ -107,6 +107,7 @@ export interface MissingPriceEnrichmentInput {
   cmcApiKey?: string;
   coingeckoApiKey?: string | null;
   jupiterApiKey?: string | null;
+  previousMissingGenerationsById?: ReadonlyMap<string, number>;
   returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
   onProgress?: EnrichmentProgressReporter;
 }
@@ -440,6 +441,7 @@ export async function runMissingPriceEnrichmentPhase(
     input.jupiterApiKey,
     input.coingeckoApiKey,
     input.onProgress,
+    input.previousMissingGenerationsById,
   );
 
   for (const asset of input.assets) {

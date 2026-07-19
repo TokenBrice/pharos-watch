@@ -28,7 +28,6 @@ import { jusdStablecoinBridgeProvider } from "./jusd-stablecoin-bridge";
 import { kavaUsdxPricefeedProvider } from "./kava-pricefeed";
 import { previewRedeemProvider } from "./preview-redeem";
 import { protocolParProvider } from "./protocol-par";
-import { usxStablePoolProvider } from "./usx-stable-pools";
 
 export type {
   CurrentPriceOverride,
@@ -44,7 +43,6 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   inheritedTrackedPriceProvider,
   protocolParProvider,
   azndCurvePoolProvider,
-  usxStablePoolProvider,
   kavaUsdxPricefeedProvider,
   jusdStablecoinBridgeProvider,
   erc4626NavProvider,

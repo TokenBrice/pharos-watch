@@ -323,6 +323,56 @@ describe("handleHealth", () => {
     expect(body.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
   });
 
+  it("does not degrade public health for a transient (non-alert-eligible) price miss", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const activeIds = [...ACTIVE_IDS];
+    const missingId = activeIds[0]!;
+    const db = makeHealthyHealthDb(now, {
+      publicationEntry: completePublicationEntry(now, {
+        complete: false,
+        expectedActiveCount: activeIds.length,
+        presentActiveCount: activeIds.length,
+        pricedActiveCount: activeIds.length - 1,
+        missingPriceCount: 1,
+        pricedActiveIds: activeIds.filter((stablecoinId) => stablecoinId !== missingId),
+        missingActiveIds: [missingId],
+        affectedMarketCapUsd: 88_000_000,
+        missingActiveAssets: [{
+          stablecoinId: missingId,
+          symbol: "MISS",
+          marketCapUsd: 88_000_000,
+          consecutiveMissingGenerations: 1,
+          rejectionReason: "no-accepted-price",
+          alertEligible: false,
+        }],
+        alertEligibleCount: 0,
+        alertEligibleIds: [],
+        maxConsecutiveMissingGenerations: 1,
+      }),
+    });
+
+    const res = await handleHealth(db);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      status: "healthy" | "degraded" | "stale";
+      warnings: string[];
+      activePriceCoverage: {
+        status: string;
+        missingActiveIds: string[];
+        alertEligibleCount: number;
+      };
+    };
+
+    expect(body.status).toBe("healthy");
+    expect(body.warnings.some((warning) => warning.startsWith("active-price-coverage-incomplete"))).toBe(false);
+    // The public JSON payload keeps the exact miss for observability.
+    expect(body.activePriceCoverage).toMatchObject({
+      status: "incomplete",
+      missingActiveIds: [missingId],
+      alertEligibleCount: 0,
+    });
+  });
+
   it("returns the bounded realtime Cache-Control profile", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([

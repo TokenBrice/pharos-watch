@@ -94,7 +94,6 @@
     "worker/src/lib/authoritative-price-sources/kava-pricefeed.ts": 95,
     "worker/src/lib/authoritative-price-sources/preview-redeem.ts": 93.8,
     "worker/src/lib/authoritative-price-sources/protocol-par.ts": 87.1,
-    "worker/src/lib/authoritative-price-sources/usx-stable-pools.ts": 96.9,
     "worker/src/lib/live-reserves-store-overview.ts": 81.4,
     "worker/src/lib/live-reserves-store-read.ts": 100,
     "worker/src/lib/live-reserves-store-row-decoding.ts": 89,

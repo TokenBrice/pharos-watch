@@ -4,7 +4,6 @@ export * from "./bluechip";
 export * from "./live-reserves";
 export * from "./core";
 export * from "./cause-of-death";
-export * from "./discovery";
 export * from "./digest";
 export * from "./market";
 export * from "./depeg-resolver";

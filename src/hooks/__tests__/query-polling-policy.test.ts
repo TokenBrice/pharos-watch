@@ -106,7 +106,6 @@ function minimalStatusResponse() {
     coingeckoPriceDiff: null,
     d1Usage: null,
     budgetOnlySurfaces: [],
-    discoveryCandidates: null,
     mintBurnReconciliation: null,
     reserveComposition: {
       configuredCoins: 0,

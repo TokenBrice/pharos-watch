@@ -67,7 +67,6 @@ describe("scheduled runner contract", () => {
     expect(SCHEDULED_SLOT_PLANS.daily0805Utc.jobChains).toContainEqual(["daily-digest"]);
     expect(flattenScheduledSlotPlanJobs(SCHEDULED_SLOT_PLANS.daily0805Utc)).not.toContain("weekly-recap");
     expect(SCHEDULED_SLOT_PLANS.daily0810Utc.jobChains).toContainEqual(["weekly-recap"]);
-    expect(SCHEDULED_SLOT_PLANS.daily0810Utc.jobChains).toContainEqual(["discovery-scan"]);
 
     const daily = CRON_JOB_DEFINITIONS.find((definition) => definition.job === "daily-digest");
     const weekly = CRON_JOB_DEFINITIONS.find((definition) => definition.job === "weekly-recap");

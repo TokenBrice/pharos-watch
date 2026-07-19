@@ -162,6 +162,7 @@ interface StablecoinsPricingStageOptions extends CronStageContext {
   db: D1Database;
   assets: PeggedAsset[];
   previousAssetsById: Map<string, PeggedAsset>;
+  previousMissingGenerationsById?: ReadonlyMap<string, number>;
   syncStartSec: number;
   fxFallbackRates: Awaited<ReturnType<typeof loadFreshFxRates>>["fxFallbackRates"];
   validationReferences: Awaited<ReturnType<typeof loadFreshFxRates>>["validationReferences"];
@@ -289,6 +290,7 @@ export async function runStablecoinsPricingStage(
     cmcApiKey: options.cmcApiKey,
     coingeckoApiKey: options.coingeckoApiKey,
     jupiterApiKey: options.jupiterApiKey,
+    previousMissingGenerationsById: options.previousMissingGenerationsById,
     returnIfAborted,
     onProgress: async (progress) => {
       const pass = progress.pass;

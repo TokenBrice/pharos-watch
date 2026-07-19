@@ -141,8 +141,8 @@ export function getPublicWorstCacheSummary(
   let sortRatio = Number.NEGATIVE_INFINITY;
   let impactedCount = 0;
 
-  for (const cache of Object.values(caches)) {
-    const cacheStatus = getCacheImpactStatus(cache);
+  for (const [key, cache] of Object.entries(caches)) {
+    const cacheStatus = getCacheImpactStatus(cache, key);
     if (cacheStatus !== "healthy") impactedCount++;
 
     const cacheRatio = getCacheFreshnessRatio(cache);
@@ -202,7 +202,15 @@ export function getImpactedPublicSurfaces(
     recentMissingAmounts: healthData.blacklist.recentMissingAmounts,
   });
 
-  if (healthData.activePriceCoverage?.status === "incomplete") {
+  // Mirror the worker's public-impact gate (public-health-assessment.ts): a merely
+  // un-repriced (transient fallback-rotation) miss keeps activePriceCoverage.status
+  // "incomplete" for observability but is not alert-eligible, so it must not render
+  // a degraded surface while the hero stays healthy. Only persistent (alert-eligible)
+  // misses — or "unknown" coverage, which fails closed — degrade this surface.
+  if (
+    healthData.activePriceCoverage?.status === "incomplete"
+    && healthData.activePriceCoverage.alertEligibleCount > 0
+  ) {
     items.push({
       id: "active-price-coverage",
       title: "Stablecoin prices and dependent analytics",
@@ -243,7 +251,7 @@ export function getImpactedPublicSurfaces(
     const copy = CACHE_IMPACT_COPY[key];
     if (!copy) continue;
 
-    const tone = getCacheImpactStatus(cache);
+    const tone = getCacheImpactStatus(cache, key);
     if (tone === "healthy") continue;
 
     items.push({

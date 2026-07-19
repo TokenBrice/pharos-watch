@@ -501,15 +501,23 @@ export async function assessPublicHealth(
     warnings.push("stablecoin-publication-unknown");
   }
 
-  const activePriceCoverageImpactStatus = activePriceCoverage.status === "complete"
-    ? "healthy"
-    : "degraded";
-  if (activePriceCoverage.status === "incomplete") {
-    warnings.push(
-      `active-price-coverage-incomplete:${activePriceCoverage.missingActiveIds.join(",") || "count-mismatch"}`,
-    );
-  } else if (activePriceCoverage.status === "unknown") {
+  // Public health gates on persistent (alert-eligible) misses only: a price that
+  // is merely un-repriced this cycle (transient fallback rotation) must not
+  // degrade the public banner. The JSON `activePriceCoverage` payload still
+  // reports exact counts/ids/status for observability; only the public impact
+  // and warning are gated on `alertEligibleCount` (misses at or past
+  // ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS). "unknown" coverage still fails closed.
+  const activePriceCoverageAlertEligible = activePriceCoverage.alertEligibleCount > 0;
+  const activePriceCoverageImpactStatus =
+    activePriceCoverage.status === "unknown" || activePriceCoverageAlertEligible
+      ? "degraded"
+      : "healthy";
+  if (activePriceCoverage.status === "unknown") {
     warnings.push("active-price-coverage-unknown");
+  } else if (activePriceCoverageAlertEligible) {
+    warnings.push(
+      `active-price-coverage-incomplete:${activePriceCoverage.alertEligibleIds.join(",") || "count-mismatch"}`,
+    );
   }
 
   const blacklistImpactStatus = blacklistResult.error

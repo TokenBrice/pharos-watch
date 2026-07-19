@@ -104,7 +104,6 @@ describe("handleStatus", () => {
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at >", rows: [] },
-      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status?refresh=live", { adminKey: "secret-key" });
@@ -551,7 +550,7 @@ describe("handleStatus", () => {
     expect(body.telegramBot).toBeNull();
   });
 
-  it("surfaces subsection loader failures through sectionErrors", async () => {
+  it("surfaces Telegram subsection loader failures through sectionErrors", async () => {
     const db = fixtureMockD1([
       { match: "cache WHERE key IN", rows: [] },
       { match: "dex_liquidity", rows: [], first: { age: 300 } },
@@ -564,11 +563,6 @@ describe("handleStatus", () => {
       { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at >", rows: [] },
       {
-        match: "FROM discovery_candidates WHERE dismissed = 0",
-        rows: [],
-        throwError: "discovery query exploded",
-      },
-      {
         match: "FROM telegram_subscribers s",
         rows: [],
         throwError: "no such table: telegram_subscribers",
@@ -579,16 +573,10 @@ describe("handleStatus", () => {
     const res = await handleStatus(db, true, request);
     const body = (await res.json()) as {
       sectionErrors: Record<string, { code: string; message: string } | undefined>;
-      discoveryCandidates: unknown;
       telegramBot: unknown;
     };
 
-    expect(body.discoveryCandidates).toBeNull();
     expect(body.telegramBot).toBeNull();
-    expect(body.sectionErrors.discoveryCandidates).toEqual({
-      code: "discovery_candidates_query_failed",
-      message: "Discovery candidates unavailable.",
-    });
     expect(body.sectionErrors.telegramBot).toEqual({
       code: "telegram_bot_stats_query_failed",
       message: "Telegram bot diagnostics unavailable.",

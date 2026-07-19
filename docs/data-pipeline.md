@@ -30,7 +30,7 @@ Most high-risk external integrations are protected by per-source circuit breaker
 - **Alerts**: Open/close transition alerts are sent when the caller provides a webhook URL to `recordOutcome(...)`
 - **Health impact**: 3 or more open circuits degrade `/api/health`; smaller circuit failures still surface in the circuit list without degrading public health on their own
 
-The source-name registry is maintained in `worker/src/lib/constants.ts` under `CIRCUIT_SOURCE`, while emitted pricing provenance and circuit semantics are tied together by `shared/lib/pricing-source-registry*.ts` and `worker/src/lib/pricing-circuit-map.ts`. Current circuit keys span the main data and delivery lanes, including DefiLlama (`defillama-*` plus `defillama-confirm` for pending depeg confirmation), CoinGecko (`coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coingecko-discovery`, `coingecko-ticker`, `coingecko-confirm`), CoinMarketCap, DexScreener (`dexscreener-prices` for exact token-address stablecoin price fallback, `dexscreener-liquidity` for optional DEX liquidity/discovery pool lookups, `dexscreener-address-prices` for optional targeted exact-address primary augmentation, and legacy `dexscreener-search` state for the retired symbol-search path), DexPaprika, Alchemy Prices, Moralis token prices, Birdeye token prices, GeckoTerminal pool probes, Jupiter, Pyth, Binance, Kraken, Bitstamp, Coinbase, RedStone, external live `protocol-redeem` RPC overrides, Curve (`curve-onchain`, `curve-oracle`, `curve-liquidity-api`), the protocol-native DEX lanes (Fluid, Balancer, Curve, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, Velodrome Slipstream), FX (`fx-frankfurter`, `fx-realtime`, `chainlink-feeds`), treasury rates, Etherscan, Alchemy, Bluechip, Anthropic, Twitter, Telegram, TronGrid, and the Kinesis Horizon sources. dRPC is an upstream RPC provider for some blacklist balance reads, but it is not a `CIRCUIT_SOURCE` key today. Synthesized or scoped emitted sources such as `coingecko-native-implied`, `zephyr-scanner`, `dex-promoted`, `uniswap-v3-dex`, `uniswap-v3-exact`, `pool-tvl-weighted`, and `cached` are explicitly marked as not directly circuit-gated. When sources depend on producer jobs, scoped supplemental fetches, local par/inherited override logic, or cached rows, that enforcement path is recorded separately from direct provider breakers.
+The source-name registry is maintained in `worker/src/lib/constants.ts` under `CIRCUIT_SOURCE`, while emitted pricing provenance and circuit semantics are tied together by `shared/lib/pricing-source-registry*.ts` and `worker/src/lib/pricing-circuit-map.ts`. Current circuit keys span the main data and delivery lanes, including DefiLlama (`defillama-*` plus `defillama-confirm` for pending depeg confirmation), CoinGecko (`coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coingecko-ticker`, `coingecko-confirm`), CoinMarketCap, DexScreener (`dexscreener-prices` for exact token-address stablecoin price fallback, `dexscreener-liquidity` for optional DEX liquidity/discovery pool lookups, `dexscreener-address-prices` for optional targeted exact-address primary augmentation, and legacy `dexscreener-search` state for the retired symbol-search path), DexPaprika, Alchemy Prices, Moralis token prices, Birdeye token prices, GeckoTerminal pool probes, Jupiter, Pyth, Binance, Kraken, Bitstamp, Coinbase, RedStone, external live `protocol-redeem` RPC overrides, Curve (`curve-onchain`, `curve-oracle`, `curve-liquidity-api`), the protocol-native DEX lanes (Fluid, Balancer, Curve, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, Velodrome Slipstream), FX (`fx-frankfurter`, `fx-realtime`, `chainlink-feeds`), treasury rates, Etherscan, Alchemy, Bluechip, Anthropic, Twitter, Telegram, TronGrid, and the Kinesis Horizon sources. dRPC is an upstream RPC provider for some blacklist balance reads, but it is not a `CIRCUIT_SOURCE` key today. Synthesized or scoped emitted sources such as `coingecko-native-implied`, `zephyr-scanner`, `dex-promoted`, `uniswap-v3-dex`, `uniswap-v3-exact`, `pool-tvl-weighted`, and `cached` are explicitly marked as not directly circuit-gated. When sources depend on producer jobs, scoped supplemental fetches, local par/inherited override logic, or cached rows, that enforcement path is recorded separately from direct provider breakers.
 
 `npm run check:provider-resilience` backs this posture with a registry in `scripts/lib/provider-resilience-registry.mjs`. It records the expected timeout, response-body handling, circuit source where applicable, and regression tests for external provider/fetcher surfaces, and it fails when a new production Worker file adds raw `fetch(...)` without a registry entry.
 
@@ -112,7 +112,7 @@ The registry lives under `worker/src/lib/authoritative-price-sources/` and suppo
 - **Live override** — used by `syncStablecoins()` to replace the current cached price
 - **Historical replay** — used by `backfill-depegs.ts` so historical rebuilds can consult the same authoritative provider instead of drifting back to CoinGecko/DefiLlama for those assets
 
-- **Current scope:** see [Pricing Pipeline](./pricing-pipeline.md#current-scope) for the asset-by-asset registry. The current code covers direct redeem quotes, scoped redemption-par references, tracked-base inheritance, fee-adjusted tracked-base inheritance, ERC-4626 NAV wrappers, Aave `previewRedeem`, Idle CDO virtual-price tranches, Kava USDX oracle state, agreeing Base/Optimism USX stable pools, the exact thin AZND Curve route, and the funded public Citrea JUSD bridge path. `crvusd-curve` was migrated out of the authoritative override registry and into primary consensus as a `curve-oracle` source at weight 3.
+- **Current scope:** see [Pricing Pipeline](./pricing-pipeline.md#current-scope) for the asset-by-asset registry. The current code covers direct redeem quotes, scoped redemption-par references, tracked-base inheritance, fee-adjusted tracked-base inheritance, ERC-4626 NAV wrappers, Aave `previewRedeem`, Idle CDO virtual-price tranches, Kava USDX oracle state, the exact thin AZND Curve route, and the funded public Citrea JUSD bridge path. `crvusd-curve` was migrated out of the authoritative override registry and into primary consensus as a `curve-oracle` source at weight 3.
 - **Source:** direct `eth_call` redemption/NAV quotes or tracked-base inheritance when a redeemable wrapper should shadow another tracked asset:
   - Cap `getBurnAmount(address,uint256)` for `cUSD -> USDC`
   - infiniFi `RedeemController.receiptToAsset(uint256)` for `iUSD -> USDC`
@@ -123,7 +123,7 @@ The registry lives under `worker/src/lib/authoritative-price-sources/` and suppo
   - ERC-4626, Aave savings, and Idle CDO wrappers read the contract's asset-per-share value and multiply it by a trusted tracked parent price; ERC-4626 NAV wrappers are prioritized ahead of lower-priority RPC-backed override families inside the live override budget
 - **Deterministic route admission:** each asset-specific adapter pins its market, bridge, vault, exchange, tokens, decimals, and dependencies. It then requires fresh protocol or block state plus route-specific capacity, executable-notional, impact, agreement, or public-redemption checks. Missing dependencies or any identity, freshness, depth, code-hash, capacity, transport, or quote failure returns no override. Thin fallback routes such as AZND remain non-replay-safe and non-depeg-authoritative by themselves.
 - **Scheduling:** the 10-second live-override stage processes all missing-price candidates before already-priced candidates and interleaves provider families within each partition. This keeps one large provider family from starving other exact recovery routes.
-- **Circuit isolation:** Kava USDX, Citrea JUSD, exact USX stable pools, and thin AZND Curve use `kava-pricefeed`, `jusd-citrea-bridge`, `usx-stable-pools`, and `aznd-curve-pool` circuits rather than sharing one grouped `protocol-redeem` circuit. A failure burst in one specialty route therefore does not suppress unrelated authoritative providers. These single-asset breakers stay visible in admin provider diagnostics but are excluded from the source-wide public circuit count; exact active-price coverage reports any missing asset output. The retired `mento-broker` cache key is filtered from active circuit diagnostics.
+- **Circuit isolation:** Kava USDX, Citrea JUSD, and thin AZND Curve use `kava-pricefeed`, `jusd-citrea-bridge`, and `aznd-curve-pool` circuits rather than sharing one grouped `protocol-redeem` circuit. A failure burst in one specialty route therefore does not suppress unrelated authoritative providers. These single-asset breakers stay visible in admin provider diagnostics but are excluded from the source-wide public circuit count; exact active-price coverage reports any missing asset output. The retired `mento-broker` and `usx-stable-pools` cache keys are filtered from active circuit diagnostics.
 - **Reason:** CG/DL can overweight thin secondary-market liquidity for wrapper-style assets whose real executable value is set by direct protocol redemption or by an instantly redeemable base asset
 - **Result:** the final cached asset keeps `priceSource = "protocol-redeem"` and `priceConfidence = "high"` when a direct protocol/NAV quote or high-confidence inherited parent validates against peg bounds. Scoped inherited prices from fresh replay-safe single-source parents keep the parent source and `single-source` confidence so they do not bypass weak-source publication guardrails.
 
@@ -291,34 +291,3 @@ The `blacklist_sync_state.last_block` column has different semantics per chain t
 - **Tron**: stores millisecond timestamps (Tron events are ordered by timestamp, not block number)
 
 This is intentional — do not mix these values across chain types.
-
-## Coverage Discovery
-
-Coverage discovery has two ingestion paths:
-
-- quarter-hourly DefiLlama residual upserts inside `worker/src/cron/sync-stablecoins/intake.ts`
-- weekly CoinGecko category scan inside `worker/src/cron/discovery-scan.ts` (Mondays on the `10 8 * * *` trigger)
-
-### Source A: DL Residuals (free)
-
-After `syncStablecoins()` filters DL assets against `REGISTRY_BY_LLAMA_ID`, untracked assets with circulating > $5M are upserted into `discovery_candidates`. Zero extra API calls.
-
-### Source B: CG Stablecoin Category (one call/week, Mondays)
-
-`GET /coins/markets?category=stablecoins&vs_currency=usd&per_page=250&order=market_cap_desc`
-
-Untracked coins with market cap > $5M are upserted. Coins found by both sources get `source: "both"`.
-
-The response boundary validates the top-level array and every candidate identity, label, symbol, and market-cap field before D1 writes. Valid rows from a mixed payload still persist, but rejected source rows set `status: "degraded"` with `reason: "malformed-source-rows"`. If a D1 batch falls back to individual writes and any candidate still fails, the run reports `reason: "partial-persistence"` plus attempted, persisted, failed, and invalid counters instead of presenting the partial ledger as a clean success.
-
-### Circuit Breaker
-
-Uses `CG_DISCOVERY` — independent from `CG_PRICES`, but it still follows the shared circuit-breaker defaults: open after 3 consecutive failures and probe again after 30 minutes.
-
-If the breaker is open when the Monday CoinGecko scan would have run, `discovery-scan` now returns `status: "degraded"` with `reason: "circuit-open-no-attempt"` instead of looking like a clean no-op.
-
-### Candidate Lifecycle
-
-- Upserted whenever the quarter-hourly DefiLlama residual pass or Monday CoinGecko scan sees them, with `last_seen` and `market_cap` updates
-- Dismissed candidates don't resurface unless market cap crosses 10x the value at dismissal
-- Hard-deleted after 90 days dismissed

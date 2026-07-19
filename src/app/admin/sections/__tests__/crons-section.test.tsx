@@ -143,7 +143,7 @@ describe("CronsSection", () => {
       groups: [
         makeGroup([
           [
-            "discovery-scan",
+            "weekly-recap",
             makeCronStatus({
               lastRun: neutralRun,
               recentRuns: [neutralRun, degradedRun],
@@ -154,7 +154,7 @@ describe("CronsSection", () => {
       ],
     });
 
-    const row = screen.getByTestId("cron-row-discovery-scan");
+    const row = screen.getByTestId("cron-row-weekly-recap");
     expect(within(row).getByText("Degraded")).toBeTruthy();
     expect(within(row).getByText("Completed with warnings (latest required run)")).toBeTruthy();
     const warningBadge = screen
@@ -170,7 +170,7 @@ describe("CronsSection", () => {
       groups: [
         makeGroup([
           [
-            "discovery-scan",
+            "weekly-recap",
             makeCronStatus({
               lastRun: neutralRun,
               recentRuns: [neutralRun, failedRun],
@@ -181,7 +181,7 @@ describe("CronsSection", () => {
       ],
     });
 
-    const row = screen.getByTestId("cron-row-discovery-scan");
+    const row = screen.getByTestId("cron-row-weekly-recap");
     expect(within(row).getByText("Unhealthy")).toBeTruthy();
     expect(within(row).getByText("Failed (latest required run)")).toBeTruthy();
   });

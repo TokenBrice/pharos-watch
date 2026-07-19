@@ -1,8 +1,9 @@
 import {
   STATUS_BLACKLIST_THRESHOLDS,
-  STATUS_CACHE_RATIO_THRESHOLDS,
   STATUS_MISSING_PRICE_THRESHOLDS,
+  getCacheRatioThresholds,
 } from "@shared/lib/status-thresholds";
+import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@shared/lib/cache-health";
 import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import type { DataQuality, StatusCause, StatusResponse } from "@shared/types/status";
 import type { PublicHealthAssessment } from "../public-health-assessment";
@@ -74,12 +75,19 @@ export function synthesizeOverallCauses(availability: StatusCause[], dataQuality
   const ranked = [...availability, ...dataQuality].map((cause, sourceIndex) => ({ cause, sourceIndex }));
   const compareRanked = (a: (typeof ranked)[number], b: (typeof ranked)[number]) =>
     severityOrder[a.cause.severity] - severityOrder[b.cause.severity] || a.sourceIndex - b.sourceIndex;
-  const durablePublic = ranked.filter(({ cause }) => DURABLE_PUBLIC_CAUSE_CODES.has(cause.code)).sort(compareRanked);
+  // Durable retention is reserved for public-impact causes that actually drive a
+  // public incident — i.e. warning-or-higher. An info-severity cause (e.g. a
+  // transient, non-alert-eligible active_price_coverage_incomplete) is already
+  // excluded from causeIsPublicImpacting, so it must not occupy or displace a
+  // durable slot here either; it falls back to normal severity-ranked selection.
+  const isDurablePublic = ({ cause }: (typeof ranked)[number]) =>
+    DURABLE_PUBLIC_CAUSE_CODES.has(cause.code) && cause.severity !== "info";
+  const durablePublic = ranked.filter(isDurablePublic).sort(compareRanked);
   const remainingCapacity = Math.max(0, OVERALL_CAUSE_PERSISTENCE_LIMIT - durablePublic.length);
   const selected = [
     ...durablePublic.slice(0, OVERALL_CAUSE_PERSISTENCE_LIMIT),
     ...ranked
-      .filter(({ cause }) => !DURABLE_PUBLIC_CAUSE_CODES.has(cause.code))
+      .filter((entry) => !isDurablePublic(entry))
       .sort(compareRanked)
       .slice(0, remainingCapacity),
   ];
@@ -106,29 +114,49 @@ export function buildAvailabilityCauses(input: {
   const cacheWarnings = input.publicHealth.cacheWarnings;
   const caches = input.publicHealth.caches;
 
-  if (worstCacheRatio > STATUS_CACHE_RATIO_THRESHOLDS.stale) {
+  // Evaluate cache freshness per-key with override-aware bands so a cache carrying
+  // a tightened availability budget (STATUS_CACHE_RATIO_OVERRIDES — e.g. yield-data
+  // at 2x/4x) emits a matching-severity cause. Comparing only the aggregate
+  // worstCacheRatio against the global 8x/12x bands would silently drop the cause
+  // for an overridden cache that already degrades public availability below the
+  // global thresholds, leaving the transition without a warning-or-higher cause and
+  // misclassifying the public incident in public-status-history. Ratio-only, to
+  // match the historical semantics (cached-fallback mode is its own fx cause).
+  let worstCacheBreach:
+    | { key: string; ratio: number; thresholds: ReturnType<typeof getCacheRatioThresholds>; tier: "degraded" | "stale" }
+    | null = null;
+  for (const [key, cache] of Object.entries(caches)) {
+    const tier = getCacheFreshnessStatus(cache, key);
+    if (tier === "healthy") continue;
+    const ratio = getCacheFreshnessRatio(cache) ?? worstCacheRatio;
+    if (worstCacheBreach == null || (tier === "stale" && worstCacheBreach.tier === "degraded")) {
+      worstCacheBreach = { key, ratio, thresholds: getCacheRatioThresholds(key), tier };
+    }
+  }
+
+  if (worstCacheBreach?.tier === "stale") {
     pushCause(availabilityCauses, {
       code: "cache_ratio_stale",
       layer: "availability",
       severity: "critical",
       message:
-        `Cache freshness exceeded stale threshold (${worstCacheRatio.toFixed(2)}x > ` +
-        `${STATUS_CACHE_RATIO_THRESHOLDS.stale.toFixed(2)}x).`,
+        `Cache freshness exceeded stale threshold (${worstCacheBreach.key} at ${worstCacheBreach.ratio.toFixed(2)}x > ` +
+        `${worstCacheBreach.thresholds.stale.toFixed(2)}x).`,
       metric: "worstCacheRatio",
-      value: worstCacheRatio,
-      threshold: STATUS_CACHE_RATIO_THRESHOLDS.stale,
+      value: worstCacheBreach.ratio,
+      threshold: worstCacheBreach.thresholds.stale,
     });
-  } else if (worstCacheRatio > STATUS_CACHE_RATIO_THRESHOLDS.degraded) {
+  } else if (worstCacheBreach?.tier === "degraded") {
     pushCause(availabilityCauses, {
       code: "cache_ratio_degraded",
       layer: "availability",
       severity: "warning",
       message:
-        `Cache freshness exceeded degraded threshold (${worstCacheRatio.toFixed(2)}x > ` +
-        `${STATUS_CACHE_RATIO_THRESHOLDS.degraded.toFixed(2)}x).`,
+        `Cache freshness exceeded degraded threshold (${worstCacheBreach.key} at ${worstCacheBreach.ratio.toFixed(2)}x > ` +
+        `${worstCacheBreach.thresholds.degraded.toFixed(2)}x).`,
       metric: "worstCacheRatio",
-      value: worstCacheRatio,
-      threshold: STATUS_CACHE_RATIO_THRESHOLDS.degraded,
+      value: worstCacheBreach.ratio,
+      threshold: worstCacheBreach.thresholds.degraded,
     });
   }
 
@@ -456,13 +484,25 @@ export function buildDataQualityCauses(input: {
   if (input.activePriceCoverage.status === "incomplete") {
     const missing = input.activePriceCoverage.missingActiveIds;
     const examples = missing.slice(0, 12).join(", ");
+    // Persistence gate, mirroring public /api/health: only alert-eligible misses
+    // (a gap whose consecutive-missing streak has reached
+    // ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS) carry warning severity and are
+    // therefore public-impacting and durable. A transient single-cycle miss is
+    // info-only — like the missing_prices_elevated early-warning band below — so
+    // it neither opens a public incident nor persists as a durable public cause,
+    // staying consistent with the gated public health status. The admin board
+    // still sees the cause and keeps its ratio-band/publication guards.
+    const alertEligible = input.activePriceCoverage.alertEligibleCount > 0;
+    const baseMessage =
+      `Live prices are missing for ${input.activePriceCoverage.missingPriceCount} active asset(s)` +
+      (examples ? `: ${examples}${missing.length > 12 ? ", ..." : ""}.` : ".");
     pushCause(dataQualityCauses, {
       code: "active_price_coverage_incomplete",
       layer: "data-quality",
-      severity: "warning",
-      message:
-        `Live prices are missing for ${input.activePriceCoverage.missingPriceCount} active asset(s)` +
-        (examples ? `: ${examples}${missing.length > 12 ? ", ..." : ""}.` : "."),
+      severity: alertEligible ? "warning" : "info",
+      message: alertEligible
+        ? baseMessage
+        : `${baseMessage} No gap has reached the alert-eligible persistence threshold; not degrading public status.`,
       metric: "missingActivePrices",
       value: input.activePriceCoverage.missingPriceCount,
       threshold: 1,

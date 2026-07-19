@@ -13,7 +13,6 @@ export type DynamicEndpointDescriptorKey =
   | "og-image"
   | "snapshot-day"
   | "snapshot-coin"
-  | "discovery-candidate-dismiss"
   | "api-key-update"
   | "api-key-deactivate"
   | "api-key-rotate"
@@ -108,11 +107,6 @@ export const DYNAMIC_ENDPOINT_DESCRIPTORS = [
   },
   publicDynamic({ key: "snapshot-day", pattern: /^\/api\/snapshots\/(\d{4}-\d{2}-\d{2})\.json$/ }),
   publicDynamic({ key: "snapshot-coin", pattern: /^\/api\/snapshot\/(\d{4}-\d{2}-\d{2})\/stablecoin\/([^/]+)$/ }),
-  adminDynamicPost({
-    key: "discovery-candidate-dismiss",
-    pattern: /^\/api\/discovery-candidates\/(\d+)\/dismiss$/,
-    routeDependencies: [],
-  }),
   adminDynamicPost({
     key: "api-key-update",
     pattern: /^\/api\/api-keys\/(\d+)\/update$/,

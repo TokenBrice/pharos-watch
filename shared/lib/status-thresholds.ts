@@ -106,6 +106,37 @@ export const STATUS_CACHE_RATIO_THRESHOLDS = {
   stale: FRESHNESS_RATIOS.DEGRADED,
 } as const;
 
+/**
+ * Per-cache overrides of the global availability ratio bands, keyed by cache key.
+ * Tightens the default 8×/12× tolerance for caches whose slow stale window would
+ * otherwise under-report real user impact on the public status surface.
+ *
+ * `yield-data`: hourly producer (`sync-yield-data`, 3600s availability budget).
+ * Under the global bands a lane can serve ~8h-stale rankings while public health
+ * still reads "healthy", even though the admin endpoint-budget lane already flags
+ * it at 1×. Ruling R3 (2026-07-19) tightens it to degrade after two missed hourly
+ * publishes (2×) and go stale after four (4×); one missed publish stays healthy.
+ * See docs/architecture.md ADR-9 and docs/status-dashboard.md.
+ */
+export const STATUS_CACHE_RATIO_OVERRIDES: Record<string, { degraded: number; stale: number }> = {
+  "yield-data": { degraded: 2.0, stale: 4.0 },
+};
+
+/** Resolve the availability ratio bands for a cache key, applying any per-cache override. */
+export function getCacheRatioThresholds(cacheKey?: string): { degraded: number; stale: number } {
+  return (cacheKey ? STATUS_CACHE_RATIO_OVERRIDES[cacheKey] : undefined) ?? STATUS_CACHE_RATIO_THRESHOLDS;
+}
+
+/**
+ * Ratio ceiling for a cache's per-record `healthy` boolean. Overridden caches flip
+ * to `healthy:false` once they enter their degraded band (public-unhealthy on real
+ * staleness); every other cache keeps the historical "not stale" ceiling.
+ */
+export function getCacheHealthyMaxRatio(cacheKey?: string): number {
+  const override = cacheKey ? STATUS_CACHE_RATIO_OVERRIDES[cacheKey] : undefined;
+  return override ? override.degraded : FRESHNESS_RATIOS.DEGRADED;
+}
+
 // --- Probe classification thresholds (browser & self-check probe runs) ---
 export const STATUS_PROBE_THRESHOLDS = {
   /** p95 latency (ms) at or below which probes are classified healthy (given fail cap). */
@@ -173,5 +204,3 @@ export const STATUS_YIELD_HEALTH_THRESHOLDS = {
 export const TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS = 15 * 60;
 
 // --- Discovery scan ---
-/** Minimum mcap (USD) for a coin to surface in the discovery scan. Below this, the universe is too noisy to be actionable. */
-export const DISCOVERY_MIN_MCAP = 5_000_000;

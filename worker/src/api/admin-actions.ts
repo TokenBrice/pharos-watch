@@ -1,9 +1,8 @@
 import type { TelegramCreds } from "../lib/telegram";
-import { makeAdminRoute, runAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";
+import { makeAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";
 import { runIdempotentAdminAction } from "../lib/idempotency";
 import { setCache } from "../lib/db-cache";
 import { jsonResponse } from "../lib/api-utils";
-import { handleDismissCandidate } from "./discovery";
 import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
 import { normalizeBlacklistSyncStateKey } from "../lib/db";
 
@@ -221,22 +220,3 @@ export const handleDebugSyncState = makeAdminRoute(
     return jsonResponse(rows);
   },
 );
-
-export function handleDiscoveryCandidateDismiss(
-  { db, request, trustedAdmin }: AdminRouteContext,
-  candidateId: number,
-): Promise<Response> {
-  return runAdminRoute(
-    {
-      endpoint: "route-discovery-candidate-dismiss",
-      request,
-      trustedAdmin,
-    },
-    () => runIdempotentAdminAction(
-      db,
-      "discovery-candidate-dismiss",
-      request,
-      () => handleDismissCandidate(db, candidateId, request),
-    ),
-  );
-}

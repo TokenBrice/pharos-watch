@@ -10,7 +10,7 @@ routes = [
 ]
 
 [vars]
-ADDRESS_PRICE_PROVIDERS_ENABLED = "none"
+ADDRESS_PRICE_PROVIDERS_ENABLED = "coingecko-onchain-address"
 
 [[rules]]
 type = "Data"
@@ -89,17 +89,17 @@ fallthrough = true
     );
   });
 
-  it("rejects re-enabling address-price providers in production", () => {
+  it("rejects re-enabling the heavier address-price providers in production", () => {
     const report = evaluateWorkerWranglerConfig(
       VALID_CONFIG.replace(
-        'ADDRESS_PRICE_PROVIDERS_ENABLED = "none"',
+        'ADDRESS_PRICE_PROVIDERS_ENABLED = "coingecko-onchain-address"',
         'ADDRESS_PRICE_PROVIDERS_ENABLED = "dexpaprika-address"',
       ),
     );
 
     expect(report.failed).toBe(true);
     expect(report.issues).toContain(
-      'Production address-price providers must stay disabled with ADDRESS_PRICE_PROVIDERS_ENABLED="none"; found dexpaprika-address.',
+      'Production address-price providers must be exactly ADDRESS_PRICE_PROVIDERS_ENABLED="coingecko-onchain-address"; found dexpaprika-address.',
     );
   });
 });

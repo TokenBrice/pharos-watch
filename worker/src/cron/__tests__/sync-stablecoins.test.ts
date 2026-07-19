@@ -546,6 +546,7 @@ describe("syncStablecoins", () => {
       undefined,
       undefined,
       expect.any(Function),
+      expect.any(Map),
     );
     expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined, undefined);
     expect(confirmPendingDepegs).toHaveBeenCalledWith(

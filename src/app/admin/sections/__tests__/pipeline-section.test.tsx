@@ -40,16 +40,6 @@ vi.mock("@/components/status/d1-usage-card", () => ({
 vi.mock("@/components/status/pipeline-integrity-panel", () => ({
   PipelineIntegrityPanel: () => <div>Integrity panel mounted</div>,
 }));
-vi.mock("@/components/status/discovery-candidates", () => ({
-  DiscoveryCandidatesCard: ({ onDismissed }: { onDismissed: () => void }) => (
-    <div>
-      Discovery panel mounted
-      <button type="button" onClick={onDismissed}>
-        Dismiss candidate
-      </button>
-    </div>
-  ),
-}));
 
 import { PipelineSection } from "../pipeline-section";
 
@@ -64,7 +54,7 @@ afterEach(() => {
 
 describe("PipelineSection", () => {
   it("syncs keyboard tab selection to the URL and mounts only the active mode", async () => {
-    render(<PipelineSection data={makeHealthyStatusResponse()} handleRefresh={vi.fn()} />);
+    render(<PipelineSection data={makeHealthyStatusResponse()} />);
 
     const qualityTab = screen.getByRole("tab", { name: /^Quality/ });
     const marketsTab = screen.getByRole("tab", { name: /^Markets/ });
@@ -92,7 +82,7 @@ describe("PipelineSection", () => {
 
   it("honors a URL-selected mode on mount", async () => {
     window.history.replaceState({}, "", "/admin/pipeline/?view=integrity");
-    render(<PipelineSection data={makeHealthyStatusResponse()} handleRefresh={vi.fn()} />);
+    render(<PipelineSection data={makeHealthyStatusResponse()} />);
 
     await waitFor(() => expect(screen.getByText("Integrity panel mounted")).toBeTruthy());
     expect(screen.getByRole("tab", { name: /^Integrity/ }).getAttribute("aria-selected")).toBe("true");
@@ -110,7 +100,7 @@ describe("PipelineSection", () => {
       },
     });
 
-    render(<PipelineSection data={data} handleRefresh={vi.fn()} />);
+    render(<PipelineSection data={data} />);
 
     expect(screen.getByText("Loader coverage is incomplete")).toBeTruthy();
     expect(screen.getByText("Classification warnings")).toBeTruthy();
@@ -119,14 +109,4 @@ describe("PipelineSection", () => {
     expect(screen.queryByText("Metadata panel mounted")).toBeNull();
   });
 
-  it("retains the status refresh callback for Discovery dismissals", async () => {
-    const handleRefresh = vi.fn();
-    render(<PipelineSection data={makeHealthyStatusResponse()} handleRefresh={handleRefresh} />);
-
-    fireEvent.click(screen.getByRole("tab", { name: /^Discovery/ }));
-    await waitFor(() => expect(screen.getByText("Discovery panel mounted")).toBeTruthy());
-    fireEvent.click(screen.getByRole("button", { name: "Dismiss candidate" }));
-
-    expect(handleRefresh).toHaveBeenCalledTimes(1);
-  });
 });

@@ -96,7 +96,6 @@ export const CRITICAL_FILES = [
   "worker/src/lib/authoritative-price-sources/kava-pricefeed.ts",
   "worker/src/lib/authoritative-price-sources/preview-redeem.ts",
   "worker/src/lib/authoritative-price-sources/protocol-par.ts",
-  "worker/src/lib/authoritative-price-sources/usx-stable-pools.ts",
   "worker/src/lib/live-reserves-store-overview.ts",
   "worker/src/lib/live-reserves-store-read.ts",
   "worker/src/lib/live-reserves-store-row-decoding.ts",

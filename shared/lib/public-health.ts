@@ -34,8 +34,8 @@ export function getPublicMintBurnStatus(sync: HealthResponse["mintBurn"]["sync"]
 export function getOverallCacheImpactStatus(caches: Record<string, CacheStatus>): PublicStatusTone {
   let worstStatus: PublicStatusTone = "healthy";
 
-  for (const cache of Object.values(caches)) {
-    worstStatus = maxPublicStatus(worstStatus, getCacheImpactStatus(cache));
+  for (const [key, cache] of Object.entries(caches)) {
+    worstStatus = maxPublicStatus(worstStatus, getCacheImpactStatus(cache, key));
     if (worstStatus === "stale") {
       return worstStatus;
     }

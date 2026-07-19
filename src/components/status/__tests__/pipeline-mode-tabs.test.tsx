@@ -12,7 +12,6 @@ const MODES: PipelineModeSummary[] = [
   { id: "yield", label: "Yield", issueCount: 0, severity: "healthy" },
   { id: "storage", label: "Storage", issueCount: 1, severity: "unknown" },
   { id: "integrity", label: "Integrity", issueCount: 3, severity: "critical" },
-  { id: "discovery", label: "Discovery", issueCount: 0, severity: "healthy" },
 ];
 
 afterEach(cleanup);

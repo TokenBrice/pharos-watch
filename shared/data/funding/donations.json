@@ -1,5 +1,5 @@
 {
-  "last_updated_at": 1779010497,
+  "last_updated_at": 1784451502,
   "donations": [
     {
       "chain": "ethereum",
@@ -624,6 +624,66 @@
       "amount_decimal": 0.0277,
       "usd_at_receipt": 63.2,
       "price_note": "coingecko-historical-2026-05-15"
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x0ce5520f0159d5a8c31afb27a8ed054853ce63a0bbde7fab18a5413599e603d8",
+      "block_timestamp": 1779910583,
+      "from_address": "0x799d0db297dc1b5d114f3562c1ec30c9f7fdae39",
+      "display": "0x799d0d...ae39",
+      "kind": "community",
+      "asset_symbol": "USDC",
+      "amount_decimal": 51.52,
+      "usd_at_receipt": 51.52,
+      "price_note": "stablecoin-1-to-1"
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x81aead23b7c247730586089f71130de6f02093afdd31dd5f37996a2491414cd7",
+      "block_timestamp": 1780346147,
+      "from_address": "0x5256d6d94ed14667fa1661a99f5b142b1e051b8e",
+      "display": "thedaofund.eth",
+      "kind": "community",
+      "asset_symbol": "ETH",
+      "amount_decimal": 0.012,
+      "usd_at_receipt": 24.05,
+      "price_note": "coingecko-historical-2026-06-01"
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x5bf1ccf4b5528dd3447038ee5496e8ac52aaeab1c20eef65b75e04088fe0dc55",
+      "block_timestamp": 1780406003,
+      "from_address": "0x97b2cb568e0880b99cd16efc6edff5272aa02676",
+      "display": "0x97b2cb...2676",
+      "kind": "community",
+      "asset_symbol": "ETH",
+      "amount_decimal": 0.0065,
+      "usd_at_receipt": 13.02,
+      "price_note": "coingecko-historical-2026-06-02"
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x7104a8d97a9f080c94e9b4e144a688eb1c3f257b482684ee2152d7a47931e1b5",
+      "block_timestamp": 1780617923,
+      "from_address": "0x5256d6d94ed14667fa1661a99f5b142b1e051b8e",
+      "display": "thedaofund.eth",
+      "kind": "community",
+      "asset_symbol": "ETH",
+      "amount_decimal": 1.064,
+      "usd_at_receipt": 1882.41,
+      "price_note": "coingecko-historical-2026-06-05"
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0xe6e4870c90de8b6f249011a9e4b9b4dafd2e765523a3fffdd0b66086ded92443",
+      "block_timestamp": 1780618187,
+      "from_address": "0xd5cf05f24727c83976652e3586c0e26dd39884e9",
+      "display": "thedaofund.eth",
+      "kind": "community",
+      "asset_symbol": "ETH",
+      "amount_decimal": 0.294903535961297,
+      "usd_at_receipt": 521.74,
+      "price_note": "coingecko-historical-2026-06-05"
     }
   ]
 }

@@ -78,9 +78,9 @@ The active frontend operator mode is now:
   - Renders the fixed 30-day public `Status runway` with explicit labeling (`Last 30d`) so the hero summary keeps a stable scope even while the transition table is filtered
 - The public `Overview` lane uses flatter signal cards for mint/burn sync, blacklist ingestion, optional Telegram bot health, and impacted public surfaces
 - The public blacklist-ingestion card keeps historical low-ratio amount gaps visible, but only recent or threshold-crossing gaps inherit warning/stale treatment; this matches the shared blacklist gap thresholds instead of flagging any non-zero backlog as degraded
-- Public cache freshness tables show the shared cache-age ratio bands (`>8x` degraded, `>12x` stale), while the hero and impacted-surface callouts follow the full shared cache-impact floor: missing cache rows and stale cache age remain stale, and cached-fallback mode degrades a lane even when the age ratio is still inside target. Stale or degraded producer-source freshness can still appear as an admin `/api/status` warning cause without becoming a public impacted-surface callout by itself until the public availability budget is breached.
+- Public cache freshness tables show the shared cache-age ratio bands (`>8x` degraded, `>12x` stale, or a tighter per-cache override — see "Per-cache availability overrides" below), while the hero and impacted-surface callouts follow the full shared cache-impact floor: missing cache rows and stale cache age remain stale, and cached-fallback mode degrades a lane even when the age ratio is still inside target. Stale or degraded producer-source freshness can still appear as an admin `/api/status` warning cause without becoming a public impacted-surface callout by itself until the public availability budget is breached.
 - The public mint/burn card, hero tile, and impacted-surface callout now follow the same backend lane contract as `/api/health`: sync freshness is primary, but a fresh cache still degrades publicly when the critical mint/burn lane's latest run is unhealthy
-- The public circuit-breaker hero tile, reliability summary badge, and public breaker table use the same public-impact circuit key filter as `/api/health`: `live-reserves:*`, optional `dexscreener-liquidity` / `dexscreener-search`, and the asset-scoped `kava-pricefeed`, `jusd-citrea-bridge`, `usx-stable-pools`, and `aznd-curve-pool` breakers remain available in raw health and admin provider diagnostics, but they do not make the public `/status/` surface report a source-wide outage. Missing output from an asset-scoped route is owned by exact active-price coverage instead. The retired `mento-broker` key remains excluded if encountered in a legacy payload but is filtered from active Worker diagnostics.
+- The public circuit-breaker hero tile, reliability summary badge, and public breaker table use the same public-impact circuit key filter as `/api/health`: `live-reserves:*`, optional `dexscreener-liquidity` / `dexscreener-search`, and the asset-scoped `kava-pricefeed`, `jusd-citrea-bridge`, and `aznd-curve-pool` breakers remain available in raw health and admin provider diagnostics, but they do not make the public `/status/` surface report a source-wide outage. Missing output from an asset-scoped route is owned by exact active-price coverage instead. The retired `mento-broker` and `usx-stable-pools` keys remain excluded if encountered in a legacy payload but are filtered from active Worker diagnostics.
 - Public `Overview` and `Reliability` lane shells use theme-aware tinted gradients with elevated inner cards so light mode keeps the same hierarchy without inheriting the dark-only monitor slabs
 
 ### Data hooks
@@ -145,7 +145,7 @@ The active frontend operator mode is now:
   - 30-minute on-chain intake jobs (`sync-mint-burn` on `4,34`, `sync-mint-burn-extended` on `13,43`) shown together in the half-hourly group but labeled as isolated triggers
   - 30-minute charts / liquidity jobs plus the decoupled DEWS / PSI DB-only trigger
   - hourly core yield publisher (`sync-yield-data`); `sync-blacklist` is on a dedicated 6-hourly trigger, and the reserve + redemption + Kinesis lane is on a dedicated 4-hourly trigger; `sync-dex-discovery` is on a dedicated 2-hourly trigger
-  - daily snapshot / digest / coverage-discovery jobs
+  - daily snapshot / digest / recap jobs
   - The default attention filter does not mount healthy rows; operators can search and filter by state, impact, trigger group, and running status
   - Trigger boundaries remain visible, with severity ordering inside each group and stable registry order for ties
   - Rows show state, impact class, operator-friendly label, raw job id, trigger, last run, last good run, readable/exact duration, item count, and evidence markers
@@ -340,7 +340,7 @@ Additional response fields:
 - `discrepancy`: divergence between effective status and synthetic probe status
 - `timeline`: recent status transitions
 - `telegramBot`: admin-only Telegram bot subscriber aggregates (`null` when Telegram tables are unavailable)
-- `datasetFreshness`: last successful writer-evaluation timestamps for key operational domains (`stablecoins`, `blacklist`, `mintBurn`, `supply`, `safetyGrades`, `yield`, `depegs`, `dews`, `digest`, `discoveryCandidates`)
+- `datasetFreshness`: last successful writer-evaluation timestamps for key operational domains (`stablecoins`, `blacklist`, `mintBurn`, `supply`, `safetyGrades`, `yield`, `depegs`, `dews`, `digest`)
 - `summary`: compact availability and diagnostics rollup (`unhealthyCrons`, `availabilityImpactingUnhealthyCrons`, `watchUnhealthyCrons`, `degradedCrons`, `cronErrors`, `availabilityImpactingCronErrors`, `availabilityImpactingConsecutiveCronErrors`, `staleCronArtifacts`, `expiredCronLeases`, `orphanedCronProgressRows`, `diagnosticIssueCount`, `worstCacheRatio`, `transitionsLast24h`)
 - `producerHeads`: one row per canonical schedule/job/path/kind, including budget-only paths, with separate last invocation/completion, productive output, publication, invocation ID, Worker version, and observed/missing state
 - `alertBroker`: retained compatibility block with zero counts, no active keys/timestamp, and `queryFailed=false`; historical broker tables are not queried
@@ -368,7 +368,6 @@ For event-backed domains, `datasetFreshness` follows the writer rather than the 
 - `blacklist`: last successful `sync-blacklist` run, not `MAX(blacklist_events.timestamp)`
 - `mintBurn`: last successful critical/extended mint-burn writer run, not `MAX(mint_burn_events.timestamp)`
 - `depegs`: last successful `sync-stablecoins` run, not `MAX(depeg_events.started_at)`
-- `discoveryCandidates`: last successful coverage writer run, not `MAX(discovery_candidates.last_seen)`
 
 `dataQuality` now also exposes:
 
@@ -386,6 +385,8 @@ This prevents `/status` from silently treating a broken stablecoins cache as `0 
 When one of those best-effort subqueries fails, `/api/status` keeps unaffected status lanes healthy, records the issue under `sourceFailures` / `sectionErrors`, increments `summary.diagnosticIssueCount`, and renders the affected card as diagnostic amber instead of silently showing a misleading `0`.
 
 Cache freshness for `dex-liquidity`, `yield-data`, and `dews` now prefers producer-owned `cache` sentinels (`freshness:*`) instead of live `MAX(...)` scans over the hot publish tables. If the sentinel is missing during rollout, `/api/status` falls back to the legacy table query; if the lookup itself fails, it can still fall back to the latest successful producer cron timestamp and adds a `cache_freshness_query_failed` info cause instead of auto-promoting the lane to public `stale`.
+
+**Per-cache availability overrides.** Availability ratio bands are the global `>8x` degraded / `>12x` stale by default, except where `STATUS_CACHE_RATIO_OVERRIDES` in `shared/lib/status-thresholds.ts` tightens a specific cache. `yield-data` overrides to `>2x` degraded / `>4x` stale against its hourly `sync-yield-data` budget: two missed publishes flip the cache entry to `healthy:false` and degrade both public cache impact and the availability `statusFloor`, while a single missed publish stays healthy. This closes the honesty gap where the global bands let ~8h-stale yield rankings still read publicly `healthy` even though the admin endpoint-budget lane already flags the lane at 1x. The override is threaded through `getCacheFreshnessStatus`/`getCacheImpactStatus` (public rollup in `shared/lib/public-health.ts`), the worker `buildCacheStatuses` `healthy` and `statusFloor` computation, and the status-page recompute in `src/lib/status/public-status.ts`; all other caches keep the global bands. See `docs/architecture.md` ADR-9.
 
 The public `/api/health` companion endpoint now returns a `warnings` array for these best-effort failures, and the status page model treats that as additional public-health context instead of assuming zero-like data is real.
 
@@ -589,12 +590,6 @@ Mutating admin paths are protected by method guardrails:
 - uncertain execution returns `X-Execution-Certainty: unknown` and remains retryable with the same intent key
 
 ---
-
-## Coverage Discovery Card
-
-**Component:** `DiscoveryCandidatesCard` (`src/components/status/discovery-candidates.tsx`)
-
-Renders in the Admin Pipeline `Discovery` tab. Shows stablecoins tracked by CoinGecko or DefiLlama that Pharos does not yet monitor. Each row displays symbol, name, a source badge (`CG` / `DL` / `Both`), market cap, days seen, and a dismiss button. Admin auth is required for the dismiss action (`POST /api/discovery-candidates/:id/dismiss`). The card is fed by `GET /api/status` via its embedded `discoveryCandidates` supplement, which reads active candidates directly from D1; `GET /api/discovery-candidates` remains available as a direct admin endpoint for focused candidate inspection.
 
 ## Price Source Health Card
 

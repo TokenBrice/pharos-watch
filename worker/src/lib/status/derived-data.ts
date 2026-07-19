@@ -27,7 +27,6 @@ export function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {
     depegs: null,
     dews: null,
     digest: null,
-    discoveryCandidates: null,
   };
 }
 
@@ -73,7 +72,6 @@ const DATASET_FRESHNESS_TARGETS: Record<keyof StatusResponse["datasetFreshness"]
   depegs: { type: "cron", jobs: ["sync-stablecoins"] },
   dews: { type: "dews-publication" },
   digest: { type: "table", table: "daily_digest", column: "generated_at" },
-  discoveryCandidates: { type: "cron", jobs: ["sync-stablecoins", "discovery-scan"] },
 };
 
 const TABLE_TARGETS = Object.values(DATASET_FRESHNESS_TARGETS).filter(
@@ -199,7 +197,7 @@ async function getLastUpdate(db: D1Database, target: DatasetFreshnessTarget, now
 
 export async function getDatasetFreshness(db: D1Database): Promise<StatusResponse["datasetFreshness"]> {
   const now = Math.floor(Date.now() / 1000);
-  const [stablecoins, blacklist, mintBurn, supply, safetyGrades, yieldTs, depegs, dews, digest, discoveryCandidates] =
+  const [stablecoins, blacklist, mintBurn, supply, safetyGrades, yieldTs, depegs, dews, digest] =
     await Promise.all([
       getLastUpdate(db, DATASET_FRESHNESS_TARGETS.stablecoins, now),
       getLastUpdate(db, DATASET_FRESHNESS_TARGETS.blacklist, now),
@@ -210,7 +208,6 @@ export async function getDatasetFreshness(db: D1Database): Promise<StatusRespons
       getLastUpdate(db, DATASET_FRESHNESS_TARGETS.depegs, now),
       getLastUpdate(db, DATASET_FRESHNESS_TARGETS.dews, now),
       getLastUpdate(db, DATASET_FRESHNESS_TARGETS.digest, now),
-      getLastUpdate(db, DATASET_FRESHNESS_TARGETS.discoveryCandidates, now),
     ]);
 
   return {
@@ -223,7 +220,6 @@ export async function getDatasetFreshness(db: D1Database): Promise<StatusRespons
     depegs,
     dews,
     digest,
-    discoveryCandidates,
   };
 }
 

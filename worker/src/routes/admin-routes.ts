@@ -152,11 +152,6 @@ export const ADMIN_STATIC_ROUTES = [
       },
     ),
   ),
-  defineLazyStaticRoute("bulk-dismiss-discovery-candidates", () =>
-    import("../api/admin-bulk-dismiss-discovery-candidates").then(
-      ({ handleBulkDismissDiscoveryCandidates }) => handleBulkDismissDiscoveryCandidates,
-    ),
-  ),
   defineLazyStaticRoute("clear-telegram-pending", () =>
     import("../api/admin-telegram-pending").then(({ handleClearTelegramPending }) => handleClearTelegramPending),
   ),

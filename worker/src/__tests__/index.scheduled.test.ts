@@ -58,7 +58,6 @@ const cronMocks = vi.hoisted(() => ({
   syncBluechip: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   generateDailyDigest: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   generateWeeklyRecap: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  runDiscoveryScan: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runPruneStatusProbeRuns: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runPruneCronHistory: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   runRepairTaskRunner: vi.fn(async () => ({ status: "ok", itemCount: 0, metadata: "{}" })),
@@ -268,7 +267,6 @@ vi.mock("../cron/sync-yield-supplemental", () => ({ syncYieldSupplemental: cronM
 vi.mock("../cron/sync-bluechip", () => ({ syncBluechip: cronMocks.syncBluechip }));
 vi.mock("../cron/daily-digest", () => ({ generateDailyDigest: cronMocks.generateDailyDigest }));
 vi.mock("../cron/weekly-recap", () => ({ generateWeeklyRecap: cronMocks.generateWeeklyRecap }));
-vi.mock("../cron/discovery-scan", () => ({ runDiscoveryScan: cronMocks.runDiscoveryScan }));
 vi.mock("../cron/prune-status-probe-runs", () => ({ runPruneStatusProbeRuns: cronMocks.runPruneStatusProbeRuns }));
 vi.mock("../cron/prune-cron-history", () => ({ runPruneCronHistory: cronMocks.runPruneCronHistory }));
 vi.mock("../cron/repair-task-runner", () => ({ runRepairTaskRunner: cronMocks.runRepairTaskRunner }));
@@ -910,10 +908,9 @@ describe("worker.scheduled", () => {
       accessTokenSecret: "tw-token-secret",
     });
     expect(cronMocks.generateWeeklyRecap).not.toHaveBeenCalled();
-    expect(cronMocks.runDiscoveryScan).not.toHaveBeenCalled();
   });
 
-  it("runs coverage discovery on the isolated daily 08:10 trigger", async () => {
+  it("runs weekly recap on the isolated daily 08:10 trigger", async () => {
     const { ctx, waits } = makeCtx();
     const env = {
       DB: {} as D1Database,
@@ -928,7 +925,6 @@ describe("worker.scheduled", () => {
     );
     await Promise.all(waits);
 
-    expect(cronMocks.runDiscoveryScan).toHaveBeenCalledTimes(1);
     expect(cronMocks.generateWeeklyRecap).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncBluechip).not.toHaveBeenCalled();
     expect(cronMocks.generateDailyDigest).not.toHaveBeenCalled();

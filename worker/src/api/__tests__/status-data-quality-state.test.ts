@@ -672,7 +672,6 @@ describe("handleStatus", () => {
         { match: "depeg_events", rows: [], first: { cnt: 0 } },
         { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
         { match: "onchain_supply WHERE updated_at >", rows: [] },
-        { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
       ]);
     }
 
@@ -822,7 +821,6 @@ describe("handleStatus", () => {
         { match: "depeg_events", rows: [], first: { cnt: 0 } },
         { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
         { match: "onchain_supply WHERE updated_at >", rows: [] },
-        { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
       ]);
     }
 
@@ -958,7 +956,6 @@ describe("handleStatus", () => {
         { match: "HAVING latest_update", rows: [], first: { cnt: params.staleSupply } },
         // Divergence query — keep empty so the divergence branch is quiet.
         { match: "SUM(supply) as total_supply", rows: [] },
-        { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
       ]);
     }
 
@@ -1012,7 +1009,6 @@ describe("handleStatus", () => {
         { match: "depeg_events", rows: [], first: { cnt: 0 } },
         { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
         { match: "onchain_supply WHERE updated_at >", rows: [] },
-        { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
         // The new transitions-count query introduced by Workstream 5.
         { match: "FROM status_transitions WHERE scope", rows: [], first: { cnt: transitionsLast24h } },
       ]);
@@ -1059,7 +1055,6 @@ describe("handleStatus", () => {
         { match: "depeg_events", rows: [], first: { cnt: 0 } },
         { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
         { match: "onchain_supply WHERE updated_at >", rows: [] },
-        { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
         { match: "FROM status_state", rows: [], first: stateRow },
       ];
     }

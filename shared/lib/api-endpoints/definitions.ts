@@ -259,12 +259,6 @@ export interface EndpointMethodValidationError {
 
 export type DynamicAdminEndpointMatch =
   | {
-      key: "discovery-candidate-dismiss";
-      path: string;
-      candidateId: number;
-      methods: readonly EndpointMethod[];
-    }
-  | {
       key: "api-key-update" | "api-key-deactivate" | "api-key-rotate";
       path: string;
       apiKeyId: number;
@@ -1046,11 +1040,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
       runbookPath: "docs/dews.md",
     },
   }),
-  adminGet({
-    key: "discovery-candidates",
-    path: API_PATHS.discoveryCandidates(),
-    probeGroup: "admin",
-  }),
   // Operator controls that require context-specific query params (?job=,
   // ?circuit=, ?leaseOwner=). Reachable via curl/wrangler or via a future
   // contextual-button UI integration; no generic `statusPageAction` because
@@ -1074,11 +1063,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
     key: "reserve-recovery-fault-injection",
     path: API_PATHS.armReserveRecoveryFaultInjection(),
     routeDependencies: ["workerVersion"],
-    probeGroup: "manual",
-  }),
-  adminMutation({
-    key: "bulk-dismiss-discovery-candidates",
-    path: API_PATHS.bulkDismissDiscoveryCandidates(),
     probeGroup: "manual",
   }),
   adminMutation({

@@ -21,7 +21,6 @@ const ADMIN_TELEGRAM_DELIVERY_CONTROL_PATH = API_PATHS.adminTelegramDeliveryCont
 const ADMIN_DYNAMIC_PATH_ROOTS = [
   "/api/api-key-requests-admin",
   "/api/api-keys",
-  "/api/discovery-candidates",
 ] as const;
 const ADMIN_STATIC_PATH_ROOTS = ENDPOINT_DEFINITIONS
   .filter((endpoint) => endpoint.adminRequired)
@@ -72,19 +71,6 @@ export function matchDynamicAdminEndpoint(path: string): DynamicAdminEndpointMat
   const match = path.match(dynamicDescriptor.pattern);
   if (!match) {
     return null;
-  }
-
-  if (dynamicDescriptor.key === "discovery-candidate-dismiss") {
-    const candidateId = Number.parseInt(match[1] ?? "", 10);
-    if (!Number.isSafeInteger(candidateId) || candidateId <= 0) {
-      return null;
-    }
-    return {
-      key: "discovery-candidate-dismiss",
-      path,
-      candidateId,
-      methods: dynamicDescriptor.methods,
-    };
   }
 
   if (

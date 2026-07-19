@@ -5,7 +5,6 @@ import type { StatusResponse } from "@shared/types";
 import { CoinGeckoPriceDiffCard } from "@/components/status/coingecko-price-diff";
 import { DatasetFreshnessTable } from "@/components/status/dataset-freshness-table";
 import { D1UsageCard } from "@/components/status/d1-usage-card";
-import { DiscoveryCandidatesCard } from "@/components/status/discovery-candidates";
 import { LiquidityHealthCard } from "@/components/status/liquidity-health";
 import { MetadataIntegrityCard } from "@/components/status/metadata-integrity-card";
 import { MintBurnReconciliationCard } from "@/components/status/mint-burn-reconciliation";
@@ -32,10 +31,9 @@ import { getStatusTone } from "@/lib/status-dashboard-model";
 
 export interface PipelineSectionProps {
   data: StatusResponse;
-  handleRefresh: () => void;
 }
 
-export function PipelineSection({ data, handleRefresh }: PipelineSectionProps) {
+export function PipelineSection({ data }: PipelineSectionProps) {
   const defaultMode = useMemo(() => deriveInitialPipelineMode(data), [data]);
   const [activeMode, setActiveMode] = useState<PipelineMode>(defaultMode);
   const modeSummaries = useMemo(() => buildPipelineModeSummaries(data), [data]);
@@ -122,15 +120,6 @@ export function PipelineSection({ data, handleRefresh }: PipelineSectionProps) {
         );
       case "integrity":
         return <PipelineIntegrityPanel model={integrityModel} />;
-      case "discovery":
-        return (
-          <DiscoveryCandidatesCard
-            candidates={data.discoveryCandidates}
-            error={data.sectionErrors.discoveryCandidates}
-            nowSeconds={data.timestamp}
-            onDismissed={handleRefresh}
-          />
-        );
     }
   };
 

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { DiscoveryCandidate } from "../discovery";
 import { ReserveCompositionOverviewSchema, type ReserveCompositionOverview } from "../live-reserves";
 import type { PriceSourceHealth } from "../pricing-source-health";
 import type {
@@ -54,7 +53,6 @@ export type StatusSectionKey =
   | "canaries"
   | "priceSourceHealth"
   | "coingeckoPriceDiff"
-  | "discoveryCandidates"
   | "jobAttempts"
   | "scheduledSlots"
   | "mintBurnReconciliation"
@@ -155,7 +153,6 @@ export interface StatusResponse {
   gtProbe: Record<string, unknown> | null;
   coingeckoPriceDiff: CoinGeckoPriceDiff | null;
   d1Usage: D1UsageSummary | null;
-  discoveryCandidates: DiscoveryCandidate[] | null;
   mintBurnReconciliation: MintBurnReconciliationSummary | null;
   reserveComposition: StatusReserveComposition;
   cacheBlobSizes?: Record<string, number>;
@@ -331,7 +328,6 @@ export const StatusResponseSchema: z.ZodType<StatusResponse> = z
     gtProbe: StatusJsonObjectSchema.nullable(),
     coingeckoPriceDiff: statusObjectSchema<CoinGeckoPriceDiff>().nullable(),
     d1Usage: statusObjectSchema<D1UsageSummary>().nullable(),
-    discoveryCandidates: z.array(statusObjectSchema<DiscoveryCandidate>()).nullable(),
     mintBurnReconciliation: statusObjectSchema<MintBurnReconciliationSummary>().nullable(),
     reserveComposition: StatusReserveCompositionSchema,
     cacheBlobSizes: z.record(z.string(), z.number()).optional(),

@@ -2,7 +2,6 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import * as status from "../status";
 import type {
   CronStatus as BarrelCronStatus,
-  DiscoveryCandidate as BarrelDiscoveryCandidate,
   HealthResponse as BarrelHealthResponse,
   PriceSourceHealth as BarrelPriceSourceHealth,
   PublicationHealth as BarrelPublicationHealth,
@@ -10,7 +9,6 @@ import type {
   TelegramDispatchCronResult as BarrelTelegramDispatchCronResult,
   YieldHealthSummary as BarrelYieldHealthSummary,
 } from "../status";
-import type { DiscoveryCandidate } from "../discovery";
 import type { PriceSourceHealth } from "../pricing-source-health";
 import type { CronStatus } from "../status/cron";
 import type { PublicationHealth } from "../status/operational";
@@ -70,7 +68,6 @@ describe("status compatibility barrel", () => {
     expectTypeOf<BarrelPublicationHealth>().toEqualTypeOf<PublicationHealth>();
     expectTypeOf<BarrelStatusResponse>().toEqualTypeOf<StatusResponse>();
     expectTypeOf<BarrelHealthResponse>().toEqualTypeOf<HealthResponse>();
-    expectTypeOf<BarrelDiscoveryCandidate>().toEqualTypeOf<DiscoveryCandidate>();
     expectTypeOf<BarrelPriceSourceHealth>().toEqualTypeOf<PriceSourceHealth>();
   });
 });
