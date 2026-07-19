@@ -276,8 +276,8 @@ Missing critical facts produce their exact reason-coded `NR`. Bounded facts with
 
 ## 2026-07-17 Anchor-Coherence Batch Chain
 
-Four accepted, identity-chained engine batches implemented the 2026-07-17
-owner rulings (anchor set R1–R9 and D1–D13; the working record lives in the
+Five accepted, identity-chained engine batches implemented the 2026-07-17
+owner rulings (anchor set R1–R9 and D1–D15; the working record lives in the
 ignored research workspace's anchor-coherence plan):
 
 1. Stage A/B (`02f7d183`, `148389d2`): mature-domain conditioning for
@@ -301,16 +301,32 @@ ignored research workspace's anchor-coherence plan):
 4. CL measured-execution activation (`615a7fea`): the owner-ratified
    six-key QuoterV2 cohort became score-eligible behind the existing
    fail-closed gate; unratified deployments remain shadow-only.
+5. Fresh-capture defect fixes (`0a6767d34`, `6d1fdaa84`; rulings D14/D15):
+   venue maturity resolves on the version-stripped family key so live
+   measured-execution registrations (`uniswap-v3`, `pancakeswap-v3`) match
+   `matureVenues` — the first post-deploy envelope had fail-closed 36 coins
+   to spurious `critical-dependency:high@64` — pancakeswap joins
+   `matureVenues` (D14), and the same-issuer diagnostic treatment extends
+   from mint-control to upgrade-control groups (D15; cross-issuer and
+   unresolved identities keep failing closed). The reviewed reserve join
+   tolerates 5pp of live weight drift (was 0.5pp, which severed 36 coins'
+   classifications on ordinary issuer rebalancing); identity stays the
+   bijection-guarded name match and scoring weights come from the live row.
 
 The final candidate identity of the chain is policy digest
-`c660ddf0559624b6d186384b6fe43f6a2d8e1ee6129aa392fe3d15a15c809306` and
+`d77890e759e4494aba42634c442fee39eca3527ef1b111746bd3aaec922a5912` and
 evaluation-build digest
-`da992cd61ae7d84eb3f515ac43d71be0c8762cb4270ca108dc73a238bdfa0202`.
+`93b5677d730ec161e7efc1d69df6e4421d39797fc1c1905dc45b71d07104339b`
+(candidate
+`safety-score-v9-candidate:v1:8a3eab0846c882174c676269a6af4d8ccbca2cbc903895513a3468e228ca5e31`
+on the captured 2026-07-18 exact envelope: A 1, B+ 1, B 6, B- 1, with
+adverse projections unchanged — USDD 39, U 32, USDai 39, MIM 0).
 Every batch was accepted against the same pinned 2026-07-16 exact input
-with per-change causal attribution and byte-identical adverse projections.
-These are calibration results, not activation evidence; V8.17 remains the
-public methodology and the recorded no-go ruling stands until a qualifying
-window under an owner-frozen deployed identity completes.
+with per-change causal attribution and byte-identical adverse projections;
+batch 5 was additionally verified against the fresh 2026-07-18 production
+envelope. These are calibration results, not activation evidence; V8.17
+remains the public methodology and the recorded no-go ruling stands until
+a qualifying window under an owner-frozen deployed identity completes.
 
 ## 2026-07-16 Real-A Calibration Result
 
