@@ -38,6 +38,8 @@ Every Pharos skill is canonical in `.codex/skills/` with matching `.claude/skill
 
 Skill bodies must not hard-code snapshots of current repo state (counts, methodology versions, enum lists, skill rosters). State the rule and point at the owning source file instead; when an enumeration is embedded for reading convenience, mark it with "the source file wins" so agents re-verify before relying on it.
 
+Release and CI skills summarize the operating path, but `docs/deployment-process.md`, `docs/testing.md`, the workflow YAML, and the automation registries remain authoritative. Keep protected-main authorization wording, validation targets, commit-derived artifact sequencing, and deployment-versus-operational proof aligned across both skills instead of allowing separate agent-specific release procedures.
+
 `npm run check:agent-skill-symlinks` validates the `.agents/skills` alias and every Claude skill mirror. It also rejects waivers for symlinks that no longer exist and requires external-target waivers to carry `owner`, `reason`, and `reviewAfter` metadata. Symlinks that point outside this repository must be listed in `scripts/lib/agent-skill-symlink-waivers.json`.
 
 ## Claude Workflow Orchestrators
@@ -62,7 +64,7 @@ Pharos currently has no repository-owned plugin or MCP server. Keep it that way 
 
 ## Local Hook Setup
 
-Tracked hooks are intentionally limited to deterministic Git policy under `.githooks/` and stateless Claude hook configuration in `.claude/settings.json`. Codex executable hooks remain an explicit local opt-in because they can run shell commands outside normal tool approval:
+Tracked hooks are intentionally limited to deterministic Git policy under `.githooks/` and stateless Claude hook configuration in `.claude/settings.json`. The pre-push hook performs a lightweight commit-derived artifact check when the pushed commit is checked out; unrelated dirty work is allowed, while dirty relevant inputs/outputs fail. Its heavy merge gate remains opt-in. Codex executable hooks remain an explicit local opt-in because they can run shell commands outside normal tool approval:
 
 ```bash
 PHAROS_INSTALL_CODEX_HOOKS=1 npm run agent:setup

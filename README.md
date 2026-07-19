@@ -89,6 +89,7 @@ Useful checks:
 npm run lint
 npm run typecheck
 npm run test
+npm run check:commit-derived-artifacts
 MERGE_GATE_DRY_RUN=1 npm run test:merge-gate
 ```
 

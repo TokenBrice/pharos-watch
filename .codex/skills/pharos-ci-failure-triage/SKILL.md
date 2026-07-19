@@ -19,9 +19,12 @@ Use this skill from the Pharos repository root for:
 ## Core Rules
 
 - Start from logs and the exact failing command. Do not guess from the workflow name alone.
-- Classify the failing lane before editing: generated artifact, docs, tests, Pages build/marker, Worker migration/deploy/activation, deploy infra, or external transient.
+- Classify the failing lane before editing: commit-derived artifact, other generated artifact, docs, tests, Pages build/marker, Worker migration/deploy/activation, deploy infra, post-deploy runtime, or external transient.
+- Read the outer and reusable workflow graph together. A skipped child job can be expected classifier behavior; the aggregate gate, selected surface, head SHA, and exact failed step determine the result.
 - Reproduce locally with the narrowest equivalent command before broad gates when possible.
 - For large local batches, use diagnostic discovery to collect failures across independent lanes; it is not a final gate and does not create release proof.
+- Do not change test timeouts or retry policy merely because a locally parallel run was resource-starved. Reproduce the focused lane serially or cap discovery fan-out first.
+- Do not add retries, credentials, or alternate origins until an external response is attributed to the edge, Worker route, application auth, or upstream provider from its URL, status, headers, and consumed body.
 - Preserve unrelated dirty work. If other agents are editing, patch only the failing lane and do not push unless explicitly requested.
 - If production deploy is requested, keep iterating until the workflow clears or a real external blocker is proven.
 
@@ -53,6 +56,8 @@ Record:
 - failed job and step
 - failing SHA/range
 - exact command and first actionable error
+- outer workflow conclusion, selected/skipped reusable jobs, and expected surface from the classifier
+- whether the failed SHA is still the current PR or `main` head
 
 ### 2. Classify The Lane
 
@@ -60,6 +65,7 @@ Common local repro commands:
 
 ```bash
 npm run test:merge-gate:discover -- --target=pr
+npm run check:commit-derived-artifacts
 npm run check:generated-artifacts
 npm run check:doc-source-paths
 npm run check:doc-sync
@@ -77,6 +83,8 @@ npm run validate:worker-smoke
 
 Use one full `npm run test:merge-gate:discover -- --target=pr` when a large local batch is failing one lane at a time. The runner expands prebuild and generated-artifact checks into atomic nodes, runs all dependency-ready work, blocks `out/` consumers after a failed Pages build, and writes a stable failed/blocked/tainted/incomplete/omitted summary to `.cache/merge-gate/discovery/latest.json`. For Pages-changing PR parity, load the intended public values and set `MERGE_GATE_PRODUCTION_ENV=1`; otherwise treat the explicit environment result as incomplete. Use `local-gate` for optional local-gate parity, `release` for a clean production-bound snapshot, and `maintenance` for broad nonblocking advisories. Tune fan-out with `MERGE_GATE_DISCOVERY_MAX_PARALLEL=<n>`.
 
+Use the exact `.nvmrc` runtime in the current shell. Scope production Pages variables to the Pages rehearsal command or a clean subshell; do not export Pages-only flags globally across Vitest and Worker commands. If local failures look load-dependent, rerun the exact shard or build alone and use `MERGE_GATE_DISCOVERY_MAX_PARALLEL=1` before changing code or test budgets.
+
 Fix every blocking root failure from the report and use the listed focused rerun commands while editing. If failed producers left blocked or tainted nodes, run the same target with `--resume`; this reruns those nodes and their dependencies without claiming that prior passing nodes are release proof. Run another full discovery only when the changed snapshot broadly invalidates the original plan. A provisional or incomplete report is not green, and no discovery report is a reusable receipt.
 
 `coverage:critical` failures belong to the weekly/manual Critical Coverage Ratchet workflow or direct local rehearsals, not the blocking reusable validate workflow. The normal `test:noncritical` lane includes critical tests despite the legacy script name.
@@ -87,14 +95,17 @@ Use `scripts/ci/classify-deploy-changes.mjs` and `scripts/ci/pharos-change-contr
 
 Preferred fixes:
 
-- Generated artifact drift: run the owning generator/check from `scripts/lib/automation-registry.mjs`, inspect the diff, and commit generated output with the source change.
+- Commit-derived artifact drift: inspect the `inputState: "committed-history"` entries in `scripts/lib/automation-registry.mjs`. Commit the relevant source first, regenerate `sitemap-dates` or `docs-metadata`, then commit or amend the output. Never regenerate against dirty history inputs and call that final.
+- Other generated artifact drift: run the owning generator/check from `scripts/lib/automation-registry.mjs`, inspect the diff, and commit generated output with the source change. After the final source state, run the full `npm run check:generated-artifacts` so dependent or non-obvious projections converge together.
 - Docs path/version drift: update the verified doc or source reference; do not silence checks.
 - Test expectation drift: verify runtime behavior first, then update tests only when the behavior is intended.
 - Pages smoke/SEO failure: inspect built `out/` and the route source; rebuild before rerunning `seo:check`.
 - Worker type/smoke failure: inspect shared/worker imports and runtime env contracts; avoid adding frontend-only imports to shared Worker paths.
-- External transient: rerun only after proving the failure is network/provider/transient, and report the evidence.
+- External transient: capture the requested URL, response provenance, status, relevant non-secret headers, and consumed response body. Rerun the same SHA only after proving the failure is network/provider/transient; a code or configuration fix requires a new commit and run.
 
 The production deploy workflow does not automatically roll back. A failed Worker activation or Pages marker proof requires causal assessment first; use Cloudflare deployment history for operator-led rollback and remember that Worker rollback does not revert D1 or other bound resources.
+
+A green Worker upload/activation is not proof that scheduled work is healthy. For cron, scheduler, ingestion, memory, or migration incidents, inspect the first relevant production execution before closure. Keep the deployment result and operational-health result separate in the report.
 
 Avoid broad rewrites while fixing CI. Make the smallest root-cause patch.
 
@@ -112,7 +123,7 @@ gh pr checks <pr-number> --watch
 
 Run `npm run test:merge-gate` before publishing only when the user wants an explicit local rehearsal or when you are debugging a local gate failure. The required GitHub `PR gate` is authoritative. Merge through the protected PR path, then find and watch the resulting `main` deployment; do not push directly to `main`.
 
-If a pushed workflow fails again, repeat from Step 1 with the new run id.
+If a pushed workflow fails again, repeat from Step 1 with the new run id. Do not layer speculative fixes across retries: one causal change, one new SHA, then reassess the exact failing lane.
 
 ### 5. Retriggering
 
@@ -144,4 +155,5 @@ Report:
 - files changed, if any
 - local validation command(s)
 - retriggered/watched workflow and final status
+- deployment proof and post-deploy operational evidence as separate results
 - remaining external risks or skipped lanes

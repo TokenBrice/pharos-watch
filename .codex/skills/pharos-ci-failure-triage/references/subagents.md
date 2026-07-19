@@ -25,8 +25,9 @@ Return:
 - workflow name, run URL, head SHA
 - failed job and step
 - first actionable error, not just aggregate failure
-- likely local repro command
-- whether this is generated artifact/docs/test/pages/worker/deploy infra/external transient
+- likely local repro command and required Node/environment scope
+- whether this is commit-derived artifact/other generated artifact/docs/test/pages/worker/deploy infra/post-deploy runtime/external transient
+- whether skipped jobs are expected from the outer workflow classifier
 - any files likely involved
 
 Do not suggest broad rewrites. Keep it concise and evidence-backed.

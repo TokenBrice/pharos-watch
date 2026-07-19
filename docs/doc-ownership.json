@@ -11,8 +11,8 @@
       "risk": "high",
       "docsToRead": ["docs/stablecoin-data.md", "docs/listing-policy.md", "docs/classification.md", "docs/shadow-stablecoins.md", "shared/data/stablecoins/AGENTS.md"],
       "docsLikelyRequired": ["docs/about-page.md", "docs/listing-policy.md", "docs/classification.md", "feature methodology docs when behavior changes"],
-      "checks": ["npm run check:stablecoin-data", "vitest run shared/lib/stablecoins shared/lib/__tests__/stablecoin-id-registry.test.ts"],
-      "hardRules": ["Keep canonical order, generated data, and schemas aligned.", "Do not add manual supply overrides."],
+      "checks": ["npm run check:stablecoin-data", "npm run check:commit-derived-artifacts after base coin source commits", "vitest run shared/lib/stablecoins shared/lib/__tests__/stablecoin-id-registry.test.ts"],
+      "hardRules": ["Keep canonical order, generated data, and schemas aligned.", "Commit base coin sources before final sitemap-date generation.", "Do not add manual supply overrides."],
       "prefixes": ["shared/data/stablecoins/", "shared/lib/stablecoins/"],
       "exactPaths": ["shared/lib/stablecoin-id-registry.ts", "shared/lib/classification.ts"]
     },
@@ -110,8 +110,8 @@
       "risk": "medium",
       "docsToRead": ["matched docs/testing.md section", "matched docs/deployment-process.md section", "matched docs/scripts.md section"],
       "docsLikelyRequired": ["docs/testing.md", "docs/deployment-process.md", "docs/scripts.md"],
-      "checks": ["changed script's focused test", "MERGE_GATE_DRY_RUN=1 npm run test:merge-gate when local rehearsal planning changes"],
-      "hardRules": ["Keep deploy-surface classification aligned with GitHub deploy behavior; local merge-gate execution is opt-in."],
+      "checks": ["changed script's focused test", "npm run check:commit-derived-artifacts when history-derived generators or hooks change", "MERGE_GATE_DRY_RUN=1 npm run test:merge-gate when local rehearsal planning changes"],
+      "hardRules": ["Keep deploy-surface classification aligned with GitHub deploy behavior; the heavy local merge-gate execution is opt-in.", "Commit relevant sources before generating git-history-derived artifacts."],
       "prefixes": [".github/", ".githooks/", "scripts/"],
       "exactPaths": ["package.json", "package-lock.json", ".gitignore"]
     },

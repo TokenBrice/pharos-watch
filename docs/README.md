@@ -29,7 +29,7 @@ Public and internal material can share a source file only when the public text r
 | --- | --- |
 | Worker, hosts, and scheduling | [architecture.md](./architecture.md), [worker-and-api-limits.md](./worker-and-api-limits.md), matched section of [worker-infrastructure.md](./worker-infrastructure.md) |
 | API endpoint work | [api-endpoint-authoring.md](./api-endpoint-authoring.md), affected section of [api-reference.md](./api-reference.md) |
-| CI, tests, and releases | Matched sections of [testing.md](./testing.md), [deployment-process.md](./deployment-process.md), and [scripts.md](./scripts.md) |
+| CI, tests, and releases | [deployment-process.md](./deployment-process.md) release snapshot state machine, then matched sections of [testing.md](./testing.md) and [scripts.md](./scripts.md) |
 | Stablecoin metadata | [stablecoin-data.md](./stablecoin-data.md), [listing-policy.md](./listing-policy.md), [classification.md](./classification.md), [process/adding-a-stablecoin.md](./process/adding-a-stablecoin.md) |
 | Pricing and supply | [data-pipeline.md](./data-pipeline.md), [pricing-pipeline.md](./pricing-pipeline.md), [supply-snapshot.md](./supply-snapshot.md) |
 | Reserves and exits | [live-reserves.md](./live-reserves.md), [redemption-backstops.md](./redemption-backstops.md) |

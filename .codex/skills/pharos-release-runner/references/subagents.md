@@ -23,9 +23,10 @@ Read:
 - git diff origin/main..HEAD
 
 Focus on:
-- mismatched generated artifacts or docs drift
+- mismatched generated artifacts or docs drift, especially commit-derived output generated before its source commit
 - missing targeted checks for touched task families
 - Pages vs Worker deploy impact
+- exact `.nvmrc` runtime, clean release snapshot, and correctly scoped production Pages environment
 - stale methodology/version/timeline updates
 - accidental inclusion of unrelated local artifacts
 - obvious release blockers that the merge gate might not explain clearly
