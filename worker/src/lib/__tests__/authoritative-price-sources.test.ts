@@ -2420,6 +2420,43 @@ describe("authoritative-price-sources", () => {
     expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledTimes(1);
   });
 
+  it("allows sAID to use a fresh replay-safe single-source AID parent", async () => {
+    const assetsPerShareRaw = 1_059_200_000_000_000_000n.toString(16).padStart(64, "0");
+    fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${assetsPerShareRaw}`);
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "said-gaib",
+        name: "GAIB sAID",
+        symbol: "sAID",
+        price: null,
+      },
+      {
+        id: "aid-gaib",
+        name: "GAIB AID",
+        symbol: "AID",
+        price: 0.998441,
+        priceSource: "coingecko",
+        priceConfidence: "single-source",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "upstream",
+        priceSyncedAt: nowSec - 30,
+      },
+    ]);
+
+    expect(overrides.get("said-gaib")).toMatchObject({
+      price: 1.0575487072,
+      source: "coingecko",
+      confidence: "single-source",
+      metadata: {
+        inheritedFrom: "aid-gaib",
+        parentReplaySafe: true,
+      },
+    });
+    expect(fetchEvmCallHexAtBlockMock).toHaveBeenCalledTimes(1);
+  });
+
   it("still rejects cached, stale, or low-confidence non-replay-safe AID parents for sAID", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const nowSec = Math.floor(Date.now() / 1000);

@@ -33,6 +33,7 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
     parentId: AID_GAIB_ID,
     chain: ETHEREUM_CHAIN,
     allowFreshNonReplaySafeParent: true,
+    allowFreshReplaySafeSingleSourceParent: true,
   }),
   {
     id: "susdt-spark",
