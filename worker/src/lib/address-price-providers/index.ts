@@ -12,6 +12,7 @@ import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-regist
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { CIRCUIT_SOURCE } from "../constants";
 import { throwIfAborted } from "../abort";
+import { hasPublishableCurrentPrice } from "../price-publication-state";
 import type { PricingProviderDiagnosticSource } from "../pricing-provider-diagnostics";
 import { createPricingAssetAttempt } from "../pricing-provider-diagnostics";
 import {
@@ -180,7 +181,7 @@ function shouldTargetAsset(
 } {
   const previous = previousAssetsById?.get(asset.id);
   const previousSourceDepth = previous?.consensusSources?.length ?? asset.consensusSources?.length ?? 0;
-  const missingPrice = asset.price == null || typeof asset.price !== "number" || asset.price <= 0;
+  const missingPrice = !hasPublishableCurrentPrice(asset);
   const previousMissingGenerations = previousMissingGenerationsById?.get(asset.id) ?? 0;
   const projectedMissingGenerations = missingPrice ? previousMissingGenerations + 1 : previousMissingGenerations;
   const alertEligibleMissingPrice =

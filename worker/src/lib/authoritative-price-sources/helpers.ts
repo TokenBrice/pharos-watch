@@ -214,6 +214,12 @@ export interface PriceSourceProvider {
    * or cache-only providers so slow RPC probes cannot starve cheap repairs.
    */
   livePriority?: number;
+  /**
+   * Optional per-candidate wall-clock cap inside the shared live override
+   * budget. Use this for heavier audited routes that need more than the
+   * default fairness slice.
+   */
+  liveTimeoutMs?: number;
   /** Run this fallback only when the asset entered the authoritative stage without a usable price. */
   liveMissingOnly?: boolean;
   liveCircuitSource?: string;

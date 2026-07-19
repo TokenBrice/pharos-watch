@@ -125,6 +125,7 @@ vi.mock("../../api/backfill-price-sources", () => ({
 }));
 
 import {
+  AUTHORITATIVE_LIVE_CANDIDATE_TIMEOUT_MS,
   AUTHORITATIVE_LIVE_OVERRIDE_BUDGET_MS,
   type AuthoritativeLivePriceCandidate,
   createAuthoritativeLivePriceOverrideStats,
@@ -167,8 +168,13 @@ function makePriorityCandidate(
   originalIndex: number,
   overrides: Partial<AuthoritativeLivePriceCandidate> = {},
 ): AuthoritativeLivePriceCandidate {
+  const hasPositivePrice = typeof price === "number" && Number.isFinite(price) && price > 0;
   return {
-    asset: { id, price } as PeggedAsset,
+    asset: {
+      id,
+      price,
+      ...(hasPositivePrice ? { priceSource: "coingecko", priceObservedAt: 1_800_000_000 } : {}),
+    } as PeggedAsset,
     provider: makePriorityProvider(livePriority),
     originalIndex,
     previousMissingGenerations: 0,
@@ -187,9 +193,17 @@ describe("authoritative-price-sources", () => {
   });
 
   it("does not enqueue a missing-only AZND fallback over a usable incumbent price", async () => {
+    const nowSec = Math.floor(Date.now() / 1_000);
     const stats = createAuthoritativeLivePriceOverrideStats();
     const overrides = await fetchAuthoritativeLivePriceOverrides(
-      [{ id: "aznd-mu-digital", price: 0.31 } as PeggedAsset],
+      [{
+        id: "aznd-mu-digital",
+        price: 0.31,
+        priceSource: "coingecko",
+        priceConfidence: "high",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "upstream",
+      } as PeggedAsset],
       undefined,
       undefined,
       { stats },
@@ -200,6 +214,42 @@ describe("authoritative-price-sources", () => {
     expect(stats.attemptedCount).toBe(0);
     expect(stats.assetAttempts).toEqual([]);
     expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+  });
+
+  it("enqueues a missing-only AZND fallback when a numeric incumbent lacks publishable provenance", async () => {
+    const nowSec = Math.floor(Date.now() / 1_000);
+    const stats = createAuthoritativeLivePriceOverrideStats();
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [
+        { id: "aznd-mu-digital", price: 0.31 } as PeggedAsset,
+        {
+          id: "usdc-circle",
+          price: 1,
+          priceSource: "coingecko",
+          priceConfidence: "high",
+          priceObservedAt: nowSec - 60,
+          priceObservedAtMode: "upstream",
+        } as PeggedAsset,
+      ],
+      undefined,
+      undefined,
+      { stats },
+    );
+
+    expect(overrides.size).toBe(0);
+    expect(stats).toMatchObject({
+      candidateCount: 1,
+      attemptedCount: 1,
+      emptyCount: 1,
+    });
+    expect(stats.assetAttempts).toEqual([
+      expect.objectContaining({
+        assetId: "aznd-mu-digital",
+        state: "attempted",
+        result: "empty",
+      }),
+    ]);
+    expect(fetchEvmBlockNumberMock).toHaveBeenCalledTimes(1);
   });
 
   it("excludes frozen assets before authoritative candidate accounting and still processes active assets", async () => {
@@ -653,6 +703,20 @@ describe("authoritative-price-sources", () => {
     ]);
   });
 
+  it("treats positive prices without source provenance as missing for authoritative scheduling", () => {
+    const prioritized = prioritizeAuthoritativeLivePriceCandidates([
+      makePriorityCandidate("priced-refresh", 1, 1, 0),
+      makePriorityCandidate("numeric-without-source", 1, 1, 1, {
+        asset: { id: "numeric-without-source", price: 1 } as PeggedAsset,
+      }),
+    ]);
+
+    expect(prioritized.map((entry) => entry.asset.id)).toEqual([
+      "numeric-without-source",
+      "priced-refresh",
+    ]);
+  });
+
   it("exhausts cheaper provider tiers before starting slower providers", () => {
     const firstProvider = makePriorityProvider(1);
     const secondProvider = makePriorityProvider(10);
@@ -728,7 +792,12 @@ describe("authoritative-price-sources", () => {
         alertEligibleMissing: false,
       },
       {
-        asset: { id: "circuit-priced", price: 1 } as PeggedAsset,
+        asset: {
+          id: "circuit-priced",
+          price: 1,
+          priceSource: "coingecko",
+          priceObservedAt: 1_800_000_000,
+        } as PeggedAsset,
         provider: circuitProvider,
         originalIndex: 2,
         previousMissingGenerations: 0,
@@ -762,7 +831,12 @@ describe("authoritative-price-sources", () => {
         alertEligibleMissing: false,
       },
       {
-        asset: { id: "circuit-priced", price: 1 } as PeggedAsset,
+        asset: {
+          id: "circuit-priced",
+          price: 1,
+          priceSource: "coingecko",
+          priceObservedAt: 1_800_000_000,
+        } as PeggedAsset,
         provider: circuitProvider,
         originalIndex: 2,
         previousMissingGenerations: 0,
@@ -821,6 +895,73 @@ describe("authoritative-price-sources", () => {
         rejectionClass: "timeout",
       }),
     ]);
+  });
+
+  it("continues to the next live candidate after a single candidate timeout", async () => {
+    vi.useFakeTimers();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      fetchEvmCallHexAtBlockMock
+        .mockImplementationOnce(
+          (_chain: string, _to: string, _data: string, _block: number | "latest", options?: { signal?: AbortSignal }) =>
+            new Promise((_resolve, reject) => {
+              options?.signal?.addEventListener(
+                "abort",
+                () => reject(options.signal?.reason ?? new Error("aborted")),
+                { once: true },
+              );
+            }),
+        )
+        .mockResolvedValueOnce(IUSD_QUOTE_HEX);
+      const stats = createAuthoritativeLivePriceOverrideStats();
+
+      const runPromise = fetchAuthoritativeLivePriceOverrides(
+        [
+          { id: "cusd-cap", name: "Cap cUSD", symbol: "cUSD", price: null, circulating: { peggedUSD: 114_000_000 } } as PeggedAsset,
+          {
+            id: "iusd-infinifi",
+            name: "infiniFi iUSD",
+            symbol: "iUSD",
+            price: null,
+            circulating: { peggedUSD: 180_000_000 },
+          } as PeggedAsset,
+        ],
+        undefined,
+        undefined,
+        { stats, wallClockBudgetMs: 10_000 },
+      );
+      await vi.advanceTimersByTimeAsync(AUTHORITATIVE_LIVE_CANDIDATE_TIMEOUT_MS);
+      const overrides = await runPromise;
+
+      expect(overrides.get("iusd-infinifi")).toMatchObject({
+        price: 1,
+        source: "protocol-redeem",
+      });
+      expect(stats).toMatchObject({
+        candidateCount: 2,
+        attemptedCount: 2,
+        successCount: 1,
+        failedCount: 1,
+        skippedBudget: 0,
+        timedOut: false,
+      });
+      expect(stats.assetAttempts).toEqual([
+        expect.objectContaining({
+          assetId: "cusd-cap",
+          state: "attempted",
+          result: "failed",
+          rejectionClass: "timeout",
+        }),
+        expect.objectContaining({
+          assetId: "iusd-infinifi",
+          state: "attempted",
+          result: "resolved",
+        }),
+      ]);
+    } finally {
+      warnSpy.mockRestore();
+      vi.useRealTimers();
+    }
   });
 
   it("reopens an actually started half-open circuit probe when the shared budget aborts it", async () => {

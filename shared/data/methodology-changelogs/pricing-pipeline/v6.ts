@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.201",
+    title: "Fair active-price recovery scheduling",
+    date: "2026-07-19",
+    effectiveAt: 1784472643,
+    summary:
+      "Live recovery now treats provenance-less numeric prices as unresolved and bounds each override candidate so one stalled wrapper cannot consume the full active-price repair budget.",
+    impact: [
+      "Authoritative live overrides and exact-address augmentation classify a current price as usable only when it is positive and carries publishable source plus observation-time provenance",
+      "Missing-only routes such as AZND can still run when an incumbent numeric value lacks provenance that would survive publication",
+      "Each live override candidate receives a bounded timeout inside the unchanged ten-second shared budget, so a slow protocol-redeem candidate fails its own attempt instead of skipping the remaining active gaps",
+      "Candidate-local timeout failures are recorded as asset-attributable timeout attempts without exhausting the shared stage budget or poisoning the grouped recovery circuit",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.200",
     title: "Persistent active-price recovery priority",
     date: "2026-07-19",

@@ -37,6 +37,11 @@ function makeDexScreenerTarget(index: number, overrides: Partial<AddressPriceTar
   };
 }
 
+const PUBLISHABLE_PRICE_META = {
+  priceSource: "coingecko",
+  priceObservedAt: 1_800_000_000,
+} as const;
+
 describe("address price providers", () => {
   it("auto-enables the stable no-key provider plus configured key-backed providers", () => {
     expect(resolveEnabledAddressPriceProviders({
@@ -78,6 +83,7 @@ describe("address price providers", () => {
           address: "base:0x0000000000000000000000000000000000000001",
           chains: ["Base"],
           price: 1,
+          ...PUBLISHABLE_PRICE_META,
         },
         {
           id: "covered",
@@ -85,6 +91,7 @@ describe("address price providers", () => {
           address: "base:0x0000000000000000000000000000000000000002",
           chains: ["Base"],
           price: 1,
+          ...PUBLISHABLE_PRICE_META,
         },
       ],
     });
@@ -137,6 +144,7 @@ describe("address price providers", () => {
           symbol: "LDS",
           address: "base:0x0000000000000000000000000000000000000001",
           price: 1,
+          ...PUBLISHABLE_PRICE_META,
           circulating: { base: 100_000 },
         },
         {
@@ -151,6 +159,7 @@ describe("address price providers", () => {
           symbol: "LDL",
           address: "base:0x0000000000000000000000000000000000000003",
           price: 1,
+          ...PUBLISHABLE_PRICE_META,
           circulating: { base: 10_000_000 },
         },
       ],
@@ -160,6 +169,45 @@ describe("address price providers", () => {
       "missing",
       "low-depth-large",
       "low-depth-small",
+    ]);
+  });
+
+  it("treats positive prices without publication provenance as missing exact-address targets", () => {
+    const targets = buildAddressPriceTargetsByProvider({
+      providers: ["dexpaprika-address"],
+      previousAssetsById: new Map([
+        ["numeric-without-source", {
+          id: "numeric-without-source",
+          symbol: "NWS",
+          consensusSources: ["coingecko", "defillama-list", "coinbase"],
+        }],
+        ["refresh", { id: "refresh", symbol: "REF", consensusSources: ["coingecko"] }],
+      ]),
+      assets: [
+        {
+          id: "refresh",
+          symbol: "REF",
+          address: "base:0x0000000000000000000000000000000000000001",
+          price: 1,
+          ...PUBLISHABLE_PRICE_META,
+          circulating: { base: 10_000_000 },
+        },
+        {
+          id: "numeric-without-source",
+          symbol: "NWS",
+          address: "base:0x0000000000000000000000000000000000000002",
+          price: 1,
+          circulating: { base: 100_000 },
+        },
+      ],
+    });
+
+    expect(targets.get("dexpaprika-address")?.map((target) => ({
+      id: target.stablecoinId,
+      missing: target.missingPrice,
+    }))).toEqual([
+      { id: "numeric-without-source", missing: true },
+      { id: "refresh", missing: false },
     ]);
   });
 
@@ -184,12 +232,14 @@ describe("address price providers", () => {
           symbol: "LOW",
           address: "base:0x0000000000000000000000000000000000000001",
           price: 1,
+          ...PUBLISHABLE_PRICE_META,
         },
         {
           id: "expiring",
           symbol: "EXP",
           address: "base:0x0000000000000000000000000000000000000002",
           price: 1,
+          ...PUBLISHABLE_PRICE_META,
         },
       ],
     });
@@ -230,6 +280,7 @@ describe("address price providers", () => {
           symbol: "REF",
           address: "base:0x0000000000000000000000000000000000000001",
           price: 1,
+          ...PUBLISHABLE_PRICE_META,
           circulating: { base: 10_000_000 },
         },
         {
@@ -308,6 +359,7 @@ describe("address price providers", () => {
           address: "base:0x0000000000000000000000000000000000000001",
           chains: ["Base"],
           price: 1,
+          ...PUBLISHABLE_PRICE_META,
         },
         {
           id: "solana-only",
@@ -315,6 +367,7 @@ describe("address price providers", () => {
           address: "solana:So11111111111111111111111111111111111111112",
           chains: ["Solana"],
           price: 1,
+          ...PUBLISHABLE_PRICE_META,
         },
       ],
     });
