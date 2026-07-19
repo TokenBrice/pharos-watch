@@ -42,6 +42,19 @@ describe("pricing-source registry ↔ policy contract", () => {
     expect(getPriceCacheMaxAgeSec(null, 6 * 3600)).toBe(6 * 3600);
   });
 
+  it("computes the replay window over the replay-safe core so agreeing soft lanes cannot zero it", () => {
+    // Trust monotonicity: a non-replay-safe corroborator joining a consensus
+    // label must not zero the replay window the core earns on its own.
+    expect(getPriceCacheMaxAgeSec("coingecko+coingecko-onchain-address+pyth", 6 * 3600)).toBe(5 * 60);
+    for (const entry of PRICING_SOURCE_REGISTRY) {
+      if (entry.isReplaySafe || entry.trustTier === "cached_replay") continue;
+      expect(getPriceCacheMaxAgeSec(`coingecko+pyth+${entry.key}`, 6 * 3600), entry.key).toBe(5 * 60);
+    }
+    // A core-less label and cached-replay lineage still never replay.
+    expect(getPriceCacheMaxAgeSec("coingecko-onchain-address", 6 * 3600)).toBe(0);
+    expect(getPriceCacheMaxAgeSec("coingecko+cached", 6 * 3600)).toBe(0);
+  });
+
   it("expands composite source labels before applying authority and pool-challenge policy", () => {
     expect(hasDepegAuthoritativeSource(["coingecko+geckoterminal"])).toBe(false);
     expect(countDepegAuthoritativeSources(["coingecko+pyth"])).toBe(1);

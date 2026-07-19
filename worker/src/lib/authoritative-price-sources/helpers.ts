@@ -194,6 +194,13 @@ export interface HistoricalPriceResolution {
 export interface LivePriceContext {
   assetsById: Map<string, PeggedAsset>;
   validationReferences?: PriceValidationReferences;
+  /**
+   * Transient per-candidate diagnostic slot: set by parent-trust resolution when
+   * a parent is rejected, cleared by the override scheduler before each
+   * candidate, and read after a null result so the attempt ledger can name the
+   * rejected parent instead of reporting an opaque missing quote.
+   */
+  lastUntrustedParent?: { parentId: string; reason: string } | null;
 }
 
 export interface LivePriceDiagnosticTarget {
@@ -298,42 +305,75 @@ interface LiveParentTrustOptions {
   allowFreshReplaySafeSingleSourceParent?: boolean;
 }
 
+interface TrustedInheritedParentResult {
+  parent: {
+    price: number;
+    observedAt: number;
+    observedAtMode: PriceObservedAtMode | null;
+    replaySafe: boolean;
+    source: string;
+    confidence: PriceConfidence;
+  } | null;
+  untrustedReason: string | null;
+}
+
 function resolveTrustedInheritedParent(
   asset: PeggedAsset,
   nowSec: number,
   options?: LiveParentTrustOptions,
-): {
-  price: number;
-  observedAt: number;
-  observedAtMode: PriceObservedAtMode | null;
-  replaySafe: boolean;
-  source: string;
-  confidence: PriceConfidence;
-} | null {
+): TrustedInheritedParentResult {
   const price = getFinitePositivePrice(asset);
-  if (price == null) return null;
+  if (price == null) return { parent: null, untrustedReason: "parent-price-missing" };
 
   const parentSource = asset.priceSource ?? null;
   const parentConfidence = asset.priceConfidence ?? null;
-  if (!parentSource) return null;
+  if (!parentSource) return { parent: null, untrustedReason: "parent-source-missing" };
 
   const sourceParts = splitCompositePriceSource(parentSource);
-  const replaySafe = isReplaySafePriceSource(parentSource);
-  const confidenceTrusted =
-    parentConfidence === "high" ||
-    isExplicitAuthoritativeParent(asset) ||
-    (options?.allowFreshReplaySafeSingleSourceParent === true &&
-      parentConfidence === "single-source" &&
-      replaySafe &&
-      sourceParts.length === 1 &&
-      !sourceParts.includes("cached"));
-  if (!confidenceTrusted || parentConfidence == null) return null;
-  const trustedConfidence = parentConfidence;
+  // Trust monotonicity: replay-safety is judged on the composite's replay-safe
+  // core, as if agreeing soft corroborators (e.g. exact-address augmentation
+  // lanes) were absent. A weight-1 non-replay-safe member joining the winning
+  // cluster must never downgrade a parent the core trusts on its own — and the
+  // padded cluster must never upgrade a core the gate would otherwise reject.
+  const replaySafeCoreParts = sourceParts.filter((part) => isReplaySafePriceSource(part));
+  const cachedSource = sourceParts.includes("cached");
 
-  if (!replaySafe) {
-    if (!options?.allowFreshNonReplaySafeParent || sourceParts.includes("cached")) {
-      return null;
-    }
+  let trustedConfidence: PriceConfidence | null = null;
+  let replaySafe = false;
+  if (isExplicitAuthoritativeParent(asset) && parentConfidence != null) {
+    trustedConfidence = parentConfidence;
+    replaySafe = isReplaySafePriceSource(parentSource);
+  } else if (parentConfidence === "high" && replaySafeCoreParts.length >= 2 && !cachedSource) {
+    trustedConfidence = parentConfidence;
+    replaySafe = true;
+  } else if (
+    options?.allowFreshNonReplaySafeParent === true &&
+    parentConfidence === "high" &&
+    !cachedSource
+  ) {
+    trustedConfidence = parentConfidence;
+    replaySafe = false;
+  } else if (
+    options?.allowFreshReplaySafeSingleSourceParent === true &&
+    replaySafeCoreParts.length === 1 &&
+    (parentConfidence === "single-source" || parentConfidence === "high") &&
+    !cachedSource
+  ) {
+    // A single replay-safe core member is admitted under single-source
+    // semantics even when soft corroborators padded the cluster to "high".
+    trustedConfidence = "single-source";
+    replaySafe = true;
+  }
+  if (trustedConfidence == null) {
+    const untrustedReason =
+      parentConfidence !== "high" && parentConfidence !== "single-source"
+        ? `confidence-${parentConfidence ?? "none"}`
+        : cachedSource
+          ? "cached-source"
+          : replaySafeCoreParts.length === 0
+            ? "non-replay-safe-source"
+            : "thin-replay-safe-core";
+    return { parent: null, untrustedReason };
   }
 
   const observedAt = asset.priceObservedAt ?? asset.priceUpdatedAt ?? null;
@@ -355,24 +395,33 @@ function resolveTrustedInheritedParent(
       splitCompositePriceSource(parentSource).length > 1
     ) {
       return {
-        price,
-        observedAt: syncedAt,
-        observedAtMode: "local_fetch",
-        replaySafe,
-        source: parentSource,
-        confidence: trustedConfidence,
+        parent: {
+          price,
+          observedAt: syncedAt,
+          observedAtMode: "local_fetch",
+          replaySafe,
+          source: parentSource,
+          confidence: trustedConfidence,
+        },
+        untrustedReason: null,
       };
     }
-    return null;
+    return {
+      parent: null,
+      untrustedReason: `freshness-${freshness.accepted === false ? freshness.reason : "missing-observed-at"}`,
+    };
   }
 
   return {
-    price,
-    observedAt: freshness.observedAt,
-    observedAtMode: freshness.observedAtMode,
-    replaySafe,
-    source: parentSource,
-    confidence: trustedConfidence,
+    parent: {
+      price,
+      observedAt: freshness.observedAt,
+      observedAtMode: freshness.observedAtMode,
+      replaySafe,
+      source: parentSource,
+      confidence: trustedConfidence,
+    },
+    untrustedReason: null,
   };
 }
 
@@ -396,10 +445,18 @@ export function resolveTrustedOverrideParent(
   options?: LiveParentTrustOptions,
 ): TrustedOverrideParent | null {
   const parentAsset = context.assetsById.get(parentId);
-  if (!parentAsset) return null;
+  if (!parentAsset) {
+    context.lastUntrustedParent = { parentId, reason: "parent-asset-missing" };
+    return null;
+  }
 
-  const trustedParent = resolveTrustedInheritedParent(parentAsset, Math.floor(Date.now() / 1000), options);
+  const { parent: trustedParent, untrustedReason } = resolveTrustedInheritedParent(
+    parentAsset,
+    Math.floor(Date.now() / 1000),
+    options,
+  );
   if (!trustedParent) {
+    context.lastUntrustedParent = { parentId, reason: untrustedReason ?? "untrusted" };
     console.warn(untrustedParentMessage());
     return null;
   }

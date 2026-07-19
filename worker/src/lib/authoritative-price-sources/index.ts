@@ -213,6 +213,10 @@ function applyOverrideToLiveContext(context: LivePriceContext, assetId: string, 
   asset.consensusSources = [override.source];
 }
 
+function readLastUntrustedParent(context: LivePriceContext): { parentId: string; reason: string } | null {
+  return context.lastUntrustedParent ?? null;
+}
+
 async function shouldAttemptLiveFetch(
   db: D1Database,
   source: string,
@@ -347,6 +351,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
       : null;
     const candidateSignal = candidateTimeout?.signal ?? liveSignal;
 
+    liveContext.lastUntrustedParent = null;
     try {
       const override = await provider.fetchLivePrice(asset, liveContext, candidateSignal);
       if (override) {
@@ -366,10 +371,13 @@ export async function fetchAuthoritativeLivePriceOverrides(
         }
       } else {
         if (stats) stats.emptyCount += 1;
+        const untrustedParent = readLastUntrustedParent(liveContext);
         recordAttempt(asset, provider, {
           state: "attempted",
           result: "empty",
-          rejectionClass: "missing-quote",
+          rejectionClass: untrustedParent
+            ? `untrusted-parent:${untrustedParent.parentId}:${untrustedParent.reason}`
+            : "missing-quote",
           candidateAt,
         });
         if (
