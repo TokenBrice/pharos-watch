@@ -1,5 +1,6 @@
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
 import { resolveChainId } from "@shared/lib/chains";
+import { V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX } from "@shared/lib/safety-score-v9/facts";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./safety-score-v9-fact-set";
 import type { ReportCardsFixedInput } from "./report-cards-fixed-input";
 
@@ -21,7 +22,7 @@ function routeChain(routeId: string): string | null {
 
 export const V9_UNMATCHED_CHAIN_ROUTE_PREFIX = "unmatched-chain:";
 export const V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX = "ambiguous-chain:";
-export const V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX = "unmatched-chain-label-pool:";
+export { V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX };
 
 function unmatchedRouteKey(assetId: string, chain: string, routeCount: number): string {
   return `${routeCount === 0 ? V9_UNMATCHED_CHAIN_ROUTE_PREFIX : V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX}${assetId}:${canonicalChainKey(chain)}`;

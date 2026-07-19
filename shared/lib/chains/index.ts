@@ -70,6 +70,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   "morph-l2":{ name: "Morph",   explorerUrl: "https://explorer.morphl2.io",      evmChainId: 2818,  type: "evm",  logoPath: "/chains/morph-l2.png"  },
   swellchain:{ name: "Swellchain",explorerUrl: "https://explorer.swellnetwork.io",evmChainId: 1923,  type: "evm",  logoPath: "/chains/swellchain.png"},
   xlayer:    { name: "X Layer", explorerUrl: "https://www.oklink.com/xlayer",     evmChainId: 196,   type: "evm",  logoPath: "/chains/xlayer.png"    },
+  robinhood: { name: "Robinhood Chain", explorerUrl: "https://robinhoodchain.blockscout.com", evmChainId: 4663, type: "evm", logoPath: "/chains/robinhood.png" },
   apechain:  { name: "ApeChain",explorerUrl: "https://apescan.io",               evmChainId: 33139, type: "evm",  logoPath: "/chains/apechain.png"  },
   bittorrent:{ name: "BitTorrent",explorerUrl: "https://bttcscan.com",           evmChainId: 199,   type: "evm",  logoPath: "/chains/bittorrent.png"},
   viction:   { name: "Viction", explorerUrl: "https://tomoscan.io",              evmChainId: 88,    type: "evm",  logoPath: "/chains/viction.png"   },
@@ -176,6 +177,7 @@ export const CHAIN_RESILIENCE_TIER: Partial<Record<string, ChainResilienceTier>>
   viction: 3,       // low activity, centralized
   codex: 3,         // new payment-focused L1
   edgechain: 3,     // exchange-adjacent financial chain
+  robinhood: 3,     // new exchange-adjacent L2 (mainnet 2026-07)
   stable: 3,        // new USDT-focused chain
   bevm: 3,          // newer BTC-aligned L2
 

@@ -4308,6 +4308,8 @@ Ratio-based on-chain status thresholds apply only when `dataQuality.onchainSuppl
 
 `crons["dispatch-telegram-alerts"].lastRun.metadata` now carries a richer delivery breakdown, including fields such as `freshAttempted`, `freshSent`, `freshRetryQueued`, `freshPermanentFailures`, `pendingAttempted`, `pendingDrained`, `pendingRetryQueued`, `pendingDeferred`, `pendingRateLimited`, `pendingRetryAfterSec`, `pendingDropped`, `pendingEnqueued`, and expanded `eventsDetected` counters (`depegTriggered`, `depegResolved`, `depegWorsening`, `launch`, `suppressedMethodologyChanges`).
 
+Source-event runs also include `authoritativePlanning`. It identifies `sourceEventId` and `sourceEventFamilies`; splits source-preset resolution, candidate-horizon, fan-out input loaders, preference-generation validation, routing, target materialization, duplicate suppression, queue handoff, and pending-drain duration; and reports capture/planning/handoff pages, fan-out load/cache counts, captured/planned/duplicate-suppressed/enqueued targets, and coordinator steps. Eventless runs return the same object with a null source ID and zero counts/timings so status consumers do not need a second shape.
+
 The same cron metadata also exposes the live safety-alert source contract:
 
 - `safetyAlertSourceState`

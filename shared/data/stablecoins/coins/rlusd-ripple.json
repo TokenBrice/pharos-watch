@@ -338,12 +338,13 @@
       "assetClass": "other",
       "issuerOrObligor": "United States Treasury and NYDFS-approved regulated financial institutions",
       "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 92
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-19",
+    "reviewer": "Kimi rescue lane 1f (2026-07-19)",
     "confidence": "verified",
     "sources": [
       {
@@ -353,9 +354,13 @@
       {
         "label": "Ripple RLUSD transparency",
         "url": "https://ripple.com/solutions/stablecoin/transparency/"
+      },
+      {
+        "label": "Ripple RLUSD User Terms (reserve asset classes and three-month Treasury bill covenant)",
+        "url": "https://ripple.com/legal/stablecoin/"
       }
     ],
-    "rationale": "Deloitte's May examination reports $1.162351093 billion of Treasury bills, $345.319216 million of government money market funds, and $269.247197 million of cash deposits at May 29, 2026. Excluding the separately disclosed negative $3.915600 million timing adjustment, gross reserve assets normalize to 65.41%, 19.44%, and 15.15%, respectively; the registry retains their aggregate live-feed identity for deterministic reconciliation.",
+    "rationale": "Deloitte's May examination reports $1.162351093 billion of Treasury bills, $345.319216 million of government money market funds, and $269.247197 million of cash deposits at May 29, 2026. Excluding the separately disclosed negative $3.915600 million timing adjustment, gross reserve assets normalize to 65.41%, 19.44%, and 15.15%, respectively; the registry retains their aggregate live-feed identity for deterministic reconciliation. The CUSIP-level table shows the longest Treasury bill maturing August 6, 2026 (69 days after the report date), and the examined NYDFS DFS-imposed Conditions plus the RLUSD User Terms restrict Treasury bills to three months or less from maturity; the registry records the 92-day covenant bound (maximum three-calendar-month span) as maturityDaysMax. Composition re-verified against the same May 2026 report on 2026-07-19; percentages unchanged.",
     "compositionBasis": "Deloitte examination of the RLUSD Reserve Report as of May 29, 2026",
     "compositionAsOf": "2026-05-29",
     "scope": "full-composition",

@@ -22,12 +22,15 @@ This file is mirrored to `CLAUDE.md`. Durable process guidance belongs in `/docs
 - Update matching docs for behavior, API, pipeline, methodology, or data-source changes; new data sources also update the about page.
 - Methodology changes update `/methodology`, the owning methodology doc, and the structured entry under `shared/data/methodology-changelogs/`. Versions increase numerically: after `v5.9`, use `v5.91` or `v6.0`, not `v5.10`.
 - When committing, use a descriptive and informative subject plus a useful body that explains what changed and why. Group pending work into logical/thematic commits; avoid empty, generic, or placeholder commit messages.
-- Do not create a branch, worktree, or PR unless explicitly asked. Before pushing, run focused checks; GitHub Actions owns the authoritative release gate, while the repo pre-push hook only runs the heavy local merge gate when explicitly opted in with `PHAROS_PRE_PUSH_GATE=main` or `PHAROS_PRE_PUSH_GATE=all`.
-- For large batches, run `npm run test:merge-gate:discover -- --target=<pr|local-gate|release|maintenance>`, read its final summary and ignored JSON report, then use focused reruns or `--resume` for blocked nodes. Discovery is diagnostic evidence, never a release receipt; use `--target=release` only for a clean production-bound snapshot with the intended public environment loaded.
+- Do not create a branch, worktree, or PR unless explicitly asked. A request to push, publish, release, or take work to production authorizes the required protected-main branch/PR path; never attempt a direct `main` push or stop only to re-ask about that required mechanism.
+- Before pushing, run focused checks. GitHub Actions owns the authoritative release gate; the pre-push hook checks commit-derived artifacts when the pushed commit is checked out, allowing unrelated dirty work but rejecting dirty relevant inputs/outputs. The heavy local merge gate runs only with `PHAROS_PRE_PUSH_GATE=main` or `PHAROS_PRE_PUSH_GATE=all`.
+- `docs-metadata` and `sitemap-dates` depend on source Git history. Commit their relevant source changes first, regenerate them, then commit or amend the generated output and run the full generated-artifact check from the final clean commit stack.
+- For large batches, run `npm run test:merge-gate:discover -- --target=<pr|local-gate|release|maintenance>`, read its final summary and ignored JSON report, then use focused reruns or `--resume` for blocked nodes. Discovery is diagnostic evidence, never a release receipt; use `--target=release` only with the exact `.nvmrc` runtime, a clean production-bound snapshot, and command-scoped production Pages environment rather than globally exported CI lane variables.
+- A green deploy proves Worker activation and/or a Pages release marker, not runtime health. For cron, scheduler, memory, migration, or ingestion-risk changes, observe the first relevant production execution before claiming operational success.
 
 ## Hard Rules
 
-The *why* behind these locked decisions lives in the [Architectural Decision Records](docs/architecture.md#architectural-decision-records).
+The _why_ behind these locked decisions lives in the [Architectural Decision Records](docs/architecture.md#architectural-decision-records).
 
 - Tailwind classes must be static strings.
 - Classification labels/colors live in `shared/lib/classification.ts`.

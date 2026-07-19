@@ -33,6 +33,35 @@ export interface DispatchCapacityMetadata {
   fanoutQueryMs: number;
   fanoutBuildMs: number;
   fanoutTotalMs: number;
+  authoritativePlanning: {
+    sourceEventId: string | null;
+    sourceEventFamilies: string[];
+    sourcePresetResolutionMs: number;
+    sourcePresetPagesCompleted: number;
+    candidateHorizonQueryMs: number;
+    captureEligibilityMs: number;
+    fanoutInputLoadMs: number;
+    directSubscriberLoadMs: number;
+    presetSubscriberLoadMs: number;
+    globalSubscriberLoadMs: number;
+    snoozeExplicitOffLoadMs: number;
+    preferenceGenerationValidationMs: number;
+    routingEvaluationMs: number;
+    targetMaterializationD1Ms: number;
+    enqueueHandoffMs: number;
+    duplicatePriorDeliverySuppressionMs: number;
+    pendingDrainSendMs: number;
+    capturedSubscriberCount: number;
+    capturePageCount: number;
+    planningPageCount: number;
+    fanoutInputLoadCallCount: number;
+    fanoutInputCacheHitCount: number;
+    plannedTargetCount: number;
+    duplicateSuppressedTargetCount: number;
+    handoffEnqueuedCount: number;
+    handoffPageCount: number;
+    coordinatorStepCount: number;
+  };
   /** C128: chats whose multi-coin set collapsed to a single burst-summary chunk this run. */
   burstCollapsedChats?: number;
   /** C128: bursting chats fully suppressed this run because their coin set was already summarized. */
@@ -253,6 +282,35 @@ export function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0):
     fanoutQueryMs: 0,
     fanoutBuildMs: 0,
     fanoutTotalMs: 0,
+    authoritativePlanning: {
+      sourceEventId: null,
+      sourceEventFamilies: [],
+      sourcePresetResolutionMs: 0,
+      sourcePresetPagesCompleted: 0,
+      candidateHorizonQueryMs: 0,
+      captureEligibilityMs: 0,
+      fanoutInputLoadMs: 0,
+      directSubscriberLoadMs: 0,
+      presetSubscriberLoadMs: 0,
+      globalSubscriberLoadMs: 0,
+      snoozeExplicitOffLoadMs: 0,
+      preferenceGenerationValidationMs: 0,
+      routingEvaluationMs: 0,
+      targetMaterializationD1Ms: 0,
+      enqueueHandoffMs: 0,
+      duplicatePriorDeliverySuppressionMs: 0,
+      pendingDrainSendMs: 0,
+      capturedSubscriberCount: 0,
+      capturePageCount: 0,
+      planningPageCount: 0,
+      fanoutInputLoadCallCount: 0,
+      fanoutInputCacheHitCount: 0,
+      plannedTargetCount: 0,
+      duplicateSuppressedTargetCount: 0,
+      handoffEnqueuedCount: 0,
+      handoffPageCount: 0,
+      coordinatorStepCount: 0,
+    },
     suppressedSafetyChangesAtSeed: 0,
     reserveSourceUnavailable: false,
   };

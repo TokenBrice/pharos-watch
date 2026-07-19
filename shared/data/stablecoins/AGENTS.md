@@ -19,6 +19,7 @@ See root AGENTS.md / CLAUDE.md Hard Rules for cross-cutting rules. This file onl
 - Use `npx tsx scripts/maintenance/migrate-stablecoin-sidecar.ts --domain <domain> --id <id> --dry-run` before layout migrations. The tool moves existing values only and proves the merged projection is unchanged.
 - Regenerate `shared/data/stablecoins/coins.generated.json` with `tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` after per-coin or sidecar edits. Do not edit generated registry artifacts by hand.
 - Keep the client, prevalidated, report-card fingerprint, and legacy redirect projections fresh too: `shared/data/stablecoins/coins.client.generated.json`, `shared/data/stablecoins/coins.prevalidated.generated.ts`, `shared/data/stablecoins/report-card-registry-fingerprint.generated.ts`, and `shared/data/stablecoins/legacy-llama-redirects.generated.json` are generated from the stablecoin registries and guarded by `npm run check:generated-artifacts`.
+- Base coin files also feed commit-derived stablecoin detail dates in `sitemap-dates`. Generate ordinary registry projections from the working tree, commit the base coin source/projections, then regenerate sitemap dates from that committed history and commit or amend the result before the final full artifact check.
 - In coordinated multi-agent batches, regenerate the full/client/compliance/prevalidated/redirect artifacts only after all source moves are complete; layout-only migrations must leave those projections byte-identical.
 - Treat `usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, and `pre-launch.json` as read-only compatibility shells. They should remain empty, and `npm run check:stablecoin-data` guards that layout.
 - Keep `canonical-order.json` aligned with the per-coin catalog.
@@ -33,5 +34,6 @@ See root AGENTS.md / CLAUDE.md Hard Rules for cross-cutting rules. This file onl
 ## Common Checks
 
 - `npm run check:stablecoin-data`
+- `npm run check:commit-derived-artifacts` after the base coin source commit
 - `npm run check:generated-artifacts`
 - Focused stablecoin registry tests under `shared/lib/__tests__`

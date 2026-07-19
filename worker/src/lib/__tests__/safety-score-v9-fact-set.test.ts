@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v8/evaluation-build-manifest-v1";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
+import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { buildV9DependencyEvaluationPlan } from "@shared/lib/safety-score-v9/dependencies";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
@@ -14,6 +15,7 @@ import {
   type SafetyScoreV9FactSetExtensionV2,
 } from "../safety-score-v9-fact-set";
 import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../safety-score-v9-extension";
+import { selectSafetyScoreV9CdpShockMeasurement } from "../safety-score-v9-extension-shock";
 import type { SafetyScoreV9ReviewedTransferFact } from "../safety-score-v9-extension-transfer";
 
 const AS_OF_SEC = 10_000;
@@ -83,6 +85,7 @@ function route(
 
 function exactFixedInput(
   args: {
+    assetId?: string;
     liquidityScore?: number;
     classifiedReserve?: boolean;
     omitPegRow?: boolean;
@@ -104,6 +107,7 @@ function exactFixedInput(
     clockSec?: number;
   } = {},
 ) {
+  const assetId = args.assetId ?? "alpha";
   const clockSec = args.clockSec ?? AS_OF_SEC;
   const observedAtSec = clockSec - 100;
   const reserve = {
@@ -114,7 +118,7 @@ function exactFixedInput(
       ? {}
       : {
           assetClass: "cash" as const,
-          issuerOrObligor: "issuer:alpha",
+          issuerOrObligor: `issuer:${assetId}`,
           riskFactors: ["custody" as const, "counterparty" as const],
           liquidityHorizon: "immediate" as const,
           maturityDaysMax: 0,
@@ -122,7 +126,7 @@ function exactFixedInput(
   };
   return createReportCardsFixedInput({
     captureKind: "exact-publication-inputs",
-    activeAssetIds: ["alpha"],
+    activeAssetIds: [assetId],
     capturedAt: "2026-07-13T00:00:00.000Z",
     sourceGeneration: "report-cards:fixture:10000",
     dexGenerationId: `dex-liquidity-${observedAtSec}`,
@@ -140,8 +144,8 @@ function exactFixedInput(
     pegDataById: args.omitPegRow
       ? {}
       : {
-          alpha: {
-            id: "alpha",
+          [assetId]: {
+            id: assetId,
             symbol: "ALPHA",
             name: "Alpha",
             pegType: "peggedUSD",
@@ -162,9 +166,9 @@ function exactFixedInput(
             methodologyVersion: "peg:fixture-v1",
           },
         },
-    activeDepegPeakBpsById: args.activeDepegPeakBps === undefined ? {} : { alpha: args.activeDepegPeakBps },
+    activeDepegPeakBpsById: args.activeDepegPeakBps === undefined ? {} : { [assetId]: args.activeDepegPeakBps },
     dexLiqMap: {
-      alpha: {
+      [assetId]: {
         liquidityScore: args.liquidityScore ?? 12,
         concentrationHhi: 0.5,
         poolCount: 1,
@@ -195,15 +199,15 @@ function exactFixedInput(
     },
     redemptionBackstopMap: {},
     bluechipMap: {},
-    resolvedBlacklistStatuses: { alpha: false },
-    liveReserveMap: args.omitLiveReserve ? {} : { alpha: [reserve] },
+    resolvedBlacklistStatuses: { [assetId]: false },
+    liveReserveMap: args.omitLiveReserve ? {} : { [assetId]: [reserve] },
     liveReserveProvenanceMap: args.omitLiveReserve
       ? {}
       : {
-          alpha: { source: "fixture-reserve-api", fetchedAt: observedAtSec },
+          [assetId]: { source: "fixture-reserve-api", fetchedAt: observedAtSec },
         },
     chainCirculatingById: {
-      alpha: args.chainSupplyByChain ?? {
+      [assetId]: args.chainSupplyByChain ?? {
         ethereum: {
           current: 10_000_000,
           circulatingPrevDay: 10_000_000,
@@ -1373,8 +1377,217 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
 
     expect(build(true).registryFingerprint).toBe(build(true, transferFact("permissionless")).registryFingerprint);
     expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "de12fc1868eed573b1c413e68a763f5b7f76675bb610cd19374f3293c320365c",
+      "6fcc431ad84fac11052cd59a972c648641debb46fc4169611eff980bde92c06d",
     );
+  });
+
+  it("derives reviewed bridge/mint/oracle research freshness on the D11 review cadence", () => {
+    const clockSec = Date.UTC(2026, 6, 19) / 1_000;
+    const researchReviewMeta = (reviewedAt: string): V9ExtensionRegistryMeta => ({
+      id: "alpha",
+      mechanismArchetype: "cdp" as const,
+      oracleRisk: {
+        tier: "redundant-with-failover" as const,
+        summary: "The fixture has reviewed oracle and liquidation branch behavior.",
+        branchModel: "multi-branch" as const,
+        branchApplicability: {
+          disposition: "branches-required" as const,
+          reviewedAt,
+          reviewer: "Fixture reviewer",
+          rationale: "The collateral market requires explicit branch evidence.",
+          sources: [{ label: "Branch docs", url: "https://example.com/branches" }],
+        },
+        reviewedAt,
+        reviewer: "Fixture reviewer",
+        confidence: "verified" as const,
+        sources: [{ label: "Oracle docs", url: "https://example.com/oracle" }],
+        branches: [
+          {
+            id: "eth",
+            label: "ETH branch",
+            tier: "redundant-with-failover" as const,
+            summary: "The ETH branch has complete reviewed controls.",
+            feeds: [{ provider: "Fixture", path: "ETH/USD", chain: "ethereum" }],
+            collateralParameters: [{ asset: "ETH", minimumCollateralRatioPct: 120 }],
+            liquidationMechanism: "Immediate permissionless liquidation through the branch.",
+            liquidationDelaySec: 0,
+            backstop: "A dedicated stability pool absorbs liquidated debt.",
+            shutdownOrBadDebtBehavior: "The branch shuts down and exposes residual bad debt explicitly.",
+            sources: [{ label: "Branch docs", url: "https://example.com/branches" }],
+          },
+        ],
+      },
+      mintAuthority: {
+        mintPath: "issuer-direct-mint" as const,
+        authorityPosture: "concentrated-admin" as const,
+        confidence: "verified" as const,
+        summary: "The fixture token is reviewed immutable with no direct mint control.",
+        upgradeability: {
+          model: "immutable" as const,
+          canChangeMintLogic: false,
+          sources: [{ label: "Mint docs", url: "https://example.com/mint" }],
+        },
+        controls: [],
+        review: {
+          sources: [{ label: "Mint docs", url: "https://example.com/mint" }],
+          evidence: "The fixture mint path is reviewed and immutable.",
+          reviewer: "Fixture reviewer",
+          reviewedAt,
+        },
+      },
+      bridgeRouteRisk: {
+        tier: "external-lock-mint" as const,
+        summary: "A reviewed external bridge route represents the fixture token.",
+        reviewedAt,
+        reviewer: "Fixture reviewer",
+        confidence: "verified" as const,
+        sources: [{ label: "Bridge docs", url: "https://example.com/bridge" }],
+        routes: [
+          {
+            id: "ethereum:0x1111111111111111111111111111111111111111",
+            destinationChain: "ethereum",
+            canonicalChain: "ethereum",
+            contractAddress: "0x1111111111111111111111111111111111111111",
+            protocol: "Fixture native issuance",
+            issuanceModel: "native-issuance" as const,
+            routeClass: "native" as const,
+            riskTier: "single-chain-or-native" as const,
+            semantics: "native-mint" as const,
+            scope: "canonical" as const,
+            reviewDisposition: "reviewed" as const,
+            observedAt: reviewedAt,
+            sources: [{ label: "Bridge docs", url: "https://example.com/bridge" }],
+          },
+          {
+            id: "base:0x3333333333333333333333333333333333333333",
+            sourceChain: "ethereum",
+            destinationChain: "base",
+            canonicalChain: "ethereum",
+            contractAddress: "0x3333333333333333333333333333333333333333",
+            protocol: "Fixture bridge",
+            issuanceModel: "bridge-representation" as const,
+            routeClass: "third-party" as const,
+            riskTier: "external-lock-mint" as const,
+            semantics: "lock-mint" as const,
+            scope: "peripheral" as const,
+            reviewDisposition: "reviewed" as const,
+            observedAt: reviewedAt,
+            sources: [{ label: "Bridge docs", url: "https://example.com/bridge" }],
+          },
+        ],
+      },
+    });
+    const researchSourceIds = [
+      "stablecoin-meta.bridge-route-risk",
+      "stablecoin-meta.mint-authority",
+      "stablecoin-meta.oracle-risk",
+    ];
+    const compileWithReview = (reviewedAt: string) => {
+      const fixed = exactFixedInput({ clockSec });
+      const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+        metaById: new Map([["alpha", researchReviewMeta(reviewedAt)]]),
+      });
+      return { baseline, compiled: compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline).assets[0]! };
+    };
+
+    // A same-day review is inside the 365-day review window and stays current.
+    const current = compileWithReview("2026-07-19");
+    expect(current.baseline.assets[0]!.controlReview).toMatchObject({ state: "reviewed-controls" });
+    expect(current.compiled.economicControlReview.oracle.status.observationState).toBe("known");
+    expect(current.compiled.economicControlReview.mint.status.observationState).toBe("known");
+    expect(current.compiled.economicControlReview.bridge.status.observationState).toBe("known");
+    for (const sourceId of researchSourceIds) {
+      expect(
+        current.compiled.evidence.find((candidate) => candidate.sourceId === sourceId),
+        `${sourceId} must derive current inside the review window`,
+      ).toMatchObject({ freshness: { state: "current", maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC } });
+    }
+
+    // A 2024 review is beyond the window: the facts degrade to stale honestly,
+    // and the stale reviews no longer carry the umbrella control inventory.
+    const stale = compileWithReview("2024-01-01");
+    expect(stale.baseline.assets[0]!.controlReview).toBeNull();
+    expect(stale.compiled.economicControlReview.oracle.status.observationState).toBe("stale");
+    expect(stale.compiled.economicControlReview.mint.status.observationState).toBe("stale");
+    expect(stale.compiled.economicControlReview.bridge.status.observationState).toBe("stale");
+    for (const sourceId of researchSourceIds) {
+      expect(
+        stale.compiled.evidence.find((candidate) => candidate.sourceId === sourceId),
+        `${sourceId} must derive stale beyond the review window`,
+      ).toMatchObject({ freshness: { state: "stale", maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC } });
+    }
+  });
+
+  it("derives route output valuation freshness on the D11 review cadence", () => {
+    const clockSec = Date.UTC(2026, 6, 19) / 1_000;
+    const fixed = exactFixedInput({ clockSec });
+    const buildBaseline = () =>
+      buildSafetyScoreV9BaselineExtension(fixed, {
+        metaById: new Map([["alpha", { id: "alpha", mechanismArchetype: "fiat-cash" as const }]]),
+      });
+
+    const current = compileSafetyScoreV9FactSetFromFixedInput(fixed, buildBaseline()).assets[0]!;
+    expect(current.evidence.find((candidate) => candidate.evidenceId.includes(":route-valuation:"))).toMatchObject({
+      freshness: { state: "current", maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC },
+    });
+
+    const staleExtension = buildBaseline();
+    staleExtension.assets[0]!.routeReviews[0]!.output!.valuation!.observedAtSec =
+      clockSec - V9_REVIEW_EVIDENCE_MAX_AGE_SEC - 1;
+    const stale = compileSafetyScoreV9FactSetFromFixedInput(fixed, staleExtension).assets[0]!;
+    expect(stale.evidence.find((candidate) => candidate.evidenceId.includes(":route-valuation:"))).toMatchObject({
+      freshness: { state: "stale", maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC },
+    });
+    expect(stale.exitRoutes[0]!.output.status.observationState).toBe("stale");
+  });
+
+  it("derives cdp shock-coverage freshness on the D12 72-hour policy window", () => {
+    const maxAgeSec = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp.stressMeasurementFreshness.maxAgeSec;
+    expect(maxAgeSec).toBe(259_200);
+    const measurement = selectSafetyScoreV9CdpShockMeasurement("lusd-liquity", 1_784_225_942);
+    if (!measurement || measurement.source === null) throw new Error("Expected a pinned LUSD shock measurement");
+    const blockSec = measurement.source.block.timestampUnix;
+    const cdpComponent = () => ({ status: status(), quality: "strong" as const, failureDomains: [] });
+
+    const compileWithShockClock = (clockSec: number) => {
+      const fixed = exactFixedInput({ clockSec, assetId: "lusd-liquity" });
+      const ext = extension();
+      ext.compiledAtSec = clockSec;
+      ext.registryFingerprint = fixed.registryFingerprint;
+      ext.sources.researchOverlays.observedAtSec = clockSec - 100;
+      const asset = ext.assets[0]!;
+      asset.assetId = "lusd-liquity";
+      asset.archetype = "cdp";
+      asset.mechanismRiskReview = {
+        archetype: "cdp" as const,
+        collateralizationRatio: 1.5,
+        liquidationCapacityRatio: 0.25,
+        metricApplicability: {
+          collateralizationRatio: { state: "measured" as const },
+          liquidationCapacityRatio: { state: "measured" as const },
+        },
+        collateralizationParameters: cdpComponent(),
+        liquidationMechanics: cdpComponent(),
+        backstop: cdpComponent(),
+        branchIsolation: cdpComponent(),
+        shutdownAndBadDebt: cdpComponent(),
+        structuralRedemption: cdpComponent(),
+      };
+      asset.cdpStressCoverage = measurement;
+      return compileSafetyScoreV9FactSetFromFixedInput(fixed, ext).assets[0]!;
+    };
+
+    // A measurement inside the 72-hour window stays current.
+    const current = compileWithShockClock(blockSec + 100);
+    expect(
+      current.evidence.find((candidate) => candidate.evidenceId.startsWith("lusd-liquity:cdp-shock-coverage:")),
+    ).toMatchObject({ freshness: { state: "current", maxAgeSec } });
+
+    // A measurement older than 72 hours derives stale honestly.
+    const stale = compileWithShockClock(blockSec + maxAgeSec + 1);
+    expect(
+      stale.evidence.find((candidate) => candidate.evidenceId.startsWith("lusd-liquity:cdp-shock-coverage:")),
+    ).toMatchObject({ freshness: { state: "stale", maxAgeSec } });
   });
 
   it("maps only explicit oracle branch families and remains NR without a mechanism review", () => {

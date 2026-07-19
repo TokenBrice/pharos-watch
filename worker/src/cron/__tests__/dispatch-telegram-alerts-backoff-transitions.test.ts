@@ -187,8 +187,13 @@ describe("dispatchTelegramAlerts", () => {
       (await dispatchTelegramAlerts(harness.db, "bot-token", undefined, undefined, reportProgress)).metadata,
     );
 
+    const targetPlanProgressCallIndex = reportProgress.mock.calls.findIndex(
+      ([update]) => update.stage === "target-plan-progress",
+    );
     const fanoutBuiltCallIndex = reportProgress.mock.calls.findIndex(([update]) => update.stage === "fanout-built");
+    expect(targetPlanProgressCallIndex).toBeGreaterThanOrEqual(0);
     expect(fanoutBuiltCallIndex).toBeGreaterThanOrEqual(0);
+    expect(targetPlanProgressCallIndex).toBeLessThan(fanoutBuiltCallIndex);
     expect(mockSendToChat.mock.invocationCallOrder[0]).toBeLessThan(
       reportProgress.mock.invocationCallOrder[fanoutBuiltCallIndex]!,
     );

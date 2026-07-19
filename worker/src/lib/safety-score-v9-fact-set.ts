@@ -876,7 +876,11 @@ function buildCdpStressCoverage(context: AssetBuildContext): V9CdpStressCoverage
             observedAtSec: fact.source.block.timestampUnix,
             url: fact.source.sourcePin.repository,
             contentSha256: fact.source.journalSha256,
-            maxAgeSec: null,
+            // D12: the owner-ratified 72h stress-measurement freshness bound
+            // already gates selection in the CDP shock adapter; the evidence
+            // ref now carries the same window.
+            maxAgeSec:
+              V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp.stressMeasurementFreshness.maxAgeSec,
           },
           context.fixedInput.clockSec,
         ),

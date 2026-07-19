@@ -17,6 +17,7 @@ export const V9_REASON_CODES = [
   "critical-unresolved",
   "future-dated-input-fact",
   "historical-critical-input",
+  "immaterial-unrecognized-chain-pool",
   "implementation-parent-cycle",
   "incomparable-route-requests",
   "incomplete-dex-route-coverage",
@@ -131,7 +132,6 @@ export const V9StructuralSignalKindSchema = z.enum([
   "weak-oracle-branch",
   "active-control-incident",
   "critical-dependency",
-  "bounded-unknown",
 ]);
 export type V9StructuralSignalKind = z.infer<typeof V9StructuralSignalKindSchema>;
 
@@ -614,7 +614,6 @@ const V9StructuralSignalLimitMapSchema = z
     "weak-oracle-branch": V9SeverityScoreMapSchema,
     "active-control-incident": V9SeverityScoreMapSchema,
     "critical-dependency": V9SeverityScoreMapSchema,
-    "bounded-unknown": V9SeverityScoreMapSchema,
   })
   .strict();
 

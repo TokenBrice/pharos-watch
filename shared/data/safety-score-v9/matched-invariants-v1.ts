@@ -132,15 +132,7 @@ export const MATCHED_V9_INVARIANTS = [
       complete: { evidenceLevel: "strong", structuralSignals: [], unresolved: [] },
       boundedUnknown: {
         evidenceLevel: "adequate",
-        structuralSignals: [
-          {
-            kind: "bounded-unknown",
-            severity: "moderate",
-            reason: "A reviewed bounded evidence gap remains.",
-            failureDomainKeys: ["evidence:matched"],
-            evidence: [],
-          },
-        ],
+        structuralSignals: [],
         unresolved: [],
       },
       noncriticalMissing: {

@@ -164,6 +164,16 @@
       "chain": "xlayer",
       "address": "0x4ae46a509f6b1d9056937ba4500cb143933d2dc8",
       "decimals": 6
+    },
+    {
+      "chain": "robinhood",
+      "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "decimals": 6
+    },
+    {
+      "chain": "hyperliquid",
+      "address": "0xae87b5246dd9f377b14bbadcf3c72131",
+      "decimals": 8
     }
   ],
   "blacklistabilityReview": {
@@ -302,9 +312,9 @@
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "USDG is Paxos-issued and its official Global Dollar page lists deployments on Ethereum, Solana, Ink, and X Layer. The route is reviewed as issuer-native multichain issuance/redemption.",
-    "reviewedAt": "2026-07-16",
-    "reviewer": "Codex bridge route review",
+    "summary": "USDG is Paxos-issued and Paxos's official USDG mainnet documentation lists native deployments on Ethereum, Solana, Ink, X Layer, Arbitrum, and Robinhood Chain, each with a Paxos-operated SupplyControl contract. USDG on Hyperliquid is USDG0, the omnichain representation issued by Paxos Labs over LayerZero OFT, not a native Paxos deployment. Native routes are reviewed as issuer-native multichain issuance/redemption; the Hyperliquid USDG0 route is reviewed as an issuer-affiliated LayerZero OFT representation.",
+    "reviewedAt": "2026-07-19",
+    "reviewer": "Codex bridge route review; Kimi rescue lane 1c (2026-07-19)",
     "confidence": "verified",
     "sources": [
       {
@@ -314,6 +324,14 @@
       {
         "label": "Paxos USDG contract repository",
         "url": "https://github.com/paxosglobal/usdg-contract"
+      },
+      {
+        "label": "Paxos USDG main network deployments",
+        "url": "https://docs.paxos.com/guides/stablecoin/usdg/mainnet"
+      },
+      {
+        "label": "Plume, Hyperliquid, & Aptos lead the inaugural launch cohort of Paxos' USDG0 omnichain stablecoin",
+        "url": "https://www.prnewswire.com/news-releases/plume-hyperliquid--aptos-lead-the-inaugural-launch-cohort-of-paxos-usdg0-omnichain-stablecoin-302624908.html"
       }
     ],
     "routes": [
@@ -345,16 +363,25 @@
         "id": "arbitrum:0x004b506865409877c9fa29bfb1eba929984b9bbc",
         "destinationChain": "arbitrum",
         "contractAddress": "0x004b506865409877c9fa29bfb1eba929984b9bbc",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Paxos native USDG",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Paxos USDG main network deployments (Arbitrum token and SupplyControl)",
+            "url": "https://docs.paxos.com/guides/stablecoin/usdg/mainnet"
+          },
+          {
+            "label": "Paxos USDG contract specification",
+            "url": "https://github.com/paxosglobal/usdg-contract"
+          }
+        ]
       },
       {
         "id": "solana:2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH",
@@ -425,6 +452,68 @@
           {
             "label": "Paxos USDG contract specification",
             "url": "https://github.com/paxosglobal/usdg-contract"
+          }
+        ]
+      },
+      {
+        "id": "robinhood:0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+        "destinationChain": "robinhood",
+        "contractAddress": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+        "protocol": "Paxos native USDG",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Paxos USDG main network deployments (Robinhood Chain token and SupplyControl)",
+            "url": "https://docs.paxos.com/guides/stablecoin/usdg/mainnet"
+          },
+          {
+            "label": "Robinhood Chain network details (chain ID 4663)",
+            "url": "https://docs.robinhood.com/chain/connecting/"
+          },
+          {
+            "label": "Global Dollar USDG deployments and USDG0 distinction",
+            "url": "https://globaldollar.com/build-with-usdg"
+          }
+        ]
+      },
+      {
+        "id": "hyperliquid:0xae87b5246dd9f377b14bbadcf3c72131",
+        "destinationChain": "hyperliquid",
+        "contractAddress": "0xae87b5246dd9f377b14bbadcf3c72131",
+        "protocol": "USDG0 omnichain (Paxos Labs, LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-19",
+        "controllerChain": "hyperliquid",
+        "controllerAddress": "0xae87b5246dd9f377b14bbadcf3c72131",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:hyperliquid:0xae87b5246dd9f377b14bbadcf3c72131"
+        ],
+        "sources": [
+          {
+            "label": "Hyperliquid spot token metadata (USDG fullName USDG0, index 352, token id 0xae87...2131)",
+            "url": "https://api.hyperliquid.xyz/info"
+          },
+          {
+            "label": "Plume, Hyperliquid, & Aptos lead the inaugural launch cohort of Paxos' USDG0 omnichain stablecoin",
+            "url": "https://www.prnewswire.com/news-releases/plume-hyperliquid--aptos-lead-the-inaugural-launch-cohort-of-paxos-usdg0-omnichain-stablecoin-302624908.html"
+          },
+          {
+            "label": "Paxos USDG main network deployments (official native deployment list excludes Hyperliquid)",
+            "url": "https://docs.paxos.com/guides/stablecoin/usdg/mainnet"
           }
         ]
       }

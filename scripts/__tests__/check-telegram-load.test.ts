@@ -7,10 +7,12 @@ import {
   evaluateQueryPlan,
   evaluateStatusPathBudget,
   findCpuBudgetBreaches,
+  findProductionDispatchBreaches,
   findRecapLoadBreaches,
   findTtlMarginBreaches,
   runStatusPathBudgetChecks,
   simulateLoadScenarios,
+  simulateProductionCalibratedDispatch,
   simulateTelegramRecapLoadScenarios,
   STATUS_PATH_MAX_DURATION_MS,
   summarizeFixture,
@@ -104,6 +106,39 @@ describe("Telegram load simulation", () => {
       // scenario stays under the CPU safety fraction of the per-invocation cap.
       expect(scenario.estimatedCpuMs).toBeLessThanOrEqual(report.assumptions.cpuBudgetCeilingMs);
     }
+  });
+
+  it("enforces the production-calibrated candidate, fanout, handoff, and wall-time bounds", () => {
+    const scenario = simulateProductionCalibratedDispatch();
+    const report = buildTelegramLoadCheckReport({ targets: [5_000], skipQueryPlans: true });
+
+    expect(scenario).toMatchObject({
+      subscriberCount: 855,
+      candidateSubscriberCount: 338,
+      targetCount: 300,
+      fanoutInputLoadCallCount: scenario.capturePageCount,
+      duplicatedFanoutInputLoadCallCount: 0,
+      handoffOperationCount: scenario.handoffPageCount * scenario.maxHandoffOperationsPerPage,
+    });
+    expect(scenario.estimatedInvocationWallMs).toBeLessThanOrEqual(scenario.maxInvocationWallMs);
+    expect(findProductionDispatchBreaches(report)).toEqual([]);
+
+    const regressed: TelegramLoadCheckReport = {
+      ...report,
+      productionDispatchScenario: {
+        ...scenario,
+        fanoutInputLoadCallCount: scenario.capturePageCount * 2,
+        duplicatedFanoutInputLoadCallCount: scenario.capturePageCount,
+        handoffOperationCount: scenario.targetCount * 3,
+        estimatedInvocationWallMs: scenario.maxInvocationWallMs + 1,
+      },
+    };
+    expect(findProductionDispatchBreaches(regressed)).toEqual([
+      "fanout-input-pages-reloaded",
+      "duplicated-fanout-input-loads",
+      "target-oriented-handoff-operations",
+      "invocation-wall-budget",
+    ]);
   });
 
   it("caps the modeled format-count at the fresh budget post-C102 reorder", () => {

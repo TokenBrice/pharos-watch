@@ -265,3 +265,75 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     expect(buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(undefined), "usdc-circle")).toEqual([]);
   });
 });
+
+describe("buildDexRouteReview model-confidence derivation", () => {
+  function dexObservation(evidenceKind: ExitRouteObservation["evidenceKind"]): ExitRouteObservation {
+    return {
+      routeId: `dex:usdc-circle:dl:ethereum%3Apool:${evidenceKind}`,
+      routeFamily: "dex-amm",
+      scope: { kind: "chain-contract", chain: "ethereum", contractOrPoolId: `pool-${evidenceKind}`, protocol: "curve" },
+      requestedNotionalUsd: 1_000_000,
+      settlementHorizonSec: 300,
+      maxCostBps: 50,
+      executableUsd: 950_000,
+      completionRatio: 0.95,
+      output: { kind: "fiat", currency: "USD" },
+      evidenceKind,
+      confidence: "high",
+      scoreEligible: true,
+      observedAt: NOW,
+      freshnessSeconds: 0,
+      commonModeKeys: ["chain:ethereum", "protocol:curve"],
+    };
+  }
+
+  function dexReviewFor(evidenceKind: ExitRouteObservation["evidenceKind"]) {
+    const fixedInput = fixedInputStub(undefined);
+    (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
+      "usdc-circle": { exitRouteObservations: [dexObservation(evidenceKind)] },
+    };
+    return buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!;
+  }
+
+  it("grades measured executable depth as high model confidence", () => {
+    expect(dexReviewFor("measured-executable-depth")).toMatchObject({
+      lane: "dex",
+      executionCertainty: "bounded",
+      modelConfidence: "high",
+    });
+  });
+
+  it.each([
+    "reserve-based-amm-simulation",
+    "direct-orderbook-depth",
+    "generic-tvl-proxy",
+    "synthetic-or-fallback",
+    "unobserved",
+  ] as const)("keeps %s evidence at medium model confidence", (evidenceKind) => {
+    expect(dexReviewFor(evidenceKind)).toMatchObject({
+      lane: "dex",
+      executionCertainty: "bounded",
+      modelConfidence: "medium",
+    });
+  });
+
+  it("lifts only the measured route when evidence kinds are mixed", () => {
+    const fixedInput = fixedInputStub(undefined);
+    (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
+      "usdc-circle": {
+        exitRouteObservations: [
+          dexObservation("reserve-based-amm-simulation"),
+          dexObservation("measured-executable-depth"),
+        ],
+      },
+    };
+    const reviews = buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle");
+    expect(reviews).toHaveLength(2);
+    expect(
+      reviews.find((review) => review.routeId.includes("measured-executable-depth")),
+    ).toMatchObject({ modelConfidence: "high" });
+    expect(
+      reviews.find((review) => review.routeId.includes("reserve-based-amm-simulation")),
+    ).toMatchObject({ modelConfidence: "medium" });
+  });
+});

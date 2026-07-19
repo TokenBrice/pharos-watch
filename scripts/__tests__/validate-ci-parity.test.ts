@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
+import { PUBLIC_DOCS } from "../../shared/lib/public-docs";
 import {
   buildNoncriticalTestShardCommands,
   NONCRITICAL_TEST_SHARD_COUNT,
@@ -197,9 +198,9 @@ describe("validate-ci parity", () => {
   it("keeps generated artifacts dependency-aware, reproducible, and bootstrap-scoped", () => {
     const expectedArtifacts = [
       ["stablecoin-catalog", 0, "deterministic", true, []],
-      ["sitemap-dates", 0, "deterministic", false, []],
+      ["sitemap-dates", 0, "git-history-derived", false, []],
       ["case-study-client-index", 0, "deterministic", true, []],
-      ["docs-metadata", 0, "deterministic", false, []],
+      ["docs-metadata", 0, "git-history-derived", false, []],
       ["depeg-event-search-data", 0, "pinned-input", true, []],
       ["homepage-bootstrap", 0, "network-derived", false, []],
       ["postman", 0, "deterministic", true, []],
@@ -281,6 +282,18 @@ describe("validate-ci parity", () => {
     expect(GENERATED_ARTIFACT_REGISTRY.every((artifact) => artifact.phase >= 0 && artifact.phase <= 3)).toBe(true);
     expect(GENERATED_ARTIFACT_REGISTRY.every((artifact) => artifact.sourcePaths.length > 0)).toBe(true);
     expect(GENERATED_ARTIFACT_REGISTRY.every((artifact) => artifact.outputPaths.length > 0)).toBe(true);
+    expect(
+      GENERATED_ARTIFACT_REGISTRY.filter((artifact) => artifact.inputState === "committed-history").map(
+        (artifact) => artifact.id,
+      ),
+    ).toEqual(["sitemap-dates", "docs-metadata"]);
+    expect(GENERATED_ARTIFACT_REGISTRY.find((artifact) => artifact.id === "docs-metadata")?.sourcePaths).toEqual(
+      [
+        "scripts/maintenance/generate-docs-metadata.ts",
+        "shared/lib/public-docs.ts",
+        ...PUBLIC_DOCS.map((doc) => `docs/${doc.source}`),
+      ].sort(),
+    );
     expect(
       GENERATED_ARTIFACT_REGISTRY.find((artifact) => artifact.id === "safety-score-v9-shock-coverage-registry"),
     ).toMatchObject({
@@ -572,10 +585,7 @@ describe("validate-ci parity", () => {
     // Code deploys refresh digest/depeg/dataset snapshots (fail-open) so digest
     // surfaces stop regressing to the committed snapshot on every merge.
     expect(pages.with).toEqual({ refresh_data: true });
-    expect(Object.keys(pages.secrets ?? {}).sort()).toEqual([
-      "CLOUDFLARE_ACCOUNT_ID",
-      "CLOUDFLARE_API_TOKEN",
-    ]);
+    expect(Object.keys(pages.secrets ?? {}).sort()).toEqual(["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"]);
     expect(pages.if).toContain("needs.deploy-worker.result == 'success'");
     expect(pages.if).toContain("needs.plan.outputs.worker_required != 'true'");
   });
@@ -584,10 +594,7 @@ describe("validate-ci parity", () => {
     const workflow = readWorkflow(".github/workflows/pages-release.yml");
     const workflowCall = workflow.on.workflow_call;
     expect(workflowCall.inputs.refresh_data).toMatchObject({ default: false, type: "boolean" });
-    expect(Object.keys(workflowCall.secrets).sort()).toEqual([
-      "CLOUDFLARE_ACCOUNT_ID",
-      "CLOUDFLARE_API_TOKEN",
-    ]);
+    expect(Object.keys(workflowCall.secrets).sort()).toEqual(["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"]);
 
     const job = workflow.jobs["pages-release"];
     expect(job.environment).toMatchObject({ name: "production", url: "https://pharos.watch" });
@@ -647,10 +654,7 @@ describe("validate-ci parity", () => {
     expect(release.if).toBe("${{ github.ref == 'refs/heads/main' }}");
     expect(release.uses).toBe("./.github/workflows/pages-release.yml");
     expect(release.with).toEqual({ refresh_data: true });
-    expect(Object.keys(release.secrets ?? {}).sort()).toEqual([
-      "CLOUDFLARE_ACCOUNT_ID",
-      "CLOUDFLARE_API_TOKEN",
-    ]);
+    expect(Object.keys(release.secrets ?? {}).sort()).toEqual(["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"]);
   });
 
   it("keeps the critical coverage baseline aligned with the ratchet target list", () => {

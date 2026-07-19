@@ -312,15 +312,52 @@ ignored research workspace's anchor-coherence plan):
    tolerates 5pp of live weight drift (was 0.5pp, which severed 36 coins'
    classifications on ordinary issuer rebalancing); identity stays the
    bijection-guarded name match and scoring weights come from the live row.
+6. Bounded unrecognized-supply treatment, reserve itemization, and dead-ladder
+   cleanup (rulings D-J, 1i(b), D-E, 2026-07-19): an unrecognized provider
+   chain-label pool below the common-mode materiality floor is a bounded
+   condition — excluded from the common-mode unattributed add-on, tolerated by
+   both supply completeness proofs, and kept visible through the new
+   diagnostic-only reason `immaterial-unrecognized-chain-pool` (at or above
+   the floor the pool stays fail-closed exactly as before). The
+   `ripple-transparency` reserve adapter itemizes its one hard-coded 100%
+   aggregate slice into the Deloitte-examined May 2026 composition (T-bills
+   65.41% / government money-market funds 19.44% / cash 15.15%), deriving the
+   split from the payload when the transparency page carries a breakdown and
+   falling back to the attested static split otherwise; the
+   undercollateralization breaker is unchanged. The never-emitted
+   `bounded-unknown` structural signal ladder (high@69/critical@49) is
+   removed from the policy surface.
+7. Evidence-derived DEX route model confidence (E-3, 2026-07-19): the v9 DEX
+   route review no longer hardcodes `modelConfidence: "medium"` on every
+   route — a `measured-executable-depth` observation (the producer's own
+   realized-quote evidence) now earns `high`, while simulated, orderbook,
+   proxy, fallback, and unobserved evidence kinds keep `medium`.
+   `executionCertainty` and every other review field are unchanged, and the
+   policy's confidence-factor tables already carried both tiers, so the
+   policy digest is untouched. Replaying the captured 2026-07-18 exact
+   envelope (freshness-shifted to 2026-07-19, 7 since-delisted assets
+   dropped): 30 assets move, all upward — 29 hold score-eligible measured
+   routes and lift their exit pillar (USDC 74.75 to 98.87, quality score
+   80.54 to 88.98, composite held at 55/C by the binding
+   `material-bridge-supply-unmatched` reason cap; USDT 69/B- to 77/B+; EURC
+   73/B to 81/A-), and honey-berachain lifts only through its 100% USDe
+   reserve dependency. The six adverse projections stay byte-identical —
+   USDD 39, U 32, USDai 39, EURS 21, MIM 0, TUSD 48 (TUSD holds no measured
+   routes).
 
 The final candidate identity of the chain is policy digest
-`d77890e759e4494aba42634c442fee39eca3527ef1b111746bd3aaec922a5912` and
+`8134bb456778eb9b19c2e013124f4db14dcb924f67ddb4d92ea54bb3995d873a` and
 evaluation-build digest
-`93b5677d730ec161e7efc1d69df6e4421d39797fc1c1905dc45b71d07104339b`
-(candidate
-`safety-score-v9-candidate:v1:8a3eab0846c882174c676269a6af4d8ccbca2cbc903895513a3468e228ca5e31`
+`33a72c6e5f0855a559d74bac630b3b48be218db65bd6b3d42d698f794c9bad1c`
+(the batch-6 identity was evaluation-build digest
+`55d7838d57ca7f5ec172527c9c1908f853e4e927609f5038d30b81282d4a5425`,
+candidate
+`safety-score-v9-candidate:v1:301a4bc45f26506834f943aeb617531422f2f64358bd2f431e940e802c8b901d`
 on the captured 2026-07-18 exact envelope: A 1, B+ 1, B 6, B- 1, with
-adverse projections unchanged — USDD 39, U 32, USDai 39, MIM 0).
+RLUSD lifted 66 to 72 (B- to B) by the reserve itemization and the six
+adverse projections byte-identical — USDD 39, U 32, USDai 39, EURS 21,
+MIM 0, TUSD 48; the E-3 replay above re-verified those six projections
+byte-identical under the new build digest).
 Every batch was accepted against the same pinned 2026-07-16 exact input
 with per-change causal attribution and byte-identical adverse projections;
 batch 5 was additionally verified against the fresh 2026-07-18 production

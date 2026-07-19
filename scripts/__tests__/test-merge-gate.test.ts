@@ -652,7 +652,7 @@ describe("getChangedFiles", () => {
 });
 
 describe("pre-push hook", () => {
-  it("makes the exact local gate opt-in and defaults pushes to advisory-only", () => {
+  it("keeps the heavy local gate opt-in and always names the lightweight commit-derived check", () => {
     const hook = readFileSync(resolve(process.cwd(), ".githooks/pre-push"), "utf8");
 
     expect(hook).toContain('pages_smoke_flag="${MERGE_GATE_PAGES_SMOKE:-1}"');
@@ -667,6 +667,7 @@ describe("pre-push hook", () => {
     expect(hook).toContain('verify_push_snapshot "$expected_sha" "before merge gate"');
     expect(hook).toContain('verify_push_snapshot "$expected_sha" "after merge gate"');
     expect(hook).toContain("check-merge-gate-receipt.mjs");
+    expect(hook).toContain("npm run check:commit-derived-artifacts");
     expect(hook).toContain("npm run test:merge-gate");
   });
 });

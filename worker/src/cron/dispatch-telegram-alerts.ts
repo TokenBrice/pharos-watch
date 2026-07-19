@@ -86,7 +86,7 @@ async function executeFullFanoutPath(
   });
 }
 
-export async function dispatchTelegramAlerts(
+async function dispatchTelegramAlertsImpl(
   db: D1Database,
   botToken: string,
   signal?: AbortSignal,
@@ -387,5 +387,32 @@ export async function dispatchTelegramAlerts(
       await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, false);
     }
     throw error;
+  }
+}
+
+export async function dispatchTelegramAlerts(
+  db: D1Database,
+  botToken: string,
+  signal?: AbortSignal,
+  sharedState?: TelegramDispatchSharedState,
+  reportProgress?: CronProgressReporter,
+): Promise<{ itemCount: number; metadata: string }> {
+  const startedAtMs = Date.now();
+  assignSharedDispatchState(sharedState, {
+    dispatchStartedAtMs: startedAtMs,
+    dispatchCompleted: false,
+    dispatchFailed: false,
+    dispatchDurationMs: 0,
+  });
+  try {
+    return await dispatchTelegramAlertsImpl(db, botToken, signal, sharedState, reportProgress);
+  } catch (error) {
+    assignSharedDispatchState(sharedState, { dispatchFailed: true });
+    throw error;
+  } finally {
+    assignSharedDispatchState(sharedState, {
+      dispatchCompleted: true,
+      dispatchDurationMs: Math.max(0, Date.now() - startedAtMs),
+    });
   }
 }

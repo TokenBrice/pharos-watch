@@ -1,5 +1,6 @@
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
 import { isDexExitRouteCoverageComplete } from "@shared/lib/p4-exit-route-capacity";
+import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { deriveSupplyModelExitRouteObservation } from "./redemption-exit-route-observations";
@@ -70,7 +71,10 @@ function buildOutputReview(
   const observedAtSec = Math.min(observation.observedAt, fixedInput.clockSec);
   const shared = {
     sourceGenerationId,
-    maxAgeSec: null,
+    // Route output valuations are review-cadence evidence: they share the D11
+    // 365-day window with the reviewed research classes, and the fact-set
+    // already degrades a stale valuation to a stale output fact.
+    maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
     url: null,
     contentSha256: null,
   } as const;
@@ -167,7 +171,10 @@ function buildDexRouteReview(
     holderAccess: "permissionless",
     executionModel: "market-depth",
     executionCertainty: "bounded",
-    modelConfidence: "medium",
+    // Measured executable depth is the producer's own realized-quote evidence,
+    // so the route model earns high confidence; simulated or otherwise
+    // derived depth keeps the conservative modeled default.
+    modelConfidence: observation.evidenceKind === "measured-executable-depth" ? "high" : "medium",
     coverageClass: dexCoverageClass(fixedInput, assetId),
     settlementModel: "atomic",
     settlementSlaSec: 0,

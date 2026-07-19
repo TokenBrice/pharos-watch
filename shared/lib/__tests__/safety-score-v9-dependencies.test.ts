@@ -205,8 +205,14 @@ describe("commonModeSignalSeverity proportional materiality", () => {
       }
     > = {},
     supplyComplete = true,
+    unmatchedChainLabelPoolShare = 0,
   ): V9CommonModeContext => ({
-    supplyExposure: { shareBySlug: new Map(Object.entries(shareBySlug)), unattributedShare, complete: supplyComplete },
+    supplyExposure: {
+      shareBySlug: new Map(Object.entries(shareBySlug)),
+      unattributedShare,
+      unmatchedChainLabelPoolShare,
+      complete: supplyComplete,
+    },
     dexExposureByDomain: new Map(Object.entries(dexExposureByDomain)),
     bridgeExposureByDomain: new Map(
       Object.entries(bridgeExposureByDomain).map(([key, exposure]) => [
@@ -272,6 +278,44 @@ describe("commonModeSignalSeverity proportional materiality", () => {
     expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, failClosed, materiality)).toBe("high");
     expect(commonModeSignalSeverity({ kind: "chain", key: "fantom" }, context({}, 0.36), materiality)).toBe("high");
     expect(commonModeSignalSeverity({ kind: "chain", key: "unknown-l2" }, context({}, 0.36), materiality)).toBe("high");
+  });
+
+  it("excludes an immaterial unrecognized-label pool from the unattributed add-on (RULED D-J)", () => {
+    // Below the 5% common-mode floor the pooled row is excluded from the
+    // conservative add-on, so a chain is graded on its own measured share.
+    expect(
+      commonModeSignalSeverity(
+        { kind: "chain", key: "fantom" },
+        context({ fantom: 0.049 }, 0.049, {}, {}, true, 0.049),
+        materiality,
+      ),
+    ).toBe("low");
+    // At exactly the floor the pool stays in the add-on and the same measured
+    // share grades as before (fail-closed latency case).
+    expect(
+      commonModeSignalSeverity(
+        { kind: "chain", key: "fantom" },
+        context({ fantom: 0.049 }, 0.05, {}, {}, true, 0.05),
+        materiality,
+      ),
+    ).toBe("moderate");
+    // Only the pooled part is excluded: any other unattributed residue still
+    // inflates every chain's conservative upper bound.
+    expect(
+      commonModeSignalSeverity(
+        { kind: "chain", key: "fantom" },
+        context({ fantom: 0.04 }, 0.08, {}, {}, true, 0.04),
+        materiality,
+      ),
+    ).toBe("moderate");
+    // A pool-free unattributed residual keeps the existing fail-closed add-on.
+    expect(
+      commonModeSignalSeverity(
+        { kind: "chain", key: "fantom" },
+        context({ fantom: 0.04 }, 0.04, {}, {}, true, 0),
+        materiality,
+      ),
+    ).toBe("moderate");
   });
 
   it("keeps retained USDC Hyperliquid exposure diagnostic under R2 maturity", () => {

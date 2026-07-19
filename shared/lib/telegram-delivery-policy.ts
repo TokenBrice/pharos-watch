@@ -121,4 +121,13 @@ export const TELEGRAM_LOAD_GUARD_ASSUMPTIONS = {
   cpuBudgetSafetyFraction: 0.5,
   formatCpuMsPerChat: 1.5,
   sendCpuMsPerMessage: 2,
+  productionDispatchSubscribers: 855,
+  productionDispatchCandidateSubscribers: 338,
+  productionDispatchTargets: 300,
+  productionFanoutInputPageWallMs: 18_000,
+  productionPlanningPageWallMs: 1_500,
+  productionHandoffOperationsPerPage: 8,
+  productionHandoffOperationWallMs: 200,
+  productionSourcePresetWallMs: 2_000,
+  productionDispatchWallBudgetMs: 180_000,
 } as const;

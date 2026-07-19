@@ -80,7 +80,7 @@ describe("DEX deployment outcomes", () => {
 
   it("materializes every audited unsupported deployment", () => {
     const outcomes = buildStaticInaccessibleDeploymentOutcomes(100);
-    expect(outcomes).toHaveLength(244);
+    expect(outcomes).toHaveLength(273);
     expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(114);
   });
 

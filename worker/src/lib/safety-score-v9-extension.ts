@@ -5,6 +5,7 @@ import { diagnoseDependencyGraph, type DependencyGraphEdge } from "@shared/lib/d
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { computeReportCardsRegistryFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
+import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -118,6 +119,9 @@ type ReserveClassification = ReturnType<typeof buildSafetyScoreV9ReserveClassifi
 const RESERVE_WEIGHT_MATCH_TOLERANCE_PCT = 5;
 const DEPLOYMENT_MATERIAL_SHARE_THRESHOLD =
   V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100;
+// RULED D-J (2026-07-19): below this floor the unrecognized-chain-label pool is
+// a bounded/diagnostic condition; at or above it the pool stays fail-closed.
+const COMMON_MODE_MATERIAL_SHARE_THRESHOLD = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.commonModeShareThreshold;
 
 function digest(domain: string, payload: unknown): string {
   return sha256Hex(stableJsonStringifyV1({ domain, payload }));
@@ -872,6 +876,16 @@ function accessEvidenceObservationState(reviewedAt: string, clockSec: number): "
   return clockSec - reviewedAtSec <= V9_ACCESS_EVIDENCE_MAX_AGE_SEC ? "current" : "stale";
 }
 
+/**
+ * Reviewed bridge/mint/oracle research shares the D11 review cadence. A review
+ * older than the window supports no known claims: the fact degrades to stale
+ * with its evidence still attached (mirroring the access-evidence treatment).
+ */
+function researchReviewObservationState(reviewedAt: string, clockSec: number): "current" | "stale" {
+  const reviewedAtSec = isoDateStartSec(reviewedAt, clockSec, "research review");
+  return clockSec - reviewedAtSec <= V9_REVIEW_EVIDENCE_MAX_AGE_SEC ? "current" : "stale";
+}
+
 function transferMaterialScope(
   fixedInput: Readonly<ReportCardsFixedInput>,
   assetId: string,
@@ -1074,6 +1088,7 @@ function adaptOracleReview(
   meta: V9ExtensionRegistryMeta,
   archetype: string,
   evidence: ReviewEvidenceBuilder,
+  clockSec: number,
 ): NonNullable<ExtensionAsset["economicControlReview"]>["oracle"] {
   const profile: OracleRiskProfile | undefined = meta.oracleRisk;
   if (!profile?.reviewedAt || !profile.reviewer || !profile.confidence) {
@@ -1106,7 +1121,15 @@ function adaptOracleReview(
     confidence,
     sources: profile.sources,
     payload: profile,
+    maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
   });
+  if (researchReviewObservationState(profile.reviewedAt, clockSec) === "stale") {
+    return {
+      status: requiredStatus("v9.control.oracle-review", "stale", `oracle:${meta.id}`, evidenceKeys),
+      tier: null,
+      branches: [],
+    };
+  }
   if (profile.branchApplicability?.disposition === "not-applicable") {
     return {
       status: notApplicableStatus("v9.control.oracle-review", profile.branchApplicability.rationale, evidenceKeys),
@@ -1254,6 +1277,16 @@ function hasCompleteSubthresholdBridgeInventory(
   const exactRowsByDeployment = new Map(rows.map((row) => [row.deploymentRouteKey, row]));
   for (const row of rows) {
     if (row.reviewState === "selected-reviewed") continue;
+    // RULED D-J (2026-07-19): an unrecognized-chain-label pool below the
+    // common-mode materiality floor is an accepted bounded row; the proof no
+    // longer requires its joined subthreshold control. At or above the floor
+    // the pool keeps the ordinary fail-closed join below.
+    if (
+      row.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX) &&
+      row.supplyShare < COMMON_MODE_MATERIAL_SHARE_THRESHOLD
+    ) {
+      continue;
+    }
     const control = controlsByDeployment.get(row.deploymentRouteKey);
     if (
       control === undefined ||
@@ -1303,6 +1336,7 @@ function adaptBridgeReview(
   supplyReview: ExtensionAsset["supplyReview"],
   deployedChainCount: number,
   evidence: ReviewEvidenceBuilder,
+  clockSec: number,
 ): {
   review: NonNullable<ExtensionAsset["economicControlReview"]>["bridge"];
   controls: ControlOverlay[];
@@ -1331,14 +1365,27 @@ function adaptBridgeReview(
     };
   }
   const confidence = confidenceForResearch(profile.confidence);
+  const reviewStale = researchReviewObservationState(profile.reviewedAt, clockSec) === "stale";
   const evidenceKeys = evidence.add({
-    componentKeys: ["economic-control:bridge", "control"],
+    // A stale review still evidences the bridge fact itself, but it cannot
+    // carry known claims in the umbrella deployment-control inventory.
+    componentKeys: reviewStale ? ["economic-control:bridge"] : ["economic-control:bridge", "control"],
     sourceId: "stablecoin-meta.bridge-route-risk",
     reviewedAt: profile.reviewedAt,
     confidence,
     sources: profile.sources,
     payload: profile,
+    maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
   });
+  if (reviewStale) {
+    return {
+      review: {
+        status: requiredStatus("v9.control.bridge-review", "stale", `bridge:${meta.id}`, evidenceKeys),
+        routes: [],
+      },
+      controls: [],
+    };
+  }
   const profileRoutes = profile.routes ?? [];
   const reviewedRoutes = profileRoutes.filter((route) => route.reviewDisposition === "reviewed");
   // Keep every non-native route as a control fact so exact deployment shares
@@ -1383,6 +1430,7 @@ function adaptBridgeReview(
 function adaptMintReview(
   meta: V9ExtensionRegistryMeta,
   evidence: ReviewEvidenceBuilder,
+  clockSec: number,
 ): {
   review: NonNullable<ExtensionAsset["economicControlReview"]>["mint"];
   controls: ControlOverlay[];
@@ -1401,14 +1449,30 @@ function adaptMintReview(
     };
   }
   const confidence = confidenceForResearch(profile.confidence);
+  const reviewStale = researchReviewObservationState(profile.review.reviewedAt, clockSec) === "stale";
   const evidenceKeys = evidence.add({
-    componentKeys: ["economic-control:mint", "control"],
+    // A stale review still evidences the mint fact itself, but it cannot
+    // carry known claims in the umbrella deployment-control inventory.
+    componentKeys: reviewStale ? ["economic-control:mint"] : ["economic-control:mint", "control"],
     sourceId: "stablecoin-meta.mint-authority",
     reviewedAt: profile.review.reviewedAt,
     confidence,
     sources: profile.review.sources,
     payload: profile,
+    maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
   });
+  if (reviewStale) {
+    return {
+      review: {
+        status: requiredStatus("v9.control.mint-review", "stale", `mint:${meta.id}`, evidenceKeys),
+        controlKey: null,
+        reconciliation: "unknown",
+        supervision: "unknown",
+        upgrade: { state: "unknown", controlKey: null },
+      },
+      controls: [],
+    };
+  }
   const reviewComplete =
     profile.review.disposition !== "unresolved" &&
     (profile.review.unresolvedQuestions?.length ?? 0) === 0 &&
@@ -1635,9 +1699,9 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       const supplyReview = buildSafetyScoreV9SupplyReview(fixedInput, assetId, meta.bridgeRouteRisk);
       const deployedChainCount = Object.keys(fixedInput.chainCirculatingById[assetId] ?? {}).length;
       const assetIssuerKey = resolveSafetyScoreV9AssetIssuerKey(assetId, metaById);
-      const mint = adaptMintReview(meta, reviewEvidence);
-      const oracle = adaptOracleReview(meta, archetype, reviewEvidence);
-      const bridge = adaptBridgeReview(meta, supplyReview, deployedChainCount, reviewEvidence);
+      const mint = adaptMintReview(meta, reviewEvidence, clockSec);
+      const oracle = adaptOracleReview(meta, archetype, reviewEvidence, clockSec);
+      const bridge = adaptBridgeReview(meta, supplyReview, deployedChainCount, reviewEvidence, clockSec);
       const controls = [...mint.controls, ...bridge.controls].sort((left, right) =>
         compareText(left.controlKey, right.controlKey),
       );

@@ -50,6 +50,12 @@ export function printTelegramLoadReport(report: TelegramLoadCheckReport): void {
     );
   }
 
+  const calibrated = report.productionDispatchScenario;
+  console.log("");
+  console.log(
+    `Production-calibrated dispatch: ${calibrated.subscriberCount} subscribers, ${calibrated.candidateSubscriberCount} candidates, ${calibrated.targetCount} targets, ${calibrated.capturePageCount} capture pages, ${calibrated.fanoutInputLoadCallCount} fanout input loads, ${calibrated.handoffOperationCount} handoff operations, estimated ${calibrated.estimatedInvocationWallMs.toLocaleString()}ms/${calibrated.maxInvocationWallMs.toLocaleString()}ms wall budget.`,
+  );
+
   console.log("");
   console.log("Personalized recap estimates:");
   for (const result of report.recapScenarios) {

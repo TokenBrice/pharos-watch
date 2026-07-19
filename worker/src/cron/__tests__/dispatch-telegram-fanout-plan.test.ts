@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { DewsChange } from "../../lib/telegram-alerts";
 import {
   buildTelegramAlertsByChat,
@@ -6,7 +6,10 @@ import {
   summarizePresetFanoutFailures,
   type TelegramFanoutPlanEvents,
 } from "../dispatch-telegram-fanout-plan";
-import type { FanoutSubscriptionInputs } from "../dispatch-telegram-alerts-fanout";
+import {
+  loadFanoutSubscriptionInputs,
+  type FanoutSubscriptionInputs,
+} from "../dispatch-telegram-alerts-fanout";
 import {
   emptyAlerts,
   type PlannedSubscriberAlert,
@@ -107,6 +110,43 @@ function overflowPlan(chatId: string): PlannedSubscriberAlert {
 }
 
 describe("dispatch telegram fanout planning", () => {
+  it("does not load subscription branches for inactive alert families", async () => {
+    const direct = vi.fn(async () => new Map());
+    const preset = vi.fn(async () => ({ kind: "ok" as const, rows: new Map() }));
+    const global = vi.fn(async () => []);
+    const snooze = vi.fn(async () => new Map());
+    const explicitlyOff = vi.fn(async () => new Map());
+    const loaderFamilies: string[] = [];
+
+    await loadFanoutSubscriptionInputs(
+      {} as D1Database,
+      { dewsIds: [], depegIds: ["usdc-circle"], safetyIds: [], launchIds: [], reserveIds: [] },
+      {
+        loadSubscriberRowsBatch: direct,
+        loadPresetSubscriberRowsBatch: preset,
+        loadGlobalSubscriberRows: global,
+        loadPerCoinSnoozeMap: snooze,
+        loadPerCoinExplicitlyOffMap: explicitlyOff,
+      },
+      NOW_SEC,
+      { onLoaderTiming: (family) => loaderFamilies.push(family) },
+    );
+
+    expect(direct).toHaveBeenCalledOnce();
+    expect(direct).toHaveBeenCalledWith(expect.anything(), ["usdc-circle"], "depeg", NOW_SEC, expect.anything());
+    expect(preset).toHaveBeenCalledOnce();
+    expect(global).toHaveBeenCalledOnce();
+    expect(snooze).toHaveBeenCalledOnce();
+    expect(explicitlyOff).toHaveBeenCalledOnce();
+    expect(loaderFamilies.sort()).toEqual([
+      "direct",
+      "global",
+      "preset",
+      "snooze-explicit-off",
+      "snooze-explicit-off",
+    ]);
+  });
+
   it("counts preset query and resolution failures without treating failed presets as subscribers", () => {
     const summary = summarizePresetFanoutFailures(fanoutInputs({
       presetDewsResult: { kind: "query-failed", error: new Error("d1 unavailable") },

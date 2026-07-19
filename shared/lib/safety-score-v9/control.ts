@@ -16,6 +16,7 @@ import {
   assertV9ValidatedPolicyEnvelope,
   resolveV9ReasonPolicy,
 } from "./policy";
+import { isV9UncanonicalizedChainPoolRoute } from "./facts";
 
 export type V9MintReconciliation = "continuous" | "periodic" | "not-applicable" | "unknown";
 export type V9MintSupervision = "prudential" | "attestation-only" | "none" | "unknown";
@@ -283,6 +284,7 @@ function hasCompleteSubthresholdUnresolvedBridgeJoins(
   controls: readonly V9DeploymentControlFactV2[],
   bridgeRoutes: readonly V9BridgeRouteControlReview[],
   materialShareThreshold: number,
+  commonModeShareThreshold: number,
 ): boolean {
   if (!isKnownRequired(facts.supply.status)) return false;
   const { selectedRouteSupplyShare, unreviewedRouteSupplyShare, unknownRouteSupplyShare } = facts.supply;
@@ -325,6 +327,13 @@ function hasCompleteSubthresholdUnresolvedBridgeJoins(
   }
   if ([...bridgeRouteCounts.values()].some((count) => count !== 1)) return false;
   return rows.every((route) => {
+    // RULED D-J (2026-07-19): an unrecognized-chain-label pool below the
+    // common-mode materiality floor is an accepted bounded row, not a proof
+    // failure. At or above the floor the pool keeps the ordinary fail-closed
+    // per-row checks below (the material unrecognized-chain latency case).
+    if (isV9UncanonicalizedChainPoolRoute(route.deploymentRouteKey) && route.supplyShare < commonModeShareThreshold) {
+      return true;
+    }
     const joined = bridgeControlsByDeployment.get(route.deploymentRouteKey) ?? [];
     if (route.reviewState === "selected-reviewed") {
       if (route.reviewedRouteKind === "native") return joined.length === 0;
@@ -788,6 +797,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       controls,
       bridge.routes,
       materialShareThreshold,
+      policy.materiality.commonModeShareThreshold,
     );
     const unresolvedBridgeShare =
       args.facts.supply.unknownRouteSupplyShare === null || args.facts.supply.unreviewedRouteSupplyShare === null
@@ -868,6 +878,25 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     );
     if (unknownBridgeShare > 0 && !completeSubthresholdUnresolvedJoins) {
       addReason("material-bridge-supply-unmatched", "deployment-control", "bridge:supply");
+    }
+  }
+
+  // RULED D-J (2026-07-19): a pooled row of unrecognized provider chain labels
+  // below the common-mode materiality floor is handled as a bounded condition
+  // (excluded from the common-mode unattributed add-on and tolerated by the
+  // completeness proof). Keep it visible as a diagnostic reason; at or above
+  // the floor the ordinary fail-closed paths above carry it instead. The path
+  // deliberately does not start with "bridge:": an asset whose bridge section
+  // contributes no component must not have this visibility-only diagnostic
+  // authorize the bounded-unknown bridge fallback below.
+  if (isKnownRequired(args.facts.supply.status)) {
+    for (const route of args.facts.supply.selectedBridgeRoutes) {
+      if (
+        isV9UncanonicalizedChainPoolRoute(route.deploymentRouteKey) &&
+        route.supplyShare < policy.materiality.commonModeShareThreshold
+      ) {
+        addReason("immaterial-unrecognized-chain-pool", "deployment-control", "supply:unrecognized-chain-pool");
+      }
     }
   }
 

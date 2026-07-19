@@ -75,6 +75,35 @@ LIMIT 50;
 
 These counters are reconciled from mutually exclusive target buckets. `metadata.countersSource` should be `authoritative-target-rows`.
 
+## Dispatch Runtime Diagnostics
+
+The latest `dispatch-telegram-alerts` cron metadata exposes `authoritativePlanning` for source-event runs. Read it from `/api/status` or inspect the stored JSON directly:
+
+```sql
+SELECT
+  id,
+  started_at,
+  duration_ms,
+  json_extract(metadata, '$.authoritativePlanning.sourceEventId') AS source_event_id,
+  json_extract(metadata, '$.authoritativePlanning.sourceEventFamilies') AS source_families,
+  json_extract(metadata, '$.authoritativePlanning.capturedSubscriberCount') AS captured_chats,
+  json_extract(metadata, '$.authoritativePlanning.plannedTargetCount') AS planned_targets,
+  json_extract(metadata, '$.authoritativePlanning.capturePageCount') AS capture_pages,
+  json_extract(metadata, '$.authoritativePlanning.planningPageCount') AS planning_pages,
+  json_extract(metadata, '$.authoritativePlanning.fanoutInputLoadCallCount') AS fanout_loads,
+  json_extract(metadata, '$.authoritativePlanning.fanoutInputCacheHitCount') AS fanout_cache_hits,
+  json_extract(metadata, '$.authoritativePlanning.fanoutInputLoadMs') AS fanout_input_ms,
+  json_extract(metadata, '$.authoritativePlanning.targetMaterializationD1Ms') AS materialization_ms,
+  json_extract(metadata, '$.authoritativePlanning.enqueueHandoffMs') AS handoff_ms,
+  json_extract(metadata, '$.authoritativePlanning.pendingDrainSendMs') AS pending_drain_ms
+FROM cron_runs
+WHERE job = 'dispatch-telegram-alerts'
+ORDER BY started_at DESC
+LIMIT 25;
+```
+
+For an unchanged capture page, `fanoutInputCacheHitCount` should increase when planning reuses the page and `fanoutInputLoadCallCount` should not exceed the capture-page count. A generation change deliberately invalidates that cache. Use the direct/preset/global/snooze loader timings and candidate-horizon timing to isolate query pressure; use materialization, duplicate-suppression, and handoff timings to isolate D1 write pressure. The target-plan coordinator writes an immediate progress checkpoint and another every eight transitions, so a stale-slot investigation should also inspect the most recent `target-plan-progress` record.
+
 ## Source Target Planning
 
 Oldest nonterminal source events and their frozen cohort:

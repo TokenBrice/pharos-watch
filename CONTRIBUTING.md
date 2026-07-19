@@ -46,16 +46,18 @@ For narrow changes, run the focused check for the area you touched. Common comma
 npm run lint
 npm run typecheck
 npm run test
-npm run test:merge-gate
+npm run check:generated-artifacts
 ```
 
-Before production-bound work is pushed to `main`, Pharos uses:
+GitHub's protected `PR gate` is the authoritative release check. For a large production-bound change, maintainers can collect local diagnostic evidence with:
 
 ```bash
-npm run test:merge-gate
+MERGE_GATE_PRODUCTION_ENV=1 npm run test:merge-gate:discover -- --target=release
 ```
 
-That gate is intentionally broad and can be slow. Use focused checks first when iterating.
+That target requires the exact `.nvmrc` runtime, a clean committed snapshot, and the intended Pages environment scoped to the rehearsal. It is intentionally broad, can be slow, and never replaces the protected PR gate. Use focused checks first when iterating; `npm run test:merge-gate` is an optional explicit local rehearsal.
+
+`docs-metadata` and `sitemap-dates` calculate timestamps from committed source history. Commit relevant source changes first, regenerate those artifacts, then commit or amend their output. `npm run check:commit-derived-artifacts` verifies that settled state before the full generated-artifact check.
 
 ## Pull Requests
 

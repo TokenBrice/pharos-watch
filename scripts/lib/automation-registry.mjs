@@ -1,4 +1,5 @@
 import { VALIDATION_IMPACT_PATHS } from "./validation-lanes.mjs";
+import { SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "./commit-derived-artifacts.mjs";
 
 function getValidationCommandDeployImpactPaths(...impacts) {
   return [...new Set(impacts.flatMap((impact) => VALIDATION_IMPACT_PATHS[impact] ?? []))].sort();
@@ -157,6 +158,7 @@ export function findDuplicateDeployImpactExactPaths(registry = DEPLOY_IMPACT_REG
 function generatedArtifact(definition) {
   return {
     ...definition,
+    inputState: definition.inputState ?? "working-tree",
     sourcePaths: uniqueSorted([definition.script, ...(definition.sourcePaths ?? [])]),
     outputPaths: uniqueSorted(definition.outputPaths ?? []),
   };
@@ -178,11 +180,12 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     id: "sitemap-dates",
     checkCommand: "tsx scripts/maintenance/generate-sitemap-dates.ts --check",
     command: "tsx scripts/maintenance/generate-sitemap-dates.ts",
+    inputState: "committed-history",
     outputPaths: ["src/generated/sitemap-dates.json", "src/generated/sitemap-dates.json.d.ts"],
     phase: 0,
-    reproducibility: "deterministic",
+    reproducibility: "git-history-derived",
     script: "scripts/maintenance/generate-sitemap-dates.ts",
-    sourcePaths: ["src/app/**", "src/components/stablecoin-detail/static-seo-content.tsx", "src/lib/page-metadata.ts"],
+    sourcePaths: SITEMAP_COMMIT_DERIVED_SOURCE_PATHS,
   }),
   generatedArtifact({
     id: "case-study-client-index",
@@ -199,11 +202,12 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     id: "docs-metadata",
     checkCommand: "tsx scripts/maintenance/generate-docs-metadata.ts --check",
     command: "tsx scripts/maintenance/generate-docs-metadata.ts",
+    inputState: "committed-history",
     outputPaths: ["src/generated/docs-metadata.json", "src/generated/docs-metadata.json.d.ts"],
     phase: 0,
-    reproducibility: "deterministic",
+    reproducibility: "git-history-derived",
     script: "scripts/maintenance/generate-docs-metadata.ts",
-    sourcePaths: ["docs/*.md", "shared/lib/public-docs.ts"],
+    sourcePaths: [...PUBLIC_DOC_SOURCE_PATHS, "shared/lib/public-docs.ts"],
   }),
   generatedArtifact({
     id: "depeg-event-search-data",

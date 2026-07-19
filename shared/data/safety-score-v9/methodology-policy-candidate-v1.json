@@ -863,12 +863,6 @@
           "moderate": 79,
           "high": 64,
           "critical": 49
-        },
-        "bounded-unknown": {
-          "low": null,
-          "moderate": null,
-          "high": 69,
-          "critical": 49
         }
       },
       "commonModeOracleLimit": 49,
@@ -1048,6 +1042,25 @@
       "defaultTreatment": "NR",
       "releaseSeverity": "release-blocker",
       "publicLabel": "Historical point-in-time fact is unresolved",
+      "auditClassification": "missing-data"
+    },
+    {
+      "code": "immaterial-unrecognized-chain-pool",
+      "ownerDomain": "control",
+      "archetypes": [
+        "*"
+      ],
+      "pathKinds": [
+        "deployment-control"
+      ],
+      "defaultFactClass": "missing-bounded-exposure",
+      "boundedness": "exposure-bounded",
+      "permittedTreatments": [
+        "diagnostic"
+      ],
+      "defaultTreatment": "diagnostic",
+      "releaseSeverity": "diagnostic",
+      "publicLabel": "Unrecognized chain supply is pooled below the common-mode materiality floor",
       "auditClassification": "missing-data"
     },
     {

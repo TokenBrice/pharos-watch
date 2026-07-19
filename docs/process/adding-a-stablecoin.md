@@ -711,19 +711,26 @@ Before running commands, confirm the addition-specific artifacts:
 - high-value active additions have either a reviewed `mintAuthority` profile or a documented intentional gap
 - downstream coverage decision notes cover every Phase 5 branch
 
-For a normal stablecoin addition, run at least:
+For a normal stablecoin addition, generate the working-tree projections and run focused checks first:
 
 ```bash
 npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
 npm run check:stablecoin-data
-npm run validate:prebuild
 npm test
-npm run build
 cd worker && npx tsc --noEmit
-npm run test:merge-gate
 ```
 
-`validate:prebuild` is the aggregated gate: it runs lint, typecheck, and the checks registered in `scripts/lib/validation-lanes.mjs`, including stablecoin data, redemption coverage, verified links, and doc sync. Running `check:stablecoin-data` separately first gives faster feedback on the most common failure mode for this kind of diff.
+Base coin files also feed commit-derived sitemap timestamps. Commit the coin source and ordinary generated registry projections before producing the final sitemap output, then settle and validate the committed snapshot:
+
+```bash
+npx tsx scripts/maintenance/generate-sitemap-dates.ts
+npm run check:commit-derived-artifacts
+npm run check:generated-artifacts
+npm run validate:prebuild
+npm run build
+```
+
+Commit the sitemap output separately or amend it into the source commit without changing the source author date. `validate:prebuild` is the aggregated gate: it runs lint, typecheck, and the checks registered in `scripts/lib/validation-lanes.mjs`, including stablecoin data, redemption coverage, verified links, and doc sync. Running `check:stablecoin-data` separately first gives faster feedback on the most common failure mode for this kind of diff. The heavy `npm run test:merge-gate` remains an optional explicit rehearsal; GitHub's protected `PR gate` is authoritative.
 
 You can also run the individual checks directly when iterating:
 

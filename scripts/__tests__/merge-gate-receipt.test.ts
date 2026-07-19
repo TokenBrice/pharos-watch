@@ -59,7 +59,8 @@ function runHook(input: string, extraEnv: Record<string, string> = {}) {
   writeFileSync(
     npmPath,
     "#!/usr/bin/env bash\n" +
-      'printf \'%s|%s|%s|%s\\n\' "${MERGE_GATE_BASE_REF:-}" "${MERGE_GATE_HEAD_REF:-}" "${MERGE_GATE_FULL_DEPLOY:-}" "$*" >> "$HOOK_LOG"\n',
+      'printf \'%s|%s|%s|%s\\n\' "${MERGE_GATE_BASE_REF:-}" "${MERGE_GATE_HEAD_REF:-}" "${MERGE_GATE_FULL_DEPLOY:-}" "$*" >> "$HOOK_LOG"\n' +
+      'exit "${HOOK_NPM_STATUS:-0}"\n',
   );
   chmodSync(gitPath, 0o755);
   chmodSync(npmPath, 0o755);
@@ -154,10 +155,10 @@ describe("merge-gate receipt", () => {
 });
 
 describe("pre-push hook execution", () => {
-  it("skips main pushes by default and points to GitHub Actions", () => {
+  it("runs the lightweight artifact guard while skipping the heavy main gate by default", () => {
     const result = runHook("refs/heads/main local-sha refs/heads/main remote-sha\n");
     expect(result.status).toBe(0);
-    expect(result.calls).toEqual([]);
+    expect(result.calls).toEqual(["|||run check:commit-derived-artifacts"]);
     expect(result.output).toContain("local merge gate skipped by default");
     expect(result.output).toContain("GitHub Actions is the authoritative release gate");
   });
@@ -204,11 +205,39 @@ describe("pre-push hook execution", () => {
     expect(result.output).toContain("after merge gate");
   });
 
-  it("skips non-main pushes by default", () => {
+  it("runs the lightweight artifact guard while skipping the heavy branch gate by default", () => {
     const result = runHook("refs/heads/topic local-sha refs/heads/topic remote-sha\n");
     expect(result.status).toBe(0);
-    expect(result.calls).toEqual([]);
+    expect(result.calls).toEqual(["|||run check:commit-derived-artifacts"]);
     expect(result.output).toContain("local merge gate skipped");
+  });
+
+  it("blocks a default push when committed artifact freshness fails", () => {
+    const result = runHook("refs/heads/topic local-sha refs/heads/topic remote-sha\n", {
+      HOOK_NPM_STATUS: "3",
+    });
+
+    expect(result.status).toBe(3);
+    expect(result.calls).toEqual(["|||run check:commit-derived-artifacts"]);
+  });
+
+  it("still verifies commit-derived artifacts when unrelated work is dirty", () => {
+    const result = runHook("refs/heads/topic local-sha refs/heads/topic remote-sha\n", {
+      HOOK_STATUS_OUTPUT: " M unrelated.txt",
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.calls).toEqual(["|||run check:commit-derived-artifacts"]);
+  });
+
+  it("reports verification as skipped when the pushed commit is not checked out", () => {
+    const result = runHook("refs/heads/topic local-sha refs/heads/topic remote-sha\n", {
+      HOOK_HEAD_SHA: "other-sha",
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.calls).toEqual([]);
+    expect(result.output).toContain("Commit-derived artifacts were not verified");
   });
 
   it("supports an explicit exact branch gate", () => {
