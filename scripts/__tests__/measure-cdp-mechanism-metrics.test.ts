@@ -7,6 +7,7 @@ import { measureLiquityV1 } from "../lib/mechanism-measurement/families/liquity-
 import { measureLiquityV2 } from "../lib/mechanism-measurement/families/liquity-v2";
 import { MechanismMeasurementEvidenceV1Schema, type MeasurementCall } from "../lib/mechanism-measurement/schema";
 import { measureConfiguredTarget } from "../lib/mechanism-measurement/measure";
+import { redactRpcUrlForEvidence } from "../lib/mechanism-measurement/rpc-provenance";
 import { CDP_MEASUREMENT_TARGETS } from "../lib/mechanism-measurement/targets";
 
 interface RecordedFixture {
@@ -68,6 +69,16 @@ const BLOCK = { ...FIXTURE.block, selection: "operator-pinned" as const };
 function recordedCaller(overrides: Map<string, string> = new Map()): EthCallJournal {
   return callerFromFixture(FIXTURE, overrides);
 }
+
+describe("redactRpcUrlForEvidence", () => {
+  it("keeps only the RPC origin for evidence and logs", () => {
+    expect(redactRpcUrlForEvidence("https://user:pass@example.com/v3/SECRET?apiKey=PRIVATE#fragment")).toBe(
+      "https://example.com",
+    );
+    expect(redactRpcUrlForEvidence("https://ethereum-rpc.publicnode.com")).toBe("https://ethereum-rpc.publicnode.com");
+    expect(redactRpcUrlForEvidence("not a url")).toBe("[invalid-rpc-url]");
+  });
+});
 
 describe("measureLiquityV1", () => {
   it("reproduces the recorded measurement from replayed returndata", async () => {
