@@ -711,7 +711,6 @@ describe("Safety Score v9 economic control", () => {
   });
 
   it("tolerates an immaterial unrecognized-chain-label pool in the bridge supply proof (RULED D-J)", () => {
-    const commonModeFloor = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.commonModeShareThreshold;
     const POOL_KEY = "unmatched-chain-label-pool:fixture-asset";
     const resultFor = (
       poolShare: number | null,

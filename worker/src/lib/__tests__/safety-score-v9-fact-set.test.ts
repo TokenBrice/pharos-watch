@@ -1422,7 +1422,11 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         authorityPosture: "concentrated-admin" as const,
         confidence: "verified" as const,
         summary: "The fixture token is reviewed immutable with no direct mint control.",
-        upgradeability: { model: "immutable" as const, canChangeMintLogic: false },
+        upgradeability: {
+          model: "immutable" as const,
+          canChangeMintLogic: false,
+          sources: [{ label: "Mint docs", url: "https://example.com/mint" }],
+        },
         controls: [],
         review: {
           sources: [{ label: "Mint docs", url: "https://example.com/mint" }],

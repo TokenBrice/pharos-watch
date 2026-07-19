@@ -226,11 +226,12 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       canChangeMintLogic: false,
     });
 
-    // The authoring fixture clock predates the registry review. Rebind only
-    // its observation dates so this test isolates compilation semantics.
+    // Rebind the registry observation dates to the fixture clock so this test
+    // isolates compilation semantics from review freshness.
     const mintAuthority = structuredClone(lusd.mintAuthority);
-    mintAuthority.review.reviewedAt = "1970-01-01";
-    if (mintAuthority.upgradeability) mintAuthority.upgradeability.observedAt = "1970-01-01";
+    const fixtureReviewDate = new Date(AS_OF_SEC * 1_000).toISOString().slice(0, 10);
+    mintAuthority.review.reviewedAt = fixtureReviewDate;
+    if (mintAuthority.upgradeability) mintAuthority.upgradeability.observedAt = fixtureReviewDate;
     const input = fixedInput();
     const extension = buildSafetyScoreV9BaselineExtension(input, {
       metaById: new Map([
