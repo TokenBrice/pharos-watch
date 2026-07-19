@@ -253,6 +253,7 @@ The root, test, and Worker TypeScript lanes own duplicate-declaration diagnostic
 
 These scripts are intentionally not CI guardrails. Keep their reports under `agents/` unless a source or methodology change needs durable documentation.
 
+- `npm run review:capabilities -- --control-center-db /path/to/control-center.db --write` for the quarterly capability lifecycle evidence report; the optional database is read-only, unavailable inputs remain explicit, and human-reviewed decisions live in `scripts/maintenance/capability-registry.ts`. See [Capability Lifecycle Reviews](./process/capability-lifecycle.md).
 - `npm run audit:price-source-depth -- --prod` for source-depth baseline research
 - `npm run audit:price-source-depth -- --input scripts/__tests__/fixtures/audit-price-source-depth --json` for deterministic fixture validation
 - `npm run audit:dia-provider -- --input agents/source-depth-baseline-YYYY-MM-DD.json` for DIA exact-address provider research

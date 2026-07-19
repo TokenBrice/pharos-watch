@@ -27,6 +27,7 @@ Use `package.json` for the full live npm-script list. Use `scripts/lib/validatio
 Common targeted runners:
 
 ```bash
+npx vitest run scripts/maintenance/__tests__/generate-capability-review.test.ts
 npm run test:merge-gate:discover
 npm run test:profile -- --output /tmp/pharos-vitest-profile.json
 npm run test:critical-contracts
