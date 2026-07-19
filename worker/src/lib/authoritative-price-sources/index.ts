@@ -3,6 +3,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { rethrowIfAborted } from "../abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../circuit-breaker";
+import { ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS } from "../stablecoin-publication-coverage";
 import {
   appendPricingAssetAttempts,
   createPricingAssetAttempt,
@@ -75,6 +76,8 @@ export interface AuthoritativeLivePriceCandidate {
   asset: PeggedAsset;
   provider: LivePriceProvider;
   originalIndex: number;
+  previousMissingGenerations: number;
+  alertEligibleMissing: boolean;
 }
 
 function getProviderLivePriority(provider: PriceSourceProvider): number {
@@ -142,12 +145,19 @@ export function prioritizeAuthoritativeLivePriceCandidates<T extends Authoritati
 
   const circuitBacked = candidates.filter((candidate) => Boolean(candidate.provider.liveCircuitSource));
   const ordinary = candidates.filter((candidate) => !candidate.provider.liveCircuitSource);
-  const missing = (partition: readonly T[]) => partition.filter((candidate) => !hasUsableLivePrice(candidate.asset));
+  const alertEligibleMissing = (partition: readonly T[]) => partition.filter((candidate) =>
+    !hasUsableLivePrice(candidate.asset) && candidate.alertEligibleMissing === true
+  );
+  const missing = (partition: readonly T[]) => partition.filter((candidate) =>
+    !hasUsableLivePrice(candidate.asset) && candidate.alertEligibleMissing !== true
+  );
   const priced = (partition: readonly T[]) => partition.filter((candidate) => hasUsableLivePrice(candidate.asset));
   return [
+    ...interleaveProviders(alertEligibleMissing(circuitBacked)),
+    ...interleaveProviders(alertEligibleMissing(ordinary)),
     ...interleaveProviders(missing(circuitBacked)),
-    ...interleaveProviders(priced(circuitBacked)),
     ...interleaveProviders(missing(ordinary)),
+    ...interleaveProviders(priced(circuitBacked)),
     ...interleaveProviders(priced(ordinary)),
   ];
 }
@@ -174,6 +184,7 @@ export interface AuthoritativeLivePriceOverrideOptions {
   wallClockBudgetMs?: number;
   stats?: AuthoritativeLivePriceOverrideStats;
   maxProviderLivePriority?: number;
+  previousMissingGenerationsById?: ReadonlyMap<string, number>;
 }
 
 function applyOverrideToLiveContext(context: LivePriceContext, assetId: string, override: CurrentPriceOverride): void {
@@ -217,11 +228,19 @@ export async function fetchAuthoritativeLivePriceOverrides(
   };
   const candidates = assets
     .filter((asset) => ACTIVE_IDS.has(asset.id))
-    .map((asset, originalIndex) => ({
-      asset,
-      originalIndex,
-      provider: AUTHORITATIVE_PRICE_PROVIDERS.find((candidate) => candidate.matches(asset.id)),
-    }))
+    .map((asset, originalIndex) => {
+      const previousMissingGenerations = options?.previousMissingGenerationsById?.get(asset.id) ?? 0;
+      const alertEligibleMissing =
+        !hasUsableLivePrice(asset) &&
+        previousMissingGenerations + 1 >= ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS;
+      return {
+        asset,
+        originalIndex,
+        previousMissingGenerations,
+        alertEligibleMissing,
+        provider: AUTHORITATIVE_PRICE_PROVIDERS.find((candidate) => candidate.matches(asset.id)),
+      };
+    })
     .filter(
       (entry): entry is AuthoritativeLivePriceCandidate =>
         typeof entry.provider?.fetchLivePrice === "function" &&

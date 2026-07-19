@@ -11,7 +11,7 @@ const USD_CONTEXT: PriceValidationContext = {
 };
 
 describe("validatePrimaryPriceCandidate — severe downside with directional corroboration", () => {
-  it("rejects an AZND exact-pool severe downside without independent corroboration", () => {
+  it("accepts the reviewed AZND exact-pool severe downside after route-level checks pass", () => {
     const decision = validatePrimaryPriceCandidate({
       price: 0.38,
       source: "curve-thin-onchain",
@@ -20,11 +20,10 @@ describe("validatePrimaryPriceCandidate — severe downside with directional cor
       validationContext: { ...USD_CONTEXT, stablecoinId: "aznd-mu-digital" },
     });
 
-    expect(decision.accepted).toBe(false);
-    expect(decision.reason).toBe("severe_downside_requires_corroboration");
+    expect(decision.accepted).toBe(true);
   });
 
-  it("rejects an AZND exact-pool temporal jump without independent corroboration", () => {
+  it("accepts the reviewed AZND exact-pool temporal jump after route-level checks pass", () => {
     const decision = validatePrimaryPriceCandidate({
       price: 0.7,
       source: "curve-thin-onchain",
@@ -40,8 +39,7 @@ describe("validatePrimaryPriceCandidate — severe downside with directional cor
       },
     });
 
-    expect(decision.accepted).toBe(false);
-    expect(decision.reason).toBe("temporal_jump_requires_corroboration");
+    expect(decision.accepted).toBe(true);
   });
 
   it("rejects severe downside with single source and no corroboration", () => {

@@ -13,6 +13,44 @@ import {
   validatePrimaryPriceCandidate,
   validatePublishedAssetPrice,
 } from "../../lib/price-publish-policy";
+import type { AuthoritativeLivePriceOverrideStats } from "../../lib/authoritative-price-sources";
+import { getRegistryLivePriceDiagnosticTarget } from "../../lib/authoritative-price-sources/helpers";
+import {
+  appendPricingAssetAttempts,
+  createPricingAssetAttempt,
+} from "../../lib/pricing-provider-diagnostics";
+
+const MAX_AUTHORITATIVE_PUBLICATION_ASSET_ATTEMPTS = 512;
+
+export function recordProtocolPriceOverridePublicationRejection(input: {
+  asset: PeggedAsset;
+  override: ProtocolPriceOverride;
+  authoritativeOverrideStats?: AuthoritativeLivePriceOverrideStats;
+  syncStartSec: number;
+  reason: string;
+}): void {
+  const { asset, override, authoritativeOverrideStats, syncStartSec, reason } = input;
+  if (!authoritativeOverrideStats) return;
+
+  const target = getRegistryLivePriceDiagnosticTarget(asset.id);
+  appendPricingAssetAttempts(
+    authoritativeOverrideStats.assetAttempts,
+    [
+      createPricingAssetAttempt({
+        assetId: asset.id,
+        adapter: override.source,
+        source: override.source,
+        ...(target ?? {}),
+        state: "attempted",
+        result: "rejected",
+        rejectionClass: reason,
+        candidateAt: syncStartSec,
+        observedAt: override.observedAt ?? null,
+      }),
+    ],
+    MAX_AUTHORITATIVE_PUBLICATION_ASSET_ATTEMPTS,
+  );
+}
 
 export interface ValidationContextResolver {
   get: (asset: PeggedAsset) => PriceValidationContext;
@@ -413,6 +451,7 @@ export function applyProtocolPriceOverrides(input: {
   validationContexts: ValidationContextResolver;
   validationReferences?: PriceValidationReferences;
   syncStartSec: number;
+  authoritativeOverrideStats?: AuthoritativeLivePriceOverrideStats;
 }): number {
   const {
     assets,
@@ -421,6 +460,7 @@ export function applyProtocolPriceOverrides(input: {
     validationContexts,
     validationReferences,
     syncStartSec,
+    authoritativeOverrideStats,
   } = input;
 
   let appliedCount = 0;
@@ -438,6 +478,13 @@ export function applyProtocolPriceOverrides(input: {
       previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
     });
     if (!decision.accepted) {
+      recordProtocolPriceOverridePublicationRejection({
+        asset,
+        override,
+        authoritativeOverrideStats,
+        syncStartSec,
+        reason: decision.reason,
+      });
       console.warn(
         `[sync-stablecoins] Rejected protocol-backed override for ${asset.symbol} (id=${asset.id}): ` +
         `$${override.price} (${decision.reason})`,

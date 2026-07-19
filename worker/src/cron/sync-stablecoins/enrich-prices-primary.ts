@@ -36,6 +36,7 @@ export async function fetchPrimaryPrices(
   validationContexts?: ValidationContextResolver,
   options?: {
     previousAssetsById?: Map<string, PeggedAsset>;
+    previousMissingGenerationsById?: ReadonlyMap<string, number>;
     addressProvider?: AddressPriceProviderRuntimeConfig;
     binanceSession?: BinanceFetchSession;
   },
