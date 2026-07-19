@@ -1045,6 +1045,65 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(right.v9FactSetDigest).toBe(left.v9FactSetDigest);
   });
 
+  it("rebinds CDP not-applicable metric evidence refs to the mechanism review evidence", () => {
+    const cdp = extension();
+    cdp.assets[0]!.archetype = "cdp";
+    cdp.assets[0]!.mechanismRiskReview = {
+      archetype: "cdp",
+      collateralizationRatio: 1.5,
+      liquidationCapacityRatio: null,
+      metricApplicability: {
+        collateralizationRatio: { state: "measured" },
+        liquidationCapacityRatio: {
+          state: "not-applicable",
+          rationale: "No liquidation venue exists for this fixture branch.",
+          evidenceRefIds: ["extension-evidence:mechanism:liquidation-capacity-ratio"],
+        },
+      },
+      collateralizationParameters: {
+        status: status("known", "v9.backing.mechanism-review"),
+        quality: "strong",
+        failureDomains: [],
+      },
+      liquidationMechanics: {
+        status: status("known", "v9.backing.mechanism-review"),
+        quality: "strong",
+        failureDomains: [],
+      },
+      backstop: {
+        status: status("known", "v9.backing.mechanism-review"),
+        quality: "strong",
+        failureDomains: [],
+      },
+      branchIsolation: {
+        status: status("known", "v9.backing.mechanism-review"),
+        quality: "strong",
+        failureDomains: [],
+      },
+      shutdownAndBadDebt: {
+        status: status("known", "v9.backing.mechanism-review"),
+        quality: "strong",
+        failureDomains: [],
+      },
+      structuralRedemption: {
+        status: status("known", "v9.backing.mechanism-review"),
+        quality: "strong",
+        failureDomains: [],
+      },
+    };
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), cdp).assets[0]!;
+    if (compiled.mechanismRiskReview.review?.archetype !== "cdp") throw new Error("Fixture archetype changed");
+
+    const applicability = compiled.mechanismRiskReview.review.metricApplicability.liquidationCapacityRatio;
+    expect(applicability.state).toBe("not-applicable");
+    if (applicability.state !== "not-applicable") throw new Error("Fixture applicability changed");
+    const metricEvidenceRefs = applicability.evidenceRefIds;
+    expect(metricEvidenceRefs).toEqual(compiled.mechanismRiskReview.status.evidenceRefIds);
+    expect(metricEvidenceRefs).toEqual(["alpha:research-overlay"]);
+    expect(compiled.evidence.map((evidence) => evidence.evidenceId)).toContain(metricEvidenceRefs[0]);
+  });
+
   it("turns unavailable classifications, valuation, dependencies, and controls into typed gaps", () => {
     const incomplete = extension();
     const asset = incomplete.assets[0]!;
@@ -1314,7 +1373,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
 
     expect(build(true).registryFingerprint).toBe(build(true, transferFact("permissionless")).registryFingerprint);
     expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "509927f3126fc0e858d1e5119c033879b24b44fd0ecb424d217cb519c12f6839",
+      "de12fc1868eed573b1c413e68a763f5b7f76675bb610cd19374f3293c320365c",
     );
   });
 

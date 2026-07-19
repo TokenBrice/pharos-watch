@@ -231,6 +231,24 @@ describe("handleEvents", () => {
     expect(dataQuery?.binds).toContain("freeze.%");
   });
 
+  it("combines exact type and class filters as alternatives", async () => {
+    const db = mockD1([
+      { match: "FROM tape_events", rows: [] },
+      { match: "cron_runs", rows: [], first: { started_at: SEC } },
+    ]) as MockD1Database;
+    const res = await handleEvents(
+      db,
+      new URL("https://x/api/events?type=depeg.opened&type=depeg.peak_worsened&class=methodology"),
+    );
+    expect(res.status).toBe(200);
+    const dataQuery = db.getHistory().find((entry) => entry.sql.includes("FROM tape_events"));
+    expect(dataQuery?.sql).toContain("(type = ? OR type = ? OR type LIKE ?)");
+    expect(dataQuery?.sql).not.toContain("(type = ? OR type = ?) AND (type LIKE ?)");
+    expect(dataQuery?.binds).toEqual(
+      expect.arrayContaining(["depeg.opened", "depeg.peak_worsened", "methodology.%"]),
+    );
+  });
+
   it("clamps since and until into the SQL ts bounds", async () => {
     const db = mockD1([
       { match: "FROM tape_events", rows: [] },

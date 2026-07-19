@@ -1,5 +1,6 @@
 import {
   DexExitRouteObservationSchema,
+  MAX_DEX_EXIT_ROUTE_OBSERVATIONS,
   ExitRouteObservationCoverageSchema,
   type DexLiquidityData,
   type LiquidityCoverageClass,
@@ -7,6 +8,7 @@ import {
 import { classifyLiquidityEvidence } from "@shared/lib/dex-liquidity-evidence";
 import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { isMissingTableError } from "./db";
 import { parseJsonObject } from "./json-parse";
 
 interface DexLiquidityRow {
@@ -107,7 +109,9 @@ function parseExitRouteDetails(
   const observations =
     raw.exitRouteObservations === undefined
       ? null
-      : DexExitRouteObservationSchema.array().safeParse(raw.exitRouteObservations);
+      : DexExitRouteObservationSchema.array()
+          .max(MAX_DEX_EXIT_ROUTE_OBSERVATIONS)
+          .safeParse(raw.exitRouteObservations);
   const coverage =
     raw.exitRouteObservationCoverage === undefined
       ? null
@@ -133,27 +137,50 @@ function parseExitRouteDetails(
   };
 }
 
+async function loadDexLiquidityRows(db: D1Database): Promise<DexLiquidityRow[]> {
+  try {
+    const rows = await db
+      .prepare(
+        `SELECT dl.stablecoin_id, dl.liquidity_score, dl.concentration_hhi,
+                dl.pool_count, dl.chain_count, dl.total_tvl_usd, dl.effective_tvl_usd,
+                dl.coverage_class, dl.coverage_confidence, dl.balance_measured_tvl_usd,
+                dl.organic_measured_tvl_usd, dl.score_components_json, dl.methodology_version, dl.updated_at,
+                dco.chain AS deployment_chain,
+                dco.contract_address AS deployment_contract_address,
+                dco.outcome AS deployment_outcome
+         FROM dex_liquidity dl
+         LEFT JOIN dex_deployment_outcomes dco ON dco.stablecoin_id = dl.stablecoin_id
+         WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER.replaceAll("publication_generation_id", "dl.publication_generation_id")}`,
+      )
+      .all<DexLiquidityRow>();
+    return rows.results ?? [];
+  } catch (error) {
+    if (!isMissingTableError(error)) throw error;
+    const rows = await db
+      .prepare(
+        `SELECT dl.stablecoin_id, dl.liquidity_score, dl.concentration_hhi,
+                dl.pool_count, dl.chain_count, dl.total_tvl_usd, dl.effective_tvl_usd,
+                dl.coverage_class, dl.coverage_confidence, dl.balance_measured_tvl_usd,
+                dl.organic_measured_tvl_usd, dl.score_components_json, dl.methodology_version, dl.updated_at,
+                NULL AS deployment_chain,
+                NULL AS deployment_contract_address,
+                NULL AS deployment_outcome
+         FROM dex_liquidity dl
+         WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER.replaceAll("publication_generation_id", "dl.publication_generation_id")}`,
+      )
+      .all<DexLiquidityRow>();
+    return rows.results ?? [];
+  }
+}
+
 export async function loadDexLiquiditySnapshot(db: D1Database): Promise<DexLiquidityLoadResult> {
-  const rows = await db
-    .prepare(
-      `SELECT dl.stablecoin_id, dl.liquidity_score, dl.concentration_hhi,
-              dl.pool_count, dl.chain_count, dl.total_tvl_usd, dl.effective_tvl_usd,
-              dl.coverage_class, dl.coverage_confidence, dl.balance_measured_tvl_usd,
-              dl.organic_measured_tvl_usd, dl.score_components_json, dl.methodology_version, dl.updated_at,
-              dco.chain AS deployment_chain,
-              dco.contract_address AS deployment_contract_address,
-              dco.outcome AS deployment_outcome
-       FROM dex_liquidity dl
-       LEFT JOIN dex_deployment_outcomes dco ON dco.stablecoin_id = dl.stablecoin_id
-       WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER.replaceAll("publication_generation_id", "dl.publication_generation_id")}`,
-    )
-    .all<DexLiquidityRow>();
+  const rows = await loadDexLiquidityRows(db);
 
   const map: DexLiquidityDbMap = {};
   const processedStablecoinIds = new Set<string>();
   const deploymentCoverageById = new Map<string, DeploymentCoverage>();
   let latestUpdatedAt: number | null = null;
-  for (const row of rows.results ?? []) {
+  for (const row of rows) {
     if (
       row.deployment_chain != null &&
       row.deployment_contract_address != null &&

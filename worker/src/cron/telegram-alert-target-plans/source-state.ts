@@ -369,6 +369,17 @@ export async function reopenTelegramTargetPlanDeliveryAfterIdentityCollision(
              WHERE target.source_event_id = telegram_alert_source_events.source_event_id
                AND target.plan_generation = telegram_alert_source_events.target_plan_generation
                AND target.status = 'planned'
+               AND EXISTS (
+                 SELECT 1 FROM telegram_pending_alerts pending
+                  WHERE pending.dedupe_key = target.pending_dedupe_key
+                    AND pending.source_event_id IS NOT target.source_event_id
+                    AND pending.chat_id = target.chat_id
+                    AND pending.message_html = target.message_html
+                    AND COALESCE(pending.chunk_index, 0) = target.chunk_index
+                    AND COALESCE(pending.alert_type, '') = target.alert_type
+                    AND COALESCE(pending.markup_policy_json, '') = target.markup_policy_json
+                    AND pending.delivery_state IN ('sent', 'execution_unknown')
+               )
           )`,
     )
     .bind(nowSec, claim.sourceEventId, claim.generation, claim.owner)

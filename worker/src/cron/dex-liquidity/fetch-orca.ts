@@ -275,7 +275,7 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
     console.warn("[fetch-orca]", error);
   }
   return makeDexApiFetchResult(results, {
-    ok: successfulPages > 0,
+    ok: results.length > 0,
     degraded: degraded || errors.length > 0,
     errors,
     warnings,

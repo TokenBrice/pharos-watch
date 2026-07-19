@@ -117,8 +117,11 @@ function safetyScoreOgPresentation(
   return {
     lastUpdated: "DEGRADED: Safety score unavailable",
     headers: {
+      // Keep degraded OG renders edge-cacheable: /api/og/* is public and
+      // unauthenticated, and rendering each miss runs the WASM PNG pipeline.
+      // The explicit degraded headers keep consumers from treating the image as
+      // current safety-score evidence while avoiding no-store render amplification.
       ...CACHE_HEADERS,
-      "Cache-Control": "no-store",
       "X-Safety-Score-Status": "degraded",
       "X-Safety-Score-Reason": reportCardCache.kind === "error" ? reportCardCache.reason : "identity-mismatch",
     },

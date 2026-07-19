@@ -183,7 +183,12 @@ async function finishStaleScheduledSlotExecution(
            AND slot_started_at = ?
            AND state = 'reconciling'
            AND execution_owner = ?
-           AND execution_generation = ?`,
+           AND execution_generation = ?
+           AND NOT EXISTS (
+             SELECT 1
+               FROM cron_run_progress progress
+              WHERE progress.slot_started_at = cron_slot_executions.slot_started_at
+           )`,
       )
       .bind(
         nowSec,
@@ -289,7 +294,11 @@ export async function sweepStaleScheduledSlotExecutions(
     if (reconciliationGeneration == null) {
       continue;
     }
-    const reconciliation = await reconcileStaleSlotArtifactsAndRecordEvent(db, staleSlot, nowSec);
+    const reconciliation = await reconcileStaleSlotArtifactsAndRecordEvent(db, staleSlot, nowSec, {
+      owner: reconciliationOwner,
+      generation: reconciliationGeneration,
+      state: "reconciling",
+    });
     const finished = await finishStaleScheduledSlotExecution(
       db,
       staleSlot,
@@ -417,7 +426,16 @@ async function claimScheduledSlotExecution(
         .run(),
     );
     if ((takeover.meta.changes ?? 0) > 0) {
-      const reconciliation = await reconcileStaleSlotArtifactsAndRecordEvent(db, staleSlot, nowSec);
+      const reconciliation: StaleSlotReconciliationSummary = await reconcileStaleSlotArtifactsAndRecordEvent(
+        db,
+        staleSlot,
+        nowSec,
+        {
+          owner,
+          generation: existing.execution_generation + 1,
+          state: "running",
+        },
+      );
       staleSlotTakeover.reconciliation = reconciliation;
       await runWithOverloadRetry(() =>
         db

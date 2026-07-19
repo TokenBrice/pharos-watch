@@ -188,12 +188,33 @@ function makeLeaseDb(seed?: {
           }
 
           if (sql.includes("DELETE FROM cron_leases")) {
-            const [job, owner, nowSec] = args as [string, string, number | undefined];
+            const [job, owner] = args as [string, string];
             const existing = leases.get(job);
             if (!existing || existing.lease_owner !== owner) {
               return { success: true, meta: { changes: 0 } };
             }
-            if (sql.includes("lease_until < ?") && !(typeof nowSec === "number" && existing.lease_until < nowSec)) {
+            if (sql.includes("lease_until = ? AND lease_until < ?")) {
+              const [, , expectedLeaseUntil, nowSec] = args as [string, string, number, number];
+              if (existing.lease_until !== expectedLeaseUntil || existing.lease_until >= nowSec) {
+                return { success: true, meta: { changes: 0 } };
+              }
+            } else if (sql.includes("lease_until < ?")) {
+              const [, , nowSec] = args as [string, string, number | undefined];
+              if (!(typeof nowSec === "number" && existing.lease_until < nowSec)) {
+                return { success: true, meta: { changes: 0 } };
+              }
+            }
+            if (sql.includes("lease_until = ?") && !sql.includes("lease_until < ?")) {
+              const [, , expectedLeaseUntil] = args as [string, string, number];
+              if (existing.lease_until !== expectedLeaseUntil) {
+                return { success: true, meta: { changes: 0 } };
+              }
+            }
+            if (
+              sql.includes("AND EXISTS") &&
+              sql.includes("FROM cron_slot_executions") &&
+              ![...slots.values()].some((slot) => slot.execution_owner === owner)
+            ) {
               return { success: true, meta: { changes: 0 } };
             }
             leases.delete(job);
@@ -266,15 +287,41 @@ function makeLeaseDb(seed?: {
           }
 
           if (sql.includes("DELETE FROM cron_run_progress")) {
-            const [job, slotStartedAt, owner] = args as [string, number, string | undefined];
+            const [job, slotStartedAt, startedAt, updatedAt] = args as [string, number, number, number];
             const existing = progressRows.get(job);
-            if (!existing || existing.slot_started_at !== slotStartedAt) {
+            if (
+              !existing ||
+              existing.slot_started_at !== slotStartedAt ||
+              existing.started_at !== startedAt ||
+              existing.updated_at !== updatedAt
+            ) {
               return { success: true, meta: { changes: 0 } };
             }
-            if (owner !== undefined && existing.lease_owner !== owner) {
-              return { success: true, meta: { changes: 0 } };
-            }
-            if (owner === undefined && existing.lease_owner != null && existing.lease_owner !== "") {
+            if (sql.includes("AND lease_owner = ?")) {
+              const [, , , , owner, leaseJob, leaseOwner, leaseUntil, nowSec] = args as [
+                string,
+                number,
+                number,
+                number,
+                string,
+                string,
+                string,
+                number,
+                number,
+              ];
+              const lease = leases.get(leaseJob);
+              if (
+                existing.lease_owner !== owner ||
+                leaseJob !== job ||
+                leaseOwner !== owner ||
+                !lease ||
+                lease.lease_owner !== owner ||
+                lease.lease_until !== leaseUntil ||
+                lease.lease_until >= nowSec
+              ) {
+                return { success: true, meta: { changes: 0 } };
+              }
+            } else if (existing.lease_owner != null && existing.lease_owner !== "") {
               return { success: true, meta: { changes: 0 } };
             }
             progressRows.delete(job);
@@ -591,6 +638,16 @@ function makeLeaseDb(seed?: {
               return lease?.lease_owner === progress.lease_owner && lease.lease_until >= activeAt;
             });
             return active ? { active: 1 } : null;
+          }
+          if (sql.includes("SELECT 1 AS current") && sql.includes("FROM cron_slot_executions")) {
+            const [slotKey, slotStartedAt, state, owner, generation] = args as [string, number, string, string, number];
+            const row = slots.get(makeSlotMapKey(slotKey, slotStartedAt));
+            return row &&
+              row.state === state &&
+              row.execution_owner === owner &&
+              row.execution_generation === generation
+              ? { current: 1 }
+              : null;
           }
           if (
             sql.includes("SELECT state, execution_owner, execution_generation") &&

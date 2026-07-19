@@ -73,6 +73,39 @@ describe("loadDexLiquiditySnapshot", () => {
     });
   });
 
+  it("falls back to liquidity rows when deployment outcomes table is missing", async () => {
+    const prepare = vi.fn()
+      .mockReturnValueOnce({
+        all: vi.fn().mockRejectedValue(new Error("D1_ERROR: no such table: dex_deployment_outcomes")),
+      })
+      .mockReturnValueOnce({
+        all: vi.fn().mockResolvedValue({ results: [liquidityRow()] }),
+      });
+    const db = { prepare } as unknown as D1Database;
+
+    await expect(loadDexLiquiditySnapshot(db)).resolves.toEqual({
+      map: {
+        "usdc-circle": {
+          liquidityScore: 91,
+          concentrationHhi: 0.2,
+          poolCount: 4,
+          chainCount: 2,
+          coverageClass: "primary",
+          coverageConfidence: 0.9,
+          liquidityEvidenceClass: "measured",
+          hasMeasuredLiquidityEvidence: true,
+          effectiveTvlUsd: 15_000_000,
+          balanceMeasuredTvlUsd: 12_000_000,
+          organicMeasuredTvlUsd: 9_000_000,
+          methodologyVersion: "5.10",
+        },
+      },
+      latestUpdatedAt: 123,
+    });
+    expect(prepare).toHaveBeenCalledTimes(2);
+    expect(prepare.mock.calls[1][0]).not.toContain("dex_deployment_outcomes");
+  });
+
   it("keeps old rows evidence-neutral", async () => {
     const db = mockDb([
       liquidityRow({

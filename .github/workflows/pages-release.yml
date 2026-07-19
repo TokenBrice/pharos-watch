@@ -69,7 +69,8 @@ jobs:
           fi
           if [ "$refresh_ok" != "true" ]; then
             echo "::warning::release data refresh failed; building from the committed snapshot"
-            git checkout -- data/digests.json data/depeg-events.json public/datasets
+            git checkout -- data/digests.json data/depeg-events.json public/datasets public/sheets
+            git clean -fd -- public/datasets public/sheets
             echo "- Data refresh: FAILED (fail-open), built from committed snapshot" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "- Data refresh: OK (${refreshed_digest_count} digest entries)" >> "$GITHUB_STEP_SUMMARY"

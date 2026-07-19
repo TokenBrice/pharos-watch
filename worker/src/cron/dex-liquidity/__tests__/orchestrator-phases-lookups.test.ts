@@ -71,6 +71,28 @@ describe("loadTrackedStablecoinMaps", () => {
     expect(stablecoinPriceById.get("susn-noon")).toBe(1.2055005012280287);
   });
 
+  it("rejects fallback-only multi-source tracked prices for CL target references", async () => {
+    loadStablecoinsCache.mockResolvedValue({
+      kind: "ok",
+      updatedAt: NOW_SEC,
+      payload: {
+        peggedAssets: [
+          makeAsset({
+            id: "usdc-circle",
+            price: 0.42,
+            priceConfidence: "high",
+            priceSource: "dexscreener-address+alchemy-address",
+            agreeSources: ["dexscreener-address", "alchemy-address"],
+          }),
+        ],
+      },
+    });
+
+    const { stablecoinPriceById } = await loadTrackedStablecoinMaps({} as D1Database, NOW_SEC);
+
+    expect(stablecoinPriceById.has("usdc-circle")).toBe(false);
+  });
+
   it("still rejects a soft price without fresh multi-source agreement", async () => {
     loadStablecoinsCache.mockResolvedValue({
       kind: "ok",

@@ -35,6 +35,11 @@ interface CacheRow {
   updated_at: number;
 }
 
+interface RecapTargetRow {
+  status: string;
+  updated_at: number;
+}
+
 interface StubState {
   usageDaily: UsageDailyRow[];
   watcherLifecycle: WatcherLifecycleRow[];
@@ -45,6 +50,7 @@ interface StubState {
   adoptionClientQuota: UpdatedAtRow[];
   diagnostics: UpdatedAtRow[];
   cache: CacheRow[];
+  recapTargets: RecapTargetRow[];
 }
 
 function makeState(): StubState {
@@ -58,6 +64,7 @@ function makeState(): StubState {
     adoptionClientQuota: [],
     diagnostics: [],
     cache: [],
+    recapTargets: [],
   };
 }
 
@@ -99,6 +106,19 @@ function createStubDb(state: StubState, options: { afterProcessedUpdateDelete?: 
           // reconcileExpiredTelegramAlertJobTargets: no rows to update in
           // these tests.
           return { success: true, meta: { changes: 0 } };
+        }
+        if (sql.trimStart().startsWith("DELETE FROM telegram_recap_targets")) {
+          const [aggregateCutoff, terminalCutoff, limit] = bound as [number, number, number];
+          const removed = deleteMatching(
+            state.recapTargets,
+            (row) =>
+              (["sent", "skipped_no_changes", "skipped_paused", "skipped_stale"].includes(row.status) &&
+                row.updated_at < aggregateCutoff) ||
+              (["cancelled", "expired", "execution_unknown", "failed_permanent"].includes(row.status) &&
+                row.updated_at < terminalCutoff),
+            limit,
+          );
+          return { success: true, meta: { changes: removed } };
         }
         if (sql.startsWith("DELETE FROM telegram_processed_updates")) {
           const [cutoff, _unknownCutoff, limit] = bound as [number, number, number];
@@ -293,6 +313,27 @@ describe("runTelegramRetentionCleanup", () => {
     expect(metadata.diagnosticsPruned).toBe(10_000);
     expect(metadata.cappedAtLimit.usageDaily).toBe(true);
     expect(metadata.cappedAtLimit.diagnostics).toBe(true);
+  });
+
+  it("caps recap-target pruning and reports the retention run as truncated", async () => {
+    const state = makeState();
+    const now = Math.floor(Date.now() / 1000);
+    for (let i = 0; i < 10_001; i += 1) {
+      state.recapTargets.push({ status: "cancelled", updated_at: now - 91 * 24 * 60 * 60 });
+    }
+    const db = createStubDb(state);
+
+    const result = await runTelegramRetentionCleanup(db);
+
+    expect(state.recapTargets).toHaveLength(1);
+    const metadata = JSON.parse(result.metadata!) as {
+      recapTargetsPruned: number;
+      runBudgetTruncated: boolean;
+      cappedAtLimit: { recapTargets: boolean };
+    };
+    expect(metadata.recapTargetsPruned).toBe(10_000);
+    expect(metadata.cappedAtLimit.recapTargets).toBe(true);
+    expect(metadata.runBudgetTruncated).toBe(true);
   });
 
   it("caps processed-update retention to one bounded run and reports a lower-bound backlog", async () => {

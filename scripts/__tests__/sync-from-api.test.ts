@@ -21,13 +21,40 @@ describe("fetchWithRetry", () => {
     }
   });
 
-  it("adds the site API credential for deploy-time internal reads", () => {
+  it("keeps the site API credential off untrusted or unresolved API reads", () => {
     vi.stubEnv("DIGEST_API_KEY", "public-key");
     vi.stubEnv("SITE_API_SHARED_SECRET", "site-secret");
 
     expect(apiFetchHeaders(["DIGEST_API_KEY"])).toEqual({
       Accept: "application/json",
       "X-API-Key": "public-key",
+    });
+    expect(apiFetchHeaders(["DIGEST_API_KEY"], { url: "https://attacker.example/api/digest-archive" })).toEqual({
+      Accept: "application/json",
+      "X-API-Key": "public-key",
+    });
+  });
+
+  it("adds the site API credential only for trusted direct site API reads", () => {
+    vi.stubEnv("DIGEST_API_KEY", "public-key");
+    vi.stubEnv("SITE_API_SHARED_SECRET", "site-secret");
+
+    expect(apiFetchHeaders(["DIGEST_API_KEY"], { url: "https://site-api.pharos.watch/api/digest-archive" })).toEqual({
+      Accept: "application/json",
+      "X-Pharos-Site-Proxy-Secret": "site-secret",
+    });
+    expect(
+      apiFetchHeaders(["DIGEST_API_KEY"], { url: "https://pharos-watch-preview.workers.dev/api/digest-archive" }),
+    ).toEqual({
+      Accept: "application/json",
+      "X-API-Key": "public-key",
+    });
+
+    vi.stubEnv("SITE_API_SHARED_SECRET_TRUSTED_ORIGINS", "https://pharos-watch-preview.workers.dev");
+    expect(
+      apiFetchHeaders(["DIGEST_API_KEY"], { url: "https://pharos-watch-preview.workers.dev/api/digest-archive" }),
+    ).toEqual({
+      Accept: "application/json",
       "X-Pharos-Site-Proxy-Secret": "site-secret",
     });
   });

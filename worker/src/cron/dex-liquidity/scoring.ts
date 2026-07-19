@@ -1,6 +1,7 @@
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { roundTo } from "@shared/lib/math";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
+import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "@shared/types/market";
 import type { ExitRouteObservation, ExitRouteObservationCoverage } from "@shared/types/market";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
@@ -396,9 +397,13 @@ export async function computeStablecoinScores(
     throwIfAborted(signal);
     const retainedPools = preparedRetainedPools.get(id) ?? [];
     const rebuilt = rebuildMetricsFromPools(retainedPools);
+    const routeObservationPools = [...rebuilt.visiblePools, ...(p4OnlyRetainedPools.get(id) ?? [])].slice(
+      0,
+      MAX_DEX_EXIT_ROUTE_OBSERVATIONS,
+    );
     const routeObservationResult = buildP4DexExitRouteObservations({
       stablecoinId: id,
-      retainedPools: [...retainedPools, ...(p4OnlyRetainedPools.get(id) ?? [])],
+      retainedPools: routeObservationPools,
       observedAt: routeObservedAt,
     });
     stripDexMeasuredExecutionInternalFields(retainedPools);

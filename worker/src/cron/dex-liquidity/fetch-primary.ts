@@ -404,11 +404,13 @@ export async function buildCurveLookups(
             : {}),
         };
         curvePoolMap.set(`${chain}:${pool.address.toLowerCase()}`, entry);
-        const fingerprintKey = buildPoolFingerprint(
-          chain,
-          "curve",
-          pool.coins.map((coin) => coin.address),
+        const curveCoinAddresses = pool.coins.map((coin) => coin.address);
+        const hasCompleteCurveCoinAddresses = curveCoinAddresses.every(
+          (address): address is string => typeof address === "string" && address.trim().length > 0,
         );
+        const fingerprintKey = hasCompleteCurveCoinAddresses
+          ? buildPoolFingerprint(chain, "curve", curveCoinAddresses)
+          : null;
         if (
           fingerprintKey &&
           pool.usdTotal >= DEX_LIQUIDITY_POOL_MIN_TVL_USD &&
@@ -431,14 +433,14 @@ export async function buildCurveLookups(
             chain,
             protocol: "curve",
             poolAddressOrId: pool.address,
-            tokenAddresses: pool.coins.map((coin) => coin.address),
+            tokenAddresses: hasCompleteCurveCoinAddresses ? curveCoinAddresses : [],
             poolType: isCryptoSwap(pool.registryId ?? "") ? "curve-cryptoswap" : "curve-stableswap",
             isStable: true,
           });
           for (const coin of pool.coins) {
             if (!coin.usdPrice || coin.usdPrice <= 0) continue;
             const resolved = resolveTrackedStablecoinId(
-              { chain, address: coin.address, symbol: coin.symbol },
+              { chain, address: typeof coin.address === "string" ? coin.address : "", symbol: coin.symbol },
               { chainAddressToId, symbolToChainScopedIds },
             );
             if (resolved.status !== "matched" || !resolved.stablecoinId) continue;

@@ -40,6 +40,11 @@ interface BuildRedemptionExitRouteObservationInput {
   now: number;
 }
 
+function floorTimestampSec(timestamp: number | undefined): number | null {
+  if (timestamp == null || !Number.isFinite(timestamp) || timestamp < 0) return null;
+  return Math.floor(timestamp);
+}
+
 function reviewedAtSec(reviewedAt: string | undefined): number | null {
   if (!reviewedAt) return null;
   const timestamp = Date.parse(`${reviewedAt}T00:00:00.000Z`);
@@ -61,7 +66,7 @@ function resolveRouteEvidence(input: BuildRedemptionExitRouteObservationInput): 
     return {
       evidenceKind: input.freshnessKind === "same-run-onchain" ? "onchain-contract-state" : "live-reserve-state",
       confidence: "high",
-      observedAt: input.sourceTimestamp ?? input.now,
+      observedAt: floorTimestampSec(input.sourceTimestamp) ?? floorTimestampSec(input.now) ?? 0,
       supportsScoring: true,
     };
   }
@@ -80,7 +85,7 @@ function resolveRouteEvidence(input: BuildRedemptionExitRouteObservationInput): 
   return {
     evidenceKind: hasReviewedTerms ? "documented-terms" : "manual-review",
     confidence: input.capacityConfidence === "heuristic" ? "low" : "unknown",
-    observedAt: reviewTimestamp ?? input.sourceTimestamp ?? input.now,
+    observedAt: reviewTimestamp ?? floorTimestampSec(input.sourceTimestamp) ?? floorTimestampSec(input.now) ?? 0,
     supportsScoring: false,
   };
 }
@@ -220,7 +225,7 @@ export function buildRedemptionExitRouteObservation(
     confidence: evidence.confidence,
     scoreEligible,
     observedAt: evidence.observedAt,
-    freshnessSeconds: Math.max(0, input.now - evidence.observedAt),
+    freshnessSeconds: Math.max(0, (floorTimestampSec(input.now) ?? 0) - evidence.observedAt),
     commonModeKeys,
     capacityCurve,
   };
@@ -310,7 +315,7 @@ export function deriveSupplyModelExitRouteObservation(
     confidence: "medium",
     scoreEligible: routeFamily !== "eventual-redemption" && withinCost,
     observedAt: reviewTimestamp,
-    freshnessSeconds: Math.max(0, now - reviewTimestamp),
+    freshnessSeconds: Math.max(0, (floorTimestampSec(now) ?? 0) - reviewTimestamp),
     commonModeKeys,
     capacityCurve,
   };

@@ -95,6 +95,9 @@ export const ExitRouteCapacityPointSchema = z.object({
 });
 export type ExitRouteCapacityPoint = z.infer<typeof ExitRouteCapacityPointSchema>;
 
+export const MAX_EXIT_ROUTE_COMMON_MODE_KEYS = 16;
+export const MAX_DEX_EXIT_ROUTE_OBSERVATIONS = 10;
+
 const ExitRouteObservationBaseSchema = z.object({
   routeId: z.string().min(1),
   routeFamily: ExitRouteFamilySchema,
@@ -110,7 +113,7 @@ const ExitRouteObservationBaseSchema = z.object({
   scoreEligible: z.boolean(),
   observedAt: z.number().int().nonnegative(),
   freshnessSeconds: z.number().int().nonnegative(),
-  commonModeKeys: z.array(z.string().min(1)),
+  commonModeKeys: z.array(z.string().min(1)).max(MAX_EXIT_ROUTE_COMMON_MODE_KEYS),
   capacityCurve: z.array(ExitRouteCapacityPointSchema).min(1).max(16).optional(),
 });
 

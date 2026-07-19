@@ -115,7 +115,7 @@ describe("hasFreshMultiSourcePrimaryAgreement", () => {
     expect(hasFreshMultiSourcePrimaryAgreement({
       price: 0.999,
       priceSource: "coingecko+defillama-list",
-      priceConfidence: "single-source",
+      priceConfidence: "high",
       priceObservedAt: nowSec - 60,
       agreeSources: ["coingecko", "defillama-list"],
     }, nowSec)).toBe(true);
@@ -133,7 +133,7 @@ describe("hasFreshMultiSourcePrimaryAgreement", () => {
     expect(hasFreshMultiSourcePrimaryAgreement({
       price: 0.999,
       priceSource: "coingecko+defillama-list",
-      priceConfidence: "single-source",
+      priceConfidence: "high",
       priceObservedAt: nowSec - (31 * 60),
       agreeSources: ["coingecko", "defillama-list"],
     }, nowSec)).toBe(false);

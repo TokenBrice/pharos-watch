@@ -300,7 +300,7 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 
 1. **Cache bypass rules**:
    - All non-GET requests bypass edge cache.
-   - GET paths marked `cacheBypass: true` in `shared/lib/api-endpoints/` bypass edge cache (status and admin/backfill endpoints like `/api/backfill-*`, `/api/audit-depeg-history`, `/api/backfill-dews`, including their dry-run preview variants).
+   - GET paths marked `cacheBypass: true` in `shared/lib/api-endpoints/` bypass edge cache (status and admin/backfill endpoints like `/api/backfill-*`, `/api/audit-depeg-history`, `/api/backfill-dews`, including their dry-run preview variants, plus activation-gated public endpoints such as `/api/report-cards/v9`).
 
 2. **Cache check:** `caches.default.match(cacheKey)` — returns cached response if available
 
@@ -313,7 +313,7 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 | Realtime           | `public, s-maxage=60, max-age=10`                              | health, events                                                                                                                                                                                              |
 | Producer-backed    | `public, s-maxage=300, max-age=60, stale-while-revalidate=300` | stablecoins, stablecoin-summary, blacklist, blacklist-summary, depeg-events, peg-summary, mint-burn-events, chains                                                                                          |
 | Per-coin           | `public, s-maxage=300, max-age=10`                             | stablecoin detail (`/api/stablecoin/:id`)                                                                                                                                                                   |
-| Standard           | `public, s-maxage=300, max-age=60`                             | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, report-cards-v9, stability-index, yield-rankings, mint-burn-flows, stress-signals, yield-adapter-manifest |
+| Standard           | `public, s-maxage=300, max-age=60`                             | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, report-cards-v9 (handler response only; endpoint bypasses edge cache to revalidate activation), stability-index, yield-rankings, mint-burn-flows, stress-signals, yield-adapter-manifest |
 | Custom             | `public, s-maxage=300, max-age=300`                            | dex-liquidity; telegram-pulse uses route-local `public, max-age=300, s-maxage=300`                                                                                                                          |
 | Slow               | `public, s-maxage=3600, max-age=300`                           | supply-history, bluechip-ratings, dex-liquidity-history, yield-history, safety-score-history, non-usd-share                                                                                                 |
 | Archive            | `public, s-maxage=86400, max-age=3600`                         | digest-snapshot, snapshots-index                                                                                                                                                                            |

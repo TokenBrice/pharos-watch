@@ -102,6 +102,25 @@ describe("fetchPancakeSwapPools", () => {
     expect(result.pools[0]?.tokens[1]?.decimals).toBe(0);
   });
 
+  it("falls back to 18 decimals for malformed Pancake token metadata", async () => {
+    const malformedDecimalPool = makePool("0xpool");
+    malformedDecimalPool.token0.decimals = 6 as unknown as string;
+    malformedDecimalPool.token1.decimals = null as unknown as string;
+
+    vi.mocked(fetchTextWithRetry)
+      .mockImplementationOnce(async () => textResult(response({ data: { pools: [malformedDecimalPool] } })))
+      .mockImplementationOnce(async () => textResult(response({ data: { poolHourDatas: [] } })))
+      .mockImplementation(async () => textResult(response({ data: { pools: [] } })));
+
+    const result = await fetchPancakeSwapPools("graph-key");
+
+    expect(result.ok).toBe(true);
+    expect(result.degraded).toBe(false);
+    expect(result.errors).toHaveLength(0);
+    expect(result.pools[0]?.tokens[0]?.decimals).toBe(6);
+    expect(result.pools[0]?.tokens[1]?.decimals).toBe(18);
+  });
+
   it("maps Pancake's asymmetric token1Price to the token0/token1 pool ratio", async () => {
     const wonPool = makePool("0xwon-usdt");
     wonPool.token0 = {

@@ -4,6 +4,7 @@ import { parseCliInteger, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRe
 import { fetchBlockByNumber, pinBlock, JournaledEthCaller, ReplayEthCaller } from "../lib/mechanism-measurement/core";
 import { measureConfiguredTarget } from "../lib/mechanism-measurement/measure";
 import { MechanismMeasurementEvidenceV1Schema } from "../lib/mechanism-measurement/schema";
+import { redactRpcUrlForEvidence } from "../lib/mechanism-measurement/rpc-provenance";
 import { CDP_MEASUREMENT_TARGETS } from "../lib/mechanism-measurement/targets";
 
 const USAGE = `Usage: npx tsx scripts/maintenance/measure-cdp-mechanism-metrics.ts --asset <id> [options]
@@ -102,7 +103,8 @@ async function measureTarget(options: CliOptions, assetId: string): Promise<void
     try {
       const block = options.block == null ? await pinBlock(rpcUrl) : await fetchBlockByNumber(rpcUrl, options.block);
       const caller = new JournaledEthCaller(rpcUrl, `0x${block.number.toString(16)}`);
-      const evidence = await measureConfiguredTarget(caller, target, block, rpcUrl);
+      const evidenceRpcUrl = redactRpcUrlForEvidence(rpcUrl);
+      const evidence = await measureConfiguredTarget(caller, target, block, evidenceRpcUrl);
       const parsed = MechanismMeasurementEvidenceV1Schema.parse(evidence);
 
       const date = parsed.block.timestampIso.slice(0, 10);
@@ -125,7 +127,7 @@ async function measureTarget(options: CliOptions, assetId: string): Promise<void
       const completeness = parsed.completeness ?? { complete: true, blockers: [] };
       const formatMetric = (value: number | null): string => (value === null ? "N/A" : String(value));
       console.log(
-        `[measure-cdp] ${parsed.assetId}: block ${parsed.block.number} (${parsed.block.selection}) via ${rpcUrl}\n` +
+        `[measure-cdp] ${parsed.assetId}: block ${parsed.block.number} (${parsed.block.selection}) via ${parsed.rpcUrl}\n` +
           `  collateralizationRatio=${formatMetric(parsed.metrics.collateralizationRatio)} liquidationCapacityRatio=${formatMetric(parsed.metrics.liquidationCapacityRatio)}\n` +
           `  complete=${completeness.complete}${completeness.blockers.length > 0 ? ` blockers=${completeness.blockers.join(" | ")}` : ""}\n` +
           `  checks=${parsed.checks.length} pass -> ${outPath}`,
@@ -134,7 +136,7 @@ async function measureTarget(options: CliOptions, assetId: string): Promise<void
     } catch (error) {
       lastError = error;
       console.warn(
-        `[measure-cdp] ${assetId}: ${rpcUrl} failed — ${error instanceof Error ? error.message : String(error)}`,
+        `[measure-cdp] ${assetId}: ${redactRpcUrlForEvidence(rpcUrl)} failed — ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }

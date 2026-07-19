@@ -9,8 +9,6 @@ import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 
 const WEAK_FIXED_PEG_JUMP_WITHHOLD_BPS = 2_000;
 const WEAK_FALLBACK_FIXED_PEG_DEPEG_BPS = 500;
-const AZND_ID = "aznd-mu-digital";
-const AZND_EXACT_POOL_SOURCE = "curve-thin-onchain";
 
 export interface TrustedPriceReference {
   price: number;
@@ -92,12 +90,6 @@ function isFallbackSearchOnlySource(source: string | null | undefined): boolean 
   });
 }
 
-function isReviewedAssetScopedDisplayRoute(input: PublishablePriceInput): boolean {
-  return input.validationContext.stablecoinId === AZND_ID
-    && input.source === AZND_EXACT_POOL_SOURCE
-    && input.confidence === "fallback";
-}
-
 function fixedPegDeviationBps(input: PublishablePriceInput): number | null {
   if (!isFixedPegValidationContext(input.validationContext)) return null;
   const referencePrice = getReferencePriceForContext(input.validationContext, input.validationReferences);
@@ -159,10 +151,6 @@ function hasSevereDownsidePublicationCorroboration(input: PublishablePriceInput)
   }
 
   if (isPricingSourceSoftGuardrailExempt(input.source)) {
-    return true;
-  }
-
-  if (isReviewedAssetScopedDisplayRoute(input)) {
     return true;
   }
 
@@ -242,10 +230,6 @@ export function shouldWithholdTemporalJump(input: PublishablePriceInput): boolea
   if (hasAuthoritativeAgreement || isPricingSourceSoftGuardrailExempt(input.source)) {
     return false;
   }
-  if (isReviewedAssetScopedDisplayRoute(input)) {
-    return false;
-  }
-
   if (
     isSevereFixedPegDownside(input.price, input.validationContext, input.validationReferences, FIXED_PEG_SEVERE_DOWNSIDE_RATIO) &&
     hasSevereDownsidePublicationCorroboration(input)

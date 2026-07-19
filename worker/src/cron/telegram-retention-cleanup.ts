@@ -183,7 +183,11 @@ export async function runTelegramRetentionCleanup(
   const expiredTargetsReconciled = await reconcileExpiredTelegramAlertJobTargets(db, nowSec, signal);
   throwIfAborted(signal);
 
-  const recapTargets = await pruneTelegramRecapTargets(db, nowSec);
+  const recapTargets = await runWithOverloadRetry(
+    () => pruneTelegramRecapTargets(db, nowSec, { limit: RETENTION_DELETE_BATCH_LIMIT }),
+    3,
+    signal,
+  );
   throwIfAborted(signal);
 
   const processedUpdates = await pruneTelegramProcessedUpdatesCapped(db, nowSec, signal, options);
@@ -791,7 +795,7 @@ export async function runTelegramRetentionCleanup(
       groupWelcomeCachePruned: groupWelcomeCache.pruned,
       reEngagementWarningCachePruned: reEngagementWarningCache.pruned,
       expiredTargetsReconciled,
-      runBudgetTruncated: processedUpdates.remainingBacklog.count > 0 || retentionDeleteCapped,
+      runBudgetTruncated: processedUpdates.remainingBacklog.count > 0 || recapTargets.cappedAtLimit || retentionDeleteCapped,
       deleteBatchLimit: RETENTION_DELETE_BATCH_LIMIT,
       highVolumeDeleteLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT,
       processedUpdatePruneBudget: {
@@ -808,7 +812,7 @@ export async function runTelegramRetentionCleanup(
       },
       cappedAtLimit: {
         processedUpdates: processedUpdates.cappedAtLimit,
-        recapTargets: false,
+        recapTargets: recapTargets.cappedAtLimit,
         targetPlanItems: targetPlanItems.cappedAtLimit,
         targetPlans: targetPlans.cappedAtLimit,
         targetPlanPages: targetPlanPages.cappedAtLimit,
