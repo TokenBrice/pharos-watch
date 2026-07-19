@@ -31,7 +31,7 @@ Every published main and CoinGecko-supply-fallback `sync-stablecoins` run writes
 
 ## Versioning
 
-- **Current methodology version:** `v6.198`
+- **Current methodology version:** `v6.199`
 - **Canonical version module:** `shared/lib/methodology-versions/pricing-pipeline.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
