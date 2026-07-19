@@ -57,7 +57,6 @@ export function isPublicImpactCircuitKey(key: string): boolean {
   if (key === "usx-stable-pools") return false;
   if (key === "aznd-curve-pool") return false;
   if (key === "mento-broker") return false;
-  if (key === "phpm-price-route") return false;
   return true;
 }
 

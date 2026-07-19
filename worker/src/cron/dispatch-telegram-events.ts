@@ -4,6 +4,7 @@ import { throwIfAborted } from "../lib/abort";
 import { readCachedJson } from "../lib/api-utils";
 import { getCache } from "../lib/db-cache";
 import { buildInClause, chunkArray } from "../lib/db";
+import { DEPEG_STEP_VALUES } from "../lib/telegram-constants";
 import {
   isDewsAlertable,
   type DepegAlertPayload,
@@ -143,6 +144,11 @@ export async function buildTelegramDispatchEvents(
       if (isReopenedEvent(row.stablecoin_id, row.event_id)) {
         return [];
       }
+      const crossesSupportedStep = DEPEG_STEP_VALUES.some(
+        (step) =>
+          Math.floor(previous.deviationBps / step) < Math.floor(currentDeviationBps / step),
+      );
+      if (!crossesSupportedStep) return [];
       return [{
         stablecoinId: row.stablecoin_id,
         symbol: row.symbol,

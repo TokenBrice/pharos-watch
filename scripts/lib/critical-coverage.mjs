@@ -94,7 +94,6 @@ export const CRITICAL_FILES = [
   "worker/src/lib/authoritative-price-sources/inherited-tracked.ts",
   "worker/src/lib/authoritative-price-sources/jusd-stablecoin-bridge.ts",
   "worker/src/lib/authoritative-price-sources/kava-pricefeed.ts",
-  "worker/src/lib/authoritative-price-sources/mento-phpm.ts",
   "worker/src/lib/authoritative-price-sources/preview-redeem.ts",
   "worker/src/lib/authoritative-price-sources/protocol-par.ts",
   "worker/src/lib/authoritative-price-sources/usx-stable-pools.ts",

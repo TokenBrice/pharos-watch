@@ -170,7 +170,6 @@ describe("blacklist-contracts shared metadata alignment", () => {
         expect.objectContaining({ stablecoinId: "brz-transfero", chain: expect.objectContaining({ chainId: "gnosis" }) }),
         expect.objectContaining({ stablecoinId: "ausd-agora", chain: expect.objectContaining({ chainId: "arbitrum" }) }),
         expect.objectContaining({ stablecoinId: "ausd-agora", chain: expect.objectContaining({ chainId: "base" }) }),
-        expect.objectContaining({ stablecoinId: "mnee-mnee", chain: expect.objectContaining({ chainId: "ethereum" }) }),
         expect.objectContaining({ stablecoinId: "euri-banking-circle", chain: expect.objectContaining({ chainId: "ethereum" }) }),
         expect.objectContaining({ stablecoinId: "euri-banking-circle", chain: expect.objectContaining({ chainId: "bsc" }) }),
         expect.objectContaining({ stablecoinId: "usdq-quantoz", chain: expect.objectContaining({ chainId: "ethereum" }) }),

@@ -21,7 +21,7 @@ export function BlacklistTrackerMethodologySection() {
           >
               <p>
                 The Blacklist Tracker monitors issuer intervention events across USDC, USDT, PAXG, XAUT, PYUSD, USD1,
-                USDG, RLUSD, U, USDtb, A7A5, FDUSD, BRZ, AUSD, MNEE, EURI, USDQ, USDO, USDX, AID, TGBP,
+                USDG, RLUSD, U, USDtb, A7A5, FDUSD, BRZ, AUSD, EURI, USDQ, USDO, USDX, AID, TGBP,
                 EURC, BUIDL, USDP, TUSD, NUSD, EURCV, USDA, USAT, AEUR, XUSD, XAUm, JPYC, FRXUSD, and
                 FIDD contracts, including blacklist, unblacklist, block/unblock, account pause/unpause, and
                 destroy/wipe actions across supported EVM and Tron networks.

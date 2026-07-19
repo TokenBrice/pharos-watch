@@ -280,10 +280,7 @@ export async function dispatchTelegramAlerts(
       launchPromoted.length +
       reservePromoted.length;
 
-    const requiresFullFanoutPath =
-      eventCount > 0 ||
-      safetySourceAssessment.state !== "ok" ||
-      safetySnapshotNeedsSeed;
+    const requiresFullFanoutPath = eventCount > 0 || sourceEvent != null;
     if (!sourceEvent && requiresFullFanoutPath) {
       sourceEvent = await persistTelegramAlertSourceEvent(
         db,
@@ -322,10 +319,7 @@ export async function dispatchTelegramAlerts(
     });
 
     const hasEvents = eventCount > 0;
-    const canUseEventlessFastPath =
-      !hasEvents &&
-      safetySourceAssessment.state === "ok" &&
-      !safetySnapshotNeedsSeed;
+    const canUseEventlessFastPath = !hasEvents && sourceEvent == null;
 
     if (canUseEventlessFastPath) {
       const result = await executeEventlessFastPath({
@@ -335,6 +329,7 @@ export async function dispatchTelegramAlerts(
         reserveSourceUnavailable: snapshotState.reserveSourceUnavailable,
         reserveSourceAssessment: snapshotState.reserveSourceAssessment,
         safetySourceAssessment,
+        safetySnapshotNeedsSeed,
         suppressedMethodologyChanges,
         suppressedSafetyChangesAtSeed,
         pendingCapacityBefore,

@@ -791,14 +791,6 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       severity: "low",
     },
   ],
-  "mnee-mnee": [
-    {
-      ts: Date.UTC(2024, 6, 18), // 2024-07-18 — MNEE launches USD-backed stablecoin on Ethereum ERC-20
-      kind: "governance",
-      label: "MNEE launch — Antigua FSRC-licensed USD stablecoin",
-      severity: "med",
-    },
-  ],
   "dusd-standx": [
     {
       ts: Date.UTC(2025, 3, 8), // 2025-04-08 — StandX DUSD token launches with delta-neutral hedged collateral
@@ -1855,17 +1847,6 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       label: "SPKCC launch — Spiko cash-and-carry fund",
       severity: "low",
       href: "https://www.spiko.io/spiko-cash-and-carry",
-    },
-  ],
-  "usp-pareto-credit": [
-    {
-      // 2025-11-21 — DefiLlama daily data shows USP's secondary-market
-      // discount bottoming near $0.916.
-      ts: Date.UTC(2025, 10, 21),
-      kind: "depeg",
-      label: "Secondary-market discount — USP low ~$0.916",
-      severity: "high",
-      href: "https://coins.llama.fi/chart/coingecko:pareto-usp?start=1763000000&span=120&period=1d&searchWidth=4h",
     },
   ],
   "usr-resolv": [

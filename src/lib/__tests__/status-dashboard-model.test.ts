@@ -351,7 +351,7 @@ describe("status dashboard model", () => {
       code: "active_price_coverage_incomplete",
       layer: "data-quality",
       severity: "warning",
-      message: "Live prices are missing for 1 active asset(s): mnee-mnee.",
+      message: "Live prices are missing for 1 active asset(s): nxusd-nereus.",
       metric: "missingActivePrices",
       value: 1,
       threshold: 1,
@@ -368,7 +368,7 @@ describe("status dashboard model", () => {
     const healthData = {
       ...BASE_HEALTH,
       status: "degraded" as const,
-      warnings: ["active-price-coverage-incomplete:mnee-mnee"],
+      warnings: ["active-price-coverage-incomplete:nxusd-nereus"],
       activePriceCoverage: {
         status: "incomplete" as const,
         expectedActiveCount: 190,
@@ -376,12 +376,12 @@ describe("status dashboard model", () => {
         pricedActiveCount: 189,
         missingPriceCount: 1,
         pricedActiveIds: [],
-        missingActiveIds: ["mnee-mnee"],
+        missingActiveIds: ["nxusd-nereus"],
         affectedMarketCapUsd: 1_500_000,
         missingActiveAssets: [
           {
-            stablecoinId: "mnee-mnee",
-            symbol: "MNEE",
+            stablecoinId: "nxusd-nereus",
+            symbol: "NXUSD",
             marketCapUsd: 1_500_000,
             currentPrice: null,
             currentSource: null,
@@ -396,7 +396,7 @@ describe("status dashboard model", () => {
           },
         ],
         alertEligibleCount: 1,
-        alertEligibleIds: ["mnee-mnee"],
+        alertEligibleIds: ["nxusd-nereus"],
         maxConsecutiveMissingGenerations: 2,
         observedAt: BASE_HEALTH.timestamp,
       },
@@ -423,7 +423,7 @@ describe("status dashboard model", () => {
       value: 1,
     });
     expect(model.issueGroups.impacting[0]?.message).toBe(
-      "Live prices are unavailable for 1 active asset: MNEE. Stablecoin listings and price-dependent analytics may be incomplete until coverage recovers.",
+      "Live prices are unavailable for 1 active asset: NXUSD. Stablecoin listings and price-dependent analytics may be incomplete until coverage recovers.",
     );
     expect(model.issueGroups.impacting[0]?.runbookUrl).toBe("https://example.com/stablecoins-cache");
     expect(model.overallCauseCount).toBe(1);

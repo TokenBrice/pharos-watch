@@ -42,7 +42,6 @@ describe("getBlacklistTooltipSummary", () => {
         FDUSD: 0,
         BRZ: 125,
         AUSD: 0,
-        MNEE: 0,
         EURI: 0,
         USDQ: 0,
         USDO: 0,

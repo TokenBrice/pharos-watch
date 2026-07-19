@@ -51,7 +51,6 @@ dusd-standx,DUSD,,46,D,20,WATCH,28,mixed
 407,UUSD,,,,,,,
 315,USPD,,,,,,,
 cusd-cap,CUSD,,67,B-,9,CALM,14,fallback
-mnee-mnee,MNEE,,63,C+,33,WATCH,,unobserved
 dola-inverse-finance,DOLA,,54,C-,19,WATCH,51,mixed
 405,USDA,,,,,,,
 cgusd-cygnus-finance,cgUSD,,50,C-,10,CALM,,unobserved
@@ -186,7 +185,6 @@ usr-resolv,USR,,,,35,WATCH,33,fallback
 107,CZUSD,,,,,,,
 92,PINA,,,,,,,
 192,USDA,,,,,,,
-usp-pareto-credit,USP,,,,20,WATCH,40,primary
 scusd-rings,SCUSD,,55,C,8,CALM,50,mixed
 43,ZUSD,,,,,,,
 dusd-alto,DUSD,,,,8,CALM,45,mixed
@@ -346,7 +344,6 @@ gyen-gyen,GYEN,,31,F,9,CALM,37,mixed
 cadc-cad-coin,CADC,,54,C-,7,CALM,74,primary
 aeur-anchored-coins,AEUR,,49,D,21,WATCH,43,fallback
 vchf-vnx,VCHF,,75,B+,17,WATCH,68,mixed
-veur-vnx,VEUR,,64,C+,24,WATCH,39,primary
 161,EURD,,,,,,,
 audd-novatti,AUDD,,63,C+,10,CALM,54,mixed
 167,fETH,,,,,,,
@@ -376,7 +373,6 @@ audm-macropod,AUDM,,69,B-,7,CALM,53,mixed
 352,BRTH,,,,,,,
 jpyc-jpyc,JPYC,,65,B-,18,WATCH,58,mixed
 gbpm-mento,GBPm,,,,21,WATCH,50,primary
-phpm-mento,PHPm,,,,10,CALM,65,primary
 cadm-mento,CADm,,,,,,14,fallback
 audm-mento,AUDm,,,,6,CALM,78,primary
 copm-mento,COPm,,,,14,CALM,34,fallback
@@ -561,7 +557,6 @@ emxn-telcoin,eMXN,,,,6,CALM,65,mixed
 eurot-token-teknoloji,EUROT,,,,5,CALM,51,fallback
 mxne-real-mxn,MXNe,,,,23,WATCH,59,primary
 jpyt-dephaser,JPYT,,,,14,CALM,43,fallback
-krwo-gimswap,KRWO,,,,17,WATCH,39,fallback
 onyc-onre,ONyc,,56,C,,,52,primary
 hbusdt-hyperbeat,hbUSDT,,53,C-,,,48,fallback
 witry-brix,wiTRY,,50,C-,,,,unobserved

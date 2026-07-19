@@ -71,11 +71,6 @@ const BACKFILLS: Record<string, UpgradeBackfill> = {
     controlRef: "LISUSD EIP-1967 proxy admin (owned by timelock)",
     observedBlock: 103_622_030,
   },
-  "mnee-mnee": {
-    model: "transparent-proxy",
-    controlRef: "MNEE EIP-1967 ProxyAdmin contract",
-    observedBlock: 25_294_738,
-  },
   "pgold-pleasing": {
     model: "transparent-proxy",
     controlRef: "Proxy-admin upgrade authority — Arbitrum",

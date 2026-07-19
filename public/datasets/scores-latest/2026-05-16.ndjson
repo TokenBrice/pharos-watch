@@ -39,7 +39,6 @@
 {"stablecoinId":"usdrif-rif","symbol":"USDRIF","pegScore":100,"safetyScore":64,"safetyGrade":"C+","dewsScore":10,"dewsBand":"CALM","liquidityScore":45,"coverageClass":"fallback"}
 {"stablecoinId":"dllr-sovryn","symbol":"DLLR","pegScore":100,"safetyScore":62,"safetyGrade":"C+","dewsScore":23,"dewsBand":"WATCH","liquidityScore":30,"coverageClass":"primary"}
 {"stablecoinId":"fxd-fathom","symbol":"FXD","pegScore":100,"safetyScore":62,"safetyGrade":"C+","dewsScore":11,"dewsBand":"CALM","liquidityScore":46,"coverageClass":"fallback"}
-{"stablecoinId":"usp-pareto-credit","symbol":"USP","pegScore":100,"safetyScore":null,"safetyGrade":"NR","dewsScore":46,"dewsBand":"ALERT","liquidityScore":21,"coverageClass":"primary"}
 {"stablecoinId":"usdq-quill","symbol":"USDQ","pegScore":100,"safetyScore":null,"safetyGrade":"NR","dewsScore":0,"dewsBand":"CALM","liquidityScore":null,"coverageClass":"unobserved"}
 {"stablecoinId":"usdk-orki","symbol":"USDK","pegScore":100,"safetyScore":null,"safetyGrade":"NR","dewsScore":7,"dewsBand":"CALM","liquidityScore":null,"coverageClass":"unobserved"}
 {"stablecoinId":"euroe-membrane","symbol":"EUROe","pegScore":100,"safetyScore":null,"safetyGrade":"NR","dewsScore":20,"dewsBand":"WATCH","liquidityScore":44,"coverageClass":"fallback"}
@@ -54,7 +53,6 @@
 {"stablecoinId":"euri-banking-circle","symbol":"EURI","pegScore":100,"safetyScore":63,"safetyGrade":"C+","dewsScore":1,"dewsBand":"CALM","liquidityScore":38,"coverageClass":"mixed"}
 {"stablecoinId":"audm-macropod","symbol":"AUDM","pegScore":100,"safetyScore":67,"safetyGrade":"B-","dewsScore":12,"dewsBand":"CALM","liquidityScore":51,"coverageClass":"mixed"}
 {"stablecoinId":"gbpm-mento","symbol":"GBPm","pegScore":100,"safetyScore":null,"safetyGrade":"NR","dewsScore":17,"dewsBand":"WATCH","liquidityScore":54,"coverageClass":"primary"}
-{"stablecoinId":"phpm-mento","symbol":"PHPm","pegScore":100,"safetyScore":null,"safetyGrade":"NR","dewsScore":11,"dewsBand":"CALM","liquidityScore":64,"coverageClass":"mixed"}
 {"stablecoinId":"cadm-mento","symbol":"CADm","pegScore":100,"safetyScore":null,"safetyGrade":"NR","dewsScore":21,"dewsBand":"WATCH","liquidityScore":54,"coverageClass":"mixed"}
 {"stablecoinId":"audm-mento","symbol":"AUDm","pegScore":100,"safetyScore":null,"safetyGrade":"NR","dewsScore":14,"dewsBand":"CALM","liquidityScore":58,"coverageClass":"primary"}
 {"stablecoinId":"copm-mento","symbol":"COPm","pegScore":100,"safetyScore":null,"safetyGrade":"NR","dewsScore":12,"dewsBand":"CALM","liquidityScore":63,"coverageClass":"mixed"}
@@ -143,7 +141,6 @@
 {"stablecoinId":"eurot-token-teknoloji","symbol":"EUROT","pegScore":100,"safetyScore":null,"safetyGrade":"NR","dewsScore":2,"dewsBand":"CALM","liquidityScore":54,"coverageClass":"fallback"}
 {"stablecoinId":"mxne-real-mxn","symbol":"MXNe","pegScore":100,"safetyScore":null,"safetyGrade":"NR","dewsScore":17,"dewsBand":"WATCH","liquidityScore":66,"coverageClass":"mixed"}
 {"stablecoinId":"jpyt-dephaser","symbol":"JPYT","pegScore":100,"safetyScore":null,"safetyGrade":"NR","dewsScore":11,"dewsBand":"CALM","liquidityScore":39,"coverageClass":"fallback"}
-{"stablecoinId":"krwo-gimswap","symbol":"KRWO","pegScore":100,"safetyScore":null,"safetyGrade":"NR","dewsScore":10,"dewsBand":"CALM","liquidityScore":39,"coverageClass":"fallback"}
 {"stablecoinId":"sofid-sofi","symbol":"SOFID","pegScore":100,"safetyScore":64,"safetyGrade":"C+","dewsScore":0,"dewsBand":"CALM","liquidityScore":null,"coverageClass":"unobserved"}
 {"stablecoinId":"usdt-tether","symbol":"USDT","pegScore":99,"safetyScore":70,"safetyGrade":"B","dewsScore":16,"dewsBand":"WATCH","liquidityScore":65,"coverageClass":"mixed"}
 {"stablecoinId":"usd1-world-liberty-financial","symbol":"USD1","pegScore":99,"safetyScore":68,"safetyGrade":"B-","dewsScore":14,"dewsBand":"CALM","liquidityScore":55,"coverageClass":"mixed"}
@@ -165,7 +162,6 @@
 {"stablecoinId":"usdu-usdu-finance","symbol":"USDU","pegScore":99,"safetyScore":54,"safetyGrade":"C-","dewsScore":12,"dewsBand":"CALM","liquidityScore":31,"coverageClass":"mixed"}
 {"stablecoinId":"usdp-parallel","symbol":"USDp","pegScore":99,"safetyScore":69,"safetyGrade":"B-","dewsScore":5,"dewsBand":"CALM","liquidityScore":68,"coverageClass":"mixed"}
 {"stablecoinId":"scusd-rings","symbol":"SCUSD","pegScore":99,"safetyScore":55,"safetyGrade":"C","dewsScore":4,"dewsBand":"CALM","liquidityScore":50,"coverageClass":"mixed"}
-{"stablecoinId":"veur-vnx","symbol":"VEUR","pegScore":99,"safetyScore":71,"safetyGrade":"B","dewsScore":7,"dewsBand":"CALM","liquidityScore":63,"coverageClass":"mixed"}
 {"stablecoinId":"zchf-frankencoin","symbol":"ZCHF","pegScore":99,"safetyScore":67,"safetyGrade":"B-","dewsScore":6,"dewsBand":"CALM","liquidityScore":67,"coverageClass":"mixed"}
 {"stablecoinId":"susdt-spark","symbol":"spUSDT","pegScore":99,"safetyScore":47,"safetyGrade":"D","dewsScore":null,"dewsBand":null,"liquidityScore":13,"coverageClass":"fallback"}
 {"stablecoinId":"steakusdt-steakhouse","symbol":"steakUSDT","pegScore":99,"safetyScore":43,"safetyGrade":"D","dewsScore":null,"dewsBand":null,"liquidityScore":13,"coverageClass":"fallback"}
@@ -189,7 +185,6 @@
 {"stablecoinId":"rlusd-ripple","symbol":"RLUSD","pegScore":97,"safetyScore":73,"safetyGrade":"B","dewsScore":6,"dewsBand":"CALM","liquidityScore":70,"coverageClass":"mixed"}
 {"stablecoinId":"usd0-usual","symbol":"USD0","pegScore":97,"safetyScore":53,"safetyGrade":"C-","dewsScore":21,"dewsBand":"WATCH","liquidityScore":50,"coverageClass":"mixed"}
 {"stablecoinId":"crvusd-curve","symbol":"crvUSD","pegScore":97,"safetyScore":77,"safetyGrade":"B+","dewsScore":24,"dewsBand":"WATCH","liquidityScore":77,"coverageClass":"mixed"}
-{"stablecoinId":"mnee-mnee","symbol":"MNEE","pegScore":97,"safetyScore":61,"safetyGrade":"C+","dewsScore":3,"dewsBand":"CALM","liquidityScore":43,"coverageClass":"fallback"}
 {"stablecoinId":"xusd-straitsx","symbol":"XUSD","pegScore":97,"safetyScore":65,"safetyGrade":"B-","dewsScore":6,"dewsBand":"CALM","liquidityScore":38,"coverageClass":"mixed"}
 {"stablecoinId":"uty-xsy","symbol":"UTY","pegScore":97,"safetyScore":38,"safetyGrade":"F","dewsScore":4,"dewsBand":"CALM","liquidityScore":34,"coverageClass":"fallback"}
 {"stablecoinId":"usdcv-societe-generale-forge","symbol":"USDCV","pegScore":97,"safetyScore":67,"safetyGrade":"B-","dewsScore":12,"dewsBand":"CALM","liquidityScore":55,"coverageClass":"primary"}

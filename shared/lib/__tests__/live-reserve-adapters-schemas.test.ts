@@ -37,7 +37,6 @@ const LATE_MONTHLY_SOURCE_AGE_IDS = [
   "iusd-infinifi",
   "jpym-mento",
   "kesm-mento",
-  "phpm-mento",
   "srusd-reservoir",
   "usdy-ondo-finance",
   "uty-xsy",

@@ -184,7 +184,6 @@ const MENTO_BROKER_TARGETS: readonly MentoBrokerMeasurementTarget[] = [
   ["copm-mento", "0x8a567e2ae79ca692bd748ab832081c45de4041ea"],
   ["ghsm-mento", "0xfaea5f3404bba20d3cc2f8c4b0a888f55a3c7313"],
   ["kesm-mento", "0x456a3d042c0dbd3db53d5489e98dfb038553b0d0"],
-  ["phpm-mento", "0x105d4a9306d2e55a71d2eb95b81553ae1dc20d7b"],
   ["zarm-mento", "0x4c35853a3b4e647fd266f4de678dcc8fec410bf6"],
 ].map(([assetId, token]) => ({
   assetId,

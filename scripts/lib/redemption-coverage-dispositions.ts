@@ -344,17 +344,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     allowedRouteFamilyIfProven: null,
   }),
   reviewed({
-    id: "krwo-gimswap",
-    disposition: "needs-research",
-    reasonCode: "issuer-terms-missing",
-    blocker:
-      "GimSwap's public KRWO guide does not provide complete redemption eligibility, KRW output, fee, settlement, and capacity terms.",
-    rationale: "A centralized mint or reserve process cannot be scored until the holder's exit contract is explicit.",
-    evidenceNeeded: "Official issuer redemption terms and current app or API evidence for the KRWO-to-KRW route.",
-    evidenceUrls: ["https://docs.gimswap.com/gimswap-guide/what-is-krwo", "https://gimswap.com"],
-    allowedRouteFamilyIfProven: "offchain-issuer",
-  }),
-  reviewed({
     id: "luausd-lumi-finance",
     disposition: "needs-research",
     reasonCode: "capacity-unpublished",

@@ -4,7 +4,7 @@
     "asOfISO": "2026-05-16T21:20:16.676Z",
     "sourceUrl": "https://pharos.watch/datasets/depeg-history/latest.json",
     "methodologyLabel": "depeg-dews v6.0",
-    "rowCount": 2068,
+    "rowCount": 2066,
     "freshnessContract": "point-in-time sample; not guaranteed to track production freshness"
   },
   "rows": [
@@ -6456,21 +6456,6 @@
       "peakPrice": 0.926212,
       "recoveryPrice": 0.9993225953424966,
       "pegReference": 0.999837,
-      "source": "live"
-    },
-    {
-      "id": "88028",
-      "stablecoinId": "veur-vnx",
-      "symbol": "VEUR",
-      "direction": "below",
-      "peakDeviationBps": -259,
-      "startedAtISO": "2026-03-22T01:15:27.000Z",
-      "endedAtISO": "2026-03-22T05:00:29.000Z",
-      "durationSec": 13502,
-      "startPrice": 1.13,
-      "peakPrice": 1.13,
-      "recoveryPrice": 1.16,
-      "pegReference": 1.16,
       "source": "live"
     },
     {
@@ -26362,21 +26347,6 @@
       "recoveryPrice": 0.9956205283866304,
       "pegReference": 1,
       "source": "backfill"
-    },
-    {
-      "id": "24501",
-      "stablecoinId": "veur-vnx",
-      "symbol": "VEUR",
-      "direction": "above",
-      "peakDeviationBps": 333,
-      "startedAtISO": "2026-02-25T02:15:41.000Z",
-      "endedAtISO": "2026-02-25T04:15:40.000Z",
-      "durationSec": 7199,
-      "startPrice": 1.2172391434387826,
-      "peakPrice": 1.2172391434387826,
-      "recoveryPrice": 1.1949411556901097,
-      "pegReference": 1.1779612787411793,
-      "source": "live"
     },
     {
       "id": "24502",

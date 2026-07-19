@@ -5522,7 +5522,7 @@ Recent pending and dead-letter lists are capped at 20 rows; target history is ca
 
 ### `POST /api/admin-telegram-resend`
 
-Previews or queues an exact historical authoritative target replay. It never reconstructs current state and never calls Telegram synchronously. The handler verifies the target row against its target-plan JSON and SHA-256 digest; dead letters must resolve through the same authoritative `(source_event_id, pending_dedupe_key)` target. Legacy/incomplete history is refused rather than approximated.
+Previews or queues an exact historical authoritative target replay. It never reconstructs current state and never calls Telegram synchronously. The handler verifies the target row against its target-plan JSON and SHA-256 digest; dead letters must resolve through the same authoritative `(source_event_id, pending_dedupe_key)` target. Settled exact-replay bundles retain 14 days; dead-letter audit lasts 90 days, so older dead letters return an incomplete-history response instead of an approximation. Unresolved and `execution_unknown` bundles retain their evidence for the 90-day reconciliation window.
 
 **Authentication:** admin (`X-Pharos-Admin: 1` header required).
 

@@ -90,7 +90,6 @@
 {"id":"usdat-saturn","symbol":"USDat","name":"Saturn USDat","pegType":"peggedUSD","pegMechanism":"rwa-backed","price":0.9989660777204402,"circulatingUsd":104434893.5966411,"chainCount":1,"chains":"Ethereum"}
 {"id":"stac-securitize","symbol":"STAC","name":"Securitize Tokenized AAA CLO Fund","pegType":"peggedUSD","pegMechanism":"rwa-backed","price":1017.7825763973831,"circulatingUsd":101879725.14087734,"chainCount":1,"chains":"Ethereum"}
 {"id":"stcusd-cap","symbol":"stcUSD","name":"Staked Cap USD","pegType":"peggedUSD","pegMechanism":"rwa-backed","price":1.0622310763571257,"circulatingUsd":101700876.10438107,"chainCount":1,"chains":"Ethereum"}
-{"id":"mnee-mnee","symbol":"MNEE","name":"MNEE USD","pegType":"peggedUSD","pegMechanism":"fiat-backed","price":1.00020001,"circulatingUsd":101407188.54819955,"chainCount":1,"chains":"Ethereum"}
 {"id":"dusd-standx","symbol":"DUSD","name":"StandX DUSD","pegType":"peggedUSD","pegMechanism":"crypto-backed","price":0.999306,"circulatingUsd":100686274.32493159,"chainCount":2,"chains":"BSC;Solana"}
 {"id":"sofid-sofi","symbol":"SOFID","name":"SoFiUSD","pegType":"peggedUSD","pegMechanism":"rwa-backed","price":1,"circulatingUsd":100011704,"chainCount":1,"chains":"Ethereum"}
 {"id":"uusd-anything-labs","symbol":"UUSD","name":"Unity USD","pegType":"peggedUSD","pegMechanism":"crypto-backed","price":0.999273,"circulatingUsd":99927273.77657166,"chainCount":1,"chains":"BSC"}
@@ -290,7 +289,6 @@
 {"id":"xagm-matrixdock","symbol":"XAGm","name":"Matrixdock Silver","pegType":"peggedSILVER","pegMechanism":"rwa-backed","price":78.94,"circulatingUsd":3629155.429354413,"chainCount":1,"chains":"Ethereum"}
 {"id":"pht-pht","symbol":"PHT","name":"PHT Stablecoin","pegType":"peggedPHP","pegMechanism":"crypto-backed","price":0.016112421450387247,"circulatingUsd":3625486.5603063777,"chainCount":3,"chains":"Ethereum;Tron;Polygon"}
 {"id":"djed-coti","symbol":"DJED","name":"Djed StableCoin","pegType":"peggedUSD","pegMechanism":"algorithmic","price":1.000644796829843,"circulatingUsd":3275233.6412712513,"chainCount":1,"chains":"Cardano"}
-{"id":"veur-vnx","symbol":"VEUR","name":"VNX EURO","pegType":"peggedEUR","pegMechanism":"fiat-backed","price":1.1647049902974498,"circulatingUsd":3217235.5974140423,"chainCount":13,"chains":"Solana;Avalanche;Base;Stellar;Ethereum;Celo;Fraxtal;Polygon;Arbitrum;Tezos;Q Protocol;XRP Ledger;Internet Computer"}
 {"id":"26","symbol":"MUSD","name":"mStable USD","pegType":"peggedUSD","pegMechanism":"crypto-backed","price":1.0000989616443103,"circulatingUsd":3207542.9631165024,"chainCount":3,"chains":"Ethereum;Polygon;Gnosis"}
 {"id":"usdxl-last","symbol":"USDXL","name":"Last USD","pegType":"peggedUSD","pegMechanism":"crypto-backed","price":0.998216,"circulatingUsd":3192171.138127118,"chainCount":2,"chains":"Hyperliquid L1;HyperEVM"}
 {"id":"usr-resolv","symbol":"USR","name":"Resolv USD","pegType":"peggedUSD","pegMechanism":"crypto-backed","price":null,"circulatingUsd":3123169.3274418106,"chainCount":6,"chains":"Ethereum;Base;BSC;Soneium;Hyperliquid L1;Berachain"}
@@ -358,7 +356,6 @@
 {"id":"107","symbol":"CZUSD","name":"Czodiac USD","pegType":"peggedUSD","pegMechanism":"crypto-backed","price":0.9998795904917785,"circulatingUsd":906476.3158216582,"chainCount":1,"chains":"BSC"}
 {"id":"ftusd-flying-tulip","symbol":"ftUSD","name":"Flying Tulip USD","pegType":"peggedUSD","pegMechanism":"crypto-backed","price":0.999988,"circulatingUsd":868459.9588768134,"chainCount":2,"chains":"Ethereum;Sonic"}
 {"id":"xmd-metal-dollar","symbol":"XMD","name":"Metal Dollar","pegType":"peggedUSD","pegMechanism":"crypto-backed","price":1.009,"circulatingUsd":846035.2311692478,"chainCount":0,"chains":""}
-{"id":"usp-pareto-credit","symbol":"USP","name":"Pareto USP","pegType":"peggedUSD","pegMechanism":"crypto-backed","price":0.998253,"circulatingUsd":815058.5698157966,"chainCount":1,"chains":"Ethereum"}
 {"id":"gbpe-monerium","symbol":"GBPe","name":"Monerium GBP emoney","pegType":"peggedGBP","pegMechanism":"rwa-backed","price":1.35,"circulatingUsd":783651.2623904493,"chainCount":5,"chains":"Ethereum;Gnosis;Linea;Arbitrum;Base"}
 {"id":"ntbill-nest","symbol":"nTBILL","name":"Nest Treasury Vault","pegType":"peggedUSD","pegMechanism":"rwa-backed","price":1.045094,"circulatingUsd":765639.2648672869,"chainCount":2,"chains":"Ethereum;Plume"}
 {"id":"usdaf-asymmetry","symbol":"USDaf","name":"Asymmetry USDaf V2","pegType":"peggedUSD","pegMechanism":"crypto-backed","price":0.9891108333451187,"circulatingUsd":736039.3019058653,"chainCount":1,"chains":"Ethereum"}
@@ -435,7 +432,6 @@
 {"id":"ebusd-ebisu","symbol":"EBUSD","name":"EBUSD","pegType":"peggedUSD","pegMechanism":"crypto-backed","price":0.9979367137474362,"circulatingUsd":128099.55349524422,"chainCount":2,"chains":"Ethereum;Plasma"}
 {"id":"euroe-membrane","symbol":"EUROe","name":"EUROe Stablecoin","pegType":"peggedEUR","pegMechanism":"fiat-backed","price":0.9998795904917785,"circulatingUsd":122645.09253134471,"chainCount":7,"chains":"Solana;Polygon;Ethereum;Arbitrum;Avalanche;OP Mainnet;Concordium"}
 {"id":"144","symbol":"HYUSD","name":"High Yield USD","pegType":"peggedUSD","pegMechanism":"algorithmic","price":0.9998795904917785,"circulatingUsd":116561.39496311198,"chainCount":2,"chains":"Base;Ethereum"}
-{"id":"phpm-mento","symbol":"PHPm","name":"Mento Philippine Peso","pegType":"peggedPHP","pegMechanism":"crypto-backed","price":0.01620920543419551,"circulatingUsd":112412.60426892951,"chainCount":1,"chains":"Celo"}
 {"id":"124","symbol":"peUSD","name":"peg-eUSD","pegType":"peggedUSD","pegMechanism":"crypto-backed","price":0.9998795904917785,"circulatingUsd":108913.81764012504,"chainCount":2,"chains":"Ethereum;Arbitrum"}
 {"id":"jpym-mento","symbol":"JPYm","name":"Mento Japanese Yen","pegType":"peggedJPY","pegMechanism":"crypto-backed","price":0.00630791,"circulatingUsd":104059.8621313449,"chainCount":1,"chains":"Celo"}
 {"id":"233","symbol":"USDS","name":"TheStandard USD","pegType":"peggedUSD","pegMechanism":"crypto-backed","price":1,"circulatingUsd":100771.7492615901,"chainCount":1,"chains":"Arbitrum"}
@@ -498,7 +494,6 @@
 {"id":"207","symbol":"DYAD","name":"Dyad","pegType":"peggedUSD","pegMechanism":"crypto-backed","price":null,"circulatingUsd":16644.631395030392,"chainCount":1,"chains":"Ethereum"}
 {"id":"189","symbol":"btcUSD","name":"btcUSD","pegType":"peggedUSD","pegMechanism":"crypto-backed","price":0.9998795904917785,"circulatingUsd":14681.024176925615,"chainCount":1,"chains":"Ethereum"}
 {"id":"169","symbol":"GAI","name":"GAI Stablecoin","pegType":"peggedUSD","pegMechanism":"crypto-backed","price":0.9998795904917785,"circulatingUsd":14297.328062721686,"chainCount":1,"chains":"Manta"}
-{"id":"krwo-gimswap","symbol":"KRWO","name":"KRWO","pegType":"peggedKRW","pegMechanism":"rwa-backed","price":0.00067296,"circulatingUsd":13661.168273100917,"chainCount":2,"chains":"Klaytn;BSC"}
 {"id":"338","symbol":"FUSD","name":"Fuse Dollar V3","pegType":"peggedUSD","pegMechanism":"crypto-backed","price":0.991174,"circulatingUsd":13386.963845328357,"chainCount":1,"chains":"Fuse"}
 {"id":"137","symbol":"CDT","name":"Collateralized Debt Token","pegType":"peggedVAR","pegMechanism":"crypto-backed","price":1.002,"circulatingUsd":12937.120031891554,"chainCount":1,"chains":"Osmosis"}
 {"id":"163","symbol":"ULTRA","name":"PrismaLRT Ultra","pegType":"peggedUSD","pegMechanism":"crypto-backed","price":0.9998795904917785,"circulatingUsd":12912.979418560457,"chainCount":1,"chains":"Ethereum"}

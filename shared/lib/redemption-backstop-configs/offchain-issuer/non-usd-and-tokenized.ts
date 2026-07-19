@@ -14,7 +14,7 @@ import {
 } from "./shared";
 
 /** vchf-vnx and vgbp-vnx share an identical issuer-redemption shape and the
- *  VNX gitbook docs[]; veur-vnx differs (transparency docs) and stays inline. */
+ *  VNX gitbook docs[]. */
 const vnxGitbookBase: RedemptionBackstopConfig = {
   ...issuerBase,
   ...reviewedDirectRedemptionSupplyFull,
@@ -48,17 +48,6 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     docs: [
       sourceRef("CADC FAQ", "https://faq.paytrie.com/col/cadc-faqs", ["route", "capacity"]),
       sourceRef("Loon website", "https://loon.finance/", ["route"]),
-    ],
-  },
-  "veur-vnx": {
-    ...issuerBase,
-    ...reviewedDirectRedemptionSupplyFull,
-    costModel: undisclosedReviewedFee(
-      "Direct 1:1 redemption through VNX Commodities AG for verified users; public fee schedule not disclosed",
-    ),
-    docs: [
-      sourceRef("VNX transparency", "https://vnx.li/transparency/", ["route", "capacity"]),
-      sourceRef("VNX website", "https://vnx.li/", ["route"]),
     ],
   },
   ...expandIds(["vchf-vnx", "vgbp-vnx"], vnxGitbookBase),
@@ -199,14 +188,6 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
         "fees",
       ]),
     ],
-  },
-  "mnee-mnee": {
-    ...issuerBase,
-    ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee(
-      "Fiat and in-kind redemptions require at least US$100,000 and charge the greater of US$5,000 or 0.5%, with additional bank or network fees possible",
-    ),
-    docs: [sourceRef("MNEE terms", "https://www.mnee.io/terms", ["route", "capacity", "fees"])],
   },
   "sbc-brale": {
     ...issuerBase,

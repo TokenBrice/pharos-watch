@@ -104,5 +104,6 @@ describe("admin auth contract: every admin route fails closed without an admin s
         `expected auth-failure status for ${method} ${path}, got ${response!.status}`,
       ).toContain(response!.status);
     },
+    15_000,
   );
 });

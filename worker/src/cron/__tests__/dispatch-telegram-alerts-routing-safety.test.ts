@@ -139,6 +139,50 @@ describe("dispatchTelegramAlerts", () => {
     expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "12345" })]);
   });
 
+  it("keeps eventless degraded-safety runs on the queue path without capturing the subscriber cohort", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const harness = createDispatchHarness();
+    snapshots(harness, {
+      safety: { "usdc-circle": { grade: "B", score: 78, methodologyVersion: "7.09" } },
+      safetySource: makeSafetySourceCache(
+        { "usdc-circle": { grade: "C", score: 61, methodologyVersion: "7.09" } },
+        now - 60,
+        "legacy-generation",
+      ).value,
+    });
+    harness.seed({ ...global("12345", { safety: true }) });
+    const heldSafetySnapshot = readCacheValue(harness.sqlite, "alert:safety-snapshot");
+
+    const first = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+    const second = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+
+    expect(first).toMatchObject({
+      eventlessFastPath: true,
+      eventsDetected: { safety: 0 },
+      safetyAlertSourceState: "wrong-generation",
+      safetyAlertsSuppressed: true,
+      messagesSent: 0,
+    });
+    expect(second).toMatchObject({
+      eventlessFastPath: true,
+      safetyAlertsSuppressed: true,
+      messagesSent: 0,
+    });
+    expect(
+      harness.sqlite
+        .prepare(
+          `SELECT
+             (SELECT COUNT(*) FROM telegram_alert_source_events) AS sources,
+             (SELECT COUNT(*) FROM telegram_alert_planning_subscribers) AS subscribers,
+             (SELECT COUNT(*) FROM telegram_alert_target_plans) AS plans,
+             (SELECT COUNT(*) FROM telegram_alert_job_targets) AS targets`,
+        )
+        .get(),
+    ).toEqual({ sources: 0, subscribers: 0, plans: 0, targets: 0 });
+    expect(readCacheValue(harness.sqlite, "alert:safety-snapshot")).toBe(heldSafetySnapshot);
+    expect(telegramDeliveryTranscript).toEqual([]);
+  });
+
   it("fans out global all-stablecoin alert subscriptions without per-coin rows", async () => {
     const harness = createDispatchHarness();
     snapshots(harness, { dews: { "usdc-circle": "CALM" } });
@@ -357,7 +401,14 @@ describe("dispatchTelegramAlerts", () => {
     const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
 
     expect(metadata).toMatchObject({ eventsDetected: { safety: 0 }, subscribersNotified: 0 });
+    expect(metadata).toMatchObject({ eventlessFastPath: true });
     expect(telegramDeliveryTranscript).toEqual([]);
+    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_source_events").get()).toEqual({
+      count: 0,
+    });
+    expect(
+      harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_planning_subscribers").get(),
+    ).toEqual({ count: 0 });
     expect(readCacheValue(harness.sqlite, "alert:safety-snapshot")).toContain('"bold-liquity"');
     expect(readCacheValue(harness.sqlite, "alert:safety-snapshot")).toContain('"usdc-circle"');
   });

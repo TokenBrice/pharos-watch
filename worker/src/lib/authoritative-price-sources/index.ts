@@ -26,7 +26,6 @@ import { inheritedTrackedPriceProvider } from "./inherited-tracked";
 import { iusdInfinifiProvider } from "./infinifi-iusd";
 import { jusdStablecoinBridgeProvider } from "./jusd-stablecoin-bridge";
 import { kavaUsdxPricefeedProvider } from "./kava-pricefeed";
-import { mentoPhpmProvider } from "./mento-phpm";
 import { previewRedeemProvider } from "./preview-redeem";
 import { protocolParProvider } from "./protocol-par";
 import { usxStablePoolProvider } from "./usx-stable-pools";
@@ -45,7 +44,6 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   inheritedTrackedPriceProvider,
   protocolParProvider,
   azndCurvePoolProvider,
-  mentoPhpmProvider,
   usxStablePoolProvider,
   kavaUsdxPricefeedProvider,
   jusdStablecoinBridgeProvider,

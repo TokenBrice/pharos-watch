@@ -40,7 +40,6 @@ xusd-babelfish,XUSD,100,48,D,19,WATCH,35,primary
 usdrif-rif,USDRIF,100,64,C+,10,CALM,45,fallback
 dllr-sovryn,DLLR,100,62,C+,23,WATCH,30,primary
 fxd-fathom,FXD,100,62,C+,11,CALM,46,fallback
-usp-pareto-credit,USP,100,,NR,46,ALERT,21,primary
 usdq-quill,USDQ,100,,NR,0,CALM,,unobserved
 usdk-orki,USDK,100,,NR,7,CALM,,unobserved
 euroe-membrane,EUROe,100,,NR,20,WATCH,44,fallback
@@ -55,7 +54,6 @@ eurau-allunity,EURAU,100,66,B-,4,CALM,57,mixed
 euri-banking-circle,EURI,100,63,C+,1,CALM,38,mixed
 audm-macropod,AUDM,100,67,B-,12,CALM,51,mixed
 gbpm-mento,GBPm,100,,NR,17,WATCH,54,primary
-phpm-mento,PHPm,100,,NR,11,CALM,64,mixed
 cadm-mento,CADm,100,,NR,21,WATCH,54,mixed
 audm-mento,AUDm,100,,NR,14,CALM,58,primary
 copm-mento,COPm,100,,NR,12,CALM,63,mixed
@@ -144,7 +142,6 @@ hchf-hedera-swiss-franc,HCHF,100,,NR,13,CALM,,unobserved
 eurot-token-teknoloji,EUROT,100,,NR,2,CALM,54,fallback
 mxne-real-mxn,MXNe,100,,NR,17,WATCH,66,mixed
 jpyt-dephaser,JPYT,100,,NR,11,CALM,39,fallback
-krwo-gimswap,KRWO,100,,NR,10,CALM,39,fallback
 sofid-sofi,SOFID,100,64,C+,0,CALM,,unobserved
 usdt-tether,USDT,99,70,B,16,WATCH,65,mixed
 usd1-world-liberty-financial,USD1,99,68,B-,14,CALM,55,mixed
@@ -166,7 +163,6 @@ usdn-noble,USDN,99,62,C+,15,CALM,,unobserved
 usdu-usdu-finance,USDU,99,54,C-,12,CALM,31,mixed
 usdp-parallel,USDp,99,69,B-,5,CALM,68,mixed
 scusd-rings,SCUSD,99,55,C,4,CALM,50,mixed
-veur-vnx,VEUR,99,71,B,7,CALM,63,mixed
 zchf-frankencoin,ZCHF,99,67,B-,6,CALM,67,mixed
 susdt-spark,spUSDT,99,47,D,,,13,fallback
 steakusdt-steakhouse,steakUSDT,99,43,D,,,13,fallback
@@ -190,7 +186,6 @@ usdf-falcon,USDf,97,63,C+,16,WATCH,57,mixed
 rlusd-ripple,RLUSD,97,73,B,6,CALM,70,mixed
 usd0-usual,USD0,97,53,C-,21,WATCH,50,mixed
 crvusd-curve,crvUSD,97,77,B+,24,WATCH,77,mixed
-mnee-mnee,MNEE,97,61,C+,3,CALM,43,fallback
 xusd-straitsx,XUSD,97,65,B-,6,CALM,38,mixed
 uty-xsy,UTY,97,38,F,4,CALM,34,fallback
 usdcv-societe-generale-forge,USDCV,97,67,B-,12,CALM,55,primary

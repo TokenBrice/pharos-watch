@@ -694,7 +694,6 @@ export const BLACKLIST_STABLECOINS = [
   "USDX",
   "AID",
   "TGBP",
-  "MNEE",
   "EURC",
   "BUIDL",
   "USDP",

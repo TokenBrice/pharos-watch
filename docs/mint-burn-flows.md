@@ -124,7 +124,6 @@ The table below is representative, not exhaustive. The complete active registry 
 | avUSD | avusd-avant | 18 | Extended | Transfer |
 | pmUSD | pmusd-precious-metals | 18 | Extended | Transfer |
 | USDz | usdz-anzen | 18 | Extended | Transfer |
-| MNEE | mnee-mnee | 18 | Extended | Transfer |
 | TBILL | tbill-openeden | 6 | Extended | Transfer |
 | USG | usg-tangent | 18 | Extended | Transfer |
 | USDO | usdo-openeden | 18 | Extended | Transfer |

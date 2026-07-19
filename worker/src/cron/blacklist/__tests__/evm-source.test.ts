@@ -95,13 +95,13 @@ const A7A5_CONFIG: ContractEventConfig = {
   ],
 };
 
-const MNEE_CONFIG: ContractEventConfig = {
-  configKey: "ethereum-0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf",
+const INDEXED_AMOUNT_CONFIG: ContractEventConfig = {
+  configKey: "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48-indexed-amount-fixture",
   chain: { chainId: "ethereum", chainName: "Ethereum", evmChainId: 1, explorerUrl: "https://etherscan.io", type: "evm" },
-  stablecoinId: "mnee-mnee",
-  stablecoin: "MNEE",
-  contractAddress: "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf",
-  decimals: 18,
+  stablecoinId: "usdc-circle",
+  stablecoin: "USDC",
+  contractAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+  decimals: 6,
   events: [
     {
       signature: "FundsConfiscated(address,uint256,address)",
@@ -264,9 +264,9 @@ describe("parseEvmLogs", () => {
 
   it("extracts indexed uint256 amounts from configured amount topics", () => {
     const confiscatedAddr = "0x8888888888888888888888888888888888888888";
-    const amountTopic = `0x${(5n * 10n ** 18n).toString(16).padStart(64, "0")}`;
+    const amountTopic = `0x${(5n * 10n ** 6n).toString(16).padStart(64, "0")}`;
     const logs = [{
-      address: "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf",
+      address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       topics: [
         "0x5a592536e075e29026312219123e24de374314962469686d4c992d3c7292c1b4",
         `0x000000000000000000000000${confiscatedAddr.slice(2)}`,
@@ -275,16 +275,16 @@ describe("parseEvmLogs", () => {
       ],
       data: "0x",
       blockNumber: "0x1234",
-      transactionHash: "0xmnee",
+      transactionHash: "0xindexed",
       logIndex: "0x4",
       timeStamp: "0x65000000",
     }];
 
-    const rows = parseEvmLogs(MNEE_CONFIG, logs);
+    const rows = parseEvmLogs(INDEXED_AMOUNT_CONFIG, logs);
 
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
-      stablecoin: "MNEE",
+      stablecoin: "USDC",
       event_type: "destroy",
       address: confiscatedAddr,
       amount_native: 5,

@@ -50,7 +50,6 @@
 {"stablecoinId":"407","symbol":"UUSD","pegScore":null,"safetyScore":null,"safetyGrade":null,"dewsScore":null,"dewsBand":null,"liquidityScore":null,"coverageClass":null}
 {"stablecoinId":"315","symbol":"USPD","pegScore":null,"safetyScore":null,"safetyGrade":null,"dewsScore":null,"dewsBand":null,"liquidityScore":null,"coverageClass":null}
 {"stablecoinId":"cusd-cap","symbol":"CUSD","pegScore":null,"safetyScore":67,"safetyGrade":"B-","dewsScore":9,"dewsBand":"CALM","liquidityScore":14,"coverageClass":"fallback"}
-{"stablecoinId":"mnee-mnee","symbol":"MNEE","pegScore":null,"safetyScore":63,"safetyGrade":"C+","dewsScore":33,"dewsBand":"WATCH","liquidityScore":null,"coverageClass":"unobserved"}
 {"stablecoinId":"dola-inverse-finance","symbol":"DOLA","pegScore":null,"safetyScore":54,"safetyGrade":"C-","dewsScore":19,"dewsBand":"WATCH","liquidityScore":51,"coverageClass":"mixed"}
 {"stablecoinId":"405","symbol":"USDA","pegScore":null,"safetyScore":null,"safetyGrade":null,"dewsScore":null,"dewsBand":null,"liquidityScore":null,"coverageClass":null}
 {"stablecoinId":"cgusd-cygnus-finance","symbol":"cgUSD","pegScore":null,"safetyScore":50,"safetyGrade":"C-","dewsScore":10,"dewsBand":"CALM","liquidityScore":null,"coverageClass":"unobserved"}
@@ -185,7 +184,6 @@
 {"stablecoinId":"107","symbol":"CZUSD","pegScore":null,"safetyScore":null,"safetyGrade":null,"dewsScore":null,"dewsBand":null,"liquidityScore":null,"coverageClass":null}
 {"stablecoinId":"92","symbol":"PINA","pegScore":null,"safetyScore":null,"safetyGrade":null,"dewsScore":null,"dewsBand":null,"liquidityScore":null,"coverageClass":null}
 {"stablecoinId":"192","symbol":"USDA","pegScore":null,"safetyScore":null,"safetyGrade":null,"dewsScore":null,"dewsBand":null,"liquidityScore":null,"coverageClass":null}
-{"stablecoinId":"usp-pareto-credit","symbol":"USP","pegScore":null,"safetyScore":null,"safetyGrade":null,"dewsScore":20,"dewsBand":"WATCH","liquidityScore":40,"coverageClass":"primary"}
 {"stablecoinId":"scusd-rings","symbol":"SCUSD","pegScore":null,"safetyScore":55,"safetyGrade":"C","dewsScore":8,"dewsBand":"CALM","liquidityScore":50,"coverageClass":"mixed"}
 {"stablecoinId":"43","symbol":"ZUSD","pegScore":null,"safetyScore":null,"safetyGrade":null,"dewsScore":null,"dewsBand":null,"liquidityScore":null,"coverageClass":null}
 {"stablecoinId":"dusd-alto","symbol":"DUSD","pegScore":null,"safetyScore":null,"safetyGrade":null,"dewsScore":8,"dewsBand":"CALM","liquidityScore":45,"coverageClass":"mixed"}
@@ -345,7 +343,6 @@
 {"stablecoinId":"cadc-cad-coin","symbol":"CADC","pegScore":null,"safetyScore":54,"safetyGrade":"C-","dewsScore":7,"dewsBand":"CALM","liquidityScore":74,"coverageClass":"primary"}
 {"stablecoinId":"aeur-anchored-coins","symbol":"AEUR","pegScore":null,"safetyScore":49,"safetyGrade":"D","dewsScore":21,"dewsBand":"WATCH","liquidityScore":43,"coverageClass":"fallback"}
 {"stablecoinId":"vchf-vnx","symbol":"VCHF","pegScore":null,"safetyScore":75,"safetyGrade":"B+","dewsScore":17,"dewsBand":"WATCH","liquidityScore":68,"coverageClass":"mixed"}
-{"stablecoinId":"veur-vnx","symbol":"VEUR","pegScore":null,"safetyScore":64,"safetyGrade":"C+","dewsScore":24,"dewsBand":"WATCH","liquidityScore":39,"coverageClass":"primary"}
 {"stablecoinId":"161","symbol":"EURD","pegScore":null,"safetyScore":null,"safetyGrade":null,"dewsScore":null,"dewsBand":null,"liquidityScore":null,"coverageClass":null}
 {"stablecoinId":"audd-novatti","symbol":"AUDD","pegScore":null,"safetyScore":63,"safetyGrade":"C+","dewsScore":10,"dewsBand":"CALM","liquidityScore":54,"coverageClass":"mixed"}
 {"stablecoinId":"167","symbol":"fETH","pegScore":null,"safetyScore":null,"safetyGrade":null,"dewsScore":null,"dewsBand":null,"liquidityScore":null,"coverageClass":null}
@@ -375,7 +372,6 @@
 {"stablecoinId":"352","symbol":"BRTH","pegScore":null,"safetyScore":null,"safetyGrade":null,"dewsScore":null,"dewsBand":null,"liquidityScore":null,"coverageClass":null}
 {"stablecoinId":"jpyc-jpyc","symbol":"JPYC","pegScore":null,"safetyScore":65,"safetyGrade":"B-","dewsScore":18,"dewsBand":"WATCH","liquidityScore":58,"coverageClass":"mixed"}
 {"stablecoinId":"gbpm-mento","symbol":"GBPm","pegScore":null,"safetyScore":null,"safetyGrade":null,"dewsScore":21,"dewsBand":"WATCH","liquidityScore":50,"coverageClass":"primary"}
-{"stablecoinId":"phpm-mento","symbol":"PHPm","pegScore":null,"safetyScore":null,"safetyGrade":null,"dewsScore":10,"dewsBand":"CALM","liquidityScore":65,"coverageClass":"primary"}
 {"stablecoinId":"cadm-mento","symbol":"CADm","pegScore":null,"safetyScore":null,"safetyGrade":null,"dewsScore":null,"dewsBand":null,"liquidityScore":14,"coverageClass":"fallback"}
 {"stablecoinId":"audm-mento","symbol":"AUDm","pegScore":null,"safetyScore":null,"safetyGrade":null,"dewsScore":6,"dewsBand":"CALM","liquidityScore":78,"coverageClass":"primary"}
 {"stablecoinId":"copm-mento","symbol":"COPm","pegScore":null,"safetyScore":null,"safetyGrade":null,"dewsScore":14,"dewsBand":"CALM","liquidityScore":34,"coverageClass":"fallback"}
@@ -560,7 +556,6 @@
 {"stablecoinId":"eurot-token-teknoloji","symbol":"EUROT","pegScore":null,"safetyScore":null,"safetyGrade":null,"dewsScore":5,"dewsBand":"CALM","liquidityScore":51,"coverageClass":"fallback"}
 {"stablecoinId":"mxne-real-mxn","symbol":"MXNe","pegScore":null,"safetyScore":null,"safetyGrade":null,"dewsScore":23,"dewsBand":"WATCH","liquidityScore":59,"coverageClass":"primary"}
 {"stablecoinId":"jpyt-dephaser","symbol":"JPYT","pegScore":null,"safetyScore":null,"safetyGrade":null,"dewsScore":14,"dewsBand":"CALM","liquidityScore":43,"coverageClass":"fallback"}
-{"stablecoinId":"krwo-gimswap","symbol":"KRWO","pegScore":null,"safetyScore":null,"safetyGrade":null,"dewsScore":17,"dewsBand":"WATCH","liquidityScore":39,"coverageClass":"fallback"}
 {"stablecoinId":"onyc-onre","symbol":"ONyc","pegScore":null,"safetyScore":56,"safetyGrade":"C","dewsScore":null,"dewsBand":null,"liquidityScore":52,"coverageClass":"primary"}
 {"stablecoinId":"hbusdt-hyperbeat","symbol":"hbUSDT","pegScore":null,"safetyScore":53,"safetyGrade":"C-","dewsScore":null,"dewsBand":null,"liquidityScore":48,"coverageClass":"fallback"}
 {"stablecoinId":"witry-brix","symbol":"wiTRY","pegScore":null,"safetyScore":50,"safetyGrade":"C-","dewsScore":null,"dewsBand":null,"liquidityScore":null,"coverageClass":"unobserved"}

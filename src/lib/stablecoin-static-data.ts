@@ -2,23 +2,23 @@ import type { PegCurrency } from "@shared/types";
 
 // Static projection of the stablecoin registry for global shell and metadata copy.
 // Keep in sync with shared/lib/stablecoins via src/lib/__tests__/stablecoin-static-data.test.ts.
-export const TRACKED_STABLECOIN_COUNT = 411;
-export const ACTIVE_STABLECOIN_COUNT = 343;
-export const CORE_AGGREGATE_STABLECOIN_COUNT = 266;
+export const TRACKED_STABLECOIN_COUNT = 406;
+export const ACTIVE_STABLECOIN_COUNT = 337;
+export const CORE_AGGREGATE_STABLECOIN_COUNT = 261;
 export const ACTIVE_VARIANT_STABLECOIN_COUNT = 47;
-export const ACTIVE_STABLE_VALUE_INVESTMENT_COUNT = 30;
+export const ACTIVE_STABLE_VALUE_INVESTMENT_COUNT = 29;
 export const PRE_LAUNCH_STABLECOIN_COUNT = 33;
 export const FROZEN_STABLECOIN_COUNT = 18;
 export const DEAD_STABLECOIN_COUNT = 88;
 
 export const ACTIVE_PEG_CURRENCY_COUNTS = {
-  USD: 250,
+  USD: 248,
   RUB: 1,
-  EUR: 18,
+  EUR: 17,
   BRL: 6,
   VAR: 3,
   CHF: 5,
-  GBP: 6,
+  GBP: 5,
   SGD: 1,
   JPY: 4,
   AUD: 5,
@@ -28,7 +28,7 @@ export const ACTIVE_PEG_CURRENCY_COUNTS = {
   TRY: 2,
   GOLD: 12,
   SILVER: 2,
-  PHP: 2,
+  PHP: 1,
   OTHER: 6,
   CAD: 4,
   ZAR: 2,
@@ -36,7 +36,7 @@ export const ACTIVE_PEG_CURRENCY_COUNTS = {
   NGN: 1,
   ARS: 1,
   MYR: 1,
-  KRW: 2,
+  KRW: 1,
   XOF: 1,
 } as const satisfies Partial<Record<PegCurrency, number>>;
 
@@ -158,7 +158,6 @@ export const TRACKED_STABLECOIN_IDS = [
   "usdz-anzen",
   "cash-phantom",
   "usdkg-gold-dollar",
-  "mnee-mnee",
   "pusd-polymarket",
   "tbill-openeden",
   "fpi-frax",
@@ -327,14 +326,12 @@ export const TRACKED_STABLECOIN_IDS = [
   "jpym-mento",
   "chfm-mento",
   "brlm-mento",
-  "phpm-mento",
   "kesm-mento",
   "copm-mento",
   "cadm-mento",
   "audm-mento",
   "ghsm-mento",
   "zarm-mento",
-  "veur-vnx",
   "eurr-stablr",
   "europ-schuman",
   "eurq-quantoz",
@@ -402,7 +399,6 @@ export const TRACKED_STABLECOIN_IDS = [
   "djed-coti",
   "pathusd-bridge",
   "xai-silo-finance",
-  "usp-pareto-credit",
   "fxd-fathom",
   "usdv-solomon",
   "ussd-sonic-labs",
@@ -445,7 +441,6 @@ export const TRACKED_STABLECOIN_IDS = [
   "wmxn-ripio",
   "xofm-mento",
   "euro3-3a-dao",
-  "krwo-gimswap",
   "usdb-bridge",
   "hkdap-anchorpoint",
   "hkd-hsbc",
@@ -500,6 +495,7 @@ const NON_ACTIVE_STABLECOIN_ID_SET: ReadonlySet<string> = new Set([
   "tbill-openeden",
   "gramg-token-teknoloji",
   "grams-token-teknoloji",
+  "vgbp-vnx",
   "cetes-etherfuse",
   "jusd-jusd-stable-token",
   "vndc-jade-labs",

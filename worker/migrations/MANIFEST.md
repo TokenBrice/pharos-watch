@@ -159,6 +159,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0213     | `0213_terminalize_published_dex_attempt_1784229000.sql`     | Terminalize one reviewed stale DEX job-attempt row after exact generation evidence proves all expected rows were published                              |
 | 0214     | `0214_dex_price_publication_staging.sql`                    | Add generation-keyed, retention-indexed DEX price staging so replay-safe bounded batches can replace the public price table atomically                  |
 | 0215     | `0215_cngn_ddr_events_90664_90666_link.sql`                 | Link two reviewed cNGN live flaps after the 0212 repair, advance ordered lineage, and close their durable DDR repair tasks                               |
+| 0216     | `0216_telegram_authoritative_retention_indexes.sql`          | Add terminal-source and job-target-item indexes for bounded authoritative Telegram workflow and replay retention                                        |
 
 ## Retired Individual Migrations
 
@@ -257,6 +258,7 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0213_terminalize_published_dex_attempt_1784229000.sql`: keep the reviewed terminal ledger repair during rollback. The row records a generation already proven fully published and changes no DEX payload or slot artifact; reopening it would recreate false active-attempt telemetry and requires a new evidence-backed corrective migration.
 - `0214_dex_price_publication_staging.sql`: roll back publication behavior by restoring the prior Worker. The additive staging table is ignored by older Workers and can remain in place; do not drop it in a normal deploy migration.
 - `0215_cngn_ddr_events_90664_90666_link.sql`: roll back DDR publication behavior by restoring the prior Worker. Keep the append-only repair authorizations, consumptions, links, and ordered revisions as reviewed provenance; do not recreate the closed tasks or detach events 90664 and 90666 without a separate corrective migration.
+- `0216_telegram_authoritative_retention_indexes.sql`: roll back retention behavior by restoring the prior Worker. Keep the additive indexes; older Workers ignore them and dropping them would only add D1 scan pressure during rollback.
 
 ## Rollback Procedure
 

@@ -93,7 +93,6 @@ uusd-anything-labs,UUSD,Unity USD,peggedUSD,crypto-backed,0.9987666555,99933964.
 fpi-frax,FPI,Frax Price Index,peggedVAR,algorithmic,1.1420036055999998,96779410.42981853,2,Ethereum;ZKsync Era
 cusd-cap,CUSD,Cap cUSD,peggedUSD,crypto-backed,0.99999963,91768888.03568967,3,Ethereum;MegaETH;Tempo
 savusd-avant,savUSD,Avant Staked USD,peggedUSD,crypto-backed,1.1825379424149631,91666974.59126742,10,Avalanche;Ethereum;Linea;Plasma;Berachain;BSC;Monad;Katana;MegaETH;Sei
-mnee-mnee,MNEE,MNEE USD,peggedUSD,fiat-backed,,91462198.0123,1,Ethereum
 dola-inverse-finance,DOLA,Dola,peggedUSD,crypto-backed,0.995619,90588579.11338168,8,Ethereum;Arbitrum;BSC;Fantom;Base;OP Mainnet;Avalanche;Polygon
 wm-m0,wM,Wrapped M,peggedUSD,rwa-backed,0.999876,87683819.8197892,5,Ethereum;Arbitrum;Plume;Base;Solana
 usda-alpha-partner,USDA,Alpha Partner USDA,peggedUSD,crypto-backed,0.9749397337,84991986.08050065,1,BSC
@@ -357,7 +356,6 @@ usdglo-glo,USDGLO,Glo Dollar,peggedUSD,fiat-backed,0.9999325240104295,1132945.45
 usdh-hubble,USDH,USDH,peggedUSD,crypto-backed,0.992704,1126345.2672342595,1,Solana
 aeur-anchored-coins,AEUR,Anchored Coins AEUR,peggedEUR,fiat-backed,1.117990454919679,1117775.589919203,2,BSC;Ethereum
 40,RAI,Rai Reflex Index,peggedVAR,crypto-backed,1.99,1082748.4647394284,7,Ethereum;OP Mainnet;Polygon;Arbitrum;Gnosis;Avalanche;Loopring
-veur-vnx,VEUR,VNX EURO,peggedEUR,fiat-backed,,1065870.44,13,Tezos;Base;Fraxtal;Q Protocol;Ethereum;Stellar;Avalanche;Polygon;Solana;Celo;Arbitrum;XRP Ledger;Internet Computer
 idrx-idrx,IDRX,IDRX,peggedIDR,rwa-backed,0.000056279999999999996,1034928.4441140427,8,Polygon;Base;BSC;Klaytn;Gnosis;Etherlink;World Chain;Solana
 qcad-stablecorp,QCAD,Stablecorp QCAD,peggedCAD,rwa-backed,0.7045,1022229.5,2,Ethereum;Base
 susd-solayer,sUSD,Solayer USD,peggedUSD,fiat-backed,1.11,984712.5678529951,1,Solana
@@ -371,7 +369,6 @@ srusd-reservoir,srUSD,Savings rUSD,peggedUSD,rwa-backed,1.1500061570912523,91175
 192,USDA,USDA,peggedUSD,crypto-backed,,902663.3647466673,1,Ethereum
 xmd-metal-dollar,XMD,Metal Dollar,peggedUSD,crypto-backed,0.989776,828007.5752932911,0,
 cadd-cad-digital,CADD,CAD Digital,peggedCAD,fiat-backed,0.703334,822509.3463877891,2,Base;Ethereum
-usp-pareto-credit,USP,Pareto USP,peggedUSD,crypto-backed,1,758368.5225979175,1,Ethereum
 43,ZUSD,ZUSD,peggedUSD,fiat-backed,0.9999269953734929,726795.5220594979,5,Stellar;Ethereum;Solana;OP Mainnet;Arbitrum
 dusd-alto,DUSD,Alto DUSD,peggedUSD,crypto-backed,0.9987026628458069,711522.5414572137,1,Ethereum
 fxd-fathom,FXD,Fathom Dollar,peggedUSD,crypto-backed,0.898929,707442.9828096376,1,XDC
@@ -448,7 +445,6 @@ usdq-quill,USDQ,Quill USD,peggedUSD,crypto-backed,1,132089.68713056666,1,Scroll
 euroe-membrane,EUROe,EUROe Stablecoin,peggedEUR,fiat-backed,0.9999269953734929,122649.52311464386,7,Solana;Polygon;Ethereum;Arbitrum;Avalanche;OP Mainnet;Concordium
 chfm-mento,CHFm,Mento Swiss Franc,peggedCHF,crypto-backed,1.24,116541.86292976886,2,Celo;Monad
 144,HYUSD,High Yield USD,peggedUSD,algorithmic,0.9999269953734929,115069.56144747332,2,Base;Ethereum
-phpm-mento,PHPm,Mento Philippine Peso,peggedPHP,crypto-backed,0.01626442352666332,107688.43334482524,1,Celo
 124,peUSD,peg-eUSD,peggedUSD,crypto-backed,0.9999269953734929,107209.14985356871,2,Ethereum;Arbitrum
 188,USC,Orby USC,peggedUSD,crypto-backed,1.011,105900.75493152131,1,Cronos
 233,USDS,TheStandard USD,peggedUSD,crypto-backed,0.99944,100771.7492615901,1,Arbitrum
@@ -505,7 +501,6 @@ euro3-3a-dao,EURO3,EURO3,peggedEUR,crypto-backed,0.9999269953734929,22864.551776
 74,MONEY,Moremoney USD,peggedUSD,crypto-backed,0.71352,16581.992973365803,1,Avalanche
 169,GAI,GAI Stablecoin,peggedUSD,crypto-backed,0.9999269953734929,14298.005907486287,1,Manta
 177,UNO,UNO,peggedUSD,fiat-backed,0.740399366255494,13716.310311697687,1,Starknet
-krwo-gimswap,KRWO,KRWO,peggedKRW,rwa-backed,0.00065585,13313.7225536928,2,Klaytn;BSC
 189,btcUSD,btcUSD,peggedUSD,crypto-backed,0.9999269953734929,13191.356930908778,1,Ethereum
 163,ULTRA,PrismaLRT Ultra,peggedUSD,crypto-backed,0.9999269953734929,12913.591630538516,1,Ethereum
 267,MEAD,Mead,peggedUSD,crypto-backed,,12874.368771265652,1,Berachain

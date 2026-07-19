@@ -172,7 +172,6 @@ const FRESH_MEASUREMENT_ASSETS = [
   "ghsm-mento",
   "jpym-mento",
   "kesm-mento",
-  "phpm-mento",
   "reusd-resupply",
   "usdq-quill",
   "zarm-mento",
@@ -209,7 +208,6 @@ describe("fresh multi-family measurement evidence", () => {
       "ghsm-mento",
       "jpym-mento",
       "kesm-mento",
-      "phpm-mento",
       "zarm-mento",
       "gho-aave",
     ] as const) {

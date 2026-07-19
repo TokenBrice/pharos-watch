@@ -182,7 +182,7 @@ describe("Telegram Mini App shared contract", () => {
   it("derives one shared catalog version from the generated bundled catalog", () => {
     expect(TelegramMiniAppCatalogSchema.parse(TELEGRAM_MINI_APP_CATALOG).searchableCoins.length).toBeGreaterThan(300);
     expect(TELEGRAM_MINI_APP_CATALOG_VERSION).toMatch(/^catalog-v1-[0-9a-f]{8}$/);
-    expect(JSON.stringify(TELEGRAM_MINI_APP_CATALOG).length).toBeGreaterThan(40_000);
+    expect(JSON.stringify(TELEGRAM_MINI_APP_CATALOG).length).toBeGreaterThan(39_000);
   });
 
   it("rejects unknown preset ids at catalog and mutable-state boundaries", () => {
