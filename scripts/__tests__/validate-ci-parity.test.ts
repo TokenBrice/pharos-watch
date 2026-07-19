@@ -623,8 +623,12 @@ describe("validate-ci parity", () => {
     expect(resolveDeployment?.run).toContain("wrangler pages deployment list");
     expect(resolveDeployment?.run).toContain('deployment?.Environment !== "Production"');
     expect(resolveDeployment?.run).toContain('deployment?.Branch !== "main"');
+    expect(marker?.env).toEqual({
+      DEPLOYMENT_URL: "${{ steps.pages-deployment.outputs.deployment_url }}",
+    });
     expect(marker?.run).toContain("wait-pages-release-marker.mjs");
-    expect(marker?.run).toContain("steps.pages-deployment.outputs.deployment_url");
+    expect(marker?.run).toContain('"${DEPLOYMENT_URL}/__pharos_release.json"');
+    expect(marker?.run).not.toContain("steps.pages-deployment.outputs.deployment_url");
     expect(marker?.run).toContain("GITHUB_STEP_SUMMARY");
     expect(marker?.run).not.toContain("pharos.watch");
 
