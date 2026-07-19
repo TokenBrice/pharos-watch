@@ -34,6 +34,12 @@ type StaleSlotLeaseRow = {
   lease_until: number;
 };
 
+export interface StaleSlotReconciliationFence {
+  owner: string;
+  generation: number;
+  state: "running" | "reconciling";
+}
+
 export interface StaleSlotReconciliationSummary {
   syntheticCronRuns: number;
   jobAttemptsAbandoned: number;
@@ -97,6 +103,7 @@ export async function hasActiveChildLeaseForScheduledSlot(
   slotKey: string,
   slotStartedAt: number,
   nowSec: number,
+  fence?: StaleSlotReconciliationFence,
 ): Promise<boolean> {
   const jobs = getExpectedJobsForScheduledSlot(slotKey);
   if (jobs.length === 0) return false;
@@ -117,6 +124,30 @@ export async function hasActiveChildLeaseForScheduledSlot(
       .first<{ active: number }>(),
   );
   return row?.active === 1;
+}
+
+async function isSlotFenceCurrent(
+  db: D1Database,
+  slot: StaleSlotExecutionArtifact,
+  fence?: StaleSlotReconciliationFence,
+): Promise<boolean> {
+  if (!fence) return true;
+  const row = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT 1 AS current
+           FROM cron_slot_executions
+          WHERE slot_key = ?
+            AND slot_started_at = ?
+            AND state = ?
+            AND execution_owner = ?
+            AND execution_generation = ?
+          LIMIT 1`,
+      )
+      .bind(slot.slot_key, slot.slot_started_at, fence.state, fence.owner, fence.generation)
+      .first<{ current: number }>(),
+  );
+  return row?.current === 1;
 }
 
 async function getCronLeaseForJob(db: D1Database, job: string): Promise<StaleSlotLeaseRow | null> {
@@ -179,6 +210,7 @@ async function insertSyntheticStaleCronRun(
   progress: StaleSlotProgressRow,
   lease: StaleSlotLeaseRow,
   nowSec: number,
+  fence?: StaleSlotReconciliationFence,
 ): Promise<boolean> {
   const startedAt = progress.started_at || slot.started_at || slot.slot_started_at;
   const durationMs = Math.max(0, nowSec - startedAt) * 1000;
@@ -222,6 +254,19 @@ async function insertSyntheticStaleCronRun(
           WHERE NOT EXISTS (
             SELECT 1 FROM cron_runs WHERE job = ? AND slot_started_at = ?
           )
+            AND NOT EXISTS (
+              SELECT 1 FROM cron_run_progress WHERE job = ? AND slot_started_at = ?
+            )
+            AND (
+              ? IS NULL OR EXISTS (
+                SELECT 1 FROM cron_slot_executions
+                 WHERE slot_key = ?
+                   AND slot_started_at = ?
+                   AND state = ?
+                   AND execution_owner = ?
+                   AND execution_generation = ?
+              )
+            )
          ON CONFLICT DO NOTHING`,
       )
       .bind(
@@ -238,6 +283,14 @@ async function insertSyntheticStaleCronRun(
         slot.worker_version ?? null,
         progress.job,
         slot.slot_started_at,
+        progress.job,
+        slot.slot_started_at,
+        fence?.owner ?? null,
+        slot.slot_key,
+        slot.slot_started_at,
+        fence?.state ?? null,
+        fence?.owner ?? null,
+        fence?.generation ?? null,
       )
       .run(),
   );
@@ -270,6 +323,7 @@ async function insertSyntheticNotStartedCronRun(
   slot: StaleSlotExecutionArtifact,
   job: string,
   nowSec: number,
+  fence?: StaleSlotReconciliationFence,
 ): Promise<boolean> {
   const idempotencyKey = ["scheduled-slot-not-started", slot.slot_key, slot.slot_started_at, job].join(":");
   const descriptor = getScheduledTaskDescriptor(slot.slot_key as CronScheduleKey, job);
@@ -306,6 +360,19 @@ async function insertSyntheticNotStartedCronRun(
           WHERE NOT EXISTS (
             SELECT 1 FROM cron_runs WHERE job = ? AND slot_started_at = ?
           )
+            AND NOT EXISTS (
+              SELECT 1 FROM cron_run_progress WHERE job = ? AND slot_started_at = ?
+            )
+            AND (
+              ? IS NULL OR EXISTS (
+                SELECT 1 FROM cron_slot_executions
+                 WHERE slot_key = ?
+                   AND slot_started_at = ?
+                   AND state = ?
+                   AND execution_owner = ?
+                   AND execution_generation = ?
+              )
+            )
          ON CONFLICT DO NOTHING`,
       )
       .bind(
@@ -321,6 +388,14 @@ async function insertSyntheticNotStartedCronRun(
         slot.worker_version ?? null,
         job,
         slot.slot_started_at,
+        job,
+        slot.slot_started_at,
+        fence?.owner ?? null,
+        slot.slot_key,
+        slot.slot_started_at,
+        fence?.state ?? null,
+        fence?.owner ?? null,
+        fence?.generation ?? null,
       )
       .run(),
   );
@@ -352,6 +427,7 @@ async function reconcileStaleSlotArtifacts(
   db: D1Database,
   slot: StaleSlotExecutionArtifact,
   nowSec: number,
+  fence?: StaleSlotReconciliationFence,
 ): Promise<StaleSlotReconciliationSummary> {
   const summary: StaleSlotReconciliationSummary = {
     syntheticCronRuns: 0,
@@ -371,12 +447,30 @@ async function reconcileStaleSlotArtifacts(
   const progressRowsWithoutOwner = progressRows.filter((progress) => !progress.lease_owner);
   const progressJobs = new Set(progressRows.map((progress) => progress.job));
   const noProgressJobs = expectedJobs.filter((job) => !progressJobs.has(job));
-  if (noProgressJobs.length > 0) {
+  const stillMissingProgressJobs: string[] = [];
+  for (const job of noProgressJobs) {
+    const row = await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `SELECT 1 AS present
+             FROM cron_run_progress
+            WHERE job = ?
+              AND slot_started_at = ?
+            LIMIT 1`,
+        )
+        .bind(job, slot.slot_started_at)
+        .first<{ present: number }>(),
+    );
+    if (!row && (await isSlotFenceCurrent(db, slot, fence))) {
+      stillMissingProgressJobs.push(job);
+    }
+  }
+  if (stillMissingProgressJobs.length > 0) {
     try {
       summary.jobAttemptsAbandoned += await markWorkerJobAttemptsAbandonedForSlot(db, {
         scheduleKey: slot.slot_key,
         slotStartedAt: slot.slot_started_at,
-        jobs: noProgressJobs,
+        jobs: stillMissingProgressJobs,
         nowSec,
         error: STALE_SLOT_ERROR,
         metadata: {
@@ -396,14 +490,31 @@ async function reconcileStaleSlotArtifacts(
     }
   }
 
-  for (const job of noProgressJobs) {
-    if (await insertSyntheticNotStartedCronRun(db, slot, job, nowSec)) {
+  for (const job of stillMissingProgressJobs) {
+    if (await insertSyntheticNotStartedCronRun(db, slot, job, nowSec, fence)) {
       summary.notStartedCronRuns++;
       summary.syntheticCronRuns++;
     }
   }
 
   for (const progress of progressRowsWithoutOwner) {
+    if (!(await isSlotFenceCurrent(db, slot, fence))) continue;
+    const progressDelete = await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `DELETE FROM cron_run_progress
+           WHERE job = ?
+             AND slot_started_at = ?
+             AND started_at = ?
+             AND updated_at = ?
+             AND (lease_owner IS NULL OR lease_owner = '')`,
+        )
+        .bind(progress.job, slot.slot_started_at, progress.started_at, progress.updated_at)
+        .run(),
+    );
+    const cleared = progressDelete.meta.changes ?? 0;
+    summary.progressRowsCleared += cleared;
+    if (cleared === 0) continue;
     try {
       summary.jobAttemptsAbandoned += await markWorkerJobAttemptsAbandonedForSlot(db, {
         scheduleKey: slot.slot_key,
@@ -425,18 +536,6 @@ async function reconcileStaleSlotArtifacts(
     } catch (err) {
       console.warn(`[cron-slot] Failed to abandon ownerless attempt for ${progress.job}@${slot.slot_started_at}:`, err);
     }
-    const progressDelete = await runWithOverloadRetry(() =>
-      db
-        .prepare(
-          `DELETE FROM cron_run_progress
-           WHERE job = ?
-             AND slot_started_at = ?
-             AND (lease_owner IS NULL OR lease_owner = '')`,
-        )
-        .bind(progress.job, slot.slot_started_at)
-        .run(),
-    );
-    summary.progressRowsCleared += progressDelete.meta.changes ?? 0;
     summary.abandonedJobs.push({
       job: progress.job,
       progressStage: progress.stage,
@@ -450,7 +549,42 @@ async function reconcileStaleSlotArtifacts(
     const lease = await getCronLeaseForJob(db, progress.job);
     if (!lease || lease.lease_owner !== progress.lease_owner || lease.lease_until >= nowSec) continue;
 
-    if (await insertSyntheticStaleCronRun(db, slot, progress, lease, nowSec)) {
+    if (!(await isSlotFenceCurrent(db, slot, fence))) continue;
+    const progressDelete = await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          `DELETE FROM cron_run_progress
+           WHERE job = ?
+             AND slot_started_at = ?
+             AND started_at = ?
+             AND updated_at = ?
+             AND lease_owner = ?
+             AND EXISTS (
+               SELECT 1 FROM cron_leases
+                WHERE job = ?
+                  AND lease_owner = ?
+                  AND lease_until = ?
+                  AND lease_until < ?
+             )`,
+        )
+        .bind(
+          progress.job,
+          slot.slot_started_at,
+          progress.started_at,
+          progress.updated_at,
+          progress.lease_owner,
+          progress.job,
+          progress.lease_owner,
+          lease.lease_until,
+          nowSec,
+        )
+        .run(),
+    );
+    const cleared = progressDelete.meta.changes ?? 0;
+    summary.progressRowsCleared += cleared;
+    if (cleared === 0) continue;
+
+    if (await insertSyntheticStaleCronRun(db, slot, progress, lease, nowSec, fence)) {
       summary.syntheticCronRuns++;
     }
     summary.abandonedJobs.push({
@@ -486,18 +620,10 @@ async function reconcileStaleSlotArtifacts(
       );
     }
 
-    const progressDelete = await runWithOverloadRetry(() =>
-      db
-        .prepare("DELETE FROM cron_run_progress WHERE job = ? AND slot_started_at = ? AND lease_owner = ?")
-        .bind(progress.job, slot.slot_started_at, progress.lease_owner)
-        .run(),
-    );
-    summary.progressRowsCleared += progressDelete.meta.changes ?? 0;
-
     const leaseDelete = await runWithOverloadRetry(() =>
       db
-        .prepare("DELETE FROM cron_leases WHERE job = ? AND lease_owner = ? AND lease_until < ?")
-        .bind(progress.job, progress.lease_owner, nowSec)
+        .prepare("DELETE FROM cron_leases WHERE job = ? AND lease_owner = ? AND lease_until = ? AND lease_until < ?")
+        .bind(progress.job, progress.lease_owner, lease.lease_until, nowSec)
         .run(),
     );
     summary.leasesCleared += leaseDelete.meta.changes ?? 0;
@@ -547,8 +673,9 @@ export async function reconcileStaleSlotArtifactsAndRecordEvent(
   db: D1Database,
   slot: StaleSlotExecutionArtifact,
   nowSec: number,
+  fence?: StaleSlotReconciliationFence,
 ): Promise<StaleSlotReconciliationSummary> {
-  const reconciliation = await reconcileStaleSlotArtifacts(db, slot, nowSec);
+  const reconciliation = await reconcileStaleSlotArtifacts(db, slot, nowSec, fence);
   await writeStaleSlotEventMarker(db, slot, nowSec, reconciliation);
   return reconciliation;
 }
