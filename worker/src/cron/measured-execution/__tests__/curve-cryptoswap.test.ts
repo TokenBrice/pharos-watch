@@ -29,6 +29,7 @@ const WETH = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
 const CRV = "0xd533a949740bb3306d119cc777fa900ba034cd52";
 const LEGACY_POOL = "0x98a7f18d4e56cfe84e3d081b40001b3d5bd3eb8b";
 const TWOCRYPTO_POOL = "0x4fdccb810f22578ad6700fc10a8c9b6c1df61852";
+const ACTIVE_TWOCRYPTO_POOL = "0x313698667d7fdd6789a9bc70821309ff891e729a";
 const TRICRYPTO_POOL = "0x4ebdf703948ddcea3b11f675b4d1fba9d2414a14";
 const SPECIAL_POOL = "0x66da369fc5dbba0774da70546bd20f2b242cd34d";
 const HASH_A = `0x${"11".repeat(32)}` as `0x${string}`;
@@ -198,6 +199,7 @@ describe("Curve CryptoSwap shadow policy", () => {
           mathCodeHash: policy.expectedMathCodeHash,
           ngKillMethodUnavailable: true,
           transferSemanticsReviewed: true,
+          onChainPoolTokenAddresses: [CRVUSD, WETH],
         },
       }),
     ).toEqual({ ok: true });
@@ -432,6 +434,57 @@ describe("Curve CryptoSwap quote transport", () => {
 
     expect(maxActive).toBeLessThanOrEqual(3);
     expect(sameChainOverlap).toBe(false);
+  });
+
+  it("rejects active quotes when provider token order disagrees with on-chain coins", async () => {
+    const policy = getCurveCryptoSwapShadowPolicy("ethereum", ACTIVE_TWOCRYPTO_POOL);
+    if (policy == null || !policy.scoreEligible) throw new Error("missing active Curve CryptoSwap policy");
+    const executeMulticall = vi.fn(async () => [
+      {
+        label: "unused",
+        success: true,
+        returnData: uint256Return(1n),
+      },
+    ]);
+    const quote = createCurveCryptoSwapQuoteExecutor({ executeMulticall });
+    const target = makeTarget({
+      poolAddress: ACTIVE_TWOCRYPTO_POOL,
+      poolTokenAddresses: [WETH, CRVUSD],
+      inputIndex: 1,
+      outputIndex: 0,
+      inputDecimals: 18,
+      outputDecimals: 18,
+    });
+    const outcomes = await quote({
+      requests: [
+        {
+          target,
+          inputUsd: 1_000,
+          blockNumber: ETHEREUM_BLOCK,
+          endpointAddress: ACTIVE_TWOCRYPTO_POOL,
+          runtimeEvidence: {
+            apiIsBroken: false,
+            poolCodeHash: policy.expectedPoolCodeHash,
+            factoryAddress: policy.expectedFactoryAddress,
+            factoryCodeHash: policy.expectedFactoryCodeHash,
+            viewsAddress: policy.expectedViewsAddress,
+            viewsCodeHash: policy.expectedViewsCodeHash,
+            mathAddress: policy.expectedMathAddress,
+            mathCodeHash: policy.expectedMathCodeHash,
+            ngKillMethodUnavailable: true,
+            transferSemanticsReviewed: true,
+            onChainPoolTokenAddresses: [CRVUSD, WETH],
+          },
+        },
+      ],
+      chainRpcs: new Map(),
+    });
+
+    expect(executeMulticall).not.toHaveBeenCalled();
+    expect(outcomes[0]).toMatchObject({
+      eligibility: { ok: true },
+      failureReason: "pool-token-order-mismatch",
+    });
   });
 
   it("keeps the generic adapter score-ineligible while the census is incomplete", async () => {
