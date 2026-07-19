@@ -482,6 +482,76 @@ describe("confirmPendingDepegs", () => {
     expect(outcome?.boundValues[21]).toBe("confirmed-by:native:brl");
   });
 
+  it("does not promote native-origin pending rows from USD-denominated hard sources", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.mocked(fetchBinancePricesDetailed).mockResolvedValueOnce({
+      kind: "ok",
+      value: {
+        prices: new Map([["BRZ", 0.191895]]),
+        diagnostics: [{
+          source: "binance",
+          stage: "primary",
+          endpoint: "data-api.binance.vision/api/v3/ticker/price",
+          status: 200,
+          ok: true,
+          success: true,
+          matchedCount: 1,
+        }],
+      },
+    });
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 24,
+            stablecoin_id: "brz-transfero",
+            symbol: "BRZ",
+            peg_type: "peggedREAL",
+            direction: "below",
+            first_seen_bps: -242,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.9758,
+            peak_seen_bps: -242,
+            peak_price: 0.9758,
+            peg_reference: 1,
+            reason: "large-cap+native-origin",
+          }),
+        ],
+        dexRows: [
+          {
+            stablecoin_id: "brz-transfero",
+            dex_price_usd: 0.191895,
+            updated_at: nowSec - 30,
+            source_pool_count: 4,
+            source_total_tvl: 5_000_000,
+            price_sources_json: JSON.stringify([
+              { price: 0.191895, tvl: 3_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+              { price: 0.191895, tvl: 2_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
+            ]),
+          },
+        ],
+      }),
+      [
+        makeAuthoritativeUsdAsset(nowSec, {
+          id: "brz-transfero",
+          name: "Brazilian Digital",
+          symbol: "BRZ",
+          geckoId: "brz",
+          pegType: "peggedREAL",
+          price: 0.191895,
+        }),
+        ...makeNeutralUsdAssets(),
+      ],
+      { peggedREAL: 0.191895 },
+    );
+
+    expect(fetchWithRetry).not.toHaveBeenCalled();
+    expect(batchExecute).not.toHaveBeenCalled();
+  });
+
   it("keeps native-origin pending rows in native units and does not promote them from the same direct quote", async () => {
     const nowSec = 1_700_000_000;
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
