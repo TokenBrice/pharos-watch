@@ -513,6 +513,7 @@ export function buildDexPriceObservationsFromRetainedPools(
     for (const evidence of exactPriceEvidenceByStablecoin?.get(stablecoinId) ?? []) {
       if (
         evidence.identityConfidence !== "exact" ||
+        evidence.sourceFamily !== "direct_api" ||
         !evidence.poolKey ||
         !Number.isFinite(evidence.price) ||
         evidence.price <= 0 ||
