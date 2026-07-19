@@ -584,7 +584,7 @@ describe("getRedemptionBackstopConfig", () => {
       outputAssetType: "stable-single",
       capacityModel: { kind: "supply-full", confidence: "documented-bound" },
       costModel: { kind: "dynamic-or-unclear" },
-      reviewedAt: "2026-04-03",
+      reviewedAt: "2026-07-19",
     });
 
     expect(getRedemptionBackstopConfig("susdai-usd-ai")).toMatchObject({
@@ -723,9 +723,10 @@ describe("getRedemptionBackstopConfig", () => {
       routeFamily: "queue-redeem",
       accessModel: "whitelisted-onchain",
       settlementModel: "same-day",
+      outputAssetType: "mixed-collateral",
       capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "documented-bound" },
       costModel: { kind: "fee-bps", feeBps: 0 },
-      reviewedAt: "2026-03-23",
+      reviewedAt: "2026-07-19",
     });
 
     expect(getRedemptionBackstopConfig("cgusd-cygnus-finance")).toMatchObject({
@@ -961,5 +962,104 @@ describe("getRedemptionBackstopConfig", () => {
         expect.stringContaining("vbUSDC and vbUSDT have no tracked Pharos ids"),
       ]),
     );
+  });
+
+  it("records the 2026-07-19 output-asset wave over newly tracked or newly documented outputs", () => {
+    for (const id of [
+      "audm-mento",
+      "brlm-mento",
+      "cadm-mento",
+      "chfm-mento",
+      "copm-mento",
+      "ghsm-mento",
+      "kesm-mento",
+      "zarm-mento",
+    ] as const) {
+      expect(getRedemptionBackstopConfig(id)).toMatchObject({
+        outputAssetType: "stable-single",
+        outputAssets: ["cusd-celo"],
+        reviewedAt: "2026-07-19",
+      });
+    }
+
+    expect(getRedemptionBackstopConfig("usdai-usd-ai")).toMatchObject({
+      outputAssetType: "stable-single",
+      outputAssets: ["pyusd-paypal"],
+      reviewedAt: "2026-07-19",
+    });
+    expect(getRedemptionBackstopConfig("u-united-stables")).toMatchObject({
+      outputAssetType: "stable-basket",
+      outputAssets: ["usdc-circle", "usdt-tether", "usd1-world-liberty-financial"],
+      reviewedAt: "2026-07-19",
+    });
+    expect(getRedemptionBackstopConfig("inalpha-nest")).toMatchObject({
+      outputAssetType: "stable-basket",
+      outputAssets: ["usdc-circle", "pusd-plume"],
+      reviewedAt: "2026-07-19",
+    });
+    expect(getRedemptionBackstopConfig("said-gaib")).toMatchObject({
+      outputAssetType: "stable-single",
+      outputAssets: ["aid-gaib"],
+      reviewedAt: "2026-07-19",
+    });
+    expect(getRedemptionBackstopConfig("acred-apollo-securitize")).toMatchObject({
+      outputAssetType: "stable-basket",
+      outputAssets: ["usdc-circle", "usdg-paxos"],
+      reviewedAt: "2026-07-19",
+    });
+    expect(getRedemptionBackstopConfig("usdu-unitas")).toMatchObject({
+      outputAssetType: "mixed-collateral",
+      outputAssets: ["asset:sol", "asset:btc", "asset:eth"],
+      reviewedAt: "2026-07-19",
+    });
+    expect(getRedemptionBackstopConfig("eur0-usual")).toMatchObject({
+      outputAssetType: "mixed-collateral",
+      outputAssets: ["asset:eutbl"],
+      reviewedAt: "2026-07-19",
+    });
+    expect(getRedemptionBackstopConfig("silk-shade-protocol")).toMatchObject({
+      outputAssetType: "mixed-collateral",
+      outputAssets: ["asset:sscrt", "asset:wbtc", "asset:usdc"],
+      reviewedAt: "2026-07-19",
+    });
+    expect(getRedemptionBackstopConfig("usdp-parallel")).toMatchObject({
+      outputAssetType: "mixed-collateral",
+      outputAssets: [
+        "asset:frxusd",
+        "asset:sfrxusd",
+        "asset:usde",
+        "asset:susde",
+        "asset:usds",
+        "asset:susds",
+        "asset:usdc",
+        "asset:ygamiusdc",
+      ],
+      reviewedAt: "2026-07-19",
+    });
+    expect(getRedemptionBackstopConfig("reusd-resupply")).toMatchObject({
+      outputAssetType: "mixed-collateral",
+      outputAssets: ["asset:crvusd", "asset:frxusd"],
+      reviewedAt: "2026-07-19",
+    });
+    expect(getRedemptionBackstopConfig("satusd-river")).toMatchObject({
+      outputAssetType: "bluechip-collateral",
+      outputAssets: ["asset:btc", "asset:eth", "asset:bnb"],
+      reviewedAt: "2026-07-19",
+    });
+
+    // Durable withholdings from the 2026-07-15 EXIT_OUTPUT waves remain
+    // unresolved: no documented payout asset, untracked output, or no fixed
+    // documented output set.
+    for (const id of [
+      "aznd-mu-digital",
+      "witry-brix",
+      "dllr-sovryn",
+      "deuro-deuro",
+      "nect-beraborrow",
+      "scusd-rings",
+      "zys-zephyr-protocol",
+    ] as const) {
+      expect(getRedemptionBackstopConfig(id)?.outputAssets).toBeUndefined();
+    }
   });
 });

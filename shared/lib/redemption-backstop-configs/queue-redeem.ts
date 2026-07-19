@@ -22,6 +22,7 @@ const REVIEWED_WRAPPER_QUEUE_AT = REVIEWED_WRAPPER_WAVE_AT;
 const REVIEWED_PHASE_4_COVERAGE_AT = "2026-05-10";
 const REVIEWED_CONFIG_ONLY_GAPS_AT = "2026-05-17";
 const REVIEWED_REDEMPTION_OUTPUTS_AT = "2026-07-15";
+const REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT = "2026-07-19";
 const reviewedQueueRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_QUEUE_REDEMPTION_AT);
 
 /** Nest NAV-vault redemptions (nTBILL/nBASIS/nOPAL/nWISDOM) share an identical
@@ -163,11 +164,12 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "acred-apollo-securitize": {
     ...queueRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    ...documentedBoundSupplyFull(REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT),
     accessModel: "issuer-api",
     settlementModel: "queued",
     executionModel: "rules-based-nav",
-    outputAssetType: "nav",
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdc-circle", "usdg-paxos"],
     costModel: fixedFee(0, "RWA.xyz lists 0% ACRED redemption fees"),
     docs: [
       sourceRef(
@@ -182,9 +184,15 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
         "access",
         "settlement",
       ]),
+      sourceRef(
+        "Securitize ACRED fund page",
+        "https://securitize.io/primary-market/apollo-diversified-credit-securitize-fund",
+        ["route", "settlement"],
+      ),
     ],
     notes: [
       "Securitize launch materials describe ACRED as offering native redemptions at daily NAV for qualifying Securitize Markets investors, while public RWA.xyz metadata lists quarterly redemption timing; Pharos therefore models the route as queued documented-bound NAV redemption rather than immediate liquidity",
+      "Output declared 2026-07-19: the current Securitize ACRED fund page lists redemption off-ramps as USDC and USDG (proceeds paid at NAV on the quarterly repurchase cycle), so the nav placeholder type was replaced with the documented stablecoin basket; the queued settlement model is unchanged.",
     ],
   },
   "usdf-falcon": {
@@ -547,9 +555,11 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ...queueRedeemBase,
     accessModel: "whitelisted-onchain",
     settlementModel: "same-day",
+    outputAssetType: "mixed-collateral",
+    outputAssets: ["asset:sol", "asset:btc", "asset:eth"],
     capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "documented-bound" },
     costModel: fixedFee(0, "Unitas docs list a 0% redemption fee"),
-    reviewedAt: REVIEWED_QUEUE_REDEMPTION_AT,
+    reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT,
     docs: [
       sourceRef("Unitas minting USDu", "https://docs.unitas.so/solution-design/minting-usdu", [
         "route",
@@ -558,10 +568,16 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       ]),
       sourceRef("Unitas overview", "https://docs.unitas.so/", ["route", "fees"]),
       sourceRef("Unitas off-exchange settlement", "https://docs.unitas.so/off-exchange-settlement", ["settlement"]),
+      sourceRef("Unitas terms of service", "https://docs.unitas.so/resources/terms-of-service", ["route"]),
+      sourceRef("Unitas delta-neutral stability", "https://docs.unitas.so/solution-overview/delta-neutral-stability", [
+        "route",
+        "capacity",
+      ]),
     ],
     notes: [
       "Direct USDu minting and redemption are restricted to whitelisted participants, while docs describe on-demand redemption flows supported by Unitas's OES settlement rails",
       "Because USDu relies on a delta-neutral collateral stack rather than a pure cash-equivalent reserve bucket, the route keeps a conservative reviewed 5% immediate-capacity bound instead of scoring against full supply",
+      "Output declared 2026-07-19: the Unitas terms define redemption as burning USDu to withdraw a pro-rata share of the underlying collateral, and the delta-neutral design page names the collateral classes as SOL, BTC, and ETH (JLP and the short-perp hedge leg are strategy positions rather than deliverable collateral classes); no single-stablecoin payout is documented.",
     ],
   },
   "yzusd-yuzu": {
@@ -816,12 +832,12 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   ...NEST_NAV_VAULT_CONFIGS,
   "inalpha-nest": {
     ...queueRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    ...documentedBoundSupplyFull(REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT),
     outputAssets: ["usdc-circle", "pusd-plume"],
     accessModel: "issuer-api",
     settlementModel: "days",
     executionModel: "rules-based-nav",
-    outputAssetType: "nav",
+    outputAssetType: "stable-basket",
     costModel: undisclosedReviewedFee(
       "Nest docs describe nALPHA/inALPHA redemption requests through the app and atomic queue; public materials reviewed do not publish one fixed redemption fee",
     ),
@@ -847,6 +863,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     notes: [
       "Nest's nALPHA guide documents redemption requests from Plume or Ethereum into pUSD or USDC through the atomic queue; Pharos tracks inALPHA as the same Alpha vault LP exposure.",
       "Nest docs list a 3-5 business day nALPHA redemption window and broader queue mechanics, so the route is modeled as delayed NAV redemption rather than instant stablecoin liquidity.",
+      "Output type corrected 2026-07-19: the documented payout assets (pUSD or USDC) were already declared, so the nav placeholder type was replaced with stable-basket, matching the four sibling Nest vault entries retyped in the 2026-07-15 output wave; the delayed-NAV settlement semantics are unchanged.",
     ],
   },
   "busd0-usual": {
