@@ -2,9 +2,10 @@ import { buildInClause } from "./db";
 import { CACHE_FRESHNESS_THRESHOLDS } from "./constants";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "./dex-liquidity";
 import {
-  FRESHNESS_RATIOS,
+  STATUS_CACHE_RATIO_OVERRIDES,
   STATUS_CACHE_RATIO_THRESHOLDS,
   classifyFreshnessRatio,
+  getCacheHealthyMaxRatio,
   type FreshnessStatus,
 } from "@shared/lib/status-thresholds";
 import { getCacheFreshnessLane } from "@shared/lib/api-freshness";
@@ -425,12 +426,23 @@ export async function buildCacheStatuses(
 
     const ratio = ageSeconds != null ? ageSeconds / maxAge : Infinity;
     if (ratio > worstRatio) worstRatio = ratio;
+    // Per-cache availability override (e.g. yield-data) uses tighter bands than
+    // the global worstRatio comparison below, so escalate the floor here where
+    // the cache key is in scope. Escalation-only; never downgrades.
+    const ratioOverride = STATUS_CACHE_RATIO_OVERRIDES[key];
+    if (ratioOverride && statusFloor !== "stale") {
+      if (ratio > ratioOverride.stale) {
+        statusFloor = "stale";
+      } else if (ratio > ratioOverride.degraded && statusFloor === "healthy") {
+        statusFloor = "degraded";
+      }
+    }
     if (!caches[key]) {
       const diagnostic = diagnostics.find((entry) => entry.key === key);
       caches[key] = {
         ageSeconds,
         maxAge,
-        healthy: ratio <= FRESHNESS_RATIOS.DEGRADED,
+        healthy: ratio <= getCacheHealthyMaxRatio(key),
         ...(freshnessSourceByKey.has(key) ? { freshnessSource: freshnessSourceByKey.get(key) } : {}),
         ...(sentinelValidationReasonByKey.has(key)
           ? { sentinelValidationReason: sentinelValidationReasonByKey.get(key) }

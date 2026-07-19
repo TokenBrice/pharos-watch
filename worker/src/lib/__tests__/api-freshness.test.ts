@@ -264,6 +264,58 @@ describe("buildCacheStatuses sentinel validation", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM stress_signals"))).toBe(false);
   });
 
+  it("keeps yield-data healthy through one missed hourly publish (<= 2x availability budget)", async () => {
+    const now = 1_800_000_000;
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          cacheRow("stablecoins", now - 60),
+          cacheRow("stablecoin-charts", now - 60),
+          cacheRow("usds-status", now - 60),
+          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          cacheRow("bluechip-ratings", now - 60),
+          sentinelRow("dex-liquidity", now - 120),
+          // 3600s = 1x the hourly budget: one missed publish stays healthy.
+          sentinelRow("yield-data", now - 3_600),
+          sentinelRow("dews", now - 240),
+        ],
+      },
+      { match: "GROUP BY job", rows: [] },
+    ]);
+
+    const { caches, statusFloor } = await buildCacheStatuses(db, now);
+
+    expect(caches["yield-data"]).toMatchObject({ ageSeconds: 3_600, healthy: true });
+    expect(statusFloor).toBe("healthy");
+  });
+
+  it("degrades yield-data past 2x its hourly budget while other caches stay fresh", async () => {
+    const now = 1_800_000_000;
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          cacheRow("stablecoins", now - 60),
+          cacheRow("stablecoin-charts", now - 60),
+          cacheRow("usds-status", now - 60),
+          cacheRow("fx-rates", now - 60, { peggedEUR: 1.08 }),
+          cacheRow("bluechip-ratings", now - 60),
+          sentinelRow("dex-liquidity", now - 120),
+          // ~2.06x the hourly budget: two missed publishes -> public-unhealthy.
+          sentinelRow("yield-data", now - 7_400),
+          sentinelRow("dews", now - 240),
+        ],
+      },
+      { match: "GROUP BY job", rows: [] },
+    ]);
+
+    const { caches, statusFloor } = await buildCacheStatuses(db, now);
+
+    expect(caches["yield-data"]).toMatchObject({ ageSeconds: 7_400, healthy: false });
+    expect(statusFloor).toBe("degraded");
+  });
+
   it("fails closed when DEWS publication evidence is missing even if cron history is fresh", async () => {
     const now = 1_800_000_000;
     const db = mockD1([

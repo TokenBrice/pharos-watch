@@ -215,6 +215,74 @@ describe("getImpactedPublicSurfaces", () => {
     expect(surfaces).toEqual([]);
   });
 
+  it("does not surface a degraded price-coverage callout for a transient (non-alert-eligible) miss", () => {
+    // status stays "incomplete" for observability, but a merely un-repriced miss
+    // is not alert-eligible — the hero is healthy, so the surface must be too.
+    const transient: HealthResponse = {
+      ...BASE_HEALTH,
+      status: "healthy",
+      warnings: [],
+      activePriceCoverage: {
+        status: "incomplete",
+        expectedActiveCount: 190,
+        presentActiveCount: 190,
+        pricedActiveCount: 189,
+        missingPriceCount: 1,
+        pricedActiveIds: [],
+        missingActiveIds: ["test-dollar"],
+        affectedMarketCapUsd: 500_000,
+        missingActiveAssets: [
+          {
+            stablecoinId: "test-dollar",
+            symbol: "TUSD",
+            marketCapUsd: 500_000,
+            currentPrice: null,
+            currentSource: null,
+            currentObservedAt: null,
+            currentConfidence: null,
+            consecutiveMissingGenerations: 1,
+            lastAcceptedPrice: null,
+            lastAcceptedSource: null,
+            lastAcceptedObservedAt: null,
+            rejectionReason: "no-accepted-price",
+            alertEligible: false,
+          },
+        ],
+        alertEligibleCount: 0,
+        alertEligibleIds: [],
+        maxConsecutiveMissingGenerations: 1,
+        observedAt: 1_700_000_000,
+      },
+    };
+    expect(getImpactedPublicSurfaces(transient).some((s) => s.id === "active-price-coverage")).toBe(false);
+  });
+
+  it("surfaces the price-coverage callout once a miss is alert-eligible", () => {
+    const alertEligible: HealthResponse = {
+      ...BASE_HEALTH,
+      status: "degraded",
+      warnings: ["active-price-coverage-incomplete:test-dollar"],
+      activePriceCoverage: {
+        status: "incomplete",
+        expectedActiveCount: 190,
+        presentActiveCount: 190,
+        pricedActiveCount: 189,
+        missingPriceCount: 1,
+        pricedActiveIds: [],
+        missingActiveIds: ["test-dollar"],
+        affectedMarketCapUsd: 500_000,
+        missingActiveAssets: [],
+        alertEligibleCount: 1,
+        alertEligibleIds: ["test-dollar"],
+        maxConsecutiveMissingGenerations: 2,
+        observedAt: 1_700_000_000,
+      },
+    };
+    expect(getImpactedPublicSurfaces(alertEligible)).toContainEqual(
+      expect.objectContaining({ id: "active-price-coverage", tone: "degraded" }),
+    );
+  });
+
   it("surfaces mint-burn when critical lane is unhealthy", () => {
     const health: HealthResponse = {
       ...BASE_HEALTH,

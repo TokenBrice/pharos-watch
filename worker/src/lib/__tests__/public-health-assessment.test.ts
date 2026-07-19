@@ -320,6 +320,66 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     expect(result.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
   });
 
+  it("keeps public health healthy for a transient (non-alert-eligible) price miss while preserving the coverage payload", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const activeIds = [...ACTIVE_IDS];
+    const missingId = activeIds[0]!;
+    const db = makeMinimalDb(nowSec, undefined, {
+      activePublicationCoverage: {
+        complete: true,
+        expectedActiveCount: activeIds.length,
+        presentActiveCount: activeIds.length,
+        waivedActiveCount: 0,
+        missingActiveIds: [],
+        waivedActiveIds: [],
+        expiredWaiverIds: [],
+      },
+      activePriceCoverage: {
+        complete: false,
+        expectedActiveCount: activeIds.length,
+        presentActiveCount: activeIds.length,
+        pricedActiveCount: activeIds.length - 1,
+        missingPriceCount: 1,
+        pricedActiveIds: activeIds.filter((stablecoinId) => stablecoinId !== missingId),
+        missingActiveIds: [missingId],
+        affectedMarketCapUsd: 88_000_000,
+        missingActiveAssets: [{
+          stablecoinId: missingId,
+          symbol: "MISS",
+          marketCapUsd: 88_000_000,
+          currentPrice: null,
+          currentSource: null,
+          currentObservedAt: null,
+          currentConfidence: null,
+          consecutiveMissingGenerations: 1,
+          lastAcceptedPrice: 1.001,
+          lastAcceptedSource: "pyth",
+          lastAcceptedObservedAt: nowSec - 900,
+          rejectionReason: "no-accepted-price",
+          alertEligible: false,
+        }],
+        alertEligibleCount: 0,
+        alertEligibleIds: [],
+        maxConsecutiveMissingGenerations: 1,
+      },
+    });
+
+    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+
+    // Impact is gated on alert-eligibility: a single-cycle rotation miss does
+    // not degrade the public banner.
+    expect(result.activePriceCoverageImpactStatus).toBe("healthy");
+    expect(result.warnings.some((warning) => warning.startsWith("active-price-coverage-incomplete"))).toBe(false);
+    // Observability preserved: the JSON payload still reports the exact miss.
+    expect(result.activePriceCoverage).toMatchObject({
+      status: "incomplete",
+      missingActiveIds: [missingId],
+      missingPriceCount: 1,
+      alertEligibleCount: 0,
+      alertEligibleIds: [],
+    });
+  });
+
   it("reconstructs alertable gaps from compacted cron state", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const activeIds = [...ACTIVE_IDS];

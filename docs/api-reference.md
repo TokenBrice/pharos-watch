@@ -2104,7 +2104,7 @@ Blacklist amount-gap severity is intentionally tolerant of isolated parser/provi
 **Overall status logic:**
 
 - `healthy` — every cache impact is healthy, the public mint/burn lane is healthy, fewer than 3 public-impact circuit groups are open, and the health subqueries all resolved cleanly
-- `degraded` — any cache impact is degraded (including FX cached-fallback or source-cadence lag), any of the blacklist/mint-burn/circuit health subqueries failed, exact active-price or stablecoin-publication coverage is incomplete/unavailable, the public mint/burn lane is warning-only, or 3+ public-impact circuit groups are open
+- `degraded` — any cache impact is degraded (including FX cached-fallback or source-cadence lag), any of the blacklist/mint-burn/circuit health subqueries failed, stablecoin-publication coverage is incomplete/unavailable, active-price coverage is unavailable (`unknown`) or has at least one alert-eligible miss (a gap whose consecutive-missing streak has reached `ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS`; transient single-cycle misses stay `healthy` while `activePriceCoverage` still reports the exact counts/IDs), the public mint/burn lane is warning-only, or 3+ public-impact circuit groups are open
 - `stale` — any cache impact is stale, or the public mint/burn lane is stale versus its critical-lane cadence
 
 `/api/health` still emits every circuit record under `circuits`, including dynamic per-coin `live-reserves:*` scopes, but those reserve-specific breakers do not change the top-level public status on their own; reserve sync health is evaluated on the dedicated reserve/data-quality lanes instead.
