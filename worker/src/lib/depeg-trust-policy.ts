@@ -156,7 +156,16 @@ export function hasFreshMultiSourcePrimaryAgreement(
     return false;
   }
 
-  return getPrimaryTrustSources(input).length >= 2;
+  if (input.priceConfidence !== "high") {
+    return false;
+  }
+
+  const sourceFamilies = getPrimaryDepegSourceFamilies(input);
+  if (sourceFamilies.size < 2) {
+    return false;
+  }
+
+  return [...sourceFamilies].some((family) => !family.startsWith("fallback:"));
 }
 
 
