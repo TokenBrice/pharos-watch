@@ -32,6 +32,7 @@ export interface AddressPriceAssetLike {
   priceConfidence?: string | null;
   priceObservedAt?: number | null;
   priceUpdatedAt?: number | null;
+  priceSyncedAt?: number | null;
 }
 
 export interface AddressPriceTarget {

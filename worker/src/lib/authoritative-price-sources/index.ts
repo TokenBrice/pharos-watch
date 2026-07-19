@@ -1,8 +1,10 @@
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { rethrowIfAborted } from "../abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../circuit-breaker";
+import { hasPublishableCurrentPrice } from "../price-publication-state";
 import { ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS } from "../stablecoin-publication-coverage";
 import {
   appendPricingAssetAttempts,
@@ -52,6 +54,7 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
 ];
 
 export const AUTHORITATIVE_LIVE_OVERRIDE_BUDGET_MS = 10_000;
+export const AUTHORITATIVE_LIVE_CANDIDATE_TIMEOUT_MS = 2_500;
 
 export interface AuthoritativeLivePriceOverrideStats {
   budgetMs: number;
@@ -86,7 +89,14 @@ function getProviderLivePriority(provider: PriceSourceProvider): number {
 }
 
 function hasUsableLivePrice(asset: PeggedAsset): boolean {
-  return typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0;
+  return hasPublishableCurrentPrice(asset);
+}
+
+function getProviderLiveTimeoutMs(provider: PriceSourceProvider): number {
+  const timeoutMs = provider.liveTimeoutMs;
+  return typeof timeoutMs === "number" && Number.isFinite(timeoutMs) && timeoutMs > 0
+    ? timeoutMs
+    : AUTHORITATIVE_LIVE_CANDIDATE_TIMEOUT_MS;
 }
 
 function shouldRecordLiveCircuitFailure(provider: PriceSourceProvider, asset: PeggedAsset): boolean {
@@ -326,8 +336,19 @@ export async function fetchAuthoritativeLivePriceOverrides(
     }
     if (stats) stats.attemptedCount += 1;
 
+    const providerTimeoutMs = getProviderLiveTimeoutMs(provider);
+    const usesCandidateTimeout = providerTimeoutMs > 0 && (budgetMs <= 0 || providerTimeoutMs < budgetMs);
+    const candidateTimeout = usesCandidateTimeout
+      ? createTimeoutSignal({
+          timeoutMs: providerTimeoutMs,
+          timeoutReason: "authoritative live price candidate timed out",
+          parentSignal: liveSignal,
+        })
+      : null;
+    const candidateSignal = candidateTimeout?.signal ?? liveSignal;
+
     try {
-      const override = await provider.fetchLivePrice(asset, liveContext, liveSignal);
+      const override = await provider.fetchLivePrice(asset, liveContext, candidateSignal);
       if (override) {
         results.set(asset.id, override);
         applyOverrideToLiveContext(liveContext, asset.id, override);
@@ -382,6 +403,19 @@ export async function fetchAuthoritativeLivePriceOverrides(
         console.warn(`[authoritative-price-sources] live override budget exhausted after ${budgetMs}ms`);
         break;
       }
+      if (candidateTimeout?.isTimedOut() && !signal?.aborted) {
+        if (stats) stats.failedCount += 1;
+        recordAttempt(asset, provider, {
+          state: "attempted",
+          result: "failed",
+          rejectionClass: "timeout",
+          candidateAt,
+        });
+        console.warn(
+          `[authoritative-price-sources] ${asset.id} live override exceeded ${providerTimeoutMs}ms candidate budget`,
+        );
+        continue;
+      }
       if (stats) stats.failedCount += 1;
       recordAttempt(asset, provider, {
         state: "attempted",
@@ -394,6 +428,8 @@ export async function fetchAuthoritativeLivePriceOverrides(
         circuitAttempts.delete(circuitSource);
       }
       console.warn(`[authoritative-price-sources] ${asset.id} live override failed:`, error);
+    } finally {
+      candidateTimeout?.dispose();
     }
   }
 

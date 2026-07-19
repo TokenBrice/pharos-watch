@@ -1,6 +1,7 @@
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { CIRCUIT_SOURCE } from "../constants";
 import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmCallHexAtBlock } from "../evm-rpc";
+import { hasPublishableCurrentPrice } from "../price-publication-state";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import {
   decodeUint256WordBigInt,
@@ -140,6 +141,7 @@ export const azndCurvePoolProvider: PriceSourceProvider = {
   liveMissingOnly: true,
   liveCircuitSource: CIRCUIT_SOURCE.AZND_CURVE_POOL,
   livePriority: 1,
+  liveTimeoutMs: 6_000,
   recordNullLiveResultAsCircuitFailure: true,
   matches(stablecoinId: string): boolean {
     return stablecoinId === AZND_ID;
@@ -149,7 +151,7 @@ export const azndCurvePoolProvider: PriceSourceProvider = {
     context: LivePriceContext,
     signal?: AbortSignal,
   ): Promise<CurrentPriceOverride | null> {
-    if (typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0) {
+    if (hasPublishableCurrentPrice(asset)) {
       return null;
     }
     return fetchAzndCurvePoolPrice(context, signal);

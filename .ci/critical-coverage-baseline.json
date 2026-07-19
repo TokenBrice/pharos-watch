@@ -72,6 +72,7 @@
     "worker/src/lib/price-divergence.ts": 100,
     "worker/src/lib/price-validation.ts": 92.3,
     "worker/src/lib/price-publish-policy.ts": 98,
+    "worker/src/lib/price-publication-state.ts": 100,
     "worker/src/lib/pricing-circuit-map.ts": 100,
     "worker/src/lib/pricing-provider-runtime-state.ts": 51.2,
     "worker/src/lib/pricing-source-freshness.ts": 100,

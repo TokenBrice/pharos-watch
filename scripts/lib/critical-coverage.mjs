@@ -74,6 +74,7 @@ export const CRITICAL_FILES = [
   "worker/src/lib/price-divergence.ts",
   "worker/src/lib/price-validation.ts",
   "worker/src/lib/price-publish-policy.ts",
+  "worker/src/lib/price-publication-state.ts",
   "worker/src/lib/pricing-circuit-map.ts",
   "worker/src/lib/pricing-provider-runtime-state.ts",
   "worker/src/lib/pricing-source-freshness.ts",
