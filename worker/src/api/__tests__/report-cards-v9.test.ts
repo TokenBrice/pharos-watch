@@ -122,7 +122,9 @@ describe("handleReportCardsV9", () => {
       lifecycle: "active",
       safetyScoreIdentity: snapshot().safetyScoreIdentity,
     });
-    expect(getRouteMatch("/api/report-cards/v9")?.endpoint?.key).toBe("report-cards-v9");
+    const endpoint = getRouteMatch("/api/report-cards/v9")?.endpoint;
+    expect(endpoint?.key).toBe("report-cards-v9");
+    expect(endpoint?.cacheBypass).toBe(true);
   });
 
   it("returns explicit unavailability without reading or recomputing V8", async () => {
