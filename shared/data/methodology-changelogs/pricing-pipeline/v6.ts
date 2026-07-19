@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.202",
+    title: "Composite parent-trust monotonicity",
+    date: "2026-07-19",
+    effectiveAt: 1784492257,
+    summary:
+      "Parent-derived pricing routes and replay-cache admission now judge composite provenance on its replay-safe core, so an agreeing non-replay-safe corroborator joining a consensus label can no longer strip trust from a high-confidence parent price.",
+    impact: [
+      "Authoritative parent trust accepts a high-confidence composite whose replay-safe core keeps at least two members, as if agreeing soft corroborators such as exact-address augmentation lanes were absent",
+      "A single replay-safe core member padded to high confidence by soft corroborators is admitted only under the existing scoped single-source opt-in and keeps single-source provenance, so padding can neither downgrade nor upgrade parent trust",
+      "Replay-cache admission computes the trusted window over the replay-safe core; core-less labels, unknown source keys, and cached-replay lineage still never replay",
+      "Exact-address augmentation no longer targets assets with three or more consensus sources and healthy confidence merely because a short-window composite member makes their observation expire before the next generation; expiring observations only order priority among already-eligible thin-coverage targets",
+      "Authoritative attempts rejected by parent trust are ledgered as `untrusted-parent` with the parent id and rejection reason instead of an opaque missing quote",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.201",
     title: "Fair active-price recovery scheduling",
     date: "2026-07-19",
