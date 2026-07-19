@@ -11,6 +11,20 @@ vi.mock("@shared/lib/stablecoins/registry", () => ({
   ACTIVE_IDS: {
     has: (stablecoinId: string) => stablecoinId !== "sofid-sofi" && stablecoinId !== "usx-dforce",
   },
+  ACTIVE_STABLECOINS: [
+    { id: "cusd-cap", symbol: "CUSD" },
+    { id: "iusd-infinifi", symbol: "iUSD" },
+    { id: "pyusd-paypal", symbol: "PYUSD" },
+    { id: "wm-m0", symbol: "wM" },
+    { id: "ausd-agora", symbol: "AUSD" },
+    { id: "usdai-usd-ai", symbol: "USDAI" },
+    { id: "usdc-circle", symbol: "USDC" },
+    { id: "yusd-aegis", symbol: "YUSD" },
+    { id: "gho-aave", symbol: "GHO" },
+    { id: "sgho-aave", symbol: "sGHO" },
+    { id: "aid-gaib", symbol: "AID" },
+    { id: "said-gaib", symbol: "sAID" },
+  ],
   TRACKED_META_BY_ID: new Map([
     [
       "cusd-cap",
@@ -151,11 +165,15 @@ function makePriorityCandidate(
   price: number | null,
   livePriority: number | undefined,
   originalIndex: number,
+  overrides: Partial<AuthoritativeLivePriceCandidate> = {},
 ): AuthoritativeLivePriceCandidate {
   return {
     asset: { id, price } as PeggedAsset,
     provider: makePriorityProvider(livePriority),
     originalIndex,
+    previousMissingGenerations: 0,
+    alertEligibleMissing: false,
+    ...overrides,
   };
 }
 
@@ -643,11 +661,15 @@ describe("authoritative-price-sources", () => {
         asset: { id: `first-${originalIndex}`, price: null } as PeggedAsset,
         provider: firstProvider,
         originalIndex,
+        previousMissingGenerations: 0,
+        alertEligibleMissing: false,
       })),
       {
         asset: { id: "second-0", price: null } as PeggedAsset,
         provider: secondProvider,
         originalIndex: 3,
+        previousMissingGenerations: 0,
+        alertEligibleMissing: false,
       },
     ];
 
@@ -667,11 +689,15 @@ describe("authoritative-price-sources", () => {
         asset: { id: `first-${originalIndex}`, price: null } as PeggedAsset,
         provider: firstProvider,
         originalIndex,
+        previousMissingGenerations: 0,
+        alertEligibleMissing: false,
       })),
       {
         asset: { id: "second-0", price: null } as PeggedAsset,
         provider: secondProvider,
         originalIndex: 3,
+        previousMissingGenerations: 0,
+        alertEligibleMissing: false,
       },
     ];
 
@@ -691,23 +717,63 @@ describe("authoritative-price-sources", () => {
         asset: { id: "ordinary-missing", price: null } as PeggedAsset,
         provider: ordinaryProvider,
         originalIndex: 0,
+        previousMissingGenerations: 0,
+        alertEligibleMissing: false,
       },
       {
         asset: { id: "circuit-missing", price: null } as PeggedAsset,
         provider: circuitProvider,
         originalIndex: 1,
+        previousMissingGenerations: 0,
+        alertEligibleMissing: false,
       },
       {
         asset: { id: "circuit-priced", price: 1 } as PeggedAsset,
         provider: circuitProvider,
         originalIndex: 2,
+        previousMissingGenerations: 0,
+        alertEligibleMissing: false,
       },
     ];
 
     expect(prioritizeAuthoritativeLivePriceCandidates(candidates).map((entry) => entry.asset.id)).toEqual([
       "circuit-missing",
-      "circuit-priced",
       "ordinary-missing",
+      "circuit-priced",
+    ]);
+  });
+
+  it("runs alert-eligible missing candidates before non-alert circuit-backed probes", () => {
+    const ordinaryProvider = makePriorityProvider(0);
+    const circuitProvider = makePriorityProvider(10, "fixture-circuit");
+    const candidates: AuthoritativeLivePriceCandidate[] = [
+      {
+        asset: { id: "ordinary-alert-missing", price: null } as PeggedAsset,
+        provider: ordinaryProvider,
+        originalIndex: 0,
+        previousMissingGenerations: 1,
+        alertEligibleMissing: true,
+      },
+      {
+        asset: { id: "circuit-missing", price: null } as PeggedAsset,
+        provider: circuitProvider,
+        originalIndex: 1,
+        previousMissingGenerations: 0,
+        alertEligibleMissing: false,
+      },
+      {
+        asset: { id: "circuit-priced", price: 1 } as PeggedAsset,
+        provider: circuitProvider,
+        originalIndex: 2,
+        previousMissingGenerations: 0,
+        alertEligibleMissing: false,
+      },
+    ];
+
+    expect(prioritizeAuthoritativeLivePriceCandidates(candidates).map((entry) => entry.asset.id)).toEqual([
+      "ordinary-alert-missing",
+      "circuit-missing",
+      "circuit-priced",
     ]);
   });
 

@@ -27,6 +27,9 @@ function makeDexScreenerTarget(index: number, overrides: Partial<AddressPriceTar
     address: `0x${index.toString(16).padStart(40, "0")}`,
     origin: "contracts",
     previousSourceDepth: 1,
+    previousMissingGenerations: 0,
+    alertEligibleMissingPrice: false,
+    recentlyMissingPrice: false,
     missingPrice: false,
     expiresBeforeNextGeneration: false,
     circulatingUsd: 1_000_000 - index,
@@ -200,6 +203,63 @@ describe("address price providers", () => {
     ]);
   });
 
+  it("pins persistent active price gaps ahead of broader exact-address refresh targets", () => {
+    const targets = buildAddressPriceTargetsByProvider({
+      providers: ["dexpaprika-address"],
+      previousAssetsById: new Map([
+        ["persistent-gap", {
+          id: "persistent-gap",
+          symbol: "GAP",
+          consensusSources: ["coingecko", "defillama-list", "coinbase"],
+        }],
+        ["new-gap", {
+          id: "new-gap",
+          symbol: "NEW",
+          consensusSources: ["coingecko", "defillama-list", "coinbase"],
+        }],
+        ["refresh", {
+          id: "refresh",
+          symbol: "REF",
+          consensusSources: ["coingecko"],
+        }],
+      ]),
+      previousMissingGenerationsById: new Map([["persistent-gap", 1]]),
+      assets: [
+        {
+          id: "refresh",
+          symbol: "REF",
+          address: "base:0x0000000000000000000000000000000000000001",
+          price: 1,
+          circulating: { base: 10_000_000 },
+        },
+        {
+          id: "new-gap",
+          symbol: "NEW",
+          address: "base:0x0000000000000000000000000000000000000002",
+          price: null,
+          circulating: { base: 100_000_000 },
+        },
+        {
+          id: "persistent-gap",
+          symbol: "GAP",
+          address: "base:0x0000000000000000000000000000000000000003",
+          price: null,
+          circulating: { base: 10_000 },
+        },
+      ],
+    });
+
+    expect(targets.get("dexpaprika-address")?.map((target) => ({
+      id: target.stablecoinId,
+      previousMissingGenerations: target.previousMissingGenerations,
+      alertEligibleMissingPrice: target.alertEligibleMissingPrice,
+    }))).toEqual([
+      { id: "persistent-gap", previousMissingGenerations: 1, alertEligibleMissingPrice: true },
+      { id: "new-gap", previousMissingGenerations: 0, alertEligibleMissingPrice: false },
+      { id: "refresh", previousMissingGenerations: 0, alertEligibleMissingPrice: false },
+    ]);
+  });
+
   it("rotates targets within priority cohorts without moving priced rows ahead of missing assets", () => {
     const targets = [
       makeDexScreenerTarget(1, { stablecoinId: "missing-large", missingPrice: true }),
@@ -215,6 +275,22 @@ describe("address price providers", () => {
       "expiring",
       "priced-low-depth",
       "priced-covered",
+    ]);
+  });
+
+  it("keeps alert-eligible gaps pinned ahead of rotated missing cohorts", () => {
+    const targets = [
+      makeDexScreenerTarget(1, { stablecoinId: "alert-gap", missingPrice: true, previousMissingGenerations: 1, alertEligibleMissingPrice: true, recentlyMissingPrice: true }),
+      makeDexScreenerTarget(2, { stablecoinId: "missing-large", missingPrice: true }),
+      makeDexScreenerTarget(3, { stablecoinId: "missing-small", missingPrice: true }),
+      makeDexScreenerTarget(4, { stablecoinId: "priced-low-depth", previousSourceDepth: 1 }),
+    ];
+
+    expect(rotateAddressPriceTargets(targets, 2).map((target) => target.stablecoinId)).toEqual([
+      "alert-gap",
+      "missing-large",
+      "missing-small",
+      "priced-low-depth",
     ]);
   });
 

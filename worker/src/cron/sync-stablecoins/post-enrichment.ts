@@ -52,6 +52,7 @@ import {
   applyAcceptedPriceCandidate,
   applyProtocolPriceOverrides,
   getPostEnrichmentCandidatePricesForCurrentAsset,
+  recordProtocolPriceOverridePublicationRejection,
   type ProtocolPriceOverride,
 } from "./pricing";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
@@ -75,6 +76,8 @@ export interface PostEnrichmentInput {
   validationContexts: { get: (asset: PeggedAsset) => PriceValidationContext };
   primaryPriceResults?: Map<string, PrimaryPriceResult>;
   previousTrustedPrices?: Map<string, TrustedPriceReference>;
+  authoritativeOverrides?: Map<string, ProtocolPriceOverride>;
+  authoritativeOverrideStats?: AuthoritativeLivePriceOverrideStats;
   returnIfAborted: (signal: AbortSignal | undefined, stage: string) => CronResult | null;
   abortResult: (signal: AbortSignal | undefined, stage: string) => CronResult;
 }
@@ -92,6 +95,7 @@ export interface SharedPriceCompletionInput extends Omit<PostEnrichmentInput, "m
   missingBefore: Set<string>;
   authoritativeOverrides?: Map<string, ProtocolPriceOverride>;
   authoritativeOverrideStats?: AuthoritativeLivePriceOverrideStats;
+  previousMissingGenerationsById?: ReadonlyMap<string, number>;
 }
 
 export interface SharedPriceCompletionResult extends PriceValidationResult {
@@ -284,6 +288,25 @@ export async function runPostEnrichmentPricePipeline(
       previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
     });
     if (!decision.accepted) {
+      const authoritativeOverride = input.authoritativeOverrides?.get(asset.id);
+      const currentPrice = asset.price;
+      if (
+        authoritativeOverride &&
+        asset.priceSource === authoritativeOverride.source &&
+        typeof currentPrice === "number" &&
+        Number.isFinite(currentPrice)
+      ) {
+        const tolerance = Math.max(1e-12, Math.abs(authoritativeOverride.price) * 1e-9);
+        if (Math.abs(currentPrice - authoritativeOverride.price) <= tolerance) {
+          recordProtocolPriceOverridePublicationRejection({
+            asset,
+            override: authoritativeOverride,
+            authoritativeOverrideStats: input.authoritativeOverrideStats,
+            syncStartSec: input.syncStartSec,
+            reason: decision.reason,
+          });
+        }
+      }
       console.warn(
         `[sync-stablecoins] Rejected unreasonable price for ${asset.symbol} (id=${asset.id}): ` +
         `$${asset.price} (${decision.reason})`,
@@ -385,7 +408,11 @@ export async function runSharedPriceCompletion(
       input.assets,
       input.signal,
       input.validationReferences,
-      { db: input.db, stats: authoritativeOverrideStats },
+      {
+        db: input.db,
+        stats: authoritativeOverrideStats,
+        previousMissingGenerationsById: input.previousMissingGenerationsById,
+      },
     ),
   );
   if (input.authoritativeOverrides) {
@@ -397,6 +424,7 @@ export async function runSharedPriceCompletion(
         db: input.db,
         stats: authoritativeOverrideStats,
         maxProviderLivePriority: 0,
+        previousMissingGenerationsById: input.previousMissingGenerationsById,
       },
     );
     for (const [assetId, override] of postFallbackLocalOverrides) {
@@ -410,10 +438,13 @@ export async function runSharedPriceCompletion(
     validationContexts: input.validationContexts,
     validationReferences: input.validationReferences,
     syncStartSec: input.syncStartSec,
+    authoritativeOverrideStats,
   });
 
   const priceResult = await runPostEnrichmentPricePipeline({
     ...input,
+    authoritativeOverrides,
+    authoritativeOverrideStats,
     missingBefore: input.missingBefore,
   }, abortStagePrefix);
   if (isAbortResult(priceResult)) return priceResult;

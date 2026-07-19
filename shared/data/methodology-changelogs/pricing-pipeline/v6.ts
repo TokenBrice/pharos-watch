@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.200",
+    title: "Persistent active-price recovery priority",
+    date: "2026-07-19",
+    effectiveAt: 1784469026,
+    summary:
+      "Persistent active price gaps now run ahead of refresh-oriented pricing work, and reviewed AZND Curve exact-pool quotes can publish after route-level checks pass.",
+    impact: [
+      "Authoritative live overrides schedule alert-eligible current missing assets first and keep every current missing candidate ahead of already-priced refresh candidates",
+      "Exact-address provider targeting now uses previous active-price coverage streaks, pinning alert-eligible gaps ahead of current misses, recent misses, expiring observations, low-depth priced rows, and broad priced refreshes",
+      "`curve-thin-onchain` remains fallback-confidence, non-replay-safe, and non-depeg-authoritative, but it bypasses generic soft-source publication corroboration after the identity-bound Curve route has passed freshness, balance, and impact checks",
+      "Authoritative override candidates that resolve but fail publication validation now append asset-attributable rejection records to the existing price-source attempt ledger",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.199",
     title: "CMC truncated-category validation hardening",
     date: "2026-07-19",

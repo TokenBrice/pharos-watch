@@ -73,6 +73,7 @@ export interface FallbackPriceEnrichmentInput extends FallbackPhaseContext, Fall
   cmcApiKey?: string;
   jupiterApiKey?: string | null;
   coingeckoApiKey?: string | null;
+  previousMissingGenerationsById?: ReadonlyMap<string, number>;
   fxFallbackRates?: Record<string, number>;
   validationReferences?: PriceValidationReferences;
   validationContexts: ValidationContextResolver;

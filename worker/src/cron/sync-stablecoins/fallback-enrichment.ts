@@ -40,7 +40,11 @@ export async function runFallbackPriceEnrichmentPhase(
     input.assets,
     input.signal,
     input.validationReferences,
-    { db: input.db, stats: authoritativeOverrideStats },
+    {
+      db: input.db,
+      stats: authoritativeOverrideStats,
+      previousMissingGenerationsById: input.previousMissingGenerationsById,
+    },
   );
   applyProtocolPriceOverrides({
     assets: input.assets,
@@ -49,6 +53,7 @@ export async function runFallbackPriceEnrichmentPhase(
     validationContexts: input.validationContexts,
     validationReferences: input.validationReferences,
     syncStartSec: input.syncStartSec,
+    authoritativeOverrideStats,
   });
 
   await reportStablecoinsStage(
@@ -65,6 +70,7 @@ export async function runFallbackPriceEnrichmentPhase(
     cmcApiKey: input.cmcApiKey,
     jupiterApiKey: input.jupiterApiKey,
     coingeckoApiKey: input.coingeckoApiKey,
+    previousMissingGenerationsById: input.previousMissingGenerationsById,
     returnIfAborted: input.returnIfAborted,
   }, "fallback-");
   if (isAbortResult(enrichmentPhase)) return enrichmentPhase;
@@ -83,6 +89,7 @@ export async function runFallbackPriceEnrichmentPhase(
     previousTrustedPrices: input.previousTrustedPrices,
     authoritativeOverrides,
     authoritativeOverrideStats,
+    previousMissingGenerationsById: input.previousMissingGenerationsById,
     returnIfAborted: input.returnIfAborted,
     abortResult: input.abortResult,
   }, "fallback-");

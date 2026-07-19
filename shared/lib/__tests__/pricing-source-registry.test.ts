@@ -213,6 +213,15 @@ describe("pricing source registry", () => {
       requiresObservedAt: true,
     });
 
+    expect(getPricingSourceRegistryEntry("curve-thin-onchain")).toMatchObject({
+      key: "curve-thin-onchain",
+      trustTier: "soft_dex",
+      depegSourceFamily: "dex:curve",
+      maxTrustedAgeSec: 5 * 60,
+      isReplaySafe: false,
+      bypassesSoftValidationGuardrails: true,
+    });
+
     expect(getPricingSourceRegistryEntry("uniswap-v4-dex")).toMatchObject({
       key: "uniswap-v4-dex",
       trustTier: "soft_dex",

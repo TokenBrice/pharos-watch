@@ -68,6 +68,12 @@ export async function syncViaCoingeckoFallback(
     syncStartSec,
     previousAssetsById,
   });
+  const previousActivePriceCoverage = await loadPreviousStablecoinActivePriceCoverage(db, syncStartSec);
+  const previousMissingGenerationsById = new Map(
+    (previousActivePriceCoverage?.missingActiveAssets ?? []).map(
+      (detail) => [detail.stablecoinId, detail.consecutiveMissingGenerations] as const,
+    ),
+  );
 
   const enrichment = await runFallbackPriceEnrichmentPhase({
     db,
@@ -78,6 +84,7 @@ export async function syncViaCoingeckoFallback(
     cmcApiKey,
     jupiterApiKey,
     coingeckoApiKey,
+    previousMissingGenerationsById,
     fxFallbackRates,
     validationReferences,
     validationContexts,
@@ -150,7 +157,6 @@ export async function syncViaCoingeckoFallback(
   });
   if (isFallbackCronResult(depegResult)) return depegResult;
   const { depegErrorCount, providerDiagnostics: depegProviderDiagnostics } = depegResult;
-  const previousActivePriceCoverage = await loadPreviousStablecoinActivePriceCoverage(db, syncStartSec);
   const publicationCoverage = evaluateStablecoinPublicationCoverage(
     assets.map((asset) => String(asset.id)),
     syncStartSec,

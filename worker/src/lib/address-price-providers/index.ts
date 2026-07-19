@@ -44,6 +44,7 @@ import {
   rotateTargets,
   writeProviderTargetCursor,
 } from "../pricing-provider-runtime-state";
+import { ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS } from "../stablecoin-publication-coverage";
 
 export type {
   AddressPriceAssetLike,
@@ -162,8 +163,16 @@ function expiresBeforeNextGeneration(asset: AddressPriceAssetLike | undefined, n
   return expiresAt > nowSec && expiresAt <= nowSec + NEXT_PRICE_GENERATION_SEC;
 }
 
-function shouldTargetAsset(asset: AddressPriceAssetLike, previousAssetsById: Map<string, AddressPriceAssetLike> | undefined, nowSec: number): {
+function shouldTargetAsset(
+  asset: AddressPriceAssetLike,
+  previousAssetsById: Map<string, AddressPriceAssetLike> | undefined,
+  previousMissingGenerationsById: ReadonlyMap<string, number> | undefined,
+  nowSec: number,
+): {
   previousSourceDepth: number;
+  previousMissingGenerations: number;
+  alertEligibleMissingPrice: boolean;
+  recentlyMissingPrice: boolean;
   expiresBeforeNextGeneration: boolean;
   lowConfidencePrice: boolean;
   missingPrice: boolean;
@@ -172,6 +181,12 @@ function shouldTargetAsset(asset: AddressPriceAssetLike, previousAssetsById: Map
   const previous = previousAssetsById?.get(asset.id);
   const previousSourceDepth = previous?.consensusSources?.length ?? asset.consensusSources?.length ?? 0;
   const missingPrice = asset.price == null || typeof asset.price !== "number" || asset.price <= 0;
+  const previousMissingGenerations = previousMissingGenerationsById?.get(asset.id) ?? 0;
+  const projectedMissingGenerations = missingPrice ? previousMissingGenerations + 1 : previousMissingGenerations;
+  const alertEligibleMissingPrice =
+    projectedMissingGenerations >= ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS &&
+    (missingPrice || previousMissingGenerations > 0);
+  const recentlyMissingPrice = previousMissingGenerations > 0;
   const priceConfidence = readStringHint(asset, "priceConfidence") ?? readStringHint(previous, "priceConfidence");
   const priceSource = readStringHint(asset, "priceSource") ?? readStringHint(previous, "priceSource");
   const lowConfidencePrice =
@@ -182,10 +197,19 @@ function shouldTargetAsset(asset: AddressPriceAssetLike, previousAssetsById: Map
   const expiring = expiresBeforeNextGeneration(previous ?? asset, nowSec);
   return {
     previousSourceDepth,
+    previousMissingGenerations,
+    alertEligibleMissingPrice,
+    recentlyMissingPrice,
     expiresBeforeNextGeneration: expiring,
     lowConfidencePrice,
     missingPrice,
-    include: !previousAssetsById || previousSourceDepth < 3 || missingPrice || lowConfidencePrice || expiring,
+    include:
+      !previousAssetsById ||
+      previousSourceDepth < 3 ||
+      missingPrice ||
+      recentlyMissingPrice ||
+      lowConfidencePrice ||
+      expiring,
   };
 }
 
@@ -257,13 +281,22 @@ function buildAssetDeployments(asset: AddressPriceAssetLike): Array<{
 }
 
 function compareAddressPriceTargets(left: AddressPriceTarget, right: AddressPriceTarget): number {
+  if (left.alertEligibleMissingPrice !== right.alertEligibleMissingPrice) {
+    return left.alertEligibleMissingPrice ? -1 : 1;
+  }
   if (left.missingPrice !== right.missingPrice) return left.missingPrice ? -1 : 1;
+  if (left.recentlyMissingPrice !== right.recentlyMissingPrice) {
+    return left.recentlyMissingPrice ? -1 : 1;
+  }
   if (left.expiresBeforeNextGeneration !== right.expiresBeforeNextGeneration) {
     return left.expiresBeforeNextGeneration ? -1 : 1;
   }
   const leftLowDepth = left.previousSourceDepth <= 2;
   const rightLowDepth = right.previousSourceDepth <= 2;
   if (leftLowDepth !== rightLowDepth) return leftLowDepth ? -1 : 1;
+  if (left.previousMissingGenerations !== right.previousMissingGenerations) {
+    return right.previousMissingGenerations - left.previousMissingGenerations;
+  }
   if (left.circulatingUsd !== right.circulatingUsd) return right.circulatingUsd - left.circulatingUsd;
   if (left.previousSourceDepth !== right.previousSourceDepth) {
     return left.previousSourceDepth - right.previousSourceDepth;
@@ -272,10 +305,12 @@ function compareAddressPriceTargets(left: AddressPriceTarget, right: AddressPric
 }
 
 function getAddressPriceTargetPriority(target: AddressPriceTarget): number {
-  if (target.missingPrice) return 0;
-  if (target.expiresBeforeNextGeneration) return 1;
-  if (target.previousSourceDepth <= 2) return 2;
-  return 3;
+  if (target.alertEligibleMissingPrice) return 0;
+  if (target.missingPrice) return 1;
+  if (target.recentlyMissingPrice) return 2;
+  if (target.expiresBeforeNextGeneration) return 3;
+  if (target.previousSourceDepth <= 2) return 4;
+  return 5;
 }
 
 export function rotateAddressPriceTargets(
@@ -298,6 +333,7 @@ export function rotateAddressPriceTargets(
 export function buildAddressPriceTargetsByProvider(params: {
   assets: AddressPriceAssetLike[];
   previousAssetsById?: Map<string, AddressPriceAssetLike>;
+  previousMissingGenerationsById?: ReadonlyMap<string, number>;
   providers: readonly AddressPriceProviderKey[];
   nowSec?: number;
 }): Map<AddressPriceProviderKey, AddressPriceTarget[]> {
@@ -309,7 +345,12 @@ export function buildAddressPriceTargetsByProvider(params: {
     const seen = new Set<string>();
 
     for (const asset of params.assets) {
-      const targeting = shouldTargetAsset(asset, params.previousAssetsById, params.nowSec ?? Math.floor(Date.now() / 1000));
+      const targeting = shouldTargetAsset(
+        asset,
+        params.previousAssetsById,
+        params.previousMissingGenerationsById,
+        params.nowSec ?? Math.floor(Date.now() / 1000),
+      );
       if (!targeting.include) continue;
 
       for (const deployment of buildAssetDeployments(asset)) {
@@ -332,6 +373,9 @@ export function buildAddressPriceTargetsByProvider(params: {
           decimals: deployment.decimals,
           origin: deployment.origin,
           previousSourceDepth: targeting.previousSourceDepth,
+          previousMissingGenerations: targeting.previousMissingGenerations,
+          alertEligibleMissingPrice: targeting.alertEligibleMissingPrice,
+          recentlyMissingPrice: targeting.recentlyMissingPrice,
           missingPrice: targeting.missingPrice,
           expiresBeforeNextGeneration: targeting.expiresBeforeNextGeneration,
           circulatingUsd: sumCirculatingUsd(asset),

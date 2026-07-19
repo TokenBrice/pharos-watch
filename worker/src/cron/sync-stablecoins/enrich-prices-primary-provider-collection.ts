@@ -266,6 +266,7 @@ export async function buildPrimaryPricePlan(
   dlListPrices?: Map<string, number | DlListQuote>,
   options?: {
     previousAssetsById?: Map<string, PeggedAsset>;
+    previousMissingGenerationsById?: ReadonlyMap<string, number>;
     addressProvider?: AddressPriceProviderRuntimeConfig;
   },
 ): Promise<PrimaryPricePlan> {
@@ -278,6 +279,7 @@ export async function buildPrimaryPricePlan(
   const addressProviderTargets = buildAddressPriceTargetsByProvider({
     assets,
     previousAssetsById: options?.previousAssetsById,
+    previousMissingGenerationsById: options?.previousMissingGenerationsById,
     providers: addressProviders,
   });
   const addressProviderCandidateIds = new Set<string>();

@@ -43,6 +43,9 @@ export interface AddressPriceTarget {
   decimals?: number;
   origin: "contracts" | "tradedContracts" | "asset.address";
   previousSourceDepth: number;
+  previousMissingGenerations: number;
+  alertEligibleMissingPrice: boolean;
+  recentlyMissingPrice: boolean;
   missingPrice: boolean;
   expiresBeforeNextGeneration: boolean;
   circulatingUsd: number;
