@@ -61,12 +61,18 @@ const ALLOW_STUB_MODE = process.argv.includes("--allow-stub") || process.env.PUB
 const REQUIRE_API_SOURCE = process.env.PUBLIC_DATASETS_REQUIRE_API === "1";
 const ROW_FLOORS: Readonly<Record<PublicDatasetTopic, number>> = {
   "top-stablecoins": 493,
-  // A fixed floor is invalid for this rolling window because legitimate event
-  // volume can decline. Live generation separately proves that the fetched
-  // source crosses the retention boundary before accepting the projection.
+  // A fixed live-generation floor is invalid for this rolling window because
+  // legitimate event volume can decline. Live generation separately proves that
+  // the fetched source crosses the retention boundary before accepting the
+  // projection. Checked artifacts keep a legacy floor below to reject obviously
+  // truncated mirrors when raw source coverage is unavailable in the artifact.
   "depeg-history": 1,
   "scores-latest": 493,
   "peg-mechanism-distribution": 99,
+};
+const CHECK_ROW_FLOORS: Readonly<Record<PublicDatasetTopic, number>> = {
+  ...ROW_FLOORS,
+  "depeg-history": 300,
 };
 const FRESHNESS_CONTRACT = "point-in-time sample; not guaranteed to track production freshness";
 
@@ -610,11 +616,22 @@ const DEFAULT_ARTIFACT_DIRS: ArtifactDirs = {
   sheetsDir: SHEETS_DIR,
 };
 
-function readJsonRowCount(path: string, topic: PublicDatasetTopic): number | null {
+interface JsonArtifactMetadata {
+  rowCount: number;
+  actualRowCount: number;
+}
+
+function readJsonArtifactMetadata(path: string, topic: PublicDatasetTopic): JsonArtifactMetadata | null {
   try {
-    const parsed = JSON.parse(readFileSync(path, "utf8")) as { _meta?: { endpoint?: string; rowCount?: unknown } };
-    if (parsed._meta?.endpoint !== topic) return null;
-    return typeof parsed._meta.rowCount === "number" ? parsed._meta.rowCount : null;
+    const parsed = JSON.parse(readFileSync(path, "utf8")) as {
+      _meta?: { endpoint?: string; rowCount?: unknown };
+      rows?: unknown;
+    };
+    if (parsed._meta?.endpoint !== topic || typeof parsed._meta.rowCount !== "number") return null;
+    return {
+      rowCount: parsed._meta.rowCount,
+      actualRowCount: Array.isArray(parsed.rows) ? parsed.rows.length : -1,
+    };
   } catch {
     return null;
   }
@@ -650,13 +667,20 @@ function checkTopic(
       return { ok: false, reason: `${path} missing preamble` };
     }
   }
-  const rowCount = readJsonRowCount(join(topicDir, "latest.json"), topic);
-  const floor = ROW_FLOORS[topic];
-  if (rowCount == null) {
-    return { ok: false, reason: `${join(topicDir, "latest.json")} missing numeric _meta.rowCount` };
+  const jsonPath = join(topicDir, "latest.json");
+  const jsonMetadata = readJsonArtifactMetadata(jsonPath, topic);
+  const floor = CHECK_ROW_FLOORS[topic];
+  if (jsonMetadata == null) {
+    return { ok: false, reason: `${jsonPath} missing numeric _meta.rowCount` };
   }
-  if (rowCount < floor) {
-    return { ok: false, reason: `${topic} rowCount ${rowCount} below required floor ${floor}` };
+  if (jsonMetadata.actualRowCount !== jsonMetadata.rowCount) {
+    return {
+      ok: false,
+      reason: `${topic} rowCount ${jsonMetadata.rowCount} does not match rows length ${jsonMetadata.actualRowCount}`,
+    };
+  }
+  if (jsonMetadata.rowCount < floor) {
+    return { ok: false, reason: `${topic} rowCount ${jsonMetadata.rowCount} below required floor ${floor}` };
   }
   return { ok: true };
 }
