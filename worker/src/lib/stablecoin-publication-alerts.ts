@@ -5,6 +5,7 @@ import type { StablecoinActivePriceCoverage } from "./stablecoin-publication-cov
 
 const ALERT_COOLDOWN_SEC = 24 * 60 * 60;
 const ALERT_MARKER_PREFIX = "sync-stablecoins:missing-active-price-alert:v1";
+const MAX_VALID_DATE_SECONDS = 8_640_000_000_000;
 
 export interface StablecoinPriceCoverageAlertResult {
   eligibleCount: number;
@@ -18,7 +19,11 @@ function markerKey(stablecoinId: string): string {
 }
 
 function formatLastAccepted(observedAt: number | null): string {
-  return observedAt == null ? "never" : new Date(observedAt * 1_000).toISOString();
+  if (observedAt == null) return "never";
+  if (!Number.isFinite(observedAt) || Math.abs(observedAt) > MAX_VALID_DATE_SECONDS) {
+    return "invalid timestamp";
+  }
+  return new Date(observedAt * 1_000).toISOString();
 }
 
 export async function alertOnMissingActiveStablecoinPrices(
