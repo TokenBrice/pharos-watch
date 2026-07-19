@@ -68,6 +68,20 @@ describe("alertOnMissingActiveStablecoinPrices", () => {
     }));
   });
 
+  it("does not throw when persisted accepted timestamps are outside the JavaScript Date range", async () => {
+    const unsafeCoverage = coverage();
+    unsafeCoverage.missingActiveAssets[0]!.lastAcceptedObservedAt = 9_000_000_000_000_000;
+
+    const result = await alertOnMissingActiveStablecoinPrices({} as D1Database, unsafeCoverage, "webhook");
+
+    expect(result).toEqual({ eligibleCount: 1, dueCount: 1, sent: true, suppressedByCooldown: 0 });
+    expect(sendAlertMock).toHaveBeenCalledWith(
+      "webhook",
+      "Active stablecoin prices missing",
+      expect.stringContaining("last accepted at=invalid timestamp"),
+    );
+  });
+
   it("retries when webhook delivery fails", async () => {
     sendAlertMock.mockResolvedValue(false);
     const result = await alertOnMissingActiveStablecoinPrices({} as D1Database, coverage(), "webhook");

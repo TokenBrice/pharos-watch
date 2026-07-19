@@ -3,6 +3,8 @@ import { getCirculatingRaw } from "@shared/lib/supply";
 
 export const ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS = 2;
 
+const MAX_VALID_DATE_SECONDS = 8_640_000_000_000;
+
 const ACTIVE_STABLECOIN_SYMBOL_BY_ID = new Map(
   ACTIVE_STABLECOINS.map((stablecoin) => [stablecoin.id, stablecoin.symbol] as const),
 );
@@ -197,6 +199,11 @@ function positiveFiniteNumberOrNull(value: unknown): number | null {
   return parsed != null && parsed > 0 ? parsed : null;
 }
 
+function dateSecondsOrNull(value: unknown): number | null {
+  const parsed = finiteNumberOrNull(value);
+  return parsed != null && Math.abs(parsed) <= MAX_VALID_DATE_SECONDS ? parsed : null;
+}
+
 function stringOrNull(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
@@ -219,7 +226,7 @@ function acceptedObservation(asset: StablecoinPriceCoverageAsset | undefined): {
   return {
     price,
     source: stringOrNull(asset?.priceSource),
-    observedAt: finiteNumberOrNull(asset?.priceObservedAt ?? asset?.priceUpdatedAt),
+    observedAt: dateSecondsOrNull(asset?.priceObservedAt ?? asset?.priceUpdatedAt),
   };
 }
 
@@ -237,12 +244,12 @@ function parsePriorMissingDetail(value: unknown): MissingActivePriceDetail | nul
     marketCapUsd: finiteNumberOrNull(entry.marketCapUsd),
     currentPrice: finiteNumberOrNull(entry.currentPrice),
     currentSource: stringOrNull(entry.currentSource),
-    currentObservedAt: finiteNumberOrNull(entry.currentObservedAt),
+    currentObservedAt: dateSecondsOrNull(entry.currentObservedAt),
     currentConfidence: stringOrNull(entry.currentConfidence),
     consecutiveMissingGenerations,
     lastAcceptedPrice: positiveFiniteNumberOrNull(entry.lastAcceptedPrice),
     lastAcceptedSource: stringOrNull(entry.lastAcceptedSource),
-    lastAcceptedObservedAt: finiteNumberOrNull(entry.lastAcceptedObservedAt),
+    lastAcceptedObservedAt: dateSecondsOrNull(entry.lastAcceptedObservedAt),
     rejectionReason: stringOrNull(entry.rejectionReason) ?? "no-accepted-price",
     alertEligible: entry.alertEligible === true
       || consecutiveMissingGenerations >= ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS,
@@ -266,7 +273,7 @@ function parsePersistedMissingState(value: unknown): MissingActivePriceDetail | 
     consecutiveMissingGenerations,
     lastAcceptedPrice: positiveFiniteNumberOrNull(value[2]),
     lastAcceptedSource: stringOrNull(value[3]),
-    lastAcceptedObservedAt: finiteNumberOrNull(value[4]),
+    lastAcceptedObservedAt: dateSecondsOrNull(value[4]),
     rejectionReason: stringOrNull(value[5]) ?? "no-accepted-price",
     alertEligible: consecutiveMissingGenerations >= ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS,
   };
@@ -424,7 +431,7 @@ export function evaluateStablecoinActivePriceCoverage(
       marketCapUsd,
       currentPrice,
       currentSource: typeof asset?.priceSource === "string" ? asset.priceSource : null,
-      currentObservedAt: finiteNumberOrNull(asset?.priceObservedAt ?? asset?.priceUpdatedAt),
+      currentObservedAt: dateSecondsOrNull(asset?.priceObservedAt ?? asset?.priceUpdatedAt),
       currentConfidence: typeof asset?.priceConfidence === "string" ? asset.priceConfidence : null,
       consecutiveMissingGenerations,
       lastAcceptedPrice,

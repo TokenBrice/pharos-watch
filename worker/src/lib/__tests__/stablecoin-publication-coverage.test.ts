@@ -193,6 +193,32 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     });
   });
 
+  it("drops accepted observation timestamps outside the JavaScript Date range", () => {
+    const previousAcceptedAssetsById = new Map([[
+      "missing",
+      {
+        id: "missing",
+        symbol: "MISS",
+        price: 0.998,
+        priceSource: "pyth",
+        priceObservedAt: 9_000_000_000_000_000,
+      },
+    ]]);
+
+    const result = evaluateStablecoinActivePriceCoverage(
+      [{ id: "missing", symbol: "MISS", price: null, priceObservedAt: 9_000_000_000_000_000 }],
+      ["missing"],
+      { previousAcceptedAssetsById },
+    );
+
+    expect(result.missingActiveAssets[0]).toMatchObject({
+      currentObservedAt: null,
+      lastAcceptedPrice: 0.998,
+      lastAcceptedSource: "pyth",
+      lastAcceptedObservedAt: null,
+    });
+  });
+
   it("loads bounded streak state from the latest prior cron metadata", async () => {
     const db = mockD1([{
       match: "activePriceCoverage",
