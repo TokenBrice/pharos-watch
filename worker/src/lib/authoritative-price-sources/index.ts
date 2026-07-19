@@ -17,6 +17,7 @@ import { azndCurvePoolProvider } from "./aznd-curve-pool";
 import { capCusdProvider } from "./cap-cusd";
 import { erc4626NavProvider } from "./erc4626-nav";
 import {
+  CACHED_VAULT_RATE_SOURCE,
   type CurrentPriceOverride,
   type HistoricalPriceContext,
   type HistoricalPriceResolution,
@@ -28,6 +29,7 @@ import { idleCdoTrancheProvider } from "./idle-cdo-tranche";
 import { inheritedTrackedPriceProvider } from "./inherited-tracked";
 import { iusdInfinifiProvider } from "./infinifi-iusd";
 import { jusdStablecoinBridgeProvider } from "./jusd-stablecoin-bridge";
+import { readVaultRateCache, writeVaultRateCache } from "./rate-cache";
 import { kavaUsdxPricefeedProvider } from "./kava-pricefeed";
 import { previewRedeemProvider } from "./preview-redeem";
 import { protocolParProvider } from "./protocol-par";
@@ -65,6 +67,7 @@ export interface AuthoritativeLivePriceOverrideStats {
   emptyCount: number;
   skippedCircuitOpen: number;
   skippedBudget: number;
+  cachedRateFallbacks: number;
   timedOut: boolean;
   assetAttempts: PricingAssetAttemptRecord[];
 }
@@ -184,6 +187,7 @@ export function createAuthoritativeLivePriceOverrideStats(
     emptyCount: 0,
     skippedCircuitOpen: 0,
     skippedBudget: 0,
+    cachedRateFallbacks: 0,
     timedOut: false,
     assetAttempts: [],
   };
@@ -239,6 +243,10 @@ export async function fetchAuthoritativeLivePriceOverrides(
   const liveContext: LivePriceContext = {
     assetsById: new Map(assets.map((asset) => [asset.id, { ...asset }])),
     validationReferences,
+    vaultRateCache: options?.db
+      ? await readVaultRateCache(options.db, Math.floor(Date.now() / 1000))
+      : undefined,
+    vaultRateWrites: new Map(),
   };
   const candidates = assets
     .filter((asset) => ACTIVE_IDS.has(asset.id))
@@ -357,7 +365,10 @@ export async function fetchAuthoritativeLivePriceOverrides(
       if (override) {
         results.set(asset.id, override);
         applyOverrideToLiveContext(liveContext, asset.id, override);
-        if (stats) stats.successCount += 1;
+        if (stats) {
+          stats.successCount += 1;
+          if (override.source === CACHED_VAULT_RATE_SOURCE) stats.cachedRateFallbacks += 1;
+        }
         recordAttempt(asset, provider, {
           state: "attempted",
           result: "resolved",
@@ -439,6 +450,10 @@ export async function fetchAuthoritativeLivePriceOverrides(
     } finally {
       candidateTimeout?.dispose();
     }
+  }
+
+  if (options?.db && liveContext.vaultRateWrites && liveContext.vaultRateWrites.size > 0) {
+    await writeVaultRateCache(options.db, liveContext.vaultRateWrites, Math.floor(Date.now() / 1000));
   }
 
   return results;

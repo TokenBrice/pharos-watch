@@ -2622,6 +2622,142 @@ describe("authoritative-price-sources", () => {
     expect(overrides.get("weusd-picwe")?.price).toBeCloseTo(0.99 * 0.9999, 6);
   });
 
+  it("publishes a cached-rate degradation price when the live vault read fails for a missing asset", async () => {
+    fetchEvmCallHexAtBlockMock.mockRejectedValue(new Error("rpc down"));
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM authoritative_vault_rates",
+        rows: [{ stablecoin_id: "gtusdc-gauntlet", rate: 1.0221, observed_at: nowSec - 3600 }],
+      },
+    ]);
+    const stats = createAuthoritativeLivePriceOverrideStats();
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [
+        {
+          id: "gtusdc-gauntlet",
+          name: "Gauntlet USDC Core",
+          symbol: "gtUSDC",
+          circulating: { peggedUSD: 128_000_000 },
+        },
+        {
+          id: "usdc-circle",
+          name: "USDC",
+          symbol: "USDC",
+          price: 0.9999,
+          priceSource: "coingecko+pyth",
+          priceConfidence: "high",
+          priceObservedAt: nowSec - 60,
+          priceObservedAtMode: "upstream",
+        },
+      ],
+      undefined,
+      undefined,
+      { db, stats },
+    );
+
+    const override = overrides.get("gtusdc-gauntlet");
+    expect(override).toMatchObject({
+      source: "protocol-redeem-cached-rate",
+      confidence: "low",
+      metadata: {
+        inheritedFrom: "usdc-circle",
+        cachedVaultRate: { rate: 1.0221, rateObservedAt: nowSec - 3600 },
+      },
+    });
+    expect(override?.price).toBeCloseTo(1.0221 * 0.9999, 6);
+    expect(override?.observedAt).toBe(nowSec - 3600);
+    expect(stats.cachedRateFallbacks).toBe(1);
+    expect(stats.assetAttempts).toEqual([
+      expect.objectContaining({
+        assetId: "gtusdc-gauntlet",
+        result: "resolved",
+        source: "protocol-redeem-cached-rate",
+      }),
+    ]);
+  });
+
+  it("keeps failing hard when the cached vault rate is too old to trust", async () => {
+    fetchEvmCallHexAtBlockMock.mockRejectedValue(new Error("rpc down"));
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        // The 24h read-side WHERE bound excludes this row, and even a returned
+        // stale row would fail the in-memory trust check.
+        match: "FROM authoritative_vault_rates",
+        rows: [{ stablecoin_id: "gtusdc-gauntlet", rate: 1.0221, observed_at: nowSec - 25 * 3600 }],
+      },
+    ]);
+    const stats = createAuthoritativeLivePriceOverrideStats();
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [
+        {
+          id: "gtusdc-gauntlet",
+          name: "Gauntlet USDC Core",
+          symbol: "gtUSDC",
+          circulating: { peggedUSD: 128_000_000 },
+        },
+        {
+          id: "usdc-circle",
+          name: "USDC",
+          symbol: "USDC",
+          price: 0.9999,
+          priceSource: "coingecko+pyth",
+          priceConfidence: "high",
+          priceObservedAt: nowSec - 60,
+          priceObservedAtMode: "upstream",
+        },
+      ],
+      undefined,
+      undefined,
+      { db, stats },
+    );
+
+    expect(overrides.size).toBe(0);
+    expect(stats.cachedRateFallbacks).toBe(0);
+    expect(stats.failedCount).toBe(1);
+  });
+
+  it("persists fresh live vault rates for the durable cache after a successful read", async () => {
+    const oneShareUsdcRaw = 1_010_000n.toString(16).padStart(64, "0");
+    fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${oneShareUsdcRaw}`);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([]);
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [
+        {
+          id: "gtusdc-gauntlet",
+          name: "Gauntlet USDC Core",
+          symbol: "gtUSDC",
+          circulating: { peggedUSD: 128_000_000 },
+        },
+        {
+          id: "usdc-circle",
+          name: "USDC",
+          symbol: "USDC",
+          price: 0.9999,
+          priceSource: "coingecko+pyth",
+          priceConfidence: "high",
+          priceObservedAt: nowSec - 60,
+          priceObservedAtMode: "upstream",
+        },
+      ],
+      undefined,
+      undefined,
+      { db },
+    );
+
+    expect(overrides.get("gtusdc-gauntlet")).toMatchObject({ source: "protocol-redeem" });
+    const rateWrite = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("INSERT INTO authoritative_vault_rates"));
+    expect(rateWrite?.binds[0]).toBe("gtusdc-gauntlet");
+    expect(rateWrite?.binds[1]).toBeCloseTo(1.01, 8);
+  });
+
   it("prices sYUSD before GT hardening from a fresh replay-safe single-source YUSD parent", async () => {
     const assetsPerShareRaw = 1_044_572_348_140_406_493n.toString(16).padStart(64, "0");
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${assetsPerShareRaw}`);

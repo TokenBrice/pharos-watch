@@ -103,6 +103,7 @@ describe("applyProtocolPriceOverrides", () => {
       emptyCount: 0,
       skippedCircuitOpen: 0,
       skippedBudget: 0,
+      cachedRateFallbacks: 0,
       timedOut: false,
       assetAttempts: [],
     };

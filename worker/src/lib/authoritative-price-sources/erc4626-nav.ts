@@ -1,12 +1,14 @@
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { CIRCUIT_SOURCE } from "../constants";
 import {
+  buildCachedRateLiveOverride,
   buildParentDerivedLiveOverride,
   defineRegistryErc4626NavVault,
   ETHEREUM_CHAIN,
   fetchVaultAssetsPerShareViaSelector,
   PROTOCOL_REDEEM_SOURCE,
   resolveTrustedOverrideParent,
+  resolveVaultAssetsPerShareWithCache,
   USDC_CIRCLE_ID,
   type CurrentPriceOverride,
   type Erc4626NavVaultConfig,
@@ -232,9 +234,13 @@ export const erc4626NavProvider: PriceSourceProvider = {
     );
     if (!parent) return null;
 
-    const assetsPerShare = await fetchErc4626AssetsPerShare(config, "latest", signal);
-    if (assetsPerShare == null) return null;
+    const resolved = await resolveVaultAssetsPerShareWithCache(asset, context, () =>
+      fetchErc4626AssetsPerShare(config, "latest", signal),
+    );
+    if (!resolved) return null;
 
-    return buildParentDerivedLiveOverride(parent, assetsPerShare);
+    return resolved.cachedObservedAt == null
+      ? buildParentDerivedLiveOverride(parent, resolved.rate)
+      : buildCachedRateLiveOverride(parent, resolved.rate, resolved.cachedObservedAt);
   },
 };

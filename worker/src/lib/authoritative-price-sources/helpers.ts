@@ -8,6 +8,7 @@ import { fetchEvmCallHexAtBlock, resolveClosestBlockAtOrBeforeTimestamp, type Ev
 import { encodeUint256 } from "../evm-selectors";
 export { encodeAddress, encodeUint256 } from "../evm-selectors";
 import { throwIfAborted } from "../abort";
+import { hasPublishableCurrentPrice } from "../price-publication-state";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import { validateCompositePricingSourceFreshness } from "../pricing-source-freshness";
 import type { PriceValidationReferences } from "../price-validation";
@@ -16,10 +17,24 @@ export const ETHEREUM_CHAIN = "ethereum";
 
 export const PROTOCOL_REDEEM_SOURCE = "protocol-redeem";
 
+export const CACHED_VAULT_RATE_SOURCE = "protocol-redeem-cached-rate";
+
+/**
+ * Vault share rates accrue a few bps per day, so a day-old rate misprices by
+ * roughly a basis point — categorically better than a missing active price
+ * while staying honest through the dedicated low-confidence source key.
+ */
+export const CACHED_VAULT_RATE_MAX_AGE_SEC = 24 * 60 * 60;
+
 export const USDC_CIRCLE_ID = "usdc-circle";
 
 const ERC4626_NAV_MIN_RATIO = 0.5;
 const ERC4626_NAV_MAX_RATIO = 10;
+
+export interface CachedVaultRate {
+  rate: number;
+  observedAt: number;
+}
 
 export interface Erc4626NavVaultConfig {
   id: string;
@@ -149,6 +164,10 @@ export interface CurrentPriceOverride {
     parentObservedAt?: number | null;
     parentObservedAtMode?: PriceObservedAtMode | null;
     parentReplaySafe?: boolean;
+    cachedVaultRate?: {
+      rate: number;
+      rateObservedAt: number;
+    };
     kavaPricefeed?: {
       marketId: string;
       blockHeight: number;
@@ -201,6 +220,10 @@ export interface LivePriceContext {
    * rejected parent instead of reporting an opaque missing quote.
    */
   lastUntrustedParent?: { parentId: string; reason: string } | null;
+  /** Durable last-good vault rates loaded once per stage; read-only for providers. */
+  vaultRateCache?: ReadonlyMap<string, CachedVaultRate>;
+  /** Fresh live vault rates collected during the stage for one durable post-loop write. */
+  vaultRateWrites?: Map<string, CachedVaultRate>;
 }
 
 export interface LivePriceDiagnosticTarget {
@@ -492,6 +515,84 @@ export function buildParentDerivedLiveOverride(
       parentObservedAt,
       parentObservedAtMode: parent.parentAsset.priceObservedAtMode ?? null,
       parentReplaySafe: parent.trustedParent.replaySafe,
+    },
+  };
+}
+
+function isTrustedCachedVaultRate(entry: CachedVaultRate | undefined, nowSec: number): entry is CachedVaultRate {
+  if (!entry) return false;
+  if (!Number.isFinite(entry.rate) || entry.rate < ERC4626_NAV_MIN_RATIO || entry.rate > ERC4626_NAV_MAX_RATIO) {
+    return false;
+  }
+  if (!Number.isFinite(entry.observedAt) || entry.observedAt <= 0 || entry.observedAt > nowSec + 60) return false;
+  return nowSec - entry.observedAt <= CACHED_VAULT_RATE_MAX_AGE_SEC;
+}
+
+/**
+ * Resolve a vault assets-per-share rate live, falling back to the durable
+ * last-good rate when the live read fails. A fresh live rate is recorded for
+ * the post-loop durable write. The cached lane is missing-only: it never
+ * replaces a publishable incumbent price, and callers still require a trusted
+ * parent before consulting it.
+ */
+export async function resolveVaultAssetsPerShareWithCache(
+  asset: Pick<PeggedAsset, "id" | "price" | "priceSource" | "priceObservedAt" | "priceUpdatedAt" | "priceSyncedAt">,
+  context: LivePriceContext,
+  fetchLiveRate: () => Promise<number | null>,
+): Promise<{ rate: number; cachedObservedAt: number | null } | null> {
+  const nowSec = Math.floor(Date.now() / 1000);
+  let liveRate: number | null = null;
+  let liveError: unknown = null;
+  try {
+    liveRate = await fetchLiveRate();
+  } catch (error) {
+    // Timeout/RPC failures fall through to the cached rate: the lookup is
+    // synchronous, so serving it under an aborted candidate budget costs
+    // nothing and rescues the asset from a missing generation.
+    liveError = error;
+    console.warn(`[authoritative-price-sources] ${asset.id}: live vault rate failed; consulting cached rate:`, error);
+  }
+  if (liveRate != null) {
+    context.vaultRateWrites?.set(asset.id, { rate: liveRate, observedAt: nowSec });
+    return { rate: liveRate, cachedObservedAt: null };
+  }
+
+  if (!hasPublishableCurrentPrice(asset)) {
+    const cached = context.vaultRateCache?.get(asset.id);
+    if (isTrustedCachedVaultRate(cached, nowSec)) {
+      return { rate: cached.rate, cachedObservedAt: cached.observedAt };
+    }
+  }
+
+  // No rescue happened: preserve the pre-cache failure contract so aborts
+  // propagate and RPC failures still count against the grouped circuit.
+  if (liveError != null) throw liveError;
+  return null;
+}
+
+/** Publish a cached-rate degradation price: explicit low-confidence provenance, never depeg-authoritative. */
+export function buildCachedRateLiveOverride(
+  parent: TrustedOverrideParent,
+  rate: number,
+  rateObservedAt: number,
+): CurrentPriceOverride | null {
+  const price = parent.trustedParent.price * rate;
+  if (!Number.isFinite(price) || price <= 0) return null;
+
+  return {
+    price,
+    source: CACHED_VAULT_RATE_SOURCE,
+    confidence: "low",
+    observedAt: Math.min(rateObservedAt, parent.trustedParent.observedAt),
+    observedAtMode: "local_fetch",
+    metadata: {
+      inheritedFrom: parent.parentId,
+      parentSource: parent.parentAsset.priceSource ?? null,
+      parentConfidence: parent.parentAsset.priceConfidence ?? null,
+      parentObservedAt: parent.parentAsset.priceObservedAt ?? parent.parentAsset.priceUpdatedAt ?? null,
+      parentObservedAtMode: parent.parentAsset.priceObservedAtMode ?? null,
+      parentReplaySafe: parent.trustedParent.replaySafe,
+      cachedVaultRate: { rate, rateObservedAt },
     },
   };
 }

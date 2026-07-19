@@ -64,6 +64,7 @@ describe("pricing source registry", () => {
       "dexscreener-search",
       "defillama-contract",
       "protocol-redeem",
+      "protocol-redeem-cached-rate",
       "zephyr-scanner",
       "pool-tvl-weighted",
       "cached",
