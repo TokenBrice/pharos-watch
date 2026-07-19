@@ -360,7 +360,7 @@ describe("status evaluation policy", () => {
 
 describe("status cause text", () => {
   it.each(["active_price_coverage_incomplete", "active_price_coverage_unknown"])(
-    "reserves persistence capacity for %s",
+    "reserves operator diagnostic capacity for %s",
     (code) => {
       const criticalCauses: StatusCause[] = Array.from({ length: 12 }, (_, index) => ({
         code: `critical-${index}`,
@@ -733,7 +733,7 @@ describe("status cause text", () => {
     );
   });
 
-  it("degrades and emits a durable public cause for incomplete active-price coverage", () => {
+  it("emits a durable warning without degrading for incomplete active-price coverage", () => {
     const activePriceCoverage = {
       ...makePublicHealth().activePriceCoverage,
       status: "incomplete" as const,
@@ -781,7 +781,7 @@ describe("status cause text", () => {
 
     const status = deriveDataQualityStatus({
       dataQuality: makeDataQuality(),
-      activePriceCoverageImpactStatus: "degraded",
+      activePriceCoverageImpactStatus: "healthy",
       missingPriceRatio: 0,
       blacklistMissingRatio: 0,
       blacklistRecentMissing: 0,
@@ -799,7 +799,7 @@ describe("status cause text", () => {
       reserveComposition: makeReserveComposition(),
     });
 
-    expect(status).toBe("degraded");
+    expect(status).toBe("healthy");
     expect(causes).toContainEqual(
       expect.objectContaining({
         code: "active_price_coverage_incomplete",

@@ -346,7 +346,7 @@ describe("status dashboard model", () => {
     expect(model.decision.summary).toBe("Public service degraded. Admin state healthy. Evidence current. Investigate.");
   });
 
-  it("creates an impacting triage issue for incomplete active-price coverage", () => {
+  it("creates a warning triage issue for incomplete active-price coverage", () => {
     const rawActivePriceCause: StatusCause = {
       code: "active_price_coverage_incomplete",
       layer: "data-quality",
@@ -367,7 +367,7 @@ describe("status dashboard model", () => {
     };
     const healthData = {
       ...BASE_HEALTH,
-      status: "degraded" as const,
+      status: "healthy" as const,
       warnings: ["active-price-coverage-incomplete:nxusd-nereus"],
       activePriceCoverage: {
         status: "incomplete" as const,
@@ -415,19 +415,60 @@ describe("status dashboard model", () => {
       historyTransitions: undefined,
     });
 
-    expect(model.issueGroups.impacting).toHaveLength(1);
-    expect(model.issueGroups.impacting[0]).toMatchObject({
+    expect(model.issueGroups.impacting).toHaveLength(0);
+    expect(model.issueGroups.warnings).toHaveLength(1);
+    expect(model.issueGroups.warnings[0]).toMatchObject({
       code: "active_price_coverage_incomplete",
-      publicImpacting: true,
+      publicImpacting: false,
       affectedSurface: "Stablecoin prices",
       value: 1,
     });
-    expect(model.issueGroups.impacting[0]?.message).toBe(
+    expect(model.issueGroups.warnings[0]?.message).toBe(
       "Live prices are unavailable for 1 active asset: NXUSD. Stablecoin listings and price-dependent analytics may be incomplete until coverage recovers.",
     );
-    expect(model.issueGroups.impacting[0]?.runbookUrl).toBe("https://example.com/stablecoins-cache");
-    expect(model.overallCauseCount).toBe(1);
-    expect(model.decision.nextStep).toBe("investigate");
+    expect(model.issueGroups.warnings[0]?.runbookUrl).toBe("https://example.com/stablecoins-cache");
+    expect(model.overallCauseCount).toBe(0);
+    expect(model.warningCauseCount).toBe(1);
+    expect(model.decision.nextStep).toBe("observe-next-run");
+  });
+
+  it("does not synthesize active-price warning issues without a health warning", () => {
+    const healthData = {
+      ...BASE_HEALTH,
+      status: "healthy" as const,
+      warnings: [],
+      activePriceCoverage: {
+        status: "incomplete" as const,
+        expectedActiveCount: 190,
+        presentActiveCount: 190,
+        pricedActiveCount: 189,
+        missingPriceCount: 1,
+        pricedActiveIds: [],
+        missingActiveIds: ["test-dollar"],
+        affectedMarketCapUsd: 500_000,
+        missingActiveAssets: [],
+        alertEligibleCount: 0,
+        alertEligibleIds: [],
+        maxConsecutiveMissingGenerations: 1,
+        observedAt: BASE_HEALTH.timestamp,
+      },
+    };
+
+    const model = buildStatusDashboardData({
+      data: BASE_STATUS,
+      healthData,
+      probes: [],
+      querySyncs: BASE_QUERY_SYNCS,
+      nowMs: 1_000_000,
+      healthError: null,
+      probesError: null,
+      historyError: null,
+      requestSourceError: null,
+      historyTransitions: undefined,
+    });
+
+    expect(model.issueGroups.warnings.some((issue) => issue.code === "active_price_coverage_incomplete")).toBe(false);
+    expect(model.overallCauseCount).toBe(0);
   });
 
   it("maps unknown exact active-price coverage to the stablecoin price surface", () => {

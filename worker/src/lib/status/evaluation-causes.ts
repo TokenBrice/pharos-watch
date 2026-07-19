@@ -68,26 +68,24 @@ function pushCause(bucket: StatusCause[], cause: StatusCause): void {
 }
 
 const OVERALL_CAUSE_PERSISTENCE_LIMIT = 12;
-const DURABLE_PUBLIC_CAUSE_CODES = new Set(["active_price_coverage_incomplete", "active_price_coverage_unknown"]);
+const DURABLE_ACTIVE_PRICE_CAUSE_CODES = new Set(["active_price_coverage_incomplete", "active_price_coverage_unknown"]);
 
 export function synthesizeOverallCauses(availability: StatusCause[], dataQuality: StatusCause[]): StatusCause[] {
   const severityOrder = { critical: 0, warning: 1, info: 2 } as const;
   const ranked = [...availability, ...dataQuality].map((cause, sourceIndex) => ({ cause, sourceIndex }));
   const compareRanked = (a: (typeof ranked)[number], b: (typeof ranked)[number]) =>
     severityOrder[a.cause.severity] - severityOrder[b.cause.severity] || a.sourceIndex - b.sourceIndex;
-  // Durable retention is reserved for public-impact causes that actually drive a
-  // public incident — i.e. warning-or-higher. An info-severity cause (e.g. a
-  // transient, non-alert-eligible active_price_coverage_incomplete) is already
-  // excluded from causeIsPublicImpacting, so it must not occupy or displace a
-  // durable slot here either; it falls back to normal severity-ranked selection.
-  const isDurablePublic = ({ cause }: (typeof ranked)[number]) =>
-    DURABLE_PUBLIC_CAUSE_CODES.has(cause.code) && cause.severity !== "info";
-  const durablePublic = ranked.filter(isDurablePublic).sort(compareRanked);
-  const remainingCapacity = Math.max(0, OVERALL_CAUSE_PERSISTENCE_LIMIT - durablePublic.length);
+  // Exact active-price coverage causes should survive the capped overall cause
+  // list for operator diagnostics. Transient, non-alert-eligible misses are
+  // info-only and must not occupy or displace a durable slot.
+  const isDurableActivePrice = ({ cause }: (typeof ranked)[number]) =>
+    DURABLE_ACTIVE_PRICE_CAUSE_CODES.has(cause.code) && cause.severity !== "info";
+  const durableActivePrice = ranked.filter(isDurableActivePrice).sort(compareRanked);
+  const remainingCapacity = Math.max(0, OVERALL_CAUSE_PERSISTENCE_LIMIT - durableActivePrice.length);
   const selected = [
-    ...durablePublic.slice(0, OVERALL_CAUSE_PERSISTENCE_LIMIT),
+    ...durableActivePrice.slice(0, OVERALL_CAUSE_PERSISTENCE_LIMIT),
     ...ranked
-      .filter((entry) => !isDurablePublic(entry))
+      .filter((entry) => !isDurableActivePrice(entry))
       .sort(compareRanked)
       .slice(0, remainingCapacity),
   ];
@@ -484,14 +482,12 @@ export function buildDataQualityCauses(input: {
   if (input.activePriceCoverage.status === "incomplete") {
     const missing = input.activePriceCoverage.missingActiveIds;
     const examples = missing.slice(0, 12).join(", ");
-    // Persistence gate, mirroring public /api/health: only alert-eligible misses
-    // (a gap whose consecutive-missing streak has reached
-    // ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS) carry warning severity and are
-    // therefore public-impacting and durable. A transient single-cycle miss is
-    // info-only — like the missing_prices_elevated early-warning band below — so
-    // it neither opens a public incident nor persists as a durable public cause,
-    // staying consistent with the gated public health status. The admin board
-    // still sees the cause and keeps its ratio-band/publication guards.
+    // Persistence gate: only alert-eligible misses (a gap whose
+    // consecutive-missing streak has reached
+    // ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS) carry warning severity for
+    // operator triage. They no longer open public uptime incidents; a transient
+    // single-cycle miss is info-only, like the missing_prices_elevated
+    // early-warning band below.
     const alertEligible = input.activePriceCoverage.alertEligibleCount > 0;
     const baseMessage =
       `Live prices are missing for ${input.activePriceCoverage.missingPriceCount} active asset(s)` +

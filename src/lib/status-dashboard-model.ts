@@ -372,7 +372,7 @@ export function buildPublicHealthStatusCauses(healthData: HealthResponse | null 
   if (!healthData) return [];
   const coverage = healthData.activePriceCoverage;
   const warning = healthData.warnings.find((item) => item.startsWith("active-price-coverage-incomplete:"));
-  if (coverage?.status !== "incomplete" && !warning) return [];
+  if (!warning) return [];
 
   const message =
     coverage?.status === "incomplete"
