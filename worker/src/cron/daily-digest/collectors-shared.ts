@@ -19,6 +19,7 @@ export interface CollectorContext {
   coreAggregateStablecoinIds: ReadonlySet<string>;
   stablecoinAssetById: Map<string, StablecoinData>;
   mcapById: Map<string, number>;
+  stablecoinsCacheIsFresh: boolean;
   nowSec: number;
   todayTs: number;
   yesterdayTs: number;
