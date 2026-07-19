@@ -31,7 +31,7 @@ Every published main and CoinGecko-supply-fallback `sync-stablecoins` run writes
 
 ## Versioning
 
-- **Current methodology version:** `v6.202`
+- **Current methodology version:** `v6.203`
 - **Canonical version module:** `shared/lib/methodology-versions/pricing-pipeline.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -287,6 +287,17 @@ When a live override validates successfully, direct protocol/NAV quotes and high
 Scoped tracked-base inheritance from a fresh replay-safe single-source parent keeps the parent `priceSource` and
 `priceConfidence = "single-source"` so downstream publication guardrails continue to see the inherited quote's soft
 upstream provenance instead of treating it as depeg-authoritative protocol redemption.
+
+Vault NAV routes (ERC-4626 `convertToAssets`, Aave `previewRedeem`, Idle CDO `virtualPrice`) also persist their
+last-good assets-per-share rate to the durable `authoritative_vault_rates` table on every successful live read. When the
+live rate read fails and the asset has no publishable current price, the route publishes
+`cached rate × fresh trusted parent price` as `protocol-redeem-cached-rate` with `priceConfidence = "low"`. The cached
+lane requires the same trusted parent as the live route, rejects rates older than 24 hours or outside the vault sanity
+bounds, never replaces a publishable incumbent price, and is registered non-replay-safe and non-depeg-authoritative so a
+stale rate cannot feed depeg state or replay continuity. Cached-rate resolutions count as provider successes for the
+grouped `protocol-redeem` circuit — an open circuit would skip the provider entirely and disable the rescue — while a
+failure with no trusted cached rate still records the pre-existing failure and circuit semantics. Cron metadata exposes
+`cachedRateFallbacks` and the attempt ledger records the cached source per asset.
 
 For tracked-base inheritance paths, the authoritative layer does not query a bespoke contract path; it inherits the tracked parent asset's live price and historical replay because Pharos models the child as an instantly redeemable wrapper or extension of that parent rail.
 

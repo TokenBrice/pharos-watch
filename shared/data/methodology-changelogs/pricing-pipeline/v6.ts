@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.203",
+    title: "Cached-rate degradation for vault NAV routes",
+    date: "2026-07-19",
+    effectiveAt: 1784493544,
+    summary:
+      "Parent-derived vault routes now persist their last-good on-chain rate and can publish cached-rate × fresh trusted parent price under an explicit low-confidence source when the live rate read fails, instead of leaving the asset without an active price.",
+    impact: [
+      "Successful ERC-4626 convertToAssets, Aave previewRedeem, and Idle CDO virtualPrice reads persist their assets-per-share rate to a durable vault-rate cache",
+      "When the live rate read fails for an asset without a publishable current price, the route publishes cached rate × fresh trusted parent price as `protocol-redeem-cached-rate` with low confidence; rates older than 24 hours or outside the vault sanity bounds never publish",
+      "The cached lane still requires the same trusted parent as the live route, never replaces a publishable incumbent price, is never replay-safe or depeg-authoritative, and carries the rate and its observation time in override metadata",
+      "When neither a live rate nor a trusted cached rate exists, the route fails exactly as before, including grouped-circuit failure accounting",
+      "Cron metadata counts cached-rate fallbacks and the attempt ledger records them as resolved `protocol-redeem-cached-rate` attempts for per-run visibility",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.202",
     title: "Composite parent-trust monotonicity",
     date: "2026-07-19",
