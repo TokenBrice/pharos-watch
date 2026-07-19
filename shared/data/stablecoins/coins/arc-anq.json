@@ -40,7 +40,7 @@
   "announcedDate": "2025-11",
   "expectedLaunchDate": "2026",
   "launchPhase": "announced",
-  "launchPhaseDetail": "India's first regulated rupee stablecoin; built by Anq with Polygon; 1:1 INR collateralized by cash, fixed deposits, and government securities; designed to prevent USD liquidity outflow; two-tier framework complementing RBI's CBDC; Uniswap v4 whitelisting for compliance. The tentative January 2026 debut has passed with no RBI confirmation, no live circulating supply, and no ARC mention on anq.finance — status uncertain as of mid-2026",
+  "launchPhaseDetail": "India's first regulated rupee stablecoin; built by Anq with Polygon; 1:1 INR collateralized by cash, fixed deposits, and government securities; designed to prevent USD liquidity outflow; two-tier framework complementing RBI's CBDC; Uniswap v4 whitelisting for compliance. The tentative January 2026 debut has passed with no RBI confirmation, no live circulating supply, and no ARC mention on anq.finance — status uncertain as of mid-2026. In July 2026 the RBI signaled to a Parliamentary Standing Committee that it favors barring banks and regulated entities from exposure to private stablecoins, including rupee-backed ones, putting the project's regulated-INR-stablecoin premise in question",
   "featuredContent": [
     {
       "type": "article",
@@ -57,6 +57,13 @@
       "title": "ARC rupee stablecoin announced by Anq and Polygon",
       "description": "India's first regulated INR stablecoin; collateralized by cash, fixed deposits, and government securities; January 2026 debut targeted.",
       "sourceUrl": "https://www.coindesk.com/markets/2025/11/20/india-s-debt-backed-arc-token-eyes-tentative-january-2026-debut-sources-say/"
+    },
+    {
+      "date": "2026-07-08",
+      "type": "regulatory",
+      "title": "RBI signals preference to bar regulated entities from private stablecoins, including rupee-backed",
+      "description": "The RBI told a Parliamentary Standing Committee it leans toward prohibiting banks and regulated firms from crypto and private-stablecoin exposure, citing seigniorage and stability concerns — a direct headwind for ARC's regulated INR-stablecoin model.",
+      "sourceUrl": "https://paymentexpert.com/2026/07/08/india-rbi-wants-ban-crypto-stablecoin/"
     }
   ]
 }

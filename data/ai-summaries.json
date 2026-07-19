@@ -3457,16 +3457,6 @@
     "reviewedAt": "2026-05-15",
     "factsAsOf": "2026-05-15"
   },
-  "mmxn-moneta-digital": {
-    "title": "Mexico's Self-Reported MXN Stablecoin",
-    "text": "MMXN is Moneta Digital's peso stablecoin, backed by issuer-reported MXN bank reserves rather than a current independent attestation cadence. The metadata supports Ethereum and Tron deployments, while Pharos deliberately keeps other historical chain claims out of the curated set until official confirmation catches up with explorer archaeology. The reserve disclosure mentions Delchain and Deltec custody context and an old Armanino engagement, but the live proof path today is still self-reported and ad hoc. Mint authority is also bluntly centralized, with issuer-controlled EOAs confirmed as minters on both tracked chains. MMXN may be useful peso rails, but compared with better-attested local-currency peers, it asks users to accept a lot of 'trust us' in a market that has already seen that movie.",
-    "updatedAt": "2026-06-12",
-    "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
-  },
   "hkdr-rd-technologies": {
     "title": "Missed the First Wave, Still in the Race",
     "text": "Pre-launch HKD stablecoin from RD Technologies; in HKMA sandbox but missed the April 2026 first licence cohort. HKDR is the HKD stablecoin from RD Technologies, a Hong Kong fintech founded by former HKMA chief executive Norman Chan. Its subsidiary RD InnoTech was in the first July 2024 cohort admitted to the HKMA stablecoin issuer sandbox — testing digital-asset trading rails and cross-border trade payments — and the firm has been positioning for licensing under the Stablecoins Ordinance that took effect August 1 2025. On 2026-04-10 the HKMA gazetted the first stablecoin issuer licences (FRS01 and FRS02) to Anchorpoint and HSBC, with RD InnoTech absent from that cohort. RD remains a credible later-license contender — a recent Series A2 round and a memorandum of understanding with ZA Bank both point to a serious operational build-out — but the regulatory window has shifted to a slower queue. The entry remains pre-launch until licence issuance is confirmed. The eventual product still routes through HKMA-mandated {{term:attestation}}attestation{{/term}}, segregated {{term:custody}}custody{{/term}}, and a regulated {{term:redemption}}redemption{{/term}} window.",
@@ -3516,16 +3506,6 @@
     "reviewedBy": "@TokenBrice",
     "reviewedAt": "2026-05-15",
     "factsAsOf": "2026-05-15"
-  },
-  "usd-nubank": {
-    "title": "Stablecoins Strapped to the Credit Card",
-    "text": "Nubank's USD stablecoin row is still pre-launch, but it is structurally interesting because the proposed surface is credit-card payments rather than a DeFi wallet. Roberto Campos Neto framed the pilot as part of a broader Nubank push into tokenized deposits and credit against tokenized assets, which is a much larger ambition than adding another dollar balance to an app. The unresolved question remains whether Nubank issues its own dollar token or routes through a third-party stablecoin such as USDC or PYUSD, and that answer decides the custody, reserve, and redemption model. Pharos keeps the placeholder as centralized and regulated-entity-driven because a Nubank rail would almost certainly be permissioned even if the token touches public chains later. The asset here is not the ticker; it is Nubank's distribution across Latin America, which is exactly why the missing product details matter.",
-    "updatedAt": "2026-06-12",
-    "authoredBy": "ai",
-    "model": "gpt-5-codex",
-    "reviewedBy": "Codex data review",
-    "reviewedAt": "2026-06-12",
-    "factsAsOf": "2026-06-12"
   },
   "moveusd-cfx": {
     "title": "CFX's Solana Deposit Dollar",
