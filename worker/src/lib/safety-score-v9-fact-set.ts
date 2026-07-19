@@ -734,6 +734,14 @@ function normalizeMechanismReview(
   let hasStale = false;
   let hasIncomplete = false;
 
+  if (normalized.archetype === "cdp") {
+    for (const applicability of Object.values(normalized.metricApplicability)) {
+      if (applicability.state !== "not-applicable") continue;
+      applicability.evidenceRefIds = evidenceIds;
+      for (const evidenceId of evidenceIds) componentEvidenceIds.add(evidenceId);
+    }
+  }
+
   for (const [componentKey, value] of Object.entries(normalized)) {
     if (value === null || typeof value !== "object" || !("status" in value)) continue;
     const fact = value as { status: V9FactStatusV2 };
