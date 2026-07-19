@@ -39,7 +39,7 @@ import {
   type V9ExitEvaluationResult,
   type V9ExitStressRequest,
 } from "./exit";
-import { parseCompiledV9FactSetV2 } from "./facts";
+import { isV9UncanonicalizedChainPoolRoute, parseCompiledV9FactSetV2 } from "./facts";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
 import {
   scoreV9EvaluatedAsset,
@@ -293,6 +293,14 @@ export interface V9BridgeDomainExposure {
 export interface V9SupplyChainExposure {
   shareBySlug: ReadonlyMap<string, number>;
   unattributedShare: number;
+  /**
+   * Supply share carried by the pooled row of raw provider chain labels that
+   * failed canonical resolution (`unmatched-chain-label-pool:<assetId>`). The
+   * pool is the unattributed share's only current source; it is tracked
+   * separately so an immaterial pool can be excluded from the common-mode
+   * unattributed add-on (bounded treatment, RULED D-J 2026-07-19).
+   */
+  unmatchedChainLabelPoolShare: number;
   complete: boolean;
 }
 export interface V9CommonModeContext {
@@ -327,12 +335,30 @@ function clampShare(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
 
+function unmatchedChainLabelPoolShare(supply: V9AssetFactsV2["supply"]): number {
+  return supply.selectedBridgeRoutes.reduce(
+    (sum, route) => sum + (isV9UncanonicalizedChainPoolRoute(route.deploymentRouteKey) ? route.supplyShare : 0),
+    0,
+  );
+}
+
 function summarizeSupplyChainExposure(supply: V9AssetFactsV2["supply"]): V9SupplyChainExposure {
+  const poolShare = unmatchedChainLabelPoolShare(supply);
   if (!isKnownRequiredStatus(supply.status)) {
-    return { shareBySlug: new Map<string, number>(), unattributedShare: 1, complete: false };
+    return {
+      shareBySlug: new Map<string, number>(),
+      unattributedShare: 1,
+      unmatchedChainLabelPoolShare: poolShare,
+      complete: false,
+    };
   }
   if (supply.chainDistribution === null || supply.chainDistribution === undefined) {
-    return { shareBySlug: new Map<string, number>(), unattributedShare: 1, complete: false };
+    return {
+      shareBySlug: new Map<string, number>(),
+      unattributedShare: 1,
+      unmatchedChainLabelPoolShare: poolShare,
+      complete: false,
+    };
   }
   const circulatingUsd = supply.circulatingUsd;
   const distributedUsd =
@@ -347,7 +373,12 @@ function summarizeSupplyChainExposure(supply: V9AssetFactsV2["supply"]): V9Suppl
     Math.abs(distributedUsd - circulatingUsd) > SUPPLY_USD_RECONCILIATION_TOLERANCE ||
     Math.abs(distributedShare - expectedShare) > SHARE_RECONCILIATION_TOLERANCE
   ) {
-    return { shareBySlug: new Map<string, number>(), unattributedShare: 1, complete: false };
+    return {
+      shareBySlug: new Map<string, number>(),
+      unattributedShare: 1,
+      unmatchedChainLabelPoolShare: poolShare,
+      complete: false,
+    };
   }
   const shareBySlug = new Map<string, number>();
   for (const row of supply.chainDistribution.chains) {
@@ -355,13 +386,19 @@ function summarizeSupplyChainExposure(supply: V9AssetFactsV2["supply"]): V9Suppl
     // Retained facts can contain pre-canonical aliases. Ambiguous rows must not
     // be merged silently because that could understate a material chain share.
     if (shareBySlug.has(chainId)) {
-      return { shareBySlug: new Map<string, number>(), unattributedShare: 1, complete: false };
+      return {
+        shareBySlug: new Map<string, number>(),
+        unattributedShare: 1,
+        unmatchedChainLabelPoolShare: poolShare,
+        complete: false,
+      };
     }
     shareBySlug.set(chainId, row.supplyShare);
   }
   return {
     shareBySlug,
     unattributedShare: supply.chainDistribution.unattributedSupplyShare,
+    unmatchedChainLabelPoolShare: poolShare,
     complete: true,
   };
 }
@@ -571,7 +608,12 @@ function buildCommonModeContext(
   // A missing asset fact fails closed: no attributed share, no reviewed tiers.
   if (!asset) {
     return {
-      supplyExposure: { shareBySlug: new Map<string, number>(), unattributedShare: 1, complete: false },
+      supplyExposure: {
+        shareBySlug: new Map<string, number>(),
+        unattributedShare: 1,
+        unmatchedChainLabelPoolShare: 0,
+        complete: false,
+      },
       dexExposureByDomain: new Map<string, V9ConservativeShareBounds>(),
       bridgeExposureByDomain: new Map<string, V9BridgeDomainExposure>(),
     };
@@ -614,8 +656,20 @@ export function commonModeSignalSeverity(
   switch (failureDomain.kind) {
     case "chain": {
       const chainId = resolveChainId(failureDomain.key) ?? failureDomain.key.toLowerCase();
+      // RULED D-J (2026-07-19): an unrecognized-label pool below the common-mode
+      // materiality floor is a bounded diagnostic condition, so it is excluded
+      // from the conservative unattributed add-on. At or above the floor the
+      // full unattributed share keeps inflating every chain's upper bound (the
+      // fail-closed latency case). The pool is the unattributed share's only
+      // current producer; subtract only the pooled part so any future
+      // unattributed source still counts.
+      const poolShare = context.supplyExposure.unmatchedChainLabelPoolShare;
+      const unattributedAddon =
+        poolShare < materiality.commonModeShareThreshold
+          ? clampShare(context.supplyExposure.unattributedShare - poolShare)
+          : context.supplyExposure.unattributedShare;
       const share = context.supplyExposure.complete
-        ? clampShare((context.supplyExposure.shareBySlug.get(chainId) ?? 0) + context.supplyExposure.unattributedShare)
+        ? clampShare((context.supplyExposure.shareBySlug.get(chainId) ?? 0) + unattributedAddon)
         : null;
       return proportionalCommonModeSeverity(share, materiality.matureChains.includes(chainId), materiality);
     }

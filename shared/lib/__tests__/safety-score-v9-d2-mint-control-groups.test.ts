@@ -50,7 +50,12 @@ const resolveV9MintControlGroupSeverity = (evaluateSet as unknown as Record<stri
   .resolveV9MintControlGroupSeverity as ((group: MintControlGroupIssuerFacts) => V9Severity) | undefined;
 
 const EMPTY_CONTEXT: V9CommonModeContext = {
-  supplyExposure: { shareBySlug: new Map<string, number>(), unattributedShare: 1, complete: false },
+  supplyExposure: {
+    shareBySlug: new Map<string, number>(),
+    unattributedShare: 1,
+    unmatchedChainLabelPoolShare: 0,
+    complete: false,
+  },
   dexExposureByDomain: new Map(),
   bridgeExposureByDomain: new Map(),
 };

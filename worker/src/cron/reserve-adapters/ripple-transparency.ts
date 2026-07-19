@@ -1,4 +1,5 @@
 import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice } from "@shared/types/reserves";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
@@ -10,6 +11,31 @@ import {
 
 const ADAPTER_KEY = "ripple-transparency";
 const MIN_RESERVE_RATIO = 0.995;
+
+/**
+ * Asset-class split of the RLUSD reserve. Percentages are reserve shares and
+ * must total 100 within the reserve-composition tolerance.
+ */
+interface ReserveBreakdown {
+  treasuryBillsPct: number;
+  governmentMoneyMarketFundsPct: number;
+  cashPct: number;
+}
+
+/**
+ * Attested fallback split, used only when the live transparency payload carries
+ * no asset-class breakdown. Source: Deloitte-examined RLUSD Reserve Report as
+ * of 2026-05-29 (RLUSD_Attestation_Report_-_May_2026_Final.pdf, examined
+ * 2026-06-25): U.S. Treasury bills 65.41%, government money-market funds
+ * 19.44%, cash and deposit accounts 15.15%.
+ */
+const ATTESTED_BREAKDOWN_2026_05: ReserveBreakdown = {
+  treasuryBillsPct: 65.41,
+  governmentMoneyMarketFundsPct: 19.44,
+  cashPct: 15.15,
+};
+
+const BREAKDOWN_TOTAL_TOLERANCE_PCT = 0.5;
 
 function parseUsdAmount(raw: string): number | null {
   const match = raw.match(/\$\s*([\d,.]+)\s*([KMB])?/i);
@@ -33,6 +59,69 @@ function parseMmDdYyyy(raw: string | undefined): number | null {
     return null;
   }
   return Math.floor(timestampMs / 1000);
+}
+
+/** Reads an explicit percentage within a short window after a class label. */
+function parseLabeledPct(normalized: string, label: RegExp): number | null {
+  const match = normalized.match(label);
+  if (!match || match.index === undefined) return null;
+  const window = normalized.slice(match.index, match.index + 300);
+  const pctMatch = window.match(/([\d]+(?:\.[\d]+)?)\s*%/);
+  if (!pctMatch) return null;
+  const pct = Number.parseFloat(pctMatch[1]);
+  return Number.isFinite(pct) && pct >= 0 && pct <= 100 ? pct : null;
+}
+
+/**
+ * Derives the asset-class split from the transparency payload when it carries
+ * an explicit breakdown (labeled percentages for all three NYDFS reserve
+ * classes summing to 100%). Returns null when the payload has no usable
+ * breakdown so the caller falls back to the attested static split.
+ */
+export function parseRippleReserveBreakdown(normalized: string): ReserveBreakdown | null {
+  const treasuryBillsPct = parseLabeledPct(normalized, /U\.?S\.?\s+Treasury\s+bills?|T-bills/i);
+  const governmentMoneyMarketFundsPct = parseLabeledPct(normalized, /[Gg]overnment\s+money[- ]market\s+funds?/);
+  const cashPct = parseLabeledPct(normalized, /[Cc]ash(\s+and\s+deposit\s+accounts)?|[Dd]eposit\s+accounts/);
+  if (treasuryBillsPct === null || governmentMoneyMarketFundsPct === null || cashPct === null) return null;
+  const total = treasuryBillsPct + governmentMoneyMarketFundsPct + cashPct;
+  if (Math.abs(total - 100) > BREAKDOWN_TOTAL_TOLERANCE_PCT) return null;
+  return { treasuryBillsPct, governmentMoneyMarketFundsPct, cashPct };
+}
+
+function buildReserveSlices(breakdown: ReserveBreakdown): ReserveSlice[] {
+  const slices: ReserveSlice[] = [
+    {
+      name: "U.S. Treasury bills",
+      pct: breakdown.treasuryBillsPct,
+      risk: "very-low",
+      assetClass: "treasury-bill",
+      issuerOrObligor: "United States Treasury",
+      riskFactors: ["duration", "liquidity", "custody"],
+      liquidityHorizon: "one-day",
+      // NYDFS reserve criteria limit T-bills to three months or less from
+      // maturity; the reviewed classification carries the same 92-day bound.
+      maturityDaysMax: 92,
+    },
+    {
+      name: "Government money-market funds",
+      pct: breakdown.governmentMoneyMarketFundsPct,
+      risk: "very-low",
+      assetClass: "money-market-fund",
+      issuerOrObligor: "DFS-approved government money-market funds",
+      riskFactors: ["counterparty", "liquidity", "custody"],
+      liquidityHorizon: "one-day",
+    },
+    {
+      name: "Cash and deposit accounts",
+      pct: breakdown.cashPct,
+      risk: "very-low",
+      assetClass: "bank-deposit",
+      issuerOrObligor: "DFS-approved depository institutions",
+      riskFactors: ["counterparty", "custody", "concentration"],
+      liquidityHorizon: "immediate",
+    },
+  ];
+  return slices.filter((slice) => slice.pct > 0);
 }
 
 export function adaptRippleTransparency(html: string): AdapterResult {
@@ -63,13 +152,7 @@ export function adaptRippleTransparency(html: string): AdapterResult {
   }
 
   return {
-    slices: [
-      {
-        name: "U.S. dollars and other cash equivalents",
-        pct: 100,
-        risk: "very-low",
-      },
-    ],
+    slices: buildReserveSlices(parseRippleReserveBreakdown(normalized) ?? ATTESTED_BREAKDOWN_2026_05),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       circulatingUsd,

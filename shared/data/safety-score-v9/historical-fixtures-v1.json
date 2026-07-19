@@ -17,12 +17,6 @@
             "kind": "algorithmic-reflexivity",
             "severity": "critical",
             "reason": "Backing and recapitalization are reflexive."
-          },
-          {
-            "pillar": "exit",
-            "kind": "bounded-unknown",
-            "severity": "high",
-            "reason": "Stress redemption capacity was not demonstrated."
           }
         ],
         "unresolvedCriticalFacts": ["stress redemption capacity"]
@@ -539,14 +533,7 @@
         "archetype": "fiat-cash",
         "implementationAgeMonths": 25,
         "signals": ["issuer redemption dependency", "banking and market-maker concentration"],
-        "riskSignals": [
-          {
-            "pillar": "exit",
-            "kind": "bounded-unknown",
-            "severity": "high",
-            "reason": "Current issuer redemption operations were not evidenced."
-          }
-        ],
+        "riskSignals": [],
         "unresolvedCriticalFacts": ["current redemption operations"]
       },
       "sources": [
@@ -661,12 +648,6 @@
             "kind": "speculative-credit",
             "severity": "high",
             "reason": "Backing depended on illiquid real-estate credit."
-          },
-          {
-            "pillar": "exit",
-            "kind": "bounded-unknown",
-            "severity": "critical",
-            "reason": "Liquid reserves could not cover the stressed exit request."
           }
         ],
         "unresolvedCriticalFacts": ["same-notional liquidation capacity"]
@@ -719,14 +700,7 @@
         "archetype": "fiat-cash",
         "implementationAgeMonths": 89,
         "signals": ["diversified liquid reserves", "direct issuer redemption"],
-        "riskSignals": [
-          {
-            "pillar": "backing",
-            "kind": "bounded-unknown",
-            "severity": "low",
-            "reason": "Named bank concentration was not fully disclosed."
-          }
-        ],
+        "riskSignals": [],
         "unresolvedCriticalFacts": ["named bank concentration"]
       },
       "sources": [
@@ -944,14 +918,7 @@
         "archetype": "fiat-cash",
         "implementationAgeMonths": 54,
         "signals": ["cash and treasury backing", "issuer redemption"],
-        "riskSignals": [
-          {
-            "pillar": "backing",
-            "kind": "bounded-unknown",
-            "severity": "moderate",
-            "reason": "Named bank distribution was unavailable."
-          }
-        ],
+        "riskSignals": [],
         "unresolvedCriticalFacts": ["bank distribution"]
       },
       "sources": [
@@ -1227,14 +1194,7 @@
         "archetype": "synthetic-delta-neutral",
         "implementationAgeMonths": 0,
         "signals": ["CEX hedge custody", "funding and basis risk", "off-exchange settlement"],
-        "riskSignals": [
-          {
-            "pillar": "backing",
-            "kind": "bounded-unknown",
-            "severity": "moderate",
-            "reason": "Venue and custody common-mode capacity was unresolved."
-          }
-        ],
+        "riskSignals": [],
         "unresolvedCriticalFacts": ["common-mode venue capacity"]
       },
       "sources": [
@@ -1285,14 +1245,7 @@
         "archetype": "fiat-cash",
         "implementationAgeMonths": 9,
         "signals": ["euro bank reserves", "Circle common control"],
-        "riskSignals": [
-          {
-            "pillar": "backing",
-            "kind": "bounded-unknown",
-            "severity": "moderate",
-            "reason": "Named euro-bank concentration was unavailable."
-          }
-        ],
+        "riskSignals": [],
         "unresolvedCriticalFacts": ["named bank concentration"]
       },
       "sources": [

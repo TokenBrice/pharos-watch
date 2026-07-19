@@ -14,6 +14,20 @@ import { stableJsonStringifyV1 } from "../stable-json";
 
 const V9_FACT_SET_DIGEST_DOMAIN = "safety-score-v9.normalized-facts.v2";
 
+/**
+ * Producer contract for the pooled route key that carries exact supply observed
+ * under raw provider chain labels which fail canonical resolution. The pool is
+ * one conservative row per asset so aliases cannot each receive an independent
+ * subthreshold exemption. Both the worker producer
+ * (safety-score-v9-extension-supply.ts) and the pure evaluator key off this
+ * prefix; keep them in sync.
+ */
+export const V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX = "unmatched-chain-label-pool:";
+
+export function isV9UncanonicalizedChainPoolRoute(deploymentRouteKey: string): boolean {
+  return deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX);
+}
+
 export function canonicalV9DependencyEdgeKey(dependencyType: DependencyType, upstreamAssetId: string): string {
   return `${dependencyType}:${upstreamAssetId}`;
 }

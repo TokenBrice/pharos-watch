@@ -123,7 +123,7 @@ describe("anchor-coherence invariants — active", () => {
     }
   });
 
-  it("more-unknown-never-raises: bounded unknowns and bounded-unknown signals never lift any score", () => {
+  it("more-unknown-never-raises: bounded unknowns and structural signals never lift any score", () => {
     for (const pillars of [
       { backing: 95, exit: 95, control: 95 },
       { backing: 70, exit: 65, control: 50 },
@@ -132,10 +132,10 @@ describe("anchor-coherence invariants — active", () => {
       const base = score({ pillars }).finalScore!;
       const variants = [
         { unresolved: [boundedCeilingFact("missing-reserve-composition")] },
-        { structuralSignals: [signal("bounded-unknown", "high")] },
+        { structuralSignals: [signal("critical-dependency", "high")] },
         {
           unresolved: [boundedCeilingFact("missing-reserve-composition")],
-          structuralSignals: [signal("bounded-unknown", "high")],
+          structuralSignals: [signal("critical-dependency", "high")],
         },
         { unresolved: [boundedCeilingFact("missing-same-notional-route")] },
       ];
@@ -220,16 +220,16 @@ describe("anchor-coherence invariants — active", () => {
 
   it("no double-charged uncertainty: dual-channel expression costs exactly the stronger single channel", () => {
     const viaReason = score({ unresolved: [boundedCeilingFact("missing-reserve-composition")] });
-    const viaSignal = score({ structuralSignals: [signal("bounded-unknown", "high")] });
+    const viaSignal = score({ structuralSignals: [signal("critical-dependency", "high")] });
     const dual = score({
       unresolved: [boundedCeilingFact("missing-reserve-composition")],
-      structuralSignals: [signal("bounded-unknown", "high")],
+      structuralSignals: [signal("critical-dependency", "high")],
     });
     expect(viaReason.finalScore).toBe(60);
-    expect(viaSignal.finalScore).toBe(69);
+    expect(viaSignal.finalScore).toBe(64);
     expect(dual.finalScore).toBe(Math.min(viaReason.finalScore!, viaSignal.finalScore!));
     expect(dual.caps.map((cap) => cap.kind)).toEqual(
-      expect.arrayContaining(["reason:missing-reserve-composition", "signal:bounded-unknown:high"]),
+      expect.arrayContaining(["reason:missing-reserve-composition", "signal:critical-dependency:high"]),
     );
   });
 });

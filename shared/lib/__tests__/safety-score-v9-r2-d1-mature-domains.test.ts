@@ -40,8 +40,8 @@ function contextForChain(chainId: string, share: number | null): V9CommonModeCon
   return {
     supplyExposure:
       share === null
-        ? { shareBySlug: new Map<string, number>(), unattributedShare: 1, complete: false }
-        : { shareBySlug: new Map([[chainId, share]]), unattributedShare: 0, complete: true },
+        ? { shareBySlug: new Map<string, number>(), unattributedShare: 1, unmatchedChainLabelPoolShare: 0, complete: false }
+        : { shareBySlug: new Map([[chainId, share]]), unattributedShare: 0, unmatchedChainLabelPoolShare: 0, complete: true },
     dexExposureByDomain: new Map(),
     bridgeExposureByDomain: new Map(),
   };
@@ -49,7 +49,12 @@ function contextForChain(chainId: string, share: number | null): V9CommonModeCon
 
 function contextForVenue(venueKey: string, upperShare: number | null): V9CommonModeContext {
   return {
-    supplyExposure: { shareBySlug: new Map<string, number>(), unattributedShare: 0, complete: true },
+    supplyExposure: {
+      shareBySlug: new Map<string, number>(),
+      unattributedShare: 0,
+      unmatchedChainLabelPoolShare: 0,
+      complete: true,
+    },
     dexExposureByDomain:
       upperShare === null
         ? new Map()
@@ -81,7 +86,12 @@ describe("R2/D1 threshold boundary semantics — active (PR #530 behavior must s
   it("fails closed when unattributed supply share pushes the conservative upper bound to >=10%", () => {
     const domain: V9FailureDomainRef = { kind: "chain", key: "futurenet" };
     const context: V9CommonModeContext = {
-      supplyExposure: { shareBySlug: new Map([["futurenet", 0.0499]]), unattributedShare: 0.06, complete: true },
+      supplyExposure: {
+        shareBySlug: new Map([["futurenet", 0.0499]]),
+        unattributedShare: 0.06,
+        unmatchedChainLabelPoolShare: 0,
+        complete: true,
+      },
       dexExposureByDomain: new Map(),
       bridgeExposureByDomain: new Map(),
     };

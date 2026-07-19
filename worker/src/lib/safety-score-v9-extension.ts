@@ -118,6 +118,9 @@ type ReserveClassification = ReturnType<typeof buildSafetyScoreV9ReserveClassifi
 const RESERVE_WEIGHT_MATCH_TOLERANCE_PCT = 5;
 const DEPLOYMENT_MATERIAL_SHARE_THRESHOLD =
   V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100;
+// RULED D-J (2026-07-19): below this floor the unrecognized-chain-label pool is
+// a bounded/diagnostic condition; at or above it the pool stays fail-closed.
+const COMMON_MODE_MATERIAL_SHARE_THRESHOLD = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.commonModeShareThreshold;
 
 function digest(domain: string, payload: unknown): string {
   return sha256Hex(stableJsonStringifyV1({ domain, payload }));
@@ -1254,6 +1257,16 @@ function hasCompleteSubthresholdBridgeInventory(
   const exactRowsByDeployment = new Map(rows.map((row) => [row.deploymentRouteKey, row]));
   for (const row of rows) {
     if (row.reviewState === "selected-reviewed") continue;
+    // RULED D-J (2026-07-19): an unrecognized-chain-label pool below the
+    // common-mode materiality floor is an accepted bounded row; the proof no
+    // longer requires its joined subthreshold control. At or above the floor
+    // the pool keeps the ordinary fail-closed join below.
+    if (
+      row.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX) &&
+      row.supplyShare < COMMON_MODE_MATERIAL_SHARE_THRESHOLD
+    ) {
+      continue;
+    }
     const control = controlsByDeployment.get(row.deploymentRouteKey);
     if (
       control === undefined ||
