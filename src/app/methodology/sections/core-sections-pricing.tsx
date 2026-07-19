@@ -327,7 +327,7 @@ export function PricingPipelineMethodologySection() {
             <ol className="list-decimal list-inside space-y-1">
               <li><span className="text-foreground font-medium">Pass 1:</span> Canonical tracked contract identity &rarr; DefiLlama coins API, but only prices that pass peg-aware validation can resolve the asset</li>
               <li><span className="text-foreground font-medium">Pass 1b:</span> Tracked alternate deployment fallback only (no synthetic same-address cross-chain probing; same validation gate as pass 1)</li>
-              <li><span className="text-foreground font-medium">Pass 2:</span> CoinMarketCap batch listings (slug first; symbol fallback only when the tracked symbol is unique, rate-limited to 1 call/hour)</li>
+              <li><span className="text-foreground font-medium">Pass 2:</span> CoinMarketCap category plus exact-slug quotes; truncated category pages ignore returned rows until the exact targeted lane validates active status, contracts, volume, freshness, and peg bounds</li>
               <li><span className="text-foreground font-medium">Pass 3:</span> Jupiter Price API for tracked Solana mints (authenticated when configured, block-freshness checked, peg-aware, and able to add bounded soft evidence to agreeing low-depth Solana prices)</li>
               <li><span className="text-foreground font-medium">Pass 4:</span> DexScreener exact token-address pools only; the older unique-symbol search fallback is retired, and the pass remains capped at 10 actual exact-address requests per run</li>
               <li><span className="text-foreground font-medium">Pass 5:</span> Allowlisted low-volume CoinGecko recovery for selected DefiLlama-listed assets, published only with fallback confidence</li>
