@@ -170,7 +170,6 @@ describe("route context typing", () => {
   });
 
   it("keeps dynamic admin dependency mapping centralized", () => {
-    expect(getDynamicRouteMatch("/api/discovery-candidates/42/dismiss")?.dependencies).toEqual([]);
     expect(getDynamicRouteMatch("/api/api-keys/7/update")?.dependencies).toEqual(["apiKeyHashPepper"]);
     expect(getDynamicRouteMatch("/api/api-keys/7/deactivate")?.dependencies).toEqual([]);
     expect(getDynamicRouteMatch("/api/api-keys/7/rotate")?.dependencies).toEqual(["apiKeyHashPepper"]);
@@ -197,9 +196,6 @@ describe("route context typing", () => {
     expect(getDynamicEndpointDescriptorByKey("stablecoin-detail")?.routeDependencies).toEqual(["coingeckoApiKey"]);
     expect(getDynamicEndpointDescriptorByKey("stablecoin-summary")?.routeDependencies).toEqual([]);
     expect(getDynamicEndpointDescriptorByKey("stablecoin-reserves")?.routeDependencies).toEqual([]);
-    expect(getDynamicEndpointDescriptorByKey("discovery-candidate-dismiss")?.routeDependencies).toEqual(
-      getDynamicRouteMatch("/api/discovery-candidates/42/dismiss")?.dependencies,
-    );
     expect(getDynamicEndpointDescriptorByKey("api-key-update")?.routeDependencies).toEqual(
       getDynamicRouteMatch("/api/api-keys/7/update")?.dependencies,
     );

@@ -173,5 +173,3 @@ export const STATUS_YIELD_HEALTH_THRESHOLDS = {
 export const TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS = 15 * 60;
 
 // --- Discovery scan ---
-/** Minimum mcap (USD) for a coin to surface in the discovery scan. Below this, the universe is too noisy to be actionable. */
-export const DISCOVERY_MIN_MCAP = 5_000_000;

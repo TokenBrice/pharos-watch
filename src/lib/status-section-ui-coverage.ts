@@ -25,7 +25,6 @@ export const STATUS_SECTION_UI_COVERAGE = {
   canaries: { workspace: "reliability", view: "Dependencies", treatment: "primary" },
   priceSourceHealth: { workspace: "pipeline", view: "Markets", treatment: "primary" },
   coingeckoPriceDiff: { workspace: "pipeline", view: "Markets", treatment: "primary" },
-  discoveryCandidates: { workspace: "pipeline", view: "Discovery", treatment: "primary" },
   jobAttempts: { workspace: "crons", view: "Selected job", treatment: "detail" },
   scheduledSlots: { workspace: "crons", view: "Trigger groups", treatment: "summary" },
   mintBurnReconciliation: { workspace: "pipeline", view: "Reserves", treatment: "primary" },

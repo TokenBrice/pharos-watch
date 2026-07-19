@@ -50,7 +50,7 @@ Public, non-admin routes on `https://api.pharos.watch` that do not require `X-AP
 
 `POST /api/telegram-mini-app/session` and `POST /api/telegram-mini-app/mutate` are also externally reachable but not anonymous. They require Telegram Mini App `initData` signed for `@PharosWatchBot`; the worker validates the HMAC, `auth_date`, and user payload before any D1-backed state write. These endpoints are denied on the website-internal site-data lane and are intended only for the Mini App at `https://pharos.watch/pharoswatchbot/app/`.
 
-Admin/operator routes are also outside the public API-key gate, but they remain Cloudflare-Access-gated and are supported through `ops-api.pharos.watch` or the `ops.pharos.watch/api/admin/*` Pages proxy. The one exception is the reserve-recovery fault injector: it accepts a cryptographically verified Access assertion only on a `workers.dev` preview host and rejects production hosts. The public API host rejects registered admin paths and configured admin-like root families before API-key auth, so a public API key cannot be used to reach registered admin routes or malformed children of configured roots such as `/api/api-keys*`, `/api/api-key-requests-admin*`, and `/api/discovery-candidates*` on `api.pharos.watch`.
+Admin/operator routes are also outside the public API-key gate, but they remain Cloudflare-Access-gated and are supported through `ops-api.pharos.watch` or the `ops.pharos.watch/api/admin/*` Pages proxy. The one exception is the reserve-recovery fault injector: it accepts a cryptographically verified Access assertion only on a `workers.dev` preview host and rejects production hosts. The public API host rejects registered admin paths and configured admin-like root families before API-key auth, so a public API key cannot be used to reach registered admin routes or malformed children of configured roots such as `/api/api-keys*` and `/api/api-key-requests-admin*` on `api.pharos.watch`.
 
 The public self-serve request form lives at `https://pharos.watch/api/`. It sends an email verification link, then exchanges that one-time token for a default key after verification. Default self-serve keys are `tier="self-serve"`, `trafficClass="external"`, limited to `30` requests per minute, expire after `60` days, and allow one active/pending self-serve claim per normalized email. Request details are available only in the private `ops.pharos.watch/admin-api/` UI.
 
@@ -155,7 +155,7 @@ All rows below are members of the centralized `API_CACHE_PROFILES` map (`shared/
 | reserve-live       | `public, s-maxage=3600, max-age=300`                           | stablecoin-reserves live mode                                                                                                                                                                                                                                                                                                                                                                       |
 | reserve-live-stale | `public, s-maxage=1800, max-age=120`                           | stablecoin-reserves live-stale mode                                                                                                                                                                                                                                                                                                                                                                 |
 | reserve-fallback   | `public, s-maxage=300, max-age=60`                             | stablecoin-reserves curated/template/unavailable fallback modes                                                                                                                                                                                                                                                                                                                                     |
-| no-store           | `no-store`                                                     | admin GET routes via the router override or admin route wrapper (`status`, `status-history`, `request-source-stats`, `yield-source-decisions`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`, `discovery-candidates`, `admin-telegram-chat/:chatId`, `admin-telegram-adoption-report`, `admin-safety-score-v9`, `status-probe-history`) |
+| no-store           | `no-store`                                                     | admin GET routes via the router override or admin route wrapper (`status`, `status-history`, `request-source-stats`, `yield-source-decisions`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`, `admin-telegram-chat/:chatId`, `admin-telegram-adoption-report`, `admin-safety-score-v9`, `status-probe-history`) |
 
 `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, `POST /api/telegram-mini-app/mutate`, and admin POST endpoints bypass edge caching because they are non-GET request paths. The self-serve API-key endpoints and Telegram Mini App endpoints explicitly return no-store responses so verification tokens, plaintext API keys, and per-chat alert state are never cacheable.
 
@@ -283,7 +283,6 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 - `POST /api/reset-cron-lease`
 - `POST /api/reset-circuit-breaker`
 - `POST /api/kill-cron-in-flight`
-- `POST /api/bulk-dismiss-discovery-candidates`
 - `POST /api/telegram-pending`
 - `POST /api/alert-broker-canary` for live execution (`execute=true`); dry-run previews bypass idempotency
 - `POST /api/admin-telegram-resend`
@@ -2073,7 +2072,7 @@ Cache freshness in `/api/health` separates producer cadence, endpoint freshness,
 | `mintBurn.sync.freshnessStatus`               | `"fresh" \| "degraded" \| "stale"`                                        | Public freshness state keyed to the 30-minute critical-lane cadence (`fresh <= 60m`, `degraded <= 90m`, `stale > 90m`)                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `mintBurn.sync.warning`                       | `string \| null`                                                          | Human-readable warning when the critical lane is stale, degraded, or errored                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `mintBurn.sync.criticalLaneHealthy`           | `boolean`                                                                 | `true` when the latest critical-lane run is `ok`, `degraded`, or `skipped_locked`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `circuits`                                    | `Record<string, CircuitRecord>`                                           | Per-source circuit breaker states. Keys include `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coingecko-discovery`, `coinmarketcap-prices`, `dexscreener-prices`, `dexscreener-liquidity`, `dexscreener-search`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api`, `pyth-prices`, `binance-prices`, `coinbase-prices`, `redstone-prices`, `curve-onchain`, `curve-liquidity-api`, `fx-realtime` |
+| `circuits`                                    | `Record<string, CircuitRecord>`                                           | Per-source circuit breaker states. Keys include `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coinmarketcap-prices`, `dexscreener-prices`, `dexscreener-liquidity`, `dexscreener-search`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api`, `pyth-prices`, `binance-prices`, `coinbase-prices`, `redstone-prices`, `curve-onchain`, `curve-liquidity-api`, `fx-realtime` |
 
 **`CacheStatus`**
 
@@ -4043,8 +4042,7 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
     "yield": 1771856320,
     "depegs": 1771856010,
     "dews": 1771856400,
-    "digest": 1771804800,
-    "discoveryCandidates": 1771856400
+    "digest": 1771804800
   },
   "summary": {
     "unhealthyCrons": 1,
@@ -4242,21 +4240,6 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
     "latestCronStatus": "ok",
     "latestCronStartedAt": 1771856300
   },
-  "discoveryCandidates": [
-    {
-      "id": 12,
-      "geckoId": "usdq",
-      "llamaId": null,
-      "name": "USDQ",
-      "symbol": "USDQ",
-      "marketCap": 18200000,
-      "source": "coingecko",
-      "firstSeen": 1771683600,
-      "lastSeen": 1771856400,
-      "daysSeen": 2,
-      "dismissed": false
-    }
-  ],
   "mintBurnReconciliation": {
     "checkedAt": 1771856453,
     "comparedCoins": 42,
@@ -4359,8 +4342,6 @@ When `safetyAlertsSuppressed=true`, DEWS/depeg/launch alerts can still continue,
 `providerCircuitHealth` is a read-only admin supplement over active provider circuit-breaker rows. Breaker decisions use the individual `cache["circuit:<source>"]` rows; `/api/status` reads those same authoritative rows through a bounded active-source allowlist so lost or stale aggregate-index writes cannot hide open providers. Successful/failing breaker writes still maintain `cache["provider:circuit:index"]` as best-effort telemetry. Loader failures return `providerCircuitHealth: null` and `sectionErrors.providerCircuitHealth`; public `/api/health.circuits` remains the raw per-circuit surface.
 
 `canaries` is a read-only admin supplement over `worker_canary_runs`. In `status` or `alert` mode it reports the latest row from the current authoritative mode per structural check, including DEX publication/current-row invariants, stablecoins-cache active coverage, PSI and DEWS latest samples, report-card cache generation/methodology freshness, and the GBP benchmark-current check. In `off` or `shadow` mode it returns the empty/unknown compatibility shape without reading retained authoritative rows; shadow evidence is inspected through D1 and cron metadata. Loader failures return `canaries: null` and `sectionErrors.canaries`; canary findings are operator diagnostics and do not directly change availability.
-
-`discoveryCandidates` exposes the current untracked-coverage backlog from `discovery_candidates`, ordered by market cap for the `/status` operator workflow.
 
 `mintBurnReconciliation` compares 24h configured canonical issuance-chain mint/burn net flow (`mint_burn_hourly`) against the cached stablecoins payload's matching chain-supply delta. It is intended for operator diagnostics, not public scoring.
 
@@ -5154,71 +5135,6 @@ Admin-only one-shot backfill endpoint for `blacklist_current_balances`, intended
   "budgetUsed": 37,
   "budgetLimit": 900
 }
-```
-
-### `GET /api/discovery-candidates`
-
-Returns stablecoins tracked by CoinGecko or DefiLlama that Pharos does not yet monitor, surfaced by the Monday CoinGecko discovery scan plus quarter-hourly DefiLlama residual upserts.
-
-**Query parameters**
-
-| Param    | Type                               | Default    | Description                         |
-| -------- | ---------------------------------- | ---------- | ----------------------------------- |
-| `status` | `"active" \| "dismissed" \| "all"` | `"active"` | Filter by candidate status          |
-| `limit`  | `integer`                          | `50`       | Max results (clamped to 1–200)      |
-| `offset` | `integer`                          | `0`        | Pagination offset (clamped to >= 0) |
-
-Malformed `limit` / `offset` values return `400` instead of silently defaulting. Out-of-range numeric values are clamped by the shared query parser.
-
-**Response**
-
-```text
-{
-  "candidates": [DiscoveryCandidate, ...],
-  "total": 12
-}
-```
-
-**`DiscoveryCandidate` fields**
-
-| Field       | Type                                   | Description                                    |
-| ----------- | -------------------------------------- | ---------------------------------------------- |
-| `id`        | `number`                               | Internal candidate ID                          |
-| `geckoId`   | `string \| null`                       | CoinGecko coin ID                              |
-| `llamaId`   | `number \| null`                       | DefiLlama stablecoin ID                        |
-| `name`      | `string`                               | Asset name                                     |
-| `symbol`    | `string`                               | Ticker symbol                                  |
-| `marketCap` | `number \| null`                       | Latest known market cap (USD)                  |
-| `source`    | `"coingecko" \| "defillama" \| "both"` | Which discovery source detected this asset     |
-| `firstSeen` | `number`                               | Unix seconds when first discovered             |
-| `lastSeen`  | `number`                               | Unix seconds of most recent detection          |
-| `daysSeen`  | `number`                               | Number of days the candidate has been observed |
-| `dismissed` | `boolean`                              | Whether this candidate has been dismissed      |
-
-### `POST /api/discovery-candidates/:id/dismiss`
-
-Dismisses a discovery candidate so it no longer appears in the active list. Dismissed candidates will not resurface unless their market cap crosses 10× the value at dismissal time.
-
-**Path parameter:** `:id` — candidate ID from `GET /api/discovery-candidates`
-
-**Response**
-
-```json
-{ "ok": true }
-```
-
-**Error responses:** `404` if the candidate is not found or is already dismissed.
-
-### `POST /api/bulk-dismiss-discovery-candidates`
-
-Bulk-dismisses discovery candidates. Requires either `?all=true` or `?ids=<csv>`. Idempotent; skipping already-dismissed rows.
-
-**Authentication:** admin (`X-Pharos-Admin: 1` header required for mutations).
-
-**Response**
-
-```json
-{ "ok": true, "dismissed": 2 }
 ```
 
 ### `POST /api/telegram-pending`

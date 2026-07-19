@@ -52,8 +52,8 @@ export function LifecyclePhasesMethodologySection() {
         <h3 className="text-foreground font-medium">Delisted</h3>
         <p>
           Reviewed as outside the listing scope. The canonical static profile and sourced decision
-          remain readable, while provider IDs and contracts are blocked from rediscovery. Delisted
-          records never enter live aggregates, alerts, or score recomputation.
+          remain readable. Delisted records never enter live aggregates, alerts, or score
+          recomputation.
         </p>
       </div>
       <div className="space-y-2">

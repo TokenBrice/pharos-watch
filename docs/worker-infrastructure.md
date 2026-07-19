@@ -206,7 +206,7 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 ### Public API Auth and Rate Limiting
 
 - `worker/src/handlers/http/gates.ts` checks the request lane in this order: `ops-api` Access auth, `site-api` shared-secret auth, then public `/api/*` key auth or explicit public exemptions.
-- Registered admin `/api/*` paths and configured admin-like root families are denied on the public lane before public API-key auth or exemption handling. This includes malformed children of configured roots such as `/api/api-keys/*`, `/api/api-key-requests-admin/*`, and `/api/discovery-candidates/*`; valid Access-authenticated `ops-api.pharos.watch` admin requests keep their normal route behavior.
+- Registered admin `/api/*` paths and configured admin-like root families are denied on the public lane before public API-key auth or exemption handling. This includes malformed children of configured roots such as `/api/api-keys/*` and `/api/api-key-requests-admin/*`; valid Access-authenticated `ops-api.pharos.watch` admin requests keep their normal route behavior.
 - Public `/api/*` routes accept `X-API-Key` tokens in the format `ph_live_<16 hex prefix>_<32 char base64url secret>`.
 - Valid keys are verified from the D1-backed `api_keys` table using `key_prefix` lookup plus an HMAC-SHA256 secret hash with `API_KEY_HASH_PEPPER`.
 - Valid keyed requests use the D1-backed `api_key_rate_limit` table with the per-key threshold stored in `api_keys.rate_limit_per_minute` (default `120/min`, self-serve `30/min`).
@@ -412,8 +412,6 @@ These router-dispatched admin routes honor an optional `Idempotency-Key` header:
 - `POST /api/reset-cron-lease`
 - `POST /api/reset-circuit-breaker`
 - `POST /api/kill-cron-in-flight`
-- `POST /api/bulk-dismiss-discovery-candidates`
-- `POST /api/discovery-candidates/:id/dismiss`
 - `POST /api/api-keys`
 - `POST /api/api-keys/:id/update`
 - `POST /api/api-keys/:id/deactivate`
@@ -651,7 +649,6 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `CG_PRICES`                          | `coingecko-prices`            | `enrich-prices`                                                                                                           |
 | `CG_DETAIL_PLATFORMS`                | `coingecko-detail-platforms`  | `GET /api/stablecoin/:id` (CoinGecko-only detail provider)                                                                |
 | `CG_MCAP`                            | `coingecko-mcap`              | `sync-stablecoins` (CG supply fallback)                                                                                   |
-| `CG_DISCOVERY`                       | `coingecko-discovery`         | `discovery-scan`                                                                                                          |
 | `CG_ONCHAIN`                         | `coingecko-onchain`           | `enrich-prices` CoinGecko Pro onchain exact-address augmentation plus `dex-discovery` Stage 1 onchain pool crawl          |
 | `CMC_PRICES`                         | `coinmarketcap-prices`        | `enrich-prices` pass 2 fallback                                                                                           |
 | `DEXSCREENER_PRICES`                 | `dexscreener-prices`          | `enrich-prices` exact token-address DexScreener fallback                                                                  |
@@ -965,7 +962,6 @@ The `probe` object returned by `/api/status` is the latest `status_probe_runs` a
 | `sync-bluechip`                   | 86,400s (24h)    | `5 8 * * *`                                                 |
 | `daily-digest`                    | 86,400s (24h)    | `5 8 * * *`                                                 |
 | `weekly-recap`                    | 604,800s (7d)    | `10 8 * * *` (Monday-only)                                  |
-| `discovery-scan`                  | 604,800s (7d)    | `10 8 * * *` (Monday-only)                                  |
 | `prune-status-probe-runs`         | 86,400s (24h)    | `0 3 * * *`                                                 |
 | `prune-cron-history`              | 86,400s (24h)    | `0 3 * * *`                                                 |
 | `worker-repair-runner`            | 86,400s (24h)    | `0 3 * * *`                                                 |

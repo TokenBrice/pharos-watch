@@ -151,7 +151,7 @@ export const CRON_GROUPS: readonly CronGroupDefinition[] = [
     title: "Daily slot",
     badge: "daily",
     description:
-      "03:00 retention pruning plus 08:00 snapshots/monitors, 08:05 digest/Bluechip/recap, and 08:10 coverage discovery lanes.",
+      "03:00 retention pruning plus 08:00 snapshots/monitors, 08:05 digest/Bluechip, and 08:10 weekly recap lanes.",
   },
   {
     key: "other",
@@ -521,15 +521,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     triggerMode: "shared",
     maxConnections: 1, // Anthropic LLM call, then Telegram post (sequential)
     connectionGroup: "weekly-recap",
-  },
-  {
-    job: "discovery-scan",
-    label: "Coverage discovery",
-    group: "daily",
-    intervalSec: 604800,
-    scheduleKey: "daily0810Utc",
-    triggerMode: "shared",
-    maxConnections: 1, // CoinGecko stablecoins market list fetch
   },
   {
     job: "yield-coverage-audit",

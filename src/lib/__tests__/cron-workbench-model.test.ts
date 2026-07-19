@@ -170,7 +170,7 @@ describe("cron workbench model", () => {
           title: "Weekly",
           badge: "weekly",
           description: "Weekly maintenance jobs.",
-          entries: [["discovery-scan", cron]],
+          entries: [["weekly-recap", cron]],
         },
       ],
       { ...DEFAULT_CRON_WORKBENCH_FILTERS },
@@ -178,7 +178,7 @@ describe("cron workbench model", () => {
 
     expect(model.rows).toHaveLength(1);
     expect(model.rows[0]).toMatchObject({
-      job: "discovery-scan",
+      job: "weekly-recap",
       state: "degraded",
       rawStatus: "skipped_neutral",
       statusLabel: "Completed with warnings (latest required run)",
@@ -203,7 +203,7 @@ describe("cron workbench model", () => {
           title: "Weekly",
           badge: "weekly",
           description: "Weekly maintenance jobs.",
-          entries: [["discovery-scan", cron]],
+          entries: [["weekly-recap", cron]],
         },
       ],
       { ...DEFAULT_CRON_WORKBENCH_FILTERS },

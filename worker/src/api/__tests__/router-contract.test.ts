@@ -262,23 +262,6 @@ describe("router contract: strict frontend paths are routable", () => {
     });
   });
 
-  it("keeps the dynamic discovery dismiss route aligned with shared admin method/auth rules", async () => {
-    const postPath = "https://api.pharos.watch/api/discovery-candidates/42/dismiss";
-    const postResult = await route(makeRouteCtx({
-      url: new URL(postPath),
-      request: new Request(postPath, { method: "POST", headers: { "X-Pharos-Admin": "1" } }),
-    }));
-    expect(postResult).not.toBeNull();
-    expect(postResult!.status).toBe(401);
-
-    const getResult = await route(makeRouteCtx({
-      url: new URL(postPath),
-      request: new Request(postPath, { method: "GET" }),
-    }));
-    expect(getResult).not.toBeNull();
-    expect(getResult!.status).toBe(405);
-  });
-
   it("keeps the dynamic API key admin routes aligned with shared method/auth rules", async () => {
     const postPath = "https://api.pharos.watch/api/api-keys/7/rotate";
     const postResult = await route(makeRouteCtx({

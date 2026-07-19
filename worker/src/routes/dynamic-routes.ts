@@ -140,13 +140,6 @@ function defineDynamicAdminRouteBinding<Key extends DynamicAdminEndpointKey>(
 }
 
 const DYNAMIC_ADMIN_ROUTE_BINDINGS = {
-  "discovery-candidate-dismiss": defineDynamicAdminRouteBinding(
-    "discovery-candidate-dismiss",
-    async (routeCtx, dynamicAdminEndpoint) => {
-      const { handleDiscoveryCandidateDismiss } = await import("../api/admin-actions");
-      return handleDiscoveryCandidateDismiss(routeCtx, dynamicAdminEndpoint.candidateId);
-    },
-  ),
   "api-key-update": defineDynamicAdminRouteBinding("api-key-update", async (routeCtx, dynamicAdminEndpoint) => {
     const { handleApiKeyUpdateRoute } = await import("../api/api-keys");
     return handleApiKeyUpdateRoute({ ...routeCtx, apiKeyId: dynamicAdminEndpoint.apiKeyId });

@@ -110,7 +110,6 @@ function statusResponse() {
     gtProbe: null,
     coingeckoPriceDiff: null,
     d1Usage: null,
-    discoveryCandidates: null,
     mintBurnReconciliation: null,
     reserveComposition: reserveComposition(),
   };

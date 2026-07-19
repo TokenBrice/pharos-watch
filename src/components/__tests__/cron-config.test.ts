@@ -76,9 +76,9 @@ describe("status cron config", () => {
   });
 
   it("keeps daily chained jobs in the daily group across both triggers", () => {
-    expect(getStatusCronDisplay("discovery-scan")).toEqual({
+    expect(getStatusCronDisplay("weekly-recap")).toEqual({
       group: "daily",
-      label: "Coverage discovery",
+      label: "Weekly recap",
       schedule: "10 8 * * *",
       triggerMode: "shared",
     });

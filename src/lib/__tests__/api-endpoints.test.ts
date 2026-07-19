@@ -71,7 +71,6 @@ describe("api endpoint registry", () => {
       "/api/blacklist",
       "/api/blacklist-summary",
       "/api/bluechip-ratings",
-      "/api/bulk-dismiss-discovery-candidates",
       "/api/chains",
       "/api/daily-digest",
       "/api/debug-sync-state",
@@ -83,7 +82,6 @@ describe("api endpoint registry", () => {
       "/api/dex-liquidity-history?stablecoin=usdt-tether",
       "/api/digest-archive",
       "/api/digest-snapshot",
-      "/api/discovery-candidates",
       "/api/events",
       "/api/feedback",
       "/api/health",
@@ -199,7 +197,6 @@ describe("api endpoint registry", () => {
       "/api/status",
       "/api/status-history?limit=10",
       "/api/debug-sync-state",
-      "/api/discovery-candidates",
       "/api/admin-telegram-adoption-report",
       "/api/status-probe-history?path=%2Fapi%2Fhealth",
     ]);
@@ -225,7 +222,6 @@ describe("api endpoint registry", () => {
       "/api/reset-circuit-breaker",
       "/api/kill-cron-in-flight",
       "/api/admin/reserve-recovery-fault-injection",
-      "/api/bulk-dismiss-discovery-candidates",
       "/api/telegram-pending",
       "/api/alert-broker-canary",
       "/api/admin-telegram-resend",
@@ -436,12 +432,6 @@ describe("api endpoint registry", () => {
   });
 
   it("matches dynamic admin routes from the shared registry", () => {
-    expect(matchDynamicAdminEndpoint("/api/discovery-candidates/42/dismiss")).toEqual({
-      key: "discovery-candidate-dismiss",
-      path: "/api/discovery-candidates/42/dismiss",
-      candidateId: 42,
-      methods: ["POST"],
-    });
     expect(matchDynamicAdminEndpoint("/api/api-keys/7/update")).toEqual({
       key: "api-key-update",
       path: "/api/api-keys/7/update",
@@ -460,9 +450,6 @@ describe("api endpoint registry", () => {
       requestId: "akr_abc12345",
       methods: ["POST"],
     });
-    expect(matchDynamicAdminEndpoint("/api/discovery-candidates/not-a-number/dismiss")).toBeNull();
-    expect(matchDynamicAdminEndpoint("/api/discovery-candidates/0/dismiss")).toBeNull();
-    expect(matchDynamicAdminEndpoint("/api/discovery-candidates/9007199254740992/dismiss")).toBeNull();
     expect(matchDynamicAdminEndpoint("/api/api-keys/0/update")).toBeNull();
     expect(matchDynamicAdminEndpoint("/api/api-keys/9007199254740992/update")).toBeNull();
     expect(isAdminPath("/api/status")).toBe(true);
@@ -470,8 +457,6 @@ describe("api endpoint registry", () => {
     expect(isAdminPath("/api/request-source-stats")).toBe(true);
     expect(isAdminPath("/api/api-key-requests-admin")).toBe(true);
     expect(isAdminPath("/api/api-key-requests-admin/akr_abc12345/reject")).toBe(true);
-    expect(isAdminPath("/api/discovery-candidates/42/dismiss")).toBe(true);
-    expect(isAdminPath("/api/discovery-candidates/0/dismiss")).toBe(false);
     expect(isAdminPath("/api/api-keys/0/update")).toBe(false);
     expect(isAdminPath("/api/stablecoins")).toBe(false);
   });
@@ -484,7 +469,6 @@ describe("api endpoint registry", () => {
     expect(isAdminLikePath("/api/api-keys/not-a-number/rotate")).toBe(true);
     expect(isAdminLikePath("/api/api-key-requests-admin")).toBe(true);
     expect(isAdminLikePath("/api/api-key-requests-admin/bad!/reject")).toBe(true);
-    expect(isAdminLikePath("/api/discovery-candidates/not-a-number/dismiss")).toBe(true);
     expect(isAdminLikePath("/api/api-key-requests")).toBe(false);
     expect(isAdminLikePath("/api/api-key-requests/verify")).toBe(false);
     expect(isAdminLikePath("/api/stablecoins")).toBe(false);
@@ -492,7 +476,7 @@ describe("api endpoint registry", () => {
   });
 
   it("keeps the shared dynamic descriptor table aligned with current access and dependency policies", () => {
-    expect(DYNAMIC_ENDPOINT_DESCRIPTORS).toHaveLength(13);
+    expect(DYNAMIC_ENDPOINT_DESCRIPTORS).toHaveLength(12);
 
     expect(findDynamicEndpointDescriptor("/api/stablecoin/usdt-tether")).toMatchObject({
       key: "stablecoin-detail",
@@ -550,9 +534,6 @@ describe("api endpoint registry", () => {
     expect(getSiteDataAccess("/api/stablecoin/usdt-tether")).toBe("allowed");
     expect(getPublicApiAccess("/api/og/stablecoin/usdt-tether")).toBe("exempt");
     expect(getSiteDataAccess("/api/og/stablecoin/usdt-tether")).toBe("denied");
-    expect(isAdminPath("/api/discovery-candidates/42/dismiss")).toBe(true);
-    expect(getPublicApiAccess("/api/discovery-candidates/0/dismiss")).toBeNull();
-    expect(getSiteDataAccess("/api/discovery-candidates/0/dismiss")).toBeNull();
     expect(getPublicApiAccess("/api/api-keys/0/update")).toBeNull();
     expect(getSiteDataAccess("/api/api-keys/0/update")).toBeNull();
   });
@@ -580,9 +561,6 @@ describe("api endpoint registry", () => {
       allowedMethods: ["GET"],
     });
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoin-summary/1"), "GET")).toBeNull();
-    expect(
-      validateEndpointMethod(new URL("https://api.pharos.watch/api/discovery-candidates/1/dismiss"), "POST"),
-    ).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys/1/update"), "POST")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys/1/deactivate"), "POST")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys/1/rotate"), "POST")).toBeNull();
@@ -641,12 +619,6 @@ describe("api endpoint registry", () => {
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-key-requests-admin"), "POST")).toEqual({
       message: "Method not allowed",
       allowedMethods: ["GET"],
-    });
-    expect(
-      validateEndpointMethod(new URL("https://api.pharos.watch/api/discovery-candidates/1/dismiss"), "GET"),
-    ).toEqual({
-      message: "Method not allowed. Use POST for this endpoint.",
-      allowedMethods: ["POST"],
     });
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys/1/rotate"), "GET")).toEqual({
       message: "Method not allowed. Use POST for this endpoint.",

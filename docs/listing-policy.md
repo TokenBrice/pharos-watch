@@ -10,8 +10,7 @@ Listing governance is checked in and deterministic:
 | --- | --- |
 | One listing class for every catalog ID | `shared/data/stablecoins/listing-decisions.json` |
 | Asset identity, lifecycle, and lifecycle review | `shared/data/stablecoins/coins/<id>.json` |
-| Delisted provider and contract fingerprints | `shared/data/stablecoins/listing-exclusions.json` |
-| Decision, lifecycle, and exclusion validation | `scripts/ci/check-stablecoin-data.ts` |
+| Decision and lifecycle validation | `scripts/ci/check-stablecoin-data.ts` |
 
 `listing-decisions.json` is intentionally compact. It contains only `schemaVersion`, `policyVersion`, and an exhaustive `listingClassById` map. Lifecycle is catalog metadata, not duplicated in the class ledger. `priceBasis` and `exitMechanism` are authored only on sourced delisted records to preserve the evidence for their removal; Pharos does not infer or store those fields for active assets.
 
@@ -76,7 +75,7 @@ A positive number is not sufficient when its semantics are wrong. Contractual pa
 
 Quarantine is operational, not punitive. A quarantine review records `changedAt`, a concrete reason, and `reviewBy`. The review date creates an explicit manual follow-up; extensions require another dated review. Reactivation requires a positive supply or market-cap path, the normal active-admission checks, and a new lifecycle review. Missing price coverage alone is worked as a pricing issue while the asset remains active.
 
-Delist when the instrument itself fails scope, including account-only balances, private contractual-par notes, misleading provider artifacts, or assets without a meaningful transferable or redemption claim. A delisted record requires a dated reason and public source. Its provider IDs and contracts go into the exclusion ledger so discovery cannot reintroduce the same instrument under another name.
+Delist when the instrument itself fails scope, including account-only balances, private contractual-par notes, misleading provider artifacts, or assets without a meaningful transferable or redemption claim. A delisted record requires a dated reason and public source.
 
 Freeze only a previously active stablecoin that has effectively ended or failed and whose historical market record belongs in the cemetery. [Freezing a Tracked Stablecoin](./freezing-stablecoins.md) owns that procedure.
 
@@ -92,18 +91,9 @@ The active-admission gate is run for additions and promotions and can be repeate
 
 An incumbent with a price-pipeline failure remains active while the failure is investigated. An incumbent with no defensible positive supply or market-cap path moves to quarantine. An asset whose instrument semantics fail scope moves to delisted. This separates repairable pricing work from catalog-quality decisions without suppressing genuine market stress.
 
-## Exclusion Fingerprints
+## Re-Admission
 
-Each delisted asset must retain every known discovery fingerprint:
-
-- CoinGecko ID
-- DefiLlama ID when present
-- canonical chain and contract address pairs
-- a concise reason and at least one public evidence URL
-
-Discovery intake checks these fingerprints before candidate persistence. Matching is exact for provider IDs and case-insensitive for chain/address contract keys. CI rejects duplicate fingerprints, unknown catalog IDs, missing delisted rows, and exclusions without a durable provider or contract fingerprint.
-
-Re-admission is exceptional. It requires new evidence that the instrument changed, not merely that a provider relisted it. The same reviewed change updates the catalog lifecycle, listing class, and exclusion fingerprints so discovery blocking and active publication cannot disagree.
+Re-admission is exceptional. It requires new evidence that the instrument changed, not merely that a provider relisted it. The same reviewed change updates the catalog lifecycle and listing class so historical scope decisions and active publication cannot disagree.
 
 ## Change Procedure
 
@@ -118,7 +108,7 @@ For an addition or promotion:
 For quarantine or delisting:
 
 1. Change the catalog lifecycle with the required review metadata.
-2. For delisting, classify the row as `excluded`, retain sourced price/exit evidence when it explains the decision, and add exclusion fingerprints.
+2. For delisting, classify the row as `excluded` and retain sourced price/exit evidence when it explains the decision.
 3. Regenerate catalog projections and verify active surfaces no longer include the ID.
 4. Preserve canonical URLs and legacy ID redirects for historical readability.
 5. Run `npm run check:stablecoin-data` and focused lifecycle tests.

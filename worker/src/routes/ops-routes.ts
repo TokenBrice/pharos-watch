@@ -1,5 +1,4 @@
-import { makeAdminRoute } from "../lib/route-wrappers";
-import { defineLazyStaticRoute, defineStaticRoute, type StaticRouteDefinition } from "./shared";
+import { defineLazyStaticRoute, type StaticRouteDefinition } from "./shared";
 
 export const OPS_STATIC_ROUTES = [
   defineLazyStaticRoute("status", () =>
@@ -69,12 +68,5 @@ export const OPS_STATIC_ROUTES = [
   ),
   defineLazyStaticRoute("debug-sync-state", () =>
     import("../api/admin-actions").then(({ handleDebugSyncState }) => handleDebugSyncState),
-  ),
-  defineStaticRoute(
-    "discovery-candidates",
-    makeAdminRoute("route-discovery-candidates", async ({ db, url }) => {
-      const { handleDiscoveryCandidates } = await import("../api/discovery");
-      return handleDiscoveryCandidates(db, url);
-    }),
   ),
 ] as const satisfies readonly StaticRouteDefinition[];

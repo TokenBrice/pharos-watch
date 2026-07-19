@@ -110,7 +110,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     ],
   },
   daily0810Utc: {
-    jobChains: [["discovery-scan"], ["weekly-recap"]],
+    jobChains: [["weekly-recap"]],
   },
   monthlyYieldAudit: {
     jobChains: [["yield-coverage-audit"]],

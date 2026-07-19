@@ -73,10 +73,10 @@ describe("findSharedTypesRuntimeImports", () => {
 
   it("allows shared/types imports from sibling type modules", () => {
     const root = makeTempRepo();
-    mkdirSync(join(root, "shared/types"), { recursive: true });
+    mkdirSync(join(root, "shared/types/status"), { recursive: true });
     writeFileSync(
       join(root, "shared/types/status.ts"),
-      'import type { DiscoveryCandidate } from "./discovery";\nexport type Row = DiscoveryCandidate;\n',
+      'import type { CronStatus } from "./status/cron";\nexport type Row = CronStatus;\n',
     );
 
     expect(findSharedTypesRuntimeImports(["shared/types"], root)).toEqual([]);

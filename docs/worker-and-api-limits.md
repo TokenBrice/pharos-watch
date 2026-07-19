@@ -71,7 +71,7 @@ The scheduler is structured around that conservative repo constraint:
 
 Treat any new fetch-heavy work added to an existing trigger slot as competing for the same trigger-wide outbound connection budget. A trigger at `5/6` must be treated as full for new fetch-heavy work unless the change also reduces existing peak usage or moves work to a different slot.
 
-Current state: `sync-dex-liquidity` is intentionally modeled at `5/6` because its nested direct-API phase can reach that static peak while staying below both the platform header-wait ceiling and the repo budget. Treat the `halfHourlyOffset` DEX scoring trigger as full for new fetch-heavy work. Other formerly full slots were given headroom by reducing Telegram send batches to 4, running supplemental yield source families serially, and moving `discovery-scan` from the 08:05 daily lane to its own 08:10 trigger.
+Current state: `sync-dex-liquidity` is intentionally modeled at `5/6` because its nested direct-API phase can reach that static peak while staying below both the platform header-wait ceiling and the repo budget. Treat the `halfHourlyOffset` DEX scoring trigger as full for new fetch-heavy work. Other formerly full slots were given headroom by reducing Telegram send batches to 4 and running supplemental yield source families serially.
 
 For `sync-stablecoins`, failed upstream responses must still be consumed or canceled before later passes start. That rule bounds unread bytes, completes transport cleanup, and keeps fetch phases deterministic; it is not a claim that an unread body still occupies Cloudflare's header-wait slot. The late fallback phase remains `CoinMarketCap` -> `Jupiter` -> `DexScreener`.
 

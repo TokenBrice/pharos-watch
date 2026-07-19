@@ -85,7 +85,6 @@ describe("handleStatus", () => {
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at >", rows: [] },
-      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -208,7 +207,6 @@ describe("handleStatus", () => {
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at >", rows: [] },
-      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -271,7 +269,6 @@ describe("handleStatus", () => {
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at >", rows: [] },
-      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -345,7 +342,6 @@ describe("handleStatus", () => {
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at >", rows: [] },
-      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -408,7 +404,6 @@ describe("handleStatus", () => {
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at >", rows: [] },
-      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -502,7 +497,6 @@ describe("handleStatus", () => {
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at >", rows: [] },
-      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -582,7 +576,6 @@ describe("handleStatus", () => {
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at >", rows: [] },
-      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -623,7 +616,6 @@ describe("handleStatus", () => {
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at >", rows: [] },
-      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
       {
         match: "FROM status_state",
         rows: [],
@@ -670,7 +662,6 @@ describe("handleStatus", () => {
     const blacklistWriterAt = now - 15 * 60;
     const mintBurnWriterAt = now - 8 * 60;
     const depegWriterAt = now - 12 * 60;
-    const discoveryWriterAt = now - 20 * 60;
 
     const db = fixtureMockD1([
       { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
@@ -684,7 +675,6 @@ describe("handleStatus", () => {
           makeCronRow("sync-blacklist", "ok", 15 * 60),
           makeCronRow("sync-mint-burn", "ok", 8 * 60),
           makeCronRow("sync-mint-burn-extended", "ok", 18 * 60),
-          makeCronRow("discovery-scan", "ok", 20 * 60),
         ],
       },
       {
@@ -706,12 +696,6 @@ describe("handleStatus", () => {
         first: { latest: depegWriterAt },
       },
       {
-        match: "SELECT MAX(started_at) as latest",
-        matchBinds: ["sync-stablecoins", "discovery-scan", "ok", "degraded"],
-        rows: [],
-        first: { latest: discoveryWriterAt },
-      },
-      {
         match: "cache",
         rows: [],
         first: { value: stablecoinsCache, updated_at: now - 60 },
@@ -720,10 +704,6 @@ describe("handleStatus", () => {
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at >", rows: [] },
-      {
-        match: "FROM discovery_candidates WHERE dismissed = 0",
-        rows: [],
-      },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -733,14 +713,12 @@ describe("handleStatus", () => {
         blacklist: number | null;
         mintBurn: number | null;
         depegs: number | null;
-        discoveryCandidates: number | null;
       };
     };
 
     expect(body.datasetFreshness.blacklist).toBe(blacklistWriterAt);
     expect(body.datasetFreshness.mintBurn).toBe(mintBurnWriterAt);
     expect(body.datasetFreshness.depegs).toBe(depegWriterAt);
-    expect(body.datasetFreshness.discoveryCandidates).toBe(discoveryWriterAt);
   });
 
   it("keeps status available when the shared stablecoins cache preload throws", async () => {
@@ -757,7 +735,6 @@ describe("handleStatus", () => {
         rows: [],
         throwError: new Error("simulated stablecoins cache read failure"),
       },
-      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });

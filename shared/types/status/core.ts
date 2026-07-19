@@ -252,5 +252,4 @@ export interface DatasetFreshness {
   depegs: number | null;
   dews: number | null;
   digest: number | null;
-  discoveryCandidates: number | null;
 }

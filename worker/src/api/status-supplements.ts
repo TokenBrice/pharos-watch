@@ -9,7 +9,6 @@ import type {
   CanaryStatus,
   CoinGeckoPriceDiff,
   D1UsageSummary,
-  DiscoveryCandidate,
   LiquidityHealth,
   MintBurnReconciliationSummary,
   PublicationHealth,
@@ -30,11 +29,6 @@ import {
   resolveCloudflareD1StatusConfig,
   type CloudflareD1StatusBindings,
 } from "../lib/env";
-import {
-  DISCOVERY_CANDIDATE_SELECT_COLUMNS,
-  mapDiscoveryCandidateRow,
-  type DiscoveryCandidateRow,
-} from "../lib/discovery-candidates";
 import { loadFreshIndependentLiveReserveMap } from "../lib/live-reserves-store";
 import { validatePricingSourceFreshness } from "../lib/pricing-source-freshness";
 import {
@@ -53,7 +47,6 @@ import { loadCanaryStatus } from "../lib/canary-checks";
 import type { WorkerCanaryMode } from "../lib/canary-checks";
 
 const SECTION_ERROR_MESSAGES: Record<string, string> = {
-  discovery_candidates_query_failed: "Discovery candidates unavailable.",
   liquidity_health_extraction_failed: "Liquidity health data unavailable.",
   publication_health_partial_failure: "Publication health partially unavailable.",
   publication_health_query_failed: "Publication health unavailable.",
@@ -101,7 +94,6 @@ export interface StatusSupplements {
   coingeckoPriceDiff: CoinGeckoPriceDiff | null;
   d1Usage: D1UsageSummary | null;
   cacheBlobSizes?: Record<string, number>;
-  discoveryCandidates: DiscoveryCandidate[] | null;
   mintBurnReconciliation: MintBurnReconciliationSummary | null;
   reserveDrift?: ReserveDriftEntry[];
   classificationWarnings?: ClassificationWarning[];
@@ -290,23 +282,6 @@ export async function loadStatusSupplements(
       { source: "stablecoins-cache" },
     );
     stablecoinsCache = { kind: "error", reason: "cache-read-failed", updatedAt: null };
-  }
-
-  let discoveryCandidates: DiscoveryCandidate[] | null = null;
-  try {
-    const discRows = await db.prepare(
-      `SELECT ${DISCOVERY_CANDIDATE_SELECT_COLUMNS} FROM discovery_candidates WHERE dismissed = 0 ORDER BY market_cap DESC LIMIT 20`,
-    ).all<DiscoveryCandidateRow>();
-    discoveryCandidates = (discRows.results ?? []).map((row) => mapDiscoveryCandidateRow(row, now));
-  } catch (err) {
-    logStatusSupplementWarning(
-      "discovery_candidates_query_failed",
-      "Discovery candidates query failed",
-      err,
-    );
-    sectionErrors.discoveryCandidates = sectionError(
-      "discovery_candidates_query_failed",
-    );
   }
 
   let liquidityHealth: LiquidityHealth | null = null;
@@ -585,7 +560,6 @@ export async function loadStatusSupplements(
     coingeckoPriceDiff,
     d1Usage,
     cacheBlobSizes,
-    discoveryCandidates,
     mintBurnReconciliation,
     reserveDrift,
     classificationWarnings,

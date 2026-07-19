@@ -201,7 +201,6 @@ export function makeHealthyStatusResponse(): StatusResponse {
       depegs: 1_699_999_000,
       dews: 1_699_999_000,
       digest: 1_699_999_000,
-      discoveryCandidates: 1_699_999_000,
     },
     summary: {
       unhealthyCrons: 0,
@@ -226,7 +225,6 @@ export function makeHealthyStatusResponse(): StatusResponse {
     gtProbe: null,
     coingeckoPriceDiff: null,
     d1Usage: null,
-    discoveryCandidates: null,
     mintBurnReconciliation: null,
     reserveComposition: {
       configuredCoins: 100,

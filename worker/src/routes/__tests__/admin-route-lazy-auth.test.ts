@@ -1,13 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { ADMIN_STATIC_ROUTES } from "../admin-routes";
-import { OPS_STATIC_ROUTES } from "../ops-routes";
 import type { FullRouteContext, StaticRouteDefinition } from "../shared";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 const moduleLoads = vi.hoisted(() => ({
   auditDepegHistory: vi.fn(),
   backfillDepegs: vi.fn(),
-  discovery: vi.fn(),
   reserveFaultInjection: vi.fn(),
 }));
 
@@ -29,13 +27,6 @@ vi.mock("../../api/admin-reserve-recovery-fault-injection", () => {
   moduleLoads.reserveFaultInjection();
   return {
     handleArmReserveRecoveryFaultInjection: vi.fn(async () => new Response("ok")),
-  };
-});
-
-vi.mock("../../api/discovery", () => {
-  moduleLoads.discovery();
-  return {
-    handleDiscoveryCandidates: vi.fn(async () => new Response("ok")),
   };
 });
 
@@ -93,12 +84,4 @@ describe("lazy admin route authentication", () => {
     expect(moduleLoads.reserveFaultInjection).not.toHaveBeenCalled();
   });
 
-  it("rejects discovery reads before importing the discovery module", async () => {
-    const route = findRoute(OPS_STATIC_ROUTES, "discovery-candidates");
-
-    const response = await route.handler(makeContext(route.endpoint.path, "GET"));
-
-    expect(response.status).toBe(401);
-    expect(moduleLoads.discovery).not.toHaveBeenCalled();
-  });
 });

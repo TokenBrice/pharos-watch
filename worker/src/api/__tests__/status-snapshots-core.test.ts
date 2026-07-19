@@ -58,7 +58,6 @@ describe("handleStatus", () => {
           }),
         ],
       },
-      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -142,7 +141,6 @@ describe("handleStatus", () => {
           matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
           rows: [makeRawStatusSnapshotRow(now, 60, scenario.raw)],
         },
-        { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
         ...scenario.tables,
       ]);
       const response = await handleStatus(db, true, fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" }));
@@ -202,7 +200,6 @@ describe("handleStatus", () => {
           },
         ],
       },
-      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -272,7 +269,6 @@ describe("handleStatus", () => {
         rows: [],
         throwError: new Error("D1_ERROR: no such table: worker_canary_runs"),
       },
-      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -306,7 +302,6 @@ describe("handleStatus", () => {
         matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
         rows: [makeRawStatusSnapshotRow(now, 60)],
       },
-      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -573,28 +568,6 @@ describe("handleStatus", () => {
           makeCronRow("sync-blacklist"),
         ],
       },
-      {
-        match: "MAX(last_seen) as latest FROM discovery_candidates",
-        rows: [],
-        first: { latest: now - 120 },
-      },
-      {
-        match: "FROM discovery_candidates WHERE dismissed = 0",
-        rows: [
-          {
-            id: 12,
-            gecko_id: "usdq",
-            llama_id: null,
-            name: "USDQ",
-            symbol: "USDQ",
-            market_cap: 18_200_000,
-            source: "coingecko",
-            first_seen: now - 172_800,
-            last_seen: now - 120,
-            dismissed: 0,
-          },
-        ],
-      },
       // Data quality: stablecoins cache for missing prices
       {
         match: "cache",
@@ -635,7 +608,6 @@ describe("handleStatus", () => {
       dependencyHealth: Record<string, unknown> | null;
       providerCircuitHealth: Record<string, unknown> | null;
       canaries: Record<string, unknown> | null;
-      discoveryCandidates: Array<Record<string, unknown>> | null;
       mintBurnReconciliation: Record<string, unknown> | null;
       reserveComposition: Record<string, unknown>;
     };
@@ -659,7 +631,6 @@ describe("handleStatus", () => {
     expect(body).toHaveProperty("dependencyHealth");
     expect(body).toHaveProperty("providerCircuitHealth");
     expect(body).toHaveProperty("canaries");
-    expect(body).toHaveProperty("discoveryCandidates");
     expect(body).toHaveProperty("mintBurnReconciliation");
     expect(body).toHaveProperty("reserveComposition");
     expect(body.reserveComposition).toMatchObject({
@@ -675,7 +646,6 @@ describe("handleStatus", () => {
     expect(body.datasetFreshness).toHaveProperty("stablecoins");
     expect(body.datasetFreshness).toHaveProperty("mintBurn");
     expect(body.datasetFreshness).toHaveProperty("safetyGrades");
-    expect(body.datasetFreshness).toHaveProperty("discoveryCandidates");
     expect(body.state).toMatchObject({
       scope: "global",
       thresholds: {
@@ -703,7 +673,6 @@ describe("handleStatus", () => {
       currentCoverage: 120,
       failedSources: ["defillama-yields"],
     });
-    expect(body.discoveryCandidates).toHaveLength(1);
     expect(["healthy", "degraded", "stale"]).toContain(body.overallStatus);
   });
 
@@ -746,7 +715,6 @@ describe("handleStatus", () => {
           }),
         ],
       },
-      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -843,10 +811,6 @@ describe("handleStatus", () => {
         ],
       },
       {
-        match: "FROM discovery_candidates WHERE dismissed = 0",
-        rows: [],
-      },
-      {
         match: "cache",
         rows: [],
         first: { value: stablecoinsCache, updated_at: now - 60 },
@@ -924,7 +888,6 @@ describe("handleStatus", () => {
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
       { match: "onchain_supply WHERE updated_at >", rows: [] },
-      { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
     ]);
 
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });

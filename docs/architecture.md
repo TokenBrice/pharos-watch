@@ -207,7 +207,7 @@ Every entry in `TRACKED_STABLECOINS` is in one of five lifecycle phases. The pha
 | Active | `"active"` (or omitted) | Yes | Yes | Live tables, analytics, aggregates, alerts, and detail page |
 | Pre-launch | `"pre-launch"` | No | No | `/upcoming/` and pre-launch detail variant |
 | Quarantined | `"quarantined"` plus `listingStatusReview` | No | No | Static read-only detail record with reason and review date |
-| Delisted | `"delisted"` plus sourced `listingStatusReview` | No | No | Static historical detail record; discovery fingerprints remain blocked |
+| Delisted | `"delisted"` plus sourced `listingStatusReview` | No | No | Static historical detail record |
 | Frozen | `"frozen"` plus `frozenAt` and `obituary` | No | No | `/cemetery/` and preserved archive detail page |
 
 The main registry universes from `shared/lib/stablecoins/registry.ts` are:

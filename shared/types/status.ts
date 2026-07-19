@@ -5,7 +5,6 @@
  * import from `@shared/types/status` unless they specifically need a lower-level
  * module to avoid loading unrelated runtime schemas.
  */
-export type { DiscoveryCandidate, DiscoveryCandidatesResponse } from "./discovery";
 export type {
   PriceSourceDepthBucket,
   PriceSourceDepthDistribution,

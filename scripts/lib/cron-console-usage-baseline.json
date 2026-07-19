@@ -73,7 +73,6 @@
   "worker/src/cron/dex-liquidity/subgraph-family-runner.ts": 4,
   "worker/src/cron/dex-liquidity/subgraph-helpers.ts": 3,
   "worker/src/cron/digest/platform.ts": 6,
-  "worker/src/cron/discovery-scan.ts": 4,
   "worker/src/cron/mint-burn/run-configs.ts": 2,
   "worker/src/cron/mint-burn/run-state.ts": 2,
   "worker/src/cron/mint-burn/sync-config.ts": 1,

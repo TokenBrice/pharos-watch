@@ -24,7 +24,6 @@ function makeRouteCtx(overrides: Partial<FullRouteContext> & { url: URL }): Full
 
 /** Synthetic placeholders that satisfy each dynamic admin pattern's parameter constraints. */
 const DYNAMIC_ADMIN_PROBE_PATHS: Record<string, string> = {
-  "discovery-candidate-dismiss": "/api/discovery-candidates/42/dismiss",
   "api-key-update": "/api/api-keys/7/update",
   "api-key-deactivate": "/api/api-keys/7/deactivate",
   "api-key-rotate": "/api/api-keys/7/rotate",

@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { handleResetCronLease } from "../admin-reset-cron-lease";
 import { handleResetCircuitBreaker } from "../admin-reset-circuit-breaker";
 import { handleKillCronInFlight } from "../admin-kill-cron-in-flight";
-import { handleBulkDismissDiscoveryCandidates } from "../admin-bulk-dismiss-discovery-candidates";
 import { handleStatusProbeHistory } from "../status-probe-history";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
@@ -141,74 +140,6 @@ describe("handleKillCronInFlight", () => {
     const db = mockD1();
     const url = new URL("https://ops-api.pharos.watch/api/kill-cron-in-flight?job=sync-mint-burn");
     const res = await handleKillCronInFlight({ db, url, request: adminRequest(url.toString()), trustedAdmin: true });
-    expect(res.status).toBe(400);
-    expect(res.headers.get("Cache-Control")).toBe("no-store");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// bulk-dismiss-discovery-candidates
-// ---------------------------------------------------------------------------
-
-describe("handleBulkDismissDiscoveryCandidates", () => {
-  it("dismisses all non-dismissed candidates when all=true", async () => {
-    const db = mockD1([
-      { match: "UPDATE discovery_candidates", rows: [], runMeta: { changes: 2 } },
-      { match: "INSERT INTO admin_action_audit", rows: [], runMeta: { changes: 1 } },
-    ]);
-    const url = new URL("https://ops-api.pharos.watch/api/bulk-dismiss-discovery-candidates?all=true");
-    const res = await handleBulkDismissDiscoveryCandidates({
-      db,
-      url,
-      request: adminRequest(url.toString()),
-      trustedAdmin: true,
-    });
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Cache-Control")).toBe("no-store");
-    const body = (await res.json()) as { ok: boolean; dismissed: number };
-    expect(body.dismissed).toBe(2);
-  });
-
-  it("accepts explicit ids list", async () => {
-    const db = mockD1([
-      { match: "UPDATE discovery_candidates", rows: [], runMeta: { changes: 2 } },
-      { match: "INSERT INTO admin_action_audit", rows: [], runMeta: { changes: 1 } },
-    ]);
-    const url = new URL("https://ops-api.pharos.watch/api/bulk-dismiss-discovery-candidates?ids=1,3");
-    const res = await handleBulkDismissDiscoveryCandidates({
-      db,
-      url,
-      request: adminRequest(url.toString()),
-      trustedAdmin: true,
-    });
-    expect(res.status).toBe(200);
-    expect(res.headers.get("Cache-Control")).toBe("no-store");
-  });
-
-  it("rejects when neither ids nor all=true is provided", async () => {
-    const db = mockD1();
-    const url = new URL("https://ops-api.pharos.watch/api/bulk-dismiss-discovery-candidates");
-    const res = await handleBulkDismissDiscoveryCandidates({
-      db,
-      url,
-      request: adminRequest(url.toString()),
-      trustedAdmin: true,
-    });
-    expect(res.status).toBe(400);
-    expect(res.headers.get("Cache-Control")).toBe("no-store");
-  });
-
-  it("rejects malformed ids", async () => {
-    const db = mockD1();
-    const url = new URL(
-      "https://ops-api.pharos.watch/api/bulk-dismiss-discovery-candidates?ids=1%2Cabc",
-    );
-    const res = await handleBulkDismissDiscoveryCandidates({
-      db,
-      url,
-      request: adminRequest(url.toString()),
-      trustedAdmin: true,
-    });
     expect(res.status).toBe(400);
     expect(res.headers.get("Cache-Control")).toBe("no-store");
   });

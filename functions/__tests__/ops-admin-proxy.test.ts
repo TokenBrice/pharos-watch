@@ -275,11 +275,11 @@ describe("ops admin proxy", () => {
     vi.stubGlobal("fetch", fetchSpy);
 
     const response = await onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/discovery-candidates/42/dismiss", {
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/api-keys/42/update", {
         method: "POST",
       }),
       env: BASE_ENV,
-      params: { path: ["discovery-candidates", "42", "dismiss"] },
+      params: { path: ["api-keys", "42", "update"] },
     });
 
     expect(response.status).toBe(403);
@@ -292,12 +292,12 @@ describe("ops admin proxy", () => {
     vi.stubGlobal("fetch", fetchSpy);
 
     const response = await onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/discovery-candidates/42/dismiss", {
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/api-keys/42/update", {
         method: "POST",
         headers: { Origin: "https://evil.example" },
       }),
       env: BASE_ENV,
-      params: { path: ["discovery-candidates", "42", "dismiss"] },
+      params: { path: ["api-keys", "42", "update"] },
     });
 
     expect(response.status).toBe(403);
@@ -316,17 +316,17 @@ describe("ops admin proxy", () => {
     vi.stubGlobal("fetch", fetchSpy);
 
     const response = await onRequest({
-      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/discovery-candidates/42/dismiss", {
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/api-keys/42/update", {
         method: "POST",
         headers: { Origin: "https://ops.pharos.watch" },
       }),
       env: BASE_ENV,
-      params: { path: ["discovery-candidates", "42", "dismiss"] },
+      params: { path: ["api-keys", "42", "update"] },
     });
 
     expect(response.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
-      "https://ops-api.pharos.watch/api/discovery-candidates/42/dismiss",
+      "https://ops-api.pharos.watch/api/api-keys/42/update",
       expect.objectContaining({
         method: "POST",
       }),

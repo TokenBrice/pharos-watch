@@ -4,7 +4,6 @@ import {
   LISTING_CLASS_BY_ID,
   getListingClass,
   isCoreAggregateListingClass,
-  isDiscoveryCandidateExcluded,
 } from "../listing-governance";
 import { TRACKED_STABLECOINS } from "../registry";
 
@@ -23,14 +22,5 @@ describe("listing governance", () => {
     expect(isCoreAggregateListingClass("stablecoin-variant")).toBe(false);
     expect(isCoreAggregateListingClass("stable-value-investment")).toBe(false);
     expect(isCoreAggregateListingClass("excluded")).toBe(false);
-  });
-
-  it("blocks excluded provider IDs and contracts case-insensitively", () => {
-    expect(isDiscoveryCandidateExcluded({ geckoId: "bfusd" })).toBe(true);
-    expect(isDiscoveryCandidateExcluded({
-      chain: "ZKSYNC",
-      address: "0xAC4DE1E9A9E83524F24AF77972DD39D588DE8164",
-    })).toBe(true);
-    expect(isDiscoveryCandidateExcluded({ geckoId: "usd-coin" })).toBe(false);
   });
 });

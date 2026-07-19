@@ -145,7 +145,7 @@ The active frontend operator mode is now:
   - 30-minute on-chain intake jobs (`sync-mint-burn` on `4,34`, `sync-mint-burn-extended` on `13,43`) shown together in the half-hourly group but labeled as isolated triggers
   - 30-minute charts / liquidity jobs plus the decoupled DEWS / PSI DB-only trigger
   - hourly core yield publisher (`sync-yield-data`); `sync-blacklist` is on a dedicated 6-hourly trigger, and the reserve + redemption + Kinesis lane is on a dedicated 4-hourly trigger; `sync-dex-discovery` is on a dedicated 2-hourly trigger
-  - daily snapshot / digest / coverage-discovery jobs
+  - daily snapshot / digest / recap jobs
   - The default attention filter does not mount healthy rows; operators can search and filter by state, impact, trigger group, and running status
   - Trigger boundaries remain visible, with severity ordering inside each group and stable registry order for ties
   - Rows show state, impact class, operator-friendly label, raw job id, trigger, last run, last good run, readable/exact duration, item count, and evidence markers
@@ -340,7 +340,7 @@ Additional response fields:
 - `discrepancy`: divergence between effective status and synthetic probe status
 - `timeline`: recent status transitions
 - `telegramBot`: admin-only Telegram bot subscriber aggregates (`null` when Telegram tables are unavailable)
-- `datasetFreshness`: last successful writer-evaluation timestamps for key operational domains (`stablecoins`, `blacklist`, `mintBurn`, `supply`, `safetyGrades`, `yield`, `depegs`, `dews`, `digest`, `discoveryCandidates`)
+- `datasetFreshness`: last successful writer-evaluation timestamps for key operational domains (`stablecoins`, `blacklist`, `mintBurn`, `supply`, `safetyGrades`, `yield`, `depegs`, `dews`, `digest`)
 - `summary`: compact availability and diagnostics rollup (`unhealthyCrons`, `availabilityImpactingUnhealthyCrons`, `watchUnhealthyCrons`, `degradedCrons`, `cronErrors`, `availabilityImpactingCronErrors`, `availabilityImpactingConsecutiveCronErrors`, `staleCronArtifacts`, `expiredCronLeases`, `orphanedCronProgressRows`, `diagnosticIssueCount`, `worstCacheRatio`, `transitionsLast24h`)
 - `producerHeads`: one row per canonical schedule/job/path/kind, including budget-only paths, with separate last invocation/completion, productive output, publication, invocation ID, Worker version, and observed/missing state
 - `alertBroker`: retained compatibility block with zero counts, no active keys/timestamp, and `queryFailed=false`; historical broker tables are not queried
@@ -368,7 +368,6 @@ For event-backed domains, `datasetFreshness` follows the writer rather than the 
 - `blacklist`: last successful `sync-blacklist` run, not `MAX(blacklist_events.timestamp)`
 - `mintBurn`: last successful critical/extended mint-burn writer run, not `MAX(mint_burn_events.timestamp)`
 - `depegs`: last successful `sync-stablecoins` run, not `MAX(depeg_events.started_at)`
-- `discoveryCandidates`: last successful coverage writer run, not `MAX(discovery_candidates.last_seen)`
 
 `dataQuality` now also exposes:
 
@@ -589,12 +588,6 @@ Mutating admin paths are protected by method guardrails:
 - uncertain execution returns `X-Execution-Certainty: unknown` and remains retryable with the same intent key
 
 ---
-
-## Coverage Discovery Card
-
-**Component:** `DiscoveryCandidatesCard` (`src/components/status/discovery-candidates.tsx`)
-
-Renders in the Admin Pipeline `Discovery` tab. Shows stablecoins tracked by CoinGecko or DefiLlama that Pharos does not yet monitor. Each row displays symbol, name, a source badge (`CG` / `DL` / `Both`), market cap, days seen, and a dismiss button. Admin auth is required for the dismiss action (`POST /api/discovery-candidates/:id/dismiss`). The card is fed by `GET /api/status` via its embedded `discoveryCandidates` supplement, which reads active candidates directly from D1; `GET /api/discovery-candidates` remains available as a direct admin endpoint for focused candidate inspection.
 
 ## Price Source Health Card
 

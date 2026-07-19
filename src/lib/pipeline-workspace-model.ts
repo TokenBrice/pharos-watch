@@ -15,7 +15,6 @@ export const PIPELINE_MODES = [
   { id: "yield", label: "Yield" },
   { id: "storage", label: "Storage" },
   { id: "integrity", label: "Integrity" },
-  { id: "discovery", label: "Discovery" },
 ] as const;
 
 export type PipelineMode = (typeof PIPELINE_MODES)[number]["id"];
@@ -90,7 +89,6 @@ const PIPELINE_ERROR_META: Partial<Record<StatusSectionKey, { mode: PipelineMode
   d1Usage: { mode: "storage", label: "D1 usage" },
   publicationHealth: { mode: "integrity", label: "Publication health" },
   dependencyHealth: { mode: "integrity", label: "Dependency health" },
-  discoveryCandidates: { mode: "discovery", label: "Discovery candidates" },
 };
 
 const SEVERITY_RANK: Record<PipelineSeverity, number> = {
@@ -616,16 +614,6 @@ export function buildPipelineModeSummaries(data: StatusResponse): PipelineModeSu
   const integrityCount = integrity.issueCount + loaderErrorCount("integrity");
   const integrityStates = [integrity.severity, ...(loaderErrorCount("integrity") > 0 ? ["unknown" as const] : [])];
 
-  const discoveryStates: PipelineSeverity[] = [];
-  let discoveryCount = loaderErrorCount("discovery");
-  if (data.discoveryCandidates) {
-    discoveryCount += data.discoveryCandidates.length;
-    discoveryStates.push(data.discoveryCandidates.length > 0 ? "watch" : "healthy");
-  } else {
-    discoveryStates.push("unknown");
-    discoveryCount += payloadIssueCount(Boolean(data.sectionErrors.discoveryCandidates), 0);
-  }
-
   const byMode: Record<PipelineMode, { issueCount: number; severity: PipelineSeverity }> = {
     quality: { issueCount: qualityCount, severity: worstSeverity(qualityStates) },
     markets: { issueCount: marketCount, severity: worstSeverity(marketStates) },
@@ -633,7 +621,6 @@ export function buildPipelineModeSummaries(data: StatusResponse): PipelineModeSu
     yield: { issueCount: yieldCount, severity: worstSeverity(yieldStates) },
     storage: { issueCount: storageCount, severity: worstSeverity(storageStates) },
     integrity: { issueCount: integrityCount, severity: worstSeverity(integrityStates) },
-    discovery: { issueCount: discoveryCount, severity: worstSeverity(discoveryStates) },
   };
 
   return PIPELINE_MODES.map((mode) => ({ ...mode, ...byMode[mode.id] }));

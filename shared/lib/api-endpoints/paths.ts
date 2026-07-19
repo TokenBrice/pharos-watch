@@ -172,16 +172,12 @@ export const API_PATHS = {
   auditDepegHistoryBase: () => "/api/audit-depeg-history",
   auditDepegHistoryDryRun: () => buildQueryPath("/api/audit-depeg-history", { "dry-run": true }),
   backfillDews: () => "/api/backfill-dews",
-  discoveryCandidates: () => "/api/discovery-candidates",
-  discoveryCandidateDismiss: (id: number) => `/api/discovery-candidates/${id}/dismiss`,
   resetCronLease: (params?: { job?: string }) => buildQueryPath("/api/reset-cron-lease", { job: params?.job }),
   resetCircuitBreaker: (params?: { circuit?: string }) =>
     buildQueryPath("/api/reset-circuit-breaker", { circuit: params?.circuit }),
   killCronInFlight: (params?: { job?: string; leaseOwner?: string }) =>
     buildQueryPath("/api/kill-cron-in-flight", { job: params?.job, leaseOwner: params?.leaseOwner }),
   armReserveRecoveryFaultInjection: () => "/api/admin/reserve-recovery-fault-injection",
-  bulkDismissDiscoveryCandidates: (params?: { all?: boolean; ids?: string }) =>
-    buildQueryPath("/api/bulk-dismiss-discovery-candidates", { all: params?.all, ids: params?.ids }),
   clearTelegramPending: (params?: { chatId?: string; olderThanSec?: number }) =>
     buildQueryPath("/api/telegram-pending", {
       chat_id: params?.chatId,

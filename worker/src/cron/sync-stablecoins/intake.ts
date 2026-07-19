@@ -7,7 +7,6 @@ import { CIRCUIT_SOURCE, DEFILLAMA_BASE, MIN_VALID_ASSET_COUNT } from "../../lib
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { logWorkerEvent } from "../../lib/structured-log";
-import { upsertDiscoveryCandidates } from "../discovery-scan";
 import type { PeggedAsset } from "./enrich-prices";
 import {
   applyTrackedAssetOverrides,
@@ -263,31 +262,6 @@ export async function loadStablecoinsIntake(
 
   hydrateGeckoIdAliases(assets);
   normalizeChainCirculating(assets);
-
-  const dlResiduals = assets
-    .filter((a) => !REGISTRY_BY_LLAMA_ID.has(String(a.id)))
-    .filter((a) => {
-      const circ = a.circulating;
-      if (!circ || typeof circ !== "object") return false;
-      const total = Object.values(circ).reduce((sum: number, v: unknown) => sum + (typeof v === "number" ? v : 0), 0);
-      return total >= 5_000_000;
-    })
-    .map((a) => ({
-      llamaId: Number(a.id),
-      name: a.name as string,
-      symbol: a.symbol as string,
-      marketCap: Object.values(a.circulating ?? {}).reduce((sum: number, v: unknown) => sum + (typeof v === "number" ? v : 0), 0),
-      source: "defillama" as const,
-    }));
-
-  if (dlResiduals.length > 0) {
-    try {
-      await upsertDiscoveryCandidates(input.db, dlResiduals);
-      console.log(`[discovery] DL residuals: ${dlResiduals.length} untracked coins above $5M`);
-    } catch (err) {
-      console.warn("[discovery] DL residuals upsert failed:", err);
-    }
-  }
 
   for (const asset of assets) {
     const mapped = REGISTRY_BY_LLAMA_ID.get(String(asset.id));

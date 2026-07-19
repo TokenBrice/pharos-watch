@@ -17,7 +17,7 @@ export default function PipelineClient() {
       isLoading={statusQuery.isLoading}
       onRetry={handleRefresh}
     >
-      {(data) => <PipelineSection data={data} handleRefresh={handleRefresh} />}
+      {(data) => <PipelineSection data={data} />}
     </WorkspaceStatusBoundary>
   );
 }

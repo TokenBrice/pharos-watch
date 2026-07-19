@@ -30,11 +30,9 @@ export const STABLECOIN_EXIT_MECHANISM_VALUES = [
 ] as const;
 export type StablecoinExitMechanism = (typeof STABLECOIN_EXIT_MECHANISM_VALUES)[number];
 
-export const LISTING_CLASS_VALUES = [
-  "core-stablecoin",
-  "cash-equivalent",
-  "stablecoin-variant",
-  "stable-value-investment",
-  "excluded",
-] as const;
-export type ListingClass = (typeof LISTING_CLASS_VALUES)[number];
+export type ListingClass =
+  | "core-stablecoin"
+  | "cash-equivalent"
+  | "stablecoin-variant"
+  | "stable-value-investment"
+  | "excluded";

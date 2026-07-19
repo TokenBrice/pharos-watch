@@ -110,7 +110,6 @@ function makeRawStatusForSnapshot(now: number, overrides: Record<string, unknown
       depegs: now - 60,
       dews: now - 60,
       digest: now - 60,
-      discoveryCandidates: now - 60,
     },
     summary: {
       unhealthyCrons: 0,
@@ -189,7 +188,6 @@ function makeMinimalLiveStatusRows(now: number, stateRow: Record<string, unknown
     { match: "depeg_events", rows: [], first: { cnt: 0 } },
     { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
     { match: "onchain_supply WHERE updated_at >", rows: [] },
-    { match: "FROM discovery_candidates WHERE dismissed = 0", rows: [] },
     { match: "FROM status_state", rows: [], first: stateRow },
   ];
 }
