@@ -498,6 +498,11 @@ export async function generateWeeklyRecap(
       },
     },
   });
+  // Hard quality failures are stored for inspection but never published.
+  const storedDigestMeta = digestCopy.hasBlockingQualityIssues
+    ? markDigestMetaBlocked(initialDigestMeta)
+    : initialDigestMeta;
+
   await insertDigestRecord({
     db,
     generatedAt: nowSec,
@@ -505,10 +510,7 @@ export async function generateWeeklyRecap(
     digestTitle: digestCopy.digestTitle || null,
     inputData: weeklyData,
     digestExtended: digestCopy.digestExtended || null,
-    // Hard quality failures are stored for inspection but never published.
-    digestMeta: digestCopy.hasBlockingQualityIssues
-      ? markDigestMetaBlocked(initialDigestMeta)
-      : initialDigestMeta,
+    digestMeta: storedDigestMeta,
     signal,
   });
   throwIfAborted(signal);
@@ -542,7 +544,7 @@ export async function generateWeeklyRecap(
     db,
     {
       generated_at: nowSec,
-      digest_meta: initialDigestMeta,
+      digest_meta: storedDigestMeta,
     },
     {
       nowSec,
