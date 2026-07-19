@@ -208,4 +208,100 @@ describe("admin Telegram delivery control", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 1 });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_dead_letters").get()).toEqual({ count: 0 });
   });
+
+  it("refuses a stale execution-unknown acknowledgement without partial archival side effects", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW * 1_000);
+    const { sqlite, db } = setupLatestSchema();
+    const insert = sqlite.prepare(
+      `INSERT INTO telegram_pending_alerts (
+         chat_id, message_html, created_at, updated_at, dedupe_key, source_type,
+         delivery_state, delivery_owner, delivery_generation, delivery_started_at,
+         delivery_completed_at, last_error_class
+       ) VALUES (?, ?, ?, ?, ?, 'risk_alert', 'execution_unknown', ?, 1, ?, ?, ?)`
+    );
+    const firstId = Number(insert.run(
+      "42",
+      "<b>First ambiguous alert</b>",
+      NOW - 600,
+      NOW - 300,
+      "42:v1:0:ambiguous:first",
+      "pending-owner",
+      NOW - 500,
+      NOW - 300,
+      "pending_effect_owner_lost",
+    ).lastInsertRowid);
+    const secondId = Number(insert.run(
+      "43",
+      "<b>Second ambiguous alert</b>",
+      NOW - 600,
+      NOW - 300,
+      "43:v1:0:ambiguous:second",
+      "pending-owner",
+      NOW - 500,
+      NOW - 300,
+      "pending_effect_owner_lost",
+    ).lastInsertRowid);
+    let raced = false;
+    const racingDb = {
+      ...db,
+      prepare(sql: string) {
+        const statement = db.prepare(sql);
+        if (!sql.includes("DELETE FROM telegram_pending_alerts") || !sql.includes("SELECT COUNT(*)")) {
+          return statement;
+        }
+        return {
+          ...statement,
+          bind: (...args: unknown[]) => {
+            const bound = statement.bind(...args);
+            return {
+              ...bound,
+              run: async () => {
+                if (!raced) {
+                  raced = true;
+                  sqlite.prepare(
+                    `UPDATE telegram_pending_alerts
+                        SET delivery_state = 'sent', delivery_generation = 2
+                      WHERE id = ?`,
+                  ).run(secondId);
+                }
+                return await bound.run();
+              },
+            } as D1PreparedStatement;
+          },
+        } as D1PreparedStatement;
+      },
+    } as D1Database;
+
+    const response = await handleAdminTelegramDeliveryControl({
+      db: racingDb,
+      request: request("POST", {
+        action: "acknowledge_execution_unknown",
+        pendingIds: [firstId, secondId],
+        operatorReason: "Concurrent change should not partially archive",
+      }),
+      trustedAdmin: true,
+    });
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({ missingIds: [secondId] });
+    expect(sqlite.prepare(
+      "SELECT id, delivery_state, delivery_generation FROM telegram_pending_alerts ORDER BY id",
+    ).all()).toEqual([
+      { id: firstId, delivery_state: "execution_unknown", delivery_generation: 1 },
+      { id: secondId, delivery_state: "sent", delivery_generation: 2 },
+    ]);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_dead_letters").get()).toEqual({ count: 0 });
+    const audit = sqlite.prepare(
+      "SELECT result, http_status, details_json FROM admin_action_audit WHERE action = 'telegram-execution-unknown-acknowledge'",
+    ).get() as { result: string; http_status: number; details_json: string };
+    expect(audit.result).toBe("error");
+    expect(audit.http_status).toBe(409);
+    expect(JSON.parse(audit.details_json)).toMatchObject({
+      pendingIds: [firstId, secondId],
+      missingIds: [secondId],
+      operatorReason: "Concurrent change should not partially archive",
+    });
+  });
+
 });

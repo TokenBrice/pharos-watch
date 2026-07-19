@@ -62,6 +62,48 @@ const PENDING_ALERT_DEAD_LETTER_COLUMNS = [
 const PENDING_ALERT_DEAD_LETTER_COLUMN_SQL = PENDING_ALERT_DEAD_LETTER_COLUMNS.join(", ");
 export const EXPIRED_PENDING_CLEANUP_BATCH_LIMIT = PENDING_DELETE_CHUNK_SIZE;
 
+function executionUnknownCasPredicate(alias: string): string {
+  return `(
+    ${alias}.id = ?
+    AND ${alias}.delivery_state = 'execution_unknown'
+    AND ${alias}.delivery_owner IS ?
+    AND ${alias}.delivery_generation = ?
+    AND COALESCE(${alias}.delivery_completed_at, ${alias}.delivery_started_at, ${alias}.created_at) = ?
+  )`;
+}
+
+function executionUnknownCasBinds(row: DeadLetterPendingRow): [number, string | null, number, number] {
+  return [
+    row.id,
+    row.delivery_owner ?? null,
+    row.delivery_generation ?? 0,
+    row.delivery_completed_at ?? row.delivery_started_at ?? row.created_at,
+  ];
+}
+
+async function deleteExactExecutionUnknownPendingRowsForAdmin(
+  db: D1Database,
+  rows: readonly DeadLetterPendingRow[],
+): Promise<number> {
+  if (rows.length === 0) return 0;
+  const predicates = rows.map(() => executionUnknownCasPredicate("telegram_pending_alerts")).join(" OR ");
+  const countPredicates = rows.map(() => executionUnknownCasPredicate("candidate")).join(" OR ");
+  const binds = rows.flatMap(executionUnknownCasBinds);
+  const result = await db
+    .prepare(
+      `DELETE FROM telegram_pending_alerts
+        WHERE (${predicates})
+          AND (
+            SELECT COUNT(*)
+              FROM telegram_pending_alerts candidate
+             WHERE ${countPredicates}
+          ) = ?`,
+    )
+    .bind(...binds, ...binds, rows.length)
+    .run();
+  return Number(result.meta?.changes ?? 0);
+}
+
 async function projectTerminalPendingRows(
   db: D1Database,
   rows: readonly DeadLetterPendingRow[],
@@ -181,10 +223,42 @@ export async function acknowledgeExecutionUnknownPendingAlertsForAdmin(
     return { acknowledgedIds: [], missingIds };
   }
 
-  const deleted = await archiveExecutionUnknownPendingRows(db, rows, nowSec);
+  const deleted = await deleteExactExecutionUnknownPendingRowsForAdmin(db, rows);
   if (deleted !== rows.length) {
-    throw new Error(`Archived ${deleted} of ${rows.length} Telegram execution-unknown rows`);
+    const refreshed = await db
+      .prepare(
+        `SELECT ${PENDING_ALERT_DEAD_LETTER_COLUMN_SQL}
+           FROM telegram_pending_alerts
+          WHERE delivery_state = 'execution_unknown'
+            AND id IN (${inClause.sql})`,
+      )
+      .bind(...inClause.binds)
+      .all<DeadLetterPendingRow>();
+    const originalById = new Map(rows.map((row) => [row.id, executionUnknownCasBinds(row).join("\u0000")]));
+    const unchangedIds = new Set(
+      (refreshed.results ?? [])
+        .filter((row) => originalById.get(row.id) === executionUnknownCasBinds(row).join("\u0000"))
+        .map((row) => row.id),
+    );
+    return { acknowledgedIds: [], missingIds: ids.filter((id) => !unchangedIds.has(id)) };
   }
+
+  const deadLettered = await deadLetterTerminalPendingRows(
+    db,
+    rows,
+    nowSec,
+    "execution_unknown_archived",
+  );
+  if (!deadLettered) {
+    throw new Error("Failed to dead-letter acknowledged Telegram execution-unknown rows");
+  }
+  await projectTerminalPendingRows(
+    db,
+    rows,
+    "execution_unknown",
+    nowSec,
+    "execution_unknown_archived",
+  );
   return { acknowledgedIds: rows.map((row) => row.id), missingIds: [] };
 }
 
