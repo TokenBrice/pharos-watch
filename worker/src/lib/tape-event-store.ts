@@ -121,15 +121,17 @@ function buildWhereClause(
   const conditions: string[] = [];
   const bindings: (string | number)[] = [];
 
+  const typeClauses: string[] = [];
   if (filters.typeExact && filters.typeExact.length > 0) {
-    const exactClauses = filters.typeExact.map(() => "type = ?");
-    conditions.push(`(${exactClauses.join(" OR ")})`);
+    typeClauses.push(...filters.typeExact.map(() => "type = ?"));
     bindings.push(...filters.typeExact);
   }
   if (filters.typePrefixes && filters.typePrefixes.length > 0) {
-    const prefixClauses = filters.typePrefixes.map(() => "type LIKE ?");
-    conditions.push(`(${prefixClauses.join(" OR ")})`);
+    typeClauses.push(...filters.typePrefixes.map(() => "type LIKE ?"));
     for (const prefix of filters.typePrefixes) bindings.push(`${prefix}.%`);
+  }
+  if (typeClauses.length > 0) {
+    conditions.push(`(${typeClauses.join(" OR ")})`);
   }
   if (filters.coinIds && filters.coinIds.length > 0) {
     const coinClauses = filters.coinIds.map(() => "coin_id = ?");
