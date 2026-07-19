@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
-import { shouldAttemptFetch } from "../../../lib/circuit-breaker";
-import { buildPrimaryPricePlan } from "../enrich-prices-primary-provider-collection";
+import { recoverBreakerOnNoCandidate, shouldAttemptFetch } from "../../../lib/circuit-breaker";
+import {
+  buildPrimaryPricePlan,
+  collectPrimaryProviderQuotes,
+  type PrimaryPricePlan,
+} from "../enrich-prices-primary-provider-collection";
 import type { PeggedAsset } from "../enrich-prices-shared";
 
 vi.mock("../../../lib/circuit-breaker", () => ({
@@ -58,5 +62,72 @@ describe("buildPrimaryPricePlan", () => {
     expect(warnSpy).toHaveBeenCalledWith(
       "[primary-prices] All live primary fetch circuits are open; continuing with local DL/DEX inputs only",
     );
+  });
+});
+
+describe("collectPrimaryProviderQuotes", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("recovers stale circuit breakers for every disabled address price provider", async () => {
+    const plan: PrimaryPricePlan = {
+      candidates: [TEST_ASSET],
+      nowSec: 1_700_000_000,
+      dexRows: new Map(),
+      dexPriceSources: new Map(),
+      dexPriceSourceTelemetry: {
+        staleRows: [],
+        malformedRows: [],
+      },
+      geckoIds: [],
+      pythFeedIds: new Map(),
+      coinbaseSymbols: [],
+      krakenSymbols: [],
+      shouldFetchBitstamp: false,
+      redstoneSymbols: [],
+      navPriceIds: [],
+      addressProviders: [],
+      addressProviderTargets: new Map(),
+      sourceAllowed: {
+        cg: false,
+        cgTicker: false,
+        pyth: false,
+        binance: false,
+        kraken: false,
+        bitstamp: false,
+        coinbase: false,
+        redstone: false,
+        curve: false,
+        curveOracle: false,
+        addressProviders: {
+          "dexscreener-address": false,
+          "dexpaprika-address": false,
+          "coingecko-onchain-address": false,
+          "alchemy-address": false,
+          "moralis-address": false,
+          "birdeye-address": false,
+        },
+      },
+    };
+
+    await collectPrimaryProviderQuotes({ plan, db: {} as D1Database });
+
+    expect(recoverBreakerOnNoCandidate).toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.DEXSCREENER_ADDRESS_PRICES,
+    );
+    expect(recoverBreakerOnNoCandidate).toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.DEXPAPRIKA_PRICES,
+    );
+    expect(recoverBreakerOnNoCandidate).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.CG_ONCHAIN);
+    expect(recoverBreakerOnNoCandidate).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.ALCHEMY_PRICES);
+    expect(recoverBreakerOnNoCandidate).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.MORALIS_PRICES);
+    expect(recoverBreakerOnNoCandidate).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.BIRDEYE_PRICES);
   });
 });
