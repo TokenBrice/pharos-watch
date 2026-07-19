@@ -71,14 +71,14 @@ describe("PRICING_SOURCE_TO_CIRCUIT contract", () => {
       enforcementPath: "direct-provider",
     });
     expect(PRICING_SOURCE_CIRCUIT_METADATA["aerodrome-onchain"]).toMatchObject({
-      circuit: CIRCUIT_SOURCE.USX_STABLE_POOLS,
-      enforced: true,
-      enforcementPath: "direct-provider",
+      circuit: null,
+      enforced: false,
+      enforcementPath: "synthesized",
     });
     expect(PRICING_SOURCE_CIRCUIT_METADATA["velodrome-onchain"]).toMatchObject({
-      circuit: CIRCUIT_SOURCE.USX_STABLE_POOLS,
-      enforced: true,
-      enforcementPath: "direct-provider",
+      circuit: null,
+      enforced: false,
+      enforcementPath: "synthesized",
     });
     expect(PRICING_SOURCE_CIRCUIT_METADATA["curve-thin-onchain"]).toMatchObject({
       circuit: CIRCUIT_SOURCE.AZND_CURVE_POOL,
