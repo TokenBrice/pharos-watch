@@ -57,6 +57,7 @@
     "validate:prebuild": "node scripts/maintenance/run-validate-prebuild.mjs",
     "lighthouse:static": "tsx scripts/maintenance/lighthouse-static-export.mjs",
     "check:generated-artifacts": "node scripts/maintenance/run-generated-artifacts.mjs --check",
+    "check:commit-derived-artifacts": "node scripts/maintenance/run-generated-artifacts.mjs --check --only=sitemap-dates,docs-metadata",
     "test:watch": "vitest",
     "audit:pricing-providers": "tsx scripts/maintenance/audit-pricing-provider-config.ts",
     "check:provider-resilience": "node scripts/ci/check-provider-resilience.mjs",

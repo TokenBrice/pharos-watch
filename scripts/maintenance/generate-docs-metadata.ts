@@ -2,12 +2,22 @@ import { execFileSync } from "node:child_process";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PUBLIC_DOCS } from "../../shared/lib/public-docs";
+import { enforceCommittedArtifactSources } from "../lib/commit-derived-artifacts.mjs";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT = join(__dirname, "../../src/generated/docs-metadata.json");
 const OUTPUT_TYPES = join(__dirname, "../../src/generated/docs-metadata.json.d.ts");
 const CHECK_MODE = process.argv.includes("--check");
+
+enforceCommittedArtifactSources({
+  artifactId: "docs-metadata",
+  check: CHECK_MODE,
+  command: "npx tsx scripts/maintenance/generate-docs-metadata.ts",
+  cwd: join(__dirname, "../.."),
+  outputPaths: ["src/generated/docs-metadata.json", "src/generated/docs-metadata.json.d.ts"],
+  sourcePaths: ["shared/lib/public-docs.ts", ...PUBLIC_DOCS.map((doc) => `docs/${doc.source}`)],
+});
 
 interface DocMetadata {
   dateModified: string;
@@ -19,14 +29,7 @@ function gitLog(args: string[]): string {
 }
 
 function getLastGitDate(filePath: string): string {
-  const output = gitLog([
-    "log",
-    "--follow",
-    "-1",
-    "--format=%aI",
-    "--",
-    relative(process.cwd(), filePath),
-  ]);
+  const output = gitLog(["log", "--follow", "-1", "--format=%aI", "--", relative(process.cwd(), filePath)]);
   if (!output) {
     throw new Error(`[docs-metadata] no git history for ${filePath}`);
   }
@@ -34,14 +37,7 @@ function getLastGitDate(filePath: string): string {
 }
 
 function getFirstGitDate(filePath: string): string {
-  const output = gitLog([
-    "log",
-    "--follow",
-    "--reverse",
-    "--format=%aI",
-    "--",
-    relative(process.cwd(), filePath),
-  ])
+  const output = gitLog(["log", "--follow", "--reverse", "--format=%aI", "--", relative(process.cwd(), filePath)])
     .split(/\r?\n/)
     .find(Boolean);
   if (!output) {
@@ -72,7 +68,8 @@ export default docsMetadata;
     },
   ],
   check: CHECK_MODE,
-  staleMessage: "src/generated/docs-metadata.json is out of date. Run `tsx scripts/maintenance/generate-docs-metadata.ts`.",
+  staleMessage:
+    "src/generated/docs-metadata.json is out of date. Run `tsx scripts/maintenance/generate-docs-metadata.ts`.",
   currentMessage: `Docs metadata is current for ${PUBLIC_DOCS.length} public docs`,
   writtenMessage: `Generated docs metadata for ${PUBLIC_DOCS.length} public docs`,
 });

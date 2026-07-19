@@ -44,6 +44,22 @@ verify_push_snapshot() {
   fi
 }
 
+verify_commit_derived_artifacts() {
+  local expected_sha="$1"
+  local head_sha
+
+  head_sha="$(git rev-parse --verify 'HEAD^{commit}')"
+
+  if [[ "$head_sha" != "$expected_sha" ]]; then
+    echo "[pre-push] Commit-derived artifacts were not verified: the pushed commit is not the checked-out HEAD." >&2
+    echo "[pre-push] GitHub Actions remains authoritative; run npm run check:commit-derived-artifacts from a clean checkout of ${expected_sha}." >&2
+    return 0
+  fi
+
+  echo "[pre-push] Verifying commit-derived artifacts for ${expected_sha}..."
+  npm run check:commit-derived-artifacts
+}
+
 run_gate() {
   local expected_sha="$1"
 
@@ -77,6 +93,7 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   fi
 
   if ! gate_main_updates; then
+    verify_commit_derived_artifacts "$local_sha"
     echo "[pre-push] Main ref update detected; local merge gate skipped by default."
     echo "[pre-push] GitHub Actions is the authoritative release gate. Set PHAROS_PRE_PUSH_GATE=main to run the exact-range local gate before pushing main."
     continue
@@ -92,6 +109,12 @@ done
 
 if [[ "$main_update_seen" -eq 0 ]]; then
   if ! gate_branch_updates; then
+    for ((index = 0; index < ${#branch_updates[@]}; index += 4)); do
+      local_sha="${branch_updates[index + 1]}"
+      if [[ ! "$local_sha" =~ $zero_sha_re ]]; then
+        verify_commit_derived_artifacts "$local_sha"
+      fi
+    done
     echo "[pre-push] No gated ref update detected; local merge gate skipped. Set PHAROS_PRE_PUSH_GATE=all to gate branch pushes."
     exit 0
   fi

@@ -4,6 +4,10 @@ import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { CASE_STUDY_LIST } from "../../src/app/learn/case-studies/content";
+import {
+  enforceCommittedArtifactSources,
+  SITEMAP_COMMIT_DERIVED_SOURCE_PATHS,
+} from "../lib/commit-derived-artifacts.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "../..");
@@ -13,6 +17,15 @@ const CASE_STUDY_CONTENT_DIR = join(__dirname, "../../src/app/learn/case-studies
 const OUTPUT = join(__dirname, "../../src/generated/sitemap-dates.json");
 const OUTPUT_TYPES = join(__dirname, "../../src/generated/sitemap-dates.json.d.ts");
 const CHECK_MODE = process.argv.includes("--check");
+
+enforceCommittedArtifactSources({
+  artifactId: "sitemap-dates",
+  check: CHECK_MODE,
+  command: "npx tsx scripts/maintenance/generate-sitemap-dates.ts",
+  cwd: REPO_ROOT,
+  outputPaths: ["src/generated/sitemap-dates.json", "src/generated/sitemap-dates.json.d.ts"],
+  sourcePaths: SITEMAP_COMMIT_DERIVED_SOURCE_PATHS,
+});
 const STABLECOIN_DETAIL_SHARED_SOURCES = [
   join(__dirname, "../../src/app/stablecoin/[id]/page.tsx"),
   join(__dirname, "../../src/components/stablecoin-detail/static-seo-content.tsx"),
@@ -152,10 +165,7 @@ function addCaseStudyDates(dates: Record<string, string>): void {
 
   for (const study of CASE_STUDY_LIST) {
     const contentPath = join(CASE_STUDY_CONTENT_DIR, `${study.slug}.ts`);
-    dates[`/learn/case-studies/${study.slug}/`] = latestIso(
-      getLastModified(contentPath),
-      sharedLastModified,
-    );
+    dates[`/learn/case-studies/${study.slug}/`] = latestIso(getLastModified(contentPath), sharedLastModified);
   }
 
   dates["/learn/case-studies/"] = latestIso(
@@ -186,7 +196,8 @@ export default sitemapDates;
     },
   ],
   check: CHECK_MODE,
-  staleMessage: "src/generated/sitemap-dates.json is out of date. Run `tsx scripts/maintenance/generate-sitemap-dates.ts`.",
+  staleMessage:
+    "src/generated/sitemap-dates.json is out of date. Run `tsx scripts/maintenance/generate-sitemap-dates.ts`.",
   currentMessage: `Sitemap dates are current for ${Object.keys(dates).length} pages`,
   writtenMessage: `Generated sitemap dates for ${Object.keys(dates).length} pages`,
 });
