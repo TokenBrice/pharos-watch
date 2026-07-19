@@ -1,10 +1,8 @@
+import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import type { PriceValidationReferences } from "../../../lib/price-validation";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
-import {
-  type CircuitOutcomeRecord,
-  type CircuitState,
-} from "../../../lib/circuit-breaker";
+import { type CircuitOutcomeRecord, type CircuitState } from "../../../lib/circuit-breaker";
 import {
   ProviderCircuitOpenError,
   ProviderExecutionError,
@@ -32,6 +30,7 @@ import { fetchMeteoraPools } from "../fetch-meteora";
 import { fetchPancakeSwapPools } from "../fetch-pancakeswap";
 import { fetchSlipstreamPools } from "../fetch-slipstream";
 import { mergeGtPools } from "../fetch-crawlers";
+import { normalizeProtocol } from "../pool-helpers";
 import { buildDirectApiPoolIdentity } from "../direct-source-helpers";
 import {
   countPoolIdentityKeys,
@@ -39,12 +38,9 @@ import {
   registerKnownPoolIdentity,
   type KnownPoolIdentityIndex,
 } from "../pool-identity";
-import type { DexPriceObs, LiquidityMetrics, SymbolLookups } from "../types";
+import type { DexPriceObs, GtNewPool, LiquidityMetrics, PoolEntry, SymbolLookups } from "../types";
 import { mergeDexPriceObservationMap } from "./price-obs";
-import {
-  DIRECT_API_FETCH_PHASE_CONCURRENCY,
-  DIRECT_API_PROVIDER_TIMEOUT_MS,
-} from "../direct-api-policy";
+import { DIRECT_API_FETCH_PHASE_CONCURRENCY, DIRECT_API_PROVIDER_TIMEOUT_MS } from "../direct-api-policy";
 import { toErrorMessage } from "../../../lib/error-utils";
 import { mapWithConcurrency } from "../../../lib/concurrency";
 
@@ -106,12 +102,8 @@ function hasTrackedDirectApiToken(
 ): boolean {
   return pool.tokens.some(
     (token) =>
-      resolveStablecoinIdForDexApiToken(
-        pool.chain,
-        token,
-        lookups.chainAddressToId,
-        lookups.symbolToChainScopedIds,
-      ) != null,
+      resolveStablecoinIdForDexApiToken(pool.chain, token, lookups.chainAddressToId, lookups.symbolToChainScopedIds) !=
+      null,
   );
 }
 
@@ -329,58 +321,80 @@ export async function runDirectApiFetchPhase(
     db,
     signal,
   });
-  const entries = await mapWithConcurrency(fetchers, DIRECT_API_FETCH_PHASE_CONCURRENCY, async ({
-    name,
-    circuitKey,
-    normalizedProtocol,
-    supportedChains,
-    fn,
-  }) => {
-    const failedSources: string[] = [];
-    const fallbackSignals: string[] = [];
-    const sourceWarnings: string[] = [];
-    const circuitEvents: DirectApiCircuitEvent[] = [];
+  const entries = await mapWithConcurrency(
+    fetchers,
+    DIRECT_API_FETCH_PHASE_CONCURRENCY,
+    async ({ name, circuitKey, normalizedProtocol, supportedChains, fn }) => {
+      const failedSources: string[] = [];
+      const fallbackSignals: string[] = [];
+      const sourceWarnings: string[] = [];
+      const circuitEvents: DirectApiCircuitEvent[] = [];
 
-    try {
-      const execution = await withProviderExecution(
-        providerContext,
-        buildDirectApiProviderPolicy(name, circuitKey),
-        ({ signal: providerSignal }) => fn(providerSignal),
-      );
-      const result = execution.value;
-      const event = directApiCircuitEventFromOutcome(circuitKey, execution.circuitOutcome);
-      if (event) circuitEvents.push(event);
-      sourceWarnings.push(...(result.warnings ?? []).map((warning) => `${circuitKey}: ${warning}`));
-      if (result.degraded) {
-        sourceWarnings.push(...result.errors.map((error) => `${circuitKey}: ${error}`));
-      }
-      if (!result.ok) {
+      try {
+        const execution = await withProviderExecution(
+          providerContext,
+          buildDirectApiProviderPolicy(name, circuitKey),
+          ({ signal: providerSignal }) => fn(providerSignal),
+        );
+        const result = execution.value;
+        const event = directApiCircuitEventFromOutcome(circuitKey, execution.circuitOutcome);
+        if (event) circuitEvents.push(event);
+        sourceWarnings.push(...(result.warnings ?? []).map((warning) => `${circuitKey}: ${warning}`));
+        if (result.degraded) {
+          sourceWarnings.push(...result.errors.map((error) => `${circuitKey}: ${error}`));
+        }
+        if (!result.ok) {
+          failedSources.push(circuitKey);
+        }
+        if (!result.ok) {
+          fallbackSignals.push(`${circuitKey}-unavailable`);
+        } else if (result.degraded) {
+          fallbackSignals.push(`${circuitKey}-partial`);
+        }
+        const entry: DirectApiFetchPhaseEntry = {
+          name,
+          circuitKey,
+          normalizedProtocol,
+          supportedChains,
+          result,
+        };
+        return {
+          failedSources,
+          fallbackSignals,
+          sourceWarnings,
+          circuitEvents,
+          entry: lookups ? compactDirectApiProviderEntry(entry, lookups) : entry,
+        };
+      } catch (err) {
+        if (err instanceof ProviderCircuitOpenError) {
+          console.log(`[dex-liquidity] ${name} API circuit open, skipping`);
+          failedSources.push(circuitKey);
+          fallbackSignals.push(`${circuitKey}-circuit-open`);
+          return {
+            failedSources,
+            fallbackSignals,
+            sourceWarnings,
+            circuitEvents,
+            entry: {
+              name,
+              circuitKey,
+              normalizedProtocol,
+              supportedChains,
+              result: makeDexApiFetchResult([], {
+                ok: false,
+                degraded: true,
+                errors: ["circuit open"],
+              }),
+            },
+          };
+        }
+        if (signal?.aborted) throw err;
+        console.warn(`[dex-liquidity] ${name} API failed (non-fatal):`, err);
+        const executionError = err instanceof ProviderExecutionError ? err : null;
+        const event = directApiCircuitEventFromOutcome(circuitKey, executionError?.circuitOutcome ?? null);
+        if (event) circuitEvents.push(event);
         failedSources.push(circuitKey);
-      }
-      if (!result.ok) {
-        fallbackSignals.push(`${circuitKey}-unavailable`);
-      } else if (result.degraded) {
-        fallbackSignals.push(`${circuitKey}-partial`);
-      }
-      const entry: DirectApiFetchPhaseEntry = {
-        name,
-        circuitKey,
-        normalizedProtocol,
-        supportedChains,
-        result,
-      };
-      return {
-        failedSources,
-        fallbackSignals,
-        sourceWarnings,
-        circuitEvents,
-        entry: lookups ? compactDirectApiProviderEntry(entry, lookups) : entry,
-      };
-    } catch (err) {
-      if (err instanceof ProviderCircuitOpenError) {
-        console.log(`[dex-liquidity] ${name} API circuit open, skipping`);
-        failedSources.push(circuitKey);
-        fallbackSignals.push(`${circuitKey}-circuit-open`);
+        fallbackSignals.push(`${circuitKey}-exception`);
         return {
           failedSources,
           fallbackSignals,
@@ -394,37 +408,13 @@ export async function runDirectApiFetchPhase(
             result: makeDexApiFetchResult([], {
               ok: false,
               degraded: true,
-              errors: ["circuit open"],
+              errors: [toErrorMessage(err)],
             }),
           },
         };
       }
-      if (signal?.aborted) throw err;
-      console.warn(`[dex-liquidity] ${name} API failed (non-fatal):`, err);
-      const executionError = err instanceof ProviderExecutionError ? err : null;
-      const event = directApiCircuitEventFromOutcome(circuitKey, executionError?.circuitOutcome ?? null);
-      if (event) circuitEvents.push(event);
-      failedSources.push(circuitKey);
-      fallbackSignals.push(`${circuitKey}-exception`);
-      return {
-        failedSources,
-        fallbackSignals,
-        sourceWarnings,
-        circuitEvents,
-        entry: {
-          name,
-          circuitKey,
-          normalizedProtocol,
-          supportedChains,
-          result: makeDexApiFetchResult([], {
-            ok: false,
-            degraded: true,
-            errors: [toErrorMessage(err)],
-          }),
-        },
-      };
-    }
-  });
+    },
+  );
 
   return {
     results: entries.map((entry) => entry.entry),
@@ -435,10 +425,7 @@ export async function runDirectApiFetchPhase(
   };
 }
 
-function buildDirectApiProviderPolicy(
-  name: string,
-  circuitKey: string,
-): ProviderExecutionPolicy<DexApiFetchResult> {
+function buildDirectApiProviderPolicy(name: string, circuitKey: string): ProviderExecutionPolicy<DexApiFetchResult> {
   return {
     providerId: `dex-direct-api:${name.toLowerCase().replaceAll(/\s+/g, "-")}`,
     maxConcurrent: 1,
@@ -446,7 +433,7 @@ function buildDirectApiProviderPolicy(
     breakerPolicy: { circuitKey },
     countsAgainstLaneBudget: true,
     responseBodyPolicy: "stream",
-    classifyOutcome: (result) => result.ok ? "success" : "failure",
+    classifyOutcome: (result) => (result.ok ? "success" : "failure"),
   };
 }
 
@@ -462,7 +449,7 @@ function directApiCircuitEventFromOutcome(
     circuitKey,
     from: before.state,
     to: after.state,
-    at: after.state === "closed" ? after.lastSuccessAt : after.openedAt ?? after.lastFailureAt,
+    at: after.state === "closed" ? after.lastSuccessAt : (after.openedAt ?? after.lastFailureAt),
   };
 }
 
@@ -484,9 +471,7 @@ export async function integrateDirectApiLiquidityPhase(params: {
     params.preprocessedPoolCounts &&
     params.preprocessedPoolCounts.retainedPoolCount !== params.directApiPools.length
   ) {
-    throw new Error(
-      "dex-liquidity: compacted direct API retained count does not match the integration input",
-    );
+    throw new Error("dex-liquidity: compacted direct API retained count does not match the integration input");
   }
 
   let directApiDedupSkippedByAddress = 0;
@@ -644,10 +629,9 @@ export async function integrateDirectApiLiquidityPhase(params: {
     );
   }
 
-  const directApiPoolsForContribution = [...retainedDirectApiPools, ...exactDuplicatePoolsForEvidence];
-  if (directApiPoolsForContribution.length > 0) {
+  if (retainedDirectApiPools.length > 0) {
     const directApiGtPools = convertToGtNewPools(
-      directApiPoolsForContribution,
+      retainedDirectApiPools,
       params.chainAddressToId,
       params.symbolToChainScopedIds,
       params.validationReferences,
@@ -656,9 +640,23 @@ export async function integrateDirectApiLiquidityPhase(params: {
     if (directApiGtPools.size > 0) {
       await mergeGtPools(params.metrics, directApiGtPools, params.db);
     }
+  }
 
+  if (exactDuplicatePoolsForEvidence.length > 0) {
+    const exactDuplicateGtPools = convertToGtNewPools(
+      exactDuplicatePoolsForEvidence,
+      params.chainAddressToId,
+      params.symbolToChainScopedIds,
+      params.validationReferences,
+      params.stablecoinPriceById,
+    );
+    retainExactDuplicatePoolEvidence(params.metrics, exactDuplicateGtPools);
+  }
+
+  const directApiPoolsForPriceObservation = [...retainedDirectApiPools, ...exactDuplicatePoolsForEvidence];
+  if (directApiPoolsForPriceObservation.length > 0) {
     const directApiPriceObs = extractPriceObservations(
-      directApiPoolsForContribution,
+      directApiPoolsForPriceObservation,
       params.chainAddressToId,
       params.symbolToChainScopedIds,
       params.validationReferences,
@@ -678,6 +676,54 @@ export async function integrateDirectApiLiquidityPhase(params: {
     acceptedByProtocolChain,
     excludedByReason,
   };
+}
+
+function retainExactDuplicatePoolEvidence(
+  metrics: Map<string, LiquidityMetrics>,
+  exactDuplicateGtPools: Map<string, GtNewPool[]>,
+): void {
+  for (const [stablecoinId, pools] of exactDuplicateGtPools) {
+    const metric = metrics.get(stablecoinId);
+    if (!metric) continue;
+
+    for (const pool of pools) {
+      const existingPool = metric.topPools.find(
+        (candidate) => candidate.poolId === canonicalExitRouteAssetKey(pool.chain, pool.address),
+      );
+      if (!existingPool || !isCompatibleExactDuplicateEvidence(existingPool, pool)) continue;
+
+      const existingExtra = existingPool.extra ?? {};
+      if (pool.ammExecutionModel && !existingExtra.ammExecutionModel && !existingExtra.executionCapabilityGate) {
+        existingPool.extra = {
+          ...existingExtra,
+          ammExecutionModel: pool.ammExecutionModel,
+        };
+      } else if (
+        pool.executionCapabilityGate &&
+        !existingExtra.ammExecutionModel &&
+        !existingExtra.executionCapabilityGate
+      ) {
+        existingPool.extra = {
+          ...existingExtra,
+          executionCapabilityGate: pool.executionCapabilityGate,
+        };
+      }
+    }
+  }
+}
+
+function isCompatibleExactDuplicateEvidence(existingPool: PoolEntry, incomingPool: GtNewPool): boolean {
+  if (normalizeProtocol(existingPool.project) !== normalizeProtocol(incomingPool.dexId)) return false;
+  return poolSymbolSet(existingPool.symbol) === poolSymbolSet(incomingPool.symbol);
+}
+
+function poolSymbolSet(symbol: string): string {
+  return symbol
+    .split(/\s*\/\s*/)
+    .map((part) => part.trim().toLowerCase())
+    .filter(Boolean)
+    .sort()
+    .join("/");
 }
 
 function incrementReason(record: Record<string, number>, reason: string, count = 1): void {
