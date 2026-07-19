@@ -272,7 +272,9 @@ export async function collectConfirmationEvidence(
   }
 
   const dexRow = dexPriceRows.get(row.stablecoin_id);
-  if (dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg")) {
+  if (isNativeOrigin) {
+    addSource(evidence.unavailableSources, "dex:usd-native-origin");
+  } else if (dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg")) {
     const dexSignal = deriveDepegSignal(dexRow.dex_price_usd, pegReference);
     const aggregateDexStatus = classifyDirectionalSignal(dexSignal, secondaryBar, pendingState.direction);
     const protocolSources = dexPriceSources.get(row.stablecoin_id);
@@ -328,7 +330,9 @@ export async function collectConfirmationEvidence(
     addSource(evidence.unavailableSources, "dex:aggregate");
   }
 
-  if (!cexAllowed) {
+  if (isNativeOrigin) {
+    addSource(evidence.unavailableSources, "cex:usd-native-origin");
+  } else if (!cexAllowed) {
     addSource(evidence.circuitOpenSources, "cex:binance");
   } else if (cexPrices == null) {
     addSource(evidence.unavailableSources, "cex:binance");
@@ -356,7 +360,9 @@ export async function collectConfirmationEvidence(
   const poolRecoverGroups = new Set<string>();
   let poolHighTvlConfirm: PoolConfirmation | null = null;
   const pools = poolChallengers.get(row.stablecoin_id);
-  if (pools?.length) {
+  if (isNativeOrigin) {
+    addSource(evidence.unavailableSources, "pool:usd-native-origin");
+  } else if (pools?.length) {
     for (const pool of pools) {
       const poolSignal = deriveDepegSignal(pool.price, pegReference);
       if (poolSignal == null) continue;
