@@ -13,7 +13,7 @@ export function buildAuthoritativeStagedPoolConfirmationIndex(
   const confirmedExactKeysByProtocol = new Map<string, Set<string>>();
 
   for (const entry of results) {
-    if (!entry.result.ok || entry.result.degraded || (entry.result.warnings?.length ?? 0) > 0) {
+    if (!entry.result.ok || entry.result.degraded) {
       continue;
     }
 
