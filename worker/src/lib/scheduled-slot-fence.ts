@@ -5,7 +5,6 @@ import {
   reconcileStaleSlotArtifactsAndRecordEvent,
   hasActiveChildLeaseForScheduledSlot,
   type StaleSlotExecutionArtifact,
-  type StaleSlotReconciliationFence,
   type StaleSlotReconciliationSummary,
 } from "./scheduled-slot-reconciliation";
 

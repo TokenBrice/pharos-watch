@@ -103,7 +103,6 @@ export async function hasActiveChildLeaseForScheduledSlot(
   slotKey: string,
   slotStartedAt: number,
   nowSec: number,
-  fence?: StaleSlotReconciliationFence,
 ): Promise<boolean> {
   const jobs = getExpectedJobsForScheduledSlot(slotKey);
   if (jobs.length === 0) return false;
