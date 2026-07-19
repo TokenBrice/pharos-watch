@@ -610,7 +610,7 @@ export async function runCmcPass(
         diagnostic.responseRowCount = cmcData.data.coins.length;
         const cmcBySymbol = new Map<string, CmcFallbackQuote>();
         const cmcBySlug = new Map<string, CmcFallbackQuote>();
-        for (const entry of cmcData.data.coins) {
+        for (const entry of categoryTruncated ? [] : cmcData.data.coins) {
           const price = entry.quote?.USD?.price;
           const observedAt = parseUnixOrIsoTimestampSec(entry.quote?.USD?.last_updated);
           if (
@@ -671,7 +671,7 @@ export async function runCmcPass(
         if (categoryTruncated) {
           diagnostic.errorClass = "truncated-response";
           diagnostic.errorMessage =
-            `CoinMarketCap category response has an unseen tail (${cmcData.data.coins.length}/${cmcData.data.num_tokens}); usable returned rows were retained`;
+            `CoinMarketCap category response has an unseen tail (${cmcData.data.coins.length}/${cmcData.data.num_tokens}); category rows were ignored pending exact quote validation`;
         }
         diagnostics.push(diagnostic);
 
