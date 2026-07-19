@@ -99,6 +99,25 @@ describe("redemption same-notional route observations", () => {
     });
   });
 
+  it("normalizes fractional live telemetry timestamps before publishing integer observations", () => {
+    const observedAt = Date.UTC(2026, 6, 13, 10) / 1_000;
+    const observation = build({
+      sourceMode: "dynamic",
+      capacityConfidence: "live-direct",
+      capacityKind: "live-direct-bounded",
+      freshnessKind: "verified-source-timestamp",
+      sourceTimestamp: observedAt + 0.75,
+      now: observedAt + 61.25,
+    });
+    expect(observation).toMatchObject({
+      evidenceKind: "live-reserve-state",
+      confidence: "high",
+      observedAt,
+      freshnessSeconds: 61,
+      scoreEligible: true,
+    });
+  });
+
   it("returns no observation when the immediate capacity request is undefined", () => {
     expect(build({ capacityProfile: undefined })).toBeNull();
     expect(build({ scoringCapacityUsd: null })).toBeNull();
