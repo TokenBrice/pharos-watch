@@ -22,7 +22,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/cron-jobs.ts",
-      "sha256": "67a9b1b91367528529610f023b75dfeeeefc8d7d4cf3dee07ccbbbc056a87674"
+      "sha256": "bba6617b7b289e8bb7c3824c3117b5469e4f52f01b89ee18d09f7f89cb7828cf"
     },
     {
       "path": "shared/lib/dependency-derivation.ts",
@@ -218,7 +218,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/stablecoin-taxonomy.ts",
-      "sha256": "839d436006a9467140684be9de6f2e839f00d1530c70975d0c78ea9ad31b4d58"
+      "sha256": "562323191ea4e263db74f20653dd36565c7a019a1972df1d3216c83c1392c170"
     },
     {
       "path": "worker/src/lib/redemption-exit-route-observations.ts",
@@ -265,7 +265,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "232d2a97f1a3a073587b51e3f3744667f4b6e7ca53319150578cf7827d6e8e5a"
     }
   ],
-  "digest": "35cb3379abec8c6964926f0b9036a0e32d8e343429731468dd4b10a7030f75de"
+  "digest": "1c4d1a8169d785de385bc94cfb2287e5983f0a3405f237f4f2bd30c5aa9c6c79"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
