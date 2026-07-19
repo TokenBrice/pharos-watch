@@ -896,6 +896,63 @@ describe("enrichMissingPrices", () => {
     ]));
   });
 
+  it("does not let truncated category rows bypass targeted CMC quote validation", async () => {
+    const assets: PeggedAsset[] = [{
+      id: "mnee-mnee",
+      name: "MNEE USD",
+      symbol: "MNEE",
+      price: 0,
+      cmcSlug: "mnee",
+      pegType: "peggedUSD",
+      contracts: [{
+        chain: "ethereum",
+        address: "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf",
+        decimals: 18,
+      }],
+      circulating: {},
+    }];
+    const fetchSpy = fixtureMockFetch([
+      {
+        match: "/v1/cryptocurrency/category",
+        body: cmcCategory([{ slug: "mnee", symbol: "MNEE", quote: { USD: cmcUsdQuote(1.18) } }], 301),
+      },
+      {
+        match: "/v3/cryptocurrency/quotes/latest",
+        body: { data: [{
+          id: 32878,
+          slug: "mnee",
+          symbol: "MNEE",
+          is_active: 0,
+          quote: [{ symbol: "USD", ...cmcUsdQuote(1.18), volume_24h: 143_000 }],
+        }] },
+      },
+    ]);
+
+    const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, undefined);
+
+    expect(result.resolved).toBe(0);
+    expect(assets[0].price).toBe(0);
+    expect(fetchSpy.getHistory().map((entry) => entry.url)).toEqual([
+      expect.stringContaining("/v1/cryptocurrency/category"),
+      expect.stringContaining("/v3/cryptocurrency/quotes/latest?slug=mnee&convert=USD"),
+    ]);
+    expect(result.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        endpoint: "pro-api.coinmarketcap.com/v1/cryptocurrency/category",
+        success: true,
+        errorClass: "truncated-response",
+        resolvedCount: 0,
+      }),
+      expect.objectContaining({
+        endpoint: "pro-api.coinmarketcap.com/v3/cryptocurrency/quotes/latest",
+        success: true,
+        matchedCount: 0,
+        resolvedCount: 0,
+        rejectionReasonCounts: { "unsupported-quote": 1 },
+      }),
+    ]));
+  });
+
   it("replays an identity-verified targeted quote across the next three cooldown generations", async () => {
     const makeAsset = (): PeggedAsset => ({
       id: "test-dollar",
@@ -1183,14 +1240,13 @@ describe("enrichMissingPrices", () => {
     });
   });
 
-  it("retains usable category rows while reporting an unseen truncated tail", async () => {
+  it("ignores truncated category rows while reporting an unseen tail", async () => {
     const assets: PeggedAsset[] = [
       {
         id: "test-dollar",
         name: "Test Dollar",
         symbol: "TUSD",
         price: 0,
-        cmcSlug: "test-dollar",
         pegType: "peggedUSD",
         circulating: {},
       },
@@ -1219,13 +1275,14 @@ describe("enrichMissingPrices", () => {
 
     const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, db);
 
-    expect(result.resolved).toBe(1);
-    expect(assets[0].price).toBe(1.0001);
+    expect(result.resolved).toBe(0);
+    expect(assets[0].price).toBe(0);
     expect(result.diagnostics?.[0]).toMatchObject({
       success: true,
       errorClass: "truncated-response",
-      resolvedCount: 1,
+      resolvedCount: 0,
     });
+    expect(result.diagnostics?.[0]?.errorMessage).toContain("category rows were ignored");
     const circuitWrite = db
       .getHistory()
       .find(

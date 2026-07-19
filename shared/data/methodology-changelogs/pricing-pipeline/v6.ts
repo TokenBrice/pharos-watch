@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.194",
+    title: "CMC truncated-category validation hardening",
+    date: "2026-07-16",
+    effectiveAt: 1784194000,
+    summary:
+      "CoinMarketCap fallback now ignores truncated category rows and requires unresolved configured slugs to pass the exact targeted quote validation lane.",
+    impact: [
+      "CMC category responses with an unseen tail remain visible as truncated-response diagnostics, but their returned rows no longer resolve prices",
+      "Configured CMC slugs that remain missing after a truncated category response must pass exact slug and symbol, active-record, positive-volume, configured-contract, freshness, and peg-aware checks before publishing",
+      "This preserves complete-category fallback behavior while preventing spoofed truncated category rows from suppressing the safer targeted quote path",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.193",
     title: "Missing-price coverage and deterministic route hardening",
     date: "2026-07-16",
