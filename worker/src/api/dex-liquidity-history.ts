@@ -3,7 +3,11 @@ import { CACHE_PROFILES } from "../lib/constants";
 import { getLiquidityMethodologyVersionAt } from "@shared/lib/liquidity-score-version";
 import { classifyLiquidityEvidence } from "./dex-liquidity-evidence";
 import { safeJsonParse } from "../lib/api-utils";
-import { ExitRouteObservationCoverageSchema, ExitRouteObservationSchema } from "@shared/types/market";
+import {
+  ExitRouteObservationCoverageSchema,
+  ExitRouteObservationSchema,
+  MAX_DEX_EXIT_ROUTE_OBSERVATIONS,
+} from "@shared/types/market";
 
 interface LiquidityHistoryRow {
   total_tvl_usd: number;
@@ -20,7 +24,9 @@ function parseRouteSummary(json: string | null) {
   const raw = safeJsonParse<unknown>(json, null, "dex-liquidity-history:exit_route_summary_json");
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   const summary = raw as Record<string, unknown>;
-  const observations = ExitRouteObservationSchema.array().safeParse(summary.observations);
+  const observations = ExitRouteObservationSchema.array()
+    .max(MAX_DEX_EXIT_ROUTE_OBSERVATIONS)
+    .safeParse(summary.observations);
   const coverage = ExitRouteObservationCoverageSchema.safeParse(summary.coverage);
   return {
     ...(observations.success ? { exitRouteObservations: observations.data } : {}),

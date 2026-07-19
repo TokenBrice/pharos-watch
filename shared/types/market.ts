@@ -34,6 +34,8 @@ export {
   ExitRouteOutputKindSchema,
   ExitRouteOutputSchema,
   ExitRouteScopeSchema,
+  MAX_DEX_EXIT_ROUTE_OBSERVATIONS,
+  MAX_EXIT_ROUTE_COMMON_MODE_KEYS,
   type DexExitEvidenceKind,
   type DexExitRouteObservation,
   type ExitRouteCapacityPoint,

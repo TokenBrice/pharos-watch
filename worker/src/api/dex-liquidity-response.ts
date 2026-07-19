@@ -3,6 +3,7 @@ import { DexLiquidityCronMetadataSchema } from "../lib/schemas";
 import {
   ExitRouteObservationCoverageSchema,
   ExitRouteObservationSchema,
+  MAX_DEX_EXIT_ROUTE_OBSERVATIONS,
   type ExitRouteObservation,
   type ExitRouteObservationCoverage,
   type LiquidityPoolSourceFamily,
@@ -123,7 +124,9 @@ export function normalizeDexScoreDetails(
   }
 
   const details = parsed as Record<string, unknown>;
-  const observations = ExitRouteObservationSchema.array().safeParse(details.exitRouteObservations);
+  const observations = ExitRouteObservationSchema.array()
+    .max(MAX_DEX_EXIT_ROUTE_OBSERVATIONS)
+    .safeParse(details.exitRouteObservations);
   const coverage = ExitRouteObservationCoverageSchema.safeParse(details.exitRouteObservationCoverage);
   return {
     scoreComponents: projectLegacyScoreComponents(details),
