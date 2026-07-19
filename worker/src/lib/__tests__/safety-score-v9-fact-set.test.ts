@@ -83,6 +83,7 @@ function route(
 
 function exactFixedInput(
   args: {
+    assetId?: string;
     liquidityScore?: number;
     classifiedReserve?: boolean;
     omitPegRow?: boolean;
@@ -104,6 +105,7 @@ function exactFixedInput(
     clockSec?: number;
   } = {},
 ) {
+  const assetId = args.assetId ?? "alpha";
   const clockSec = args.clockSec ?? AS_OF_SEC;
   const observedAtSec = clockSec - 100;
   const reserve = {
@@ -114,7 +116,7 @@ function exactFixedInput(
       ? {}
       : {
           assetClass: "cash" as const,
-          issuerOrObligor: "issuer:alpha",
+          issuerOrObligor: `issuer:${assetId}`,
           riskFactors: ["custody" as const, "counterparty" as const],
           liquidityHorizon: "immediate" as const,
           maturityDaysMax: 0,
@@ -122,7 +124,7 @@ function exactFixedInput(
   };
   return createReportCardsFixedInput({
     captureKind: "exact-publication-inputs",
-    activeAssetIds: ["alpha"],
+    activeAssetIds: [assetId],
     capturedAt: "2026-07-13T00:00:00.000Z",
     sourceGeneration: "report-cards:fixture:10000",
     dexGenerationId: `dex-liquidity-${observedAtSec}`,
@@ -140,8 +142,8 @@ function exactFixedInput(
     pegDataById: args.omitPegRow
       ? {}
       : {
-          alpha: {
-            id: "alpha",
+          [assetId]: {
+            id: assetId,
             symbol: "ALPHA",
             name: "Alpha",
             pegType: "peggedUSD",
@@ -162,9 +164,9 @@ function exactFixedInput(
             methodologyVersion: "peg:fixture-v1",
           },
         },
-    activeDepegPeakBpsById: args.activeDepegPeakBps === undefined ? {} : { alpha: args.activeDepegPeakBps },
+    activeDepegPeakBpsById: args.activeDepegPeakBps === undefined ? {} : { [assetId]: args.activeDepegPeakBps },
     dexLiqMap: {
-      alpha: {
+      [assetId]: {
         liquidityScore: args.liquidityScore ?? 12,
         concentrationHhi: 0.5,
         poolCount: 1,
@@ -195,15 +197,15 @@ function exactFixedInput(
     },
     redemptionBackstopMap: {},
     bluechipMap: {},
-    resolvedBlacklistStatuses: { alpha: false },
-    liveReserveMap: args.omitLiveReserve ? {} : { alpha: [reserve] },
+    resolvedBlacklistStatuses: { [assetId]: false },
+    liveReserveMap: args.omitLiveReserve ? {} : { [assetId]: [reserve] },
     liveReserveProvenanceMap: args.omitLiveReserve
       ? {}
       : {
-          alpha: { source: "fixture-reserve-api", fetchedAt: observedAtSec },
+          [assetId]: { source: "fixture-reserve-api", fetchedAt: observedAtSec },
         },
     chainCirculatingById: {
-      alpha: args.chainSupplyByChain ?? {
+      [assetId]: args.chainSupplyByChain ?? {
         ethereum: {
           current: 10_000_000,
           circulatingPrevDay: 10_000_000,
@@ -1542,7 +1544,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     const cdpComponent = () => ({ status: status(), quality: "strong" as const, failureDomains: [] });
 
     const compileWithShockClock = (clockSec: number) => {
-      const fixed = { ...exactFixedInput({ clockSec }), activeAssetIds: ["lusd-liquity"] };
+      const fixed = exactFixedInput({ clockSec, assetId: "lusd-liquity" });
       const ext = extension();
       ext.compiledAtSec = clockSec;
       ext.registryFingerprint = fixed.registryFingerprint;
