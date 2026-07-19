@@ -47,6 +47,9 @@ describe("Safety Score v9 missing-data work routing", () => {
     ["missing-same-notional-route", "EXIT_RUNTIME_ROUTE"],
     ["unsupported-same-notional-route", "EXIT_DEX_COVERAGE"],
     ["unresolved-mint-authority", "MINT_AUTHORITY"],
+    ["material-unknown-reserve-exposure", "RESERVE_COMPOSITION"],
+    ["missing-custody-profile", "RESERVE_COMPOSITION"],
+    ["missing-latest-assurance-report", "RESERVE_COMPOSITION"],
   ] as const)("routes score-only reason %s to %s", (reasonCode, expected) => {
     expect(classifyV9ScoreProjectionWorkType(reasonCode)).toBe(expected);
   });
