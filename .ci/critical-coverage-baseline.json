@@ -108,6 +108,7 @@
     "worker/src/api/admin-safety-score-v9.ts": 86.1,
     "worker/src/lib/safety-score-history-v2.ts": 82.7,
     "worker/src/lib/safety-score-history-boundary-operation.ts": 92.9,
+    "worker/src/lib/safety-score-v9-anchor-gate.ts": 92,
     "worker/src/lib/safety-score-v9-cache-codec.ts": 90.7,
     "worker/src/lib/safety-score-v9-candidate.ts": 87.7,
     "worker/src/lib/safety-score-v9-extension.ts": 93.3,
