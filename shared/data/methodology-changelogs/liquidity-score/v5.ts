@@ -11,6 +11,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // counter over. Entries below are newest-first by version.
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.85",
+    title: "Raydium pool-implied counter-asset reference",
+    date: "2026-07-20",
+    effectiveAt: 1784505600,
+    summary:
+      "Raydium standard AMM pools now complete exact reserve capture when the untracked counter asset's USD reference is implied from the pool's own captured spot price instead of gating to incomplete-exact-capture.",
+    impact: [
+      "Roughly 460 retained Raydium standard pools (USDC, USDT, USD1 pairs) move from capability-gated rows to exact constant-product execution models with score-eligible reserve-based simulations",
+      "USD1 gains its first score-eligible Solana exit routes; USDC and USDT gain substantially deeper Solana route surfaces",
+      "Counter-asset references derived this way are recorded as referencePriceSource \"pool-implied\"; token-identity and balance failures still fail closed to incomplete-exact-capture",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.84",
     title: "Composite Curve LP pair-quality normalization",
     date: "2026-06-29",
