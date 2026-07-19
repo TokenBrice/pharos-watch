@@ -30,7 +30,7 @@ npm run bootstrap:generated
 
 Legacy category shards remain only as read-only compatibility shells. Do not add or move entries into `usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, or `pre-launch.json`; they should remain empty, and `npm run check:stablecoin-data` guards that source layout.
 
-The client, compliance, prevalidated runtime, and legacy redirect projections are also generated from the per-coin catalog. `coins.client.generated.json` powers lightweight browser-facing metadata through `shared/lib/stablecoins/client-registry.ts`; `coins.compliance.generated.json` keeps GENIUS long-form evidence scoped to `/compliance/`; `coins.prevalidated.generated.ts` lets the full registry load checked metadata without validating the entire aggregate on the hot path or bundling the full Zod registry validator into browser-facing chunks; `legacy-llama-redirects.generated.json` is the minimal Pages Functions map for old numeric DefiLlama stablecoin URLs. Run `npm run check:generated-artifacts` after metadata edits, and regenerate those projections with the scripts named by that check if they drift.
+The client, compliance, prevalidated runtime, and legacy redirect projections are also generated from the per-coin catalog. `coins.client.generated.json` powers lightweight browser-facing metadata through `shared/lib/stablecoins/client-registry.ts`; `coins.compliance.generated.json` keeps GENIUS long-form evidence scoped to `/compliance/`; `coins.prevalidated.generated.ts` lets the full registry load checked metadata without validating the entire aggregate on the hot path or bundling the full Zod registry validator into browser-facing chunks; `legacy-llama-redirects.generated.json` is the minimal Pages Functions map for old numeric DefiLlama stablecoin URLs. Base coin files also feed the commit-derived `sitemap-dates` projection used by stablecoin detail pages. Commit base coin source and ordinary working-tree projections first, regenerate sitemap dates from that committed history, then run `npm run check:generated-artifacts` after the final generated commit.
 
 ## Editing Rules
 
@@ -65,15 +65,24 @@ Scanner output is not curated metadata. The local scanner POC writes candidate a
 
 ## Required Checks
 
-Run these after metadata edits:
+Run ordinary catalog generation and focused validation while editing:
 
 ```bash
 npm run bootstrap:generated
 npm run check:stablecoin-data
 npm run check:mechanism-archetype-coverage
-npm run check:generated-artifacts
 npm test -- shared/lib/__tests__/stablecoin-id-registry.test.ts
 ```
+
+After base coin source/projection commits exist, settle and validate the commit-derived sitemap plus the complete artifact graph:
+
+```bash
+npx tsx scripts/maintenance/generate-sitemap-dates.ts
+npm run check:commit-derived-artifacts
+npm run check:generated-artifacts
+```
+
+Commit the sitemap output separately or amend it into the source commit without changing the source author date. A check against dirty base coin history intentionally fails rather than certifying provisional timestamps.
 
 If the change affects page counts, feature coverage, reserve coverage, source families, or public methodology behavior, also update the matching route/feature docs from `docs/README.md`.
 
