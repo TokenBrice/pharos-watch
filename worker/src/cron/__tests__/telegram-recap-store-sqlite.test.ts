@@ -256,7 +256,22 @@ describe("telegram recap store on latest SQLite schema", () => {
         (recap_key, chat_id, local_date, window_start_at, window_end_at, preference_generation, watchlist_fingerprint, status, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, 0, 'x', ?, ?, ?)`).run(key, key, "2026-06-01", 1, 2, status, 1, NOW - 91 * 86400);
     }
-    await expect(pruneTelegramRecapTargets(db, NOW)).resolves.toEqual({ deletedTargets: 3 });
+    await expect(pruneTelegramRecapTargets(db, NOW)).resolves.toEqual({ deletedTargets: 3, cappedAtLimit: false });
     expect(sqlite.prepare("SELECT recap_key FROM telegram_recap_targets ORDER BY recap_key").all()).toEqual([{ recap_key: "old-skip" }, { recap_key: "old-unknown" }]);
+  });
+
+  it("caps recap target pruning to the requested batch size", async () => {
+    const { sqlite, db } = setup();
+    for (let i = 0; i < 3; i += 1) {
+      sqlite.prepare(`INSERT INTO telegram_recap_targets
+        (recap_key, chat_id, local_date, window_start_at, window_end_at, preference_generation, watchlist_fingerprint, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, 0, 'x', 'cancelled', ?, ?)`).run(`old-cancelled-${i}`, `${i}`, "2026-06-01", 1, 2, 1, NOW - 91 * 86400);
+    }
+
+    await expect(pruneTelegramRecapTargets(db, NOW, { limit: 2 })).resolves.toEqual({
+      deletedTargets: 2,
+      cappedAtLimit: true,
+    });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_recap_targets").get()).toEqual({ count: 1 });
   });
 });
