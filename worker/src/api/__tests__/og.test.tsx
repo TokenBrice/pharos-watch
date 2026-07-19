@@ -186,12 +186,12 @@ describe("stablecoin OG card data", () => {
       expect(data.pegScore).toBe(99);
     });
 
-    it("renders an explicit non-cacheable degraded state when compact safety identity is unavailable", async () => {
+    it("renders an explicit cacheable degraded state when compact safety identity is unavailable", async () => {
       const db = makeOgDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
       const res = await handleOg(db, "/api/og/stablecoin/usdt-tether");
 
       expect(res?.status).toBe(200);
-      expect(res?.headers.get("Cache-Control")).toBe("no-store");
+      expect(res?.headers.get("Cache-Control")).toBe("public, max-age=900, s-maxage=900");
       expect(res?.headers.get("X-Safety-Score-Status")).toBe("degraded");
       const calls = vi.mocked(satoriStandalone).mock.calls;
       const element = calls[calls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
@@ -201,7 +201,7 @@ describe("stablecoin OG card data", () => {
       });
     });
 
-    it("renders a non-cacheable degraded state for a complete V9 compact publication on the V8 release", async () => {
+    it("renders a cacheable degraded state for a complete V9 compact publication on the V8 release", async () => {
       const v8Cache = completeReportCardCache(nowSec);
       const v9GenerationId = `safety-score-v9:9.0:${nowSec}`;
       const v9Cache = {
@@ -227,7 +227,7 @@ describe("stablecoin OG card data", () => {
       const res = await handleOg(db, "/api/og/stablecoin/usdt-tether");
 
       expect(res?.status).toBe(200);
-      expect(res?.headers.get("Cache-Control")).toBe("no-store");
+      expect(res?.headers.get("Cache-Control")).toBe("public, max-age=900, s-maxage=900");
       expect(res?.headers.get("X-Safety-Score-Status")).toBe("degraded");
       expect(res?.headers.get("X-Safety-Score-Reason")).toBe("invalid-payload");
       const calls = vi.mocked(satoriStandalone).mock.calls;
@@ -238,7 +238,7 @@ describe("stablecoin OG card data", () => {
       });
     });
 
-    it("renders a non-cacheable degraded state for a different V8 evaluation build", async () => {
+    it("renders a cacheable degraded state for a different V8 evaluation build", async () => {
       const v8Cache = completeReportCardCache(nowSec);
       const currentDigest = v8Cache.safetyScoreIdentity.evaluationBuildDigest;
       const mismatchedCache = {
@@ -253,7 +253,7 @@ describe("stablecoin OG card data", () => {
       const res = await handleOg(db, "/api/og/stablecoin/usdt-tether");
 
       expect(res?.status).toBe(200);
-      expect(res?.headers.get("Cache-Control")).toBe("no-store");
+      expect(res?.headers.get("Cache-Control")).toBe("public, max-age=900, s-maxage=900");
       expect(res?.headers.get("X-Safety-Score-Status")).toBe("degraded");
       expect(res?.headers.get("X-Safety-Score-Reason")).toBe("identity-mismatch");
       const calls = vi.mocked(satoriStandalone).mock.calls;
@@ -261,7 +261,7 @@ describe("stablecoin OG card data", () => {
       expect(element.props.data).toMatchObject({ grade: "NR" });
     });
 
-    it("does not cache stale complete compact safety data", async () => {
+    it("serves cacheable degraded OG headers for stale complete compact safety data", async () => {
       const db = makeOgDb(
         [makeAsset({ id: "usdt-tether", symbol: "USDT" })],
         completeReportCardCache(nowSec - 3 * 60 * 60),
@@ -270,7 +270,7 @@ describe("stablecoin OG card data", () => {
       const res = await handleOg(db, "/api/og/stablecoin/usdt-tether");
 
       expect(res?.status).toBe(200);
-      expect(res?.headers.get("Cache-Control")).toBe("no-store");
+      expect(res?.headers.get("Cache-Control")).toBe("public, max-age=900, s-maxage=900");
       expect(res?.headers.get("X-Safety-Score-Status")).toBe("degraded");
       expect(res?.headers.get("X-Safety-Score-Reason")).toBe("stale-cache");
     });
