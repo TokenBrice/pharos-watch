@@ -1,6 +1,8 @@
 import { DS_CHAIN_MAP, resolveChainId } from "@shared/lib/chains";
 import { median } from "@shared/lib/stats";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
+import { abortError, throwIfAborted } from "../../lib/abort";
 import { CIRCUIT_SOURCE, DEXSCREENER_MIN_LIQUIDITY_USD } from "../../lib/constants";
 import {
   isProviderCircuitAllowed,
@@ -27,6 +29,10 @@ const DEXSCREENER_REQUEST_TIMEOUT_MS = 5_000;
 const DEXSCREENER_MAX_RETRIES = 0;
 const DEXSCREENER_PASS_BUDGET_MS = 45_000;
 const DEXSCREENER_ROTATION_INTERVAL_MS = 15 * 60 * 1_000;
+const DEXSCREENER_PASS_TIMEOUT_ERROR = new DOMException(
+  `DexScreener pass timed out after ${DEXSCREENER_PASS_BUDGET_MS}ms`,
+  "TimeoutError",
+);
 
 interface DexScreenerTarget {
   chain: string;
@@ -47,6 +53,22 @@ function stableStringHash(value: string): number {
     hash = Math.imul(hash, 16777619);
   }
   return hash >>> 0;
+}
+
+async function abortable<T>(operation: Promise<T>, signal: AbortSignal): Promise<T> {
+  throwIfAborted(signal);
+
+  let onAbort: (() => void) | null = null;
+  const abortPromise = new Promise<never>((_resolve, reject) => {
+    onAbort = () => reject(abortError(signal));
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+
+  try {
+    return await Promise.race([operation, abortPromise]);
+  } finally {
+    if (onAbort) signal.removeEventListener("abort", onAbort);
+  }
 }
 
 const ADDRESS_CHAIN_ALIASES: Record<string, string> = {
@@ -222,86 +244,125 @@ export async function runDexScreenerPass(
   let dexExactSuccessfulCalls = 0;
 
   if (dexscreenerAllowed) {
+    const passTimeout = createTimeoutSignal({
+      timeoutMs: DEXSCREENER_PASS_BUDGET_MS,
+      timeoutReason: DEXSCREENER_PASS_TIMEOUT_ERROR,
+      parentSignal: signal,
+    });
     const dexBudgetDeadlineMs = Date.now() + DEXSCREENER_PASS_BUDGET_MS;
     const resolvedAssetIds = new Set<string>();
     const maxTargetCount = Math.max(...dexCandidates.map((entry) => entry.exactTargets.length));
 
-    requestRounds: for (let targetIndex = 0; targetIndex < maxTargetCount; targetIndex += 1) {
-      for (const entry of dexCandidates) {
-        if (resolvedAssetIds.has(entry.asset.id)) continue;
-        const target = entry.exactTargets[targetIndex];
-        if (!target) continue;
-        if (dexExactAttempts >= DEXSCREENER_MAX_REQUESTS) break requestRounds;
+    try {
+      requestRounds: for (let targetIndex = 0; targetIndex < maxTargetCount; targetIndex += 1) {
+        throwIfAborted(passTimeout.signal);
+        for (const entry of dexCandidates) {
+          throwIfAborted(passTimeout.signal);
+          if (resolvedAssetIds.has(entry.asset.id)) continue;
+          const target = entry.exactTargets[targetIndex];
+          if (!target) continue;
+          if (dexExactAttempts >= DEXSCREENER_MAX_REQUESTS) break requestRounds;
 
-        const exactRemainingBudgetMs = dexBudgetDeadlineMs - Date.now();
-        if (exactRemainingBudgetMs <= 0) {
-          console.warn(
-            `[enrich] DexScreener pass budget exhausted after ${dexExactAttempts}/${DEXSCREENER_MAX_REQUESTS} requests`,
-          );
-          break requestRounds;
+          const exactRemainingBudgetMs = dexBudgetDeadlineMs - Date.now();
+          if (exactRemainingBudgetMs <= 0) {
+            console.warn(
+              `[enrich] DexScreener pass budget exhausted after ${dexExactAttempts}/${DEXSCREENER_MAX_REQUESTS} requests`,
+            );
+            break requestRounds;
+          }
+
+          if (dexExactAttempts > 0) {
+            await dsRateLimit(passTimeout.signal);
+          }
+
+          dexExactAttempts += 1;
+          const pushExactFailure = (errorClass: string, errorMessage: string, status: number | null = null) => {
+            diagnostics.push({
+              source: "dexscreener-exact",
+              stage: "fallback",
+              endpoint: endpointLabel(`https://api.dexscreener.com/tokens/v1/${target.chain}/${target.address}`),
+              status,
+              ok: false,
+              success: false,
+              candidateCount: 1,
+              errorClass,
+              errorMessage,
+            });
+          };
+
+          let lookupResult: Awaited<ReturnType<typeof fetchDsTokenPoolsWithStatus>>;
+          try {
+            const requestTimeout = createTimeoutSignal({
+              timeoutMs: Math.min(DEXSCREENER_REQUEST_TIMEOUT_MS, exactRemainingBudgetMs),
+              timeoutReason: new DOMException(
+                `DexScreener exact lookup timed out after ${Math.min(DEXSCREENER_REQUEST_TIMEOUT_MS, exactRemainingBudgetMs)}ms`,
+                "TimeoutError",
+              ),
+              parentSignal: passTimeout.signal,
+            });
+            try {
+              lookupResult = await abortable(
+                fetchDsTokenPoolsWithStatus(
+                  target.chain,
+                  target.address,
+                  requestTimeout.signal,
+                  Math.min(DEXSCREENER_REQUEST_TIMEOUT_MS, exactRemainingBudgetMs),
+                  DEXSCREENER_MAX_RETRIES,
+                ),
+                requestTimeout.signal,
+              );
+            } finally {
+              requestTimeout.dispose();
+            }
+          } catch (error) {
+            if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+            if (passTimeout.signal.aborted && passTimeout.isTimedOut()) {
+              console.warn(
+                `[enrich] DexScreener pass timed out after ${dexExactAttempts}/${DEXSCREENER_MAX_REQUESTS} requests`,
+              );
+              pushExactFailure("TimeoutError", errorMessageFor(error));
+              break requestRounds;
+            }
+            console.warn(
+              `[enrich] DexScreener exact lookup threw for ${entry.asset.symbol} (${target.chain}:${target.address}):`,
+              error,
+            );
+            pushExactFailure(errorClassFor(error), errorMessageFor(error));
+            continue;
+          }
+
+          const { ok, pairs } = lookupResult;
+          if (ok) {
+            dexExactSuccessfulCalls += 1;
+          } else {
+            console.warn(
+              `[enrich] DexScreener exact lookup failed for ${entry.asset.symbol} (${target.chain}:${target.address})`,
+            );
+            pushExactFailure(
+              "upstream-error",
+              lookupResult.error
+                ? `DexScreener exact lookup returned no usable response: ${lookupResult.error}`
+                : "DexScreener exact lookup returned no usable response",
+              lookupResult.status ?? null,
+            );
+          }
+
+          const exactPrice = resolveDexScreenerAddressPrice(entry.asset, target, pairs, fxRates);
+          if (exactPrice == null) continue;
+
+          applyResolvedPrice(assets[entry.index], exactPrice, "dexscreener-exact", "fallback");
+          resolved += 1;
+          resolvedAssetIds.add(entry.asset.id);
         }
-
-        if (dexExactAttempts > 0) {
-          await dsRateLimit(signal);
-        }
-
-        dexExactAttempts += 1;
-        const pushExactFailure = (errorClass: string, errorMessage: string, status: number | null = null) => {
-          diagnostics.push({
-            source: "dexscreener-exact",
-            stage: "fallback",
-            endpoint: endpointLabel(`https://api.dexscreener.com/tokens/v1/${target.chain}/${target.address}`),
-            status,
-            ok: false,
-            success: false,
-            candidateCount: 1,
-            errorClass,
-            errorMessage,
-          });
-        };
-
-        let lookupResult: Awaited<ReturnType<typeof fetchDsTokenPoolsWithStatus>>;
-        try {
-          lookupResult = await fetchDsTokenPoolsWithStatus(
-            target.chain,
-            target.address,
-            signal,
-            Math.min(DEXSCREENER_REQUEST_TIMEOUT_MS, exactRemainingBudgetMs),
-            DEXSCREENER_MAX_RETRIES,
-          );
-        } catch (error) {
-          if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
-          console.warn(
-            `[enrich] DexScreener exact lookup threw for ${entry.asset.symbol} (${target.chain}:${target.address}):`,
-            error,
-          );
-          pushExactFailure(errorClassFor(error), errorMessageFor(error));
-          continue;
-        }
-
-        const { ok, pairs } = lookupResult;
-        if (ok) {
-          dexExactSuccessfulCalls += 1;
-        } else {
-          console.warn(
-            `[enrich] DexScreener exact lookup failed for ${entry.asset.symbol} (${target.chain}:${target.address})`,
-          );
-          pushExactFailure(
-            "upstream-error",
-            lookupResult.error
-              ? `DexScreener exact lookup returned no usable response: ${lookupResult.error}`
-              : "DexScreener exact lookup returned no usable response",
-            lookupResult.status ?? null,
-          );
-        }
-
-        const exactPrice = resolveDexScreenerAddressPrice(entry.asset, target, pairs, fxRates);
-        if (exactPrice == null) continue;
-
-        applyResolvedPrice(assets[entry.index], exactPrice, "dexscreener-exact", "fallback");
-        resolved += 1;
-        resolvedAssetIds.add(entry.asset.id);
       }
+    } catch (error) {
+      if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+      if (!passTimeout.isTimedOut()) throw error instanceof Error ? error : new Error(String(error));
+      console.warn(
+        `[enrich] DexScreener pass timed out after ${dexExactAttempts}/${DEXSCREENER_MAX_REQUESTS} requests`,
+      );
+    } finally {
+      passTimeout.dispose();
     }
 
     await recordProviderOutcomeSafe({
