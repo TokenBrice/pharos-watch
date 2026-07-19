@@ -405,7 +405,11 @@
     {
       "name": "QiDao overcollateralized crypto vaults",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "QiDao vault borrowers across multi-chain markets",
+      "riskFactors": ["market", "liquidity", "smart-contract", "custody", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {

@@ -547,11 +547,20 @@
     {
       "name": "Protocol Owned Liquidity",
       "pct": 13.7,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Apyx protocol (Preference Capital (BVI) Ltd.)",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Cash & Equivalents (USDC, U.S. Treasury Bills)",
-      "pct": 12.8,
+      "pct": 12.6,
       "risk": "very-low",
       "assetClass": "other",
       "issuerOrObligor": "USDC issuer and United States Treasury; split undisclosed",
@@ -564,14 +573,22 @@
     },
     {
       "name": "Inventory",
-      "pct": 11.2,
+      "pct": 11.4,
       "risk": "high",
-      "assetClass": "other"
+      "assetClass": "other",
+      "issuerOrObligor": "Apyx protocol (Preference Capital (BVI) Ltd.)",
+      "riskFactors": [
+        "market",
+        "custody",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-18",
-    "reviewer": "OpenAI Codex reserve-drift audit",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
     "confidence": "verified",
     "sources": [
       {
@@ -587,11 +604,11 @@
         "url": "https://docs.apyx.fi/solution-overview/example-collateral-allocation/strc"
       }
     ],
-    "rationale": "The timestamped July 18 Accountable snapshot reports 62.3% STRC, 13.7% Protocol Owned Liquidity, 12.8% Cash & Equivalents, and 11.2% Inventory, normalized across the disclosed reserves. The same snapshot reports a 0.881615 collateralization ratio, a material 11.8385% deficit against full backing; the normalized composition must not be read as evidence of 100% liability coverage. The source does not disclose the internal assets or failure domains for the protocol-liquidity and inventory buckets, so both retain the conservative high-risk tier already used by the live adapter.",
+    "rationale": "The Accountable reserves_split snapshot timestamped 2026-07-19T20:33:36Z reports 62.3% STRC, 13.7% Protocol Owned Liquidity, 12.6% Cash & Equivalents, and 11.4% Inventory (the 0.004% 'Other' bucket rounds out), normalized across the disclosed reserves. The same snapshot reports a 0.881307 collateralization ratio, a material ~11.9% deficit against full backing; the normalized composition must not be read as evidence of 100% liability coverage. The source does not disclose the internal assets of the protocol-liquidity and inventory buckets, so both retain the conservative high-risk tier already used by the live adapter; their failure domain is the Apyx protocol itself.",
     "compositionBasis": "Timestamped Accountable reserves_split snapshot",
-    "compositionAsOf": "2026-07-18",
+    "compositionAsOf": "2026-07-19",
     "scope": "full-composition",
-    "knownUnknownExposure": "USDC cannot be isolated from Treasury backing in Cash & Equivalents, while the source-native Protocol Owned Liquidity and Inventory buckets do not disclose their constituent assets, obligors, or failure domains.",
+    "knownUnknownExposure": "USDC cannot be isolated from Treasury backing in Cash & Equivalents, while the source-native Protocol Owned Liquidity and Inventory buckets do not disclose their constituent assets.",
     "knownUnknownExposurePct": 37.7,
     "nonLinkDispositions": [
       {
@@ -606,12 +623,12 @@
         "reserveName": "Protocol Owned Liquidity",
         "pct": 13.7,
         "disposition": "insufficient-evidence",
-        "rationale": "The Accountable snapshot names the bucket but does not disclose its constituent assets or failure domains."
+        "rationale": "The Accountable snapshot names the bucket but does not disclose its constituent assets; its failure domain is the Apyx protocol."
       },
       {
         "reserveIndex": 2,
         "reserveName": "Cash & Equivalents (USDC, U.S. Treasury Bills)",
-        "pct": 12.8,
+        "pct": 12.6,
         "disposition": "basket-needs-split",
         "rationale": "The source reports one combined cash-and-Treasury category.",
         "candidateCoinIds": [
@@ -621,11 +638,45 @@
       {
         "reserveIndex": 3,
         "reserveName": "Inventory",
-        "pct": 11.2,
+        "pct": 11.4,
         "disposition": "insufficient-evidence",
-        "rationale": "The Accountable snapshot names the bucket but does not disclose its constituent assets or failure domains."
+        "rationale": "The Accountable snapshot names the bucket but does not disclose its constituent assets; its failure domain is the Apyx protocol."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed custodian(s) attested monthly by Wolf & Company",
+        "role": "custodian"
+      },
+      {
+        "name": "Apyx protocol contracts and accounts (Protocol Owned Liquidity and Inventory buckets)",
+        "role": "other",
+        "jurisdiction": "British Virgin Islands"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Apyx transparency documentation",
+        "url": "https://docs.apyx.fi/collateral-and-custody/transparency"
+      },
+      {
+        "label": "Apyx third-party attestation index (Wolf & Company, monthly)",
+        "url": "https://docs.apyx.fi/collateral-and-custody/third-party-attestation"
+      },
+      {
+        "label": "APYX Accountable dashboard",
+        "url": "https://accountable.apyx.fi/"
+      }
+    ],
+    "uncertainty": "Apyx states it works with custodians monthly to obtain attestations that backing assets exist and remain under custody control (Wolf & Company opinions published for March-May 2026), but the custodian identities, account segregation terms, bankruptcy-remoteness structure, and rehypothecation permissions are not disclosed in the reviewed documentation. The Protocol Owned Liquidity and Inventory buckets (25.1% of the 2026-07-19 reserves_split) are protocol-controlled with no stated custody arrangement."
   },
   "liveReservesConfig": {
     "adapter": "accountable",

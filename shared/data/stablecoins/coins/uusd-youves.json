@@ -693,27 +693,119 @@
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "reserves": [
     {
-      "name": "XTZ (Tezos)",
-      "pct": 60,
-      "risk": "high"
-    },
-    {
       "name": "USDt (Tether on Tezos)",
-      "pct": 20,
+      "pct": 91.26,
       "risk": "low",
-      "coinId": "usdt-tether"
-    },
-    {
-      "name": "tzBTC (wrapped Bitcoin)",
-      "pct": 10,
-      "risk": "medium"
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether Operations Limited (USDt on Tezos)",
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "SIRS (XTZ/tzBTC LP tokens)",
-      "pct": 10,
-      "risk": "high"
+      "pct": 6.59,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Youves SIRS liquidity-pool tokens (XTZ/tzBTC)",
+      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "XTZ (Tezos)",
+      "pct": 1.8,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Tezos native asset locked in Youves vault engines",
+      "riskFactors": ["market", "liquidity", "smart-contract"],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "tzBTC (wrapped Bitcoin)",
+      "pct": 0.35,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "tzBTC wrapped Bitcoin on Tezos",
+      "riskFactors": ["market", "custody", "liquidity", "smart-contract"],
+      "liquidityHorizon": "seven-days"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Finalized USDt V3 engine storage (Tezos level 14059094)",
+        "url": "https://api.tzkt.io/v1/contracts/KT1JmfujyCYTw5krfu9bSn7YbLYuz2VbNaje/storage?level=14059094"
+      },
+      {
+        "label": "Youves collateral details",
+        "url": "https://docs.youves.com/syntheticAssets/stableTokens/collateralManagement/Collateral-Management-Details/"
+      },
+      {
+        "label": "Pinned Youves mainnet engine registry",
+        "url": "https://github.com/youves-com/youves-sdk/blob/764ab33b49cbd132d952008f4259832d877fd4c6/src/networks.mainnet.ts#L850-L1070"
+      }
+    ],
+    "rationale": "Finalized Tezos state at level 14059094 (2026-07-14) shows uUSD debt of 11,172,864.36 across the active USDt V3 engine against 652,976.97 SIRS, 151,089.72 XTZ, and 34,460.85 tzBTC of debt across the remaining active and legacy engines, so the USDt branch carries about 93% of system debt. Weights are collateral-value estimates at each branch's enforced minimum collateral ratio (USDt 110%, SIRS/tzBTC 135%, XTZ 160%, legacy 200%), which normalizes the debt shares to 91.26/6.59/1.80/0.35 and replaces the stale 60/20/10/10 allocation that the pinned on-chain debt contradicts.",
+    "compositionBasis": "Finalized Youves engine debt at Tezos level 14059094 weighted by enforced minimum collateral ratios",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Actual per-vault collateralization exceeds the enforced minimums (target ratios are higher), so the crypto-branch shares are lower bounds and the USDt share an upper bound; savings-pool uUSD, accrued interest, and the SIRS LP token's internal XTZ/tzBTC split are not modeled. The uUSD savings pool holds deposited uUSD rather than reserve collateral and is excluded.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "SIRS (XTZ/tzBTC LP tokens)",
+        "pct": 6.59,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "SIRS is a Tezos-native LP token rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "XTZ (Tezos)",
+        "pct": 1.8,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "XTZ is an exogenous Layer-1 cryptoasset rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "tzBTC (wrapped Bitcoin)",
+        "pct": 0.35,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "tzBTC is a wrapped-Bitcoin cryptoasset rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Youves vault engine contracts (per collateral branch, Tezos)",
+        "role": "other",
+        "jurisdiction": "Tezos"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Youves collateral details",
+        "url": "https://docs.youves.com/syntheticAssets/stableTokens/collateralManagement/Collateral-Management-Details/"
+      },
+      {
+        "label": "Finalized USDt V3 engine storage (Tezos level 14059094)",
+        "url": "https://api.tzkt.io/v1/contracts/KT1JmfujyCYTw5krfu9bSn7YbLYuz2VbNaje/storage?level=14059094"
+      }
+    ],
+    "uncertainty": "Collateral is locked in per-user vaults inside the Youves engine contracts rather than with any custodian, and the protocol does not deploy vault collateral elsewhere by design. Engine administration resolves to the 4-of-7 FlatYouves DEX Admin multisig, and the documented oracle timestamp defect (millisecond reports accepted against a seconds-based freshness check) can impair branch liquidations. Legal segregation and bankruptcy-remoteness terms do not apply to contract custody."
+  },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",

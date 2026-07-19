@@ -205,5 +205,32 @@
         "rationale": "Anzens names the reserve categories but does not publish a current allocation among cash, cash equivalents, Treasury Bills, and Treasury-focused money-market funds."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "BitGo Trust Company (qualified custodian)",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Anzens USDA homepage",
+        "url": "https://www.anzens.com/"
+      },
+      {
+        "label": "Anzens terms and conditions",
+        "url": "https://www.anzens.com/landing/terms-and-conditions"
+      }
+    ],
+    "uncertainty": "Anzens states that USDA reserves are held in segregated accounts custodied by BitGo Trust, a qualified custodian, which implies trust-style segregation and bankruptcy remoteness of client assets. The reviewed sources do not publish account-level terms, whether any reserve share sits outside BitGo Trust, or explicit rehypothecation prohibitions.",
+    "knownUnknownExposurePct": 0
   }
 }

@@ -417,27 +417,39 @@
     {
       "name": "IOTA, stIOTA, and IBTC collateral",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Virtue CDP and Stability Pool Move objects on IOTA Rebased",
+      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-2 Safety Score V9 reserve review",
-    "confidence": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "probable",
     "sources": [
       {
         "label": "Virtue VUSD CDP documentation",
         "url": "https://docs.virtue.money/overview/what-is-vusd"
       },
       {
+        "label": "Virtue technical resources (CDP object IDs)",
+        "url": "https://docs.virtue.money/resources/technical-resources"
+      },
+      {
+        "label": "MoveBit Virtue CDP audit (2025-07-10)",
+        "url": "https://github.com/Virtue-CDP/virtue-audits/blob/main/Virtue-Audit-Movebit-20250710.pdf"
+      },
+      {
         "label": "VUSD package on IOTA Rebased",
         "url": "https://graphql.mainnet.iota.cafe"
       }
     ],
-    "rationale": "Virtue's reviewed IOTA checkpoint enumerates four debt-bearing collateral branches and their vault debt, but does not publish a current total collateral allocation or custody split that verifies the static 100% IOTA/stIOTA/iBTC fallback. The branch categories are retained without invented percentages or additional dependency edges.",
+    "rationale": "Virtue's reviewed IOTA checkpoint enumerates four debt-bearing collateral branches and their vault debt, but does not publish a current total collateral allocation or custody split that verifies the static 100% IOTA/stIOTA/iBTC fallback. The branch categories are retained without invented percentages or additional dependency edges. The live deployment is the Move-VM CDP on IOTA Rebased; the Dedaub-audited 'Virtue V2' Liquity fork for IOTA EVM shows no evidence of deployment, and current Virtue documentation names IOTA and stIOTA without confirming an IBTC branch, so the IBTC component remains unverified.",
     "compositionBasis": "Current branch inventory and collateral categories from Virtue documentation and IOTA package reads",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current collateral balances, collateral weights, and branch-level custody allocation are not published as a reconciled reserve composition.",
+    "knownUnknownExposure": "Current collateral balances, collateral weights, and branch-level custody allocation are not published as a reconciled reserve composition; the existence of an IBTC branch is not confirmed by current Virtue documentation.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -448,6 +460,37 @@
         "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Virtue CDP and Stability Pool Move objects on IOTA Rebased (package 0xd3b6...904f)",
+        "role": "other",
+        "jurisdiction": "IOTA"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Virtue technical resources (CDP object IDs)",
+        "url": "https://docs.virtue.money/resources/technical-resources"
+      },
+      {
+        "label": "MoveBit Virtue CDP audit (2025-07-10)",
+        "url": "https://github.com/Virtue-CDP/virtue-audits/blob/main/Virtue-Audit-Movebit-20250710.pdf"
+      },
+      {
+        "label": "VUSD coin on IOTAScan",
+        "url": "https://iotascan.com/mainnet/coin/0xd3b63e603a78786facf65ff22e79701f3e824881a12fa3268d62a75530fe904f::vusd::VUSD"
+      }
+    ],
+    "uncertainty": "Collateral is locked in non-custodial protocol Move objects rather than with any bank or custodian; the package is immutable but an AdminCap held by an EOA gates supply limits and module versions, and liquidations run through whitelisted executors with a 0.7% protocol fee on liquidated collateral. Legal segregation, bankruptcy remoteness, and rehypothecation terms are not documented for contract custody.",
+    "knownUnknownExposurePct": 100
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

@@ -133,6 +133,35 @@
       }
     ]
   },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "RAAC RWf(x) TokenBlender and Treasury contracts (Ethereum)",
+        "role": "other"
+      },
+      {
+        "name": "I-ON Digital (ION.au issuer and in-situ gold claim obligor)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "RAAC pmUSD documentation",
+        "url": "https://docs.raac.io/"
+      },
+      {
+        "label": "Chainlink ION proof of reserve feed",
+        "url": "https://data.chain.link/feeds/ethereum/mainnet/ion-por"
+      }
+    ],
+    "uncertainty": "pmUSD collateral is the TokenBlender base token held in RAAC's on-chain RWf(x) Treasury, minted against ION.au in-situ gold claims. The reviewed sources do not establish how ION.au gold claims are custodied or perfected, whether claim assets are segregated from I-ON Digital's estate, or any reuse terms; the Chainlink ION proof-of-reserve feed attests existence, not legal custody terms."
+  },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",

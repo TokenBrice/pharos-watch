@@ -60,6 +60,36 @@
       }
     ]
   },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Metronome Synth per-asset DepositToken and Pool contracts (Ethereum, Optimism, Base, Hemi)",
+        "role": "other"
+      },
+      {
+        "name": "Vesper pool contracts underlying va-token collateral",
+        "role": "other"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "conditional",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Metronome Synth supported assets",
+        "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol/supported-assets"
+      },
+      {
+        "label": "Metronome Synth contract addresses",
+        "url": "https://docs.metronome.io/metronome-synth/contracts"
+      }
+    ],
+    "uncertainty": "Collateral is pooled per asset in non-custodial DepositToken contracts with per-user debt tracked separately; plain assets (ETH, WBTC, USDC, DAI, FRAX) sit idle in those contracts, while Vesper va-token collateral (vaETH, vaUSDC, vaFRAX, and similar) represents positions whose underlying Vesper pools deploy capital into yield strategies by design — hence conditional reuse. No legal segregation, bankruptcy-remoteness, or rehypothecation terms exist for contract custody; published audits could not be located in primary sources.",
+    "knownUnknownExposurePct": 100
+  },
   "llamaId": "326",
   "detailProvider": "defillama",
   "geckoId": "metronome-synth-usd",

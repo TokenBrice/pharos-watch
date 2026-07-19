@@ -497,14 +497,91 @@
     {
       "name": "Senior secured private-credit loans",
       "pct": 95,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Hamilton Lane Senior Credit Opportunities Fund (SCOPE) underlying private borrowers",
+      "riskFactors": ["credit", "liquidity", "market", "concentration"],
+      "liquidityHorizon": "over-seven-days"
     },
     {
       "name": "Cash and liquidity buffer",
       "pct": 5,
-      "risk": "low"
+      "risk": "low",
+      "assetClass": "cash",
+      "issuerOrObligor": "Hamilton Lane SCOPE fund liquidity accounts",
+      "riskFactors": ["counterparty", "custody"],
+      "liquidityHorizon": "one-day"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Securitize HLSCOPE fund page",
+        "url": "https://securitize.io/primary-market/hl-scope"
+      },
+      {
+        "label": "Hamilton Lane SCOPE via Securitize announcement",
+        "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize"
+      }
+    ],
+    "rationale": "HLSCOPE is a tokenized feeder into Hamilton Lane's SCOPE senior credit opportunities fund, which targets floating-rate senior secured loans to private borrowers. The 95/5 split between senior secured loans and the cash liquidity buffer follows SCOPE's documented strategy of remaining predominantly invested with a liquidity sleeve; neither publisher discloses a current position-level holdings file, so the loan bucket is one aggregate classified exposure rather than invented obligor weights.",
+    "compositionBasis": "Securitize and Hamilton Lane SCOPE fund strategy disclosures; position-level holdings are undisclosed",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The underlying loan portfolio's obligors, sector weights, and current funded-versus-cash allocation are not published at position level; the 95/5 split is an approximation of the documented predominantly-invested strategy, not a reported allocation.",
+    "knownUnknownExposurePct": 95,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Senior secured private-credit loans",
+        "pct": 95,
+        "disposition": "insufficient-evidence",
+        "rationale": "SCOPE's private-credit positions are not published at position level, so the bucket cannot be split into reviewed obligor exposures."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Cash and liquidity buffer",
+        "pct": 5,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Fund-level cash is an external reserve asset rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Hamilton Lane (fund manager) underlying fund custodian",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Securitize (tokenization platform and transfer agent)",
+        "role": "other",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Securitize HLSCOPE fund page",
+        "url": "https://securitize.io/primary-market/hl-scope"
+      },
+      {
+        "label": "Hamilton Lane SCOPE via Securitize announcement",
+        "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize"
+      }
+    ],
+    "uncertainty": "HLSCOPE is a feeder-fund interest: fund assets sit with the underlying Hamilton Lane fund's custodian under a fund structure that is bankruptcy-remote from the tokenization entity by design, but the reviewed materials do not name the custodian or publish account-level segregation and reuse terms.",
+    "knownUnknownExposurePct": 100
+  },
   "yieldConfig": {
     "yieldSource": "Hamilton Lane SCOPE NAV",
     "yieldType": "nav-appreciation"

@@ -2,7 +2,7 @@
   "id": "mhyper-midas",
   "reserves": [
     {
-      "name": "Hyperithm market-neutral stablecoin strategies",
+      "name": "Hyperithm market-neutral stablecoin strategy NAV",
       "pct": 100,
       "risk": "high",
       "assetClass": "hedged-crypto",
@@ -12,8 +12,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-13",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
     "confidence": "verified",
     "sources": [
       {
@@ -29,16 +29,16 @@
         "url": "https://www.fordefi.com/customer-stories/how-midas-brings-tokenized-investment-opportunities-on-chain-with-fordefis-defi-native-custody-2ti85"
       }
     ],
-    "rationale": "mHYPER is a certificate tracking a managed market-neutral reference portfolio rather than a claim on one stablecoin. Public sources identify the strategy and attestation framework, but do not provide a durable position-level composition.",
-    "compositionBasis": "Current Midas product and attestation disclosures",
-    "compositionAsOf": "2026-07-13",
+    "rationale": "mHYPER is a certificate tracking a managed market-neutral reference portfolio rather than a claim on one stablecoin. The slice name is aligned to the exact live chainlink-nav adapter row identity so the reviewed classification overlays the captured NAV exposure; public sources identify the strategy and attestation framework, but do not provide a durable position-level composition.",
+    "compositionBasis": "Current Midas product and attestation disclosures; live NAV row identity from the Midas Chainlink NAV oracle adapter",
+    "compositionAsOf": "2026-07-20",
     "scope": "full-composition",
     "knownUnknownExposure": "The managed strategy's position-level assets, venues, and weights are not disclosed in a durable static composition.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Hyperithm market-neutral stablecoin strategies",
+        "reserveName": "Hyperithm market-neutral stablecoin strategy NAV",
         "pct": 100,
         "disposition": "insufficient-evidence",
         "rationale": "The strategy mandate is known, but current position-level stablecoin, protocol, and venue exposures are not available for reviewed links."

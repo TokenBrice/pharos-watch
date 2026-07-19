@@ -160,9 +160,61 @@
     {
       "name": "Hemi credit and crypto collateral",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "vCRED protocol vaults on Hemi",
+      "riskFactors": ["credit", "market", "liquidity", "smart-contract", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "vCRED official site",
+        "url": "https://vcred.trade/"
+      }
+    ],
+    "rationale": "vCRED's public materials describe programmable vaults on Hemi with single-sided staking and protocol-managed strategies, but publish no verifiable reserve composition, attestation, or per-position breakdown. The envelope is therefore one aggregate classified basket with an explicit insufficient-evidence disposition rather than invented weights.",
+    "compositionBasis": "vCRED public site; no verifiable reserve composition or attestation is published",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The credit-versus-crypto split, constituent assets, obligors, and weights inside the vCRED vaults are undisclosed.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Hemi credit and crypto collateral",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "No primary source publishes the vault composition, so the basket cannot be split or linked to tracked assets."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "vCRED programmable vault contracts (Hemi)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "vCRED official site",
+        "url": "https://vcred.trade/"
+      }
+    ],
+    "uncertainty": "vCRED describes smart-contract vaults with automated agents on Hemi; the reviewed sources do not establish who controls the vaults, any legal segregation or insolvency treatment, or whether deposited assets are redeployed beyond the described strategies.",
+    "knownUnknownExposurePct": 100
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

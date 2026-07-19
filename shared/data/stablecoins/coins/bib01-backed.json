@@ -301,7 +301,7 @@
     },
     "params": {
       "porFeedAddress": "0xad4395fc414fc1575a7a38c20b0bfdbdb09ee41a",
-      "assetLabel": "IB01 ETF shares (Chainlink LedgerLens PoR)",
+      "assetLabel": "iShares IB01 0-1 year U.S. Treasury bond ETF shares",
       "assetRisk": "very-low"
     }
   },

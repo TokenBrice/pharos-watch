@@ -358,8 +358,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
     "confidence": "probable",
     "sources": [
       {
@@ -383,9 +383,9 @@
         "url": "https://sourcify.dev/server/v2/contract/1/0xc80a5a2658fd44e76b0940773bd3c2c2cd9454de"
       }
     ],
-    "rationale": "Zoth describes ZeUSD as a CDP against Treasuries, ETFs, money-market funds, reverse repos, and on-chain RWAs. Its mechanics document specifies isolated smart-contract escrows for on-chain assets and traditional or omnibus escrow for off-chain assets. The V1 deployment registry labels the legacy V1 deployments \"Depricated\" and identifies historical USYC, wSTBT, T-Bill, and other sub-vaults. At Ethereum block 0x1859e17, the V1 token proxy resolved to 0xc80a5a2658fd44e76b0940773bd3c2c2cd9454de; the reviewed source exposes token/router controls but no aggregate reserve or liability-accounting view. No current ZeUSD allocation or attestation could be reconciled.",
-    "compositionBasis": "Zoth's stated ZeUSD eligible collateral categories and legacy V1 deployment inventory; current component weights are undisclosed",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "Re-verified 2026-07-20 against the mechanics page and Terms and Conditions fetched today: Zoth describes ZeUSD as minted against eligible RWA collateral (Treasuries, ETFs, money-market funds, reverse repos, and on-chain RWAs), secured through isolated access-controlled escrow smart-contract vaults for on-chain assets and traditional or omnibus escrow accounts for off-chain assets. The V1 deployment registry labels the legacy deployments 'Depricated', the tracked V1 router's shared deposit/redemption pause was active at the 2026-07-14 oracle review, and no current ZeUSD component allocation, balance, or attestation is published, so the single bounded envelope with a basket-needs-split disposition is retained rather than inventing weights.",
+    "compositionBasis": "Zoth's stated ZeUSD eligible collateral categories and custody mechanics re-fetched 2026-07-20; current component weights remain undisclosed",
+    "compositionAsOf": "2026-07-20",
     "scope": "full-composition",
     "knownUnknownExposure": "The current collateral positions, values, RWA issuers, escrow providers, cross-chain allocation, and assets-and-liabilities reconciliation are not published in accessible source material.",
     "knownUnknownExposurePct": 100,
@@ -398,6 +398,39 @@
         "rationale": "The issuer documents eligible collateral categories and historical V1 vaults, but not a current component allocation."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Zoth isolated access-controlled escrow smart-contract vaults on Ethereum (on-chain RWA collateral)",
+        "role": "other"
+      },
+      {
+        "name": "Undisclosed traditional or omnibus escrow account providers (off-chain RWA collateral)",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "mixed",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Zoth ZeUSD mechanics",
+        "url": "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token/mechanics-of-zeusd"
+      },
+      {
+        "label": "Zoth ZeUSD terms and conditions",
+        "url": "https://docs.zoth.io/zoth/legal/zeusd/terms-and-conditions"
+      },
+      {
+        "label": "Zoth contract deployments",
+        "url": "https://docs.zoth.io/zoth/tech-center/contract-deployments"
+      }
+    ],
+    "uncertainty": "The mechanics page and Terms document the custody channels — isolated access-controlled escrow smart-contract vaults for on-chain assets, and traditional escrow or omnibus accounts for off-chain assets — which grounds the mixed segregation rating, but they name no escrow agent, bank, or custodian, publish no account terms, and describe no trust, SPV, or other bankruptcy-remoteness structure, so bankruptcyRemoteness and rehypothecation remain unknown. The Terms assert a 'fully non-custodial CDP', which holds only for the smart-contract channel; the off-chain escrow channel is custodial by construction and its operator is unidentified. The Terms also give Zoth discretion to liquidate or reinvest collateral into the same RWA product. The tracked V1 is deprecated with a severe residual depeg and an active router pause (2026-07-14 review), and the March 2025 admin-key compromise that drained roughly $8.4M from a Zoth sub-vault is direct precedent that access-controlled vault custody can fail; the current collateral inventory, if any, is unreconciled."
   },
   "liveReservesConfig": {
     "adapter": "curated-validated",

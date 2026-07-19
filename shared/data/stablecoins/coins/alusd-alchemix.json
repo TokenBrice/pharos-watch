@@ -364,25 +364,41 @@
       "name": "DAI yield-token collateral",
       "pct": 80.2,
       "risk": "low",
-      "coinId": "dai-makerdao"
+      "coinId": "dai-makerdao",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "MakerDAO/Sky (DAI) via Alchemix-registered Yearn and Aave yield strategies",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity"],
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "USDC yield-token collateral",
       "pct": 15.9,
       "risk": "low",
-      "coinId": "usdc-circle"
+      "coinId": "usdc-circle",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle (USDC) via Alchemix-registered Yearn and Aave yield strategies",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity"],
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "USDT yield-token collateral",
       "pct": 0.4,
       "risk": "low",
-      "coinId": "usdt-tether"
+      "coinId": "usdt-tether",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether (USDT) via Alchemix-registered Yearn and Aave yield strategies",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity"],
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "FRAX yield-token collateral",
       "pct": 3.5,
       "risk": "low",
-      "coinId": "frax-frax"
+      "coinId": "frax-frax",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Frax (FRAX) via Alchemix-registered yield strategies",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity"],
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
@@ -413,6 +429,32 @@
     "scope": "selected-slices",
     "knownUnknownExposure": "All registered yield-token expected values in the observed Ethereum Alchemist were attributed to their on-chain underlying stablecoins; asset-wide L2, bridge, Transmuter, and AMO exposure remains unreconciled outside this selected slice.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Alchemix AlchemistV2 contracts and registered yield-strategy vaults (Yearn, Aave)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "AlchemistV2 on Etherscan",
+        "url": "https://etherscan.io/address/0x5C6374a2ac4EBC38DeA0Fc1F8716e5Ea1AdD94dd"
+      },
+      {
+        "label": "Alchemix collateral de-pegging documentation",
+        "url": "https://v2-docs.alchemix.fi/resources/guides/vault-losses-and-collateral-de-pegging"
+      }
+    ],
+    "uncertainty": "Collateral is deposited non-custodially into AlchemistV2 and routed into registered Yearn/Aave yield strategies, so custody is contract-based rather than with a legal custodian; legal segregation and insolvency treatment do not apply at the protocol layer, and underlying stablecoin issuers retain their own custody and freeze postures.",
+    "knownUnknownExposurePct": 100
   },
   "liveReservesConfig": {
     "adapter": "curated-validated",

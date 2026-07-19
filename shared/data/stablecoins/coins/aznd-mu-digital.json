@@ -115,17 +115,25 @@
     {
       "name": "Short Term Cash",
       "pct": 80.9,
-      "risk": "very-low"
+      "risk": "very-low",
+      "assetClass": "cash",
+      "issuerOrObligor": "GHAM-managed Singapore fund vehicle (bank deposit obligors undisclosed)",
+      "riskFactors": ["credit", "custody", "concentration"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "Liquid Bonds",
       "pct": 19.1,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "public-credit",
+      "issuerOrObligor": "Asia-Pacific sovereign, bank, and corporate bond issuers (GHAM-managed portfolio; constituents undisclosed)",
+      "riskFactors": ["credit", "duration", "liquidity", "market", "concentration"],
+      "liquidityHorizon": "seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SONG Safety Score V9 reserve review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
     "confidence": "probable",
     "sources": [
       {
@@ -139,12 +147,20 @@
       {
         "label": "MU Digital AZND mint and redeem terms",
         "url": "https://docs.mudigital.net/protocol-overview/asia-dollar-aznd/mint-redeem"
+      },
+      {
+        "label": "MU Digital risk management framework",
+        "url": "https://docs.mudigital.net/mechanics/risk-management-framework"
+      },
+      {
+        "label": "MU Digital transparency and reporting",
+        "url": "https://docs.mudigital.net/mechanics/transparency-and-reporting"
       }
     ],
-    "rationale": "The reviewed MU Digital disclosures and the latest checked-in Accountable snapshot support the disclosed AZND reserve envelope of 80.9% short-term cash and 19.1% liquid bonds. The product mandate also permits an Asia credit portfolio with illiquid private credit capped at 20%, while the muBOND junior tranche is described as absorbing losses before AZND; those are structural terms, not a current constituent-level reconciliation.",
-    "compositionBasis": "Latest checked-in Accountable snapshot and MU Digital product disclosures",
+    "rationale": "Re-verified the Mu Digital litepaper pages on 2026-07-20: the yield-mechanics page commits the Asset Pool to Asia-Pacific government (min BBB), corporate IG (min BBB-), bank (senior and subordinated), and high-yield (min BB) bonds plus private credit, and the risk framework caps illiquid private credit at 20% with a blended BBB target and average duration ~5. The 80.9% short-term cash / 19.1% liquid bonds split from the last checked-in Accountable snapshot remains the most recent constituent-level envelope; no newer dated snapshot was fetchable today. The 'Liquid Bonds' slice keeps the high tier: the documented mandate spans subordinated bank debt and BB high yield, the snapshot does not break out ratings, and under the uncertain-choose-riskier rule the credit taxonomy tier is retained rather than assuming an IG-only book. Redemptions run on a weekly Singapore fund calendar (~7 calendar days), so bond liquidity is mapped to seven-days.",
+    "compositionBasis": "Latest checked-in Accountable snapshot (80.9/19.1 envelope) re-checked against Mu Digital litepaper disclosures fetched 2026-07-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "The static envelope is disclosed, but the snapshot date, fund-level constituent identities, custody allocation, valuation reconciliation, and loss-recovery execution terms are not fully published in the reviewed materials.",
+    "knownUnknownExposure": "The static envelope is disclosed, but the snapshot date, fund-level constituent identities and ratings mix, custody allocation, valuation reconciliation, and loss-recovery execution terms are not fully published in the reviewed materials.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -162,6 +178,41 @@
         "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Regulated Singapore fund vehicle (custodian bank/prime broker unnamed in Mu Digital disclosures)",
+        "role": "custodian",
+        "jurisdiction": "Singapore"
+      },
+      {
+        "name": "Golden Hill Asset Management (GHAM), MAS CMS Licence CMS-101035 (portfolio manager, not custodian)",
+        "role": "other",
+        "jurisdiction": "Singapore"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "MU Digital yield mechanics (GHAM partnership)",
+        "url": "https://docs.mudigital.net/mechanics/how-we-generate-yield"
+      },
+      {
+        "label": "MU Digital transparency and reporting",
+        "url": "https://docs.mudigital.net/mechanics/transparency-and-reporting"
+      },
+      {
+        "label": "MU Digital risk management framework",
+        "url": "https://docs.mudigital.net/mechanics/risk-management-framework"
+      }
+    ],
+    "uncertainty": "Mu Digital's litepaper (fetched 2026-07-20) states the Asset Pool is managed by GHAM under a MAS Capital Markets Services licence and held in a regulated fund vehicle, but it does not name the fund's custodian bank, sub-custodians, or the prime broker that provides the documented liquidity credit lines. The transparency page commits to Pennyworks NAV accounting and to onchain Treasury Wallets 'segregated from the Company's operational funds', but it documents no trust, SPV, or holder-claim structure for the fund assets themselves, so segregation and bankruptcy-remoteness terms are unpublished. No rehypothecation or collateral-reuse terms are disclosed for either the bond portfolio or the prime-broker credit lines. Provider shares are not published; the 80.9/19.1 reserve envelope carries no custody split."
   },
   "yieldConfig": {
     "yieldSource": "Mu Digital loAZND vault",

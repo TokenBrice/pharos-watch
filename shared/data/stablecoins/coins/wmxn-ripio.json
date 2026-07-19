@@ -479,5 +479,31 @@
     "knownUnknownExposure": "No reserve asset class is unclassified; the Mexican financial institution, account type, and withdrawal liquidity are undisclosed.",
     "knownUnknownExposurePct": 0
   },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed Mexican bank (single reserve account)",
+        "role": "bank",
+        "jurisdiction": "Mexico"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Independent public accountant certification for wMXN - March 2026",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wMXN__Token-Certification.pdf"
+      },
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      }
+    ],
+    "uncertainty": "The March 31, 2026 certification by Pablo Eduardo Soto (Certified Public Accountant, Professional Council of Economic Sciences of CABA) reconciled 518,689 outstanding wMXN to MXN 937,364.13 on a Mexican bank statement but is expressly not an audit or review — it is an agreed-procedures certification on client-supplied documents, and it is the first wMXN attestation published. The bank is not named; account segregation, insolvency protections, and rehypothecation terms are undisclosed, and the certified collateral-to-token surplus (~1.81x) is unexplained in the document."
+  },
   "launchDate": "2025-07-11"
 }

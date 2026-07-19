@@ -763,6 +763,7 @@
       "coinId": "usdt-tether",
       "depType": "collateral",
       "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether (USDT issuer) held at Falcon custodians",
       "riskFactors": ["counterparty", "custody", "smart-contract", "concentration"],
       "liquidityHorizon": "immediate"
     },
@@ -773,6 +774,7 @@
       "coinId": "usdc-circle",
       "depType": "collateral",
       "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle (USDC issuer) held at Falcon custodians",
       "riskFactors": ["counterparty", "custody", "smart-contract", "concentration"],
       "liquidityHorizon": "immediate"
     },
@@ -860,6 +862,47 @@
         "rationale": "ETH and liquid-staking collateral are external crypto backing rather than tracked stablecoin dependencies."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Falcon-controlled multisig wallets",
+        "role": "other",
+        "sharePct": 95.4
+      },
+      {
+        "name": "Ceffu",
+        "role": "custodian",
+        "sharePct": 2.5
+      },
+      {
+        "name": "Fireblocks",
+        "role": "custodian",
+        "sharePct": 2
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "conditional",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Falcon transparency API (per-venue custody breakdown)",
+        "url": "https://api.falcon.finance/api/v1/transparency"
+      },
+      {
+        "label": "Falcon Finance transparency and security guide",
+        "url": "https://falcon.finance/news/a-guide-to-transparency-and-security-in-falcon-finance"
+      },
+      {
+        "label": "Falcon transparency dashboard",
+        "url": "https://app.falcon.finance/transparency"
+      }
+    ],
+    "uncertainty": "The issuer's live transparency API attributes each reserve asset to three custody venues; at the 2026-07-17 snapshot roughly 95.4% sat in Falcon-labelled multisig wallets, 2.6% at Ceffu, and 2.1% at Fireblocks (venue shares shift over time). Falcon states that Fireblocks and Ceffu provide MPC custody and off-exchange settlement, but the reviewed sources do not establish account-level segregation, insolvency treatment, or signer structure, and reserve assets are actively deployed into trading and yield strategies, so reuse is inherent to the strategy.",
+    "knownUnknownExposurePct": 0
   },
   "liveReservesConfig": {
     "adapter": "falcon",

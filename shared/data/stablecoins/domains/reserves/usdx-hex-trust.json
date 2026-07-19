@@ -6,6 +6,7 @@
       "pct": 100,
       "risk": "very-low",
       "assetClass": "other",
+      "issuerOrObligor": "United States Treasury and undisclosed financial institutions holding USDX cash and cash-equivalent balances",
       "riskFactors": ["counterparty", "duration", "liquidity", "custody", "concentration"],
       "liquidityHorizon": "unknown"
     }

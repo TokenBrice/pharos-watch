@@ -368,13 +368,21 @@
     {
       "name": "sICX (staked ICX) collateral on ICON",
       "pct": 90,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "ICON network staked-ICX positions in Balanced Loans contracts",
+      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "Cross-chain Hub and Stability Fund collateral (BTC, ETH, BNB, AVAX, INJ, USDC, USDT and other bridged assets)",
       "pct": 10,
       "risk": "high",
-      "blacklistable": true
+      "blacklistable": true,
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Balanced cross-chain Hub and Stability Fund positions across bridged-asset issuers",
+      "riskFactors": ["market", "liquidity", "smart-contract", "counterparty", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -412,6 +420,32 @@
         "rationale": "The historical v1 row is not treated as a current reserve allocation after the documented v2 transition."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Balanced Loans and Stability Fund contracts (ICON and cross-chain Hub)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Balanced v1 transition guide",
+        "url": "https://docs.balanced.network/"
+      },
+      {
+        "label": "Balanced stablecoin page",
+        "url": "https://balanced.network/stablecoin/"
+      }
+    ],
+    "uncertainty": "bnUSD collateral sits in Balanced's on-chain loan and Stability Fund contracts rather than with a legal custodian. Following the documented April 2026 v2 transition, the current v2 contract custody structure is not established in the reviewed sources; bridged collateral constituents additionally carry their own bridge and issuer custody layers.",
+    "knownUnknownExposurePct": 100
   },
   "launchDate": "2021-04-25"
 }

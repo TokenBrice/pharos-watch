@@ -192,5 +192,36 @@
     "knownUnknownExposure": "The reserve asset class and protocol reserve contract are identified, but current ADA balance, reserve account state, and operational custody details are not disclosed in the reviewed public sources.",
     "knownUnknownExposurePct": 0
   },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Djed reserve pool script address on Cardano",
+        "role": "other",
+        "jurisdiction": "Cardano"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Djed live transparency dashboard",
+        "url": "https://djed.xyz"
+      },
+      {
+        "label": "Djed reserve pool script address (Cardanoscan)",
+        "url": "https://cardanoscan.io/address/addr1z8mcpc26j64fmhhd6sv5qj5mk9xqnfxgm6k8zmk7h2rlu4qm5kjdmrpmng059yellupyvwgay2v0lz6663swmds7hp0qhxg9gt"
+      },
+      {
+        "label": "Open Djed community registry (contract addresses)",
+        "url": "https://github.com/artifi-labs/open-djed"
+      }
+    ],
+    "uncertainty": "Reserves are ADA locked at a dedicated Cardano script address with no custodian; the pool balance (about 28.99M ADA on 2026-07-19) is independently verifiable on-chain. COTI has not officially published the contract addresses — the inventory comes from the community-maintained open-djed registry — and the pre-launch audit COTI announced was never published with an auditor name or report. Legal bankruptcy-remoteness and rehypothecation terms do not apply to script custody; the reserve is delegated (staked) but not lent out.",
+    "knownUnknownExposurePct": 0
+  },
   "launchDate": "2023-01-31"
 }

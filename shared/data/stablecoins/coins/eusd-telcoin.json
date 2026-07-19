@@ -291,13 +291,17 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
     "confidence": "probable",
     "sources": [
       {
         "label": "Telcoin Digital Asset Bank",
         "url": "https://bank.telco.in/"
+      },
+      {
+        "label": "Telcoin eUSD bank page",
+        "url": "https://bank.telco.in/eUSD"
       },
       {
         "label": "Telcoin Digital Cash",
@@ -308,8 +312,9 @@
         "url": "https://bank.telco.in/terms-of-use"
       }
     ],
-    "rationale": "Telcoin describes eUSD as a bank-issued Digital Dollar connected to traditional banking and payments infrastructure. The reviewed primary sources do not publish current eUSD reserve balances, asset-class weights, named counterparties, or an external assurance report, so the existing 100% aggregate reserve envelope is retained without fabricated subcategories.",
+    "rationale": "Re-verified 2026-07-20: Telcoin describes eUSD as a bank-issued Digital Dollar connected to traditional banking and payments infrastructure under Nebraska Digital Asset Depository Charter No. 001. The bank.telco.in and bank.telco.in/eUSD pages fetched today publish the statutory risk disclosure (not FDIC-insured, not government-guaranteed) but still name no reserve asset classes, weights, reserve institutions, or auditor, and no monthly attestation report has appeared since the 2026-07-14 review. The existing 100% aggregate reserve envelope is retained without fabricated subcategories; confidence stays probable on issuer-primary disclosure of the envelope only.",
     "compositionBasis": "Telcoin Digital Asset Bank and Digital Cash issuer disclosures for eUSD",
+    "compositionAsOf": "2026-07-20",
     "scope": "full-composition",
     "knownUnknownExposure": "The full 100% reserve envelope lacks current category weights, named reserve institutions, and assurance evidence. Telcoin states that monthly attestations will be published, but no eUSD report was located in the reviewed sources.",
     "knownUnknownExposurePct": 100,
@@ -344,8 +349,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
     "confidence": "probable",
     "sources": [
       {
@@ -357,7 +362,7 @@
         "url": "https://bank.telco.in/terms-of-use"
       }
     ],
-    "uncertainty": "The reviewed sources identify Telcoin's bank-issued framework but do not identify the eUSD reserve accounts, counterparties, legal segregation, bankruptcy treatment, or rehypothecation terms. The profile remains unknown until eUSD-specific reporting is published."
+    "uncertainty": "Re-checked 2026-07-20: the reviewed sources identify Telcoin's bank-issued framework but do not identify the eUSD reserve accounts, counterparties, legal segregation, bankruptcy treatment, or rehypothecation terms. The profile remains unknown until eUSD-specific reporting is published."
   },
   "liveReservesConfig": {
     "adapter": "curated-validated",

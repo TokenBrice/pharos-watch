@@ -92,12 +92,60 @@
     {
       "name": "Hive protocol conversion capacity",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Hive blockchain protocol (witness median price-feed conversion)",
+      "riskFactors": ["market", "liquidity", "concentration"],
+      "liquidityHorizon": "seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Hive Backed Dollar overview",
+        "url": "https://hive.io/hbd/"
+      },
+      {
+        "label": "Hive dynamic global properties documentation",
+        "url": "https://developers.hive.io/tutorials-recipes/understanding-dynamic-global-properties.html"
+      },
+      {
+        "label": "Hive glossary (HBD conversion and haircut mechanics)",
+        "url": "https://developers.hive.io/glossary/"
+      }
+    ],
+    "rationale": "HBD is a native Hive protocol liability, not a claim on a segregated reserve portfolio: there are no asset reserves, only the protocol's conversion rule paying $1 of HIVE per HBD at the 3.5-day median witness price, bounded by the debt-ratio haircut. Live chain properties at 2026-07-19 report about 32.4M HBD outstanding with the DHF account itself holding roughly 72% of supply, and the community HBD stabilizer bot is inactive, so peg defense rests on conversions, the haircut, and the witness-set savings rate.",
+    "compositionBasis": "Hive protocol conversion and haircut mechanism confirmed against live chain properties",
+    "compositionAsOf": "2026-07-19",
+    "scope": "full-composition",
+    "knownUnknownExposure": "There is no external reserve custodian, asset allocation, or legally segregated collateral pool. HBD holders instead depend on Hive protocol value, witness-set price submissions, and the protocol debt-limit and haircut rules; whether the protocol's debt-ratio accounting nets out DHF-held HBD is not definitively documented in the reviewed sources.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Hive protocol conversion capacity",
+        "pct": 100,
+        "disposition": "self-reserve",
+        "rationale": "Backing is the Hive protocol's own conversion capacity denominated in HIVE market value — a self-referential protocol reserve rather than an exogenous asset or tracked stablecoin."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Hive base-layer protocol (conversion mechanism; no reserve custodian)",
+        "role": "other",
+        "jurisdiction": "Hive"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
     "confidence": "verified",
     "sources": [
       {
@@ -109,10 +157,7 @@
         "url": "https://developers.hive.io/tutorials-recipes/understanding-dynamic-global-properties.html"
       }
     ],
-    "rationale": "HBD is a native Hive protocol liability, not a claim on a segregated reserve portfolio. Hive documents the reciprocal HIVE/HBD conversions and the debt-ratio haircut that bounds the conversion mechanism.",
-    "compositionBasis": "Hive protocol conversion and haircut mechanism",
-    "scope": "full-composition",
-    "knownUnknownExposure": "There is no external reserve custodian, asset allocation, or legally segregated collateral pool. HBD holders instead depend on Hive protocol value, witness-set price submissions, and the protocol debt-limit and haircut rules.",
+    "uncertainty": "HBD has no reserve assets to custody: backing is the protocol-native conversion rule against HIVE market value. Custody concepts (segregation, bankruptcy remoteness, rehypothecation) do not apply; the operative risks are witness price-feed integrity, the 3.5-day conversion delay, and the debt-ratio haircut degrading the $1 conversion rate when protocol debt is high.",
     "knownUnknownExposurePct": 0
   },
   "yieldConfig": {

@@ -296,26 +296,108 @@
     {
       "name": "BMMF Turkey FX arbitrage (Balsa Technologies, delta-neutral TRY/USD)",
       "pct": 50,
-      "risk": "very-high"
+      "risk": "very-high",
+      "assetClass": "other",
+      "issuerOrObligor": "Balsa Technologies (BMMF strategy operator) and Turkish crypto-market counterparties",
+      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity", "legal", "concentration"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "DeFi protocols (Giza, Almanak, USD.AI, Ethena, Aave, Cap)",
       "pct": 40,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Giza, Almanak, USD.AI, Ethena, Aave, and Cap protocol positions",
+      "riskFactors": ["smart-contract", "counterparty", "market", "liquidity", "concentration"],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Cash stablecoins (USDC buffer)",
       "pct": 5,
       "risk": "low",
-      "coinId": "usdc-circle"
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle (USDC)",
+      "riskFactors": ["counterparty", "liquidity", "custody"],
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "Cash stablecoins (USDT buffer)",
       "pct": 5,
       "risk": "low",
-      "coinId": "usdt-tether"
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether (USDT)",
+      "riskFactors": ["counterparty", "liquidity", "custody"],
+      "liquidityHorizon": "immediate"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-1 (lead usde-ethena)",
+    "confidence": "unknown",
+    "sources": [
+      {
+        "label": "Piku documentation",
+        "url": "https://docs.piku.co/piku"
+      },
+      {
+        "label": "Stablewatch Piku USP analysis (secondary corroboration of the 50% BMMF allocation)",
+        "url": "https://www.stablewatch.io/research/piku-yield-optimized-stablecoin"
+      }
+    ],
+    "rationale": "Piku's own documentation describes the backing model (BMMF Turkey FX arbitrage, DeFi yield allocations, RWA, and cash stablecoin buffers) but publishes no dated allocation, attestation, or reserve dashboard. The 50/40/5/5 category weights are retained as an unaudited approximation consistent with third-party Stablewatch research (October 2025: ~50% BMMF arbitrage, ~50% across six DeFi protocols); they are not issuer-attested and are treated as bounded-unknown exposure.",
+    "compositionBasis": "Issuer strategy-category documentation crossed with secondary research; no issuer-published weights or attestation",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The 50% BMMF off-chain arbitrage leg has no published operator statements, venue, or custody detail, and the 40% DeFi allocation has no published per-protocol weights; only the 10% cash stablecoin buffer is identity-resolved.",
+    "knownUnknownExposurePct": 90,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "BMMF Turkey FX arbitrage (Balsa Technologies, delta-neutral TRY/USD)",
+        "pct": 50,
+        "disposition": "insufficient-evidence",
+        "rationale": "Off-chain delta-neutral strategy run by a single named operator with no published attestations, venues, or position detail."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "DeFi protocols (Giza, Almanak, USD.AI, Ethena, Aave, Cap)",
+        "pct": 40,
+        "disposition": "basket-needs-split",
+        "rationale": "Issuer materials name the protocol set but publish no per-protocol weights, so the slice cannot be linked to a single tracked asset.",
+        "candidateCoinIds": ["usde-ethena", "usdai-usd-ai", "stcusd-cap"]
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Balsa Technologies (BMMF off-chain strategy operator)",
+        "role": "other"
+      },
+      {
+        "name": "PikuDAO-governed on-chain strategy contracts",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-1 (lead usde-ethena)",
+    "confidence": "unknown",
+    "sources": [
+      {
+        "label": "Piku documentation",
+        "url": "https://docs.piku.co/piku"
+      }
+    ],
+    "uncertainty": "Piku publishes no custodian identities, account structures, or insolvency terms for either the off-chain BMMF leg or the on-chain DeFi allocations. Reserve deployment into third-party strategies is the disclosed design; whether any independent custodian holds assets is not documented."
+  },
   "yieldConfig": {
     "yieldSource": "Turkey-FX delta-neutral arbitrage (BMMF) plus DeFi protocol allocations",
     "yieldType": "nav-appreciation"

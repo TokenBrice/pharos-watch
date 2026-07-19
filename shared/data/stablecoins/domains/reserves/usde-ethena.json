@@ -2,54 +2,55 @@
   "id": "usde-ethena",
   "reserves": [
     {
-      "name": "Liquid Cash strategy basket",
-      "pct": 99,
-      "risk": "medium",
-      "assetClass": "other",
-      "issuerOrObligor": "Ethena reserve stablecoin issuers, lending protocols, RWA issuers, and institutional borrowers",
-      "riskFactors": [
-        "credit",
-        "counterparty",
-        "custody",
-        "smart-contract",
-        "market",
-        "basis",
-        "liquidity",
-        "duration",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "BTC collateral",
-      "pct": 0.6,
-      "risk": "medium",
-      "assetClass": "hedged-crypto",
-      "issuerOrObligor": "Ethena off-exchange custodians and derivatives venues for BTC collateral",
-      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity", "concentration"],
+      "name": "Liquid stablecoins (USDT, USDC, USDtb, PYUSD)",
+      "pct": 45.67,
+      "risk": "low",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether (USDT), Circle (USDC), Ethena/Securitize (USDtb), and PayPal/Paxos (PYUSD)",
+      "riskFactors": ["credit", "custody", "liquidity", "concentration"],
       "liquidityHorizon": "one-day"
     },
     {
-      "name": "ETH / liquid staking collateral",
-      "pct": 0.4,
+      "name": "DeFi lending positions (Aave, Morpho)",
+      "pct": 34.83,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave and Morpho lending protocol markets",
+      "riskFactors": ["smart-contract", "counterparty", "liquidity", "market", "concentration"],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Tokenized AAA CLO funds (JAAA, STAC)",
+      "pct": 12.43,
+      "risk": "high",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Janus Henderson Anemoy (JAAA) and Securitize (STAC) AAA CLO tokenized funds",
+      "riskFactors": ["credit", "duration", "liquidity", "concentration"],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "Institutional lending (BTC-collateralized)",
+      "pct": 6.08,
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Undisclosed institutional borrowers under BTC-collateralized loan agreements",
+      "riskFactors": ["credit", "counterparty", "liquidity", "concentration"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Delta-hedged crypto collateral (BTC, ETH, BNB)",
+      "pct": 0.99,
       "risk": "medium",
       "assetClass": "hedged-crypto",
-      "issuerOrObligor": "Ethena off-exchange custodians, liquid-staking issuers, and derivatives venues for ETH collateral",
-      "riskFactors": [
-        "market",
-        "basis",
-        "counterparty",
-        "custody",
-        "liquidity",
-        "smart-contract",
-        "concentration"
-      ],
+      "issuerOrObligor": "Ethena off-exchange custodians (Copper, Ceffu, Fireblocks) and derivatives venues",
+      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity", "concentration"],
       "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-1 (lead usde-ethena)",
     "confidence": "verified",
     "sources": [
       {
@@ -69,34 +70,49 @@
         "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail"
       }
     ],
-    "rationale": "The exact source-native adapter output is retained at 99.0% Liquid Cash strategy basket, 0.6% BTC collateral, and 0.4% ETH / liquid staking collateral from the July 15 issuer snapshot. Ethena's same-day strategy breakdown shows that the Liquid Cash identity is a mixed accounting basket spanning liquid stables, DeFi lending, RWA, institutional lending, and crypto-basis strategies, so it is classified as medium risk rather than falsely treated as pure stablecoin exposure.",
-    "compositionBasis": "Exact Ethena live-reserve adapter identities and rounded weights, interpreted with the same-day issuer strategy breakdown",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "Ethena's collateral positions API reports a single 99.0% Liquid Cash aggregate, but the issuer's same-timestamp strategy breakdown API distributes exactly that aggregate across Liquid Stables (45.67%: USDT, USDC, USDtb, PYUSD), DeFi Lending (34.83%: Aave, Morpho), RWA (12.43%: JAAA, STAC), and Institutional Lending (6.08%: BTC-collateralized), with the remaining 0.99% matching the per-asset delta-hedged crypto rows (BTC 0.55%, ETH 0.42%, BNB and LST dust ~0.02%). The curated composition therefore replaces the prior aggregate Liquid Cash row with the issuer-published strategy categories. Per-constituent weights inside the stablecoin and RWA categories are not published, so those two categories stay bounded as baskets.",
+    "compositionBasis": "Ethena real-time collateral positions API crossed with the same-timestamp issuer strategy breakdown API (snapshot 2026-07-19T15:00:32Z); category weights used as published, no estimates",
+    "compositionAsOf": "2026-07-19",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 99% source-native Liquid Cash row remains an aggregate basket. Ethena publishes same-day strategy-category weights, but not a one-to-one constituent and failure-domain split for the exact adapter identity.",
-    "knownUnknownExposurePct": 99,
+    "knownUnknownExposure": "The 45.67% Liquid Stables category is an issuer-labeled basket of USDT, USDC, USDtb, and PYUSD without published per-stablecoin weights, and the 12.43% RWA category is a basket of JAAA and STAC fund shares without published per-fund weights. Constituent-level allocation and failure-domain splits for both baskets remain issuer-undisclosed.",
+    "knownUnknownExposurePct": 58.1,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Liquid Cash strategy basket",
-        "pct": 99,
+        "reserveName": "Liquid stablecoins (USDT, USDC, USDtb, PYUSD)",
+        "pct": 45.67,
         "disposition": "basket-needs-split",
-        "rationale": "The scored live identity aggregates stablecoins, lending strategies, RWA, institutional lending, and crypto-basis positions without a compatible constituent and failure-domain allocation.",
-        "candidateCoinIds": ["usdtb-ethena", "usdc-circle", "usdt-tether", "pyusd-paypal"]
+        "rationale": "Ethena publishes the category total and constituent list (USDT, USDC, USDtb, PYUSD) but not per-stablecoin weights, so no single tracked coinId can be linked without fabrication.",
+        "candidateCoinIds": ["usdt-tether", "usdc-circle", "usdtb-ethena", "pyusd-paypal"]
       },
       {
         "reserveIndex": 1,
-        "reserveName": "BTC collateral",
-        "pct": 0.6,
+        "reserveName": "DeFi lending positions (Aave, Morpho)",
+        "pct": 34.83,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "BTC backing and its paired derivatives positions are external crypto exposures rather than tracked stablecoin dependencies."
+        "rationale": "Aave and Morpho lending market positions are protocol exposures, not tracked stablecoin dependencies."
       },
       {
         "reserveIndex": 2,
-        "reserveName": "ETH / liquid staking collateral",
-        "pct": 0.4,
+        "reserveName": "Tokenized AAA CLO funds (JAAA, STAC)",
+        "pct": 12.43,
+        "disposition": "basket-needs-split",
+        "rationale": "Ethena discloses the two fund identities (JAAA and STAC) but not their relative weights inside the RWA category, so the slice cannot be linked to one tracked coinId.",
+        "candidateCoinIds": ["jaaa-janus-henderson-anemoy", "stac-securitize"]
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "Institutional lending (BTC-collateralized)",
+        "pct": 6.08,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "ETH and liquid-staking backing with paired derivatives positions are external crypto exposures rather than tracked stablecoin dependencies."
+        "rationale": "BTC-collateralized loans to undisclosed institutional borrowers are external private-credit exposure, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "Delta-hedged crypto collateral (BTC, ETH, BNB)",
+        "pct": 0.99,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "BTC, ETH, and BNB backing with paired derivatives hedges are external crypto exposures rather than tracked stablecoin dependencies."
       }
     ]
   },
@@ -118,8 +134,8 @@
     "segregation": "omnibus",
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-13",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-1 (lead usde-ethena)",
     "confidence": "verified",
     "sources": [
       {
@@ -131,6 +147,6 @@
         "url": "https://docs.ethena.fi/backing-custody-and-security/real-time-dashboards"
       }
     ],
-    "uncertainty": "Ethena names multiple off-exchange settlement providers and states that protocol assets remain beneficially owned by the protocol, while Copper and Ceffu use commingled omnibus wallets. Provider allocation shares and contractual outcomes in each provider or exchange insolvency are not public."
+    "uncertainty": "Ethena names Copper, Ceffu, and Fireblocks as off-exchange settlement providers and states that protocol assets remain beneficially owned by the protocol, while Copper and Ceffu use commingled omnibus wallets. Provider allocation shares across the stablecoin, DeFi lending, RWA, institutional lending, and crypto-basis categories, and contractual outcomes in each provider or exchange insolvency, are not public."
   }
 }

@@ -403,8 +403,8 @@
       }
     },
     "params": {
-      "label": "Physical silver bars",
-      "risk": "very-low"
+      "label": "Physical silver bars (LBMA Good Delivery, Asian vault custody)",
+      "risk": "medium"
     }
   },
   "notices": [

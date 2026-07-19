@@ -1332,59 +1332,123 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "WBTC",
-      "pct": 52.36,
+      "name": "Custodied BTC (ex: wBTC/cbBTC)",
+      "pct": 55.1,
       "risk": "medium",
-      "blacklistable": true
+      "blacklistable": true,
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "BitGo (WBTC) and Coinbase (cbBTC) custodied Bitcoin wrappers",
+      "riskFactors": ["custody", "counterparty", "market", "liquidity"],
+      "liquidityHorizon": "immediate"
     },
     {
-      "name": "wstETH",
-      "pct": 23.95,
-      "risk": "low"
+      "name": "ETH",
+      "pct": 22.4,
+      "risk": "very-low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum native asset (no issuer or custodian layer)",
+      "riskFactors": ["market"],
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "tBTC",
-      "pct": 9.9,
-      "risk": "medium"
-    },
-    {
-      "name": "WETH",
-      "pct": 5.26,
-      "risk": "very-low"
-    },
-    {
-      "name": "sfrxETH",
-      "pct": 4.29,
-      "risk": "low"
-    },
-    {
-      "name": "cbBTC",
-      "pct": 3.73,
+      "pct": 12.6,
       "risk": "medium",
-      "blacklistable": true
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Threshold Network tBTC bridge and signer set",
+      "riskFactors": ["custody", "counterparty", "market", "smart-contract"],
+      "liquidityHorizon": "immediate"
     },
     {
-      "name": "weETH",
-      "pct": 0.5,
-      "risk": "low"
+      "name": "wstETH / sfrxETH / weETH",
+      "pct": 9.9,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Lido (wstETH), Frax (sfrxETH), and Ether.fi (weETH) liquid staking issuers",
+      "riskFactors": ["market", "smart-contract", "liquidity"],
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex dependency review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
     "confidence": "verified",
     "sources": [
       {
         "label": "Curve crvUSD markets API",
         "url": "https://prices.curve.finance/v1/crvusd/markets"
+      },
+      {
+        "label": "Curve crvUSD markets overview",
+        "url": "https://www.curve.finance/crvusd/"
       }
     ],
-    "rationale": "Weights are each market's current debt share from the official API. PegKeeper counterassets are stabilization-pool counterparties, not serial claims or proportional collateral, so the prior equal-weight dependency links are removed.",
-    "compositionBasis": "Current crvUSD debt outstanding by LLAMMA collateral market",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "The prior per-market debt-share rows (WBTC, wstETH, tBTC, WETH, sfrxETH, cbBTC, weETH) never matched the live crvusd reserve adapter, which buckets on-chain LLAMMA band balances plus the Yield Basis collateral leg into four canonical exposures, so the v9 classification overlay could not attach. The envelope is restated on the adapter's exact bucket identities and 2026-07-19 captured weights; the adapter refreshes weights at runtime and each bucket now carries a complete failure-domain identity. PegKeeper counterassets remain stabilization-pool counterparties, not proportional collateral.",
+    "compositionBasis": "Live crvusd reserve adapter bucket identities and weights captured 2026-07-19 from Curve ControllerFactory/LLAMMA band balances and the Yield Basis on-chain collateral leg",
+    "compositionAsOf": "2026-07-19",
     "scope": "full-composition",
-    "knownUnknownExposure": "No material collateral market is unidentified; rounding and the de minimis LBTC market explain the 0.01% display remainder.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "All four live collateral buckets are identified; per-market constituents inside each bucket (e.g. WBTC vs cbBTC vs LBTC) change with market usage and are aggregated by design.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Custodied BTC (ex: wBTC/cbBTC)",
+        "pct": 55.1,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Custodied Bitcoin wrappers are external crypto collateral, not tracked stablecoin dependencies."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "ETH",
+        "pct": 22.4,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Native ETH is external crypto collateral, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "tBTC",
+        "pct": 12.6,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "tBTC is external crypto collateral, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "wstETH / sfrxETH / weETH",
+        "pct": 9.9,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Liquid staking tokens are external crypto collateral, not tracked stablecoin dependencies."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Curve LLAMMA per-market AMM and Controller contracts",
+        "role": "other"
+      },
+      {
+        "name": "Curve Yield Basis LT market contracts",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Curve crvUSD technical documentation",
+        "url": "https://docs.curve.finance/crvUSD/overview/"
+      },
+      {
+        "label": "Curve crvUSD markets API",
+        "url": "https://prices.curve.finance/v1/crvusd/markets"
+      }
+    ],
+    "uncertainty": "Collateral is held non-custodially in per-market LLAMMA AMM contracts and Yield Basis market contracts, with WBTC/cbBTC and tBTC introducing their own custodian and bridge layers. There is no issuer bankruptcy estate for the on-chain collateral itself, but wrapper-level custody, legal segregation, and reuse terms sit with the wrapper issuers and are not established by the reviewed sources.",
+    "knownUnknownExposurePct": 100
   },
   "liveReservesConfig": {
     "adapter": "crvusd",

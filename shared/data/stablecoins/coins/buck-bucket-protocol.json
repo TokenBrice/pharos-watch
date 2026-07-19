@@ -2941,5 +2941,35 @@
       }
     ]
   },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Bucket Protocol V1 CDP collateral vault contracts (Sui)",
+        "role": "other"
+      },
+      {
+        "name": "Bucket Protocol Peg Stability Module contract (Sui)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Bucket technical resources",
+        "url": "https://docs.bucketprotocol.io/developer-and-security/technical-resources"
+      },
+      {
+        "label": "Pinned Bucket V1 interface and deployment registry",
+        "url": "https://github.com/Bucket-Protocol/bucket-interface/tree/5215a1e65107406b71acdae78dc7cfb96ba45789"
+      }
+    ],
+    "uncertainty": "Collateral is held in Bucket's on-chain CDP vaults and Peg Stability Module on Sui rather than with a legal custodian, so legal segregation, insolvency treatment, and reuse restrictions are not applicable in the traditional sense and are not separately established by the reviewed sources; wrapped-asset constituents (BTC, ETH, stablecoins) carry their own issuer and bridge custody layers.",
+    "knownUnknownExposurePct": 100
+  },
   "launchDate": "2023-06-28"
 }

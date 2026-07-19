@@ -409,7 +409,7 @@
       }
     },
     "params": {
-      "label": "GBP bank deposits",
+      "label": "GBP cash and short-term UK gilts",
       "risk": "very-low"
     }
   },

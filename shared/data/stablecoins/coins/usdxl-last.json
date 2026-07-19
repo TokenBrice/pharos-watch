@@ -1333,26 +1333,86 @@
     {
       "name": "HYPE and HYPE LSTs (Hyperliquid native)",
       "pct": 60,
-      "risk": "very-high"
+      "risk": "very-high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "HypurrFi borrowers depositing HYPE and HYPE liquid-staking tokens",
+      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "Bridged BTC (UBTC) and ETH",
       "pct": 25,
-      "risk": "medium"
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "HypurrFi borrowers depositing Unit-bridged BTC (UBTC) and ETH (UETH)",
+      "riskFactors": ["market", "liquidity", "custody", "smart-contract", "concentration"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "USDT0 and stablecoin liquidity reserves",
       "pct": 10,
       "risk": "low",
       "coinId": "usdt-tether",
-      "depType": "collateral"
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether (USDT0) protocol-owned liquidity and stablecoin reserves",
+      "riskFactors": ["counterparty", "liquidity", "smart-contract"],
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "Protocol-owned USDXL liquidity",
       "pct": 5,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Last protocol-owned USDXL liquidity positions",
+      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
+      "liquidityHorizon": "one-day"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-1 (lead usde-ethena)",
+    "confidence": "unknown",
+    "sources": [
+      {
+        "label": "HypurrFi lending market",
+        "url": "https://app.hypurrfi.com/"
+      },
+      {
+        "label": "Last (USDXL) website",
+        "url": "https://www.last.net/"
+      }
+    ],
+    "rationale": "USDXL is minted CDP-style against borrower collateral on HypurrFi's Aave V3 fork on HyperEVM. Issuer materials define the eligible collateral set (HYPE and HYPE LSTs, Unit-bridged UBTC and UETH) plus protocol-owned USDT0 and USDXL liquidity, but publish no collateral-mix breakdown or attestation, so the 60/25/10/5 category weights remain unaudited approximations of a dynamic borrower-driven mix.",
+    "compositionBasis": "Issuer-documented eligible collateral set; no published collateral-mix breakdown",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The collateral mix is borrower-driven and unpublished: the HYPE/LST share, the bridged BTC/ETH share, and the protocol-owned liquidity share are projections without issuer or on-chain aggregate evidence.",
+    "knownUnknownExposurePct": 90,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "HYPE and HYPE LSTs (Hyperliquid native)",
+        "pct": 60,
+        "disposition": "insufficient-evidence",
+        "rationale": "HYPE-family collateral is an external crypto exposure whose exact share of the CDP pool is not published by the issuer."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Bridged BTC (UBTC) and ETH",
+        "pct": 25,
+        "disposition": "insufficient-evidence",
+        "rationale": "Bridged BTC and ETH collateral shares are not published; the weight is an approximation."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "Protocol-owned USDXL liquidity",
+        "pct": 5,
+        "disposition": "insufficient-evidence",
+        "rationale": "Protocol-owned liquidity in the protocol's own synthetic dollar is self-referential support whose current size is not attested."
+      }
+    ]
+  },
   "notices": [
     {
       "type": "danger",

@@ -202,8 +202,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-6 V9 reserve review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
     "confidence": "manual-review",
     "sources": [
       {
@@ -211,12 +211,16 @@
         "url": "https://docs.silo.finance/"
       },
       {
+        "label": "Silo developer documentation",
+        "url": "https://devdocs.silo.finance/"
+      },
+      {
         "label": "XAI verified Ethereum contract",
         "url": "https://etherscan.io/address/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac#code"
       }
     ],
-    "rationale": "Silo documentation establishes isolated credit-line collateral as the backing model, and the reviewed XAI record identifies USDC and ETH exposure. The public sources do not provide a dated, reproducible aggregate collateral snapshot for the rounded percentages in this static record, so those weights remain a bounded review rather than a claim of complete current composition.",
-    "compositionBasis": "Static XAI collateral categories reconciled against Silo's isolated-market design",
+    "rationale": "Re-checked 2026-07-20 whether Silo publishes enough to upgrade scope: current Silo documentation covers the V3 isolated-market design and does not publish a dated, reproducible aggregate collateral snapshot for legacy XAI credit lines, and XAI has been under a SiloDAO-approved deprecation and wind-down since 2024, so no issuer reserve reporting exists for it. Scope remains selected-slices at manual-review confidence: the USDC 89.45% and ETH 10.55% weights are carried from the 2026-07-14 bounded review as a static record, not re-derived today.",
+    "compositionBasis": "Static XAI collateral categories reconciled against Silo's isolated-market design; no issuer snapshot exists",
     "compositionAsOf": "2026-07-14",
     "scope": "selected-slices",
     "knownUnknownExposure": "The current aggregate collateral mix, market-level balances, and liquidation liquidity are not published in a reproducible issuer snapshot.",
@@ -230,6 +234,36 @@
         "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Silo V1 isolated lending-market contracts on Ethereum (self-custodied smart contracts; no third-party custodian)",
+        "role": "other",
+        "sharePct": 100
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "none",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Silo V3 documentation",
+        "url": "https://docs.silo.finance/"
+      },
+      {
+        "label": "Silo developer documentation",
+        "url": "https://devdocs.silo.finance/"
+      },
+      {
+        "label": "XAI verified Ethereum contract",
+        "url": "https://etherscan.io/address/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac#code"
+      }
+    ],
+    "uncertainty": "XAI credit-line collateral sits inside Silo V1 isolated lending-market contracts on Ethereum; there is no bank, trust, or third-party custodian, and no bankruptcy-remoteness structure exists for a DeFi lending market, so bankruptcyRemoteness is none. Assets deposited into a Silo market are lendable within that isolated silo by design — that is how borrowers draw XAI credit lines — so deposited collateral can be re-lent inside its own market, recorded here as permitted rehypothecation in the protocol sense. Not known: current per-market collateral balances backing residual XAI debt, how the 2024 SiloDAO deprecation plan treated remaining credit-line collateral, whether deprecated-market collateral was withdrawn or stranded, and any off-chain recovery claim (none is documented)."
   },
   "liveReservesConfig": {
     "adapter": "curated-validated",

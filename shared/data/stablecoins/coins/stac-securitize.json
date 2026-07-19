@@ -269,9 +269,49 @@
     {
       "name": "AAA CLO fund portfolio",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Securitize AAA CLO Tokenized Fund, Ltd. portfolio of U.S. dollar AAA CLO tranches (BNY Investments sub-advisor)",
+      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "concentration"],
+      "liquidityHorizon": "over-seven-days"
     }
   ],
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "The Bank of New York Mellon (BNY)",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "BNY Investments (sub-advisor)",
+        "role": "other",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Securitize (fund tokenization and transfer agent)",
+        "role": "other",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-1 (lead usde-ethena)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Securitize BNY CLO Fund offering page",
+        "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund"
+      },
+      {
+        "label": "Chronicle STAC proof of asset",
+        "url": "https://chroniclelabs.org/dashboard/proofofasset/securitize-stac"
+      }
+    ],
+    "uncertainty": "The fund documentation names BNY as custodian and BNY Investments as sub-advisor for the BVI private fund holding the CLO portfolio, a structure that holds fund assets apart from Securitize's own balance sheet. Account-level segregation terms, rehypothecation restrictions, and custody of any interim cash balances are not publicly reproduced."
+  },
   "reserveReview": {
     "reviewedAt": "2026-07-14",
     "reviewer": "SONG Safety Score V9 reserve review",

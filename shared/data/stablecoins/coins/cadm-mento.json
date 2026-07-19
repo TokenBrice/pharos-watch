@@ -226,9 +226,44 @@
       "name": "USDm (Mento Dollar) CDP collateral",
       "pct": 100,
       "risk": "low",
-      "coinId": "cusd-celo"
+      "coinId": "cusd-celo",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Mento Protocol and the shared Mento Reserve",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-1 (lead usde-ethena)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento Reserve analytics API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
+      {
+        "label": "Mento CDP documentation",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp"
+      },
+      {
+        "label": "Mento deployment registry",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+      }
+    ],
+    "rationale": "CADm is minted through the Mento V3 CDP system against USDm collateral, matching the GBPm sibling review. The exact reserve is one tracked stablecoin exposure with the Mento Reserve, custody, liquidity, and smart-contract failure domains retained.",
+    "compositionBasis": "Exact live Mento CDP row and Mento CDP/deployment documentation",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No additional direct CADm reserve slice is identified; the upstream Mento Reserve basket is tracked through the linked USDm asset.",
+    "knownUnknownExposurePct": 0
+  },
   "liveReservesConfig": {
     "adapter": "mento",
     "version": 1,

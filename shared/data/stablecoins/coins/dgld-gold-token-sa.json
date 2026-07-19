@@ -327,7 +327,7 @@
       }
     },
     "params": {
-      "label": "Allocated LBMA gold bars (PAMP SA vaults)",
+      "label": "Allocated LBMA Good Delivery PAMP gold (Swiss vaults)",
       "risk": "very-low"
     }
   },

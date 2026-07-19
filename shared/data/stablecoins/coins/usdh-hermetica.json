@@ -125,6 +125,36 @@
       }
     ]
   },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Copper (off-exchange settlement)",
+        "role": "custodian"
+      },
+      {
+        "name": "Ceffu (off-exchange settlement)",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "conditional",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Hermetica USDh backing mechanism",
+        "url": "https://docs.hermetica.fi/usdh/how-it-works/backing-mechanism"
+      },
+      {
+        "label": "Hermetica December 2025 custodian attestation",
+        "url": "https://www.blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-december-2025"
+      }
+    ],
+    "uncertainty": "Hermetica's monthly custodian attestations identify Copper and Ceffu settlement solutions holding BTC margin off-exchange, but do not publish per-custodian shares, account-level segregation, or insolvency terms; collateral is actively deployed as futures margin, so reuse within the delta-neutral strategy is inherent.",
+    "knownUnknownExposurePct": 100
+  },
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://docs.hermetica.fi/usdh/how-it-works/backing",

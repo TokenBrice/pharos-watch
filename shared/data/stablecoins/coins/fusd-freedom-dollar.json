@@ -70,9 +70,42 @@
     {
       "name": "Zano ecosystem collateral and reserve mechanisms",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Freedom Dollar DAO reserve contract stakers (ZANO)",
+      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
+      "liquidityHorizon": "over-seven-days"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-1 (lead usde-ethena)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Freedom Dollar white paper",
+        "url": "https://www.freedomdollar.com/en/white-paper"
+      },
+      {
+        "label": "Freedom Dollar website",
+        "url": "https://freedomdollar.com/"
+      }
+    ],
+    "rationale": "FUSD is minted against ZANO deposited into the Freedom Dollar DAO reserve contract, with reserves staked on Zano and publicly visible on-chain. The reserve is a single ZANO-collateral category; the issuer does not publish a constituent breakdown beyond the Zano-native reserve and staking positions.",
+    "compositionBasis": "Freedom Dollar white paper reserve design; single Zano-native collateral category",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The reserve resolves to one exogenous ZANO collateral category; staking reward positions inside the DAO reserve are not separately itemized.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Zano ecosystem collateral and reserve mechanisms",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "ZANO is an external cryptoasset that is not a tracked stablecoin dependency."
+      }
+    ]
+  },
   "notices": [
     {
       "type": "info",

@@ -236,17 +236,86 @@
   "custodyModel": "institutional-unregulated",
   "reserves": [
     {
-      "name": "PYUSD liquid sleeve",
-      "pct": 82.35,
+      "name": "PYUSD (PayPal USD)",
+      "pct": 66.82,
       "risk": "low",
-      "coinId": "pyusd-paypal"
+      "coinId": "pyusd-paypal",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Paxos (PYUSD issuer) held in USD.AI reserve contracts",
+      "riskFactors": ["counterparty", "custody", "smart-contract"],
+      "liquidityHorizon": "immediate"
     },
     {
-      "name": "GPU-backed infrastructure loans",
-      "pct": 17.65,
-      "risk": "high"
+      "name": "GPU-backed infrastructure loans (NVIDIA hardware)",
+      "pct": 33.18,
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "USD.AI borrower SPVs financing NVIDIA GPU compute (27 loan positions per issuer proof-of-reserves API)",
+      "riskFactors": ["credit", "liquidity", "market", "concentration", "legal"],
+      "liquidityHorizon": "over-seven-days"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USD.AI proof-of-reserves API (Arbitrum)",
+        "url": "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161"
+      },
+      {
+        "label": "USD.AI reserves dashboard",
+        "url": "https://app.usd.ai/reserves"
+      }
+    ],
+    "rationale": "The issuer's live proof-of-reserves API enumerates every reserve position: a PYUSD T-bill sleeve plus 27 GPU-backed infrastructure loan deals whose shares sum to 66.82% PYUSD and 33.18% loans as of 2026-07-20. Slice names are aligned to the exact live usdai-proof-of-reserves adapter identities so the reviewed classification overlays the captured rows; the prior 82.35/17.65 weights and looser slice names were stale.",
+    "compositionBasis": "USD.AI proof-of-reserves API position-level shares aggregated by bucket, fetched 2026-07-20",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Every reserve bucket reported by the issuer API is identified; individual loan-level obligor detail inside the GPU loan bucket is published by the API (borrower addresses, hardware, APR) but is aggregated here into one reviewed exposure.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "GPU-backed infrastructure loans (NVIDIA hardware)",
+        "pct": 33.18,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "GPU infrastructure loans are private-credit positions, not tracked stablecoin dependencies."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "USD.AI protocol reserve contracts (Arbitrum)",
+        "role": "other"
+      },
+      {
+        "name": "GPU loan borrower SPVs and hardware colocation operators",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "USD.AI proof-of-reserves API (Arbitrum)",
+        "url": "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161"
+      },
+      {
+        "label": "USD.AI reserves dashboard",
+        "url": "https://app.usd.ai/reserves"
+      }
+    ],
+    "uncertainty": "The PYUSD sleeve sits in USD.AI's on-chain reserve contracts, while GPU loans are extended to borrower SPVs with hardware collateral held at colocation sites; the reviewed sources do not establish legal segregation, SPV insolvency treatment, or reuse terms for the loan book.",
+    "knownUnknownExposurePct": 33.18
+  },
   "yieldConfig": {
     "yieldSource": "USD.AI savings (sUSDai)",
     "yieldType": "nav-appreciation"

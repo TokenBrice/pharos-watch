@@ -106,11 +106,149 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "Ceffu-custodied strategy assets and off-exchange delta-neutral margin",
-      "pct": 100,
-      "risk": "very-high"
+      "name": "Ceffu-custodied BTC with Binance inverse-perpetual hedge",
+      "pct": 25.38,
+      "risk": "medium",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Ceffu (custodian) and Binance (hedge venue)",
+      "riskFactors": ["basis", "counterparty", "custody", "market", "liquidity"],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "USDC on-chain vault and yield-distributor balances",
+      "pct": 5.42,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial, Inc.",
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDT on-chain vault balance",
+      "pct": 1.16,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether Operations Limited",
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Ceffu-custodied SOL with Binance inverse-perpetual hedge",
+      "pct": 0.15,
+      "risk": "high",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Ceffu (custodian) and Binance (hedge venue)",
+      "riskFactors": ["basis", "counterparty", "custody", "market", "liquidity"],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Unmapped reserve positions (issuer API does not reconcile reserves to supply)",
+      "pct": 67.89,
+      "risk": "very-high",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed",
+      "riskFactors": ["counterparty", "custody", "liquidity", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Solomon protocol-data API (custody, vault, hedge positions)",
+        "url": "https://data.solomonlabs.io/api/solomon-protocol/protocol-data"
+      },
+      {
+        "label": "Solomon USDv Reserves dashboard",
+        "url": "https://app.solomonlabs.org/stats"
+      },
+      {
+        "label": "Ceffu attestation of assets held for Solomon Labs as of 2026-04-01",
+        "url": "https://github.com/SolomonLabs/attestations/blob/main/ceffu/2026/2026-04-01.pdf"
+      },
+      {
+        "label": "Solomon USDv minting (off-exchange custody and hedging)",
+        "url": "https://docs.solomonlabs.org/usdv/usdv-and-susdv/minting-usdv"
+      }
+    ],
+    "rationale": "Solomon's live protocol-data API (updated 2026-07-19) reports reserve components totaling $485,493.66 — Ceffu-custodied BTC $383,689.11 and SOL $2,263.56 with Binance inverse-perpetual shorts of $559,199.99 (BTC) and $2,480 (SOL) notional, plus on-chain vault balances of $81,306.39 USDC and $17,532.47 USDT and $701.37 in yield distributors — against a tracked USDv supply of about $1.51M that matches the API's own protocolTvl. The identified components therefore cover only ~32.1% of supply, so the composition is shown with an explicit 67.89% unmapped residual rather than normalizing the identified third to 100%. The docs' narrative of USDG/USDC reserves with short-dated Treasuries as the planned primary component is not reflected in the live API, which shows neither USDG nor Treasuries.",
+    "compositionBasis": "Issuer live protocol-data API reserve components measured against tracked USDv supply (protocolTvl) at 2026-07-19",
+    "compositionAsOf": "2026-07-19",
+    "scope": "full-composition",
+    "knownUnknownExposure": "About 67.9% of tracked USDv supply has no issuer-explained backing allocation in the live API. The API does not reconcile reserve components to protocolTvl; the location and segregation of the margin supporting the Binance short positions is undisclosed; the BTC hedge notional ($559.2K) exceeds Ceffu-reported BTC spot ($383.7K), implying leveraged or incompletely reported positioning. The latest Ceffu first-party attestation (2026-04-01, >= USD 954,454.71 aggregate across client-related accounts) is 3.5 months stale, is issued by the custodian itself rather than an independent auditor, and does not break down composition.",
+    "knownUnknownExposurePct": 67.89,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Ceffu-custodied BTC with Binance inverse-perpetual hedge",
+        "pct": 25.38,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "BTC spot held at Ceffu with an off-exchange hedge is an exogenous cryptoasset exposure rather than a tracked stablecoin."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "Ceffu-custodied SOL with Binance inverse-perpetual hedge",
+        "pct": 0.15,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "SOL spot held at Ceffu with an off-exchange hedge is an exogenous cryptoasset exposure rather than a tracked stablecoin."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "Unmapped reserve positions (issuer API does not reconcile reserves to supply)",
+        "pct": 67.89,
+        "disposition": "insufficient-evidence",
+        "rationale": "The issuer's live API and latest Ceffu attestation do not identify the backing for the majority of USDv supply; no asset class, custodian, or venue is published for this remainder."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Ceffu (CH Europe Digital Solution Sp. z o.o.)",
+        "role": "custodian",
+        "jurisdiction": "Poland"
+      },
+      {
+        "name": "Binance (off-exchange hedge execution venue)",
+        "role": "other"
+      },
+      {
+        "name": "Solomon on-chain vault and yield-distributor contracts (Solana)",
+        "role": "other",
+        "jurisdiction": "Solana"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Ceffu attestation of assets held for Solomon Labs as of 2026-04-01",
+        "url": "https://github.com/SolomonLabs/attestations/blob/main/ceffu/2026/2026-04-01.pdf"
+      },
+      {
+        "label": "Solomon USDv minting (off-exchange custody and hedging)",
+        "url": "https://docs.solomonlabs.org/usdv/usdv-and-susdv/minting-usdv"
+      },
+      {
+        "label": "Solomon protocol-data API (custody, vault, hedge positions)",
+        "url": "https://data.solomonlabs.io/api/solomon-protocol/protocol-data"
+      }
+    ],
+    "uncertainty": "Ceffu's first-party attestation states client assets are held fully in Ceffu custody and not at any digital asset exchange, while the live API shows Binance inverse-perpetual shorts, implying off-exchange settlement with margin whose account segregation is undisclosed. No provider shares, bankruptcy-remoteness terms, or reuse limits are published; the strategy by design deploys custody assets into hedged positions. The attestation is aggregate, point-in-time (2026-04-01), and not an independent audit.",
+    "knownUnknownExposurePct": 67.89
+  },
   "liveReservesConfig": {
     "adapter": "attestation-pdf-index",
     "version": 1,
@@ -132,8 +270,34 @@
     "params": {
       "slices": [
         {
-          "name": "Ceffu-custodied strategy assets and off-exchange delta-neutral margin",
-          "pct": 100,
+          "name": "Ceffu-custodied BTC with Binance inverse-perpetual hedge",
+          "pct": 25.38,
+          "risk": "medium"
+        },
+        {
+          "name": "USDC on-chain vault and yield-distributor balances",
+          "pct": 5.42,
+          "risk": "low",
+          "coinId": "usdc-circle",
+          "depType": "collateral",
+          "blacklistable": true
+        },
+        {
+          "name": "USDT on-chain vault balance",
+          "pct": 1.16,
+          "risk": "low",
+          "coinId": "usdt-tether",
+          "depType": "collateral",
+          "blacklistable": true
+        },
+        {
+          "name": "Ceffu-custodied SOL with Binance inverse-perpetual hedge",
+          "pct": 0.15,
+          "risk": "high"
+        },
+        {
+          "name": "Unmapped reserve positions (issuer API does not reconcile reserves to supply)",
+          "pct": 67.89,
           "risk": "very-high"
         }
       ]
@@ -142,8 +306,8 @@
   "notices": [
     {
       "type": "warning",
-      "title": "Aggregate reserve disclosure",
-      "message": "USDv has on-chain supply validation, but public attestations are aggregate and do not expose a live composition API. The modeled redemption backstop is limited to approved/whitelisted participants and a documented 0.5% instant reserve buffer; the live feed validates Solana token supply only, while reserve composition is Ceffu-custodied off-exchange and is not on-chain verifiable."
+      "title": "Partial reserve coverage",
+      "message": "USDv has on-chain supply validation and a live issuer protocol-data API, but the API's reported reserve components covered only about 32% of tracked supply at 2026-07-19; the remaining backing is unmapped. Public Ceffu attestations are aggregate, custodian-issued, and stale (latest 2026-04-01). The modeled redemption backstop is limited to approved/whitelisted participants and a documented 0.5% instant reserve buffer; the live feed validates Solana token supply only, while reserve composition is Ceffu-custodied off-exchange and is not on-chain verifiable."
     }
   ],
   "mintAuthority": {

@@ -212,6 +212,37 @@
       }
     ]
   },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed custodian account holding off-chain U.S. Treasury bills",
+        "role": "custodian"
+      },
+      {
+        "name": "Cygnus cgUSD vault and accounting/NAV oracle contracts on Base",
+        "role": "other",
+        "jurisdiction": "Base"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Cygnus cgUSD withdrawals FAQ (custodian-account T-bill sales)",
+        "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/faq/withdrawals"
+      },
+      {
+        "label": "Cygnus cgUSD v1 overview",
+        "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1"
+      }
+    ],
+    "uncertainty": "Cygnus documents that redemptions are fulfilled by selling U.S. Treasury bills held in a custodian account, but the custodian is never named and no segregation, bankruptcy-remoteness, or reuse terms are published; there is no reserve attestation from any accountant. On-chain, the cgUSD supply tracks an issuer-administered NAV oracle (vault and oracle governed by a 10-second timelock per the 2026-07-16 on-chain control review), so the reported off-chain portfolio value is issuer-asserted rather than independently fed.",
+    "knownUnknownExposurePct": 100
+  },
   "custodyModel": "institutional-unregulated",
   "liveReservesConfig": {
     "adapter": "curated-validated",
