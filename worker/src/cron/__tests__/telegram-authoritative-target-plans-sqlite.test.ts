@@ -618,6 +618,92 @@ describe("authoritative Telegram target plans on latest SQLite schema", () => {
     ).toEqual({ status: "planned", final_delivery_state: null, cancellation_reason: null });
   });
 
+  it("keeps degraded hash-only identity collisions closed across coordinator runs", async () => {
+    const { sqlite, db } = setupLatestSchema();
+    const priorSourceEventId = "telegram-source:test:v1:prior-hash-reopen";
+    const currentSourceEventId = "telegram-source:test:v1:current-hash-reopen";
+    insertSubscriber(sqlite, "42");
+
+    insertSource(sqlite, priorSourceEventId);
+    await openDeliveryForRoutes(
+      db,
+      priorSourceEventId,
+      new Map([["42", [routed("42", priorSourceEventId, 1)]]]),
+    );
+    await enqueueTelegramAuthoritativeTargets(db, priorSourceEventId, 1, NOW);
+    sqlite
+      .prepare(
+        `UPDATE telegram_pending_alerts
+            SET delivery_state = 'sent', delivery_completed_at = ?
+          WHERE source_event_id = ?`,
+      )
+      .run(NOW + 1, priorSourceEventId);
+
+    insertSource(sqlite, currentSourceEventId);
+    await openDeliveryForRoutes(
+      db,
+      currentSourceEventId,
+      new Map([["42", [routed("42", currentSourceEventId, 1, "-different")]]]),
+    );
+    const prior = sqlite
+      .prepare("SELECT dedupe_key FROM telegram_pending_alerts WHERE source_event_id = ?")
+      .get(priorSourceEventId) as { dedupe_key: string };
+    sqlite
+      .prepare(
+        `UPDATE telegram_alert_job_targets
+            SET pending_dedupe_key = ?
+          WHERE source_event_id = ?`,
+      )
+      .run(prior.dedupe_key, currentSourceEventId);
+
+    await expect(
+      enqueueTelegramAuthoritativeTargets(db, currentSourceEventId, 1, NOW + 2),
+    ).rejects.toThrow("pending handoff was not confirmed");
+
+    const result = await runTelegramTargetPlanCoordinator({
+      db,
+      sourceEventId: currentSourceEventId,
+      nowSec: NOW + 3,
+      maxSteps: 2,
+      deliveryHandoffLimit: 1,
+      callbacks: {
+        resolveInitialEligibility: async () => {
+          throw new Error("hash-only collision recovery must not recapture subscribers");
+        },
+        planSubscribers: async () => {
+          throw new Error("hash-only collision recovery must not rematerialize targets");
+        },
+      },
+    });
+
+    expect(result).toMatchObject({
+      state: "degraded",
+      steps: 1,
+      enqueued: 0,
+      remainingTargets: 0,
+    });
+    expect(
+      sqlite
+        .prepare(
+          `SELECT target_plan_state, last_error_class, last_attempt_at
+             FROM telegram_alert_source_events WHERE source_event_id = ?`,
+        )
+        .get(currentSourceEventId),
+    ).toEqual({
+      target_plan_state: "degraded",
+      last_error_class: "pending_identity_collision",
+      last_attempt_at: NOW + 2,
+    });
+    expect(
+      sqlite
+        .prepare(
+          `SELECT status, final_delivery_state, cancellation_reason
+             FROM telegram_alert_job_targets WHERE source_event_id = ?`,
+        )
+        .get(currentSourceEventId),
+    ).toEqual({ status: "planned", final_delivery_state: null, cancellation_reason: null });
+  });
+
   it("re-enters handoff for an already-degraded terminal identity collision", async () => {
     const { sqlite, db } = setupLatestSchema();
     const priorSourceEventId = "telegram-source:test:v1:prior-degraded-recovery";
