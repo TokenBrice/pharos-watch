@@ -501,15 +501,13 @@ export async function assessPublicHealth(
     warnings.push("stablecoin-publication-unknown");
   }
 
-  // Public health gates on persistent (alert-eligible) misses only: a price that
-  // is merely un-repriced this cycle (transient fallback rotation) must not
-  // degrade the public banner. The JSON `activePriceCoverage` payload still
-  // reports exact counts/ids/status for observability; only the public impact
-  // and warning are gated on `alertEligibleCount` (misses at or past
-  // ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS). "unknown" coverage still fails closed.
+  // Missing active prices are public warnings, not availability incidents. The
+  // JSON `activePriceCoverage` payload still reports exact counts/ids/status for
+  // observability, and alert-eligible misses still emit warnings for operator
+  // triage. Only missing coverage evidence itself fails closed.
   const activePriceCoverageAlertEligible = activePriceCoverage.alertEligibleCount > 0;
   const activePriceCoverageImpactStatus =
-    activePriceCoverage.status === "unknown" || activePriceCoverageAlertEligible
+    activePriceCoverage.status === "unknown"
       ? "degraded"
       : "healthy";
   if (activePriceCoverage.status === "unknown") {
