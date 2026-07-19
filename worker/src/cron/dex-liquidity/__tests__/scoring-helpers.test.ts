@@ -330,6 +330,27 @@ describe("buildDexPriceObservationsFromRetainedPools", () => {
 
     expect(result.has("usp-pareto-credit")).toBe(false);
   });
+
+  it("does not join exact evidence from non-direct sources", () => {
+    const pool = makePool({ poolId: "ethereum:0xretained", tvlUsd: 52_000, price: undefined });
+    const result = buildDexPriceObservationsFromRetainedPools(
+      new Map([["usp-pareto-credit", [pool]]]),
+      new Map([
+        [
+          "usp-pareto-credit",
+          [
+            makeObs({
+              poolKey: "ethereum:0xretained",
+              identityConfidence: "exact",
+              sourceFamily: "dexscreener",
+            }),
+          ],
+        ],
+      ]),
+    );
+
+    expect(result.has("usp-pareto-credit")).toBe(false);
+  });
 });
 
 describe("filterRetainedPools", () => {
