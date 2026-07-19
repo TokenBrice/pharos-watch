@@ -1386,7 +1386,7 @@ describe("fetchOrcaPools", () => {
     expect(pools.degraded).toBe(true);
   });
 
-  it("skips pools below TVL threshold", async () => {
+  it("marks Orca pages with no pools above the TVL threshold as unavailable", async () => {
     mockJsonFetch({
       data: [{
         address: "pool1",
@@ -1404,8 +1404,9 @@ describe("fetchOrcaPools", () => {
 
     const pools = await fetchOrcaPools();
     expect(pools.pools).toHaveLength(0);
-    expect(pools.ok).toBe(true);
+    expect(pools.ok).toBe(false);
     expect(pools.degraded).toBe(true);
+    expect(pools.errors).toContain("page 1 had no eligible pools despite minTvl filter");
   });
 
   it("returns empty array on HTTP error", async () => {
@@ -1416,14 +1417,14 @@ describe("fetchOrcaPools", () => {
     expect(pools.degraded).toBe(true);
   });
 
-  it("returns empty array when data is empty", async () => {
+  it("marks empty Orca responses as unavailable", async () => {
     mockJsonFetch({
       data: [],
       meta: { cursor: { next: null } },
     });
     const pools = await fetchOrcaPools();
     expect(pools.pools).toHaveLength(0);
-    expect(pools.ok).toBe(true);
+    expect(pools.ok).toBe(false);
     expect(pools.degraded).toBe(false);
   });
 
