@@ -309,12 +309,15 @@ function buildLiquidityScoringFacts(
   const eligibleRedemptionScore = redemptionEligibleForLiquidity
     ? getSafetyEligibleRedemptionScore(redemption, dexScore)
     : null;
+  const exitScoringCirculatingSupplyUsd =
+    options?.circulatingSupplyUsd ??
+    (options?.sameNotionalScoringMode === "active" ? liq?.deploymentSupplyCoverage?.totalSupplyUsd : undefined);
   const exitScoreDiagnostics = computeEffectiveExitScoreDiagnostics(
     dexScore,
     eligibleRedemptionScore,
     redemption
       ? {
-          circulatingSupplyUsd: options?.circulatingSupplyUsd ?? liq?.deploymentSupplyCoverage?.totalSupplyUsd,
+          circulatingSupplyUsd: exitScoringCirculatingSupplyUsd,
           modeledExitSizeUsd: redemption.capacityProfile?.modeledExitSizeUsd,
           currentExecutableCapacityUsd: redemption.capacityProfile?.scoringUsd ?? redemption.immediateCapacityUsd,
           routeExitCorrelation: redemption.routeExitCorrelation,
@@ -331,7 +334,7 @@ function buildLiquidityScoringFacts(
           impairedOutputAssetIds: options?.impairedOutputAssetIds,
         }
       : {
-          circulatingSupplyUsd: options?.circulatingSupplyUsd ?? liq?.deploymentSupplyCoverage?.totalSupplyUsd,
+          circulatingSupplyUsd: exitScoringCirculatingSupplyUsd,
           dexExitRouteObservations: liq?.exitRouteObservations,
           dexExitRouteCoverageComplete: isDexExitRouteCoverageComplete(liq?.exitRouteObservationCoverage),
           dexExitRouteCoverageStatus: liq?.exitRouteObservationCoverage?.status,
