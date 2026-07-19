@@ -167,7 +167,10 @@ function buildDexRouteReview(
     holderAccess: "permissionless",
     executionModel: "market-depth",
     executionCertainty: "bounded",
-    modelConfidence: "medium",
+    // Measured executable depth is the producer's own realized-quote evidence,
+    // so the route model earns high confidence; simulated or otherwise
+    // derived depth keeps the conservative modeled default.
+    modelConfidence: observation.evidenceKind === "measured-executable-depth" ? "high" : "medium",
     coverageClass: dexCoverageClass(fixedInput, assetId),
     settlementModel: "atomic",
     settlementSlaSec: 0,
