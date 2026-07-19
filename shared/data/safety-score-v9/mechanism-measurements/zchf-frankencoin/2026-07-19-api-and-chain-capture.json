@@ -1,0 +1,227 @@
+{
+  "schemaVersion": 1,
+  "kind": "cdp-mechanism-measurement",
+  "assetId": "zchf-frankencoin",
+  "archetype": "cdp",
+  "capturedAtIso": "2026-07-19T04:10:00.000Z",
+  "capturedBy": "Kimi rescue lane 1d (2026-07-19)",
+  "apiCaptures": [
+    {
+      "name": "frankencoin-info",
+      "url": "https://api.frankencoin.com/ecosystem/frankencoin/info",
+      "fetchedAtUnix": 1784443763,
+      "payload": {
+        "token": {
+          "usd": 1.2371825541749573,
+          "supply": 34139468.8738245
+        },
+        "tvl": {
+          "usd": 70135674.22221261,
+          "chf": 56689834.48362974
+        },
+        "fps": {
+          "price": 1388.4307497048292,
+          "totalSupply": 8890.068249041235,
+          "marketCap": 12343244.123943424
+        },
+        "chainSupply": {
+          "ethereum-mainnet": 30429960.649122458,
+          "base": 2282396.2738433215,
+          "gnosis": 1394348.3083229049,
+          "arbitrum": 26001.929951831047,
+          "optimism": 5600.12,
+          "polygon": 1142.9185,
+          "avalanche": 16.67408398168284,
+          "sonic": 2
+        }
+      },
+      "note": "chainSupply values keyed by chain name from the API's chainId map (1, 8453, 100, 42161, 10, 137, 43114, 146); they sum to the reported total supply 34139468.8738245. The ethereum-mainnet figure 30429960.649122458 matches the journaled eth_call totalSupply() at block 25538909 to 8 decimals."
+    },
+    {
+      "name": "collateral-positions-details",
+      "url": "https://api.frankencoin.com/ecosystem/collateral/positions/details",
+      "fetchedAtUnix": 1784443763,
+      "note": "Open, non-denied position collateral balances valued with the protocol price mapping below; method reproduces the 2026-07-17 and 2026-07-15 reserveReview captures."
+    },
+    {
+      "name": "prices-mapping",
+      "url": "https://api.frankencoin.com/prices/mapping",
+      "fetchedAtUnix": 1784444021,
+      "note": "CHF prices per collateral address; every active collateral line had a mapped price (no missing prices)."
+    }
+  ],
+  "computedCollateralChf": {
+    "method": "sum over open, non-denied positions of collateralBalance x price-mapping CHF price",
+    "totalValueChf": 56170191.0,
+    "totalMintedFromPositionsZchf": 33538709.88,
+    "rows": [
+      {
+        "symbol": "BOSS",
+        "balance": 2377594.0,
+        "priceChf": 7.3085,
+        "valueChf": 17376645.75,
+        "mintedZchf": 6886023.21
+      },
+      {
+        "symbol": "cbBTC",
+        "balance": 203.6857,
+        "priceChf": 52287.0264,
+        "valueChf": 10650120.66,
+        "mintedZchf": 7573891.01
+      },
+      {
+        "symbol": "WBTC",
+        "balance": 143.4869,
+        "priceChf": 52284.733,
+        "valueChf": 7502172.32,
+        "mintedZchf": 5062045.79
+      },
+      {
+        "symbol": "LsETH",
+        "balance": 2858.9517,
+        "priceChf": 1697.33,
+        "valueChf": 4852584.44,
+        "mintedZchf": 3290652.04
+      },
+      {
+        "symbol": "DQTS",
+        "balance": 602200.0,
+        "priceChf": 8.0332,
+        "valueChf": 4837593.04,
+        "mintedZchf": 3520000.0
+      },
+      {
+        "symbol": "wstETH",
+        "balance": 2151.573,
+        "priceChf": 1872.9577,
+        "valueChf": 4029805.17,
+        "mintedZchf": 2096779.0
+      },
+      {
+        "symbol": "SPYon",
+        "balance": 6044.5574,
+        "priceChf": 605.3619,
+        "valueChf": 3659144.75,
+        "mintedZchf": 2916948.47
+      },
+      {
+        "symbol": "XAUt",
+        "balance": 289.5449,
+        "priceChf": 3241.4007,
+        "valueChf": 938531.16,
+        "mintedZchf": 825000.0
+      },
+      {
+        "symbol": "PAXG",
+        "balance": 243.2607,
+        "priceChf": 3239.4894,
+        "valueChf": 788040.54,
+        "mintedZchf": 605613.51
+      },
+      {
+        "symbol": "WETH",
+        "balance": 492.665,
+        "priceChf": 1509.8046,
+        "valueChf": 743827.83,
+        "mintedZchf": 491206.53
+      },
+      {
+        "symbol": "GNO",
+        "balance": 6500.0,
+        "priceChf": 89.5317,
+        "valueChf": 581956.05,
+        "mintedZchf": 195000.0
+      },
+      {
+        "symbol": "REALU",
+        "balance": 71074.0,
+        "priceChf": 1.4948,
+        "valueChf": 106241.42,
+        "mintedZchf": 43288.8
+      },
+      {
+        "symbol": "LENDS",
+        "balance": 1245.0,
+        "priceChf": 68.0154,
+        "valueChf": 84679.17,
+        "mintedZchf": 24900.0
+      },
+      {
+        "symbol": "CRV",
+        "balance": 61345.9847,
+        "priceChf": 0.1726,
+        "valueChf": 10588.32,
+        "mintedZchf": 7361.52
+      },
+      {
+        "symbol": "ysyBOLD",
+        "balance": 9433.98,
+        "priceChf": 0.8756,
+        "valueChf": 8260.39,
+        "mintedZchf": 0.0
+      }
+    ],
+    "crossCheck": "The protocol API's own TVL figure is 56689834.48 CHF (0.92% above this computation); total supply 34139468.87 ZCHF exceeds position-minted 33538709.88 ZCHF by ~601k ZCHF, the amount minted through the stablecoin bridges (XCHF/VCHF/CHFAU), which hold locked source stablecoins instead of position collateral."
+  },
+  "chainReads": [
+    {
+      "chain": "ethereum",
+      "rpcUrl": "https://ethereum-rpc.publicnode.com",
+      "block": {
+        "number": 25538909,
+        "hash": "0x1aa5181b6b62b1b6e27b7d3d05158b3d083c93eaad882af4047fa90faea3cc49",
+        "timestampUnix": 1784441175,
+        "timestampIso": "2026-07-19T03:26:15.000Z",
+        "selection": "finalized"
+      },
+      "calls": [
+        {
+          "name": "frankencoin.totalSupply",
+          "to": "0xb58e61c3098d85632df34eecfb899a1ed80921cb",
+          "signature": "totalSupply()(uint256)",
+          "decoded": "30429960.649122455000125962",
+          "note": "Matches the API ethereum-mainnet supply 30429960.649122458 (rounding in the last decimal)."
+        },
+        {
+          "name": "frankencoin.equity",
+          "to": "0xb58e61c3098d85632df34eecfb899a1ed80921cb",
+          "signature": "equity()(uint256)",
+          "decoded": "4114414.707981140591307414",
+          "note": "Per the pinned Frankencoin.sol source, equity() = balanceOf(reserve) - minterReserve(): the free equity owned by FPS holders."
+        },
+        {
+          "name": "frankencoin.minterReserve",
+          "to": "0xb58e61c3098d85632df34eecfb899a1ed80921cb",
+          "signature": "minterReserve()(uint256)",
+          "decoded": "8634455.934138395367318746",
+          "note": "Reserve attributable to minters (position owners' reserve contributions); per the source it covers losses after equity holders are wiped out."
+        },
+        {
+          "name": "frankencoin.reserve",
+          "to": "0xb58e61c3098d85632df34eecfb899a1ed80921cb",
+          "signature": "reserve()(address)",
+          "decoded": "0x1bA26788dfDe592fec8bcB0Eaff472a42BE341B2",
+          "note": "Equity/FPS contract, unchanged from the 2026-07-17 capture."
+        }
+      ]
+    }
+  ],
+  "derivedMetrics": {
+    "collateralizationRatio": 1.645315,
+    "collateralizationRatioMethod": "computedCollateralChf.totalValueChf / total supply (56170191.00 / 34139468.8738245); conservative variant against position-minted debt only is 1.674787; protocol-TVL variant is 1.660537.",
+    "reservePoolCoverage": {
+      "totalReservePoolZchf": 12748870.642119535,
+      "method": "equity() + minterReserve() at block 25538909 = balanceOf(reserve pool)",
+      "shareOfTotalSupply": 0.373435,
+      "equityShareOfTotalSupply": 0.120518,
+      "minterReserveShareOfTotalSupply": 0.252917,
+      "note": "Loss-absorption capital, not committed liquidation capacity; Frankencoin liquidations clear through externally funded challenge auctions."
+    },
+    "ccipBridgedShare": {
+      "protocolApiShare": 0.108657,
+      "protocolApiMethod": "1 - ethereum-mainnet supply / total supply from the 2026-07-19 info capture",
+      "defiLlamaPipelineShare": 0.111585,
+      "defiLlamaPipelineMethod": "sum of non-Ethereum chainCirculatingById.current / totalSupplyUsd from the 2026-07-18 replay fixedInput (all seven non-Ethereum deployments are Chainlink CCIP burn/mint)"
+    }
+  }
+}

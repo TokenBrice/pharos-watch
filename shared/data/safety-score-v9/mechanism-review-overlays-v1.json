@@ -1297,6 +1297,103 @@
       }
     },
     {
+      "assetId": "zchf-frankencoin",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-19",
+      "sources": [
+        {
+          "label": "Frankencoin collateralized minting documentation (positions, liquidation price, minting limits)",
+          "url": "https://docs.frankencoin.com/positions"
+        },
+        {
+          "label": "Frankencoin challenges and auctions documentation (externally funded bids, bid-switching design, challenger reward)",
+          "url": "https://docs.frankencoin.com/positions/auctions"
+        },
+        {
+          "label": "Frankencoin reserve documentation (three reserve types, three-layer liquidation loss protection, equity equilibrium)",
+          "url": "https://docs.frankencoin.com/reserve"
+        },
+        {
+          "label": "Frankencoin governance documentation (veto process, 2% qualified-voter threshold, immutable contracts)",
+          "url": "https://docs.frankencoin.com/governance"
+        },
+        {
+          "label": "Pinned Frankencoin.sol source (equity() = reserve balance minus minterReserve(); coverLoss mints uncovered ZCHF)",
+          "url": "https://github.com/Frankencoin-ZCHF/Frankencoin/blob/c1f229e3b26050367aafcb55da294342b4cae382/contracts/stablecoin/Frankencoin.sol"
+        },
+        {
+          "label": "ChainSecurity Frankencoin v2024 audit (liquidation mechanism interaction, minimum-collateral enforcement, forceSale bad-debt accounting)",
+          "url": "https://github.com/Frankencoin-ZCHF/Frankencoin/blob/main/audits/V2/ChainSecurity_Frankencoin_Frankencoin_v2024.pdf"
+        },
+        {
+          "label": "Frankencoin collateral positions API (open, non-denied position balances and parameters)",
+          "url": "https://api.frankencoin.com/ecosystem/collateral/positions/details"
+        },
+        {
+          "label": "Frankencoin collateral price mapping API (CHF prices per collateral address)",
+          "url": "https://api.frankencoin.com/prices/mapping"
+        },
+        {
+          "label": "Frankencoin info API (per-chain supply, protocol TVL, FPS market data)",
+          "url": "https://api.frankencoin.com/ecosystem/frankencoin/info"
+        },
+        {
+          "label": "ZCHF Ethereum verified contract read page (totalSupply, equity, minterReserve, reserve)",
+          "url": "https://etherscan.io/address/0xb58e61c3098d85632df34eecfb899a1ed80921cb#readContract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC used for the journaled eth_call reads at finalized block 25538909",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ],
+      "notes": "Reviewed 2026-07-19 by Kimi rescue lane 1d (2026-07-19). Measured at finalized Ethereum block 25538909 (2026-07-19T03:26:15Z) via journaled eth_call plus same-day protocol API captures; evidence: shared/data/safety-score-v9/mechanism-measurements/zchf-frankencoin/2026-07-19-api-and-chain-capture.json. The eth_call totalSupply() of 30429960.649122455 ZCHF matches the protocol API's ethereum-mainnet supply at displayed precision; global supply is 34139468.87 ZCHF. System collateralization ratio 1.645315 = 56170191.00 CHF computed collateral value (open, non-denied position balances valued at price-mapping CHF prices) over total supply; the protocol's own TVL cross-check (56689834.48 CHF, 0.92% higher) gives 1.660537 and the position-debt-only variant 1.674787. Position-level parameters are explicit per the positions documentation and API: owner-set liquidation price bounding mintable debt, per-position minimum collateral, per-position reserve contribution (observed 10%-40% of minted, mostly 20%-25%), 1%-3% annual interest, and mostly one-day challenge periods; new minters pass a 14-day application with qualified pool-share holder veto (>2% of holding-period-weighted votes). No protocol-enforced minimum collateral ratio beyond the owner-set liquidation price was found; sound pricing is enforced ex-post through challenges, supporting adequate rather than strong collateralization parameters. Liquidation runs through permissionless challenge auctions whose bid-switching design (bids above the liquidation price buy the challenger's collateral instead of the position's) makes price manipulation expensive, with a 2% challenger reward and no oracle dependency: adequate liquidation mechanics whose own documentation states the assumption that challengers can acquire the collateral asset, and no committed bidder of last resort exists. Bids are externally funded and no ZCHF-dedicated pool is contractually committed to debt offset, so liquidationCapacityRatio is structurally not applicable; the measured reserve pool is loss-absorption capital and is reported as analogous metrics instead. Backstop: the reserve documentation and pinned source establish three loss layers - the challenged position's minter reserve contribution, then FPS equity, then the general minter reserve - with coverLoss minting uncovered ZCHF as the terminal backstop; at block 25538909 the reserve pool held 12748870.64 ZCHF = 37.34% of supply (minter reserve 8634455.93 = 25.29%, FPS equity 4114414.71 = 12.05%; FPS market cap about $12.34M), supporting adequate backstop. NOT established: any stress-tested bound on reserve adequacy against the tokenized-equity collateral lines (BOSS is about 31% of collateral value), and the terminal backstop is dilutive inflation rather than pre-funded capital. Branch isolation: each position is a separate contract holding exactly one collateral type, and a failed position's collateral cannot be seized for another position's debt; cross-branch transmission exists only through the shared FPS equity and general minter reserve after a position's own reserve is consumed - adequate. NOT established: any per-collateral debt ceiling limiting one collateral line's share of system debt. Shutdown and bad debt: no global settlement or shutdown mechanism exists; bad debt is socialized through coverLoss, whose pinned source shows the reserve pool absorbing first and any uncovered remainder being minted as new ZCHF - limited. Structural redemption: holders have no direct redemption claim on position collateral; structural exits are the 1:1 stablecoin bridges (XCHF/VCHF/CHFAU, per-bridge limits and horizons) and secondary markets, while auctions repay position debt rather than holder claims - limited. NOT established: any holder-level redemption path to collateral.",
+      "metrics": {
+        "collateralizationRatio": 1.645315,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "measured"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "Frankencoin challenge auctions are funded by external bidders, not by a ZCHF-dedicated pool contractually committed to debt offset; the measured reserve pool (0.373435 of supply at block 25538909) is loss-absorption capital evidenced in the backstop component, not committed liquidation capacity.",
+          "sourceUrl": "https://docs.frankencoin.com/positions/auctions"
+        }
+      },
+      "analogousMetrics": {
+        "reservePoolCoverageRatio": 0.373435,
+        "equityCoverageRatio": 0.120518,
+        "positionDebtCollateralizationRatio": 1.674787
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "backstop": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "branchIsolation": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "shutdownAndBadDebt": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "limited"
+        }
+      }
+    },
+    {
       "assetId": "hyusd-hylo",
       "archetype": "synthetic-delta-neutral",
       "reviewedAt": "2026-07-15",
@@ -1473,7 +1570,7 @@
     {
       "assetId": "usdt-tether",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-17",
+      "reviewedAt": "2026-07-19",
       "sources": [
         {
           "label": "Tether Token Terms of Sale and Service (personal contractual redemption right and eligibility conditions; updated 2026-02-26)",
@@ -1488,11 +1585,15 @@
           "url": "https://tether.to/transparency/?tab=reports"
         },
         {
+          "label": "Tether Q1 2026 attestation press release (published 2026-05-01; confirms the 2026-03-31 BDO attestation as the latest, about $141B direct/indirect U.S. Treasury bill exposure and an $8.23B excess reserve buffer; names no custodians)",
+          "url": "https://tether.io/news/tether-posts-1-04b-q1-2026-profit-despite-highly-volatile-global-markets-reaches-all-time-highs-8-23b-reserve-buffer-and-maintains-u-s-treasury-heavy-backing/"
+        },
+        {
           "label": "BDO ISAE 3000R assurance report on Tether International's Financial Figures and Reserves Report as of 31 March 2026 (reserve composition, bank/depositary confirmation procedures, custodian emphasis of matter; signed 2026-04-30)",
           "url": "https://assets.ctfassets.net/vyse88cgwfbl/6crn1tXbl6AtWZBWucZnfg/c4ff472d70c1b48c2f689f27b54c84f5/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_31-03-2026.pdf"
         }
       ],
-      "notes": "Tether International, S.A. de C.V.'s Terms make purchase and redemption a personal contractual right available only to verified customers. The 2026-02-20 Relevant Information Document and Tether's transparency disclosures characterize reserves as issuer-held and issuer-owned assets that Tether invests and manages at its sole discretion, while the post-sale obligation is conditional redemption for eligible primary-market customers; the BDO ISAE 3000R report as of 2026-03-31 likewise defines the Reserves as all assets owned by the Company. The reviewed sources establish neither beneficial ownership or a direct reserve-asset claim for holders nor reserve segregation, a holder trust, or bankruptcy-remoteness protection. Claim and segregation are therefore weak. Custody continuity, reviewed 2026-07-17: the RID's Safeguarding Arrangements section states Tether primarily holds the Reserves with various third parties including banks and licensed financial institutions, and BDO's 2026-03-31 ISAE 3000R procedures obtained confirmation letters directly from banks and depositaries and sample-tested precious-metals inventory to confirm asset existence, but no reviewed primary source names the USDT reserve custodians, provider shares, custodian-failure continuity or replacement terms, or rehypothecation restrictions, and the report's emphasis of matter excludes key-custodian or counterparty illiquidity from the assured valuation. These are self-reported custody disclosures only, so custody continuity is limited under the D1 mapping (adequate would require a recent attestation naming custodians). Reserve composition verified 2026-07-17 against the BDO Financial Figures and Reserves Report as of 31 March 2026 (approved 30 April 2026; latest published attestation at review date): U.S. Treasury bills $117.04B (61.03%), overnight reverse repurchase agreements $19.33B (10.08%), term reverse repurchase agreements $4.75B (2.47%), cash and bank deposits $0.11B (0.06%), precious metals $19.84B (10.34%), Bitcoin $6.62B (3.45%), public equities $3.41B (1.78%), other investments $4.84B (2.53%), secured loans $15.83B (8.25%); total assets $191.77B against liabilities $183.54B, an $8.23B excess. The attestation's residual corporate-bond category ($3.0M, 0.0016%) is de minimis and not separately sliced. The reserve schema has no per-slice source slot; the per-slice document/date/URL table is recorded in the ANCHOR-EV package-3 packet (schema gap logged there).",
+      "notes": "Tether International, S.A. de C.V.'s Terms make purchase and redemption a personal contractual right available only to verified customers. The 2026-02-20 Relevant Information Document and Tether's transparency disclosures characterize reserves as issuer-held and issuer-owned assets that Tether invests and manages at its sole discretion, while the post-sale obligation is conditional redemption for eligible primary-market customers; the BDO ISAE 3000R report as of 2026-03-31 likewise defines the Reserves as all assets owned by the Company. The reviewed sources establish neither beneficial ownership or a direct reserve-asset claim for holders nor reserve segregation, a holder trust, or bankruptcy-remoteness protection. Claim and segregation are therefore weak. Custody continuity, re-reviewed 2026-07-19 by Kimi rescue lane 1b (2026-07-19): the RID's Safeguarding Arrangements section states Tether primarily holds the Reserves with various third parties including banks and licensed financial institutions, and BDO's 2026-03-31 ISAE 3000R procedures obtained confirmation letters directly from banks and depositaries and sample-tested precious-metals inventory to confirm asset existence, but no reviewed primary source names the USDT reserve custodians, provider shares, custodian-failure continuity or replacement terms, or rehypothecation restrictions, and the report's emphasis of matter excludes key-custodian or counterparty illiquidity from the assured valuation. These are self-reported custody disclosures only, so custody continuity is limited under the D1 mapping (adequate would require a recent attestation naming custodians). The 2026-07-19 re-review re-read the 2026-03-31 BDO report, the 2026-02-20 RID, the Terms, and Tether's 2026-05-01 Q1 2026 attestation press release for custodian names: none names any reserve custodian, and the widely reported Cantor Fitzgerald custody relationship is documented only in secondary press and executive interviews, which are not admissible primary sources under D1, so limited stands. Claim and segregation were likewise re-confirmed weak on 2026-07-19: the Terms still grant only a personal contractual purchase/redemption right to verified customers and document no holder claim on segregated assets, holder trust, or bankruptcy-remoteness protection. Reserve composition re-verified 2026-07-19 against the BDO Financial Figures and Reserves Report as of 31 March 2026 (approved 30 April 2026; still the latest published attestation - Tether's newsroom carries no Q2 2026 report as of 2026-07-19): U.S. Treasury bills $117.04B (61.03%), overnight reverse repurchase agreements $19.33B (10.08%), term reverse repurchase agreements $4.75B (2.47%), cash and bank deposits $0.11B (0.06%), precious metals $19.84B (10.34%), Bitcoin $6.62B (3.45%), public equities $3.41B (1.78%), other investments $4.84B (2.53%), secured loans $15.83B (8.25%); total assets $191.77B against liabilities $183.54B, an $8.23B excess. The attestation's residual corporate-bond category ($3.0M, 0.0016%) is de minimis and not separately sliced. The reserve schema has no per-slice source slot; the per-slice document/date/URL table is recorded in the ANCHOR-EV package-3 packet (schema gap logged there).",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -1675,7 +1776,7 @@
     {
       "assetId": "rlusd-ripple",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-15",
+      "reviewedAt": "2026-07-19",
       "sources": [
         {
           "label": "Ripple Stablecoin Terms (reserve segregation and denial of holder property interests)",
@@ -1684,13 +1785,20 @@
         {
           "label": "Deloitte RLUSD examination report for May 2026 (segregated reserve reconciliation)",
           "url": "https://cdn.sanity.io/files/ior4a5y3/production/00bb3899f244c392ab77e55e65dee33cf271dfce.pdf/RLUSD_Attestation_Report_-_May_2026_Final.pdf"
+        },
+        {
+          "label": "Ripple press release: Ripple Selects BNY to Custody Ripple USD Reserves (2025-07-09)",
+          "url": "https://ripple.com/ripple-press/ripple-selects-bny-to-custody-ripple-usd-reserves/"
         }
       ],
-      "notes": "Ripple's terms require RLUSD reserve assets to be segregated but expressly deny holders any direct or indirect property interest in the reserves or a right to withdraw reserve assets. Deloitte's May 2026 report confirms segregated reserve assets at NYDFS-approved U.S. depositories and custodians. The governing terms therefore contradict the direct reserve-asset claim required for a higher tier, so claim and segregation is weak. The report does not identify the depositories or custodians, allocations, failure-continuity arrangements, or reserve-wide non-rehypothecation protections, so custody continuity remains uncurated.",
+      "notes": "Re-reviewed 2026-07-19 by Kimi rescue lane 1f (2026-07-19). Ripple's RLUSD User Terms (last updated 2024-10-03) require the reserve to be maintained at no less than 100% of outstanding RLUSD in accounts segregated from SCTC's other assets at depository institutions and securities custodians, but expressly state that RLUSD conveys no direct or indirect property interest in or right to withdraw reserve assets, that no trust or fiduciary services are provided to users, and that the holder redemption right is conditioned on becoming a Ripple Customer. The governing terms therefore contradict the direct reserve-asset claim required for a higher tier, so claim and segregation stays weak. Custody continuity, added in this re-review: Ripple's July 9, 2025 press release names The Bank of New York Mellon as the primary reserve custodian, the terms covenant segregated accounts at depository institutions and securities custodians, and Deloitte's May 2026 examination confirms segregated reserve assets held with NYDFS-approved U.S. depository institutions and asset custodians. The remaining depository institutions and custodians are not publicly identified, custody allocation shares, substitute-custodian or failure-recovery arrangements, and reserve-wide non-rehypothecation protections are undisclosed, so custody continuity is limited rather than adequate.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
           "quality": "weak"
+        },
+        "custodyContinuity": {
+          "quality": "limited"
         }
       }
     },
