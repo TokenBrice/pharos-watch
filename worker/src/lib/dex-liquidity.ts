@@ -1,5 +1,6 @@
 import {
   DexExitRouteObservationSchema,
+  MAX_DEX_EXIT_ROUTE_OBSERVATIONS,
   ExitRouteObservationCoverageSchema,
   type DexLiquidityData,
   type LiquidityCoverageClass,
@@ -107,7 +108,9 @@ function parseExitRouteDetails(
   const observations =
     raw.exitRouteObservations === undefined
       ? null
-      : DexExitRouteObservationSchema.array().safeParse(raw.exitRouteObservations);
+      : DexExitRouteObservationSchema.array()
+          .max(MAX_DEX_EXIT_ROUTE_OBSERVATIONS)
+          .safeParse(raw.exitRouteObservations);
   const coverage =
     raw.exitRouteObservationCoverage === undefined
       ? null
