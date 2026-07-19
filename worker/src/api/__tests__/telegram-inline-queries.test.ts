@@ -33,6 +33,10 @@ function makeChosenInlineResultRequest(): Request {
   );
 }
 
+function inlineReadLimitRows() {
+  return [{ match: "INSERT INTO cache", rows: [{ value: "1" }] }];
+}
+
 function inlineAnswerBody(): {
   inline_query_id: string;
   results: Array<{
@@ -59,6 +63,7 @@ describe("Telegram inline status cards", () => {
 
   it("serves one source-attributed status card through the existing status loader", async () => {
     const db = mockD1([
+      ...inlineReadLimitRows(),
       { match: "FROM price_cache WHERE asset_id = ?", rows: [{ price: 0.9997, updated_at: 1_700_000_000 }] },
       { match: "FROM safety_grade_history", rows: [{ grade: "A", score: 88, recorded_at: 1_700_000_000 }] },
       { match: "FROM stress_signals", rows: [{ band: "CALM", score: 5, computed_at: 1_700_000_000 }] },
@@ -120,6 +125,36 @@ describe("Telegram inline status cards", () => {
     if (query) expect(usageRow?.binds).not.toContain(query);
   });
 
+  it("rate-limits repeated equivalent status card reads before loading status rows", async () => {
+    const db = mockD1([
+      { match: "INSERT INTO cache", rows: [{ value: "1" }], runMeta: { changes: 0 } },
+      {
+        match: "SELECT updated_at FROM cache WHERE key = ?",
+        rows: [
+          {
+            key: "telegram:command-cooldown:inline:123456:/status:usdc-circle",
+            updated_at: Math.floor(Date.now() / 1000),
+          },
+        ],
+      },
+      { match: "FROM price_cache WHERE asset_id = ?", rows: [{ price: 1, updated_at: 1_700_000_000 }] },
+    ]);
+
+    const response = await handleTelegramWebhook(db, makeInlineQueryRequest("  usdc  "), "test-secret", "bot-token");
+
+    expect(response.status).toBe(200);
+    expect(inlineAnswerBody()).toMatchObject({
+      results: [],
+      cache_time: TELEGRAM_INLINE_STATUS_POLICY.emptyResultCacheTimeSec,
+    });
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM price_cache"))).toBe(false);
+    const usageRow = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_usage_daily"));
+    expect(usageRow?.binds).toContain("inline_query");
+    expect(usageRow?.binds).toContain("rate_limited");
+    expect(usageRow?.binds).not.toContain("usdc");
+    expect(usageRow?.binds).not.toContain(123456);
+  });
+
   it("records chosen cards as an aggregate only and makes no Bot API request", async () => {
     const db = mockD1([]);
 
@@ -138,6 +173,7 @@ describe("Telegram inline status cards", () => {
   it("records a failed inline answer as a bounded aggregate", async () => {
     fetchSpy.mockResolvedValueOnce(new Response("unavailable", { status: 503 }));
     const db = mockD1([
+      ...inlineReadLimitRows(),
       { match: "FROM price_cache WHERE asset_id = ?", rows: [{ price: 1, updated_at: 1_700_000_000 }] },
       { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
     ]);
