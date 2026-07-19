@@ -623,21 +623,33 @@ export async function projectTelegramRecapTerminalOutcome(
 
 export interface TelegramRecapRetentionResult {
   deletedTargets: number;
+  cappedAtLimit: boolean;
 }
 
 /** Delete only bounded recap audit rows; pending delivery retention remains owned by its queue. */
 export async function pruneTelegramRecapTargets(
   db: D1Database,
   nowSec: number,
-  options: { aggregateRetentionSec?: number; terminalRetentionSec?: number } = {},
+  options: { aggregateRetentionSec?: number; terminalRetentionSec?: number; limit?: number } = {},
 ): Promise<TelegramRecapRetentionResult> {
   const aggregateCutoff = nowSec - (options.aggregateRetentionSec ?? 30 * 86400);
   const terminalCutoff = nowSec - (options.terminalRetentionSec ?? 90 * 86400);
+  const limit = options.limit;
+  if (limit != null && (!Number.isInteger(limit) || limit <= 0)) {
+    throw new RangeError("Telegram recap target prune limit must be a positive integer.");
+  }
   const result = await db.prepare(`
     DELETE FROM telegram_recap_targets
-     WHERE (status IN ('sent', 'skipped_no_changes', 'skipped_paused', 'skipped_stale')
-            AND updated_at < ?)
-        OR (status IN ('cancelled', 'expired', 'execution_unknown', 'failed_permanent') AND updated_at < ?)
-  `).bind(aggregateCutoff, terminalCutoff).run();
-  return { deletedTargets: Number(result.meta?.changes ?? 0) };
+     WHERE rowid IN (
+       SELECT rowid
+         FROM telegram_recap_targets
+        WHERE (status IN ('sent', 'skipped_no_changes', 'skipped_paused', 'skipped_stale')
+               AND updated_at < ?)
+           OR (status IN ('cancelled', 'expired', 'execution_unknown', 'failed_permanent') AND updated_at < ?)
+        ORDER BY updated_at ASC, recap_key ASC
+        LIMIT ?
+     )
+  `).bind(aggregateCutoff, terminalCutoff, limit ?? 10_000).run();
+  const deletedTargets = Number(result.meta?.changes ?? 0);
+  return { deletedTargets, cappedAtLimit: deletedTargets >= (limit ?? 10_000) };
 }
