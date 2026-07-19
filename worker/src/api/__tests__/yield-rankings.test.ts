@@ -502,7 +502,7 @@ describe("handleYieldRankings", () => {
     expect(body._meta.ageSeconds).toBe(30);
   });
 
-  it("hydrates across ordinary compact publication generations and reports the live identity", async () => {
+  it("returns explicit NR fields instead of crossing compact publication generations", async () => {
     const hourlyPublishedAt = Math.floor(Date.now() / 1000) - 3_600;
     const hourlyGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${hourlyPublishedAt}`;
     const payload = {
@@ -538,25 +538,29 @@ describe("handleYieldRankings", () => {
     const res = await handleYieldRankings(db);
     const body = await res.json() as YieldRankingsResponse;
 
+    expect(res.status).toBe(200);
     expect(body.rankings[0]).toMatchObject({
       id: "rated-coin",
-      safetyScore: 66,
-      safetyGrade: "B-",
+      safetyScore: null,
+      safetyGrade: "NR",
+      safetyReason: "safety-identity-mismatch",
+      pharosYieldScore: null,
+      pysNullReason: "safety-unrated",
     });
     expect(body.provenance?.safetySnapshot).toMatchObject(payload.provenance.safetySnapshot);
     expect(body.provenance?.liveSafetyHydration).toMatchObject({
-      kind: "ok",
-      coverageRatio: 1,
-      coveredCount: 1,
+      kind: "degraded",
+      coverageRatio: 0,
+      coveredCount: 0,
       trackedCount: 1,
-      reason: null,
+      reason: "safety-identity-mismatch",
       source: "report-card-cache",
       publicationGenerationId: liveGenerationId,
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
       publishedAt: expect.any(Number),
     });
     expect(body.provenance?.liveSafetyHydration?.publicationGenerationId).toBe(liveGenerationId);
-    expect(body.rankings[0]?.provenance?.safetyScoreIdentity).toEqual(currentSafetyIdentity);
+    expect(body.warnings?.some((warning) => warning.code === "yield-safety-hydration-degraded")).toBe(true);
   });
 
   it("returns explicit NR fields instead of crossing compact safety identities", async () => {
