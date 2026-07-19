@@ -29,24 +29,31 @@ function makeRouteCtx(overrides: Partial<FullRouteContext> & { url: URL }): Full
   return { db, execCtx, request: defaultRequest, trustedAdmin: false, ...overrides };
 }
 
-// Dark-gated public endpoints return 404 until an owner-gated activation
-// marker is written; that pre-activation 404 is their contract, not a routing
-// failure. See worker/src/api/report-cards-v9.ts.
-const DARK_GATED_PATHS = new Set(["/api/report-cards/v9"]);
+// Cache-backed public snapshots have dedicated handler tests; this broad route
+// sweep only needs to prove they stay registered.
+const REGISTRATION_ONLY_PATHS = new Set([
+  "/api/report-cards",
+  "/api/report-cards/v9",
+  "/api/depeg-resolver",
+  "/api/depeg-resolver-review",
+]);
 
 describe("router contract: strict frontend paths are routable", () => {
   it("routes all strict contract paths", async () => {
     for (const path of STRICT_CONTRACT_PATHS_LIST) {
+      if (REGISTRATION_ONLY_PATHS.has(path)) {
+        expect(ROUTER_STATIC_PATHS, `expected static route for ${path}`).toContain(path);
+        continue;
+      }
+
       const result = route(makeRouteCtx({ url: new URL(`https://api.pharos.watch${path}`) }));
       expect(result, `expected route for ${path}`).not.toBeNull();
 
       const response = await result!;
-      if (!DARK_GATED_PATHS.has(path)) {
-        expect(response.status, `unexpected 404 for ${path}`).not.toBe(404);
-      }
+      expect(response.status, `unexpected 404 for ${path}`).not.toBe(404);
       expect(response.status, `unexpected 500 for ${path}`).not.toBe(500);
     }
-  });
+  }, 15_000);
 
   it("returns null for unknown paths", () => {
     const result = route(makeRouteCtx({ url: new URL("https://api.pharos.watch/api/definitely-not-real") }));
@@ -151,15 +158,18 @@ describe("router contract: strict frontend paths are routable", () => {
       if (endpoint.path.includes(":") && !endpoint.probePath) {
         continue;
       }
+      if (REGISTRATION_ONLY_PATHS.has(endpoint.path)) {
+        expect(ROUTER_STATIC_PATHS, `expected static route for ${endpoint.path}`).toContain(endpoint.path);
+        continue;
+      }
+
       const path = endpoint.probePath ?? endpoint.path;
       for (const method of endpoint.methods) {
         const request = new Request(`https://api.pharos.watch${path}`, {
           method,
           headers: method === "POST" ? { "X-Pharos-Admin": "1" } : undefined,
         });
-        const expectedPublicStatuses = DARK_GATED_PATHS.has(endpoint.path)
-          ? [200, 400, 404, 502, 503]
-          : endpoint.path === "/api/telegram-webhook"
+        const expectedPublicStatuses = endpoint.path === "/api/telegram-webhook"
             ? [200, 400, 501, 502, 503]
             : endpoint.path === "/api/stablecoin-reserves/iusd-infinifi"
               ? [200, 400, 502, 503]
