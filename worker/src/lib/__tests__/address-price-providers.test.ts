@@ -211,16 +211,23 @@ describe("address price providers", () => {
     ]);
   });
 
-  it("prioritizes a trusted price expiring before the next generation ahead of low-depth rows", () => {
+  it("orders expiring thin-coverage rows first without re-targeting deep high-confidence assets", () => {
     const nowSec = 1_800_000_000;
     const targets = buildAddressPriceTargetsByProvider({
       providers: ["dexpaprika-address"],
       nowSec,
       previousAssetsById: new Map([
-        ["expiring", {
-          id: "expiring",
+        ["deep-expiring", {
+          id: "deep-expiring",
           symbol: "EXP",
           consensusSources: ["coingecko", "defillama-list", "coinbase"],
+          priceSource: "coingecko",
+          priceObservedAt: nowSec,
+        }],
+        ["thin-expiring", {
+          id: "thin-expiring",
+          symbol: "TEX",
+          consensusSources: ["coingecko"],
           priceSource: "coingecko",
           priceObservedAt: nowSec,
         }],
@@ -235,20 +242,32 @@ describe("address price providers", () => {
           ...PUBLISHABLE_PRICE_META,
         },
         {
-          id: "expiring",
+          id: "deep-expiring",
           symbol: "EXP",
           address: "base:0x0000000000000000000000000000000000000002",
+          price: 1,
+          ...PUBLISHABLE_PRICE_META,
+        },
+        {
+          id: "thin-expiring",
+          symbol: "TEX",
+          address: "base:0x0000000000000000000000000000000000000003",
           price: 1,
           ...PUBLISHABLE_PRICE_META,
         },
       ],
     });
 
+    // A deep, high-confidence asset is not re-targeted merely because a
+    // short-window composite member makes its price look expiring — that rule
+    // would re-target every oracle-covered major each run and append a
+    // non-replay-safe lane to their consensus provenance. Expiring still
+    // orders cohorts among rows included for thin coverage.
     expect(targets.get("dexpaprika-address")?.map((target) => ({
       id: target.stablecoinId,
       expiring: target.expiresBeforeNextGeneration,
     }))).toEqual([
-      { id: "expiring", expiring: true },
+      { id: "thin-expiring", expiring: true },
       { id: "low-depth", expiring: false },
     ]);
   });

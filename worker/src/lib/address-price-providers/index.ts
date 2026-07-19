@@ -204,13 +204,18 @@ function shouldTargetAsset(
     expiresBeforeNextGeneration: expiring,
     lowConfidencePrice,
     missingPrice,
+    // `expiring` is deliberately not an inclusion reason on its own: thin
+    // coverage is already captured by `previousSourceDepth < 3`, so an
+    // expiring-only rule would re-target deep high-confidence majors every run
+    // (their labels carry short-window oracle members), wasting the request cap
+    // and appending a non-replay-safe lane to their consensus provenance.
+    // `expiring` still orders cohorts among assets included for other reasons.
     include:
       !previousAssetsById ||
       previousSourceDepth < 3 ||
       missingPrice ||
       recentlyMissingPrice ||
-      lowConfidencePrice ||
-      expiring,
+      lowConfidencePrice,
   };
 }
 
