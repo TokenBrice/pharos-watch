@@ -38,6 +38,7 @@ describe("runDexScreenerPass", () => {
     vi.restoreAllMocks();
     vi.mocked(fetchDsTokenPoolsWithStatus).mockReset();
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it("does not use the retired symbol-search fallback for addressless assets", async () => {
@@ -87,7 +88,13 @@ describe("runDexScreenerPass", () => {
         }),
       ],
     });
-    expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledWith("base", "0xabc", undefined, expect.any(Number), 0);
+    expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledWith(
+      "base",
+      "0xabc",
+      expect.any(AbortSignal),
+      expect.any(Number),
+      0,
+    );
 
     const circuitWrites = db.getHistory().filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
     const exactWrite = circuitWrites.find((entry) => entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`);
@@ -143,6 +150,47 @@ describe("runDexScreenerPass", () => {
           success: false,
           errorClass: "upstream-error",
           errorMessage: expect.stringContaining("HTTP 429"),
+        }),
+      ],
+    });
+  });
+
+  it("does not wait indefinitely when an exact lookup never settles", async () => {
+    vi.useFakeTimers();
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockReturnValueOnce(new Promise(() => {}));
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: [`circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`],
+        rows: [],
+        first: null,
+      },
+    ]);
+
+    const resultPromise = runDexScreenerPass(
+      [
+        makeMissingAsset({
+          id: "exact-usd",
+          symbol: "EXACT",
+          address: "0xabc",
+          chains: ["Base"],
+        }),
+      ],
+      undefined,
+      db,
+    );
+    await vi.advanceTimersByTimeAsync(5_001);
+
+    await expect(resultPromise).resolves.toMatchObject({
+      resolved: 0,
+      failures: [],
+      diagnostics: [
+        expect.objectContaining({
+          source: "dexscreener-exact",
+          endpoint: "api.dexscreener.com/tokens/v1/base/0xabc",
+          ok: false,
+          success: false,
+          errorClass: "TimeoutError",
         }),
       ],
     });
