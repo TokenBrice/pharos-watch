@@ -66,9 +66,9 @@ function parseLabeledPct(normalized: string, label: RegExp): number | null {
   const match = normalized.match(label);
   if (!match || match.index === undefined) return null;
   const window = normalized.slice(match.index, match.index + 300);
-  const pctMatch = window.match(/([\d]+(?:\.[\d]+)?)\s*%/);
+  const pctMatch = window.match(/\d{1,3}\.\d{1,6}\s{0,3}%/) ?? window.match(/\d{1,3}\s{0,3}%/);
   if (!pctMatch) return null;
-  const pct = Number.parseFloat(pctMatch[1]);
+  const pct = Number.parseFloat(pctMatch[0]);
   return Number.isFinite(pct) && pct >= 0 && pct <= 100 ? pct : null;
 }
 
@@ -81,7 +81,7 @@ function parseLabeledPct(normalized: string, label: RegExp): number | null {
 export function parseRippleReserveBreakdown(normalized: string): ReserveBreakdown | null {
   const treasuryBillsPct = parseLabeledPct(normalized, /U\.?S\.?\s+Treasury\s+bills?|T-bills/i);
   const governmentMoneyMarketFundsPct = parseLabeledPct(normalized, /[Gg]overnment\s+money[- ]market\s+funds?/);
-  const cashPct = parseLabeledPct(normalized, /[Cc]ash(\s+and\s+deposit\s+accounts)?|[Dd]eposit\s+accounts/);
+  const cashPct = parseLabeledPct(normalized, /[Cc]ash|[Dd]eposit\s+accounts/);
   if (treasuryBillsPct === null || governmentMoneyMarketFundsPct === null || cashPct === null) return null;
   const total = treasuryBillsPct + governmentMoneyMarketFundsPct + cashPct;
   if (Math.abs(total - 100) > BREAKDOWN_TOTAL_TOLERANCE_PCT) return null;
