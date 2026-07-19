@@ -314,7 +314,7 @@ export function buildUniV3MeasuredExecutionTarget(input: {
   );
   if (inputPrice == null || !Number.isFinite(inputPrice) || inputPrice <= 0) return null;
   const outputStablecoinId = input.chainAddressToId.get(buildChainAddressKey(candidate.chain, tokenOut.address));
-  const outputPrice = getTokenReferenceUsdPrice(
+  let outputPrice = getTokenReferenceUsdPrice(
     tokenOut,
     candidate.chain,
     input.chainAddressToId,
@@ -322,6 +322,23 @@ export function buildUniV3MeasuredExecutionTarget(input: {
     input.validationReferences,
     input.stablecoinPriceById,
   );
+  if (outputPrice == null) {
+    // An untracked counter asset (WETH, WBTC, …) has no direct reference, so
+    // the whole target gated to target-unresolved. The subgraph candidate's
+    // spot prices (decimal-adjusted; token0Price is token1's price in token0
+    // units, token1Price is token0's price in token1 units — the convention
+    // the Uni V3 price-observation indexer already consumes) plus the input
+    // leg's direct reference imply the output reference — the same derivation
+    // deriveTokenUsdPrice uses for display pricing and
+    // applyRaydiumPoolImpliedReferences uses for Raydium execution models.
+    // Only price resolution may be repaired this way; identity failures above
+    // stay gated.
+    const spotInputPerOutput = inputIndex === 0 ? candidate.token0Price : candidate.token1Price;
+    const impliedOutputPrice = inputPrice * spotInputPerOutput;
+    if (Number.isFinite(impliedOutputPrice) && impliedOutputPrice > 0) {
+      outputPrice = impliedOutputPrice;
+    }
+  }
   if (outputPrice == null || !Number.isFinite(outputPrice) || outputPrice <= 0) return null;
   const chain = canonicalExitRouteChain(candidate.chain);
   const poolId = canonicalExitRouteAssetKey(chain, poolAddress);
