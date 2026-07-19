@@ -2473,6 +2473,12 @@ describe("authoritative-price-sources", () => {
       },
       {
         priceSource: "alchemy-address+coingecko+moralis-address",
+        priceConfidence: "high" as const,
+        priceObservedAt: nowSec - 20 * 60,
+        priceSyncedAt: nowSec - 30,
+      },
+      {
+        priceSource: "alchemy-address+coingecko+moralis-address",
         priceConfidence: "low" as const,
         priceObservedAt: nowSec - 60,
       },

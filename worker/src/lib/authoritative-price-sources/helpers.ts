@@ -344,6 +344,7 @@ function resolveTrustedInheritedParent(
     if (
       freshness.accepted === false &&
       freshness.reason === "stale_observed_at" &&
+      replaySafe &&
       syncedAt != null &&
       splitCompositePriceSource(parentSource).length > 1
     ) {
