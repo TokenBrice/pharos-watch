@@ -467,11 +467,12 @@
       "implementationAddresses": [
         "0x155384be16fa171e6d97e4136643a9ac31678d04"
       ],
-      "adminAddresses": [
-        "0x95081db6a3ae3e1d14d66e68c703e463e4faf912"
-      ],
-      "canChangeMintLogic": true,
-      "controlRef": "USSD Frax ProxyAdmin (mint implementation upgrade)",
+    "adminAddresses": [
+      "0x95081db6a3ae3e1d14d66e68c703e463e4faf912",
+      "0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac"
+    ],
+    "canChangeMintLogic": true,
+    "controlRef": "USSD terminal Safe (BrandedFactory + ProxyAdmin owner, 3-of-6)",
       "observedAt": "2026-07-14",
       "observedBlock": 75932905,
       "sources": [
@@ -555,40 +556,75 @@
           }
         ]
       },
-      {
-        "label": "USSD Frax ProxyAdmin (mint implementation upgrade)",
-        "role": "proxy-admin",
-        "authorityType": "contract",
-        "directMintAbility": "upgrade-only",
-        "chain": "sonic",
-        "address": "0x95081db6a3ae3e1d14d66e68c703e463e4faf912",
-        "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-14",
-        "observedBlock": 75932905,
-        "failureDomainKeys": [
-          "sonic:0x95081db6a3ae3e1d14d66e68c703e463e4faf912",
-          "sonic:0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac"
+    {
+      "label": "USSD terminal Safe (BrandedFactory + ProxyAdmin owner, 3-of-6)",
+      "role": "minter-admin",
+      "authorityType": "safe",
+      "directMintAbility": "can-authorize",
+      "threshold": 3,
+      "signerCount": 6,
+      "canRaiseCap": true,
+      "chain": "sonic",
+      "address": "0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac",
+      "modulesOrGuardsStatus": "none-detected",
+      "observedAt": "2026-07-14",
+      "observedBlock": 75932905,
+      "safe": {
+        "version": "1.4.1",
+        "owners": [
+          "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+          "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+          "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+          "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+          "0x381e2495e683868f693aa5b1414f712f21d34b40",
+          "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
         ],
-        "evidence": "At Sonic block 75932905, the USSD proxy's EIP-1967 admin slot returned ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912. ProxyAdmin.owner() returned 0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac; the verified OpenZeppelin ProxyAdmin source exposes upgradeAndCall with no timelock or delay mechanism. The same proxy admin and owner are present on the Ethereum, Base, Arbitrum, Optimism, and Scroll deployments at their current blocks.",
-        "sources": [
-          {
-            "label": "USSD proxy verified source",
-            "url": "https://etherscan.io/address/0x000000000eccff26b795f73fb0a70d48da657fef#code"
-          },
-          {
-            "label": "USSD ProxyAdmin on SonicScan",
-            "url": "https://sonicscan.org/address/0x95081db6a3ae3e1d14d66e68c703e463e4faf912#code"
-          },
-          {
-            "label": "Sonic RPC",
-            "url": "https://rpc.soniclabs.com"
-          }
-        ]
-      }
-    ],
+        "threshold": 3,
+        "enabledModules": [],
+        "guard": "0x0000000000000000000000000000000000000000",
+        "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+        "observedBlock": 75932905,
+        "observedAt": "2026-07-14",
+        "source": "onchain"
+      },
+      "failureDomainKeys": [
+        "sonic:0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac"
+      ],
+      "routeChecks": {
+        "caps": "This Safe owns BrandedFactory, which owns the direct BrandedCustodian and holds FACTORY_ROLE, the MINTER_ROLE administrator; it is the terminal authority for the custodian mint-cap and minter-authorization path.",
+        "pausersAdminsUpgraders": "The same Safe owns ProxyAdmin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912. Its immediate upgradeAndCall path can replace USSD mint-critical implementation logic without a timelock."
+      },
+      "evidence": "At Sonic block 75932905, both BrandedFactory.owner() and ProxyAdmin.owner() returned this Safe. BrandedFactory is the direct BrandedCustodian owner and the token's sole FACTORY_ROLE holder, so this is the terminal authority for authorizing minters and changing the direct-custodian mint-cap path. The same 3-of-6 Safe can authorize the ProxyAdmin's immediate upgradeAndCall path. Safe reads returned VERSION() = 1.4.1, the six listed owners, threshold 3, an empty module list, and a zero guard.",
+      "sources": [
+        {
+          "label": "Sonic BrandedFactory verified source",
+          "url": "https://sonicscan.org/address/0x63e89638743a409e2389f06a3f778a4570314d7d#code"
+        },
+        {
+          "label": "Sonic BrandedCustodian verified source",
+          "url": "https://sonicscan.org/address/0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03#code"
+        },
+        {
+          "label": "USSD ProxyAdmin on SonicScan",
+          "url": "https://sonicscan.org/address/0x95081db6a3ae3e1d14d66e68c703e463e4faf912#code"
+        },
+        {
+          "label": "USSD Frax owner Safe on SonicScan",
+          "url": "https://sonicscan.org/address/0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac"
+        },
+        {
+          "label": "Sonic RPC",
+          "url": "https://rpc.soniclabs.com"
+        }
+      ]
+    }
+  ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "none",
     "review": {
-      "evidence": "At current blocks on Sonic (75932905), Ethereum (25531120), Base (48622804), Arbitrum (483776104), Optimism (154218090), and Scroll (34361168), all six tracked USSD deployments resolve to implementation 0x155384be… and ProxyAdmin 0x95081db6…. On Sonic, the verified implementation and role-grant logs resolve MINTER_ROLE to BrandedCustodian 0x54e144…, FACTORY_ROLE and the custodian owner to BrandedFactory 0x63e896…, and the ProxyAdmin owner to 0x87c7…. The token-side mint, cap, role-admin, and upgrade surfaces are therefore structured and current; the broader approved-collateral roster used by external Frax frxUSD routes remains a separate unresolved governance surface. 2026-07-20 dc-1 pass: the previously open question concerns the external Frax frxUSD approved-collateral roster and reserve-deployment controllers — a reserve-domain fact, not USSD mint-control identity. The tracked token's direct minter (BrandedCustodian), role administrator (BrandedFactory), and proxy upgrade controller (Frax ProxyAdmin) are resolved on-chain, so the deployment-control review is scoreable; the collateral-roster question stays with the reserve review.",
-      "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+      "evidence": "At current blocks on Sonic (75932905), Ethereum (25531120), Base (48622804), Arbitrum (483776104), Optimism (154218090), and Scroll (34361168), all six tracked USSD deployments resolve to implementation 0x155384be… and ProxyAdmin 0x95081db6…. On Sonic, the verified implementation and role-grant logs resolve MINTER_ROLE to BrandedCustodian 0x54e144…, FACTORY_ROLE and the custodian owner to BrandedFactory 0x63e896…, and the ProxyAdmin owner to 0x87c7…. The token-side mint, cap, role-admin, and upgrade surfaces are therefore structured and current; the broader approved-collateral roster used by external Frax frxUSD routes remains a separate unresolved governance surface. The BrandedCustodian mintCap is uint256.max and its Factory owner can reset it, while ProxyAdmin upgrades have no enforced delay, so the economic cap is unbounded. Frax publishes the cited real-time balance-sheet view, supporting continuous reconciliation; reviewed sources do not identify a named prudential supervisor. The tracked token's direct minter, role administrator, and proxy upgrade controller are resolved on-chain, so the deployment-control review is scoreable; the collateral-roster question stays with the reserve review.",
+      "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
       "sources": [
         {

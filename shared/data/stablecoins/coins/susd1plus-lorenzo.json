@@ -90,9 +90,9 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "sUSD1+ is a Lorenzo strategy-vault receipt over USD1+ exposure that ultimately inherits the reviewed World Liberty Financial USD1 issuer/controller mint path; wrapper share minting does not create base USD1 supply.",
+    "authorityPosture": "unknown",
+    "confidence": "unknown",
+    "summary": "sUSD1+ is a Lorenzo strategy-vault receipt whose base USD1 authority is inherited from the reviewed parent, but the local BSC UUPS upgrade authority cannot be enumerated from public contract reads.",
     "inheritedFrom": "usd1-world-liberty-financial",
     "controls": [
       {
@@ -104,6 +104,8 @@
         "directMintAbility": "none",
         "modulesOrGuardsStatus": "unknown",
         "capDescription": "Wrapper/share accounting over Lorenzo USD1+ strategy exposure; does not mint base USD1.",
+        "observedAt": "2026-07-20",
+        "observedBlock": 111074113,
         "sources": [
           {
             "label": "Lorenzo Protocol",
@@ -112,29 +114,55 @@
           {
             "label": "Lorenzo GitHub",
             "url": "https://github.com/Lorenzo-Protocol/"
+          },
+          {
+            "label": "sUSD1+ BSC proxy",
+            "url": "https://bscscan.com/address/0x4f2760b32720f013e900dc92f65480137391199b"
           }
         ],
-        "evidence": "Local metadata marks sUSD1+ as `variantOf: usd1-world-liberty-financial` and `variantKind: strategy-vault`; base USD1 already has reviewed mint authority."
+        "evidence": "At BSC block 111074113, the proxy's EIP-1967 implementation slot resolved to 0xaafe784a51f119d38e57717fd8a00f844bd86f13 while the standard admin and beacon slots were zero. UPGRADE_INTERFACE_VERSION() returned 5.0.0, but asset(), owner(), getOwner(), and admin() did not identify a local controller."
       },
       {
-        "chain": "ethereum",
-        "address": "0xee9b1a09AEdAceD9DCdA74964eA447fEB93861C2",
-        "label": "Inherited USD1 token owner/controller",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "direct",
-        "timelockDelaySec": 259200,
+        "label": "sUSD1+ unresolved UUPS upgrade authority",
+        "role": "proxy-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "upgrade-only",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
+        "capDescription": "A UUPS implementation replacement may change local share-mint logic, but public reads do not identify the account or contract authorized by _authorizeUpgrade.",
+        "observedAt": "2026-07-20",
+        "observedBlock": 111074113,
         "sources": [
           {
-            "label": "USD1 website",
-            "url": "https://worldlibertyfinancial.com/usd1"
+            "label": "sUSD1+ BSC proxy",
+            "url": "https://bscscan.com/address/0x4f2760b32720f013e900dc92f65480137391199b"
           }
         ],
-        "evidence": "Inherited from reviewed `usd1-world-liberty-financial` mintAuthority."
+        "evidence": "The proxy reports UPGRADE_INTERFACE_VERSION 5.0.0 and resolves to implementation 0xaafe784a51f119d38e57717fd8a00f844bd86f13, but all tested owner/admin getters revert. Storage slot 0 points to 0x507ec48ef26919a205a9f3b8aaf69532e20c0987, itself a UUPS proxy with implementation 0x6e0f4dc0d748e4917b418357d989b2023b8b7a20 and no readable owner. This confirms an unresolved upgrade surface, not a controller identity."
       }
     ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x4f2760b32720f013e900dc92f65480137391199b"
+      ],
+      "implementationAddresses": [
+        "0xaafe784a51f119d38e57717fd8a00f844bd86f13"
+      ],
+      "canChangeMintLogic": "unknown",
+      "controlRef": "sUSD1+ unresolved UUPS upgrade authority",
+      "observedAt": "2026-07-20",
+      "observedBlock": 111074113,
+      "sources": [
+        {
+          "label": "sUSD1+ BSC proxy",
+          "url": "https://bscscan.com/address/0x4f2760b32720f013e900dc92f65480137391199b"
+        }
+      ]
+    },
     "review": {
       "sources": [
         {
@@ -146,11 +174,13 @@
           "url": "https://www.lorenzo-protocol.xyz/"
         }
       ],
-      "evidence": "Local variant metadata ties sUSD1+ to reviewed USD1 authority; the child wrapper creates strategy shares, not base USD1 supply. Follow-up probes 2026-07-20: the BSC UUPS proxy 0x4f2760b32720f013e900dc92f65480137391199b still resolves to impl 0xaafe784a51f119d38e57717fd8a00f844bd86f13 (48,824 bytes, unverified); owner()/getOwner()/admin()/DEFAULT_ADMIN_ROLE() all revert through the proxy; storage slot 0 holds 0x507ec48ef26919a205a9f3b8aaf69532e20c0987, itself a UUPS proxy (impl 0x6e0f4dc0d748e4917b418357d989b2023b8b7a20) whose owner getters also revert. The upgrade authority therefore remains genuinely unestablished from public reads; the unresolved question stands until Lorenzo discloses the admin or the impl source is verified.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+      "evidence": "Re-reviewed 2026-07-20. Local metadata establishes sUSD1+ as a USD1 strategy-vault variant, so base USD1 supply authority remains inherited rather than copied into the child controls. At BSC block 111074113, the local proxy is an OZ 5 UUPS surface with implementation 0xaafe784a51f119d38e57717fd8a00f844bd86f13 and zero standard EIP-1967 admin/beacon slots. owner(), getOwner(), admin(), DEFAULT_ADMIN_ROLE(), and asset() did not identify a controller; slot 0's nested UUPS proxy also has no readable owner. No independent reconciliation or named prudential supervisor is established for this local strategy wrapper.",
+      "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
+      "disposition": "unresolved",
       "unresolvedQuestions": [
-        "BSC UUPS proxy at 0x4f2760b32720f013e900dc92f65480137391199b has impl 0xaafe784a51f119d38e57717fd8a00f844bd86f13 with OZ5 owner slot=0x0 and no accessible owner()/DEFAULT_ADMIN_ROLE. BSCScan/Blockscout return no verified source for the impl (48824 bytes). Cannot confirm who controls _authorizeUpgrade. Need Lorenzo team disclosure or impl source verification to promote."
+        "Identify the authority permitted by _authorizeUpgrade for BSC proxy 0x4f2760b32720f013e900dc92f65480137391199b. Its implementation is unverified and all owner/admin probes revert; Lorenzo disclosure or verified implementation source is required before attributing a controller or threshold.",
+        "Explain the role of nested slot-0 UUPS proxy 0x507ec48ef26919a205a9f3b8aaf69532e20c0987 and identify its owner or access manager."
       ]
     }
   },

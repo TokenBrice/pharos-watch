@@ -135,9 +135,38 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "unknown",
     "summary": "YieldFi yUSD is an ERC-4626-style USDC strategy vault; wrapper shares mint against USDC deposits or manager calls, while base USDC mint authority is inherited from Circle.",
     "inheritedFrom": "usdc-circle",
+    "upgradeability": {
+      "model": "unknown",
+      "proxyAddresses": [
+        "0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
+        "0x03acc35286baae6d73d99a9f14ef13752208c8dc",
+        "0x10472f91f67c49260bdd65f016ea0757bb1fc91e"
+      ],
+      "implementationAddresses": [
+        "0x5bf44d32260aee6b807c490e92ef0481d15ab493"
+      ],
+      "adminAddresses": [
+        "0xe26e1d2ae51dcb89e382ca7400b080e6632117b9",
+        "0x8e31efda4453494a84fa6168d53eb1418c0b4ac4"
+      ],
+      "canChangeMintLogic": "unknown",
+      "controlRef": "YieldFi Manager runtime share-mint authority (Ethereum)",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25295175,
+      "sources": [
+        {
+          "label": "Sourcify YieldFi YToken source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5bf44d32260aee6b807c490e92ef0481d15ab493/sources/src/core/tokens/YToken.sol"
+        },
+        {
+          "label": "YieldFi yUSD terms",
+          "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -145,9 +174,9 @@
         "label": "YieldFi YToken share minting",
         "role": "wrapper",
         "authorityType": "contract",
-        "directMintAbility": "parameter-only",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Verified source mints shares during deposit and permits manager-only mintYToken/burnYToken accounting; it does not mint base USDC.",
         "sources": [
           {
@@ -159,9 +188,34 @@
             "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
           }
         ],
-        "evidence": "Ethereum reads returned asset() = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48, implementation 0x5bf44d32260aee6b807c490e92ef0481d15ab493, admin 0xe26e1d2ae51dcb89e382ca7400b080e6632117b9, manager() = 0x03ACc35286bAAE6D73d99a9f14Ef13752208C8dC, and administrator() = 0x10472f91f67C49260BDD65F016ea0757bb1Fc91e."
+        "evidence": "Ethereum reads returned asset() = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48, implementation 0x5bf44d32260aee6b807c490e92ef0481d15ab493, admin 0xe26e1d2ae51dcb89e382ca7400b080e6632117b9, manager() = 0x03ACc35286bAAE6D73d99a9f14Ef13752208C8dC, and administrator() = 0x10472f91f67C49260BDD65F016ea0757bb1Fc91e. Deposits mint vault shares but do not provide an independent base-USDC mint path."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x03acc35286baae6d73d99a9f14ef13752208c8dc",
+        "label": "YieldFi Manager runtime share-mint authority (Ethereum)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Verified YToken source restricts mintYToken and burnYToken to the configured Manager; the Manager proxy's terminal operator and role configuration are not established.",
+        "sources": [
+          {
+            "label": "Sourcify YieldFi YToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5bf44d32260aee6b807c490e92ef0481d15ab493/sources/src/core/tokens/YToken.sol"
+          },
+          {
+            "label": "YieldFi yUSD terms",
+            "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
+          }
+        ],
+        "evidence": "At Ethereum block 25295175, YToken manager() returned this Manager transparent-proxy address. The verified YToken source permits manager-only mintYToken and burnYToken calls; the current Manager proxy's terminal operator, roles, and any corresponding non-Ethereum authority paths are not established by the reviewed sources."
       }
     ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -173,11 +227,12 @@
           "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5bf44d32260aee6b807c490e92ef0481d15ab493/sources/src/core/tokens/YToken.sol"
         }
       ],
-      "evidence": "At Ethereum block 25295175: vault proxy admin (0xe26e1d2ae51dcb89e382ca7400b080e6632117b9, OZ ProxyAdmin) is owned by YieldFiTimelockController (0x8e31efda4453494a84fa6168d53eb1418c0b4ac4) with 1-day minDelay (86400 seconds). The timelock has 0 holders for all roles (PROPOSER, EXECUTOR, DEFAULT_ADMIN) — upgrade path is frozen; vault implementation cannot be changed. Administrator proxy (0x10472...) and Manager proxy (0x03ACc...) ProxyAdmins are also owned by the same timelock. Runtime minting (mintYToken/burnYToken) flows through the Manager contract (TransparentUpgradeableProxy, impl: Manager), which is operated as an issuer-backend by YieldFi — not confirmable from chain state.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25295175: vault proxy admin (0xe26e1d2ae51dcb89e382ca7400b080e6632117b9, OZ ProxyAdmin) is owned by YieldFiTimelockController (0x8e31efda4453494a84fa6168d53eb1418c0b4ac4) with 1-day minDelay (86400 seconds). The timelock has 0 holders for all roles (PROPOSER, EXECUTOR, DEFAULT_ADMIN), so the observed upgrade path is inactive. Administrator proxy (0x10472...) and Manager proxy (0x03ACc...) ProxyAdmins are also owned by the same timelock. Runtime minting (mintYToken/burnYToken) flows through the Manager contract (TransparentUpgradeableProxy, impl: Manager), but its terminal operator and role configuration cannot be confirmed from the reviewed chain state or issuer materials.",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
+      "disposition": "unresolved",
       "unresolvedQuestions": [
-        "YieldFiTimelockController (0x8e31...) has 0 proposers/executors/admin — confirm this is intentional (permanently frozen upgrade path) and not a deployment misconfiguration. Runtime minting via Manager contract (issuer-backend) cannot be confirmed on-chain."
+        "Enumerate the Manager proxy's terminal operator and role authority for Ethereum share minting, and establish the corresponding mint authority across each tracked non-Ethereum yUSD deployment."
       ]
     }
   },

@@ -38,6 +38,22 @@
   "oracleRisk": {
     "tier": "opaque-or-unknown",
     "summary": "Public docs reviewed for Indigo iUSD do not identify the collateral oracle setup or failure handling.",
+    "branchApplicability": {
+      "disposition": "unresolved",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex Safety Score V9 small-1-free oracle review",
+      "rationale": "Indigo documents iUSD prices as oracle-derived and used for liquidation, redemption, and interest settlement, but the reviewed public material does not establish the complete live collateral-feed inventory, feed failure behavior, liquidation parameters, backstop, or shutdown branches for the current Cardano deployment.",
+      "sources": [
+        {
+          "label": "Indigo iAssets documentation",
+          "url": "https://docs.indigoprotocol.io/readme/iassets"
+        },
+        {
+          "label": "Indigo Protocol documentation",
+          "url": "https://docs.indigoprotocol.io/"
+        }
+      ]
+    },
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
     "confidence": "limited",
@@ -194,9 +210,25 @@
         "observedAt": "2026-07-20"
       }
     ],
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "Indigo CDP minting validators",
+      "observedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Koios: iUSD Plutus script",
+          "url": "https://api.koios.rest/api/v1/plutus_script_list?script_hash=eq.f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b69880"
+        },
+        {
+          "label": "Indigo V3 mainnet system parameters",
+          "url": "https://config.indigoprotocol.io/mainnet/mainnet-system-params-v3.json"
+        }
+      ]
+    },
     "review": {
       "evidence": "2026-07-20 re-review. Koios script_info confirms the iUSD minting policy f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b69880 is a plutusV2 script (1189 bytes, creation tx 99329591f444f68ed4a33ed664c146fbf278cf9202067974cfa1a26d09a34107): no privileged owner or minter address, minting enforced by CDP collateral logic, and immutable \u2014 Cardano policy hashes permanently bind the script, so neither the DAO nor any admin can upgrade or replace the iUSD minting validator for the existing asset. The INDY DAO on-chain governance surface named in Indigo's official mainnet V3 system parameters (GOV_NFT 2fccae8b..., poll manager 2c64c712..., gov execute 0e764163..., treasury 46ffe1d1..., UPGRADE ca72f111..., VERSION_RECORD d626ddf3...) was verified on-chain via Koios: all six scripts exist (plutusV2/plutusV3). Governance authority is therefore parameter-and-version control through the upgrade-token mechanism, not mint authority over iUSD. Economic cap semantics: bounded \u2014 iUSD mints only against overcollateralized CDP collateral.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+      "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
       "disposition": "scoreable",
       "sources": [
@@ -214,6 +246,8 @@
         }
       ]
     },
-    "economicCapSemantics": "bounded"
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none"
   }
 }

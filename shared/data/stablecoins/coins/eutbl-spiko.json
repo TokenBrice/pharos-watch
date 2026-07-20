@@ -47,7 +47,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Spiko announced Chainlink CCIP as the interoperability standard for moving its regulated money-market fund tokens across multiple blockchains. The route is scored as an external validated network with compliance-aware controls rather than an issuer-only burn/mint path. 2026-07-20 cohort dc-1 pass: EVM rows confirmed issuer-native Spiko deployments (uniform token reads); Stellar and Starknet rows remain unresolved (non-EVM, not re-verified).",
+    "summary": "Spiko announced Chainlink CCIP as the interoperability standard for moving its regulated money-market fund tokens across multiple blockchains. The route is scored as an external validated network with compliance-aware controls rather than an issuer-only burn/mint path. 2026-07-20 cohort dc-1 pass: all seven listed deployments are verified issuer-native Spiko tokens; the Stellar contract is in Spiko's official registry and the Starknet token has the shared Spiko owner.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
     "confidence": "verified",
@@ -204,31 +204,60 @@
         "id": "stellar:EUTBL-CBGV2QFQBBGEQRUKUMCPO3SZOHDDYO6SCP5CH6TW7EALKVHCXTMWDDOF",
         "destinationChain": "stellar",
         "contractAddress": "EUTBL-CBGV2QFQBBGEQRUKUMCPO3SZOHDDYO6SCP5CH6TW7EALKVHCXTMWDDOF",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Unresolved in the 2026-07-20 dc-1 pass: non-EVM deployment; mint/bridge authority could not be re-verified from public chain reads in this pass. EVM deployments are issuer-native and reviewed.",
+        "protocol": "Spiko EUTBL (issuer-native multichain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Spiko's stellar-contracts production registry lists EUTBL at Soroban contract CBGV2QFQBBGEQRUKUMCPO3SZOHDDYO6SCP5CH6TW7EALKVHCXTMWDDOF with shared Spiko PermissionManager CBGHLRSX5D5YMBPNK4ZGMUTJUHFIT7YGXGJURM5LFNZ7B6WNSXLGS26M; its setup script invokes set_permission_manager on EUTBL. The production config records the EUTBL name, symbol, and 5 decimals, and stellar.expert exposes the deployed contract.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "Spiko stellar-contracts production addresses",
+            "url": "https://github.com/spiko-tech/stellar-contracts/blob/main/address/production.json"
+          },
+          {
+            "label": "EUTBL contract on stellar.expert",
+            "url": "https://stellar.expert/explorer/public/contract/CBGV2QFQBBGEQRUKUMCPO3SZOHDDYO6SCP5CH6TW7EALKVHCXTMWDDOF"
+          }
+        ]
       },
       {
         "id": "starknet:0x04f5e0de717daa6aa8de63b1bf2e8d7823ec5b21a88461b1519d9dbc956fb7f2",
         "destinationChain": "starknet",
         "contractAddress": "0x04f5e0de717daa6aa8de63b1bf2e8d7823ec5b21a88461b1519d9dbc956fb7f2",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Unresolved in the 2026-07-20 dc-1 pass: non-EVM deployment; mint/bridge authority could not be re-verified from public chain reads in this pass. EVM deployments are issuer-native and reviewed.",
+        "protocol": "Spiko EUTBL (issuer-native multichain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified via Starknet RPC at block 12076435: token 0x04f5e0de717daa6aa8de63b1bf2e8d7823ec5b21a88461b1519d9dbc956fb7f2 reports name 'Spiko EU T-Bills Money Market Fund', symbol 'EUTBL', decimals 5, and owner 0x7bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d, the shared Spiko Starknet owner. It is Spiko's native Starknet fund-token deployment, not a third-party bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "observedBlock": 12076435,
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "Spiko EU T-Bills fund",
+            "url": "https://www.spiko.io/spiko-treasury-bills-euro"
+          },
+          {
+            "label": "EUTBL on Starknet Voyager",
+            "url": "https://voyager.online/contract/0x04f5e0de717daa6aa8de63b1bf2e8d7823ec5b21a88461b1519d9dbc956fb7f2"
+          },
+          {
+            "label": "Starknet Lava RPC",
+            "url": "https://rpc.starknet.lava.build"
+          }
+        ]
       }
     ]
   },
@@ -304,8 +333,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "EUTBL Ethereum mint/burn routes through Spiko's PermissionManager (proxy, UUPS). Admin group (group 0) = 3/8 Safe (v1.4.1). Minter group (group 1) = 1/6 Safe (v1.4.1). Token proxy admin slot = zero. Arbitrum, Polygon, Base, Etherlink, Stellar, and Starknet routes remain unresolved.",
+    "confidence": "unknown",
+    "summary": "EUTBL Ethereum mint/burn routes through Spiko's UUPS PermissionManager. Its group-0 Safe can authorize minters and replace PermissionManager logic without a contract-enforced delay. The current Stellar and Starknet deployment mint and upgrade authorities are not enumerated.",
     "controls": [
       {
         "chain": "ethereum",
@@ -344,8 +373,124 @@
           }
         ],
         "evidence": "PermissionManager (UUPS proxy, implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e = verified PermissionManager.sol). Admin group (group 0) held by Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea (3/8, v1.4.1, no modules, no guard). Minter group (group 1) held by Safe 0xa4f97076721c78b050c2cd6a1bf7b442d801fb4a (1/6, v1.4.1, no modules, no guard). PermissionManager proxy admin slot = zero (UUPS — admin Safe controls upgrades via group 0)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xa4f97076721c78b050c2cd6a1bf7b442d801fb4a",
+        "label": "Spiko PermissionManager MINTER Safe (1-of-6)",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 6,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573477,
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x4D1d9C5B5d9Ca448194313D799De374f362Bd460",
+            "0x6c00Be5d1013a5bca938EF6aa8F1E5e706FF384d",
+            "0xDa47Bd72438F11bef7Cc54F18cd02426dd86A5a2",
+            "0xe67D2cbeaE3090bE017C66e7A6943961619a5D35",
+            "0x4896F23FF83242D8D4EB5fA1dEdF8c57e9145949",
+            "0xA6e06dfE42064B7Cd6DC902a62e74ca5Bb574011"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 25573477,
+          "observedAt": "2026-07-20",
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Spiko PermissionManager implementation",
+            "url": "https://eth.blockscout.com/address/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+          },
+          {
+            "label": "Ethereum MEV Blocker RPC",
+            "url": "https://rpc.mevblocker.io"
+          }
+        ],
+        "evidence": "At Ethereum block 25573477, the EUTBL PermissionManager mint requirement includes group 1, which is held by this Safe. Direct Safe reads returned version 1.4.1, the six listed owners, threshold 1, an empty module list, a zero guard storage slot, and master copy 0x41675c099f32341bf84bfc5382af534df5c7461a."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "label": "Spiko PermissionManager ADMIN Safe (3-of-8)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 8,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x75e0092e7D2c8D854Fcf5334f95554852d62746a",
+            "0xE9106C617D7180bf6BaDCFa5EdC664B726c5Dcbb",
+            "0x6c00Be5d1013a5bca938EF6aa8F1E5e706FF384d",
+            "0x4D1d9C5B5d9Ca448194313D799De374f362Bd460",
+            "0xDa47Bd72438F11bef7Cc54F18cd02426dd86A5a2",
+            "0xe67D2cbeaE3090bE017C66e7A6943961619a5D35",
+            "0x4896f23FF83242D8D4EB5fA1dEdF8c57e9145949",
+            "0xA6e06dfE42064B7Cd6DC902a62e74ca5Bb574011"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "observedBlock": 25573477,
+          "observedAt": "2026-07-20",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573477,
+        "sources": [
+          {
+            "label": "Spiko PermissionManager implementation",
+            "url": "https://eth.blockscout.com/address/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25573477, Safe reads returned VERSION() = 1.4.1, eight owners, and threshold 3; existing PermissionManager review records no enabled modules or guard. Group 0 can administer PermissionManager permissions and its UUPS upgrade authorization, so it can authorize minters and replace mint-critical authority logic."
       }
     ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x344278aff344d6fb960705dc18a4912221608472"
+      ],
+      "implementationAddresses": [
+        "0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+      ],
+      "adminAddresses": [
+        "0x4eaa52b6280593a8820c45ce38f974290ae52cea"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Spiko PermissionManager ADMIN Safe (3-of-8)",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573477,
+      "sources": [
+        {
+          "label": "Spiko PermissionManager implementation",
+          "url": "https://eth.blockscout.com/address/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "review": {
       "sources": [
         {
@@ -359,13 +504,23 @@
         {
           "label": "Blockscout PermissionManager implementation",
           "url": "https://eth.blockscout.com/address/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+        },
+        {
+          "label": "Spiko EU T-Bills fund",
+          "url": "https://www.spiko.io/spiko-treasury-bills-euro"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
         }
       ],
-      "evidence": "Ethereum block 25295019: EUTBL token proxy admin = zero; PermissionManager decoded — admin group = 3/8 Safe 0x4eaa52b6 (v1.4.1), minter group = 1/6 Safe 0xa4f97076 (v1.4.1), no modules on either Safe. Ethereum surfaces fully confirmed. 2026-07-20 dc-1 pass: EVM-chain mint/bridge authorities are resolved (issuer-native uniform Spiko deployments on Ethereum, Base, Polygon, Etherlink, and Arbitrum — see the bridge-route review). The Stellar and Starknet authorities remain open and are tracked in the bridge-route review rows.",
-      "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+      "evidence": "Ethereum contract and RPC evidence identifies the UUPS PermissionManager as EUTBL's authority path. At block 25573477 its group-0 Safe remains 3-of-8; the PermissionManager implementation slot is 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e and the external proxy-admin slot is zero. The reviewed Spiko fund record is an AMF-regulated UCITS short-term VNAV money-market fund with quarterly PwC audit evidence, supporting periodic reconciliation and prudential supervision. Stellar and Starknet mint, terminal administration, and upgrade controls remain unenumerated, so asset-wide economic-cap semantics cannot be established.",
+      "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
-      "unresolvedQuestions": [],
-      "disposition": "scoreable"
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Enumerate the current Stellar and Starknet token minter, terminal administrator, and mint-logic upgrade controls. The bridge-route review establishes the deployments as issuer-native but does not enumerate those control surfaces."
+      ]
     }
   },
   "chainTier": "ethereum",

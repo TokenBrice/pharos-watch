@@ -140,6 +140,9 @@
         "evidence": "The verified ERC20F implementation gates _authorizeUpgrade() with UPGRADER_ROLE 0x189ab7a9.... RoleGranted history and current hasRole calls identify 0x9367b51c... as the holder on both Ethereum and Base. Both proxies resolve to implementation 0x0f25045d.... The upgrader account delegates to Fireblocks UniversalGaslessDelegate; no timelock is present and the underlying signer custody remains undisclosed."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
       "sources": [
         {
@@ -163,8 +166,8 @@
           "url": "https://base.blockscout.com/api?module=logs&action=getLogs&address=0x16f93ebc5320c89efc8701577efe49d14a276a06&fromBlock=0&toBlock=47200457&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
         }
       ],
-      "evidence": "Ethereum and Base share the same UUPS implementation and role graph. Current calls confirm 0x4b37dd8b holds MINTER_ROLE, 0xb3a77dd7 holds DEFAULT_ADMIN_ROLE, and 0x9367b51c holds UPGRADER_ROLE on both chains. EIP-7702 code identifies Fireblocks UniversalGaslessDelegate as the common delegate implementation. That resolves the on-chain delegate and upgrade authority, but not the signer custody policy behind any of the three delegated EOAs, so confidence remains manual-review. 2026-07-20 dc-1 pass: control identities (MINTER_ROLE, DEFAULT_ADMIN_ROLE, UPGRADER_ROLE holders) are established on-chain on Ethereum and Base. The Fireblocks/EIP-7702 signer custody-policy opacity is a custody-quality caveat, not a control-identity gap; it does not block a scoreable deployment-control review.",
-      "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+      "evidence": "Ethereum and Base share the same UUPS implementation and role graph. Current calls confirm 0x4b37dd8b holds MINTER_ROLE, 0xb3a77dd7 holds DEFAULT_ADMIN_ROLE, and 0x9367b51c holds UPGRADER_ROLE on both chains. EIP-7702 code identifies Fireblocks UniversalGaslessDelegate as the common delegate implementation. That resolves the on-chain delegate and upgrade authority, but not the signer custody policy behind any of the three delegated EOAs, so confidence remains manual-review. The registry records Alberta Treasury Board and Finance under Alberta's Loan and Trust Corporations Act as the named prudential regulator. The Fireblocks/EIP-7702 signer custody-policy opacity is a custody-quality caveat, not a control-identity gap; it does not block a scoreable deployment-control review.",
+      "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
       "unresolvedQuestions": [],
       "disposition": "scoreable"

@@ -229,8 +229,8 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
+    "authorityPosture": "unknown",
+    "confidence": "unknown",
     "summary": "SILK is minted as an overcollateralized CDP via ShadeLend on Secret Network; ShadeDAO assemblies (multisig branches) tune risk parameters and govern a permissioned SILK minter that bond and arbitrage (AMO) modules can also access.",
     "controls": [
       {
@@ -239,6 +239,7 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "evidence": "ShadeLend issues SILK against overcollateralized user deposits (ATOM, SCRT, stables, SHD); the SILK minter is also permissioned to Shade bonds and Shade Arbitrage, so minting is mechanism-gated rather than fully permissionless.",
         "sources": [
           {
@@ -263,10 +264,29 @@
         ]
       }
     ],
+    "upgradeability": {
+      "model": "unknown",
+      "canChangeMintLogic": "unknown",
+      "controlRef": "ShadeDAO governance assemblies (multisig branches)",
+      "observedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "ShadeDAO docs",
+          "url": "https://docs.shadeprotocol.io/shade-protocol/shade-protocol/shadedao"
+        },
+        {
+          "label": "SILK docs",
+          "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk"
+        }
+      ]
+    },
+    "economicCapSemantics": "unknown",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "evidence": "SILK is a basket-pegged overcollateralized CDP minted through ShadeLend, with the SILK minter additionally permissioned to bonds and arbitrage AMOs and risk parameters set by ShadeDAO assembly multisigs. Secret Network's privacy model prevents live on-chain admin reads, but the mint mechanism and governance structure are documented.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Governance docs",
@@ -278,6 +298,7 @@
         }
       ],
       "sourceFreeRationale": "Mechanism established from Shade docs/audit coverage; Secret Network privacy precludes live verification of current minter admin keys and assembly multisig thresholds.",
+      "disposition": "unresolved",
       "unresolvedQuestions": [
         "Secret Network enforces transaction-level privacy; SILK minter admin key and ShadeDAO assembly multisig thresholds/signers cannot be read from chain state. Resolution requires Secret Network node access with a viewing key or direct issuer disclosure. Bond/arbitrage minting centralization status also unconfirmable remotely."
       ]

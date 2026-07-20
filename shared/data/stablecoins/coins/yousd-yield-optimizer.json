@@ -300,8 +300,8 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "yoUSD is an ERC-4626 vault on Base where any user mints share tokens by depositing USDC; base asset issuance is inherited from Circle, while the privileged surface is a verified 4/6 Safe and authority contract controlling strategy/protocol whitelisting and rebalancing.",
+    "confidence": "unknown",
+    "summary": "yoUSD is an ERC-4626 vault on Base where users mint shares by depositing USDC. Base USDC issuance is inherited from Circle, but an unenumerated authority contract and a Safe-proposed timelock retain privileged strategy and mint-logic control surfaces.",
     "inheritedFrom": "usdc-circle",
     "controls": [
       {
@@ -330,6 +330,7 @@
           "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
           "version": "1.4.1+L2",
           "observedBlock": 47201583,
+          "observedAt": "2026-06-11",
           "source": "safe-api"
         },
         "evidence": "Safe API confirmed Base Safe 4-of-6 (threshold 4, 6 owners, no modules, zero guard, fallbackHandler 0xfd07..., version 1.4.1+L2) at Base block 47201583. This Safe holds PROPOSER_ROLE on the 2-day TimelockController (0x38ce5e45d0f5d03e83863bb19b3b1a272c186f48) which owns the ProxyAdmin (0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073) that controls the yoUSD vault upgrades."
@@ -354,12 +355,57 @@
         "address": "0x0000000f2eB9f69274678c76222B35eEc7588a65",
         "canRaiseCap": "unknown",
         "evidence": "Users deposit USDC via yoGateway and receive yoUSD vault shares at NAV; the vault contract performs ERC-4626 share accounting and does not create discretionary supply."
+      },
+      {
+        "label": "yoUSD ProxyAdmin owner TimelockController",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "chain": "base",
+        "address": "0x38ce5e45d0f5d03e83863bb19b3b1a272c186f48",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-06-11",
+        "observedBlock": 47201583,
+        "sources": [
+          {
+            "label": "yoUSD vault contract",
+            "url": "https://basescan.org/address/0x0000000f2eb9f69274678c76222b35eec7588a65"
+          }
+        ],
+        "evidence": "At Base block 47201583, the vault's EIP-1967 admin was ProxyAdmin 0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073 and ProxyAdmin.owner() was this TimelockController. getMinDelay() returned 172800 seconds. An implementation change through that owned ProxyAdmin can alter local share-mint logic."
       }
     ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x0000000f2eB9f69274678c76222B35eEc7588a65"
+      ],
+      "adminAddresses": [
+        "0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073",
+        "0x38ce5e45d0f5d03e83863bb19b3b1a272c186f48"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "yoUSD ProxyAdmin owner TimelockController",
+      "observedAt": "2026-06-11",
+      "observedBlock": 47201583,
+      "sources": [
+        {
+          "label": "yoUSD vault contract",
+          "url": "https://basescan.org/address/0x0000000f2eb9f69274678c76222b35eec7588a65"
+        }
+      ]
+    },
     "review": {
       "evidence": "At Base block 47201583: yoUSD vault (0x0000000f2eB9f69274678c76222B35eEc7588a65) confirmed as TransparentUpgradeableProxy. ProxyAdmin = 0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073 (confirmed via EIP-1967 admin slot). ProxyAdmin owner = TimelockController 0x38ce5e45d0f5d03e83863bb19b3b1a272c186f48 with 2-day minDelay (172800 seconds). Admin Safe (0x67b6...) holds PROPOSER_ROLE on the timelock. Safe confirmed 4-of-6, version 1.4.1+L2, no modules, zero guard via Safe API. Authority contract 0x9524e25079b1b04D904865704783A5aA0202d44D confirmed as the operational vault/strategy permission layer owned by the Safe.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
+      "disposition": "unresolved",
       "sources": [
         {
           "label": "YO Protocol docs",

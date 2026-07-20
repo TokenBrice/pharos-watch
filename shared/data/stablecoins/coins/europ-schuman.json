@@ -121,44 +121,15 @@
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
-    "tier": "external-lock-mint",
-    "summary": "EUROP is a regulated euro token deployed across several chains; candidate evidence includes LayerZero and Avalanche bridge routing. The weaker external omnichain lock/burn-and-mint path determines the route tier.",
+    "tier": "issuer-native-burn-mint",
+    "summary": "EUROP is issued natively by Schuman on each reviewed deployment. The Ethereum, Polygon, Avalanche, Plasma, and XRPL rows have issuer-controlled minting evidence and no identified third-party bridge representation.",
     "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "reviewer": "Pharos bridge route review",
     "confidence": "verified",
-    "protocols": [
-      {
-        "source": "l2beat",
-        "name": "LayerZero",
-        "slug": "layerzero",
-        "url": "https://l2beat.com/interop/protocols/layerzero",
-        "bridgeTypes": [
-          "oft",
-          "lockOrBurnAndMint"
-        ]
-      },
-      {
-        "source": "l2beat",
-        "name": "Avalanche Bridge",
-        "slug": "avalanche",
-        "url": "https://l2beat.com/interop/protocols/avalanche",
-        "bridgeTypes": [
-          "lockAndMint"
-        ]
-      }
-    ],
     "sources": [
       {
         "label": "EUROP whitepaper",
         "url": "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf"
-      },
-      {
-        "label": "LayerZero OFT reference",
-        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
-      },
-      {
-        "label": "L2BEAT Avalanche Bridge",
-        "url": "https://l2beat.com/interop/protocols/avalanche"
       }
     ],
     "routes": [

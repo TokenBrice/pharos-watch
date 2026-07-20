@@ -69,11 +69,11 @@
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
-    "tier": "issuer-native-lock-mint",
-    "summary": "USD3 is deployed on Ethereum and Base with no source-verified third-party bridge path resolved. The reviewed profile treats it as protocol/issuer-controlled multichain issuance and not a liquidity bridge. 2026-07-20 cohort dc-1 pass: Ethereum row confirmed native USD3; the Base row address could not be verified on-chain (see reviewNote).",
+    "tier": "canonical-rollup-bridge",
+    "summary": "USD3 is issued natively on Ethereum by Reserve Protocol. Its Base deployment is an immutable OptimismMintableERC20 representation whose constructor-set bridge is the canonical Base L2StandardBridge and whose remote token is Ethereum USD3; it is not issuer-native multichain issuance or a liquidity bridge.",
     "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
-    "confidence": "manual-review",
+    "reviewer": "Pharos bridge route review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Reserve docs",
@@ -112,18 +112,37 @@
       },
       {
         "id": "base:0xefb97aaf77993922ac4be4da8fbc9a2425322677",
+        "sourceChain": "ethereum",
         "destinationChain": "base",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xefb97aaf77993922ac4be4da8fbc9a2425322677",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Still unresolved after the 2026-07-20 dc-1 pass: name()/symbol() reads at 0xefb97aaf77993922ac4be4da8fbc9a2425322677 on Base return empty via public RPCs (two attempts), so the deployment identity and controller could not be verified on-chain. Needs issuer/explorer confirmation of the Base USD3 address before review can complete.",
+        "protocol": "Base Standard Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Base block 48622147, the verified OptimismMintableERC20 returned BRIDGE() = 0x4200000000000000000000000000000000000010 and REMOTE_TOKEN() = Ethereum USD3 0x0d86883FAf4FfD7aEb116390af37746F45b6F378. This is the canonical Base lock/mint representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "base",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:base-standard-bridge",
+          "contract:base:0xefb97aaf77993922ac4be4da8fbc9a2425322677"
+        ],
+        "observedAt": "2026-07-14",
+        "observedBlock": 48622147,
+        "sources": [
+          {
+            "label": "USD3 Base OptimismMintableERC20 source",
+            "url": "https://base.blockscout.com/address/0xefb97aaf77993922ac4be4da8fbc9a2425322677"
+          },
+          {
+            "label": "Base Standard Bridge documentation",
+            "url": "https://docs.base.org/base-chain/specs/protocol/bridging/bridges"
+          }
+        ]
       }
     ]
   },

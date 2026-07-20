@@ -29,9 +29,9 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "eEARN is a vault/share token over USDC; wrapper share minting occurs through deposits into the Ember Earn vault, while base USDC mint authority is inherited from Circle.",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "unknown",
+    "summary": "eEARN is a UUPS USDC vault-share wrapper: current shares are minted against deposited USDC, base USDC issuance is inherited from Circle, and the local implementation can be replaced by a one-day CTG One Governance timelock whose role members are not publicly enumerable.",
     "inheritedFrom": "usdc-circle",
     "controls": [
       {
@@ -44,6 +44,8 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Wrapper share minting represents deposits into the eEARN vault and does not create base USDC supply.",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573289,
         "sources": [
           {
             "label": "Ethereum eEARN contract",
@@ -54,9 +56,64 @@
             "url": "https://dawn.royco.org/"
           }
         ],
-        "evidence": "The tracked eEARN contract is reviewed as a USDC vault/share wrapper; live-reserve metadata expects USDC as the underlying asset, so wrapper minting creates vault shares rather than durable base USDC."
+        "evidence": "At Ethereum block 25573289, asset() returned USDC 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48. The proxy's EIP-1967 implementation slot resolved to 0xAB222201C5bD8A18Dc6B340Ba78a709589E01781 while admin and beacon slots were zero; the current wrapper creates shares against deposited USDC rather than base USDC supply."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x12917e06b55995e7a5d73681ce491774c73b7c6a",
+        "label": "eEARN CTG One Governance Timelock",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 86400,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The owner-authorized UUPS replacement path can alter local eEARN share-mint logic after the timelock delay.",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573295,
+        "sources": [
+          {
+            "label": "eEARN UUPS implementation source",
+            "url": "https://etherscan.io/address/0xab222201c5bd8a18dc6b340ba78a709589e01781#code"
+          },
+          {
+            "label": "CTG One Governance Timelock",
+            "url": "https://etherscan.io/address/0x12917e06b55995e7a5d73681ce491774c73b7c6a#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25573289, eEARN owner() returned this 5,457-byte CTGOneGovernance contract and UPGRADE_INTERFACE_VERSION() returned 5.0.0. The verified implementation source restricts _authorizeUpgrade to onlyOwner. CTGOneGovernance is a TimelockController; getMinDelay() returned 86400 seconds at block 25573295."
       }
     ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "not-applicable",
+    "supervision": "unknown",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x9be9294722f8aad37b11a9792be2c782182cafa2"
+      ],
+      "implementationAddresses": [
+        "0xab222201c5bd8a18dc6b340ba78a709589e01781"
+      ],
+      "adminAddresses": [
+        "0x12917e06b55995e7a5d73681ce491774c73b7c6a"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 86400,
+      "controlRef": "eEARN CTG One Governance Timelock",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573295,
+      "sources": [
+        {
+          "label": "eEARN UUPS implementation source",
+          "url": "https://etherscan.io/address/0xab222201c5bd8a18dc6b340ba78a709589e01781#code"
+        },
+        {
+          "label": "CTG One Governance Timelock",
+          "url": "https://etherscan.io/address/0x12917e06b55995e7a5d73681ce491774c73b7c6a#code"
+        }
+      ]
+    },
     "review": {
       "sources": [
         {
@@ -66,13 +123,19 @@
         {
           "label": "Existing USDC mint authority review",
           "url": "https://developers.circle.com/stablecoins/what-is-usdc"
+        },
+        {
+          "label": "CTG One Governance Timelock",
+          "url": "https://etherscan.io/address/0x12917e06b55995e7a5d73681ce491774c73b7c6a#code"
         }
       ],
-      "evidence": "eEARN is tracked as a USDC strategy-vault variant with 100% USDC wrapper reserves in Pharos metadata. No separate base-supply mint authority is modeled for the wrapper; base USDC mint authority is inherited from Circle. 2026-07-20 dc-1 pass: re-read the eEARN vault 0x9be9294722f8aad37b11a9792be2c782182cafa2 on-chain — owner() returns 0x12917e06b55995e7a5d73681ce491774c73b7c6a (admin/upgrade authority) and the EIP-1967 implementation is 0xab222201c5bd8a18dc6b340ba78a709589e01781. Upgrade/admin controls are now independently re-read, closing the prior open question.",
-      "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+      "evidence": "Re-reviewed 2026-07-20. eEARN is a USDC strategy-vault variant and asset() confirms the current USDC backing. The ERC-1967 proxy resolves to implementation 0xab222201c5bd8a18dc6b340ba78a709589e01781 with no external proxy-admin slot; owner() resolves to CTGOneGovernance 0x12917e06b55995e7a5d73681ce491774c73b7c6a. Its verified TimelockController exposes a one-day minimum delay. However, getRoleMemberCount for its proposer, executor, canceller, and timelock-admin roles is unavailable, and public RPC historical RoleGranted enumeration requires archive access, so the entities able to schedule or cancel an upgrade are not assigned by inference. The wrapper has no independent reserve-reconciliation or named prudential-supervision evidence.",
+      "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
-      "unresolvedQuestions": [],
-      "disposition": "scoreable"
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Enumerate current CTGOneGovernance PROPOSER_ROLE, EXECUTOR_ROLE, CANCELLER_ROLE, and TIMELOCK_ADMIN_ROLE holders. Direct getRoleMemberCount reads are unavailable and the public RPC does not serve the required historical RoleGranted scan without archive access."
+      ]
     }
   },
   "variantOf": "usdc-circle",
@@ -80,6 +143,19 @@
   "pegReferenceId": "usdc-circle",
   "collateral": "USDC deposited into Ember Earn's Ethereum vault token; Royco Dawn wraps eEARN into senior and junior tranche vaults for structured yield exposure",
   "pegMechanism": "ERC-4626-style shares redeem against the vault's USDC asset at the current share price; the token is a NAV wrapper over USDC rather than a fiat-issuer stablecoin",
+  "mechanismArchetypeReview": {
+    "disposition": "unresolved",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "small-2-free implementation review",
+    "rationale": "The verified Ethereum deployment and its first USDC deposit establish the current eEARN vault implementation boundary; this date review does not classify a broader mechanism archetype.",
+    "sources": [
+      {
+        "label": "eEARN contract creation and first mint",
+        "url": "https://eth.blockscout.com/api?module=account&action=tokentx&contractaddress=0x9be9294722f8aad37b11a9792be2c782182cafa2&page=1&offset=1&sort=asc"
+      }
+    ]
+  },
+  "implementationLaunchDate": "2026-02-20",
   "detailProvider": "coingecko",
   "links": [
     {

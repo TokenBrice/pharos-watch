@@ -654,6 +654,9 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
     "summary": "yzUSD mints via Yuzu's eligible-investor primary-mint model: 40 EOA accounts hold MINTER_ROLE on the Plasma token (enumerated exhaustively at block 27578074). Upgrades run through a 48-hour timelock (delay 172800s) with a 4-of-5 proposer Safe; limit/restriction parameters are managed by a 3-of-5 Safe behind a 12-hour timelock. Collateral operations sit in a Fordefi MPC treasury workspace.",
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -875,12 +878,16 @@
     ],
     "review": {
       "evidence": "At Plasma block 27099366, yzUSD is a TransparentUpgradeableProxy with implementation 0x32d7...5cfe and ProxyAdmin 0x6ccf...d2aa. ProxyAdmin.owner() is a 172800-second TimelockController proposed by a 4-of-5 Safe. LIMIT_MANAGER_ROLE and RESTRICTION_MANAGER_ROLE are each currently held by a 3-of-5 Safe and a 43200-second TimelockController proposed by that Safe; both Safes have the same five EOA owners. This corrects the prior UUPS classification and the false claim that the 48-hour timelock was an unresolvable custom contract. The remaining blocker is narrower: historical MINTER_ROLE grants/revokes have not yet been exhaustively reconciled to a complete current holder set. MINTER_ROLE reconciliation completed 2026-07-20: full RoleGranted/RoleRevoked history of the yzUSD token on Plasma (Routescan index) reconciled against per-account hasRole calls at block 27578074 \u2014 40 live MINTER_ROLE holders, all EOAs (enumerated in the direct-minter control evidence).",
-      "reviewer": "owner-triage; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+      "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Yuzu Stablecoin (yzUSD) docs",
           "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
+        },
+        {
+          "label": "Yuzu Accountable dashboard API",
+          "url": "https://cache.accountable.capital/dashboard/yuzu"
         },
         {
           "label": "Plasmascan yzUSD proxy",
@@ -907,7 +914,7 @@
           "url": "https://plasma.drpc.org"
         }
       ],
-      "unresolvedQuestions": []
+      "disposition": "scoreable"
     }
   }
 }

@@ -128,9 +128,24 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "partially-bounded-admin",
-    "confidence": "probable",
-    "summary": "SPKCC mint/burn routes through Spiko's PermissionManager (ERC1967Proxy) on each EVM chain. Mint requires PermissionManager group 0 (ADMIN) or group 2 (daily-operator). Group 2 is a rotating Spiko EOA; group 0 ADMIN is the Spiko admin Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea (3/8, verified on-chain 2026-07-20). Polygon/Base deployments share the Ethereum PermissionManager address; Arbitrum uses a chain-local proxy to the same implementation; Starknet/Stellar deployments were verified 2026-07-20.",
+    "authorityPosture": "unknown",
+    "confidence": "unknown",
+    "summary": "Ethereum PermissionManager controls and the Spiko admin Safe were observed, but the current Starknet, Stellar, and complete cross-chain authorization paths are not fully enumerated. The mint-authority profile remains unresolved.",
+    "upgradeability": {
+      "model": "unknown",
+      "canChangeMintLogic": "unknown",
+      "observedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Sourcify Spiko Token source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+        },
+        {
+          "label": "Sourcify Spiko PermissionManager source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e/sources/contracts/permissions/PermissionManager.sol"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -173,6 +188,9 @@
         "observedBlock": 25571110
       }
     ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -184,10 +202,15 @@
           "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
         }
       ],
-      "evidence": "At Ethereum block 25295096: PermissionManager decoded \u2014 group 0 (ADMIN) controls mint authorization; group 2 (daily-operator) is the rotating EOA minter; minting at block 23169041 confirmed EOA 0x2B3755 in group 2. 2026-07-20 dc-8 verification: group 0 ADMIN = Spiko Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea (3/8; getGroups bitmap + getThreshold/getOwners verified on Ethereum block 25571110). Multichain lanes resolved: authority() = 0x344278aff... on ethereum/polygon/base SPKCC tokens and 0xa925c217... on arbitrum (blocks 25571110/90541049/48863611/485706358); Starknet token owner() = 0x7bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d (symbol 'SPKCC', decimals 5; name storage partially corrupted \u2014 noted); Stellar SPKCC = Soroban contract CDS2GCAQTNQINSCJUJIVBJXILKBWP5PU7LOBGHMP3X47QCQBFKPMTCNT per Spiko's stellar-contracts production.json, created 2025-10-01 by single-signer GBYIQXBK... (Horizon).",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+      "evidence": "Ethereum evidence establishes that PermissionManager group 0 can control the daily-operator mint group and that the observed group-0 holder is a 3-of-8 Spiko Safe. The cited reads do not enumerate every live member and upgrade relationship on Arbitrum or the mint and upgrade control paths for the Starknet and Stellar deployments. The profile therefore does not claim a deployment-wide mint surface, cap, reconciliation cadence, or prudential-supervision conclusion.",
+      "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
-      "disposition": "scoreable"
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Enumerate the active Arbitrum PermissionManager admin, minter, and upgrade-authority relationships.",
+        "Identify the active Starknet token owner, minter, and class-upgrade authority with primary chain evidence.",
+        "Identify the Stellar MINTER role and contract or WASM upgrade authority for the production SPKCC deployment."
+      ]
     }
   },
   "chainTier": "ethereum",

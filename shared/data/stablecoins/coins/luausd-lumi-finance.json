@@ -18,6 +18,22 @@
     "tier": "oracleless-or-internal",
     "summary": "LUAUSD is minted by users staking LUA against Lumi's internal floor-price mechanism; the reviewed material does not establish the position-level collateral checks or liquidation path.",
     "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "unresolved",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex Safety Score V9 small-1-free oracle review",
+      "rationale": "Lumi documents LUA staking, floor-price support, minting, and reserve-backed AMM flows, but does not establish whether the current production mechanism has a complete oracle, collateral-health, liquidation, backstop, or shutdown branch that can be reviewed as applicable or not applicable.",
+      "sources": [
+        {
+          "label": "Lumi staking and stablecoin documentation",
+          "url": "https://lumi-finance.gitbook.io/docs/legacy/staking-and-stablecoin"
+        },
+        {
+          "label": "Lumi LUA minting documentation",
+          "url": "https://lumi-finance.gitbook.io/docs/lua-minting"
+        }
+      ]
+    },
     "reviewedAt": "2026-07-14",
     "reviewer": "SOL-3 adversarial verification",
     "confidence": "limited",

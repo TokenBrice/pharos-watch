@@ -311,8 +311,8 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "ZeUSD token minting is restricted to a router contract, but an EOA holds DEFAULT_ADMIN_ROLE/ADMIN_ROLE on the token and can set the router and authorize upgrades.",
+    "confidence": "unknown",
+    "summary": "ZeUSD token minting is restricted to a router contract, but an EOA holds DEFAULT_ADMIN_ROLE and ADMIN_ROLE on the token. The current router-admin, terminal upgrade, and active multi-deployment control chains are not fully enumerated.",
     "mintIncidents": [
       {
         "date": "2025-03-01",
@@ -381,6 +381,23 @@
         "evidence": "ZeUSD.owner() returned this EOA; hasRole(DEFAULT_ADMIN_ROLE) and hasRole(ADMIN_ROLE) both returned true. RoleGranted logs show this address received both roles during initialization."
       }
     ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "upgradeability": {
+      "model": "unknown",
+      "canChangeMintLogic": "unknown",
+      "sources": [
+        {
+          "label": "ZeUSD implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xc80a5a2658fd44e76b0940773bd3c2c2cd9454de?fields=sources"
+        },
+        {
+          "label": "ZeUSD router implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xea25b537209ec4aefbc7252c6a49b132639ea677?fields=abi,metadata"
+        }
+      ]
+    },
     "review": {
       "sources": [
         {
@@ -396,12 +413,14 @@
           "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x7dc9748da8e762e569f9269f48f69a1a9f8ea761&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
         }
       ],
-      "evidence": "Direct reads and Sourcify source identify a router-only token mint path plus an EOA token owner/admin that can set the router and authorize upgrades.",
-      "reviewer": "Codex mint-authority top100 batch-c",
-      "reviewedAt": "2026-05-24",
+      "evidence": "Direct reads and Sourcify source identify a router-only token mint path plus an EOA token owner/admin that can set the router. The reviewed primary sources do not enumerate the router's active administration, its terminal upgrade authority, or current control parity across all tracked deployments. Zoth's current reserve review also records no public assets-and-liabilities reconciliation or verified prudential-supervision record for this token.",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
+      "disposition": "unresolved",
       "unresolvedQuestions": [
         "Router admin role grants include additional addresses in logs; final row should review the router's own access-control implementation and current active admin set.",
-        "No multisig setup was verified for the token owner/admin EOA."
+        "No multisig setup was verified for the token owner/admin EOA.",
+        "Reconcile the current token and router upgrade path for every tracked ZeUSD deployment; the reviewed implementation source alone does not establish the terminal authority."
       ]
     }
   },

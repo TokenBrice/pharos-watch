@@ -44,9 +44,68 @@
             "url": "https://etherscan.io/address/0xe1753f2e00940cc31213dd92013cf019dfe4ca1d#readContract"
           }
         ],
-        "evidence": "At Ethereum block 25295167: asset() on the actual sGHO contract (0xe1753f2e00940cc31213dd92013cf019dfe4ca1d) returned GHO 0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f. Prior entry at 0x1a88df... was incorrect (that address is a separate contract and asset() reverts there). Wrapper is savings/share accounting only; parent GHO has reviewed facilitator-bucket mintAuthority."
+        "evidence": "At Ethereum block 25573280, asset() on 0xe1753f2e00940cc31213dd92013cf019dfe4ca1d returned GHO 0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f. The wrapper is deposit/share accounting only; its shares do not create durable GHO supply.",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573280
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A",
+        "label": "Aave Governance V3 Level-1 Executor (sGHO ProxyAdmin owner)",
+        "role": "proxy-admin",
+        "authorityType": "dao-governor",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573280,
+        "sources": [
+          {
+            "label": "Aave address book",
+            "url": "https://github.com/aave-dao/aave-address-book"
+          },
+          {
+            "label": "sGHO ProxyAdmin",
+            "url": "https://etherscan.io/address/0xc15700631020eba02317964550365b95a9a28adb"
+          }
+        ],
+        "evidence": "At Ethereum block 25573280, the sGHO EIP-1967 implementation slot was 0xff229a0bbb614a284de8ae0e41e5974878fd7c04 and the admin slot was ProxyAdmin 0xc15700631020eba02317964550365b95a9a28adb. ProxyAdmin.owner() returned this Aave Governance V3 Level-1 Executor, which can change the wrapper implementation."
       }
     ],
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xe1753f2e00940cc31213dd92013cf019dfe4ca1d"
+      ],
+      "implementationAddresses": [
+        "0xff229a0bbb614a284de8ae0e41e5974878fd7c04"
+      ],
+      "adminAddresses": [
+        "0xc15700631020eba02317964550365b95a9a28adb",
+        "0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Aave Governance V3 Level-1 Executor (sGHO ProxyAdmin owner)",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573280,
+      "sources": [
+        {
+          "label": "sGHO token",
+          "url": "https://etherscan.io/address/0xe1753f2e00940cc31213dd92013cf019dfe4ca1d#readContract"
+        },
+        {
+          "label": "sGHO ProxyAdmin",
+          "url": "https://etherscan.io/address/0xc15700631020eba02317964550365b95a9a28adb"
+        },
+        {
+          "label": "Aave address book",
+          "url": "https://github.com/aave-dao/aave-address-book"
+        }
+      ]
+    },
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -58,9 +117,10 @@
           "url": "https://etherscan.io/address/0xe1753f2e00940cc31213dd92013cf019dfe4ca1d#readContract"
         }
       ],
-      "evidence": "At Ethereum block 25295167: asset() on 0xe1753f2e00940cc31213dd92013cf019dfe4ca1d returned GHO 0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f. Prior blocker resolved: the asset() revert was on a stale/wrong address (0x1a88df...); the actual sGHO token matches the contracts[] entry. Wrapper minting is deposit/share accounting; durable mint authority inherits from reviewed parent GHO.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25573280, asset() on the recorded sGHO token returned GHO 0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f. The wrapper is an EIP-1967 transparent proxy with implementation 0xff229a0bbb614a284de8ae0e41e5974878fd7c04 and ProxyAdmin 0xc15700631020eba02317964550365b95a9a28adb. Its ProxyAdmin owner is the Aave Governance V3 Level-1 Executor 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A. Shares are local deposit accounting; durable GHO issuance remains inherited from the reviewed parent. No named prudential supervisor applies to the wrapper.",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable"
     }
   },
   "variantOf": "gho-aave",

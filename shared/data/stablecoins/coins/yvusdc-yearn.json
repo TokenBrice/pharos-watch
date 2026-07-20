@@ -24,6 +24,26 @@
     "confidence": "verified",
     "summary": "yvUSDC-1 is a Yearn vault share over USDC; vault shares mint against deposited USDC while base USDC mint authority is inherited from Circle.",
     "inheritedFrom": "usdc-circle",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "Yearn v3 USDC vault share accounting",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573280,
+      "sources": [
+        {
+          "label": "Yearn v3 USDC vault (verified source)",
+          "url": "https://eth.blockscout.com/address/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -32,8 +52,10 @@
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "not-applicable",
+      "canRaiseCap": false,
+      "modulesOrGuardsStatus": "not-applicable",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573280,
         "capDescription": "asset() returned USDC; wrapper minting does not create base USDC supply.",
         "sources": [
           {
@@ -45,7 +67,30 @@
             "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204"
           }
         ],
-        "evidence": "Ethereum reads returned asset() = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 and apiVersion() = 3.0.2 at block 25166611."
+      "evidence": "At Ethereum block 25573280, asset() returned USDC and apiVersion() returned 3.0.2. Blockscout's verified YearnV3Vault source shows shares are minted only through the vault deposit/mint accounting path; EIP-1967 implementation, admin, and beacon slots were all zero."
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xb3bd6B2E61753C311EFbCF0111f75D29706D9a41",
+      "label": "Yearn v3 USDC vault role manager",
+      "role": "minter-admin",
+      "authorityType": "contract",
+      "directMintAbility": "parameter-only",
+      "canRaiseCap": true,
+      "modulesOrGuardsStatus": "not-applicable",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573280,
+      "sources": [
+        {
+          "label": "Yearn v3 USDC vault (verified source)",
+          "url": "https://eth.blockscout.com/address/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204"
+        },
+        {
+          "label": "Yearn v3 vault docs",
+          "url": "https://docs.yearn.fi/getting-started/products/yvaults/v3"
+        }
+      ],
+      "evidence": "The fixed-block role_manager() read returned this contract. The verified YearnV3Vault source allows the role manager to assign vault roles, including the deposit-limit manager, but it does not create a direct share-mint method outside deposit/mint accounting."
       }
     ],
     "review": {
@@ -59,9 +104,10 @@
           "url": "https://developers.circle.com/stablecoins/what-is-usdc"
         }
       ],
-      "evidence": "yvUSDC-1 is a wrapper/strategy vault over reviewed USDC with no separate base-supply mint authority.",
-      "reviewer": "Codex mint-authority full-gap batch-6",
-      "reviewedAt": "2026-05-24"
+    "evidence": "At Ethereum block 25573280, the vault's asset() was USDC, apiVersion() was 3.0.2, and EIP-1967 implementation, admin, and beacon slots were zero. The direct YearnV3Vault source makes share creation deposit-only; the observed role manager can administer vault parameters but cannot create shares outside that flow. Durable USDC issuance remains inherited from Circle, with no separate wrapper reserve reconciliation or named prudential supervisor.",
+    "reviewer": "P2 mint-free cohort",
+    "reviewedAt": "2026-07-20",
+    "disposition": "scoreable"
     }
   },
   "variantOf": "usdc-circle",

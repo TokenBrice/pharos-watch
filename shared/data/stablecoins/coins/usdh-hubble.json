@@ -20,6 +20,22 @@
   "oracleRisk": {
     "tier": "opaque-or-unknown",
     "summary": "Public docs reviewed for Hubble USDH do not identify the collateral oracle setup or failure handling.",
+    "branchApplicability": {
+      "disposition": "unresolved",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex Safety Score V9 small-1-free oracle review",
+      "rationale": "Hubble's technical resources identify the USDH program and liquidation reward vaults, but the reviewed public material does not establish the current collateral-market inventory, oracle feeds and freshness/fallback behavior, liquidation thresholds, or bad-debt and shutdown handling.",
+      "sources": [
+        {
+          "label": "Hubble technical resources",
+          "url": "https://docs.hubbleprotocol.io/resources/technical-resources"
+        },
+        {
+          "label": "Hubble USDH documentation",
+          "url": "https://docs.hubbleprotocol.io"
+        }
+      ]
+    },
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
     "confidence": "limited",

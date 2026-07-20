@@ -263,10 +263,13 @@
         "evidence": "This umbrella control exists because the upgradeability schema accepts one controlRef; it does not imply a shared controller. Ethereum beacon 0x985462c9... is owned by timelock 0x3715b215..., BSC beacon 0xc046b05a... by timelock 0x8860bbfc..., and HyperEVM beacon 0x258269e7... by timelock 0x6253fbc5.... Each owner returned getMinDelay() = 7200. Ethereum's role graph is resolved above; the terminal role holders and signer structures behind the BSC and HyperEVM timelocks are intentionally left unresolved."
       }
     ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "periodic",
+    "supervision": "unknown",
     "review": {
       "evidence": "Sourcify verifies the Ethereum token as BeaconProxy and beacon 0x985462c9... as UpgradeableBeacon. On 2026-07-14, the standard beacon slots on Ethereum, BSC, and HyperEVM resolved respectively to 0x985462c9..., 0xc046b05a..., and 0x258269e7.... Their implementation() calls returned 0xebbcb2ce..., 0x578f397c..., and 0x0d25c65d..., while owner() returned distinct TimelockControllers 0x3715b215..., 0x8860bbfc..., and 0x6253fbc5.... All three timelocks returned a current minimum delay of 7200 seconds. Ethereum's existing direct minters remain GMTokenManager and OndoOFT; the Ethereum timelock role graph is current and its admin Safe remains 5-of-9 with no modules or guard. BSC and HyperEVM terminal timelock role holders/signers were not established by this ruling, and the Solana deployment remains an SPL Token mint outside the EVM beacon graph, so the asset-wide authority profile is not scoreable yet.",
-      "reviewer": "owner-triage",
-      "reviewedAt": "2026-07-14",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
       "disposition": "unresolved",
       "unresolvedQuestions": [
         "Which terminal accounts control the BSC and HyperEVM timelocks' admin, proposer, executor, and canceller roles, and what signer thresholds, modules, or guards apply?",
@@ -300,6 +303,10 @@
         {
           "label": "Solana mainnet RPC",
           "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Ondo Global Markets trust and transparency",
+          "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
         }
       ]
     }

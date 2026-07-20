@@ -18,19 +18,35 @@
   "pegMechanism": "XAI is borrowed into existence against approved Silo collateral and burned on repayment. It has no dedicated stability module: the soft USD peg relies on arbitrage (borrow/repay always settle at $1, so a sub-$1 market price is repaid at a discount and an above-$1 price is sold) backed by DEX liquidity, while SiloDAO controls minting capacity and the XAI borrow interest rate across silos to manage circulating supply",
   "mechanismArchetype": "cdp",
   "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "Silo routes market prices through SiloOracleRepository modules such as Chainlink, DIA, and Uniswap oracles, with no stronger XAI failover tier verified.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
-    "confidence": "verified",
+    "tier": "opaque-or-unknown",
+    "summary": "Silo's published v1 oracle documentation describes a configurable per-asset price-provider repository, but reviewed primary and on-chain sources do not map the tracked XAI credit-line collateral set to a current price provider, fallback, or liquidation configuration.",
+    "branchApplicability": {
+      "disposition": "unresolved",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex Prompt 6b oracle review",
+      "rationale": "The official PriceProvidersRepository documentation establishes that Silo routes each supported asset to a configured provider, but it does not identify any XAI-specific silo or asset mapping. The verified XAI token contract does not reveal the legacy credit-line market set, feed wiring, fallback, liquidation timing, backstop, or shutdown and bad-debt handling; a complete branch inventory remains unproven.",
+      "sources": [
+        {
+          "label": "Silo PriceProvidersRepository documentation",
+          "url": "https://devdocs.silo.finance/smart-contracts-overview/oracle/priceprovidersrepository"
+        },
+        {
+          "label": "Verified XAI Ethereum token contract",
+          "url": "https://eth.blockscout.com/address/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac?tab=contract"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex Prompt 6b oracle review",
+    "confidence": "limited",
     "sources": [
       {
-        "label": "Silo oracle repository docs",
-        "url": "https://devdocs.silo.finance/"
+        "label": "Silo PriceProvidersRepository documentation",
+        "url": "https://devdocs.silo.finance/smart-contracts-overview/oracle/priceprovidersrepository"
       },
       {
-        "label": "Silo Chainlink integration",
-        "url": "https://medium.com/silo-protocol/silo-finance-integrates-chainlink-price-feeds-to-help-secure-pricing-on-isolated-lending-markets-a2271f4c22ce"
+        "label": "Verified XAI Ethereum token contract",
+        "url": "https://eth.blockscout.com/address/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac?tab=contract"
       }
     ]
   },

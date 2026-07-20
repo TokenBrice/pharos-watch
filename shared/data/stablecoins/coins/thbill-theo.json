@@ -231,9 +231,24 @@
   "governanceQuality": "single-entity",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
-    "confidence": "verified",
-    "summary": "thBILL is a NAV-accreting IToken (UUPS-style ERC1967 proxy on ETH) issued by Theo Network. The canonical mint admin is a TimelockController (minDelay=0) whose proposer/executor/canceller is a single Gnosis Safe (6 signers, 4-of-6 on Ethereum, no modules). Arbitrum and Base deployments are ThBillOFT bridge contracts owned by the same Safe (3-of-5 on Arbitrum). No modules detected on any Safe.",
+    "authorityPosture": "unknown",
+    "confidence": "unknown",
+    "summary": "The retained June 2026 observations describe a Theo Ethereum timelock and governance Safe, but the current mint, upgrade, Safe, and OFT authority paths have not been freshly reverified. The profile remains unresolved.",
+    "upgradeability": {
+      "model": "unknown",
+      "canChangeMintLogic": "unknown",
+      "observedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Theo Network docs",
+          "url": "https://docs.theo.xyz"
+        },
+        {
+          "label": "thBILL ETH contract on Blockscout",
+          "url": "https://eth.blockscout.com/address/0x5fa487bca6158c64046b2813623e20755091da0b"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Theo Network issuance backend",
@@ -302,10 +317,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
-      "evidence": "At Ethereum block 25295049: thBILL proxy 0x5fa487bca6158c64046b2813623e20755091da0b (ERC1967 → impl IToken at 0x325478a069b0dbbdfbee909fa3741f84259ba519, name IToken from Blockscout). EIP-1967 admin slot = 0x0 (no separate ProxyAdmin). Current DEFAULT_ADMIN = TimelockController 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02 (minDelay=0, confirmed via contract name on Blockscout). Timelock PROPOSER/EXECUTOR/CANCELLER = Gnosis Safe 0x94877640... (6 owners, 4/6 ETH; 5 owners 3/5 ARB — same Safe address). No modules on Safe (ETH or ARB). ARB/BASE deployments are OFT bridges (ThBillOFT) owned by same Safe. Full mint surface resolved.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "The last complete Ethereum authority observation is dated 2026-06-11. It identified a zero-delay timelock and a 4-of-6 Safe, but it does not constitute a fresh, complete review of current DEFAULT_ADMIN, minter, Safe module, OFT owner, delegate, and cross-chain controls. The historical facts are retained as candidate evidence rather than a current deployment-wide conclusion.",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Theo Network docs",
@@ -315,6 +333,12 @@
           "label": "thBILL ETH contract on Blockscout",
           "url": "https://eth.blockscout.com/address/0x5fa487bca6158c64046b2813623e20755091da0b"
         }
+      ],
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Reverify the current Ethereum DEFAULT_ADMIN, minter, and implementation-upgrade authorization path.",
+        "Reverify the active Safe owners, threshold, modules, and guards for every mint-relevant Theo Safe.",
+        "Enumerate every current OFT owner, delegate, and cross-chain mint or burn control path."
       ]
     }
   },

@@ -14,6 +14,23 @@
   "collateral": "Basket of real-world assets (gold, bonds, T-bills, equity, cash)",
   "pegMechanism": "RWA-indexed basket tracking purchasing power; price appreciates over time",
   "mechanismArchetype": "rwa-credit-fund",
+  "implementationLaunchDate": "2023-11-20",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex Prompt 6b implementation review",
+    "rationale": "ISC's official whitepaper describes issuance and recall of ISC loans to a reserve that buys and sells a real-world asset basket. The earliest recorded mintToChecked transaction from the current SPL mint authority is dated 2023-11-20. Together these establish the current Solana implementation boundary and support the rwa-credit-fund classification.",
+    "sources": [
+      {
+        "label": "ISC reserve basic mechanics",
+        "url": "https://wp.isc.money/how-isc-works/the-isc-reserves/basic-mechanics"
+      },
+      {
+        "label": "Earliest recorded ISC authority-signed mint",
+        "url": "https://explorer.solana.com/tx/59UCCne8eWbiVx3f74Tpx2mSn4CWGrSQ1U1SP66syLPN1eLBZcyAKfJWsPKyC9ns9feYcUfqgtyb3qQe8j5Ubvqr"
+      }
+    ]
+  },
   "llamaId": "186",
   "detailProvider": "defillama",
   "geckoId": "international-stable-currency",

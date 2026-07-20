@@ -21,6 +21,22 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Abracadabra Cauldrons use per-market external oracles connected to each market, but reviewed docs do not prove stronger failover controls.",
+    "branchApplicability": {
+      "disposition": "unresolved",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex Safety Score V9 small-1-free oracle review",
+      "rationale": "Abracadabra documents one oracle per Cauldron and a liquidation path for undercollateralized positions, but the reviewed primary sources do not provide the complete current debt-bearing Cauldron inventory, deployed oracle and fallback configuration, branch parameters, or system-level bad-debt and shutdown coverage.",
+      "sources": [
+        {
+          "label": "Abracadabra architecture overview",
+          "url": "https://dev.abracadabra.money/getting-started/architecture-overview"
+        },
+        {
+          "label": "Abracadabra Cauldron V3 documentation",
+          "url": "https://dev.abracadabra.money/core-contracts/cauldrons/cauldron-v3"
+        }
+      ]
+    },
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
     "confidence": "verified",

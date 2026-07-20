@@ -19,19 +19,43 @@
   "cmcSlug": "mai",
   "protocolSlug": "qidao",
   "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "QiDao MAI collateral vaults use Chainlink-priced collateral feeds, with no stronger reviewed failover tier found in public docs.",
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
-    "confidence": "verified",
+    "tier": "opaque-or-unknown",
+    "summary": "QiDao and Chainlink document collateralized MAI loans using Chainlink price feeds, but reviewed primary and on-chain sources do not establish the current Base and Polygon market inventory, feed wiring, fallback behavior, or complete liquidation configuration.",
+    "branchApplicability": {
+      "disposition": "unresolved",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex Prompt 6b oracle review",
+      "rationale": "QiDao's current site identifies Base and Polygon as the fully live overcollateralized MAI vault deployments, and Chainlink's QiDao case study documents a historical integration of Chainlink Price Feeds for collateral calculations. Neither source, nor the canonical Polygon MAI token deployment, establishes a current per-market collateral/feed inventory, fallback or staleness handling, liquidation timing and backstop, or shutdown and bad-debt behavior. A complete branch inventory therefore cannot be authored.",
+      "sources": [
+        {
+          "label": "QiDao MAI website",
+          "url": "https://www.mai.finance/"
+        },
+        {
+          "label": "Chainlink QiDao price-feed case study",
+          "url": "https://chain.link/case-studies/qidao"
+        },
+        {
+          "label": "Canonical Polygon MAI token deployment",
+          "url": "https://polygonscan.com/token/0xa3fa99a148fa48d14ed51d610c367c61876997f1"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex Prompt 6b oracle review",
+    "confidence": "limited",
     "sources": [
       {
-        "label": "QiDao Chainlink case study",
+        "label": "QiDao MAI website",
+        "url": "https://www.mai.finance/"
+      },
+      {
+        "label": "Chainlink QiDao price-feed case study",
         "url": "https://chain.link/case-studies/qidao"
       },
       {
-        "label": "Aave MAI listing discussion",
-        "url": "https://governance.aave.com/t/add-mai-on-aave-v3/7630"
+        "label": "Canonical Polygon MAI token deployment",
+        "url": "https://polygonscan.com/token/0xa3fa99a148fa48d14ed51d610c367c61876997f1"
       }
     ]
   },
@@ -146,7 +170,7 @@
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "MAI historically expanded across many chains through third-party bridge allocations (Multichain era), and public governance and post-incident reporting tied MAI's cross-chain supply to Multichain-era bridge exposure. 2026-07-20 on-chain re-verification: current per-chain MAI tokens are owned by QiDao per-chain Safe multisigs (enumerated per row), so present-day mint control is issuer-administered; tracked MAI supply is ~zero across chains. Because legacy supply integrity depended on external lock/mint infrastructure, the profile keeps external-lock-mint tiering history while current deployments are issuer-native.",
+    "summary": "MAI historically expanded across many chains through third-party bridge allocations (Multichain era), and public governance and post-incident reporting tied MAI's cross-chain supply to Multichain-era bridge exposure. 2026-07-20 on-chain re-verification found QiDao per-chain Safe owners for the live deployments; the dormant Fraxtal EditableERC20 has a zero owner and zero supply, so its prior route remains unresolved. Because legacy supply integrity depended on external lock/mint infrastructure, the profile keeps external-lock-mint tiering history while current deployments are issuer-native.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "probable",
@@ -520,10 +544,20 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Verified on Fraxtal at block 38851950: the contract 0xb84df10966a5d7e1ab46d9276f55d57bd336afc7 reports name 'Mai Stablecoin' with totalSupply() = 0, and owner()/authority()/endpoint() reads all revert, so no controller can be honestly identified for this dormant zero-supply deployment. Left unresolved.",
+        "reviewNote": "Verified via Fraxtal RPC at block 38867433: contract 0xb84df10966a5d7e1ab46d9276f55d57bd336afc7 reports name 'Mai Stablecoin', symbol 'MAI', decimals 18, totalSupply() = 0, and owner() = the zero address. Its verified EditableERC20 source gates mint() with onlyOwner, so no live direct mint controller is observable. Public evidence does not establish whether this dormant deployment was issuer-issued or a bridge representation, so it remains unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
-        "observedBlock": 38851950
+        "observedBlock": 38867433,
+        "sources": [
+          {
+            "label": "MAI on Fraxscan",
+            "url": "https://fraxscan.com/address/0xb84df10966a5d7e1ab46d9276f55d57bd336afc7#code"
+          },
+          {
+            "label": "Fraxtal RPC",
+            "url": "https://rpc.frax.com"
+          }
+        ]
       },
       {
         "id": "bsc:0x3f56e0c36d275367b8c502090edf38289b3dea0d",

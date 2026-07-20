@@ -170,8 +170,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "USDM is issued on Cardano by Moneta (USA issuance) and NBX (EEA, MiCA-notified EMT); mint/redeem is centralized and KYC-gated 1:1 against segregated reserves, with a Charli3 oracle verifying reserve backing on-chain before each mint.",
+    "confidence": "unknown",
+    "summary": "USDM is centrally issued on Cardano by Moneta and NBX against stated segregated reserves, with a Charli3 reserve feed consulted before minting, but the Cardano policy script and its controlling key or admin inventory are not publicly retrievable.",
     "controls": [
       {
         "label": "Moneta / NBX issuance backend",
@@ -179,6 +179,7 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "evidence": "Moneta (USA) and NBX (EEA) operate the centralized 1:1 mint/redeem for USDM against segregated reserves; a Charli3 oracle attests reserve backing on-chain before each mint, but issuance remains issuer-controlled with no permissionless route.",
         "sources": [
           {
@@ -186,12 +187,55 @@
             "url": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet"
           }
         ]
+      },
+      {
+        "chain": "cardano",
+        "address": "c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df10",
+        "label": "USDM Cardano minting policy (unreadable)",
+        "role": "unknown",
+        "authorityType": "unknown",
+        "directMintAbility": "unknown",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The policy hash identifies the Cardano asset's minting rule, but its script, controlling keys, threshold, and recovery or pause inventory are not publicly retrievable with the available keyless endpoints.",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Koios Cardano Plutus script endpoint",
+            "url": "https://api.koios.rest/api/v1/plutus_script_list?script_hash=eq.c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df10"
+          },
+          {
+            "label": "moneta.global",
+            "url": "https://moneta.global/"
+          }
+        ],
+        "evidence": "Koios script_info, native_script_list, asset_info, and asset_summary returned no policy or asset record for this hash during the 2026-07-20 review. Without a provisioned Cardano indexer or issuer policy disclosure, no signer, threshold, upgrade, or bypass control is attributed."
       }
     ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "continuous",
+    "supervision": "unknown",
+    "upgradeability": {
+      "model": "unknown",
+      "canChangeMintLogic": "unknown",
+      "controlRef": "USDM Cardano minting policy (unreadable)",
+      "observedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Koios Cardano Plutus script endpoint",
+          "url": "https://api.koios.rest/api/v1/plutus_script_list?script_hash=eq.c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df10"
+        },
+        {
+          "label": "Charli3 USDM reserves feed",
+          "url": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet"
+        }
+      ]
+    },
     "review": {
-      "evidence": "2026-07-20 re-review. USDM remains issuer-minted on Cardano by Moneta (USA) / NBX (EEA, MiCA-notified): Moneta's current site confirms KYC-gated 1:1 minting against segregated reserves with a Charli3 reserve oracle consulted on-chain before mint, and no bridge or wrapper path. CoinGecko confirms the on-chain asset c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df10.5553444d (policy c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df10, 6 decimals). 2026-07-20 attempts to read the minting policy's controlling keys with keyless tooling all failed: Koios script_info and native_script_list return no record for the policy hash, and Koios asset_info/asset_summary return no rows for the asset (policy not retrievable from its index); no Blockfrost/Maestro API key is provisioned in this environment; cardanoscan and cexplorer are Cloudflare-blocked or unreachable. The issuer-backend classification of the mint path does not depend on the unreadable key ceremony, but the policy's key structure and the full admin/pause/recovery inventory remain unverified.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+      "evidence": "Re-reviewed 2026-07-20. Moneta's materials describe centrally operated, KYC-gated 1:1 USDM issuance by Moneta/NBX against stated segregated reserves; the live Charli3 feed is described as a reserve check before mint, supporting continuous reserve gating. CoinGecko identifies the Cardano policy c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df10. Koios script_info, native_script_list, asset_info, and asset_summary yielded no policy or asset record, while no Blockfrost or Maestro credential is present and public explorers were blocked or unreachable. NBX has named Finanstilsynet registry material, but the reviewed evidence does not establish a complete prudential supervisor for the combined Moneta/NBX USDM issuance path, so supervision is not promoted.",
+      "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
+      "disposition": "unresolved",
       "sources": [
         {
           "label": "Charli3 USDM reserves feed",

@@ -63,6 +63,9 @@
     "confidence": "verified",
     "summary": "stcUSD is an ERC-4626 UUPS wrapper over Cap cUSD. Wrapper minting remains deposit/share accounting with no separate privileged mint path, while live upgrade authority routes through Cap's external AccessControl and one-day TimelockController to the 3-of-5 Cap governance Safe. Durable cUSD mint authority is inherited from the reviewed Cap vault controls.",
     "inheritedFrom": "cusd-cap",
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "upgradeability": {
       "model": "uups",
       "proxyAddresses": [
@@ -77,8 +80,8 @@
       "canChangeMintLogic": true,
       "delaySec": 86400,
       "controlRef": "Cap Ethereum governance Safe through one-day timelock",
-      "observedAt": "2026-07-14",
-      "observedBlock": 25531350,
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573280,
       "sources": [
         {
           "label": "StakedCap implementation (Blockscout)",
@@ -105,7 +108,8 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-14",
-        "observedBlock": 25531350,
+        "observedBlock": 25573280,
+        "observedAt": "2026-07-20",
         "sources": [
           {
             "label": "stcUSD token (Etherscan)",
@@ -149,8 +153,8 @@
           "observedBlock": 25531350,
           "source": "onchain"
         },
-        "observedAt": "2026-07-14",
-        "observedBlock": 25531350,
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573280,
         "failureDomainKeys": [
           "cap-governance-safe"
         ],
@@ -203,8 +207,9 @@
         }
       ],
       "evidence": "At Ethereum block 25531350, stcUSD remained an ERC-4626 UUPS wrapper whose asset() was cUSD 0xcCcc62962d17b8914c62D74FfB843d73B2a3cccC. Deposits mint wrapper shares through ERC-4626 accounting, while the verified StakedCap implementation authorizes upgrades through the external AccessControl contract. Its DEFAULT_ADMIN was the one-day TimelockController, which retained self-admin authority; the 3-of-5 Cap governance Safe actively held proposer, executor, and canceller roles and had no enabled modules. The wrapper upgrade path is live, while durable base-asset mint authority remains inherited from the separately reviewed cUSD parent.",
-      "reviewer": "owner-triage",
-      "reviewedAt": "2026-07-14"
+    "reviewer": "P2 mint-free cohort",
+    "reviewedAt": "2026-07-20",
+    "disposition": "scoreable"
     }
   },
   "variantOf": "cusd-cap",

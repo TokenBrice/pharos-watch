@@ -66,6 +66,9 @@
     "confidence": "verified",
     "summary": "autoUSD is a Tokemak (AUTO Finance) Autopool USDC strategy-vault share token: shares mint only through the permissionless ERC-4626 deposit flow (Etherscan-verified AutopoolETH implementation 0xfb2ebdedc38a7d19080e44ab1d621bc9afad0695, compiler v0.8.24; live asset/totalAssets/maxDeposit/factory reads 2026-07-20), and the transparent-proxy upgrade path is controlled by a 6-of-11 Safe. Durable base USDC issuance remains inherited from Circle.",
     "inheritedFrom": "usdc-circle",
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -79,8 +82,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Auto Finance autoUSD ProxyAdmin owner Safe",
-      "observedAt": "2026-07-15",
-      "observedBlock": 25539960,
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573280,
       "sources": [
         {
           "label": "Ethereum autoUSD transparent proxy",
@@ -169,9 +172,9 @@
           "moduleGuard": null,
           "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
           "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
-          "observedBlock": 25539960,
-          "observedAt": "2026-07-15",
-          "source": "safe-api"
+        "observedBlock": 25573280,
+        "observedAt": "2026-07-20",
+        "source": "onchain"
         },
         "sources": [
           {
@@ -191,9 +194,9 @@
             "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x6c4D843D9d075c4f8971E64DeA16181b2CFa38F8/"
           }
         ],
-        "observedAt": "2026-07-15",
-        "observedBlock": 25539960,
-        "evidence": "At Ethereum block 25539960, ProxyAdmin 0x84a317... getProxyImplementation(autoUSD) returned 0xfb2ebded..., getProxyAdmin(autoUSD) returned itself, and owner() returned this Safe. The Safe returned 11 owners, threshold 6, version 1.3.0, and no enabled modules. Its Safe Transaction Service record reported zero guard and module guard, fallback handler 0xf48f..., and master copy 0xd9db.... An eth_call to ProxyAdmin.upgrade(autoUSD, currentImplementation) from the Safe address succeeded."
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573280,
+      "evidence": "At Ethereum block 25539960, ProxyAdmin 0x84a317... getProxyImplementation(autoUSD) returned 0xfb2ebded..., getProxyAdmin(autoUSD) returned itself, and owner() returned this Safe. The Safe returned 11 owners, threshold 6, version 1.3.0, and no enabled modules. Its Safe Transaction Service record reported zero guard and module guard, fallback handler 0xf48f..., and master copy 0xd9db.... A fixed-block follow-up at Ethereum block 25573280 reconfirmed owner() = this Safe, getOwners() = the listed 11 EOAs, getThreshold() = 6, and getModulesPaginated() = []. An eth_call to ProxyAdmin.upgrade(autoUSD, currentImplementation) from the Safe address succeeded."
       }
     ],
     "review": {
@@ -224,7 +227,7 @@
         }
       ],
       "evidence": "At Ethereum block 25539960, autoUSD was an active USDC wrapper behind transparent proxy 0xa7569a44f348d3d70d8ad5889e50f78e33d80d35, whose ProxyAdmin is owned by the observed 6-of-11 Safe and can replace the implementation without a contract-enforced delay. The retained Tokemak commit is not source-aligned with deployed implementation 0xfb2ebdedc38a7d19080e44ab1d621bc9afad0695: it is a different Solidity version and its deposit/mint call graph differs. The on-chain topology is preserved here, but it does not establish the deployed share-mint predicate. Durable base USDC issuance remains inherited from Circle. 2026-07-20 (Kimi P2 dc-2): the live share-mint predicate is established behaviorally — the proxy exposes a working ERC-4626 surface (asset() = USDC, totalAssets() ~8.72M USDC units coherent with totalSupply at the share price, maxDeposit() positive, factory() = Tokemak AutopoolFactory 0x2b2ca9b7..., isShutdown() = false; MINTER_ROLE/DEFAULT_ADMIN_ROLE/owner() all revert through the proxy), and the implementation self-identifies as 'autopoolUSDCTemplate Token'. No privileged mint outside the deposit flow is exposed; the sole privileged path is the 6-of-11 Safe's proxy upgrade authority. The implementation's unverified source remains a residual caveat, so confidence is manual-review. 2026-07-20 follow-up: the implementation source is now Etherscan-verified (AutopoolETH, v0.8.24), closing the source-alignment question from the 2026-07-15 review; live ERC-4626 reads confirm the deposit-only share-mint predicate.",
-      "reviewer": "TERRA-III Safety Score V9 source-alignment challenge; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
       "disposition": "scoreable"
     }

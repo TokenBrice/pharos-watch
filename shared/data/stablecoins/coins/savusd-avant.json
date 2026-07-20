@@ -541,18 +541,43 @@
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "The reviewed Avant documentation and live ERC-4626 vault path do not identify a complete savUSD NAV oracle, fallback, stale-price, or circuit-breaker profile.",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "summary": "Avant documents savUSD as a yield-bearing avUSD wrapper, but the reviewed materials do not identify a complete NAV oracle, fallback, stale-price, or circuit-breaker profile.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex Prompt 6b oracle review",
+      "rationale": "Avant documents savUSD as the yield-bearing token received when avUSD is staked and returned as avUSD through an unstaking cooldown. The wrapper does not create borrower debt positions or operate a separate collateral-liquidation engine, so no savUSD market-specific oracle or liquidation branches exist; upstream avUSD and strategy exposures remain separate.",
+      "sources": [
+        {
+          "label": "Avant savUSD staking guide",
+          "url": "https://docs.avantprotocol.com/overview/using-avant-protocol/staking-for-savassets"
+        },
+        {
+          "label": "Avant savUSD unstaking guide",
+          "url": "https://docs.avantprotocol.com/overview/using-avant-protocol/unstaking-savassets"
+        },
+        {
+          "label": "Avant contract registry",
+          "url": "https://docs.avantprotocol.com/security/contract-addresses"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex Prompt 6b oracle review",
     "confidence": "unknown",
     "sources": [
       {
-        "label": "Avant Protocol documentation",
-        "url": "https://docs.avantprotocol.com/"
+        "label": "Avant savUSD staking guide",
+        "url": "https://docs.avantprotocol.com/overview/using-avant-protocol/staking-for-savassets"
       },
       {
-        "label": "Avant Protocol website",
-        "url": "https://www.avantprotocol.com/"
+        "label": "Avant savUSD unstaking guide",
+        "url": "https://docs.avantprotocol.com/overview/using-avant-protocol/unstaking-savassets"
+      },
+      {
+        "label": "Avant contract registry",
+        "url": "https://docs.avantprotocol.com/security/contract-addresses"
       }
     ]
   },
@@ -591,14 +616,29 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
-    "confidence": "verified",
+    "confidence": "unknown",
     "inheritedFrom": "avusd-avant",
-    "summary": "savUSD (StakedAvUSDV2) is Avant's staked wrapper of avUSD; shares are minted only via deposit() — no privileged mint function. Not upgradeable (proxiableUUID reverts, no EIP-1967 slots). DEFAULT_ADMIN = EOA 0xd4d23209... confirmed on Avalanche and Ethereum deployments.",
+    "summary": "The reviewed Avalanche and Ethereum savUSD vault contracts appear to mint shares only against avUSD deposits and expose no EIP-1967 upgrade slot, but the complete current wrapper/admin and inherited avUSD issuance surface is not reconciled across the active deployment set. The profile remains unresolved.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "savUSD Avalanche contract",
+          "url": "https://snowtrace.io/address/0x06d47f3fb376649c3a9dafe069b3d6e35572219e"
+        },
+        {
+          "label": "savUSD Ethereum contract",
+          "url": "https://etherscan.io/address/0xb8d89678e75a973e74698c976716308abb8a46a4"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "savUSD savings vault (StakedAvUSDV2, non-upgradeable)",
         "role": "wrapper",
-        "authorityType": "eoa",
+        "authorityType": "contract",
         "directMintAbility": "none",
         "chain": "avalanche",
         "address": "0x06d47f3fb376649c3a9dafe069b3d6e35572219e",
@@ -625,6 +665,9 @@
         "evidence": "Underlying avUSD is minted 1:1 against USDC via Avant's AvantMintingV2 contract, with privileged operations behind MPC custody (Fireblocks/Fordefi), a policy engine, and RBAC. savUSD inherits this concentrated-admin posture from the parent."
       }
     ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -640,9 +683,15 @@
           "url": "https://etherscan.io/address/0xb8d89678e75a973e74698c976716308abb8a46a4"
         }
       ],
-      "evidence": "At Avalanche block 87752599 and Ethereum block 25295219: savUSD (StakedAvUSDV2) is not upgradeable on any deployment. DEFAULT_ADMIN = EOA 0xd4d23209aae8630bf386b7393763a5b7865e57cb confirmed on Avalanche and Ethereum. Minting is deposit-only (ERC-4626 share accounting). Wrapper mint surface fully confirmed; parent avUSD mint path tracked separately.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "The cited Avalanche and Ethereum reads establish deposit-only share accounting and no EIP-1967 proxy slots for those two vault contracts. They do not reconcile the complete current savUSD wrapper/admin surface across all tracked deployments or establish how the inherited avUSD issuer controls interact with each route. The immutable local-wrapper finding is retained, but it is not treated as a complete mint-authority review.",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Reconcile every active savUSD deployment and its local administrator, mint, and bridge controller rather than relying on the two reviewed vault contracts.",
+        "Verify the current inherited avUSD issuer mint path and the relationship between that path and savUSD share issuance.",
+        "Confirm whether the DEFAULT_ADMIN EOA on the reviewed wrappers can alter any mint-relevant configuration despite the absence of an implementation upgrade path."
+      ]
     }
   },
   "launchDate": "2024-11-15",

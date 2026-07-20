@@ -145,19 +145,19 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
-    "confidence": "verified",
-    "summary": "GLDT is minted by the Gold DAO swap canister on the Internet Computer when users lock GLD NFTs at 100 GLDT per gram; the swap canister holds the GLDT ledger minting rights and is governed/upgradeable by the Gold DAO SNS.",
+    "authorityPosture": "unknown",
+    "confidence": "unknown",
+    "summary": "Gold DAO documentation describes GLDT minting against locked GLD NFTs through an SNS-governed swap canister, but this review does not have reproducible primary ICP evidence that establishes the live ledger minting principal and its complete controller path. The profile remains unresolved.",
     "controls": [
       {
-        "label": "GLDT swap canister (minter)",
+        "label": "Reported GLDT swap canister (unconfirmed live minter)",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "cap-limited",
-        "canRaiseCap": false,
+        "directMintAbility": "unknown",
+        "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "The GLDT swap canister holds minting rights on the GLDT ledger and mints only when GLD NFTs are locked (100 GLDT per gram); reverse swaps burn GLDT and release NFTs, so supply is collateral-bounded by locked gold NFTs.",
-        "evidence": "The GLDT ICRC-1 ledger's icrc1 minting account is 6f6ua-hqaaa-aaaar-qairq-cai (ICRC API read 2026-07-20), which the GoldDAO/gold-dao canister_ids.json maps to the gldt_swap canister; the IC API shows its sole controller is the Gold DAO SNS root tw2vt-hqaaa-aaaaq-aab6a-cai. The swap canister mints GLDT only when GLD NFT gold certificates are locked (1/100 g per GLDT), so minting is bounded by gold deposits and cannot be raised administratively.",
+        "capDescription": "Gold DAO documentation describes a 100-GLDT-per-gram locked-NFT mint mechanism, but the current review does not independently establish that the reported principal is the active ledger minter or that the described bound is enforced by its live code.",
+        "evidence": "The cited ICRC/IC API and repository mapping nominate 6f6ua-hqaaa-aaaar-qairq-cai as a swap canister. This review retains it only as a candidate: no reproducible ICP-native query transcript or primary issuer source establishes the active ledger mint authority and its live mint checks.",
         "chain": "icp",
         "address": "6f6ua-hqaaa-aaaar-qairq-cai",
         "failureDomainKeys": [
@@ -210,8 +210,8 @@
       }
     ],
     "review": {
-      "evidence": "Gold DAO documentation describes GLDT minting via an SNS-controlled swap canister against locked GLD NFTs. Current Internet Computer API state confirms the GLDT ledger is controlled by Gold DAO Root and closes the Root/Governance controller loop. The public key-canister directory still does not identify the swap-canister principal that holds ledger minting rights. 2026-07-20 (Kimi P2 dc-2): the GLDT ledger minting account is the GLDT swap canister 6f6ua-hqaaa-aaaar-qairq-cai (ICRC API), controlled solely by the Gold DAO SNS root tw2vt-hqaaa-aaaaq-aab6a-cai (IC API) — the previously open swap-canister principal question is closed. Minting is bounded by locked GLD NFT gold deposits.",
-      "reviewer": "SOL-7 blocker challenge batch 02; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+      "evidence": "Gold DAO documentation describes an SNS-controlled swap canister and NFT-backed minting. The cited public API and repository records nominate a swap principal and a Root/Governance loop, but they do not supply independently reproducible primary evidence of the live ledger minting account, its current controller set, or the active mint bound. The prior candidate mapping is retained as a finding rather than promoted to a scoreable mint path.",
+      "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
       "sources": [
         {
@@ -226,17 +226,18 @@
           "label": "Internet Computer API — Gold DAO Root",
           "url": "https://ic-api.internetcomputer.org/api/v3/canisters/tw2vt-hqaaa-aaaaq-aab6a-cai"
         }
+      ],
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Use ICP-native tooling or a primary issuer endpoint to reproduce the GLDT ledger minting-account read and bind it to the active swap canister principal.",
+        "Enumerate the live swap and ledger controller chain, including whether the SNS can alter the mint code or its economic bound.",
+        "Verify the live code path enforcing the locked-GLD-NFT conversion rule before classifying the mint as economically bounded."
       ]
     },
     "upgradeability": {
-      "model": "custom",
-      "adminAddresses": [
-        "tw2vt-hqaaa-aaaaq-aab6a-cai",
-        "tr3th-kiaaa-aaaaq-aab6q-cai"
-      ],
-      "canChangeMintLogic": true,
-      "controlRef": "Gold DAO SNS governance (canister controller)",
-      "observedAt": "2026-07-14",
+      "model": "unknown",
+      "canChangeMintLogic": "unknown",
+      "observedAt": "2026-07-20",
       "sources": [
         {
           "label": "Gold DAO key canisters",
@@ -252,7 +253,9 @@
         }
       ]
     },
-    "economicCapSemantics": "bounded"
+    "economicCapSemantics": "unknown",
+    "reconciliation": "unknown",
+    "supervision": "unknown"
   },
   "launchDate": "2024-10-30"
 }

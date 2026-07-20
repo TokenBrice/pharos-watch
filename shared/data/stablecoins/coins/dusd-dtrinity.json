@@ -324,8 +324,23 @@
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
     "authorityPosture": "concentrated-admin",
-    "confidence": "verified",
-    "summary": "dUSD minting on Ethereum runs through the AMO Manager and one additional undocumented minter contract under a 1-day timelocked 3-of-5 Governance Safe; a separate 5-of-5 Emergency Safe holds pause only. Deployments are chain-isolated; Sonic is administered by the Governance Safe directly without a timelock.",
+    "confidence": "unknown",
+    "summary": "Ethereum dUSD mint controls are partially enumerated: two contracts hold MINTER_ROLE and a 1-day timelocked 3-of-5 Safe administers roles, while the chain-isolated Fraxtal, Katana, and Sonic mint and upgrade inventories are not complete. The profile remains unresolved rather than extrapolating Ethereum authority across deployments.",
+    "upgradeability": {
+      "model": "unknown",
+      "canChangeMintLogic": "unknown",
+      "observedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Ethereum dUSD proxy",
+          "url": "https://etherscan.io/address/0x07fff99e1664d9b116fbc158c0e99785f81ca236"
+        },
+        {
+          "label": "dTRINITY docs — contract addresses",
+          "url": "https://docs.dtrinity.org/security/addresses"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -385,7 +400,7 @@
             "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
             "0x64dbdd2aad00383defc305398f18a019161558cb",
             "0xdc672ba6e55b71b39fa5423d42b88e7adf9d24a4",
-            "0x09e0c8376940abe845a89b7304147a95c72644f59"
+            "0x9e0c8376940abe845a89b7304147a95c72644f59"
           ],
           "threshold": 3,
           "enabledModules": [],
@@ -424,7 +439,7 @@
           "owners": [
             "0x64dbdd2aad00383defc305398f18a019161558cb",
             "0xdc672ba6e55b71b39fa5423d42b88e7adf9d24a4",
-            "0x09e0c8376940abe845a89b7304147a95c72644f59",
+            "0x9e0c8376940abe845a89b7304147a95c72644f59",
             "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
             "0x4b58ff1aae6add7465a5584ebcaeb876ec8f21fd"
           ],
@@ -447,9 +462,12 @@
         "evidence": "This 5-of-5 Safe (owners read on-chain 2026-07-20) holds PAUSER_ROLE on the Ethereum dUSD token (granted at block 25112809; hasRole re-verified 2026-07-20) — emergency pause only, no mint or admin capability."
       }
     ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
-      "evidence": "ETH block 25295164: dUSD is a TransparentUpgradeableProxy; ProxyAdmin (0xbe90db...) owner is an OZ TimelockController (0x18cb0e...) with 24h delay and no active proposers (0 RoleGranted events, all hasRole checks returned false). Upgrade path is effectively locked. Sonic: proxy admin owner is a 2/3 multisig (0xE83C18..., 3 owners, threshold 2 via getThreshold). AMO/SMO contract addresses not resolvable from known contract addresses — contributor mint admin identity on ETH remains unconfirmed. 2026-07-20 (Kimi P2 dc-2): AMO Manager 0x29532F74A9302e0a1E9f7d015FE355FFdE6e6880 (docs registry) and a second, registry-undocumented minter 0xf84cc8217713a53fc3e3eb2d62d2af33a084ff85 both hold MINTER_ROLE on the Ethereum dUSD token (hasRole reads). DEFAULT_ADMIN_ROLE sits with the 1-day TimelockController 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b behind the 3-of-5 Governance Safe 0xE83c188a7BE46B90715C757A06cF917175f30262 (owners read). Emergency pause rests with the 5-of-5 Safe 0x04401537CA997a43EBCFEc8194c7e88c7ee79804. dTRINITY is chain-isolated by design; Sonic uses a direct Safe admin with no timelock and is absent from the docs registry.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+      "evidence": "Ethereum evidence at the cited token and Safe contracts identifies two active MINTER_ROLE holders, a 1-day TimelockController behind the 3-of-5 Governance Safe, and a pause-only 5-of-5 Safe. It does not establish a complete mint-role, cap, and upgrade-controller inventory for every chain-isolated dUSD deployment. The second Ethereum minter is not documented in the issuer registry, and the available Sonic administration observation does not substitute for a complete Sonic/Fraxtal/Katana mint review.",
+      "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
       "sources": [
         {
@@ -461,7 +479,12 @@
           "url": "https://etherscan.io/address/0x07fff99e1664d9b116fbc158c0e99785f81ca236"
         }
       ],
-      "disposition": "scoreable"
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Enumerate current minter, administrator, and upgrade-controller relationships for the Fraxtal and Katana dUSD deployments.",
+        "Verify the Sonic token's active minters and complete proxy/implementation authority path rather than relying on the documented Safe admin alone.",
+        "Identify the undocumented Ethereum MINTER_ROLE holder's mint constraints and any collateral or cap checks."
+      ]
     }
   },
   "launchDate": "2024-12-18",

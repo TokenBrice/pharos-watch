@@ -252,25 +252,28 @@
           }
         ],
         "evidence": "At Ethereum block 25295194, eth_getStorageAt EIP-1967 admin slot (0xb531...) = 0x0 and impl slot (0x3608...) = 0x0: this is not a proxy contract. owner() returned 0x3B0AAf6e6fCd4a7cEEf8c92C32DFeA9E64dC1862 (Ethena 5/10 admin Safe, modules=[], guard=0x0, version 1.3.0). Wrapper mints only on USDe deposit; no privileged mint surface on the wrapper."
-      },
-      {
-        "chain": "ethereum",
-        "address": "0xe3490297a08d6fC8Da46Edb7B6142E4F461b62D3",
-        "label": "Inherited USDe token minter contract",
-        "role": "backend-signer",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "sources": [
-          {
-            "label": "Ethena mint and redeem docs",
-            "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
-          }
-        ],
-        "evidence": "Inherited from reviewed `usde-ethena` mintAuthority."
       }
     ],
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "Ethereum sUSDe staking wrapper",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25295194,
+      "sources": [
+        {
+          "label": "Ethena staking docs",
+          "url": "https://docs.ethena.fi/solution-design/staking-usde"
+        },
+        {
+          "label": "Ethena key addresses",
+          "url": "https://docs.ethena.fi/solution-design/key-addresses"
+        }
+      ]
+    },
     "review": {
       "sources": [
         {
@@ -282,9 +285,10 @@
           "url": "https://docs.ethena.fi/solution-design/staking-usde"
         }
       ],
-      "evidence": "sUSDe Ethereum wrapper is a non-proxy contract (EIP-1967 admin=0, impl=0). owner() confirmed Ethena 5/10 admin Safe (0x3B0AAf6e...) with no modules or guard at block 25295194. Wrapper has no privileged mint; all sUSDe shares come from deposited USDe. Bridge deployments inherit base USDe's signed-order mint path (out of scope for wrapper verification).",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "sUSDe Ethereum wrapper is a non-proxy contract (EIP-1967 admin=0, impl=0). owner() confirmed Ethena 5/10 admin Safe (0x3B0AAf6e...) with no modules or guard at block 25295194. Wrapper has no privileged mint; all local sUSDe shares come from deposited USDe. The local share-mint predicate is therefore deposit-bounded, while durable USDe issuance remains in the inherited parent profile. No local reserve reconciliation or named prudential supervisor applies to the wrapper.",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable"
     }
   },
   "deploymentModel": "third-party-bridge",

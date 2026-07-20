@@ -188,11 +188,12 @@
     }
   },
   "mechanismArchetype": "fiat-cash",
+  "implementationLaunchDate": "2023-04-04",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-13",
-    "reviewer": "Codex mechanism review",
-    "rationale": "zkUSD is presented as portal-issued and redeemable at one USDC, making it a reserve-style receipt rather than a borrower CDP.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex Prompt 6b implementation review",
+    "rationale": "zkUSD is an issuer-controlled portal-issued stable-token receipt rather than a borrower CDP. The canonical zkSync token deployment was created on 2023-04-04; current reserve and redemption terms remain separately unresolved.",
     "sources": [
       {
         "label": "Goal3 docs",
@@ -201,6 +202,10 @@
       {
         "label": "Goal3 site",
         "url": "https://goal3.xyz/"
+      },
+      {
+        "label": "zkSync Era contract-creation API",
+        "url": "https://block-explorer-api.mainnet.zksync.io/api?module=contract&action=getcontractcreation&contractaddresses=0xfc7e56298657b002b3e656400e746b7212912757"
       }
     ]
   }

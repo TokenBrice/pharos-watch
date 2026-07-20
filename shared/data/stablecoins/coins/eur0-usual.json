@@ -84,48 +84,219 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "EUR0 issuance is Usual-operated: eligible users mint/redeem through protocol collateral routes backed by euro RWA collateral, while the Ethereum token remains upgradeable through a proxy-admin path.",
+    "confidence": "verified",
+    "summary": "EUR0 minting is permissioned through RegistryAccess. Two enumerated Usual protocol modules currently hold EUR0_MINT, while the same 8-of-15 Usual Safe signer set can add minters through RegistryAccess and replace the token implementation through ProxyAdmin.",
     "controls": [
       {
         "chain": "ethereum",
-        "address": "0x3c89Cd1884E7bEf73Ca3eF08d2Ef6ec338fD8e49",
-        "label": "EUR0 token (TransparentUpgradeableProxy → Eur0 impl)",
+        "address": "0x78331cC94BbF86293bDa80cA10463812b1E73179",
+        "label": "RevenueDistributionModule (EUR0_MINT role)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573280,
         "sources": [
           {
-            "label": "Usual EUR0 docs",
-            "url": "https://tech.usual.money/overview/features/eur0"
+            "label": "EUR0 RegistryAccess",
+            "url": "https://etherscan.io/address/0x65771978ff9238162a41c77384c9f55c1ec9e9ab"
           },
           {
-            "label": "Ethereum EUR0 token",
-            "url": "https://etherscan.io/address/0x3c89cd1884e7bef73ca3ef08d2ef6ec338fd8e49"
+            "label": "RevenueDistributionModule",
+            "url": "https://etherscan.io/address/0x78331cC94BbF86293bDa80cA10463812b1E73179"
           }
         ],
-        "evidence": "At block 25295183: EIP-1967 impl slot = 0xc3b20caff0bd32c8835659f0c48e0ed341d2016d (Eur0). mint(address,uint256) requires EUR0_MINT role via RegistryAccess.onlyMatchingRole(EUR0_MINT). Current RegistryAccess at storage slot 0xb6bec7bc... = 0x65771978ff9238162a41c77384c9f55c1ec9e9ab."
+        "evidence": "The full-history RoleGranted scan of RegistryAccess found EUR0_MINT (0x6500bcee6db6566aefb937c0a529226d48f4a9fd311099231e0e63ec7196854b) granted to this module with no RoleRevoked event. At Ethereum block 25573280, RegistryAccess.hasRole(EUR0_MINT, this module) returned true."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xB9677b45BffBE3d586D2ae2cbcd1775577b166d1",
+        "label": "DaoCollateral (EUR0_MINT role)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573280,
+        "sources": [
+          {
+            "label": "EUR0 RegistryAccess",
+            "url": "https://etherscan.io/address/0x65771978ff9238162a41c77384c9f55c1ec9e9ab"
+          },
+          {
+            "label": "DaoCollateral",
+            "url": "https://etherscan.io/address/0xB9677b45BffBE3d586D2ae2cbcd1775577b166d1"
+          }
+        ],
+        "evidence": "The full-history RoleGranted scan of RegistryAccess found EUR0_MINT granted to this module with no RoleRevoked event. At Ethereum block 25573280, RegistryAccess.hasRole(EUR0_MINT, this module) returned true."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xE89e6931c803fFdeA19E98F88979967CF211CA76",
+        "label": "Usual 8-of-15 Safe (RegistryAccess owner)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 8,
+        "signerCount": 15,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573280,
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0xEBc9B8F11Da82cC17ffEC763dE7EB1daa735Bb3C",
+            "0xDF758F044e3761aD52E1B96E1A468f03f565334b",
+            "0x8d08338c592cF18C586C43d6b567cb938614F6b8",
+            "0x6BC737aD5213ea26a3A1Bb73431598AF2167cDBd",
+            "0xD09C7955C38b9ACDC293e006bD5d0C059a57699a",
+            "0xFe45baf0F18c207152A807c1b05926583CFE2e4b",
+            "0x0bB03BDF016c9F99AAe32fb2DA303e79a9e6FEC7",
+            "0x533C0b7959Eb6F042E19ca40700A7af22F69e2d8",
+            "0x189339Ff517172d91e14DCA03aC843C6d7A4Eb5E",
+            "0x118D6dCF55a0DfBC3d1052FBD41A483f8a6a68b3",
+            "0x3b9eAF01facee23846cea722a92e853bee064d69",
+            "0x91c5Da0CEFc781545B6B9Ad0438D1a944B6DdC52",
+            "0x1F7F8786D8699CC4d722AEaEd5797a6d8a6815d5",
+            "0xd0F657D3CEBB51ceEa20DFb3aF6213fa1cecd5A7",
+            "0xEb6927E3599D1Ee873b348efc99e81B36179CDAf"
+          ],
+          "threshold": 8,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 25573280,
+          "observedAt": "2026-07-20",
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "EUR0 RegistryAccess",
+            "url": "https://etherscan.io/address/0x65771978ff9238162a41c77384c9f55c1ec9e9ab"
+          },
+          {
+            "label": "Usual RegistryAccess owner Safe",
+            "url": "https://etherscan.io/address/0xE89e6931c803fFdeA19E98F88979967CF211CA76"
+          }
+        ],
+        "evidence": "At Ethereum block 25573280, RegistryAccess.owner() returned this Safe. On-chain Safe reads returned version 1.4.1, 15 owners, threshold 8, an empty module list, and a zero guard; it can change the RegistryAccess role configuration that authorizes EUR0 minters."
       },
       {
         "chain": "ethereum",
         "address": "0xd0faE00123a2E778c078c2691C6cB81a9DB08577",
-        "label": "EUR0 ProxyAdmin (owned by Usual 8/15 Safe)",
+        "label": "EUR0 ProxyAdmin",
         "role": "proxy-admin",
         "authorityType": "contract",
         "directMintAbility": "upgrade-only",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573280,
         "sources": [
           {
             "label": "Ethereum EUR0 token",
             "url": "https://etherscan.io/address/0x3c89cd1884e7bef73ca3ef08d2ef6ec338fd8e49"
+          },
+          {
+            "label": "EUR0 ProxyAdmin",
+            "url": "https://etherscan.io/address/0xd0faE00123a2E778c078c2691C6cB81a9DB08577"
           }
         ],
-        "evidence": "At block 25295183: EIP-1967 admin slot = 0xd0faE00123... (ProxyAdmin contract); ProxyAdmin.owner() = 0x68BFFB0fCd08aa9967297A63e5Dee4767F44cAe1 (8/15 Safe confirmed via Blockscout ContractName=SafeProxy and getOwners()=15 addresses). Same 8/15 signers control RegistryAccess.owner() at 0xE89e6931c803fFdeA19E98F88979967CF211CA76 (no modules)."
+        "evidence": "At Ethereum block 25573280, the EUR0 EIP-1967 admin slot was this ProxyAdmin and ProxyAdmin.owner() returned 0x68bFFB0fcD08AA9967297A63E5DEE4767f44cae1. It is the immediate contract upgrade surface for the EUR0 implementation."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x68bFFB0fcD08AA9967297A63E5DEE4767f44cae1",
+        "label": "Usual 8-of-15 Safe (EUR0 ProxyAdmin owner)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "threshold": 8,
+        "signerCount": 15,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573280,
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0xEBc9B8F11Da82cC17ffEC763dE7EB1daa735Bb3C",
+            "0xDF758F044e3761aD52E1B96E1A468f03f565334b",
+            "0x8d08338c592cF18C586C43d6b567cb938614F6b8",
+            "0x6BC737aD5213ea26a3A1Bb73431598AF2167cDBd",
+            "0xD09C7955C38b9ACDC293e006bD5d0C059a57699a",
+            "0xFe45baf0F18c207152A807c1b05926583CFE2e4b",
+            "0x0bB03BDF016c9F99AAe32fb2DA303e79a9e6FEC7",
+            "0x533C0b7959Eb6F042E19ca40700A7af22F69e2d8",
+            "0x189339Ff517172d91e14DCA03aC843C6d7A4Eb5E",
+            "0x118D6dCF55a0DfBC3d1052FBD41A483f8a6a68b3",
+            "0x3b9eAF01facee23846cea722a92e853bee064d69",
+            "0x91c5Da0CEFc781545B6B9Ad0438D1a944B6DdC52",
+            "0x1F7F8786D8699CC4d722AEaEd5797a6d8a6815d5",
+            "0xd0F657D3CEBB51ceEa20DFb3aF6213fa1cecd5A7",
+            "0xEb6927E3599D1Ee873b348efc99e81B36179CDAf"
+          ],
+          "threshold": 8,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 25573280,
+          "observedAt": "2026-07-20",
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "EUR0 ProxyAdmin",
+            "url": "https://etherscan.io/address/0xd0faE00123a2E778c078c2691C6cB81a9DB08577"
+          },
+          {
+            "label": "Usual EUR0 ProxyAdmin owner Safe",
+            "url": "https://etherscan.io/address/0x68bFFB0fcD08AA9967297A63E5DEE4767f44cae1"
+          }
+        ],
+        "evidence": "At Ethereum block 25573280, EUR0 ProxyAdmin.owner() returned this Safe. On-chain Safe reads returned version 1.4.1, 15 owners, threshold 8, an empty module list, and a zero guard. It can authorize implementation changes that alter EUR0 mint-critical logic."
       }
     ],
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x3c89cd1884e7bef73ca3ef08d2ef6ec338fd8e49"
+      ],
+      "implementationAddresses": [
+        "0xc3b20caff0bd32c8835659f0c48e0ed341d2016d"
+      ],
+      "adminAddresses": [
+        "0xd0faE00123a2E778c078c2691C6cB81a9DB08577",
+        "0x68bFFB0fcD08AA9967297A63E5DEE4767f44cae1"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Usual 8-of-15 Safe (EUR0 ProxyAdmin owner)",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573280,
+      "sources": [
+        {
+          "label": "Ethereum EUR0 token",
+          "url": "https://etherscan.io/address/0x3c89cd1884e7bef73ca3ef08d2ef6ec338fd8e49"
+        },
+        {
+          "label": "EUR0 ProxyAdmin",
+          "url": "https://etherscan.io/address/0xd0faE00123a2E778c078c2691C6cB81a9DB08577"
+        },
+        {
+          "label": "Usual EUR0 ProxyAdmin owner Safe",
+          "url": "https://etherscan.io/address/0x68bFFB0fcD08AA9967297A63E5DEE4767f44cae1"
+        }
+      ]
+    },
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -135,32 +306,16 @@
         {
           "label": "Ethereum EUR0 token",
           "url": "https://etherscan.io/address/0x3c89cd1884e7bef73ca3ef08d2ef6ec338fd8e49"
-        }
-      ],
-      "evidence": "At Ethereum block 25295183: EUR0 proxy admin chain = ProxyAdmin (0xd0faE00123...) → 8/15 Usual Safe (0x68BFFB0f..., 15 owners read via getOwners()). RegistryAccess (0x65771978...) controls EUR0_MINT role; its owner is a separate 8/15 Usual Safe (0xE89e6931...) with the same 15 signers. EUR0_MINT role holder(s) cannot be enumerated (RegistryAccess uses non-enumerable AccessControl; no RoleGranted events emitted post-deployment). Follow-up 2026-07-20: the EUR0_MINT role holders are now enumerated — a full-history RoleGranted scan on RegistryAccess 0x65771978ff9238162a41c77384c9f55c1ec9e9ab shows EUR0_MINT (0x6500bcee...) granted to RevenueDistributionModule 0x78331cC94BbF86293bDa80cA10463812b1E73179 and DaoCollateral 0xB9677b45BffBE3d586D2ae2cbcd1775577b166d1 (both Usual protocol contracts, blockscout-verified proxies), with zero RoleRevoked events; hasRole() confirms both still hold the role.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
-      "reviewedAt": "2026-07-20",
-      "unresolvedQuestions": []
-    },
-    "upgradeability": {
-      "model": "transparent-proxy",
-      "adminAddresses": [
-        "0xd0faE00123a2E778c078c2691C6cB81a9DB08577"
-      ],
-      "canChangeMintLogic": true,
-      "controlRef": "EUR0 ProxyAdmin (owned by Usual 8/15 Safe)",
-      "observedAt": "2026-06-11",
-      "observedBlock": 25295183,
-      "sources": [
-        {
-          "label": "Ethereum EUR0 token",
-          "url": "https://etherscan.io/address/0x3c89cd1884e7bef73ca3ef08d2ef6ec338fd8e49"
         },
         {
-          "label": "Usual EUR0 docs",
-          "url": "https://tech.usual.money/overview/features/eur0"
+          "label": "EUR0 RegistryAccess",
+          "url": "https://etherscan.io/address/0x65771978ff9238162a41c77384c9f55c1ec9e9ab"
         }
-      ]
+      ],
+      "evidence": "At Ethereum block 25573280, EUR0 was a transparent proxy with implementation 0xc3b20caff0bd32c8835659f0c48e0ed341d2016d and ProxyAdmin 0xd0faE00123a2E778c078c2691C6cB81a9DB08577. RegistryAccess.owner() resolved to one 8-of-15 Usual Safe, and ProxyAdmin.owner() resolved to a second 8-of-15 Usual Safe with the same 15 owners; both Safes had no enabled modules and a zero guard. The full RoleGranted history identifies RevenueDistributionModule and DaoCollateral as EUR0_MINT holders, and both hasRole checks remained true at the observation block. These authority paths can add minters or replace mint logic without an independently enforced quantitative cap, so the economic cap is unbounded. Reviewed sources do not establish a supply-versus-reserve reconciliation cadence or a named prudential supervisor for EUR0.",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable"
     }
   },
   "liveReservesConfig": {
