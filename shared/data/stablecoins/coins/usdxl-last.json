@@ -14,6 +14,23 @@
   "collateral": "Position-backed synthetic dollar minted against blue-chip overcollateralized positions on HypurrFi's Aave V3 fork on HyperEVM, with protocol-owned liquidity and stablecoin reserves including USDT0 supporting secondary liquidity. Eligible borrow collateral includes HYPE and HYPE LSTs, bridged BTC, and ETH.",
   "pegMechanism": "Users open overcollateralized CDP-style borrows on HypurrFi and mint USDXL against their position; repayment burns the synthetic dollar. Liquidations and protocol-owned liquidity defend the peg, but public docs do not describe an enabled direct 1:1 holder redemption against issuer reserves.",
   "mechanismArchetype": "cdp",
+  "implementationLaunchDate": "2025-03-22",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex Prompt 6b implementation review",
+    "rationale": "HypurrFi's official USDXL reference describes USDXL as a CDP-hybrid synthetic dollar. Hyperliquid's official tokenDetails endpoint records the tracked HyperCore USDXL token deployTime as 2025-03-22, establishing the current deployment boundary.",
+    "sources": [
+      {
+        "label": "HypurrFi USDXL agent reference",
+        "url": "https://docs.hypurrfi.com/agents/usdxl"
+      },
+      {
+        "label": "Hyperliquid tokenDetails API",
+        "url": "https://api.hyperliquid.xyz/info"
+      }
+    ]
+  },
   "llamaId": "322",
   "detailProvider": "defillama",
   "geckoId": "last-usd",

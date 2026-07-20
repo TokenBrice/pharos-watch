@@ -156,6 +156,25 @@
         "observedAt": "2026-07-20"
       }
     ],
+    "economicCapSemantics": "bounded",
+    "reconciliation": "continuous",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "Zephyr native reserve mint/redeem rules",
+      "observedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Zephyr GitHub - native mint transaction types",
+          "url": "https://github.com/ZephyrProtocol/zephyr/blob/master/src/cryptonote_protocol/enums.h"
+        },
+        {
+          "label": "Zephyr GitHub - native chain configuration",
+          "url": "https://github.com/ZephyrProtocol/zephyr/blob/master/src/cryptonote_config.h"
+        }
+      ]
+    },
     "review": {
       "sources": [
         {
@@ -171,9 +190,10 @@
           "url": "https://github.com/ZephyrProtocol/zephyr/blob/master/src/cryptonote_config.h"
         }
       ],
-      "evidence": "Source code reviewed 2026-06-11. No admin/emergency/foundation mint bypass found in enums.h, blockchain.cpp, or cryptonote_tx_utils.cpp. All mint paths are reserve-ratio-gated user transactions. Foundation holds oracle signing key (price-feed centralization) but not a privileged minter role.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
-      "reviewedAt": "2026-07-20"
+      "evidence": "Re-reviewed 2026-07-20. Official Zephyr source exposes only reserve-ratio-gated user MINT_STABLE, MINT_RESERVE, and MINT_YIELD transaction types; no admin, emergency, or foundation mint bypass was found in enums.h, blockchain.cpp, or cryptonote_tx_utils.cpp. Existing ZSD rules therefore enforce collateral and reserve-ratio checks continuously as part of each mint, and the existing asset's native consensus rules cannot be upgraded through a privileged contract or account. The foundation oracle RSA key is a price-feed centralization vector, not a direct mint authority. No named prudential supervisor is evidenced by the reviewed protocol materials.",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable"
     }
   },
   "reserves": [

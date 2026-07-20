@@ -84,8 +84,8 @@ export default createClientFeaturePage({
     path: "/coverage/",
     title: "Coverage Matrix",
     leadParagraphs: [
-      `Use this page to answer two questions fast across ${ACTIVE_STABLECOIN_COUNT} active stablecoins from the ${TRACKED_STABLECOIN_COUNT}-asset tracked universe: what Pharos can show for a coin right now, and how much of the tracked market each surface actually reaches.`,
-      "Start with the feature snapshot for breadth by coin count and market-cap share, then drop into the matrix when you need the asset-level truth.",
+      `What Pharos can show for each of the ${ACTIVE_STABLECOIN_COUNT} active stablecoins, and how much of the ${TRACKED_STABLECOIN_COUNT}-asset tracked market each feature reaches.`,
+      "Start with the feature snapshot for breadth, then open the matrix for asset-level detail.",
       <>
         {PRE_LAUNCH_STABLECOIN_COUNT}{" "}
         <Link href="/upcoming/" className="pharos-prose-link">

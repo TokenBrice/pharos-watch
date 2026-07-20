@@ -761,6 +761,937 @@
           ]
         }
       ]
+    },
+    {
+      "assetId": "buck-bucket-protocol",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex TRANSFER-FACT",
+      "deployments": [
+        {
+          "chainId": "sui",
+          "contractOrTokenId": "0xce7ff77a83ea0cb6fd39bd8748e2ec89a3f41e8efdc3f4eb123e0ca37b184db2::buck::BUCK",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "The tracked BUCK witness has only the drop ability, and the published buck module creates an ordinary currency with coin::create_currency; it contains neither a DenyCap nor a regulated-currency creation path. Although the compatible package is upgradeable through its UpgradeCap, generic transfer::public_transfer<Coin<BUCK>> bypasses BUCK-module hooks. The TreasuryCap controls minting but cannot intercept transfers of already-held Coin<BUCK> objects.",
+          "sources": [
+            {
+              "label": "Sui mainnet JSON-RPC package and normalized BUCK module",
+              "url": "https://fullnode.mainnet.sui.io:443"
+            },
+            {
+              "label": "Pinned Bucket Protocol BUCK Move module",
+              "url": "https://github.com/Bucket-Protocol/bucket-interface/blob/4df6697a39940ee785870a32efbfbcedaccb776f/bucket-protocol/sources/buck.move"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "reusd-resupply",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex TRANSFER-FACT",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x57ab1e0003f623289cd798b1824be09a793e4bec",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "The verified direct Stablecoin deployment grants owner/operators mint authority only. Its burn(from, amount) spends the holder allowance whenever the caller differs from from, and it has no transfer override, pause, blacklist, freeze, or seizure path.",
+          "sources": [
+            {
+              "label": "Sourcify verified reUSD Stablecoin source",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x57ab1e0003f623289cd798b1824be09a793e4bec?fields=all"
+            },
+            {
+              "label": "Ethereum Blockscout verified reUSD contract",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x57ab1e0003f623289cd798b1824be09a793e4bec"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "uty-xsy",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex TRANSFER-FACT",
+      "deployments": [
+        {
+          "chainId": "base",
+          "contractOrTokenId": "0xba515304d8153c4b162dc79f867e152df9c127eb",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "At the reviewed Base state, this verified ERC-1967 proxy points to the verified UTYAsyncVault implementation and owner() is the nonzero upgrade authority 0xa695bb4b9a86daf0581233031f273697135e3016. Its verified implementation authorizes UUPS upgrades only for that owner, which can replace the transfer implementation.",
+          "sources": [
+            {
+              "label": "Sourcify verified Base UTY proxy",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0xba515304d8153c4b162dc79f867e152df9c127eb?fields=all"
+            },
+            {
+              "label": "Sourcify verified Base UTY implementation",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0xf2f6e1a62d3d1f0efb01c28e485f1dc8b173ce2b?fields=all"
+            },
+            {
+              "label": "Base public RPC observation",
+              "url": "https://base-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "chainId": "avalanche",
+          "contractOrTokenId": "0xba515304d8153c4b162dc79f867e152df9c127eb",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "At the reviewed Avalanche state, the verified UUPS proxy points to 0x79fc5fd276c03aaa8418871ce3a5c5767a0241ef and owner() is the same nonzero upgrade authority as the canonical deployment. The documented UTY deployment is owner-controlled UUPS, so that authority can replace transfer logic.",
+          "sources": [
+            {
+              "label": "Routescan verified Avalanche UTY UUPS proxy",
+              "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xba515304d8153c4b162dc79f867e152df9c127eb"
+            },
+            {
+              "label": "YieldPoint contract deployment documentation",
+              "url": "https://docs.yieldpoint.io/protocol/architecture/contracts"
+            },
+            {
+              "label": "Avalanche public RPC observation",
+              "url": "https://api.avax.network/ext/bc/C/rpc"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "nxusd-nereus",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex TRANSFER-FACT",
+      "deployments": [
+        {
+          "chainId": "avalanche",
+          "contractOrTokenId": "0xf14f4ce569cb3679e99d5059909e23b07bd2f387",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "The verified direct NXUSD deployment has owner-only mint and mintToBentoBox paths. burn(amount) burns only msg.sender, and the source has no proxy, blacklist, freeze, pause, holder seizure, or transfer hook.",
+          "sources": [
+            {
+              "label": "Sourcify exact-match Avalanche NXUSD source",
+              "url": "https://sourcify.dev/server/v2/contract/43114/0xf14f4ce569cb3679e99d5059909e23b07bd2f387?fields=all"
+            },
+            {
+              "label": "Pinned Nereus NXUSD source",
+              "url": "https://github.com/nereusfinance/nereus-stablecoin-core/blob/e75e91b072a9d2346503383aafa2d40abc7ea582/contracts/NXUSD.sol"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "fpi-frax",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex TRANSFER-FACT",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "The verified direct FPI source has ordinary ERC-20 transfers. Its privileged minter_burn_from calls ERC20Burnable.burnFrom, which spends the holder's allowance; minter status alone cannot burn an unapproved holder. No pause, blacklist, freeze, transfer hook, or upgradeable proxy controls the material Ethereum deployment.",
+          "sources": [
+            {
+              "label": "Sourcify verified Ethereum FPI source",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e?fields=all"
+            },
+            {
+              "label": "Ethereum Blockscout verified FPI contract",
+              "url": "https://eth.blockscout.com/address/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e?tab=contract"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "usd3-reserve-protocol",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex TRANSFER-FACT",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x0d86883faf4ffd7aeb116390af37746f45b6f378",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "At the reviewed Ethereum state, the verified ERC-1967 proxy points to RTokenP1 0x258ce833cf9ad19208372763a00aa1565dd40b3c. RTokenP1 exposes UUPS upgrades and its Component implementation authorizes them only for main(); main() points to the verified Reserve Main proxy, whose current implementation exposes upgradeRTokenTo. Reserve governance can therefore replace the holder-transfer implementation.",
+          "sources": [
+            {
+              "label": "Ethereum Blockscout verified USD3 proxy",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d86883faf4ffd7aeb116390af37746f45b6f378"
+            },
+            {
+              "label": "Ethereum Blockscout verified USD3 RToken implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x258ce833cf9ad19208372763a00aa1565dd40b3c"
+            },
+            {
+              "label": "Reserve Component UUPS authorization source",
+              "url": "https://github.com/reserve-protocol/protocol/blob/master/contracts/p1/mixins/Component.sol"
+            },
+            {
+              "label": "Ethereum Blockscout verified Reserve Main implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc5bf686cfb85786fcfff557297d4aff8f4e15e44"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "mim-abracadabra",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex TRANSFER-FACT",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "The verified direct MagicInternetMoneyV1 deployment has ordinary ERC-20 transfer paths. Owner-only minting does not alter holder balances, and burn(amount) burns only msg.sender; there is no pause, blacklist, freeze, arbitrary holder burn, or proxy upgrade path.",
+          "sources": [
+            {
+              "label": "Sourcify verified Ethereum MIM source",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3?fields=all"
+            }
+          ]
+        },
+        {
+          "chainId": "arbitrum",
+          "contractOrTokenId": "0xfea7a6a0b346362bf88a9e4a88416b77a57d6c2a",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "The verified direct AnyswapV5ERC20 token contract lets an onlyAuth caller invoke burn(from, amount), directly burning an arbitrary nonzero holder address without an allowance. That privileged seizure path makes this material deployment restrictable.",
+          "sources": [
+            {
+              "label": "Sourcify verified Arbitrum MIM AnyswapV5 source",
+              "url": "https://sourcify.dev/server/v2/contract/42161/0xfea7a6a0b346362bf88a9e4a88416b77a57d6c2a?fields=all"
+            }
+          ]
+        },
+        {
+          "chainId": "avalanche",
+          "contractOrTokenId": "0x130966628846bfd36ff31a822705796e8cb8c18d",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "The verified direct AnyswapV3ERC20 token contract lets an onlyAuth caller invoke burn(from, amount), directly burning an arbitrary nonzero holder address without an allowance. That privileged seizure path makes this material deployment restrictable.",
+          "sources": [
+            {
+              "label": "Sourcify verified Avalanche MIM AnyswapV3 source",
+              "url": "https://sourcify.dev/server/v2/contract/43114/0x130966628846bfd36ff31a822705796e8cb8c18d?fields=all"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "dusd-fluid",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex TRANSFER-FACT",
+      "deployments": [
+        {
+          "chainId": "arbitrum",
+          "contractOrTokenId": "0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "At the reviewed Arbitrum state, this verified TransparentUpgradeableProxy points to 0xe825f4f14b93a329fbae230ef6b222f26cca4028 and has nonzero EOA admin 0xdeab81c9ff7528de932890058579c0c2341f7223. The verified proxy gives its admin upgradeToAndCall, so it can replace the current transfer implementation even though the current implementation's whitelist and pause paths do not hook ordinary transfers.",
+          "sources": [
+            {
+              "label": "Sourcify verified Arbitrum DUSD transparent proxy",
+              "url": "https://sourcify.dev/server/v2/contract/42161/0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709?fields=all"
+            },
+            {
+              "label": "Sourcify exact-match Arbitrum DUSD implementation",
+              "url": "https://sourcify.dev/server/v2/contract/42161/0xe825f4f14b93a329fbae230ef6b222f26cca4028?fields=all"
+            },
+            {
+              "label": "Arbitrum public RPC observation",
+              "url": "https://arbitrum-one-rpc.publicnode.com"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "scusd-rings",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex TRANSFER-FACT",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "The verified BoringVault overrides transfer and transferFrom to call BeforeTransferHook. A nonzero RolesAuthority controls setBeforeTransferHook through requiresAuth, and its current owner is nonzero; that authority can install a hook that rejects selected or all holder transfers.",
+          "sources": [
+            {
+              "label": "Sourcify exact-match Ethereum scUSD BoringVault source",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae?fields=all"
+            },
+            {
+              "label": "Ethereum Blockscout verified scUSD RolesAuthority source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7d5f6108e23c0cb2cfd744e5c46f1aaffc30a348"
+            },
+            {
+              "label": "Ethereum public RPC observation",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "chainId": "sonic",
+          "contractOrTokenId": "0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "SonicScan exact-match verifies this material contract as BoringVault and exposes setBeforeTransferHook in its ABI. Its current authority is the same nonzero RolesAuthority as Ethereum, whose owner can grant the requiresAuth capability; that authority can install a transfer-rejecting hook.",
+          "sources": [
+            {
+              "label": "SonicScan exact-match scUSD BoringVault source",
+              "url": "https://sonicscan.org/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae#code"
+            },
+            {
+              "label": "Veda BoringVault hook implementation",
+              "url": "https://github.com/Veda-Labs/boring-vault/blob/f5ab09de989adb5d682312c7f205d928b67d57f2/src/base/BoringVault.sol"
+            },
+            {
+              "label": "Sonic public RPC observation",
+              "url": "https://rpc.soniclabs.com"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "usdv-solomon",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex TRANSFER-FACT",
+      "deployments": [
+        {
+          "chainId": "solana",
+          "contractOrTokenId": "Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "At finalized Solana slot 434084056, this exact mint is owned by the legacy SPL Token program, has freezeAuthority null, and its 564 observed token accounts included no frozen account. Issuance authority cannot freeze existing Tokenkeg transfers without a freeze authority or Token-2022 transfer extension.",
+          "sources": [
+            {
+              "label": "Solana mainnet finalized mint and token-account observation",
+              "url": "https://api.mainnet-beta.solana.com"
+            },
+            {
+              "label": "Pinned SPL Token transfer and freeze-authority processor",
+              "url": "https://github.com/solana-program/token/blob/405c9172df3aeb508712142aae1caf0d31ada671/program/src/processor.rs"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "rusd-reservoir",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex TRANSFER-FACT",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "The exact-match direct Stablecoin uses AccessControl only for minting. Its burnFrom is the ordinary allowance-gated ERC20Burnable implementation, and the source has no transfer override, pause, blacklist, freeze, arbitrary holder burn, or proxy upgrade path.",
+          "sources": [
+            {
+              "label": "Sourcify exact-match Ethereum rUSD Stablecoin source",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x09d4214c03d01f49544c0448dbe3a27f768f2b34?fields=all"
+            }
+          ]
+        },
+        {
+          "chainId": "berachain",
+          "contractOrTokenId": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+          "scope": "material-bridge",
+          "posture": "permissionless",
+          "evidence": "The verified direct RusdOft only adds LayerZero OFT bridge behavior to standard ERC-20 transfer logic. Its default OFT debit burns the sender and it has no transfer override, pause, blacklist, freeze, arbitrary holder burn, or upgrade proxy.",
+          "sources": [
+            {
+              "label": "Routescan verified Berachain rUSD OFT source",
+              "url": "https://api.routescan.io/v2/network/mainnet/evm/80094/etherscan/api?module=contract&action=getsourcecode&address=0x09d4214c03d01f49544c0448dbe3a27f768f2b34"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "brlm-mento",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex TRANSFER-FACT",
+      "deployments": [
+        {
+          "chainId": "celo",
+          "contractOrTokenId": "0xe8537a3d056da446677b9e9d6c5db704eaab4787",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "At reviewed Celo block 72643512, the verified proxy points to StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e and owner() is the Mento Timelock proxy 0x890db8a597940165901372dd7db61c9f246e2147. The verified proxy permits owner-only implementation replacement; the current timelock getMinDelay() is 172800 seconds. This active governance upgrade path can replace transfer behavior.",
+          "sources": [
+            {
+              "label": "Celo Blockscout verified BRLm proxy",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xe8537a3d056da446677b9e9d6c5db704eaab4787"
+            },
+            {
+              "label": "Celo Blockscout verified StableTokenV2 implementation",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+            },
+            {
+              "label": "Celo Blockscout verified Mento Timelock proxy",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x890db8a597940165901372dd7db61c9f246e2147"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "usdq-quill",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex TRANSFER-FACT",
+      "deployments": [
+        {
+          "chainId": "scroll",
+          "contractOrTokenId": "0xdb9e8f82d6d45fff803161f2a5f75543972b229a",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "At the reviewed Scroll state, this ERC-1967 proxy points to the verified BoldToken UUPS implementation 0x4103155fb2dcf8b6138c8eb4be0542facc9a7523. Its authority is AccessManager proxy 0xbe589551397d0f28255e429ddb478620b1c2f08a, whose current implementation is verified QuillAccessManager; upgradeToAndCall has target role 2, and the current Safe 0x32fD58B8c4D454aB585DEA736b7D2b5929B6676c holds roles 0 and 2. That active upgrade path can replace transfer behavior.",
+          "sources": [
+            {
+              "label": "Scroll Blockscout verified USDQ ERC-1967 proxy",
+              "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0xdb9e8f82d6d45fff803161f2a5f75543972b229a"
+            },
+            {
+              "label": "Sourcify exact-match USDQ BoldToken UUPS implementation",
+              "url": "https://sourcify.dev/server/v2/contract/534352/0x4103155fb2dcf8b6138c8eb4be0542facc9a7523?fields=all"
+            },
+            {
+              "label": "Sourcify exact-match Quill AccessManager implementation",
+              "url": "https://sourcify.dev/server/v2/contract/534352/0x3e5462da8e6c3971d445d717c389a8bec036b719?fields=all"
+            },
+            {
+              "label": "Scroll public RPC observation",
+              "url": "https://rpc.scroll.io"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "zarm-mento",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex TRANSFER-FACT",
+      "deployments": [
+        {
+          "chainId": "celo",
+          "contractOrTokenId": "0x4c35853a3b4e647fd266f4de678dcc8fec410bf6",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "At reviewed Celo block 72643512, the verified proxy points to StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e and owner() is the Mento Timelock proxy 0x890db8a597940165901372dd7db61c9f246e2147. The verified proxy permits owner-only implementation replacement; the current timelock getMinDelay() is 172800 seconds. This active governance upgrade path can replace transfer behavior.",
+          "sources": [
+            {
+              "label": "Celo Blockscout verified ZARm proxy",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x4c35853a3b4e647fd266f4de678dcc8fec410bf6"
+            },
+            {
+              "label": "Celo Blockscout verified StableTokenV2 implementation",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+            },
+            {
+              "label": "Celo Blockscout verified Mento Timelock proxy",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x890db8a597940165901372dd7db61c9f246e2147"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "xofm-mento",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex TRANSFER-FACT",
+      "deployments": [
+        {
+          "chainId": "celo",
+          "contractOrTokenId": "0x73f93dcc49cb8a239e2032663e9475dd5ef29a08",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "At reviewed Celo block 72643512, the verified proxy points to StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e and owner() is the Mento Timelock proxy 0x890db8a597940165901372dd7db61c9f246e2147. The verified proxy permits owner-only implementation replacement; the current timelock getMinDelay() is 172800 seconds. This active governance upgrade path can replace transfer behavior.",
+          "sources": [
+            {
+              "label": "Celo Blockscout verified XOFm proxy",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x73f93dcc49cb8a239e2032663e9475dd5ef29a08"
+            },
+            {
+              "label": "Celo Blockscout verified StableTokenV2 implementation",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+            },
+            {
+              "label": "Celo Blockscout verified Mento Timelock proxy",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x890db8a597940165901372dd7db61c9f246e2147"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "audm-mento",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex TRANSFER-FACT",
+      "deployments": [
+        {
+          "chainId": "celo",
+          "contractOrTokenId": "0x7175504c455076f15c04a2f90a8e352281f492f9",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "At reviewed Celo block 72643512, the verified proxy points to StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e and owner() is the Mento Timelock proxy 0x890db8a597940165901372dd7db61c9f246e2147. The verified proxy permits owner-only implementation replacement; the current timelock getMinDelay() is 172800 seconds. This active governance upgrade path can replace transfer behavior.",
+          "sources": [
+            {
+              "label": "Celo Blockscout verified AUDm proxy",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x7175504c455076f15c04a2f90a8e352281f492f9"
+            },
+            {
+              "label": "Celo Blockscout verified StableTokenV2 implementation",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+            },
+            {
+              "label": "Celo Blockscout verified Mento Timelock proxy",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x890db8a597940165901372dd7db61c9f246e2147"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "usn-noon",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex P2 access acc-2",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0xda67b4284609d2d48e5d10cfac411572727dc1ed",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "Noon's official registry identifies this exact address as Ethereum Mainnet USN, distinct from its listed USN OFT representations. The exact-matched ERC-1967 proxy currently resolves to verified USNUpgradeableHyperlane implementation 0x6bdc8104ec827cd48b9cac526420b59a31bc8397. Current permissionless() is true, but the implementation's _update rejects blacklisted senders and recipients, and its nonzero owner can blacklist accounts. The live ProxyAdmin is also nonzero and has a nonzero owner, so holder transfers are selectively restrictable rather than permissionless.",
+          "sources": [
+            {
+              "label": "Sourcify exact-matched Ethereum USN proxy",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xda67b4284609d2d48e5d10cfac411572727dc1ed?fields=all"
+            },
+            {
+              "label": "Sourcify verified USN implementation source",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x6bdc8104ec827cd48b9cac526420b59a31bc8397?fields=all"
+            },
+            {
+              "label": "Noon official USN deployment registry",
+              "url": "https://docs.noon.capital/built-for-safety/2.-audited-and-secured-infrastructure/contracts-and-addresses"
+            },
+            {
+              "label": "Ethereum public RPC observation",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "eusd-electronic-usd",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex P2 access acc-2",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "The current ERC-1967 proxy resolves to verified RTokenP1 implementation 0x258ce833cf9ad19208372763a00aa1565dd40b3c. Its ComponentP1 base is UUPS and authorizes implementation replacement through the associated Main contract. Current ordinary transfer is not itself frozen, but the live privileged upgrade path can introduce holder-transfer restrictions.",
+          "sources": [
+            {
+              "label": "Ethereum Blockscout verified eUSD proxy",
+              "url": "https://eth.blockscout.com/address/0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f?tab=contract"
+            },
+            {
+              "label": "Ethereum Blockscout verified eUSD RTokenP1 implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x258ce833cf9ad19208372763a00aa1565dd40b3c"
+            },
+            {
+              "label": "Reserve Protocol documentation",
+              "url": "https://docs.reserve.org/"
+            }
+          ]
+        },
+        {
+          "chainId": "base",
+          "contractOrTokenId": "0xcfa3ef56d303ae4faaba0592388f19d7c3399fb4",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "Sourcify matches this Base representation to OptimismMintableERC20. Its standard holder transfer path has no blacklist or pause hook, but the immutable BRIDGE may call burn(address,uint256) against an arbitrary holder without allowance. That privileged bridge-burn surface makes the material representation restrictable.",
+          "sources": [
+            {
+              "label": "Sourcify matched Base eUSD bridge representation",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0xcfa3ef56d303ae4faaba0592388f19d7c3399fb4?fields=all"
+            },
+            {
+              "label": "OptimismMintableERC20 reference source",
+              "url": "https://github.com/ethereum-optimism/optimism/blob/develop/packages/contracts-bedrock/src/universal/OptimismMintableERC20.sol"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "ousd-origin-protocol",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex P2 access acc-2",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "The current proxy implementation is verified OUSD 0xa7b7c59a1705e4a624ea8a4ad8a06f9de22dcc33. Ordinary transfer and transferFrom have no blacklist or pause branch, but the implementation grants vaultAddress exclusive burn(address,uint256) authority over any nonzero holder balance. That live privileged holder-burn path makes transfer restrictable.",
+          "sources": [
+            {
+              "label": "Ethereum Blockscout verified OUSD proxy",
+              "url": "https://eth.blockscout.com/address/0x2a8e1e676ec238d8a992307b495b45b3feaa5e86?tab=contract"
+            },
+            {
+              "label": "Ethereum Blockscout verified OUSD implementation",
+              "url": "https://eth.blockscout.com/address/0xa7b7c59a1705e4a624ea8a4ad8a06f9de22dcc33?tab=contract"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "home-homecoin",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex P2 access acc-2",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0xb8919522331c59f5c16bdfaa6a121a6e03a91f62",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "HomeCoin's official site identifies this exact address as its HOME contract. The exact-matched transparent proxy currently resolves to verified Pool16 implementation 0x366049d336e73cfaf39c6a933780ca4c96ea084c. Its ERC-1967 admin is verified ProxyAdmin 0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f, whose current owner is nonzero. The current transfer path is ordinary ERC-20, but this live administrator can replace the implementation and introduce restrictions.",
+          "sources": [
+            {
+              "label": "Sourcify exact-matched HOME proxy",
+              "url": "https://sourcify.dev/server/v2/contract/1/0xb8919522331c59f5c16bdfaa6a121a6e03a91f62?fields=all"
+            },
+            {
+              "label": "Ethereum Blockscout verified HOME implementation",
+              "url": "https://eth.blockscout.com/address/0x366049d336e73cfaf39c6a933780ca4c96ea084c?tab=contract"
+            },
+            {
+              "label": "Ethereum Blockscout verified HOME ProxyAdmin",
+              "url": "https://eth.blockscout.com/address/0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f?tab=contract"
+            },
+            {
+              "label": "HomeCoin official HOME contract page",
+              "url": "https://www.homecoin.finance/"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "iusd-indigo-protocol",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex P2 access acc-2",
+      "deployments": [
+        {
+          "chainId": "cardano",
+          "contractOrTokenId": "f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b6988069555344",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "Koios identifies this exact policy ID and 0x69555344 asset name as iUSD; Indigo documents iUSD as an iAsset created on Cardano. On Cardano, an ordinary transfer spends the holder's UTxO and does not execute the asset minting policy; that policy governs minting and burning only. Indigo's governed PSM and redemption controls do not create a protocol surface that can freeze a holder's already-held native iUSD during a ledger transfer.",
+          "sources": [
+            {
+              "label": "Koios iUSD policy and asset record",
+              "url": "https://api.koios.rest/api/v1/asset_info?_asset_policy=f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b69880&_asset_name=69555344"
+            },
+            {
+              "label": "Cardano native-token transfer model",
+              "url": "https://developers.cardano.org/docs/build/smart-contracts/lessons/theory/native-tokens/"
+            },
+            {
+              "label": "Indigo Protocol V3 documentation",
+              "url": "https://docs.indigoprotocol.io/readme/indigo-protocol-v3.md"
+            },
+            {
+              "label": "Indigo official iUSD and Cardano overview",
+              "url": "https://docs.indigoprotocol.io/readme/about-indigo"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "doc-money-on-chain",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex P2 access acc-2",
+      "deployments": [
+        {
+          "chainId": "rootstock",
+          "contractOrTokenId": "0xe700691da7b9851f2f35f8b8182c69c53ccad9db",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "Money On Chain documents DoC as its RBTC/Rootstock stablecoin. The verified non-proxy DoCToken currently has owner() = MoCExchange 0x6acb83bb0281fb847b43cf7dd5e2766bfdf49038. Holder transfer is ordinary ERC-20, but the owner-only burn(address,uint256) path burns an arbitrary holder balance without allowance. The documented system owner is therefore a direct holder-transfer intervention surface.",
+          "sources": [
+            {
+              "label": "Rootstock Blockscout verified DoCToken source",
+              "url": "https://rootstock.blockscout.com/address/0xe700691da7b9851f2f35f8b8182c69c53ccad9db?tab=contract"
+            },
+            {
+              "label": "Money On Chain OwnerBurnableToken documentation",
+              "url": "https://docs.moneyonchain.com/main-rbtc-contract/money-on-chain-platform/contracts-architecture/ownerburnabletoken"
+            },
+            {
+              "label": "Money On Chain DoC Rootstock system documentation",
+              "url": "https://docs.moneyonchain.com/main-rbtc-contract"
+            },
+            {
+              "label": "Rootstock public RPC observation",
+              "url": "https://public-node.rsk.co"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "dusd-alto",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex P2 access acc-2",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x63d74d22e689c715a04f2c13962b1f77f443d35b",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "Alto documents DUSD as its native stablecoin, and this exact direct token is the tracked Ethereum deployment. It has a nonzero owner, which can assign an allowed burner; burn(address,uint256) then destroys an arbitrary holder balance without holder allowance. The owner can also assign pausers. Even though ordinary ERC-20 transfer has no address blacklist, the active owner-mediated burner path makes transfers restrictable.",
+          "sources": [
+            {
+              "label": "Ethereum Blockscout verified DUSD source",
+              "url": "https://eth.blockscout.com/address/0x63d74d22e689c715a04f2c13962b1f77f443d35b?tab=contract"
+            },
+            {
+              "label": "Alto official DUSD documentation",
+              "url": "https://docs.alto.money/"
+            },
+            {
+              "label": "Ethereum public RPC observation",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "nect-beraborrow",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex P2 access acc-2",
+      "deployments": [
+        {
+          "chainId": "berachain",
+          "contractOrTokenId": "0x1ce0a25d13ce4d52071ae7e02cf1f6606f4c79d3",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "The verified direct DebtToken initializes privileged borrower-operations and DenManager paths. Its burn(address,uint256) permits a whitelisted DenManager or PSM bond to destroy an arbitrary holder balance without allowance, and the MetaBeraborrowCore owner can alter the privileged whitelist. Ordinary transfer is open, but this live holder-burn authority makes NECT restrictable.",
+          "sources": [
+            {
+              "label": "Routescan verified Berachain NECT source",
+              "url": "https://api.routescan.io/v2/network/mainnet/evm/80094/etherscan/api?module=contract&action=getsourcecode&address=0x1ce0a25d13ce4d52071ae7e02cf1f6606f4c79d3"
+            },
+            {
+              "label": "Berachain public RPC",
+              "url": "https://rpc.berachain.com"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "usdaf-asymmetry",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex P2 access acc-2",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "Sourcify exact-matches this direct BoldToken deployment. Current owner() and the EIP-1967 implementation, admin, and beacon slots are zero. Its verified source has ordinary holder transfer and allowance transferFrom checks only; there is no pause, blacklist, freeze, arbitrary-holder burn, or reachable administrative transfer hook.",
+          "sources": [
+            {
+              "label": "Sourcify exact-matched USDaf BoldToken source",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8?fields=all"
+            },
+            {
+              "label": "Ethereum Blockscout verified USDaf source",
+              "url": "https://eth.blockscout.com/address/0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8?tab=contract"
+            },
+            {
+              "label": "Ethereum public RPC observation",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "cadm-mento",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex P2 access acc-2",
+      "deployments": [
+        {
+          "chainId": "celo",
+          "contractOrTokenId": "0xff4ab19391af240c311c54200a492233052b6325",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "The verified CADm proxy currently points to verified StableTokenV2 implementation 0x434563b0604be100f04b7ae485bcafe3c9d8850e. Its live proxy owner is Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147, and the verified proxy exposes owner-gated implementation replacement. Current transfers are ordinary ERC-20, but this live upgrade authority can introduce restrictions.",
+          "sources": [
+            {
+              "label": "Celo Blockscout verified CADm proxy",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xff4ab19391af240c311c54200a492233052b6325"
+            },
+            {
+              "label": "Celo Blockscout verified Mento StableTokenV2 implementation",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+            },
+            {
+              "label": "Celo public RPC observation",
+              "url": "https://forno.celo.org"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "copm-mento",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex P2 access acc-2",
+      "deployments": [
+        {
+          "chainId": "celo",
+          "contractOrTokenId": "0x8a567e2ae79ca692bd748ab832081c45de4041ea",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "The verified COPm proxy currently points to verified StableTokenV2 implementation 0x434563b0604be100f04b7ae485bcafe3c9d8850e. Its live proxy owner is Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147, and the verified proxy exposes owner-gated implementation replacement. Current transfers are ordinary ERC-20, but this live upgrade authority can introduce restrictions.",
+          "sources": [
+            {
+              "label": "Celo Blockscout verified COPm proxy",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x8a567e2ae79ca692bd748ab832081c45de4041ea"
+            },
+            {
+              "label": "Celo Blockscout verified Mento StableTokenV2 implementation",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+            },
+            {
+              "label": "Celo public RPC observation",
+              "url": "https://forno.celo.org"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "ghsm-mento",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex P2 access acc-2",
+      "deployments": [
+        {
+          "chainId": "celo",
+          "contractOrTokenId": "0xfaea5f3404bba20d3cc2f8c4b0a888f55a3c7313",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "The verified GHSm proxy currently points to verified StableTokenV2 implementation 0x434563b0604be100f04b7ae485bcafe3c9d8850e. Its live proxy owner is Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147, and the verified proxy exposes owner-gated implementation replacement. Current transfers are ordinary ERC-20, but this live upgrade authority can introduce restrictions.",
+          "sources": [
+            {
+              "label": "Celo Blockscout verified GHSm proxy",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xfaea5f3404bba20d3cc2f8c4b0a888f55a3c7313"
+            },
+            {
+              "label": "Celo Blockscout verified Mento StableTokenV2 implementation",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+            },
+            {
+              "label": "Celo public RPC observation",
+              "url": "https://forno.celo.org"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "kesm-mento",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex P2 access acc-2",
+      "deployments": [
+        {
+          "chainId": "celo",
+          "contractOrTokenId": "0x456a3d042c0dbd3db53d5489e98dfb038553b0d0",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "The verified KESm proxy currently points to verified StableTokenV2 implementation 0x434563b0604be100f04b7ae485bcafe3c9d8850e. Its live proxy owner is Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147, and the verified proxy exposes owner-gated implementation replacement. Current transfers are ordinary ERC-20, but this live upgrade authority can introduce restrictions.",
+          "sources": [
+            {
+              "label": "Celo Blockscout verified KESm proxy",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x456a3d042c0dbd3db53d5489e98dfb038553b0d0"
+            },
+            {
+              "label": "Celo Blockscout verified Mento StableTokenV2 implementation",
+              "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+            },
+            {
+              "label": "Celo public RPC observation",
+              "url": "https://forno.celo.org"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "usbd-bima",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex P2 access acc-2",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+          "scope": "canonical",
+          "posture": "restrictable",
+          "evidence": "The fully verified direct DebtToken has a nonzero BimaCore owner. Its burn(address,uint256) lets an enabled TroveManager or the owner-configured lending-vault adapter destroy an arbitrary holder balance without allowance. Ordinary transfer is open, but this privileged holder-burn path makes USBD restrictable.",
+          "sources": [
+            {
+              "label": "Ethereum Blockscout verified USBD DebtToken source",
+              "url": "https://eth.blockscout.com/address/0x6bede1c6009a78c222d9bdb7974bb67847fdb68c?tab=contract"
+            },
+            {
+              "label": "Ethereum public RPC observation",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "chainId": "hemi",
+          "contractOrTokenId": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+          "scope": "material-bridge",
+          "posture": "restrictable",
+          "evidence": "Hemi fully verifies the same DebtToken source file as Ethereum, and current owner() resolves to the same nonzero BimaCore owner. The source's enabled TroveManager or owner-configured lending-vault adapter can call burn(address,uint256) against an arbitrary holder without allowance, so this material representation is restrictable.",
+          "sources": [
+            {
+              "label": "Hemi explorer verified USBD DebtToken source",
+              "url": "https://explorer.hemi.xyz/address/0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+            },
+            {
+              "label": "Hemi public RPC observation",
+              "url": "https://rpc.hemi.network/rpc"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

@@ -2563,6 +2563,7 @@ export function compileSafetyScoreV9FactSetFromNormalizedInput(
         generationId: extension.sources.peg.generationId,
         payloadSha256: digest("safety-score-v9.peg.v1", {
           pegDataById: fixedInput.pegDataById,
+          navPriceById: fixedInput.navPriceById ?? {},
           activeDepegPeakBpsById: fixedInput.activeDepegPeakBpsById,
         }),
         observedAtSec: extension.sources.peg.observedAtSec,

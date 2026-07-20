@@ -14,6 +14,23 @@
   "collateral": "1:1 USDC held in a Circle-deployed xReserve smart contract; the underlying reserve is Circle USDC, whose backing is short-duration U.S. Treasuries and cash held by regulated custodians.",
   "pegMechanism": "Users mint USDCx on Movement by depositing USDC into Circle's xReserve smart contract, which issues USDCx 1:1; redemption burns USDCx and releases the underlying USDC back to the user. xReserve also enables 1:1 transfers between USDCx and USDC across supported chains via Circle CCTP and Gateway without third-party bridges.",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex Safety Score V9 implementation-date review",
+    "rationale": "Movement's launch announcement and Circle's xReserve documentation describe USDCx as a 1:1 USDC-backed representation minted when USDC is deposited into the xReserve contract and burned on redemption, establishing the fiat-cash mechanism used by the current deployment.",
+    "sources": [
+      {
+        "label": "Movement USDCx launch announcement",
+        "url": "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin"
+      },
+      {
+        "label": "Circle xReserve",
+        "url": "https://www.circle.com/xreserve"
+      }
+    ]
+  },
+  "implementationLaunchDate": "2026-03-25",
   "detailProvider": "coingecko",
   "geckoId": "usdcx-movement",
   "links": [

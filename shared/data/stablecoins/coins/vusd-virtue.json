@@ -355,7 +355,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
-    "summary": "Virtue documents movement between the IOTA Move deployment and IOTA EVM through IOTA's native cross-chain bridge. Pharos treats this as a canonical ecosystem route rather than a third-party bridge.",
+    "summary": "Virtue documents movement from its IOTA Move deployment to IOTA EVM through IOTA's native cross-chain bridge. The IOTA EVM ERC-20 is the IOTA EVM system ERC20Coin proxy whose stored coin type exactly matches the configured Move VUSD type, so Pharos treats it as a canonical wrapped representation rather than an independently issued token.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Pharos P7 bridge review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "verified",
@@ -404,18 +404,36 @@
       },
       {
         "id": "iota-evm:0x10740259a1860af3327dd0642ee35d6e8e7143ff",
+        "sourceChain": "iota",
         "destinationChain": "iota-evm",
+        "canonicalChain": "iota",
         "contractAddress": "0x10740259a1860af3327dd0642ee35d6e8e7143ff",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "2026-07-20: the IOTA EVM vUSD ERC-20 0x10740259a1860af3327dd0642ee35d6e8e7143ff (name 'Virtue USD', 6 decimals, totalSupply 9,978,371.12) exposes no owner()/minter()/role surface via standard calls, so its mint gate cannot be honestly attributed. Virtue documents Move-side issuance as canonical with IOTA's native bridge linking the two, but the wrapper's controller is not enumerable from public reads. Left unresolved.",
+        "representationId": "0xd3b63e603a78786facf65ff22e79701f3e824881a12fa3268d62a75530fe904f::vusd::VUSD",
+        "protocol": "IOTA EVM ERC20Coin system proxy",
+        "issuanceModel": "wrapped-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "other",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At IOTA EVM block 12521835, this address returned name Virtue USD, symbol VUSD, and 6 decimals. Its ERC20Coin bytecode delegates balances and total supply to the IOTA EVM Magic Contract at 0x1074000000000000000000000000000000000000, and its stored coin type decodes exactly to the configured IOTA Move VUSD type. Virtue documents the native IOTA Mainnet-to-IOTA EVM VUSD bridge. This is therefore the canonical system-proxy representation, not an independently mintable ERC-20.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20"
+        "observedAt": "2026-07-20",
+        "observedBlock": 12521835,
+        "sources": [
+          {
+            "label": "Virtue cross-chain arbitrage docs",
+            "url": "https://docs.virtue.money/arbitrage-opportunities"
+          },
+          {
+            "label": "IOTA ERC20Coin system proxy source",
+            "url": "https://github.com/iotaledger/wasp/blob/develop/packages/vm/core/evm/iscmagic/ERC20Coin.sol"
+          },
+          {
+            "label": "IOTA EVM public JSON-RPC",
+            "url": "https://json-rpc.evm.iotaledger.net"
+          }
+        ]
       }
     ]
   },

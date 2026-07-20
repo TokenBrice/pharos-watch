@@ -83,6 +83,26 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
     "summary": "USDU cannot be minted by users directly; only DAO-approved/whitelisted adapter contracts (Curve, TermMax, Morpho) can mint or burn USDU, and the set of approved adapters is curated under USDU Finance DAO risk governance.",
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "Whitelisted USDU adapters (Curve / TermMax / Morpho)",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573280,
+      "sources": [
+        {
+          "label": "USDU token (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0xdde3ec717f220fc6a29d6a4be73f91da5b718e55"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Whitelisted USDU adapters (Curve / TermMax / Morpho)",
@@ -94,6 +114,7 @@
         "evidence": "2026-07-20 full SetModule/SubmitModule event enumeration from block 0 on the USDU token 0xdde3ec717f220fc6a29d6a4be73f91da5b718e55: 9 module addresses were ever submitted, 4 have since expired. checkValidModule() = true today for exactly these five adapters: 0xfb46481a9819e068af0eb64a2c2824fcecaaaa45, 0x8f36bbee57acb4857cb97898020b529969fdf221, 0x77cbb2f180f55dd2916bfc78f879a2c2de37f638, 0x5febefd5aecfefb3352c5edd49d634b1456c4bd7, 0x397fb4a34757ac180c0841b26131f25040e2e50b. 0xfb46481a\u2026 has a never-expiring module grant (expiredAt = 2^256-1); the other four expire 2027-10 (modules() reads). All approvals were submitted by the curator DAO proxy 0x9fe66037c44236c87d9ac8345f489b4413fdff06.",
         "address": "0xfb46481a9819e068af0eb64a2c2824fcecaaaa45",
         "observedAt": "2026-07-20",
+        "observedBlock": 25573280,
         "failureDomainKeys": [
           "ethereum:0xfb46481a9819e068af0eb64a2c2824fcecaaaa45",
           "ethereum:0x8f36bbee57acb4857cb97898020b529969fdf221",
@@ -111,12 +132,13 @@
         "canRaiseCap": "unknown",
         "evidence": "curator() on the USDU token returns this ERC1967Proxy (the curator DAO, implementation behind the proxy), read 2026-07-20. It is the sole submitter of all historical SetModule events and governs adapter approval and risk parameters.",
         "address": "0x9fe66037c44236c87d9ac8345f489b4413fdff06",
-        "observedAt": "2026-07-20"
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573280
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25295203 the USDU token's curator/guardian/module model was established (curator = 0x9fe66037c44236c87d9ac8345f489b4413fdff06, no guardian set, mintModule/burnModule gated to whitelisted modules). 2026-07-20 follow-up: full SetModule/SubmitModule event enumeration from block 0 found 9 historical module approvals, of which exactly five are currently valid (checkValidModule = true): 0xfb46481a9819e068af0eb64a2c2824fcecaaaa45, 0x8f36bbee57acb4857cb97898020b529969fdf221, 0x77cbb2f180f55dd2916bfc78f879a2c2de37f638, 0x5febefd5aecfefb3352c5edd49d634b1456c4bd7, 0x397fb4a34757ac180c0841b26131f25040e2e50b. The curator DAO proxy resolves to a standard Aragon OSx DAO implementation (0x58c1f7bc62bb63fb137bc8f6d8ea6321a0501d29): module approvals execute through the Aragon permission framework rather than a single EOA.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+      "evidence": "At Ethereum block 25295203 the USDU token's curator/guardian/module model was established (curator = 0x9fe66037c44236c87d9ac8345f489b4413fdff06, no guardian set, mintModule/burnModule gated to whitelisted modules). 2026-07-20 follow-up: full SetModule/SubmitModule event enumeration from block 0 found 9 historical module approvals, of which exactly five are currently valid (checkValidModule = true): 0xfb46481a9819e068af0eb64a2c2824fcecaaaa45, 0x8f36bbee57acb4857cb97898020b529969fdf221, 0x77cbb2f180f55dd2916bfc78f879a2c2de37f638, 0x5febefd5aecfefb3352c5edd49d634b1456c4bd7, 0x397fb4a34757ac180c0841b26131f25040e2e50b. The curator DAO proxy resolves to a standard Aragon OSx DAO implementation (0x58c1f7bc62bb63fb137bc8f6d8ea6321a0501d29): module approvals execute through the Aragon permission framework rather than a single EOA. Blockscout's verified direct Stablecoin source exposes the module-gated mint path and curator/guardian transitions, but no proxy or upgrader path; fixed-block EIP-1967 implementation, admin, and beacon slots were zero at Ethereum block 25573280.",
+      "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
       "sources": [
         {

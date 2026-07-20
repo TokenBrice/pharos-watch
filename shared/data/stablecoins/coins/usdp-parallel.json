@@ -917,9 +917,39 @@
   "geckoId": "parallel-usdp",
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "USDp is minted and burned through the Parallelizer (a licensed Angle Transmuter fork): users mint/burn at oracle value against a whitelisted overcollateralized stablecoin basket with adaptive fees, while the PRL/sPRL DAO governor (with a guardian multisig) sets accepted collateral, fees, and exposure limits.",
+    "authorityPosture": "unknown",
+    "confidence": "unknown",
+    "summary": "USDp's Ethereum Parallelizer diamond mints and burns against a governed collateral basket under a 5/8 Safe-controlled AccessManager. Route data identifies many additional chain-local AccessManagers whose terminal managers and upgrade paths are not yet enumerated.",
+    "upgradeability": {
+      "model": "unknown",
+      "proxyAddresses": [
+        "0x6efeddf9269c3683ba516cb0e2124fe335f262a2"
+      ],
+      "implementationAddresses": [
+        "0xad58fc13a682a121e5fe2f8e45d4d988a7e51b0d"
+      ],
+      "adminAddresses": [
+        "0x94ea8800444017695345156319e96bdb1e355f7a",
+        "0x25fc7ffa8f9da3582a36633d04804f0004706f9b"
+      ],
+      "canChangeMintLogic": "unknown",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573468,
+      "sources": [
+        {
+          "label": "Parallelizer diamond (Ethereum)",
+          "url": "https://eth.blockscout.com/address/0x6efeddf9269c3683ba516cb0e2124fe335f262a2"
+        },
+        {
+          "label": "ParallelAccessManager (Ethereum)",
+          "url": "https://eth.blockscout.com/address/0x94Ea8800444017695345156319e96bdB1E355F7a"
+        },
+        {
+          "label": "Parallel team Safe (Ethereum)",
+          "url": "https://eth.blockscout.com/address/0x25Fc7ffa8f9da3582a36633d04804F0004706F9b"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Parallelizer module (Angle Transmuter fork, diamond proxy)",
@@ -945,13 +975,31 @@
       {
         "label": "Parallel team Safe 5/8 (ParallelAccessManager ADMIN_ROLE)",
         "role": "governor",
-        "authorityType": "multisig",
+        "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "threshold": 5,
         "signerCount": 8,
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "Verified on-chain 2026-07-20: hasRole(ADMIN_ROLE=0, Safe 0x25Fc7ffa8f9da3582a36633d04804F0004706F9b) = true on ParallelAccessManager 0x94Ea8800444017695345156319e96bdB1E355F7a (Safe getOwners() = 8, getThreshold() = 5 previously confirmed at block 25295271). The ADMIN_ROLE holder grants and revokes minter role 110, which gates mint(address,uint256) on the USDp token.",
+        "safe": {
+          "owners": [
+            "0x35b3e718aAfd5F932450eeb8690D022a96AAd78a",
+            "0x8222624aE36fA6d21e32801cCa2B5AF54669e290",
+            "0xD758e17c0d96a6C753995D86e891E07286858130",
+            "0x79603115Df2Ba00659ADC63192325CF104ca529C",
+            "0xBabB038737A7Ae0DcA02075E79ed5B7704C29827",
+            "0x244a875233a8898aA97753CD919857271079682c",
+            "0x06C24D990EaAC2659565827788BDDb8c8fe31142",
+            "0x4C5d1029C2c64fC6477529d5A391cA667a514B4C"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-07-20",
+          "observedBlock": 25573468,
+          "source": "onchain"
+        },
+        "evidence": "Verified on-chain 2026-07-20 at Ethereum block 25573468: hasRole(ADMIN_ROLE=0, Safe 0x25Fc7ffa8f9da3582a36633d04804F0004706F9b) = true on ParallelAccessManager 0x94Ea8800444017695345156319e96bdB1E355F7a; Safe getOwners() returned 8 and getThreshold() returned 5. The ADMIN_ROLE holder grants and revokes minter role 110, which gates mint(address,uint256) on the USDp token. accessManager() on the Parallelizer diamond returns this manager, getTargetFunctionRole(diamond, diamondCut=0x1f931c1c) = 10, and canCall(Safe, diamond, diamondCut) = true, so the Safe can change diamond facets and mint-critical module logic without a configured target delay.",
         "sources": [
           {
             "label": "ParallelAccessManager (Ethereum)",
@@ -966,10 +1014,17 @@
         "address": "0x25Fc7ffa8f9da3582a36633d04804F0004706F9b"
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "Verified on-chain 2026-07-20: USDp token (0x9b3a8f7c, ERC1967Proxy -> TokenP impl) authority() = ParallelAccessManager 0x94Ea8800444017695345156319e96bdB1E355F7a. The Parallelizer diamond 0x6efeddf9269c3683ba516cb0e2124fe335f262a2 holds USDp minter role 110 (RoleGranted event at block 22815811; hasRole = true; facetAddresses/getCollateralList confirm the Transmuter-fork diamond and the frxUSD/sfrxUSD/USDS/USD0 basket). hasRole(ADMIN, team Safe 0x25Fc7ffa) = true (5/8 Safe). Prior block 25295271 checks: Safe getOwners() = 8, getThreshold() = 5, no modules, no guard; getTargetFunctionRole(USDp, mint=0x40c10f19) = 110.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+      "evidence": "Verified on-chain 2026-07-20: Ethereum USDp authority() = ParallelAccessManager 0x94Ea8800444017695345156319e96bdB1E355F7a; the Parallelizer diamond holds its minter role and the 5/8 team Safe holds ADMIN_ROLE and can diamondCut its mint-critical module logic. The route inventory, however, identifies 23 native deployments with distinct chain-local AccessManagers, including 0x0e4e... on Base/Arbitrum and 0xfd28... on several other chains. Their terminal administrators, Safe state, and upgrade paths have not been enumerated, so the asset-wide review remains unresolved.",
+      "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Enumerate each unique non-Ethereum ParallelAccessManager's minter-role holder, terminal administrator/Safe state, and mint-logic upgrade path before treating USDp as asset-wide scoreable."
+      ],
       "sources": [
         {
           "label": "Parallelizer module docs",

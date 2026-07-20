@@ -39,7 +39,7 @@ describe("selectSafetyScoreV9CdpShockMeasurement", () => {
       blockers: [],
       exactReplayPassed: true,
       replayVerification: {
-        attestedAt: "2026-07-17",
+        attestedAt: "2026-07-20",
         mode: "offline-byte-identical",
         callsConsumed: 265,
         codePinsConsumed: 14,
@@ -98,7 +98,7 @@ describe("selectSafetyScoreV9CdpShockMeasurement", () => {
       blockers: [],
       exactReplayPassed: true,
       replayVerification: {
-        attestedAt: "2026-07-17",
+        attestedAt: "2026-07-20",
         mode: "offline-byte-identical",
         callsConsumed: 746,
         codePinsConsumed: 54,

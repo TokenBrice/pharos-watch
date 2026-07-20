@@ -121,6 +121,63 @@
       "decimals": 6
     }
   ],
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "USDat is currently an Ethereum-only Saturn M0 extension. The token wraps and unwraps M through the local M0 SwapFacility; no cross-chain representation is authored for the current deployment.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Pharos bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "M0 Extensions / SwapFacility",
+        "url": "https://docs.m0.org/protocol/extensions"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Saturn USDat overview",
+        "url": "https://saturncredit.gitbook.io/saturn-docs/solution/usdat-overview"
+      },
+      {
+        "label": "M0 Extensions and SwapFacility documentation",
+        "url": "https://docs.m0.org/protocol/extensions"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x23238f20b894f29041f48d88ee91131c395aaa71",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x23238f20b894f29041f48d88ee91131c395aaa71",
+        "protocol": "Saturn USDat M0 extension",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Ethereum block 25573173 on 2026-07-20, name() = USDat, symbol() = USDat, decimals() = 6, mToken() = Ethereum M 0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b, and swapFacility() = 0xB6807116b3B1B321a390594e31ECD6e0076f6278. This is a locally issued M0 extension wrapped and unwrapped through the Ethereum SwapFacility, not a cross-chain bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573173,
+        "sources": [
+          {
+            "label": "Saturn USDat overview",
+            "url": "https://saturncredit.gitbook.io/saturn-docs/solution/usdat-overview"
+          },
+          {
+            "label": "M0 Extensions and SwapFacility documentation",
+            "url": "https://docs.m0.org/protocol/extensions"
+          },
+          {
+            "label": "USDat contract on Etherscan",
+            "url": "https://etherscan.io/address/0x23238f20b894f29041f48d88ee91131c395aaa71"
+          }
+        ]
+      }
+    ]
+  },
   "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,

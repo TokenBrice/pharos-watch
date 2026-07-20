@@ -54,6 +54,26 @@
     "confidence": "verified",
     "summary": "steakUSDT is a Morpho ERC-4626 vault over USDT; wrapper minting is deposit/share accounting while durable USDT issuance is inherited from reviewed Tether controls. Morpho vault owner/curator reads remain wrapper-governance facts, not separate USDT mint ability.",
     "inheritedFrom": "usdt-tether",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "steakUSDT MetaMorpho vault",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573280,
+      "sources": [
+        {
+          "label": "Morpho vault page",
+          "url": "https://app.morpho.org/ethereum/vault/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9/steakhouse-prime-instant"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -62,8 +82,10 @@
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "not-applicable",
+      "canRaiseCap": false,
+      "modulesOrGuardsStatus": "not-applicable",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573280,
         "sources": [
           {
             "label": "Morpho vault page",
@@ -74,7 +96,7 @@
             "url": "https://github.com/morpho-org/metamorpho/blob/main/src/MetaMorpho.sol"
           }
         ],
-        "evidence": "Ethereum RPC `asset()` returned USDT 0xdAC17F958D2ee523a2206206994597C13D831ec7; `owner()` returned 0x4D7bd498Bb24098Ca281C05519629c605407f71d and `curator()` returned 0x827e86072B06674a077f592A531dcE4590aDeCdB. EIP-1967 impl slot = 0x0 and proxy admin slot = 0x0 at Ethereum block 25295160 — vault is immutable (not a proxy), no upgrade path exists."
+      "evidence": "At Ethereum block 25573280, asset() returned USDT 0xdAC17F958D2ee523a2206206994597C13D831ec7; owner() returned 0x4D7bd498Bb24098Ca281C05519629c605407f71d and curator() returned 0x827e86072B06674a077f592A531dcE4590aDeCdB. EIP-1967 implementation, admin, and beacon slots were zero, so the vault is direct immutable code with no upgrade path."
       },
       {
         "chain": "ethereum",
@@ -142,9 +164,10 @@
           "url": "https://etherscan.io/address/0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd"
         }
       ],
-      "evidence": "On-chain asset() read confirmed USDT. EIP-1967 impl and admin slots both zero at Ethereum block 25295160 — MetaMorpho vault is immutable with no upgrade path. Durable mint authority inherits from reviewed parent USDT. 2026-07-20 (Kimi P2 dc-2): deployment-wide curator/custody chain resolved on-chain — vault owner() -> contract 0x4d7bd498bb24098ca281c05519629c605407f71d -> owner() -> 5-of-10 Gnosis Safe 0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd (threshold/signers read via getOwners/getThreshold). The Safe's control is parameter-only; the vault itself remains an immutable access-only wrapper, so reconciliation/recovery sits with Steakhouse's Safe-governed curation operations.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-2 (lead usdc-circle)",
-      "reviewedAt": "2026-07-20"
+    "evidence": "At Ethereum block 25573280, asset() confirmed USDT and EIP-1967 implementation, admin, and beacon slots were zero, making the MetaMorpho vault immutable. The owner chain resolves on-chain to the 5-of-10 Steakhouse Safe, whose parameter control cannot mint shares outside the deposit flow. Durable mint authority remains inherited from reviewed USDT; no wrapper-specific reserve reconciliation or prudential supervisor is established.",
+    "reviewer": "P2 mint-free cohort",
+    "reviewedAt": "2026-07-20",
+    "disposition": "scoreable"
     }
   },
   "links": [

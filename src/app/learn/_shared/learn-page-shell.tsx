@@ -26,9 +26,7 @@ export function LearnPageShell({
           {title}
         </h1>
         {subtitle ? (
-          <p className="text-lg leading-relaxed text-muted-foreground sm:text-xl">
-            {subtitle}
-          </p>
+          <p className="pharos-page-lead">{subtitle}</p>
         ) : null}
         {leadParagraphs.length > 0 ? (
           <div className="space-y-3 text-[15px] leading-relaxed text-muted-foreground">

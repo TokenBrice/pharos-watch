@@ -96,9 +96,28 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "USTBL is issuer-minted natively by Spiko on Ethereum, Polygon, Base, Etherlink, Arbitrum, Starknet, and Stellar. EVM deployments gate minting behind Spiko's PermissionManager (authority() verified per chain); the Arbitrum proxy resolves to the same PermissionManager implementation as Ethereum. Starknet name/owner verified; Stellar production addresses verified against Spiko's stellar-contracts repository.",
+    "authorityPosture": "unknown",
+    "confidence": "unknown",
+    "summary": "Ethereum and several EVM token authority relationships are observed, but the Arbitrum member inventory and the Starknet and Stellar mint and upgrade control paths are incomplete. The multi-chain USTBL mint-authority profile remains unresolved.",
+    "upgradeability": {
+      "model": "unknown",
+      "canChangeMintLogic": "unknown",
+      "observedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Sourcify Spiko Token source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+        },
+        {
+          "label": "Blockscout PermissionManager source",
+          "url": "https://eth.blockscout.com/address/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+        },
+        {
+          "label": "Spiko USTBL product page",
+          "url": "https://www.spiko.io/spiko-treasury-bills-dollar"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -208,6 +227,7 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
@@ -224,6 +244,7 @@
         "role": "minter-admin",
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
@@ -234,6 +255,9 @@
         "evidence": "Verified on Arbitrum 2026-07-20: EIP-1967 proxy whose implementation matches the Ethereum PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (itself a proxy to implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, the Blockscout-verified Spiko PermissionManager source)."
       }
     ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
       "sources": [
         {
@@ -253,9 +277,15 @@
           "url": "https://github.com/spiko-tech/stellar-contracts/blob/main/address/production.json"
         }
       ],
-      "evidence": "Ethereum, Polygon, Base, and Etherlink USTBL token proxies resolve to the same verified Token implementation and PermissionManager authority 0x344278aff344d6fb960705dc18a4912221608472 (authority() verified per chain 2026-07-20). Arbitrum token authority() = 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a, an EIP-1967 proxy to the same PermissionManager implementation as Ethereum (verified 2026-07-20, block 485687744). Starknet token reports name()='Spiko US T-Bills Money Market Fund' and owner()=0x7bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d via starknet_call (2026-07-20). Stellar USTBL = Soroban contract CARUUX2FZNPH6DGJOEUFSIUQWYHNL5AVDV7PMVSHWL7OBYIBFC76F4TO per Spiko's stellar-contracts address/production.json (stellar.expert contract record, created 2025-10-01). USTBL is multi-chain with native issuance on each chain, not bridged.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-6 (lead usde-ethena)",
-      "reviewedAt": "2026-07-20"
+      "evidence": "The cited EVM reads establish that several USTBL deployments use the reviewed Token and PermissionManager pattern, but the active Arbitrum group memberships are not enumerated and the Starknet and Stellar deployment authority paths remain incomplete. Spiko identifies the French AMF as the named regulator for its UCITS money-market fund and the product metadata records PwC quarterly independent audit, supporting prudential supervision and periodic reconciliation for the fund; those facts do not resolve the complete multi-chain mint control surface.",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Enumerate the active Arbitrum PermissionManager admin, minter, and upgrader memberships.",
+        "Identify the Starknet owner, minter, and class-upgrade authorities with primary chain evidence.",
+        "Identify the Stellar MINTER, owner, and WASM upgrade authorities for the production USTBL deployment."
+      ]
     }
   },
   "chainTier": "ethereum",

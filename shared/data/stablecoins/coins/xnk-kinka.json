@@ -78,7 +78,7 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "unknown",
     "summary": "XNK uses an owner-controlled legacy mintable ERC-20; minting is not finished and the owner is a contract whose signer/threshold setup was not verified.",
     "controls": [
       {
@@ -114,6 +114,22 @@
         "evidence": "code read returned contract bytecode; no Safe threshold or owner model was verified."
       }
     ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "XNK legacy mintable token",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25166611,
+      "sources": [
+        {
+          "label": "Sourcify XNK source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x722a89f1b925fe41883978219c2176aecc7d6699/sources/ERC20Token.sol"
+        }
+      ]
+    },
     "review": {
       "sources": [
         {
@@ -125,9 +141,10 @@
           "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x722a89f1b925fe41883978219c2176aecc7d6699/sources/ERC20Token.sol"
         }
       ],
-      "evidence": "XNK source/RPC reads show ongoing owner mint ability. Phase 0c follow-up: 0x2691FBB371456eaC5C5AA0082a0f53C91249c044 is a contract (22kb), not a Safe (Safe API 422, getOwners() reverts). owner() on 0x2691 returned 0x50ea796bcf3d178a100b1f0ef44faaef64741bfe (another contract, 22kb). 0x50ea is not a Safe (getOwners reverts, required() reverts). Neither contract exposes a legible multisig interface. The control chain from XNK token \u2192 0x2691 \u2192 0x50ea is unresolvable without verified source or ABI.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "XNK source/RPC reads show ongoing owner mint ability. Phase 0c follow-up: 0x2691FBB371456eaC5C5AA0082a0f53C91249c044 is a contract (22kb), not a Safe (Safe API 422, getOwners() reverts). owner() on 0x2691 returned 0x50ea796bcf3d178a100b1f0ef44faaef64741bfe (another contract, 22kb). 0x50ea is not a Safe (getOwners reverts, required() reverts). Neither contract exposes a legible multisig interface. The direct legacy token source does not identify a proxy or other code-replacement path, but its owner-control chain is unresolvable without verified source or ABI; cap, reconciliation, and supervision facts therefore remain unknown.",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
+      "disposition": "unresolved",
       "unresolvedQuestions": [
         "Resolve the admin/signature model for owner contract 0x2691FBB371456eaC5C5AA0082a0f53C91249c044 and its owner 0x50ea796bcf3d178a100b1f0ef44faaef64741bfe. Neither is a Safe or known multisig. Source code not verified on Sourcify or Etherscan. Cannot determine signer count or threshold."
       ]
@@ -233,7 +250,7 @@
   "launchDate": "2024-02-21",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "XNK is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
+    "summary": "XNK is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified. The catalog's Cardano policy has no live asset record in Koios, so that individual route remains unresolved.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "probable",
@@ -295,9 +312,15 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "2026-07-20: Koios (api.koios.rest) returns no minted assets and no mint transactions for policy 2c5c6ca6f993e198bc9ac859ffb624dd291ec50b4d361544bd01e3ac584e4b, so the Cardano XNK deployment cannot be verified against live chain state. Left unresolved.",
+        "reviewNote": "2026-07-20: Koios asset_list returns no assets for policy 2c5c6ca6f993e198bc9ac859ffb624dd291ec50b4d361544bd01e3ac584e4b. The catalog identifies only that policy, not an asset name, so no live Cardano XNK asset or mint authority can be verified. Route controller, semantics, and scope remain unknown.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Koios Cardano asset list for the catalog policy",
+            "url": "https://api.koios.rest/api/v1/asset_list?_asset_policy=2c5c6ca6f993e198bc9ac859ffb624dd291ec50b4d361544bd01e3ac584e4b"
+          }
+        ]
       }
     ]
   }

@@ -381,7 +381,7 @@
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "M0 documents M Portals as the multichain architecture for M, with Ethereum as the authoritative issuance and governance source and Wormhole NTT implementing hub lock/release plus spoke mint/burn logic. That is reviewed as external lock/mint bridge exposure. 2026-07-20 cohort dc-1 pass: resolved the flagged non-native route controls with on-chain reads (portal()/minterGateway() per chain); see per-row reviewNote evidence.",
+    "summary": "M0 documents M Portals as the multichain architecture for M, with Ethereum as the authoritative issuance and governance source and Wormhole NTT implementing hub lock/release plus spoke mint/burn logic. That is reviewed as external lock/mint bridge exposure. 2026-07-20 cohort dc-1 pass: resolved the flagged non-native route controls with on-chain reads, including Solana's documented M Portal program; see per-row reviewNote evidence.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
     "confidence": "verified",
@@ -534,16 +534,39 @@
         "id": "solana:mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo",
         "destinationChain": "solana",
         "contractAddress": "mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 Portal (Wormhole NTT lock/mint representation of Ethereum-native M)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "M0's Solana documentation identifies this exact Token-2022 M mint and Portal program mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY as the Wormhole NTT gateway. It specifies release_inbound_mint_multisig for inbound mints; M0's Portal architecture documents Ethereum hub lock/release and spoke mint/burn. Finalized Solana RPC at slot 434087588 returns name 'M by M0', symbol 'M', 6 decimals, and metadata linking the mint to Ethereum M 0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "observedBlock": 434087588,
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "solana",
+        "controllerAddress": "mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:solana:mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY"
+        ],
+        "sources": [
+          {
+            "label": "M0 on Solana",
+            "url": "https://docs.m0.org/protocol/solana"
+          },
+          {
+            "label": "M0 Portal architecture",
+            "url": "https://docs.m0.org/protocol/m-portals"
+          },
+          {
+            "label": "M on Solscan",
+            "url": "https://solscan.io/token/mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo"
+          }
+        ]
       },
       {
         "id": "hyperevm:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",

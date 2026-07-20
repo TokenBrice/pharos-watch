@@ -73,9 +73,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "Securitize launched STAC as issuer-administered digital fund shares on Ethereum and later expanded the same regulated fund to Solana. The reviewed deployment evidence describes native issuer issuance on both networks rather than a holder-operated third-party bridge. 2026-07-20 cohort dc-1 pass: Ethereum row confirmed native STAC; Solana row remains unresolved (non-EVM).",
+    "summary": "Securitize launched STAC as issuer-administered digital fund shares on Ethereum and later expanded the same regulated fund to Solana. The reviewed deployment evidence describes native issuer issuance on both networks rather than a holder-operated third-party bridge.",
     "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+    "reviewer": "Pharos bridge route review",
     "confidence": "verified",
     "protocols": [
       {
@@ -127,16 +127,26 @@
         "id": "solana:u49MwZqu4bHRHRsciaBarHK7JZDYGxuaNnwyMBdEKYk",
         "destinationChain": "solana",
         "contractAddress": "u49MwZqu4bHRHRsciaBarHK7JZDYGxuaNnwyMBdEKYk",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Unresolved in the 2026-07-20 dc-1 pass: Solana deployment; mint authority not re-verified from public chain reads in this pass.",
+        "protocol": "STAC (Securitize native issuance on Solana)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Securitize's issuer release identifies the Solana expansion. Solana RPC verified on 2026-07-20 that the Token-2022 mint reports the STAC name/symbol, 6 decimals, and mint authority GSM7ZTDNByoGwayftzcSrDqWmMF9L3mU6KLVrca57j2M; this is issuer-native issuance rather than a third-party bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Securitize STAC Solana expansion",
+            "url": "https://investors.securitize.io/news/news-details/2026/Securitize-Expands-STAC-Tokenized-AAA-CLO-Fund-to-Solana/default.aspx"
+          },
+          {
+            "label": "STAC on Solscan (mint authority verified 2026-07-20)",
+            "url": "https://solscan.io/token/u49MwZqu4bHRHRsciaBarHK7JZDYGxuaNnwyMBdEKYk"
+          }
+        ]
       }
     ]
   },

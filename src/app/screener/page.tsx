@@ -98,8 +98,7 @@ export default createClientFeaturePage({
     path: "/screener/",
     title: "Pharos Screener",
     leadParagraphs: [
-      "Filter the tracked stablecoin universe by Safety Grade, safety dimensions, DEWS, Mint Authority Score, supply, type, mechanism, peg, mint authority route, and lifecycle. Every filter lives in the URL, so sharing the link shares the view.",
-      "Mint Authority Score is a standalone privileged-mint risk score that can drag the Safety Score v8 Decentralization dimension through a penalty-only blend; route buckets still show who can create or route durable supply.",
+      "Filter the tracked stablecoin universe by safety grade, risk dimensions, supply, type, mechanism, peg, and lifecycle. Every filter lives in the URL, so sharing the link shares the view.",
     ],
   },
   afterClient: (

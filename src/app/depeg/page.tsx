@@ -85,7 +85,7 @@ export default createClientFeaturePage({
       />
     ),
     leadParagraphs: [
-      "Pharos's stablecoin depeg tracker — a live incident board for confirmed peg deviations, pending confirmation, and early stress signals. DEWS anticipate upcoming depeg risk. DDR predicts depeg resolution chances and duration.",
+      "A live incident board for stablecoin depegs: confirmed deviations, pending confirmations, and early stress warnings, with forecasts for how each incident should resolve.",
     ],
   },
   afterClient: (

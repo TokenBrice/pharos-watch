@@ -232,21 +232,66 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
-    "confidence": "verified",
+    "confidence": "unknown",
     "inheritedFrom": "dusd-dtrinity",
-    "summary": "sdUSD (dSTAKE vault) is upgradeable via ProxyAdmin owned by a 24-hour TimelockController, whose proposer/executor/canceller is a single 3-of-5 Safe multisig (0xe83c188...). Shares are minted only by staking dUSD \u2014 no privileged mint surface. Fraxtal deployment admin not separately verified.",
+    "summary": "sdUSD (dSTAKE vault) is upgradeable via ProxyAdmin owned by a 24-hour TimelockController, whose proposer/executor/canceller is a single 3-of-5 Safe multisig (0xe83c188...). Shares are minted only by staking dUSD \u2014 no privileged mint surface. Fraxtal has a distinct proxy-admin path whose terminal signer policy is unverified.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x7cb20517776636ed76b68edb3d99dcce356abf02",
+        "0x58acc2600835211dcb5847c5fa422791fd492409"
+      ],
+      "implementationAddresses": [
+        "0x9c278036c3c4529472751502dfc71bb1f0a3bfd4",
+        "0x0f51b15939a42bd995ecd3a2c151dc58621856c6"
+      ],
+      "adminAddresses": [
+        "0xbe90db309b80357631069b689fc3481aca2c65be",
+        "0xde914ec384346fea47339e5086d2d399b7f4733b"
+      ],
+      "canChangeMintLogic": "unknown",
+      "controlRef": "dSTAKE Ethereum upgrade Safe (via 24-hour TimelockController)",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573508,
+      "sources": [
+        {
+          "label": "sdUSD Ethereum proxy",
+          "url": "https://eth.blockscout.com/address/0x7cb20517776636ed76b68edb3d99dcce356abf02?tab=contract"
+        },
+        {
+          "label": "Fraxtal sdUSD exact-match transparent proxy source",
+          "url": "https://sourcify.dev/server/v2/contract/252/0x58acc2600835211dcb5847c5fa422791fd492409?fields=sources"
+        }
+      ]
+    },
     "controls": [
       {
-        "label": "dSTAKE sdUSD vault (EIP-1967 upgradeable proxy, Ethereum)",
-        "role": "wrapper",
-        "authorityType": "multisig",
-        "directMintAbility": "none",
+        "label": "dSTAKE Ethereum upgrade Safe (via 24-hour TimelockController)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
         "chain": "ethereum",
-        "address": "0x7cb20517776636ed76b68edb3d99dcce356abf02",
-        "canRaiseCap": false,
+        "address": "0xe83c188a7be46b90715c757a06cf917175f30262",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "threshold": 3,
         "signerCount": 5,
+        "timelockDelaySec": 86400,
+        "safe": {
+          "owners": [
+            "0x4B58fF1AAE6AdD7465A5584eBCaeb876ec8f21FD",
+            "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
+            "0x64dbDD2AAD00383Defc305398F18a019161558CB",
+            "0xDC672ba6e55B71b39FA5423D42B88E7aDF9d24A4",
+            "0x9E0c8376940aBE845A89b7304147a95c72644f59"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-07-20",
+          "observedBlock": 25573508,
+          "source": "onchain"
+        },
         "sources": [
           {
             "label": "dTRINITY sdUSD docs",
@@ -259,9 +304,31 @@
           {
             "label": "dTRINITY TimelockController",
             "url": "https://etherscan.io/address/0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b"
+          },
+          {
+            "label": "dTRINITY governance Safe",
+            "url": "https://etherscan.io/address/0xe83c188a7be46b90715c757a06cf917175f30262"
           }
         ],
-        "evidence": "At Ethereum block 25295192: EIP-1967 proxy admin slot = 0xbe90db309b80357631069b689fc3481aca2c65be (ProxyAdmin); ProxyAdmin owner() = 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b (TimelockController, minDelay = 86400 s = 24 h). Timelock creation events at block 25105532: PROPOSER_ROLE, CANCELLER_ROLE, and EXECUTOR_ROLE all granted to Safe 0xe83c188a7be46b90715c757a06cf917175f30262 (Blockscout ContractName: Safe). Safe getOwners() = 5 addresses; getThreshold() = 3. sdUSD receipts minted only by dUSD deposit (no privileged mint)."
+        "evidence": "At Ethereum block 25295192, the sdUSD proxy admin was ProxyAdmin 0xbe90db309b80357631069b689fc3481aca2c65be, whose owner is TimelockController 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b with minDelay 86400 seconds. That timelock's proposer, canceller, and executor roles resolve to this Safe. At block 25573508 the Safe returned the five owners recorded here, threshold 3, and no enabled modules; the current upgrade path can change wrapper mint logic after the delay."
+      },
+      {
+        "label": "dSTAKE sdUSD vault share accounting (Ethereum)",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "chain": "ethereum",
+        "address": "0x7cb20517776636ed76b68edb3d99dcce356abf02",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Ethereum sdUSD shares are minted only against deposited local dUSD and do not create base dUSD supply.",
+        "sources": [
+          {
+            "label": "sdUSD Ethereum contract",
+            "url": "https://etherscan.io/address/0x7cb20517776636ed76b68edb3d99dcce356abf02"
+          }
+        ],
+        "evidence": "At Ethereum block 25570988, asset() on the dSTAKE vault returned local dUSD 0x07fff99e1664d9b116fbc158c0e99785f81ca236. The current vault share path is deposit-backed accounting."
       },
       {
         "label": "Inherited dUSD AMO/governed-reserve mint authority",
@@ -272,6 +339,9 @@
         "evidence": "Underlying dUSD is minted 1:1 against a governance-set whitelist of reserve stablecoins, with AMO pre-minting dUSD into Curve pools and contributor governance (pre-TGE multisig) controlling the whitelist, AMO/SMO, and a mint kill-switch. sdUSD inherits this concentrated-admin posture, plus the March 17 2026 dTRINITY exploit exposure noted on the dUSD profile."
       }
     ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -287,9 +357,13 @@
           "url": "https://etherscan.io/address/0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b"
         }
       ],
-      "evidence": "At Ethereum block 25295192: sdUSD Ethereum proxy upgrade path confirmed as ProxyAdmin \u2192 24-hour TimelockController \u2192 3-of-5 Safe. No privileged mint on the wrapper; receipts minted only by dUSD deposit into dSTAKE. Fraxtal deployment (0x58acc260...) not verified independently \u2014 separate admin chain presumed but unconfirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "Ethereum control review is current: ProxyAdmin 0xbe90db309b80357631069b689fc3481aca2c65be is owned by the 86400-second TimelockController 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b, which resolves to the reviewed 3-of-5 Safe. The local wrapper share path is dUSD-deposit backed. Fraxtal has a distinct transparent proxy and DStakeProxyAdmin 0xde914ec384346fea47339e5086d2d399b7f4733b, whose owner is an EOA; its terminal signer policy and any delay are not established by the reviewed sources.",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Verify the terminal owner, signer policy, delay, and upgrade permissions of the Fraxtal DStakeProxyAdmin 0xde914ec384346fea47339e5086d2d399b7f4733b before treating the two-deployment sdUSD mint and code-change authority as complete."
+      ]
     }
   },
   "launchDate": "2025-10-13"

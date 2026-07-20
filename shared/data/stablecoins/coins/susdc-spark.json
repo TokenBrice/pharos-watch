@@ -158,10 +158,29 @@
   ],
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "spUSDC is a Spark ERC-4626 savings wrapper over USDC. Wrapper shares are minted against deposited USDC and inherit Circle USDC's reviewed issuer mint authority for base supply.",
+    "authorityPosture": "unknown",
+    "confidence": "unknown",
+    "summary": "spUSDC shares are minted against deposited USDC in the reviewed Spark ERC-4626 vaults, but the complete current Spark governance, wrapper-admin, and inherited USDC issuer control path is not reconciled. The profile remains unresolved.",
     "inheritedFrom": "usdc-circle",
+    "upgradeability": {
+      "model": "unknown",
+      "canChangeMintLogic": "unknown",
+      "observedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Spark address registry",
+          "url": "https://github.com/sparkdotfi/spark-address-registry"
+        },
+        {
+          "label": "spUSDC vault on Etherscan",
+          "url": "https://etherscan.io/address/0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
+        },
+        {
+          "label": "spUSDC vault on Snowtrace",
+          "url": "https://snowtrace.io/address/0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -202,6 +221,9 @@
         "evidence": "Inherited from reviewed `usdc-circle` mintAuthority."
       }
     ],
+    "economicCapSemantics": "bounded",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -213,9 +235,15 @@
           "url": "https://docs.spark.fi"
         }
       ],
-      "evidence": "At Ethereum block 25295159: ETH vault (0x28b3a8fb...) has EIP-1967 impl slot = 0x1b992302652a92611dcd5090d1cb388c6377f455 (UUPS proxy). Proxy admin slot = 0x0 (no external ProxyAdmin; UUPS upgrade controlled by DEFAULT_ADMIN). DEFAULT_ADMIN_ROLE member[0] = 0x3300f198988e4c9c63f75df86de36421f06af8c4. At Avalanche block 87752284: impl slot = 0xc2c0582d1cce30449cf561c7b9c4d6d527547f12 (also UUPS). DEFAULT_ADMIN_ROLE member[0] = 0x7566debc906c17338524a414343fa61bca26a843 (8113 bytes of code). 2026-07-20 follow-up resolved both prior open questions via the Spark address registry (sparkdotfi/spark-address-registry): the Ethereum admin is SPARK_PROXY, the Spark DAO SubProxy whose payloads execute through Sky/Spark governance approval (token-holder governance, no fixed signer set, governed by the Sky governance security flow), and the Avalanche admin is SPARK_EXECUTOR (spark-gov-relay/Executor.sol v1.0.1), Spark's cross-chain governance executor driven from Ethereum mainnet through the LZReceiver 0xd905be48983D405C6fD7f5a983D2351fb61C691F.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
-      "reviewedAt": "2026-07-20"
+      "evidence": "The cited Ethereum and Avalanche vault observations establish local ERC-4626 share issuance against deposited USDC and identify Spark-linked administrators. They do not resolve the conflicting proxy or clone characterization, the actual implementation upgrade capability on both deployments, or the ultimate authorization path through SPARK_PROXY, SPARK_EXECUTOR, and the cross-chain governance receiver. The inherited USDC issuer path is separately documented but not reconciled with every wrapper route.",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Verify the active implementation model and mint-relevant upgrade capability for both 0x28b3a8fb vault deployments.",
+        "Trace the ultimate authorization of Ethereum SPARK_PROXY and Avalanche SPARK_EXECUTOR, including the LayerZero receiver path.",
+        "Reconcile every active wrapper and bridge route with the inherited USDC issuer mint authority."
+      ]
     }
   },
   "deploymentModel": "native-multichain",

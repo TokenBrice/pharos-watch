@@ -126,6 +126,26 @@
     "confidence": "verified",
     "summary": "sBOLD is a K3 Capital ERC-4626 wrapper over BOLD; wrapper issuance is share/risk-module accounting while durable BOLD mint authority is inherited from reviewed parent BOLD, and K3 wrapper administration resolves to a 2/3 Safe.",
     "inheritedFrom": "bold-liquity",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "sBOLD wrapper token",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573280,
+      "sources": [
+        {
+          "label": "K3 sBOLD repository",
+          "url": "https://github.com/K3Capital/sBOLD"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -134,15 +154,17 @@
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "not-applicable",
+      "canRaiseCap": false,
+      "modulesOrGuardsStatus": "not-applicable",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573280,
         "sources": [
           {
             "label": "Liquity BOLD contract source",
             "url": "https://etherscan.io/address/0x6440f144b7e50D6a8439336510312d2F54beB01D#code"
           }
         ],
-        "evidence": "Local metadata marks sBOLD as `variantOf: bold-liquity` and `variantKind: risk-absorption`; parent BOLD has reviewed `none-resolved` mint authority. Live asset() reads confirm the vault asset is BOLD."
+      "evidence": "Local metadata marks sBOLD as `variantOf: bold-liquity` and `variantKind: risk-absorption`; parent BOLD has reviewed `none-resolved` mint authority. At Ethereum block 25573280, asset() returned BOLD and EIP-1967 implementation, admin, and beacon slots were all zero. Share issuance remains the wrapper's deposit/accounting path, not a durable BOLD issuer mint surface."
       },
       {
         "chain": "ethereum",
@@ -165,8 +187,9 @@
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
-          "observedBlock": 25294485,
-          "source": "safe-api"
+        "observedBlock": 25573280,
+        "observedAt": "2026-07-20",
+        "source": "onchain"
         },
         "sources": [
           {
@@ -182,7 +205,7 @@
             "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x2dF68EA583B8394A8Cc71EeBcd4fA7c6746027D5/"
           }
         ],
-        "evidence": "Phase 0c Safe verification refreshed the current Safe Transaction Service state: 2/3 owners, no enabled modules, zero guard, fallback handler 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4, observed against Ethereum block 25294485. Live ERC-4626 asset() also resolves to BOLD at 0x6440f144b7e50d6a8439336510312d2f54beb01d."
+      "evidence": "At Ethereum block 25573280, getOwners() returned the listed three EOAs, getThreshold() returned 2, and getModulesPaginated() returned an empty list. Safe Transaction Service data reports a zero guard and the fallback handler 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4. Live ERC-4626 asset() also resolves to BOLD at 0x6440f144b7e50d6a8439336510312d2f54beb01d."
       }
     ],
     "review": {
@@ -196,9 +219,10 @@
           "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x2dF68EA583B8394A8Cc71EeBcd4fA7c6746027D5/"
         }
       ],
-      "evidence": "sBOLD inherits BOLD's reviewed mint authority for base BOLD creation, while the K3 wrapper's live owner resolves to a 2/3 Safe with no modules or guard. Phase 0c refreshed current Safe state through the Safe Transaction Service at Ethereum block 25294485.",
-      "reviewer": "Codex Phase 0c verification",
-      "reviewedAt": "2026-06-11"
+    "evidence": "sBOLD inherits BOLD's reviewed mint authority for base BOLD creation. At Ethereum block 25573280, the direct wrapper contract had zero EIP-1967 implementation, admin, and beacon slots; its owner Safe was 2-of-3 with no modules detected. There is no separately upgradeable wrapper mint-logic path.",
+    "reviewer": "P2 mint-free cohort",
+    "reviewedAt": "2026-07-20",
+    "disposition": "scoreable"
     }
   },
   "deploymentModel": "single-chain",

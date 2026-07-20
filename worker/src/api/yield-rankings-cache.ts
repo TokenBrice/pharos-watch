@@ -1,5 +1,5 @@
 import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
-import { safetyScoreV8PublicationIdentitiesMatch } from "@shared/lib/safety-score-v8-publication";
+import { safetyScoreV8MethodologyIdentitiesMatch } from "@shared/lib/safety-score-v8-publication";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
   YieldRankingsResponseSchema,
@@ -549,7 +549,7 @@ function hasCompatibleSafetyIdentity(
   identity: SafetyScoreV8PublicationIdentity,
 ): boolean {
   const published = payload.provenance?.safetySnapshot.safetyScoreIdentity;
-  return published != null && safetyScoreV8PublicationIdentitiesMatch(published, identity);
+  return published != null && safetyScoreV8MethodologyIdentitiesMatch(published, identity);
 }
 
 function removeSafetyDerivedSourceRisk(sourceRisk: YieldRanking["sourceRisk"]): YieldRanking["sourceRisk"] {

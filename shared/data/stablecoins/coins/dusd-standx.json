@@ -317,8 +317,8 @@
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "verified",
-    "summary": "StandX DUSD is minted on-chain via the protocol Gateway when users deposit USDT/USDC into the StandX Secure Vault; Solana mint authority is a PDA of an immutable StandX program, while on BSC the sole MINTER_ROLE is the Gateway controller proxy and DEFAULT_ADMIN_ROLE is a 3-of-4 Safe, confirmed by a complete deployment-to-current role-event scan.",
+    "confidence": "unknown",
+    "summary": "StandX DUSD uses an on-chain Gateway for USDT/USDC deposits. Solana mint authority is a PDA of an immutable program, and BSC's sole MINTER_ROLE is the Gateway controller proxy under a 3-of-4 DEFAULT_ADMIN Safe; the terminal Settler/RSV backend and BSC Gateway upgrade control chain are not fully enumerated.",
     "controls": [
       {
         "chain": "solana",
@@ -376,7 +376,7 @@
           "owners": [
             "0x222542fac5d6f5c2562312f907d202be807ee415",
             "0x955703b14f475bc0c53db9522283ba1bf1c8a8e1",
-            "0x649b82c8de192e92f8dc9c88f63038016ce5631",
+            "0x649b82c8de192e92f8dc9c88f63038016ce56310",
             "0x56383a4af4482a708dbbac53bf03ad706028b203"
           ],
           "threshold": 3,
@@ -415,10 +415,32 @@
         ]
       }
     ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "upgradeability": {
+      "model": "unknown",
+      "canChangeMintLogic": "unknown",
+      "sources": [
+        {
+          "label": "DUSD BSC token on BscScan",
+          "url": "https://bscscan.com/address/0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122"
+        },
+        {
+          "label": "Solana RPC getAccountInfo",
+          "url": "https://api.mainnet-beta.solana.com"
+        }
+      ]
+    },
     "review": {
       "evidence": "StandX operates a two-layer model (on-chain Gateway + off-chain Settler/RSV multisig). Solana: at slot 425778638, DUSD mint DUSDt4AeLZHWYmcXnVGYdgAzjtzU5mXUVnTMdnSzAttM (Token-2022) has mintAuthority and freezeAuthority H4Mp7WL282pdbY9V9N7AJnsQwB5yyrU1E7svfsH2Ur5h, which is owned by StandX program STANDKqqZERMKosYH2PAtNtnt6mig4CRPycsRwjuVhB. StandX program has upgradeAuthority: None (immutable, programData 4XNF9sPKbX3SAor8mm8HDbWycw7qGC642NJs6mePqXQe at slot 425779135). Solana mint authority is a PDA of an immutable program. BSC: DUSD token 0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122 has slot 0 = 0x2c02f575cdd0cc87de89ae6a493b05a5ed95065a (admin proxy pointing to implementation 0xdf09ebf9a24080deedb0a9a85db0b3aa9a90caa1); slot 1 of that proxy = 0x00b4f9b510893505acefb10ec91cbc972185088e (a second proxy pointing to 0xb69f4f80ec472ff9fe86933ac739329f8f72dc3b, a 31KB AccessControl+UUPS implementation). Partial role resolution on 2026-06-11 at BSC block 103642466: hasRole(DEFAULT_ADMIN_ROLE, 0x6c2404092cb1acfe9a06bc7de61bf619933edba5) = true (a 171-byte unverified contract, structure unresolved) and hasRole(MINTER_ROLE, 0x2c02f575…) = true (the Gateway controller proxy); hasRole(MINTER_ROLE, 0x6c2404…) = false. 2026-07-20 follow-up resolved both open questions: the 171-byte DEFAULT_ADMIN contract is a Gnosis Safe 1.1.1 proxy (masterCopy 0x29fcB43b46531BcA003ddC8FCB67FFE91900C762) with 4 owners and threshold 3, and a complete RoleGranted/RoleRevoked scan from deployment (block 47,000,000) through block 111,600,000 via bsc.lava.build found no role events after block 48,346,672 — MINTER_ROLE has only ever been held by the Gateway proxy 0x2c02f575cdd0cc87de89ae6a493b05a5ed95065a, and DEFAULT_ADMIN_ROLE only by the Safe.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+      "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Identify the current terminal signer set, threshold, and authorization rules for the StandX Settler and RSV Fund backend that participates in the mint/redeem lifecycle.",
+        "Reconcile the BSC Gateway controller's nested proxy implementation and terminal upgrade authority; the Solana program is immutable, but the BSC Gateway path is not fully established."
+      ],
       "sources": [
         {
           "label": "Minting $DUSD",

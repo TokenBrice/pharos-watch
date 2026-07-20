@@ -19,9 +19,29 @@
   "geckoId": "balanced-dollars",
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "The historical bnUSD v1 design used external collateral pricing, with public sources tying Balanced oracle integration to Band. Balanced's current documentation says the v1 app is no longer supported after the April 2026 v2 launch, so the active v2 oracle and failover path are not established for this tracked v1 record.",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-1 Safety Score V9 evidence review",
+    "summary": "Balanced's current bnUSD overview describes collateralized loans, liquidations, and a Stability Fund, but it does not identify the production collateral-price oracle, fallback, or oracle-failure behavior. The official transition guide says v1 is no longer supported, so historical v1 sources cannot establish the current v2 branch.",
+    "branchApplicability": {
+      "disposition": "unresolved",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex Prompt 6b oracle review",
+      "rationale": "Current Balanced documentation establishes borrower collateral and a liquidation path, but not the active collateral-market inventory, feed addresses or providers, fallback behavior, liquidation configuration, backstop operation, or shutdown and bad-debt handling. Because v1 is unsupported after the v2 transition, an old v1 oracle integration cannot be used as evidence for the current branch.",
+      "sources": [
+        {
+          "label": "Balanced bnUSD overview",
+          "url": "https://balanced.network/stablecoin/"
+        },
+        {
+          "label": "Balanced v2 transition guide",
+          "url": "https://docs.balanced.network/"
+        },
+        {
+          "label": "bnUSD canonical ICON deployment transaction",
+          "url": "https://tracker.icon.community/transaction/0x807cd811b5add6bc32044f500c0833843f8c0cf2bd2433814cfe80fddf387db3"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex Prompt 6b oracle review",
     "confidence": "unknown",
     "sources": [
       {
@@ -29,12 +49,12 @@
         "url": "https://balanced.network/stablecoin/"
       },
       {
-        "label": "Band Protocol Balanced partnership",
-        "url": "https://medium.com/bandprotocol/balanced-network-strategic-partnership-with-band-protocol-and-launch-review-1cfbde8adaef"
+        "label": "Balanced v2 transition guide",
+        "url": "https://docs.balanced.network/"
       },
       {
-        "label": "Balanced v1 transition guide",
-        "url": "https://docs.balanced.network/"
+        "label": "bnUSD canonical ICON deployment transaction",
+        "url": "https://tracker.icon.community/transaction/0x807cd811b5add6bc32044f500c0833843f8c0cf2bd2433814cfe80fddf387db3"
       }
     ]
   },

@@ -105,8 +105,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "UKTBL Ethereum mint/burn is confirmed gated by Spiko's PermissionManager (UUPS proxy, immutable admin slot). The PermissionManager admin = issuer EOA 0xed608cf...7375 (deployed+initialized it). Non-Ethereum chain mint surfaces unresolved.",
+    "confidence": "unknown",
+    "summary": "UKTBL Ethereum mint/burn is gated by Spiko's UUPS PermissionManager. Its group-0 Safe can authorize minters and replace PermissionManager logic without a contract-enforced delay. Terminal mint and upgrade control chains are not enumerated for every non-Ethereum deployment.",
     "controls": [
       {
         "chain": "ethereum",
@@ -144,9 +144,190 @@
             "url": "https://eth.blockscout.com/address/0x344278aff344d6fb960705dc18a4912221608472"
           }
         ],
-        "evidence": "Verified on-chain 2026-07-20: Sourcify-verified PermissionManager; getRequirements(UKTBL, mint) = group mask {0,2}; group 0 (ADMIN) = Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea (3/7); group 2 = six operator contracts with canCall mint = true on UKTBL."
+        "evidence": "Verified on-chain 2026-07-20: Sourcify-verified PermissionManager; getRequirements(UKTBL, mint) = group mask {0,2}; group 0 (ADMIN) = Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea (3/8); group 2 = six operator contracts with canCall mint = true on UKTBL."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x57fa613b284f05421f78c8bd579555d5c0d7783d",
+        "label": "UKTBL PermissionManager group-2 mint operator 0x57fa613b",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Spiko PermissionManager implementation",
+            "url": "https://eth.blockscout.com/address/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+          }
+        ],
+        "evidence": "PermissionManager group-2 membership and canCall(this operator, UKTBL, mint) were verified on 2026-07-20; group 2 is required by the UKTBL mint requirement."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5ed5a75eeed1934ea060186e35187eaa73331366",
+        "label": "UKTBL PermissionManager group-2 mint operator 0x5ed5a75e",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Spiko PermissionManager implementation",
+            "url": "https://eth.blockscout.com/address/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+          }
+        ],
+        "evidence": "PermissionManager group-2 membership and canCall(this operator, UKTBL, mint) were verified on 2026-07-20; group 2 is required by the UKTBL mint requirement."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x64e31c39fc3ec028557c9354d27b5c09faeb5fda",
+        "label": "UKTBL PermissionManager group-2 mint operator 0x64e31c39",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Spiko PermissionManager implementation",
+            "url": "https://eth.blockscout.com/address/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+          }
+        ],
+        "evidence": "PermissionManager group-2 membership and canCall(this operator, UKTBL, mint) were verified on 2026-07-20; group 2 is required by the UKTBL mint requirement."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x7430d9d142d811f61b4a2d90d6f3a70a8500bbb7",
+        "label": "UKTBL PermissionManager group-2 mint operator 0x7430d9d1",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Spiko PermissionManager implementation",
+            "url": "https://eth.blockscout.com/address/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+          }
+        ],
+        "evidence": "PermissionManager group-2 membership and canCall(this operator, UKTBL, mint) were verified on 2026-07-20; group 2 is required by the UKTBL mint requirement."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x930f7f3a9a235d27ae082add5b7d4635e59eaf55",
+        "label": "UKTBL PermissionManager group-2 mint operator 0x930f7f3a",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Spiko PermissionManager implementation",
+            "url": "https://eth.blockscout.com/address/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+          }
+        ],
+        "evidence": "PermissionManager group-2 membership and canCall(this operator, UKTBL, mint) were verified on 2026-07-20; group 2 is required by the UKTBL mint requirement."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb114e0e00622ffe5800004a98c8e01cd2c0c393b",
+        "label": "UKTBL PermissionManager group-2 mint operator 0xb114e0e0",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Spiko PermissionManager implementation",
+            "url": "https://eth.blockscout.com/address/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+          }
+        ],
+        "evidence": "PermissionManager group-2 membership and canCall(this operator, UKTBL, mint) were verified on 2026-07-20; group 2 is required by the UKTBL mint requirement."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "label": "Spiko PermissionManager ADMIN Safe (3-of-8)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 8,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x75e0092e7D2c8D854Fcf5334f95554852d62746a",
+            "0xE9106C617D7180bf6BaDCFa5EdC664B726c5Dcbb",
+            "0x6c00Be5d1013a5bca938EF6aa8F1E5e706FF384d",
+            "0x4D1d9C5B5d9Ca448194313D799De374f362Bd460",
+            "0xDa47Bd72438F11bef7Cc54F18cd02426dd86A5a2",
+            "0xe67D2cbeaE3090bE017C66e7A6943961619a5D35",
+            "0x4896f23FF83242D8D4EB5fA1dEdF8c57e9145949",
+            "0xA6e06dfE42064B7Cd6DC902a62e74ca5Bb574011"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "observedBlock": 25573477,
+          "observedAt": "2026-07-20",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573477,
+        "sources": [
+          {
+            "label": "Spiko PermissionManager implementation",
+            "url": "https://eth.blockscout.com/address/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25573477, Safe reads returned VERSION() = 1.4.1, eight owners, and threshold 3; existing PermissionManager review records no enabled modules or guard. Group 0 can administer PermissionManager permissions and its UUPS upgrade authorization, so it can authorize minters and replace mint-critical authority logic."
       }
     ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x344278aff344d6fb960705dc18a4912221608472"
+      ],
+      "implementationAddresses": [
+        "0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+      ],
+      "adminAddresses": [
+        "0x4eaa52b6280593a8820c45ce38f974290ae52cea"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Spiko PermissionManager ADMIN Safe (3-of-8)",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573477,
+      "sources": [
+        {
+          "label": "Spiko PermissionManager implementation",
+          "url": "https://eth.blockscout.com/address/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "review": {
       "sources": [
         {
@@ -160,11 +341,23 @@
         {
           "label": "Blockscout PermissionManager source",
           "url": "https://eth.blockscout.com/address/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+        },
+        {
+          "label": "Spiko UK T-Bills fund",
+          "url": "https://www.spiko.io/spiko-treasury-bills-pound"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
         }
       ],
-      "evidence": "Resolved 2026-07-20 against the Sourcify-verified PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 on Ethereum: getRequirements(token, mint) = group mask {0,2}; group 0 (ADMIN) is held solely by Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea (getThreshold() = 3, getOwners() = 7: 0x75e0092e7d2c8d854fcf5334f95554852d62746a, 0xe9106c617d7180bf6badcfa5edc664b726c5dcbb, 0x6c00be5d1013a5bca938ef6aa8f1e5e706ff384d, 0x4d1d9c5b5d9ca448194313d799de374f362bd460, 0xda47bd72438f11bef7cc54f18cd02426dd86a5a2, 0xe67d2cbeae3090be017c66e7a6943961619a5d35, 0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949); group 2 is held by six operator contracts (0x57fa613b284f05421f78c8bd579555d5c0d7783d, 0x5ed5a75eeed1934ea060186e35187eaa73331366, 0x64e31c39fc3ec028557c9354d27b5c09faeb5fda, 0x7430d9d142d811f61b4a2d90d6f3a70a8500bbb7, 0x930f7f3a9a235d27ae082add5b7d4635e59eaf55, 0xb114e0e00622ffe5800004a98c8e01cd2c0c393b) for which canCall(token, mint) = true; group 5 is the relayer EOA 0x71a1a4165ae953cb80fcd102c28fc5d03beafa24 (membership confirmed via getGroups bitmask at the latest block; GroupAdded/GroupRemoved event scan covered deployment through block 24,290,000). The same PermissionManager pattern repeats per chain (arbitrum uses 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a).",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
-      "reviewedAt": "2026-07-20"
+      "evidence": "Ethereum contract and RPC evidence identifies the UUPS PermissionManager as UKTBL's authority path. At block 25573477, its group-0 Safe is 3-of-8; the PermissionManager implementation slot is 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e and the external proxy-admin slot is zero. Existing role evidence establishes group 2 operator contracts that can call UKTBL mint on Ethereum. The reviewed Spiko fund record is an AMF-regulated UCITS short-term VNAV money-market fund with quarterly PwC audit evidence, supporting periodic reconciliation and prudential supervision. The chain-local authority contract is identified for several EVM deployments, but terminal minter and upgrade control chains are not complete for every non-Ethereum deployment.",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Enumerate terminal minter, administrator, and mint-logic upgrade controls for the Starknet and Stellar deployments, and reconcile the group memberships and UUPS authorization path for every non-Ethereum PermissionManager."
+      ]
     }
   },
   "chainTier": "ethereum",

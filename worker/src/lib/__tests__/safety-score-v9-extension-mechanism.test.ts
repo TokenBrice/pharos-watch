@@ -16,7 +16,7 @@ type MechanismMeta = Pick<StablecoinMeta, "id" | "reserves" | "reserveReview" | 
 // Curated overlays now re-bound after twelve months (VER2-004), so the stub
 // carries a clock within a year of the fixture overlay review dates
 // (2026-07-13..16) to keep them current.
-const STUB_CLOCK_SEC = Date.UTC(2026, 6, 17) / 1_000;
+const STUB_CLOCK_SEC = Date.UTC(2026, 6, 21) / 1_000;
 
 function fixedInputStub(
   liveReserves: Record<string, unknown[]> = {},

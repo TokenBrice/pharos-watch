@@ -46,6 +46,13 @@ const FreshnessEntrySchema = z.object({
 
 const BlacklistStatusSchema = z.union([z.boolean(), z.literal("possible"), z.literal("inherited")]);
 
+const NavPriceObservationSchema = z.strictObject({
+  priceUsd: z.number().finite().positive(),
+  sourceId: z.string().min(1),
+  observedAtSec: z.number().int().nonnegative(),
+  confidence: z.enum(["high", "medium", "low", "unknown"]),
+});
+
 const DexDeploymentSupplyCoverageSchema: z.ZodType<DexDeploymentSupplyCoverage> = z.strictObject({
   totalSupplyUsd: z.number().finite().positive(),
   observedSupplyUsd: z.number().finite().nonnegative(),
@@ -82,6 +89,9 @@ const FixedInputPayloadFields = {
     redemptionBackstops: FreshnessEntrySchema,
   }),
   pegDataById: z.record(z.string(), PegSummaryCoinSchema),
+  // NAV observations support route-output valuation only. They remain separate
+  // from peg rows because NAV tokens have no fixed peg deviation to score.
+  navPriceById: z.record(z.string(), NavPriceObservationSchema).optional(),
   activeDepegPeakBpsById: z.record(z.string(), z.number().finite().nonnegative()),
   redemptionBackstopMap: RedemptionBackstopMapSchema,
   bluechipMap: BluechipRatingsMapSchema,
@@ -537,6 +547,12 @@ function assertFixedInputConsistency(input: ReportCardsFixedInput): void {
     throw new Error("Fixed input active asset identities contain duplicates");
   }
   if (input.captureKind === "exact-publication-inputs") {
+    const invalidNavPriceIds = Object.keys(input.navPriceById ?? {}).filter(
+      (id) => ACTIVE_STABLECOINS.find((coin) => coin.id === id)?.flags.navToken !== true,
+    );
+    if (invalidNavPriceIds.length > 0) {
+      throw new Error(`Fixed input NAV price rows target non-NAV assets: ${invalidNavPriceIds.join(",")}`);
+    }
     assertSameIds(Object.keys(input.dexLiqMap), input.activeAssetIds, "Exact fixed input DEX active rows");
     assertSameIds(
       Object.keys(input.resolvedBlacklistStatuses),
@@ -667,6 +683,7 @@ export function normalizeFixedInput(value: unknown): ReportCardsFixedInput {
     activeAssetIds: [...input.activeAssetIds].sort(),
     inputMethodologyVersions: normalizeReportCardsFixedInputMethodologyVersions(input.inputMethodologyVersions),
     pegDataById: sortedRecord(input.pegDataById),
+    ...(input.navPriceById ? { navPriceById: sortedRecord(input.navPriceById) } : {}),
     activeDepegPeakBpsById: sortedRecord(input.activeDepegPeakBpsById),
     dexLiqMap: normalizeFixedDexLiquidityMap(input.dexLiqMap),
     redemptionBackstopMap,

@@ -201,7 +201,7 @@
         "authorityType": "contract",
         "directMintAbility": "none",
         "canRaiseCap": false,
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "fxSAVE shares are minted/burned by the f(x) saving vault against fxUSD deposits and redemptions; this share accounting cannot create or destroy base fxUSD supply.",
         "sources": [
           {
@@ -213,7 +213,33 @@
             "url": "https://etherscan.io/address/0x7743e50f534a7f9f1791dde7dcd89f7783eefc39"
           }
         ],
-        "evidence": "At Ethereum block 25295182: asset() returned 0x65c9a641afceb9c0e6034e558a319488fa0fa3be (fxUSD Stability Pool, correct); EIP-1967 impl slot = 0xe4031e271809d20074e4bef1caeefec5f710e8a6; EIP-1967 proxy admin slot = ProxyAdmin(0x9b54b7703551d9d0ced177a78367560a8b2edda4). ProxyAdmin.owner() = TimelockController(0x68863fb8855b04509a835082478d6e3d0be4e61a, getMinDelay()=259200s/3 days)."
+        "evidence": "At Ethereum block 25573280: asset() returned 0x65c9a641afceb9c0e6034e558a319488fa0fa3be (fxUSD Stability Pool); EIP-1967 implementation slot = 0xe4031e271809d20074e4bef1caeefec5f710e8a6 and admin slot = ProxyAdmin 0x9b54b7703551d9d0ced177a78367560a8b2edda4. The receipt shares are minted and burned only through the vault's fxUSD deposit and redemption accounting.",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573280
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x68863fb8855b04509a835082478d6e3d0be4e61a",
+        "label": "AladdinDAO 3-day TimelockController (fxSAVE ProxyAdmin owner)",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 259200,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573280,
+        "sources": [
+          {
+            "label": "Ethereum fxSAVE contract",
+            "url": "https://etherscan.io/address/0x7743e50f534a7f9f1791dde7dcd89f7783eefc39"
+          },
+          {
+            "label": "AladdinDAO TimelockController",
+            "url": "https://etherscan.io/address/0x68863fb8855b04509a835082478d6e3d0be4e61a"
+          }
+        ],
+        "evidence": "At Ethereum block 25573280, the fxSAVE EIP-1967 admin was ProxyAdmin 0x9b54b7703551d9d0ced177a78367560a8b2edda4; ProxyAdmin.owner() returned this TimelockController, whose getMinDelay() returned 259200 seconds. It can replace the vault implementation only after the three-day delay."
       },
       {
         "label": "Inherited fxUSD CDP mint path",
@@ -221,16 +247,47 @@
         "authorityType": "contract",
         "directMintAbility": "none",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
         "evidence": "Underlying fxUSD supply is minted CDP-style against overcollateralized wstETH/WBTC positions with governance-tuned risk parameters (user-collateralized-governed, partially-bounded-admin); fxSAVE holds fxUSD and inherits that base mint authority. 2026-07-20 (Kimi P2 dc-2): the inherited control surface is the upstream fxUSD mint system itself; recorded asset:fxusd-f-x-protocol as the explicit failure domain so the control identity resolves (no separate contract/EOA administers fxSAVE minting — shares mint only through the vault deposit flow).",
         "failureDomainKeys": [
           "asset:fxusd-f-x-protocol"
         ]
       }
     ],
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39"
+      ],
+      "implementationAddresses": [
+        "0xe4031e271809d20074e4bef1caeefec5f710e8a6"
+      ],
+      "adminAddresses": [
+        "0x9b54b7703551d9d0ced177a78367560a8b2edda4",
+        "0x68863fb8855b04509a835082478d6e3d0be4e61a"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 259200,
+      "controlRef": "AladdinDAO 3-day TimelockController (fxSAVE ProxyAdmin owner)",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573280,
+      "sources": [
+        {
+          "label": "Ethereum fxSAVE contract",
+          "url": "https://etherscan.io/address/0x7743e50f534a7f9f1791dde7dcd89f7783eefc39"
+        },
+        {
+          "label": "AladdinDAO TimelockController",
+          "url": "https://etherscan.io/address/0x68863fb8855b04509a835082478d6e3d0be4e61a"
+        }
+      ]
+    },
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "fxSAVE (variantOf fxusd-f-x-protocol, variantKind strategy-vault) is a yield-bearing vault receipt. At Ethereum block 25295182: asset() confirmed (fxUSD Stability Pool); upgrade admin chain confirmed as ProxyAdmin(0x9b54b7) owned by AladdinDAO TimelockController(0x68863f, 3-day delay, getMinDelay()=259200). No privileged share-minting outside deposit flows.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+      "evidence": "fxSAVE (variantOf fxusd-f-x-protocol, variantKind strategy-vault) is a yield-bearing vault receipt over fxUSD. At Ethereum block 25573280, asset() confirmed the fxUSD Stability Pool and the proxy chain resolved to ProxyAdmin 0x9b54b7703551d9d0ced177a78367560a8b2edda4 owned by TimelockController 0x68863fb8855b04509a835082478d6e3d0be4e61a with a 259200-second minimum delay. No privileged share mint outside deposit accounting was found; changing that accounting requires the delayed upgrade path. The wrapper has no issuer reserve or named prudential supervisor of its own.",
+      "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
       "sources": [
         {
@@ -241,7 +298,8 @@
           "label": "Ethereum fxSAVE contract",
           "url": "https://etherscan.io/address/0x7743e50f534a7f9f1791dde7dcd89f7783eefc39"
         }
-      ]
+      ],
+      "disposition": "scoreable"
     }
   },
   "launchDate": "2025-04-02"

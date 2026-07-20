@@ -338,6 +338,9 @@
         "evidence": "At Flare block 65060282, hasRole(UPGRADE_ADMIN_ROLE, 0x47345bb8...) returned true. Verified HexTrustUSDV2 source gates the upgrade authorization path through UPGRADE_ADMIN_ROLE; this EOA has no DEFAULT_ADMIN_ROLE or MINTER_ROLE."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -354,9 +357,10 @@
         }
       ],
       "evidence": "At Ethereum block 25530752, Flare block 65060282, and Songbird block 127737529, the EIP-1967 implementation slots returned 0xce2d107b..., 0x35151b..., and 0xF34A47..., respectively, while the proxy-admin slot was zero on all three deployments. owner() and hasRole(DEFAULT_ADMIN_ROLE, 0xb8ce31ad...) returned the same default-admin EOA on every deployment. hasRole(MINTER_ROLE, ...) returned true for 0xf28a91a1... and 0x6329218f... on Ethereum, and for 0x6329218f... on Flare and Songbird. hasRole(UPGRADE_ADMIN_ROLE, 0xb8ce31ad...) returned true on all three; 0x47345bb8... also held UPGRADE_ADMIN_ROLE on Ethereum and Flare. Verified source gates mint() with MINTER_ROLE and _authorizeUpgrade with the upgrade-admin path. Follow-up 2026-07-20: (1) The active minter EOAs are Hex Trust operational backend keys that submit mint/burn transactions directly on-chain; issuer documentation (htdigitalassets.com) describes USDX mint/redeem as an issuer-operated process under Hex Trust's licensed custody, and no public source names them as custody-vault or treasury addresses. (2) No on-chain policy or approval-flow constraint exists beyond MINTER_ROLE — the verified implementation exposes no supply ceiling or mint timelock; any custody approval flow is off-chain and not observable. Both questions are answered to the limit of public evidence.",
-      "reviewer": "Codex CTRL batch 13; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+      "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
-      "unresolvedQuestions": []
+      "unresolvedQuestions": [],
+      "disposition": "scoreable"
     }
   },
   "custodyModel": "institutional-regulated",

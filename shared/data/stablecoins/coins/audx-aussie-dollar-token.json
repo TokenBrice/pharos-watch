@@ -81,8 +81,8 @@
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "AUDX public issuer material describes direct availability on supported blockchains rather than a third-party bridge route. Pharos reviews the route as issuer-native multichain issuance, with broader listed deployments kept at probable confidence.",
-    "reviewedAt": "2026-06-13",
+    "summary": "TAU Pty Ltd's terms identify AUDX as issued on Ethereum and Polygon and allow the company to mint or transfer it after a purchase; exact on-chain checks confirm the tracked 18-decimal AUDX deployments and direct minter role on both. The same token and role reads exist on Conflux and XDC, but the issuer's current terms do not identify those deployments, so their route class and scope remain unresolved.",
+    "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review",
     "confidence": "probable",
     "sources": [
@@ -93,6 +93,10 @@
       {
         "label": "AUDX transparency",
         "url": "https://www.audxtoken.com/transparency"
+      },
+      {
+        "label": "AUDX issuer terms and conditions",
+        "url": "https://www.audxtoken.com/terms-and-conditions"
       }
     ],
     "routes": [
@@ -100,31 +104,53 @@
         "id": "ethereum:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
         "destinationChain": "ethereum",
         "contractAddress": "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "AUDX issuer-native issuance (TAU Pty Ltd)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "TAU's current terms state that AUDX is issued on Ethereum and Polygon and that the company may mint or transfer AUDX to a nominated wallet. At Ethereum block 25573503, this exact address returned Aussie Dollar Token, AUDX, and 18 decimals, and MINTER_ROLE was true for the deployment minter 0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28. No third-party bridge is documented for the issued Ethereum token.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573503,
+        "sources": [
+          {
+            "label": "AUDX issuer terms and conditions",
+            "url": "https://www.audxtoken.com/terms-and-conditions"
+          },
+          {
+            "label": "AUDX Ethereum deployment",
+            "url": "https://eth.blockscout.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+          }
+        ]
       },
       {
         "id": "polygon:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
         "destinationChain": "polygon",
         "contractAddress": "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "AUDX issuer-native issuance (TAU Pty Ltd)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "TAU's current terms state that AUDX is issued on Ethereum and Polygon and that the company may mint or transfer AUDX to a nominated wallet. At Polygon block 90560276, this exact address returned Aussie Dollar Token, AUDX, and 18 decimals, and MINTER_ROLE was true for the deployment minter 0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28. No third-party bridge is documented for the issued Polygon token.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "observedBlock": 90560276,
+        "sources": [
+          {
+            "label": "AUDX issuer terms and conditions",
+            "url": "https://www.audxtoken.com/terms-and-conditions"
+          },
+          {
+            "label": "AUDX Polygon deployment",
+            "url": "https://polygon.blockscout.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+          }
+        ]
       },
       {
         "id": "conflux:0x47a365e29697c700c75d58936b3d93a8a20a43c9",
@@ -137,9 +163,20 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "At Conflux eSpace block 152494603, this exact address returned Aussie Dollar Token, AUDX, and 18 decimals, and MINTER_ROLE was true for 0x1274d87337eb9091e22b9686ae34ad54c989c883. That verifies a direct-minter token surface, but TAU's current terms identify only Ethereum and Polygon; their conditional statement that AUDX may be issued on other chains does not establish this contract as a canonical issuer route or its cross-chain transfer semantics. It remains unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "observedBlock": 152494603,
+        "sources": [
+          {
+            "label": "AUDX issuer terms and conditions",
+            "url": "https://www.audxtoken.com/terms-and-conditions"
+          },
+          {
+            "label": "AUDX Conflux eSpace deployment",
+            "url": "https://evm.confluxscan.org/address/0x47a365e29697c700c75d58936b3d93a8a20a43c9"
+          }
+        ]
       },
       {
         "id": "xdc:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
@@ -152,9 +189,20 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "At XDC block 105138370, this exact address returned Aussie Dollar Token, AUDX, and 18 decimals, and MINTER_ROLE was true for 0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28. That verifies a direct-minter token surface, but TAU's current terms identify only Ethereum and Polygon; their conditional statement that AUDX may be issued on other chains does not establish this contract as a canonical issuer route or its cross-chain transfer semantics. It remains unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "observedBlock": 105138370,
+        "sources": [
+          {
+            "label": "AUDX issuer terms and conditions",
+            "url": "https://www.audxtoken.com/terms-and-conditions"
+          },
+          {
+            "label": "AUDX XDC deployment",
+            "url": "https://xdcscan.com/address/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+          }
+        ]
       }
     ]
   },

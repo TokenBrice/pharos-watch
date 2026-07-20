@@ -82,7 +82,7 @@ export default createClientFeaturePage({
       version: YIELD_METHODOLOGY_VERSION_LABEL,
       changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
     },
-    leadParagraphs: ["Stablecoin yield rankings weighed against safety and real-world benchmarks — not just raw APY."],
+    leadParagraphs: ["Stablecoin yield rankings that weigh every APY against safety and real-world benchmarks."],
   },
   afterClient: (
     <>

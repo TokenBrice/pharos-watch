@@ -98,11 +98,21 @@
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
-    "tier": "single-chain-or-native",
-    "summary": "IDRX is issuer-backed rupiah stablecoin infrastructure available on multiple supported networks. Reviewed issuer materials did not identify a distinct bridge, lockbox, or liquidity route controlling durable supply, so Pharos treats the route as native issuance on listed chains. 2026-07-20 cohort dc-1 pass: EVM rows confirmed issuer-native IDRX deployments (uniform token reads per chain); Solana row remains unresolved (non-EVM, not re-verified).",
+    "tier": "issuer-native-burn-mint",
+    "summary": "IDRX documents both direct issuer minting on a selected supported chain and an issuer-operated bridge in which a source burn and its transaction hash are submitted to IDRX before the destination wallet receives IDRX. Its supported-chain page lists the exact current Solana mint. Pharos therefore treats the documented route as issuer-native burn/mint rather than a third-party bridge.",
     "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
-    "confidence": "probable",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "IDRX issuer-operated burn/mint bridge",
+        "url": "https://docs.idrx.co/integration/processing-bridge-idrx-request",
+        "bridgeTypes": [
+          "issuerBurnMint"
+        ]
+      }
+    ],
     "sources": [
       {
         "label": "IDRX",
@@ -111,6 +121,14 @@
       {
         "label": "IDRX docs",
         "url": "https://docs.idrx.co/"
+      },
+      {
+        "label": "IDRX supported chains and contract addresses",
+        "url": "https://docs.idrx.co/introduction/supported-chain-and-contract-address"
+      },
+      {
+        "label": "IDRX bridge processing flow",
+        "url": "https://docs.idrx.co/integration/processing-bridge-idrx-request"
       }
     ],
     "routes": [
@@ -265,16 +283,35 @@
         "id": "solana:idrxZcP8xiKkYk6XGD4uz1dxEYCWSgKDHqgjsBbwDur",
         "destinationChain": "solana",
         "contractAddress": "idrxZcP8xiKkYk6XGD4uz1dxEYCWSgKDHqgjsBbwDur",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Unresolved in the 2026-07-20 dc-1 pass: Solana deployment; mint authority not re-verified from public chain reads in this pass. EVM deployments are issuer-native and reviewed.",
+        "protocol": "IDRX issuer-operated bridge",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "IDRX's official supported-chain page names this exact current Solana mint and deprecates its predecessor. Its bridge flow burns IDRX on the source chain, submits the burn transaction hash to IDRX, then sends IDRX to the destination wallet; direct issuer minting is also available for a selected supported chain. At finalized Solana slot 434086281, the exact SPL mint reported 2 decimals, mint authority Bpqui7hhcjfHoxwbkK4dw1GBB86Rt1DHEjQu8Mr7g8Tn, and no freeze authority.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "observedBlock": 434086281,
+        "sources": [
+          {
+            "label": "IDRX supported chains and contract addresses",
+            "url": "https://docs.idrx.co/introduction/supported-chain-and-contract-address"
+          },
+          {
+            "label": "IDRX bridge processing flow",
+            "url": "https://docs.idrx.co/integration/processing-bridge-idrx-request"
+          },
+          {
+            "label": "IDRX mint service",
+            "url": "https://docs.idrx.co/services"
+          },
+          {
+            "label": "Solana mainnet JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ]
       }
     ]
   },

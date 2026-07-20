@@ -76,6 +76,46 @@ interface DexPublicationRow {
   updated_at: number | null;
 }
 
+function navPriceConfidence(
+  confidence: StablecoinData["priceConfidence"],
+): "high" | "medium" | "low" | "unknown" {
+  if (confidence === "high") return "high";
+  if (confidence === "low") return "low";
+  if (confidence === "single-source" || confidence === "fallback") return "medium";
+  return "unknown";
+}
+
+function buildNavPriceById(
+  peggedAssets: readonly StablecoinData[],
+  clockSec: number,
+): NonNullable<ReportCardsFixedInput["navPriceById"]> {
+  const entries: Array<[string, NonNullable<ReportCardsFixedInput["navPriceById"]>[string]]> = [];
+  for (const asset of peggedAssets) {
+    if (!ACTIVE_META_BY_ID.get(asset.id)?.flags.navToken) continue;
+    if (typeof asset.price !== "number" || !Number.isFinite(asset.price) || asset.price <= 0) continue;
+    if (!asset.priceSource || asset.priceSource === "missing") continue;
+    const observedAtSec = asset.priceObservedAt ?? asset.priceUpdatedAt ?? asset.priceSyncedAt;
+    if (
+      typeof observedAtSec !== "number" ||
+      !Number.isFinite(observedAtSec) ||
+      observedAtSec < 0 ||
+      observedAtSec > clockSec
+    ) {
+      continue;
+    }
+    entries.push([
+      asset.id,
+      {
+        priceUsd: asset.price,
+        sourceId: asset.priceSource,
+        observedAtSec,
+        confidence: navPriceConfidence(asset.priceConfidence),
+      },
+    ]);
+  }
+  return Object.fromEntries(entries);
+}
+
 export function resolveExactDexPublicationGeneration(
   rows: readonly DexPublicationRow[],
   activeIds: readonly string[] = ACTIVE_STABLECOINS.map((coin) => coin.id),
@@ -342,6 +382,7 @@ export async function buildReportCardsSnapshot(
     redemptionStale,
     inputFreshness: scoringInputFreshness,
     pegDataById: Object.fromEntries(nonNavPegDataById),
+    navPriceById: buildNavPriceById(peggedAssets, pegAnalytics.nowSec),
     activeDepegPeakBpsById: Object.fromEntries(activeDepegPeakBpsById),
     dexLiqMap,
     redemptionBackstopMap,

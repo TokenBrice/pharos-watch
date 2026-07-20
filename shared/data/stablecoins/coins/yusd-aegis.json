@@ -107,9 +107,39 @@
   },
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
-    "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "YUSD token minting is delegated to AegisMinting. Normal minting requires a whitelisted user/order plus trusted-signer signature; the same minter contract also has cross-chain mint functions. A 3/5 Safe controls the minter and default-admin role.",
+    "authorityPosture": "unknown",
+    "confidence": "unknown",
+    "summary": "YUSD's Ethereum minting is delegated to AegisMinting, where normal minting requires a whitelisted user/order plus trusted-signer signature and a 3/5 Safe controls the minter and default-admin role. Distinct BSC AegisMinting and Avalanche OFT authority paths are identified but not fully enumerated.",
+    "upgradeability": {
+      "model": "unknown",
+      "implementationAddresses": [
+        "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
+        "0xc4df68e592245ca5202fe8b7c438d2b799820fc2",
+        "0xab3dbcd9b096c3ff76275038bf58eac10d22c61f",
+        "0xca2671dcd031a72359f456c212f62a9bda737cd7"
+      ],
+      "canChangeMintLogic": "unknown",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573468,
+      "sources": [
+        {
+          "label": "YUSD Ethereum token",
+          "url": "https://etherscan.io/address/0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a#code"
+        },
+        {
+          "label": "AegisMinting Sourcify source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xc4df68e592245ca5202fe8b7c438d2b799820fc2?fields=sources"
+        },
+        {
+          "label": "YUSD on BscScan",
+          "url": "https://bscscan.com/address/0xab3dbcd9b096c3ff76275038bf58eac10d22c61f#code"
+        },
+        {
+          "label": "YUSD on Snowtrace",
+          "url": "https://snowtrace.io/address/0xca2671dcd031a72359f456c212f62a9bda737cd7"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -145,8 +175,7 @@
         "modulesOrGuardsStatus": "none-detected",
         "routeChecks": {
           "pausersAdminsUpgraders": "Aegis admin Safe is owner/defaultAdmin for AegisMinting; reviewed as 3-of-5 with no modules and zero guard.",
-          "caps": "Safe can administer mint limits and trusted-signer/cross-chain operator roles; active signer/operator ownership remains a review question.",
-          "unsupportedReason": "Trusted signer ownership and current cross-chain operator role holder remain unresolved in the profile review."
+          "caps": "Safe can administer mint limits and trusted-signer/cross-chain operator roles; the reviewed Ethereum trusted signer is configured by this Safe and CROSS_CHAIN_OPERATOR_ROLE is unassigned."
         },
         "safe": {
           "threshold": 3,
@@ -160,6 +189,7 @@
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "observedAt": "2026-07-20",
           "observedBlock": 25165875,
           "source": "safe-api"
         },
@@ -172,6 +202,9 @@
         "evidence": "AegisMinting.owner() and defaultAdmin() returned this Safe."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -191,9 +224,14 @@
           "url": "https://etherscan.io/address/0x90ccf2c4b3dee7aeac9af5950a7c60f89af1db00"
         }
       ],
-      "evidence": "Direct reads and Sourcify source identify AegisMinting as the active YUSD minter, with owner/default-admin control held by a 3/5 Safe. Follow-up verification 2026-07-20: AegisConfig (0x90ccf2c4b3dee7aeac9af5950a7c60f89af1db00).trustedSigner() = 0xb28c97e348c3078fc1f6fcc61b79c8a0da35008e (rotated from 0xA4056dE8...), config owner() = the same Safe, so the operational signer is administered solely by the reviewed Safe. CROSS_CHAIN_OPERATOR_ROLE on Ethereum AegisMinting is currently unassigned: a RoleGranted event scan over blocks 20,000,000-25,450,000 found zero grants of this role and hasRole returns false for the BSC AegisMinting, the current and former trusted signers, and the Safe. The BSC deployment has its own AegisMinting (0x02bf8f0e...) under the same Safe; the Avalanche deployment is a LayerZero OFT.",
-      "reviewer": "Codex mint-authority top100 batch-c; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
-      "reviewedAt": "2026-07-20"
+      "evidence": "Direct reads and Sourcify source identify Ethereum AegisMinting as the active YUSD minter, with owner/default-admin control held by a 3/5 Safe. Follow-up verification 2026-07-20: AegisConfig (0x90ccf2c4b3dee7aeac9af5950a7c60f89af1db00).trustedSigner() = 0xb28c97e348c3078fc1f6fcc61b79c8a0da35008e, and config owner() = the same Safe. The BSC deployment has a distinct AegisMinting at 0x02bf8f0e..., and Avalanche uses a LayerZero OFT; their terminal minter, administrator, and upgrade-control chains are not fully represented here. The Accountable proof-of-reserves cadence and any prudential supervisor were not re-evidenced for this asset-level unresolved review.",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Enumerate the BSC AegisMinting and Avalanche LayerZero OFT terminal minter, administrator, and upgrade authorities before treating YUSD as asset-wide scoreable.",
+        "Re-evidence the Accountable reconciliation cadence and any named prudential supervisor for YUSD before assigning reviewed profile-level values."
+      ]
     }
   },
   "deploymentModel": "third-party-bridge",

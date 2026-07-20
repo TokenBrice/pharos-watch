@@ -111,7 +111,7 @@
       "model": "uups",
       "canChangeMintLogic": true,
       "controlRef": "Spiko super-admin multisig",
-      "observedAt": "2026-06-11",
+      "observedAt": "2026-07-20",
       "sources": [
         {
           "label": "Spiko smart contracts",
@@ -126,6 +126,9 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "issuer-backend:gbpsafo-spiko:spiko-daily-operator-relayer"
+        ],
         "evidence": "Verified on-chain 2026-07-20: the Ethereum PermissionManager requires group mask {0,2} for mint on GBPSAFO; group 2 holds six operator contracts and group 5 (other Spiko tokens) the relayer EOA 0x71a1a4165ae953cb80fcd102c28fc5d03beafa24; these are Spiko-operated daily-operator identities.",
         "sources": [
           {
@@ -141,6 +144,9 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
+        "failureDomainKeys": [
+          "safe:ethereum:0x4eaa52b6280593a8820c45ce38f974290ae52cea"
+        ],
         "evidence": "Verified on-chain 2026-07-20: this Safe is the sole member of group 0 (ADMIN) in the Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 on Ethereum (getGroups bitmask = group 0; GroupAdded event history); it administers all permission groups including the mint group.",
         "sources": [
           {
@@ -163,14 +169,20 @@
             "0xe67d2cbeae3090be017c66e7a6943961619a5d35",
             "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949"
           ],
+          "observedBlock": 25571110,
+          "observedAt": "2026-07-20",
           "source": "onchain"
         }
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
-      "evidence": "Resolved 2026-07-20 against the Sourcify-verified PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 on Ethereum: getRequirements(token, mint) = group mask {0,2}; group 0 (ADMIN) is held solely by Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea (getThreshold() = 3, getOwners() = 7: 0x75e0092e7d2c8d854fcf5334f95554852d62746a, 0xe9106c617d7180bf6badcfa5edc664b726c5dcbb, 0x6c00be5d1013a5bca938ef6aa8f1e5e706ff384d, 0x4d1d9c5b5d9ca448194313d799de374f362bd460, 0xda47bd72438f11bef7cc54f18cd02426dd86a5a2, 0xe67d2cbeae3090be017c66e7a6943961619a5d35, 0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949); group 2 is held by six operator contracts (0x57fa613b284f05421f78c8bd579555d5c0d7783d, 0x5ed5a75eeed1934ea060186e35187eaa73331366, 0x64e31c39fc3ec028557c9354d27b5c09faeb5fda, 0x7430d9d142d811f61b4a2d90d6f3a70a8500bbb7, 0x930f7f3a9a235d27ae082add5b7d4635e59eaf55, 0xb114e0e00622ffe5800004a98c8e01cd2c0c393b) for which canCall(token, mint) = true; group 5 is the relayer EOA 0x71a1a4165ae953cb80fcd102c28fc5d03beafa24 (membership confirmed via getGroups bitmask at the latest block; GroupAdded/GroupRemoved event scan covered deployment through block 24,290,000). The same PermissionManager pattern repeats per chain (arbitrum uses 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a).",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+      "evidence": "Resolved 2026-07-20 against the Sourcify-verified PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 on Ethereum: getRequirements(token, mint) = group mask {0,2}; group 0 (ADMIN) is held solely by Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea (3-of-7), and six group-2 operator contracts have canCall(token, mint) = true. The ADMIN Safe can change permission assignments and UUPS mint-critical logic, so no independent on-chain economic ceiling is evidenced. GBPSAFO is an AMF-authorized UCITS sub-fund; its product record identifies recurring PwC assurance, so supply-to-fund reconciliation is recorded as periodic and supervision as prudential rather than inferred from the contract path.",
+      "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Spiko smart contracts",

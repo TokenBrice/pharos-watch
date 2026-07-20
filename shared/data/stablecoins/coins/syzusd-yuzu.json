@@ -35,6 +35,23 @@
   "variantOf": "yzusd-yuzu",
   "variantKind": "strategy-vault",
   "pegReferenceId": "yzusd-yuzu",
+  "implementationLaunchDate": "2025-10-10",
+  "mechanismArchetypeReview": {
+    "disposition": "unresolved",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex Prompt 6b implementation review",
+    "rationale": "The primary Plasma syzUSD vault deployment was created on 2025-10-10. This establishes the current wrapper implementation boundary; because syzUSD is a variant, the date review retains its parent-inherited mechanism classification rather than declaring a redundant direct archetype.",
+    "sources": [
+      {
+        "label": "Yuzu syzUSD documentation",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd"
+      },
+      {
+        "label": "syzUSD Plasma vault creation transaction",
+        "url": "https://plasmascan.to/tx/0x2f4bcaf4ba6a5b1d01d01e8da06ba942c93373d464267755cd68384480e0cec1"
+      }
+    ]
+  },
   "collateral": "Staked wrapper over Yuzu USD, backed by yzUSD reserve assets deployed into curated DeFi yield strategies and overcollateralized by protocol risk tranching",
   "pegMechanism": "Users stake yzUSD for syzUSD; syzUSD appreciates against yzUSD as strategy yield accrues, and final exits inherit Yuzu's KYC-gated primary redemption and liquidity-buffer constraints",
   "detailProvider": "coingecko",
@@ -302,7 +319,37 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
     "inheritedFrom": "yzusd-yuzu",
-    "summary": "syzUSD is Yuzu's staking wrapper of yzUSD; shares are minted only by staking yzUSD into the ERC-4626 vault, so it inherits yzUSD's permissioned (eligible-investor-gated) mint authority rather than creating new yzUSD supply.",
+    "summary": "syzUSD is Yuzu's staking wrapper of yzUSD; shares mint only against yzUSD deposits, while each chain-local transparent proxy can have its wrapper logic replaced by its observed ProxyAdmin owner. Durable yzUSD mint authority remains inherited from the parent.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6",
+        "0x484be0540ad49f351eaa04eeb35df0f937d4e73f"
+      ],
+      "implementationAddresses": [
+        "0xa3982582016375a0b25cb7d572379d3d49e5e9c8",
+        "0xe536b80e7f859e72ad095d769da1da45b7312d53"
+      ],
+      "adminAddresses": [
+        "0x7392751a860a51694231c7a0b4a9c853f8169cf0",
+        "0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331",
+        "0xa2a9700407934e913c840556b3d29f19cf6f203d",
+        "0xd32ab76a165f1a716986ba8c58344e3df4397f5e"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Yuzu Monad ProxyAdmin owner (unclassified contract)",
+      "observedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "syzUSD vault on Plasmascan",
+          "url": "https://plasmascan.to/address/0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
+        },
+        {
+          "label": "syzUSD vault on Monadexplorer",
+          "url": "https://monadexplorer.com/address/0x484be0540ad49f351eaa04eeb35df0f937d4e73f"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "syzUSD ERC-4626 staking vault (share accounting)",
@@ -312,7 +359,63 @@
         "chain": "plasma",
         "address": "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6",
         "canRaiseCap": "unknown",
-        "evidence": "syzUSD is an ERC-4626 vault that mints/burns shares against yzUSD deposits (expected asset 0x6695c0f8706c5ace3bdf8995073179cca47926dc); share price appreciates as strategy yield accrues. The wrapper cannot create base yzUSD supply."
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "syzUSD vault on Plasmascan",
+            "url": "https://plasmascan.to/address/0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
+          }
+        ],
+        "evidence": "On-chain review 2026-07-20 identifies this as the Plasma transparent-proxy ERC-4626 vault with asset() = yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc. It mints/burns shares only against yzUSD deposits and cannot create base yzUSD supply."
+      },
+      {
+        "label": "Yuzu Plasma ProxyAdmin owner Safe (4-of-5)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "chain": "plasma",
+        "address": "0xa2a9700407934e913c840556b3d29f19cf6f203d",
+        "canRaiseCap": "unknown",
+        "threshold": 4,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "unknown",
+        "safe": {
+          "owners": [
+            "0x1c6acbdc24f88cc538ca9b2a4f872019e8d39f95",
+            "0x87b39bacc760a39822807e358bf21bd5772d7ce2",
+            "0xa92cb0695913b0fac4dc87048f958105d2e2ca7c",
+            "0x1ec4d0023c89c34903026ab8a3056e5b21490483",
+            "0x0939dc5cc492c4ba54ba1fab0ee3b3e1b4adb60f"
+          ],
+          "threshold": 4,
+          "observedBlock": 27604884,
+          "observedAt": "2026-07-20",
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "syzUSD vault on Plasmascan",
+            "url": "https://plasmascan.to/address/0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
+          }
+        ],
+        "evidence": "At Plasma block 27604884 on 2026-07-20, the vault ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0 reported this 4-of-5 Safe as owner; getThreshold() = 4 and getOwners() returned the listed five addresses. The Safe can replace the Plasma vault implementation; modules and guard state were not enumerated."
+      },
+      {
+        "label": "Yuzu Monad ProxyAdmin owner (unclassified contract)",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "chain": "monad",
+        "address": "0xd32ab76a165f1a716986ba8c58344e3df4397f5e",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "syzUSD vault on Monadexplorer",
+            "url": "https://monadexplorer.com/address/0x484be0540ad49f351eaa04eeb35df0f937d4e73f"
+          }
+        ],
+        "evidence": "At the 2026-07-20 Monad review, the vault ProxyAdmin 0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331 reported this contract as owner. Its internal governance model was not classified, but it is the observed authority that can replace the Monad wrapper implementation."
       },
       {
         "label": "Inherited yzUSD permissioned mint authority",
@@ -323,11 +426,14 @@
         "evidence": "Underlying yzUSD primary mint/redeem is gated to KYC'ed eligible investors 1:1 with USDT0, with collateral managed in a Fordefi MPC workspace. syzUSD inherits this concentrated-admin posture from the parent."
       }
     ],
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "unknown",
     "review": {
       "evidence": "syzUSD (variantOf yzusd-yuzu, variantKind strategy-vault) is an ERC-4626 staked wrapper over yzUSD on Plasma and Monad. It inherits yzUSD's permissioned-minter mint path and concentrated-admin posture; the wrapper only mints/burns shares against yzUSD deposits. 2026-07-20 follow-up resolved the open EOA-role question: on Plasma, vault owner() = EOA 0xceaff57fbcd0e8f095c5c1125dd09b93fc5bbf82 while the ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0 is owned by the separate 4/5 Safe 0xa2a9700407934e913c840556b3d29f19cf6f203d; on Monad, vault owner() = EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae (no code) while the ProxyAdmin 0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331 is owned by 0xd32ab76a165f1a716986ba8c58344e3df4397f5e. The owner() EOAs are operational-only vault admins distinct from the upgrade admins; no MPC/HSM attestation for either EOA was found, so they are recorded honestly as EOAs.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+      "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
-      "sourceFreeRationale": "Classified as the staked variant of yzusd-yuzu per coin metadata and Yuzu docs; posture mirrored from the parent yzUSD mintAuthority. The vault's own admin was not independently resolved on-chain.",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Yuzu syzUSD docs",
@@ -336,6 +442,14 @@
         {
           "label": "Yuzu yzUSD docs",
           "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
+        },
+        {
+          "label": "syzUSD vault on Plasmascan",
+          "url": "https://plasmascan.to/address/0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
+        },
+        {
+          "label": "syzUSD vault on Monadexplorer",
+          "url": "https://monadexplorer.com/address/0x484be0540ad49f351eaa04eeb35df0f937d4e73f"
         }
       ]
     }

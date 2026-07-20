@@ -117,9 +117,28 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "none-resolved",
-    "confidence": "verified",
+    "confidence": "unknown",
     "summary": "ZYS is a yield-share variant over the Zephyr ZSD yield reserve. Inherits ZSD's verified no-privileged-mint profile: source code review confirmed no admin/emergency mint bypass in the Zephyr Protocol codebase.",
     "inheritedFrom": "zsd-zephyr-protocol",
+    "economicCapSemantics": "unknown",
+    "reconciliation": "unknown",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "unknown",
+      "canChangeMintLogic": "unknown",
+      "controlRef": "Zephyr ZYS share accounting",
+      "observedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Zephyr docs",
+          "url": "https://zephyrprotocol.com/documentation"
+        },
+        {
+          "label": "Zephyr GitHub — enums.h",
+          "url": "https://github.com/ZephyrProtocol/zephyr/blob/master/src/cryptonote_protocol/enums.h"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Zephyr ZYS share accounting",
@@ -156,9 +175,13 @@
           "url": "https://github.com/ZephyrProtocol/zephyr/blob/master/src/cryptonote_protocol/enums.h"
         }
       ],
-      "evidence": "ZYS inherits the ZSD mint-authority profile. ZSD was verified 2026-06-11: source code review confirmed no admin/emergency mint bypass (see zsd-zephyr-protocol). ZYS share accounting is governed by the same reserve-ratio rules with no separate privileged mint surface.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-6 (lead usde-ethena)",
-      "reviewedAt": "2026-07-20"
+    "evidence": "ZYS inherits the ZSD mint-authority profile. ZSD source review found no admin/emergency mint bypass, but the registry contains no ZYS contract or native-chain control identifier and no public interface equivalent to owner(), role-event enumeration, or proxy-slot inspection was established. That source review supports the inherited design description but does not enumerate present ZYS share or code-change authority.",
+    "reviewer": "P2 mint-free cohort",
+    "reviewedAt": "2026-07-20",
+    "disposition": "unresolved",
+    "unresolvedQuestions": [
+      "Identify a public Zephyr native-chain ZYS issuance/control interface or source-backed release-governance record that can enumerate current share-mint and code-change authority; no tracked contract address or equivalent endpoint is available."
+    ]
     }
   },
   "reserves": [

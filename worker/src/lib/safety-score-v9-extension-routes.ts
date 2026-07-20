@@ -46,16 +46,36 @@ function trackedStablecoinValuation(
   fixedInput: Readonly<ReportCardsFixedInput>,
   trackedAssetId: string,
   observedAtSec: number,
-): Pick<RouteValuation, "unitValueUsd" | "expectedUnitValueUsd" | "confidence" | "observedAtSec"> | null {
+): Pick<
+  RouteValuation,
+  "basis" | "unitValueUsd" | "expectedUnitValueUsd" | "confidence" | "observedAtSec" | "sourceId"
+> | null {
   const peg = fixedInput.pegDataById[trackedAssetId];
-  if (!peg || peg.currentDeviationBps === null || peg.currentDeviationBps === undefined) return null;
-  const unitValueUsd = 1 + peg.currentDeviationBps / 10_000;
-  if (!Number.isFinite(unitValueUsd) || unitValueUsd <= 0) return null;
+  if (peg?.currentDeviationBps !== null && peg?.currentDeviationBps !== undefined) {
+    const unitValueUsd = 1 + peg.currentDeviationBps / 10_000;
+    if (!Number.isFinite(unitValueUsd) || unitValueUsd <= 0) return null;
+    return {
+      basis: "price",
+      unitValueUsd,
+      expectedUnitValueUsd: 1,
+      confidence: "medium",
+      observedAtSec: Math.min(peg.priceObservedAt ?? observedAtSec, observedAtSec),
+      sourceId: "report-cards-peg-summary",
+    };
+  }
+
+  const navPrice = fixedInput.navPriceById?.[trackedAssetId];
+  if (!navPrice) return null;
   return {
-    unitValueUsd,
-    expectedUnitValueUsd: 1,
-    confidence: "medium",
-    observedAtSec: Math.min(peg.priceObservedAt ?? observedAtSec, observedAtSec),
+    basis: "nav",
+    unitValueUsd: navPrice.priceUsd,
+    // A NAV product has no $1 fixed-peg expectation. Its own observed NAV is
+    // both the current and expected output value, so this does not create a
+    // synthetic depeg signal.
+    expectedUnitValueUsd: navPrice.priceUsd,
+    confidence: navPrice.confidence,
+    observedAtSec: Math.min(navPrice.observedAtSec, observedAtSec),
+    sourceId: navPrice.sourceId,
   };
 }
 
@@ -94,9 +114,7 @@ function buildOutputReview(
     const tracked = trackedStablecoinValuation(fixedInput, assetKeys[0]!, observedAtSec);
     if (tracked) {
       valuation = {
-        basis: "price",
         referenceAssetKey: assetKeys[0]!,
-        sourceId: "report-cards-peg-summary",
         ...tracked,
         ...shared,
       };
@@ -114,9 +132,7 @@ function buildOutputReview(
         component.tracked!.unitValueUsd < minimum.tracked!.unitValueUsd ? component : minimum,
       );
       valuation = {
-        basis: "price",
         referenceAssetKey: weakest.assetKey,
-        sourceId: "report-cards-peg-summary",
         ...weakest.tracked!,
         confidence: "medium",
         ...shared,

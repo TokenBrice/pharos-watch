@@ -112,11 +112,14 @@ export default function MethodologyPage() {
           <div className="space-y-3">
             <div className="space-y-2">
               <h1 className="pharos-page-title">Methodology</h1>
-              <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+              <p className="pharos-page-lead max-w-3xl">
                 How Pharos grades stablecoins: transparent scoring across safety, peg stability, mint authority,
-                liquidity, yield, and contagion risk. Treat this page like a reference manual, not a marketing
-                explainer. All scoring methodologies operate over the active subset of tracked stablecoins; pre-launch
-                and frozen coins are excluded from new computations and live aggregates.
+                liquidity, yield, and contagion risk.
+              </p>
+              <p className="pharos-lead max-w-3xl">
+                Treat this page like a reference manual, not a marketing explainer. All scoring methodologies operate
+                over the active subset of tracked stablecoins; pre-launch and frozen coins are excluded from new
+                computations and live aggregates.
               </p>
             </div>
             <div className="pharos-card-shell px-4 py-4 md:hidden">

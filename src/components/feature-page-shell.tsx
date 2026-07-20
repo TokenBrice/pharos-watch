@@ -71,9 +71,9 @@ export function FeaturePageShell({
           </p>
         )}
         {leadParagraphs.length > 0 ? (
-          <div className="space-y-2">
+          <div className="max-w-4xl space-y-2">
             {leadParagraphs.map((paragraph, index) => (
-              <p key={index} className="pharos-lead">
+              <p key={index} className={index === 0 ? "pharos-page-lead" : "pharos-lead"}>
                 {paragraph}
               </p>
             ))}

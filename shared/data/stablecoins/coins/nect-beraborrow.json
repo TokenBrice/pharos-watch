@@ -20,6 +20,22 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Beraborrow publishes collateral oracle provider mappings such as RedStone, Chronicle, and eOracle, but reviewed docs do not show stronger failover handling.",
+    "branchApplicability": {
+      "disposition": "unresolved",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex Safety Score V9 small-1-free oracle review",
+      "rationale": "Beraborrow documents provider mappings and its collateral-ratio liquidation model, but the reviewed primary sources do not establish the full current set of debt-bearing collateral branches, deployed feed addresses and fallback behavior, or branch-specific liquidation and shutdown configuration.",
+      "sources": [
+        {
+          "label": "Beraborrow pricing assets documentation",
+          "url": "https://beraborrow.gitbook.io/docs/pricing-assets"
+        },
+        {
+          "label": "Beraborrow collateral ratio and liquidation documentation",
+          "url": "https://beraborrow.gitbook.io/docs/borrowing/collateral-ratio-and-liquidation"
+        }
+      ]
+    },
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
     "confidence": "verified",

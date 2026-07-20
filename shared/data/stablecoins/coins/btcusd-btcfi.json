@@ -20,12 +20,11 @@
   "oracleRisk": {
     "tier": "opaque-or-unknown",
     "summary": "BTCFi documents 50% maximum LTV and liquidation risk, while Bifrost publishes native WBTC and BTCB price feeds; BTCFi's own docs do not prove which feed is wired into BtcUSD or document liquidation recovery and oracle-failure handling.",
-    "branchModel": "multi-branch",
     "branchApplicability": {
-      "disposition": "branches-required",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex data review",
-      "rationale": "BtcUSD is minted against Bitcoin collateral and therefore requires an oracle/liquidation branch review. The public BTCFi documentation describes one Bifrost-side mint workflow but does not expose separate market contracts or prove distinct collateral engines, so the documented collateral set is represented as one grouped branch and retained as opaque.",
+      "disposition": "unresolved",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "Codex Prompt 6b oracle review",
+      "rationale": "BTCFi's official mint guide establishes a Bitcoin-collateralized BtcUSD loan with a 50% maximum LTV and liquidation risk, but it does not identify the deployed CDP market contracts, the feed consumed by collateral checks, fallback behavior, liquidation executor or timing, a backstop, or shutdown and bad-debt handling. Bifrost's published native price API does not prove its feeds are wired into BtcUSD, so a complete branch inventory cannot be authored.",
       "sources": [
         {
           "label": "BTCFi Bitcoin USD docs",
@@ -34,11 +33,15 @@
         {
           "label": "BTCFi mint guide",
           "url": "https://docs.bifrostnetwork.com/eng.btcfi.one/dashboard/3.-mint-btcusd"
+        },
+        {
+          "label": "Bifrost native price-oracle API",
+          "url": "https://docs.bifrostnetwork.com/bifrost-network/developer-documentations/cross-chain-transaction-and-oracle-api/price-oracle-contract-api"
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex Prompt 6b oracle review",
     "confidence": "limited",
     "sources": [
       {
@@ -52,67 +55,6 @@
       {
         "label": "Bifrost native price-oracle API",
         "url": "https://docs.bifrostnetwork.com/bifrost-network/developer-documentations/cross-chain-transaction-and-oracle-api/price-oracle-contract-api"
-      }
-    ],
-    "branches": [
-      {
-        "id": "btcfi-bifrost-bitcoin-collateral",
-        "label": "BTCFi Bifrost Bitcoin collateral",
-        "tier": "opaque-or-unknown",
-        "summary": "BTCFi exposes a single Bifrost-side BtcUSD borrowing workflow, but its docs do not identify the price-feed contract consumed by the collateral and liquidation logic.",
-        "collateralAssets": [
-          "BTCFi-supported Bitcoin collateral"
-        ],
-        "chains": [
-          "bifrost"
-        ],
-        "feeds": [
-          {
-            "provider": "Unverified BTCFi collateral-price source",
-            "path": "Undocumented collateral price input -> BtcUSD LTV and liquidation checks; Bifrost's published WBTC/BTCB feeds are candidates, not proven BTCFi wiring",
-            "chain": "bifrost",
-            "observedAt": "2026-07-14",
-            "failureDomainKeys": [
-              "btcfi-undocumented-price-source",
-              "bifrost"
-            ]
-          }
-        ],
-        "fallbackBehavior": "BTCFi's public documentation does not describe staleness checks, a secondary oracle, or the behavior taken when its collateral-price source is unavailable.",
-        "observedAt": "2026-07-14",
-        "collateralParameters": [
-          {
-            "asset": "BTCFi-supported Bitcoin collateral",
-            "maximumLtvPct": 50,
-            "note": "The BTCFi mint guide says users may mint up to 50% of collateral value and warns of liquidation at the liquidation threshold, but it does not publish a separate liquidation-ratio value."
-          }
-        ],
-        "liquidationMechanism": "The BTCFi mint and repay guides warn that positions reaching the liquidation threshold can be liquidated, but do not document who executes liquidation, the sale or offset sequence, or any execution delay.",
-        "backstop": "No Stability Pool, insurance reserve, debt auction, or other liquidation backstop is identified in the reviewed BTCFi documentation.",
-        "shutdownOrBadDebtBehavior": "The reviewed BTCFi documentation does not specify an oracle-failure pause, emergency shutdown, or how collateral shortfall and residual bad debt would be allocated.",
-        "failureDomainKeys": [
-          "btcfi-undocumented-price-source",
-          "btcfi-undocumented-liquidation-backstop",
-          "bifrost"
-        ],
-        "sources": [
-          {
-            "label": "BTCFi Bitcoin USD docs",
-            "url": "https://docs.bifrostnetwork.com/eng.btcfi.one"
-          },
-          {
-            "label": "BTCFi mint guide",
-            "url": "https://docs.bifrostnetwork.com/eng.btcfi.one/dashboard/3.-mint-btcusd"
-          },
-          {
-            "label": "BTCFi repayment guide",
-            "url": "https://docs.bifrostnetwork.com/eng.btcfi.one/dashboard/4.-repay-btcusd"
-          },
-          {
-            "label": "Bifrost native price-oracle API",
-            "url": "https://docs.bifrostnetwork.com/bifrost-network/developer-documentations/cross-chain-transaction-and-oracle-api/price-oracle-contract-api"
-          }
-        ]
       }
     ]
   },
@@ -180,10 +122,10 @@
     "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
-    "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "BtcUSD on Base is an ERC20_Bridged (Vyper) contract whose canonical issuance lives on the Bifrost network. The Base bridge token has 2 owners: a contract (0x26fce52a..., not a Safe) and an EOA (0xf98e8601...). The native BtcUSD token on Bifrost is a non-proxy mint/burn contract owned by EOA 0xa4247099...; the CDP vault system contracts are publicly undocumented, so the owner EOA is the observable native mint authority.",
+    "mintPath": "unknown",
+    "authorityPosture": "unknown",
+    "confidence": "unknown",
+    "summary": "BtcUSD on Base is an ERC20_Bridged (Vyper) contract whose canonical issuance lives on Bifrost. Base bridge-token owners are enumerable direct minters; on Bifrost, the native token's DEFAULT_ADMIN_ROLE EOA can grant the mint role but current MINTER_ROLE membership/CDP controller has not been enumerated.",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -223,21 +165,22 @@
         "chain": "bifrost",
         "address": "0xa4247099c1462f9d9121a1809d001c1a6cc70dd5",
         "label": "BtcUSD Bifrost token owner EOA",
-        "role": "direct-minter",
+        "role": "minter-admin",
         "authorityType": "eoa",
-        "directMintAbility": "direct",
+        "directMintAbility": "can-authorize",
         "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-20",
         "sources": [
           {"label": "BtcUSD Bifrost token on Bifrost explorer", "url": "https://explorer.mainnet.bifrostnetwork.com/address/0x6906ccda405926fc3f04240187dd4fad5df6d555"}
         ],
-        "evidence": "2026-07-20 via the Bifrost public EVM RPC (public-01.mainnet.bifrostnetwork.com/bifrost, now reachable): the native BtcUSD token 0x6906ccda405926fc3f04240187dd4fad5df6d555 is a 13.9KB non-proxy contract carrying mint()/burn() selectors whose owner() returns this EOA (no contract code). BTCfi's Liquity-v1-style CDP vault system contracts are not publicly documented and the token source is unverified, so the observable mint authority on Bifrost is this owner EOA; no separate vault contract could be identified or bounded."
+        "evidence": "2026-07-20 via the Bifrost public EVM RPC: the native BtcUSD token 0x6906ccda405926fc3f04240187dd4fad5df6d555 is a 13.9KB non-proxy contract whose owner() returns this EOA (no contract code). eth_call to mint(address,uint256) from this owner reverted AccessControlUnauthorizedAccount, so it is not a direct minter. However, hasRole(DEFAULT_ADMIN_ROLE, owner) returned true, getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE, and eth_call to grantRole(MINTER_ROLE, owner) from this owner succeeded. It can therefore authorize minters, while current MINTER_ROLE membership remains unenumerable because getRoleMemberCount reverts and the token source/CDP controller is unverified."
       },
       {
         "chain": "base",
         "address": "0x26fce52a077b4f1dbd7c920b6f23a1d9d18dddbe",
         "label": "BtcUSD Base bridge owner contract",
-        "role": "minter-admin",
+        "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": true,
@@ -252,7 +195,7 @@
         "chain": "base",
         "address": "0xf98e8601a1eef3bce943f9b002e83db8a0951aa5",
         "label": "BtcUSD Base bridge owner EOA",
-        "role": "minter-admin",
+        "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": true,
@@ -280,10 +223,17 @@
         "evidence": "At Base block 48621895, the EIP-1967 admin slot of the BtcUSD bridge proxy returned this deployed contract and the implementation slot returned 0x6e9070b8. 2026-07-20 follow-up: the admin is a 10.25KB contract whose slot-0 owner reads as EOA 0xf9d5bd4013c955175185e406b407d5cee90b0001 (no contract code), so the upgrade authority chain resolves to that EOA; the admin contract itself remains source-unverified, so its delay and signer policy are unknown."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "At Base block 48621895: BtcUSD (0xe4b20925...) is a TransparentUpgradeableProxy with EIP-1967 admin 0x55506bcc5fa9b2e702848aa110b5a6987a735060 and implementation 0x6e9070b8a8dbbc6cad6b6d029a5c6f6a653b74a9. get_owners() returned 0x26fce52a (contract) and 0xf98e8601 (EOA), both direct bridge-token mint owners. 2026-07-20 follow-up resolved both prior open questions: the Bifrost public EVM RPC (public-01.mainnet.bifrostnetwork.com/bifrost) is reachable, and the native BtcUSD token 0x6906ccda405926fc3f04240187dd4fad5df6d555 reads as a non-proxy mint/burn contract owned by EOA 0xa4247099c1462f9d9121a1809d001c1a6cc70dd5 (the CDP vault system contracts remain publicly undocumented and unverified, so the owner EOA is the observable mint authority); and the Base proxy admin's slot-0 owner reads as EOA 0xf9d5bd4013c955175185e406b407d5cee90b0001, resolving its ownership chain.",
-      "reviewer": "Codex CTRL batch 17; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+      "evidence": "At Base block 48621895, BtcUSD is a TransparentUpgradeableProxy with enumerable direct bridge-token mint owners 0x26fce52a and 0xf98e8601. The Base proxy admin and its slot-0 EOA owner are also identified. On Bifrost, native BtcUSD owner() returns 0xa4247099c1462f9d9121a1809d001c1a6cc70dd5; it is the DEFAULT_ADMIN_ROLE holder and can grant MINTER_ROLE, but cannot mint directly. Current MINTER_ROLE membership cannot be enumerated because getRoleMemberCount reverts, and the unverified token/undocumented CDP system leaves the native mint controller unresolved.",
+      "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Reconcile native Bifrost BtcUSD MINTER_ROLE grant/revoke history or enumerate its CDP vault controller and terminal authority; the DEFAULT_ADMIN owner can authorize minters but cannot mint directly."
+      ],
       "sources": [
         {
           "label": "BTCfi docs",

@@ -337,14 +337,19 @@
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-13",
-    "reviewer": "Codex mechanism review",
-    "rationale": "HONEY is minted and redeemed against an approved dollar-stablecoin reserve basket, with no borrower CDP position.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "small-2-free implementation review",
+    "rationale": "HONEY is minted and redeemed against an approved dollar-stablecoin reserve basket, with no borrower CDP position. The earliest indexed HONEY mint is on 2025-01-26, establishing the current deployment's implementation boundary.",
     "sources": [
       {
         "label": "Berachain HONEY docs",
         "url": "https://docs.berachain.com/learn/pol/tokens/honey"
+      },
+      {
+        "label": "HONEY first mint on Berachain",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/80094/etherscan/api?module=account&action=tokentx&contractaddress=0xfcbd14dc51f0a4d49d5e53c2e0950e0bc26d0dce&page=1&offset=1&sort=asc"
       }
     ]
-  }
+  },
+  "implementationLaunchDate": "2025-01-26"
 }

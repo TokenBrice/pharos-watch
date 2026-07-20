@@ -134,22 +134,52 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "unknown",
     "summary": "USDA is issued by Anzens, a FinCEN-registered MSB; minting and redemption run 1:1 through Anzens' centralized backend via KYC-verified bank transfers against USD cash and Treasuries custodied at BitGo Trust on Cardano.",
+    "economicCapSemantics": "unknown",
+    "reconciliation": "unknown",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "unknown",
+      "canChangeMintLogic": "unknown",
+      "controlRef": "Anzens issuance backend",
+      "observedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Koios policy_asset_list for USDA policy",
+          "url": "https://api.koios.rest/api/v1/policy_asset_list?_policy_id=fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456"
+        },
+        {
+          "label": "Cardano Token Registry — Anzens USDA",
+          "url": "https://raw.githubusercontent.com/cardano-foundation/cardano-token-registry/master/mappings/fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae45655534441.json"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Anzens issuance backend",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
+        "chain": "cardano",
         "canRaiseCap": "unknown",
+        "sources": [
+          {
+            "label": "Anzens USDA homepage",
+            "url": "https://www.anzens.com/"
+          },
+          {
+            "label": "Koios policy_asset_list for USDA policy",
+            "url": "https://api.koios.rest/api/v1/policy_asset_list?_policy_id=fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456"
+          }
+        ],
         "evidence": "Anzens mints/burns USDA 1:1 against segregated USD reserves and Treasuries custodied at BitGo Trust, gated by KYC bank transfers; no permissionless or user-collateralized mint route exists on the Cardano native policy."
       }
     ],
     "review": {
       "evidence": "Anzens (FinCEN MSB) is the sole issuer of USDA on Cardano; mint/redeem is centralized 1:1 via KYC bank transfers against BitGo Trust-custodied reserves. Policy ID fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456 confirmed via Koios as a PlutusV2 script (type=plutusV2, 154 mints / 123 burns confirmed, policy_asset_list verified). Minting transactions include uid metadata but no required_signers field is exposed in Koios tx_info; the PlutusV2 script validates internally with signing key(s) embedded as script parameters — not observable from chain state without full script parameter decoding. 2026-07-20 (Kimi P2 dc-2): Koios script_info confirms the minting policy is a plutusV2 script created in tx 77f120599d05ed304970bb9bda15f2a8f56aa6495178065444c601f0212e675a with the USDA asset name embedded; Anzens/EMURGO publish only custody-adjacent statements (EMURGO key-management blog; BitGo custodial services for USDA mint/burn operations) and no script parameterization, so the controlling signing keys remain unestablished from public sources.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-2 (lead usdc-circle)",
-      "reviewedAt": "2026-06-11",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Anzens USDA homepage",
@@ -170,7 +200,8 @@
       ],
       "unresolvedQuestions": [
         "Cardano PlutusV2 minting policy confirmed (policy ID fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456). The controlling signing key(s) are embedded as script parameters in the PlutusV2 bytecode and cannot be read from Koios/chain-state APIs without full script parameter decoding. Decode the script parameters or obtain Anzens' published policy key documentation to confirm authorityType and raise confidence."
-      ]
+      ],
+      "disposition": "unresolved"
     }
   },
   "reserves": [

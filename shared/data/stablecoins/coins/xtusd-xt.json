@@ -32,6 +32,18 @@
   "oracleRisk": {
     "tier": "opaque-or-unknown",
     "summary": "XT.com documents XTUSD as an XTDao vault system with collateral auctions, but its first-party announcement does not identify the price oracle, feed source, or failover path used for vault collateral on XSC; current oracle wiring remains unverified.",
+    "branchApplicability": {
+      "disposition": "unresolved",
+      "reviewedAt": "2026-07-20",
+      "reviewer": "small-2-free oracle review",
+      "rationale": "XT.COM's public material establishes the XTUSD vault context but does not enumerate the live collateral, oracle, liquidation, or failover branches on XSC. No branch inventory is inferred from the missing disclosure.",
+      "sources": [
+        {
+          "label": "XT.COM TAI to XTUSD announcement",
+          "url": "https://xtsupport.zendesk.com/hc/en-us/articles/8232048512921-XT-COM-Announcement-on-Supporting-TAI-Contract-Upgrade-and-Renaming-as-XTUSD"
+        }
+      ]
+    },
     "reviewedAt": "2026-07-14",
     "reviewer": "SONG-1 oracle evidence review",
     "confidence": "unknown",
@@ -145,34 +157,53 @@
     }
   ],
   "mintAuthority": {
-    "mintPath": "user-collateralized-governed",
-    "authorityPosture": "partially-bounded-admin",
+    "mintPath": "unknown",
+    "authorityPosture": "unknown",
     "confidence": "unknown",
-    "summary": "XTUSD is described by XT.com as an XTDao/MakerDAO-style vault stablecoin, with users minting against protocol collateral while DAO/protocol governance controls collateral parameters; the on-chain XSC admin remains unresolved.",
+    "summary": "XT.com historically described XTUSD as an XTDao/MakerDAO-style vault stablecoin, but the active XSC mint, governance, cap, and upgrade controls cannot be enumerated from current verifiable evidence.",
     "controls": [
       {
-        "label": "XTDao vault/protocol mint route",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "cap-limited",
+        "label": "XT.com-described XTDao vault route (current contracts unresolved)",
+        "role": "unknown",
+        "authorityType": "unknown",
+        "directMintAbility": "unknown",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
-        "capDescription": "XTUSD minting is described as a MakerDAO-style vault route bounded by collateral and auctions; on-chain XSC cap/admin verification remains unresolved.",
-        "evidence": "XT.com's TAI-to-XTUSD announcement describes XTUSD's economic system as an XTDao smart-contract project based on MakerDAO, with vault collateral and auctions used to keep enough collateral against outstanding debt."
+        "capDescription": "The issuer's historical announcement describes collateral and auctions, but no current XTDao mint-contract address or enforceable cap could be identified on XSC.",
+        "evidence": "XT.com's TAI-to-XTUSD announcement describes a historical XTDao smart-contract project based on MakerDAO. It does not identify the current mint contracts, role holders, or cap authority, so no live mint controller is attributed to this label."
       },
       {
-        "label": "XTDao collateral-parameter governance",
-        "role": "governor",
-        "authorityType": "dao-governor",
-        "directMintAbility": "parameter-only",
+        "label": "XTUSD token and undisclosed XTDao upgrade path",
+        "role": "proxy-admin",
+        "authorityType": "unknown",
+        "directMintAbility": "unknown",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
-        "evidence": "XT.com's announcement describes XTDao as the governance/protocol layer that can support multiple collateral assets over time, making the mint path user-collateralized but parameter-governed."
+        "evidence": "The readable XSC token at 0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0 has non-proxy bytecode and zero EIP-1967 implementation slot, but owner(), masterMinter(), AccessControl reads, and LayerZero endpoint() revert. Neither issuer materials nor public XSC tooling identify the separate XTDao contracts or any upgrade authority."
       }
     ],
+    "upgradeability": {
+      "model": "unknown",
+      "canChangeMintLogic": "unknown",
+      "controlRef": "XTUSD token and undisclosed XTDao upgrade path",
+      "observedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "XT.COM TAI to XTUSD announcement",
+          "url": "https://xtsupport.zendesk.com/hc/en-us/articles/8232048512921-XT-COM-Announcement-on-Supporting-TAI-Contract-Upgrade-and-Renaming-as-XTUSD"
+        },
+        {
+          "label": "XSC public RPC (datarpc1.xsc.pub)",
+          "url": "https://datarpc1.xsc.pub"
+        }
+      ]
+    },
+    "economicCapSemantics": "unknown",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "evidence": "2026-07-20 re-review: XSC (XT Smart Chain, chainId 520) DOES expose working public keyless RPC endpoints (https://datarpc1.xsc.pub and siblings, eth_chainId=0x208, latest block ~47.4M), superseding the earlier note that no public RPC exists. The XTUSD token contract 0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0 (CoinGecko-listed, XSC) is readable: 3,991-byte non-proxy bytecode (EIP-1967 impl slot zero), name() 'XT Stablecoin', symbol() 'XTUSD', decimals() 18, totalSupply() ~2,291,132.6. However the token exposes no enumerable administrative surface: owner(), masterMinter(), hasRole/getRoleMemberCount (AccessControl), and LayerZero endpoint() all revert, and a full-history eth_getLogs scan times out on the public nodes. The XTDao vault/mint contracts, cap authority, pause authority, and governance executor therefore remain unidentified: no contract addresses for the XTDao system are published in the reviewed issuer materials, and there is no public XSC block-explorer API to enumerate them. The mint-authority controls cannot be honestly resolved from verifiable evidence.",
-      "reviewer": "SONG-1 mint-control evidence review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+      "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
       "disposition": "unresolved",
       "sources": [
