@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
-import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
+import { createReportCardsFixedInput, type ReportCardsFixedInput } from "../report-cards-fixed-input";
+import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9-extension";
 import {
   buildSafetyScoreV9RetainedRedemptionRoutes,
   buildSafetyScoreV9RouteReviews,
 } from "../safety-score-v9-extension-routes";
 
 const NOW = Date.UTC(2026, 6, 13) / 1_000;
+const V9_FIXTURE_CLOCK = Date.UTC(2027, 0, 1) / 1_000;
 
 function supplyFullRow(overrides: Partial<RedemptionBackstopEntry> = {}): RedemptionBackstopEntry {
   return {
@@ -65,6 +68,86 @@ function fixedInputStub(row: RedemptionBackstopEntry | undefined): ReportCardsFi
     redemptionBackstopMap: row ? { [row.stablecoinId]: row } : {},
     pegDataById: {},
   } as unknown as ReportCardsFixedInput;
+}
+
+function capturedNavOutputInput(navObservedAtSec: number): ReportCardsFixedInput {
+  const route: ExitRouteObservation = {
+    routeId: "dex:usdaf-asymmetry:dl:ethereum%3Apool:ethereum%3Athbill-output",
+    routeFamily: "dex-amm",
+    scope: { kind: "chain-contract", chain: "ethereum", contractOrPoolId: "pool", protocol: "curve" },
+    requestedNotionalUsd: 1_000_000,
+    settlementHorizonSec: 300,
+    maxCostBps: 200,
+    executableUsd: 900_000,
+    completionRatio: 0.9,
+    output: { kind: "tracked-stablecoin", trackedAssetIds: ["thbill-theo"] },
+    evidenceKind: "reserve-based-amm-simulation",
+    confidence: "high",
+    scoreEligible: true,
+    observedAt: V9_FIXTURE_CLOCK,
+    freshnessSeconds: 0,
+    commonModeKeys: ["chain:ethereum", "protocol:curve"],
+  };
+  return createReportCardsFixedInput({
+    captureKind: "public-reconstruction",
+    activeAssetIds: ["usdaf-asymmetry"],
+    capturedAt: new Date(V9_FIXTURE_CLOCK * 1_000).toISOString(),
+    sourceGeneration: "report-cards:nav-output-fixture",
+    dexGenerationId: "dex-liquidity-nav-output-fixture",
+    redemptionGenerationId: "redemption-backstops-unavailable",
+    registryRevision: "registry:nav-output-fixture",
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+    clockSec: V9_FIXTURE_CLOCK,
+    updatedAt: V9_FIXTURE_CLOCK,
+    liquidityStale: false,
+    redemptionStale: true,
+    inputFreshness: {
+      dexLiquidity: { updatedAt: V9_FIXTURE_CLOCK, ageSeconds: 0, stale: false },
+      redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
+    },
+    pegDataById: {},
+    navPriceById: {
+      "thbill-theo": {
+        priceUsd: 1.0188,
+        sourceId: "defillama-contract",
+        observedAtSec: navObservedAtSec,
+        confidence: "high",
+      },
+    },
+    activeDepegPeakBpsById: {},
+    dexLiqMap: {
+      "usdaf-asymmetry": {
+        liquidityScore: 50,
+        concentrationHhi: 0.5,
+        poolCount: 1,
+        chainCount: 1,
+        exitRouteObservations: [route],
+        exitRouteObservationCoverage: {
+          status: "populated",
+          capabilityMatrixVersion: "p4a.4",
+          retainedPoolCount: 1,
+          observationCount: 1,
+          scoreEligibleObservationCount: 1,
+          scoreEligiblePoolCount: 1,
+          scoreEligibleCapabilityPoolCount: 1,
+          unsupportedPoolCount: 0,
+          evidenceCounts: { "reserve-based-amm-simulation": 1 },
+          unsupportedReasons: {},
+        },
+        methodologyVersion: "dex:fixture-v1",
+        updatedAt: V9_FIXTURE_CLOCK,
+      },
+    },
+    redemptionBackstopMap: {},
+    bluechipMap: {},
+    resolvedBlacklistStatuses: { "usdaf-asymmetry": false },
+    liveReserveMap: {},
+    liveReserveProvenanceMap: {},
+    chainCirculatingById: {},
+    dexDeploymentSupplyCoverageById: {},
+    collateralDriftCoins: [],
+    liveToFallbackCoins: [],
+  });
 }
 
 function liveDirectRow(routeStatusSource: RedemptionBackstopEntry["routeStatusSource"]): RedemptionBackstopEntry {
@@ -252,6 +335,76 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
         }),
       }),
     ]);
+  });
+
+  it("values a NAV output from the captured NAV price without creating a peg valuation", () => {
+    const fixedInput = fixedInputStub(undefined);
+    const route: ExitRouteObservation = {
+      routeId: "dex:asset-input:dl:ethereum%3Apool:ethereum%3Anav-output",
+      routeFamily: "dex-amm",
+      scope: { kind: "chain-contract", chain: "ethereum", contractOrPoolId: "pool", protocol: "curve" },
+      requestedNotionalUsd: 1_000_000,
+      settlementHorizonSec: 300,
+      maxCostBps: 200,
+      executableUsd: 900_000,
+      completionRatio: 0.9,
+      output: { kind: "tracked-stablecoin", trackedAssetIds: ["thbill-theo"] },
+      evidenceKind: "reserve-based-amm-simulation",
+      confidence: "high",
+      scoreEligible: true,
+      observedAt: NOW,
+      freshnessSeconds: 0,
+      commonModeKeys: ["chain:ethereum", "protocol:curve"],
+    };
+    (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
+      "asset-input": {
+        exitRouteObservations: [route],
+        exitRouteObservationCoverage: {
+          status: "populated",
+          capabilityMatrixVersion: "p4a.4",
+          retainedPoolCount: 1,
+          observationCount: 1,
+          scoreEligibleObservationCount: 1,
+          scoreEligiblePoolCount: 1,
+          scoreEligibleCapabilityPoolCount: 1,
+          unsupportedPoolCount: 0,
+          evidenceCounts: { "reserve-based-amm-simulation": 1 },
+          unsupportedReasons: {},
+        },
+      },
+    };
+    (fixedInput as { navPriceById: Record<string, unknown> }).navPriceById = {
+      "thbill-theo": {
+        priceUsd: 1.0188,
+        sourceId: "defillama-contract",
+        observedAtSec: NOW,
+        confidence: "high",
+      },
+    };
+
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "asset-input")[0]?.output?.valuation).toMatchObject({
+      basis: "nav",
+      referenceAssetKey: "thbill-theo",
+      unitValueUsd: 1.0188,
+      expectedUnitValueUsd: 1.0188,
+      sourceId: "defillama-contract",
+    });
+  });
+
+  it("includes captured NAV observations in V9 peg-source provenance", () => {
+    const olderInput = capturedNavOutputInput(V9_FIXTURE_CLOCK - 60);
+    const newerInput = capturedNavOutputInput(V9_FIXTURE_CLOCK - 30);
+    const olderExtension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(olderInput);
+    const newerExtension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(newerInput);
+
+    expect(newerInput.baseInputGenerationId).not.toBe(olderInput.baseInputGenerationId);
+    expect(newerExtension.sources.peg).toMatchObject({ observedAtSec: V9_FIXTURE_CLOCK - 30 });
+    expect(newerExtension.sources.peg.generationId).not.toBe(olderExtension.sources.peg.generationId);
+    expect(newerExtension.assets[0]?.routeReviews[0]?.output?.valuation).toMatchObject({
+      basis: "nav",
+      sourceId: "defillama-contract",
+      observedAtSec: V9_FIXTURE_CLOCK - 30,
+    });
   });
 
   it("derives nothing when the row already carries observations or is absent", () => {

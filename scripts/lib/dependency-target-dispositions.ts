@@ -40,24 +40,24 @@ function adapterReview(
  */
 export const DEPENDENCY_TARGET_DISPOSITIONS: readonly DependencyTargetDisposition[] = [
   {
-    targetId: "usdb-bridge",
-    expectedLifecycle: "pre-launch",
+    targetId: "cetes-etherfuse",
+    expectedLifecycle: "quarantined",
     action: "retain-reviewed-link",
-    reviewer: "Codex dependency review",
-    reviewedAt: "2026-07-12",
+    reviewer: "Codex Prompt 6b dependency review",
+    reviewedAt: "2026-07-20",
     sources: [
-      { label: "Frax frxUSD documentation", url: "https://docs.frax.com/protocol/assets/frxusd/frxusd" },
-      { label: "Bridge", url: "https://www.bridge.xyz" },
+      { label: "Etherfuse CETES stablebond page", url: "https://app.etherfuse.com/bonds/cetes" },
+      { label: "Brale MXNe", url: "https://brale.xyz/stablecoins/MXNe" },
     ],
     rationale:
-      "Frax reserve disclosures identify Bridge USDB as an upstream reserve asset. The canonical link remains correct while the tracked USDB entry stays pre-launch and unavailable to report-card scoring.",
+      "MXNe's reviewed 100% reserve slice names tracked Etherfuse CETES. CETES is quarantined while runtime supply coverage is unavailable, so retain the reserve link with unavailable-upstream scoring.",
   },
   {
     targetId: "rusd-reservoir",
-    expectedLifecycle: "quarantined",
+    expectedLifecycle: "active",
     action: "retain-reviewed-link",
-    reviewer: "Codex dependency review",
-    reviewedAt: "2026-07-12",
+    reviewer: "Codex Prompt 6b dependency review",
+    reviewedAt: "2026-07-20",
     sources: [
       { label: "Reservoir documentation", url: "https://docs.reservoir.xyz" },
       { label: "Reservoir proof of reserves", url: "https://app.reservoir.xyz/reserves" },
@@ -66,11 +66,27 @@ export const DEPENDENCY_TARGET_DISPOSITIONS: readonly DependencyTargetDispositio
       "srUSD and wrapped srUSD are direct claims on Reservoir rUSD. rUSD is tracked and active, but its current report card is NR, so the reviewed wrapper link must remain visible with unavailable-upstream scoring.",
   },
   {
-    targetId: "wtgxx-wisdomtree",
-    expectedLifecycle: "active",
+    targetId: "tbill-openeden",
+    expectedLifecycle: "quarantined",
     action: "retain-reviewed-link",
-    reviewer: "Codex dependency review",
-    reviewedAt: "2026-07-12",
+    reviewer: "Codex Prompt 6b dependency review",
+    reviewedAt: "2026-07-20",
+    sources: [
+      { label: "OpenEden TBILL", url: "https://openeden.com/tbill" },
+      {
+        label: "OpenEden USDO reserve assets",
+        url: "https://docs.openeden.com/usdo/usdo-token/reserve-assets",
+      },
+    ],
+    rationale:
+      "OpenEden's reviewed USDO reserve composition names tracked TBILL. TBILL is quarantined while runtime supply coverage is unavailable, so retain the reserve link with unavailable-upstream scoring.",
+  },
+  {
+    targetId: "wtgxx-wisdomtree",
+    expectedLifecycle: "quarantined",
+    action: "retain-reviewed-link",
+    reviewer: "Codex Prompt 6b dependency review",
+    reviewedAt: "2026-07-20",
     sources: [
       {
         label: "WisdomTree WTGXX",

@@ -1605,7 +1605,10 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     clockSec,
   );
   const pegObservedAtSec = maximumObservedAt(
-    Object.values(fixedInput.pegDataById).map((peg) => peg.priceObservedAt),
+    [
+      ...Object.values(fixedInput.pegDataById).map((peg) => peg.priceObservedAt),
+      ...Object.values(fixedInput.navPriceById ?? {}).map((navPrice) => navPrice.observedAtSec),
+    ],
     fixedInput.updatedAt,
     clockSec,
   );
@@ -1620,6 +1623,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
   });
   const pegGenerationDigest = digest("safety-score-v9.peg.v1", {
     pegDataById: fixedInput.pegDataById,
+    navPriceById: fixedInput.navPriceById ?? {},
     activeDepegPeakBpsById: fixedInput.activeDepegPeakBpsById,
   });
   const researchOverlaysGenerationDigest = digest("safety-score-v9.research-overlays.v3", {
