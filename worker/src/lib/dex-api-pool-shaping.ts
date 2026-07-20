@@ -321,6 +321,7 @@ function applyRaydiumPoolImpliedReferences(
       chainAddressToId,
       symbolToChainScopedIds,
     );
+    if (trackedAssetId) return tokens;
     resolved[position] = {
       address,
       symbol,
@@ -328,7 +329,6 @@ function applyRaydiumPoolImpliedReferences(
       balance,
       referencePriceUsd: implied,
       referencePriceSource: "pool-implied",
-      ...(trackedAssetId ? { trackedAssetId } : {}),
     };
   }
   return resolved;

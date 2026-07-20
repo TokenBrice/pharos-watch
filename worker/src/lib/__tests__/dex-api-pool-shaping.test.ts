@@ -330,8 +330,12 @@ describe("Raydium standard AMM execution gates", () => {
 describe("Raydium pool-implied counter-asset reference", () => {
   const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
   const WSOL = "So11111111111111111111111111111111111111112";
+  const USYC = "7LWanZteUKtvFjv4MHYgKXXdAuCQYFPJysL9pxxdRQGn";
   const POOL = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2";
-  const chainAddressToId = new Map([[`solana:${USDC}`, "usdc-circle"]]);
+  const chainAddressToId = new Map([
+    [`solana:${USDC}`, "usdc-circle"],
+    [`solana:${USYC}`, "usyc-hashnote"],
+  ]);
   const symbolToChainScopedIds = new Map<string, Map<string, string[]>>();
 
   function raydiumPool(overrides: Partial<DexApiPool> = {}): DexApiPool {
@@ -474,6 +478,25 @@ describe("Raydium pool-implied counter-asset reference", () => {
     expect(shaped?.ammExecutionModel?.tokens[0]).toMatchObject({
       referencePriceUsd: 76.1,
       referencePriceSource: "source-token-usd",
+    });
+  });
+
+  it("does not imply references for unresolved tracked assets", () => {
+    const shaped = modelFor(
+      raydiumPool({
+        price: 0.5,
+        tokens: [
+          { address: USYC, symbol: "USYC", decimals: 6, priceUsd: null },
+          { address: USDC, symbol: "USDC", decimals: 6, priceUsd: null },
+        ],
+        balances: [1_000_000, 500_000],
+      }),
+    );
+
+    expect(shaped?.ammExecutionModel).toBeUndefined();
+    expect(shaped?.executionCapabilityGate).toEqual({
+      family: "raydium-amm",
+      reason: "incomplete-exact-capture",
     });
   });
 });
