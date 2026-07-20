@@ -250,6 +250,51 @@ describe("evaluateV9Exit", () => {
     expect(trace?.capsApplied).toContain("zero-executable-capacity");
   });
 
+  it("floors a route that fills a vanishing fraction of the stress request", () => {
+    // The owner's motivating case: $13.93 against a $25M request scored 46.31,
+    // which is not an exit at any portfolio size. The cut is relative, so it
+    // scales with the asset instead of encoding a dollar constant.
+    const shoulder = (executableUsd: number) =>
+      route({
+        routeKey: "dex:thin-depth",
+        lane: "dex",
+        routeFamily: "dex-amm",
+        evidenceKind: "measured-executable-depth",
+        capacityCurve: [
+          {
+            requestedNotionalUsd: 25_000_000,
+            maxCostBps: 200,
+            executableUsd,
+            completionRatio: executableUsd / 25_000_000,
+            executionCostBps: 200,
+          },
+        ],
+      });
+    const evaluate = (executableUsd: number) =>
+      evaluateV9Exit({ circulatingUsd: 1_000_000_000, routes: [shoulder(executableUsd)] }, V9_CANDIDATE_POLICY_V1)
+        .routes.find((entry) => entry.routeKey === "dex:thin-depth");
+
+    const immaterial = evaluate(13.93);
+    expect(immaterial?.included).toBe(true);
+    expect(immaterial?.score).not.toBeCloseTo(46.31, 2);
+    expect(immaterial?.score).toBe(0);
+    expect(immaterial?.capsApplied).toContain("immaterial-executable-capacity");
+
+    // The floor is the ratio at which coverage stops moving the published
+    // score: (20 / 0.01) * 0.6 * 0.25 = 300 score per unit ratio, against the
+    // 0.005 rounding quantum, so ~1.667e-5 of the request — $416.67 here.
+    const exit = V9_CANDIDATE_POLICY_V1.policy.semantic.exit;
+    const anchor = exit.coverageRatioBreakpoints.find((point) => point.value > 0 && point.score > 0)!;
+    const floorRatio = 0.005 / ((anchor.score / anchor.value) * 0.6 * exit.componentWeights.capacity);
+    expect(floorRatio).toBeCloseTo(1.667e-5, 8);
+
+    // Real-but-thin capacity above the floor keeps its credit; the rule removes
+    // vanishing routes, not small ones.
+    const material = evaluate(25_000_000 * floorRatio * 1.5);
+    expect(material?.score).toBeGreaterThan(0);
+    expect(material?.capsApplied).not.toContain("immaterial-executable-capacity");
+  });
+
   it("does not award a diversification benefit off a zero-capacity independent route", () => {
     const primary = route();
     const zeroCapacityIndependent = route({

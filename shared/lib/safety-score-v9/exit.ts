@@ -87,6 +87,36 @@ function clampScore(value: number): number {
   return Math.max(0, Math.min(100, value));
 }
 
+/** Share of the capacity component carried by completion coverage rather than absolute size. */
+const COVERAGE_SHARE_OF_CAPACITY = 0.6;
+
+/** Half the 0.01 quantum `roundTraceScore` publishes route scores at. */
+const TRACE_SCORE_QUANTUM = 0.005;
+
+/**
+ * Completion ratio below which a route's own capacity measurement stops being
+ * observable in the score that measurement is supposed to drive.
+ *
+ * The coverage ladder anchors the bottom of its meaningful band at the first
+ * positive breakpoint and interpolates linearly to zero below it, so coverage
+ * contributes `(score/value) * ratio * COVERAGE_SHARE_OF_CAPACITY * weight` to
+ * the route ladder. Below the ratio where that falls under the published
+ * rounding quantum, the completion fact moves nothing, and the route is carried
+ * entirely by access, settlement, execution, output and a bounded-unknown cost
+ * — the exact substitution the zero-capacity floor already ruled cannot stand
+ * in for capacity.
+ *
+ * Derived from the policy rather than chosen, and expressed as a fraction of
+ * the stress request, so it scales with the asset and encodes no dollar
+ * constant. Exact zero is its degenerate case.
+ */
+function materialCompletionRatio(policy: V9ValidatedPolicyEnvelope["policy"]["semantic"]["exit"]): number {
+  const anchor = policy.coverageRatioBreakpoints.find((point) => point.value > 0 && point.score > 0);
+  if (anchor === undefined) return 0;
+  const scorePerRatio = (anchor.score / anchor.value) * COVERAGE_SHARE_OF_CAPACITY * policy.componentWeights.capacity;
+  return scorePerRatio > 0 ? TRACE_SCORE_QUANTUM / scorePerRatio : 0;
+}
+
 function roundTraceScore(value: number): number {
   return Math.round(value * 100) / 100;
 }
@@ -349,7 +379,8 @@ function evaluateRoute(
   const coverageScore = interpolateScore(completionRatio, policy.coverageRatioBreakpoints);
   const absoluteScore = interpolateScore(valuedExecutableUsd, policy.absoluteCapacityBreakpoints);
   const delayMultiplier = settlementDelayMultiplier(route.settlementDelaySec, policy.settlementDelayBands);
-  const capacity = (coverageScore * 0.6 + absoluteScore * 0.4) * delayMultiplier;
+  const capacity =
+    (coverageScore * COVERAGE_SHARE_OF_CAPACITY + absoluteScore * (1 - COVERAGE_SHARE_OF_CAPACITY)) * delayMultiplier;
   const components = {
     access: policy.accessScores[route.access],
     settlement: policy.settlementScores[route.settlement],
@@ -376,12 +407,18 @@ function evaluateRoute(
   const capsApplied: string[] = [];
   // Capacity carries only a minority of the component ladder, so access,
   // settlement, execution certainty, output quality and a bounded-unknown cost
-  // would otherwise carry a route that provably moves no value at the stress
-  // request. A route that clears nothing has no exit value, and the cost of a
-  // trade that cannot happen is not a mitigating fact: it floors at zero.
+  // would otherwise carry a route that moves no meaningful value at the stress
+  // request. A route that clears nothing — or so little that filling it is not
+  // an exit at any portfolio size — has no exit value, and the cost of a trade
+  // that cannot meaningfully happen is not a mitigating fact: it floors at
+  // zero. The cut is a fraction of what was actually asked for, so it scales
+  // with the asset; clearing exactly nothing is its degenerate case.
   if (valuedExecutableUsd === 0) {
     score = 0;
     capsApplied.push("zero-executable-capacity");
+  } else if (completionRatio < materialCompletionRatio(policy)) {
+    score = 0;
+    capsApplied.push("immaterial-executable-capacity");
   }
   const confidenceFactor = Math.min(
     policy.observationConfidenceFactors[route.observationConfidence],
