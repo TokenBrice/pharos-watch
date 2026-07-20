@@ -53,7 +53,7 @@ export default function DocsIndexPage() {
       variant="longform"
       containerClassName="mx-auto max-w-3xl"
       leadParagraphs={[
-        "Architecture, methodology, and design references for Pharos. Human-readable pages are paired with markdown negotiation for agent consumption.",
+        "Architecture, methodology, and design references for Pharos. Every page is also served as plain markdown for agents.",
       ]}
     >
       <div className="space-y-10">

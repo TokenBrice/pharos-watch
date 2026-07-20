@@ -158,12 +158,12 @@ export default createClientFeaturePage({
     path: "/compliance/",
     title: "Compliance Tracker",
     leadParagraphs: [
-      "EU MiCA authorization status and U.S. GENIUS Act implementation-watch signals across assessed stablecoins — sourced to public registers, regulator notices, and issuer disclosures.",
+      "Where each assessed stablecoin stands under EU MiCA and the U.S. GENIUS Act, sourced from public registers, regulator notices, and issuer disclosures.",
     ],
     headerSupplement: (
       <p className="pharos-lead hidden sm:block">
-        Compliance status here is narrow and source-backed. It does not prove reserve sufficiency, operational controls,
-        BSA/AML effectiveness, sanctions controls, lawful-order readiness, or venue offer/sale compliance.
+        Compliance status here is narrow and source-backed: it does not prove reserve sufficiency, operational
+        controls, or sanctions and AML effectiveness.
       </p>
     ),
   },

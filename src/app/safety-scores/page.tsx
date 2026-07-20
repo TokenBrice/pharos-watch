@@ -72,7 +72,7 @@ export default createClientFeaturePage({
       />
     ),
     leadParagraphs: [
-      "Independent stablecoin safety ratings: letter grades from A+ to F computed from live reserve feeds, transitive dependency scoring, and redemption-backstop blending — not just market-cap rankings.",
+      "Independent stablecoin safety ratings: letter grades from A+ to F, built from live reserve feeds, dependency scoring, and redemption backstops.",
     ],
   },
   afterClient: (
