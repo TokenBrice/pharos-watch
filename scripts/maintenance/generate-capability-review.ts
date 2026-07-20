@@ -708,8 +708,8 @@ function formatOptionalNumber(value: number | null): string {
   return value === null ? "unavailable" : formatNumber(value);
 }
 
-function escapeTable(value: string): string {
-  return value.replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
+export function escapeCapabilityReviewTableCell(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/\r?\n/g, " ").replace(/\|/g, "\\|");
 }
 
 function formatEpoch(value: number | null): string {
@@ -875,7 +875,7 @@ export function renderCapabilityReview(report: CapabilityReviewReport): string {
   );
   for (const item of report.capabilities) {
     lines.push(
-      `| ${escapeTable(item.capability.name)} | ${item.capability.decision.state} | ${escapeTable(trafficSummary(item))} | ${escapeTable(searchSummary(item))} | ${escapeTable(eventSummary(item))} | ${escapeTable(apiSummary(item))} | ${formatNumber(item.footprint.sourceFiles)}/${formatNumber(item.footprint.testFiles)}/${formatNumber(item.footprint.approximateLoc)} | ${formatNumber(item.activity.commits)}/${formatNumber(item.activity.fixes)} | ${item.capability.cronJobs.length} | ${item.reviewDue ? "yes" : "no"} |`,
+      `| ${escapeCapabilityReviewTableCell(item.capability.name)} | ${item.capability.decision.state} | ${escapeCapabilityReviewTableCell(trafficSummary(item))} | ${escapeCapabilityReviewTableCell(searchSummary(item))} | ${escapeCapabilityReviewTableCell(eventSummary(item))} | ${escapeCapabilityReviewTableCell(apiSummary(item))} | ${formatNumber(item.footprint.sourceFiles)}/${formatNumber(item.footprint.testFiles)}/${formatNumber(item.footprint.approximateLoc)} | ${formatNumber(item.activity.commits)}/${formatNumber(item.activity.fixes)} | ${item.capability.cronJobs.length} | ${item.reviewDue ? "yes" : "no"} |`,
     );
   }
 
