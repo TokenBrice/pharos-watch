@@ -1,7 +1,7 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { CIRCUIT_SOURCE, USER_AGENT } from "../../lib/constants";
-import { cgHeaders, cgUrl } from "../../lib/coingecko";
+import { cgHeaders, cgSimplePricePath, cgUrl } from "../../lib/coingecko";
 import { throwIfAborted } from "../../lib/abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
@@ -47,7 +47,7 @@ export async function fetchCoinGeckoMarketData(db: D1Database, signal?: AbortSig
   }
 
   const result = await fetchTextWithRetry(
-    cgUrl(`/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true&include_last_updated_at=true`, coingeckoApiKey ?? null),
+    cgUrl(cgSimplePricePath(`ids=${ids}&vs_currencies=usd&include_market_cap=true&include_last_updated_at=true`), coingeckoApiKey ?? null),
     {
       headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
       signal,

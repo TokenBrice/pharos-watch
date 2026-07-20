@@ -34,6 +34,7 @@ export interface DepegRow {
   peg_reference: number;
   source: string;
   close_reason?: string | null;
+  recovery_first_seen_at?: number | null;
   confirmation_sources: string | null;
   pending_reason: string | null;
   provenance_json?: string | null;
@@ -43,9 +44,9 @@ export interface DepegRow {
   provenance_replay_version?: string | null;
 }
 
-/** Column list (in DepegRow declaration order) for the 13-column depeg_events SELECT shape. */
+/** Column list for the detector's depeg_events SELECT shape. */
 export const DEPEG_EVENTS_DEPEGROW_COLUMNS =
-  "id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source";
+  "id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source, recovery_first_seen_at";
 
 export interface DexPriceRow {
   stablecoin_id: string;
@@ -56,16 +57,15 @@ export interface DexPriceRow {
   updated_at: number;
 }
 
-export type PendingDepegReasonFlag = "large-cap" | "low-confidence" | "extreme-move";
+export type PendingDepegReasonFlag = "confirmation-window" | "large-cap" | "low-confidence" | "extreme-move";
 export const NATIVE_ORIGIN_PENDING_REASON_FLAG = "native-origin";
 /**
  * Stored reason is a "+"-joined list of flags in canonical order:
- * extreme-move > large-cap > low-confidence.
- * Examples: "large-cap", "large-cap+low-confidence", "extreme-move".
+ * confirmation-window > extreme-move > large-cap > low-confidence.
  */
 export type PendingDepegReason = string;
 
-const REASON_ORDER: PendingDepegReasonFlag[] = ["extreme-move", "large-cap", "low-confidence"];
+const REASON_ORDER: PendingDepegReasonFlag[] = ["confirmation-window", "extreme-move", "large-cap", "low-confidence"];
 
 export function buildPendingReason(flags: Iterable<PendingDepegReasonFlag>): PendingDepegReason {
   const set = new Set(flags);
@@ -76,7 +76,7 @@ export function parsePendingReason(reason: PendingDepegReason | null | undefined
   const result = new Set<PendingDepegReasonFlag>();
   if (!reason) return result;
   for (const part of reason.split("+")) {
-    if (part === "large-cap" || part === "low-confidence" || part === "extreme-move") {
+    if (part === "confirmation-window" || part === "large-cap" || part === "low-confidence" || part === "extreme-move") {
       result.add(part);
     }
   }

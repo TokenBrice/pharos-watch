@@ -4,7 +4,7 @@ import { normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { cgHeaders, cgUrl } from "../../lib/coingecko";
+import { cgHeaders, cgSimplePricePath, cgUrl } from "../../lib/coingecko";
 import { DEFILLAMA_BASE, USER_AGENT } from "../../lib/constants";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { throwIfAborted } from "../../lib/abort";
@@ -167,7 +167,7 @@ async function fetchCurrentCoinGeckoMarketCaps(
 
   const result = await fetchTextWithRetry(
     cgUrl(
-      `/simple/price?ids=${encodeURIComponent(geckoIds.join(","))}&vs_currencies=usd&include_market_cap=true`,
+      cgSimplePricePath(`ids=${encodeURIComponent(geckoIds.join(","))}&vs_currencies=usd&include_market_cap=true`),
       coingeckoApiKey ?? null,
     ),
     {

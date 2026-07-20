@@ -1,6 +1,6 @@
 import type { PegRateSource } from "@shared/lib/peg-rates";
 import type { PegAssetBase, StablecoinMeta } from "@shared/types/core";
-import type { DepegEvent, DepegEventCloseReason } from "@shared/types/market";
+import type { DepegEventCloseReason } from "@shared/types/market";
 import type { DepegDirection } from "../../lib/depeg-signals";
 import type {
   DepegRow,
@@ -64,7 +64,6 @@ export interface PendingDepegCommandPayload {
 }
 
 export type DepegPersistenceCommand =
-  | { type: "insert-live"; event: DepegEvent }
   | { type: "upsert-pending"; payload: PendingDepegCommandPayload }
   | {
       type: "close-event";
@@ -74,6 +73,8 @@ export type DepegPersistenceCommand =
       closeReason: DepegEventCloseReason;
     }
   | { type: "update-peak"; id: number; peakDeviationBps: number; peakPrice: number | null }
+  | { type: "begin-recovery"; id: number; firstSeenAt: number }
+  | { type: "clear-recovery"; id: number }
   | { type: "delete-event"; id: number };
 
 export interface DepegAssetDecision {

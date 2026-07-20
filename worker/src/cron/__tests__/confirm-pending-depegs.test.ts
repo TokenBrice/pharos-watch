@@ -116,18 +116,21 @@ interface OppositeDirectionCase {
 }
 
 function makePendingRow(overrides: Partial<PendingRow> = {}): PendingRow {
+  const firstSeenAt = overrides.first_seen_at ?? 0;
+  const firstSeenBps = overrides.first_seen_bps ?? -200;
+  const firstPrice = overrides.first_price ?? 0.98;
   return {
     id: 1,
     stablecoin_id: "usdt-tether",
     symbol: "USDT",
     peg_type: "peggedUSD",
     direction: "below",
-    first_seen_bps: -200,
-    first_seen_at: 0,
-    first_price: 0.98,
-    last_seen_bps: null,
-    last_seen_at: null,
-    last_price: null,
+    first_seen_bps: firstSeenBps,
+    first_seen_at: firstSeenAt,
+    first_price: firstPrice,
+    last_seen_bps: firstSeenBps,
+    last_seen_at: firstSeenAt + DEPEG_PENDING_MIN_AGE_SEC,
+    last_price: firstPrice,
     peak_seen_bps: null,
     peak_price: null,
     peg_reference: 1,
@@ -425,7 +428,7 @@ describe("confirmPendingDepegs", () => {
     expect(deletes).toEqual([21]);
   });
 
-  it("does not clear BRZ pending rows as recovered when the native quote is in the secondary-confirm zone", async () => {
+  it("clears BRZ pending rows when the native quote is below the full confirmation bar", async () => {
     const nowSec = 1_700_000_000;
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
     vi.spyOn(console, "log").mockImplementation(() => {});
@@ -476,13 +479,13 @@ describe("confirmPendingDepegs", () => {
       .filter((stmt) => stmt.sql.startsWith("DELETE FROM depeg_pending"))
       .map((stmt) => stmt.boundValues[0]);
 
-    expect(inserts).toHaveLength(1);
+    expect(inserts).toHaveLength(0);
     expect(deletes).toEqual([22]);
-    expect(outcome?.boundValues[15]).toBe("promoted");
-    expect(outcome?.boundValues[21]).toBe("confirmed-by:native:brl");
+    expect(outcome?.boundValues[15]).toBe("recovered");
+    expect(outcome?.boundValues[21]).toBe("native-peg-recovered");
   });
 
-  it("does not promote native-origin pending rows from USD-denominated hard sources", async () => {
+  it("promotes native-origin rows only from the sustained native-domain signal", async () => {
     const nowSec = 1_700_000_000;
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
     vi.spyOn(console, "log").mockImplementation(() => {});
@@ -549,10 +552,13 @@ describe("confirmPendingDepegs", () => {
     );
 
     expect(fetchWithRetry).not.toHaveBeenCalled();
-    expect(batchExecute).not.toHaveBeenCalled();
+    const insert = lastBatchStatements().find((stmt) => stmt.sql.startsWith("INSERT INTO depeg_events"));
+    expect(insert?.boundValues[4]).toBe(-242);
+    expect(insert?.boundValues[7]).toBe(0.9758);
+    expect(insert?.boundValues[9]).toBe("temporal:15m");
   });
 
-  it("keeps native-origin pending rows in native units and does not promote them from the same direct quote", async () => {
+  it("promotes a native-origin row after the native quote persists for the full window", async () => {
     const nowSec = 1_700_000_000;
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
     vi.spyOn(console, "log").mockImplementation(() => {});
@@ -600,7 +606,10 @@ describe("confirmPendingDepegs", () => {
     );
 
     expect(fetchWithRetry).not.toHaveBeenCalled();
-    expect(batchExecute).not.toHaveBeenCalled();
+    const insert = lastBatchStatements().find((stmt) => stmt.sql.startsWith("INSERT INTO depeg_events"));
+    expect(insert?.boundValues[4]).toBe(-242);
+    expect(insert?.boundValues[7]).toBe(0.9758);
+    expect(insert?.boundValues[9]).toBe("temporal:15m");
   });
 
   it("promotes or rejects pending rows based on secondary-source agreement", async () => {
@@ -725,7 +734,7 @@ describe("confirmPendingDepegs", () => {
       0.975,
       0.95,
       1,
-      "coingecko-confirm",
+      "temporal:15m+coingecko-confirm",
       "large-cap",
     ]);
     expect(inserts[1]?.boundValues).toEqual([
@@ -738,10 +747,49 @@ describe("confirmPendingDepegs", () => {
       0.98,
       0.94,
       1,
-      "dex:curve+dex:uniswap",
+      "temporal:15m+dex:curve+dex:uniswap",
       "large-cap",
     ]);
     expect(deletes).toEqual([10, 11, 12, 13]);
+  });
+
+  it("does not promote before threshold observations span the full window", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.mocked(fetchWithRetry).mockResolvedValue(new Response(JSON.stringify({
+      tether: { usd: 0.95, last_updated_at: nowSec - 30 },
+    }), { status: 200 }));
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 15,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            first_seen_bps: -240,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.976,
+            last_seen_bps: -240,
+            last_seen_at: nowSec - 120,
+            last_price: 0.976,
+          }),
+        ],
+      }),
+      [
+        makeAuthoritativeUsdAsset(nowSec, {
+          id: "usdt-tether",
+          symbol: "USDT",
+          geckoId: "tether",
+          price: 0.94,
+        }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
+    expect(batchExecute).not.toHaveBeenCalled();
   });
 
   it("treats missing CoinGecko confirmation timestamps as insufficient evidence", async () => {
@@ -779,7 +827,7 @@ describe("confirmPendingDepegs", () => {
     expect(batchExecute).not.toHaveBeenCalled();
   });
 
-  it("treats missing DefiLlama confirmation timestamps as insufficient evidence", async () => {
+  it("does not query the DefiLlama CoinGecko mirror for confirmation", async () => {
     const nowSec = 1_700_000_000;
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
     vi.spyOn(console, "log").mockImplementation(() => {});
@@ -814,11 +862,7 @@ describe("confirmPendingDepegs", () => {
       ],
     );
 
-    expect(fetchWithRetry).toHaveBeenCalledWith(
-      expect.stringContaining("coins.llama.fi/prices/current/coingecko:tether"),
-      expect.anything(),
-      1,
-    );
+    expect(fetchWithRetry).not.toHaveBeenCalled();
     expect(batchExecute).not.toHaveBeenCalled();
   });
 
@@ -1019,7 +1063,7 @@ describe("confirmPendingDepegs", () => {
     expect(outcome.boundValues[0]).toBe(64);
     expect(outcome.boundValues[15]).toBe("promoted");
     expect(outcome.boundValues[17]).toContain("dex:curve+dex:uniswap");
-    expect(outcome.boundValues[21]).toBe("confirmed-by:dex:curve+dex:uniswap");
+    expect(outcome.boundValues[21]).toBe("confirmed-by:temporal:15m+dex:curve+dex:uniswap");
   });
 
   it.each([
@@ -1215,24 +1259,10 @@ describe("confirmPendingDepegs", () => {
     }
   });
 
-  it("uses DefiLlama as the off-chain confirmer when the primary price already comes from CoinGecko", async () => {
+  it("does not treat DefiLlama's CoinGecko mirror as independent confirmation", async () => {
     const nowSec = 1_700_000_000;
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
     vi.spyOn(console, "log").mockImplementation(() => {});
-
-    vi.mocked(fetchWithRetry).mockImplementation(async (url: string) => {
-      if (url.includes("coins.llama.fi/prices/current/coingecko:tether")) {
-        return new Response(JSON.stringify({
-          coins: {
-            "coingecko:tether": { price: 0.95, timestamp: nowSec - 30 },
-          },
-        }), { status: 200 });
-      }
-      if (url.includes("api.coingecko.com")) {
-        throw new Error("should not query CoinGecko for CoinGecko-primary confirmation");
-      }
-      return null;
-    });
 
     await confirmPendingDepegs(
       makeDb({
@@ -1261,36 +1291,8 @@ describe("confirmPendingDepegs", () => {
       ],
     );
 
-    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
-    expect(fetchWithRetry).toHaveBeenCalledWith(
-      expect.stringContaining("coins.llama.fi/prices/current/coingecko:tether"),
-      expect.objectContaining({ headers: { "User-Agent": "Pharos/1.0 (stablecoin analytics)" } }),
-      1,
-    );
-
-    expect(batchExecute).toHaveBeenCalledTimes(1);
-    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
-    const prepared = statements as PreparedStatementWithMeta[];
-    const inserts = prepared.filter((stmt) => stmt.sql.startsWith("INSERT INTO depeg_events"));
-    const deletes = prepared
-      .filter((stmt) => stmt.sql.startsWith("DELETE FROM depeg_pending"))
-      .map((stmt) => stmt.boundValues[0]);
-
-    expect(inserts).toHaveLength(1);
-    expect(inserts[0]?.boundValues).toEqual([
-      "usdt-tether",
-      "USDT",
-      "peggedUSD",
-      "below",
-      -500,
-      nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
-      0.976,
-      0.95,
-      1,
-      "defillama-confirm",
-      "large-cap",
-    ]);
-    expect(deletes).toEqual([31]);
+    expect(fetchWithRetry).not.toHaveBeenCalled();
+    expect(batchExecute).not.toHaveBeenCalled();
   });
 
   it("promotes a refreshed pending row using the worst stored or confirmer peak state", async () => {
@@ -1338,7 +1340,7 @@ describe("confirmPendingDepegs", () => {
       0.98,
       0.95,
       1,
-      "coingecko-confirm",
+      "temporal:15m+coingecko-confirm",
       "large-cap",
     ]);
   });
@@ -2185,7 +2187,7 @@ describe("confirmPendingDepegs", () => {
     // [5]=startedAt, [6]=startPrice, [7]=peakPrice, [8]=pegReference,
     // [9]=confirmationSources, [10]=pendingReason
     const bound = inserts[0]!.boundValues;
-    expect(bound[9]).toBe("dex:curve+dex:uniswap");
+    expect(bound[9]).toBe("temporal:15m+dex:curve+dex:uniswap");
     expect(bound[10]).toBe("large-cap");
   });
 });

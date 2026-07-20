@@ -162,6 +162,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0216     | `0216_telegram_authoritative_retention_indexes.sql`          | Add terminal-source and job-target-item indexes for bounded authoritative Telegram workflow and replay retention                                        |
 | 0217     | `0217_telegram_hot_family_subscription_indexes.sql`          | Add partial coin/snooze/chat covering indexes for hot DEWS, depeg, and safety direct-fanout reads                                                         |
 | 0218     | `0218_authoritative_vault_rates.sql`                         | Add durable last-good vault-rate cache for authoritative parent-derived pricing degradation                                                              |
+| 0219     | `0219_depeg_recovery_confirmation.sql`                       | Add the first-seen recovery timestamp used to require a persistent 15-minute recovery before closing a live depeg event                                   |
 
 ## Retired Individual Migrations
 
@@ -263,6 +264,7 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0216_telegram_authoritative_retention_indexes.sql`: roll back retention behavior by restoring the prior Worker. Keep the additive indexes; older Workers ignore them and dropping them would only add D1 scan pressure during rollback.
 - `0217_telegram_hot_family_subscription_indexes.sql`: roll back source-specific candidate planning by restoring the prior Worker. Keep the additive partial indexes until measured production reads show their write/storage cost exceeds the fanout benefit.
 - `0218_authoritative_vault_rates.sql`: roll back cached-rate degradation by restoring the prior Worker; reads/writes tolerate a missing table, so the additive table can stay (or be dropped later in a coordinated cleanup) without affecting older Workers.
+- `0219_depeg_recovery_confirmation.sql`: roll back recovery confirmation by restoring the prior Worker. Keep the nullable timestamp column; older Workers ignore it, and retained values are inert until a confirming Worker is redeployed.
 
 ## Rollback Procedure
 

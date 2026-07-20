@@ -41,6 +41,7 @@ export interface DepegAlertPayload {
   deviationBps: number;
   price: number;
   pegReference: number;
+  priceCurrency?: string;
   reopenedAfterMinutes?: number;
   contextLine?: string;
 }
@@ -51,6 +52,7 @@ export interface DepegResolved {
   durationMinutes: number;
   peakDeviationBps: number;
   recoveryPrice: number | null;
+  priceCurrency?: string;
   contextLine?: string;
 }
 
@@ -62,6 +64,7 @@ export interface DepegWorsening {
   currentDeviationBps: number;
   price: number;
   pegReference: number;
+  priceCurrency?: string;
   contextLine?: string;
 }
 
@@ -125,19 +128,25 @@ function formatDurationMinutes(durationMinutes: number): string {
   return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
 }
 
+function formatPrice(value: number, currency = "USD", fractionDigits = 4): string {
+  const prefix = ({ USD: "$", EUR: "€", GBP: "£", JPY: "¥" } as const)[currency as "USD" | "EUR" | "GBP" | "JPY"]
+    ?? `${currency} `;
+  return `${prefix}${value.toFixed(fractionDigits)}`;
+}
+
 export function formatDepegTriggeredLine(e: DepegAlertPayload): string {
   const pct = (e.deviationBps / 100).toFixed(1);
   const glyph = DEPEG_DIRECTION_GLYPH[e.direction];
   const recovery = e.reopenedAfterMinutes != null
     ? `\nRe-depegged after ${formatDurationMinutes(e.reopenedAfterMinutes)} recovery`
     : "";
-  return `${glyph} <b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg by ${pct}% (${e.deviationBps} bps)\nPrice: $${e.price.toFixed(4)} (peg: $${e.pegReference.toFixed(2)})${recovery}${formatContextLine(e.contextLine)}`;
+  return `${glyph} <b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg by ${pct}% (${e.deviationBps} bps)\nPrice: ${formatPrice(e.price, e.priceCurrency)} (peg: ${formatPrice(e.pegReference, e.priceCurrency, 2)})${recovery}${formatContextLine(e.contextLine)}`;
 }
 
 export function formatDepegResolvedLine(e: DepegResolved): string {
   const duration = formatDurationMinutes(e.durationMinutes);
   const recoveryLine = e.recoveryPrice != null
-    ? `Recovery price: $${e.recoveryPrice.toFixed(4)}`
+    ? `Recovery price: ${formatPrice(e.recoveryPrice, e.priceCurrency)}`
     : "Recovery evidence: native peg quote";
   return `<b>${escapeHtml(e.symbol)}</b>\nDuration: ${duration}\nPeak deviation: ${(e.peakDeviationBps / 100).toFixed(1)}%\n${recoveryLine}${formatContextLine(e.contextLine)}`;
 }
@@ -149,7 +158,7 @@ export function formatDepegWorseningLine(e: DepegWorsening): string {
   const deltaPct = (deltaBps / 100).toFixed(1);
   const deltaStr = deltaBps >= 0 ? `+${deltaPct}%` : `${deltaPct}%`;
   const glyph = DEPEG_DIRECTION_GLYPH[e.direction];
-  return `${glyph} <b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg worsening\nDeviation: ${prev}% → ${curr}% (${deltaStr})\nPrice: $${e.price.toFixed(4)} (peg: $${e.pegReference.toFixed(2)})${formatContextLine(e.contextLine)}`;
+  return `${glyph} <b>${escapeHtml(e.symbol)}</b> — ${e.direction} peg worsening\nDeviation: ${prev}% → ${curr}% (${deltaStr})\nPrice: ${formatPrice(e.price, e.priceCurrency)} (peg: ${formatPrice(e.pegReference, e.priceCurrency, 2)})${formatContextLine(e.contextLine)}`;
 }
 
 export function formatSafetyLine(e: SafetyChange): string {

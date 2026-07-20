@@ -220,8 +220,7 @@ describe("buildTelegramDispatchEvents", () => {
     );
 
     expect(events.depegResolved).toEqual([]);
-    expect(events.depegTriggered).toHaveLength(1);
-    expect(events.depegTriggered[0].reopenedAfterMinutes).toBe(10);
+    expect(events.depegTriggered).toEqual([]);
   });
 
   it("emits depeg worsening only when a supported subscriber step is crossed", async () => {

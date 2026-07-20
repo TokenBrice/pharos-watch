@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.098",
+    title: "Depeg onset and recovery require persistent confirmation",
+    date: "2026-07-20",
+    effectiveAt: 1784529544,
+    summary:
+      "Every live depeg onset now waits beyond the full trigger threshold for 15 minutes, while recovery requires a separate 15-minute stay inside a tighter half-threshold band before an incident closes.",
+    impact: [
+      "Small-cap, multi-source, extreme, direction-change, and native-currency onsets all enter `depeg_pending`; no source combination bypasses the 15-minute temporal window",
+      "Secondary confirmation uses the full trigger threshold, and DefiLlama's `coingecko:{id}` mirror no longer counts as independent evidence for a CoinGecko-family primary",
+      "Live recovery begins only within 50% of the trigger threshold and persists `recovery_first_seen_at`; deadband or renewed-depeg observations reset the timer before closure",
+      "Trigger comparisons use unrounded basis-point deviation while persisted and displayed values remain rounded",
+      "Telegram depeg dispatch deduplicates at stablecoin incident level and formats native-domain EUR, GBP, and JPY prices in their stored currency",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.097",
     title: "Fiat FX references and PegScore coverage become explicit",
     date: "2026-07-18",

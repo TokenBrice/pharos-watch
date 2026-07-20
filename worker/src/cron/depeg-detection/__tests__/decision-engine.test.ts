@@ -69,7 +69,7 @@ function makeExistingEvent(overrides: Partial<DepegRow> = {}): DepegRow {
 }
 
 describe("decideDepegAsset", () => {
-  it("returns a live insert command for an authoritative small-cap depeg", () => {
+  it("routes an authoritative small-cap depeg through pending confirmation", () => {
     const decision = decideDepegAsset({
       now: 1_750_000_000,
       asset: makeAsset(),
@@ -82,16 +82,20 @@ describe("decideDepegAsset", () => {
     expect(decision.trackedCoinId).toBe("usdt-tether");
     expect(decision.commands).toHaveLength(1);
     expect(decision.commands[0]).toMatchObject({
-      type: "insert-live",
-      event: {
+      type: "upsert-pending",
+      payload: {
         stablecoinId: "usdt-tether",
         direction: "below",
-        peakDeviationBps: -200,
-        startPrice: 0.98,
+        bps: -200,
+        price: 0.98,
         pegReference: 1,
+        reason: "confirmation-window",
       },
     });
-    expect(decision.diagnostics).toHaveLength(0);
+    expect(decision.diagnostics).toEqual([{
+      level: "log",
+      message: "[depeg] Pending confirmation for USDT: -200bps (confirmation-window)",
+    }]);
   });
 
   it("returns pending command diagnostics without logging as a side effect", () => {
@@ -115,13 +119,13 @@ describe("decideDepegAsset", () => {
           stablecoinId: "usdt-tether",
           direction: "below",
           bps: -200,
-          reason: "large-cap",
+          reason: "confirmation-window+large-cap",
         },
       });
       expect(decision.diagnostics).toEqual([
         {
           level: "log",
-          message: "[depeg] Pending confirmation for USDT: -200bps (supply $2.0B)",
+          message: "[depeg] Pending confirmation for USDT: -200bps (confirmation-window+large-cap)",
         },
       ]);
       expect(logSpy).not.toHaveBeenCalled();
@@ -154,12 +158,12 @@ describe("decideDepegAsset", () => {
         stablecoinId: "usdt-tether",
         direction: "below",
         bps: -250,
-        reason: "large-cap",
+        reason: "confirmation-window+large-cap",
       },
     });
   });
 
-  it("keeps strong near-threshold evidence on the immediate live path", () => {
+  it("requires the confirmation window even with strong primary evidence", () => {
     const decision = decideDepegAsset({
       now: 1_750_000_000,
       asset: makeAsset({
@@ -177,16 +181,30 @@ describe("decideDepegAsset", () => {
 
     expect(decision.commands).toHaveLength(1);
     expect(decision.commands[0]).toMatchObject({
-      type: "insert-live",
-      event: {
+      type: "upsert-pending",
+      payload: {
         stablecoinId: "usdt-tether",
         direction: "below",
-        peakDeviationBps: -150,
+        bps: -150,
+        reason: "confirmation-window",
       },
     });
   });
 
-  it("opens a fresh independent multi-source extreme move for non-large-cap assets", () => {
+  it("does not start confirmation when only the rounded value reaches the threshold", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_000,
+      asset: makeAsset({ price: 0.99005 }),
+      meta: usdMeta,
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+    });
+
+    expect(decision.commands).toEqual([]);
+  });
+
+  it("requires the confirmation window for independent multi-source extreme moves", () => {
     const decision = decideDepegAsset({
       now: 1_750_000_000,
       asset: makeAsset({
@@ -214,15 +232,16 @@ describe("decideDepegAsset", () => {
     expect(decision.trackedCoinId).toBe("msusd-main-street");
     expect(decision.commands).toHaveLength(1);
     expect(decision.commands[0]).toMatchObject({
-      type: "insert-live",
-      event: {
+      type: "upsert-pending",
+      payload: {
         stablecoinId: "msusd-main-street",
         direction: "below",
-        peakDeviationBps: -8000,
-        startPrice: 0.2,
+        bps: -8000,
+        price: 0.2,
+        reason: "confirmation-window+extreme-move+low-confidence",
       },
     });
-    expect(decision.diagnostics).toHaveLength(0);
+    expect(decision.diagnostics).toHaveLength(1);
   });
 
   it("keeps same-family extreme moves pending even when two source labels agree", () => {
@@ -249,7 +268,7 @@ describe("decideDepegAsset", () => {
         stablecoinId: "usdt-tether",
         direction: "below",
         bps: -8000,
-        reason: "extreme-move+low-confidence",
+        reason: "confirmation-window+extreme-move+low-confidence",
       },
     });
   });
@@ -281,12 +300,12 @@ describe("decideDepegAsset", () => {
     expect(decision.diagnostics).toEqual([
       {
         level: "warn",
-        message: "[depeg] Suppressed live depeg mutation for BRZ: primary=156bps but direct BRL quote=-50bps",
+        message: "[depeg] Suppressed live depeg mutation for BRZ: primary=156bps but BRL quote=-50bps",
       },
     ]);
   });
 
-  it("opens a supported native-peg depeg when primary peer reference is inside threshold", () => {
+  it("routes a supported native-peg depeg through pending confirmation", () => {
     const decision = decideDepegAsset({
       now: 1_750_000_000,
       asset: makeAsset({
@@ -314,19 +333,20 @@ describe("decideDepegAsset", () => {
     expect(decision.trackedCoinId).toBe("brz-transfero");
     expect(decision.commands).toHaveLength(1);
     expect(decision.commands[0]).toMatchObject({
-      type: "insert-live",
-      event: {
+      type: "upsert-pending",
+      payload: {
         stablecoinId: "brz-transfero",
         direction: "below",
-        peakDeviationBps: -242,
-        startPrice: 0.9758,
+        bps: -242,
+        price: 0.9758,
         pegReference: 1,
+        reason: "confirmation-window+native-origin",
       },
     });
     expect(decision.diagnostics).toEqual([
       {
         level: "log",
-        message: "[depeg] Opened native-peg depeg for BRZ: primary=-37bps, direct BRL quote=-242bps",
+        message: "[depeg] Pending native-peg confirmation for BRZ: -242bps against BRL quote",
       },
     ]);
   });
@@ -367,13 +387,13 @@ describe("decideDepegAsset", () => {
         bps: -242,
         price: 0.9758,
         pegReference: 1,
-        reason: "large-cap+native-origin",
+        reason: "confirmation-window+large-cap+native-origin",
       },
     });
     expect(decision.diagnostics).toEqual([
       {
         level: "log",
-        message: "[depeg] Pending native-peg confirmation for BRZ: -242bps against direct BRL quote",
+        message: "[depeg] Pending native-peg confirmation for BRZ: -242bps against BRL quote",
       },
     ]);
   });
@@ -414,13 +434,13 @@ describe("decideDepegAsset", () => {
         bps: -8000,
         price: 0.2,
         pegReference: 1,
-        reason: "extreme-move+native-origin",
+        reason: "confirmation-window+extreme-move+native-origin",
       },
     });
     expect(decision.diagnostics).toEqual([
       {
         level: "log",
-        message: "[depeg] Pending native-peg confirmation for BRZ: -8000bps against direct BRL quote",
+        message: "[depeg] Pending native-peg confirmation for BRZ: -8000bps against BRL quote",
       },
     ]);
   });
@@ -454,12 +474,12 @@ describe("decideDepegAsset", () => {
     expect(decision.diagnostics).toEqual([
       {
         level: "warn",
-        message: "[depeg] Kept BRZ open despite primary recovery: primary=0bps but direct BRL quote=200bps",
+        message: "[depeg] Kept BRZ open despite primary recovery: primary=0bps but BRL quote=200bps",
       },
     ]);
   });
 
-  it("closes a native-peg event with the recovered native quote", () => {
+  it("closes a native-peg event after sustained recovery in native units", () => {
     const decision = decideDepegAsset({
       now: 1_750_000_900,
       asset: makeAsset({
@@ -475,6 +495,7 @@ describe("decideDepegAsset", () => {
         start_price: 0.9758,
         peak_price: 0.9758,
         peg_reference: 1,
+        recovery_first_seen_at: 1_750_000_000,
       }),
       pegRates: { peggedREAL: 0.191895 },
       pegRateSources: { peggedREAL: "median" },
@@ -483,7 +504,7 @@ describe("decideDepegAsset", () => {
         stablecoinId: "brz-transfero",
         geckoId: "brz",
         pegCurrency: "BRL",
-        price: 0.992,
+        price: 0.997,
         updatedAt: 1_750_000_840,
       },
     });
@@ -493,13 +514,13 @@ describe("decideDepegAsset", () => {
         type: "close-event",
         id: 7,
         endedAt: 1_750_000_900,
-        recoveryPrice: 0.992,
+        recoveryPrice: 0.997,
         closeReason: "recovered-native",
       },
     ]);
   });
 
-  it("does not mix a USD recovery price into a native-peg event", () => {
+  it("starts recovery without mixing a USD price into a native-peg event", () => {
     const decision = decideDepegAsset({
       now: 1_750_000_900,
       asset: makeAsset({
@@ -523,13 +544,61 @@ describe("decideDepegAsset", () => {
 
     expect(decision.commands).toEqual([
       {
-        type: "close-event",
+        type: "begin-recovery",
         id: 7,
-        endedAt: 1_750_000_900,
-        recoveryPrice: null,
-        closeReason: "recovered-primary",
+        firstSeenAt: 1_750_000_900,
       },
     ]);
+  });
+
+  it("keeps an event open until the full recovery window elapses", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_900,
+      asset: makeAsset({ price: 1.001 }),
+      meta: usdMeta,
+      existing: makeExistingEvent({
+        stablecoin_id: "usdt-tether",
+        symbol: "USDT",
+        peg_type: "peggedUSD",
+        direction: "below",
+        peak_deviation_bps: -200,
+        start_price: 0.98,
+        peak_price: 0.98,
+        peg_reference: 1,
+        recovery_first_seen_at: 1_750_000_300,
+      }),
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+    });
+
+    expect(decision.seenEventIds).toEqual([7]);
+    expect(decision.commands).toEqual([]);
+  });
+
+  it("clears a partial recovery when price returns to the deadband", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_900,
+      asset: makeAsset({ price: 0.993 }),
+      meta: usdMeta,
+      existing: makeExistingEvent({
+        stablecoin_id: "usdt-tether",
+        symbol: "USDT",
+        peg_type: "peggedUSD",
+        direction: "below",
+        peak_deviation_bps: -200,
+        start_price: 0.98,
+        peak_price: 0.98,
+        peg_reference: 1,
+        recovery_first_seen_at: 1_750_000_300,
+      }),
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+    });
+
+    expect(decision.seenEventIds).toEqual([7]);
+    expect(decision.commands).toEqual([{ type: "clear-recovery", id: 7 }]);
   });
 
   it("updates a native-peg event peak from the native quote domain", () => {
@@ -665,14 +734,12 @@ describe("decideDepegAsset", () => {
       ],
     });
 
-    expect(decision.seenEventIds).toEqual([]);
+    expect(decision.seenEventIds).toEqual([42]);
     expect(decision.commands).toEqual([
       {
-        type: "close-event",
+        type: "begin-recovery",
         id: 42,
-        endedAt: 1_780_630_000,
-        recoveryPrice: 1.0006,
-        closeReason: "recovered-primary",
+        firstSeenAt: 1_780_630_000,
       },
     ]);
   });

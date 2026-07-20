@@ -37,6 +37,7 @@ type ClosedDepegResolutionRow = {
   started_at: number;
   ended_at: number;
   recovery_price: number | null;
+  peg_reference: number;
   close_reason: string | null;
 };
 
@@ -82,6 +83,11 @@ function isRecoveryClosure(row: Pick<ClosedDepegResolutionRow, "close_reason" | 
   return row.recovery_price != null;
 }
 
+function eventPriceCurrency(stablecoinId: string, pegReference: number): string {
+  if (pegReference !== 1) return "USD";
+  return TRACKED_META_BY_ID.get(stablecoinId)?.flags.pegCurrency ?? "USD";
+}
+
 export async function buildTelegramDispatchEvents(
   db: D1Database,
   sourceData: DispatchSourceData,
@@ -111,37 +117,15 @@ export async function buildTelegramDispatchEvents(
 
   const previousActiveIds = new Set(Object.keys(safeDepegSnapshot));
 
-  // P1.10: prior snapshots carry an optional `eventId` so we can tell a
-  // close-then-reopen-within-one-window apart (event #1 ended, event #2 active
-  // for the same coin). Legacy snapshots without `eventId` fall back to
-  // stablecoin_id-only membership so behavior is unchanged for older caches.
-  const previousEventIdByStablecoinId = new Map<string, number>();
-  for (const [stablecoinId, entry] of Object.entries(safeDepegSnapshot)) {
-    const eventId = (entry as { eventId?: unknown }).eventId;
-    if (typeof eventId === "number" && Number.isFinite(eventId)) {
-      previousEventIdByStablecoinId.set(stablecoinId, eventId);
-    }
-  }
   const currentRowByStablecoinId = new Map(
     activeDepegRows.map((row) => [row.stablecoin_id, row] as const),
   );
-  function isReopenedEvent(stablecoinId: string, currentEventId: number): boolean {
-    const previousEventId = previousEventIdByStablecoinId.get(stablecoinId);
-    return previousEventId != null && previousEventId !== currentEventId;
-  }
-
-  const reopenedRecoveryMinutesByStablecoinId = new Map<string, number>();
 
   const depegWorsening: DepegWorsening[] = activeDepegRows
     .flatMap((row) => {
       const previous = safeDepegSnapshot[row.stablecoin_id];
       const currentDeviationBps = Math.abs(Number(row.peak_deviation_bps ?? 0));
       if (!previous || previous.direction !== row.direction || currentDeviationBps <= previous.deviationBps) {
-        return [];
-      }
-      // A close-then-reopen surfaces as `depegTriggered` for the new event id;
-      // suppress the worsening alert so we don't double-fire on the same event.
-      if (isReopenedEvent(row.stablecoin_id, row.event_id)) {
         return [];
       }
       const crossesSupportedStep = DEPEG_STEP_VALUES.some(
@@ -157,17 +141,14 @@ export async function buildTelegramDispatchEvents(
         currentDeviationBps,
         price: Number(row.start_price ?? 0),
         pegReference: Number(row.peg_reference ?? 1),
+        priceCurrency: eventPriceCurrency(row.stablecoin_id, Number(row.peg_reference ?? 1)),
       }];
     });
 
   const depegResolved: DepegResolved[] = [];
-  // A previously-active coin "resolved" either because it has no active event
-  // anymore OR because the active event id changed (close-then-reopen).
-  const resolvedCandidateIds = [...previousActiveIds].filter((stablecoinId) => {
-    const currentRow = currentRowByStablecoinId.get(stablecoinId);
-    if (!currentRow) return true;
-    return isReopenedEvent(stablecoinId, currentRow.event_id);
-  });
+  const resolvedCandidateIds = [...previousActiveIds].filter(
+    (stablecoinId) => !currentRowByStablecoinId.has(stablecoinId),
+  );
   if (resolvedCandidateIds.length > 0) {
     throwIfAborted(signal);
     const resolvedRows: ClosedDepegResolutionRow[] = [];
@@ -176,7 +157,7 @@ export async function buildTelegramDispatchEvents(
       const inClause = buildInClause(idChunk);
       const chunkRows = await db
         .prepare(
-          `SELECT event.stablecoin_id, event.symbol, event.peak_deviation_bps, event.started_at, event.ended_at, event.recovery_price, event.close_reason
+          `SELECT event.stablecoin_id, event.symbol, event.peak_deviation_bps, event.started_at, event.ended_at, event.recovery_price, event.peg_reference, event.close_reason
              FROM depeg_events event
              JOIN (
                SELECT stablecoin_id, MAX(ended_at) as ended_at
@@ -204,30 +185,19 @@ export async function buildTelegramDispatchEvents(
 
       const durationSeconds = Math.max(0, resolved.ended_at - resolved.started_at);
       const previous = safeDepegSnapshot[stablecoinId];
-      const currentRow = currentRowByStablecoinId.get(stablecoinId);
-      if (currentRow && isReopenedEvent(stablecoinId, currentRow.event_id)) {
-        reopenedRecoveryMinutesByStablecoinId.set(
-          stablecoinId,
-          Math.max(1, Math.round(durationSeconds / 60)),
-        );
-        continue;
-      }
       depegResolved.push({
         stablecoinId,
         symbol: resolved.symbol ?? previous?.symbol ?? getSymbol(stablecoinId),
         durationMinutes: Math.max(1, Math.round(durationSeconds / 60)),
         peakDeviationBps: Math.abs(Number(resolved.peak_deviation_bps ?? 0)),
         recoveryPrice: resolved.recovery_price ?? null,
+        priceCurrency: eventPriceCurrency(stablecoinId, Number(resolved.peg_reference ?? 1)),
       });
     }
   }
 
   const depegTriggered: DepegAlertPayload[] = activeDepegRows
-    .filter(
-      (row) =>
-        !previousActiveIds.has(row.stablecoin_id) ||
-        isReopenedEvent(row.stablecoin_id, row.event_id),
-    )
+    .filter((row) => !previousActiveIds.has(row.stablecoin_id))
     .map((row) => ({
       stablecoinId: row.stablecoin_id,
       symbol: row.symbol,
@@ -235,7 +205,7 @@ export async function buildTelegramDispatchEvents(
       deviationBps: Math.abs(Number(row.peak_deviation_bps ?? 0)),
       price: Number(row.start_price ?? 0),
       pegReference: Number(row.peg_reference ?? 1),
-      reopenedAfterMinutes: reopenedRecoveryMinutesByStablecoinId.get(row.stablecoin_id),
+      priceCurrency: eventPriceCurrency(row.stablecoin_id, Number(row.peg_reference ?? 1)),
     }));
 
   const { changes: rawSafetyChanges, suppressedMethodologyChanges } = !safetySnapshotNeedsSeed

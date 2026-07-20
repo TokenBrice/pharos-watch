@@ -652,6 +652,20 @@ describe("depeg direction glyphs", () => {
     expect(line).toContain("Re-depegged after 1h 5m recovery");
   });
 
+  it("formats native-currency event prices with the matching symbol", () => {
+    const line = formatDepegTriggeredLine({
+      stablecoinId: "eurq-quantoz",
+      symbol: "EURQ",
+      direction: "below",
+      deviationBps: 160,
+      price: 0.984,
+      pegReference: 1,
+      priceCurrency: "EUR",
+    });
+
+    expect(line).toContain("Price: €0.9840 (peg: €1.00)");
+  });
+
   it("prefixes worsening lines with the same direction glyph", () => {
     const below = formatDepegWorseningLine({
       stablecoinId: "usdc-circle",

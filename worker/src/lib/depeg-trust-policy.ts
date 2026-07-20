@@ -37,7 +37,7 @@ interface PrimaryPriceTrustInput {
 export { isAuthoritativeDepegPegReference } from "@shared/lib/peg-reference-trust";
 export type { PegReferenceTrustInput } from "@shared/lib/peg-reference-trust";
 
-export type OffchainDepegConfirmerKey = "coingecko-confirm" | "defillama-confirm";
+export type OffchainDepegConfirmerKey = "coingecko-confirm";
 
 function getPrimaryPriceAgeSec(
   input: Pick<PrimaryPriceTrustInput, "priceObservedAt" | "priceUpdatedAt">,
@@ -112,7 +112,6 @@ export function chooseIndependentOffchainDepegConfirmer(
 ): OffchainDepegConfirmerKey | null {
   const primaryFamilies = getPrimaryDepegSourceFamilies(input);
   if (!primaryFamilies.has("coingecko")) return "coingecko-confirm";
-  if (!primaryFamilies.has("defillama")) return "defillama-confirm";
   return null;
 }
 

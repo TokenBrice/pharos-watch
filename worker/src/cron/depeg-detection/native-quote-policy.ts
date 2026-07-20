@@ -3,6 +3,7 @@ import type { PegAssetBase } from "@shared/types/core";
 import type { DepegRow } from "../../lib/depeg-helpers";
 import {
   signalCrossesThreshold,
+  signalIsWithinThreshold,
   signalsShareDirection,
   type DepegDirection,
   type DepegSignal,
@@ -15,14 +16,16 @@ interface NativeQuotePolicyContext {
   asset: PegAssetBase;
   bps: number;
   absBps: number;
+  rawAbsBps: number;
   direction: DepegDirection;
   threshold: number;
+  recoveryThreshold: number;
   nativeSignal: DepegSignal | null;
   nativePegPrice: number | null;
   nativePegCurrency: string | undefined;
 }
 
-function isNativePegEvent(event: DepegRow): boolean {
+export function isNativePegEvent(event: DepegRow): boolean {
   return event.source === "live" &&
     event.peg_reference === 1 &&
     normalizePegType(event.peg_type) !== "peggedUSD";
@@ -64,12 +67,15 @@ export function resolveDirectRecovery(params: {
   nativeSignal: DepegSignal | null;
   nativePegPrice: number | null;
   primaryPrice: number;
-  threshold: number;
+  recoveryThreshold: number;
   primarySupportsRecovery: boolean;
   primaryRecoveryContradicted: boolean;
 }): Pick<Extract<DepegPersistenceCommand, { type: "close-event" }>, "recoveryPrice" | "closeReason"> | null {
-  if (isNativePegEvent(params.existing) && params.nativeSignal?.absBps != null && params.nativeSignal.absBps < params.threshold) {
-    return { recoveryPrice: params.nativePegPrice, closeReason: "recovered-native" };
+  if (signalIsWithinThreshold(params.nativeSignal, params.recoveryThreshold)) {
+    return {
+      recoveryPrice: isNativePegEvent(params.existing) ? params.nativePegPrice : null,
+      closeReason: "recovered-native",
+    };
   }
   if (!params.primarySupportsRecovery || params.primaryRecoveryContradicted) return null;
   return {
@@ -84,7 +90,7 @@ function emptyDecision(trackedCoinId: string): DepegAssetDecision {
 
 function suppressionMessage(ctx: NativeQuotePolicyContext): string {
   return `[depeg] Suppressed live depeg mutation for ${ctx.asset.symbol}: ` +
-    `primary=${ctx.bps}bps but direct ${ctx.nativePegCurrency} quote=${ctx.nativeSignal?.bps ?? "n/a"}bps`;
+    `primary=${ctx.bps}bps but ${ctx.nativePegCurrency} quote=${ctx.nativeSignal?.bps ?? "n/a"}bps`;
 }
 
 export function applyNativeQuoteVeto(
@@ -95,41 +101,42 @@ export function applyNativeQuoteVeto(
     ctx.nativeSignal != null &&
     signalCrossesThreshold(ctx.nativeSignal, ctx.threshold) &&
     signalsShareDirection(ctx.nativeSignal, ctx.direction);
-  const nativeShowsRecovery = ctx.nativeSignal != null && ctx.nativeSignal.absBps < ctx.threshold;
+  const nativeShowsRecovery = signalIsWithinThreshold(ctx.nativeSignal, ctx.recoveryThreshold);
   const nativeSupportsExistingDirection =
     existing != null &&
     ctx.nativeSignal != null &&
     signalCrossesThreshold(ctx.nativeSignal, ctx.threshold) &&
     signalsShareDirection(ctx.nativeSignal, existing.direction as DepegDirection);
 
-  if (ctx.absBps >= ctx.threshold && ctx.nativeSignal != null && !nativeSupportsPrimaryDirection) {
+  if (ctx.rawAbsBps >= ctx.threshold && ctx.nativeSignal != null && !nativeSupportsPrimaryDirection) {
     const decision = emptyDecision(ctx.trackedCoinId);
-    if (nativeShowsRecovery) {
-      if (existing) {
-        decision.commands.push({
-          type: "close-event",
-          id: existing.id,
-          endedAt: ctx.now,
-          recoveryPrice: isNativePegEvent(existing) ? ctx.nativePegPrice : null,
-          closeReason: "recovered-native",
-        });
-      }
+    if (nativeShowsRecovery && !existing) {
       decision.diagnostics.push({ level: "warn", message: suppressionMessage(ctx) });
       return decision;
     }
 
-    if (existing && nativeSupportsExistingDirection) decision.seenEventIds.push(existing.id);
+    if (nativeShowsRecovery) return null;
+
+    if (existing) {
+      decision.seenEventIds.push(existing.id);
+      if (existing.recovery_first_seen_at != null) {
+        decision.commands.push({ type: "clear-recovery", id: existing.id });
+      }
+    }
     decision.diagnostics.push({ level: "warn", message: suppressionMessage(ctx) });
     return decision;
   }
 
-  if (ctx.absBps < ctx.threshold && existing && nativeSupportsExistingDirection) {
+  if (ctx.rawAbsBps < ctx.threshold && existing && nativeSupportsExistingDirection) {
     const decision = emptyDecision(ctx.trackedCoinId);
     decision.seenEventIds.push(existing.id);
+    if (existing.recovery_first_seen_at != null) {
+      decision.commands.push({ type: "clear-recovery", id: existing.id });
+    }
     decision.diagnostics.push({
       level: "warn",
       message: `[depeg] Kept ${ctx.asset.symbol} open despite primary recovery: ` +
-        `primary=${ctx.bps}bps but direct ${ctx.nativePegCurrency} quote=${ctx.nativeSignal?.bps ?? "n/a"}bps`,
+        `primary=${ctx.bps}bps but ${ctx.nativePegCurrency} quote=${ctx.nativeSignal?.bps ?? "n/a"}bps`,
     });
     return decision;
   }

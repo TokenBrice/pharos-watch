@@ -3,6 +3,8 @@ export type DepegDirection = "above" | "below";
 export interface DepegSignal {
   bps: number;
   absBps: number;
+  rawBps?: number;
+  absRawBps?: number;
   direction: DepegDirection;
 }
 
@@ -17,11 +19,14 @@ export function deriveDepegSignal(price: number, pegRef: number): DepegSignal | 
     return null;
   }
 
-  const bps = Math.round(((price / pegRef) - 1) * 10000);
+  const rawBps = ((price / pegRef) - 1) * 10000;
+  const bps = Math.round(rawBps);
   return {
     bps,
     absBps: Math.abs(bps),
-    direction: toDirection(bps),
+    rawBps,
+    absRawBps: Math.abs(rawBps),
+    direction: toDirection(rawBps),
   };
 }
 
@@ -45,10 +50,17 @@ export function signalsShareDirection(
 }
 
 export function signalCrossesThreshold(
-  signal: Pick<DepegSignal, "absBps"> | null | undefined,
+  signal: Pick<DepegSignal, "absBps" | "absRawBps"> | null | undefined,
   thresholdBps: number,
 ): boolean {
-  return signal != null && signal.absBps >= thresholdBps;
+  return signal != null && (signal.absRawBps ?? signal.absBps) >= thresholdBps;
+}
+
+export function signalIsWithinThreshold(
+  signal: Pick<DepegSignal, "absBps" | "absRawBps"> | null | undefined,
+  thresholdBps: number,
+): boolean {
+  return signal != null && (signal.absRawBps ?? signal.absBps) <= thresholdBps;
 }
 
 export function classifyDirectionalSignal(
@@ -57,7 +69,7 @@ export function classifyDirectionalSignal(
   expectedDirection: DepegDirection,
 ): DirectionalSignalStatus {
   if (signal == null) return "insufficient";
-  if (signal.absBps < thresholdBps) return "recover";
+  if ((signal.absRawBps ?? signal.absBps) < thresholdBps) return "recover";
   return signal.direction === expectedDirection ? "confirm" : "contradict";
 }
 

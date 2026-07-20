@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.204",
+    title: "Full-precision CoinGecko simple prices",
+    date: "2026-07-20",
+    effectiveAt: 1784529544,
+    summary:
+      "All Worker CoinGecko simple-price requests now ask for full precision so peg and depeg decisions consume the unrounded upstream quote.",
+    impact: [
+      "A shared request-path helper forces `precision=full` while preserving every caller's existing ids, quote currencies, market-cap fields, and freshness parameters",
+      "Primary, supplemental, native-fiat, pending-confirmation, supply-gap, status, and auxiliary yield price paths use the same precision policy",
+      "CoinGecko `last_updated_at` freshness checks and all existing validation, consensus, and source-weight rules remain unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.203",
     title: "Cached-rate degradation for vault NAV routes",
     date: "2026-07-19",

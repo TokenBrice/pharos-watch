@@ -86,8 +86,8 @@ export function PricingPipelineMethodologySection() {
           <code className="mx-1 text-xs">priceObservedAtMode</code>, so a hard single-source print only becomes
           depeg-authoritative when its freshness is source-native rather than inferred from local collection time. The
           source registry now also records each provider&apos;s freshness kind, maximum trusted age, and whether it truly
-          supports upstream timestamps. CoinGecko simple-price rows use upstream <code className="mx-1 text-xs">last_updated_at</code>
-          when it is present and are rejected when that upstream timestamp is outside the trusted freshness window. Bitstamp,
+          supports upstream timestamps. CoinGecko simple-price requests use <code className="mx-1 text-xs">precision=full</code> and rows use upstream <code className="mx-1 text-xs">last_updated_at</code>
+          when it is present, so threshold logic receives the unrounded quote and rejects it when that timestamp is outside the trusted freshness window. Bitstamp,
           Coinbase, and Curve on-chain reads now publish upstream-observed freshness provenance rather than stamping rows
           at local fetch time, and the <code className="mx-1 text-xs">crvUSD</code> Curve oracle feed enforces a 5-minute
           on-chain staleness guard using the aggregator block timestamp and records against its own dedicated circuit
