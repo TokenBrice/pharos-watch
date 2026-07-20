@@ -133,6 +133,46 @@ describe("fetchDataSources", () => {
     expect(vi.mocked(recordOutcome)).toHaveBeenCalledWith(expect.anything(), "curve-liquidity-api", true);
   });
 
+  it("caps Curve API fetch concurrency below the DEX job peak", async () => {
+    let activeCurveRequests = 0;
+    let maxActiveCurveRequests = 0;
+
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string | URL | Request) => {
+      const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
+      if (urlStr.includes("yields.llama.fi")) {
+        return {
+          response: new Response("", { status: 200 }),
+          body: { data: FAKE_DL_POOLS },
+        };
+      }
+      if (urlStr.includes("api.llama.fi/protocols")) {
+        return {
+          response: new Response("", { status: 200 }),
+          body: [],
+        };
+      }
+      if (urlStr.includes("api.curve.finance")) {
+        activeCurveRequests++;
+        maxActiveCurveRequests = Math.max(maxActiveCurveRequests, activeCurveRequests);
+        await new Promise((resolve) => setTimeout(resolve, 1));
+        activeCurveRequests--;
+        return {
+          response: new Response("", { status: 200 }),
+          body: { data: { poolData: [] } },
+        };
+      }
+      return {
+        response: new Response("", { status: 200 }),
+        body: {},
+      };
+    });
+
+    const result = await fetchDataSources(null, createMockDb(), PRIMARY_POOL_LOOKUPS);
+
+    expect(result).not.toBeNull();
+    expect(maxActiveCurveRequests).toBe(4);
+  });
+
   it("records failure when all Curve chains fail", async () => {
     vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string | URL | Request) => {
       const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
