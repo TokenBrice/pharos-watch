@@ -917,11 +917,31 @@ function supplyShareValuesReconcile(left: number, right: number): boolean {
   return Math.abs(left - right) <= SUPPLY_SHARE_RECONCILIATION_TOLERANCE;
 }
 
+/**
+ * Supply kinds whose `circulatingUsd` is already USD-denominated and therefore
+ * usable as a canonical supply weight without any price multiplication. Both
+ * chain-attributed and aggregate-only circulating qualify; they differ only in
+ * whether a per-chain breakdown exists.
+ */
+export function isUsdDenominatedSupplyKind(sourceKind: string): boolean {
+  return sourceKind === "usd-denominated-circulating" || sourceKind === "aggregate-circulating";
+}
+
 const V9SupplyFactV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
     sourceGenerationId: CanonicalTextSchema,
-    sourceKind: z.enum(["usd-denominated-circulating", "raw-supply-times-price", "reported-market-cap"]),
+    // `aggregate-circulating` is USD-denominated like `usd-denominated-circulating`
+    // but carries no per-chain attribution: it comes from the top-level
+    // circulating bucket for assets whose intake lane never populates a
+    // per-chain breakdown. Kept distinct so consumers can tell aggregate-only
+    // supply from chain-attributed supply.
+    sourceKind: z.enum([
+      "usd-denominated-circulating",
+      "aggregate-circulating",
+      "raw-supply-times-price",
+      "reported-market-cap",
+    ]),
     circulatingUnits: z.number().finite().nonnegative().nullable(),
     referencePriceUsd: z.number().finite().nonnegative().nullable(),
     circulatingUsd: NonNegativeUsdSchema.nullable(),
@@ -945,11 +965,18 @@ const V9SupplyFactV2Schema = z
         ctx.addIssue({ code: "custom", message: "Raw-supply valuation requires units and price" });
       }
     }
-    if (supply.sourceKind === "usd-denominated-circulating" && supply.referencePriceUsd !== null) {
+    if (isUsdDenominatedSupplyKind(supply.sourceKind) && supply.referencePriceUsd !== null) {
       ctx.addIssue({
         code: "custom",
         path: ["referencePriceUsd"],
         message: "USD-denominated circulating supply must not be multiplied by price",
+      });
+    }
+    if (supply.sourceKind === "aggregate-circulating" && supply.chainDistribution) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["chainDistribution"],
+        message: "Aggregate-only circulating supply must not carry a chain distribution",
       });
     }
     if (supply.chainDistribution !== null && supply.chainDistribution !== undefined) {

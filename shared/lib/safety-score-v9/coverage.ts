@@ -1,5 +1,10 @@
 import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "../../data/safety-score-v9/evaluation-build-manifest-v1";
-import type { V9FactStatusV2, V9AssetFactsV2, CompiledV9FactSetV2 } from "../../types/safety-score-v9-facts";
+import {
+  isUsdDenominatedSupplyKind,
+  type V9FactStatusV2,
+  type V9AssetFactsV2,
+  type CompiledV9FactSetV2,
+} from "../../types/safety-score-v9-facts";
 import {
   V9_RELEASE_COVERAGE_FLOORS,
   V9CoverageEvaluationProjectionPayloadV1Schema,
@@ -129,7 +134,7 @@ function reviewState(asset: V9AssetFactsV2, domain: (typeof REVIEW_DOMAINS)[numb
   } else if (domain === "supply") {
     statuses = [asset.supply.status];
     structuralComplete =
-      asset.supply.sourceKind === "usd-denominated-circulating" && asset.supply.circulatingUsd !== null;
+      isUsdDenominatedSupplyKind(asset.supply.sourceKind) && asset.supply.circulatingUsd !== null;
   } else {
     statuses = [asset.implementation.status];
     structuralComplete = asset.implementation.launchedAtSec !== null;
@@ -246,7 +251,7 @@ function currentCanonicalWeightMatches(
   const weight = manifestAsset.weight;
   const factIsCurrentCanonical =
     statusCurrent(asset, asset.supply.status) &&
-    asset.supply.sourceKind === "usd-denominated-circulating" &&
+    isUsdDenominatedSupplyKind(asset.supply.sourceKind) &&
     asset.supply.circulatingUsd !== null &&
     asset.supply.sourceGenerationId === chainSupplyGenerationId;
   if (weight.disposition !== "current-valid") return !factIsCurrentCanonical;

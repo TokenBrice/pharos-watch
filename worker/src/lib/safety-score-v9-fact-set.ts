@@ -15,6 +15,8 @@ import {
 import { collateralExposureV9Path, createV9FactGap, optionalExitV9Path } from "@shared/lib/safety-score-v9/reasons";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { getCirculatingRaw } from "@shared/lib/supply";
+import { SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "../cron/sync-stablecoins/shared";
 import {
   V9AccessReviewV2Schema,
   V9EconomicControlReviewV2Schema,
@@ -2265,12 +2267,25 @@ function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
   };
 }
 
-function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
+/**
+ * Supply fact for assets that carry no usable per-chain circulating breakdown.
+ * The supplemental/fallback intake lanes (coingecko-fallback,
+ * onchain-total-supply, zephyr-scanner) populate only the top-level circulating
+ * bucket, so reading the per-chain map alone discards a real, already
+ * USD-denominated figure.
+ *
+ * Per-chain attribution genuinely does not exist for these assets, so
+ * `chainDistribution`, `failureDomains` and the bridge-route shares stay empty
+ * rather than being synthesized: chain-concentration gates must remain honestly
+ * blocked instead of silently reading a single-chain distribution.
+ */
+function buildAggregateSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
   const source = context.extension.sources.chainSupply;
-  const chainRows = context.fixedInput.chainCirculatingById[context.asset.assetId] ?? {};
-  const chains = Object.keys(chainRows).sort(compareText);
-  const circulatingUsd = chains.reduce((sum, chain) => sum + chainRows[chain]!.current, 0);
-  if (chains.length === 0) {
+  const aggregate = context.fixedInput.aggregateCirculatingById[context.asset.assetId];
+  // DefiLlama list circulating values are already USD-denominated across all peg
+  // types, so this is a plain sum — never a price multiplication.
+  const circulatingUsd = aggregate ? getCirculatingRaw(aggregate) : 0;
+  if (circulatingUsd <= 0) {
     return {
       status: missingLocalFact(context, {
         componentKey: "chain-supply",
@@ -2291,6 +2306,75 @@ function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
       unreviewedRouteSupplyShare: null,
       failureDomains: [],
     };
+  }
+  // Supplemental supply is carried forward run-over-run and preserves its
+  // original observation time, so it ages independently of the chain-supply
+  // lane. It therefore takes the intake lane's own 7-day carry-forward ceiling
+  // rather than the per-chain lane's ~30-minute cron freshness, which would
+  // stale out every legitimately carried-forward asset. Where the intake lane
+  // records no observation time there is nothing to age against, so the fact
+  // falls back to the capture's own observation time.
+  const observedAtSec = aggregate?.observedAtSec ?? source.observedAtSec;
+  const evidenceId = addEvidence(
+    context,
+    createV9EvidenceReference(
+      {
+        evidenceId: `${context.asset.assetId}:aggregate-supply`,
+        sourceId: "report-cards-aggregate-circulating",
+        sourceGenerationId: source.generationId,
+        disposition: "observed",
+        observedAtSec,
+        contentSha256: digest("safety-score-v9.aggregate-supply.v1", aggregate),
+        maxAgeSec: SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
+      },
+      context.fixedInput.clockSec,
+    ),
+  );
+  const evidence = context.evidence.get(evidenceId)!;
+  const status =
+    evidence.freshness.state === "stale"
+      ? missingLocalFact(context, {
+          componentKey: "chain-supply",
+          reasonCode: "missing-pillar-evidence",
+          ownerDomain: "evidence",
+          policyRuleId: "v9.supply.current",
+          message: "The aggregate circulating observation is past the supplemental carry-forward ceiling.",
+          observationState: "stale",
+          evidenceRefIds: [evidenceId],
+        }).status
+      : createV9FactStatus({
+          applicability: requiredV9Applicability("v9.supply.current"),
+          observationState: "known",
+          evidenceRefIds: [evidenceId],
+        });
+  return {
+    status,
+    sourceGenerationId: source.generationId,
+    sourceKind: "aggregate-circulating",
+    circulatingUnits: null,
+    referencePriceUsd: null,
+    circulatingUsd,
+    chainDistribution: null,
+    selectedBridgeRoutes: [],
+    selectedRouteSupplyShare: null,
+    unknownRouteSupplyShare: null,
+    unreviewedRouteSupplyShare: null,
+    failureDomains: [],
+  };
+}
+
+function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
+  const source = context.extension.sources.chainSupply;
+  const chainRows = context.fixedInput.chainCirculatingById[context.asset.assetId] ?? {};
+  const chains = Object.keys(chainRows).sort(compareText);
+  const circulatingUsd = chains.reduce((sum, chain) => sum + chainRows[chain]!.current, 0);
+  // A per-chain map that is present but sums to zero carries no more supply
+  // information than an absent one, and the aggregate bucket may still hold a
+  // real figure. Both cases route to the aggregate fallback; a zero-summing map
+  // would otherwise produce a zero-denominator distribution and leave assets
+  // like a7a5-old-vector unobserved despite a published circulating supply.
+  if (chains.length === 0 || circulatingUsd <= 0) {
+    return buildAggregateSupply(context);
   }
   const evidenceId = addEvidence(
     context,

@@ -104,6 +104,8 @@ function exactFixedInput(
         circulatingPrevMonth: number;
       }
     >;
+    aggregateCirculating?: Record<string, number>;
+    supplyObservedAtSec?: number | null;
     clockSec?: number;
   } = {},
 ) {
@@ -216,6 +218,14 @@ function exactFixedInput(
         },
       },
     },
+    aggregateCirculatingById: args.aggregateCirculating
+      ? {
+          [assetId]: {
+            circulating: args.aggregateCirculating,
+            observedAtSec: args.supplyObservedAtSec === undefined ? observedAtSec : args.supplyObservedAtSec,
+          },
+        }
+      : {},
     dexDeploymentSupplyCoverageById: {},
     collateralDriftCoins: [],
     liveToFallbackCoins: [],
@@ -880,6 +890,85 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         { kind: "chain", key: "zero network" },
       ]),
     );
+  });
+
+  it("falls back to the aggregate circulating bucket when no per-chain rows exist", () => {
+    const fixed = exactFixedInput({
+      chainSupplyByChain: {},
+      aggregateCirculating: { peggedUSD: 4_000_000, peggedEUR: 1_000_000 },
+    });
+
+    const supply = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension()).assets[0]!.supply;
+    expect(supply.status.observationState).toBe("known");
+    expect(supply.sourceKind).toBe("aggregate-circulating");
+    // Summed, never multiplied by price: list circulating is already USD.
+    expect(supply.circulatingUsd).toBe(5_000_000);
+    expect(supply.referencePriceUsd).toBeNull();
+    expect(supply.circulatingUnits).toBeNull();
+    // Per-chain attribution genuinely does not exist, so it is not synthesized.
+    expect(supply.chainDistribution).toBeNull();
+    expect(supply.failureDomains).toEqual([]);
+    expect(supply.selectedBridgeRoutes).toEqual([]);
+    expect(supply.selectedRouteSupplyShare).toBeNull();
+    expect(supply.unknownRouteSupplyShare).toBeNull();
+    expect(supply.unreviewedRouteSupplyShare).toBeNull();
+  });
+
+  it("keeps supply missing when neither per-chain rows nor a positive aggregate bucket exist", () => {
+    const absent = compileSafetyScoreV9FactSetFromFixedInput(
+      exactFixedInput({ chainSupplyByChain: {} }),
+      extension(),
+    ).assets[0]!.supply;
+    expect(absent.status.observationState).not.toBe("known");
+    expect(absent.circulatingUsd).toBeNull();
+    expect(absent.sourceKind).toBe("usd-denominated-circulating");
+    expect(absent.chainDistribution).toBeNull();
+
+    const zero = compileSafetyScoreV9FactSetFromFixedInput(
+      exactFixedInput({ chainSupplyByChain: {}, aggregateCirculating: { peggedUSD: 0 } }),
+      extension(),
+    ).assets[0]!.supply;
+    expect(zero.status.observationState).not.toBe("known");
+    expect(zero.circulatingUsd).toBeNull();
+    expect(zero.sourceKind).toBe("usd-denominated-circulating");
+  });
+
+  it("ages aggregate supply against the supplemental carry-forward ceiling, not the chain-supply cron window", () => {
+    const supplyObservedAtSec = AS_OF_SEC - 4_000;
+    const fixed = exactFixedInput({
+      chainSupplyByChain: {},
+      aggregateCirculating: { peggedUSD: 4_000_000 },
+      supplyObservedAtSec,
+    });
+
+    const alpha = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension()).assets[0]!;
+    const evidence = alpha.evidence.find((entry) => entry.evidenceId === "alpha:aggregate-supply")!;
+    // Carried-forward supply legitimately predates the chain-supply lane's own
+    // window (500s in this fixture); it is bounded by the 7-day intake ceiling.
+    expect(evidence.freshness.maxAgeSec).toBe(7 * 86400);
+    expect(evidence.observedAtSec).toBe(supplyObservedAtSec);
+    expect(evidence.freshness.ageSec).toBe(4_000);
+    expect(evidence.freshness.state).toBe("current");
+    expect(alpha.supply.status.observationState).toBe("known");
+  });
+
+  it("leaves chain-attributed supply untouched when per-chain rows are present", () => {
+    const withoutAggregate = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), extension()).assets[0]!
+      .supply;
+    // An aggregate bucket that disagrees must not displace real chain attribution.
+    const withAggregate = compileSafetyScoreV9FactSetFromFixedInput(
+      exactFixedInput({ aggregateCirculating: { peggedUSD: 999_000_000 } }),
+      extension(),
+    ).assets[0]!.supply;
+
+    expect(withoutAggregate.sourceKind).toBe("usd-denominated-circulating");
+    expect(withoutAggregate.circulatingUsd).toBe(10_000_000);
+    expect(withoutAggregate.chainDistribution).toEqual({
+      chains: [{ chainId: "ethereum", supplyUsd: 10_000_000, supplyShare: 1 }],
+      unattributedSupplyUsd: 0,
+      unattributedSupplyShare: 0,
+    });
+    expect(withAggregate).toEqual(withoutAggregate);
   });
 
   it("joins route display names and supply IDs into one canonical chain common mode", () => {
