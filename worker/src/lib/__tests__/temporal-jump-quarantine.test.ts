@@ -111,6 +111,25 @@ describe("shouldWithholdTemporalJump", () => {
     expect(withheld).toBe(false);
   });
 
+  it("returns true for uncorroborated curve-thin-onchain jumps", () => {
+    const withheld = shouldWithholdTemporalJump({
+      price: 0.7,
+      source: "curve-thin-onchain",
+      confidence: "fallback",
+      agreeSources: ["curve-thin-onchain"],
+      mode: "primary_authoritative",
+      validationContext: USD_CONTEXT,
+      previousTrustedPrice: {
+        price: 1,
+        source: "pyth",
+        confidence: "high",
+        observedAt: null,
+        agreeSources: ["pyth"],
+      },
+    });
+    expect(withheld).toBe(true);
+  });
+
   it("returns true when moveBps is at/above the 2000 bps threshold and no bypass applies", () => {
     // 1.0 → 0.78 = ~2472 bps, above 2000 threshold.
     // Source is softAggregator (not authoritative), not guardrail-exempt, and 0.78 > 0.50

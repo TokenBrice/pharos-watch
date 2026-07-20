@@ -225,7 +225,6 @@ describe("pricing source registry", () => {
       depegSourceFamily: "dex:curve",
       maxTrustedAgeSec: 5 * 60,
       isReplaySafe: false,
-      bypassesSoftValidationGuardrails: true,
     });
 
     expect(getPricingSourceRegistryEntry("uniswap-v4-dex")).toMatchObject({

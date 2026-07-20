@@ -42,7 +42,6 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     maxTrustedAgeSec: 5 * 60,
     defaultWeight: 1,
     isReplaySafe: false,
-    bypassesSoftValidationGuardrails: true,
     freshnessKind: "upstream",
     supportsUpstreamObservedAt: true,
     defaultObservedAtMode: "upstream",
