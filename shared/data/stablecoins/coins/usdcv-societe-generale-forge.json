@@ -141,10 +141,10 @@
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
-    "tier": "single-chain-or-native",
-    "summary": "USDCV is issued by Societe Generale-FORGE on Ethereum and Solana through issuer smart contracts listed in the white paper. No bridge, lockbox, or external cross-chain transfer route was resolved, so Pharos treats this as native issuance on each supported chain.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "tier": "issuer-native-burn-mint",
+    "summary": "SG-FORGE issues USDCV natively on Ethereum (SmartCoin V4 UUPS) and Solana (SPL Token-2022); per-chain mint authority resolves to SG-FORGE-controlled accounts. No third-party bridge carries the representation.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
     "confidence": "verified",
     "sources": [
       {
@@ -161,31 +161,51 @@
         "id": "ethereum:0x5422374b27757da72d5265cc745ea906e0446634",
         "destinationChain": "ethereum",
         "contractAddress": "0x5422374b27757da72d5265cc745ea906e0446634",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "SG-FORGE USDCV (SmartCoin)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: SG-FORGE SmartCoin V4 UUPS on Ethereum (verified mint-authority review 2026-07-15; registrar/minter and operations EOAs documented there).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDCV Ethereum token",
+            "url": "https://etherscan.io/address/0x5422374b27757da72d5265cc745ea906e0446634"
+          },
+          {
+            "label": "SG-FORGE USDCV (BNY custodian) launch",
+            "url": "https://www.sgforge.com/usd-stablecoin-bny-custodian/"
+          }
+        ]
       },
       {
         "id": "solana:8smindLdDuySY6i2bStQX9o8DVhALCXCMbNxD98unx35",
         "destinationChain": "solana",
         "contractAddress": "8smindLdDuySY6i2bStQX9o8DVhALCXCMbNxD98unx35",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "SG-FORGE USDCV (SmartCoin)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: USDCV launched natively on Solana as an SPL Token-2022 mint whose mint/freeze/permanent-delegate/update authorities are the SG-FORGE key 5tg4qRdiXJ7XxYd6KK4UnnNvxgHJqfBUygPqZLwSnhnt (metadata self-describes as an official SG-FORGE institutional stablecoin, read 2026-07-19). No bridge in the route.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "SG-FORGE USDCV Solana metadata",
+            "url": "https://www.sgforge.com/usdcv-solana-metadata/"
+          },
+          {
+            "label": "USDCV white paper (Ethereum + Solana edition)",
+            "url": "https://www.sgforge.com/wp-content/uploads/2025/08/SG-Forge-USDCV-White-Paper_V2.0_Ethereum_Solana_11082025.pdf"
+          }
+        ]
       }
     ]
   },

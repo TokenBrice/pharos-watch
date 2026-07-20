@@ -42,11 +42,11 @@
   },
   "detailProvider": "coingecko",
   "bridgeRouteRisk": {
-    "tier": "canonical-rollup-bridge",
-    "summary": "Spark Savings USDC is tracked on Ethereum and Avalanche as a wrapper/variant of USDC. The route evidence points to base-layer/canonical bridge exposure rather than a separate liquidity bridge, so it is reviewed as canonical bridge risk with inherited USDC exposure.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "tier": "issuer-native-burn-mint",
+    "summary": "Spark Savings USDC is tracked on Ethereum and Avalanche as a wrapper/variant of USDC. On-chain reads on 2026-07-20 confirm both deployments are local Spark ERC-4626 savings vaults over local USDC (immutable clones, zero proxy admin), so issuance is native per chain with inherited USDC exposure.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "l2beat",
@@ -76,32 +76,53 @@
       {
         "id": "ethereum:0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spark native savings vault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: 163-byte minimal proxy (implementation 0x1b992302652a92611dcd5090d1cb388c6377f455, EIP-1967 admin slot zero — no upgrade authority) of the Spark ERC-4626 savings vault with asset() = USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; shares mint natively against local USDC deposits. The vault's DEFAULT_ADMIN is the Spark DAO SubProxy (SPARK_PROXY 0x3300f198988e4C9C63F75dF86De36421f06af8c4) per the Spark address registry. No bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "spUSDC vault on Etherscan",
+            "url": "https://etherscan.io/address/0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
+          },
+          {
+            "label": "Spark address registry",
+            "url": "https://github.com/sparkdotfi/spark-address-registry"
+          }
+        ]
       },
       {
         "id": "avalanche:0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
         "destinationChain": "avalanche",
         "contractAddress": "0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spark native savings vault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: 163-byte minimal proxy (implementation 0xc2c0582d1cce30449cf561c7b9c4d6d527547f12, EIP-1967 admin slot zero — no upgrade authority) of the Spark ERC-4626 savings vault with asset() = USDC 0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6e; shares mint natively against local USDC deposits. The vault's DEFAULT_ADMIN is the Spark cross-chain governance executor (SPARK_EXECUTOR 0x7566DEbC906C17338524A414343fA61BcA26A843, driven from mainnet via the LZReceiver 0xd905be48983D405C6fD7f5a983D2351fb61C691F) per the Spark address registry. No bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "spUSDC vault on Snowscan",
+            "url": "https://snowscan.xyz/address/0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d"
+          },
+          {
+            "label": "Spark address registry",
+            "url": "https://github.com/sparkdotfi/spark-address-registry"
+          }
+        ]
       }
     ]
   },
@@ -192,13 +213,9 @@
           "url": "https://docs.spark.fi"
         }
       ],
-      "evidence": "At Ethereum block 25295159: ETH vault (0x28b3a8fb...) has EIP-1967 impl slot = 0x1b992302652a92611dcd5090d1cb388c6377f455 (UUPS proxy). Proxy admin slot = 0x0 (no external ProxyAdmin; UUPS upgrade controlled by DEFAULT_ADMIN). DEFAULT_ADMIN_ROLE member[0] = 0x3300f198988e4c9c63f75df86de36421f06af8c4 (Blockscout: SubProxy — Sky/MakerDAO governance routing contract). SubProxy responds to no standard owner/Safe/Timelock queries. At Avalanche block 87752284: impl slot = 0xc2c0582d1cce30449cf561c7b9c4d6d527547f12 (also UUPS). DEFAULT_ADMIN_ROLE member[0] = 0x7566debc906c17338524a414343fa61bca26a843 (8113 bytes of code, unidentifiable via Safe API, Blockscout Avax, or standard multisig selectors). Upgrade surface exists on both chains but final admin type cannot be confirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "ETH DEFAULT_ADMIN is SubProxy (0x3300f198988e4c9c63f75df86de36421f06af8c4, Sky governance router): confirm the ultimate signer set and timelock delay behind the SubProxy (requires Spark address registry or Sky governance docs).",
-        "Avalanche DEFAULT_ADMIN (0x7566debc906c17338524a414343fa61bca26a843, 8113 bytes): contract type unidentifiable via getOwners()/Safe API/getThreshold() — verify via Avalanche Snowtrace or Spark address registry before promoting."
-      ]
+      "evidence": "At Ethereum block 25295159: ETH vault (0x28b3a8fb...) has EIP-1967 impl slot = 0x1b992302652a92611dcd5090d1cb388c6377f455 (UUPS proxy). Proxy admin slot = 0x0 (no external ProxyAdmin; UUPS upgrade controlled by DEFAULT_ADMIN). DEFAULT_ADMIN_ROLE member[0] = 0x3300f198988e4c9c63f75df86de36421f06af8c4. At Avalanche block 87752284: impl slot = 0xc2c0582d1cce30449cf561c7b9c4d6d527547f12 (also UUPS). DEFAULT_ADMIN_ROLE member[0] = 0x7566debc906c17338524a414343fa61bca26a843 (8113 bytes of code). 2026-07-20 follow-up resolved both prior open questions via the Spark address registry (sparkdotfi/spark-address-registry): the Ethereum admin is SPARK_PROXY, the Spark DAO SubProxy whose payloads execute through Sky/Spark governance approval (token-holder governance, no fixed signer set, governed by the Sky governance security flow), and the Avalanche admin is SPARK_EXECUTOR (spark-gov-relay/Executor.sol v1.0.1), Spark's cross-chain governance executor driven from Ethereum mainnet through the LZReceiver 0xd905be48983D405C6fD7f5a983D2351fb61C691F.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+      "reviewedAt": "2026-07-20"
     }
   },
   "deploymentModel": "native-multichain",

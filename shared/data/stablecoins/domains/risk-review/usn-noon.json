@@ -23,67 +23,29 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Noon USN is an omnichain token minted natively on Ethereum and carried to Sophon, zkSync Era, Starknet, TAC and others via native burn/mint over external validated messaging networks. The verified Ethereum implementation (USNUpgradeableHyperlane) inherits LayerZero V2 OFTUpgradeable -- the token itself is the OFT, so the home chain burns/mints rather than using a lockbox adapter -- and additionally integrates Hyperlane (configureHyperlane/configureISM/sendTokensViaHyperlane/handle/mailbox). Noon's contracts page labels the Sophon and zkSync deployments \"USN OFT,\" and its interoperability page documents Hyperlane burn-on-source/mint-on-destination as the cross-chain route. Supply therefore moves by external-validated-network burn/mint, not a third-party lockbox or lock/mint. The specific DVN security stack and Hyperlane ISM configuration were not retrievable, so the validation parameters are unreviewed.",
-    "reviewedAt": "2026-06-21",
-    "reviewer": "Pharos bridge-route re-verification",
-    "confidence": "probable",
+    "summary": "USN is native on Ethereum. Its zkSync, Sophon, and Starknet deployments are Noon-operated Hyperlane warp tokens that burn/mint against Ethereum USN, with owner and mailbox reads verified on-chain at 2026-07-20.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+    "confidence": "verified",
     "protocols": [
       {
-        "source": "issuer",
-        "name": "LayerZero OFT (Omnichain Fungible Token)",
-        "slug": "layerzero",
-        "url": "https://docs.noon.capital/additional-resources/contracts-and-addresses",
-        "bridgeTypes": [
-          "burn-mint",
-          "omnichain-token",
-          "external-messaging"
-        ],
-        "note": "Noon docs explicitly label Sophon and zkSync Era USN deployments as OFT; Ethereum is the native home chain."
-      },
-      {
-        "source": "explorer",
-        "name": "USNUpgradeableHyperlane implementation (OFTUpgradeable + Hyperlane)",
-        "slug": "sourcify",
-        "url": "https://sourcify.dev/server/v2/contract/1/0x6bdc8104ec827cd48b9cac526420b59a31bc8397?fields=abi,metadata",
-        "bridgeTypes": [
-          "burn-mint",
-          "layerzero-oft",
-          "hyperlane-warp"
-        ],
-        "note": "Verified impl inherits OFTUpgradeable + OAppPreCrimeSimulatorUpgradeable, native burn/mint, plus Hyperlane configureHyperlane/sendTokensViaHyperlane/handle/mailbox. Home chain is burn/mint, not a lockbox adapter."
-      },
-      {
         "source": "docs",
-        "name": "Hyperlane interchain messaging",
-        "slug": "hyperlane",
-        "url": "https://docs.noon.capital/additional-resources/contracts-and-addresses",
+        "name": "Hyperlane",
+        "url": "https://docs.hyperlane.xyz/",
         "bridgeTypes": [
-          "warp-route",
-          "external-validated"
-        ],
-        "note": "Dual integration alongside LayerZero; Hyperlane Mailbox dispatch present in contract internals."
+          "messaging",
+          "burnAndMint"
+        ]
       }
     ],
     "sources": [
       {
-        "label": "Noon official contracts and addresses (USN/sUSN labeled OFT on Sophon + zkSync Era)",
-        "url": "https://docs.noon.capital/additional-resources/contracts-and-addresses"
+        "label": "Noon interoperability docs",
+        "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
       },
       {
-        "label": "Verified Ethereum USN implementation source (USNUpgradeableHyperlane: OFTUpgradeable + Hyperlane, burn/mint)",
-        "url": "https://sourcify.dev/server/v2/contract/1/0x6bdc8104ec827cd48b9cac526420b59a31bc8397?fields=abi,metadata"
-      },
-      {
-        "label": "Ethereum USN token proxy (TransparentUpgradeableProxy, LayerZero v2 imports)",
-        "url": "https://etherscan.io/address/0xda67b4284609d2d48e5d10cfac411572727dc1ed"
-      },
-      {
-        "label": "zkSync Era USN OFT contract",
-        "url": "https://explorer.zksync.io/address/0x0469d9d1dE0ee58fA1153ef00836B9BbCb84c0B6"
-      },
-      {
-        "label": "Starknet 2025 Year in Review (Noon USN+sUSN deployed via LayerZero OFT to Starknet)",
-        "url": "https://www.starknet.io/blog/starknet-2025-year-in-review/"
+        "label": "Hyperlane docs",
+        "url": "https://docs.hyperlane.xyz/"
       }
     ],
     "routes": [
@@ -91,61 +53,125 @@
         "id": "ethereum:0xda67b4284609d2d48e5d10cfac411572727dc1ed",
         "destinationChain": "ethereum",
         "contractAddress": "0xda67b4284609d2d48e5d10cfac411572727dc1ed",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Noon native issuance (MinterHandlerV2)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "USN is native on Ethereum: minting is administered by the reviewed MinterHandlerV2 under Noon's 3-of-6 admin Safe.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
-      },
-      {
-        "id": "sophon:0xc1aa99c3881b26901af70738a7c217dc32536d36",
-        "destinationChain": "sophon",
-        "contractAddress": "0xc1aa99c3881b26901af70738a7c217dc32536d36",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Noon interoperability docs",
+            "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
+          },
+          {
+            "label": "Hyperlane docs",
+            "url": "https://docs.hyperlane.xyz/"
+          }
+        ]
       },
       {
         "id": "zksync:0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6",
+        "sourceChain": "ethereum",
         "destinationChain": "zksync",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Noon Hyperlane warp route (USN burn-mint)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "zksync",
+        "controllerAddress": "0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "HypERC20 warp token: name()='USN Token', owner()=0x15d91eb2c3188bb85881d2e09b5025f3fcc4a263 (contract), mailbox()=0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e (Hyperlane zkSync mailbox) read on zkSync Era at 2026-07-20; mint executes only on Hyperlane message delivery.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Noon interoperability docs",
+            "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
+          },
+          {
+            "label": "Hyperlane docs",
+            "url": "https://docs.hyperlane.xyz/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:hyperlane-warp-route",
+          "contract:zksync:0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6"
+        ]
+      },
+      {
+        "id": "sophon:0xc1aa99c3881b26901af70738a7c217dc32536d36",
+        "sourceChain": "ethereum",
+        "destinationChain": "sophon",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xc1aa99c3881b26901af70738a7c217dc32536d36",
+        "protocol": "Noon Hyperlane warp route (USN burn-mint)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "sophon",
+        "controllerAddress": "0xc1aa99c3881b26901af70738a7c217dc32536d36",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "HypERC20 warp token: name()='USN Token', owner()=0x553d36879016ce22977a622804eee76dc0dc88e0 (contract), mailbox()=0x9bbdf86b272d224323136e15594fdce487f40ce7 (Hyperlane Sophon mailbox) read on Sophon at 2026-07-20; mint executes only on Hyperlane message delivery.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Noon interoperability docs",
+            "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
+          },
+          {
+            "label": "Hyperlane docs",
+            "url": "https://docs.hyperlane.xyz/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:hyperlane-warp-route",
+          "contract:sophon:0xc1aa99c3881b26901af70738a7c217dc32536d36"
+        ]
       },
       {
         "id": "starknet:0x01e6545cab7ba4ac866768ba5e1bd540893762286ed3fea7f9c02bfa147e135b",
+        "sourceChain": "ethereum",
         "destinationChain": "starknet",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x01e6545cab7ba4ac866768ba5e1bd540893762286ed3fea7f9c02bfa147e135b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Noon Hyperlane warp route (USN burn-mint)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "starknet",
+        "controllerAddress": "0x01e6545cab7ba4ac866768ba5e1bd540893762286ed3fea7f9c02bfa147e135b",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "starknet_call at 2026-07-20: symbol()=USN, owner()=0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072, mailbox()=0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8 (Hyperlane Starknet mailbox); mint executes only on Hyperlane message delivery.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Noon interoperability docs",
+            "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
+          },
+          {
+            "label": "Hyperlane docs",
+            "url": "https://docs.hyperlane.xyz/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:hyperlane-warp-route",
+          "contract:starknet:0x01e6545cab7ba4ac866768ba5e1bd540893762286ed3fea7f9c02bfa147e135b"
+        ]
       }
     ]
   }

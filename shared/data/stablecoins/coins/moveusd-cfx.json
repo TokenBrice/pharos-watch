@@ -145,8 +145,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
     "confidence": "probable",
     "sources": [
       {
@@ -158,9 +158,9 @@
         "url": "https://docs.cfx.to/docs/key-features"
       }
     ],
-    "rationale": "CFX states that its issued digital assets, including MoveUSD, are fully backed and redeemable 1:1 for U.S. dollars, with USD custody by FDIC member banks. Its footer further states that the USD deposits collateralizing MoveUSD are held in a beneficiary account by an FDIC member bank. The bank, account terms, liquidity terms, and independent assurance report are not disclosed.",
+    "rationale": "Re-verified 2026-07-20: the CFX homepage still states that CFX-issued digital assets, including MoveUSD, are fully backed and redeemable 1:1 for U.S. dollars, with USD custody by FDIC member banks, and that the USD deposits collateralizing MoveUSD are held in a beneficiary account by an FDIC member bank. No change since the 2026-07-14 review: the bank, account terms, liquidity terms, and independent assurance report remain undisclosed, and the former docs.moveusd.com disclosures page still redirects to docs.cfx.to with no dedicated reserve disclosure page (docs.cfx.to disclosures path returns 404). The 100% bank-deposit slice is retained with counterparty/custody/concentration risk factors and unknown liquidity horizon.",
     "compositionBasis": "CFX issuer disclosure of MoveUSD's beneficiary-account USD backing",
-    "compositionAsOf": "2026-07-14",
+    "compositionAsOf": "2026-07-20",
     "scope": "full-composition",
     "knownUnknownExposure": "The single disclosed reserve category is known, but CFX does not identify the FDIC member bank, publish account-level terms, or provide a dated independent reserve report.",
     "knownUnknownExposurePct": 0,
@@ -186,8 +186,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
     "confidence": "probable",
     "sources": [
       {

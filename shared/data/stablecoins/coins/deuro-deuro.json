@@ -59,9 +59,9 @@
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
     "summary": "dEURO documents immutable Ethereum mainnet protocol contracts, while the tracked deployments extend to Polygon, Arbitrum, Optimism, and Base. No external bridge protocol was resolved, so the reviewed route is treated as canonical rollup/base-layer bridging rather than a separate third-party lockbox.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "l2beat",
@@ -100,77 +100,160 @@
       {
         "id": "ethereum:0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "dEURO (native)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native dEURO on Ethereum: immutable token (no EIP-1967 admin, owner() reverts), minted by approved Frankencoin-style minting modules per the reviewed mintAuthority.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "dEURO token on Etherscan",
+            "url": "https://etherscan.io/address/0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+          },
+          {
+            "label": "dEURO docs",
+            "url": "https://docs.deuro.com/"
+          }
+        ]
       },
       {
         "id": "polygon:0xc2ff25dd99e467d2589b2c26edd270f220f14e47",
+        "sourceChain": "ethereum",
         "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xc2ff25dd99e467d2589b2c26edd270f220f14e47",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Polygon PoS Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: hasRole(DEPOSITOR_ROLE, 0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa) = true on the DecentralizedEURO(PoS) child token, so the Polygon PoS ChildChainManager is the mint authority for this representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "polygon",
+        "controllerAddress": "0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa",
+        "failureDomainKeys": [
+          "protocol:polygon-pos-bridge",
+          "contract:polygon:0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "dEURO(PoS) child token on Polygonscan (DEPOSITOR_ROLE probed 2026-07-20)",
+            "url": "https://polygonscan.com/address/0xc2ff25dd99e467d2589b2c26edd270f220f14e47"
+          },
+          {
+            "label": "Polygon PoS state-transfer documentation",
+            "url": "https://docs.polygon.technology/pos/how-to/bridging/l1-l2-communication/state-transfer"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x5e85faf503621830ca857a5f38b982e0cc57d537",
+        "sourceChain": "ethereum",
         "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x5e85faf503621830ca857a5f38b982e0cc57d537",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Arbitrum Canonical ERC20 Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: l2Gateway() of the Arbitrum dEURO token returns 0x09e9222e96e7b4ae2a407b98d48e330053351eee, the Arbitrum One L2 ERC20 gateway, the mint authority for this canonically bridged representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x09e9222e96e7b4ae2a407b98d48e330053351eee",
+        "failureDomainKeys": [
+          "protocol:arbitrum-canonical-messaging",
+          "contract:arbitrum:0x09e9222e96e7b4ae2a407b98d48e330053351eee"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "dEURO on Arbiscan (l2Gateway() probed 2026-07-20)",
+            "url": "https://arbiscan.io/address/0x5e85faf503621830ca857a5f38b982e0cc57d537"
+          },
+          {
+            "label": "L2BEAT Arbitrum Canonical",
+            "url": "https://l2beat.com/interop/protocols/arbitrum"
+          }
+        ]
       },
       {
         "id": "optimism:0x1b5f7fa46ed0f487f049c42f374ca4827d65a264",
+        "sourceChain": "ethereum",
         "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x1b5f7fa46ed0f487f049c42f374ca4827d65a264",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Optimism OP Stack Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: bridge()/l2Bridge() of the OP Mainnet dEURO token return 0x4200000000000000000000000000000000000010, the L2StandardBridge, the mint authority for this canonically bridged representation; l1Token()/remoteToken() return the Ethereum dEURO 0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "optimism",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:optimism-canonical-messaging",
+          "contract:optimism:0x4200000000000000000000000000000000000010"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "dEURO on optimism explorer (bridge() probed 2026-07-20)",
+            "url": "https://optimistic.etherscan.io/address/0x1b5f7fa46ed0f487f049c42f374ca4827d65a264"
+          },
+          {
+            "label": "L2BEAT canonical rollup bridge",
+            "url": "https://l2beat.com/interop"
+          }
+        ]
       },
       {
         "id": "base:0x1b5f7fa46ed0f487f049c42f374ca4827d65a264",
+        "sourceChain": "ethereum",
         "destinationChain": "base",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x1b5f7fa46ed0f487f049c42f374ca4827d65a264",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Base OP Stack Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: bridge()/l2Bridge() of the Base dEURO token return 0x4200000000000000000000000000000000000010, the L2StandardBridge, the mint authority for this canonically bridged representation; l1Token()/remoteToken() return the Ethereum dEURO 0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "base",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:base-canonical-messaging",
+          "contract:base:0x4200000000000000000000000000000000000010"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "dEURO on base explorer (bridge() probed 2026-07-20)",
+            "url": "https://basescan.org/address/0x1b5f7fa46ed0f487f049c42f374ca4827d65a264"
+          },
+          {
+            "label": "L2BEAT canonical rollup bridge",
+            "url": "https://l2beat.com/interop"
+          }
+        ]
       }
     ]
   },
@@ -252,13 +335,23 @@
         "directMintAbility": "cap-limited",
         "chain": "ethereum",
         "capDescription": "Mint bounded by per-position overcollateralization with oracle-free auction liquidation; users self-mint against approved collateral.",
-        "canRaiseCap": "unknown",
-        "evidence": "At Ethereum block 25295200: DecentralizedEURO contract (0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea) code length = 21734 bytes; EIP-1967 proxy admin slot = 0x0; owner() reverts; no upgradeable proxy. Contract is immutable. Mint is restricted to approved minting modules via minterOnly modifier.",
+        "canRaiseCap": true,
+        "evidence": "Verified on-chain 2026-07-20: the dEURO constructor block 22088283 approved 8 minting modules (MinterApplied events: 0x8b3c41c649b9c7085c171cbb82337889b3604618, 0x4ce0ab2fc21bd27a47a64f594fdf7654ea57dc79, 0x073493d73258c4beb6542e8dd3e1b2891c972303, 0x5c49c00f897bd970d964bfb8c3065ae65a180994, 0xd03cd3ea55e67bc61b78a0d70ee93018e2182dbe, 0x2353d16869f717bfcd22dabc0adbf4dca62c609f, 0x3ed40fa0e5c803e807ebd51355e388006f9e1fee, 0x0423f419de1c44151b6b000e2daa51859c1d5d2a); no MinterDenied events were observed through block 22,140,000, and isMinter() = true at the latest block for 0x8b3c41c6..., 0x4ce0ab2f... and 0x073493d7.... Mint is bounded per module by overcollateralized position rules; the module set is expandable through the application-and-veto process, so the aggregate cap is raiseable.",
         "sources": [
           {
             "label": "dEURO token on Etherscan",
             "url": "https://etherscan.io/address/0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
           }
+        ],
+        "failureDomainKeys": [
+          "contract:ethereum:0x8b3c41c649b9c7085c171cbb82337889b3604618",
+          "contract:ethereum:0x4ce0ab2fc21bd27a47a64f594fdf7654ea57dc79",
+          "contract:ethereum:0x073493d73258c4beb6542e8dd3e1b2891c972303",
+          "contract:ethereum:0x5c49c00f897bd970d964bfb8c3065ae65a180994",
+          "contract:ethereum:0xd03cd3ea55e67bc61b78a0d70ee93018e2182dbe",
+          "contract:ethereum:0x2353d16869f717bfcd22dabc0adbf4dca62c609f",
+          "contract:ethereum:0x3ed40fa0e5c803e807ebd51355e388006f9e1fee",
+          "contract:ethereum:0x0423f419de1c44151b6b000e2daa51859c1d5d2a"
         ]
       },
       {
@@ -266,8 +359,8 @@
         "role": "governor",
         "authorityType": "dao-governor",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": "unknown",
-        "evidence": "Equity contract (nDEPS) deployed at 0xc71104001a3ccda1bef1177d765831bd1bfe8ee6 by the dEURO constructor (confirmed via internal CREATE transaction in block 22088283). nDEPS totalSupply > 0 (active). Protocol-share holders can call denyMinter() during the application period to veto new minting modules. No central operator; module authorization is permissionless but challengeable.",
+        "canRaiseCap": true,
+        "evidence": "nDEPS (Equity) at 0xc71104001a3ccda1bef1177d765831bd1bfe8ee6, deployed by the dEURO constructor in block 22088283, governs minting-module admissions: anyone may propose a module with a fee and application period; nDEPS holders can veto via denyMinter(). This governance path can authorize new minting capacity.",
         "sources": [
           {
             "label": "dEURO Equity (nDEPS) on Etherscan",
@@ -277,13 +370,15 @@
             "label": "dEURO docs",
             "url": "https://docs.deuro.com/"
           }
-        ]
+        ],
+        "chain": "ethereum",
+        "address": "0xc71104001a3ccda1bef1177d765831bd1bfe8ee6"
       }
     ],
     "review": {
       "evidence": "At Ethereum block 25295200: DecentralizedEURO (0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea) is immutable — no EIP-1967 proxy admin slot, owner() reverts, code length 21734. Equity/nDEPS contract (0xc71104001a3ccda1bef1177d765831bd1bfe8ee6) confirmed via internal CREATE from dEURO constructor at block 22088283. The minting model is Frankencoin-style: anyone can suggestMinter() with a fee and application period; nDEPS holders can denyMinter(). No privileged operator can mint directly; new modules are time-delayed and community-vetoable.",
-      "reviewer": "SONG-1 mint-control evidence review",
-      "reviewedAt": "2026-07-14",
+      "reviewer": "SONG-1 mint-control evidence review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "dEURO docs",

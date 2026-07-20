@@ -3,6 +3,7 @@ import { DEPEG_PENDING_EXPIRY_SEC } from "../lib/constants";
 import {
   buildInsertDepegEventStmt,
   isExtremeMovePending,
+  isNativeOriginPending,
   parsePendingReason,
 } from "../lib/depeg-helpers";
 import {
@@ -32,12 +33,20 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
     threshold,
     age,
     primarySameDirectionDepegged,
+    primaryConfirmationSources,
+    temporalSameDirectionConfirmed,
   } = plan;
   const hasHardConfirmation =
     evidence.dexStatus === "confirm" ||
     evidence.cexStatus === "confirm" ||
     evidence.poolStatus === "confirm";
-  if (hasHardConfirmation || (evidence.offchainStatus === "confirm" && !parsePendingReason(pendingState.reason).has("low-confidence"))) {
+  const isNativeOrigin = isNativeOriginPending(pendingState.reason);
+  const hasSourceConfirmation =
+    isNativeOrigin ||
+    primaryConfirmationSources.length >= 2 ||
+    hasHardConfirmation ||
+    (evidence.offchainStatus === "confirm" && !parsePendingReason(pendingState.reason).has("low-confidence"));
+  if (temporalSameDirectionConfirmed && hasSourceConfirmation) {
     const currentSignal =
       authoritativePrice != null
         ? deriveDepegSignal(authoritativePrice, pegReference)
@@ -61,6 +70,8 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
       { bps: pendingState.peakSeenBps, price: pendingState.peakPrice },
     );
     const confirmedBy = confirmationSourceList(
+      "temporal:15m",
+      primaryConfirmationSources,
       evidence.offchainStatus === "confirm" ? evidence.offchainSourceKey : null,
       evidence.dexStatus === "confirm" ? evidence.dexConfirmationKeys : [],
       evidence.cexStatus === "confirm" ? "cex:binance" : null,

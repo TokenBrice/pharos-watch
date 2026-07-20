@@ -140,9 +140,9 @@
   "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "cgUSD currently has one tracked Base deployment in Pharos metadata, and no reviewed Cygnus source shows durable supply depending on a cross-chain bridge route. The row is triaged as single-chain/native for bridge-route scoring.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "cgUSD has one tracked Base deployment: a direct, non-proxy ERC-4626 rebasing vault administered by a TimelockController (10s delay, 2-of-11 Safe proposer). Users mint natively on Base by depositing USDC/USDT, and no reviewed Cygnus source shows durable supply depending on a cross-chain bridge route. Scored as single-chain/native.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
     "confidence": "verified",
     "sources": [
       {
@@ -152,6 +152,34 @@
       {
         "label": "Cygnus website",
         "url": "https://www.cygnus.finance/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "base:0xca72827a3d211cfd8f6b00ac98824872b72cab49",
+        "destinationChain": "base",
+        "canonicalChain": "base",
+        "contractAddress": "0xca72827a3d211cfd8f6b00ac98824872b72cab49",
+        "protocol": "Cygnus ERC-4626 vault native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Home chain and sole tracked deployment: cgUSD is minted natively on Base through the ERC-4626 vault (USDC/USDT deposits; NAV rebase via issuer oracle). Re-verified at Base block 48861416 on 2026-07-20: owner()=0xfECAB866b450b97dB38500898e9272c1D18918b7 (the reviewed TimelockController with 10s delay and 2-of-11 Safe proposer in the mint-authority profile), EIP-1967 impl/admin slots zero (direct non-proxy deployment). No bridge minter exists; cgUSD supply lives only on Base.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "cgUSD vault on Base (Blockscout)",
+            "url": "https://base.blockscout.com/address/0xca72827a3d211cfd8f6b00ac98824872b72cab49"
+          },
+          {
+            "label": "Cygnus docs",
+            "url": "https://wiki.cygnus.finance/whitepaper/"
+          }
+        ]
       }
     ]
   },
@@ -211,6 +239,37 @@
         "rationale": "The issuer identifies the portfolio categories but does not publish a current constituent or weight-level allocation."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed custodian account holding off-chain U.S. Treasury bills",
+        "role": "custodian"
+      },
+      {
+        "name": "Cygnus cgUSD vault and accounting/NAV oracle contracts on Base",
+        "role": "other",
+        "jurisdiction": "Base"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Cygnus cgUSD withdrawals FAQ (custodian-account T-bill sales)",
+        "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/faq/withdrawals"
+      },
+      {
+        "label": "Cygnus cgUSD v1 overview",
+        "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1"
+      }
+    ],
+    "uncertainty": "Cygnus documents that redemptions are fulfilled by selling U.S. Treasury bills held in a custodian account, but the custodian is never named and no segregation, bankruptcy-remoteness, or reuse terms are published; there is no reserve attestation from any accountant. On-chain, the cgUSD supply tracks an issuer-administered NAV oracle (vault and oracle governed by a 10-second timelock per the 2026-07-16 on-chain control review), so the reported off-chain portfolio value is issuer-asserted rather than independently fed.",
+    "knownUnknownExposurePct": 100
   },
   "custodyModel": "institutional-unregulated",
   "liveReservesConfig": {

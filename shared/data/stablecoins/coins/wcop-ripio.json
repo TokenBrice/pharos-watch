@@ -304,10 +304,68 @@
       "risk": "high",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Undisclosed Colombian financial institution",
-      "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Independent public accountant certification for wCOP - March 2026",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wCOP__Token-Certification.pdf"
+      },
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      }
+    ],
+    "rationale": "The March 31, 2026 certification reconciles 104,898,654 outstanding wCOP across six chains and COP107,966,549.02 of collateral to a Colombian bank statement, then certifies that all outstanding tokens are backed by Colombian pesos at a financial institution in Colombia. The engagement is expressly a certification, not an audit or review, and the bank and account terms are not disclosed.",
+    "compositionBasis": "Independent public accountant certification of the wCOP collateral as of March 31, 2026",
+    "compositionAsOf": "2026-03-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No reserve asset class is unclassified; the Colombian financial institution, account type, and withdrawal liquidity are undisclosed.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Colombian-peso cash deposited in a Colombian bank account",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Colombian-peso bank cash is external reserve backing rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed Colombian financial institution",
+        "role": "bank",
+        "jurisdiction": "Colombia"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Independent public accountant certification for wCOP - March 2026",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wCOP__Token-Certification.pdf"
+      }
+    ],
+    "uncertainty": "The certification verifies the aggregate balance against a Colombian bank statement but does not name the institution, establish segregation or bankruptcy remoteness, disclose rehypothecation terms, or describe withdrawal liquidity.",
+    "knownUnknownExposurePct": 100
+  },
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,
@@ -329,27 +387,6 @@
       "risk": "high"
     }
   },
-  "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
-    "sources": [
-      {
-        "label": "Independent public accountant certification for wCOP - March 2026",
-        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wCOP__Token-Certification.pdf"
-      },
-      {
-        "label": "Ripio local stablecoins",
-        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
-      }
-    ],
-    "rationale": "The March 31, 2026 certification reconciles 104,898,654 outstanding wCOP across six chains and COP107,966,549.02 of collateral to a Colombian bank statement, then certifies that all outstanding tokens are backed by Colombian pesos at a financial institution in Colombia. The engagement is expressly a certification, not an audit or review, and the bank and account terms are not disclosed.",
-    "compositionBasis": "Independent public accountant certification of the wCOP collateral as of March 31, 2026",
-    "compositionAsOf": "2026-03-31",
-    "scope": "full-composition",
-    "knownUnknownExposure": "No reserve asset class is unclassified; the Colombian financial institution, account type, and withdrawal liquidity are undisclosed.",
-    "knownUnknownExposurePct": 0
-  },
   "notices": [
     {
       "type": "info",
@@ -361,8 +398,8 @@
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
     "summary": "wCOP has reviewed cross-chain route evidence through Across, an intent/liquidity framework rather than issuer-native settlement. The route is scored as liquidity/intent because execution and available bridge liquidity are material to cross-chain movement.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "probable",
     "protocols": [
       {
@@ -370,7 +407,10 @@
         "name": "Across",
         "slug": "across",
         "url": "https://l2beat.com/interop/protocols/across",
-        "bridgeTypes": ["intent", "liquidity"]
+        "bridgeTypes": [
+          "intent",
+          "liquidity"
+        ]
       }
     ],
     "sources": [
@@ -392,91 +432,169 @@
         "id": "ethereum:0x8a1d45e102e886510e891d2ec656a708991e2d76",
         "destinationChain": "ethereum",
         "contractAddress": "0x8a1d45e102e886510e891d2ec656a708991e2d76",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ripio wCOP",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the ethereum wCOP token is an EIP-1967 minimal proxy to Ripio's single master implementation 0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652 (eth_getCode/eth_getStorageAt 2026-07-20, block 25570796), the same shared implementation convention as the reviewed wBRL rows in wbrl-ripio.json. The verified mint-authority review (2026-06-11) confirms MINTER_ROLE is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...; hasRole spot-verified on ethereum, base and gnosis 2026-07-20). No third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 25570796,
+        "sources": [
+          {
+            "label": "wCOP ethereum token",
+            "url": "https://etherscan.io/address/0x8a1d45e102e886510e891d2ec656a708991e2d76"
+          },
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          }
+        ]
       },
       {
         "id": "base:0x8a1d45e102e886510e891d2ec656a708991e2d76",
         "destinationChain": "base",
         "contractAddress": "0x8a1d45e102e886510e891d2ec656a708991e2d76",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ripio wCOP",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the base wCOP token is an EIP-1967 minimal proxy to Ripio's single master implementation 0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652 (eth_getCode/eth_getStorageAt 2026-07-20, block 48861713), the same shared implementation convention as the reviewed wBRL rows in wbrl-ripio.json. The verified mint-authority review (2026-06-11) confirms MINTER_ROLE is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...; hasRole spot-verified on ethereum, base and gnosis 2026-07-20). No third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 48861713,
+        "sources": [
+          {
+            "label": "wCOP base token",
+            "url": "https://basescan.org/address/0x8a1d45e102e886510e891d2ec656a708991e2d76"
+          },
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          }
+        ]
       },
       {
         "id": "worldchain:0x8a1d45e102e886510e891d2ec656a708991e2d76",
         "destinationChain": "worldchain",
         "contractAddress": "0x8a1d45e102e886510e891d2ec656a708991e2d76",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ripio wCOP",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the worldchain wCOP token is an EIP-1967 minimal proxy to Ripio's single master implementation 0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652 (eth_getCode/eth_getStorageAt 2026-07-20, block 32588567), the same shared implementation convention as the reviewed wBRL rows in wbrl-ripio.json. The verified mint-authority review (2026-06-11) confirms MINTER_ROLE is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...; hasRole spot-verified on ethereum, base and gnosis 2026-07-20). No third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 32588567,
+        "sources": [
+          {
+            "label": "wCOP worldchain token",
+            "url": "https://worldscan.org/address/0x8a1d45e102e886510e891d2ec656a708991e2d76"
+          },
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          }
+        ]
       },
       {
         "id": "bsc:0x8a1d45e102e886510e891d2ec656a708991e2d76",
         "destinationChain": "bsc",
         "contractAddress": "0x8a1d45e102e886510e891d2ec656a708991e2d76",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ripio wCOP",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the bsc wCOP token is an EIP-1967 minimal proxy to Ripio's single master implementation 0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652 (eth_getCode/eth_getStorageAt 2026-07-20, block 111007307), the same shared implementation convention as the reviewed wBRL rows in wbrl-ripio.json. The verified mint-authority review (2026-06-11) confirms MINTER_ROLE is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...; hasRole spot-verified on ethereum, base and gnosis 2026-07-20). No third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 111007307,
+        "sources": [
+          {
+            "label": "wCOP bsc token",
+            "url": "https://bscscan.com/address/0x8a1d45e102e886510e891d2ec656a708991e2d76"
+          },
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          }
+        ]
       },
       {
         "id": "polygon:0x8a1d45e102e886510e891d2ec656a708991e2d76",
         "destinationChain": "polygon",
         "contractAddress": "0x8a1d45e102e886510e891d2ec656a708991e2d76",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ripio wCOP",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the polygon wCOP token is an EIP-1967 minimal proxy to Ripio's single master implementation 0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652 (eth_getCode/eth_getStorageAt 2026-07-20, block 90538518), the same shared implementation convention as the reviewed wBRL rows in wbrl-ripio.json. The verified mint-authority review (2026-06-11) confirms MINTER_ROLE is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...; hasRole spot-verified on ethereum, base and gnosis 2026-07-20). No third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 90538518,
+        "sources": [
+          {
+            "label": "wCOP polygon token",
+            "url": "https://polygonscan.com/address/0x8a1d45e102e886510e891d2ec656a708991e2d76"
+          },
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          }
+        ]
       },
       {
         "id": "gnosis:0x8a1d45e102e886510e891d2ec656a708991e2d76",
         "destinationChain": "gnosis",
         "contractAddress": "0x8a1d45e102e886510e891d2ec656a708991e2d76",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ripio wCOP",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the gnosis wCOP token is an EIP-1967 minimal proxy to Ripio's single master implementation 0x6f6206fac28d9f60d221a63aae5fb5c3a9ea6652 (eth_getCode/eth_getStorageAt 2026-07-20, block 47292203), the same shared implementation convention as the reviewed wBRL rows in wbrl-ripio.json. The verified mint-authority review (2026-06-11) confirms MINTER_ROLE is held only by Ripio's own accounts (EOA 0x466c02e2cc... and minter-router 0x46167cB034..., administered by the 4-of-7 Ripio Safe 0x2b839174fe...; hasRole spot-verified on ethereum, base and gnosis 2026-07-20). No third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 47292203,
+        "sources": [
+          {
+            "label": "wCOP gnosis token",
+            "url": "https://gnosisscan.io/address/0x8a1d45e102e886510e891d2ec656a708991e2d76"
+          },
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          }
+        ]
       }
     ]
   }

@@ -134,6 +134,7 @@ import {
   prioritizeAuthoritativeLivePriceCandidates,
 } from "../authoritative-price-sources";
 import { CIRCUIT_SOURCE } from "../constants";
+import { PRICING_SOURCE_REGISTRY } from "@shared/lib/pricing-source-registry";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
   encodeUint256,
@@ -2466,6 +2467,295 @@ describe("authoritative-price-sources", () => {
       },
     });
     expect(overrides.get("sbold-k3-capital")?.price).toBeCloseTo(1.062 * 1.0001, 6);
+  });
+
+  it("prices unscoped ERC-4626 NAV vaults from a high-confidence parent carrying an agreeing non-replay-safe corroborator", async () => {
+    // Reproduces the 2026-07-19 outage: the exact-address augmentation lane
+    // joined the USDC winning cluster, and the every-member replay-safety rule
+    // rejected the parent for every unscoped wrapper.
+    const oneShareUsdcRaw = 1_010_000n.toString(16).padStart(64, "0");
+    fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${oneShareUsdcRaw}`);
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "gtusdc-gauntlet",
+        name: "Gauntlet USDC Core",
+        symbol: "gtUSDC",
+        circulating: { peggedUSD: 128_000_000 },
+      },
+      {
+        id: "usdc-circle",
+        name: "USDC",
+        symbol: "USDC",
+        price: 0.9999,
+        priceSource: "bitstamp+coingecko+coingecko-onchain-address+kraken+pyth+redstone",
+        priceConfidence: "high",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "local_fetch",
+      },
+    ]);
+
+    const override = overrides.get("gtusdc-gauntlet");
+    expect(override).toMatchObject({
+      source: "protocol-redeem",
+      confidence: "high",
+      metadata: {
+        inheritedFrom: "usdc-circle",
+        parentReplaySafe: true,
+      },
+    });
+    expect(override?.price).toBeCloseTo(1.01 * 0.9999, 4);
+  });
+
+  it("keeps a trusted composite parent trusted when any registered non-replay-safe lane joins its label", async () => {
+    // Trust monotonicity: agreeing corroborators must never downgrade a parent
+    // whose replay-safe core is trusted on its own. Iterates every registered
+    // non-replay-safe lane so a future soft source cannot regress the gate.
+    const softLanes = PRICING_SOURCE_REGISTRY.filter(
+      (entry) => !entry.isReplaySafe && entry.trustTier !== "cached_replay",
+    ).map((entry) => entry.key);
+    expect(softLanes.length).toBeGreaterThan(0);
+    const oneShareUsdcRaw = 1_010_000n.toString(16).padStart(64, "0");
+    fetchEvmCallHexAtBlockMock.mockResolvedValue(`0x${oneShareUsdcRaw}`);
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    for (const lane of softLanes) {
+      const overrides = await fetchAuthoritativeLivePriceOverrides([
+        {
+          id: "gtusdc-gauntlet",
+          name: "Gauntlet USDC Core",
+          symbol: "gtUSDC",
+          circulating: { peggedUSD: 128_000_000 },
+        },
+        {
+          id: "usdc-circle",
+          name: "USDC",
+          symbol: "USDC",
+          price: 0.9999,
+          priceSource: `coingecko+pyth+${lane}`,
+          priceConfidence: "high",
+          priceObservedAt: nowSec - 60,
+          priceObservedAtMode: "upstream",
+        },
+      ]);
+
+      expect(overrides.has("gtusdc-gauntlet"), lane).toBe(true);
+    }
+  });
+
+  it("still rejects a thin replay-safe core padded to high confidence and names the parent in the attempt ledger", async () => {
+    // No-upgrade guard: a single replay-safe member padded to "high" by a soft
+    // corroborator must not become a trusted composite for unscoped vaults, and
+    // the rejection must be attributable in the persisted attempt ledger.
+    const nowSec = Math.floor(Date.now() / 1000);
+    const stats = createAuthoritativeLivePriceOverrideStats();
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [
+        {
+          id: "gtusdc-gauntlet",
+          name: "Gauntlet USDC Core",
+          symbol: "gtUSDC",
+          circulating: { peggedUSD: 128_000_000 },
+        },
+        {
+          id: "usdc-circle",
+          name: "USDC",
+          symbol: "USDC",
+          price: 0.9999,
+          priceSource: "coingecko+coingecko-onchain-address",
+          priceConfidence: "high",
+          priceObservedAt: nowSec - 60,
+          priceObservedAtMode: "local_fetch",
+        },
+      ],
+      undefined,
+      undefined,
+      { stats },
+    );
+
+    expect(overrides.has("gtusdc-gauntlet")).toBe(false);
+    expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+    expect(stats.assetAttempts).toEqual([
+      expect.objectContaining({
+        assetId: "gtusdc-gauntlet",
+        state: "attempted",
+        result: "empty",
+        rejectionClass: "untrusted-parent:usdc-circle:thin-replay-safe-core",
+      }),
+    ]);
+  });
+
+  it("prices inheritance wrappers from a high-confidence parent carrying an agreeing non-replay-safe corroborator", async () => {
+    // WEUSD has no on-chain leg at all — its 2026-07-19 outage was purely the
+    // poisoned-parent gate, so it is the cleanest inheritance regression.
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "weusd-picwe",
+        name: "PicWe WEUSD",
+        symbol: "WEUSD",
+        circulating: { peggedUSD: 500_000 },
+      },
+      {
+        id: "usdc-circle",
+        name: "USDC",
+        symbol: "USDC",
+        price: 0.9999,
+        priceSource: "bitstamp+coingecko+coingecko-onchain-address+kraken+pyth+redstone",
+        priceConfidence: "high",
+        priceObservedAt: nowSec - 60,
+        priceObservedAtMode: "local_fetch",
+      },
+    ]);
+
+    expect(overrides.get("weusd-picwe")).toMatchObject({
+      source: "protocol-redeem",
+      confidence: "high",
+      metadata: {
+        inheritedFrom: "usdc-circle",
+        parentReplaySafe: true,
+      },
+    });
+    expect(overrides.get("weusd-picwe")?.price).toBeCloseTo(0.99 * 0.9999, 6);
+  });
+
+  it("publishes a cached-rate degradation price when the live vault read fails for a missing asset", async () => {
+    fetchEvmCallHexAtBlockMock.mockRejectedValue(new Error("rpc down"));
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM authoritative_vault_rates",
+        rows: [{ stablecoin_id: "gtusdc-gauntlet", rate: 1.0221, observed_at: nowSec - 3600 }],
+      },
+    ]);
+    const stats = createAuthoritativeLivePriceOverrideStats();
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [
+        {
+          id: "gtusdc-gauntlet",
+          name: "Gauntlet USDC Core",
+          symbol: "gtUSDC",
+          circulating: { peggedUSD: 128_000_000 },
+        },
+        {
+          id: "usdc-circle",
+          name: "USDC",
+          symbol: "USDC",
+          price: 0.9999,
+          priceSource: "coingecko+pyth",
+          priceConfidence: "high",
+          priceObservedAt: nowSec - 60,
+          priceObservedAtMode: "upstream",
+        },
+      ],
+      undefined,
+      undefined,
+      { db, stats },
+    );
+
+    const override = overrides.get("gtusdc-gauntlet");
+    expect(override).toMatchObject({
+      source: "protocol-redeem-cached-rate",
+      confidence: "low",
+      metadata: {
+        inheritedFrom: "usdc-circle",
+        cachedVaultRate: { rate: 1.0221, rateObservedAt: nowSec - 3600 },
+      },
+    });
+    expect(override?.price).toBeCloseTo(1.0221 * 0.9999, 6);
+    expect(override?.observedAt).toBe(nowSec - 3600);
+    expect(stats.cachedRateFallbacks).toBe(1);
+    expect(stats.assetAttempts).toEqual([
+      expect.objectContaining({
+        assetId: "gtusdc-gauntlet",
+        result: "resolved",
+        source: "protocol-redeem-cached-rate",
+      }),
+    ]);
+  });
+
+  it("keeps failing hard when the cached vault rate is too old to trust", async () => {
+    fetchEvmCallHexAtBlockMock.mockRejectedValue(new Error("rpc down"));
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        // The 24h read-side WHERE bound excludes this row, and even a returned
+        // stale row would fail the in-memory trust check.
+        match: "FROM authoritative_vault_rates",
+        rows: [{ stablecoin_id: "gtusdc-gauntlet", rate: 1.0221, observed_at: nowSec - 25 * 3600 }],
+      },
+    ]);
+    const stats = createAuthoritativeLivePriceOverrideStats();
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [
+        {
+          id: "gtusdc-gauntlet",
+          name: "Gauntlet USDC Core",
+          symbol: "gtUSDC",
+          circulating: { peggedUSD: 128_000_000 },
+        },
+        {
+          id: "usdc-circle",
+          name: "USDC",
+          symbol: "USDC",
+          price: 0.9999,
+          priceSource: "coingecko+pyth",
+          priceConfidence: "high",
+          priceObservedAt: nowSec - 60,
+          priceObservedAtMode: "upstream",
+        },
+      ],
+      undefined,
+      undefined,
+      { db, stats },
+    );
+
+    expect(overrides.size).toBe(0);
+    expect(stats.cachedRateFallbacks).toBe(0);
+    expect(stats.failedCount).toBe(1);
+  });
+
+  it("persists fresh live vault rates for the durable cache after a successful read", async () => {
+    const oneShareUsdcRaw = 1_010_000n.toString(16).padStart(64, "0");
+    fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${oneShareUsdcRaw}`);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([]);
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [
+        {
+          id: "gtusdc-gauntlet",
+          name: "Gauntlet USDC Core",
+          symbol: "gtUSDC",
+          circulating: { peggedUSD: 128_000_000 },
+        },
+        {
+          id: "usdc-circle",
+          name: "USDC",
+          symbol: "USDC",
+          price: 0.9999,
+          priceSource: "coingecko+pyth",
+          priceConfidence: "high",
+          priceObservedAt: nowSec - 60,
+          priceObservedAtMode: "upstream",
+        },
+      ],
+      undefined,
+      undefined,
+      { db },
+    );
+
+    expect(overrides.get("gtusdc-gauntlet")).toMatchObject({ source: "protocol-redeem" });
+    const rateWrite = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("INSERT INTO authoritative_vault_rates"));
+    expect(rateWrite?.binds[0]).toBe("gtusdc-gauntlet");
+    expect(rateWrite?.binds[1]).toBeCloseTo(1.01, 8);
   });
 
   it("prices sYUSD before GT hardening from a fresh replay-safe single-source YUSD parent", async () => {

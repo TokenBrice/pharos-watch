@@ -1,12 +1,11 @@
 import {
   CIRCUIT_SOURCE,
-  DEFILLAMA_COINS,
   DEPEG_DEX_PROTOCOL_CORROBORATION_MIN,
   POOL_CHALLENGE_CONFIRM_MIN,
   POOL_CHALLENGE_HIGH_TVL_USD,
   USER_AGENT,
 } from "../lib/constants";
-import { cgHeaders, cgUrl } from "../lib/coingecko";
+import { cgHeaders, cgSimplePricePath, cgUrl } from "../lib/coingecko";
 import { recordOutcomeSafe } from "../lib/circuit-breaker";
 import {
   collectDexProtocolCorroborations,
@@ -25,7 +24,7 @@ import {
 } from "../lib/depeg-signals";
 import type { PendingDepegState } from "../lib/depeg-pending";
 import { fetchJsonWithRetry } from "../lib/fetch-retry";
-import { CoinGeckoSimplePriceSchema, DefiLlamaCoinsPriceSchema } from "../lib/upstream-schemas";
+import { CoinGeckoSimplePriceSchema } from "../lib/upstream-schemas";
 import {
   addSource,
   addSources,
@@ -69,7 +68,6 @@ async function evaluateOffchainConfirmer(args: {
   direction: PendingDepegState["direction"];
   agreeSources: string[] | undefined;
   priceSource: string | null | undefined;
-  defillamaAllowed: boolean;
   coingeckoAllowed: boolean;
   coingeckoApiKey: string | null | undefined;
   signal: AbortSignal | undefined;
@@ -84,7 +82,6 @@ async function evaluateOffchainConfirmer(args: {
     direction,
     agreeSources,
     priceSource,
-    defillamaAllowed,
     coingeckoAllowed,
     coingeckoApiKey,
     signal,
@@ -93,33 +90,25 @@ async function evaluateOffchainConfirmer(args: {
   const confirmerKey = chooseIndependentOffchainDepegConfirmer({ agreeSources, priceSource });
   if (confirmerKey == null) {
     console.log(
-      `[depeg-confirm] ${symbol} off-chain skipped: primary agreement already includes CoinGecko and DefiLlama families`,
+      `[depeg-confirm] ${symbol} off-chain skipped: primary agreement already includes the CoinGecko family`,
     );
     return { kind: "no-confirmer" };
   }
 
-  const useDefiLlamaSecondary = confirmerKey === "defillama-confirm";
-  const offchainLabel = useDefiLlamaSecondary ? "DefiLlama" : "CoinGecko";
-  const circuitKey = useDefiLlamaSecondary
-    ? CIRCUIT_SOURCE.DEFILLAMA_CONFIRM
-    : CIRCUIT_SOURCE.COINGECKO_CONFIRM;
-  const offchainAllowed = useDefiLlamaSecondary ? defillamaAllowed : coingeckoAllowed;
-  if (!offchainAllowed) {
+  const offchainLabel = "CoinGecko";
+  const circuitKey = CIRCUIT_SOURCE.COINGECKO_CONFIRM;
+  if (!coingeckoAllowed) {
     console.log(`[depeg-confirm] ${symbol} ${offchainLabel} skipped: circuit open`);
     return { kind: "circuit-open", sourceKey: confirmerKey };
   }
 
   try {
     const offchainResult = await fetchJsonWithRetry<unknown>(
-      useDefiLlamaSecondary
-        ? `${DEFILLAMA_COINS}/prices/current/coingecko:${geckoId}`
-        : cgUrl(`/simple/price?ids=${geckoId}&vs_currencies=usd&include_last_updated_at=true`, coingeckoApiKey ?? null),
-      useDefiLlamaSecondary
-        ? { headers: { "User-Agent": USER_AGENT }, signal }
-        : {
-            headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
-            signal,
-          },
+      cgUrl(cgSimplePricePath(`ids=${geckoId}&vs_currencies=usd&include_last_updated_at=true`), coingeckoApiKey ?? null),
+      {
+        headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
+        signal,
+      },
       1,
     );
     if (!offchainResult?.response.ok) {
@@ -127,19 +116,10 @@ async function evaluateOffchainConfirmer(args: {
       return { kind: "unavailable", sourceKey: confirmerKey, reason: "non-ok" };
     }
 
-    let offchainPrice: number | undefined;
-    let observedAt: number | undefined;
-    if (useDefiLlamaSecondary) {
-      const parsed = DefiLlamaCoinsPriceSchema.safeParse(offchainResult.body);
-      const coin = parsed.success ? parsed.data.coins?.[`coingecko:${geckoId}`] : undefined;
-      offchainPrice = coin?.price;
-      observedAt = coin?.timestamp;
-    } else {
-      const parsed = CoinGeckoSimplePriceSchema.safeParse(offchainResult.body);
-      const coin = parsed.success ? parsed.data[geckoId] : undefined;
-      offchainPrice = coin?.usd;
-      observedAt = coin?.last_updated_at;
-    }
+    const parsed = CoinGeckoSimplePriceSchema.safeParse(offchainResult.body);
+    const coin = parsed.success ? parsed.data[geckoId] : undefined;
+    const offchainPrice = coin?.usd;
+    const observedAt = coin?.last_updated_at;
 
     const timestampStatus = classifyConfirmationTimestamp(observedAt, now);
     if (offchainPrice && offchainPrice > 0 && timestampStatus === "fresh") {
@@ -193,7 +173,6 @@ export async function collectConfirmationEvidence(
     cexAllowed,
     cexPrices,
     coingeckoAllowed,
-    defillamaAllowed,
     coingeckoApiKey,
     signal,
     now,
@@ -229,7 +208,7 @@ export async function collectConfirmationEvidence(
       addSource(evidence.hardOpposingSources, nativeSourceKey);
     }
     console.log(
-      `[depeg-confirm] ${row.symbol} direct ${nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency ?? "native"} check: ` +
+      `[depeg-confirm] ${row.symbol} ${nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency ?? "native"} check: ` +
       `price=${nativePegQuote?.price ?? "n/a"}, deviation=${nativeSignal.absBps}bps, ` +
       `bar=${secondaryBar}bps, status=${evidence.offchainStatus}`,
     );
@@ -243,7 +222,6 @@ export async function collectConfirmationEvidence(
       direction: pendingState.direction,
       agreeSources: asset?.agreeSources,
       priceSource: asset?.priceSource,
-      defillamaAllowed,
       coingeckoAllowed,
       coingeckoApiKey,
       signal,

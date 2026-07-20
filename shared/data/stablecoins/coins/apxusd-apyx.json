@@ -11,7 +11,7 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "Preferred shares issued by Digital Asset Treasuries (DATs) — variable-rate, dividend-bearing preferred equity from companies holding digital assets (e.g., Strategy STRC, Strive SATA), held in excess of apxUSD outstanding, plus a cash and short-term U.S. Treasury Bill buffer (incl. USDC) for liquidity; redemptions settle in USDC, with preferred-share positions sold to USDC under stress",
+  "collateral": "Preferred shares issued by Digital Asset Treasuries (DATs) \u2014 variable-rate, dividend-bearing preferred equity from companies holding digital assets (e.g., Strategy STRC, Strive SATA), held in excess of apxUSD outstanding, plus a cash and short-term U.S. Treasury Bill buffer (incl. USDC) for liquidity; redemptions settle in USDC, with preferred-share positions sold to USDC under stress",
   "pegMechanism": "Whitelisted primary-market mint/redeem with USDC settlement at Redemption Value; secondary liquidity and arbitrage support non-whitelisted holders, while Protocol-Owned Liquidity provides an additional stability buffer during market stress.",
   "llamaId": "354",
   "detailProvider": "defillama",
@@ -44,7 +44,7 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "apxUSD has stablecoin-like mint/redeem mechanics, but collateral consists of preferred equity in Digital Asset Treasury companies rather than cash or government securities, the Terms of Service explicitly disclaim that financial terminology carries its customary legal meaning, and US persons are blocked from the platform — all of which cloud GENIUS payment-stablecoin applicability."
+      "summary": "apxUSD has stablecoin-like mint/redeem mechanics, but collateral consists of preferred equity in Digital Asset Treasury companies rather than cash or government securities, the Terms of Service explicitly disclaim that financial terminology carries its customary legal meaning, and US persons are blocked from the platform \u2014 all of which cloud GENIUS payment-stablecoin applicability."
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
@@ -57,7 +57,7 @@
     "reserveDisclosureUrl": "https://docs.apyx.fi/collateral-and-custody/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "apxUSD is stablecoin-adjacent but its preferred-share collateral (primarily STRC, Strategy preferred equity) and BVI domicile make GENIUS payment-stablecoin classification unresolved. The Terms of Service explicitly state the protocol is facilitated by Preference Capital (BVI) Ltd. under BVI law, describe apxUSD as a protocol-generated asset rather than a claim against any legal entity, and block US, EU, UK, and Canadian persons from accessing the platform. A depeg event occurred on 2026-06-04 with apxUSD trading at $0.90–$0.93 due to STRC preferred-share volatility.",
+    "notes": "apxUSD is stablecoin-adjacent but its preferred-share collateral (primarily STRC, Strategy preferred equity) and BVI domicile make GENIUS payment-stablecoin classification unresolved. The Terms of Service explicitly state the protocol is facilitated by Preference Capital (BVI) Ltd. under BVI law, describe apxUSD as a protocol-generated asset rather than a claim against any legal entity, and block US, EU, UK, and Canadian persons from accessing the platform. A depeg event occurred on 2026-06-04 with apxUSD trading at $0.90\u2013$0.93 due to STRC preferred-share volatility.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -85,8 +85,8 @@
         "OCC GENIUS Act rulemaking bulletin and public releases",
         "Apyx product, terms, and transparency pages",
         "Apyx Terms of Service (confirmed BVI jurisdiction, US persons blocked, no regulatory licensing disclosed)",
-        "ValueTheMarkets article on apxUSD challenges (June 2026) — no regulatory filings or GENIUS Act references",
-        "Web searches for Apyx/Preference Capital regulatory filings, OCC/FinCEN databases — no results",
+        "ValueTheMarkets article on apxUSD challenges (June 2026) \u2014 no regulatory filings or GENIUS Act references",
+        "Web searches for Apyx/Preference Capital regulatory filings, OCC/FinCEN databases \u2014 no results",
         "OCC Bulletin 2026-3 GENIUS proposed rule",
         "OCC Bulletin 2026-24 GENIUS reporting proposal",
         "OCC digital asset licensing applications tracker",
@@ -122,9 +122,9 @@
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "apxUSD moves cross-chain via Chainlink CCIP using the Cross-Chain Token (CCT) standard. The CCIP directory and on-chain pool contracts list apxUSD across all three deployments with matching token addresses: Ethereum is the home chain with a Lock/Release token pool (0x0e9cA42Bc60bE25F9A67f52173067Cc0Bb405BB5), while Base (BurnMintTokenPool 0x49b577E70Fd22B482aaA94c3799F41f3443C24B2) and BNB Chain (BurnMintTokenPool 0xFD957D7E27D239da5455b82303b2F618f73a9C49) use Burn/Mint pools, so CCIP-locked Ethereum supply backs the destination-chain mints. Pool deployers tie back to Apyx (ETH pool labeled 'Apyx: Deployer'; BNB pool deployed by an apxUSD ROLE_MINTER Safe owner), confirming this is the issuer's own CCIP CCT deployment rather than a third-party bridge listing.",
-    "reviewedAt": "2026-06-21",
-    "reviewer": "Pharos bridge-route re-verification",
+    "summary": "apxUSD moves cross-chain via Chainlink CCIP using the Cross-Chain Token (CCT) standard. Row-level on-chain verification on 2026-07-20 confirmed the per-chain surfaces: Ethereum is the native home deployment (ApxUSD.sol, minted natively via the reviewed MinterV0/AccessManager path; no getCCIPPool or LayerZero endpoint() surface on the token), with the CCIP Lock/Release pool 0x0e9cA42Bc60bE25F9A67f52173067Cc0Bb405BB5 locking Ethereum supply. Base (token getCCIPPool() = BurnMintTokenPool 0x49b577E70Fd22B482aaA94c3799F41f3443C24B2) and BNB Chain (getCCIPPool() = BurnMintTokenPool 0xFD957D7E27D239da5455b82303b2F618f73a9C49) are CCIP burn/mint representations; both pools return their chain's token from getToken(), are owned by the Apyx 3/6 Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2, and carry identical 13813-byte bytecode. No LayerZero endpoint() surface was found on any deployment.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
     "confidence": "verified",
     "protocols": [
       {
@@ -177,46 +177,108 @@
         "id": "ethereum:0x98a878b1cd98131b271883b390f68d2c90674665",
         "destinationChain": "ethereum",
         "contractAddress": "0x98a878b1cd98131b271883b390f68d2c90674665",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Apyx apxUSD (native home deployment; Chainlink CCIP lock/release lockbox)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "observedBlock": 25570877,
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "apxUSD Ethereum token on Etherscan",
+            "url": "https://etherscan.io/address/0x98a878b1cd98131b271883b390f68d2c90674665"
+          },
+          {
+            "label": "Chainlink CCIP Directory - apxUSD",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/apxUSD"
+          },
+          {
+            "label": "apxUSD Ethereum Lock/Release token pool",
+            "url": "https://etherscan.io/address/0x0e9cA42Bc60bE25F9A67f52173067Cc0Bb405BB5"
+          }
+        ],
+        "reviewNote": "On-chain reads 2026-07-20 (Ethereum block 25570877): the apxUSD token has no getCCIPPool() and no LayerZero endpoint() surface (both calls revert), matching the home-chain ApxUSD.sol whose primary issuance runs through the reviewed MinterV0/AccessManager mint path (mint-authority review 2026-07-13, verified). The Chainlink CCIP directory lists Ethereum pool 0x0e9cA42Bc60bE25F9A67f52173067Cc0Bb405BB5 as a Lock/Release lockbox, which escrows but never mints this deployment. Native issuance."
       },
       {
         "id": "base:0xd993935e13851dd7517af10687ec7e5022127228",
         "destinationChain": "base",
         "contractAddress": "0xd993935e13851dd7517af10687ec7e5022127228",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP (BurnMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain reads 2026-07-20 (Base block 48862198): the bridged apxUSD token's getCCIPPool() returns Chainlink CCIP BurnMintTokenPool 0x49b577E70Fd22B482aaA94c3799F41f3443C24B2; the pool's getToken() returns this token and owner() returns the Apyx 3/6 Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2 (pool bytecode 13813 bytes). The token has no LayerZero endpoint() surface. Mint/burn is gated to the CCIP pool per the verified BridgedApyxToken source, so CCIP mints this representation against the Ethereum Lock/Release lockbox.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "observedBlock": 48862198,
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "base",
+        "controllerAddress": "0x49b577e70fd22b482aaa94c3799f41f3443c24b2",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0x49b577e70fd22b482aaa94c3799f41f3443c24b2"
+        ],
+        "sources": [
+          {
+            "label": "apxUSD Base token on BaseScan",
+            "url": "https://basescan.org/address/0xd993935e13851dd7517af10687ec7e5022127228"
+          },
+          {
+            "label": "apxUSD Base BurnMintTokenPool on BaseScan",
+            "url": "https://basescan.org/address/0x49b577E70Fd22B482aaA94c3799F41f3443C24B2"
+          },
+          {
+            "label": "Chainlink CCIP Directory - apxUSD",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/apxUSD"
+          }
+        ]
       },
       {
         "id": "bsc:0x6b3788fd6604bbf03c5378d24e57bb334baad4af",
         "destinationChain": "bsc",
         "contractAddress": "0x6b3788fd6604bbf03c5378d24e57bb334baad4af",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP (BurnMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain reads 2026-07-20 (BSC block 111009463): the bridged apxUSD token's getCCIPPool() returns Chainlink CCIP BurnMintTokenPool 0xFD957D7E27D239da5455b82303b2F618f73a9C49; the pool's getToken() returns this token and owner() returns the Apyx 3/6 Safe 0xf9862efc1704ac05e687f66e5cd8c130e5663ce2 (pool bytecode 13813 bytes, identical to the Base pool). The token has no LayerZero endpoint() surface. Mint/burn is gated to the CCIP pool per the verified BridgedApyxToken source, so CCIP mints this representation against the Ethereum Lock/Release lockbox.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "observedBlock": 111009463,
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "bsc",
+        "controllerAddress": "0xfd957d7e27d239da5455b82303b2f618f73a9c49",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:bsc:0xfd957d7e27d239da5455b82303b2f618f73a9c49"
+        ],
+        "sources": [
+          {
+            "label": "apxUSD BNB Chain token on BscScan",
+            "url": "https://bscscan.com/address/0x6b3788fd6604bbf03c5378d24e57bb334baad4af"
+          },
+          {
+            "label": "apxUSD BNB Chain BurnMintTokenPool on BscScan",
+            "url": "https://bscscan.com/address/0xFD957D7E27D239da5455b82303b2F618f73a9C49"
+          },
+          {
+            "label": "Chainlink CCIP Directory - apxUSD",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/apxUSD"
+          }
+        ]
       }
     ]
   },
@@ -252,7 +314,7 @@
       ],
       "canChangeMintLogic": true,
       "delaySec": 0,
-      "controlRef": "Apyx deployment-wide UUPS authority — 3/6 Safe",
+      "controlRef": "Apyx deployment-wide UUPS authority \u2014 3/6 Safe",
       "observedAt": "2026-07-13",
       "sources": [
         {
@@ -279,7 +341,7 @@
     },
     "controls": [
       {
-        "label": "apxUSD AccessManager — Ethereum",
+        "label": "apxUSD AccessManager \u2014 Ethereum",
         "role": "minter-admin",
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
@@ -304,7 +366,7 @@
         ]
       },
       {
-        "label": "Apyx MinterV0 — Ethereum scheduled mint contract",
+        "label": "Apyx MinterV0 \u2014 Ethereum scheduled mint contract",
         "role": "backend-signer",
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
@@ -332,7 +394,7 @@
         ]
       },
       {
-        "label": "Apyx ROLE_MINTER Safe — Ethereum",
+        "label": "Apyx ROLE_MINTER Safe \u2014 Ethereum",
         "role": "direct-minter",
         "authorityType": "safe",
         "directMintAbility": "direct",
@@ -441,7 +503,7 @@
         ]
       },
       {
-        "label": "Apyx deployment-wide UUPS authority — 3/6 Safe",
+        "label": "Apyx deployment-wide UUPS authority \u2014 3/6 Safe",
         "role": "proxy-admin",
         "authorityType": "multisig",
         "directMintAbility": "upgrade-only",
@@ -547,11 +609,20 @@
     {
       "name": "Protocol Owned Liquidity",
       "pct": 13.7,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Apyx protocol (Preference Capital (BVI) Ltd.)",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Cash & Equivalents (USDC, U.S. Treasury Bills)",
-      "pct": 12.8,
+      "pct": 12.6,
       "risk": "very-low",
       "assetClass": "other",
       "issuerOrObligor": "USDC issuer and United States Treasury; split undisclosed",
@@ -564,14 +635,22 @@
     },
     {
       "name": "Inventory",
-      "pct": 11.2,
+      "pct": 11.4,
       "risk": "high",
-      "assetClass": "other"
+      "assetClass": "other",
+      "issuerOrObligor": "Apyx protocol (Preference Capital (BVI) Ltd.)",
+      "riskFactors": [
+        "market",
+        "custody",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-18",
-    "reviewer": "OpenAI Codex reserve-drift audit",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
     "confidence": "verified",
     "sources": [
       {
@@ -587,11 +666,11 @@
         "url": "https://docs.apyx.fi/solution-overview/example-collateral-allocation/strc"
       }
     ],
-    "rationale": "The timestamped July 18 Accountable snapshot reports 62.3% STRC, 13.7% Protocol Owned Liquidity, 12.8% Cash & Equivalents, and 11.2% Inventory, normalized across the disclosed reserves. The same snapshot reports a 0.881615 collateralization ratio, a material 11.8385% deficit against full backing; the normalized composition must not be read as evidence of 100% liability coverage. The source does not disclose the internal assets or failure domains for the protocol-liquidity and inventory buckets, so both retain the conservative high-risk tier already used by the live adapter.",
+    "rationale": "The Accountable reserves_split snapshot timestamped 2026-07-19T20:33:36Z reports 62.3% STRC, 13.7% Protocol Owned Liquidity, 12.6% Cash & Equivalents, and 11.4% Inventory (the 0.004% 'Other' bucket rounds out), normalized across the disclosed reserves. The same snapshot reports a 0.881307 collateralization ratio, a material ~11.9% deficit against full backing; the normalized composition must not be read as evidence of 100% liability coverage. The source does not disclose the internal assets of the protocol-liquidity and inventory buckets, so both retain the conservative high-risk tier already used by the live adapter; their failure domain is the Apyx protocol itself.",
     "compositionBasis": "Timestamped Accountable reserves_split snapshot",
-    "compositionAsOf": "2026-07-18",
+    "compositionAsOf": "2026-07-19",
     "scope": "full-composition",
-    "knownUnknownExposure": "USDC cannot be isolated from Treasury backing in Cash & Equivalents, while the source-native Protocol Owned Liquidity and Inventory buckets do not disclose their constituent assets, obligors, or failure domains.",
+    "knownUnknownExposure": "USDC cannot be isolated from Treasury backing in Cash & Equivalents, while the source-native Protocol Owned Liquidity and Inventory buckets do not disclose their constituent assets.",
     "knownUnknownExposurePct": 37.7,
     "nonLinkDispositions": [
       {
@@ -606,12 +685,12 @@
         "reserveName": "Protocol Owned Liquidity",
         "pct": 13.7,
         "disposition": "insufficient-evidence",
-        "rationale": "The Accountable snapshot names the bucket but does not disclose its constituent assets or failure domains."
+        "rationale": "The Accountable snapshot names the bucket but does not disclose its constituent assets; its failure domain is the Apyx protocol."
       },
       {
         "reserveIndex": 2,
         "reserveName": "Cash & Equivalents (USDC, U.S. Treasury Bills)",
-        "pct": 12.8,
+        "pct": 12.6,
         "disposition": "basket-needs-split",
         "rationale": "The source reports one combined cash-and-Treasury category.",
         "candidateCoinIds": [
@@ -621,11 +700,45 @@
       {
         "reserveIndex": 3,
         "reserveName": "Inventory",
-        "pct": 11.2,
+        "pct": 11.4,
         "disposition": "insufficient-evidence",
-        "rationale": "The Accountable snapshot names the bucket but does not disclose its constituent assets or failure domains."
+        "rationale": "The Accountable snapshot names the bucket but does not disclose its constituent assets; its failure domain is the Apyx protocol."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed custodian(s) attested monthly by Wolf & Company",
+        "role": "custodian"
+      },
+      {
+        "name": "Apyx protocol contracts and accounts (Protocol Owned Liquidity and Inventory buckets)",
+        "role": "other",
+        "jurisdiction": "British Virgin Islands"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Apyx transparency documentation",
+        "url": "https://docs.apyx.fi/collateral-and-custody/transparency"
+      },
+      {
+        "label": "Apyx third-party attestation index (Wolf & Company, monthly)",
+        "url": "https://docs.apyx.fi/collateral-and-custody/third-party-attestation"
+      },
+      {
+        "label": "APYX Accountable dashboard",
+        "url": "https://accountable.apyx.fi/"
+      }
+    ],
+    "uncertainty": "Apyx states it works with custodians monthly to obtain attestations that backing assets exist and remain under custody control (Wolf & Company opinions published for March-May 2026), but the custodian identities, account segregation terms, bankruptcy-remoteness structure, and rehypothecation permissions are not disclosed in the reviewed documentation. The Protocol Owned Liquidity and Inventory buckets (25.1% of the 2026-07-19 reserves_split) are protocol-controlled with no stated custody arrangement."
   },
   "liveReservesConfig": {
     "adapter": "accountable",

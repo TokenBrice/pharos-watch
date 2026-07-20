@@ -175,6 +175,11 @@
       "chain": "stellar",
       "address": "SBC-GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR",
       "decimals": 7
+    },
+    {
+      "chain": "tempo",
+      "address": "0x20c000000000000000000000ae247a1130450f09",
+      "decimals": 6
     }
   ],
   "blacklistabilityReview": {
@@ -206,7 +211,9 @@
             "label": "Brale SBC proof of reserve",
             "url": "https://brale.xyz/stablecoins/SBC"
           }
-        ]
+        ],
+        "chain": "ethereum",
+        "address": "0xb180f98037a63a3dca66b6b4ddbf250265b65110"
       },
       {
         "label": "Proxy upgrade authority — 6-signer legacy multisig, threshold 3 (UPGRADER_ROLE)",
@@ -223,7 +230,9 @@
             "label": "SBC Ethereum proxy implementation",
             "url": "https://etherscan.io/address/0x935eda0060ba40ea409bb05fa2300abb4e215ac1"
           }
-        ]
+        ],
+        "chain": "ethereum",
+        "address": "0x4d16d9e3358b68638e25f631ac861fa40a8fb87e"
       },
       {
         "chain": "polygon",
@@ -490,8 +499,8 @@
     "supervision": "attestation-only",
     "review": {
       "evidence": "Current EVM role reads confirm chain-local upgrade authorities: Ethereum block 25531059 uses legacy multisig 0x4d16d9e3; Arbitrum block 483773115, Optimism block 154217718, Base block 48622433, Celo block 72133454, and Ethereum Classic block 24947752 use Brale EOA 0xb180f98; Polygon block 90219432 uses Safe 0xcf64b5d4; Avalanche block 90290804 uses Safe 0xa8cdd1c1. Polygon and Avalanche Safes are both 3-of-6 with no enabled modules and zero guard storage. Solana uses the immutable canonical Token Program with a 1-of-2 mint-authority multisig, and Stellar uses its native issuer account with one weight-1 signer and no threshold elevation. MCCPA/Abdo performs monthly independent examinations; the latest reviewed report covers May 31, 2026, was published June 9, 2026, and fully reconciles SBC liabilities to reserve assets. Brale's disclosed FinCEN MSB and state money-transmitter status does not establish prudential issuer supervision comparable to a banking, trust, or EMI charter, so supervision is attestation-only.",
-      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
-      "reviewedAt": "2026-07-15",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Brale SBC proof of reserve",
@@ -581,8 +590,8 @@
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Brale documents stablecoin issuance APIs that can mint and redeem branded stablecoins across supported networks, including SBC. The route is reviewed as issuer-native burn/mint rather than an unaffiliated bridge route.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
     "confidence": "verified",
     "sources": [
       {
@@ -598,152 +607,248 @@
       {
         "id": "ethereum:0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Brale issuer-native SBC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native SBC issuance on ethereum: the UUPS proxy resolves to Brale's SBC implementation 0x935eda0060ba40ea409bb05fa2300abb4e215ac1 with the reviewed 6-signer legacy multisig UPGRADER_ROLE authority (verified on-chain 2026-07-20); no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "SBC on ethereum explorer (probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16"
+          }
+        ]
       },
       {
         "id": "arbitrum:0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
         "destinationChain": "arbitrum",
+        "canonicalChain": "arbitrum",
         "contractAddress": "0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Brale issuer-native SBC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native SBC issuance on arbitrum: the UUPS proxy resolves to Brale's SBC implementation 0xc1bc0450f8bb1386ffd5150cbb3ad38da1f0dd12 with the reviewed Brale EOA UPGRADER_ROLE authority (verified on-chain 2026-07-20); no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "SBC on arbitrum explorer (probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798"
+          }
+        ]
       },
       {
         "id": "optimism:0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16",
         "destinationChain": "optimism",
+        "canonicalChain": "optimism",
         "contractAddress": "0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Brale issuer-native SBC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native SBC issuance on optimism: the UUPS proxy resolves to Brale's SBC implementation 0x935eda0060ba40ea409bb05fa2300abb4e215ac1 with the reviewed Brale EOA UPGRADER_ROLE authority (verified on-chain 2026-07-20); no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "SBC on optimism explorer (probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16"
+          }
+        ]
       },
       {
         "id": "base:0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
         "destinationChain": "base",
+        "canonicalChain": "base",
         "contractAddress": "0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Brale issuer-native SBC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native SBC issuance on base: the UUPS proxy resolves to Brale's SBC implementation 0xc1bc0450f8bb1386ffd5150cbb3ad38da1f0dd12 with the reviewed Brale EOA UPGRADER_ROLE authority (verified on-chain 2026-07-20); no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "SBC on base explorer (probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798"
+          }
+        ]
       },
       {
         "id": "polygon:0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
         "destinationChain": "polygon",
+        "canonicalChain": "polygon",
         "contractAddress": "0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Brale issuer-native SBC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native SBC issuance on polygon: the UUPS proxy resolves to Brale's SBC implementation 0xc1bc0450f8bb1386ffd5150cbb3ad38da1f0dd12 with the reviewed Polygon 3/6 Safe UPGRADER_ROLE authority (verified on-chain 2026-07-20); no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "SBC on polygon explorer (probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798"
+          }
+        ]
       },
       {
         "id": "avalanche:0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16",
         "destinationChain": "avalanche",
+        "canonicalChain": "avalanche",
         "contractAddress": "0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Brale issuer-native SBC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native SBC issuance on avalanche: the UUPS proxy resolves to Brale's SBC implementation 0x935eda0060ba40ea409bb05fa2300abb4e215ac1 with the reviewed Avalanche 3/6 Safe UPGRADER_ROLE authority (verified on-chain 2026-07-20); no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "SBC on avalanche explorer (probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16"
+          }
+        ]
       },
       {
         "id": "celo:0xde093684c796204224bc081f937aa059d903c52a",
         "destinationChain": "celo",
+        "canonicalChain": "celo",
         "contractAddress": "0xde093684c796204224bc081f937aa059d903c52a",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Brale issuer-native SBC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native SBC issuance on celo: the UUPS proxy resolves to Brale's SBC implementation 0xe856714d339ac62cb71242d25e30867a6358778a with the reviewed Brale EOA UPGRADER_ROLE authority (verified on-chain 2026-07-20); no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "SBC on celo explorer (probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xde093684c796204224bc081f937aa059d903c52a"
+          }
+        ]
       },
       {
         "id": "solana:DBAzBUXaLj1qANCseUPZz4sp9F8d2sc78C4vKjhbTGMA",
         "destinationChain": "solana",
+        "canonicalChain": "solana",
         "contractAddress": "DBAzBUXaLj1qANCseUPZz4sp9F8d2sc78C4vKjhbTGMA",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Brale issuer-native SBC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native SBC issuance on solana: the SPL mint's authority is the reviewed 1-of-2 Token Program multisig 8Dn2V6HX6gTwkCid2MUiv3mXvMkTcyxQeqTychdBRBSj (verified on-chain 2026-07-20); no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "SBC on solana explorer (probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=DBAzBUXaLj1qANCseUPZz4sp9F8d2sc78C4vKjhbTGMA"
+          }
+        ]
       },
       {
         "id": "ethereum-classic:0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
         "destinationChain": "ethereum-classic",
+        "canonicalChain": "ethereum-classic",
         "contractAddress": "0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Brale issuer-native SBC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native SBC issuance on ethereum-classic: the UUPS proxy resolves to Brale's SBC implementation 0xc1bc0450f8bb1386ffd5150cbb3ad38da1f0dd12 with the reviewed Brale EOA UPGRADER_ROLE authority (verified on-chain 2026-07-20); no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "SBC on ethereum-classic explorer (probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798"
+          }
+        ]
       },
       {
         "id": "stellar:SBC-GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR",
         "destinationChain": "stellar",
+        "canonicalChain": "stellar",
         "contractAddress": "SBC-GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Brale issuer-native SBC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native SBC issuance on stellar: the classic SBC asset's issuer account GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR is a single-signer issuer account (Horizon-verified in the reviewed profile) (verified on-chain 2026-07-20); no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "SBC on stellar explorer (probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=SBC-GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR"
+          }
+        ]
+      },
+      {
+        "id": "tempo:0x20c000000000000000000000ae247a1130450f09",
+        "destinationChain": "tempo",
+        "canonicalChain": "tempo",
+        "contractAddress": "0x20c000000000000000000000ae247a1130450f09",
+        "protocol": "Brale issuer-native SBC (Tempo TIP-20)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native SBC issuance on Tempo: TIP-20 token 0x20c000000000000000000000ae247a1130450f09 (Stable Coin/SBC, 6 decimals, supply 26.26 matching the exact captured supply; verified on-chain 2026-07-20), issued natively per DefiLlama's sbc adapter.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "SBC on the Tempo explorer (supply probed 2026-07-20)",
+            "url": "https://explore.tempo.xyz/token/0x20c000000000000000000000ae247a1130450f09"
+          },
+          {
+            "label": "DefiLlama sbc adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/sbc/index.ts"
+          }
+        ]
       }
     ]
   },

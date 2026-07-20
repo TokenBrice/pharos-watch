@@ -699,7 +699,7 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `KINESIS_KAU`                        | `kinesis-kau-horizon`         | `sync-kinesis-supply` KAU chain circulation fetch                                                                         |
 | `KINESIS_KAG`                        | `kinesis-kag-horizon`         | `sync-kinesis-supply` KAG chain circulation fetch                                                                         |
 | `COINGECKO_CONFIRM`                  | `coingecko-confirm`           | pending depeg confirmation                                                                                                |
-| `DEFILLAMA_CONFIRM`                  | `defillama-confirm`           | pending depeg confirmation                                                                                                |
+| `DEFILLAMA_CONFIRM`                  | `defillama-confirm`           | legacy retained state; pending depeg confirmation no longer queries DefiLlama's CoinGecko mirror                         |
 | Dynamic `live-reserves:<scope>` keys | e.g. `live-reserves:infinifi` | `sync-live-reserves` per configured breaker scope; some adapters also opt into source-invariant within-run result sharing |
 
 Primary-oracle implementation notes:

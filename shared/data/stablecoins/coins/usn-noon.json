@@ -174,8 +174,8 @@
     "controls": [
       {
         "chain": "ethereum",
-      "address": "0xB91b361ebE4022Bb62dF0651bDD09b21209ac058",
-      "label": "USN MinterHandlerV2",
+        "address": "0xB91b361ebE4022Bb62dF0651bDD09b21209ac058",
+        "label": "USN MinterHandlerV2",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
@@ -189,7 +189,7 @@
           "unsupportedReason": "This control covers primary issuer minting on Ethereum only. LayerZero and Hyperlane destination-mint messaging and peer authority remains separately unresolved under bridgeRouteRisk."
         },
         "observedAt": "2026-07-14",
-      "observedBlock": 25530462,
+        "observedBlock": 25530462,
         "sources": [
           {
             "label": "MinterHandlerV2 implementation",
@@ -283,8 +283,8 @@
       },
       {
         "chain": "ethereum",
-      "address": "0xE5e412C212B4FBbF550A94e7BD5e83dB0B315A7F",
-      "label": "USN Ethereum upgrade timelock",
+        "address": "0xE5e412C212B4FBbF550A94e7BD5e83dB0B315A7F",
+        "label": "USN Ethereum upgrade timelock",
         "role": "proxy-admin",
         "authorityType": "timelock",
         "directMintAbility": "upgrade-only",
@@ -292,7 +292,7 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-14",
-      "observedBlock": 25531363,
+        "observedBlock": 25531363,
         "failureDomainKeys": [
           "safe:ethereum:0x1ea169ecccf7714e7ba04900e1a3357cca77327f"
         ],
@@ -305,16 +305,16 @@
             "label": "Noon upgrade timelock source",
             "url": "https://sourcify.dev/server/v2/contract/1/0xe5e412c212b4fbbf550a94e7bd5e83db0b315a7f?fields=sources,abi,metadata"
           },
-        {
-          "label": "USN ProxyAdmin on Etherscan",
-          "url": "https://etherscan.io/address/0x55f39512cb43111a13e8440ee3e3602e72628239#code"
-        },
-        {
-          "label": "Ethereum PublicNode RPC",
-          "url": "https://ethereum-rpc.publicnode.com"
-        }
-      ],
-      "evidence": "At Ethereum block 25531363, the USN proxy implementation slot was 0x6bdc8104...8397 and the canonical EIP-1967 admin slot 0xb5312768...d6103 returned ProxyAdmin 0x55f39512...8239. The OpenZeppelin v5 transparent-proxy runtime independently embeds the same immutable ProxyAdmin address. ProxyAdmin.owner() returned this verified timelock; delay() returned 172800 seconds and owner() returned the Noon 3-of-6 admin Safe. Verified source requires the owner to schedule an exact upgrade and wait for the delay before execution."
+          {
+            "label": "USN ProxyAdmin on Etherscan",
+            "url": "https://etherscan.io/address/0x55f39512cb43111a13e8440ee3e3602e72628239#code"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25531363, the USN proxy implementation slot was 0x6bdc8104...8397 and the canonical EIP-1967 admin slot 0xb5312768...d6103 returned ProxyAdmin 0x55f39512...8239. The OpenZeppelin v5 transparent-proxy runtime independently embeds the same immutable ProxyAdmin address. ProxyAdmin.owner() returned this verified timelock; delay() returned 172800 seconds and owner() returned the Noon 3-of-6 admin Safe. Verified source requires the owner to schedule an exact upgrade and wait for the delay before execution."
       }
     ],
     "review": {
@@ -364,7 +364,7 @@
   "reserves": [
     {
       "name": "Private Credit (Fasanara FTAC)",
-      "pct": 72.3,
+      "pct": 74.3,
       "risk": "high",
       "assetClass": "private-credit",
       "issuerOrObligor": "Fasanara Capital and FTAC borrowers",
@@ -379,21 +379,8 @@
       "liquidityHorizon": "over-seven-days"
     },
     {
-      "name": "US Treasury Bills",
-      "pct": 13.1,
-      "risk": "very-low",
-      "assetClass": "treasury-bill",
-      "issuerOrObligor": "United States Treasury",
-      "riskFactors": [
-        "duration",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "one-day"
-    },
-    {
       "name": "DeFi Lending",
-      "pct": 8.2,
+      "pct": 10.72,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Undisclosed DeFi protocols and borrowers",
@@ -407,26 +394,8 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "CLOs (JAAA)",
-      "pct": 5.3,
-      "risk": "high",
-      "coinId": "jaaa-janus-henderson-anemoy",
-      "depType": "collateral",
-      "assetClass": "fund-share",
-      "issuerOrObligor": "Janus Henderson Anemoy AAA CLO Fund",
-      "riskFactors": [
-        "credit",
-        "duration",
-        "liquidity",
-        "custody",
-        "counterparty",
-        "smart-contract"
-      ],
-      "liquidityHorizon": "seven-days"
-    },
-    {
-      "name": "Unknown / unmapped Accountable buckets",
-      "pct": 1.1,
+      "name": "Other / unmapped Accountable buckets",
+      "pct": 5.46,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Undisclosed Noon reserve counterparties",
@@ -443,6 +412,37 @@
         "concentration"
       ],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "CLOs (JAAA)",
+      "pct": 5.47,
+      "risk": "high",
+      "coinId": "jaaa-janus-henderson-anemoy",
+      "depType": "collateral",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Janus Henderson Anemoy AAA CLO Fund",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "US Treasury Bills",
+      "pct": 4.05,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "duration",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
     }
   ],
   "liveReservesConfig": {
@@ -479,8 +479,8 @@
     }
   },
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-1 (lead usde-ethena)",
     "confidence": "probable",
     "sources": [
       {
@@ -496,35 +496,64 @@
         "url": "https://docs.noon.capital/noon-the-basics/liquidity"
       }
     ],
-    "rationale": "The exact 2026-07-15 fixed-input capture identifies five Accountable deployment buckets and their weights. The dashboard establishes current category allocation, while Noon documents its transparency and liquidity model; it does not disclose the FTAC borrower book, DeFi protocols and positions, or the unmapped bucket constituents.",
-    "compositionBasis": "Accountable deployment-category snapshot captured at 2026-07-15T12:13:13Z",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "The live Accountable deployment capture (API timestamp 2026-07-19T21:54:41Z) reports five deployment buckets: Fasanara FTAC private credit 74.3%, DeFi lending 10.72%, JAAA CLOs 5.47%, an unmapped Other bucket 5.46%, and US Treasury bills 4.05%. The dashboard establishes current category allocation, while Noon documents its transparency and liquidity model; it does not disclose the FTAC borrower book, DeFi protocols and positions, or the Other bucket constituents. Weights are refreshed from the 2026-07-15 capture with the same bucket identities.",
+    "compositionBasis": "Accountable deployment-category snapshot captured at 2026-07-19T21:54:41Z",
+    "compositionAsOf": "2026-07-19",
     "scope": "full-composition",
-    "knownUnknownExposure": "FTAC borrower-level exposure, DeFi protocol positions, and the unmapped Accountable bucket remain unresolved.",
-    "knownUnknownExposurePct": 81.6,
+    "knownUnknownExposure": "FTAC borrower-level exposure, DeFi protocol positions, and the unmapped Other bucket remain unresolved.",
+    "knownUnknownExposurePct": 90.48,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Private Credit (Fasanara FTAC)",
-        "pct": 72.3,
+        "pct": 74.3,
         "disposition": "insufficient-evidence",
         "rationale": "The current category and weight are known, but borrower identities, loan terms, seniority, and custody are not published."
       },
       {
-        "reserveIndex": 2,
+        "reserveIndex": 1,
         "reserveName": "DeFi Lending",
-        "pct": 8.2,
+        "pct": 10.72,
         "disposition": "basket-needs-split",
         "rationale": "The current category and weight are known, but protocol, market, borrower, and position weights are not published."
       },
       {
-        "reserveIndex": 4,
-        "reserveName": "Unknown / unmapped Accountable buckets",
-        "pct": 1.1,
+        "reserveIndex": 2,
+        "reserveName": "Other / unmapped Accountable buckets",
+        "pct": 5.46,
         "disposition": "insufficient-evidence",
         "rationale": "Accountable reports this residual without constituent identity or instrument detail."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed institutional custodians and exchanges (balances ingested by Accountable inside the Noon perimeter)",
+        "role": "custodian"
+      },
+      {
+        "name": "Accountable (third-party proof-of-solvency attestation)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-1 (lead usde-ethena)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Noon transparency documentation",
+        "url": "https://docs.noon.capital/security/transparency"
+      },
+      {
+        "label": "Noon Accountable dashboard API",
+        "url": "https://cache.accountable.capital/dashboard/noon"
+      }
+    ],
+    "uncertainty": "Noon states that Accountable's verification engine ingests data directly from Noon's asset custodians and exchanges within the Noon perimeter, but does not name those custodians or exchanges. Account segregation, insolvency treatment, provider shares, and rehypothecation terms are not publicly documented; deployment of reserves into yield strategies is part of Noon's disclosed design rather than custodian rehypothecation."
   },
   "launchDate": "2025-01-27"
 }

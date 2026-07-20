@@ -12,7 +12,7 @@ export const CHAIN_HEALTH_METHODOLOGY_VERSION = "1.4";
 export const CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL = methodologyLabel(CHAIN_HEALTH_METHODOLOGY_VERSION);
 export const CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH = "/methodology/chain-health-changelog/";
 
-export const DEPEG_DEWS_METHODOLOGY_VERSION = "6.097";
+export const DEPEG_DEWS_METHODOLOGY_VERSION = "6.098";
 export const DEPEG_DEWS_METHODOLOGY_VERSION_LABEL = methodologyLabel(DEPEG_DEWS_METHODOLOGY_VERSION);
 export const DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH = "/methodology/depeg-changelog/";
 
@@ -20,7 +20,7 @@ export const DDR_METHODOLOGY_VERSION = "3.04";
 export const DDR_METHODOLOGY_VERSION_LABEL = methodologyLabel(DDR_METHODOLOGY_VERSION);
 export const DDR_METHODOLOGY_CHANGELOG_PATH = "/methodology/depeg-resolver-changelog/";
 
-export const LIQUIDITY_METHODOLOGY_VERSION = "5.84";
+export const LIQUIDITY_METHODOLOGY_VERSION = "5.85";
 export const LIQUIDITY_METHODOLOGY_VERSION_LABEL = methodologyLabel(LIQUIDITY_METHODOLOGY_VERSION);
 export const LIQUIDITY_METHODOLOGY_CHANGELOG_PATH = "/methodology/liquidity-score-changelog/";
 
@@ -32,7 +32,7 @@ export const MINT_BURN_FLOW_METHODOLOGY_VERSION = "6.17";
 export const MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL = methodologyLabel(MINT_BURN_FLOW_METHODOLOGY_VERSION);
 export const MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH = "/methodology/mint-burn-flow-changelog/";
 
-export const PRICING_PIPELINE_METHODOLOGY_VERSION = "6.201";
+export const PRICING_PIPELINE_METHODOLOGY_VERSION = "6.204";
 export const PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL = methodologyLabel(PRICING_PIPELINE_METHODOLOGY_VERSION);
 export const PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH = "/methodology/pricing-pipeline-changelog/";
 

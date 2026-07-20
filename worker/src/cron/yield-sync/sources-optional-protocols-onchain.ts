@@ -1,7 +1,7 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { type ChainRpcConfig, getChainRpc } from "../../lib/chain-registry";
 import { resolveRpcUrls } from "./sources-helpers";
-import { cgHeaders, cgUrl } from "../../lib/coingecko";
+import { cgHeaders, cgSimplePricePath, cgUrl } from "../../lib/coingecko";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
@@ -58,7 +58,7 @@ async function fetchCoinGeckoUsdPrice(
 ): Promise<number | null> {
   try {
     const result = await fetchJsonWithRetry<Record<string, { usd?: number }>>(
-      cgUrl(`/simple/price?ids=${encodeURIComponent(geckoId)}&vs_currencies=usd`, coingeckoApiKey ?? null),
+      cgUrl(cgSimplePricePath(`ids=${encodeURIComponent(geckoId)}&vs_currencies=usd`), coingeckoApiKey ?? null),
       {
         headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
         signal,

@@ -154,10 +154,10 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "external-lock-mint",
-    "summary": "Mezo documents the MUSD bridge between Mezo, Ethereum, and Base using Wormhole NTT. Because cross-chain supply relies on Wormhole NTT bridge contracts, the reviewed route is external lock/mint.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "tier": "external-validated-network",
+    "summary": "MUSD is canonically issued on Mezo (Liquity-style CDP minting through BorrowerOperations, token owner is the Mezo 5-of-9 Safe). Cross-chain MUSD runs on Wormhole NTT v1.1.0 with Mezo as the locking hub and Ethereum and Base as burning spokes: all three chains carry the same canonical MUSD token contract at 0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186, and spoke mint/burn authority sits with the Wormhole NTT managers attested by the guardian network, so the cross-chain route is an external validated network in burn-mint mode, not a wrapped representation.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
     "confidence": "verified",
     "protocols": [
       {
@@ -166,18 +166,24 @@
         "url": "https://wormhole.com/products/native-token-transfers",
         "bridgeTypes": [
           "nativeTokenTransfer",
-          "lockAndMint"
-        ]
+          "burnAndMint",
+          "lockAndUnlock"
+        ],
+        "note": "Mezo is the NTT locking hub (manager mode()=0, holds bridged-out MUSD); Ethereum and Base are burning spokes (manager mode()=1). Deployment topology from the issuer's ntt-bridge-musd-mainnet deployment.json, each leg re-verified on-chain 2026-07-20."
       }
     ],
     "sources": [
       {
-        "label": "Mezo MUSD bridge docs",
-        "url": "https://mezo.org/docs/users/musd/musd-bridge/"
-      },
-      {
         "label": "Mezo Wormhole announcement",
         "url": "https://mezo.org/blog/mezo-and-musd-go-multichain-with-wormhole/"
+      },
+      {
+        "label": "Mezo ntt-bridge-musd-mainnet deployment.json",
+        "url": "https://github.com/mezo-org/ntt-bridge-musd-mainnet/blob/main/deployment.json"
+      },
+      {
+        "label": "Mezo MUSD contracts",
+        "url": "https://github.com/mezo-org/musd"
       },
       {
         "label": "Wormhole NTT",
@@ -186,49 +192,90 @@
     ],
     "routes": [
       {
-        "id": "ethereum:0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
-        "destinationChain": "ethereum",
-        "contractAddress": "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
-      },
-      {
         "id": "mezo:0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
         "destinationChain": "mezo",
+        "canonicalChain": "mezo",
         "contractAddress": "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Mezo",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical home chain. On-chain reads via Mezo RPC (2026-07-20): token owner() = 0x98D8899c3030741925BE630C710A98B57F397C7a, a 171-byte Safe proxy whose getThreshold()=5 and getOwners()=9 on Ethereum; mintList(BorrowerOperations 0x44b1bac67dDA612a41a58AAf779143B181dEe031)=true, the Liquity CDP mint route. The Wormhole NTT manager 0x7efb386675d75280D39Aae42964A6776DE0ee0bD reads token()=MUSD and mode()=0 (locking hub) and held 1,164,649.25 MUSD of locked bridged-out supply at query time.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Mezo MUSD contracts",
+            "url": "https://github.com/mezo-org/musd"
+          },
+          {
+            "label": "Mezo ntt-bridge-musd-mainnet deployment.json",
+            "url": "https://github.com/mezo-org/ntt-bridge-musd-mainnet/blob/main/deployment.json"
+          },
+          {
+            "label": "Mezo mainnet RPC",
+            "url": "https://jsonrpc-mezo.boar.network"
+          }
+        ]
+      },
+      {
+        "id": "ethereum:0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
+        "destinationChain": "ethereum",
+        "canonicalChain": "mezo",
+        "contractAddress": "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
+        "protocol": "Wormhole NTT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Same canonical MUSD token bytecode as Mezo (6436 bytes). An eth_getLogs scan for MintListAddressAdded from the token's deployment block 22467780 through 25571115 returned exactly one entry, at block 22973966, adding 0x5293158bf7a81ED05418DA497a80F7e6DBF4477E; mintList(that address)=true. That contract is the Wormhole NTT manager (209-byte proxy): token()=MUSD, mode()=1 (burning spoke), matching the issuer's ntt-bridge-musd-mainnet deployment.json. No LayerZero endpoint() surface. Mint/burn on Ethereum is gated by guardian-attested NTT messages; token owner is the same Mezo 5-of-9 Safe as on Mezo.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Mezo Wormhole announcement",
+            "url": "https://mezo.org/blog/mezo-and-musd-go-multichain-with-wormhole/"
+          },
+          {
+            "label": "Mezo ntt-bridge-musd-mainnet deployment.json",
+            "url": "https://github.com/mezo-org/ntt-bridge-musd-mainnet/blob/main/deployment.json"
+          },
+          {
+            "label": "MUSD token on Etherscan",
+            "url": "https://etherscan.io/address/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+          }
+        ]
       },
       {
         "id": "base:0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
         "destinationChain": "base",
+        "canonicalChain": "mezo",
         "contractAddress": "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Wormhole NTT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Same canonical MUSD token bytecode as Mezo (6436 bytes). On-chain reads via Base RPC (2026-07-20): mintList(0x3EB418BdBE95b4b9cf465ecfBD8424685ACD1Bc1)=true; that contract is the Wormhole NTT manager (209-byte proxy) with token()=MUSD and mode()=1 (burning spoke), matching the issuer's ntt-bridge-musd-mainnet deployment.json. Token owner is the same Mezo 5-of-9 Safe as on Mezo and Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Mezo ntt-bridge-musd-mainnet deployment.json",
+            "url": "https://github.com/mezo-org/ntt-bridge-musd-mainnet/blob/main/deployment.json"
+          },
+          {
+            "label": "MUSD token on Basescan",
+            "url": "https://basescan.org/address/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+          }
+        ]
       }
     ]
   },
@@ -324,8 +371,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
     "confidence": "verified",
     "sources": [
       {
@@ -337,11 +384,11 @@
         "url": "https://mezo.org/docs/users/borrow/liquidation-mechanics/"
       }
     ],
-    "rationale": "The exact current fixed input reports one live row, BTC collateral in Mezo ActivePool, at 100%. Mezo documents the ActivePool as the BTC collateral account for its Liquity-style CDP path; collateral returns on repayment, is paid out on redemption, or moves through the StabilityPool and DefaultPool on liquidation. The structured classification covers that observed aggregate BTC slice and retains native, wrapped, bridge, custody, and contract risks without inventing a variant allocation. This selected slice does not establish that every separate MUSD mint-authority path is backed by the ActivePool.",
+    "rationale": "The exact current fixed input reports one live row, BTC collateral in Mezo ActivePool, at 100%, and that row is the entire observed reserve envelope. Mezo documents the ActivePool as the BTC collateral account for its Liquity-style CDP path; collateral returns on repayment, is paid out on redemption, or moves through the StabilityPool and DefaultPool on liquidation. The structured classification covers that observed aggregate BTC slice and retains native, wrapped, bridge, custody, and contract risks without inventing a variant allocation. The scope is restated as full-composition over the observed envelope so the reviewed classification overlays the live row; whether every separate MUSD mint-authority path is backed by the ActivePool remains a mint-authority question, not a reserve-composition one.",
     "compositionBasis": "Mezo ActivePool live-reserve capture and MUSD collateral documentation",
     "compositionAsOf": "2026-07-15",
-    "scope": "selected-slices",
-    "knownUnknownExposure": "No unresolved part of the recorded ActivePool slice remains; native-versus-wrapped BTC source-path weights are not published and are retained as aggregate risk factors. Separate non-CDP MUSD issuance paths are outside this selected-slice review.",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unresolved part of the recorded ActivePool slice remains; native-versus-wrapped BTC source-path weights are not published and are retained as aggregate risk factors. Separate non-CDP MUSD issuance paths are outside this reserve-composition review.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

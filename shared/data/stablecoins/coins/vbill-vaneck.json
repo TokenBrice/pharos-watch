@@ -164,9 +164,9 @@
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "Wormhole is Securitize and VanEck's official interoperability provider for VBILL, powering token transfers between Securitize-issued deployments on Ethereum, Avalanche, BNB Chain, and Solana.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Securitize VBILL page",
@@ -197,62 +197,90 @@
       {
         "id": "avalanche:0x7f4546ef315efc65336187fe3765ea779ac90183",
         "destinationChain": "avalanche",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x7f4546ef315efc65336187fe3765ea779ac90183",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Securitize native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native VBILL: 170-byte EIP-1967 proxy, owner() = the Securitize token owner EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee on every chain (mint-authority review; read 2026-07-20). Securitize issues VBILL natively per chain under its DS protocol.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Securitize",
+            "url": "https://securitize.io/"
+          }
+        ]
       },
       {
         "id": "bsc:0x14d72634328c4d03bba184a48081df65f1911279",
         "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x14d72634328c4d03bba184a48081df65f1911279",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Securitize native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native VBILL: 170-byte EIP-1967 proxy, owner() = the Securitize token owner EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee on every chain (mint-authority review; read 2026-07-20). Securitize issues VBILL natively per chain under its DS protocol.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Securitize",
+            "url": "https://securitize.io/"
+          }
+        ]
       },
       {
         "id": "ethereum:0x2255718832bc9fd3be1caf75084f4803da14ff01",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x2255718832bc9fd3be1caf75084f4803da14ff01",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Securitize native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native VBILL: 170-byte EIP-1967 proxy, owner() = the Securitize token owner EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee on every chain (mint-authority review; read 2026-07-20). Securitize issues VBILL natively per chain under its DS protocol.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Securitize",
+            "url": "https://securitize.io/"
+          }
+        ]
       },
       {
         "id": "solana:34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1",
         "destinationChain": "solana",
+        "canonicalChain": "ethereum",
         "contractAddress": "34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Securitize native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native VBILL on Solana: SPL mint 34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1 has mintAuthority = freezeAuthority = BJXUcHs7R8m9oxzQkFxphZUXMY8SPsK8uPi5Sx7ycgiK \u2014 the Securitize issuance authority (read 2026-07-20 via Solana RPC).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Securitize",
+            "url": "https://securitize.io/"
+          }
+        ]
       }
     ]
   },
@@ -266,7 +294,14 @@
       "risk": "very-low",
       "assetClass": "other",
       "issuerOrObligor": "U.S. Treasury; State Street Bank and Trust Company; Treasury-repo counterparties",
-      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "concentration"],
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "concentration"
+      ],
       "liquidityHorizon": "one-day",
       "maturityDaysMax": 397
     }

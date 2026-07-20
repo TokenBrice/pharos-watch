@@ -72,12 +72,8 @@
         "label": "FXRP Trove branch",
         "tier": "standard-external",
         "summary": "The branch PriceFeed calls the FTSOv2 XRP/USD feed through the shared connector without preserving or checking the upstream timestamp.",
-        "collateralAssets": [
-          "FXRP"
-        ],
-        "chains": [
-          "flare"
-        ],
+        "collateralAssets": ["FXRP"],
+        "chains": ["flare"],
         "feeds": [
           {
             "provider": "Flare FTSOv2",
@@ -136,12 +132,8 @@
         "label": "wFLR Trove branch",
         "tier": "standard-external",
         "summary": "The branch PriceFeed calls the FTSOv2 FLR/USD feed through the shared connector without preserving or checking the upstream timestamp.",
-        "collateralAssets": [
-          "wFLR"
-        ],
-        "chains": [
-          "flare"
-        ],
+        "collateralAssets": ["wFLR"],
+        "chains": ["flare"],
         "feeds": [
           {
             "provider": "Flare FTSOv2",
@@ -200,12 +192,8 @@
         "label": "stXRP Trove branch",
         "tier": "single-source-or-laggy",
         "summary": "The branch uses a custom stXRP/USD FTSOv2 feed through the shared connector, with no enforced heartbeat, second provider, or cached fallback.",
-        "collateralAssets": [
-          "stXRP"
-        ],
-        "chains": [
-          "flare"
-        ],
+        "collateralAssets": ["stXRP"],
+        "chains": ["flare"],
         "feeds": [
           {
             "provider": "Flare FTSOv2 custom feed",
@@ -264,12 +252,8 @@
         "label": "sFLR Trove branch",
         "tier": "single-source-or-laggy",
         "summary": "The branch uses a custom sFLR/USD FTSOv2 feed through the shared connector, with no enforced heartbeat, second provider, or cached fallback.",
-        "collateralAssets": [
-          "sFLR"
-        ],
-        "chains": [
-          "flare"
-        ],
+        "collateralAssets": ["sFLR"],
+        "chains": ["flare"],
         "feeds": [
           {
             "provider": "Flare FTSOv2 custom feed",
@@ -402,16 +386,9 @@
     "summary": "CDP is minted from Enosys Loans overcollateralized vaults on Flare when users deposit Flare-ecosystem collateral. The CDP token (0x6cd3a5ba...) is an EIP-1967 proxy; its owner is a Gnosis Safe 1.3.0 multisig (0xdedda089..., 2-of-6, no modules, no guard). The proxy admin (0xd6363e03) is itself owned by an EOA (0xfc75f3c7). Collateral mint is bounded by per-position overcollateralization and Liquity V2 redemption rules; the admin multisig controls risk parameter updates.",
     "upgradeability": {
       "model": "transparent-proxy",
-      "proxyAddresses": [
-        "0x6cd3a5ba46fa254d4d2e3c2b37350ae337e94a0f"
-      ],
-      "implementationAddresses": [
-        "0x03dc7269d65018516133987de01104cf2607c884"
-      ],
-      "adminAddresses": [
-        "0xd6363e03cf93d35103592f11ae7160179e0be3ff",
-        "0xfc75f3c7dba8decd0f5c923fe577bf2ff111bce4"
-      ],
+      "proxyAddresses": ["0x6cd3a5ba46fa254d4d2e3c2b37350ae337e94a0f"],
+      "implementationAddresses": ["0x03dc7269d65018516133987de01104cf2607c884"],
+      "adminAddresses": ["0xd6363e03cf93d35103592f11ae7160179e0be3ff", "0xfc75f3c7dba8decd0f5c923fe577bf2ff111bce4"],
       "canChangeMintLogic": true,
       "controlRef": "Enosys CDP ProxyAdmin owner EOA (implementation upgrade authority)",
       "observedAt": "2026-07-14",
@@ -517,11 +494,124 @@
   "deploymentModel": "single-chain",
   "reserves": [
     {
-      "name": "Enosys Loans overcollateralized crypto positions",
-      "pct": 100,
-      "risk": "high"
+      "name": "FXRP",
+      "pct": 71.7,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Flare FAssets protocol (agent-collateralized XRP representation)",
+      "riskFactors": ["market", "liquidity", "smart-contract", "custody", "concentration"],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "WFLR",
+      "pct": 16.3,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Flare network canonical wrapped-FLR contract",
+      "riskFactors": ["market", "liquidity", "smart-contract"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "stXRP",
+      "pct": 8.2,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Firelight Finance (ERC-4626 vault over staked FXRP)",
+      "riskFactors": ["market", "liquidity", "smart-contract", "custody"],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "sFLR",
+      "pct": 3.8,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Sceptre (Flare liquid staking)",
+      "riskFactors": ["market", "liquidity", "smart-contract", "custody"],
+      "liquidityHorizon": "one-day"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Enosys Loans documentation",
+        "url": "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans"
+      },
+      {
+        "label": "Flare news on the Enosys Loans XRP-backed stablecoin",
+        "url": "https://flare.network/news/enosys-loans-xrp-backed-stablecoin-flare"
+      },
+      {
+        "label": "Flare public RPC used by the configured adapter",
+        "url": "https://flare-api.flare.network/ext/C/rpc"
+      }
+    ],
+    "rationale": "Enosys Loans is a Liquity V2 friendly fork whose documented collateral branches are FXRP, WFLR, stXRP, and sFLR, priced by the Flare Time Series Oracle. The configured on-chain adapter's branch snapshot resolves all four live collateral rows and supplies the point-in-time weights; those weights remain dynamic and are not treated as permanent composition.",
+    "compositionBasis": "Enosys Loans documented collateral branches and the configured Flare branch snapshot (live-reserves capture of 2026-07-19); percentages rounded to one decimal",
+    "compositionAsOf": "2026-07-19",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No material collateral row is unclassified in this snapshot; branch weights are point-in-time and shift with trove activity.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "FXRP",
+        "pct": 71.7,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Branch collateral is an exogenous cryptoasset rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "WFLR",
+        "pct": 16.3,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Branch collateral is an exogenous cryptoasset rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "stXRP",
+        "pct": 8.2,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Branch collateral is an exogenous cryptoasset rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "sFLR",
+        "pct": 3.8,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Branch collateral is an exogenous cryptoasset rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Enosys Loans collateral branch contracts (Liquity V2 friendly fork)",
+        "role": "other",
+        "jurisdiction": "Flare"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Enosys Loans documentation",
+        "url": "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans"
+      },
+      {
+        "label": "Flare news on the Enosys Loans XRP-backed stablecoin",
+        "url": "https://flare.network/news/enosys-loans-xrp-backed-stablecoin-flare"
+      }
+    ],
+    "uncertainty": "Collateral sits in on-chain branch contracts of the Liquity V2 fork rather than with a conventional custodian; legal segregation, bankruptcy remoteness, and rehypothecation terms do not apply to the non-custodial contracts, whose integrity and FTSO pricing are the operative risks.",
+    "knownUnknownExposurePct": 100
+  },
   "liveReservesConfig": {
     "adapter": "liquity-v2-branches",
     "version": 2,

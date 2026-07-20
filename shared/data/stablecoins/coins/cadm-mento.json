@@ -207,14 +207,42 @@
   "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "CADm is tracked only on Celo in Pharos and Mento docs route users to Celo-native Mento stables. No material bridge route is present for the reviewed metadata row.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "CADm is tracked only on Celo in Pharos and Mento docs route users to Celo-native Mento stables. The sole Celo deployment was verified on-chain 2026-07-20 as native Mento issuance (Mento Broker sole minter, Mento Timelock owner); no bridge representation carries the claim.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
     "confidence": "verified",
     "sources": [
       {
         "label": "Mento on Celo docs",
         "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      }
+    ],
+    "routes": [
+      {
+        "id": "celo:0xff4ab19391af240c311c54200a492233052b6325",
+        "destinationChain": "celo",
+        "canonicalChain": "celo",
+        "contractAddress": "0xff4ab19391af240c311c54200a492233052b6325",
+        "protocol": "Mento CADm (native issuance on Celo)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Mento stablecoins on Celo docs",
+            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          },
+          {
+            "label": "CADm on Celo Blockscout (probed 2026-07-20)",
+            "url": "https://celo.blockscout.com/address/0xff4ab19391af240c311c54200a492233052b6325"
+          }
+        ],
+        "reviewNote": "Verified on-chain 2026-07-20 at Celo block 72616317: name 'Mento Canadian Dollar', symbol CADm, totalSupply 2667.02 CADm; owner() = 0x890db8a597940165901372dd7db61c9f246e2147 (Mento Timelock, 48h delay per mint-authority review); broker() = 0x777a8255ca72412f0d706dc03c9d1987306b4cad (Mento Broker, sole authorized minter per the 2026-07-15 mint-authority review). Native Mento protocol issuance on Celo, the asset's only chain — no bridge representation."
       }
     ]
   },
@@ -226,9 +254,44 @@
       "name": "USDm (Mento Dollar) CDP collateral",
       "pct": 100,
       "risk": "low",
-      "coinId": "cusd-celo"
+      "coinId": "cusd-celo",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Mento Protocol and the shared Mento Reserve",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-1 (lead usde-ethena)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento Reserve analytics API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
+      {
+        "label": "Mento CDP documentation",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp"
+      },
+      {
+        "label": "Mento deployment registry",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+      }
+    ],
+    "rationale": "CADm is minted through the Mento V3 CDP system against USDm collateral, matching the GBPm sibling review. The exact reserve is one tracked stablecoin exposure with the Mento Reserve, custody, liquidity, and smart-contract failure domains retained.",
+    "compositionBasis": "Exact live Mento CDP row and Mento CDP/deployment documentation",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No additional direct CADm reserve slice is identified; the upstream Mento Reserve basket is tracked through the linked USDm asset.",
+    "knownUnknownExposurePct": 0
+  },
   "liveReservesConfig": {
     "adapter": "mento",
     "version": 1,

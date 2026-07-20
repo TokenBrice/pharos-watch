@@ -52,9 +52,9 @@
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
-    "summary": "yoUSD is a multi-chain yield-optimizer stable asset whose strategy allocates across protocols and chains. The workflow's L2BEAT route signal points to Across, so Pharos scores bridge-route exposure as a liquidity-or-intent route rather than native-only issuance.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "yoUSD is a multi-chain yield-optimizer stable asset whose strategy allocates across protocols and chains. The workflow's L2BEAT route signal points to Across, so Pharos scores bridge-route exposure as a liquidity-or-intent route rather than native-only issuance. 2026-07-20 cohort dc-1 pass: Base row confirmed native yoUSD; Ethereum/Arbitrum rows confirmed uniform yoUSD multichain deployments (uniform address + owner reads).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
     "confidence": "probable",
     "protocols": [
       {
@@ -86,46 +86,80 @@
         "id": "base:0x0000000f2eb9f69274678c76222b35eec7588a65",
         "destinationChain": "base",
         "contractAddress": "0x0000000f2eb9f69274678c76222b35eec7588a65",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "yoUSD (native issuance on Base)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'yoUSD', symbol yoUSD, 6 decimals; owner() = 0x67b6f699f1c8040414032a3c2c88a54db144fcd2 (yoUSD admin Safe per the mint-authority review) — native issuance on Base.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "yoUSD on Basescan",
+            "url": "https://basescan.org/address/0x0000000f2eb9f69274678c76222b35eec7588a65"
+          }
+        ]
       },
       {
         "id": "ethereum:0x0000000f2eb9f69274678c76222b35eec7588a65",
         "destinationChain": "ethereum",
         "contractAddress": "0x0000000f2eb9f69274678c76222b35eec7588a65",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "yoUSD multichain deployment (uniform address + admin Safe)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'yoUSD'/'yoVaultUSD', symbol yoUSD, 6 decimals on ethereum; uniform deployment address with uniform owner() 0x67b6f699f1c8040414032a3c2c88a54db144fcd2 (yoUSD admin Safe). The token contract executes mint for this issuer-operated cross-chain deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "base",
+        "canonicalChain": "base",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x0000000f2eb9f69274678c76222b35eec7588a65",
+        "failureDomainKeys": [
+          "protocol:yousd-multichain",
+          "contract:ethereum:0x0000000f2eb9f69274678c76222b35eec7588a65"
+        ],
+        "sources": [
+          {
+            "label": "yoUSD on Basescan",
+            "url": "https://basescan.org/address/0x0000000f2eb9f69274678c76222b35eec7588a65"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x0000000f2eb9f69274678c76222b35eec7588a65",
         "destinationChain": "arbitrum",
         "contractAddress": "0x0000000f2eb9f69274678c76222b35eec7588a65",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "yoUSD multichain deployment (uniform address + admin Safe)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'yoUSD'/'yoVaultUSD', symbol yoUSD, 6 decimals on arbitrum; uniform deployment address with uniform owner() 0x67b6f699f1c8040414032a3c2c88a54db144fcd2 (yoUSD admin Safe). The token contract executes mint for this issuer-operated cross-chain deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "base",
+        "canonicalChain": "base",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x0000000f2eb9f69274678c76222b35eec7588a65",
+        "failureDomainKeys": [
+          "protocol:yousd-multichain",
+          "contract:arbitrum:0x0000000f2eb9f69274678c76222b35eec7588a65"
+        ],
+        "sources": [
+          {
+            "label": "yoUSD on Basescan",
+            "url": "https://basescan.org/address/0x0000000f2eb9f69274678c76222b35eec7588a65"
+          }
+        ]
       }
     ]
   },
@@ -147,7 +181,13 @@
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "YO Protocol and whitelisted cross-chain DeFi venues",
-      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody", "market"],
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody",
+        "market"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],

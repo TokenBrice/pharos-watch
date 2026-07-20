@@ -68,6 +68,18 @@ describe("resolveChainId", () => {
     expect(CHAIN_META.citrea).toBeDefined();
   });
 
+  it("registers and resolves Pharos Network mainnet", () => {
+    expect(CHAIN_META.pharos).toMatchObject({
+      name: "Pharos Network",
+      explorerUrl: "https://www.pharosscan.xyz",
+      evmChainId: 1672,
+      type: "evm",
+      providers: { coingecko: "pharos" },
+    });
+    expect(resolveChainId("pharos")).toBe("pharos");
+    expect(resolveChainId("Pharos")).toBe("pharos");
+  });
+
   it("resolves DefiLlama chain names that differ from local metadata names", () => {
     expect(resolveChainId("XDC")).toBe("xdc");
     expect(resolveChainId("ZKsync Era")).toBe("zksync");
@@ -79,6 +91,10 @@ describe("resolveChainId", () => {
 describe("getChainResilienceTier", () => {
   it("treats BEVM as a tier-3 chain", () => {
     expect(getChainResilienceTier("bevm")).toBe(3);
+  });
+
+  it("treats the newly launched Pharos Network as tier 3", () => {
+    expect(getChainResilienceTier("pharos")).toBe(3);
   });
 });
 

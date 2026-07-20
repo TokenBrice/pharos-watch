@@ -1,13 +1,14 @@
 import { getPegReference, normalizePegType } from "@shared/lib/peg-rates";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { sumPegBuckets } from "@shared/lib/supply";
-import type { DepegEvent } from "@shared/types/market";
 import {
   DEPEG_CONFIRMATION_SUPPLY_THRESHOLD,
   DEPEG_DEX_PROTOCOL_CORROBORATION_MIN,
   DEPEG_EVENT_MIN_SUPPLY_USD,
   DEPEG_EXTREME_MOVE_BPS,
+  DEPEG_PENDING_MIN_AGE_SEC,
   DEPEG_SECONDARY_THRESHOLD_RATIO,
+  getDepegRecoveryThresholdBps,
   getDepegThresholdBps,
   POOL_CHALLENGE_CONFIRM_MIN,
   POOL_CHALLENGE_HIGH_TVL_USD,
@@ -16,7 +17,6 @@ import {
   buildPendingReason,
   countDexProtocolCorroborations,
   dexPoolIndependentGroupKey,
-  isExtremeMovePending,
   markNativeOriginPending,
   type DepegRow,
   type DexPriceRow,
@@ -25,7 +25,6 @@ import {
 } from "../../lib/depeg-helpers";
 import {
   classifyPrimaryDepegTrust,
-  getPrimaryDepegSourceFamilies,
   hasFreshMultiSourcePrimaryAgreement,
   isAuthoritativeDepegPegReference,
   isTrustedDexPriceRow,
@@ -33,6 +32,7 @@ import {
 import {
   deriveDepegSignal,
   signalCrossesThreshold,
+  signalIsWithinThreshold,
   signalsShareDirection,
   type DepegDirection,
   type DepegSignal,
@@ -47,6 +47,7 @@ import type {
 } from "./types";
 import {
   applyNativeQuoteVeto,
+  isNativePegEvent,
   recoveryPriceForEvent,
   resolveDirectRecovery,
   resolvePeakUpdateCommand,
@@ -59,8 +60,10 @@ interface DecisionContext {
   price: number;
   bps: number;
   absBps: number;
+  rawAbsBps: number;
   direction: DepegDirection;
   threshold: number;
+  recoveryThreshold: number;
   pegRef: number;
   supply: number;
   primaryTrust: "authoritative" | "confirm_required";
@@ -78,8 +81,6 @@ interface DecisionContext {
   dexSupportsSecondaryBarDirection: boolean;
   dexSupportsRecovery: boolean;
   primarySupportsRecovery: boolean;
-  primaryCorroboratesExtremeMove: boolean;
-  requiresConfirmation: boolean;
   pendingReason: PendingDepegReason;
   nativeSignal: DepegSignal | null;
   nativePegPrice: number | null;
@@ -158,36 +159,6 @@ function derivePoolRecoveryVeto(params: {
   };
 }
 
-function buildLiveEventCommand(
-  asset: DepegAssetDecisionInput["asset"],
-  now: number,
-  direction: DepegDirection,
-  peakDeviationBps: number,
-  eventPrice: number,
-  pegReference: number,
-): DepegPersistenceCommand {
-  const event: DepegEvent = {
-    id: 0,
-    stablecoinId: asset.id,
-    symbol: asset.symbol,
-    pegType: asset.pegType ?? "",
-    direction,
-    peakDeviationBps,
-    startedAt: now,
-    endedAt: null,
-    startPrice: eventPrice,
-    peakPrice: eventPrice,
-    recoveryPrice: null,
-    pegReference,
-    source: "live",
-    confirmationSources: null,
-    pendingReason: null,
-    closeReason: null,
-    provenance: null,
-  };
-  return { type: "insert-live", event };
-}
-
 function buildPendingCommand(
   asset: DepegAssetDecisionInput["asset"],
   now: number,
@@ -257,9 +228,10 @@ function deriveDexEvidence(params: {
   now: number;
   pegRef: number;
   threshold: number;
+  recoveryThreshold: number;
   direction: DepegDirection;
 }): DexEvidence {
-  const { input, existing, now, pegRef, threshold, direction } = params;
+  const { input, existing, now, pegRef, threshold, recoveryThreshold, direction } = params;
   const dexSignal = input.dexRow && isTrustedDexPriceRow(input.dexRow, now, "depeg")
     ? deriveDepegSignal(input.dexRow.dex_price_usd, pegRef)
     : null;
@@ -276,7 +248,7 @@ function deriveDexEvidence(params: {
     "confirm",
   );
   const dexSecondaryDirectionProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, secondaryBar, direction, "confirm");
-  const dexRecoveryProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, threshold, direction, "recover");
+  const dexRecoveryProtocolCount = countDexProtocolCorroborations(input.protocolSources, pegRef, recoveryThreshold, direction, "recover");
   const recoveryVetoDirection: DepegDirection = existingDirection;
   const dexRecoveryChallenged = hasRecoveryChallenge(input.challengerPools, pegRef, threshold, recoveryVetoDirection);
   const poolRecoveryVetoEvidence = derivePoolRecoveryVeto({
@@ -302,7 +274,7 @@ function deriveDexEvidence(params: {
     dexSecondaryDirectionProtocolCount >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN;
   const dexSupportsRecovery =
     dexSignal != null &&
-    dexSignal.absBps < threshold &&
+    signalIsWithinThreshold(dexSignal, recoveryThreshold) &&
     dexRecoveryProtocolCount >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN &&
     !dexRecoveryChallenged;
   return {
@@ -383,9 +355,11 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
     return { kind: "skip", decision: emptyDecision(trackedCoinId) };
   }
   const { bps, absBps, direction } = primarySignal;
+  const rawAbsBps = primarySignal.absRawBps ?? absBps;
   const threshold = getDepegThresholdBps(asset.pegType);
+  const recoveryThreshold = getDepegRecoveryThresholdBps(asset.pegType);
   const nativeSignal = input.nativePegQuote ? deriveDepegSignal(input.nativePegQuote.price, 1) : null;
-  const dexEvidence = deriveDexEvidence({ input, existing, now, pegRef, threshold, direction });
+  const dexEvidence = deriveDexEvidence({ input, existing, now, pegRef, threshold, recoveryThreshold, direction });
   const {
     dexAbsBps,
     dexDirectionProtocolCount,
@@ -404,26 +378,16 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
   const tieredMarketCapRequiresConfirmation = requiresTieredMarketCapConfirmation({
     supply,
     sourceDepth,
-    absBps,
+    absBps: rawAbsBps,
     threshold,
   });
-  const requiresConfirmation =
-    tieredMarketCapRequiresConfirmation ||
-    primaryTrust === "confirm_required" ||
-    absBps >= DEPEG_EXTREME_MOVE_BPS;
   const primarySupportsRecovery =
     primaryTrust === "authoritative" ||
     hasFreshMultiSourcePrimaryAgreement(asset, now);
-  const primaryCorroboratesExtremeMove =
-    absBps >= DEPEG_EXTREME_MOVE_BPS &&
-    !tieredMarketCapRequiresConfirmation &&
-    hasFreshMultiSourcePrimaryAgreement(asset, now) &&
-    getPrimaryDepegSourceFamilies(asset).size >= 2;
-  const reasonFlags: PendingDepegReasonFlag[] = [];
-  if (absBps >= DEPEG_EXTREME_MOVE_BPS) reasonFlags.push("extreme-move");
+  const reasonFlags: PendingDepegReasonFlag[] = ["confirmation-window"];
+  if (rawAbsBps >= DEPEG_EXTREME_MOVE_BPS) reasonFlags.push("extreme-move");
   if (tieredMarketCapRequiresConfirmation) reasonFlags.push("large-cap");
   if (primaryTrust === "confirm_required") reasonFlags.push("low-confidence");
-  if (reasonFlags.length === 0) reasonFlags.push("large-cap"); // defensive - requiresConfirmation is true so at least one reason must apply.
   const pendingReason: PendingDepegReason = buildPendingReason(reasonFlags);
 
   return {
@@ -435,8 +399,10 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
       price,
       bps,
       absBps,
+      rawAbsBps,
       direction,
       threshold,
+      recoveryThreshold,
       pegRef,
       supply,
       primaryTrust,
@@ -454,8 +420,6 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
       dexSupportsSecondaryBarDirection,
       dexSupportsRecovery,
       primarySupportsRecovery,
-      primaryCorroboratesExtremeMove,
-      requiresConfirmation,
       pendingReason,
       nativeSignal,
       nativePegPrice: input.nativePegQuote?.price ?? null,
@@ -465,7 +429,7 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
 }
 
 /**
- * Allows fresh direct native-fiat quotes to initiate supported non-USD live
+ * Allows fresh native-fiat quotes to initiate supported non-USD pending
  * depeg state when the USD-vs-reference primary path is still inside threshold.
  */
 function decideNewNativePegDepeg(ctx: DecisionContext): Omit<DepegAssetDecision, "trackedCoinId"> | null {
@@ -473,48 +437,31 @@ function decideNewNativePegDepeg(ctx: DecisionContext): Omit<DepegAssetDecision,
     ctx.nativeSignal == null ||
     ctx.nativePegPrice == null ||
     !signalCrossesThreshold(ctx.nativeSignal, ctx.threshold) ||
-    ctx.absBps >= ctx.threshold
+    ctx.rawAbsBps >= ctx.threshold
   ) {
     return null;
   }
 
   const commands: DepegPersistenceCommand[] = [];
   const diagnostics: DepegDiagnostic[] = [];
-  const reasonFlags: PendingDepegReasonFlag[] = [];
+  const reasonFlags: PendingDepegReasonFlag[] = ["confirmation-window"];
   if (ctx.supply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD) reasonFlags.push("large-cap");
-  if (ctx.nativeSignal.absBps >= DEPEG_EXTREME_MOVE_BPS) reasonFlags.push("extreme-move");
+  if (signalCrossesThreshold(ctx.nativeSignal, DEPEG_EXTREME_MOVE_BPS)) reasonFlags.push("extreme-move");
 
-  if (reasonFlags.length > 0) {
-    const pendingReason = markNativeOriginPending(buildPendingReason(reasonFlags));
-    commands.push(buildPendingCommand(
-      ctx.asset,
-      ctx.now,
-      ctx.nativeSignal.direction,
-      ctx.nativeSignal.bps,
-      ctx.nativePegPrice,
-      1,
-      pendingReason,
-    ));
-    diagnostics.push(withDiagnostic(
-      "log",
-      `[depeg] Pending native-peg confirmation for ${ctx.asset.symbol}: ` +
-      `${ctx.nativeSignal.bps}bps against direct ${ctx.nativePegCurrency ?? "native"} quote`,
-    ));
-    return { seenEventIds: [], commands, diagnostics };
-  }
-
-  commands.push(buildLiveEventCommand(
+  const pendingReason = markNativeOriginPending(buildPendingReason(reasonFlags));
+  commands.push(buildPendingCommand(
     ctx.asset,
     ctx.now,
     ctx.nativeSignal.direction,
     ctx.nativeSignal.bps,
     ctx.nativePegPrice,
     1,
+    pendingReason,
   ));
   diagnostics.push(withDiagnostic(
     "log",
-    `[depeg] Opened native-peg depeg for ${ctx.asset.symbol}: ` +
-    `primary=${ctx.bps}bps, direct ${ctx.nativePegCurrency ?? "native"} quote=${ctx.nativeSignal.bps}bps`,
+    `[depeg] Pending native-peg confirmation for ${ctx.asset.symbol}: ` +
+    `${ctx.nativeSignal.bps}bps against ${ctx.nativePegCurrency ?? "native"} quote`,
   ));
   return { seenEventIds: [], commands, diagnostics };
 }
@@ -541,7 +488,6 @@ function decideExistingEvent(
     dexAbsBps,
     dexSupportsDirection,
     dexSupportsSecondaryBarDirection,
-    requiresConfirmation,
     pendingReason,
   } = ctx;
   const commands: DepegPersistenceCommand[] = [];
@@ -559,11 +505,7 @@ function decideExistingEvent(
         recoveryPrice: recoveryPriceForEvent(existing, price),
         closeReason: "superseded-direction",
       });
-      if (requiresConfirmation) {
-        commands.push(buildPendingCommand(asset, now, direction, bps, price, pegRef, pendingReason));
-      } else {
-        commands.push(buildLiveEventCommand(asset, now, direction, bps, price, pegRef));
-      }
+      commands.push(buildPendingCommand(asset, now, direction, bps, price, pegRef, pendingReason));
     } else if (primaryTrust === "confirm_required") {
       seenEventIds.push(existing.id);
       diagnostics.push(withDiagnostic(
@@ -580,6 +522,9 @@ function decideExistingEvent(
 
   // Same direction - event stays open.
   seenEventIds.push(existing.id);
+  if (existing.recovery_first_seen_at != null) {
+    commands.push({ type: "clear-recovery", id: existing.id });
+  }
   const peakUpdate = resolvePeakUpdateCommand({
     existing,
     nativeSignal: ctx.nativeSignal,
@@ -610,8 +555,7 @@ function decideExistingEvent(
 
 /**
  * Handles opening a new depeg event when no existing event is open.
- * Routes to pending confirmation for large-cap / low-confidence / extreme moves,
- * or applies DEX cross-validation before instant event creation.
+ * Applies DEX cross-validation, then routes every onset through pending confirmation.
  */
 function decideNewDepeg(ctx: DecisionContext): Omit<DepegAssetDecision, "trackedCoinId"> {
   const {
@@ -620,39 +564,14 @@ function decideNewDepeg(ctx: DecisionContext): Omit<DepegAssetDecision, "tracked
     bps,
     direction,
     pegRef,
-    supply,
     dexRow,
     dexAbsBps,
-    dexSupportsDirection,
     dexSupportsRecovery,
-    primaryCorroboratesExtremeMove,
-    requiresConfirmation,
     pendingReason,
   } = ctx;
   const commands: DepegPersistenceCommand[] = [];
   const diagnostics: DepegDiagnostic[] = [];
 
-  if (supply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD) {
-    // >=$1B coin: insert into pending table for confirmation next cycle.
-    commands.push(buildPendingCommand(asset, now, direction, bps, ctx.price, pegRef, pendingReason));
-    diagnostics.push(withDiagnostic(
-      "log",
-      `[depeg] Pending confirmation for ${asset.symbol}: ${bps}bps (supply $${(supply / 1e9).toFixed(1)}B)`,
-    ));
-    return { seenEventIds: [], commands, diagnostics };
-  }
-
-  if (requiresConfirmation) {
-    if (isExtremeMovePending(pendingReason) && (dexSupportsDirection || primaryCorroboratesExtremeMove)) {
-      commands.push(buildLiveEventCommand(asset, now, direction, bps, ctx.price, pegRef));
-    } else {
-      commands.push(buildPendingCommand(asset, now, direction, bps, ctx.price, pegRef, pendingReason));
-      diagnostics.push(withDiagnostic("log", `[depeg] Pending confirmation for ${asset.symbol}: ${bps}bps (${pendingReason})`));
-    }
-    return { seenEventIds: [], commands, diagnostics };
-  }
-
-  // <$1B coin, no special confirmation needed - DEX cross-validation then instant event.
   if (isDexFresh(dexRow, dexAbsBps, ctx.now) && dexRow && dexSupportsRecovery) {
     diagnostics.push(withDiagnostic(
       "log",
@@ -663,7 +582,8 @@ function decideNewDepeg(ctx: DecisionContext): Omit<DepegAssetDecision, "tracked
     return { seenEventIds: [], commands, diagnostics };
   }
 
-  commands.push(buildLiveEventCommand(asset, now, direction, bps, ctx.price, pegRef));
+  commands.push(buildPendingCommand(asset, now, direction, bps, ctx.price, pegRef, pendingReason));
+  diagnostics.push(withDiagnostic("log", `[depeg] Pending confirmation for ${asset.symbol}: ${bps}bps (${pendingReason})`));
   return { seenEventIds: [], commands, diagnostics };
 }
 
@@ -680,7 +600,7 @@ function decideRecovery(
     asset,
     price,
     primarySupportsRecovery,
-    threshold,
+    recoveryThreshold,
     dexRow,
     dexAbsBps,
     dexExistingDirectionProtocolCount,
@@ -700,30 +620,41 @@ function decideRecovery(
     nativeSignal: ctx.nativeSignal,
     nativePegPrice: ctx.nativePegPrice,
     primaryPrice: price,
-    threshold,
+    recoveryThreshold,
     primarySupportsRecovery,
     primaryRecoveryContradicted:
       (isDexFresh(dexRow, dexAbsBps, now) && dexSupportsExistingDirection) || poolRecoveryVeto,
   });
 
-  if (directRecovery) {
-    // Price recovered - close the event.
-    commands.push({
-      type: "close-event",
-      id: existing.id,
-      endedAt: now,
-      ...directRecovery,
-    });
-  } else if (isDexFresh(dexRow, dexAbsBps, now) && dexRow && dexSupportsRecovery) {
-    commands.push({
-      type: "close-event",
-      id: existing.id,
-      endedAt: now,
-      recoveryPrice: recoveryPriceForEvent(existing, dexRow.dex_price_usd),
-      closeReason: "recovered-dex",
-    });
+  const recovery = directRecovery ?? (
+    isDexFresh(dexRow, dexAbsBps, now) && dexRow && dexSupportsRecovery
+      ? {
+          recoveryPrice: recoveryPriceForEvent(existing, dexRow.dex_price_usd),
+          closeReason: "recovered-dex" as const,
+        }
+      : null
+  );
+
+  if (recovery) {
+    const recoveryFirstSeenAt = existing.recovery_first_seen_at;
+    if (recoveryFirstSeenAt == null) {
+      commands.push({ type: "begin-recovery", id: existing.id, firstSeenAt: now });
+      seenEventIds.push(existing.id);
+    } else if (now - recoveryFirstSeenAt >= DEPEG_PENDING_MIN_AGE_SEC) {
+      commands.push({
+        type: "close-event",
+        id: existing.id,
+        endedAt: now,
+        ...recovery,
+      });
+    } else {
+      seenEventIds.push(existing.id);
+    }
   } else {
     seenEventIds.push(existing.id);
+    if (existing.recovery_first_seen_at != null) {
+      commands.push({ type: "clear-recovery", id: existing.id });
+    }
     if (isDexFresh(dexRow, dexAbsBps, now) && dexSupportsExistingDirection) {
       diagnostics.push(withDiagnostic(
         "warn",
@@ -738,7 +669,7 @@ function decideRecovery(
         `pool challengers still show the ${existing.direction} depeg ` +
         `(groups=${poolRecoveryVetoGroupCount}, highTvl=${poolRecoveryVetoHighTvl})`,
       ));
-    } else if (isDexFresh(dexRow, dexAbsBps, now) && dexRow && dexAbsBps != null && dexAbsBps < threshold) {
+    } else if (isDexFresh(dexRow, dexAbsBps, now) && dexRow && dexAbsBps != null && dexAbsBps <= recoveryThreshold) {
       diagnostics.push(withDiagnostic(
         "warn",
         `[depeg] Ignored aggregate DEX recovery for ${asset.symbol}: ` +
@@ -751,6 +682,16 @@ function decideRecovery(
   return { seenEventIds, commands, diagnostics };
 }
 
+function decideRecoveryDeadband(existing: DepegRow): Omit<DepegAssetDecision, "trackedCoinId"> {
+  return {
+    seenEventIds: [existing.id],
+    commands: existing.recovery_first_seen_at == null
+      ? []
+      : [{ type: "clear-recovery", id: existing.id }],
+    diagnostics: [],
+  };
+}
+
 export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDecision {
   const derived = deriveDecisionContext(input);
   if (derived.kind === "skip") return derived.decision;
@@ -760,13 +701,28 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
   if (nativeVeto) return nativeVeto;
 
   const nativeOpening = input.existing ? null : decideNewNativePegDepeg(ctx);
+  const existingNativeSignal = input.existing && isNativePegEvent(input.existing)
+    ? ctx.nativeSignal
+    : null;
+  const existingSignal = existingNativeSignal ?? {
+    bps: ctx.bps,
+    absBps: ctx.absBps,
+    absRawBps: ctx.rawAbsBps,
+    direction: ctx.direction,
+  };
+  const nativeShowsRecovery = signalIsWithinThreshold(ctx.nativeSignal, ctx.recoveryThreshold);
+  const shouldEvaluateRecovery = input.existing != null && (
+    signalIsWithinThreshold(existingSignal, ctx.recoveryThreshold) || nativeShowsRecovery
+  );
   const decision = input.existing
-    ? ctx.absBps >= ctx.threshold
-      ? decideExistingEvent(ctx, input.existing)
-      : decideRecovery(ctx, input.existing)
+    ? shouldEvaluateRecovery
+      ? decideRecovery(ctx, input.existing)
+      : signalCrossesThreshold(existingSignal, ctx.threshold)
+        ? decideExistingEvent(ctx, input.existing)
+        : decideRecoveryDeadband(input.existing)
     : nativeOpening
       ? nativeOpening
-    : ctx.absBps >= ctx.threshold
+    : ctx.rawAbsBps >= ctx.threshold
       ? decideNewDepeg(ctx)
       : emptyDecision();
 

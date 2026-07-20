@@ -56,26 +56,32 @@
       {
         "label": "HeLa MintProposer/MintVoter quorum",
         "role": "direct-minter",
-        "authorityType": "contract",
+        "authorityType": "dao-governor",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
-        "evidence": "HeLa governance docs describe MintProposer addresses proposing mint requests to whitelisted users and MintVoter addresses approving them until mintQuorum is reached."
+        "evidence": "HeLa governance docs define HLUSD minting as a chain-runtime quorum action: MintProposer addresses propose mints to whitelisted users and MintVoter addresses approve until mintQuorum is reached; proposals and votes execute inside the HeLa runtime (not an EVM contract). The HeLa mainnet EVM gateway (mainnet-rpc.helachain.com, chain id 8668) is live, but the native role state is exposed only through the HeLa runtime API/CLI (hela managest), so individual role-holder addresses remain unenumerated through standard JSON-RPC.",
+        "failureDomainKeys": [
+          "protocol:hela-runtime-stablecoin-governance"
+        ]
       },
       {
         "label": "HeLa Admin role",
         "role": "minter-admin",
-        "authorityType": "issuer-backend",
+        "authorityType": "dao-governor",
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
-        "evidence": "HeLa governance docs state that Admin manages roles, mintQuorum, burnQuorum, thresholds, and stablecoin parameters."
+        "evidence": "HeLa governance docs state the Admin role proposes and votes on all other roles and configures mintQuorum, burnQuorum, whitelistQuorum, blacklistQuorum, and configQuorum within the HeLa runtime's on-chain proposal system; the initial Chain Initiator assignment is single-use and afterwards all role management flows through propose-vote governance.",
+        "failureDomainKeys": [
+          "protocol:hela-runtime-stablecoin-governance"
+        ]
       }
     ],
     "review": {
-      "evidence": "HeLa documentation describes HLUSD mint governance through MintProposer, MintVoter, and Admin roles rather than a generic issuer backend; exact live role holder addresses are still unresolved. HeLa chain uses a non-standard EVM-compatible runtime not accessible via standard publicnode/ankr RPC endpoints.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "HeLa documentation describes HLUSD mint governance through MintProposer, MintVoter, and Admin roles rather than a generic issuer backend; exact live role holder addresses are still unresolved. HeLa chain uses a non-standard EVM-compatible runtime not accessible via standard publicnode/ankr RPC endpoints. Follow-up 2026-07-20: the authority model is resolved as HeLa runtime quorum governance (protocol-level propose/vote roles per the HeLa stablecoin-governance documentation). A public HeLa EVM gateway (mainnet-rpc.helachain.com) is now documented and live; the runtime-native role roster is not exposed through it, so per-address enumeration stays out of scope for this encoding.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "HLUSD governance",
@@ -83,9 +89,7 @@
         }
       ],
       "sourceFreeRationale": "Classification based on the role-based mint governance model in HeLa documentation; the on-chain role holder addresses could not be resolved because HLUSD's native HeLa chain is not modeled in Pharos contracts.",
-      "unresolvedQuestions": [
-        "HLUSD's native HeLa chain has no accessible public RPC via standard providers (publicnode/ankr); mint role holder addresses (MintProposer, MintVoter, Admin) cannot be verified until the chain is modeled or a public RPC endpoint is documented."
-      ]
+      "unresolvedQuestions": []
     }
   },
   "chainTier": "unproven",

@@ -131,7 +131,10 @@ export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] 
     outputKinds: ["tracked-stablecoin", "collateral"],
     commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
     scoreEligible: true,
-    limitations: ["Supports only Raydium standard constant-product pools with complete retained inputs."],
+    limitations: [
+      "Supports only Raydium standard constant-product pools with complete retained inputs.",
+      "Untracked counter-asset reference prices may be pool-implied: derived from the same response's spot price and the other token's direct reference.",
+    ],
   },
   {
     id: "balancer-weighted-constant-mean-exact",

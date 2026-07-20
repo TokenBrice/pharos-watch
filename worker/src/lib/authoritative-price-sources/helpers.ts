@@ -8,6 +8,7 @@ import { fetchEvmCallHexAtBlock, resolveClosestBlockAtOrBeforeTimestamp, type Ev
 import { encodeUint256 } from "../evm-selectors";
 export { encodeAddress, encodeUint256 } from "../evm-selectors";
 import { throwIfAborted } from "../abort";
+import { hasPublishableCurrentPrice } from "../price-publication-state";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import { validateCompositePricingSourceFreshness } from "../pricing-source-freshness";
 import type { PriceValidationReferences } from "../price-validation";
@@ -16,10 +17,24 @@ export const ETHEREUM_CHAIN = "ethereum";
 
 export const PROTOCOL_REDEEM_SOURCE = "protocol-redeem";
 
+export const CACHED_VAULT_RATE_SOURCE = "protocol-redeem-cached-rate";
+
+/**
+ * Vault share rates accrue a few bps per day, so a day-old rate misprices by
+ * roughly a basis point — categorically better than a missing active price
+ * while staying honest through the dedicated low-confidence source key.
+ */
+export const CACHED_VAULT_RATE_MAX_AGE_SEC = 24 * 60 * 60;
+
 export const USDC_CIRCLE_ID = "usdc-circle";
 
 const ERC4626_NAV_MIN_RATIO = 0.5;
 const ERC4626_NAV_MAX_RATIO = 10;
+
+export interface CachedVaultRate {
+  rate: number;
+  observedAt: number;
+}
 
 export interface Erc4626NavVaultConfig {
   id: string;
@@ -149,6 +164,10 @@ export interface CurrentPriceOverride {
     parentObservedAt?: number | null;
     parentObservedAtMode?: PriceObservedAtMode | null;
     parentReplaySafe?: boolean;
+    cachedVaultRate?: {
+      rate: number;
+      rateObservedAt: number;
+    };
     kavaPricefeed?: {
       marketId: string;
       blockHeight: number;
@@ -194,6 +213,17 @@ export interface HistoricalPriceResolution {
 export interface LivePriceContext {
   assetsById: Map<string, PeggedAsset>;
   validationReferences?: PriceValidationReferences;
+  /**
+   * Transient per-candidate diagnostic slot: set by parent-trust resolution when
+   * a parent is rejected, cleared by the override scheduler before each
+   * candidate, and read after a null result so the attempt ledger can name the
+   * rejected parent instead of reporting an opaque missing quote.
+   */
+  lastUntrustedParent?: { parentId: string; reason: string } | null;
+  /** Durable last-good vault rates loaded once per stage; read-only for providers. */
+  vaultRateCache?: ReadonlyMap<string, CachedVaultRate>;
+  /** Fresh live vault rates collected during the stage for one durable post-loop write. */
+  vaultRateWrites?: Map<string, CachedVaultRate>;
 }
 
 export interface LivePriceDiagnosticTarget {
@@ -298,42 +328,75 @@ interface LiveParentTrustOptions {
   allowFreshReplaySafeSingleSourceParent?: boolean;
 }
 
+interface TrustedInheritedParentResult {
+  parent: {
+    price: number;
+    observedAt: number;
+    observedAtMode: PriceObservedAtMode | null;
+    replaySafe: boolean;
+    source: string;
+    confidence: PriceConfidence;
+  } | null;
+  untrustedReason: string | null;
+}
+
 function resolveTrustedInheritedParent(
   asset: PeggedAsset,
   nowSec: number,
   options?: LiveParentTrustOptions,
-): {
-  price: number;
-  observedAt: number;
-  observedAtMode: PriceObservedAtMode | null;
-  replaySafe: boolean;
-  source: string;
-  confidence: PriceConfidence;
-} | null {
+): TrustedInheritedParentResult {
   const price = getFinitePositivePrice(asset);
-  if (price == null) return null;
+  if (price == null) return { parent: null, untrustedReason: "parent-price-missing" };
 
   const parentSource = asset.priceSource ?? null;
   const parentConfidence = asset.priceConfidence ?? null;
-  if (!parentSource) return null;
+  if (!parentSource) return { parent: null, untrustedReason: "parent-source-missing" };
 
   const sourceParts = splitCompositePriceSource(parentSource);
-  const replaySafe = isReplaySafePriceSource(parentSource);
-  const confidenceTrusted =
-    parentConfidence === "high" ||
-    isExplicitAuthoritativeParent(asset) ||
-    (options?.allowFreshReplaySafeSingleSourceParent === true &&
-      parentConfidence === "single-source" &&
-      replaySafe &&
-      sourceParts.length === 1 &&
-      !sourceParts.includes("cached"));
-  if (!confidenceTrusted || parentConfidence == null) return null;
-  const trustedConfidence = parentConfidence;
+  // Trust monotonicity: replay-safety is judged on the composite's replay-safe
+  // core, as if agreeing soft corroborators (e.g. exact-address augmentation
+  // lanes) were absent. A weight-1 non-replay-safe member joining the winning
+  // cluster must never downgrade a parent the core trusts on its own — and the
+  // padded cluster must never upgrade a core the gate would otherwise reject.
+  const replaySafeCoreParts = sourceParts.filter((part) => isReplaySafePriceSource(part));
+  const cachedSource = sourceParts.includes("cached");
 
-  if (!replaySafe) {
-    if (!options?.allowFreshNonReplaySafeParent || sourceParts.includes("cached")) {
-      return null;
-    }
+  let trustedConfidence: PriceConfidence | null = null;
+  let replaySafe = false;
+  if (isExplicitAuthoritativeParent(asset) && parentConfidence != null) {
+    trustedConfidence = parentConfidence;
+    replaySafe = isReplaySafePriceSource(parentSource);
+  } else if (parentConfidence === "high" && replaySafeCoreParts.length >= 2 && !cachedSource) {
+    trustedConfidence = parentConfidence;
+    replaySafe = true;
+  } else if (
+    options?.allowFreshNonReplaySafeParent === true &&
+    parentConfidence === "high" &&
+    !cachedSource
+  ) {
+    trustedConfidence = parentConfidence;
+    replaySafe = false;
+  } else if (
+    options?.allowFreshReplaySafeSingleSourceParent === true &&
+    replaySafeCoreParts.length === 1 &&
+    (parentConfidence === "single-source" || parentConfidence === "high") &&
+    !cachedSource
+  ) {
+    // A single replay-safe core member is admitted under single-source
+    // semantics even when soft corroborators padded the cluster to "high".
+    trustedConfidence = "single-source";
+    replaySafe = true;
+  }
+  if (trustedConfidence == null) {
+    const untrustedReason =
+      parentConfidence !== "high" && parentConfidence !== "single-source"
+        ? `confidence-${parentConfidence ?? "none"}`
+        : cachedSource
+          ? "cached-source"
+          : replaySafeCoreParts.length === 0
+            ? "non-replay-safe-source"
+            : "thin-replay-safe-core";
+    return { parent: null, untrustedReason };
   }
 
   const observedAt = asset.priceObservedAt ?? asset.priceUpdatedAt ?? null;
@@ -355,24 +418,33 @@ function resolveTrustedInheritedParent(
       splitCompositePriceSource(parentSource).length > 1
     ) {
       return {
-        price,
-        observedAt: syncedAt,
-        observedAtMode: "local_fetch",
-        replaySafe,
-        source: parentSource,
-        confidence: trustedConfidence,
+        parent: {
+          price,
+          observedAt: syncedAt,
+          observedAtMode: "local_fetch",
+          replaySafe,
+          source: parentSource,
+          confidence: trustedConfidence,
+        },
+        untrustedReason: null,
       };
     }
-    return null;
+    return {
+      parent: null,
+      untrustedReason: `freshness-${freshness.accepted === false ? freshness.reason : "missing-observed-at"}`,
+    };
   }
 
   return {
-    price,
-    observedAt: freshness.observedAt,
-    observedAtMode: freshness.observedAtMode,
-    replaySafe,
-    source: parentSource,
-    confidence: trustedConfidence,
+    parent: {
+      price,
+      observedAt: freshness.observedAt,
+      observedAtMode: freshness.observedAtMode,
+      replaySafe,
+      source: parentSource,
+      confidence: trustedConfidence,
+    },
+    untrustedReason: null,
   };
 }
 
@@ -396,10 +468,18 @@ export function resolveTrustedOverrideParent(
   options?: LiveParentTrustOptions,
 ): TrustedOverrideParent | null {
   const parentAsset = context.assetsById.get(parentId);
-  if (!parentAsset) return null;
+  if (!parentAsset) {
+    context.lastUntrustedParent = { parentId, reason: "parent-asset-missing" };
+    return null;
+  }
 
-  const trustedParent = resolveTrustedInheritedParent(parentAsset, Math.floor(Date.now() / 1000), options);
+  const { parent: trustedParent, untrustedReason } = resolveTrustedInheritedParent(
+    parentAsset,
+    Math.floor(Date.now() / 1000),
+    options,
+  );
   if (!trustedParent) {
+    context.lastUntrustedParent = { parentId, reason: untrustedReason ?? "untrusted" };
     console.warn(untrustedParentMessage());
     return null;
   }
@@ -435,6 +515,84 @@ export function buildParentDerivedLiveOverride(
       parentObservedAt,
       parentObservedAtMode: parent.parentAsset.priceObservedAtMode ?? null,
       parentReplaySafe: parent.trustedParent.replaySafe,
+    },
+  };
+}
+
+function isTrustedCachedVaultRate(entry: CachedVaultRate | undefined, nowSec: number): entry is CachedVaultRate {
+  if (!entry) return false;
+  if (!Number.isFinite(entry.rate) || entry.rate < ERC4626_NAV_MIN_RATIO || entry.rate > ERC4626_NAV_MAX_RATIO) {
+    return false;
+  }
+  if (!Number.isFinite(entry.observedAt) || entry.observedAt <= 0 || entry.observedAt > nowSec + 60) return false;
+  return nowSec - entry.observedAt <= CACHED_VAULT_RATE_MAX_AGE_SEC;
+}
+
+/**
+ * Resolve a vault assets-per-share rate live, falling back to the durable
+ * last-good rate when the live read fails. A fresh live rate is recorded for
+ * the post-loop durable write. The cached lane is missing-only: it never
+ * replaces a publishable incumbent price, and callers still require a trusted
+ * parent before consulting it.
+ */
+export async function resolveVaultAssetsPerShareWithCache(
+  asset: Pick<PeggedAsset, "id" | "price" | "priceSource" | "priceObservedAt" | "priceUpdatedAt" | "priceSyncedAt">,
+  context: LivePriceContext,
+  fetchLiveRate: () => Promise<number | null>,
+): Promise<{ rate: number; cachedObservedAt: number | null } | null> {
+  const nowSec = Math.floor(Date.now() / 1000);
+  let liveRate: number | null = null;
+  let liveError: unknown = null;
+  try {
+    liveRate = await fetchLiveRate();
+  } catch (error) {
+    // Timeout/RPC failures fall through to the cached rate: the lookup is
+    // synchronous, so serving it under an aborted candidate budget costs
+    // nothing and rescues the asset from a missing generation.
+    liveError = error;
+    console.warn(`[authoritative-price-sources] ${asset.id}: live vault rate failed; consulting cached rate:`, error);
+  }
+  if (liveRate != null) {
+    context.vaultRateWrites?.set(asset.id, { rate: liveRate, observedAt: nowSec });
+    return { rate: liveRate, cachedObservedAt: null };
+  }
+
+  if (!hasPublishableCurrentPrice(asset)) {
+    const cached = context.vaultRateCache?.get(asset.id);
+    if (isTrustedCachedVaultRate(cached, nowSec)) {
+      return { rate: cached.rate, cachedObservedAt: cached.observedAt };
+    }
+  }
+
+  // No rescue happened: preserve the pre-cache failure contract so aborts
+  // propagate and RPC failures still count against the grouped circuit.
+  if (liveError != null) throw liveError;
+  return null;
+}
+
+/** Publish a cached-rate degradation price: explicit low-confidence provenance, never depeg-authoritative. */
+export function buildCachedRateLiveOverride(
+  parent: TrustedOverrideParent,
+  rate: number,
+  rateObservedAt: number,
+): CurrentPriceOverride | null {
+  const price = parent.trustedParent.price * rate;
+  if (!Number.isFinite(price) || price <= 0) return null;
+
+  return {
+    price,
+    source: CACHED_VAULT_RATE_SOURCE,
+    confidence: "low",
+    observedAt: Math.min(rateObservedAt, parent.trustedParent.observedAt),
+    observedAtMode: "local_fetch",
+    metadata: {
+      inheritedFrom: parent.parentId,
+      parentSource: parent.parentAsset.priceSource ?? null,
+      parentConfidence: parent.parentAsset.priceConfidence ?? null,
+      parentObservedAt: parent.parentAsset.priceObservedAt ?? parent.parentAsset.priceUpdatedAt ?? null,
+      parentObservedAtMode: parent.parentAsset.priceObservedAtMode ?? null,
+      parentReplaySafe: parent.trustedParent.replaySafe,
+      cachedVaultRate: { rate, rateObservedAt },
     },
   };
 }

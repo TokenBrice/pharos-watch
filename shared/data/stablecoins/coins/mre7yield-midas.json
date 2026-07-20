@@ -126,9 +126,9 @@
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
-    "summary": "mRe7YIELD is a Midas liquid yield token with multichain distribution, and the workflow candidate identifies Across as the material route surface. Because Across is an intent/liquidity framework, the route is reviewed as liquidity-route risk.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "mRe7YIELD is a Midas liquid yield token with multichain distribution, and the workflow candidate identifies Across as the material route surface. Because Across is an intent/liquidity framework, the route is reviewed as liquidity-route risk. 2026-07-20 cohort dc-1 pass: Ethereum row confirmed native; Etherlink row confirmed uniform Midas deployment; Starknet row remains unresolved (non-EVM).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
     "confidence": "probable",
     "protocols": [
       {
@@ -156,46 +156,87 @@
         "id": "ethereum:0x87c9053c819bb28e0d73d33059e1b3da80afb0cf",
         "destinationChain": "ethereum",
         "contractAddress": "0x87c9053c819bb28e0d73d33059e1b3da80afb0cf",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Midas mRe7YIELD (native issuance on Ethereum)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Midas Re7 Yield', symbol mRe7YIELD, 18 decimals — Midas issuer-native deployment on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Midas",
+            "url": "https://midas.app/"
+          },
+          {
+            "label": "mRe7YIELD on Etherscan",
+            "url": "https://etherscan.io/address/0x87c9053c819bb28e0d73d33059e1b3da80afb0cf"
+          }
+        ]
       },
       {
         "id": "etherlink:0x733d504435a49fc8c4e9759e756c2846c92f0160",
         "destinationChain": "etherlink",
         "contractAddress": "0x733d504435a49fc8c4e9759e756c2846c92f0160",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Midas multichain deployment (uniform proxy admin)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Midas Re7 Yield', symbol mRe7YIELD, 18 decimals on Etherlink; EIP-1967 admin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac matches the Ethereum deployment admin (uniform Midas multichain deployment). The token contract executes mint.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "etherlink",
+        "controllerAddress": "0x733d504435a49fc8c4e9759e756c2846c92f0160",
+        "failureDomainKeys": [
+          "protocol:midas-multichain",
+          "contract:etherlink:0x733d504435a49fc8c4e9759e756c2846c92f0160"
+        ],
+        "sources": [
+          {
+            "label": "Midas",
+            "url": "https://midas.app/"
+          }
+        ]
       },
       {
         "id": "starknet:0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
         "destinationChain": "starknet",
         "contractAddress": "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Midas multichain deployment (uniform proxy admin)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Starknet 2026-07-20 (starknet_call, block 12067807): name 'Midas Re7 Yield', symbol mRe7YIELD, 18 decimals, totalSupply 175,676.21 tokens. getClassHashAt returns class 0x05ffbcfeb50d200a0677c48a129a11245a3fc519d1d98d76882d1c9a1b19c6ed with get_upgrade_delay() = 0, matching the 2026-07-13 mintAuthority review: the single-key OpenZeppelin governance account 0x04758595201d9d01be9f8bd232fe3a1c0b5c7b953219c9faa35779b3e73c214c holds class-replacement power. Same uniform Midas multichain deployment pattern as the reviewed Etherlink route — the token contract executes mint; no third-party bridge is in the path.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "starknet",
+        "controllerAddress": "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
+        "failureDomainKeys": [
+          "protocol:midas-multichain",
+          "contract:starknet:0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc"
+        ],
+        "observedAt": "2026-07-20",
+        "observedBlock": 12067807,
+        "sources": [
+          {
+            "label": "Midas",
+            "url": "https://midas.app/"
+          },
+          {
+            "label": "mRe7YIELD on Starkscan (verified 2026-07-20)",
+            "url": "https://starkscan.co/contract/0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc"
+          }
+        ]
       }
     ]
   },
@@ -204,11 +245,11 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "Re7-managed DeFi lending, liquidity, restaking, funding-rate, and options strategies",
+      "name": "Re7-managed DeFi yield strategy NAV",
       "pct": 100,
       "risk": "high",
       "assetClass": "fund-share",
-      "issuerOrObligor": "Re7 Capital strategy and Midas issuer",
+      "issuerOrObligor": "Re7 Capital strategy manager and Midas issuer",
       "riskFactors": [
         "counterparty",
         "smart-contract",
@@ -220,6 +261,65 @@
       "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Midas mRe7YIELD",
+        "url": "https://midas.app/mre7yield"
+      },
+      {
+        "label": "Midas Attestation Engine",
+        "url": "https://blog.midas.app/introducing-the-midas-attestation-engine/"
+      },
+      {
+        "label": "Midas mRe7YIELD risk documentation",
+        "url": "https://docs.midas.app/tokens/mre7yield/risks"
+      }
+    ],
+    "rationale": "mRe7YIELD is a liquid yield token certificate tracking a Re7 Capital managed DeFi yield strategy (lending, liquidity provisioning, restaking, funding-rate arbitrage, and options) rather than a claim on one stablecoin. The slice name is aligned to the exact live chainlink-nav adapter row identity so the reviewed classification overlays the captured NAV exposure; public sources identify the strategy mandate and attestation framework, but do not provide a durable position-level composition.",
+    "compositionBasis": "Current Midas product, risk, and attestation disclosures; live NAV row identity from the Midas Chainlink NAV oracle adapter",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The managed strategy's position-level assets, venues, and weights are not disclosed in a durable static composition.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Re7-managed DeFi yield strategy NAV",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The strategy mandate is known, but current position-level stablecoin, protocol, and venue exposures are not available for reviewed links."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Fordefi",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "mixed",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "conditional",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Fordefi Midas custody case study",
+        "url": "https://www.fordefi.com/customer-stories/how-midas-brings-tokenized-investment-opportunities-on-chain-with-fordefis-defi-native-custody-2ti85"
+      },
+      {
+        "label": "Midas mRe7YIELD",
+        "url": "https://midas.app/mre7yield"
+      }
+    ],
+    "uncertainty": "Fordefi documents dedicated Midas workspaces in which the strategy manager holds an MPC share and Midas holds an administrative policy share. Assets are actively deployed across protocols and venues, so provider allocation, venue segregation, and reuse conditions remain strategy-dependent."
+  },
   "yieldConfig": {
     "yieldSource": "Midas mRe7YIELD strategy",
     "yieldType": "nav-appreciation"

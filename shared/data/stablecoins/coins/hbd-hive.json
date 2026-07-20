@@ -92,12 +92,64 @@
     {
       "name": "Hive protocol conversion capacity",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Hive blockchain protocol (witness median price-feed conversion)",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Hive Backed Dollar overview",
+        "url": "https://hive.io/hbd/"
+      },
+      {
+        "label": "Hive dynamic global properties documentation",
+        "url": "https://developers.hive.io/tutorials-recipes/understanding-dynamic-global-properties.html"
+      },
+      {
+        "label": "Hive glossary (HBD conversion and haircut mechanics)",
+        "url": "https://developers.hive.io/glossary/"
+      }
+    ],
+    "rationale": "HBD is a native Hive protocol liability, not a claim on a segregated reserve portfolio: there are no asset reserves, only the protocol's conversion rule paying $1 of HIVE per HBD at the 3.5-day median witness price, bounded by the debt-ratio haircut. Live chain properties at 2026-07-19 report about 32.4M HBD outstanding with the DHF account itself holding roughly 72% of supply, and the community HBD stabilizer bot is inactive, so peg defense rests on conversions, the haircut, and the witness-set savings rate.",
+    "compositionBasis": "Hive protocol conversion and haircut mechanism confirmed against live chain properties",
+    "compositionAsOf": "2026-07-19",
+    "scope": "full-composition",
+    "knownUnknownExposure": "There is no external reserve custodian, asset allocation, or legally segregated collateral pool. HBD holders instead depend on Hive protocol value, witness-set price submissions, and the protocol debt-limit and haircut rules; whether the protocol's debt-ratio accounting nets out DHF-held HBD is not definitively documented in the reviewed sources.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Hive protocol conversion capacity",
+        "pct": 100,
+        "disposition": "self-reserve",
+        "rationale": "Backing is the Hive protocol's own conversion capacity denominated in HIVE market value — a self-referential protocol reserve rather than an exogenous asset or tracked stablecoin."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Hive base-layer protocol (conversion mechanism; no reserve custodian)",
+        "role": "other",
+        "jurisdiction": "Hive"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
     "confidence": "verified",
     "sources": [
       {
@@ -109,10 +161,7 @@
         "url": "https://developers.hive.io/tutorials-recipes/understanding-dynamic-global-properties.html"
       }
     ],
-    "rationale": "HBD is a native Hive protocol liability, not a claim on a segregated reserve portfolio. Hive documents the reciprocal HIVE/HBD conversions and the debt-ratio haircut that bounds the conversion mechanism.",
-    "compositionBasis": "Hive protocol conversion and haircut mechanism",
-    "scope": "full-composition",
-    "knownUnknownExposure": "There is no external reserve custodian, asset allocation, or legally segregated collateral pool. HBD holders instead depend on Hive protocol value, witness-set price submissions, and the protocol debt-limit and haircut rules.",
+    "uncertainty": "HBD has no reserve assets to custody: backing is the protocol-native conversion rule against HIVE market value. Custody concepts (segregation, bankruptcy remoteness, rehypothecation) do not apply; the operative risks are witness price-feed integrity, the 3.5-day conversion delay, and the debt-ratio haircut degrading the $1 conversion rate when protocol debt is high.",
     "knownUnknownExposurePct": 0
   },
   "yieldConfig": {
@@ -145,7 +194,11 @@
         "chain": "hive",
         "capDescription": "HBD is minted via on-chain HIVE->HBD conversion (3.5-day time-averaged HIVE price); debt-ratio cap halts printing at 20% of virtual supply (hbd_start_percent/stop_percent=2000); haircut on HIVE→HBD conversions kicks in at 30% of HIVE market cap (HIVE_HBD_HARD_LIMIT=3000). Current hbd_print_rate=0 (minting halted).",
         "canRaiseCap": true,
-        "evidence": "Hive blockchain API (database_api.get_config) confirmed: hbd_start_percent=2000, hbd_stop_percent=2000, HIVE_HBD_HARD_LIMIT=3000. get_dynamic_global_properties confirmed: hbd_print_rate=0 (printing fully halted), current_hbd_supply≈32.9M HBD, virtual_supply≈1.24B HIVE (~$61.9M at $0.05). HBD debt ratio ≈53% >> 20% start threshold; printing stopped. No permissioned minter: conversion is enforced by Hive consensus code open to all users."
+        "evidence": "Hive blockchain API (database_api.get_config) confirmed: hbd_start_percent=2000, hbd_stop_percent=2000, HIVE_HBD_HARD_LIMIT=3000. get_dynamic_global_properties confirmed: hbd_print_rate=0 (printing fully halted), current_hbd_supply≈32.9M HBD, virtual_supply≈1.24B HIVE (~$61.9M at $0.05). HBD debt ratio ≈53% >> 20% start threshold; printing stopped. No permissioned minter: conversion is enforced by Hive consensus code open to all users.",
+        "failureDomainKeys": [
+          "protocol:hive-blockchain"
+        ],
+        "observedAt": "2026-07-20"
       },
       {
         "label": "Hive witness consensus set (parameter governance)",
@@ -154,13 +207,17 @@
         "directMintAbility": "parameter-only",
         "chain": "hive",
         "canRaiseCap": true,
-        "evidence": "Block-producing witnesses set HBD interest/savings APR (currently 12% — hbd_interest_rate=1200) and can soft-fork the debt-limit parameters (hbd_start_percent, hbd_stop_percent) via consensus. HIVE_HBD_HARD_LIMIT=3000 is a hard-coded constant requiring a chain hard fork to change. Witnesses tune issuance terms but do not directly mint to arbitrary accounts."
+        "evidence": "Block-producing witnesses set HBD interest/savings APR (currently 12% — hbd_interest_rate=1200) and can soft-fork the debt-limit parameters (hbd_start_percent, hbd_stop_percent) via consensus. HIVE_HBD_HARD_LIMIT=3000 is a hard-coded constant requiring a chain hard fork to change. Witnesses tune issuance terms but do not directly mint to arbitrary accounts.",
+        "failureDomainKeys": [
+          "witness-set:hive"
+        ],
+        "observedAt": "2026-07-20"
       }
     ],
     "review": {
       "evidence": "Hive blockchain API (database_api.get_config and get_dynamic_global_properties) confirmed live consensus parameters: hbd_start_percent=2000 (HBD printing halted at 20% of virtual_supply), hbd_stop_percent=2000 (printing resumes below 20%), HIVE_HBD_HARD_LIMIT=3000 (30% debt ratio triggers haircut on HIVE→HBD conversions). Current state: hbd_print_rate=0 (printing fully halted; current HBD supply ~32.9M at ~53% of virtual_supply ~1.24B HIVE). HBD interest rate is 1200 (12% APR), set by witness consensus. These are all witness-tunable soft-fork parameters.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Hive Dollar (HBD) overview",

@@ -69,8 +69,8 @@
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "zkUSD has one tracked ZKsync contract and no source-verified cross-chain route. The ZKsync signal is canonical chain infrastructure context, so this is reviewed as native to the current deployment.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
     "confidence": "verified",
     "sources": [
       {
@@ -80,6 +80,29 @@
       {
         "label": "L2BEAT ZKsync Era",
         "url": "https://l2beat.com/interop/protocols/zksync-era"
+      }
+    ],
+    "routes": [
+      {
+        "id": "zksync:0xfc7e56298657b002b3e656400e746b7212912757",
+        "destinationChain": "zksync",
+        "contractAddress": "0xfc7e56298657b002b3e656400e746b7212912757",
+        "protocol": "Goal3 native zkSync Era issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "zkUSD is native on zkSync Era: the Goal3 protocol's UUPS proxy and owner EOA are covered by the reviewed mint-authority profile; no bridge carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Goal3 X",
+            "url": "https://x.com/Goal3_xyz"
+          }
+        ]
       }
     ]
   },

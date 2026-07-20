@@ -79,16 +79,33 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "OnRe structured insurance and reinsurance yield portfolio",
-      "pct": 100,
-      "risk": "high"
+      "name": "Unallocated ONyc Pool stablecoin collateral and treasury (USDC and USDG)",
+      "pct": 77.83,
+      "risk": "low",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle (USDC) and Paxos-issued Global Dollar (USDG), held in OnRe program-controlled Squads multisig and Safe treasury",
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Deployed short-duration reinsurance underwriting positions (specialty and ILW contracts)",
+      "pct": 22.17,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "On Re SAC Ltd segregated account (Bermuda Monetary Authority registration 55347); cedent insurers/MGAs and reinsurance counterparties",
+      "riskFactors": ["credit", "counterparty", "liquidity", "custody", "legal", "concentration"],
+      "liquidityHorizon": "over-seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG Safety Score V9 reserve review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
     "confidence": "probable",
     "sources": [
+      {
+        "label": "OnRe Transparency Hub (live pool data)",
+        "url": "https://app.onre.finance/earn/transparency"
+      },
       {
         "label": "OnRe tokenized reinsurance documentation",
         "url": "https://docs.onre.finance/introduction/onre-tokenized-reinsurance-onyc"
@@ -96,22 +113,83 @@
       {
         "label": "OnRe FAQ",
         "url": "https://docs.onre.finance/technical-resources/frequently-asked-questions"
+      },
+      {
+        "label": "OnRe independent attestations (Apex Group)",
+        "url": "https://docs.onre.finance/security-and-verification/independent-attestations"
+      },
+      {
+        "label": "ONyc asset attestation for May 2026",
+        "url": "https://www.onre.finance/blog/onyc-asset-attestation-may-2026"
       }
     ],
-    "rationale": "OnRe describes ONYC as exposure to its structured insurance and reinsurance portfolio. The reviewed source envelope retains one aggregate 100% portfolio category because current policy, counterparty, and claim-level allocations are not publicly reconciled.",
-    "compositionBasis": "OnRe ONYC product documentation; current portfolio allocation undisclosed",
+    "rationale": "OnRe's Transparency Hub fetched 2026-07-20 shows a $36.09M ONyc pool with $28.09M (77.83%) unallocated in the yielding asset reserve (~3.95% projected yield) and the remaining ~$8.0M (22.17%) deployed across five named short-duration specialty and ILW reinsurance deals. The table's per-deal 'Deal Value' figures are full deal capacities (they sum above the pool total), so the split is derived from the unallocated row against the stated total; that interpretation keeps confidence at probable. The FAQ confirms USDC and USDG as the pool's mint/stablecoin collateral and describes the unallocated reserve as supporting secondary liquidity and backstopping contracts. Apex Group performs monthly attestations (latest published covers NAV as of 2026-05-31), but the attestation PDF is view-restricted and could not be machine-read today. This replaces the prior single aggregate envelope with a two-slice full-composition record.",
+    "compositionBasis": "OnRe Transparency Hub live pool figures fetched 2026-07-20 ($28.09M unallocated of $36.09M total)",
+    "compositionAsOf": "2026-07-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "The portfolio backing class is identified, but current insurance layers, reinsurer shares, policy maturities, claims, and custody or recovery terms are not disclosed in the reviewed sources.",
-    "knownUnknownExposurePct": 0,
+    "knownUnknownExposure": "The split between USDC and USDG inside the unallocated collateral, per-deal deployed amounts, cedent identities, and claim reserves are not published; the May 2026 Apex attestation PDF is view-restricted.",
+    "knownUnknownExposurePct": 77.83,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "OnRe structured insurance and reinsurance yield portfolio",
-        "pct": 100,
+        "reserveName": "Unallocated ONyc Pool stablecoin collateral and treasury (USDC and USDG)",
+        "pct": 77.83,
+        "disposition": "basket-needs-split",
+        "rationale": "The FAQ names USDC and USDG as the pool's stablecoin collateral but does not publish per-stablecoin weights, so the slice cannot yet be linked to a single tracked coin.",
+        "candidateCoinIds": ["usdc-circle", "usdg-paxos"]
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Deployed short-duration reinsurance underwriting positions (specialty and ILW contracts)",
+        "pct": 22.17,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Insurance and reinsurance positions are external backing rather than tracked stablecoin dependencies."
+        "rationale": "Insurance and reinsurance underwriting positions are external real-world backing rather than tracked stablecoin dependencies."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "On Re SAC Ltd segregated account (ONyc Pool); Bermuda Monetary Authority Class IIGB insurer and Class F digital-asset business, registration 55347",
+        "role": "other",
+        "jurisdiction": "Bermuda"
+      },
+      {
+        "name": "OnRe Squads v4 multisig vault 45YnzauhsBM8CpUz96Djf8UG5vqq2Dua62wuW9H3jaJ5 (program-controlled collateral on Solana)",
+        "role": "custodian",
+        "jurisdiction": "Solana (on-chain)"
+      },
+      {
+        "name": "OnRe Safe 0x5c13F4cc53B4CD95350e796C190D25C94DA47e4B (custody and treasury on Ethereum)",
+        "role": "custodian",
+        "jurisdiction": "Ethereum (on-chain)"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "conditional",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "OnRe FAQ (segregated account and licences)",
+        "url": "https://docs.onre.finance/technical-resources/frequently-asked-questions"
+      },
+      {
+        "label": "OnRe Transparency Hub token configuration",
+        "url": "https://app.onre.finance/earn/transparency"
+      },
+      {
+        "label": "OnRe tokenized reinsurance documentation",
+        "url": "https://docs.onre.finance/introduction/onre-tokenized-reinsurance-onyc"
+      },
+      {
+        "label": "Bermuda Monetary Authority regulated-entities registry",
+        "url": "https://www.bma.bm/regulated-entities"
+      }
+    ],
+    "uncertainty": "The ONyc Pool operates inside a Bermuda segregated account whose assets and liabilities are legally ring-fenced from OnRe's other books, and On Re SAC Ltd holds BMA Class IIGB insurer and Class F DABA licences (registration 55347; registry match confirmed by the 2026-07-15 Pharos registry pass), which grounds segregated custody and a structured bankruptcy-remoteness posture. Not known: the off-chain banks, brokers, or reinsurance trust accounts holding posted collateral; per-account segregation at those institutions; and the recovery waterfall if a reinsurance counterparty or cedent defaults. Posting pool capital as collateral to reinsurance counterparties is the disclosed business model, recorded as conditional rehypothecation; no lending-out of the stablecoin reserve itself is documented. Collateral deployed into roughly 5-13 month reinsurance contracts is not withdrawable on demand, and primary redemptions remain subject to redemption windows, holding periods, and liquidity availability."
   },
   "yieldConfig": {
     "yieldSource": "OnRe insurance collateral yield",

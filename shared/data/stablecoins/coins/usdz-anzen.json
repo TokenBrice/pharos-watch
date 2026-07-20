@@ -66,13 +66,13 @@
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "Anzen Terms of Service — confirms Anzen Group Ltd (BVI), no regulatory registration",
+        "label": "Anzen Terms of Service \u2014 confirms Anzen Group Ltd (BVI), no regulatory registration",
         "url": "https://anzen.finance/terms",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "Anzen docs — no GENIUS or regulatory disclosures",
+        "label": "Anzen docs \u2014 no GENIUS or regulatory disclosures",
         "url": "https://docs.anzen.finance/",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-06-07"
@@ -87,8 +87,8 @@
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC GENIUS Act rulemaking bulletin and public releases (Bulletin 2026-3)",
-        "Anzen Terms of Service (anzen.finance/terms) — entity confirmed as Anzen Group Ltd, BVI; explicitly states not registered with any regulatory body in any jurisdiction",
-        "Anzen docs and website — no GENIUS PPSI application, state-qualified, or foreign-issuer exception disclosure found",
+        "Anzen Terms of Service (anzen.finance/terms) \u2014 entity confirmed as Anzen Group Ltd, BVI; explicitly states not registered with any regulatory body in any jurisdiction",
+        "Anzen docs and website \u2014 no GENIUS PPSI application, state-qualified, or foreign-issuer exception disclosure found",
         "Web search: no news or regulator source linking Anzen/USDz to any GENIUS authorization pathway",
         "OCC Bulletin 2026-3 GENIUS proposed rule",
         "OCC Bulletin 2026-24 GENIUS reporting proposal",
@@ -143,8 +143,8 @@
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "Anzen documents the USDz/sUSDz bridge as powered by LayerZero for Ethereum, Base, and Blast, so cross-chain supply movement uses an external omnichain lock/burn-and-mint route.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "verified",
     "protocols": [
       {
@@ -173,76 +173,151 @@
         "id": "ethereum:0xa469b7ee9ee773642b3e93e842e5d9b5baa10067",
         "destinationChain": "ethereum",
         "contractAddress": "0xa469b7ee9ee773642b3e93e842e5d9b5baa10067",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Anzen native USDz (LayerZero OFT hub)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical USDz on Ethereum (verified 2026-07-20, block 25570986): user-callable SPCT-gated deposit mint per the verified mint-authority review; the token also exposes endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and is the OFT hub for the Base representation (LayerZero OFT registry lists USDz only on ethereum and base). owner() = Anzen DEFAULT_ADMIN Safe 0xc88729a8f57cd88fda7f94478985e5df108fd679 (2-of-6).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "canonicalChain": "ethereum",
+        "observedBlock": 25570986,
+        "sources": [
+          {
+            "label": "Anzen docs",
+            "url": "https://docs.anzen.finance/"
+          },
+          {
+            "label": "USDz on Etherscan (verified 2026-07-20)",
+            "url": "https://etherscan.io/address/0xa469b7ee9ee773642b3e93e842e5d9b5baa10067"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDz)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDz"
+          }
+        ]
       },
       {
         "id": "base:0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938",
         "destinationChain": "base",
         "contractAddress": "0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT (Anzen USDz)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Base 2026-07-20 (block 48862865): USDz OFT symbol()='USDz', endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c, owner() = Anzen Safe 0x0e5ec65ea055937646ab029ef3644de3de67766a (getThreshold/getOwners = 2-of-7); the LayerZero OFT registry lists USDz only on ethereum and base. The OFT contract itself is the mint/burn authority for this representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "base",
+        "controllerAddress": "0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0xa469b7ee9ee773642b3e93e842e5d9b5baa10067",
+          "contract:base:0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938"
+        ],
+        "observedBlock": 48862865,
+        "sources": [
+          {
+            "label": "LayerZero OFT metadata API (USDz)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDz"
+          },
+          {
+            "label": "USDz OFT on Basescan (verified 2026-07-20)",
+            "url": "https://basescan.org/address/0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x5018609ab477cc502e170a5accf5312b86a4b94f",
         "destinationChain": "arbitrum",
         "contractAddress": "0x5018609ab477cc502e170a5accf5312b86a4b94f",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Anzen issuer-deployed USDz",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on arbitrum 2026-07-20 (block 485696014): USDz token 0x5018609ab477cc502e170a5accf5312b86a4b94f (symbol USDz) has no LayerZero endpoint surface \u2014 it is not the OFT \u2014 and owner() = Anzen Safe 0x0e5ec65ea055937646ab029ef3644de3de67766a (getThreshold/getOwners = 2-of-7). Anzen issuer-deployed deployment administered by the issuer Safe.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 485696014,
+        "sources": [
+          {
+            "label": "Anzen docs",
+            "url": "https://docs.anzen.finance/"
+          },
+          {
+            "label": "USDz on arbitrum explorer (owner verified 2026-07-20)",
+            "url": "https://arbiscan.io/address/0x5018609ab477cc502e170a5accf5312b86a4b94f"
+          }
+        ]
       },
       {
         "id": "blast:0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6",
         "destinationChain": "blast",
         "contractAddress": "0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Anzen issuer-deployed USDz",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on blast 2026-07-20 (block 37852633): USDz token 0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6 (symbol USDz) has no LayerZero endpoint surface \u2014 it is not the OFT \u2014 and owner() = Anzen Safe 0x9076e336e9d0901a3aca0d559124884e114d7b48 (getThreshold/getOwners = 2-of-7). Anzen issuer-deployed deployment administered by the issuer Safe.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 37852633,
+        "sources": [
+          {
+            "label": "Anzen docs",
+            "url": "https://docs.anzen.finance/"
+          },
+          {
+            "label": "USDz on blast explorer (owner verified 2026-07-20)",
+            "url": "https://blastscan.io/address/0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6"
+          }
+        ]
       },
       {
         "id": "manta:0x73d23f3778a90be8846e172354a115543df2a7e4",
         "destinationChain": "manta",
         "contractAddress": "0x73d23f3778a90be8846e172354a115543df2a7e4",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Anzen issuer-deployed USDz",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on manta 2026-07-20 (block 9029112): USDz token 0x73d23f3778a90be8846e172354a115543df2a7e4 (symbol USDz) has no LayerZero endpoint surface \u2014 it is not the OFT \u2014 and owner() = Anzen Safe 0x349d4b7580abc27cd9fba78c0e7a62865ef51da6 (getThreshold/getOwners = 2-of-6). Anzen issuer-deployed deployment administered by the issuer Safe.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 9029112,
+        "sources": [
+          {
+            "label": "Anzen docs",
+            "url": "https://docs.anzen.finance/"
+          },
+          {
+            "label": "USDz on manta explorer (owner verified 2026-07-20)",
+            "url": "https://pacific-explorer.manta.network/address/0x73d23f3778a90be8846e172354a115543df2a7e4"
+          }
+        ]
       }
     ]
   },
@@ -251,12 +326,22 @@
     {
       "name": "SPCT (Secured Private Credit Token)",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Anzen Group Ltd SPCT portfolio (U.S. private-credit ABS obligors)",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex dependency review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
     "confidence": "verified",
     "sources": [
       {
@@ -276,11 +361,11 @@
         "url": "https://eth.blockscout.com/address/0xf30a29f1c540724fd8c5c4be1af604a6c6800d29"
       }
     ],
-    "rationale": "Anzen states that each USDz is backed 1:1 by SPCT and identifies SPCT as the permissioned on-chain representation of its private-credit portfolio. At Ethereum block 25530452 and contemporaneous configured-chain heads, SPCT totalSupply was 8,225,104.203284636303620608 while aggregate USDz totalSupply across Ethereum, Base, Arbitrum, Blast, and Manta was 8,120,206.614623636303620608, reconciling the documented single-asset reserve path without any USTB dependency.",
-    "compositionBasis": "Anzen issuer disclosure corroborated by SPCT and multichain USDz totalSupply reads",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "Anzen states that each USDz is backed 1:1 by SPCT and identifies SPCT as the permissioned on-chain representation of its U.S. private-credit ABS portfolio. Public-RPC totalSupply reads on 2026-07-20 returned SPCT pool (0xf30a29f1c540724fd8c5c4be1af604a6c6800d29) totalSupply 8,225,104.2033 against aggregate USDz totalSupply of 8,120,206.6146 across Ethereum (811,082.23), Base (6,690,509.36), Arbitrum (77,436.72), Blast (41,012.52), and Manta (500,165.78) \u2014 both figures unchanged from the 2026-07-14 readings, keeping SPCT coverage near 101.3% of USDz supply and confirming the single-asset reserve path without any USTB or other dependency. The 100% SPCT slice is unchanged; underlying loan-level weights are not published beyond Anzen's documented criteria (U.S.-based assets, ABS-only structures, single-asset concentration limits). Liquidity horizon is marked over-seven-days because SPCT is permissioned (KYC/KYB whitelist) and represents private credit, so reserve-level liquidation runs at loan/redemption timelines rather than public-market ones.",
+    "compositionBasis": "Anzen issuer disclosure corroborated by SPCT and multichain USDz totalSupply reads (public RPC, 2026-07-20)",
+    "compositionAsOf": "2026-07-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "SPCT is fully identified as the direct reserve asset; its underlying private-credit loan-level weights are not a tracked-stablecoin dependency question.",
+    "knownUnknownExposure": "SPCT is fully identified as the direct reserve asset; its underlying private-credit loan-level weights are not a tracked-stablecoin dependency question and are not published by the issuer.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -291,6 +376,41 @@
         "rationale": "SPCT represents private-credit collateral rather than a tracked stablecoin dependency."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Anzen protocol contracts \u2014 SPCT pool 0xf30a29f1c540724fd8c5c4be1af604a6c6800d29 (Ethereum); no disclosed third-party custodian for on-chain reserves",
+        "role": "other",
+        "sharePct": 100,
+        "jurisdiction": "British Virgin Islands"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "none",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Anzen USDz collateral documentation (holder-claim disclaimer)",
+        "url": "https://docs.anzen.finance/usdz-101/backing-assets-collateral"
+      },
+      {
+        "label": "Anzen USDz transparency documentation",
+        "url": "https://docs.anzen.finance/usdz-101/transparency"
+      },
+      {
+        "label": "Anzen Terms of Service (Anzen Group Ltd, BVI; no regulatory registration)",
+        "url": "https://anzen.finance/terms"
+      },
+      {
+        "label": "SPCT pool Ethereum contract",
+        "url": "https://eth.blockscout.com/address/0xf30a29f1c540724fd8c5c4be1af604a6c6800d29"
+      }
+    ],
+    "uncertainty": "SPCT is a permissioned token (KYC/KYB-whitelisted holders) whose pool contract on Ethereum (0xf30a29f1c540724fd8c5c4be1af604a6c6800d29) anchors the on-chain reserve; the off-chain custody chain for the underlying U.S. private-credit ABS notes \u2014 custodian, trustee, servicer, and account segregation \u2014 is not disclosed in Anzen docs reviewed 2026-07-20. Anzen's collateral documentation explicitly disclaims any holder claim: information about the collateral 'does not create any relationship between USDz and the collateral or claims for USDz holders to the collateral assets', so no bankruptcy-remoteness structure for USDz holders is documented (marked none rather than unknown on that explicit disclaimer). Anzen Group Ltd (BVI) states in its Terms of Service that it is not registered with any regulatory body in any jurisdiction. Whether SPCT or the underlying collateral is rehypothecated or re-deployed is not addressed in issuer documentation (marked unknown). Loan-level composition, obligor identities, and weightings are not published; the legacy transparency host rwa.anzen.finance did not resolve during this review, while app.anzen.finance/transparency remains the live dashboard referenced by the proof-of-reserves record."
   },
   "liveReservesConfig": {
     "adapter": "anzen-usdz",
@@ -358,7 +478,7 @@
         "signerCount": 6,
         "threshold": 2,
         "modulesOrGuardsStatus": "none-detected",
-        "evidence": "At Ethereum block 25295203, owner() on USDz token returned 0xc88729a8…; hasRole(DEFAULT_ADMIN, 0xc88729a8…) = true; getOwners() returned 6 addresses; getThreshold() = 2; masterCopy slot0 = 0xd9db270c1b5e3bd161e8c8503c55ceabee709552 (Safe v1.3); guard storage slot = 0x0; getModulesPaginated returned empty array (count 0).",
+        "evidence": "At Ethereum block 25295203, owner() on USDz token returned 0xc88729a8\u2026; hasRole(DEFAULT_ADMIN, 0xc88729a8\u2026) = true; getOwners() returned 6 addresses; getThreshold() = 2; masterCopy slot0 = 0xd9db270c1b5e3bd161e8c8503c55ceabee709552 (Safe v1.3); guard storage slot = 0x0; getModulesPaginated returned empty array (count 0).",
         "safe": {
           "owners": [
             "0x21ae1055c747cc59051327b5f334ea0899fe90f2",
@@ -392,7 +512,7 @@
         "chain": "ethereum",
         "address": "0xa469b7ee9ee773642b3e93e842e5d9b5baa10067",
         "capDescription": "deposit() and depositBySPCT() are callable by any holder of the permissioned SPCT token; mint supply is bounded by SPCT availability (issuer-controlled RWA).",
-        "evidence": "Blockscout ABI shows deposit(uint256) and depositBySPCT(uint256) on the USDz contract with no role guard visible in the ABI — supply expansion is bounded by SPCT access, which is issuer-controlled.",
+        "evidence": "Blockscout ABI shows deposit(uint256) and depositBySPCT(uint256) on the USDz contract with no role guard visible in the ABI \u2014 supply expansion is bounded by SPCT access, which is issuer-controlled.",
         "sources": [
           {
             "label": "Anzen USDz overview",

@@ -133,7 +133,7 @@ async function requestBatch(
   requests: readonly JsonRpcRequest[],
 ): Promise<readonly JsonRpcResponse[]> {
   if (requests.length === 0) return [];
-  const maxBatchSize = rpcUrl.includes("drpc.org") ? 3 : rpcUrl.includes("blockscout.com") ? 5 : 50;
+  const maxBatchSize = getShockRpcMaxBatchSize(rpcUrl);
   const results: JsonRpcResponse[] = [];
   for (let offset = 0; offset < requests.length; offset += maxBatchSize) {
     const chunk = requests.slice(offset, offset + maxBatchSize);
@@ -196,6 +196,17 @@ async function requestBatch(
     results.push(...chunkResults);
   }
   return results;
+}
+
+function hostnameMatchesDomain(hostname: string, domain: string): boolean {
+  return hostname === domain || hostname.endsWith(`.${domain}`);
+}
+
+export function getShockRpcMaxBatchSize(rpcUrl: string): number {
+  const { hostname } = new URL(rpcUrl);
+  if (hostnameMatchesDomain(hostname, "drpc.org")) return 3;
+  if (hostnameMatchesDomain(hostname, "blockscout.com")) return 5;
+  return 50;
 }
 
 abstract class DecodedCallJournal {

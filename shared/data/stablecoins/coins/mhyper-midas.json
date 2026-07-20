@@ -500,9 +500,9 @@
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
     "summary": "mHYPER has reviewed cross-chain route evidence through Across, an intent/liquidity framework rather than issuer-native settlement. The route is scored as liquidity/intent because execution and available bridge liquidity are material to cross-chain movement.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "l2beat",
@@ -533,62 +533,104 @@
       {
         "id": "ethereum:0x9b5528528656dbc094765e2abb79f293c21191b9",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x9b5528528656dbc094765e2abb79f293c21191b9",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Midas native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native mHYPER: mint authority is the Midas shared operator EOA 0x5683de280d0c3967fba2f04d707fa1ef5a044e25 plus deposit-vault minters (mint-authority review). This chain has no LayerZero adapter; supply is minted locally by Midas.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Midas",
+            "url": "https://midas.app/"
+          }
+        ]
       },
       {
         "id": "monad:0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7",
+        "sourceChain": "ethereum",
         "destinationChain": "monad",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Midas LzMintBurnOFTAdapter (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "mHYPER on monad is minted by the immutable MidasLzMintBurnOFTAdapter 0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df (13,682-byte non-proxy runtime): token() = this deployment and endpoint() = the chain's LayerZero V2 endpoint (read 2026-07-20). The adapter is the OFT mint/burn authority; Midas's shared operator EOA 0x5683de280d0c3967fba2f04d707fa1ef5a044e25 also holds the chain's mint operator role.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "monad",
+        "controllerAddress": "0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:monad:0x08bc5ef2e2afe697614bf3a9eaa71dcbb577f2df"
+        ],
+        "sources": [
+          {
+            "label": "Midas",
+            "url": "https://midas.app/"
+          }
+        ]
       },
       {
         "id": "plasma:0xb31bea5c2a43f942a3800558b1aa25978da75f8a",
+        "sourceChain": "ethereum",
         "destinationChain": "plasma",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xb31bea5c2a43f942a3800558b1aa25978da75f8a",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Midas LzMintBurnOFTAdapter (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "mHYPER on plasma is minted by the immutable MidasLzMintBurnOFTAdapter 0x801c551b22dcd0a3e23ff8e6134e662e1837d75b (13,682-byte non-proxy runtime): token() = this deployment and endpoint() = the chain's LayerZero V2 endpoint (read 2026-07-20). The adapter is the OFT mint/burn authority; Midas's shared operator EOA 0x5683de280d0c3967fba2f04d707fa1ef5a044e25 also holds the chain's mint operator role.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "plasma",
+        "controllerAddress": "0x801c551b22dcd0a3e23ff8e6134e662e1837d75b",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:plasma:0x801c551b22dcd0a3e23ff8e6134e662e1837d75b"
+        ],
+        "sources": [
+          {
+            "label": "Midas",
+            "url": "https://midas.app/"
+          }
+        ]
       },
       {
         "id": "katana:0x926a8a63fa1e1fdbbeb811a0319933b1a0f1edbb",
         "destinationChain": "katana",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x926a8a63fa1e1fdbbeb811a0319933b1a0f1edbb",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Midas native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native mHYPER: mint authority is the Midas shared operator EOA 0x5683de280d0c3967fba2f04d707fa1ef5a044e25 plus deposit-vault minters (mint-authority review). This chain has no LayerZero adapter; supply is minted locally by Midas.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Midas",
+            "url": "https://midas.app/"
+          }
+        ]
       }
     ]
   },

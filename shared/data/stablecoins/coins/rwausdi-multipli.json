@@ -19,9 +19,9 @@
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Multipli documents rwaUSDi and its unwind/peg module across multiple EVM deployments, with no external bridge protocol resolved. The reviewed route is issuer/protocol-native issuance and redemption mechanics across supported chains.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Multipli docs",
@@ -36,62 +36,90 @@
       {
         "id": "ethereum:0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Multipli native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native rwaUSDi: 212-byte EIP-1967 proxy (impl 0x2a66bb2da3ad1c854e79307f64b862decd860d4c), owner() = the chain-local Safe 0xf25c404c101d40d88b5dcd64b82583dbc918dd25 (read 2026-07-20). Multipli issues natively on each chain; no bridge contract mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Multipli",
+            "url": "https://multipli.fi/"
+          }
+        ]
       },
       {
         "id": "base:0xd74fb32112b1ef5b4c428fead8da8d85a0019009",
         "destinationChain": "base",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xd74fb32112b1ef5b4c428fead8da8d85a0019009",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Multipli native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native rwaUSDi on Base: 212-byte EIP-1967 proxy (impl 0x5f0d2ae761a5eed6d7106771db846aa67be153f6), owner() = the same chain-local Safe 0xf25c404c101d40d88b5dcd64b82583dbc918dd25 (read 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Multipli",
+            "url": "https://multipli.fi/"
+          }
+        ]
       },
       {
         "id": "monad:0x650b616b46ff94000eb115926ab8393b90788d76",
         "destinationChain": "monad",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x650b616b46ff94000eb115926ab8393b90788d76",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Multipli native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native rwaUSDi on Monad: 212-byte EIP-1967 proxy (impl 0x524e2461234672643fd59310bd95ffe41538916d), owner() = the same chain-local Safe 0xf25c404c101d40d88b5dcd64b82583dbc918dd25 (read 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Multipli",
+            "url": "https://multipli.fi/"
+          }
+        ]
       },
       {
         "id": "arbitrum:0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
         "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Multipli native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native rwaUSDi on Arbitrum: same 212-byte proxy and impl 0x2a66bb2da3ad1c854e79307f64b862decd860d4c as Ethereum, owner() = the same chain-local Safe 0xf25c404c101d40d88b5dcd64b82583dbc918dd25 (read 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Multipli",
+            "url": "https://multipli.fi/"
+          }
+        ]
       }
     ]
   },
@@ -163,7 +191,15 @@
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Undisclosed rwaUSDi private-pool borrowers, funds, and strategy counterparties",
-      "riskFactors": ["credit", "counterparty", "liquidity", "custody", "legal", "market", "concentration"],
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "liquidity",
+        "custody",
+        "legal",
+        "market",
+        "concentration"
+      ],
       "liquidityHorizon": "over-seven-days"
     }
   ],
@@ -200,6 +236,36 @@
         "rationale": "AFI verifies only the aggregate and Multipli publishes an eligible-asset envelope rather than a dated current constituent allocation."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed institutional custodians, prime brokers, and fund administrators behind Multipli's rwaUSDi private pools",
+        "role": "custodian"
+      },
+      {
+        "name": "AFI Protocol (proof-of-reserves attestation layer, not a custodian)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "AFI rwaUSDi proof-of-reserves snapshot (2026-07-16)",
+        "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs"
+      },
+      {
+        "label": "AFI rwaUSDi periodic reserve reports",
+        "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/periodic-report?pageNo=1&offset=20"
+      }
+    ],
+    "uncertainty": "AFI's proof verifies aggregate rwaUSDi reserves and liabilities but does not identify the custodians, administrators, or prime brokers holding the underlying credit and fund positions; Multipli's documentation names strategy counterparties (e.g., Nomura, Fasanara, Edge Capital) without custody terms.",
+    "knownUnknownExposurePct": 100
   },
   "liveReservesConfig": {
     "adapter": "curated-validated",
@@ -276,8 +342,12 @@
         "canRaiseCap": false,
         "capDescription": "The token mint(address,uint256) entry point has no global supply ceiling or per-minter allowance. The current EOA does not need to raise a cap before minting an arbitrary amount.",
         "modulesOrGuardsStatus": "none-detected",
-        "failureDomainKeys": ["eoa:evm:0xd60acbbc9b249f4bb4b70a88e5c5f5ac73b6b081"],
-        "bypassSurfaces": ["One EOA key can immediately create uncapped rwaUSDi on all four material deployments."],
+        "failureDomainKeys": [
+          "eoa:evm:0xd60acbbc9b249f4bb4b70a88e5c5f5ac73b6b081"
+        ],
+        "bypassSurfaces": [
+          "One EOA key can immediately create uncapped rwaUSDi on all four material deployments."
+        ],
         "observedAt": "2026-07-13",
         "sources": [
           {
@@ -302,7 +372,7 @@
       {
         "chain": "arbitrum",
         "address": "0xf25c404c101d40d88b5dcd64b82583dbc918dd25",
-        "label": "rwaUSDi Arbitrum token and RolesAuthority owner — 1-of-7 Safe",
+        "label": "rwaUSDi Arbitrum token and RolesAuthority owner \u2014 1-of-7 Safe",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "direct",
@@ -356,7 +426,7 @@
       {
         "chain": "monad",
         "address": "0xf25c404c101d40d88b5dcd64b82583dbc918dd25",
-        "label": "rwaUSDi Monad token and RolesAuthority owner — 2-of-7 Safe",
+        "label": "rwaUSDi Monad token and RolesAuthority owner \u2014 2-of-7 Safe",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "direct",
@@ -410,7 +480,7 @@
       {
         "chain": "ethereum",
         "address": "0xf25c404c101d40d88b5dcd64b82583dbc918dd25",
-        "label": "rwaUSDi Ethereum token and RolesAuthority owner — 3-of-8 Safe",
+        "label": "rwaUSDi Ethereum token and RolesAuthority owner \u2014 3-of-8 Safe",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "direct",
@@ -465,7 +535,7 @@
       {
         "chain": "base",
         "address": "0xf25c404c101d40d88b5dcd64b82583dbc918dd25",
-        "label": "rwaUSDi Base token and RolesAuthority owner — 3-of-7 Safe",
+        "label": "rwaUSDi Base token and RolesAuthority owner \u2014 3-of-7 Safe",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "direct",

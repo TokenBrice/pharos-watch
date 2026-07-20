@@ -95,12 +95,22 @@ export const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDe
 ] as const;
 
 /**
- * QuoterV2 measurements remain shadow-only until their RPC evidence is
- * independently authenticated at runtime. An empty cohort keeps the
- * activation-pending gate in place and prevents untrusted quote data from
- * affecting score-eligible exit-route observations.
+ * Activation is cohort-scoped. The 2026-07-17 owner-ratified cohort is backed
+ * by the fork-equivalence, cross-check, drift, and shadow evidence packet at
+ * agents/safety-score-v9/results/cl-activation-evidence-2026-07-17/packet.md
+ * (120/120 exact provider reproductions; failures confined to producer
+ * startup generations). Keys not listed here remain shadow-only fail-closed.
+ * Restored 2026-07-20 after the #592 security rollup emptied the cohort as an
+ * over-broad artifact (owner ruling).
  */
-export const DEX_MEASURED_EXECUTION_SCORE_ELIGIBLE_DEPLOYMENT_KEYS: readonly string[] = [];
+export const DEX_MEASURED_EXECUTION_SCORE_ELIGIBLE_DEPLOYMENT_KEYS: readonly string[] = [
+  "uniswap-v3-quoter-v2:ethereum",
+  "uniswap-v3-quoter-v2:polygon",
+  "uniswap-v3-quoter-v2:arbitrum",
+  "pancakeswap-v3-quoter-v2:base",
+  "pancakeswap-v3-quoter-v2:bsc",
+  "pancakeswap-v3-quoter-v2:ethereum",
+];
 
 function deploymentKey(adapterProfileId: string, chain: string): string {
   return `${adapterProfileId.trim().toLowerCase()}:${chain.trim().toLowerCase()}`;

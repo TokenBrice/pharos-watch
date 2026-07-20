@@ -693,27 +693,119 @@
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "reserves": [
     {
-      "name": "XTZ (Tezos)",
-      "pct": 60,
-      "risk": "high"
-    },
-    {
       "name": "USDt (Tether on Tezos)",
-      "pct": 20,
+      "pct": 91.26,
       "risk": "low",
-      "coinId": "usdt-tether"
-    },
-    {
-      "name": "tzBTC (wrapped Bitcoin)",
-      "pct": 10,
-      "risk": "medium"
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether Operations Limited (USDt on Tezos)",
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
+      "liquidityHorizon": "one-day"
     },
     {
       "name": "SIRS (XTZ/tzBTC LP tokens)",
-      "pct": 10,
-      "risk": "high"
+      "pct": 6.59,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Youves SIRS liquidity-pool tokens (XTZ/tzBTC)",
+      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "XTZ (Tezos)",
+      "pct": 1.8,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Tezos native asset locked in Youves vault engines",
+      "riskFactors": ["market", "liquidity", "smart-contract"],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "tzBTC (wrapped Bitcoin)",
+      "pct": 0.35,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "tzBTC wrapped Bitcoin on Tezos",
+      "riskFactors": ["market", "custody", "liquidity", "smart-contract"],
+      "liquidityHorizon": "seven-days"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Finalized USDt V3 engine storage (Tezos level 14059094)",
+        "url": "https://api.tzkt.io/v1/contracts/KT1JmfujyCYTw5krfu9bSn7YbLYuz2VbNaje/storage?level=14059094"
+      },
+      {
+        "label": "Youves collateral details",
+        "url": "https://docs.youves.com/syntheticAssets/stableTokens/collateralManagement/Collateral-Management-Details/"
+      },
+      {
+        "label": "Pinned Youves mainnet engine registry",
+        "url": "https://github.com/youves-com/youves-sdk/blob/764ab33b49cbd132d952008f4259832d877fd4c6/src/networks.mainnet.ts#L850-L1070"
+      }
+    ],
+    "rationale": "Finalized Tezos state at level 14059094 (2026-07-14) shows uUSD debt of 11,172,864.36 across the active USDt V3 engine against 652,976.97 SIRS, 151,089.72 XTZ, and 34,460.85 tzBTC of debt across the remaining active and legacy engines, so the USDt branch carries about 93% of system debt. Weights are collateral-value estimates at each branch's enforced minimum collateral ratio (USDt 110%, SIRS/tzBTC 135%, XTZ 160%, legacy 200%), which normalizes the debt shares to 91.26/6.59/1.80/0.35 and replaces the stale 60/20/10/10 allocation that the pinned on-chain debt contradicts.",
+    "compositionBasis": "Finalized Youves engine debt at Tezos level 14059094 weighted by enforced minimum collateral ratios",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Actual per-vault collateralization exceeds the enforced minimums (target ratios are higher), so the crypto-branch shares are lower bounds and the USDt share an upper bound; savings-pool uUSD, accrued interest, and the SIRS LP token's internal XTZ/tzBTC split are not modeled. The uUSD savings pool holds deposited uUSD rather than reserve collateral and is excluded.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "SIRS (XTZ/tzBTC LP tokens)",
+        "pct": 6.59,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "SIRS is a Tezos-native LP token rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "XTZ (Tezos)",
+        "pct": 1.8,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "XTZ is an exogenous Layer-1 cryptoasset rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "tzBTC (wrapped Bitcoin)",
+        "pct": 0.35,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "tzBTC is a wrapped-Bitcoin cryptoasset rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Youves vault engine contracts (per collateral branch, Tezos)",
+        "role": "other",
+        "jurisdiction": "Tezos"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Youves collateral details",
+        "url": "https://docs.youves.com/syntheticAssets/stableTokens/collateralManagement/Collateral-Management-Details/"
+      },
+      {
+        "label": "Finalized USDt V3 engine storage (Tezos level 14059094)",
+        "url": "https://api.tzkt.io/v1/contracts/KT1JmfujyCYTw5krfu9bSn7YbLYuz2VbNaje/storage?level=14059094"
+      }
+    ],
+    "uncertainty": "Collateral is locked in per-user vaults inside the Youves engine contracts rather than with any custodian, and the protocol does not deploy vault collateral elsewhere by design. Engine administration resolves to the 4-of-7 FlatYouves DEX Admin multisig, and the documented oracle timestamp defect (millisecond reports accepted against a seconds-based freshness check) can impair branch liquidations. Legal segregation and bankruptcy-remoteness terms do not apply to contract custody."
+  },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
@@ -726,9 +818,11 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "chain": "tezos",
-        "canRaiseCap": "unknown",
-        "capDescription": "Mint bounded by collateral-specific target ratios (e.g. ~200% XTZ, ~115% stablecoins) enforced by the Youves vault/engine with oracle-driven liquidation.",
-        "evidence": "Youves docs describe users opening vaults that lock collateral and mint uUSD against collateral-specific target ratios, with a price oracle setting liquidation thresholds."
+        "address": "KT1FFE2LC5JpVakVjHm5mM36QVp2p3ZzH4hH",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-20",
+        "capDescription": "Mint bounded by collateral-specific target ratios (e.g. ~200% XTZ, ~115% stablecoins) enforced by the Youves vault/engine with oracle-driven liquidation; the 4-of-7 admin multisig can reconfigure engine parameters.",
+        "evidence": "2026-07-20 TzKT reads: this is the Youves Vault Creator engine whose storage token_contract = the tracked uUSD token KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW and whose administrators bigmap includes the 4-of-7 FlatYouves DEX Admin multisig KT1Q8yKdJaU5VcBL8JcxUT9PU99m53ubERk4. Users open vaults that lock collateral and mint uUSD against collateral-specific target ratios, with a price oracle setting liquidation thresholds."
       },
       {
         "label": "Youves DAO contract (YOU governance) + break-glass guardian",
@@ -736,8 +830,10 @@
         "authorityType": "dao-governor",
         "directMintAbility": "parameter-only",
         "chain": "tezos",
+        "address": "KT1C3T98TqCm38cHPauZ4SopkQ4torCsxgab",
         "canRaiseCap": "unknown",
-        "evidence": "Youves docs state the Murmuration-derived DAO contract is set as administrator over all Youves contracts (changing parameters via YOU-staker-voted Michelson lambdas), with a keyholder multisig retained as a break-glass guardian."
+        "observedAt": "2026-07-20",
+        "evidence": "2026-07-20 TzKT reads: this contract is aliased 'Youves DAO' and appears in the Vault Creator engine's administrators bigmap. Youves docs state the Murmuration-derived DAO contract is set as administrator over all Youves contracts (changing parameters via YOU-staker-voted Michelson lambdas), with a keyholder multisig retained as a break-glass guardian."
       },
       {
         "chain": "tezos",
@@ -760,8 +856,8 @@
     ],
     "review": {
       "evidence": "At Tezos level 13594990 (2026-06-11), TzKT bigmap reads of all three uUSD engine administrator bigmaps (7710, 22750, 75204) confirm KT1Q8yKdJaU5VcBL8JcxUT9PU99m53ubERk4 (FlatYouves DEX Admin) as the sole or primary admin across all engines; that contract's storage holds 7 Tezos public keys with threshold 4 (4-of-7 Tezos multisig, stored_counter=120). The uUSD token admin bigmap (7705) lists the three vault-creator / engine contracts as administrators. The Youves DAO governance token is KT1Xobej4mc6XgEjDoJoHtTKgbD1ELMvcQuL (YOU Governance). The relationship between the DAO governance contract and the engine admin (FlatYouves DEX Admin multisig) is not confirmed on-chain — the DAO is not directly wired as an engine admin; the 4-of-7 multisig appears to be the operative administrator. Promotion judgment: every mint-capable surface is confirmed — engines are cap-limited contracts and their shared admin is the confirmed 4-of-7 multisig. The DAO-vs-multisig governance relationship colors posture, not control confirmation (same standard as other verified multisig-admin coins).",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Youves governance docs",
@@ -793,6 +889,34 @@
       {
         "label": "Youves smart contracts",
         "url": "https://docs.youves.com/smartContracts/smartcontracts/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "tezos:KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW",
+        "destinationChain": "tezos",
+        "canonicalChain": "tezos",
+        "contractAddress": "KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW",
+        "protocol": "Youves native vault issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "2026-07-20 TzKT reads: the tracked uUSD FA2 token (youves uUSD, 12 decimals) is minted natively on Tezos by the Youves Vault Creator engine KT1FFE2LC5JpVakVjHm5mM36QVp2p3ZzH4hH (listed in the token's administrators bigmap) against vault collateral; no bridge representation carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "uUSD token on TzKT",
+            "url": "https://tzkt.io/KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW/operations"
+          },
+          {
+            "label": "Youves smart contracts",
+            "url": "https://docs.youves.com/smartContracts/smartcontracts/"
+          }
+        ]
       }
     ]
   },

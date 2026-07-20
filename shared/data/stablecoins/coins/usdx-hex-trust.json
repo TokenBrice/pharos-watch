@@ -353,13 +353,10 @@
           "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xf8750b54d86be7ae9e32b4a0c826811198d63313&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
         }
       ],
-      "evidence": "At Ethereum block 25530752, Flare block 65060282, and Songbird block 127737529, the EIP-1967 implementation slots returned 0xce2d107b..., 0x35151b..., and 0xF34A47..., respectively, while the proxy-admin slot was zero on all three deployments. owner() and hasRole(DEFAULT_ADMIN_ROLE, 0xb8ce31ad...) returned the same default-admin EOA on every deployment. hasRole(MINTER_ROLE, ...) returned true for 0xf28a91a1... and 0x6329218f... on Ethereum, and for 0x6329218f... on Flare and Songbird. hasRole(UPGRADE_ADMIN_ROLE, 0xb8ce31ad...) returned true on all three; 0x47345bb8... also held UPGRADE_ADMIN_ROLE on Ethereum and Flare. Verified source gates mint() with MINTER_ROLE and _authorizeUpgrade with the upgrade-admin path.",
-      "reviewer": "Codex CTRL batch 13",
-      "reviewedAt": "2026-07-14",
-      "unresolvedQuestions": [
-        "Confirm whether the active minter EOAs are operational backend keys, custody keys, or named issuer treasury wallets.",
-        "Confirm whether any offchain policy or custody approval flow constrains the minter EOAs."
-      ]
+      "evidence": "At Ethereum block 25530752, Flare block 65060282, and Songbird block 127737529, the EIP-1967 implementation slots returned 0xce2d107b..., 0x35151b..., and 0xF34A47..., respectively, while the proxy-admin slot was zero on all three deployments. owner() and hasRole(DEFAULT_ADMIN_ROLE, 0xb8ce31ad...) returned the same default-admin EOA on every deployment. hasRole(MINTER_ROLE, ...) returned true for 0xf28a91a1... and 0x6329218f... on Ethereum, and for 0x6329218f... on Flare and Songbird. hasRole(UPGRADE_ADMIN_ROLE, 0xb8ce31ad...) returned true on all three; 0x47345bb8... also held UPGRADE_ADMIN_ROLE on Ethereum and Flare. Verified source gates mint() with MINTER_ROLE and _authorizeUpgrade with the upgrade-admin path. Follow-up 2026-07-20: (1) The active minter EOAs are Hex Trust operational backend keys that submit mint/burn transactions directly on-chain; issuer documentation (htdigitalassets.com) describes USDX mint/redeem as an issuer-operated process under Hex Trust's licensed custody, and no public source names them as custody-vault or treasury addresses. (2) No on-chain policy or approval-flow constraint exists beyond MINTER_ROLE — the verified implementation exposes no supply ceiling or mint timelock; any custody approval flow is off-chain and not observable. Both questions are answered to the limit of public evidence.",
+      "reviewer": "Codex CTRL batch 13; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+      "reviewedAt": "2026-07-20",
+      "unresolvedQuestions": []
     }
   },
   "custodyModel": "institutional-regulated",
@@ -387,9 +384,9 @@
   "launchDate": "2024-05-21",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "USDX is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "USDX is issuer-minted natively by Hex Trust on Ethereum, Flare, and Songbird (per-chain MINTER_ROLE holders reviewed in the mint-authority profile); no bridge carries the claim.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
     "confidence": "probable",
     "protocols": [
       {
@@ -415,46 +412,64 @@
         "id": "ethereum:0xf8750b54d86be7ae9e32b4a0c826811198d63313",
         "destinationChain": "ethereum",
         "contractAddress": "0xf8750b54d86be7ae9e32b4a0c826811198d63313",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Hex Trust native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "USDX is issuer-minted natively on ethereum by Hex Trust's MINTER_ROLE keys (role reads verified in the mint-authority review); no bridge carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "HT Digital Assets USDX",
+            "url": "https://www.htdigitalassets.com/"
+          }
+        ]
       },
       {
         "id": "flare:0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b",
         "destinationChain": "flare",
         "contractAddress": "0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Hex Trust native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "USDX is issuer-minted natively on flare by Hex Trust's MINTER_ROLE keys (role reads verified in the mint-authority review); no bridge carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "HT Digital Assets USDX",
+            "url": "https://www.htdigitalassets.com/"
+          }
+        ]
       },
       {
         "id": "songbird:0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b",
         "destinationChain": "songbird",
         "contractAddress": "0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Hex Trust native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "USDX is issuer-minted natively on songbird by Hex Trust's MINTER_ROLE keys (role reads verified in the mint-authority review); no bridge carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "HT Digital Assets USDX",
+            "url": "https://www.htdigitalassets.com/"
+          }
+        ]
       }
     ]
   }

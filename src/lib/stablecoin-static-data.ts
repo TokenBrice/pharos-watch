@@ -2,12 +2,12 @@ import type { PegCurrency } from "@shared/types";
 
 // Static projection of the stablecoin registry for global shell and metadata copy.
 // Keep in sync with shared/lib/stablecoins via src/lib/__tests__/stablecoin-static-data.test.ts.
-export const TRACKED_STABLECOIN_COUNT = 406;
+export const TRACKED_STABLECOIN_COUNT = 404;
 export const ACTIVE_STABLECOIN_COUNT = 337;
 export const CORE_AGGREGATE_STABLECOIN_COUNT = 261;
 export const ACTIVE_VARIANT_STABLECOIN_COUNT = 47;
 export const ACTIVE_STABLE_VALUE_INVESTMENT_COUNT = 29;
-export const PRE_LAUNCH_STABLECOIN_COUNT = 33;
+export const PRE_LAUNCH_STABLECOIN_COUNT = 31;
 export const FROZEN_STABLECOIN_COUNT = 18;
 export const DEAD_STABLECOIN_COUNT = 88;
 
@@ -417,7 +417,6 @@ export const TRACKED_STABLECOIN_IDS = [
   "idrx-idrx",
   "cngn-compliant-naira",
   "mxnb-juno",
-  "mmxn-moneta-digital",
   "brl1-brl1",
   "wars-argentine-peso",
   "wbrl-ripio",
@@ -453,7 +452,6 @@ export const TRACKED_STABLECOIN_IDS = [
   "krw1-bdacs",
   "rusd-revolut",
   "brl-itau",
-  "usd-nubank",
   "krw-imbank",
   "sofid-sofi",
   "onyc-onre",
@@ -520,7 +518,6 @@ const NON_ACTIVE_STABLECOIN_ID_SET: ReadonlySet<string> = new Set([
   "pgold-polaris",
   "klarnausd-klarna",
   "bd-basedollar",
-  "mmxn-moneta-digital",
   "trusd-tori",
   "buck-buck-assets",
   "rgbp-revolut",
@@ -537,7 +534,6 @@ const NON_ACTIVE_STABLECOIN_ID_SET: ReadonlySet<string> = new Set([
   "krw1-bdacs",
   "rusd-revolut",
   "brl-itau",
-  "usd-nubank",
   "krw-imbank",
   "ist-agoric",
   "gynusd-gyndore",

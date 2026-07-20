@@ -556,9 +556,9 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "NECT mints only via registered Beraborrow collateral-vault (Den) branches against overcollateralized positions, with Liquity-style $1-face-value redemptions; supply is bounded by collateralized borrowing rather than an issuer minter.",
+        "capDescription": "NECT mints only via registered Beraborrow collateral-vault (Den) branches against overcollateralized positions, with Liquity-style $1-face-value redemptions; supply is bounded by collateralized borrowing. Branch registration and debt ceilings are controlled by the Registry owner (4-of-7 Beraborrow Safe behind a 3-day timelock), which can raise mint capacity by registering new branches or adjusting parameters.",
         "evidence": "Beraborrow docs describe Dens depositing collateral to mint the overcollateralized stablecoin NECT (Liquity v2-style), with NECT token at 0x1cE0a25D13CE4d52071aE7e02Cf1F6606F4C79d3.",
         "sources": [
           {
@@ -578,7 +578,7 @@
         "signerCount": 7,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
-        "capDescription": "4-of-7 Beraborrow Safe owns the Registry contract (which controls branch/minter registration for NECT), subject to a 3-day timelock (259,200 seconds). NECT token has no owner() function and no OpenZeppelin Ownable/AccessControl — minting is whitelisted via TroveManagers/BorrowerOperations/DebtManager mappings controlled by the Registry.",
+        "capDescription": "4-of-7 Beraborrow Safe owns the Registry contract (which controls branch/minter registration for NECT), subject to a 3-day timelock (259,200 seconds). NECT token has no owner() function and no OpenZeppelin Ownable/AccessControl \u2014 minting is whitelisted via TroveManagers/BorrowerOperations/DebtManager mappings controlled by the Registry.",
         "evidence": "At Berachain block 22088792, NECT token (0x1ce0a25d) has no owner() (reverts), no Ownable/AccessControl in bytecode. Mint requires caller in TroveManagers (slot 8), BorrowerOperations (slot 11), or DebtManager (slot 12) mappings. Registry at 0x27393e8a owner() returned 0xce7d3fd53c0510325b3cebb96298522e6c538753 (Gnosis Safe L2, masterCopy 0x3e5c6364). RPC getOwners() returned 7 signers, getThreshold() returned 4. Registry timelock delay = 0x3f480 = 259200s (3 days). Safe modules/guard not confirmed via Safe API (Berachain Safe API endpoint unclear). Direct Berachain RPC reads at block 22089745: getOwners() returned 7 owners, getThreshold()=4, no modules, no guard, masterCopy GnosisSafeL2 v1.3.0.",
         "sources": [
           {
@@ -607,9 +607,9 @@
       }
     ],
     "review": {
-      "evidence": "At Berachain block 22088792: NECT token has no Ownable/AccessControl in bytecode; owner() reverts; mint() reverts with 'Debt: Caller not BO/DM' (whitelisted contract minting). Registry at 0x27393e8a6f8f2e32b870903279999c820e984dc7 owned by 0xce7d3fd5 (4/7 Gnosis Safe L2, confirmed via RPC getOwners/getThreshold), timelock delay 3 days. Control is NOT renounced — Safe retains authority to add branch minters via Registry. Reclassification to immutable-user-collateralized is NOT appropriate. Berachain RPC reads at block 22089745 resolved the Registry owner Safe: getModulesPaginated returned no modules and the guard slot is zero, clearing the final modules/guards blocker.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Berachain block 22088792: NECT token has no Ownable/AccessControl in bytecode; owner() reverts; mint() reverts with 'Debt: Caller not BO/DM' (whitelisted contract minting). Registry at 0x27393e8a6f8f2e32b870903279999c820e984dc7 owned by 0xce7d3fd5 (4/7 Gnosis Safe L2, confirmed via RPC getOwners/getThreshold), timelock delay 3 days. Control is NOT renounced \u2014 Safe retains authority to add branch minters via Registry. Reclassification to immutable-user-collateralized is NOT appropriate. Berachain RPC reads at block 22089745 resolved the Registry owner Safe: getModulesPaginated returned no modules and the guard slot is zero, clearing the final modules/guards blocker.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Beraborrow docs",
@@ -622,5 +622,47 @@
       ]
     }
   },
-  "launchDate": "2025-02-07"
+  "launchDate": "2025-02-07",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "NECT exists only on Berachain; Beraborrow branch (Den) contracts mint NECT against overcollateralized positions on Berachain. No cross-chain route.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Beraborrow docs",
+        "url": "https://docs.beraborrow.com/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "berachain:0x1ce0a25d13ce4d52071ae7e02cf1f6606f4c79d3",
+        "destinationChain": "berachain",
+        "canonicalChain": "berachain",
+        "contractAddress": "0x1ce0a25d13ce4d52071ae7e02cf1f6606f4c79d3",
+        "protocol": "Beraborrow native NECT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Berachain at block 23753621: NECT token 0x1ce0a25d13ce4d52071ae7e02cf1f6606f4c79d3 (symbol NECT). Minting is whitelisted via registered Beraborrow branch (Den) contracts controlled by the Registry owner (4-of-7 Beraborrow Safe behind a 3-day timelock) per the verified mint-authority review. Native single-chain deployment; no bridge mints this token.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 23753621,
+        "sources": [
+          {
+            "label": "NECT on Berascan (verified 2026-07-20)",
+            "url": "https://berascan.com/address/0x1ce0a25d13ce4d52071ae7e02cf1f6606f4c79d3"
+          },
+          {
+            "label": "Beraborrow docs",
+            "url": "https://docs.beraborrow.com/"
+          }
+        ]
+      }
+    ]
+  }
 }

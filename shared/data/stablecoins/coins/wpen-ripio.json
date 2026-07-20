@@ -89,11 +89,11 @@
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
-    "tier": "liquidity-or-intent-route",
-    "summary": "WPEN is part of Ripio's wrapped local-stablecoin family deployed across several chains. The workflow's route signal points to Across/World-style liquidity routing rather than issuer-native bridging, so Pharos scores this as a liquidity-or-intent route with probable confidence.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "tier": "issuer-native-burn-mint",
+    "summary": "Ripio issues wPEN natively on Ethereum, Base, World Chain, BSC, Polygon, and Gnosis: every deployment is an EIP-1167 clone of one Ripio master implementation, and per-chain MINTER_ROLE is held only by Ripio-administered accounts. No third-party bridge carries the representation.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "l2beat",
@@ -124,91 +124,151 @@
         "id": "ethereum:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
         "destinationChain": "ethereum",
         "contractAddress": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ripio wPEN",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the ethereum wPEN token is an EIP-1167 clone of Ripio's single master implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on ethereum is held only by Ripio's own accounts administered by the 4-of-7 Ripio Safe. No third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "wPEN ethereum token",
+            "url": "https://etherscan.io/address/0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
+          },
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          }
+        ]
       },
       {
         "id": "base:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
         "destinationChain": "base",
         "contractAddress": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ripio wPEN",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the base wPEN token is an EIP-1167 clone of Ripio's single master implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on base is held only by Ripio's own accounts administered by the 4-of-7 Ripio Safe. No third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "wPEN base token",
+            "url": "https://basescan.org/address/0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
+          },
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          }
+        ]
       },
       {
         "id": "worldchain:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
         "destinationChain": "worldchain",
         "contractAddress": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ripio wPEN",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the worldchain wPEN token is an EIP-1167 clone of Ripio's single master implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on worldchain is held only by Ripio's own accounts administered by the 4-of-7 Ripio Safe. No third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "wPEN worldchain token",
+            "url": "https://worldscan.org/address/0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
+          },
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          }
+        ]
       },
       {
         "id": "bsc:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
         "destinationChain": "bsc",
         "contractAddress": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ripio wPEN",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the bsc wPEN token is an EIP-1167 clone of Ripio's single master implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on bsc is held only by Ripio's own accounts administered by the 4-of-7 Ripio Safe. No third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "wPEN bsc token",
+            "url": "https://bscscan.com/address/0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
+          },
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          }
+        ]
       },
       {
         "id": "polygon:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
         "destinationChain": "polygon",
         "contractAddress": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ripio wPEN",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the polygon wPEN token is an EIP-1167 clone of Ripio's single master implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on polygon is held only by Ripio's own accounts administered by the 4-of-7 Ripio Safe. No third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "wPEN polygon token",
+            "url": "https://polygonscan.com/address/0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
+          },
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          }
+        ]
       },
       {
         "id": "gnosis:0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
         "destinationChain": "gnosis",
         "contractAddress": "0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ripio wPEN",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the gnosis wPEN token is an EIP-1167 clone of Ripio's single master implementation 0x9d6266a9167f17ff3dd20f63a474812d0cd47969 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-06-11) confirms MINTER_ROLE on gnosis is held only by Ripio's own accounts administered by the 4-of-7 Ripio Safe. No third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "wPEN gnosis token",
+            "url": "https://gnosisscan.io/address/0x4f34c8b3b5fb6d98da888f0fea543d4d9c9f2ebe"
+          },
+          {
+            "label": "Ripio local stablecoins",
+            "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+          }
+        ]
       }
     ]
   },

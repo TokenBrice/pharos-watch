@@ -76,11 +76,11 @@
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
-    "tier": "liquidity-or-intent-route",
-    "summary": "IDRT has multichain deployments and the candidate bridge evidence points to Across. With no stronger issuer-native burn/mint controls resolved, the external liquidity/intent route determines the tier.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "tier": "issuer-native-burn-mint",
+    "summary": "IDRT is issuer-minted natively on Ethereum, BSC, and Polygon: on each chain the token is a non-upgradeable Ownable ERC20 whose owner() is PT Rupiah Token Indonesia's 4-of-6 Safe (verified on-chain 2026-07-20), so there is no bridge minter on those chains; Across remains only a liquidity/intent transfer path for canonical tokens. The Harmony deployment is a legacy '1IDRT' lock-mint representation minted by a Harmony bridge contract (verified minter 0xbadb6897...) and dormant since 2021.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "l2beat",
@@ -107,62 +107,114 @@
       {
         "id": "ethereum:0x998ffe1e43facffb941dc337dd0468d52ba5b48a",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x998ffe1e43facffb941dc337dd0468d52ba5b48a",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Rupiah Token issuer-native IDRT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "IDRT on Etherscan (probed 2026-07-20)",
+            "url": "https://etherscan.io/address/0x998ffe1e43facffb941dc337dd0468d52ba5b48a"
+          },
+          {
+            "label": "IDRT Ethereum owner Safe",
+            "url": "https://etherscan.io/address/0x109046f16d512843138218f061232f2cc7d7c9d7"
+          }
+        ],
+        "reviewNote": "Verified on-chain 2026-07-20 at Ethereum block 25571083: name 'Rupiah Token', non-upgradeable (no EIP-1967 impl/admin slots), owner() = 0x109046f16d512843138218f061232f2cc7d7c9d7 — a 171-byte Safe proxy with getThreshold() = 4 and the documented 6-owner set. Mint is the issuer Safe's native owner path, not a bridge. Home chain."
       },
       {
         "id": "bsc:0x66207e39bb77e6b99aab56795c7c340c08520d83",
         "destinationChain": "bsc",
+        "canonicalChain": "bsc",
         "contractAddress": "0x66207e39bb77e6b99aab56795c7c340c08520d83",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Rupiah Token issuer-native IDRT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "IDRT on BscScan (probed 2026-07-20)",
+            "url": "https://bscscan.com/address/0x66207e39bb77e6b99aab56795c7c340c08520d83"
+          },
+          {
+            "label": "IDRT BSC owner Safe",
+            "url": "https://bscscan.com/address/0x0e8b655e51d8166dad044f45f22e8d4eff652ea4"
+          }
+        ],
+        "reviewNote": "Verified on-chain 2026-07-20 at BSC block 111014993: non-upgradeable (no EIP-1967 slots), owner() = 0x0e8b655e51d8166dad044f45f22e8d4eff652ea4 — a 171-byte Safe proxy, getThreshold() = 4, same 6-owner signer set as the Ethereum Safe. Issuer-native mint, no bridge representation."
       },
       {
         "id": "harmony:0xcefbea899cfccdc653b171d063481b622086be3f",
+        "sourceChain": "ethereum",
         "destinationChain": "harmony",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xcefbea899cfccdc653b171d063481b622086be3f",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Legacy Harmony bridge 1IDRT (lock-mint representation)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "harmony",
+        "controllerAddress": "0xbadb6897cf2e35aca73b6f37361a35eeb6f71637",
+        "failureDomainKeys": [
+          "protocol:harmony-bridge",
+          "contract:harmony:0xbadb6897cf2e35aca73b6f37361a35eeb6f71637",
+          "eoa:0x533334823b1e5a9c17b32b2957660e84b4d3cfad"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "1IDRT on Harmony explorer",
+            "url": "https://explorer.harmony.one/address/0xcefbea899cfccdc653b171d063481b622086be3f"
+          },
+          {
+            "label": "Verified 1IDRT minter contract on Harmony",
+            "url": "https://explorer.harmony.one/address/0xbadb6897cf2e35aca73b6f37361a35eeb6f71637"
+          }
+        ],
+        "reviewNote": "Verified on-chain 2026-07-20 at Harmony block 91745490: symbol '1IDRT' (legacy Harmony bridge naming), totalSupply 1,200,000.00 (approx. USD 72); the token has no owner() but exposes mint/isMinter/addMinter. isMinter(0xbadb6897cf2e35aca73b6f37361a35eeb6f71637) = true; that contract was created by and is owned by EOA 0x533334823b1e5a9c17b32b2957660e84b4d3cfad (0-byte code, verified via eth_getCode and explorer getcontractcreation). The minter set is not enumerable on-chain, so additional minters cannot be excluded; last token activity 2021-10-29 and last owner call to the minter contract 2022-10-16 — the legacy Harmony bridge is dormant."
       },
       {
         "id": "polygon:0x554cd6bdd03214b10aafa3e0d4d42de0c5d2937b",
         "destinationChain": "polygon",
+        "canonicalChain": "polygon",
         "contractAddress": "0x554cd6bdd03214b10aafa3e0d4d42de0c5d2937b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Rupiah Token issuer-native IDRT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "IDRT on Polygonscan (probed 2026-07-20)",
+            "url": "https://polygonscan.com/address/0x554cd6bdd03214b10aafa3e0d4d42de0c5d2937b"
+          },
+          {
+            "label": "IDRT Polygon owner Safe",
+            "url": "https://polygonscan.com/address/0xa1f0fc535ad0ebcae0ef81b2990fcd75465ad7ae"
+          }
+        ],
+        "reviewNote": "Verified on-chain 2026-07-20 at Polygon block 90540824: non-upgradeable (no EIP-1967 slots), owner() = 0xa1f0fc535ad0ebcae0ef81b2990fcd75465ad7ae — a 171-byte Safe proxy, getThreshold() = 4, same 6-owner signer set as the Ethereum Safe. Issuer-native mint, no bridge representation."
       }
     ]
   },
@@ -226,28 +278,45 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0x0000000000000000000000000000000000000000",
           "version": "1.3.0",
-          "observedBlock": 25295025,
+          "observedBlock": 25571083,
           "source": "onchain"
         },
-        "evidence": "At Ethereum block 25295025, IDRT (0x998ffe...) owner() = 0x109046f16d512843138218f061232f2cc7d7c9d7. Blockscout: GnosisSafeProxy. getOwners() = 6 addresses; getThreshold() = 4; getModulesPaginated() = sentinel only (no modules); guard slot = 0x0; VERSION() = 1.3.0. BSC (block 103628780) owner() = 0x0e8b655... same Safe with identical 6 owners and threshold 4. Polygon (block 88323921) owner() = 0xa1f0fc535..., identical 6-owner 4-of-6 Safe, no modules.",
+        "evidence": "Re-verified 2026-07-20: at Ethereum block 25571083, IDRT (0x998ffe...) owner() = 0x109046f16d512843138218f061232f2cc7d7c9d7 (171-byte Safe proxy; getThreshold() = 4; getOwners() = 6 EOAs: 0xf18c1ca6..., 0x41fad55c..., 0x031f9a3c..., 0xed4e4310..., 0x3dd6ea51..., 0xf042bfbd...). At BSC block 111014993 owner() = 0x0e8b655e51d8166dad044f45f22e8d4eff652ea4 (171-byte Safe proxy, threshold 4, identical 6-owner set). At Polygon block 90540824 owner() = 0xa1f0fc535ad0ebcae0ef81b2990fcd75465ad7ae (171-byte Safe proxy, threshold 4, identical set). Prior review (Ethereum block 25295025, 2026-07-15) established Safe v1.3.0, no modules, no guard, and non-upgradeable Ownable ERC20 tokens on all three chains; owner() controls mint and burn. Harmony excluded (legacy bridge representation, dormant — see bridgeRouteRisk).",
         "sources": [
           {
             "label": "IDRT Ethereum token",
             "url": "https://etherscan.io/address/0x998ffe1e43facffb941dc337dd0468d52ba5b48a"
           },
           {
-            "label": "IDRT Ethereum owner Safe",
+            "label": "IDRT Ethereum owner Safe (probed 2026-07-20)",
             "url": "https://etherscan.io/address/0x109046f16d512843138218f061232f2cc7d7c9d7"
+          },
+          {
+            "label": "IDRT BSC owner Safe (probed 2026-07-20)",
+            "url": "https://bscscan.com/address/0x0e8b655e51d8166dad044f45f22e8d4eff652ea4"
+          },
+          {
+            "label": "IDRT Polygon owner Safe (probed 2026-07-20)",
+            "url": "https://polygonscan.com/address/0xa1f0fc535ad0ebcae0ef81b2990fcd75465ad7ae"
           }
-        ]
+        ],
+        "chain": "ethereum",
+        "address": "0x109046f16d512843138218f061232f2cc7d7c9d7",
+        "failureDomainKeys": [
+          "issuer:pt-rupiah-token-indonesia",
+          "safe:ethereum:0x109046f16d512843138218f061232f2cc7d7c9d7",
+          "safe:bsc:0x0e8b655e51d8166dad044f45f22e8d4eff652ea4",
+          "safe:polygon:0xa1f0fc535ad0ebcae0ef81b2990fcd75465ad7ae"
+        ],
+        "observedAt": "2026-07-20"
       }
     ],
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
       "evidence": "At Ethereum block 25295025, BSC block 103628780, Polygon block 88323921: IDRT is a non-upgradeable Ownable ERC20 on each chain. Owner is a 4-of-6 Safe (v1.3.0) with identical signer set across Ethereum (0x109046f...), BSC (0x0e8b655...), and Polygon (0xa1f0fc5...) — all 6 EOA signers match. No modules or guard on any Safe. Harmony deployment excluded (chain is inactive). No proxy; no separate minter role. Mint-tier review (2026-07-15): Johannes Juara & Rekan issued a monthly agreed-upon-procedures report for 2026-01-31, signed 2026-02-09, but the expected subsequent monthly reports are absent as of 2026-07-15; current recurring reconciliation is therefore not established. Bappebti crypto-asset recognition and trading oversight do not constitute prudential supervision of PT Rupiah Token Indonesia as a stablecoin issuer.",
-      "reviewer": "Codex SOL-V mint-tier research",
-      "reviewedAt": "2026-07-15",
+      "reviewer": "Codex SOL-V mint-tier research; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Rupiah Token website",

@@ -45,7 +45,7 @@ const { getVariants, isTrackedVariant } = createVariantRelationshipHelpers({
   hasTrackedVariantMeta,
 });
 
-const EXPECTED_TRACKED_STABLECOIN_COUNT = 406;
+const EXPECTED_TRACKED_STABLECOIN_COUNT = 404;
 
 function makeStablecoinAsset(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -154,7 +154,6 @@ describe("tracked stablecoin metadata", () => {
       "pgold-polaris",
       "klarnausd-klarna",
       "bd-basedollar",
-      "mmxn-moneta-digital",
       "trusd-tori",
       "rgbp-revolut",
       "jpysc-sbi-startale",
@@ -170,7 +169,6 @@ describe("tracked stablecoin metadata", () => {
       "krw1-bdacs",
       "rusd-revolut",
       "brl-itau",
-      "usd-nubank",
       "krw-imbank",
       "gynusd-gyndore",
       "gelt-tether",

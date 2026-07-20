@@ -126,7 +126,7 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "evidence": "Spiko's published contract design assigns an in-house 'daily-operator' relayer responsibility for minting tokens to investor addresses and handling redemptions; minting is gated to investors who pass KYC and join permission groups.",
+        "evidence": "Verified on-chain 2026-07-20: the Ethereum PermissionManager requires group mask {0,2} for mint on GBPSAFO; group 2 holds six operator contracts and group 5 (other Spiko tokens) the relayer EOA 0x71a1a4165ae953cb80fcd102c28fc5d03beafa24; these are Spiko-operated daily-operator identities.",
         "sources": [
           {
             "label": "Spiko smart contracts",
@@ -137,23 +137,40 @@
       {
         "label": "Spiko super-admin multisig",
         "role": "proxy-admin",
-        "authorityType": "multisig",
+        "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
-        "evidence": "A multisig 'super-admin' permission group holds full access to upgrade the UUPS-proxy contracts and manage permission groups (including the minter/burner roles); exact signer set and threshold not independently confirmed on-chain.",
+        "evidence": "Verified on-chain 2026-07-20: this Safe is the sole member of group 0 (ADMIN) in the Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 on Ethereum (getGroups bitmask = group 0; GroupAdded event history); it administers all permission groups including the mint group.",
         "sources": [
           {
             "label": "Spiko smart contracts",
             "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
           }
-        ]
+        ],
+        "chain": "ethereum",
+        "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "threshold": 3,
+        "signerCount": 7,
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x75e0092e7d2c8d854fcf5334f95554852d62746a",
+            "0xe9106c617d7180bf6badcfa5edc664b726c5dcbb",
+            "0x6c00be5d1013a5bca938ef6aa8f1e5e706ff384d",
+            "0x4d1d9c5b5d9ca448194313d799de374f362bd460",
+            "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2",
+            "0xe67d2cbeae3090be017c66e7a6943961619a5d35",
+            "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949"
+          ],
+          "source": "onchain"
+        }
       }
     ],
     "review": {
-      "evidence": "Spiko's smart-contract post describes a permission-group RBAC: an in-house daily-operator relayer mints to KYC'd investors, a redemption contract holds the sole burn role, and a super-admin multisig controls UUPS upgrades and permissions. This is centralized issuer-direct minting, not a user-collateralized path.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "Resolved 2026-07-20 against the Sourcify-verified PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 on Ethereum: getRequirements(token, mint) = group mask {0,2}; group 0 (ADMIN) is held solely by Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea (getThreshold() = 3, getOwners() = 7: 0x75e0092e7d2c8d854fcf5334f95554852d62746a, 0xe9106c617d7180bf6badcfa5edc664b726c5dcbb, 0x6c00be5d1013a5bca938ef6aa8f1e5e706ff384d, 0x4d1d9c5b5d9ca448194313d799de374f362bd460, 0xda47bd72438f11bef7cc54f18cd02426dd86a5a2, 0xe67d2cbeae3090be017c66e7a6943961619a5d35, 0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949); group 2 is held by six operator contracts (0x57fa613b284f05421f78c8bd579555d5c0d7783d, 0x5ed5a75eeed1934ea060186e35187eaa73331366, 0x64e31c39fc3ec028557c9354d27b5c09faeb5fda, 0x7430d9d142d811f61b4a2d90d6f3a70a8500bbb7, 0x930f7f3a9a235d27ae082add5b7d4635e59eaf55, 0xb114e0e00622ffe5800004a98c8e01cd2c0c393b) for which canCall(token, mint) = true; group 5 is the relayer EOA 0x71a1a4165ae953cb80fcd102c28fc5d03beafa24 (membership confirmed via getGroups bitmask at the latest block; GroupAdded/GroupRemoved event scan covered deployment through block 24,290,000). The same PermissionManager pattern repeats per chain (arbitrum uses 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a).",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Spiko smart contracts",
@@ -164,10 +181,7 @@
           "url": "https://www.spiko.io/spiko-pound"
         }
       ],
-      "sourceFreeRationale": "Spiko uses a custom RBAC permission-group system not compatible with standard AccessControl interfaces. On-chain reads (owner(), getRoleMemberCount(), getOwners()) all revert or return nothing useful on the token proxies. The Ethereum proxy (0xc273986a...) delegates to a combined Token+TimelockController-like implementation (0x60fcb851..., named 'Token' on Blockscout) which exposes Timelock selectors but not standard enumerable role getters. The Polygon external proxy admin (0x251747f0...) is an unverified contract that does not respond to standard Safe or multisig ABI.",
-      "unresolvedQuestions": [
-        "Spiko's custom permission-group RBAC does not expose enumerable role holders via standard interfaces. To verify: call Spiko's proprietary getPermissionGroup() or equivalent on the token implementation contracts, or obtain off-chain attestation of the super-admin multisig signer set and daily-operator relayer addresses for each deployment chain."
-      ]
+      "sourceFreeRationale": "Spiko uses a custom RBAC permission-group system not compatible with standard AccessControl interfaces. On-chain reads (owner(), getRoleMemberCount(), getOwners()) all revert or return nothing useful on the token proxies. The Ethereum proxy (0xc273986a...) delegates to a combined Token+TimelockController-like implementation (0x60fcb851..., named 'Token' on Blockscout) which exposes Timelock selectors but not standard enumerable role getters. The Polygon external proxy admin (0x251747f0...) is an unverified contract that does not respond to standard Safe or multisig ABI."
     }
   },
   "chainTier": "ethereum",
@@ -175,9 +189,9 @@
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Spiko describes its own infrastructure for issuing, operating, and monitoring regulated fund tokens across EVM networks, Starknet, and Stellar with minimal external dependencies. For GBPSAFO, no separate bridge protocol was verified, so the reviewed route is issuer-operated multichain issuance rather than a third-party bridge rail.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "issuer",
@@ -200,107 +214,156 @@
       {
         "id": "arbitrum:0xbe023308ac2ef7e1c3799f4e6a3003ee6d342635",
         "destinationChain": "arbitrum",
+        "canonicalChain": "arbitrum",
         "contractAddress": "0xbe023308ac2ef7e1c3799f4e6a3003ee6d342635",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko issuer-native fund token",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Spiko issuance on arbitrum: authority() returns the chain-local Spiko PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a (verified on-chain 2026-07-20); Spiko issues its regulated fund tokens natively per chain with no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "GBPSAFO on arbitrum explorer (authority() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xbe023308ac2ef7e1c3799f4e6a3003ee6d342635"
+          }
+        ]
       },
       {
         "id": "polygon:0x4fe515c67eeeadb3282780325f09bb7c244fe774",
         "destinationChain": "polygon",
+        "canonicalChain": "polygon",
         "contractAddress": "0x4fe515c67eeeadb3282780325f09bb7c244fe774",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko issuer-native fund token",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Spiko issuance on polygon: authority() returns the chain-local Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (verified on-chain 2026-07-20); Spiko issues its regulated fund tokens natively per chain with no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "GBPSAFO on polygon explorer (authority() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0x4fe515c67eeeadb3282780325f09bb7c244fe774"
+          }
+        ]
       },
       {
         "id": "base:0x2f6c0e5e06b43512706a9cdf66cd21f723fe0ec3",
         "destinationChain": "base",
+        "canonicalChain": "base",
         "contractAddress": "0x2f6c0e5e06b43512706a9cdf66cd21f723fe0ec3",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko issuer-native fund token",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Spiko issuance on base: authority() returns the chain-local Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (verified on-chain 2026-07-20); Spiko issues its regulated fund tokens natively per chain with no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "GBPSAFO on base explorer (authority() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0x2f6c0e5e06b43512706a9cdf66cd21f723fe0ec3"
+          }
+        ]
       },
       {
         "id": "etherlink:0xfe20ebe3881491b2e158b9d10cb95bcfa652262d",
         "destinationChain": "etherlink",
+        "canonicalChain": "etherlink",
         "contractAddress": "0xfe20ebe3881491b2e158b9d10cb95bcfa652262d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko issuer-native fund token",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Spiko issuance on etherlink: authority() returns the chain-local Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (verified on-chain 2026-07-20); Spiko issues its regulated fund tokens natively per chain with no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "GBPSAFO on etherlink explorer (authority() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xfe20ebe3881491b2e158b9d10cb95bcfa652262d"
+          }
+        ]
       },
       {
         "id": "ethereum:0xc273986a91e4bfc543610a5cb5860b7cfefb6cc0",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xc273986a91e4bfc543610a5cb5860b7cfefb6cc0",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko issuer-native fund token",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Spiko issuance on ethereum: authority() returns the chain-local Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (verified on-chain 2026-07-20); Spiko issues its regulated fund tokens natively per chain with no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "GBPSAFO on ethereum explorer (authority() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xc273986a91e4bfc543610a5cb5860b7cfefb6cc0"
+          }
+        ]
       },
       {
         "id": "stellar:CAGYRRKPFSWKM6SJOE4QAAVYMOSHMDS5WOQ4T5A2E6XNCU7LZZKUNQKP",
         "destinationChain": "stellar",
+        "canonicalChain": "stellar",
         "contractAddress": "CAGYRRKPFSWKM6SJOE4QAAVYMOSHMDS5WOQ4T5A2E6XNCU7LZZKUNQKP",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko issuer-native fund token",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Spiko issuance on stellar: the Soroban token contract has a live instance entry with TotalSupply storage; Spiko operates it directly (no bridge wrapper) (verified on-chain 2026-07-20); Spiko issues its regulated fund tokens natively per chain with no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "GBPSAFO on Stellar explorer (instance probed 2026-07-20)",
+            "url": "https://stellar.expert/explorer/public/contract/CAGYRRKPFSWKM6SJOE4QAAVYMOSHMDS5WOQ4T5A2E6XNCU7LZZKUNQKP"
+          }
+        ]
       },
       {
         "id": "starknet:0x06e8a99926ff6d56f4cb93c37b63286d736cd1f81740d53f88b4875b4cbe7f49",
         "destinationChain": "starknet",
+        "canonicalChain": "starknet",
         "contractAddress": "0x06e8a99926ff6d56f4cb93c37b63286d736cd1f81740d53f88b4875b4cbe7f49",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko issuer-native fund token",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Spiko issuance on starknet: the contract class is deployed (starknet_getClassAt) and owner() returns the Spiko admin contract 0x7bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d (verified on-chain 2026-07-20); Spiko issues its regulated fund tokens natively per chain with no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "GBPSAFO on Starknet explorer (owner() probed 2026-07-20)",
+            "url": "https://starkscan.co/contract/0x06e8a99926ff6d56f4cb93c37b63286d736cd1f81740d53f88b4875b4cbe7f49"
+          }
+        ]
       }
     ]
   },
@@ -314,7 +377,12 @@
       "risk": "medium",
       "assetClass": "fund-share",
       "issuerOrObligor": "Spiko AMF-authorized GBP overnight swap fund and swap counterparties",
-      "riskFactors": ["counterparty", "liquidity", "custody", "market"],
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "market"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
@@ -322,14 +390,27 @@
     "reviewedAt": "2026-07-14",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "probable",
-    "sources": [{"label": "Spiko Pound product page", "url": "https://www.spiko.io/spiko-pound"}],
+    "sources": [
+      {
+        "label": "Spiko Pound product page",
+        "url": "https://www.spiko.io/spiko-pound"
+      }
+    ],
     "rationale": "Spiko describes GBPsAFO as a tokenized GBP overnight total-return swap fund. The reviewed public product materials do not publish current collateral instruments, swap counterparties, or position weights.",
     "compositionBasis": "Spiko GBP fund product disclosure",
     "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
     "knownUnknownExposure": "The live collateral and overnight swap counterparty allocation are not publicly disclosed.",
     "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [{"reserveIndex": 0, "reserveName": "Fully collateralized overnight total-return swap exposure", "pct": 100, "disposition": "basket-needs-split", "rationale": "Issuer disclosure does not provide component weights or counterparties."}]
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Fully collateralized overnight total-return swap exposure",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Issuer disclosure does not provide component weights or counterparties."
+      }
+    ]
   },
   "yieldConfig": {
     "yieldSource": "Spiko Amundi Overnight Swap Fund GBP NAV",

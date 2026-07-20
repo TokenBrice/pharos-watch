@@ -122,10 +122,7 @@ export async function confirmPendingDepegs(
     }
   }
 
-  const [coingeckoAllowed, defillamaAllowed] = await Promise.all([
-    shouldAttemptFetch(db, CIRCUIT_SOURCE.COINGECKO_CONFIRM),
-    shouldAttemptFetch(db, CIRCUIT_SOURCE.DEFILLAMA_CONFIRM),
-  ]);
+  const coingeckoAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.COINGECKO_CONFIRM);
 
   const stmts: D1PreparedStatement[] = [];
 
@@ -163,7 +160,6 @@ export async function confirmPendingDepegs(
       cexAllowed,
       cexPrices,
       coingeckoAllowed,
-      defillamaAllowed,
       coingeckoApiKey,
       signal,
       now,

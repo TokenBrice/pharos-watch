@@ -214,10 +214,10 @@
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-lock-mint",
-    "summary": "USDnr is an M0-based token deployed on Ethereum and Fluent. M0 bridge docs describe hub-and-spoke portal contracts for moving M0 tokens between connected networks, so the route is issuer/protocol-operated lock/mint infrastructure.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "summary": "USDNR is an M0-extension stablecoin; its Ethereum and Fluent deployments are transparent proxies administered by Nerona's own ProxyAdmin (identical admin on both chains, read 2026-07-20). No third-party bridge carries the representation.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "docs",
@@ -244,31 +244,55 @@
         "id": "ethereum:0xd48e565561416de59da1050ed70b8d75e8ef28f9",
         "destinationChain": "ethereum",
         "contractAddress": "0xd48e565561416de59da1050ed70b8d75e8ef28f9",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Nerona USDNR (M0 extension)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical home deployment: USDNR is an M0 extension on Ethereum backed by the M0 MinterGateway rail (mint-authority review 2026-06-11); the token proxy's EIP-1967 admin is Nerona's ProxyAdmin 0x9ffe615c92635e5b36de004dd78a94c51aa04256 (owner EOA 0xc07f0b4556e0cc1bfd8a076a98d43e79acd3cd33, read 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDNR Ethereum token",
+            "url": "https://etherscan.io/address/0xd48e565561416de59da1050ed70b8d75e8ef28f9"
+          },
+          {
+            "label": "M0 docs",
+            "url": "https://docs.m0.org/"
+          }
+        ]
       },
       {
         "id": "fluent:0xd48e565561416de59da1050ed70b8d75e8ef28f9",
         "destinationChain": "fluent",
         "contractAddress": "0xd48e565561416de59da1050ed70b8d75e8ef28f9",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Nerona USDNR (M0 extension)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the Fluent USDNR token is the same-style transparent proxy with the identical EIP-1967 admin 0x9ffe615c92635e5b36de004dd78a94c51aa04256 (owner EOA 0xc07f0b4556e0cc1bfd8a076a98d43e79acd3cd33) as the canonical Ethereum deployment (read 2026-07-20) — Nerona/M0 administers the deployment directly; no third-party bridge contract sits in the mint path. The Fluent Foundation's BLEND token-sale disclosure (April 2026) confirms USDnr is an M0-platform extension legally issued by MXON as Minter, with Fluent as an official M0 spoke chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDNR Fluent token (EIP-1967 admin read 2026-07-20)",
+            "url": "https://explorer.fluent.xyz/address/0xd48e565561416de59da1050ed70b8d75e8ef28f9"
+          },
+          {
+            "label": "M0 docs",
+            "url": "https://docs.m0.org/"
+          },
+          {
+            "label": "Fluent Foundation BLEND token disclosure (USDnr / M0 description)",
+            "url": "https://cdn.fluent.xyz/docs/token-disclosure.pdf"
+          }
+        ]
       }
     ]
   },

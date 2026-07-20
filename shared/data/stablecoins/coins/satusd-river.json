@@ -2002,8 +2002,8 @@
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "River documents satUSD as an omnichain asset and bridge built on LayerZero's OFT standard, including cross-chain collateral and minting flows. Because route finality depends on the LayerZero/OFT stack, satUSD is scored as external-lock-mint.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
     "confidence": "verified",
     "protocols": [
       {
@@ -2031,167 +2031,352 @@
       {
         "id": "ethereum:0x1958853a8be062dc4f401750eb233f5850f0d0d2",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x1958853a8be062dc4f401750eb233f5850f0d0d2",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "River native satUSD (SatoshiXApp CDP mint)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0xb8374e4dff99202292da2fe34425e1de665b67e6 (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. This DebtToken deployment exposes no LayerZero endpoint; minting is local CDP only.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "ethereum explorer satUSD token",
+            "url": "https://etherscan.io/token/0x1958853a8be062dc4f401750eb233f5850f0d0d2"
+          },
+          {
+            "label": "River docs (satUSD omnichain OFT)",
+            "url": "https://docs.river.inc"
+          }
+        ]
       },
       {
         "id": "arbitrum:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
         "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xb4818bb69478730ef4e33cc068dd94278e2766cb",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "River native satUSD (SatoshiXApp CDP mint) + River OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0x07bbc5a83b83a5c440d1caedbf1081426d0aa4ec (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = the chain's LayerZero V2 endpoint), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "arbitrum explorer satUSD token",
+            "url": "https://arbiscan.io/token/0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+          },
+          {
+            "label": "River docs (satUSD omnichain OFT)",
+            "url": "https://docs.river.inc"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:arbitrum:0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+        ]
       },
       {
         "id": "base:0x70654aad8b7734dc319d0c3608ec7b32e03fa162",
         "destinationChain": "base",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x70654aad8b7734dc319d0c3608ec7b32e03fa162",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "River native satUSD (SatoshiXApp CDP mint)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0x9a3c724ee9603a7550499be73dc743b371811dd3 (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. This DebtToken deployment exposes no LayerZero endpoint; minting is local CDP only.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "base explorer satUSD token",
+            "url": "https://basescan.org/token/0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
+          },
+          {
+            "label": "River docs (satUSD omnichain OFT)",
+            "url": "https://docs.river.inc"
+          }
+        ]
       },
       {
         "id": "bsc:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
         "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xb4818bb69478730ef4e33cc068dd94278e2766cb",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "River native satUSD (SatoshiXApp CDP mint) + River OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0x07bbc5a83b83a5c440d1caedbf1081426d0aa4ec (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = the chain's LayerZero V2 endpoint), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "bsc explorer satUSD token",
+            "url": "https://bscscan.com/token/0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+          },
+          {
+            "label": "River docs (satUSD omnichain OFT)",
+            "url": "https://docs.river.inc"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:bsc:0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+        ]
       },
       {
         "id": "sonic:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
         "destinationChain": "sonic",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xb4818bb69478730ef4e33cc068dd94278e2766cb",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "River native satUSD (SatoshiXApp CDP mint) + River OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0x07bbc5a83b83a5c440d1caedbf1081426d0aa4ec (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = the chain's LayerZero V2 endpoint), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "sonic explorer satUSD token",
+            "url": "https://sonicscan.org/token/0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+          },
+          {
+            "label": "River docs (satUSD omnichain OFT)",
+            "url": "https://docs.river.inc"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:sonic:0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+        ]
       },
       {
         "id": "bob:0xecf21b335b41f9d5a89f6186a99c19a3c467871f",
         "destinationChain": "bob",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xecf21b335b41f9d5a89f6186a99c19a3c467871f",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "River native satUSD (SatoshiXApp CDP mint) + River OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0xec272af6e65c4d7857091225fa8ed300df787ccf (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = the chain's LayerZero V2 endpoint), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation. A deprecated satUSD V1 token 0x78Fea795cBFcC5fFD6Fb5B845a4f53d25C283bDB also circulates on this chain; DefiLlama aggregates V1+V2 into the chain capture, so this row's V2 totalSupply reads below the captured chain total.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "bob explorer satUSD token",
+            "url": "https://explorer.gobob.xyz/token/0xecf21b335b41f9d5a89f6186a99c19a3c467871f"
+          },
+          {
+            "label": "River docs (satUSD omnichain OFT)",
+            "url": "https://docs.river.inc"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:bob:0xecf21b335b41f9d5a89f6186a99c19a3c467871f"
+        ]
       },
       {
         "id": "bitlayer:0xba50ddac6b2f5482ca064efac621e0c7c0f6a783",
         "destinationChain": "bitlayer",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xba50ddac6b2f5482ca064efac621e0c7c0f6a783",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "River native satUSD (SatoshiXApp CDP mint) + River OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0x95e5b977c8c33de5b3b5d2216f1097c2017bdf71 (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = the chain's LayerZero V2 endpoint), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation. A deprecated satUSD V1 token 0xa1e63CB2CE698CfD3c2Ac6704813e3b870FEDADf also circulates on this chain; DefiLlama aggregates V1+V2 into the chain capture, so this row's V2 totalSupply reads below the captured chain total.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "bitlayer explorer satUSD token",
+            "url": "https://www.btrscan.com/token/0xba50ddac6b2f5482ca064efac621e0c7c0f6a783"
+          },
+          {
+            "label": "River docs (satUSD omnichain OFT)",
+            "url": "https://docs.river.inc"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:bitlayer:0xba50ddac6b2f5482ca064efac621e0c7c0f6a783"
+        ]
       },
       {
         "id": "bsquared:0x8dd8b12d55c73c08294664a5915475ed1c8b1f6f",
         "destinationChain": "bsquared",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x8dd8b12d55c73c08294664a5915475ed1c8b1f6f",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "River native satUSD (SatoshiXApp CDP mint)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0x2863e3d0f29e2eec6adefc0df0d3171dad542c02 (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. This DebtToken deployment exposes no LayerZero endpoint; minting is local CDP only. A deprecated satUSD V1 token 0x62b4B8F5a03e40b9dAAf95c7A6214969406e28c3 also circulates on this chain; DefiLlama aggregates V1+V2 into the chain capture, so this row's V2 totalSupply reads below the captured chain total.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "bsquared explorer satUSD token",
+            "url": "https://explorer.bsquared.network/token/0x8dd8b12d55c73c08294664a5915475ed1c8b1f6f"
+          },
+          {
+            "label": "River docs (satUSD omnichain OFT)",
+            "url": "https://docs.river.inc"
+          }
+        ]
       },
       {
         "id": "hemi:0xb4818bb69478730ef4e33cc068dd94278e2766cb",
         "destinationChain": "hemi",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xb4818bb69478730ef4e33cc068dd94278e2766cb",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "River native satUSD (SatoshiXApp CDP mint) + River OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0x07bbc5a83b83a5c440d1caedbf1081426d0aa4ec (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = the chain's LayerZero V2 endpoint), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "hemi explorer satUSD token",
+            "url": "https://explorer.hemi.xyz/token/0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+          },
+          {
+            "label": "River docs (satUSD omnichain OFT)",
+            "url": "https://docs.river.inc"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:hemi:0xb4818bb69478730ef4e33cc068dd94278e2766cb"
+        ]
       },
       {
         "id": "bevm:0x2031c8848775a5efb7cff2a4edbe3f04c50a1478",
         "destinationChain": "bevm",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x2031c8848775a5efb7cff2a4edbe3f04c50a1478",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "River native satUSD (SatoshiXApp CDP mint) + River OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0xd4b0eecf327c0f1b43d487fecfd2ea56e746a72b (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = the chain's LayerZero V2 endpoint), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation. A deprecated satUSD V1 token 0xF2692468666E459D87052f68aE474E36C1a34fbB also circulates on this chain; DefiLlama aggregates V1+V2 into the chain capture, so this row's V2 totalSupply reads below the captured chain total.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "bevm explorer satUSD token",
+            "url": "https://scan-mainnet.bevm.io/token/0x2031c8848775a5efb7cff2a4edbe3f04c50a1478"
+          },
+          {
+            "label": "River docs (satUSD omnichain OFT)",
+            "url": "https://docs.river.inc"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:bevm:0x2031c8848775a5efb7cff2a4edbe3f04c50a1478"
+        ]
       },
       {
         "id": "xlayer:0xcef6c74ce218c0e1f48ca2430635d0a65cd3737a",
         "destinationChain": "xlayer",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xcef6c74ce218c0e1f48ca2430635d0a65cd3737a",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "River native satUSD (SatoshiXApp CDP mint) + River OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native satUSD mint chain: the token UUPS proxy exposes satoshiXApp() = 0xb4d4793a1cd57b6ecebadf6fcbe5aed03e8e93ec (this chain's SatoshiXApp CDP mint contract, read 2026-07-20) and owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. The deployment is also the issuer-deployed DebtTokenWithLz OFT (endpoint() = the chain's LayerZero V2 endpoint), so supply additionally moves cross-chain via River's own LayerZero burn-mint layer; no third-party bridge mints this representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "xlayer explorer satUSD token",
+            "url": "https://www.oklink.com/xlayer/token/0xcef6c74ce218c0e1f48ca2430635d0a65cd3737a"
+          },
+          {
+            "label": "River docs (satUSD omnichain OFT)",
+            "url": "https://docs.river.inc"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:xlayer:0xcef6c74ce218c0e1f48ca2430635d0a65cd3737a"
+        ]
       }
     ]
   },
@@ -2201,11 +2386,11 @@
   ],
   "reserves": [
     {
-      "name": "BTC, ETH, BNB, and liquid-staking-token CDP collateral basket",
+      "name": "Aggregate River protocol collateral TVL",
       "pct": 100,
       "risk": "medium",
-      "assetClass": "other",
-      "issuerOrObligor": "River protocol user-deposited collateral",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "River protocol user-deposited collateral (BTC, ETH, BNB, and liquid staking tokens)",
       "riskFactors": [
         "market",
         "liquidity",
@@ -2215,8 +2400,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
     "confidence": "probable",
     "sources": [
       {
@@ -2226,18 +2411,22 @@
       {
         "label": "River satUSD product overview",
         "url": "https://river.inc/"
+      },
+      {
+        "label": "River protocol-info API",
+        "url": "https://api-airdrop.river.inc/protocol-info"
       }
     ],
-    "rationale": "River states that satUSD is minted against BTC, ETH, BNB, and liquid staking tokens through its omni-CDP system. The issuer does not publish a current collateral allocation or a chain-wide pool inventory, so the previously stored asset-class weights are not supportable and are replaced with the documented aggregate basket.",
-    "compositionBasis": "River current product and FAQ collateral disclosures",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "The live river-protocol-info adapter publishes one aggregate Aggregate River protocol collateral TVL row at 100%, so the reviewed classification is keyed to that exact identity. River states that satUSD is minted against BTC, ETH, BNB, and liquid staking tokens through its omni-CDP system. The issuer does not publish a current collateral allocation or a chain-wide pool inventory, so the previously stored asset-class weights are not supportable and the envelope remains the documented aggregate basket.",
+    "compositionBasis": "River current product and FAQ collateral disclosures plus the protocol-info aggregate TVL feed",
+    "compositionAsOf": "2026-07-20",
     "scope": "full-composition",
     "knownUnknownExposure": "River does not publish current weights among BTC, ETH, BNB, and liquid staking tokens or a complete cross-chain collateral inventory.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "BTC, ETH, BNB, and liquid-staking-token CDP collateral basket",
+        "reserveName": "Aggregate River protocol collateral TVL",
         "pct": 100,
         "disposition": "basket-needs-split",
         "rationale": "Official sources name the collateral categories but do not disclose their current weights."
@@ -2351,12 +2540,107 @@
             "url": "https://basescan.org/address/0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
           }
         ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5cd923fb3a229813e53253a37dce0b1d8aee5296",
+        "label": "satUSD Ethereum River system contract ward (impl 0x87440b10)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25570752,
+        "evidence": "rely() tx 0x1f2c608234ec787e174b96d712a8fc978f5cdc2e0f832e21cf0607c9fb2bdb46 (block 23182825) enabled this ward; wards() read 2026-07-20 still true. 163-byte UUPS proxy with implementation 0x87440b10b933ef4cac07f3b4b1e41f1d02e50338; owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47. Ward mint calls are unbounded at the token contract.",
+        "sources": [
+          {
+            "label": "satUSD Ethereum ward contract",
+            "url": "https://etherscan.io/address/0x5cd923fb3a229813e53253a37dce0b1d8aee5296"
+          }
+        ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x355961ace96134fe7ba72b24b24559e7ca4aed86",
+        "label": "satUSD Ethereum River system contract ward (impl 0xf3d6913b)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25570752,
+        "evidence": "rely() tx 0xb184590360390eea70fbaa80669bec8a8f41ea165621e6db02c995af14823768 (block 23217269) enabled this ward; wards() read 2026-07-20 still true. 163-byte UUPS proxy with implementation 0xf3d6913b6725d7812aacf9f4f9219106470c3e20; owner() = River owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47.",
+        "sources": [
+          {
+            "label": "satUSD Ethereum ward contract",
+            "url": "https://etherscan.io/address/0x355961ace96134fe7ba72b24b24559e7ca4aed86"
+          }
+        ]
+      },
+      {
+        "chain": "base",
+        "address": "0xfbddd16303a7bc37b19448e738b21ecdac0fa8d0",
+        "label": "satUSD Base operational EOA ward",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "observedBlock": 48861445,
+        "evidence": "rely() tx 0x9acafdd16f83cf85ab845ea97bd9961e55eb5aaede1501ce289f1b6b67a4e5ff (block 29456817) enabled this ward; wards() read 2026-07-20 still true; eth_getCode empty (EOA).",
+        "sources": [
+          {
+            "label": "satUSD Base ward EOA",
+            "url": "https://basescan.org/address/0xfbddd16303a7bc37b19448e738b21ecdac0fa8d0"
+          }
+        ]
+      },
+      {
+        "chain": "base",
+        "address": "0xc25981394d1612930c79faf083fdc3fe8d0773c7",
+        "label": "satUSD Base operational EOA ward",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "observedBlock": 48861445,
+        "evidence": "rely() tx 0x32192a8d0bd3ad65ab4d83a0af411b24abcdfaaff732bf9c537feb7cadf2de75 (block 30251012) enabled this ward; wards() read 2026-07-20 still true; eth_getCode empty (EOA).",
+        "sources": [
+          {
+            "label": "satUSD Base ward EOA",
+            "url": "https://basescan.org/address/0xc25981394d1612930c79faf083fdc3fe8d0773c7"
+          }
+        ]
+      },
+      {
+        "chain": "base",
+        "address": "0xd3e87b4b76e6f8bff454aafc2ad3271c5b317d47",
+        "label": "satUSD Base UUPS owner and ward administrator",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "observedBlock": 48861445,
+        "evidence": "owner() on the Base satUSD UUPS proxy 0x70654aad8b7734dc319d0c3608ec7b32e03fa162 returns this address (read 2026-07-20, eth_getCode empty). It is the same River owner EOA recorded as the Ethereum proxy admin; on Base it can _authorizeUpgrade() and rely() new mint wards, so it is the cap-raise authority for the Base SatoshiXApp cap-limited minter.",
+        "sources": [
+          {
+            "label": "satUSD Base proxy",
+            "url": "https://basescan.org/address/0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "RPC reads establish both current SatoshiXApp addresses, both UUPS implementations, and the shared owner. Verified DebtTokenWithLz source shows three mint-authorized classes: satoshiXApp, troveManager mapping entries, and owner-managed wards. Because rely(), deny(), and enableTroveManager() emit no membership events and neither mapping is enumerable, exact current ward and TroveManager membership cannot be reconstructed safely from the contract interface alone.",
-      "reviewer": "Codex Safety Score V9 CTRL curation",
-      "reviewedAt": "2026-07-14",
+      "evidence": "2026-07-20 full-history enumeration: every transaction to the Ethereum satUSD proxy (2,058 txs) and Base satUSD proxy (10,000 txs) was scanned for rely()/deny()/enableTroveManager() via explorer transaction APIs. Ethereum: 4 rely calls, no deny, no enableTroveManager \u2014 current wards()=true set is SatoshiXApp 0xb8374e4DfF99202292da2FE34425e1dE665b67E6, owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47, and River system UUPS proxies 0x5cd923fb3a229813e53253a37dce0b1d8aee5296 (impl 0x87440b10b933ef4cac07f3b4b1e41f1d02e50338) and 0x355961ace96134fe7ba72b24b24559e7ca4aed86 (impl 0xf3d6913b6725d7812aacf9f4f9219106470c3e20). Base: 3 rely calls, no deny, no enableTroveManager \u2014 wards()=true set is SatoshiXApp 0x9a3c724ee9603A7550499bE73DC743B371811dd3 and operational EOAs 0xfbddd16303a7bc37b19448e738b21ecdac0fa8d0 and 0xc25981394d1612930c79faf083fdc3fe8d0773c7. The troveManager mapping is empty on both chains (enableTroveManager was never called and the mapping has no other writer). wards(address) reads at 2026-07-20 confirm every listed member is still enabled.",
+      "reviewer": "Codex Safety Score V9 CTRL curation; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "River docs",
@@ -2371,10 +2655,7 @@
           "url": "https://basescan.org/address/0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
         }
       ],
-      "unresolvedQuestions": [
-        "Enumerate every currently enabled wards(address) entry on Ethereum and Base despite the mappings having no iterable getter or membership events.",
-        "Enumerate every currently enabled troveManager(address) entry on Ethereum and Base despite enableTroveManager() emitting no event."
-      ]
+      "disposition": "scoreable"
     }
   },
   "launchDate": "2025-02-12"

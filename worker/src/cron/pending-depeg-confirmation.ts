@@ -17,6 +17,8 @@ import {
 } from "../lib/depeg-helpers";
 import {
   classifyPrimaryDepegTrust,
+  getPrimaryDepegSourceFamilies,
+  hasFreshMultiSourcePrimaryAgreement,
   isAuthoritativeDepegPegReference,
 } from "../lib/depeg-trust-policy";
 import {
@@ -125,6 +127,8 @@ export interface ConfirmationPlanReady {
   nativeSourceKey: string;
   authoritativePrice: number | null;
   primarySameDirectionDepegged: boolean;
+  primaryConfirmationSources: string[];
+  temporalSameDirectionConfirmed: boolean;
   age: number;
   evidence: CollectedConfirmationEvidence;
 }
@@ -137,7 +141,6 @@ export interface ConfirmationEvidenceInput extends ConfirmationPlanReady {
   cexAllowed: boolean;
   cexPrices: Map<string, number> | null;
   coingeckoAllowed: boolean;
-  defillamaAllowed: boolean;
   coingeckoApiKey: string | null | undefined;
   signal: AbortSignal | undefined;
   now: number;
@@ -391,17 +394,18 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
       addSource(opposingSources, nativeSourceKey);
       addSource(hardOpposingSources, nativeSourceKey);
     }
-  } else if (expectsNativePegQuote(meta)) {
+  } else if (nativeSignal == null && expectsNativePegQuote(meta)) {
     addSource(unavailableSources, buildNativeConfirmationKey(meta?.flags.pegCurrency));
   }
 
-  const authoritativePrice =
-    asset != null &&
-    primaryTrust === "authoritative" &&
-    asset.price != null &&
-    typeof asset.price === "number" &&
-    Number.isFinite(asset.price) &&
-    asset.price > 0
+  const authoritativePrice = isNativeOrigin
+    ? nativePegQuote?.price ?? null
+    : asset != null &&
+        primaryTrust === "authoritative" &&
+        asset.price != null &&
+        typeof asset.price === "number" &&
+        Number.isFinite(asset.price) &&
+        asset.price > 0
       ? asset.price
       : null;
   const currentPrimarySignal =
@@ -410,6 +414,14 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
       : null;
   const currentPrimaryStatus = classifyDirectionalSignal(currentPrimarySignal, threshold, pendingState.direction);
   const primarySameDirectionDepegged = currentPrimaryStatus === "confirm";
+  const primaryConfirmationSources =
+    !isNativeOrigin && primarySameDirectionDepegged && asset && hasFreshMultiSourcePrimaryAgreement(asset, now)
+      ? [...getPrimaryDepegSourceFamilies(asset)].sort().map((family) => `primary:${family}`)
+      : [];
+  const temporalSameDirectionConfirmed =
+    pendingState.lastSeenAt - pendingState.firstSeenAt >= DEPEG_PENDING_MIN_AGE_SEC &&
+    now - pendingState.lastSeenAt <= DEPEG_PENDING_MIN_AGE_SEC &&
+    Math.abs(pendingState.lastSeenBps) >= threshold;
 
   if (openSet.has(row.stablecoin_id)) {
     console.log(`[depeg-confirm] Cleaned pending for ${row.symbol}: open event already exists`);
@@ -429,7 +441,7 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
 
   if (nativePegRecovered) {
     console.log(
-      `[depeg-confirm] Cleared pending for ${row.symbol}: direct ${nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency ?? "native"} quote recovered to ${nativeSignal?.absBps ?? "n/a"}bps`,
+      `[depeg-confirm] Cleared pending for ${row.symbol}: ${nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency ?? "native"} quote recovered to ${nativeSignal?.absBps ?? "n/a"}bps`,
     );
     return {
       kind: "mutate",
@@ -484,6 +496,8 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     nativeSourceKey,
     authoritativePrice,
     primarySameDirectionDepegged,
+    primaryConfirmationSources,
+    temporalSameDirectionConfirmed,
     age,
     evidence: {
       confirmingSources,

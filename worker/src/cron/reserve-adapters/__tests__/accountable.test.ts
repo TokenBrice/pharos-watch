@@ -360,8 +360,8 @@ describe("adaptAccountableDashboard", () => {
                 reserves_split: [
                   { value: 623, name: "STRC" },
                   { value: 137, name: "Protocol Owned Liquidity" },
-                  { value: 128, name: "Cash & Equivalents" },
-                  { value: 112, name: "Inventory" },
+                  { value: 126, name: "Cash & Equivalents" },
+                  { value: 114, name: "Inventory" },
                 ],
               },
             },
@@ -387,8 +387,8 @@ describe("adaptAccountableDashboard", () => {
     expect(result.slices).toEqual([
       { name: "STRC (Strategy preferred equity, BTC-linked)", pct: 62.3, risk: "high" },
       { name: "Protocol Owned Liquidity", pct: 13.7, risk: "high" },
-      { name: "Cash & Equivalents (USDC, U.S. Treasury Bills)", pct: 12.8, risk: "very-low" },
-      { name: "Inventory", pct: 11.2, risk: "high" },
+      { name: "Cash & Equivalents (USDC, U.S. Treasury Bills)", pct: 12.6, risk: "very-low" },
+      { name: "Inventory", pct: 11.4, risk: "high" },
     ]);
     expect(apxusd.reserves.map(({ name, pct, risk }) => ({ name, pct, risk }))).toEqual(result.slices);
     expect(validateAdapterOutput(result, {

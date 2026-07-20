@@ -55,9 +55,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Inverse documents sDOLA bridging through Chainlink CCIP, with sDOLA locked on the source chain and minted on the destination after CCIP relay. The route is reviewed as an external validated-network bridge with Chainlink validation assumptions.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "sDOLA is native on Ethereum (ERC-4626 wrapper, locked by the CCIP LockReleaseTokenPool on transfer). Base, Optimism, Arbitrum, and Berachain deployments are burn-mint representations minted solely by the Chainlink CCIP BurnMintTokenPool on each chain (mint simulation verified on-chain).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
     "confidence": "verified",
     "protocols": [
       {
@@ -91,76 +91,158 @@
         "id": "ethereum:0xb45ad160634c528cc3d2926d9807104fa3157305",
         "destinationChain": "ethereum",
         "contractAddress": "0xb45ad160634c528cc3d2926d9807104fa3157305",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Inverse native issuance (sDOLA ERC-4626)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "sDOLA is native on Ethereum (immutable ERC-4626 wrapper over DOLA). The Chainlink CCIP LockReleaseTokenPool 0x05eEe76f456C51Be0459EC1c0a78bf177B2c877C (registered in the CCIP TokenAdminRegistry, read on-chain) locks sDOLA for cross-chain transfer.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Chainlink CCIP token registry (sDOLA)",
+            "url": "https://docs.chain.link/ccip/directory/mainnet"
+          },
+          {
+            "label": "Inverse Finance Docs",
+            "url": "https://docs.inverse.finance/"
+          }
+        ]
       },
       {
         "id": "base:0xca78ee4544ec5a33af86f1e786efc7d3652bf005",
+        "sourceChain": "ethereum",
         "destinationChain": "base",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xca78ee4544ec5a33af86f1e786efc7d3652bf005",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP (sDOLA BurnMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "base",
+        "controllerAddress": "0xd84e1b7e1a7a8d49167884855c3985ef4bca45ab",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "eth_call mint() simulation succeeds from the CCIP BurnMintTokenPool 0xd84e1B7e1a7A8D49167884855c3985ef4bCa45aB and reverts from other senders on base at 2026-07-20; pool registered in the Chainlink CCIP token directory (BurnMintTokenPool 1.5.1). Token owner is Inverse's GovernanceProxy (verified CCIP receiver).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Chainlink CCIP token registry (sDOLA)",
+            "url": "https://docs.chain.link/ccip/directory/mainnet"
+          },
+          {
+            "label": "Inverse Finance Docs",
+            "url": "https://docs.inverse.finance/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0xd84e1b7e1a7a8d49167884855c3985ef4bca45ab"
+        ]
       },
       {
         "id": "optimism:0xfc63c9c8ba44ae89c01265453ed4f427c80cbd4e",
+        "sourceChain": "ethereum",
         "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xfc63c9c8ba44ae89c01265453ed4f427c80cbd4e",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP (sDOLA BurnMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "optimism",
+        "controllerAddress": "0x8404024d8f74ad2d20e82c184816b64d4184a018",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "eth_call mint() simulation succeeds from the CCIP BurnMintTokenPool 0x8404024d8F74Ad2D20E82c184816B64D4184A018 and reverts from other senders on optimism at 2026-07-20; pool registered in the Chainlink CCIP token directory (BurnMintTokenPool 1.5.1). Token owner is Inverse's GovernanceProxy (verified CCIP receiver).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Chainlink CCIP token registry (sDOLA)",
+            "url": "https://docs.chain.link/ccip/directory/mainnet"
+          },
+          {
+            "label": "Inverse Finance Docs",
+            "url": "https://docs.inverse.finance/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:optimism:0x8404024d8f74ad2d20e82c184816b64d4184a018"
+        ]
       },
       {
         "id": "arbitrum:0x7a1e123e41458aabab8068bfed6010d8f9480898",
+        "sourceChain": "ethereum",
         "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x7a1e123e41458aabab8068bfed6010d8f9480898",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP (sDOLA BurnMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xbbc28db61df26b76d5f7d5eed17ed4d6c278460e",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "eth_call mint() simulation succeeds from the CCIP BurnMintTokenPool 0xbbc28DB61DF26B76D5F7D5Eed17eD4D6C278460e and reverts from other senders on arbitrum at 2026-07-20; pool registered in the Chainlink CCIP token directory (BurnMintTokenPool 1.5.1). Token owner is Inverse's GovernanceProxy (verified CCIP receiver).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Chainlink CCIP token registry (sDOLA)",
+            "url": "https://docs.chain.link/ccip/directory/mainnet"
+          },
+          {
+            "label": "Inverse Finance Docs",
+            "url": "https://docs.inverse.finance/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:arbitrum:0xbbc28db61df26b76d5f7d5eed17ed4d6c278460e"
+        ]
       },
       {
         "id": "berachain:0x02eaa69646183c069fc2b64f15923f27b9cf3b03",
+        "sourceChain": "ethereum",
         "destinationChain": "berachain",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x02eaa69646183c069fc2b64f15923f27b9cf3b03",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP (sDOLA BurnMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "berachain",
+        "controllerAddress": "0x8bbd036d018657e454f679e7c4726f7a8ece2773",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "eth_call mint() simulation succeeds from the CCIP BurnMintTokenPool 0x8Bbd036d018657E454F679E7C4726F7a8ECE2773 and reverts from other senders on berachain at 2026-07-20; pool registered in the Chainlink CCIP token directory (BurnMintTokenPool 1.5.1). Token owner is Inverse's GovernanceProxy (verified CCIP receiver).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Chainlink CCIP token registry (sDOLA)",
+            "url": "https://docs.chain.link/ccip/directory/mainnet"
+          },
+          {
+            "label": "Inverse Finance Docs",
+            "url": "https://docs.inverse.finance/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:berachain:0x8bbd036d018657e454f679e7c4726f7a8ece2773"
+        ]
       }
     ]
   },

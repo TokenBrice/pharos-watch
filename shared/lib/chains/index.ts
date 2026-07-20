@@ -45,6 +45,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   hyperliquid:      { name: "Hyperliquid L1", explorerUrl: "https://app.hyperliquid.xyz/explorer", evmChainId: null,  type: "other", logoPath: "/chains/hyperliquid-l1.png" },
   megaeth:   { name: "MegaETH",   explorerUrl: "https://mega.etherscan.io",         evmChainId: 4326,  type: "evm",  logoPath: "/chains/megaeth.png", darkInvert: true, providers: { dexscreener: "megaeth", geckoTerminal: "megaeth", birdeye: "megaeth" } },
   monad:     { name: "Monad",     explorerUrl: "https://explorer.monad.xyz",       evmChainId: 143,   type: "evm",  logoPath: "/chains/monad.png",     providers: { dexscreener: "monad", geckoTerminal: "monad", moralis: "monad", birdeye: "monad" } },
+  pharos:    { name: "Pharos Network", explorerUrl: "https://www.pharosscan.xyz",  evmChainId: 1672,  type: "evm",  logoPath: "/chains/pharos.png",    providers: { coingecko: "pharos" } },
   tempo:     { name: "Tempo",     explorerUrl: "https://explorer.tempo.xyz",       evmChainId: 4217,  type: "evm",  logoPath: "/chains/tempo.svg"     },
   xdc:       { name: "XDC Network",explorerUrl: "https://xdcscan.io",             evmChainId: 50,    type: "evm",  logoPath: "/chains/xdc.png"       },
   redbelly:  { name: "Redbelly Network",explorerUrl: "https://redbelly.routescan.io", evmChainId: 151, type: "evm", logoPath: "/chains/redbelly.svg", providers: { coingecko: "redbelly-network" } },
@@ -149,6 +150,7 @@ const CHAIN_ALIASES: Record<string, string> = {
   "edgeX L1": "edgechain",
   "Secret": "secret",
   "Redbelly": "redbelly",
+  "Pharos": "pharos",
   "Echelon Initia": "initia",
 };
 
@@ -176,6 +178,7 @@ export const CHAIN_RESILIENCE_TIER: Partial<Record<string, ChainResilienceTier>>
   tempo: 3,         // new payment-focused L1
   viction: 3,       // low activity, centralized
   codex: 3,         // new payment-focused L1
+  pharos: 3,        // new high-performance L1
   edgechain: 3,     // exchange-adjacent financial chain
   robinhood: 3,     // new exchange-adjacent L2 (mainnet 2026-07)
   stable: 3,        // new USDT-focused chain

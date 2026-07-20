@@ -69,14 +69,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "JPYT uses chain-specific USDT and USDC collateral paths, so no single fixed reserve coinId or weight is representative.",
   ],
   [
-    "jusd-juicedollar::USDC.e/USDT.e/ctUSD bridge reserves::USDC",
-    "JUSD's bridge reserve slice is a de minimis combined USDC.e/USDT.e/ctUSD bucket without stablecoin-level weights, so no single coinId is representative.",
-  ],
-  [
-    "jusd-juicedollar::USDC.e/USDT.e/ctUSD bridge reserves::USDT",
-    "JUSD's bridge reserve slice is a de minimis combined USDC.e/USDT.e/ctUSD bucket without stablecoin-level weights, so no single coinId is representative.",
-  ],
-  [
     "nxusd-nereus::Nereus overcollateralized crypto positions including DAI collateral::DAI",
     "Nereus reports DAI as part of a broader overcollateralized crypto collateral set, so a single DAI coinId would overstate the reserve dependency.",
   ],
@@ -115,18 +107,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
     "susdc-spark::USDC deposited in Spark Savings vault::USDC",
     "Spark does not publish the current spUSDC-specific split between idle USDC and downstream strategies.",
-  ],
-  [
-    "usx-solstice::USDC, USDT, and DAI collateral basket::USDC",
-    "Solstice publishes the basket constituents but not current constituent weights.",
-  ],
-  [
-    "usx-solstice::USDC, USDT, and DAI collateral basket::USDT",
-    "Solstice publishes the basket constituents but not current constituent weights.",
-  ],
-  [
-    "usx-solstice::USDC, USDT, and DAI collateral basket::DAI",
-    "Solstice publishes the basket constituents but not current constituent weights.",
   ],
   [
     "usda-avalon::FBTC-backed CDP positions and USDT/USDC 1:1 mint reserves::USDC",
@@ -179,6 +159,42 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
     "hbusdt-hyperbeat::Dynamic Hyperbeat hbUSDT strategy portfolio::USDT",
     "The reviewed Hyperbeat portfolio is a dynamic strategy envelope without durable asset or position weights; the hbUSDT product name does not establish a fixed USDT reserve slice.",
+  ],
+  [
+    "usde-ethena::Liquid stablecoins (USDT, USDC, USDtb, PYUSD)::USDC",
+    "Ethena reports this as one mixed liquid-stablecoin bucket without current constituent weights, so no single tracked coinId is representative.",
+  ],
+  [
+    "usde-ethena::Liquid stablecoins (USDT, USDC, USDtb, PYUSD)::USDT",
+    "Ethena reports this as one mixed liquid-stablecoin bucket without current constituent weights, so no single tracked coinId is representative.",
+  ],
+  [
+    "usde-ethena::Liquid stablecoins (USDT, USDC, USDtb, PYUSD)::USDtb",
+    "Ethena reports this as one mixed liquid-stablecoin bucket without current constituent weights, so no single tracked coinId is representative.",
+  ],
+  [
+    "yzusd-yuzu::Other disclosed small positions (syrupUSDG, VBILL, PYUSD loops; Aave AUSD/GHO/RLUSD; rest)::GHO",
+    "Yuzu reports GHO inside an aggregate residual strategy bucket without a separable current weight, so a GHO coinId would overstate the dependency.",
+  ],
+  [
+    "ousg-ondo-finance::OUSG tokenized Treasury fund portfolio::OUSG",
+    "The reserve label names the subject fund itself, not an upstream OUSG dependency edge.",
+  ],
+  [
+    "euro3-3a-dao::Whitelisted 3A Vault collateral (USDC.e, DAI, WETH/ETH, USDT, WBTC, wstETH and other approved assets; mix undisclosed)::USDC",
+    "3A reports an unweighted multi-asset vault collateral set, so no single tracked stablecoin coinId is representative.",
+  ],
+  [
+    "euro3-3a-dao::Whitelisted 3A Vault collateral (USDC.e, DAI, WETH/ETH, USDT, WBTC, wstETH and other approved assets; mix undisclosed)::USDT",
+    "3A reports an unweighted multi-asset vault collateral set, so no single tracked stablecoin coinId is representative.",
+  ],
+  [
+    "euro3-3a-dao::Whitelisted 3A Vault collateral (USDC.e, DAI, WETH/ETH, USDT, WBTC, wstETH and other approved assets; mix undisclosed)::DAI",
+    "3A reports an unweighted multi-asset vault collateral set, so no single tracked stablecoin coinId is representative.",
+  ],
+  [
+    "onyc-onre::Unallocated ONyc Pool stablecoin collateral and treasury (USDC and USDG)::USDC",
+    "OnRe reports this as one unallocated USDC/USDG and treasury bucket without current constituent weights, so no single coinId is representative.",
   ],
 ]);
 

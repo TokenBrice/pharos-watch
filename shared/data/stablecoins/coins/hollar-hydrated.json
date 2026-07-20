@@ -163,41 +163,189 @@
     {
       "name": "DOT",
       "pct": 40,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Polkadot network (bridged into Hydration)",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "ETH",
       "pct": 15,
-      "risk": "very-low"
+      "risk": "very-low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum protocol (bridged into Hydration)",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "vDOT (liquid staked DOT)",
       "pct": 15,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Bifrost (vDOT liquid staking on Polkadot)",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "custody"
+      ],
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "WBTC / tBTC",
       "pct": 10,
-      "risk": "medium"
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "BitGo (WBTC) and Threshold Network (tBTC), bridged into Hydration",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "USDT (stablecoins)",
       "pct": 7.5,
       "risk": "low",
-      "coinId": "usdt-tether"
+      "coinId": "usdt-tether",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether Holdings",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "USDC (stablecoins)",
       "pct": 7.5,
       "risk": "low",
-      "coinId": "usdc-circle"
+      "coinId": "usdc-circle",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "GIGADOT / GIGAETH",
       "pct": 5,
-      "risk": "very-high"
+      "risk": "very-high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Hydration GigaStrategy protocol LP positions",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Hydration HOLLAR documentation",
+        "url": "https://docs.hydration.net/products/hollar/"
+      },
+      {
+        "label": "Hydration borrow markets",
+        "url": "https://app.hydration.net/borrow/markets"
+      }
+    ],
+    "rationale": "Hydration documents HOLLAR as minted against DOT, ETH, vDOT, USDT, USDC, tBTC, and WBTC collateral through its GHO-style borrow markets, with giga-token variants also accepted. The retained per-asset split is the prior curation wave's approximation of the borrow-market collateral mix, because Hydration publishes no dated official aggregate breakdown. Each collateral asset is classified; the weights themselves are approximate.",
+    "compositionBasis": "Hydration's documented HOLLAR collateral set with approximate borrow-market weights; no dated official aggregate allocation is published",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current per-asset collateral weights, the share held via the HOLLAR Stability Module versus borrow positions, and per-asset utilization are not published as a dated aggregate; non-stablecoin slice weights (85% of the basket) are approximations.",
+    "knownUnknownExposurePct": 85,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "DOT",
+        "pct": 40,
+        "disposition": "insufficient-evidence",
+        "rationale": "Slice weight is an approximation; Hydration publishes no dated aggregate collateral breakdown for this asset."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "ETH",
+        "pct": 15,
+        "disposition": "insufficient-evidence",
+        "rationale": "Slice weight is an approximation; Hydration publishes no dated aggregate collateral breakdown for this asset."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "vDOT (liquid staked DOT)",
+        "pct": 15,
+        "disposition": "insufficient-evidence",
+        "rationale": "Slice weight is an approximation; Hydration publishes no dated aggregate collateral breakdown for this asset."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "WBTC / tBTC",
+        "pct": 10,
+        "disposition": "insufficient-evidence",
+        "rationale": "Slice weight is an approximation; Hydration publishes no dated aggregate collateral breakdown for this asset."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "GIGADOT / GIGAETH",
+        "pct": 5,
+        "disposition": "insufficient-evidence",
+        "rationale": "Slice weight is an approximation; Hydration publishes no dated aggregate collateral breakdown for this asset."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Hydration borrow-market and HOLLAR Stability Module contracts (non-custodial appchain positions)",
+        "role": "other",
+        "jurisdiction": "Hydration (Polkadot parachain)"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Hydration HOLLAR documentation",
+        "url": "https://docs.hydration.net/products/hollar/"
+      },
+      {
+        "label": "Hydration borrow markets",
+        "url": "https://app.hydration.net/borrow/markets"
+      }
+    ],
+    "uncertainty": "Collateral is held in on-chain borrow-market and HSM contracts on the Hydration appchain with automated per-block partial liquidations rather than a conventional custodian. Legal segregation, bankruptcy remoteness, and rehypothecation concepts do not map to this non-custodial structure; operative risks are runtime governance and smart-contract integrity.",
+    "knownUnknownExposurePct": 100
+  },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
@@ -235,10 +383,13 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "HOLLAR mints only against overcollateralized positions on Hydration's Aave-v3-forked (GHO-style) money market, subject to a per-asset supply cap; the launch supply cap was 2,000,000 HOLLAR.",
-        "evidence": "Coverage describes HOLLAR as a GHO-derived facilitator mint on Hydration's Aave v3 fork with overcollateralized positions and an initial supply cap of 2,000,000 HOLLAR."
+        "evidence": "HOLLAR mints only against overcollateralized positions on Hydration's Aave-v3-forked (GHO-style) money market pallet with a per-asset supply cap (launch cap 2,000,000 HOLLAR); Hydration governance can raise the cap, so the bound is raiseable. The pallet-backed EVM shim at 0x531a654d1696ed52e7275a8cede955e82620f99a has no proxy admin or owner().",
+        "failureDomainKeys": [
+          "module:hydration:aave-money-market"
+        ]
       },
       {
         "chain": "hydration",
@@ -246,10 +397,13 @@
         "role": "governor",
         "authorityType": "dao-governor",
         "directMintAbility": "parameter-only",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "Hydration governance sets collateral onboarding, risk parameters, supply caps, and the HSM configuration; HOLLAR is governed by Hydration rather than Polkadot OpenGov directly.",
-        "evidence": "Coverage notes HOLLAR is governed by Hydration (not DOT holders), which controls collateral rules, risk parameters, and the on-chain HOLLAR Stability Module. Hydration's pinned runtime source configures HSM AuthorityOrigin as Root, EconomicParameters, or GeneralAdmin."
+        "evidence": "Coverage notes HOLLAR is governed by Hydration (not DOT holders), which controls collateral rules, risk parameters, and the on-chain HOLLAR Stability Module. Hydration's pinned runtime source configures HSM AuthorityOrigin as Root, EconomicParameters, or GeneralAdmin.",
+        "failureDomainKeys": [
+          "governance:hydration:opengov-parameter-admin"
+        ]
       },
       {
         "chain": "hydration",
@@ -275,13 +429,16 @@
             "url": "https://rpc.hydradx.cloud"
           }
         ],
-        "evidence": "Hydration's runtime composes System, ConvictionVoting, Referenda, Origins, Whitelist, and Dispatcher, and its pinned governance configuration defines a `root` referendum track. Runtime code changes are Root-origin operations, so the root OpenGov track is the on-chain governance route that can replace the runtime minting logic. At Hydration block 13133392, state_getRuntimeVersion reported hydradx specVersion 428."
+        "evidence": "Hydration's runtime composes System, ConvictionVoting, Referenda, Origins, Whitelist, and Dispatcher, and its pinned governance configuration defines a `root` referendum track. Runtime code changes are Root-origin operations, so the root OpenGov track is the on-chain governance route that can replace the runtime minting logic. At Hydration block 13133392, state_getRuntimeVersion reported hydradx specVersion 428.",
+        "failureDomainKeys": [
+          "governance:hydration:opengov-root-track"
+        ]
       }
     ],
     "review": {
       "evidence": "Hydration press and coverage describe HOLLAR as an Aave-v3/GHO-derived overcollateralized stablecoin with the native HSM for peg support, governed by Hydration with parameter-level control over collateral and caps.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Hydration HOLLAR launch (Polkadot newsroom)",

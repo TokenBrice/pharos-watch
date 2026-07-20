@@ -28,7 +28,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "AUDF uses a 2/5 Admin Safe that holds DEFAULT_ADMIN_ROLE and MINT_ROLE on all confirmed chains (ETH, Polygon, Base, Avalanche). The ETH MINT_ROLE also has a second holder: a StablecoinMintBurnOFTAdapter contract, itself owned by the same Admin Safe. ProxyAdmin across all confirmed chains is also owned by the Admin Safe. Redbelly chain unconfirmable.",
+    "summary": "AUDF uses a 2/5 Admin Safe that holds DEFAULT_ADMIN_ROLE and MINT_ROLE on Ethereum, Polygon, Base, and Avalanche; on Redbelly the Safe holds DEFAULT_ADMIN_ROLE and MINT_ROLE is currently unassigned (granting runs through the Safe). The Ethereum MINT_ROLE also has a second holder: a StablecoinMintBurnOFTAdapter contract owned by the same Safe. ProxyAdmin across chains is owned by the Admin Safe.",
     "upgradeability": {
       "model": "transparent-proxy",
       "canChangeMintLogic": true,
@@ -95,7 +95,7 @@
             "url": "https://eth.blockscout.com/address/0xD1Ccc777949Bd8c25A0C73BA0D20303C36EE6A91"
           }
         ],
-        "evidence": "Identified as StablecoinMintBurnOFTAdapter (LayerZero OFT cross-chain bridge adapter). owner() returned 0x6929Fd915b0755EfDC255eA841B68a263A362C5A — the Admin Safe. Upgrade and operational authority is therefore under the same 2/5 Safe."
+        "evidence": "Identified as StablecoinMintBurnOFTAdapter (LayerZero OFT cross-chain bridge adapter). owner() returned 0x6929Fd915b0755EfDC255eA841B68a263A362C5A \u2014 the Admin Safe. Upgrade and operational authority is therefore under the same 2/5 Safe."
       },
       {
         "chain": "ethereum",
@@ -132,22 +132,23 @@
         {
           "label": "AUDF RoleGranted logs (ETH)",
           "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b&fromBlock=0&toBlock=25295047&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        },
+        {
+          "label": "AUDF on Redbelly explorer (roles verified 2026-07-20)",
+          "url": "https://explorer.redbelly.network/address/0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b"
         }
       ],
-      "evidence": "2/5 Admin Safe confirmed as DEFAULT_ADMIN + MINT_ROLE holder on ETH, Polygon, Base, and Avax. ProxyAdmin owned by same Safe on ETH and Avax. OFT adapter (ETH MINT_ROLE) owned by Safe. Operational EOA minter 0xfd5d8237 confirmed on Polygon and Base; same EOA absent from Avax (Safe-only on Avax). Redbelly chain (same address) not reachable via any public RPC.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Redbelly chain (0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b) has no accessible public RPC — cannot enumerate role holders."
-      ]
+      "evidence": "2/5 Admin Safe confirmed as DEFAULT_ADMIN + MINT_ROLE holder on ETH, Polygon, Base, and Avax. ProxyAdmin owned by the same Safe on ETH and Avax. OFT adapter (ETH MINT_ROLE) owned by Safe. Operational EOA minter 0xfd5d8237 confirmed on Polygon and Base; same EOA absent from Avax (Safe-only on Avax). Redbelly re-verified 2026-07-20 at block 3075429 via governors.mainnet.redbelly.network (now publicly reachable): the token reports the same uniform implementation 0xc9357d8fb84dd3041612dc5b2a2cd914d9405572 and proxy admin 0x2dcafce3b4fc7aba1b822637b12d6156fc85edd9; hasRole confirms the Admin Safe 0x6929Fd915b0755EfDC255eA841B68a263A362C5A holds DEFAULT_ADMIN_ROLE on Redbelly while MINT_ROLE is held by neither the Safe, the operational EOA, nor the OFT adapter.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+      "reviewedAt": "2026-07-20"
     }
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "AUDF is integrated with LayerZero and Stargate for cross-chain interoperability. Because Stargate/LayerZero introduces external bridge and messaging infrastructure, Pharos scores AUDF as external lock/mint route exposure rather than native-only issuance.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "probable",
     "protocols": [
       {
@@ -190,76 +191,141 @@
         "id": "ethereum:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
         "destinationChain": "ethereum",
         "contractAddress": "0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Forte issuer-native AUDF (multichain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on ethereum at block 25570987: AUDF token 0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b is the uniform Forte deployment (EIP-1967 proxy to the shared implementation 0xc9357d8fb84dd3041612dc5b2a2cd914d9405572 on all five chains, proxy admin 0x2dcafce3b4fc7aba1b822637b12d6156fc85edd9). Minting is issuer-controlled: the 2-of-5 AUDF Admin Safe 0x6929Fd915b0755EfDC255eA841B68a263A362C5A holds DEFAULT_ADMIN_ROLE (and MINT_ROLE on Ethereum/Polygon/Base/Avalanche per the mint-authority review); no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 25570987,
+        "sources": [
+          {
+            "label": "AUDF on ethereum explorer (verified 2026-07-20)",
+            "url": "https://etherscan.io/address/0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b"
+          },
+          {
+            "label": "Forte AUDF",
+            "url": "https://forte.xyz/"
+          }
+        ]
       },
       {
         "id": "polygon:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
         "destinationChain": "polygon",
         "contractAddress": "0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Forte issuer-native AUDF (multichain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on polygon at block 90540063: AUDF token 0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b is the uniform Forte deployment (EIP-1967 proxy to the shared implementation 0xc9357d8fb84dd3041612dc5b2a2cd914d9405572 on all five chains, proxy admin 0x2dcafce3b4fc7aba1b822637b12d6156fc85edd9). Minting is issuer-controlled: the 2-of-5 AUDF Admin Safe 0x6929Fd915b0755EfDC255eA841B68a263A362C5A holds DEFAULT_ADMIN_ROLE (and MINT_ROLE on Ethereum/Polygon/Base/Avalanche per the mint-authority review); no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 90540063,
+        "sources": [
+          {
+            "label": "AUDF on polygon explorer (verified 2026-07-20)",
+            "url": "https://polygonscan.com/address/0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b"
+          },
+          {
+            "label": "Forte AUDF",
+            "url": "https://forte.xyz/"
+          }
+        ]
       },
       {
         "id": "avalanche:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
         "destinationChain": "avalanche",
         "contractAddress": "0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Forte issuer-native AUDF (multichain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on avalanche at block 90755323: AUDF token 0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b is the uniform Forte deployment (EIP-1967 proxy to the shared implementation 0xc9357d8fb84dd3041612dc5b2a2cd914d9405572 on all five chains, proxy admin 0x2dcafce3b4fc7aba1b822637b12d6156fc85edd9). Minting is issuer-controlled: the 2-of-5 AUDF Admin Safe 0x6929Fd915b0755EfDC255eA841B68a263A362C5A holds DEFAULT_ADMIN_ROLE (and MINT_ROLE on Ethereum/Polygon/Base/Avalanche per the mint-authority review); no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 90755323,
+        "sources": [
+          {
+            "label": "AUDF on avalanche explorer (verified 2026-07-20)",
+            "url": "https://snowscan.xyz/address/0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b"
+          },
+          {
+            "label": "Forte AUDF",
+            "url": "https://forte.xyz/"
+          }
+        ]
       },
       {
         "id": "base:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
         "destinationChain": "base",
         "contractAddress": "0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Forte issuer-native AUDF (multichain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on base at block 48862872: AUDF token 0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b is the uniform Forte deployment (EIP-1967 proxy to the shared implementation 0xc9357d8fb84dd3041612dc5b2a2cd914d9405572 on all five chains, proxy admin 0x2dcafce3b4fc7aba1b822637b12d6156fc85edd9). Minting is issuer-controlled: the 2-of-5 AUDF Admin Safe 0x6929Fd915b0755EfDC255eA841B68a263A362C5A holds DEFAULT_ADMIN_ROLE (and MINT_ROLE on Ethereum/Polygon/Base/Avalanche per the mint-authority review); no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 48862872,
+        "sources": [
+          {
+            "label": "AUDF on base explorer (verified 2026-07-20)",
+            "url": "https://basescan.org/address/0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b"
+          },
+          {
+            "label": "Forte AUDF",
+            "url": "https://forte.xyz/"
+          }
+        ]
       },
       {
         "id": "redbelly:0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
         "destinationChain": "redbelly",
         "contractAddress": "0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Forte issuer-native AUDF (multichain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on redbelly at block 3075403: AUDF token 0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b is the uniform Forte deployment (EIP-1967 proxy to the shared implementation 0xc9357d8fb84dd3041612dc5b2a2cd914d9405572 on all five chains, proxy admin 0x2dcafce3b4fc7aba1b822637b12d6156fc85edd9). Minting is issuer-controlled: the 2-of-5 AUDF Admin Safe 0x6929Fd915b0755EfDC255eA841B68a263A362C5A holds DEFAULT_ADMIN_ROLE (and MINT_ROLE on Ethereum/Polygon/Base/Avalanche per the mint-authority review); no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 3075403,
+        "sources": [
+          {
+            "label": "AUDF on redbelly explorer (verified 2026-07-20)",
+            "url": "https://explorer.redbelly.network/address/0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b"
+          },
+          {
+            "label": "Forte AUDF",
+            "url": "https://forte.xyz/"
+          }
+        ]
       }
     ]
   },

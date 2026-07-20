@@ -381,9 +381,9 @@
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "M0 documents M Portals as the multichain architecture for M, with Ethereum as the authoritative issuance and governance source and Wormhole NTT implementing hub lock/release plus spoke mint/burn logic. That is reviewed as external lock/mint bridge exposure.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "M0 documents M Portals as the multichain architecture for M, with Ethereum as the authoritative issuance and governance source and Wormhole NTT implementing hub lock/release plus spoke mint/burn logic. That is reviewed as external lock/mint bridge exposure. 2026-07-20 cohort dc-1 pass: resolved the flagged non-native route controls with on-chain reads (portal()/minterGateway() per chain); see per-row reviewNote evidence.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
     "confidence": "verified",
     "protocols": [
       {
@@ -422,61 +422,113 @@
         "id": "ethereum:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
         "destinationChain": "ethereum",
         "contractAddress": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 M (Ethereum native issuance via MinterGateway)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: minterGateway() on the Ethereum M token returns 0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e (M0 MinterGateway) — native issuance on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "M0 documentation",
+            "url": "https://docs.m0.org/"
+          },
+          {
+            "label": "M on Etherscan",
+            "url": "https://etherscan.io/address/0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b"
+          }
+        ]
       },
       {
         "id": "optimism:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
         "destinationChain": "optimism",
         "contractAddress": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 Portal (burn-mint cross-chain representation of Ethereum-native M)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'M by M^0'/'M by M0', symbol M, 6 decimals; portal() returns 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd (M0 Portal on optimism) — the mint/burn authority for this cross-chain representation of Ethereum-native M.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "optimism",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:optimism:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "sources": [
+          {
+            "label": "M0 documentation",
+            "url": "https://docs.m0.org/"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
         "destinationChain": "arbitrum",
         "contractAddress": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 Portal (burn-mint cross-chain representation of Ethereum-native M)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'M by M^0'/'M by M0', symbol M, 6 decimals; portal() returns 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd (M0 Portal on arbitrum) — the mint/burn authority for this cross-chain representation of Ethereum-native M.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:arbitrum:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "sources": [
+          {
+            "label": "M0 documentation",
+            "url": "https://docs.m0.org/"
+          }
+        ]
       },
       {
         "id": "base:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
         "destinationChain": "base",
         "contractAddress": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 Portal (burn-mint cross-chain representation of Ethereum-native M)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'M by M^0'/'M by M0', symbol M, 6 decimals; portal() returns 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd (M0 Portal on base) — the mint/burn authority for this cross-chain representation of Ethereum-native M.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "base",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:base:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "sources": [
+          {
+            "label": "M0 documentation",
+            "url": "https://docs.m0.org/"
+          }
+        ]
       },
       {
         "id": "solana:mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo",
@@ -497,151 +549,291 @@
         "id": "hyperevm:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
         "destinationChain": "hyperevm",
         "contractAddress": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 Portal (burn-mint cross-chain representation of Ethereum-native M)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'M by M^0'/'M by M0', symbol M, 6 decimals; portal() returns 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd (M0 Portal on hyperevm) — the mint/burn authority for this cross-chain representation of Ethereum-native M.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:hyperevm:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "sources": [
+          {
+            "label": "M0 documentation",
+            "url": "https://docs.m0.org/"
+          }
+        ]
       },
       {
         "id": "plume:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
         "destinationChain": "plume",
         "contractAddress": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 Portal (burn-mint cross-chain representation of Ethereum-native M)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'M by M^0'/'M by M0', symbol M, 6 decimals; portal() returns 0x36f586a30502ae3afb555b8aa4dcc05d233c2ece (M0 Portal on plume) — the mint/burn authority for this cross-chain representation of Ethereum-native M.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "plume",
+        "controllerAddress": "0x36f586a30502ae3afb555b8aa4dcc05d233c2ece",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:plume:0x36f586a30502ae3afb555b8aa4dcc05d233c2ece"
+        ],
+        "sources": [
+          {
+            "label": "M0 documentation",
+            "url": "https://docs.m0.org/"
+          }
+        ]
       },
       {
         "id": "bsc:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
         "destinationChain": "bsc",
         "contractAddress": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 Portal (burn-mint cross-chain representation of Ethereum-native M)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'M by M^0'/'M by M0', symbol M, 6 decimals; portal() returns 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd (M0 Portal on bsc) — the mint/burn authority for this cross-chain representation of Ethereum-native M.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "bsc",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:bsc:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "sources": [
+          {
+            "label": "M0 documentation",
+            "url": "https://docs.m0.org/"
+          }
+        ]
       },
       {
         "id": "linea:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
         "destinationChain": "linea",
         "contractAddress": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 Portal (burn-mint cross-chain representation of Ethereum-native M)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'M by M^0'/'M by M0', symbol M, 6 decimals; portal() returns 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd (M0 Portal on linea) — the mint/burn authority for this cross-chain representation of Ethereum-native M.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "linea",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:linea:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "sources": [
+          {
+            "label": "M0 documentation",
+            "url": "https://docs.m0.org/"
+          }
+        ]
       },
       {
         "id": "soneium:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
         "destinationChain": "soneium",
         "contractAddress": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 Portal (burn-mint cross-chain representation of Ethereum-native M)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'M by M^0'/'M by M0', symbol M, 6 decimals; portal() returns 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd (M0 Portal on soneium) — the mint/burn authority for this cross-chain representation of Ethereum-native M.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "soneium",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:soneium:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "sources": [
+          {
+            "label": "M0 documentation",
+            "url": "https://docs.m0.org/"
+          }
+        ]
       },
       {
         "id": "citrea:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
         "destinationChain": "citrea",
         "contractAddress": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 Portal (burn-mint cross-chain representation of Ethereum-native M)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'M by M^0'/'M by M0', symbol M, 6 decimals; portal() returns 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd (M0 Portal on citrea) — the mint/burn authority for this cross-chain representation of Ethereum-native M.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "citrea",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:citrea:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "sources": [
+          {
+            "label": "M0 documentation",
+            "url": "https://docs.m0.org/"
+          }
+        ]
       },
       {
         "id": "sei:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
         "destinationChain": "sei",
         "contractAddress": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 Portal (burn-mint cross-chain representation of Ethereum-native M)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'M by M^0'/'M by M0', symbol M, 6 decimals; portal() returns 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd (M0 Portal on sei) — the mint/burn authority for this cross-chain representation of Ethereum-native M.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "sei",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:sei:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "sources": [
+          {
+            "label": "M0 documentation",
+            "url": "https://docs.m0.org/"
+          }
+        ]
       },
       {
         "id": "mantra:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
         "destinationChain": "mantra",
         "contractAddress": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 Portal (burn-mint cross-chain representation of Ethereum-native M)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'M by M^0'/'M by M0', symbol M, 6 decimals; portal() returns 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd (M0 Portal on mantra) — the mint/burn authority for this cross-chain representation of Ethereum-native M.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "mantra",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:mantra:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "sources": [
+          {
+            "label": "M0 documentation",
+            "url": "https://docs.m0.org/"
+          }
+        ]
       },
       {
         "id": "plasma:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
         "destinationChain": "plasma",
         "contractAddress": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 Portal (burn-mint cross-chain representation of Ethereum-native M)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'M by M^0'/'M by M0', symbol M, 6 decimals; portal() returns 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd (M0 Portal on plasma) — the mint/burn authority for this cross-chain representation of Ethereum-native M.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "plasma",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:plasma:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "sources": [
+          {
+            "label": "M0 documentation",
+            "url": "https://docs.m0.org/"
+          }
+        ]
       },
       {
         "id": "monad:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
         "destinationChain": "monad",
         "contractAddress": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 Portal (burn-mint cross-chain representation of Ethereum-native M)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'M by M^0'/'M by M0', symbol M, 6 decimals; portal() returns 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd (M0 Portal on monad) — the mint/burn authority for this cross-chain representation of Ethereum-native M.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "monad",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:monad:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "sources": [
+          {
+            "label": "M0 documentation",
+            "url": "https://docs.m0.org/"
+          }
+        ]
       }
     ]
   },

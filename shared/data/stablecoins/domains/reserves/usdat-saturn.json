@@ -21,8 +21,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure)",
     "confidence": "probable",
     "sources": [
       {
@@ -38,10 +38,10 @@
         "url": "https://protocol-api.m0.org/graphql"
       }
     ],
-    "rationale": "The current M0 protocol API snapshot exposes 97.9% Tokenized treasury collateral and 2.1% Cash for the M0 reserve categories used by USDat. Saturn documents a launch target of 100% M and states that USDat capital is held in the token contract, but it does not publish a USDat-specific current reserve allocation or independently reconcile the M0 categories to USDat supply.",
+    "rationale": "The M0 protocol API snapshot re-verified on 2026-07-20 exposes 97.9% Tokenized treasury collateral and 2.1% Cash (97.875%/2.125% before rounding) for the M0 reserve categories used by USDat — identical names and weights to the live m0 reserve-adapter rows, so the curated classification now overlays the captured exposures. Saturn documents a launch target of 100% M and states that USDat capital is held in the token contract, but it does not publish a USDat-specific current reserve allocation or independently reconcile the M0 categories to USDat supply, so both slices remain explicitly unresolved at the USDat level.",
     "compositionBasis": "Current M0 protocol category snapshot combined with Saturn USDat mechanics and transparency documentation",
-    "compositionAsOf": "2026-07-14",
-    "scope": "selected-slices",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
     "knownUnknownExposure": "The issuer identifies M as the launch reserve target but does not publish a current reserve-allocation breakdown or current token balance; its documented future allocation policy permits a shift toward digital credit.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [

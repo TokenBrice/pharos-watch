@@ -2,6 +2,55 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.204",
+    title: "Full-precision CoinGecko simple prices",
+    date: "2026-07-20",
+    effectiveAt: 1784529544,
+    summary:
+      "All Worker CoinGecko simple-price requests now ask for full precision so peg and depeg decisions consume the unrounded upstream quote.",
+    impact: [
+      "A shared request-path helper forces `precision=full` while preserving every caller's existing ids, quote currencies, market-cap fields, and freshness parameters",
+      "Primary, supplemental, native-fiat, pending-confirmation, supply-gap, status, and auxiliary yield price paths use the same precision policy",
+      "CoinGecko `last_updated_at` freshness checks and all existing validation, consensus, and source-weight rules remain unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "6.203",
+    title: "Cached-rate degradation for vault NAV routes",
+    date: "2026-07-19",
+    effectiveAt: 1784493544,
+    summary:
+      "Parent-derived vault routes now persist their last-good on-chain rate and can publish cached-rate × fresh trusted parent price under an explicit low-confidence source when the live rate read fails, instead of leaving the asset without an active price.",
+    impact: [
+      "Successful ERC-4626 convertToAssets, Aave previewRedeem, and Idle CDO virtualPrice reads persist their assets-per-share rate to a durable vault-rate cache",
+      "When the live rate read fails for an asset without a publishable current price, the route publishes cached rate × fresh trusted parent price as `protocol-redeem-cached-rate` with low confidence; rates older than 24 hours or outside the vault sanity bounds never publish",
+      "The cached lane still requires the same trusted parent as the live route, never replaces a publishable incumbent price, is never replay-safe or depeg-authoritative, and carries the rate and its observation time in override metadata",
+      "When neither a live rate nor a trusted cached rate exists, the route fails exactly as before, including grouped-circuit failure accounting",
+      "Cron metadata counts cached-rate fallbacks and the attempt ledger records them as resolved `protocol-redeem-cached-rate` attempts for per-run visibility",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "6.202",
+    title: "Composite parent-trust monotonicity",
+    date: "2026-07-19",
+    effectiveAt: 1784492257,
+    summary:
+      "Parent-derived pricing routes and replay-cache admission now judge composite provenance on its replay-safe core, so an agreeing non-replay-safe corroborator joining a consensus label can no longer strip trust from a high-confidence parent price.",
+    impact: [
+      "Authoritative parent trust accepts a high-confidence composite whose replay-safe core keeps at least two members, as if agreeing soft corroborators such as exact-address augmentation lanes were absent",
+      "A single replay-safe core member padded to high confidence by soft corroborators is admitted only under the existing scoped single-source opt-in and keeps single-source provenance, so padding can neither downgrade nor upgrade parent trust",
+      "Replay-cache admission computes the trusted window over the replay-safe core; core-less labels, unknown source keys, and cached-replay lineage still never replay",
+      "Exact-address augmentation no longer targets assets with three or more consensus sources and healthy confidence merely because a short-window composite member makes their observation expire before the next generation; expiring observations only order priority among already-eligible thin-coverage targets",
+      "Authoritative attempts rejected by parent trust are ledgered as `untrusted-parent` with the parent id and rejection reason instead of an opaque missing quote",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.201",
     title: "Fair active-price recovery scheduling",
     date: "2026-07-19",

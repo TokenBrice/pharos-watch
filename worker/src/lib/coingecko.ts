@@ -18,6 +18,13 @@ export function cgUrl(path: string, apiKey: string | null = null): string {
   return `${base}${path}`;
 }
 
+/** Build a CoinGecko simple-price path with unrounded price precision. */
+export function cgSimplePricePath(query: string | URLSearchParams): string {
+  const params = new URLSearchParams(typeof query === "string" ? query : query.toString());
+  params.set("precision", "full");
+  return `/simple/price?${params.toString()}`;
+}
+
 /** Return headers that include the API key when configured. Merges with any extra headers. */
 export function cgHeaders(extra?: Record<string, string>, apiKey: string | null = null): Record<string, string> {
   const headers: Record<string, string> = { ...extra };

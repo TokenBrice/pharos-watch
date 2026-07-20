@@ -26,14 +26,14 @@ describe("page metadata helpers", () => {
   });
 
   it("uses pre-launch tracker wording before live stablecoin data exists", () => {
-    const preLaunch = TRACKED_META_BY_ID.get("usd-nubank");
+    const preLaunch = TRACKED_META_BY_ID.get("krw-imbank");
 
     expect(preLaunch).toBeDefined();
 
     const description = buildStablecoinDetailDescription(preLaunch!);
     const metadata = buildStablecoinDetailMetadata(preLaunch!);
 
-    expect(metadata.title).toBe("USD-NU (Nubank USD Stablecoin) Stablecoin Launch Tracker");
+    expect(metadata.title).toBe("KRW-iM (iM Bank KRW Stablecoin) Stablecoin Launch Tracker");
     expect(description).toContain("Pre-launch profile");
     expect(description).toContain("before live data begins");
     expect(description).not.toContain("Peg score");

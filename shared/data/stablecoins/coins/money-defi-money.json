@@ -970,9 +970,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "MONEY is deployed on Arbitrum, Optimism, and Base through LayerZero OFT-style omnichain infrastructure. Because durable cross-chain supply depends on external LayerZero messaging rather than only canonical rollup bridges, Pharos scores the route as external lock/mint exposure.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "MONEY is deployed on Arbitrum, Optimism, and Base through LayerZero OFT-style omnichain infrastructure. Because durable cross-chain supply depends on external LayerZero messaging rather than only canonical rollup bridges, Pharos scores the route as external lock/mint exposure. 2026-07-20 cohort dc-1 pass: MONEY rows confirmed LayerZero OFT representations (uniform address + owner reads).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
     "confidence": "verified",
     "protocols": [
       {
@@ -1001,46 +1001,88 @@
         "id": "arbitrum:0x69420f9e38a4e60a62224c489be4bf7a94402496",
         "destinationChain": "arbitrum",
         "contractAddress": "0x69420f9e38a4e60a62224c489be4bf7a94402496",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Defi.Money MONEY (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Defi.Money Stablecoin', symbol MONEY on arbitrum; uniform deployment address; owner() = 0x222d2b30ecd382a058618d9f1ee01f147666e48b (defi.money admin, per the verified mint-authority review). The OFT token contract itself executes mint on verified LayerZero messages.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x69420f9e38a4e60a62224c489be4bf7a94402496",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:arbitrum:0x69420f9e38a4e60a62224c489be4bf7a94402496"
+        ],
+        "sources": [
+          {
+            "label": "Defi.Money documentation",
+            "url": "https://docs.defi.money/"
+          }
+        ]
       },
       {
         "id": "optimism:0x69420f9e38a4e60a62224c489be4bf7a94402496",
         "destinationChain": "optimism",
         "contractAddress": "0x69420f9e38a4e60a62224c489be4bf7a94402496",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Defi.Money MONEY (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Defi.Money Stablecoin', symbol MONEY on optimism; uniform deployment address; owner() = 0x222d2b30ecd382a058618d9f1ee01f147666e48b (defi.money admin, per the verified mint-authority review). The OFT token contract itself executes mint on verified LayerZero messages.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "optimism",
+        "controllerAddress": "0x69420f9e38a4e60a62224c489be4bf7a94402496",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:optimism:0x69420f9e38a4e60a62224c489be4bf7a94402496"
+        ],
+        "sources": [
+          {
+            "label": "Defi.Money documentation",
+            "url": "https://docs.defi.money/"
+          }
+        ]
       },
       {
         "id": "base:0x69420f9e38a4e60a62224c489be4bf7a94402496",
         "destinationChain": "base",
         "contractAddress": "0x69420f9e38a4e60a62224c489be4bf7a94402496",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Defi.Money MONEY (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Defi.Money Stablecoin', symbol MONEY on base; uniform deployment address; owner() = 0x222d2b30ecd382a058618d9f1ee01f147666e48b (defi.money admin, per the verified mint-authority review). The OFT token contract itself executes mint on verified LayerZero messages.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "base",
+        "controllerAddress": "0x69420f9e38a4e60a62224c489be4bf7a94402496",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:base:0x69420f9e38a4e60a62224c489be4bf7a94402496"
+        ],
+        "sources": [
+          {
+            "label": "Defi.Money documentation",
+            "url": "https://docs.defi.money/"
+          }
+        ]
       }
     ]
   },
@@ -1101,9 +1143,70 @@
     {
       "name": "Approved crypto loan collateral",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "defi.money LLAMMA market collateral across Arbitrum, Optimism, and Base (WBTC, ETH, and other accepted market collateral)",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "defi.money documentation — how MONEY is made",
+        "url": "https://docs.defi.money/welcome/how-does-it-work/how-is-usdmoney-made"
+      },
+      {
+        "label": "defi.money documentation — deployed contract addresses",
+        "url": "https://docs.defi.money/welcome/deployments/contracts-addresses"
+      }
+    ],
+    "rationale": "MONEY is a crvUSD-style CDP stablecoin: every unit is minted against overcollateralized loan positions in approved LLAMMA markets on Arbitrum, Optimism, and Base, so the reserve envelope is the aggregate of accepted crypto loan collateral. As of 2026-07-20 the defi.money website and app return HTTP 402 DEPLOYMENT_DISABLED and no current per-market collateral or debt composition is published anywhere, while DefiLlama still reports roughly $14M of MONEY circulating, so the envelope is retained as one explicitly unresolved aggregate rather than a fabricated per-asset split.",
+    "compositionBasis": "defi.money documented crvUSD-style CDP architecture and deployment registry; current per-market weights unpublished",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The complete per-market collateral split (asset identities, debt shares, and band-position conversions across Arbitrum, Optimism, and Base) is not published; the issuer frontend and API are disabled, so no current verifiable composition exists.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Approved crypto loan collateral",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The documented envelope spans multiple accepted collateral assets across three chains, but no current per-market weights are published and the disabled frontend prevents issuer-side verification."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "defi.money LLAMMA AMM and Controller contracts (Arbitrum, Optimism, Base)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "defi.money documentation — deployed contract addresses",
+        "url": "https://docs.defi.money/welcome/deployments/contracts-addresses"
+      }
+    ],
+    "uncertainty": "Collateral is held by the protocol's immutable LLAMMA market contracts rather than a legal custodian; the reviewed sources establish the deployment registry but no legal segregation, insolvency treatment, or reuse terms. The issuer frontend is disabled as of 2026-07-20, limiting further verification.",
+    "knownUnknownExposurePct": 100
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,
@@ -1136,7 +1239,10 @@
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "MONEY is minted only against overcollateralized loans in defi.money markets under per-market debt ceilings, using crvUSD's controller and LLAMMA soft-liquidation mechanics; supply tracks collateralized borrowing, not an issuer minter.",
-        "evidence": "defi.money docs describe a crvUSD-style loan/CDP stablecoin where users deposit approved collateral and borrow MONEY against per-market risk parameters with peg-keeper/LLAMMA mechanics."
+        "evidence": "defi.money docs describe a crvUSD-style loan/CDP stablecoin where users deposit approved collateral and borrow MONEY against per-market risk parameters with peg-keeper/LLAMMA mechanics.",
+        "failureDomainKeys": [
+          "protocol:defi-money-controllers"
+        ]
       },
       {
         "chain": "arbitrum",
@@ -1178,9 +1284,9 @@
       }
     ],
     "review": {
-      "evidence": "At Arbitrum block 472419864, owner() on MONEY token returned 0x222d2B30EcD382a058618d9F1ee01F147666E48b. Safe API confirmed Gnosis Safe v1.3.0+L2, 3-of-7 threshold, 7 owners, no modules, no guard. EIP-1967 admin slot zero (not upgradeable proxy). No minter() selector on token. crvUSD-style market controllers are bounded by the Safe's admin authority; no independent privileged mint surface detected on the token.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Arbitrum block 472419864, owner() on MONEY token returned 0x222d2B30EcD382a058618d9F1ee01F147666E48b. Safe API confirmed Gnosis Safe v1.3.0+L2, 3-of-7 threshold, 7 owners, no modules, no guard. EIP-1967 admin slot zero (not upgradeable proxy). No minter() selector on token. crvUSD-style market controllers are bounded by the Safe's admin authority; no independent privileged mint surface detected on the token. 2026-07-20 dc-1 pass: the crvUSD-style market-controller set has no single contract address; its failure domain is recorded as protocol:defi-money-controllers. The economic mint cap is raiseable — the verified admin Safe 0x222d2B30EcD382a058618d9F1ee01F147666E48b can authorize controllers and raise caps (can-authorize + canRaiseCap=true in this profile).",
+      "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "defi.money docs",
@@ -1190,8 +1296,11 @@
           "label": "Arbitrum MONEY token (Arbiscan)",
           "url": "https://arbiscan.io/token/0x69420f9e38a4e60a62224c489be4bf7a94402496"
         }
-      ]
-    }
+      ],
+      "disposition": "scoreable",
+      "unresolvedQuestions": []
+    },
+    "economicCapSemantics": "raiseable"
   },
   "launchDate": "2024-09-10"
 }

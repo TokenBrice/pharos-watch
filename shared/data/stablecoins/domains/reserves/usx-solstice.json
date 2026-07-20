@@ -2,11 +2,11 @@
   "id": "usx-solstice",
   "reserves": [
     {
-      "name": "USDC, USDT, and DAI collateral basket",
+      "name": "Aggregate Solstice attested reserves",
       "pct": 100,
       "risk": "low",
       "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle, Tether, and MakerDAO stablecoin issuers",
+      "issuerOrObligor": "Circle, Tether, and MakerDAO stablecoin issuers (USDC, USDT, and DAI per Solstice collateral disclosure)",
       "riskFactors": [
         "counterparty",
         "liquidity",
@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex Safety Score V9 dependency review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
     "confidence": "verified",
     "sources": [
       {
@@ -35,18 +35,19 @@
         "url": "https://attestation-api.solstice.finance/dashboard"
       }
     ],
-    "rationale": "Solstice identifies USDC and USDT on its product page, while the USX FAQ documents USDC, USDT, and DAI as reserve-stablecoin options for the Liquid Stability Reserve. The attestation endpoint publishes aggregate coverage rather than asset-level balances, so exact constituent weights cannot be authored defensibly.",
-    "compositionBasis": "Solstice collateral disclosure and aggregate reserve attestation",
+    "rationale": "Solstice identifies USDC and USDT on its product page, while the USX FAQ documents USDC, USDT, and DAI as reserve-stablecoin options for the Liquid Stability Reserve. A 2026-07-20 fetch of the attestation dashboard returned only aggregate reserves/supply timeline values (collateralization about 1.004), not asset-level balances, so exact constituent weights cannot be authored defensibly. The slice name is aligned to the exact solstice-attestation adapter row identity so the reviewed classification overlays the captured aggregate exposure.",
+    "compositionBasis": "Solstice collateral disclosure and the aggregate reserve attestation timeline emitted by the solstice-attestation live adapter",
+    "compositionAsOf": "2026-07-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "The USDC and USDT constituent split is not published by the aggregate attestation source.",
+    "knownUnknownExposure": "The USDC, USDT, and DAI constituent split is not published by the aggregate attestation source.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "USDC, USDT, and DAI collateral basket",
+        "reserveName": "Aggregate Solstice attested reserves",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "Both tracked stablecoins are named as collateral, but no source establishes their current individual weights.",
+        "rationale": "USDC, USDT, and DAI are named as reserve stablecoins, but the aggregate attestation source does not establish their current individual weights.",
         "candidateCoinIds": [
           "usdc-circle",
           "usdt-tether",

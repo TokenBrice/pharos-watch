@@ -292,9 +292,9 @@
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
     "summary": "gtUSDCp has reviewed cross-chain route evidence through Across, an intent/liquidity framework rather than issuer-native settlement. The route is scored as liquidity/intent because execution and available bridge liquidity are material to cross-chain movement.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "l2beat",
@@ -325,47 +325,68 @@
       {
         "id": "ethereum:0x8c106eedad96553e64287a5a6839c3cc78afa3d0",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x8c106eedad96553e64287a5a6839c3cc78afa3d0",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Gauntlet USDC Prime (ERC-4626 vault)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native gtUSDCp issuance on ethereum: the Gauntlet USDC Prime vault (gtusdcp) exposes asset() = USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 and owner() = 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec (Gauntlet); shares mint against USDC deposits (verified on-chain 2026-07-20); no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "gtUSDCp on ethereum explorer (owner()/asset() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0x8c106eedad96553e64287a5a6839c3cc78afa3d0"
+          }
+        ]
       },
       {
         "id": "base:0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61",
         "destinationChain": "base",
+        "canonicalChain": "base",
         "contractAddress": "0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Gauntlet USDC Prime (ERC-4626 vault)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native gtUSDCp issuance on base: the Gauntlet USDC Prime vault (gtUSDCp) exposes owner() = the Gauntlet authority 0x5a4e19842e09000a582c20a4f524c26fb48dd4d0; shares mint against USDC deposits (verified on-chain 2026-07-20); no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "gtUSDCp on base explorer (owner()/asset() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed",
         "destinationChain": "arbitrum",
+        "canonicalChain": "arbitrum",
         "contractAddress": "0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Gauntlet USDC Prime (ERC-4626 vault)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native gtUSDCp issuance on arbitrum: the Gauntlet USDC Prime vault (gtUSDCp) exposes asset() = Arbitrum USDC 0xaf88d065e77c8cc2239327c5edb3a432268e5831 and owner() = the Gauntlet authority 0x5a4e19842e09000a582c20a4f524c26fb48dd4d0 (verified on-chain 2026-07-20); no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "gtUSDCp on arbitrum explorer (owner()/asset() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed"
+          }
+        ]
       }
     ]
   }

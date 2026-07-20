@@ -107,6 +107,11 @@
       "chain": "osmosis",
       "address": "ibc/92AE2F53284505223A1BB80D132F859A00E190C6A738772F0B3EF65E20BA484F",
       "decimals": 6
+    },
+    {
+      "chain": "algorand",
+      "address": "83209012",
+      "decimals": 8
     }
   ],
   "blacklistabilityReview": {
@@ -224,8 +229,8 @@
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Monerium documents EURe e-money tokens as live on multiple chains and its SDK describes euro payments minting tokens to wallets and burning tokens for bank payouts. The route is reviewed as issuer-native issuance/redemption, not a third-party bridge.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "verified",
     "sources": [
       {
@@ -242,136 +247,316 @@
         "id": "ethereum:0x39b8b6385416f4ca36a20319f70d28621895279d",
         "destinationChain": "ethereum",
         "contractAddress": "0x39b8b6385416f4ca36a20319f70d28621895279d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Monerium native EURe",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on ethereum at block 25570683: EURe token 0x39b8b6385416f4ca36a20319f70d28621895279d is Monerium's EIP-1967 upgradeable ERC-20 (symbol EURe; implementation slot -> 0x6f916c6eaa99073dfafeb7f210235acb6028f437), owner() = Monerium Safe 0x5591a6495d726c7efafb9a9dad32695d137b4d9f (getThreshold/getOwners = 3-of-6). Monerium's MiCA whitepaper and developer documentation list EURe as natively issued by Monerium ehf. (Icelandic EMI) on this chain; SEPA-inflow minting is performed by the issuer.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 25570683,
+        "sources": [
+          {
+            "label": "Monerium tokens (supported chains)",
+            "url": "https://docs.monerium.com/tokens/"
+          },
+          {
+            "label": "EURe MiCA white paper",
+            "url": "https://monerium.com/whitepapers/eure-whitepaper/"
+          },
+          {
+            "label": "EURe on ethereum explorer (verified 2026-07-20)",
+            "url": "https://etherscan.io/address/0x39b8b6385416f4ca36a20319f70d28621895279d"
+          }
+        ]
       },
       {
         "id": "gnosis:0x420ca0f9b9b604ce0fd9c18ef134c705e5fa3430",
         "destinationChain": "gnosis",
         "contractAddress": "0x420ca0f9b9b604ce0fd9c18ef134c705e5fa3430",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Monerium native EURe",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on gnosis at block 47291937: EURe token 0x420ca0f9b9b604ce0fd9c18ef134c705e5fa3430 is Monerium's EIP-1967 upgradeable ERC-20 (symbol EURe; implementation slot -> 0x60cb9fdd0fcfd9bb3b2b721864db5e7c07f4635d), owner() = Monerium Safe 0x8001ea269cb9715bf7acff89c664ffc134a519ec (getThreshold/getOwners = 3-of-6). Monerium's MiCA whitepaper and developer documentation list EURe as natively issued by Monerium ehf. (Icelandic EMI) on this chain; SEPA-inflow minting is performed by the issuer.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 47291937,
+        "sources": [
+          {
+            "label": "Monerium tokens (supported chains)",
+            "url": "https://docs.monerium.com/tokens/"
+          },
+          {
+            "label": "EURe MiCA white paper",
+            "url": "https://monerium.com/whitepapers/eure-whitepaper/"
+          },
+          {
+            "label": "EURe on gnosis explorer (verified 2026-07-20)",
+            "url": "https://gnosisscan.io/address/0x420ca0f9b9b604ce0fd9c18ef134c705e5fa3430"
+          }
+        ]
       },
       {
         "id": "base:0xbf6e2966a9c3d99c9e4d069e04f7bdb9c8aa762c",
         "destinationChain": "base",
         "contractAddress": "0xbf6e2966a9c3d99c9e4d069e04f7bdb9c8aa762c",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Monerium native EURe",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on base at block 48861027: EURe token 0xbf6e2966a9c3d99c9e4d069e04f7bdb9c8aa762c is Monerium's EIP-1967 upgradeable ERC-20 (symbol EURe; implementation slot -> 0x89ab57c789b8a9ea44296cc63b0071bf73b22c1f), owner() = Monerium Safe 0x8001ea269cb9715bf7acff89c664ffc134a519ec (getThreshold/getOwners = 3-of-6). Monerium's MiCA whitepaper and developer documentation list EURe as natively issued by Monerium ehf. (Icelandic EMI) on this chain; SEPA-inflow minting is performed by the issuer.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 48861027,
+        "sources": [
+          {
+            "label": "Monerium tokens (supported chains)",
+            "url": "https://docs.monerium.com/tokens/"
+          },
+          {
+            "label": "EURe MiCA white paper",
+            "url": "https://monerium.com/whitepapers/eure-whitepaper/"
+          },
+          {
+            "label": "EURe on base explorer (verified 2026-07-20)",
+            "url": "https://basescan.org/address/0xbf6e2966a9c3d99c9e4d069e04f7bdb9c8aa762c"
+          }
+        ]
       },
       {
         "id": "linea:0x3ff47c5bf409c86533fe1f4907524d304062428d",
         "destinationChain": "linea",
         "contractAddress": "0x3ff47c5bf409c86533fe1f4907524d304062428d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Monerium native EURe",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on linea at block 31446664: EURe token 0x3ff47c5bf409c86533fe1f4907524d304062428d is Monerium's EIP-1967 upgradeable ERC-20 (symbol EURe; implementation slot -> 0x0f04844cf6426b854466953e1ba89710bf7cf4ad), owner() = Monerium Safe 0x8001ea269cb9715bf7acff89c664ffc134a519ec (getThreshold/getOwners = 3-of-6). Monerium's MiCA whitepaper and developer documentation list EURe as natively issued by Monerium ehf. (Icelandic EMI) on this chain; SEPA-inflow minting is performed by the issuer.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 31446664,
+        "sources": [
+          {
+            "label": "Monerium tokens (supported chains)",
+            "url": "https://docs.monerium.com/tokens/"
+          },
+          {
+            "label": "EURe MiCA white paper",
+            "url": "https://monerium.com/whitepapers/eure-whitepaper/"
+          },
+          {
+            "label": "EURe on linea explorer (verified 2026-07-20)",
+            "url": "https://lineascan.build/address/0x3ff47c5bf409c86533fe1f4907524d304062428d"
+          }
+        ]
       },
       {
         "id": "scroll:0xd7bb130a48595fcdf9480e36c1ae97ff2938ac21",
         "destinationChain": "scroll",
         "contractAddress": "0xd7bb130a48595fcdf9480e36c1ae97ff2938ac21",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Monerium native EURe",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on scroll at block 34416619: EURe token 0xd7bb130a48595fcdf9480e36c1ae97ff2938ac21 is Monerium's EIP-1967 upgradeable ERC-20 (symbol EURe; implementation slot -> 0x6ef160df8226761c1035ccd25f4ce1486eeeb507), owner() = Monerium Safe 0x8001ea269cb9715bf7acff89c664ffc134a519ec (getThreshold/getOwners = 3-of-6). Monerium's MiCA whitepaper and developer documentation list EURe as natively issued by Monerium ehf. (Icelandic EMI) on this chain; SEPA-inflow minting is performed by the issuer.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 34416619,
+        "sources": [
+          {
+            "label": "Monerium tokens (supported chains)",
+            "url": "https://docs.monerium.com/tokens/"
+          },
+          {
+            "label": "EURe MiCA white paper",
+            "url": "https://monerium.com/whitepapers/eure-whitepaper/"
+          },
+          {
+            "label": "EURe on scroll explorer (verified 2026-07-20)",
+            "url": "https://scrollscan.com/address/0xd7bb130a48595fcdf9480e36c1ae97ff2938ac21"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x0c06ccf38114ddfc35e07427b9424adcca9f44f8",
         "destinationChain": "arbitrum",
         "contractAddress": "0x0c06ccf38114ddfc35e07427b9424adcca9f44f8",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Monerium native EURe",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on arbitrum at block 485681313: EURe token 0x0c06ccf38114ddfc35e07427b9424adcca9f44f8 is Monerium's EIP-1967 upgradeable ERC-20 (symbol EURe; implementation slot -> 0xddfe2c5f94909420cf55827fffa09a7ff9b2ab77), owner() = Monerium Safe 0xd4d43a82708261f2995f7ba65319d8664b992a96 (getThreshold/getOwners = 3-of-6). Monerium's MiCA whitepaper and developer documentation list EURe as natively issued by Monerium ehf. (Icelandic EMI) on this chain; SEPA-inflow minting is performed by the issuer.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 485681313,
+        "sources": [
+          {
+            "label": "Monerium tokens (supported chains)",
+            "url": "https://docs.monerium.com/tokens/"
+          },
+          {
+            "label": "EURe MiCA white paper",
+            "url": "https://monerium.com/whitepapers/eure-whitepaper/"
+          },
+          {
+            "label": "EURe on arbitrum explorer (verified 2026-07-20)",
+            "url": "https://arbiscan.io/address/0x0c06ccf38114ddfc35e07427b9424adcca9f44f8"
+          }
+        ]
       },
       {
         "id": "polygon:0xe0aea583266584dafbb3f9c3211d5588c73fea8d",
         "destinationChain": "polygon",
         "contractAddress": "0xe0aea583266584dafbb3f9c3211d5588c73fea8d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Monerium native EURe",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on polygon at block 90537604: EURe token 0xe0aea583266584dafbb3f9c3211d5588c73fea8d is Monerium's EIP-1967 upgradeable ERC-20 (symbol EURe; implementation slot -> 0xd1cfa02a1785f3ca0a5602b18649b7ca5439681b), owner() = Monerium Safe 0x8001ea269cb9715bf7acff89c664ffc134a519ec (getThreshold/getOwners = 3-of-6). Monerium's MiCA whitepaper and developer documentation list EURe as natively issued by Monerium ehf. (Icelandic EMI) on this chain; SEPA-inflow minting is performed by the issuer.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 90537604,
+        "sources": [
+          {
+            "label": "Monerium tokens (supported chains)",
+            "url": "https://docs.monerium.com/tokens/"
+          },
+          {
+            "label": "EURe MiCA white paper",
+            "url": "https://monerium.com/whitepapers/eure-whitepaper/"
+          },
+          {
+            "label": "EURe on polygon explorer (verified 2026-07-20)",
+            "url": "https://polygonscan.com/address/0xe0aea583266584dafbb3f9c3211d5588c73fea8d"
+          }
+        ]
       },
       {
         "id": "noble:ueure",
         "destinationChain": "noble",
         "contractAddress": "ueure",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Monerium native EURe (Noble/Cosmos)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Monerium's MiCA whitepaper: 'On Noble, which is built on the Cosmos SDK, EURe is issued through native modules rather than an EVM contract; issuance and redemption' are issuer-operated. ueure is Monerium's native Noble denomination, confirmed by the Noble-side ICS-20 escrow for channel-1 holding ueure (queried 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "EURe MiCA white paper",
+            "url": "https://monerium.com/whitepapers/eure-whitepaper/"
+          },
+          {
+            "label": "Monerium tokens (supported chains)",
+            "url": "https://docs.monerium.com/tokens/"
+          }
+        ]
       },
       {
         "id": "osmosis:ibc/92AE2F53284505223A1BB80D132F859A00E190C6A738772F0B3EF65E20BA484F",
         "destinationChain": "osmosis",
         "contractAddress": "ibc/92AE2F53284505223A1BB80D132F859A00E190C6A738772F0B3EF65E20BA484F",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Noble EURe via IBC",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "IBC voucher path verified 2026-07-20: sha256(\"transfer/channel-750/ueure\") equals this row's denom hash, matching the ACTIVE preferred Noble channel-1 to Osmosis channel-750 ics20-1 channel (same channel pair as the reviewed Noble USDC row in usdc-circle.json). The controller is the Noble-side ICS-20 escrow account noble1kq2rzz6fq2q7fsu75a9g7cpzjeanmk68qxshr6, derived per ibc-go GetEscrowAddress(\"transfer\", \"channel-1\") and verified against live chain state: it holds exactly 8,047,489,870 ueure, matching the Osmosis voucher supply of 8,047,489,870 (100% 1:1 escrow backing).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "noble",
+        "canonicalChain": "noble",
+        "controllerChain": "noble",
+        "controllerAddress": "noble1kq2rzz6fq2q7fsu75a9g7cpzjeanmk68qxshr6",
+        "failureDomainKeys": [
+          "protocol:ibc-ics20",
+          "contract:noble:noble1kq2rzz6fq2q7fsu75a9g7cpzjeanmk68qxshr6"
+        ],
+        "sources": [
+          {
+            "label": "Noble escrow balances (ueure observed 2026-07-20)",
+            "url": "https://rest.cosmos.directory/noble/cosmos/bank/v1beta1/balances/noble1kq2rzz6fq2q7fsu75a9g7cpzjeanmk68qxshr6"
+          },
+          {
+            "label": "Osmosis voucher supply (observed 2026-07-20)",
+            "url": "https://rest.cosmos.directory/osmosis/cosmos/bank/v1beta1/supply/by_denom?denom=ibc/92AE2F53284505223A1BB80D132F859A00E190C6A738772F0B3EF65E20BA484F"
+          },
+          {
+            "label": "EURe on Mintscan (Osmosis IBC)",
+            "url": "https://www.mintscan.io/osmosis/assets"
+          }
+        ]
+      },
+      {
+        "id": "algorand:83209012",
+        "sourceChain": "ethereum",
+        "destinationChain": "algorand",
+        "canonicalChain": "ethereum",
+        "contractAddress": "83209012",
+        "protocol": "Monerium native EURe (Algorand ASA)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Algorand via mainnet-idx.algonode.cloud 2026-07-20: ASA 83209012 ('Monerium EUR emoney', EURe, 8 decimals) has manager WDZGUOESONZCBTQQNF6WHBMJ3O34MGIASSN4OQENUOLHH2GUL5HCH2E4ZQ and reserve/freeze XSAED32VYAQK42TQHKCRHYK7P6LBBPQ2237PALQZAGL2XJTNNOPD523CNA (the Monerium reserve account). EURe is natively issued by Monerium on Algorand; ASA supply is controlled by the manager address by design.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "EURe ASA on Algorand indexer (verified 2026-07-20)",
+            "url": "https://mainnet-idx.algonode.cloud/v2/assets/83209012"
+          },
+          {
+            "label": "Monerium tokens (supported chains)",
+            "url": "https://docs.monerium.com/tokens/"
+          }
+        ]
       }
     ]
   },

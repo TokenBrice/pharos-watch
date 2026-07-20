@@ -19,8 +19,8 @@
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "HLSCOPE was first tokenized through Securitize on Polygon and is now tracked on Ethereum and Optimism as well. Public multichain evidence points to Wormhole-enabled interoperability, so the route is reviewed conservatively as an external lock/mint route.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "probable",
     "protocols": [
       {
@@ -52,76 +52,140 @@
         "id": "polygon:0x4c5ca366e26409845624e29b62c388a06961a792",
         "destinationChain": "polygon",
         "contractAddress": "0x4c5ca366e26409845624e29b62c388a06961a792",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Securitize native HLSCOPE",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on polygon at block 90540065: HLSCOPE token 0x4c5ca366e26409845624e29b62c388a06961a792 (symbol HLSCOPE, EIP-1967 proxy) is Securitize's DSToken issuance surface for the Hamilton Lane SCOPE fund on this chain, per the verified mint-authority review (Securitize DSToken issuance surfaces enumerated per chain). owner() = Securitize ops account 0x59c1eacec450c57dcb9b8725d0f96635c2b676ee (EOA). Issuer-minted natively; cross-chain movement runs through Securitize's Wormhole-enabled interoperability under issuer control.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "polygon",
+        "canonicalChain": "polygon",
+        "observedBlock": 90540065,
+        "sources": [
+          {
+            "label": "HLSCOPE on polygon explorer (verified 2026-07-20)",
+            "url": "https://polygonscan.com/address/0x4c5ca366e26409845624e29b62c388a06961a792"
+          },
+          {
+            "label": "Securitize Hamilton Lane SCOPE",
+            "url": "https://securitize.io/"
+          }
+        ]
       },
       {
         "id": "ethereum:0xda2ffa104356688e74d9340519b8c17f00d7752e",
         "destinationChain": "ethereum",
         "contractAddress": "0xda2ffa104356688e74d9340519b8c17f00d7752e",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Securitize native HLSCOPE",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on ethereum at block 25570988: HLSCOPE token 0xda2ffa104356688e74d9340519b8c17f00d7752e (symbol HLSCOPE, EIP-1967 proxy) is Securitize's DSToken issuance surface for the Hamilton Lane SCOPE fund on this chain, per the verified mint-authority review (Securitize DSToken issuance surfaces enumerated per chain). owner() = Securitize ops account 0x59c1eacec450c57dcb9b8725d0f96635c2b676ee (EOA). Issuer-minted natively; cross-chain movement runs through Securitize's Wormhole-enabled interoperability under issuer control.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "polygon",
+        "canonicalChain": "polygon",
+        "observedBlock": 25570988,
+        "sources": [
+          {
+            "label": "HLSCOPE on ethereum explorer (verified 2026-07-20)",
+            "url": "https://etherscan.io/address/0xda2ffa104356688e74d9340519b8c17f00d7752e"
+          },
+          {
+            "label": "Securitize Hamilton Lane SCOPE",
+            "url": "https://securitize.io/"
+          }
+        ]
       },
       {
         "id": "optimism:0x720f86f4b5b5d5d0ea3e5718ec43071d4d05134b",
         "destinationChain": "optimism",
         "contractAddress": "0x720f86f4b5b5d5d0ea3e5718ec43071d4d05134b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Securitize native HLSCOPE",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on optimism at block 154458159: HLSCOPE token 0x720f86f4b5b5d5d0ea3e5718ec43071d4d05134b (symbol HLSCOPE, EIP-1967 proxy) is Securitize's DSToken issuance surface for the Hamilton Lane SCOPE fund on this chain, per the verified mint-authority review (Securitize DSToken issuance surfaces enumerated per chain). owner() = Securitize ops account 0x59c1eacec450c57dcb9b8725d0f96635c2b676ee (EOA). Issuer-minted natively; cross-chain movement runs through Securitize's Wormhole-enabled interoperability under issuer control.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "polygon",
+        "canonicalChain": "polygon",
+        "observedBlock": 154458159,
+        "sources": [
+          {
+            "label": "HLSCOPE on optimism explorer (verified 2026-07-20)",
+            "url": "https://optimistic.etherscan.io/address/0x720f86f4b5b5d5d0ea3e5718ec43071d4d05134b"
+          },
+          {
+            "label": "Securitize Hamilton Lane SCOPE",
+            "url": "https://securitize.io/"
+          }
+        ]
       },
       {
         "id": "plume:0x175c2abf6ddb7401c4aaa669cabdc55e7a5e172a",
         "destinationChain": "plume",
         "contractAddress": "0x175c2abf6ddb7401c4aaa669cabdc55e7a5e172a",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Securitize native HLSCOPE",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on plume at block 82174966: HLSCOPE token 0x175c2abf6ddb7401c4aaa669cabdc55e7a5e172a (symbol HLSCOPE, EIP-1967 proxy) is Securitize's DSToken issuance surface for the Hamilton Lane SCOPE fund on this chain, per the verified mint-authority review (Securitize DSToken issuance surfaces enumerated per chain). owner() = Securitize ops account 0x59c1eacec450c57dcb9b8725d0f96635c2b676ee (EOA). Issuer-minted natively; cross-chain movement runs through Securitize's Wormhole-enabled interoperability under issuer control.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "polygon",
+        "canonicalChain": "polygon",
+        "observedBlock": 82174966,
+        "sources": [
+          {
+            "label": "HLSCOPE on plume explorer (verified 2026-07-20)",
+            "url": "https://explorer.plume.org/address/0x175c2abf6ddb7401c4aaa669cabdc55e7a5e172a"
+          },
+          {
+            "label": "Securitize Hamilton Lane SCOPE",
+            "url": "https://securitize.io/"
+          }
+        ]
       },
       {
         "id": "tron:TSwyYj6zLPLKV6tbFCyTzuEqN7YaTPht1X",
         "destinationChain": "tron",
         "contractAddress": "TSwyYj6zLPLKV6tbFCyTzuEqN7YaTPht1X",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Securitize native HLSCOPE (Tron)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Tron 2026-07-20 via TronGrid triggerconstantcontract: contract TSwyYj6zLPLKV6tbFCyTzuEqN7YaTPht1X (an ERC1967Proxy) reports symbol()='HLSCOPE', name()='Hamilton Lane SCOPE Securitize Tokenized Feeder Fund LP', owner() = 0x4a833ac40b115635a7300f1cc97ae436c555384a (no contract code on Tron \u2014 EOA). Securitize's native Tron issuance of the Hamilton Lane SCOPE fund token.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "polygon",
+        "canonicalChain": "polygon",
+        "sources": [
+          {
+            "label": "HLSCOPE on Tronscan (verified 2026-07-20)",
+            "url": "https://tronscan.org/#/contract/TSwyYj6zLPLKV6tbFCyTzuEqN7YaTPht1X"
+          },
+          {
+            "label": "Securitize Hamilton Lane SCOPE",
+            "url": "https://securitize.io/"
+          }
+        ]
       }
     ]
   },
@@ -497,14 +561,99 @@
     {
       "name": "Senior secured private-credit loans",
       "pct": 95,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Hamilton Lane Senior Credit Opportunities Fund (SCOPE) underlying private borrowers",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "market",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
     },
     {
       "name": "Cash and liquidity buffer",
       "pct": 5,
-      "risk": "low"
+      "risk": "low",
+      "assetClass": "cash",
+      "issuerOrObligor": "Hamilton Lane SCOPE fund liquidity accounts",
+      "riskFactors": [
+        "counterparty",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Securitize HLSCOPE fund page",
+        "url": "https://securitize.io/primary-market/hl-scope"
+      },
+      {
+        "label": "Hamilton Lane SCOPE via Securitize announcement",
+        "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize"
+      }
+    ],
+    "rationale": "HLSCOPE is a tokenized feeder into Hamilton Lane's SCOPE senior credit opportunities fund, which targets floating-rate senior secured loans to private borrowers. The 95/5 split between senior secured loans and the cash liquidity buffer follows SCOPE's documented strategy of remaining predominantly invested with a liquidity sleeve; neither publisher discloses a current position-level holdings file, so the loan bucket is one aggregate classified exposure rather than invented obligor weights.",
+    "compositionBasis": "Securitize and Hamilton Lane SCOPE fund strategy disclosures; position-level holdings are undisclosed",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The underlying loan portfolio's obligors, sector weights, and current funded-versus-cash allocation are not published at position level; the 95/5 split is an approximation of the documented predominantly-invested strategy, not a reported allocation.",
+    "knownUnknownExposurePct": 95,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Senior secured private-credit loans",
+        "pct": 95,
+        "disposition": "insufficient-evidence",
+        "rationale": "SCOPE's private-credit positions are not published at position level, so the bucket cannot be split into reviewed obligor exposures."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Cash and liquidity buffer",
+        "pct": 5,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Fund-level cash is an external reserve asset rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Hamilton Lane (fund manager) underlying fund custodian",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Securitize (tokenization platform and transfer agent)",
+        "role": "other",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Securitize HLSCOPE fund page",
+        "url": "https://securitize.io/primary-market/hl-scope"
+      },
+      {
+        "label": "Hamilton Lane SCOPE via Securitize announcement",
+        "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize"
+      }
+    ],
+    "uncertainty": "HLSCOPE is a feeder-fund interest: fund assets sit with the underlying Hamilton Lane fund's custodian under a fund structure that is bankruptcy-remote from the tokenization entity by design, but the reviewed materials do not name the custodian or publish account-level segregation and reuse terms.",
+    "knownUnknownExposurePct": 100
+  },
   "yieldConfig": {
     "yieldSource": "Hamilton Lane SCOPE NAV",
     "yieldType": "nav-appreciation"

@@ -12,7 +12,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Predominantly liquid stablecoins (~77%: USDtb by Ethena backed by BlackRock BUIDL, plus USDC, USDT, pyUSD, and yield-bearing variants deposited in Aave/Morpho) as non-hedged backing; remainder in delta-neutral positions — BTC (~16%) and ETH/stETH (~8%) spot long + equal short perpetual futures on CEXes (Binance, Bybit, OKX)",
+  "collateral": "Predominantly liquid stablecoins (~77%: USDtb by Ethena backed by BlackRock BUIDL, plus USDC, USDT, pyUSD, and yield-bearing variants deposited in Aave/Morpho) as non-hedged backing; remainder in delta-neutral positions \u2014 BTC (~16%) and ETH/stETH (~8%) spot long + equal short perpetual futures on CEXes (Binance, Bybit, OKX)",
   "pegMechanism": "Delta-neutral hedging: spot collateral custodied off-exchange (Copper, Ceffu, Anchorage Digital, Kraken) with equal short perpetual positions on CEXes (Binance, Bybit, OKX)",
   "llamaId": "146",
   "detailProvider": "defillama",
@@ -224,6 +224,26 @@
       "chain": "hyperliquid",
       "address": "0x2e6d84f2d7ca82e6581e03523e4389f7",
       "decimals": 8
+    },
+    {
+      "chain": "ink",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "monad",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "robinhood",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
+    },
+    {
+      "chain": "tempo",
+      "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {
@@ -467,8 +487,8 @@
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "USDe uses or is linked to LayerZero/OFT-style cross-chain token infrastructure. Because OFT/adapter routes depend on external messaging, endpoint configuration, and lock/mint or burn/mint token contracts outside issuer-native redemption alone, Pharos scores the reviewed route as external lock/mint.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "verified",
     "protocols": [
       {
@@ -531,380 +551,1275 @@
         "id": "arbitrum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "destinationChain": "arbitrum",
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on arbitrum at block 485672661: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0xc9647361742eb964965b461c44bdf5c4bc3c406d (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:arbitrum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on arbitrum explorer (verified 2026-07-20)",
+            "url": "https://arbiscan.io/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "observedBlock": 485672661
       },
       {
         "id": "base:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "destinationChain": "base",
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Base at block 48859867: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, owner() = Ethena Safe 0xbc89d10eb486b6591583f218acb9545087dbf293 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "base",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:base:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "observedBlock": 48859867,
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on Basescan (verified 2026-07-20)",
+            "url": "https://basescan.org/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ]
       },
       {
         "id": "optimism:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "destinationChain": "optimism",
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on optimism at block 154455233: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0xc66bbbf821f2cfb3a85683acf0326eac92c160bd (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "optimism",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:optimism:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on optimism explorer (verified 2026-07-20)",
+            "url": "https://optimistic.etherscan.io/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "observedBlock": 154455233
       },
       {
         "id": "bsc:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "destinationChain": "bsc",
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on bsc at block 110999461: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0xc9647361742eb964965b461c44bdf5c4bc3c406d (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "bsc",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:bsc:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on bsc explorer (verified 2026-07-20)",
+            "url": "https://bscscan.com/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "observedBlock": 110999461
       },
       {
         "id": "avalanche:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "destinationChain": "avalanche",
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on avalanche at block 90749623: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0x4e1204b35ee8adc35d20dbe6a52d4b40b6a858da (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "avalanche",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:avalanche:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on avalanche explorer (verified 2026-07-20)",
+            "url": "https://snowscan.xyz/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "observedBlock": 90749623
       },
       {
         "id": "zksync:0x39fe7a0dacce31bd90418e3e659fb0b5f0b3db0d",
         "destinationChain": "zksync",
         "contractAddress": "0x39fe7a0dacce31bd90418e3e659fb0b5f0b3db0d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on zksync Era 2026-07-20: zkSync-specific USDe OFT (symbol()='USDe'), endpoint() = LayerZero endpoint 0xd07c30af3ff30d96bdc9c6044958230eb797ddbf, owner() = Ethena Safe 0xa026e9a5e54e16349d7b594449f32901e02c609a (getThreshold/getOwners = 5-of-10). Mint/burn is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "zksync",
+        "controllerAddress": "0x39fe7a0dacce31bd90418e3e659fb0b5f0b3db0d",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:zksync:0x39fe7a0dacce31bd90418e3e659fb0b5f0b3db0d"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on zksync explorer (verified 2026-07-20)",
+            "url": "https://explorer.zksync.io/address/0x39fe7a0dacce31bd90418e3e659fb0b5f0b3db0d"
+          }
+        ]
       },
       {
         "id": "mantle:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "destinationChain": "mantle",
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on mantle at block 98189462: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0x799a2cd46cbc7fb53949072257e6331054a060bb (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "mantle",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:mantle:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on mantle explorer (verified 2026-07-20)",
+            "url": "https://mantlescan.xyz/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "observedBlock": 98189462
       },
       {
         "id": "linea:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "destinationChain": "linea",
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on linea at block 31446302: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0xe1b9b4c7d664126bf4b6724deb59eb5f8aab9192 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "linea",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:linea:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on linea explorer (verified 2026-07-20)",
+            "url": "https://lineascan.build/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "observedBlock": 31446302
       },
       {
         "id": "scroll:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "destinationChain": "scroll",
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Scroll at block 34416240: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c; owner() = EthenaTimelockController 0x3970a0af8819613f139ae9cccf4bb0412a6c68aa (Blockscout-verified; getMinDelay() = 86400s, self-administered DEFAULT_ADMIN, PROPOSER/CANCELLER = Ethena 5-of-10 Safe 0xafafc5d0df6830052988c76dd8d0dfa7f5b8ffd6, executors include 3-of-6 Safe 0xa07591b02fbd07d03df21ed9a574f058bf45c344). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "scroll",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:scroll:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on scroll explorer (verified 2026-07-20)",
+            "url": "https://scrollscan.com/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "observedBlock": 34416240
       },
       {
         "id": "blast:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "destinationChain": "blast",
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on blast at block 37849713: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0x689272b1d2b2f37a0b3fe1f5af0420c64f6cc9e3 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "blast",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:blast:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on blast explorer (verified 2026-07-20)",
+            "url": "https://blastscan.io/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "observedBlock": 37849713
       },
       {
         "id": "mode:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "destinationChain": "mode",
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on mode at block 42170830: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0x273ced5b9da8f5ba6e40c82c126898cb5307b2ea (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "mode",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:mode:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on mode explorer (verified 2026-07-20)",
+            "url": "https://modescan.io/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "observedBlock": 42170830
       },
       {
         "id": "manta:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "destinationChain": "manta",
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on manta at block 9028528: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0xa408fd6724341b27f2e348faf9eccec04a2299ea (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "manta",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:manta:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on manta explorer (verified 2026-07-20)",
+            "url": "https://pacific-explorer.manta.network/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "observedBlock": 9028528
       },
       {
         "id": "berachain:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "destinationChain": "berachain",
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on berachain at block 23747262: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, Ethena Safe 0x093d3f4785149a3d2600cb10d63afa14f9b09364 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "berachain",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:berachain:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on berachain explorer (verified 2026-07-20)",
+            "url": "https://berascan.com/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "observedBlock": 23747262
       },
       {
         "id": "kava:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "destinationChain": "kava",
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on kava at block 21715058: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0x10e9219dd188d0f3af30824469dc874a539733b6 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "kava",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:kava:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on kava explorer (verified 2026-07-20)",
+            "url": "https://kavascan.com/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "observedBlock": 21715058
       },
       {
         "id": "hyperevm:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "destinationChain": "hyperevm",
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on hyperevm at block 40924298: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9, Ethena Safe 0x8f866f78b73431fbff76f77108a65b5699554972 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:hyperevm:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on hyperevm explorer (verified 2026-07-20)",
+            "url": "https://purrsec.com/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "observedBlock": 40924298
       },
       {
         "id": "ton:EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f",
         "destinationChain": "ton",
         "contractAddress": "EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT (TON jetton)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "TON jetton master EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f ('Ethena USDe', tonapi.io whitelisted, queried 2026-07-20) reports mintable=true with admin 0:ab8feb26323e8940202f6fe04fc2531aef520003ba4adca35a15c54e75e602ea (EQCrj-smMj6JQCAvb-BPwlMa71IAA7pK3KNaFcVOdeYC6qS7, active account). DefiLlama attributes TON USDe supply to this jetton as the bridging representation; LayerZero's OFT registry does not enumerate TON, and the admin account's internal signer set is not enumerable via public APIs \u2014 controller identity recorded, composition unverified.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "ton",
+        "controllerAddress": "EQCrj-smMj6JQCAvb-BPwlMa71IAA7pK3KNaFcVOdeYC6qS7",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:ton:EQCrj-smMj6JQCAvb-BPwlMa71IAA7pK3KNaFcVOdeYC6qS7"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "USDe jetton on TONAPI (mintable, admin observed 2026-07-20)",
+            "url": "https://tonviewer.com/EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f"
+          },
+          {
+            "label": "Jetton admin account on TONAPI",
+            "url": "https://tonviewer.com/EQCrj-smMj6JQCAvb-BPwlMa71IAA7pK3KNaFcVOdeYC6qS7"
+          }
+        ]
       },
       {
         "id": "aptos:0xf37a8864fe737eb8ec2c2931047047cbaed1beed3fb0e5b7c5526dafd3b9c2e9",
         "destinationChain": "aptos",
         "contractAddress": "0xf37a8864fe737eb8ec2c2931047047cbaed1beed3fb0e5b7c5526dafd3b9c2e9",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "LayerZero OFT registry (queried 2026-07-20) lists the Aptos USDe OFT adapter object 0x9674429dcc02d2ed0d50fa24cb25262d349a5722b1a02502cff92e3cc85924b3 managing the fungible-asset USDe 0xf37a8864fe737eb8ec2c2931047047cbaed1beed3fb0e5b7c5526dafd3b9c2e9 (innerTokenAddress). Mint/burn is driven by LayerZero-verified messages against the Ethereum OFT adapter.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "aptos",
+        "controllerAddress": "0x9674429dcc02d2ed0d50fa24cb25262d349a5722b1a02502cff92e3cc85924b3",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:aptos:0x9674429dcc02d2ed0d50fa24cb25262d349a5722b1a02502cff92e3cc85924b3"
+        ],
+        "sources": [
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "USDe fungible asset on Aptos explorer",
+            "url": "https://explorer.aptoslabs.com/fungible_asset/0xf37a8864fe737eb8ec2c2931047047cbaed1beed3fb0e5b7c5526dafd3b9c2e9?network=mainnet"
+          }
+        ]
       },
       {
         "id": "solana:DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT",
         "destinationChain": "solana",
         "contractAddress": "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "LayerZero OFT registry (queried 2026-07-20) lists the Solana USDe OFT: mint DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT, OFT program 9S6fwN8gZsr3ikUH38QWPDbLzyJTYcQd5GtrEWzoS2y9, mintAuthority = OFT store PDA 4x3oQtX4MhjTKGBeXDZbtTSLZ9cUWo5waN2UChAuthtS. Mint/burn of the Solana representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "solana",
+        "controllerAddress": "4x3oQtX4MhjTKGBeXDZbtTSLZ9cUWo5waN2UChAuthtS",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:solana:4x3oQtX4MhjTKGBeXDZbtTSLZ9cUWo5waN2UChAuthtS"
+        ],
+        "sources": [
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "USDe mint on Solscan",
+            "url": "https://solscan.io/token/DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT"
+          }
+        ]
       },
       {
         "id": "plasma:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "destinationChain": "plasma",
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on plasma at block 27568891: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, Ethena Safe 0x2c57434603f21f580c91a3bdc0cc5f3f20278632 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "plasma",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:plasma:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on plasma explorer (verified 2026-07-20)",
+            "url": "https://plasma-explorer.com/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "observedBlock": 27568891
       },
       {
         "id": "zircuit:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "destinationChain": "zircuit",
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on zircuit at block 32286513: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, Ethena Safe 0x07762c592e243d4add1648a7ab4916d898780bae (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "zircuit",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:zircuit:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on zircuit explorer (verified 2026-07-20)",
+            "url": "https://explorer.zircuit.com/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "observedBlock": 32286513
       },
       {
         "id": "metis:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "destinationChain": "metis",
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on metis at block 22922381: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0x795db361ed5727f3f27dccde15b7d0d975fc94e0 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "metis",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:metis:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on metis explorer (verified 2026-07-20)",
+            "url": "https://andromeda-explorer.metis.io/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "observedBlock": 22922381
       },
       {
         "id": "morph-l2:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "destinationChain": "morph-l2",
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on morph-l2 at block 24658779: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, Ethena Safe 0x2a07237ebe1abf114f35c876c3673e2f5229e567 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "morph-l2",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:morph-l2:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on morph-l2 explorer (verified 2026-07-20)",
+            "url": "https://explorer.morphl2.io/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "observedBlock": 24658779
       },
       {
         "id": "swellchain:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "destinationChain": "swellchain",
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on swellchain at block 25906271: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0xcb566e3b6934fa77258d68ea18e931fa75e1aaaa, Ethena Safe 0x182ad0c7526e201102e5c486cc20ae50d6528481 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "swellchain",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:swellchain:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on swellchain explorer (verified 2026-07-20)",
+            "url": "https://explorer.swellnetwork.io/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "observedBlock": 25906271
       },
       {
         "id": "xlayer:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "destinationChain": "xlayer",
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on xlayer at block 65740209: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0xce2f77841a8b974ce8e79157bccbecf17599f0e8 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "xlayer",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:xlayer:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on xlayer explorer (verified 2026-07-20)",
+            "url": "https://www.oklink.com/xlayer/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "observedBlock": 65740209
       },
       {
         "id": "fraxtal:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "destinationChain": "fraxtal",
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on fraxtal at block 38849267: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, Ethena Safe 0xc66bbbf821f2cfb3a85683acf0326eac92c160bd (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "fraxtal",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:fraxtal:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on fraxtal explorer (verified 2026-07-20)",
+            "url": "https://fraxscan.com/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "observedBlock": 38849267
       },
       {
         "id": "megaeth:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "destinationChain": "megaeth",
+        "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on megaeth at block 21712234: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, Ethena Safe 0x6e61463ec8ef3c585bb534473528f5fa68c9a709 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "megaeth",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:megaeth:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on megaeth explorer (verified 2026-07-20)",
+            "url": "https://mega.etherscan.io/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "observedBlock": 21712234
+      },
+      {
+        "id": "hyperliquid:0x2e6d84f2d7ca82e6581e03523e4389f7",
+        "destinationChain": "hyperliquid",
+        "contractAddress": "0x2e6d84f2d7ca82e6581e03523e4389f7",
+        "protocol": "LayerZero OFT (HyperEVM-linked HyperCore asset)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Hyperliquid spotMeta API (queried 2026-07-20): HyperCore USDe (tokenId 0x2e6d84f2d7ca82e6581e03523e4389f7, spot index 235) is EVM-linked to the HyperEVM USDe OFT 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34. Verified on HyperEVM at block 40924298: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9, owner() = Ethena Safe 0x8f866f78b73431fbff76f77108a65b5699554972 (5-of-10). DefiLlama attributes Hyperliquid L1 USDe supply to LayerZero bridging from Ethereum; the HyperEVM OFT custody-backs the HyperCore asset via the HyperEVM-HyperCore link.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:hyperevm:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "sources": [
+          {
+            "label": "Hyperliquid spotMeta API (USDe tokenId EVM link)",
+            "url": "https://api.hyperliquid.xyz/info"
+          },
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "USDe OFT on HyperEVM explorer (verified 2026-07-20)",
+            "url": "https://purrsec.com/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ]
+      },
+      {
+        "id": "ink:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "sourceChain": "ethereum",
+        "destinationChain": "ink",
+        "canonicalChain": "ethereum",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on ink at block 51011790: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0xca29f3a6f966cb2fc0de625f8f325c0c46dbe958, owner() = Ethena Safe 0xaca3d1ece65c008a7df54f748d776566d5253e78 (getThreshold/getOwners = 5-of-10). DefiLlama attributes ink USDe supply to LayerZero bridging from Ethereum. Mint/burn is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ink",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:ink:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on ink explorer (verified 2026-07-20)",
+            "url": "https://explorer.inkonchain.com/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "observedBlock": 51011790
+      },
+      {
+        "id": "monad:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "sourceChain": "ethereum",
+        "destinationChain": "monad",
+        "canonicalChain": "ethereum",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on monad at block 88890968: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, owner() = Ethena Safe 0x648209c3e51cf5b43faa5466ac13ab0514710aa0 (getThreshold/getOwners = 5-of-10). DefiLlama attributes monad USDe supply to LayerZero bridging from Ethereum. Mint/burn is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "monad",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:monad:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on monad explorer (verified 2026-07-20)",
+            "url": "https://explorer.monad.xyz/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "observedBlock": 88890968
+      },
+      {
+        "id": "robinhood:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "sourceChain": "ethereum",
+        "destinationChain": "robinhood",
+        "canonicalChain": "ethereum",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on robinhood 2026-07-20: OFT symbol()='USDe', endpoint() = LayerZero endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, owner() = Ethena Safe 0x6a31d637eb0a52019e69b5cb9ec0c9ada5aeffe0 (getThreshold/getOwners = 5-of-10). DefiLlama attributes robinhood USDe supply to LayerZero bridging from Ethereum. Mint/burn is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 escrowing canonical USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "robinhood",
+        "controllerAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+          "contract:robinhood:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "LayerZero OFT metadata API (USDe)",
+            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDe"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "USDe OFT on robinhood explorer (verified 2026-07-20)",
+            "url": "https://robinhoodchain.blockscout.com/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ],
+        "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+      },
+      {
+        "id": "tempo:0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+        "sourceChain": "ethereum",
+        "destinationChain": "tempo",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
         "protocol": "unresolved route",
         "issuanceModel": "unknown",
@@ -913,24 +1828,19 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "2026-07-20: the contract at 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 on Tempo is a minimal EIP-1967 proxy (implementation 0xbd78bd7f1fd926b893f2f502c41deea7ea63ad8a) whose endpoint() returns 0x20bb7c2e2f4e5ca2b4c57060d1ae2615245dcc9c, but all ERC20 metadata and owner() calls revert, so the deployment cannot be honestly identified as the USDe OFT or attributed to a controller. DefiLlama classifies Tempo USDe supply ($22, dust) as natively minted. Left unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
-      },
-      {
-        "id": "hyperliquid:0x2e6d84f2d7ca82e6581e03523e4389f7",
-        "destinationChain": "hyperliquid",
-        "contractAddress": "0x2e6d84f2d7ca82e6581e03523e4389f7",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "Tempo explorer",
+            "url": "https://explorer.tempo.xyz/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          }
+        ]
       }
     ]
   }

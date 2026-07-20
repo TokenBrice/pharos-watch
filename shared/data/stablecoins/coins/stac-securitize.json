@@ -73,9 +73,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "Securitize launched STAC as issuer-administered digital fund shares on Ethereum and later expanded the same regulated fund to Solana. The reviewed deployment evidence describes native issuer issuance on both networks rather than a holder-operated third-party bridge.",
-    "reviewedAt": "2026-07-13",
-    "reviewer": "Pharos P7 bridge review",
+    "summary": "Securitize launched STAC as issuer-administered digital fund shares on Ethereum and later expanded the same regulated fund to Solana. The reviewed deployment evidence describes native issuer issuance on both networks rather than a holder-operated third-party bridge. 2026-07-20 cohort dc-1 pass: Ethereum row confirmed native STAC; Solana row remains unresolved (non-EVM).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
     "confidence": "verified",
     "protocols": [
       {
@@ -102,16 +102,26 @@
         "id": "ethereum:0x51c2d74017390cbbd30550179a16a1c28f7210fc",
         "destinationChain": "ethereum",
         "contractAddress": "0x51c2d74017390cbbd30550179a16a1c28f7210fc",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "STAC (Securitize native issuance on Ethereum)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Securitize Tokenized AAA CLO Fund', symbol STAC, 6 decimals; owner() = 0x59c1eacec450c57dcb9b8725d0f96635c2b676ee — Securitize issuer-native deployment on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Securitize",
+            "url": "https://securitize.io/"
+          },
+          {
+            "label": "STAC on Etherscan",
+            "url": "https://etherscan.io/address/0x51c2d74017390cbbd30550179a16a1c28f7210fc"
+          }
+        ]
       },
       {
         "id": "solana:u49MwZqu4bHRHRsciaBarHK7JZDYGxuaNnwyMBdEKYk",
@@ -124,7 +134,7 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "Unresolved in the 2026-07-20 dc-1 pass: Solana deployment; mint authority not re-verified from public chain reads in this pass.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-13"
       }
@@ -269,20 +279,84 @@
     {
       "name": "AAA CLO fund portfolio",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Securitize AAA CLO Tokenized Fund, Ltd. portfolio of U.S. dollar AAA CLO tranches (BNY Investments sub-advisor)",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
     }
   ],
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "The Bank of New York Mellon (BNY)",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "BNY Investments (sub-advisor)",
+        "role": "other",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Securitize (fund tokenization and transfer agent)",
+        "role": "other",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-1 (lead usde-ethena)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Securitize BNY CLO Fund offering page",
+        "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund"
+      },
+      {
+        "label": "Chronicle STAC proof of asset",
+        "url": "https://chroniclelabs.org/dashboard/proofofasset/securitize-stac"
+      }
+    ],
+    "uncertainty": "The fund documentation names BNY as custodian and BNY Investments as sub-advisor for the BVI private fund holding the CLO portfolio, a structure that holds fund assets apart from Securitize's own balance sheet. Account-level segregation terms, rehypothecation restrictions, and custody of any interim cash balances are not publicly reproduced."
+  },
   "reserveReview": {
     "reviewedAt": "2026-07-14",
     "reviewer": "SONG Safety Score V9 reserve review",
     "confidence": "probable",
-    "sources": [{ "label": "Securitize BNY CLO Fund offering page", "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund" }, { "label": "Chronicle STAC proof of asset", "url": "https://chroniclelabs.org/dashboard/proofofasset/securitize-stac" }],
+    "sources": [
+      {
+        "label": "Securitize BNY CLO Fund offering page",
+        "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund"
+      },
+      {
+        "label": "Chronicle STAC proof of asset",
+        "url": "https://chroniclelabs.org/dashboard/proofofasset/securitize-stac"
+      }
+    ],
     "rationale": "Securitize identifies STAC as a tokenized AAA CLO fund share, and Chronicle publishes the proof-of-asset surface. The static envelope is one AAA-CLO portfolio category; current issuer/tranche weights are not publicly reproduced.",
     "compositionBasis": "Securitize fund mandate and proof-of-asset disclosure",
     "scope": "full-composition",
     "knownUnknownExposure": "The sole disclosed portfolio category is AAA CLO exposure; current tranche and issuer weights are not published.",
     "knownUnknownExposurePct": 0,
-    "nonLinkDispositions": [{ "reserveIndex": 0, "reserveName": "AAA CLO fund portfolio", "pct": 100, "disposition": "untracked-exogenous-asset", "rationale": "The CLO portfolio is an external fund exposure rather than a tracked stablecoin dependency." }]
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "AAA CLO fund portfolio",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The CLO portfolio is an external fund exposure rather than a tracked stablecoin dependency."
+      }
+    ]
   },
   "yieldConfig": {
     "yieldSource": "Securitize Tokenized AAA CLO Fund NAV",

@@ -91,7 +91,16 @@
         "directMintAbility": "direct",
         "chain": "ethereum",
         "canRaiseCap": "unknown",
-        "evidence": "USDU Finance docs/transparency state users cannot mint USDU directly; only whitelisted adapters can mint/burn USDU while executing their strategy, with each adapter holding the on-chain backing assets."
+        "evidence": "2026-07-20 full SetModule/SubmitModule event enumeration from block 0 on the USDU token 0xdde3ec717f220fc6a29d6a4be73f91da5b718e55: 9 module addresses were ever submitted, 4 have since expired. checkValidModule() = true today for exactly these five adapters: 0xfb46481a9819e068af0eb64a2c2824fcecaaaa45, 0x8f36bbee57acb4857cb97898020b529969fdf221, 0x77cbb2f180f55dd2916bfc78f879a2c2de37f638, 0x5febefd5aecfefb3352c5edd49d634b1456c4bd7, 0x397fb4a34757ac180c0841b26131f25040e2e50b. 0xfb46481a\u2026 has a never-expiring module grant (expiredAt = 2^256-1); the other four expire 2027-10 (modules() reads). All approvals were submitted by the curator DAO proxy 0x9fe66037c44236c87d9ac8345f489b4413fdff06.",
+        "address": "0xfb46481a9819e068af0eb64a2c2824fcecaaaa45",
+        "observedAt": "2026-07-20",
+        "failureDomainKeys": [
+          "ethereum:0xfb46481a9819e068af0eb64a2c2824fcecaaaa45",
+          "ethereum:0x8f36bbee57acb4857cb97898020b529969fdf221",
+          "ethereum:0x77cbb2f180f55dd2916bfc78f879a2c2de37f638",
+          "ethereum:0x5febefd5aecfefb3352c5edd49d634b1456c4bd7",
+          "ethereum:0x397fb4a34757ac180c0841b26131f25040e2e50b"
+        ]
       },
       {
         "label": "USDU DAO / curator (adapter whitelist authority)",
@@ -100,13 +109,15 @@
         "directMintAbility": "can-authorize",
         "chain": "ethereum",
         "canRaiseCap": "unknown",
-        "evidence": "The DAO/curator governs adapter approval and risk parameters, controlling which contracts hold mint/burn rights; published as core token/DAO/adapter contracts on Ethereum."
+        "evidence": "curator() on the USDU token returns this ERC1967Proxy (the curator DAO, implementation behind the proxy), read 2026-07-20. It is the sole submitter of all historical SetModule events and governs adapter approval and risk parameters.",
+        "address": "0x9fe66037c44236c87d9ac8345f489b4413fdff06",
+        "observedAt": "2026-07-20"
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25295203: USDU token verified as 'Stablecoin' contract on Blockscout with curator/guardian/module model. curator() returned 0x9fe66037… (ERC1967Proxy → DAO implementation contract). guardian() returned zero address (no guardian set). Token owner() reverted (no Ownable). ABI shows mintModule(address,uint256) / burnModule(address,uint256) — only whitelisted modules can mint/burn. The specific set of approved modules was not enumerable from ABI; module(address) takes an address argument and no enumeration function was found. Curator is a DAO contract (upgradeable proxy); its internal governance (token holders, timelock) was not fully resolved.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25295203 the USDU token's curator/guardian/module model was established (curator = 0x9fe66037c44236c87d9ac8345f489b4413fdff06, no guardian set, mintModule/burnModule gated to whitelisted modules). 2026-07-20 follow-up: full SetModule/SubmitModule event enumeration from block 0 found 9 historical module approvals, of which exactly five are currently valid (checkValidModule = true): 0xfb46481a9819e068af0eb64a2c2824fcecaaaa45, 0x8f36bbee57acb4857cb97898020b529969fdf221, 0x77cbb2f180f55dd2916bfc78f879a2c2de37f638, 0x5febefd5aecfefb3352c5edd49d634b1456c4bd7, 0x397fb4a34757ac180c0841b26131f25040e2e50b. The curator DAO proxy resolves to a standard Aragon OSx DAO implementation (0x58c1f7bc62bb63fb137bc8f6d8ea6321a0501d29): module approvals execute through the Aragon permission framework rather than a single EOA.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "USDU token (Blockscout)",
@@ -121,10 +132,7 @@
           "url": "https://usdu.finance/transparency/"
         }
       ],
-      "unresolvedQuestions": [
-        "Enumerate the current approved modules (adapter contracts) that hold mintModule rights — no on-chain enumeration function found; requires event log scan or docs cross-check.",
-        "Resolve internal governance of the DAO curator (0x9fe66037): token-based voting, multisig, or EOA admin."
-      ]
+      "disposition": "scoreable"
     }
   },
   "launchDate": "2025-07-04",

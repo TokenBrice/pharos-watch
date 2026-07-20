@@ -70,22 +70,33 @@
     {
       "name": "XT.com issuer-managed reserve assets",
       "pct": 100,
-      "risk": "very-high"
+      "risk": "very-high",
+      "assetClass": "other",
+      "issuerOrObligor": "XTDao vault collateral (initially the XT token) administered under XT.com/XSC",
+      "riskFactors": [
+        "market",
+        "credit",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-1 reserve evidence review",
-    "confidence": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "confidence": "manual-review",
     "sources": [
       {
         "label": "XT.COM XTUSD announcement",
         "url": "https://xtsupport.zendesk.com/hc/en-us/articles/8232048512921-XT-COM-Announcement-on-Supporting-TAI-Contract-Upgrade-and-Renaming-as-XTUSD"
       }
     ],
-    "rationale": "The first-party announcement describes XT as the initial XTDao collateral asset and says additional collateral may be supported later, but it is a 2022 launch announcement rather than a current reserve inventory. No current collateral weights, custody evidence, or XSC-readable reserve state were available for review.",
+    "rationale": "The first-party announcement describes XT as the initial XTDao collateral asset and says additional collateral may be supported later, but it is a 2022 launch announcement rather than a current reserve inventory. A 2026-07-20 re-review found no current collateral weights, custody evidence, or XSC-readable reserve state. The single issuer-managed envelope is retained with explicit v9 classification rather than invented constituent weights.",
     "compositionBasis": "Current Pharos reserve row retained as an issuer-managed placeholder; the reviewed source establishes the historical XTDao design but not a current composition snapshot.",
-    "compositionAsOf": "2026-07-14",
+    "compositionAsOf": "2026-07-20",
     "scope": "full-composition",
     "knownUnknownExposure": "The sole issuer-managed reserve row has no current, independently verifiable collateral identity or weight.",
     "knownUnknownExposurePct": 100,
@@ -98,6 +109,28 @@
         "rationale": "The official source describes XTDao collateral mechanics but does not provide a current reserve composition or verifiable XSC state."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "XTDao vault contracts on XSC and XT.com issuer operations",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "XT.COM XTUSD announcement",
+        "url": "https://xtsupport.zendesk.com/hc/en-us/articles/8232048512921-XT-COM-Announcement-on-Supporting-TAI-Contract-Upgrade-and-Renaming-as-XTUSD"
+      }
+    ],
+    "uncertainty": "XTUSD is described as an XTDao vault stablecoin on XSC under XT.com issuer operations, but no reviewed source names a custodian, account segregation, insolvency treatment, rehypothecation terms, or current vault-level collateral.",
+    "knownUnknownExposurePct": 100
   },
   "notices": [
     {
@@ -138,19 +171,23 @@
       }
     ],
     "review": {
-      "evidence": "XT.com's first-party TAI-to-XTUSD announcement describes XTUSD as built on an XTDao smart-contract project based on MakerDAO, with users minting against collateral in XTDao vaults. XSC (XT Smart Chain) does not expose a public keyless RPC or explorer API accessible in this environment, so the current vault contract, owner/admin, pause, upgrade, and cap authorities cannot be verified.",
-      "reviewer": "SONG-1 mint-control evidence review",
-      "reviewedAt": "2026-07-14",
+      "evidence": "2026-07-20 re-review: XSC (XT Smart Chain, chainId 520) DOES expose working public keyless RPC endpoints (https://datarpc1.xsc.pub and siblings, eth_chainId=0x208, latest block ~47.4M), superseding the earlier note that no public RPC exists. The XTUSD token contract 0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0 (CoinGecko-listed, XSC) is readable: 3,991-byte non-proxy bytecode (EIP-1967 impl slot zero), name() 'XT Stablecoin', symbol() 'XTUSD', decimals() 18, totalSupply() ~2,291,132.6. However the token exposes no enumerable administrative surface: owner(), masterMinter(), hasRole/getRoleMemberCount (AccessControl), and LayerZero endpoint() all revert, and a full-history eth_getLogs scan times out on the public nodes. The XTDao vault/mint contracts, cap authority, pause authority, and governance executor therefore remain unidentified: no contract addresses for the XTDao system are published in the reviewed issuer materials, and there is no public XSC block-explorer API to enumerate them. The mint-authority controls cannot be honestly resolved from verifiable evidence.",
+      "reviewer": "SONG-1 mint-control evidence review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+      "reviewedAt": "2026-07-20",
       "disposition": "unresolved",
       "sources": [
         {
           "label": "XT.COM TAI to XTUSD announcement",
           "url": "https://xtsupport.zendesk.com/hc/en-us/articles/8232048512921-XT-COM-Announcement-on-Supporting-TAI-Contract-Upgrade-and-Renaming-as-XTUSD"
+        },
+        {
+          "label": "XSC public RPC (datarpc1.xsc.pub)",
+          "url": "https://datarpc1.xsc.pub"
         }
       ],
       "unresolvedQuestions": [
-        "XSC chain has no publicly accessible keyless RPC or block explorer API; on-chain verification of XTDao vault owner/admin requires either direct XSC node access or a public XSC explorer with contract read support.",
-        "The reviewed first-party announcement identifies the historical XTDao design but does not identify the currently active mint contract, cap authority, pause authority, or upgrade authority."
+        "The XTDao vault/mint and governance contract addresses on XSC are not published in reviewed issuer materials and cannot be enumerated on-chain: the XTUSD token 0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0 exposes no owner/role/admin surface (owner(), hasRole(), masterMinter() all revert), full-history log scans time out on the public XSC RPCs, and no public XSC explorer API exists to trace deployer or internal transactions.",
+        "The reviewed first-party announcement identifies the historical XTDao design but does not identify the currently active mint contract, cap authority, pause authority, or upgrade authority; issuer disclosure of the XTDao system contracts or a functioning XSC explorer is required before the controls can be scored."
       ]
     }
   }

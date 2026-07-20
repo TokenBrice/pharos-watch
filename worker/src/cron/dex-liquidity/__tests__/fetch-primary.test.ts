@@ -31,6 +31,8 @@ import { fetchJsonWithRetry } from "../../../lib/fetch-retry";
 import { buildDlStablecoinPoolsCache } from "../../yield-sync/cache";
 import type { LlamaPool } from "../types";
 import { buildCurveLookups, fetchDataSources } from "../fetch-primary";
+import { buildPoolFingerprint } from "../pool-helpers";
+import { CURVE_CHAINS } from "../constants";
 
 function createMockDb(): D1Database {
   return {
@@ -541,5 +543,65 @@ describe("buildCurveLookups", () => {
     expect(curvePoolMap.has("ethereum:0x1111111111111111111111111111111111111111")).toBe(true);
     expect(curvePoolMap.has("ethereum:0x3333333333333333333333333333333333333333")).toBe(true);
     expect(curvePoolMap.has("ethereum:0x4444444444444444444444444444444444444444")).toBe(true);
+  });
+
+  it("keeps the appended Curve API chains at the tail of the fetch order", () => {
+    // Payloads are index-aligned to CURVE_CHAINS in both fetchDataSources and
+    // buildCurveLookups; appended chains must stay appended.
+    expect(CURVE_CHAINS.slice(0, 8)).toEqual([
+      "ethereum",
+      "base",
+      "arbitrum",
+      "polygon",
+      "fraxtal",
+      "sonic",
+      "taiko",
+      "zksync",
+    ]);
+    expect(CURVE_CHAINS.slice(8)).toEqual(["optimism", "avalanche", "fantom", "kava"]);
+  });
+
+  it("indexes appended-chain payloads (optimism) for address, fingerprint, and symbol joins", async () => {
+    // Shape mirrors the live Curve getPools/all/optimism 3pool response.
+    const DAI = "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1";
+    const USDC = "0x0b2c639c533813f4aa9d7837caf62653d097ff85";
+    const USDT = "0x94b008aa00579c1307b0ef2c499aad98a8ce58e58";
+    const optimismPayload = {
+      data: {
+        poolData: [
+          {
+            address: "0x1337BedC9D22ecbe766dF105c9623922A27963EC",
+            name: "Curve.fi DAI/USDC/USDT",
+            amplificationCoefficient: "2000",
+            coins: [
+              { symbol: "DAI", address: DAI, poolBalance: "31868512011738815990995", usdPrice: 1, decimals: "18" },
+              { symbol: "USDC", address: USDC, poolBalance: "30000000000", usdPrice: 1, decimals: "6" },
+              { symbol: "USDT", address: USDT, poolBalance: "30000000000", usdPrice: 1, decimals: "6" },
+            ],
+            usdTotal: 92_000,
+            isMetaPool: false,
+            assetTypeName: "usd",
+            totalSupply: 0,
+            registryId: "factory-stable-ng",
+            isBroken: false,
+            virtualPrice: "1",
+            usdTotalExcludingBasePool: 0,
+            creationTs: 123,
+            basePoolAddress: null,
+            gaugeCrvApy: null,
+          },
+        ],
+      },
+    };
+    const curvePayloads = [...Array(8).fill(null), optimismPayload];
+
+    const { curvePoolMap } = await buildCurveLookups(curvePayloads, new Map(), new Map(), new Map());
+
+    const byAddress = curvePoolMap.get("optimism:0x1337bedc9d22ecbe766df105c9623922a27963ec");
+    expect(byAddress).toBeDefined();
+    const fingerprintKey = buildPoolFingerprint("optimism", "curve", [DAI, USDC, USDT]);
+    expect(fingerprintKey).not.toBeNull();
+    expect(curvePoolMap.get(fingerprintKey!)).toBe(byAddress);
+    expect(curvePoolMap.get("optimism:DAI-USDC-USDT")).toBe(byAddress);
   });
 });

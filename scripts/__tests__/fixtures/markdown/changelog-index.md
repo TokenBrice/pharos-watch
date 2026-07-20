@@ -6,15 +6,18 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
-## 2026-07-13 to 2026-07-15
+## 2026-07-13 to 2026-07-19
 
-USD3 joins coverage, exact liquidity evidence expands, and yield filters show every qualifying result.
+USD3 arrives, USX is frozen after its collapse, Safety Score reaches v8.17, and pricing degrades gracefully.
 
-- **USD3 coverage**: USD3 joins active tracking as a NAV-bearing senior-credit asset, with sourced issuer, reserve, mint, yield, redemption, and Ethereum flow coverage.
-- **Exact pool models**: Exact StableSwap simulations now cover Curve and hook-free Balancer pools, turning eligible pool evidence into more precise exit-liquidity capacity estimates.
-- **Resolved exit routes**: Reviewed redemption rails now identify their concrete output assets, allowing eligible routes to resolve, value their exit capacity, and contribute evidence without guessing.
-- **Corrected depeg history**: A reviewed cNGN recovery event now links to its canonical incident, keeping the public depeg timeline aligned with the underlying market record.
-- **Yield result completeness**: Yield rankings now retain every opportunity that passes selected filters, making the displayed opportunity set match the user's chosen criteria.
+- **Catalog lifecycle**: USD3 joins active tracking, USX is frozen after an irrecoverable depeg, VGBP is quarantined, Royal RUSD and REUR delist, and a formal lifecycle policy now governs how assets enter and leave the aggregate.
+- **Safety Score v8.14-v8.17**: Four public releases harden dependency integrity, make dependency scoring deterministic, qualify DEX exit evidence, and tighten provenance, with downstream consumers failing closed on identity drift.
+- **V9 evidence campaign**: A private research campaign resolves mint and upgrade authority graphs, reserve envelopes, oracle branches, and mechanism measurements across hundreds of assets, feeding the unreleased V9 scoring shadow.
+- **Pricing resilience**: Pricing v6.202-v6.203 add composite parent-trust monotonicity and a cached-rate degradation lane, and a remediation sweep restores long-tail coverage with exact pool routes and coverage-aware fallbacks.
+- **Exact exit liquidity**: Exact StableSwap capacity models now cover Curve and Balancer stable pools, a concentrated-liquidity shadow producer measures real execution, and reviewed redemption rails resolve concrete output assets.
+- **Broader evidence coverage**: The reserve-composition queue drains for 105 assets, redemption v4.18 declares output assets for dozens of reviewed rails, and Pharos Network mainnet joins the chain registry.
+- **Smarter daily digest**: The daily digest gains novelty-gated lead selection, a depeg lifecycle review queue, live-deviation severity scoring, consistency lints, and an upgraded editorial model; blocked digests never publish.
+- **Pipeline reliability**: Worker crons regain memory headroom, liquidity scoring bounds peak memory, Telegram delivery checkpoints per wave, deploys survive shared-egress WAF blocks, and release validation is streamlined.
 
 ## 2026-07-06 to 2026-07-12
 

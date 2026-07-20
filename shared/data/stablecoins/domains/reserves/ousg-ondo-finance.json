@@ -2,11 +2,11 @@
   "id": "ousg-ondo-finance",
   "reserves": [
     {
-      "name": "State Street Galaxy Onchain Liquidity Sweep Fund (SWEEP)",
-      "pct": 36.798028,
+      "name": "OUSG tokenized Treasury fund portfolio",
+      "pct": 100,
       "risk": "low",
       "assetClass": "fund-share",
-      "issuerOrObligor": "State Street Global Advisors and Galaxy Asset Management",
+      "issuerOrObligor": "Ondo I LP OUSG portfolio: State Street Galaxy SWEEP, BlackRock BUIDL, Franklin Templeton BENJI, Fidelity FYOXX, Silicon Valley Bank deposits, and USDC (per issuer portfolio table dated 2026-07-13)",
       "riskFactors": [
         "credit",
         "duration",
@@ -16,107 +16,12 @@
         "legal",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "BlackRock USD Institutional Digital Liquidity Fund (BUIDL)",
-      "pct": 24.759805,
-      "risk": "low",
-      "coinId": "buidl-blackrock",
-      "assetClass": "fund-share",
-      "issuerOrObligor": "BlackRock Financial Management",
-      "riskFactors": [
-        "credit",
-        "duration",
-        "liquidity",
-        "custody",
-        "counterparty",
-        "legal",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Franklin OnChain U.S. Government Money Fund (BENJI)",
-      "pct": 18.893336,
-      "risk": "low",
-      "coinId": "benji-franklin-templeton",
-      "assetClass": "fund-share",
-      "issuerOrObligor": "Franklin Templeton",
-      "riskFactors": [
-        "credit",
-        "duration",
-        "liquidity",
-        "custody",
-        "counterparty",
-        "legal",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Fidelity Treasury Digital Fund (FYOXX)",
-      "pct": 18.283568,
-      "risk": "low",
-      "assetClass": "fund-share",
-      "issuerOrObligor": "Fidelity Investments",
-      "riskFactors": [
-        "credit",
-        "duration",
-        "liquidity",
-        "custody",
-        "counterparty",
-        "legal",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Silicon Valley Bank deposits",
-      "pct": 1.004605,
-      "risk": "low",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "Silicon Valley Bank",
-      "riskFactors": [
-        "credit",
-        "liquidity",
-        "custody",
-        "counterparty",
-        "legal"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "USDC cash equivalents held at Coinbase",
-      "pct": 0.227874,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle Internet Financial; held through Coinbase",
-      "riskFactors": [
-        "counterparty",
-        "custody",
-        "liquidity"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Other assets (funds in transit and net receivables)",
-      "pct": 0.032784,
-      "risk": "medium",
-      "assetClass": "other",
-      "issuerOrObligor": "Ondo I LP counterparties",
-      "riskFactors": [
-        "counterparty",
-        "liquidity",
-        "legal"
-      ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SOL-5 dependency review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
     "confidence": "verified",
     "sources": [
       {
@@ -128,40 +33,24 @@
         "url": "https://docs.ondo.finance/qualified-access-products/ousg/overview"
       }
     ],
-    "rationale": "Ondo's portfolio table dated July 13, 2026 reports seven positions totaling $408,120,484. The authored percentages normalize each published dollar value to that total; BUIDL, BENJI, and USDC map to exact tracked dependencies while every other disclosed position is explicitly dispositioned.",
-    "compositionBasis": "Issuer-published OUSG position values normalized to the published total underlying assets",
+    "rationale": "The live Chainlink NAV adapter captures OUSG as a single portfolio-NAV row, so the prior seven-position static envelope could never classify the runtime exposure and its BUIDL-only label was stale. The issuer's portfolio table dated July 13, 2026 reports seven positions totaling $408,120,484: State Street Galaxy SWEEP 36.80%, BlackRock BUIDL 24.76%, Franklin BENJI 18.89%, Fidelity FYOXX 18.28%, Silicon Valley Bank deposits 1.00%, USDC at Coinbase 0.23%, and funds-in-transit/net receivables 0.03%. The static envelope is restated on the live row identity with that position-level detail preserved here, and the adapter assetLabel and assetRisk were corrected to describe the diversified fund portfolio rather than BUIDL alone.",
+    "compositionBasis": "Live chainlink-nav adapter row identity; issuer-published OUSG position table dated 2026-07-13 for constituent detail",
     "compositionAsOf": "2026-07-13",
     "scope": "full-composition",
-    "knownUnknownExposure": "Every position in the issuer's current portfolio table is identified and either linked to an exact tracked asset or explicitly dispositioned.",
-    "knownUnknownExposurePct": 0,
+    "knownUnknownExposure": "The issuer publishes the full position-level portfolio, but the runtime reserve row is a single NAV identity that aggregates all positions; BUIDL and BENJI are tracked assets that the runtime row cannot split out.",
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "State Street Galaxy Onchain Liquidity Sweep Fund (SWEEP)",
-        "pct": 36.798028,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "SWEEP is an identified fund share without a tracked Pharos stablecoin record."
-      },
-      {
-        "reserveIndex": 3,
-        "reserveName": "Fidelity Treasury Digital Fund (FYOXX)",
-        "pct": 18.283568,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "FYOXX is an identified fund share without a tracked Pharos stablecoin record."
-      },
-      {
-        "reserveIndex": 4,
-        "reserveName": "Silicon Valley Bank deposits",
-        "pct": 1.004605,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "The disclosed bank deposit is not a stablecoin dependency."
-      },
-      {
-        "reserveIndex": 6,
-        "reserveName": "Other assets (funds in transit and net receivables)",
-        "pct": 0.032784,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "Ondo identifies this accounting line as funds in transit and outstanding receivables less payables, not a stablecoin dependency."
+        "reserveName": "OUSG tokenized Treasury fund portfolio",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The live Chainlink NAV adapter collapses the diversified OUSG portfolio into one NAV row; the issuer's 2026-07-13 position table documents the constituents (SWEEP 36.8%, BUIDL 24.8%, BENJI 18.9%, FYOXX 18.3%, SVB deposits 1.0%, USDC 0.2%) but the runtime row cannot carry per-position links.",
+        "candidateCoinIds": [
+          "buidl-blackrock",
+          "benji-franklin-templeton",
+          "usdc-circle"
+        ]
       }
     ]
   },

@@ -20,7 +20,7 @@ import type {
   StatusSectionErrors,
   YieldHealthSummary,
 } from "@shared/types/status";
-import { cgHeaders, cgUrl } from "../lib/coingecko";
+import { cgHeaders, cgSimplePricePath, cgUrl } from "../lib/coingecko";
 import { USER_AGENT } from "../lib/constants";
 import { summarizeCollateralDriftFromLiveReserveMap } from "../lib/collateral-drift";
 import { cancelResponseBodyQuietly } from "../lib/response-body";
@@ -141,7 +141,7 @@ async function fetchCoinGeckoUsdPrices(
       vs_currencies: "usd",
       include_last_updated_at: "true",
     });
-    const response = await fetch(cgUrl(`/simple/price?${params.toString()}`, coingeckoApiKey), {
+    const response = await fetch(cgUrl(cgSimplePricePath(params), coingeckoApiKey), {
       headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey),
       signal: AbortSignal.timeout(5_000),
     });

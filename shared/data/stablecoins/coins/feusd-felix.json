@@ -336,9 +336,9 @@
   ],
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
-    "summary": "FEUSD has HyperEVM/Hyperliquid deployments and candidate evidence points to Hyperliquid canonical routing. With no separate issuer bridge protocol resolved, the route is reviewed as canonical ecosystem bridge exposure.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "FEUSD has HyperEVM/Hyperliquid deployments and candidate evidence points to Hyperliquid canonical routing. With no separate issuer bridge protocol resolved, the route is reviewed as canonical ecosystem bridge exposure. 2026-07-20 cohort dc-1 pass: HyperEVM row confirmed native feUSD; HyperCore row remains unresolved (non-EVM).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
     "confidence": "probable",
     "protocols": [
       {
@@ -366,16 +366,22 @@
         "id": "hyperevm:0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70",
         "destinationChain": "hyperevm",
         "contractAddress": "0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Felix feUSD (native issuance on HyperEVM)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'feUSD', symbol feUSD, 18 decimals on HyperEVM; EIP-1967 admin 0x44a600c031dbdf652500f4a6d84b168056f13692 — Felix issuer-native deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Felix",
+            "url": "https://www.felixprotocol.com/"
+          }
+        ]
       },
       {
         "id": "hyperliquid:0x88102bea0bbad5f301f6e9e4dacdf979",
@@ -388,7 +394,7 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "Unresolved in the 2026-07-20 dc-1 pass: HyperCore spot representation (non-EVM); mint/bridge authority not re-verified from public chain reads in this pass.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-06-13"
       }

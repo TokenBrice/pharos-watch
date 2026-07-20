@@ -96,7 +96,7 @@
       "sourcesChecked": [
         "OCC GENIUS Act rulemaking bulletin and public releases",
         "FinChain FUSD site (fusd.finchain.global)",
-        "FinChain Gitbook docs — introduction, structuring, reserves pages",
+        "FinChain Gitbook docs \u2014 introduction, structuring, reserves pages",
         "Federal Register search for FinChain / FUSD",
         "BMA regulated entities search",
         "Web search: FinChain FUSD GENIUS Act US regulatory 2026",
@@ -141,8 +141,8 @@
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "FinChain's existing on-chain review identifies CCIP bridge pools among the FUSD minter set, and the issuer documents multichain FUSD deployments. Because cross-chain supply movement depends on Chainlink CCIP messaging/pools, FUSD is scored as external-validated-network.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
     "confidence": "verified",
     "protocols": [
       {
@@ -165,62 +165,113 @@
       {
         "id": "ethereum:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "FinChain native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native FUSD on Ethereum: 2,739-byte EIP-1967 proxy (impl 0x27d2f80fdb8102044897d006c921645c8da92de0, admin = ProxyAdmin 0x29A48097055d6779e6832355680B7C7bF0D43C53). Mint authority is FinChain's mint proxy 0x561bc4f174e04d057c9ce7ae763bc18be7fa3107 plus bridge senders (mint-authority review, read 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Etherscan FUSD token",
+            "url": "https://etherscan.io/token/0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+          }
+        ]
       },
       {
         "id": "avalanche:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+        "sourceChain": "ethereum",
         "destinationChain": "avalanche",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP BurnMint pool",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "FUSD on avalanche is minted by Chainlink CCIP BurnMint token pools: getRoleMember enumeration (MINTER_ROLE, read 2026-07-20) lists 0xa2b31f91fd83efa022bb79934c6c3d24d044b0f1, 0xc73a36ec9950530256c051b3740412a067f64589 (15,818-byte CCIP pool contracts), alongside the shared FinChain mint proxy 0x561bc4f174e04d057c9ce7ae763bc18be7fa3107 and TokenBridgeSender 0x2f36c915af812ff06742468f206030fcad4c4242. The same CCIP pool owner families (0x914d7fec\u2026, 0xc61f22aa\u2026) operate the pools on every chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xa2b31f91fd83efa022bb79934c6c3d24d044b0f1",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:avalanche:0xa2b31f91fd83efa022bb79934c6c3d24d044b0f1",
+          "contract:avalanche:0xc73a36ec9950530256c051b3740412a067f64589"
+        ],
+        "sources": [
+          {
+            "label": "FinChain",
+            "url": "https://finchain.com/"
+          }
+        ]
       },
       {
         "id": "sonic:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+        "sourceChain": "ethereum",
         "destinationChain": "sonic",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP BurnMint pool",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "FUSD on sonic is minted by Chainlink CCIP BurnMint token pools: getRoleMember enumeration (MINTER_ROLE, read 2026-07-20) lists 0xb074559749d57991708f403673c577d6967d2c2f, 0xff5d2c5b907ed4c88cee5b0cf1d280e4df3176fd (15,818-byte CCIP pool contracts), alongside the shared FinChain mint proxy 0x561bc4f174e04d057c9ce7ae763bc18be7fa3107 and TokenBridgeSender 0x2f36c915af812ff06742468f206030fcad4c4242. The same CCIP pool owner families (0x914d7fec\u2026, 0xc61f22aa\u2026) operate the pools on every chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "sonic",
+        "controllerAddress": "0xb074559749d57991708f403673c577d6967d2c2f",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:sonic:0xb074559749d57991708f403673c577d6967d2c2f",
+          "contract:sonic:0xff5d2c5b907ed4c88cee5b0cf1d280e4df3176fd"
+        ],
+        "sources": [
+          {
+            "label": "FinChain",
+            "url": "https://finchain.com/"
+          }
+        ]
       },
       {
         "id": "monad:0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+        "sourceChain": "ethereum",
         "destinationChain": "monad",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP BurnMint pool",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "FUSD on monad is minted by Chainlink CCIP BurnMint token pools: getRoleMember enumeration (MINTER_ROLE, read 2026-07-20) lists 0xb496894fd559d7c923477246e384e7463c69060e (15,818-byte CCIP pool contracts), alongside the shared FinChain mint proxy 0x561bc4f174e04d057c9ce7ae763bc18be7fa3107 and TokenBridgeSender 0x2f36c915af812ff06742468f206030fcad4c4242. The same CCIP pool owner families (0x914d7fec\u2026, 0xc61f22aa\u2026) operate the pools on every chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "monad",
+        "controllerAddress": "0xb496894fd559d7c923477246e384e7463c69060e",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:monad:0xb496894fd559d7c923477246e384e7463c69060e"
+        ],
+        "sources": [
+          {
+            "label": "FinChain",
+            "url": "https://finchain.com/"
+          }
+        ]
       }
     ]
   },

@@ -94,7 +94,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "DJED is minted and burned permissionlessly against a shared ADA reserve pool by a formally verified autonomous smart-contract bank, with SHEN reserve-coin holders absorbing volatility; minting is gated by the 400%-800% reserve-ratio band rather than a per-user CDP, and COTI/IOG operate the oracle. The minting policy (Plutus V1) is immutable on Cardano — the reserve-ratio enforcement cannot be bypassed; COTI only controls the oracle price feed.",
+    "summary": "DJED is minted and burned permissionlessly against a shared ADA reserve pool by a formally verified autonomous smart-contract bank, with SHEN reserve-coin holders absorbing volatility; minting is gated by the 400%-800% reserve-ratio band rather than a per-user CDP, and COTI/IOG operate the oracle. The minting policy (Plutus V1) is immutable on Cardano \u2014 the reserve-ratio enforcement cannot be bypassed; COTI only controls the oracle price feed.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
@@ -105,7 +105,7 @@
           "url": "https://cotinetwork.medium.com/djed-is-now-available-on-mainnet-9a2ac66daea4"
         },
         {
-          "label": "Koios script_info — Djed minting policy plutusV1",
+          "label": "Koios script_info \u2014 Djed minting policy plutusV1",
           "url": "https://api.koios.rest/api/v1/script_info"
         }
       ]
@@ -119,7 +119,13 @@
         "chain": "cardano",
         "capDescription": "DJED mint allowed only while the ADA reserve ratio stays at or above 400% (and within the 400%-800% band); mint price set by oracle ADA/USD.",
         "canRaiseCap": false,
-        "evidence": "Koios script_info confirms the DJED minting policy (hash 8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61) is type plutusV1, created in tx 46c1db4ab4cae757880056fc4f48abb313bccec71b3f8fff9f10c6749b819ead. Plutus V1 scripts are immutable on Cardano — the reserve-ratio logic (400%-800% band) is hardcoded and cannot be changed. No upgrade mechanism exists for Plutus V1 minting policies."
+        "evidence": "Koios script_info re-verified 2026-07-20: the DJED minting policy (hash 8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61) is type plutusV1, created in tx 46c1db4ab4cae757880056fc4f48abb313bccec71b3f8fff9f10c6749b819ead. Plutus V1 minting policies are immutable on Cardano \u2014 the reserve-ratio enforcement (mint allowed only within the 400%-800% reserve band) is hardcoded in the script and cannot be changed, upgraded, or bypassed. The policy hash is the on-chain identity of the autonomous bank's mint authority.",
+        "address": "8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61",
+        "failureDomainKeys": [
+          "protocol:djed",
+          "contract:cardano:8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61"
+        ],
+        "observedAt": "2026-07-20"
       },
       {
         "label": "COTI / IOG operator (oracle price feed only)",
@@ -127,13 +133,13 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "parameter-only",
         "canRaiseCap": false,
-        "evidence": "COTI controls the ADA/USD oracle price NFT used by the Djed Plutus script. The oracle can only update the price feed — it cannot bypass the immutable reserve-ratio enforcement in the Plutus V1 script. The upgrade path is absent (Plutus V1 scripts cannot be upgraded on Cardano)."
+        "evidence": "COTI controls the ADA/USD oracle price NFT used by the Djed Plutus script. The oracle can only update the price feed \u2014 it cannot bypass the immutable reserve-ratio enforcement in the Plutus V1 script. The upgrade path is absent (Plutus V1 scripts cannot be upgraded on Cardano)."
       }
     ],
     "review": {
-      "evidence": "Koios API confirmed the DJED minting policy (8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61) is a Plutus V1 smart contract — immutable, created at genesis tx. The reserve-ratio enforcement (400%-800% band) is encoded in the script and cannot be overridden or upgraded. COTI's administrative surface is limited to the off-chain oracle price feed; it cannot bypass or change the Plutus V1 mint rules. No upgrade path exists for Cardano Plutus V1 minting policies.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "Koios API re-verified 2026-07-20: the DJED minting policy (8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61) remains a plutusV1 script created at tx 46c1db4ab4cae757880056fc4f48abb313bccec71b3f8fff9f10c6749b819ead \u2014 immutable, with the 400%-800% reserve-ratio band encoded in the script itself. Minting is therefore economically bounded by actual ADA reserves entering the bank contract (economicCapSemantics: bounded); no issuer or governance path can mint beyond the band. COTI's administrative surface stays limited to the off-chain oracle price feed, which cannot bypass the Plutus V1 mint rules. No upgrade path exists for Cardano Plutus V1 minting policies.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+      "reviewedAt": "2026-07-20",
       "disposition": "scoreable",
       "sources": [
         {
@@ -141,11 +147,12 @@
           "url": "https://cotinetwork.medium.com/djed-is-now-available-on-mainnet-9a2ac66daea4"
         },
         {
-          "label": "Koios script_info — Djed minting policy plutusV1",
+          "label": "Koios script_info \u2014 Djed minting policy plutusV1",
           "url": "https://api.koios.rest/api/v1/script_info"
         }
       ]
-    }
+    },
+    "economicCapSemantics": "bounded"
   },
   "chainTier": "mature-alt-l1",
   "deploymentModel": "single-chain",
@@ -190,6 +197,37 @@
     "compositionAsOf": "2026-07-14",
     "scope": "full-composition",
     "knownUnknownExposure": "The reserve asset class and protocol reserve contract are identified, but current ADA balance, reserve account state, and operational custody details are not disclosed in the reviewed public sources.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Djed reserve pool script address on Cardano",
+        "role": "other",
+        "jurisdiction": "Cardano"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Djed live transparency dashboard",
+        "url": "https://djed.xyz"
+      },
+      {
+        "label": "Djed reserve pool script address (Cardanoscan)",
+        "url": "https://cardanoscan.io/address/addr1z8mcpc26j64fmhhd6sv5qj5mk9xqnfxgm6k8zmk7h2rlu4qm5kjdmrpmng059yellupyvwgay2v0lz6663swmds7hp0qhxg9gt"
+      },
+      {
+        "label": "Open Djed community registry (contract addresses)",
+        "url": "https://github.com/artifi-labs/open-djed"
+      }
+    ],
+    "uncertainty": "Reserves are ADA locked at a dedicated Cardano script address with no custodian; the pool balance (about 28.99M ADA on 2026-07-19) is independently verifiable on-chain. COTI has not officially published the contract addresses \u2014 the inventory comes from the community-maintained open-djed registry \u2014 and the pre-launch audit COTI announced was never published with an auditor name or report. Legal bankruptcy-remoteness and rehypothecation terms do not apply to script custody; the reserve is delegated (staked) but not lent out.",
     "knownUnknownExposurePct": 0
   },
   "launchDate": "2023-01-31"

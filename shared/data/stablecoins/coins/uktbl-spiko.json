@@ -144,7 +144,7 @@
             "url": "https://eth.blockscout.com/address/0x344278aff344d6fb960705dc18a4912221608472"
           }
         ],
-        "evidence": "ERC1967 UUPS proxy wrapping PermissionManager impl 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e. Proxy admin slot = 0x0 (immutable; upgrade via _authorizeUpgrade gated to ADMIN group). Initialized with admin = 0xed608cf38968c0ba09676843d90b33dd59dd7375 (deployer EOA). ADMIN group (getGroupAdmins(0)) = mask 0x01 = deployer EOA at index 0. Issuer EOA controls who can mint and can upgrade the PermissionManager itself."
+        "evidence": "Verified on-chain 2026-07-20: Sourcify-verified PermissionManager; getRequirements(UKTBL, mint) = group mask {0,2}; group 0 (ADMIN) = Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea (3/7); group 2 = six operator contracts with canCall mint = true on UKTBL."
       }
     ],
     "review": {
@@ -162,12 +162,9 @@
           "url": "https://eth.blockscout.com/address/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
         }
       ],
-      "evidence": "Ethereum mint surface confirmed: Token.sol restricted() gated by PermissionManager (immutable proxy, EOA admin 0xed608cf...7375). Deployer EOA is the sole admin. Non-Ethereum chains (Arbitrum, Polygon, Base, Etherlink, Starknet, Stellar) not yet verified.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Resolve Arbitrum, Polygon, Base, Etherlink, Starknet, and Stellar mint or bridge authorities before claiming multichain completeness."
-      ]
+      "evidence": "Resolved 2026-07-20 against the Sourcify-verified PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 on Ethereum: getRequirements(token, mint) = group mask {0,2}; group 0 (ADMIN) is held solely by Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea (getThreshold() = 3, getOwners() = 7: 0x75e0092e7d2c8d854fcf5334f95554852d62746a, 0xe9106c617d7180bf6badcfa5edc664b726c5dcbb, 0x6c00be5d1013a5bca938ef6aa8f1e5e706ff384d, 0x4d1d9c5b5d9ca448194313d799de374f362bd460, 0xda47bd72438f11bef7cc54f18cd02426dd86a5a2, 0xe67d2cbeae3090be017c66e7a6943961619a5d35, 0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949); group 2 is held by six operator contracts (0x57fa613b284f05421f78c8bd579555d5c0d7783d, 0x5ed5a75eeed1934ea060186e35187eaa73331366, 0x64e31c39fc3ec028557c9354d27b5c09faeb5fda, 0x7430d9d142d811f61b4a2d90d6f3a70a8500bbb7, 0x930f7f3a9a235d27ae082add5b7d4635e59eaf55, 0xb114e0e00622ffe5800004a98c8e01cd2c0c393b) for which canCall(token, mint) = true; group 5 is the relayer EOA 0x71a1a4165ae953cb80fcd102c28fc5d03beafa24 (membership confirmed via getGroups bitmask at the latest block; GroupAdded/GroupRemoved event scan covered deployment through block 24,290,000). The same PermissionManager pattern repeats per chain (arbitrum uses 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a).",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+      "reviewedAt": "2026-07-20"
     }
   },
   "chainTier": "ethereum",
@@ -175,9 +172,9 @@
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Spiko documents internal infrastructure for issuing, operating, and monitoring its regulated fund tokens across EVM networks, Starknet, and Stellar. For UKTBL, no independent bridge route was verified, so the route is reviewed as issuer-native multichain issuance.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "issuer",
@@ -200,107 +197,156 @@
       {
         "id": "arbitrum:0x903d5990119bc799423e9c25c56518ba7dd19474",
         "destinationChain": "arbitrum",
+        "canonicalChain": "arbitrum",
         "contractAddress": "0x903d5990119bc799423e9c25c56518ba7dd19474",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko issuer-native fund token",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Spiko issuance on arbitrum: authority() returns the chain-local Spiko PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a (verified on-chain 2026-07-20); Spiko issues its regulated fund tokens natively per chain with no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "UKTBL on arbitrum explorer (authority() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0x903d5990119bc799423e9c25c56518ba7dd19474"
+          }
+        ]
       },
       {
         "id": "ethereum:0xf695df6c0f3bb45918a7a82e83348fc59517734e",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xf695df6c0f3bb45918a7a82e83348fc59517734e",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko issuer-native fund token",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Spiko issuance on ethereum: authority() returns the chain-local Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (verified on-chain 2026-07-20); Spiko issues its regulated fund tokens natively per chain with no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "UKTBL on ethereum explorer (authority() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xf695df6c0f3bb45918a7a82e83348fc59517734e"
+          }
+        ]
       },
       {
         "id": "polygon:0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d",
         "destinationChain": "polygon",
+        "canonicalChain": "polygon",
         "contractAddress": "0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko issuer-native fund token",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Spiko issuance on polygon: authority() returns the chain-local Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (verified on-chain 2026-07-20); Spiko issues its regulated fund tokens natively per chain with no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "UKTBL on polygon explorer (authority() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d"
+          }
+        ]
       },
       {
         "id": "base:0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068",
         "destinationChain": "base",
+        "canonicalChain": "base",
         "contractAddress": "0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko issuer-native fund token",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Spiko issuance on base: authority() returns the chain-local Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (verified on-chain 2026-07-20); Spiko issues its regulated fund tokens natively per chain with no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "UKTBL on base explorer (authority() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068"
+          }
+        ]
       },
       {
         "id": "etherlink:0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d",
         "destinationChain": "etherlink",
+        "canonicalChain": "etherlink",
         "contractAddress": "0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko issuer-native fund token",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Spiko issuance on etherlink: authority() returns the chain-local Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (verified on-chain 2026-07-20); Spiko issues its regulated fund tokens natively per chain with no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "UKTBL on etherlink explorer (authority() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d"
+          }
+        ]
       },
       {
         "id": "starknet:0x0153d6e0462080bb2842109e9b64f589ef5aa06bb32b26bbdb894aca92674395",
         "destinationChain": "starknet",
+        "canonicalChain": "starknet",
         "contractAddress": "0x0153d6e0462080bb2842109e9b64f589ef5aa06bb32b26bbdb894aca92674395",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko issuer-native fund token",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Spiko issuance on starknet: the contract class is deployed (starknet_getClassAt) and owner() returns the Spiko admin contract 0x7bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d (verified on-chain 2026-07-20); Spiko issues its regulated fund tokens natively per chain with no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "UKTBL on Starknet explorer (owner() probed 2026-07-20)",
+            "url": "https://starkscan.co/contract/0x0153d6e0462080bb2842109e9b64f589ef5aa06bb32b26bbdb894aca92674395"
+          }
+        ]
       },
       {
         "id": "stellar:CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR",
         "destinationChain": "stellar",
+        "canonicalChain": "stellar",
         "contractAddress": "CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko issuer-native fund token",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Spiko issuance on stellar: the Soroban token contract has a live instance entry with TotalSupply storage; Spiko operates it directly (no bridge wrapper) (verified on-chain 2026-07-20); Spiko issues its regulated fund tokens natively per chain with no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "UKTBL on Stellar explorer (instance probed 2026-07-20)",
+            "url": "https://stellar.expert/explorer/public/contract/CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR"
+          }
+        ]
       }
     ]
   },
@@ -314,7 +360,13 @@
       "risk": "low",
       "assetClass": "fund-share",
       "issuerOrObligor": "Spiko UK T-Bills Money Market Fund",
-      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "smart-contract"],
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
       "liquidityHorizon": "one-day",
       "maturityDaysMax": 180
     }

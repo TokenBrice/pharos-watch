@@ -41,5 +41,30 @@
     "scope": "full-composition",
     "knownUnknownExposure": "No unidentified base-USDai reserve exposure remained in the fixed-block liability reconciliation. This conclusion does not classify the separate sUSDai strategy portfolio.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "USDai canonical mint/redeem hub contract (Arbitrum)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "USD.AI March 2026 mint/redeem upgrade - 1:1 PYUSD backing",
+        "url": "https://usd.ai/insights/usdai-mint-redeem-upgrade"
+      },
+      {
+        "label": "USDai Arbitrum implementation and baseToken",
+        "url": "https://arbitrum.blockscout.com/address/0x2af577d7e3baa01a991509f7f218dea1ff7d5bc4?tab=contract"
+      }
+    ],
+    "uncertainty": "Base-USDai PYUSD collateral is held by the canonical USDai hub contract on Arbitrum rather than with a named legal custodian, so legal segregation, insolvency treatment, and reuse restrictions are not established by the reviewed sources; underlying PYUSD issuance custody sits with Paxos Trust Company."
   }
 }

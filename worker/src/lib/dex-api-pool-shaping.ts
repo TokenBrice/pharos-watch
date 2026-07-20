@@ -283,6 +283,57 @@ function capabilityGate(
   return { executionModel: null, gate: { family, reason } };
 }
 
+/**
+ * Raydium's pool list carries no per-token USD price, so an untracked counter
+ * asset fails direct reference resolution and the whole pool gates to
+ * incomplete-exact-capture. The same API response's spot `price` (tokens[0]
+ * denominated in tokens[1], decimal-adjusted) plus the other token's direct
+ * reference implies the counter reference — the same derivation
+ * deriveTokenUsdPrice already uses for display pricing. Only price resolution
+ * may be repaired this way; identity or balance failures stay gated.
+ */
+function applyRaydiumPoolImpliedReferences(
+  pool: DexApiPool,
+  modelEntries: { token: DexApiPoolToken; balance: number; index: number }[],
+  tokens: (DexAmmExecutionToken | null)[],
+  chainAddressToId: Map<string, string>,
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>,
+): (DexAmmExecutionToken | null)[] {
+  if (pool.price == null || !Number.isFinite(pool.price) || pool.price <= 0) return tokens;
+  if (modelEntries.length !== 2) return tokens;
+  const resolved = [...tokens];
+  for (let position = 0; position < 2; position++) {
+    if (resolved[position] != null) continue;
+    const anchor = resolved[position === 0 ? 1 : 0]!;
+    if (anchor == null) return tokens;
+    const { token, balance, index } = modelEntries[position]!;
+    const address = token.address.trim();
+    const symbol = normalizeDexSymbol(token.symbol);
+    if (!address || !symbol || !Number.isFinite(token.decimals) || token.decimals < 0 || token.decimals > 255) {
+      return tokens;
+    }
+    if (!Number.isFinite(balance) || balance <= 0) return tokens;
+    const implied = index === 0 ? pool.price * anchor.referencePriceUsd : anchor.referencePriceUsd / pool.price;
+    if (!Number.isFinite(implied) || implied <= 0) return tokens;
+    const trackedAssetId = resolveStablecoinIdForDexApiToken(
+      pool.chain,
+      token,
+      chainAddressToId,
+      symbolToChainScopedIds,
+    );
+    resolved[position] = {
+      address,
+      symbol,
+      decimals: token.decimals,
+      balance,
+      referencePriceUsd: implied,
+      referencePriceSource: "pool-implied",
+      ...(trackedAssetId ? { trackedAssetId } : {}),
+    };
+  }
+  return resolved;
+}
+
 function isCanonicalEvmAddress(value: string): boolean {
   return /^0x[a-f0-9]{40}$/.test(value.trim().toLowerCase());
 }
@@ -395,10 +446,14 @@ function buildAmmExecutionCapability(
       trackedStablecoinPrices,
     ),
   );
-  if (tokens.some((token) => token == null)) {
+  const referencedTokens =
+    family === "raydium-amm"
+      ? applyRaydiumPoolImpliedReferences(pool, modelEntries, tokens, chainAddressToId, symbolToChainScopedIds)
+      : tokens;
+  if (referencedTokens.some((token) => token == null)) {
     return capabilityGate(family, "incomplete-exact-capture");
   }
-  let exactTokens = tokens as DexAmmExecutionToken[];
+  let exactTokens = referencedTokens as DexAmmExecutionToken[];
 
   if (invariant === "weighted-constant-mean") {
     const weights = exactTokens.map((token) => token.weight);

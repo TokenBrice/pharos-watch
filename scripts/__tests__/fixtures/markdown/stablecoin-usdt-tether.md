@@ -73,6 +73,18 @@ Direct 1:1 redemption through Tether. Supply figures include USDT0 (omnichain va
 | katana | `0x2dca96907fde857dd3d816880a0df407eeb2d2f2` | 6 |
 | stable | `0x779ded0c9e1022225f8e0630b35a9b54be713736` | 6 |
 | hyperliquid | `0x25faedc3f054130dbb4e4203aca63567` | 8 |
+| gnosis | `0x4ECaBa5870353805a9F068101A40E0f32ed605C6` | 6 |
+| pulsechain | `0x0Cb6F5a34ad42ec934882A05265A7d5F59b51A2f` | 6 |
+| moonriver | `0xB44a9B6905aF7c801311e8F4E76932ee959c663C` | 6 |
+| xdc | `0xD4B5f10D61916Bd6E0860144a91Ac658dE8a1437` | 6 |
+| taiko | `0x2DEF195713CF4a606B49D07E520e22C17899a736` | 6 |
+| flow | `0x674843C06FF83502ddb4D37c2E09C01cdA38cbc8` | 6 |
+| sei | `0x9151434b16b9763660705744891fa906f660ecc5` | 6 |
+| linea | `0xA219439258ca9da29E9Cc4cE5596924745e12B93` | 6 |
+| zksync | `0x493257fD37EDB34451f62EDf8D2a0C418852bA4C` | 6 |
+| mode | `0xf0F161fDA2712DB8b566946122a5af183995e2eD` | 6 |
+| manta | `0xf417F5A458eC102B90352F697D6e2Ac3A3d2851f` | 6 |
+| boba | `0x5DE1677344D3Cb0D7D465c10b72A8f60699C062d` | 6 |
 
 ## Live Data
 

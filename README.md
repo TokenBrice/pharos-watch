@@ -83,6 +83,8 @@ npx wrangler dev
 
 For local tunnel or cross-origin `next dev` testing, set `NEXT_ALLOWED_DEV_ORIGINS=host1,host2` in `.env.local`; `next.config.ts` appends those hosts to the built-in dev allowlist.
 
+Local Next.js and scripts that explicitly load credentials use the ignored root `.env.local`; [`.env.example`](./.env.example) documents variable names, not values. Check only whether a required name is present, and never print or copy its value. Worker runtime secrets remain in Cloudflare/Wrangler-managed bindings rather than local environment files.
+
 Useful checks:
 
 ```bash

@@ -21,6 +21,22 @@ export const PRICING_SOURCE_REGISTRY_SPECIAL = [
     isProtocolOverride: true,
     bypassesSoftValidationGuardrails: true,
   }),
+  // Degradation lane for parent-derived vault routes: last-good on-chain rate ×
+  // fresh trusted parent price when the live rate read fails. Deliberately
+  // non-replay-safe and never depeg-authoritative — the rate is stale protocol
+  // data with bounded drift, not a market observation.
+  definePricingSource(PRICING_SOURCE_PRESETS.hardProtocol, {
+    key: "protocol-redeem-cached-rate",
+    label: "Protocol Redemption (cached rate)",
+    shortLabel: "Protocol cached",
+    depegSourceFamily: "protocol:redeem",
+    maxTrustedAgeSec: 24 * 60 * 60,
+    defaultWeight: 0,
+    isProtocolOverride: true,
+    bypassesSoftValidationGuardrails: true,
+    isReplaySafe: false,
+    canBeDepegAuthoritative: false,
+  }),
   definePricingSource(PRICING_SOURCE_PRESETS.hardProtocol, {
     key: "zephyr-scanner",
     label: "Zephyr Scanner",

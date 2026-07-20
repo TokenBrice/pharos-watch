@@ -64,6 +64,7 @@ describe("pricing source registry", () => {
       "dexscreener-search",
       "defillama-contract",
       "protocol-redeem",
+      "protocol-redeem-cached-rate",
       "zephyr-scanner",
       "pool-tvl-weighted",
       "cached",
@@ -260,6 +261,12 @@ describe("pricing source registry", () => {
   it("expands composite source labels before applying shared policy", () => {
     expect(getPriceCacheMaxAgeSec("coingecko+pyth", 6 * 3600)).toBe(5 * 60);
     expect(getPriceCacheMaxAgeSec("coingecko+not-a-source", 6 * 3600)).toBe(0);
+    // Replay-safe-core semantics: an agreeing non-replay-safe corroborator
+    // does not zero the composite window, while core-less and cached labels
+    // still never replay.
+    expect(getPriceCacheMaxAgeSec("coingecko+coingecko-onchain-address+pyth", 6 * 3600)).toBe(5 * 60);
+    expect(getPriceCacheMaxAgeSec("coingecko-onchain-address", 6 * 3600)).toBe(0);
+    expect(getPriceCacheMaxAgeSec("coingecko+cached", 6 * 3600)).toBe(0);
     expect(hasDepegAuthoritativeSource(["coingecko+geckoterminal"])).toBe(false);
     expect(countDepegAuthoritativeSources(["coingecko+pyth"])).toBe(1);
     expect(isPoolChallengeEligibleConsensus(["coingecko+geckoterminal"])).toBe(true);

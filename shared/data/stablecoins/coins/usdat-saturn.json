@@ -211,6 +211,26 @@
           }
         ],
         "evidence": "At Ethereum block 25295161: EIP-1967 impl slot=0x45bf08d042a8958f01f8e8319b791e4584550da8 (TransparentUpgradeableProxy). ProxyAdmin (EIP-1967 admin slot)=0x0f38d8a5583f9316084e9c40737244870c565924. ProxyAdmin owner=TimelockController 0x23ca665c8a73292fc7ac2cc4493d2ce883bba468 (minDelay=259200s, 3 days); timelock proposer=Gnosis Safe 3/5 (0xb7a9b5f301ef3bad36c2b4964e82931dd7fb989c). No modules detected."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xfd5782e3bff366601da3973ae30c583de4f08a67",
+        "label": "USDat proxy admin timelock",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "timelockDelaySec": 432000,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25570046,
+        "evidence": "At Ethereum block 25570046 (2026-07-20): EIP-1967 slots on the USDat proxy 0x23238f20b894f29041f48d88ee91131c395aaa71 read implementation 0x17cac25c6d6bbcb592837fea083a5c8eb4d1e52e and admin 0xcf1072da5f0d127aef99136489bad08bfa3d1a7d; the ProxyAdmin's owner() is TimelockController 0xfd5782e3bff366601da3973ae30c583de4f08a67 with getMinDelay() = 432,000 seconds (5 days).",
+        "sources": [
+          {
+            "label": "Etherscan TimelockController 0xfd5782e3",
+            "url": "https://etherscan.io/address/0xfd5782e3bff366601da3973ae30c583de4f08a67"
+          }
+        ]
       }
     ],
     "review": {
@@ -233,8 +253,36 @@
         }
       ],
       "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable non-proxy (IsProxy=false, both EIP-1967 slots zero). SwapFacility confirmed TransparentUpgradeableProxy; ProxyAdmin=0x0f38d8a5... → TimelockController 0x23ca665c... (3-day minDelay); timelock proposer is Gnosis Safe 3/5. Same governance structure as verified musd-metamask. All controls fully characterized.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+      "reviewedAt": "2026-07-20"
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x23238f20b894f29041f48d88ee91131c395aaa71"
+      ],
+      "implementationAddresses": [
+        "0x17cac25c6d6bbcb592837fea083a5c8eb4d1e52e"
+      ],
+      "adminAddresses": [
+        "0xcf1072da5f0d127aef99136489bad08bfa3d1a7d",
+        "0xfd5782e3bff366601da3973ae30c583de4f08a67"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 432000,
+      "controlRef": "USDat proxy admin timelock",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25570046,
+      "sources": [
+        {
+          "label": "Etherscan USDat proxy (EIP-1967 slots)",
+          "url": "https://etherscan.io/address/0x23238f20b894f29041f48d88ee91131c395aaa71#readProxyContract"
+        },
+        {
+          "label": "Etherscan TimelockController 0xfd5782e3",
+          "url": "https://etherscan.io/address/0xfd5782e3bff366601da3973ae30c583de4f08a67"
+        }
+      ]
     }
   },
   "collateralQuality": "rwa",

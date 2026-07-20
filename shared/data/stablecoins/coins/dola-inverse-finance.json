@@ -171,6 +171,16 @@
       "chain": "bsc",
       "address": "0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840",
       "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0xbc2b48bc930ddc4e5cfb2e87a45c379aab3aac5c",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x221743dc9e954be4f86844649bf19b43d6f8366d",
+      "decimals": 18
     }
   ],
   "canBeBlacklisted": true,
@@ -210,11 +220,11 @@
         "summary": "Inverse Finance's Anchor/Frontier oracle-manipulation incident let an attacker borrow and withdraw DOLA against manipulated collateral, leaving bad debt through the stablecoin issuance route.",
         "sources": [
           {
-            "label": "CoinDesk — Inverse Finance exploit",
+            "label": "CoinDesk \u2014 Inverse Finance exploit",
             "url": "https://www.coindesk.com/tech/2022/04/02/defi-lender-inverse-finance-exploited-for-156-million"
           },
           {
-            "label": "BlockSec — Inverse oracle manipulation analysis",
+            "label": "BlockSec \u2014 Inverse oracle manipulation analysis",
             "url": "https://blocksecteam.medium.com/price-oracle-manipulation-attack-on-inverse-finance-a5544218ea91"
           }
         ]
@@ -259,7 +269,7 @@
           "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/governance/overview"
         }
       ],
-      "evidence": "At Ethereum block 25294782: DOLA operator() confirmed = Timelock 0x926dF14a (48h delay). Timelock admin = 0xbeccb6bb (GovernorBravo, INV-token governance). GovernorBravo slot 0 = Timelock address (standard Compound Bravo pairing). Full DAO governance chain confirmed: INV vote → GovernorBravo → 48h Timelock → DOLA mint/burn. No multisig bypass. DOLA minting is over-collateralised issuance controlled by the token operator, which at block 25294782 is a Compound Timelock with a 48-hour delay administered by INV-token GovernorBravo; every supply change requires an on-chain INV vote followed by the independently enforced 48-hour execution delay, so the encoding-derived direct-mint cap is economically raiseable rather than unbounded and DOLA falls outside the fiat-custodial centralized-mint scope.",
+      "evidence": "At Ethereum block 25294782: DOLA operator() confirmed = Timelock 0x926dF14a (48h delay). Timelock admin = 0xbeccb6bb (GovernorBravo, INV-token governance). GovernorBravo slot 0 = Timelock address (standard Compound Bravo pairing). Full DAO governance chain confirmed: INV vote \u2192 GovernorBravo \u2192 48h Timelock \u2192 DOLA mint/burn. No multisig bypass. DOLA minting is over-collateralised issuance controlled by the token operator, which at block 25294782 is a Compound Timelock with a 48-hour delay administered by INV-token GovernorBravo; every supply change requires an on-chain INV vote followed by the independently enforced 48-hour execution delay, so the encoding-derived direct-mint cap is economically raiseable rather than unbounded and DOLA falls outside the fiat-custodial centralized-mint scope.",
       "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
       "reviewedAt": "2026-07-16"
     }
@@ -276,42 +286,94 @@
   "reserves": [
     {
       "name": "sUSDe collateral",
-      "pct": 82.7,
+      "pct": 81.0,
       "risk": "high",
       "coinId": "susde-ethena",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Ethena (sUSDe staked USDe issuer)",
+      "riskFactors": [
+        "counterparty",
+        "market",
+        "basis",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "sUSDS collateral",
-      "pct": 12.5,
+      "pct": 12.3,
       "risk": "low",
       "coinId": "susds-sky",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky Ecosystem (sUSDS savings vault)",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "ETH / Liquid staking (wstETH, WETH)",
       "pct": 1.5,
-      "risk": "low"
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "ETH and Lido wstETH collateral",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "Other collateral",
-      "pct": 1.4,
-      "risk": "high"
+      "pct": 3.4,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Curve sDOLA-scrvUSD LP position",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Governance tokens (INV, CRV, CVX)",
       "pct": 1.3,
-      "risk": "very-high"
+      "risk": "very-high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Inverse Finance (INV), Curve (CRV), and Convex (CVX) governance tokens",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "BTC (WBTC, cbBTC)",
-      "pct": 0.6,
-      "risk": "medium"
+      "pct": 0.5,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Wrapped BTC custodians (WBTC, Coinbase cbBTC)",
+      "riskFactors": [
+        "market",
+        "custody",
+        "counterparty",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex dependency review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
     "confidence": "verified",
     "sources": [
       {
@@ -323,12 +385,12 @@
         "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/about/transparency"
       }
     ],
-    "rationale": "Tracked dependencies use each current FiRM market's DOLA debt share from the official API. The remaining slices are not silently linked: the sDOLA-scrvUSD Curve LP needs a constituent split, while ETH/LST, governance-token, and BTC collateral are identified exogenous assets outside the stablecoin dependency graph.",
-    "compositionBasis": "Current DOLA debt outstanding by FiRM collateral market, aggregated with the reviewed DOLA live-reserve adapter",
-    "compositionAsOf": "2026-07-14",
-    "scope": "dependency-relationships",
-    "knownUnknownExposure": "The 1.4% Other collateral slice is the sDOLA-scrvUSD Curve LP; its self and scrvUSD legs cannot be weighted from the aggregate market debt alone.",
-    "knownUnknownExposurePct": 1.4,
+    "rationale": "The FiRM markets API fetched on 2026-07-20 reported $42,982,738 of total DOLA debt; bucketing each market's debt through the reviewed DOLA live-reserve adapter mapping yields sUSDe 81.0%, sUSDS 12.3%, the sDOLA-scrvUSD Curve LP 3.4%, ETH/LST 1.5%, governance tokens 1.3%, and BTC 0.5%, summing to 100.0% on the adapter's exact identities. Since the 2026-07-14 review the sDOLA-scrvUSD LP slice grew from 1.4% to 3.4% and sUSDe eased from 82.7% to 81.0%, so curated weights were re-aligned to the 2026-07-20 live rows and every slice now carries a complete classification. The scope is restated as full-composition: the six slices cover the entire observed FiRM collateral envelope. The remaining slices are not silently linked: the sDOLA-scrvUSD Curve LP needs a constituent split, while ETH/LST, governance-token, and BTC collateral are identified exogenous assets outside the stablecoin dependency graph.",
+    "compositionBasis": "Current DOLA debt outstanding by FiRM collateral market (API fetched 2026-07-20), aggregated with the reviewed DOLA live-reserve adapter",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The 3.4% Other collateral slice is the sDOLA-scrvUSD Curve LP; its self and scrvUSD legs cannot be weighted from the aggregate market debt alone.",
+    "knownUnknownExposurePct": 3.4,
     "nonLinkDispositions": [
       {
         "reserveIndex": 2,
@@ -340,10 +402,12 @@
       {
         "reserveIndex": 3,
         "reserveName": "Other collateral",
-        "pct": 1.4,
+        "pct": 3.4,
         "disposition": "basket-needs-split",
         "rationale": "The API identifies this debt as an sDOLA-scrvUSD Curve LP market but does not split the self and scrvUSD constituent weights.",
-        "candidateCoinIds": ["scrvusd-curve"]
+        "candidateCoinIds": [
+          "scrvusd-curve"
+        ]
       },
       {
         "reserveIndex": 4,
@@ -355,7 +419,7 @@
       {
         "reserveIndex": 5,
         "reserveName": "BTC (WBTC, cbBTC)",
-        "pct": 0.6,
+        "pct": 0.5,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Bitcoin collateral is identified but is not a stablecoin dependency."
       }
@@ -381,8 +445,8 @@
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "DOLA cross-chain deployments are reviewed through Inverse Finance documentation that identifies Chainlink CCIP bridges and chain-specific Fed contracts. CCIP is an external validation and messaging route, so the bridge-route tier is external validated network rather than issuer-native settlement.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "verified",
     "protocols": [
       {
@@ -410,61 +474,131 @@
         "id": "ethereum:0x865377367054516e17014ccded1e7d814edc9ce4",
         "destinationChain": "ethereum",
         "contractAddress": "0x865377367054516e17014ccded1e7d814edc9ce4",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Inverse Finance native DOLA",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native DOLA on Ethereum: minting is controlled by the token operator, a Compound Timelock (48h delay) administered by INV-token GovernorBravo, per the verified mint-authority review (2026-07-16). No bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "Inverse Finance Docs",
+            "url": "https://docs.inverse.finance/"
+          },
+          {
+            "label": "DOLA on Etherscan",
+            "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4"
+          }
+        ],
+        "observedBlock": 25570879
       },
       {
         "id": "arbitrum:0x6a7661795c374c0bfc635934efaddff3a7ee23b6",
         "destinationChain": "arbitrum",
         "contractAddress": "0x6a7661795c374c0bfc635934efaddff3a7ee23b6",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Arbitrum canonical bridge (StandardArbERC20)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Arbitrum 2026-07-20 (block 485690756): DOLA 0x6a7661795c374c0bfc635934efaddff3a7ee23b6 is a BeaconProxy to the shared StandardArbERC20 implementation 0x3f770Ac673856F105b586bb393d122721265aD46; l1Address() = 0x865377367054516e17014ccded1e7d814edc9ce4 (Ethereum DOLA) and l2Gateway() = 0x09e9222e96e7b4ae2a407b98d48e330053351eee (Arbitrum L2 ERC20 Gateway), which is the mint/burn authority for this canonical bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x09e9222e96e7b4ae2a407b98d48e330053351eee",
+        "failureDomainKeys": [
+          "protocol:arbitrum-canonical-messaging",
+          "contract:arbitrum:0x09e9222e96e7b4ae2a407b98d48e330053351eee"
+        ],
+        "sources": [
+          {
+            "label": "DOLA on Arbiscan (l2Gateway verified 2026-07-20)",
+            "url": "https://arbiscan.io/address/0x6a7661795c374c0bfc635934efaddff3a7ee23b6"
+          },
+          {
+            "label": "Arbitrum canonical bridge docs",
+            "url": "https://docs.arbitrum.io/build-decentralized-apps/token-bridging/overview"
+          }
+        ],
+        "observedBlock": 485690756
       },
       {
         "id": "base:0x4621b7a9c75199271f773ebd9a499dbd165c3191",
         "destinationChain": "base",
         "contractAddress": "0x4621b7a9c75199271f773ebd9a499dbd165c3191",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Base Standard Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Base 2026-07-20 (block 48862205): DOLA 0x4621b7a9c75199271f773ebd9a499dbd165c3191 reports bridge() and l2Bridge() = 0x4200000000000000000000000000000000000010 (Base L2StandardBridge predeploy), the mint/burn authority for this canonical bridge representation of Ethereum DOLA.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "base",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:base-canonical-messaging",
+          "contract:base:0x4200000000000000000000000000000000000010"
+        ],
+        "sources": [
+          {
+            "label": "DOLA on Basescan (l2Bridge verified 2026-07-20)",
+            "url": "https://basescan.org/address/0x4621b7a9c75199271f773ebd9a499dbd165c3191"
+          },
+          {
+            "label": "Base bridge docs",
+            "url": "https://docs.base.org/docs/bridges/bridge-tokens"
+          }
+        ],
+        "observedBlock": 48862205
       },
       {
         "id": "optimism:0x8ae125e8653821e851f12a49f7765db9a9ce7384",
         "destinationChain": "optimism",
         "contractAddress": "0x8ae125e8653821e851f12a49f7765db9a9ce7384",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Optimism Standard Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Optimism 2026-07-20 (block 154457492): DOLA 0x8ae125e8653821e851f12a49f7765db9a9ce7384 reports l2Bridge() = 0x4200000000000000000000000000000000000010 (Optimism L2StandardBridge predeploy), the mint/burn authority for this canonical bridge representation of Ethereum DOLA.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "optimism",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:optimism-canonical-messaging",
+          "contract:optimism:0x4200000000000000000000000000000000000010"
+        ],
+        "sources": [
+          {
+            "label": "DOLA on Optimistic Etherscan (l2Bridge verified 2026-07-20)",
+            "url": "https://optimistic.etherscan.io/address/0x8ae125e8653821e851f12a49f7765db9a9ce7384"
+          },
+          {
+            "label": "Optimism Standard Bridge docs",
+            "url": "https://docs.optimism.io/builders/app-developers/bridging/standard-bridge"
+          }
+        ],
+        "observedBlock": 154457492
       },
       {
         "id": "fantom:0x3129662808bec728a27ab6a6b9afd3cbaca8a43c",
@@ -477,24 +611,110 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "Verified on Fantom 2026-07-20 (block 122578711): DOLA 0x3129662808bec728a27ab6a6b9afd3cbaca8a43c (name 'Dola USD Stablecoin') owner() = 0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe, which holds no Fantom bytecode (EOA). The bridge-route model cannot honestly encode this opaque legacy EOA as a contract controller (same convention as the unresolved Binance-Peg row in dai-makerdao.json), and no route-specific mint-controller contract was established. Left unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "observedBlock": 122578711
       },
       {
         "id": "bsc:0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840",
         "destinationChain": "bsc",
         "contractAddress": "0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "BSC DOLA (Safe-owned representation)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on BSC 2026-07-20 (block 111009503): DOLA 0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840 (name 'Dola USD Stablecoin', 18 decimals) owner() = 0xf7da4bc9b7a6bb3653221ae333a9d2a2c2d5bda7, a Safe multisig with getThreshold/getOwners = 3-of-6. The owner is the mint authority for this deployment; the signer set is not publicly attributed to a named entity in Inverse Finance documentation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "bsc",
+        "controllerAddress": "0xf7da4bc9b7a6bb3653221ae333a9d2a2c2d5bda7",
+        "failureDomainKeys": [
+          "contract:bsc:0xf7da4bc9b7a6bb3653221ae333a9d2a2c2d5bda7"
+        ],
+        "sources": [
+          {
+            "label": "DOLA on BscScan (owner verified 2026-07-20)",
+            "url": "https://bscscan.com/address/0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840"
+          },
+          {
+            "label": "Inverse Finance Docs",
+            "url": "https://docs.inverse.finance/"
+          }
+        ],
+        "observedBlock": 111009503
+      },
+      {
+        "id": "polygon:0xbc2b48bc930ddc4e5cfb2e87a45c379aab3aac5c",
+        "sourceChain": "ethereum",
+        "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xbc2b48bc930ddc4e5cfb2e87a45c379aab3aac5c",
+        "protocol": "Polygon FxPortal (fxDOLA)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Polygon 2026-07-20 (block 90544401): token 0xbc2b48bc930ddc4e5cfb2e87a45c379aab3aac5c reports name 'Dola USD Stablecoin (FXERC20)', symbol fxDOLA, and is a 45-byte minimal-proxy clone of the FXERC20 template 0xad87e3b217c66b0d45deafbc540330d300811b94 \u2014 the Polygon FxPortal child-token pattern, whose mint/burn authority is structurally the FxChild contract 0x8397259c983751daf40400790063935a11afa28a (the canonical Polygon FxChild predeploy); admin getters on the template revert, consistent with the FxPortal design.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "polygon",
+        "controllerAddress": "0x8397259c983751daf40400790063935a11afa28a",
+        "failureDomainKeys": [
+          "protocol:polygon-fxportal",
+          "contract:polygon:0x8397259c983751daf40400790063935a11afa28a"
+        ],
+        "observedAt": "2026-07-20",
+        "observedBlock": 90544401,
+        "sources": [
+          {
+            "label": "fxDOLA on Polygonscan (verified 2026-07-20)",
+            "url": "https://polygonscan.com/address/0xbc2b48bc930ddc4e5cfb2e87a45c379aab3aac5c"
+          },
+          {
+            "label": "Polygon FxPortal docs",
+            "url": "https://docs.polygon.technology/pos/how-to/bridging/fxportal/"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0x221743dc9e954be4f86844649bf19b43d6f8366d",
+        "sourceChain": "ethereum",
+        "destinationChain": "avalanche",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x221743dc9e954be4f86844649bf19b43d6f8366d",
+        "protocol": "Avalanche DOLA (Safe-owned representation)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Avalanche 2026-07-20 (block 90761741): DOLA 0x221743dc9e954be4f86844649bf19b43d6f8366d (name 'Dola USD Stablecoin', 18 decimals) owner() = 0x1a927b237a57421c414eb511a33c4b82c2718677, a Safe multisig with getThreshold/getOwners = 3-of-4. The owner is the mint authority for this deployment; the signer set is not publicly attributed to a named entity in Inverse Finance documentation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "avalanche",
+        "controllerAddress": "0x1a927b237a57421c414eb511a33c4b82c2718677",
+        "failureDomainKeys": [
+          "contract:avalanche:0x1a927b237a57421c414eb511a33c4b82c2718677"
+        ],
+        "observedAt": "2026-07-20",
+        "observedBlock": 90761741,
+        "sources": [
+          {
+            "label": "DOLA on Snowscan (owner verified 2026-07-20)",
+            "url": "https://snowscan.xyz/address/0x221743dc9e954be4f86844649bf19b43d6f8366d"
+          },
+          {
+            "label": "Inverse Finance Docs",
+            "url": "https://docs.inverse.finance/"
+          }
+        ]
       }
     ]
   }

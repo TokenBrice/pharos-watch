@@ -160,12 +160,14 @@ jobs:
           );
           NODE
       - name: Verify deployment release marker
+        env:
+          DEPLOYMENT_URL: ${{ steps.pages-deployment.outputs.deployment_url }}
         run: |
           node scripts/maintenance/wait-pages-release-marker.mjs \
-            --url ${{ steps.pages-deployment.outputs.deployment_url }}/__pharos_release.json \
+            --url "${DEPLOYMENT_URL}/__pharos_release.json" \
             --attempts 24 \
             --delay-ms 5000
           {
-            echo "- Deployment: ${{ steps.pages-deployment.outputs.deployment_url }}"
+            echo "- Deployment: ${DEPLOYMENT_URL}"
             echo "- Release marker: verified for \`${GITHUB_SHA}\`"
           } >> "$GITHUB_STEP_SUMMARY"

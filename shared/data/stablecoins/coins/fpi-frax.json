@@ -335,9 +335,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
-    "summary": "FPI is deployed on Ethereum and Fraxtal, and Frax documentation describes the Fraxtal bridge as derived from Optimism's standard bridge for Ethereum/Fraxtal asset movement. Pharos treats this row as canonical rollup-bridge exposure.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "FPI is deployed on Ethereum and Fraxtal, and Frax documentation describes the Fraxtal bridge as derived from Optimism's standard bridge for Ethereum/Fraxtal asset movement. Pharos treats this row as canonical rollup-bridge exposure. 2026-07-20 cohort dc-1 pass: Ethereum and Fraxtal rows both confirmed issuer-native FPI deployments; the zkSync-unmatched supply row remains without a verified deployment address.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
     "confidence": "verified",
     "protocols": [
       {
@@ -368,31 +368,47 @@
         "id": "ethereum:0x5ca135cb8527d76e932f34b5145575f9d8cbe08e",
         "destinationChain": "ethereum",
         "contractAddress": "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "FPI (Frax native issuance on Ethereum)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Frax Price Index', symbol FPI, 18 decimals; owner() = 0x6a7efa964cf6d9ab3bc3c47ebddb853a8853c502 (Frax Safe per the mint-authority evidence) — native issuance on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "FPI on Etherscan",
+            "url": "https://etherscan.io/address/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e"
+          },
+          {
+            "label": "Frax FPI docs",
+            "url": "https://docs.frax.com/protocol/assets/fpi/overview"
+          }
+        ]
       },
       {
         "id": "fraxtal:0xfc00000000000000000000000000000000000003",
         "destinationChain": "fraxtal",
         "contractAddress": "0xfc00000000000000000000000000000000000003",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "FPI (Frax native issuance on Fraxtal)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Frax Price Index', symbol FPI, 18 decimals on Fraxtal; system-space deployment 0xFC00...0003 with owner() 0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6 and EIP-1967 admin 0xfc0000000000000000000000000000000000000a — Frax's own-chain native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Fraxtal FPI",
+            "url": "https://docs.frax.com/fraxtal/addresses/frax-tokens"
+          }
+        ]
       }
     ]
   },

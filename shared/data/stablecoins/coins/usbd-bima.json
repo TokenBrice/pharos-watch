@@ -287,11 +287,11 @@
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
-    "tier": "external-lock-mint",
-    "summary": "USBD is a native LayerZero Omnichain Fungible Token (OFT): its verified Ethereum DebtToken source imports @layerzerolabs/oft-evm/contracts/OFT.sol and is declared `contract DebtToken is OFT`, taking a LayerZero V2 endpoint in its constructor (send/quoteSend/lzReceive/setPeer present), so supply moves via burn-on-source / mint-on-destination over LayerZero messaging — a regular OFT, not a lockbox adapter or a third-party liquidity bridge (the L2BEAT 'Across' reference is just a bridge that can route USBD, not its issuance path). The identical CREATE2 address across ethereum/hemi/plume/sonic/bsc/nibiru is the OFT pattern. Classified at external-lock-mint (40) rather than external-validated-network (65) because, while the OFT burn/mint mechanism is verified from primary contract source, the DVN security stack is neither named nor reviewed: LayerZeroScan was rate-limited and Bima publishes no LayerZero/OFT/DVN documentation, so this is a generic OFT with an unreviewed third-party control surface.",
-    "reviewedAt": "2026-06-21",
-    "reviewer": "Pharos bridge-route re-verification",
-    "confidence": "probable",
+    "tier": "external-validated-network",
+    "summary": "USBD is a native LayerZero Omnichain Fungible Token (OFT): its verified Ethereum DebtToken source imports @layerzerolabs/oft-evm/contracts/OFT.sol and is declared `contract DebtToken is OFT`, taking a LayerZero V2 endpoint in its constructor (send/quoteSend/lzReceive/setPeer present), so cross-chain supply moves via burn-on-source / mint-on-destination over LayerZero messaging \u2014 a regular OFT, not a lockbox adapter or a third-party liquidity bridge (the L2BEAT 'Across' reference is just a bridge that can route USBD, not its issuance path). Re-verified on-chain 2026-07-20: all six tracked deployments are a byte-identical 19,637-byte DebtToken OFT at the same CREATE2 address 0x6bede1c6009a78c222d9bdb7974bb67847fdb68c; endpoint() returns the LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c on ethereum/bsc and chain-specific LayerZero endpoints on hemi and sonic (0x6f475642a6e85809b1c36fa62763669b1b48dd5b, eid() 30329/30332), nibiru (0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd, eid 30369), and plume (0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36, eid 30370); owner() is the same documented EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 on all six chains (eth_getCode = 0 on ethereum; the OFT owner/delegate reviewed under mintAuthority). OFT peer wiring is sparse: peers() on the ethereum token returns non-zero only for sonic (30332) and plume (30370). Native CDP minting via BorrowerOperations exists per chain (reviewed on ethereum 2026-07-14; Bima registry also lists markets on hemi/plume/sonic/bsc/nibiru). Per-application DVN security stack remains unreviewed, so cross-chain routes stay external-validated-network. DefiLlama additionally reports USBD supply under the raw chain labels GOAT and CORE, which do not canonicalize to any CHAIN_META entry \u2014 a policy-maintainer-routed label pool, not fixable from coin data.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "explorer",
@@ -327,92 +327,193 @@
       {
         "id": "ethereum:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Bima USBD native issuance (Liquity-v1-fork CDP)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical USBD home deployment (27.4% of supply). Verified on-chain 2026-07-20: 19,637-byte DebtToken OFT; endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c; owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 (eth_getCode = 0). Native minting via BorrowerOperations 0x87FED36c032EE7289a1d2f3C48798e4C7fCDfAEc (reviewed in mintAuthority, 2026-07-14); no bridge contract holds mint rights on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USBD DebtToken on Ethereum (endpoint/owner reads, 2026-07-20)",
+            "url": "https://etherscan.io/address/0x6bedE1c6009a78c222D9BDb7974bb67847fdB68c#readContract"
+          },
+          {
+            "label": "Bima docs - Mainnet Addresses",
+            "url": "https://docs.bima.money/security/mainnet-addresses"
+          }
+        ]
       },
       {
         "id": "hemi:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "sourceChain": "ethereum",
         "destinationChain": "hemi",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Bima USBD via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: byte-identical 19,637-byte DebtToken OFT at the shared CREATE2 address 0x6bede1c6009a78c222d9bdb7974bb67847fdb68c. endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (24,005-byte LayerZero endpoint, eid() = 30329 = Hemi). Largest satellite: 72.6% of supply. owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 (the documented OFT owner/delegate from the 2026-07-14 mintAuthority review). Cross-chain movement is OFT burn-mint over LayerZero; Bima's registry also documents a native CDP market on this chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "controllerChain": "hemi",
+        "controllerAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:hemi:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USBD DebtToken on hemi (endpoint/owner reads, 2026-07-20)",
+            "url": "https://explorer.hemi.xyz/address/0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
       },
       {
         "id": "plume:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "sourceChain": "ethereum",
         "destinationChain": "plume",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Bima USBD via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: byte-identical 19,637-byte DebtToken OFT at the shared CREATE2 address 0x6bede1c6009a78c222d9bdb7974bb67847fdb68c. endpoint() = 0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36 (LayerZero endpoint on Plume, eid() = 30370). owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 (the documented OFT owner/delegate from the 2026-07-14 mintAuthority review). Cross-chain movement is OFT burn-mint over LayerZero; Bima's registry also documents a native CDP market on this chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "controllerChain": "plume",
+        "controllerAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:plume:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USBD DebtToken on plume (endpoint/owner reads, 2026-07-20)",
+            "url": "https://explorer.plumenetwork.xyz/address/0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
       },
       {
         "id": "sonic:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "sourceChain": "ethereum",
         "destinationChain": "sonic",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Bima USBD via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: byte-identical 19,637-byte DebtToken OFT at the shared CREATE2 address 0x6bede1c6009a78c222d9bdb7974bb67847fdb68c. endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (24,005-byte LayerZero endpoint, eid() = 30332 = Sonic). peers(30332) on the ethereum token returns this address \u2014 the mesh link is wired. owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 (the documented OFT owner/delegate from the 2026-07-14 mintAuthority review). Cross-chain movement is OFT burn-mint over LayerZero; Bima's registry also documents a native CDP market on this chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "controllerChain": "sonic",
+        "controllerAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:sonic:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USBD DebtToken on sonic (endpoint/owner reads, 2026-07-20)",
+            "url": "https://sonicscan.org/address/0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
       },
       {
         "id": "bsc:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "sourceChain": "ethereum",
         "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Bima USBD via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: byte-identical 19,637-byte DebtToken OFT at the shared CREATE2 address 0x6bede1c6009a78c222d9bdb7974bb67847fdb68c. endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 (the documented OFT owner/delegate from the 2026-07-14 mintAuthority review). Cross-chain movement is OFT burn-mint over LayerZero; Bima's registry also documents a native CDP market on this chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "controllerChain": "bsc",
+        "controllerAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:bsc:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USBD DebtToken on bsc (endpoint/owner reads, 2026-07-20)",
+            "url": "https://bscscan.com/address/0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
       },
       {
         "id": "nibiru:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "sourceChain": "ethereum",
         "destinationChain": "nibiru",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Bima USBD via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: byte-identical 19,637-byte DebtToken OFT at the shared CREATE2 address 0x6bede1c6009a78c222d9bdb7974bb67847fdb68c. endpoint() = 0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd (24,005-byte LayerZero endpoint, eid() = 30369 = Nibiru). owner() = EOA 0xe3fbba95bb35be804696624dd1e9344a86e3cbc4 (the documented OFT owner/delegate from the 2026-07-14 mintAuthority review). Cross-chain movement is OFT burn-mint over LayerZero; Bima's registry also documents a native CDP market on this chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "controllerChain": "nibiru",
+        "controllerAddress": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:nibiru:0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USBD DebtToken on nibiru (endpoint/owner reads, 2026-07-20)",
+            "url": "https://explorer.nibiru.fi/address/0x6bede1c6009a78c222d9bdb7974bb67847fdb68c"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
       }
     ]
   },
@@ -571,7 +672,7 @@
         "canRaiseCap": true,
         "chain": "ethereum",
         "address": "0xaca5d659364636284041b8d3acad8a57f6e7b8a5",
-        "evidence": "At Ethereum block 25530822: BimaCore.owner() = BimaCore.guardian() = 0xaca5d659364636284041b8d3acad8a57f6e7b8a5, eth_getCode = 0x (EOA). The deployed USBD DebtToken runtime code contains authorizedMint(address,uint256) [selector 0x73b8d9c7] and setLendingVaultAdapterAddress(address) [0xecfa0872], both guarded by require(msg.sender == _bimaCore.owner()) — so this EOA can mint USBD directly without limit and can grant unbounded mint() rights to any contract it names as the lending-vault adapter (currently 0x0). Factory 0xc5790164d3CCB6533b241EeE3Fd7f56862759376 (DebtToken.factory(), immutable) has owner() = the same EOA and can enableTroveManager new minters. TroveManager.setParameters (maxSystemDebt) requires msg.sender == owner(). BimaCore EIP-1967 implementation/admin/beacon slots all 0x0 (not a proxy).",
+        "evidence": "At Ethereum block 25530822: BimaCore.owner() = BimaCore.guardian() = 0xaca5d659364636284041b8d3acad8a57f6e7b8a5, eth_getCode = 0x (EOA). The deployed USBD DebtToken runtime code contains authorizedMint(address,uint256) [selector 0x73b8d9c7] and setLendingVaultAdapterAddress(address) [0xecfa0872], both guarded by require(msg.sender == _bimaCore.owner()) \u2014 so this EOA can mint USBD directly without limit and can grant unbounded mint() rights to any contract it names as the lending-vault adapter (currently 0x0). Factory 0xc5790164d3CCB6533b241EeE3Fd7f56862759376 (DebtToken.factory(), immutable) has owner() = the same EOA and can enableTroveManager new minters. TroveManager.setParameters (maxSystemDebt) requires msg.sender == owner(). BimaCore EIP-1967 implementation/admin/beacon slots all 0x0 (not a proxy).",
         "sources": [
           {
             "label": "BimaCore on Etherscan",
@@ -611,7 +712,7 @@
     ],
     "review": {
       "disposition": "scoreable",
-      "evidence": "Ethereum block 25530822: EIP-1967 implementation (0x3608...), admin (0xb531...), and beacon (0xa3f0...) slots all read 0x0 on DebtToken 0x6bede1c6..., BimaCore 0x227E9323..., BorrowerOperations 0x87FED36c..., and Factory 0xc5790164... (eth_getStorageAt) — no proxy anywhere in the mint path, so the deployed mint code cannot be swapped by an upgrade. Mint logic is nonetheless owner-mutable without a proxy: eth_getCode on the token shows the live runtime contains authorizedMint(address,uint256) [0x73b8d9c7], setLendingVaultAdapterAddress(address) [0xecfa0872], and lendingVaultAdapterAddress() [0xfe834ae0], matching the verified bima-v1-core mainnet-v2 DebtToken source where all three are gated on _bimaCore.owner(); mint(address,uint256) accepts borrowerOperationsAddress, any enabled troveManager, or the lending-vault adapter. lendingVaultAdapterAddress() = 0x0 today, and factory() = 0xc5790164... (immutable) whose owner() is the same EOA, so the owner can both mint directly and install new mint-capable code. BimaCore.owner() = guardian() = 0xaca5d659... and DebtToken.owner() = 0xe3fbba95...; eth_getCode = 0x for both (EOAs). No timelock, multisig, or Safe anywhere in the path.",
+      "evidence": "Ethereum block 25530822: EIP-1967 implementation (0x3608...), admin (0xb531...), and beacon (0xa3f0...) slots all read 0x0 on DebtToken 0x6bede1c6..., BimaCore 0x227E9323..., BorrowerOperations 0x87FED36c..., and Factory 0xc5790164... (eth_getStorageAt) \u2014 no proxy anywhere in the mint path, so the deployed mint code cannot be swapped by an upgrade. Mint logic is nonetheless owner-mutable without a proxy: eth_getCode on the token shows the live runtime contains authorizedMint(address,uint256) [0x73b8d9c7], setLendingVaultAdapterAddress(address) [0xecfa0872], and lendingVaultAdapterAddress() [0xfe834ae0], matching the verified bima-v1-core mainnet-v2 DebtToken source where all three are gated on _bimaCore.owner(); mint(address,uint256) accepts borrowerOperationsAddress, any enabled troveManager, or the lending-vault adapter. lendingVaultAdapterAddress() = 0x0 today, and factory() = 0xc5790164... (immutable) whose owner() is the same EOA, so the owner can both mint directly and install new mint-capable code. BimaCore.owner() = guardian() = 0xaca5d659... and DebtToken.owner() = 0xe3fbba95...; eth_getCode = 0x for both (EOAs). No timelock, multisig, or Safe anywhere in the path.",
       "reviewer": "Pharos V9 CTRL upgrade-authority review",
       "reviewedAt": "2026-07-14",
       "sources": [

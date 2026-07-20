@@ -69,15 +69,23 @@
         "label": "Sky governed Vault collateral ilks",
         "tier": "medianized-with-delay",
         "summary": "Oracle-dependent Sky collateral ilks share the Median-to-OSM-to-Spot price path and use per-ilk Dog/Clipper liquidation parameters.",
-        "collateralAssets": ["Governance-approved Vault collateral ilks"],
-        "chains": ["ethereum"],
+        "collateralAssets": [
+          "Governance-approved Vault collateral ilks"
+        ],
+        "chains": [
+          "ethereum"
+        ],
         "feeds": [
           {
             "provider": "Sky whitelisted oracle set",
             "path": "Per-ilk signed observations -> Median -> OSM -> Spot -> Vat",
             "chain": "ethereum",
             "heartbeatSec": 3600,
-            "failureDomainKeys": ["sky-oracle-signers", "sky-governance", "ethereum"]
+            "failureDomainKeys": [
+              "sky-oracle-signers",
+              "sky-governance",
+              "ethereum"
+            ]
           }
         ],
         "fallbackBehavior": "Each per-ilk OSM retains a delayed current value and queues the next value; if its peek is invalid or Spot is not poked, the Vat keeps the prior safety price and can become stale rather than accepting a fresh invalid value.",
@@ -92,7 +100,12 @@
         "liquidationDelaySec": 0,
         "backstop": "Collateral-auction proceeds cancel the seized debt; residual system debt is recorded in Vow, can first be netted against protocol surplus, and can become eligible for the documented governance-token debt-auction mechanism after the debt-queue delay.",
         "shutdownOrBadDebtBehavior": "Uncovered liquidation debt remains in Vow's debt queue and can mature into debt-auction-eligible bad debt. Sky's archived End documentation describes system caging and collateral settlement but marks End deprecated, so this profile does not treat emergency shutdown as a currently active guarantee.",
-        "failureDomainKeys": ["sky-oracle-signers", "sky-governance", "sky-auction-keepers", "ethereum"],
+        "failureDomainKeys": [
+          "sky-oracle-signers",
+          "sky-governance",
+          "sky-auction-keepers",
+          "ethereum"
+        ],
         "sources": [
           {
             "label": "Sky OSM documentation",
@@ -259,6 +272,96 @@
       "chain": "pulsechain",
       "address": "0xefd766ccb38eaf1dfd701853bfce31359239f305",
       "decimals": 18
+    },
+    {
+      "chain": "zksync",
+      "address": "0x4b9eb6c0b6ea15176bbf62841c6b2a8a398cb656",
+      "decimals": 18
+    },
+    {
+      "chain": "boba",
+      "address": "0xf74195bb8a5cf652411867c5c2c5b8c2a402be35",
+      "decimals": 18
+    },
+    {
+      "chain": "metis",
+      "address": "0x4c078361fc9bbb78df910800a991c7c3dd2f6ce0",
+      "decimals": 18
+    },
+    {
+      "chain": "astar",
+      "address": "0x6de33698e9e9b787e09d3bd7771ef63557e148bb",
+      "decimals": 18
+    },
+    {
+      "chain": "linea",
+      "address": "0x4af15ec2a0bd43db75dd04e62faa3b8ef36b00d5",
+      "decimals": 18
+    },
+    {
+      "chain": "scroll",
+      "address": "0xca77eb3fefe3725dc33bccb54edefc3d9f764f97",
+      "decimals": 18
+    },
+    {
+      "chain": "rootstock",
+      "address": "0x6b1a73d547f4009a26b8485b63d7015d248ad406",
+      "decimals": 18
+    },
+    {
+      "chain": "unichain",
+      "address": "0x20cab320a855b39f724131c69424240519573f81",
+      "decimals": 18
+    },
+    {
+      "chain": "taiko",
+      "address": "0x7d02a3e0180451b17e5d7f29ef78d06f8117106c",
+      "decimals": 18
+    },
+    {
+      "chain": "morph-l2",
+      "address": "0xef8a24599229d002b28ba2f5c0ebdd3c0effbed4",
+      "decimals": 18
+    },
+    {
+      "chain": "hemi",
+      "address": "0x6c851f501a3f24e29a8e39a29591cddf09369080",
+      "decimals": 18
+    },
+    {
+      "chain": "starknet",
+      "address": "0x05574eb6b8789a91466f902c380d978e472db68170ff82a5b650b95a58ddf4ad",
+      "decimals": 18
+    },
+    {
+      "chain": "osmosis",
+      "address": "ibc/0CD3A0285E1341859B5E86B6AB7682F023D03E97607CCC1DC95706411D866DF7",
+      "decimals": 18
+    },
+    {
+      "chain": "cardano",
+      "address": "25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935444149",
+      "decimals": 6
+    },
+    {
+      "chain": "moonriver",
+      "address": "0x80a16016cc4a2e6a2caca8a4a498b1699ff0f844",
+      "decimals": 18
+    },
+    {
+      "chain": "moonbeam",
+      "address": "0x765277eebeca2e31912c9946eae1021199b39c61",
+      "decimals": 18
+    },
+    {
+      "chain": "harmony",
+      "address": "0xef977d2f931c1978db5f6747666fa1eacb0d0339",
+      "decimals": 18
+    },
+    {
+      "chain": "aurora",
+      "address": "0xe3520349f477a5f6eb06107066048508498a291b",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {
@@ -376,22 +479,26 @@
   "deploymentModel": "canonical-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "DAI is native on Ethereum. Its non-Ethereum deployments span Maker-governed rollup bridges and external lock/mint or validated-network bridges. Contract controllers are verified where the destination token exposes one; legacy BSC, Avalanche, and Fantom routes remain unresolved because their live mint authority resolves only to an EOA.",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex Safety Score V9 bridge review",
+    "summary": "DAI is native on Ethereum. Reviewed non-Ethereum deployments span Maker-governed and canonical rollup bridges (Arbitrum, Optimism, Base, zkSync Era, Boba, Metis, Linea, Scroll, Unichain, Taiko, Morph, Hemi, Starknet StarkGate), federation/validator bridges (Polygon PoS, Gnosis OmniBridge, Rootstock TokenBridge, PulseChain, NEAR Rainbow, Wormhole Solana, Orbit Klaytn, Multichain Kava, Celer Astar, Axelar Osmosis, Wanchain Cardano). BSC, Avalanche, Fantom, Moonriver, Moonbeam, Harmony, and Aurora remain unresolved because their live mint authority resolves only to bytecode-less EOAs (Multichain MPC, Binance peg wallet, Avalanche bridge role, Rainbow admin).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex Safety Score V9 bridge review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
     "confidence": "verified",
     "protocols": [
       {
         "source": "docs",
         "name": "MakerDAO Optimism DAI Bridge",
         "url": "https://github.com/makerdao/optimism-dai-bridge",
-        "bridgeTypes": ["lockAndMint"]
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
       },
       {
         "source": "docs",
         "name": "MakerDAO Starknet DAI Bridge",
         "url": "https://github.com/makerdao/starknet-dai-bridge",
-        "bridgeTypes": ["lockAndMint"]
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
       }
     ],
     "sources": [
@@ -547,9 +654,9 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "The token's live owner() is 0xF68a4b64162906efF0fF6aE34E2bB1Cd42FEf62d, but that address has no BSC bytecode. The bridge-route model cannot honestly encode this EOA as a contract controller, and no separate route-specific mint-controller contract was established.",
+        "reviewNote": "The token's live owner() is 0xF68a4b64162906efF0fF6aE34E2bB1Cd42FEf62d, but that address has no BSC bytecode. The bridge-route model cannot honestly encode this EOA as a contract controller, and no separate route-specific mint-controller contract was established. Re-verified 2026-07-20: authority state unchanged (live owner()/bridge-role reads return the same bytecode-less EOAs; no newer MigrateBridgeRole events on Avalanche DAI.e within the last 200k blocks).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-07-20",
         "sources": [
           {
             "label": "BscScan Binance-Peg DAI token",
@@ -570,9 +677,9 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "DAI.e minting is gated by the token's private bridge role. The latest MigrateBridgeRole event assigns that role to 0xeb1bb70123b2f43419d070d7fde5618971cc2f8f, which has no Avalanche bytecode, so the bridge-route model cannot honestly encode it as a contract controller.",
+        "reviewNote": "DAI.e minting is gated by the token's private bridge role. The latest MigrateBridgeRole event assigns that role to 0xeb1bb70123b2f43419d070d7fde5618971cc2f8f, which has no Avalanche bytecode, so the bridge-route model cannot honestly encode it as a contract controller. Re-verified 2026-07-20: authority state unchanged (live owner()/bridge-role reads return the same bytecode-less EOAs; no newer MigrateBridgeRole events on Avalanche DAI.e within the last 200k blocks).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-07-20",
         "sources": [
           {
             "label": "SnowScan Avalanche Bridge DAI.e",
@@ -597,9 +704,9 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "The token's live owner() is 0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE, but that address has no Fantom bytecode. The bridge-route model cannot honestly encode this EOA as a contract controller, and no separate route-specific mint-controller contract was established.",
+        "reviewNote": "The token's live owner() is 0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE, but that address has no Fantom bytecode. The bridge-route model cannot honestly encode this EOA as a contract controller, and no separate route-specific mint-controller contract was established. Re-verified 2026-07-20: authority state unchanged (live owner()/bridge-role reads return the same bytecode-less EOAs; no newer MigrateBridgeRole events on Avalanche DAI.e within the last 200k blocks).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-07-20",
         "sources": [
           {
             "label": "Fantom explorer DAI token",
@@ -729,7 +836,10 @@
         "scope": "peripheral",
         "controllerChain": "klaytn",
         "controllerAddress": "0x60070F5D2e1C1001400A04F152E7ABD43410F7B9",
-        "failureDomainKeys": ["protocol:orbit-bridge", "contract:klaytn:0x60070f5d2e1c1001400a04f152e7abd43410f7b9"],
+        "failureDomainKeys": [
+          "protocol:orbit-bridge",
+          "contract:klaytn:0x60070f5d2e1c1001400a04f152e7abd43410f7b9"
+        ],
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-14",
@@ -762,7 +872,10 @@
         "scope": "peripheral",
         "controllerChain": "kava",
         "controllerAddress": "0x639A647fbe20b6c8ac19E48E2de44ea792c62c5C",
-        "failureDomainKeys": ["protocol:multichain", "contract:kava:0x639a647fbe20b6c8ac19e48e2de44ea792c62c5c"],
+        "failureDomainKeys": [
+          "protocol:multichain",
+          "contract:kava:0x639a647fbe20b6c8ac19e48e2de44ea792c62c5c"
+        ],
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-14",
@@ -791,7 +904,10 @@
         "scope": "peripheral",
         "controllerChain": "near",
         "controllerAddress": "factory.bridge.near",
-        "failureDomainKeys": ["protocol:rainbow-bridge", "contract:near:factory.bridge.near"],
+        "failureDomainKeys": [
+          "protocol:rainbow-bridge",
+          "contract:near:factory.bridge.near"
+        ],
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-14",
@@ -845,6 +961,527 @@
             "url": "https://api.scan.pulsechain.com/address/0x4fd0aaa7506f3d9cb8274bdb946ec42a1b8751ef"
           }
         ]
+      },
+      {
+        "id": "zksync:0x4b9eb6c0b6ea15176bbf62841c6b2a8a398cb656",
+        "sourceChain": "ethereum",
+        "destinationChain": "zksync",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x4b9eb6c0b6ea15176bbf62841c6b2a8a398cb656",
+        "protocol": "zkSync Era canonical bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "zksync",
+        "controllerAddress": "0x11f943b2c77b743ab90f4a0ae7d5a4e7fca3e102",
+        "failureDomainKeys": [
+          "protocol:zksync-canonical-messaging",
+          "contract:zksync:0x11f943b2c77b743ab90f4a0ae7d5a4e7fca3e102"
+        ],
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "zkSync Era DAI token l2Bridge() read at block 2026-07-20 returning L2SharedBridge 0x11f943b2c77b743ab90f4a0ae7d5a4e7fca3e102",
+            "url": "https://era.zksync.network/address/0x4b9eb6c0b6ea15176bbf62841c6b2a8a398cb656"
+          },
+          {
+            "label": "zkSync Era bridge documentation",
+            "url": "https://docs.zksync.io/zksync-protocol/rollup/bridges"
+          }
+        ]
+      },
+      {
+        "id": "boba:0xf74195bb8a5cf652411867c5c2c5b8c2a402be35",
+        "sourceChain": "ethereum",
+        "destinationChain": "boba",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xf74195bb8a5cf652411867c5c2c5b8c2a402be35",
+        "protocol": "Boba canonical bridge (OP Stack)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "boba",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:boba-canonical-messaging",
+          "contract:boba:0x4200000000000000000000000000000000000010"
+        ],
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "BobaScan DAI token l2Bridge()/l1Token() read returning L2StandardBridge and L1 DAI",
+            "url": "https://bobascan.com/address/0xf74195bb8a5cf652411867c5c2c5b8c2a402be35"
+          }
+        ]
+      },
+      {
+        "id": "metis:0x4c078361fc9bbb78df910800a991c7c3dd2f6ce0",
+        "sourceChain": "ethereum",
+        "destinationChain": "metis",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x4c078361fc9bbb78df910800a991c7c3dd2f6ce0",
+        "protocol": "Metis canonical bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "metis",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:metis-canonical-messaging",
+          "contract:metis:0x4200000000000000000000000000000000000010"
+        ],
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Metis Andromeda m.DAI token l2Bridge()/l1Token() read returning L2StandardBridge and L1 DAI",
+            "url": "https://andromeda-explorer.metis.io/address/0x4c078361fc9bbb78df910800a991c7c3dd2f6ce0"
+          }
+        ]
+      },
+      {
+        "id": "astar:0x6de33698e9e9b787e09d3bd7771ef63557e148bb",
+        "sourceChain": "ethereum",
+        "destinationChain": "astar",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x6de33698e9e9b787e09d3bd7771ef63557e148bb",
+        "protocol": "Celer cBridge (MintSwapCanonicalToken)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "astar",
+        "controllerAddress": "0xbb7684cc5408f4dd0921e5c2cadd547b8f1ad573",
+        "failureDomainKeys": [
+          "protocol:celer-cbridge",
+          "contract:astar:0xbb7684cc5408f4dd0921e5c2cadd547b8f1ad573"
+        ],
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "reviewNote": "Verified MintSwapCanonicalToken: owner is RestrictedMultiBridgeTokenOwner 0xbdd2739ae69a054895be33a22b2d2ed71a1de778 whose constructor (tx 0x35cd6f2707...) sets bridge = PeggedTokenBridge 0xbb7684cc5408f4dd0921e5c2cadd547b8f1ad573 (verified contract on Astar blockscout), the sole mint-cap bridge.",
+        "sources": [
+          {
+            "label": "Astar blockscout DAI (MintSwapCanonicalToken)",
+            "url": "https://astar.blockscout.com/address/0x6de33698e9e9b787e09d3bd7771ef63557e148bb"
+          },
+          {
+            "label": "Astar blockscout PeggedTokenBridge (mint bridge)",
+            "url": "https://astar.blockscout.com/address/0xbb7684cc5408f4dd0921e5c2cadd547b8f1ad573"
+          }
+        ]
+      },
+      {
+        "id": "linea:0x4af15ec2a0bd43db75dd04e62faa3b8ef36b00d5",
+        "sourceChain": "ethereum",
+        "destinationChain": "linea",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x4af15ec2a0bd43db75dd04e62faa3b8ef36b00d5",
+        "protocol": "Linea canonical token bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "linea",
+        "controllerAddress": "0x353012dc4a9a6cf55c941badc267f82004a8ceb9",
+        "failureDomainKeys": [
+          "protocol:linea-canonical-messaging",
+          "contract:linea:0x353012dc4a9a6cf55c941badc267f82004a8ceb9"
+        ],
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Linea DAI BridgedToken bridge() read returning L2 TokenBridge 0x353012dc4a9a6cf55c941badc267f82004a8ceb9",
+            "url": "https://lineascan.build/address/0x4af15ec2a0bd43db75dd04e62faa3b8ef36b00d5"
+          }
+        ]
+      },
+      {
+        "id": "scroll:0xca77eb3fefe3725dc33bccb54edefc3d9f764f97",
+        "sourceChain": "ethereum",
+        "destinationChain": "scroll",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xca77eb3fefe3725dc33bccb54edefc3d9f764f97",
+        "protocol": "Scroll canonical bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "scroll",
+        "controllerAddress": "0xac78dff3a87b5b534e366a93e785a0ce8fa6cc62",
+        "failureDomainKeys": [
+          "protocol:scroll-canonical-messaging",
+          "contract:scroll:0xac78dff3a87b5b534e366a93e785a0ce8fa6cc62"
+        ],
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Scroll DAI token gateway() read returning L2 DAI gateway 0xac78dff3a87b5b534e366a93e785a0ce8fa6cc62",
+            "url": "https://scrollscan.com/address/0xca77eb3fefe3725dc33bccb54edefc3d9f764f97"
+          }
+        ]
+      },
+      {
+        "id": "rootstock:0x6b1a73d547f4009a26b8485b63d7015d248ad406",
+        "sourceChain": "ethereum",
+        "destinationChain": "rootstock",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x6b1a73d547f4009a26b8485b63d7015d248ad406",
+        "protocol": "Rootstock TokenBridge (rDAI)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "rootstock",
+        "controllerAddress": "0x9d11937e2179dc5270aa86a3f8143232d6da0e69",
+        "failureDomainKeys": [
+          "protocol:rootstock-tokenbridge",
+          "contract:rootstock:0x9d11937e2179dc5270aa86a3f8143232d6da0e69"
+        ],
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Rootstock rDAI SideToken minter() read returning TokenBridge 0x9d11937e2179dc5270aa86a3f8143232d6da0e69",
+            "url": "https://explorer.rootstock.io/address/0x6b1a73d547f4009a26b8485b63d7015d248ad406"
+          }
+        ]
+      },
+      {
+        "id": "unichain:0x20cab320a855b39f724131c69424240519573f81",
+        "sourceChain": "ethereum",
+        "destinationChain": "unichain",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x20cab320a855b39f724131c69424240519573f81",
+        "protocol": "Unichain canonical bridge (OP Stack)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "unichain",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:unichain-canonical-messaging",
+          "contract:unichain:0x4200000000000000000000000000000000000010"
+        ],
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Unichain DAI token l2Bridge()/remoteToken() read returning L2StandardBridge and L1 DAI",
+            "url": "https://uniscan.xyz/address/0x20cab320a855b39f724131c69424240519573f81"
+          }
+        ]
+      },
+      {
+        "id": "taiko:0x7d02a3e0180451b17e5d7f29ef78d06f8117106c",
+        "sourceChain": "ethereum",
+        "destinationChain": "taiko",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x7d02a3e0180451b17e5d7f29ef78d06f8117106c",
+        "protocol": "Taiko canonical ERC20 vault",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "taiko",
+        "controllerAddress": "0x1670000000000000000000000000000000000002",
+        "failureDomainKeys": [
+          "protocol:taiko-canonical-messaging",
+          "contract:taiko:0x1670000000000000000000000000000000000002"
+        ],
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "reviewNote": "eth_call mint(1 wei) simulation on the Taiko DAI BridgedERC20 succeeds from the L2 ERC20Vault 0x1670000000000000000000000000000000000002 and reverts from any other sender, proving the vault is the sole mint controller.",
+        "sources": [
+          {
+            "label": "TaikoScan bridged DAI",
+            "url": "https://taikoscan.io/address/0x7d02a3e0180451b17e5d7f29ef78d06f8117106c"
+          },
+          {
+            "label": "Taiko mainnet contract addresses",
+            "url": "https://docs.taiko.xyz/network-reference/mainnet-addresses"
+          }
+        ]
+      },
+      {
+        "id": "morph-l2:0xef8a24599229d002b28ba2f5c0ebdd3c0effbed4",
+        "sourceChain": "ethereum",
+        "destinationChain": "morph-l2",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xef8a24599229d002b28ba2f5c0ebdd3c0effbed4",
+        "protocol": "Morph canonical bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "morph-l2",
+        "controllerAddress": "0x5300000000000000000000000000000000000016",
+        "failureDomainKeys": [
+          "protocol:morph-canonical-messaging",
+          "contract:morph-l2:0x5300000000000000000000000000000000000016"
+        ],
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Morph DAI token gateway() read returning L2 gateway predeploy 0x5300000000000000000000000000000000000016",
+            "url": "https://explorer.morphl2.io/address/0xef8a24599229d002b28ba2f5c0ebdd3c0effbed4"
+          }
+        ]
+      },
+      {
+        "id": "hemi:0x6c851f501a3f24e29a8e39a29591cddf09369080",
+        "sourceChain": "ethereum",
+        "destinationChain": "hemi",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x6c851f501a3f24e29a8e39a29591cddf09369080",
+        "protocol": "Hemi canonical bridge (OP Stack)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "hemi",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:hemi-canonical-messaging",
+          "contract:hemi:0x4200000000000000000000000000000000000010"
+        ],
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Hemi DAI token l2Bridge()/remoteToken() read returning L2StandardBridge and L1 DAI",
+            "url": "https://explorer.hemi.xyz/address/0x6c851f501a3f24e29a8e39a29591cddf09369080"
+          },
+          {
+            "label": "Hemi token list",
+            "url": "https://github.com/hemilabs/token-list"
+          }
+        ]
+      },
+      {
+        "id": "starknet:0x05574eb6b8789a91466f902c380d978e472db68170ff82a5b650b95a58ddf4ad",
+        "sourceChain": "ethereum",
+        "destinationChain": "starknet",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x05574eb6b8789a91466f902c380d978e472db68170ff82a5b650b95a58ddf4ad",
+        "protocol": "StarkGate DAI bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "starknet",
+        "controllerAddress": "0x07754236934aeaf4c29d287b94b5fde8687ba7d59466ea6b80f3f57d6467b7d6",
+        "failureDomainKeys": [
+          "protocol:starkgate",
+          "contract:starknet:0x07754236934aeaf4c29d287b94b5fde8687ba7d59466ea6b80f3f57d6467b7d6"
+        ],
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "reviewNote": "starknet_call symbol() on 0x05574eb6... returns DAI and totalSupply is live; the companion legacy Dai v0 token (0x00da1142...) remains minor. L1 bridge 0xCA14057f85F2662257fd2637FdEc558626bCe554 holds the collateral.",
+        "sources": [
+          {
+            "label": "Starknet bridged tokens registry (starknet-io/starknet-addresses)",
+            "url": "https://github.com/starknet-io/starknet-addresses/blob/master/bridged_tokens/mainnet.json"
+          },
+          {
+            "label": "Voyager StarkGate DAI token",
+            "url": "https://voyager.online/contract/0x05574eb6b8789a91466f902c380d978e472db68170ff82a5b650b95a58ddf4ad"
+          }
+        ]
+      },
+      {
+        "id": "osmosis:ibc/0CD3A0285E1341859B5E86B6AB7682F023D03E97607CCC1DC95706411D866DF7",
+        "sourceChain": "ethereum",
+        "destinationChain": "osmosis",
+        "canonicalChain": "ethereum",
+        "contractAddress": "ibc/0CD3A0285E1341859B5E86B6AB7682F023D03E97607CCC1DC95706411D866DF7",
+        "protocol": "Axelar (axlDAI via IBC)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x4F4495243837681061C4743b74B3eEdf548D56A5",
+        "failureDomainKeys": [
+          "protocol:axelar-network",
+          "contract:ethereum:0x4f4495243837681061c4743b74b3eedf548d56a5"
+        ],
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "reviewNote": "axlDAI on Osmosis is the IBC voucher of Axelar-chain dai-wei (channel-208), minted under Axelar validator consensus against DAI locked in the Ethereum AxelarGateway contract 0x4F4495243837681061C4743b74B3eEdf548D56A5.",
+        "sources": [
+          {
+            "label": "Cosmos chain-registry Osmosis assetlist (DAI from Axelar channel-208/dai-wei)",
+            "url": "https://github.com/cosmos/chain-registry/blob/master/osmosis/assetlist.json"
+          },
+          {
+            "label": "Axelar mainnet gateway addresses",
+            "url": "https://docs.axelar.dev/resources/contract-addresses/mainnet"
+          }
+        ]
+      },
+      {
+        "id": "cardano:25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935444149",
+        "sourceChain": "ethereum",
+        "destinationChain": "cardano",
+        "canonicalChain": "ethereum",
+        "contractAddress": "25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935444149",
+        "protocol": "Wanchain Cardano bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "cardano",
+        "controllerAddress": "25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935",
+        "failureDomainKeys": [
+          "protocol:wanchain-bridge",
+          "contract:cardano:25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935"
+        ],
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "reviewNote": "Koios asset_info: DAI (fingerprint asset19gaqdfcckssln6cttx3gr7yf45kfz26jh6w7gs) minted 2023-09-24 under policy 25c5de5f... with Wanchain tokenPairID 563 (wanscan token registry); mint authority is the Wanchain Cardano bridge monetary policy controlled by the Wanchain storeman group.",
+        "sources": [
+          {
+            "label": "Cardano token registry subject 25c5de5f...444149",
+            "url": "https://tokens.cardano.org/metadata/25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935444149"
+          },
+          {
+            "label": "Wanchain bridge",
+            "url": "https://bridge.wanchain.org/"
+          }
+        ]
+      },
+      {
+        "id": "moonriver:0x80a16016cc4a2e6a2caca8a4a498b1699ff0f844",
+        "sourceChain": "ethereum",
+        "destinationChain": "moonriver",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x80a16016cc4a2e6a2caca8a4a498b1699ff0f844",
+        "protocol": "Multichain authority unresolved",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "anyDAI (AnyswapV5-family): owner()/Vault() both return 0x10c6b61dbf44a083aec3780acf769c77be747e23, which has no Moonriver bytecode (Multichain MPC EOA). The bridge-route model cannot honestly encode an EOA as a contract controller, and no route-specific mint-controller contract was established. Re-verified 2026-07-20.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Moonriver explorer anyDAI token",
+            "url": "https://moonriver.moonscan.io/address/0x80a16016cc4a2e6a2caca8a4a498b1699ff0f844"
+          }
+        ]
+      },
+      {
+        "id": "moonbeam:0x765277eebeca2e31912c9946eae1021199b39c61",
+        "sourceChain": "ethereum",
+        "destinationChain": "moonbeam",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x765277eebeca2e31912c9946eae1021199b39c61",
+        "protocol": "Multichain authority unresolved",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "multiDAI (same Multichain deployment as the reviewed Kava route): owner()/Vault() both return 0xec4486a90371c9b66f499ff3936f29f0d5af8b7e, which has no Moonbeam bytecode (Multichain MPC EOA), unlike Kava where the vault is the router contract. DefiLlama also counts an Axelar DAI (0x14df360966a1c4582d2b18edbdae432ea0a27575) on Moonbeam; the chain-level route stays unresolved while the dominant legacy representation's mint authority is an unverifiable EOA. Re-verified 2026-07-20.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Moonscan multiDAI token",
+            "url": "https://moonscan.io/address/0x765277eebeca2e31912c9946eae1021199b39c61"
+          },
+          {
+            "label": "BeamSwap token list (multiDAI)",
+            "url": "https://github.com/BeamSwap/beamswap-tokenlist"
+          }
+        ]
+      },
+      {
+        "id": "harmony:0xef977d2f931c1978db5f6747666fa1eacb0d0339",
+        "sourceChain": "ethereum",
+        "destinationChain": "harmony",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xef977d2f931c1978db5f6747666fa1eacb0d0339",
+        "protocol": "Harmony Horizon bridge authority unresolved",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "1DAI (Horizon bridge) mint() reverts with 'MinterRole: caller does not have the Minter role' (OpenZeppelin MinterRole). The minter set cannot be enumerated within public-RPC log limits (1024-block cap; ~92M block history) and the legacy Horizon manager candidate 0x2dCCDB49382740115e2D75B29A46dC46A5FB0a48 no longer has bytecode. Mint authority cannot be honestly established; the Horizon bridge was exploited in 2022 and 1DAI is depegged legacy. Verified 2026-07-20.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Harmony explorer 1DAI token",
+            "url": "https://explorer.harmony.one/address/0xef977d2f931c1978db5f6747666fa1eacb0d0339"
+          }
+        ]
+      },
+      {
+        "id": "aurora:0xe3520349f477a5f6eb06107066048508498a291b",
+        "sourceChain": "ethereum",
+        "destinationChain": "aurora",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe3520349f477a5f6eb06107066048508498a291b",
+        "protocol": "Rainbow Bridge authority unresolved",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Verified explorer name 'Rainbow Bridged DAI (Aurora)' (EvmErc20). Its sole admin() is 0x4444588443c3a91288c5002483449aba1054192b, which carries no Aurora EVM bytecode, so the bridge-route model cannot honestly encode it as a contract controller. Verified 2026-07-20.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Aurora explorer Rainbow Bridged DAI",
+            "url": "https://explorer.aurora.dev/address/0xe3520349f477a5f6eb06107066048508498a291b"
+          }
+        ]
       }
     ]
   },
@@ -858,7 +1495,13 @@
       "risk": "very-low",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Sky PSM contracts and external stablecoin issuers",
-      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract", "concentration"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
@@ -867,7 +1510,15 @@
       "risk": "low",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Grove Agent and underlying institutional-credit counterparties",
-      "riskFactors": ["credit", "counterparty", "liquidity", "custody", "smart-contract", "legal", "concentration"],
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "legal",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     },
     {
@@ -876,7 +1527,15 @@
       "risk": "low",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Spark Agent and its lending, liquidity, CeFi, and RWA counterparties",
-      "riskFactors": ["credit", "counterparty", "liquidity", "custody", "smart-contract", "market", "concentration"],
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "market",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     },
     {
@@ -885,7 +1544,15 @@
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Obex Agent and supported institutional stablecoin projects",
-      "riskFactors": ["credit", "counterparty", "liquidity", "custody", "smart-contract", "legal", "concentration"],
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "legal",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     },
     {
@@ -894,7 +1561,14 @@
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Sky Core vault collateral pools and underlying crypto protocols",
-      "riskFactors": ["market", "liquidity", "smart-contract", "custody", "counterparty", "concentration"],
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "custody",
+        "counterparty",
+        "concentration"
+      ],
       "liquidityHorizon": "one-day"
     },
     {
@@ -903,7 +1577,12 @@
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Sky governance token and LockStake Engine",
-      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     },
     {
@@ -912,7 +1591,14 @@
       "risk": "low",
       "assetClass": "other",
       "issuerOrObligor": "Sky legacy RWA legal structures and underlying obligors",
-      "riskFactors": ["credit", "counterparty", "liquidity", "custody", "legal", "concentration"],
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "liquidity",
+        "custody",
+        "legal",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
@@ -971,7 +1657,11 @@
         "pct": 40.4,
         "disposition": "basket-needs-split",
         "rationale": "The published group combines several PSM assets without per-asset weights.",
-        "candidateCoinIds": ["usdc-circle", "usdt-tether", "usdp-paxos"]
+        "candidateCoinIds": [
+          "usdc-circle",
+          "usdt-tether",
+          "usdp-paxos"
+        ]
       },
       {
         "reserveIndex": 1,

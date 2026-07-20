@@ -25,6 +25,7 @@ const REVIEWED_HIVE_HBD_AT = REVIEWED_MAY_BATCH_AT;
 // moves from documented-bound to reserve-sync-metadata.
 const REVIEWED_MENTO_LIVE_REDEMPTION_AT = "2026-07-09";
 const REVIEWED_REDEMPTION_OUTPUTS_AT = "2026-07-15";
+const REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT = "2026-07-19";
 const MENTO_BIPOOLMANAGER_DOC = sourceRef(
   "Mento BiPoolManager smart-contract docs",
   "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager",
@@ -65,8 +66,9 @@ function defineCollateralRecordEntries(configs: Record<string, RedemptionBacksto
 const mentoFpmmPoolRedeemConfig: RedemptionBackstopConfig = {
   ...collateralRedeemBase,
   capacityModel: { kind: "reserve-sync-metadata" },
-  reviewedAt: REVIEWED_MENTO_LIVE_REDEMPTION_AT,
+  reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT,
   outputAssetType: "stable-single",
+  outputAssets: ["cusd-celo"],
   costModel: undisclosedReviewedFee(
     "Mento CDP redemption/repayment path burns the FX stablecoin against USDm collateral at oracle value; public docs reviewed do not publish one global fixed redemption fee",
   ),
@@ -88,6 +90,7 @@ const mentoFpmmPoolRedeemConfig: RedemptionBackstopConfig = {
   notes: [
     "Mento CDP-backed FX stables are modeled as on-chain collateral redemptions into USDm collateral rather than issuer fiat redemption.",
     "Live reserve sync now reads the coin's Mento V3 FPMM pool USDm balance each run and reports it as direct redemption capacity, replacing the prior documented-bound/eventual-only model; no live fee telemetry is available for this pool shape.",
+    "Output declared 2026-07-19: Mento V3 CDP docs name USDm as the collateral asset of the FX-stable CDP/FPMM path, so the redemption pays USDm (tracked cusd-celo), mirroring the jpym-mento precedent; declaration was previously blocked on cusd-celo being untracked.",
   ],
 };
 
@@ -96,8 +99,9 @@ const mentoFpmmPoolRedeemConfig: RedemptionBackstopConfig = {
 const mentoBrokerPoolRedeemConfig: RedemptionBackstopConfig = {
   ...collateralRedeemBase,
   capacityModel: { kind: "reserve-sync-metadata" },
-  reviewedAt: REVIEWED_MENTO_LIVE_REDEMPTION_AT,
+  reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT,
   outputAssetType: "stable-single",
+  outputAssets: ["cusd-celo"],
   costModel: documentedVariableFee(
     "Mento broker pool spread, set on-chain per pool (PoolConfig.spread, currently 5 bps on USDm stable pools per MGP-13); live telemetry supplies the current bps",
     "formula",
@@ -126,6 +130,7 @@ const mentoBrokerPoolRedeemConfig: RedemptionBackstopConfig = {
     "Mento V3 docs describe FX stables as USDm-collateralized Liquity v2-style CDP debt, with normal redemptions following the CDP branch mechanics.",
     "FX market-hours gating can temporarily block normal redemptions and close-trove operations; current docs list Friday 21:00 UTC through Sunday 23:00 UTC plus specified holidays.",
     "Live reserve sync now enumerates the coin's Mento Broker/BiPoolManager pool (getExchangeIds/getPoolExchange) each run and reports the current counter-asset bucket depth and pool spread as direct redemption capacity and fee, replacing the prior documented-bound/eventual-only model.",
+    "Output declared 2026-07-19: the coin's Broker/BiPoolManager pool pairs the FX stable against USDm (verified on-chain: every FX exchange settles in the USDm token, the rebranded cUSD), so the redemption pays USDm (tracked cusd-celo); declaration was previously blocked on cusd-celo being untracked.",
   ],
 };
 
@@ -357,8 +362,9 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       capacityModel: {
         kind: "reserve-sync-metadata",
       },
-      reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
+      reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT,
       outputAssetType: "mixed-collateral",
+      outputAssets: ["asset:crvusd", "asset:frxusd"],
       costModel: fixedFee(100, "Communal redemption model with 1% fee establishing a price floor"),
       docs: [
         sourceRef("Resupply stability mechanics", "https://docs.resupply.fi/resupply-protocol/stability-mechanics", [
@@ -366,10 +372,16 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
           "capacity",
           "fees",
         ]),
+        sourceRef(
+          "Resupply collateralized debt positions",
+          "https://docs.resupply.finance/resupply-protocol/collateralized-debt-positions",
+          ["route", "capacity"],
+        ),
         sourceRef("Resupply app", "https://resupply.fi/redeem", ["route", "capacity", "settlement"]),
       ],
       notes: [
         "Fresh Resupply pair telemetry reads RedemptionHandler.getMaxRedeemableDebt() and the permissionless guard state as the current executable capacity bound; when the guard is closed, the route stays visible but does not uplift Safety Score liquidity",
+        "Output declared 2026-07-19: Resupply docs state all reUSD collateral backing consists of crvUSD supplied to Curve Lend or frxUSD supplied to Frax Lend, and the redeemer chooses which pools to redeem against, so the payout is the chosen pools' crvUSD/frxUSD-denominated lending collateral.",
       ],
     },
     "cusd-celo": {
@@ -458,8 +470,18 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     },
     "usdp-parallel": {
       ...collateralRedeemBase,
-      ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
+      ...documentedBoundSupplyFull(REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT),
       outputAssetType: "mixed-collateral",
+      outputAssets: [
+        "asset:frxusd",
+        "asset:sfrxusd",
+        "asset:usde",
+        "asset:susde",
+        "asset:usds",
+        "asset:susds",
+        "asset:usdc",
+        "asset:ygamiusdc",
+      ],
       costModel: documentedVariableFee(
         "Parallelizer module: dynamic minting/burning fees adjust to correct peg deviations; depeg penalty applied proportionally",
       ),
@@ -474,6 +496,14 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
           "https://docs.parallel.best/developers-hub/parallel-v3/build-on-parallel/parallelizer-module-integration",
           ["route", "capacity"],
         ),
+        sourceRef(
+          "Parallel USDp implementation",
+          "https://docs.parallel.best/products/parallel-v3/stablecoins-and-savings/usdp-and-susdp/implementation",
+          ["route", "capacity"],
+        ),
+      ],
+      notes: [
+        "Output declared 2026-07-19: Parallel V3 docs state stablecoins can be burnt at oracle value for any asset in the backing (or redeemed pro-rata across it), and the implementation page lists the current per-chain backing set — frxUSD, sfrxUSD, USDe, sUSDe (Ethereum); USDS, sUSDS (Base); USDe, sUSDe (HyperEVM); USDC and the ygamiUSDC Silo Vault (Avalanche). The declared set is the full documented backing including the untracked ygamiUSDC vault token; the set is DAO-mutable.",
       ],
     },
     "hyusd-hylo": {
@@ -526,6 +556,8 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     "satusd-river": {
       ...collateralRedeemBase,
       ...reviewedDirectRedemptionSupplyFull,
+      reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT,
+      outputAssets: ["asset:btc", "asset:eth", "asset:bnb"],
       costModel: undisclosedReviewedFee(
         "Omni-CDP with $1-of-collateral redemption arbitrage; public fee schedule not disclosed",
       ),
@@ -535,6 +567,10 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
           "capacity",
           "fees",
         ]),
+        sourceRef("River FAQ", "https://docs.river.inc/intro/faq", ["route", "capacity"]),
+      ],
+      notes: [
+        "Output declared 2026-07-19: River docs state holders can exchange 1 satUSD for $1 worth of collateral from the least-collateralized positions, and the FAQ names the collateral classes as BTC, ETH, BNB, and other liquid staking tokens; the declared set covers the three named bluechip classes while individual LSTs (e.g. solvBTC, LBTC) are not exhaustively enumerated in public docs.",
       ],
     },
     "doc-money-on-chain": {

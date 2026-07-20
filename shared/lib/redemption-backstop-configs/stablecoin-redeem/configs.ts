@@ -25,6 +25,7 @@ import {
 } from "./shared";
 
 const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/stablecoin-redeem/configs.ts";
+const REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT = "2026-07-19";
 
 const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
   "usd3-3jane": defineStablecoinRedeemConfig({
@@ -456,13 +457,19 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "u-united-stables": defineStablecoinRedeemConfig({
     ...reviewedDirectRedemptionSupplyFull,
+    reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT,
     accessModel: "whitelisted-onchain",
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdc-circle", "usdt-tether", "usd1-world-liberty-financial"],
     costModel: documentedVariableFee(
       "Smart contract mint/burn 1:1 against whitelisted stablecoins (USDC, USDT, USD1); on-chain oracles enforce collateral backing",
     ),
     docs: [
       sourceRef("United Stables", "https://www.u.tech/", ["capacity"]),
       sourceRef("United Stables terms", "https://www.u.tech/terms/", ["route", "fees", "access"]),
+    ],
+    notes: [
+      "Output declared 2026-07-19: United Stables documents 1:1 smart-contract mint/burn against the whitelisted stablecoins USDC, USDT, and USD1, all of which are tracked and priced; the terms reserve the issuer's right to satisfy redemptions with any eligible reserve asset including cash, so the declared basket is the documented onchain stablecoin set rather than a guaranteed payout composition.",
     ],
   }),
   "usx-solstice": defineStablecoinRedeemConfig({
@@ -522,7 +529,8 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "usdai-usd-ai": defineStablecoinRedeemConfig({
     ...reviewedDirectRedemptionSupplyFull,
-    reviewedAt: "2026-04-03",
+    reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT,
+    outputAssets: ["pyusd-paypal"],
     costModel: documentedVariableFee(
       "USD.AI's current app flow and issuer guidance indicate base USDai is minted and redeemed instantly against PYUSD, while the longer unstaking queue applies to sUSDai rather than base USDai",
     ),
@@ -532,6 +540,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
     notes: [
       "Current route models the base USDai burn-and-withdraw path into PYUSD; the asynchronous queue applies to sUSDai unstaking, not direct USDai redemption",
+      "Output declared 2026-07-19 from the existing reviewed note above: the modeled direct redemption pays PYUSD (tracked pyusd-paypal).",
     ],
   }),
   "frxusd-frax": defineStablecoinRedeemConfig({
@@ -1206,11 +1215,11 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "said-gaib": defineStablecoinRedeemConfig({
     outputAssets: ["aid-gaib"],
-    reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
+    reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT,
     capacityModel: { kind: "reserve-sync-metadata" },
     settlementModel: "queued",
     executionModel: "rules-based-nav",
-    outputAssetType: "nav",
+    outputAssetType: "stable-single",
     costModel: fixedFee(
       0,
       "sAID exits to AID through a monthly FIFO withdrawal cycle at unstaking NAV; verified source exposes no separate unstaking-fee deduction",
@@ -1229,6 +1238,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "sAID is not a $1-pegged wrapper; this route models the holder-exercisable withdrawal into AID at unstaking NAV, including possible unrealized-loss haircuts.",
       "Final AID redemption into supported stablecoins remains whitelisted for primary-market users, while regular users generally exit AID through app or DEX liquidity.",
       "Fresh ERC-4626 reserve telemetry reads the vault's idle AID balance as the current redeemable bound while the monthly FIFO cycle still governs settlement; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
+      "Output type corrected 2026-07-19: the withdrawal pays AID (tracked aid-gaib, a $1-target stablecoin) — the previously declared output asset — so the nav placeholder type was replaced with stable-single; the unstaking-NAV conversion-rate and haircut caveats above are unchanged and remain captured by the queued rules-based-nav execution model.",
     ],
   }),
   "zys-zephyr-protocol": defineStablecoinRedeemConfig({

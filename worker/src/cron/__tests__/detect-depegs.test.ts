@@ -50,7 +50,9 @@ import { detectDepegEvents } from "../detect-depegs";
 import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
 
 function isCloseEventUpdate(sql: string): boolean {
-  return sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = ?, close_reason = ? WHERE id = ?");
+  return sql.includes(
+    "UPDATE depeg_events SET ended_at = ?, recovery_price = ?, close_reason = ?, recovery_first_seen_at = NULL WHERE id = ?",
+  );
 }
 
 // Helper to build a minimal asset
@@ -119,7 +121,7 @@ describe("detectDepegEvents", () => {
     expect(insertCalls).toHaveLength(0);
   });
 
-  it("opens a new depeg event when price deviates past threshold", async () => {
+  it("starts pending confirmation when price deviates past threshold", async () => {
     const preparedSqls: string[] = [];
     const db = mockD1([
       { match: "depeg_events", rows: [] },
@@ -138,8 +140,9 @@ describe("detectDepegEvents", () => {
 
     await detectDepegEvents(db, assets);
 
-    const inserts = preparedSqls.filter(s => s.includes("INSERT INTO depeg_events"));
+    const inserts = preparedSqls.filter(s => s.includes("INSERT INTO depeg_pending"));
     expect(inserts.length).toBeGreaterThanOrEqual(1);
+    expect(preparedSqls.some((sql) => sql.includes("INSERT INTO depeg_events"))).toBe(false);
   });
 
   it("does not trigger at exactly the threshold (100 bps for USD)", async () => {
@@ -234,6 +237,7 @@ describe("detectDepegEvents", () => {
           direction: "below", peak_deviation_bps: -200, started_at: now - 3600,
           start_price: 0.98, peak_price: 0.98, peg_reference: 1,
           recovery_price: null, ended_at: null, source: "live",
+          recovery_first_seen_at: now - 900,
         }],
       },
       { match: "dex_prices", rows: [] },
@@ -268,6 +272,7 @@ describe("detectDepegEvents", () => {
           direction: "below", peak_deviation_bps: -220, started_at: now - 3600,
           start_price: 0.978, peak_price: 0.978, peg_reference: 1,
           recovery_price: null, ended_at: null, source: "live",
+          recovery_first_seen_at: now - 900,
         }],
       },
       { match: "dex_prices", rows: [] },
@@ -298,7 +303,7 @@ describe("detectDepegEvents", () => {
     expect(closures.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("handles direction change: closes old and opens new", async () => {
+  it("handles direction change: closes old and starts pending confirmation", async () => {
     const now = Math.floor(Date.now() / 1000);
     const preparedSqls: string[] = [];
     const db = mockD1([
@@ -330,7 +335,7 @@ describe("detectDepegEvents", () => {
       s.includes("UPDATE depeg_events SET ended_at")
     );
     const inserts = preparedSqls.filter(s =>
-      s.includes("INSERT INTO depeg_events")
+      s.includes("INSERT INTO depeg_pending")
     );
     expect(closures.length).toBeGreaterThanOrEqual(1);
     expect(inserts.length).toBeGreaterThanOrEqual(1);
@@ -613,7 +618,7 @@ describe("detectDepegEvents", () => {
       makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.98 }),
     ]);
 
-    const inserts = preparedSqls.filter((sql) => sql.includes("INSERT INTO depeg_events"));
+    const inserts = preparedSqls.filter((sql) => sql.includes("INSERT INTO depeg_pending"));
     expect(inserts.length).toBeGreaterThanOrEqual(1);
   });
 
@@ -690,7 +695,7 @@ describe("detectDepegEvents", () => {
     expect(inserts).toHaveLength(0);
   });
 
-  it("closes an open BRZ event when the direct BRL quote shows recovery", async () => {
+  it("closes an open BRZ event after sustained recovery in the BRL quote", async () => {
     const now = Math.floor(Date.now() / 1000);
     const preparedSqls: string[] = [];
     vi.mocked(fetchCurrentNativePegQuotes).mockResolvedValue(new Map([
@@ -720,6 +725,7 @@ describe("detectDepegEvents", () => {
           recovery_price: null,
           ended_at: null,
           source: "live",
+          recovery_first_seen_at: now - 900,
         }],
       },
       { match: "dex_prices", rows: [] },
@@ -845,7 +851,7 @@ describe("detectDepegEvents", () => {
     expect(pending.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("opens fresh independent multi-source extreme downside moves below the large-cap floor", async () => {
+  it("routes fresh multi-source extreme downside moves through pending confirmation", async () => {
     const preparedSqls: string[] = [];
     const db = mockD1([
       { match: "depeg_events", rows: [] },
@@ -873,8 +879,8 @@ describe("detectDepegEvents", () => {
 
     await detectDepegEvents(db, assets);
 
-    expect(preparedSqls.some((sql) => sql.includes("INSERT INTO depeg_events"))).toBe(true);
-    expect(preparedSqls.some((sql) => sql.includes("INSERT INTO depeg_pending"))).toBe(false);
+    expect(preparedSqls.some((sql) => sql.includes("INSERT INTO depeg_events"))).toBe(false);
+    expect(preparedSqls.some((sql) => sql.includes("INSERT INTO depeg_pending"))).toBe(true);
   });
 
   it("allows legitimate depeg prices within bounds", async () => {
@@ -897,7 +903,7 @@ describe("detectDepegEvents", () => {
     await detectDepegEvents(db, assets);
 
     const inserts = preparedSqls.filter(s =>
-      s.includes("INSERT INTO depeg_events")
+      s.includes("INSERT INTO depeg_pending")
     );
     expect(inserts.length).toBeGreaterThanOrEqual(1);
   });
@@ -984,7 +990,7 @@ describe("detectDepegEvents", () => {
         match: "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at FROM dex_prices",
         rows: [{
           stablecoin_id: "usdt-tether",
-          dex_price_usd: 0.994,
+          dex_price_usd: 0.985,
           deviation_from_primary_bps: 240,
           source_pool_count: 4,
           source_total_tvl: 4_000_000,
@@ -996,8 +1002,8 @@ describe("detectDepegEvents", () => {
         rows: [{
           stablecoin_id: "usdt-tether",
           price_sources_json: JSON.stringify([
-            { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 0.994, tvl: 2_000_000 },
-            { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: 0.9945, tvl: 2_000_000 },
+            { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 0.985, tvl: 2_000_000 },
+            { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: 0.9845, tvl: 2_000_000 },
           ]),
           updated_at: now - 60,
         }],
@@ -1135,6 +1141,7 @@ describe("detectDepegEvents", () => {
           direction: "below", peak_deviation_bps: -240, started_at: now - 7200,
           start_price: 0.976, peak_price: 0.976, peg_reference: 1,
           recovery_price: null, ended_at: null, source: "live",
+          recovery_first_seen_at: now - 900,
         }],
       },
       {
@@ -1283,7 +1290,7 @@ describe("detectDepegEvents", () => {
       makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.98 }),
     ]);
 
-    const inserts = preparedSqls.filter((sql) => sql.includes("INSERT INTO depeg_events"));
+    const inserts = preparedSqls.filter((sql) => sql.includes("INSERT INTO depeg_pending"));
     expect(inserts.length).toBeGreaterThanOrEqual(1);
   });
 

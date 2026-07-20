@@ -192,7 +192,7 @@ export const DexAmmExecutionTokenSchema = z.object({
   decimals: z.number().int().min(0).max(255),
   balance: z.number().finite().positive(),
   referencePriceUsd: z.number().finite().positive(),
-  referencePriceSource: z.enum(["source-token-usd", "tracked-market", "peg-reference"]),
+  referencePriceSource: z.enum(["source-token-usd", "tracked-market", "peg-reference", "pool-implied"]),
   trackedAssetId: z.string().min(1).optional(),
   weight: z.number().finite().positive().max(1).optional(),
 });

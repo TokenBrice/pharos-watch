@@ -40,5 +40,35 @@
         "candidateCoinIds": ["usdc-circle", "usdtb-ethena"]
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "USDtb reserve structure (BlackRock BUIDL via Securitize; Anchorage Digital Bank issuance rails)",
+        "role": "custodian"
+      },
+      {
+        "name": "Circle Internet Financial (USDC reserves)",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "MegaUSD reserve-composition disclosure",
+        "url": "https://megausd.money/"
+      },
+      {
+        "label": "MegaETH USDm announcement (2025-09-08)",
+        "url": "https://www.megaeth.com/blog-news/megaeth-introduces-usdm"
+      }
+    ],
+    "uncertainty": "USDM is issued on Ethena's USDtb rails with reserves described as roughly 90% USDtb plus liquid stablecoins; the custodians, account segregation, and any reuse terms behind the USDtb and stablecoin legs are not disclosed in the reviewed Mega sources.",
+    "knownUnknownExposurePct": 100
   }
 }

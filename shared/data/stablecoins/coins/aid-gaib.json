@@ -277,9 +277,32 @@
           "url": "https://docs.gaib.ai/products/gaib-products/transparency"
         }
       ],
-      "evidence": "At Ethereum block 25294761: hasRole confirmed for all four controls (MINTER_ROLE×2 contract holders, DEFAULT_ADMIN Safe 3/5, DEFAULT_ADMIN EOA). Both MINTER_ROLE holders are contracts (4099 and 3162 bytes); 0x410C19….owner()=EOA 0x3885be…; 0xE2E142….owner()=contract 0xee0cd7c…. EOA 0x3885be… confirmed no bytecode. DEFAULT_ADMIN Safe 3/5 confirmed (threshold 3, 5 owners, no modules, no guard). Same DEFAULT_ADMIN Safe and EOA confirmed on Arbitrum, Base, and BSC via hasRole. Arb/Base/BSC MINTER_ROLE has no active holders (different impl 0xfd8cf705… from Ethereum); minting on those chains routes via bridge contract authorized by DEFAULT_ADMIN. GAIB names McMillan Woods (Hong Kong) CPA for periodic reports, but GAIB's transparency documentation scopes that work to verifying the GPU/AI-financing deployment (e.g. the June 2026 Spiceflow assurance report), not an AID reserve-versus-circulating-supply reconciliation, and AID's dollar backing is shown only via self-displayed on-chain addresses, so no credible independent recurring reconciliation of AID reserves was found and reconciliation is unknown. Singapore's stablecoin regime covers only SGD/G10-pegged issuers and no MAS licence or other prudential authorisation for GAIB/AID was located, so supervision is none.",
-      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
-      "reviewedAt": "2026-07-16"
+      "evidence": "At Ethereum block 25294761: hasRole confirmed for all four controls (MINTER_ROLE×2 contract holders, DEFAULT_ADMIN Safe 3/5, DEFAULT_ADMIN EOA). Both MINTER_ROLE holders are contracts (4099 and 3162 bytes); 0x410C19….owner()=EOA 0x3885be…; 0xE2E142….owner()=contract 0xee0cd7c…. EOA 0x3885be… confirmed no bytecode. DEFAULT_ADMIN Safe 3/5 confirmed (threshold 3, 5 owners, no modules, no guard). Same DEFAULT_ADMIN Safe and EOA confirmed on Arbitrum, Base, and BSC via hasRole. Arb/Base/BSC MINTER_ROLE has no active holders (different impl 0xfd8cf705… from Ethereum); minting on those chains routes via bridge contract authorized by DEFAULT_ADMIN. GAIB names McMillan Woods (Hong Kong) CPA for periodic reports, but GAIB's transparency documentation scopes that work to verifying the GPU/AI-financing deployment (e.g. the June 2026 Spiceflow assurance report), not an AID reserve-versus-circulating-supply reconciliation, and AID's dollar backing is shown only via self-displayed on-chain addresses, so no credible independent recurring reconciliation of AID reserves was found and reconciliation is unknown. Singapore's stablecoin regime covers only SGD/G10-pegged issuers and no MAS licence or other prudential authorisation for GAIB/AID was located, so supervision is none. 2026-07-20 follow-up: the token is a UUPS proxy (EIP-1967 implementation 0x2db74834f556e1f19ed397e5f935a983e4c2f38b, proxiableUUID() returns the EIP-1967 slot, UPGRADE_INTERFACE_VERSION = '5.0.0', upgradeToAndCall present); upgrade authorization is role-gated in the implementation, so the DEFAULT_ADMIN_ROLE holders (Safe 0x32793F6B... 3/5 and EOA 0x3885be...) can change mint-critical logic.",
+      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+      "reviewedAt": "2026-07-20"
+    },
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x18f52b3fb465118731d9e0d276d4eb3599d57596"
+      ],
+      "implementationAddresses": [
+        "0x2db74834f556e1f19ed397e5f935a983e4c2f38b"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "AID default-admin Safe",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25570980,
+      "sources": [
+        {
+          "label": "AID Ethereum token proxy (EIP-1967 implementation slot)",
+          "url": "https://etherscan.io/address/0x18f52b3fb465118731d9e0d276d4eb3599d57596#readProxyContract"
+        },
+        {
+          "label": "AID implementation (proxiableUUID = EIP-1967 slot, UPGRADE_INTERFACE_VERSION 5.0.0)",
+          "url": "https://etherscan.io/address/0x2db74834f556e1f19ed397e5f935a983e4c2f38b#code"
+        }
+      ]
     }
   },
   "collateralQuality": "rwa",
@@ -344,6 +367,36 @@
         "rationale": "GAIB identifies the reserve categories but does not publish a reproducible current split among them."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "GAIB AID Minter contracts (Ethereum 0xE2E1424687EB676b3807693CBb439362b8eA908E, Base 0x81c1FBa2C7Df54aC76de5Ebe373e89bCad3b8632, Arbitrum 0x04DfA27c7D1Ade09dDfccfA233FB3c8490CA2b18)",
+        "role": "other"
+      },
+      {
+        "name": "Undisclosed off-chain reserve custodians (post-mint Treasury and stable-asset conversion)",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "GAIB AID and sAID contracts",
+        "url": "https://docs.gaib.ai/products/gaib-products/aid-and-said-contracts"
+      },
+      {
+        "label": "GAIB AID product documentation",
+        "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid"
+      }
+    ],
+    "uncertainty": "GAIB documents the on-chain Minter and Redeemer contracts that accept USDC/USDT, but what happens to proceeds after minting — conversion into Treasuries, custodian identities, account segregation, insolvency protections, and reuse terms — is off-chain and undocumented. The June 2026 Spiceflow assurance report covers GPU-financing asset deployment, not AID reserve custody, and no AID reserve attestation is publicly retrievable.",
+    "knownUnknownExposurePct": 100
   },
   "liveReservesConfig": {
     "adapter": "single-asset",

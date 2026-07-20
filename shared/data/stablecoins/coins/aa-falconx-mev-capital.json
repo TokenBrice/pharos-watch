@@ -101,31 +101,43 @@
     {
       "name": "FalconX institutional credit-line exposure via Pareto vault",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "FalconX (single borrower) via Pareto credit vault curated by M11 Credit",
+      "riskFactors": ["credit", "counterparty", "liquidity", "legal", "concentration"],
+      "liquidityHorizon": "over-seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-2 Safety Score V9 reserve review",
-    "confidence": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "probable",
     "sources": [
+      {
+        "label": "Pareto credit vaults (structure and flow of funds)",
+        "url": "https://docs.pareto.credit/product/credit-vaults"
+      },
       {
         "label": "Pareto live credit vaults",
         "url": "https://docs.pareto.credit/product/credit-vaults/live-vaults"
       },
       {
-        "label": "Ethereum Blockscout AA FalconX tranche",
-        "url": "https://eth.blockscout.com/address/0xc26a6fa2c37b38e549a4a1807543801db684f99c"
+        "label": "rwa.xyz AA_FalconXUSDC asset profile (legal structure, account segregation)",
+        "url": "https://app.rwa.xyz/assets/AA_FalconXUSDC"
       },
       {
-        "label": "Ethereum Blockscout IdleCDO",
-        "url": "https://eth.blockscout.com/address/0x433d5b175148da32ffe1e1a37a939e1b7e79be4d"
+        "label": "FalconX tokenized structured credit facility announcement",
+        "url": "https://www.falconx.io/newsroom/falconx-launches-the-first-tokenized-structured-credit-facility-in-digital-assets"
+      },
+      {
+        "label": "Ethereum Blockscout AA FalconX tranche",
+        "url": "https://eth.blockscout.com/address/0xc26a6fa2c37b38e549a4a1807543801db684f99c"
       }
     ],
-    "rationale": "Official Pareto materials identify AA_FalconXUSDC as a senior tranche backed through the IdleCDO and underlying USDC/USDf credit-vault exposure, but the reviewed sources do not publish a current balance sheet, constituent weights, or custody and counterparty allocation for the tranche. The existing generic credit-line row is retained as a bounded projection; no additional reserve dependency edges are inferred.",
-    "compositionBasis": "Current product and contract identity review; no dated allocation snapshot was available.",
+    "rationale": "AA_FalconXUSDC is a Pareto credit-vault tranche whose lenders deposit USDC that is lent each monthly cycle to a single obligor, FalconX, within its prime-brokerage lending business; the facility runs through a special-purpose vehicle with an equity first-loss tranche and transaction-level collateral, and rwa.xyz records bankruptcy-remote account segregation. The borrower, structure, protections, and NAV are public, but the underlying FalconX loan book (obligors, instruments, weights) is not disclosed, so the reserve remains one bounded single-obligor credit slice. The prior review's confidence is raised from unknown to probable on the strength of the Pareto documentation, the issuer announcement, and the rwa.xyz legal-structure listing.",
+    "compositionBasis": "Pareto credit-vault documentation, issuer facility announcement, and rwa.xyz legal-structure listing; underlying loan book undisclosed",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current tranche assets, credit-vault constituent weights, custody, counterparty, and impairment allocation are not disclosed in the reviewed sources.",
+    "knownUnknownExposure": "The composition of the underlying FalconX loan book — borrowers, instruments, collateral, maturities, and impairment allocation — is not disclosed in any reviewed source; no independent attestation of the loan book exists.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -133,9 +145,44 @@
         "reserveName": "FalconX institutional credit-line exposure via Pareto vault",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "The Pareto/FalconX materials identify the credit-line tranche but do not disclose the current underlying collateral instruments or weights, so the slice cannot be split or linked."
+        "rationale": "The vault's single-obligor credit exposure is documented, but the underlying loan-book composition cannot be split or linked from public evidence."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Pareto credit vault contracts (Ethereum)",
+        "role": "other",
+        "jurisdiction": "Ethereum"
+      },
+      {
+        "name": "FalconX (borrower; loan proceeds move to borrower wallet each cycle)",
+        "role": "other"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "rwa.xyz AA_FalconXUSDC asset profile (legal structure, account segregation)",
+        "url": "https://app.rwa.xyz/assets/AA_FalconXUSDC"
+      },
+      {
+        "label": "Pareto credit vaults (structure and flow of funds)",
+        "url": "https://docs.pareto.credit/product/credit-vaults"
+      },
+      {
+        "label": "FalconX tokenized structured credit facility announcement",
+        "url": "https://www.falconx.io/newsroom/falconx-launches-the-first-tokenized-structured-credit-facility-in-digital-assets"
+      }
+    ],
+    "uncertainty": "rwa.xyz records the facility's account segregation as bankruptcy remote and the structure as a special-purpose vehicle extending overcollateralized credit, while Pareto documents that vault funds are sent directly to the borrower's wallet each monthly cycle and deployed in FalconX's lending business, so reuse of proceeds is the product's design. No custodian, administrator, or auditor is named for the vault or the SPV in reviewed sources, and the segregation assertion rests on a data-platform listing rather than published legal documents.",
+    "knownUnknownExposurePct": 100
   },
   "yieldConfig": {
     "yieldSource": "Pareto FalconX Credit Vault",

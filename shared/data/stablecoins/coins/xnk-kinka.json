@@ -125,7 +125,7 @@
           "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x722a89f1b925fe41883978219c2176aecc7d6699/sources/ERC20Token.sol"
         }
       ],
-      "evidence": "XNK source/RPC reads show ongoing owner mint ability. Phase 0c follow-up: 0x2691FBB371456eaC5C5AA0082a0f53C91249c044 is a contract (22kb), not a Safe (Safe API 422, getOwners() reverts). owner() on 0x2691 returned 0x50ea796bcf3d178a100b1f0ef44faaef64741bfe (another contract, 22kb). 0x50ea is not a Safe (getOwners reverts, required() reverts). Neither contract exposes a legible multisig interface. The control chain from XNK token → 0x2691 → 0x50ea is unresolvable without verified source or ABI.",
+      "evidence": "XNK source/RPC reads show ongoing owner mint ability. Phase 0c follow-up: 0x2691FBB371456eaC5C5AA0082a0f53C91249c044 is a contract (22kb), not a Safe (Safe API 422, getOwners() reverts). owner() on 0x2691 returned 0x50ea796bcf3d178a100b1f0ef44faaef64741bfe (another contract, 22kb). 0x50ea is not a Safe (getOwners reverts, required() reverts). Neither contract exposes a legible multisig interface. The control chain from XNK token \u2192 0x2691 \u2192 0x50ea is unresolvable without verified source or ABI.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "unresolvedQuestions": [
@@ -145,7 +145,13 @@
       "risk": "medium",
       "assetClass": "other",
       "issuerOrObligor": "Kinka (BVI) Ltd.; Gold Management LLC and Loomis International",
-      "riskFactors": ["counterparty", "liquidity", "custody", "market", "legal"],
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "market",
+        "legal"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
@@ -228,8 +234,8 @@
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "XNK is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "probable",
     "protocols": [
       {
@@ -255,16 +261,28 @@
         "id": "ethereum:0x722a89f1b925fe41883978219c2176aecc7d6699",
         "destinationChain": "ethereum",
         "contractAddress": "0x722a89f1b925fe41883978219c2176aecc7d6699",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Kinka native XNK (legacy mintable ERC-20)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "XNK on Ethereum (owner() = 0x2691FBB371456eaC5C5AA0082a0f53C91249c044, mintingFinished() = false per the mint-authority review, re-confirmed 2026-07-20): Kinka's legacy owner-controlled mintable token. The owner contract chain (0x2691 \u2192 0x50ea) remains unresolvable (see mint-authority review), but no third-party bridge mints this deployment \u2014 minting is owner-only on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "XNK on Etherscan",
+            "url": "https://etherscan.io/address/0x722a89f1b925fe41883978219c2176aecc7d6699"
+          },
+          {
+            "label": "Kinka",
+            "url": "https://kinka-gold.com/"
+          }
+        ],
+        "observedBlock": 25571214
       },
       {
         "id": "cardano:2c5c6ca6f993e198bc9ac859ffb624dd291ec50b4d361544bd01e3ac584e4b",
@@ -277,9 +295,9 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "2026-07-20: Koios (api.koios.rest) returns no minted assets and no mint transactions for policy 2c5c6ca6f993e198bc9ac859ffb624dd291ec50b4d361544bd01e3ac584e4b, so the Cardano XNK deployment cannot be verified against live chain state. Left unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20"
       }
     ]
   }

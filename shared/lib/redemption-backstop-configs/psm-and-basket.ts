@@ -21,6 +21,7 @@ import {
 const REVIEWED_BASKET_REDEMPTION_AT = REVIEWED_FIRST_WAVE_AT;
 const REVIEWED_ROUTE_TUNING_AT = "2026-04-04";
 const REVIEWED_RESERVE_PROTOCOL_DTF_AT = REVIEWED_MAY_BATCH_AT;
+const REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT = "2026-07-19";
 const reviewedBasketRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_BASKET_REDEMPTION_AT);
 
 export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
@@ -115,8 +116,9 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "eur0-usual": {
     ...basketRedeemBase,
-    ...documentedBoundSupplyFull(REVIEWED_FOLLOWUP_REMEDIATION_AT),
+    ...documentedBoundSupplyFull(REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT),
     outputAssetType: "mixed-collateral",
+    outputAssets: ["asset:eutbl"],
     costModel: undisclosedReviewedFee(
       "Usual docs describe EUR0 redemption into eligible euro RWA collateral through the dApp; public materials reviewed do not publish one fixed EUR0 redemption fee",
     ),
@@ -126,9 +128,13 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
         "route",
         "access",
       ]),
+      sourceRef("Usual EUR0 product docs", "https://docs.usual.money/usual-products/usd0-stablecoin/eur0-stablecoin", [
+        "route",
+      ]),
     ],
     notes: [
       "Modeled as the Usual dApp basket redemption route into eligible euro-denominated RWA collateral, primarily Spiko EUTBL, rather than a direct fiat EUR issuer rail.",
+      "Output declared 2026-07-19: the Usual EUR0 product docs state redemption burns EUR0 to receive euTBL (Spiko EU T-Bills MMF) at par on the permissioned route, and the tech docs list EUTBL by Spiko as the sole EUR0 collateral entry; the permissionless Swapper Engine leg settles in EURC subject to liquidity and is not the modeled route.",
     ],
   },
   "gho-aave": {
@@ -271,15 +277,24 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   },
   "silk-shade-protocol": {
     ...basketRedeemBase,
-    ...documentedBoundSupplyFull("2026-04-16"),
+    ...documentedBoundSupplyFull(REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT),
     outputAssetType: "mixed-collateral",
+    outputAssets: ["asset:sscrt", "asset:wbtc", "asset:usdc"],
     costModel: undisclosedReviewedFee(
       "Shade Protocol documents Silk redemption pools plus ShadeDAO bond-assisted arbitrage; public docs reviewed do not publish a single fixed bps redemption fee",
     ),
-    docs: [sourceRef("Shade Protocol Silk docs", "https://docs.shadeprotocol.io/silk", ["route", "capacity"])],
+    docs: [
+      sourceRef("Shade Protocol Silk docs", "https://docs.shadeprotocol.io/silk", ["route", "capacity"]),
+      sourceRef(
+        "Shade Lend stability mechanisms",
+        "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/lend/stability-mechanisms",
+        ["route", "fees"],
+      ),
+    ],
     notes: [
       "Silk tracks a basket of GDP-weighted currencies; redemption pools combined with ShadeLend overcollateralization provide a reviewed basket-exit rail rather than a single-stable PSM",
       "Output asset type is mixed-collateral because the redeemed basket is not guaranteed to be all-stablecoin; it can include native Shade collateral assets",
+      "Output declared 2026-07-19: Shade Lend docs state a holder may redeem SILK for the collateral of their chosen vault, repaying a pro-rata share of the vault's debt; the declared assets are the vault collateral documented in official sources (sSCRT in the Lend docs, USDC.axl and wBTC vaults in Shade DAO forum redemption reports). The vault whitelist is governance-mutable and no canonical current list is published.",
     ],
   },
   "eusd-electronic-usd": {

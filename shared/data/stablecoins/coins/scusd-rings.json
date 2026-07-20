@@ -482,10 +482,10 @@
   },
   "launchDate": "2024-12-09",
   "bridgeRouteRisk": {
-    "tier": "external-lock-mint",
+    "tier": "issuer-native-burn-mint",
     "summary": "scUSD is reviewed as a Sonic/Ethereum Rings asset whose architecture includes cross-chain components: underlying capital is bridged through the Sonic bridge and vault shares can be bridged through LayerZero. Because holder-facing supply can depend on bridge/vault-share routing, Pharos scores the route as external lock/mint.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
     "confidence": "verified",
     "protocols": [
       {
@@ -517,31 +517,51 @@
         "id": "ethereum:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
         "destinationChain": "ethereum",
         "contractAddress": "0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Veda BoringVault native share mint (LayerZeroTeller)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: non-proxy BoringVault receipt token with owner() = 0x0; the reviewed mintAuthority identifies the sole external mint authority as the authorized LayerZeroTeller 0x358CFACf00d0b4634849821Bb3D1965b472c776a via RolesAuthority capability reads. Shares are minted natively by the vault system on this chain; no separate bridge representation contract carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "scUSD token on Etherscan",
+            "url": "https://etherscan.io/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+          },
+          {
+            "label": "Rings scUSD documentation",
+            "url": "https://docs.rings.money/"
+          }
+        ]
       },
       {
         "id": "sonic:0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
         "destinationChain": "sonic",
         "contractAddress": "0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Veda BoringVault native share mint (LayerZeroTeller)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: non-proxy BoringVault receipt token with owner() = 0x0; the reviewed mintAuthority identifies the sole external mint authority as the authorized LayerZeroTeller 0x358CFACf00d0b4634849821Bb3D1965b472c776a via RolesAuthority capability reads. Shares are minted natively by the vault system on this chain; no separate bridge representation contract carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "scUSD token on Sonicscan",
+            "url": "https://sonicscan.org/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae"
+          },
+          {
+            "label": "Rings scUSD documentation",
+            "url": "https://docs.rings.money/"
+          }
+        ]
       }
     ]
   },

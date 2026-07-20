@@ -92,20 +92,43 @@
     {
       "name": "U.S. home loan liens / property-backed receivables",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "U.S. home-loan borrowers via HomeCoin/Bacon Protocol origination",
+      "riskFactors": [
+        "credit",
+        "market",
+        "liquidity",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
     }
   ],
   "reserveReview": {
     "reviewedAt": "2026-07-14",
     "reviewer": "SONG Safety Score V9 reserve review",
     "confidence": "unknown",
-    "sources": [{ "label": "HomeCoin documentation", "url": "https://github.com/homecoin-finance/gitbook" }],
+    "sources": [
+      {
+        "label": "HomeCoin documentation",
+        "url": "https://github.com/homecoin-finance/gitbook"
+      }
+    ],
     "rationale": "BLOCKED: issuer materials describe home-loan liens and property-backed receivables but do not publish a current loan tape, valuation, reserve allocation, or independent attestation.",
     "compositionBasis": "Issuer description of mortgage-lien backing; current portfolio composition undisclosed",
     "scope": "selected-slices",
     "knownUnknownExposure": "The entire recorded collateral category lacks current public constituent, valuation, and allocation evidence.",
     "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [{ "reserveIndex": 0, "reserveName": "U.S. home loan liens / property-backed receivables", "pct": 100, "disposition": "insufficient-evidence", "rationale": "No current sourced portfolio composition or valuation is published." }]
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "U.S. home loan liens / property-backed receivables",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "No current sourced portfolio composition or valuation is published."
+      }
+    ]
   },
   "liveReservesConfig": {
     "adapter": "curated-validated",
@@ -144,14 +167,16 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "HOME supply expands only as new overcollateralized home loans are originated through a Pan; minting is tied to lien-backed loan creation rather than free issuer mint.",
-        "canRaiseCap": "unknown",
-        "evidence": "HOME token (0xb8919522331c59f5c16bdfaa6a121a6e03a91f62) is a proxy (EIP-1967 impl slot = 0x366049d336e73cfaf39c6a933780ca4c96ea084c, 24022 bytes); owner() reverts on the proxy — minting is contract-controlled via Pan loan origination.",
+        "canRaiseCap": false,
+        "evidence": "HOME token (0xb8919522331c59f5c16bdfaa6a121a6e03a91f62) is a proxy (EIP-1967 impl slot = 0x366049d336e73cfaf39c6a933780ca4c96ea084c, 24022 bytes); owner() reverts on the proxy — minting is contract-controlled via Pan loan origination. Follow-up 2026-07-20: the HOME token proxy's implementation is the Pool16 lending contract (blockscout-verified): borrow() mints HOME permissionlessly against servicer-issued property NFT liens (99% to borrower, 0.5% to servicer, 0.5% to DAO); getServicerAddress() = 0xa42f6fb68607048dde54fcd53d2195cc8ca5f486 (the reviewed 3-of-5 MultiSigWallet) and the liquidity token is USDC 0xa0b86991... There is no aggregate on-chain supply cap; mint volume is bounded only by servicer-originated loans.",
         "sources": [
           {
             "label": "HOME token on Etherscan",
             "url": "https://etherscan.io/address/0xb8919522331c59f5c16bdfaa6a121a6e03a91f62"
           }
-        ]
+        ],
+        "address": "0xb8919522331c59f5c16bdfaa6a121a6e03a91f62",
+        "modulesOrGuardsStatus": "not-applicable"
       },
       {
         "label": "HomeCoin ProxyAdmin owner (legacy Gnosis MultiSigWallet)",
@@ -179,8 +204,8 @@
     ],
     "review": {
       "evidence": "At Ethereum block 25295203: HOME token (0xb8919522...) EIP-1967 proxy admin slot = 0x5729890f... (ProxyAdmin); impl slot = 0x366049d3... (24022 bytes). ProxyAdmin.owner() = 0xa42f6fb6... (legacy Gnosis MultiSigWallet, 342 bytes). getOwners() = 5 EOAs; required (slot 4) = 3; ownerCount (slot 3) = 5. No Safe module system. Minting is via Pan contracts (loan origination); no direct issuer-discretion mint path.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "HomeCoin / Bacon Protocol docs",
@@ -195,7 +220,8 @@
           "url": "https://etherscan.io/address/0xa42f6fb68607048dde54fcd53d2195cc8ca5f486"
         }
       ]
-    }
+    },
+    "economicCapSemantics": "unbounded"
   },
   "launchDate": "2021-09-28"
 }

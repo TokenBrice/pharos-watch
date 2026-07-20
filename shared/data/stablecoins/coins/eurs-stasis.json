@@ -31,7 +31,7 @@
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-only",
       "liabilityReconciliation": "partial",
-        "reviewer": "owner-triage",
+      "reviewer": "owner-triage",
       "confidence": "verified",
       "sources": [
         {
@@ -47,9 +47,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "STASIS EURS is an issuer-backed euro token with Ethereum, Polygon, and Stellar deployments and no resolved external bridge protocol in source materials. The reviewed route is issuer-managed native issuance/redemption across supported chains.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "EURS is issuer-minted natively by STASIS on Ethereum, Polygon, XDC, Algorand, and Stellar (STASIS's published issuance chains; Ethereum delegate/owner verified on-chain). Arbitrum EURS is a Multichain representation (AnyswapV4Router owner, mint simulation verified) and Gnosis EURS is the OmniBridge representation (mediator owner verified).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
     "confidence": "probable",
     "sources": [
       {
@@ -66,91 +66,168 @@
         "id": "ethereum:0xdb25f211ab05b1c97d595516f45794528a807ad8",
         "destinationChain": "ethereum",
         "contractAddress": "0xdb25f211ab05b1c97d595516f45794528a807ad8",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "STASIS native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "STASIS-issued native deployment; on Ethereum the EURSToken delegate is the reviewed 3-of-7 STASIS Safe and the token owner is the reviewed issuer EOA; EURS is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "STASIS EURS",
+            "url": "https://stasis.net/"
+          }
+        ]
       },
       {
         "id": "polygon:0xe111178a87a3bff0c8d18decba5798827539ae99",
         "destinationChain": "polygon",
         "contractAddress": "0xe111178a87a3bff0c8d18decba5798827539ae99",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "STASIS native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "STASIS-issued native deployment administered under the issuer's mint controls (reviewed mint-authority profile); EURS is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "STASIS EURS",
+            "url": "https://stasis.net/"
+          }
+        ]
       },
       {
         "id": "algorand:227855942",
         "destinationChain": "algorand",
         "contractAddress": "227855942",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "STASIS native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "STASIS-issued native deployment administered under the issuer's mint controls (reviewed mint-authority profile); EURS is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "STASIS EURS",
+            "url": "https://stasis.net/"
+          }
+        ]
       },
       {
         "id": "arbitrum:0xd22a58f79e9481d1a88e00c343885a588b34b68b",
+        "sourceChain": "ethereum",
         "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xd22a58f79e9481d1a88e00c343885a588b34b68b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Multichain (AnyswapV4Router)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xc931f61b1534eb21d8c11b24f3f5ab2471d4ab50",
+        "failureDomainKeys": [
+          "protocol:multichain",
+          "contract:arbitrum:0xc931f61b1534eb21d8c11b24f3f5ab2471d4ab50"
+        ],
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Arbitrum EURS is a Multichain-bridged representation: owner() = AnyswapV4Router 0xc931f61b1534eb21d8c11b24f3f5ab2471d4ab50 (blockscout-verified) and an eth_call mint() simulation succeeds from that router and reverts from any other sender at 2026-07-20. Not a STASIS native issuance chain (STASIS lists only Ethereum, Polygon, XDC, XRPL, Algorand, and Stellar).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Arbitrum blockscout AnyswapV4Router",
+            "url": "https://arbitrum.blockscout.com/address/0xc931f61b1534eb21d8c11b24f3f5ab2471d4ab50"
+          },
+          {
+            "label": "STASIS EURS",
+            "url": "https://stasis.net/eurs"
+          }
+        ]
       },
       {
         "id": "stellar:EURS-GC5FGCDEOGOGSNWCCNKS3OMEVDHTE3Q5A5FEQWQKV3AXA7N6KDQ2CUZJ",
         "destinationChain": "stellar",
         "contractAddress": "EURS-GC5FGCDEOGOGSNWCCNKS3OMEVDHTE3Q5A5FEQWQKV3AXA7N6KDQ2CUZJ",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "STASIS native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "STASIS-issued native deployment administered under the issuer's mint controls (reviewed mint-authority profile); EURS is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "STASIS EURS",
+            "url": "https://stasis.net/"
+          }
+        ]
       },
       {
         "id": "xdc:0x1ebb2c8a71a9ec59bf558886a8adf8f4a565814f",
         "destinationChain": "xdc",
         "contractAddress": "0x1ebb2c8a71a9ec59bf558886a8adf8f4a565814f",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "STASIS native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "STASIS-issued native deployment administered under the issuer's mint controls (reviewed mint-authority profile); EURS is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "STASIS EURS",
+            "url": "https://stasis.net/"
+          }
+        ]
+      },
+      {
+        "id": "gnosis:0x9EE40742182707467f78344F6b287bE8704F27E2",
+        "sourceChain": "ethereum",
+        "destinationChain": "gnosis",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x9EE40742182707467f78344F6b287bE8704F27E2",
+        "protocol": "Gnosis OmniBridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "gnosis",
+        "controllerAddress": "0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d",
+        "failureDomainKeys": [
+          "protocol:gnosis-omnibridge",
+          "contract:gnosis:0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d"
+        ],
+        "reviewDisposition": "reviewed",
+        "reviewNote": "'STASIS EURS Token on xDai' is the OmniBridge-minted representation: owner() = Gnosis OmniBridge mediator 0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d (contract) verified on Gnosis at 2026-07-20.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Gnosis OmniBridge documentation",
+            "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/omnibridge"
+          }
+        ]
       }
     ]
   },
@@ -220,6 +297,11 @@
       "chain": "xdc",
       "address": "0x1ebb2c8a71a9ec59bf558886a8adf8f4a565814f",
       "decimals": 2
+    },
+    {
+      "chain": "gnosis",
+      "address": "0x9EE40742182707467f78344F6b287bE8704F27E2",
+      "decimals": 2
     }
   ],
   "blacklistabilityReview": {
@@ -241,7 +323,7 @@
         "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "evidence": "At Ethereum block 25295020, storage slot 3 of 0xdb25f211ab05b1c97d595516f45794528a807ad8 contains address 0x70250fcfef983c9b912c8eefb7021b4b7bae836e; eth_getCode returned no bytecode (EOA). In the EURSToken contract layout (owner=slot2, issuer=slot3, totalSupply=slot4), slot3 is the issuer address which holds mint/freeze authority in the issuer-operated model.",
+        "evidence": "At Ethereum block 25295020, storage slot 3 of 0xdb25f211ab05b1c97d595516f45794528a807ad8 contains address 0x70250fcfef983c9b912c8eefb7021b4b7bae836e; eth_getCode returned no bytecode (EOA). In the EURSToken contract layout (owner=slot2, issuer=slot3, totalSupply=slot4), slot3 is the issuer address which holds mint/freeze authority in the issuer-operated model. Follow-up 2026-07-20: EURSToken storage slot 3 reads owner = 0x70250fcfef983c9b912c8eefb7021b4b7bae836e (eth_getCode: no bytecode — EOA). setOwner/setDelegate are owner-gated per the verified EURSToken source.",
         "sources": [
           {
             "label": "EURS contract on Etherscan",
@@ -251,6 +333,11 @@
             "label": "STASIS EURS GitHub",
             "url": "https://github.com/STASISNET/STASIS-EURS-token-smart-contract"
           }
+        ],
+        "chain": "ethereum",
+        "address": "0x70250fcfef983c9b912c8eefb7021b4b7bae836e",
+        "failureDomainKeys": [
+          "eoa:ethereum:0x70250fcfef983c9b912c8eefb7021b4b7bae836e"
         ]
       },
       {
@@ -263,6 +350,7 @@
         "signerCount": 7,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
+          "threshold": 3,
           "owners": [
             "0x98cee9817499595b45eca740f7fc1da2f9f9280d",
             "0xaaa8d6ce7d27489ca2360bbb6a3a147d3f9e75c3",
@@ -272,20 +360,21 @@
             "0xdf8a372f71968542442a2dc5915cf3c40502166b",
             "0x558cc8752201b5f709f5d200a6f2256dafc805cc"
           ],
-          "threshold": 3,
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": null,
-          "version": "1.3.0",
-          "observedBlock": 25295020,
-          "source": "onchain"
+          "observedAt": "2026-07-20",
+          "source": "onchain",
+          "observedBlock": 25571720
         },
-        "evidence": "At Ethereum block 25295020, storage slot 2 of 0xdb25f211ab05b1c97d595516f45794528a807ad8 contains 0x1bee4f735062cd00841d6997964f187f5f5f5ac9 (the contract's owner). masterCopy() on that address = 0xd9db270c1b5e3bd161e8c8503c55ceabee709552 (Gnosis Safe 1.3.0 non-L2); threshold() = 3; getOwners() returned 7 addresses; getModules() = 0; guard slot = 0x0. Slot4 totalSupply = 12412594000 (= 124,125,940 EURS at 2 decimals, confirmed match).",
+        "evidence": "At Ethereum block 25295020, storage slot 2 of 0xdb25f211ab05b1c97d595516f45794528a807ad8 contains 0x1bee4f735062cd00841d6997964f187f5f5f5ac9 (the contract's owner). masterCopy() on that address = 0xd9db270c1b5e3bd161e8c8503c55ceabee709552 (Gnosis Safe 1.3.0 non-L2); threshold() = 3; getOwners() returned 7 addresses; getModules() = 0; guard slot = 0x0. Slot4 totalSupply = 12412594000 (= 124,125,940 EURS at 2 decimals, confirmed match). Follow-up 2026-07-20: EURSToken storage slot 2 reads delegate = 0x1bee4f735062cd00841d6997964f187f5f5f5ac9, a GnosisSafeProxy (blockscout-verified) with getThreshold()=3 and 7 owners (getOwners()); mastercopy 0xd9db270c1b5e3bd161e8c8503c55ceabee709552. Delegated EURS execution (mint/burn/freeze) routes through this Safe.",
         "sources": [
           {
             "label": "EURS contract on Etherscan",
             "url": "https://etherscan.io/address/0xdb25f211ab05b1c97d595516f45794528a807ad8"
           }
+        ],
+        "chain": "ethereum",
+        "address": "0x1bee4f735062cd00841d6997964f187f5f5f5ac9",
+        "failureDomainKeys": [
+          "safe:ethereum:0x1bee4f735062cd00841d6997964f187f5f5f5ac9"
         ]
       },
       {
@@ -307,8 +396,8 @@
     "supervision": "none",
     "review": {
       "evidence": "Verified at Ethereum block 25295020. EURSToken (non-proxy) at 0xdb25f211ab05b1c97d595516f45794528a807ad8: owner (slot2) = Gnosis Safe 1.3.0 (7/3, no modules, no guard); issuer (slot3) = EOA 0x70250fcfef. totalSupply confirmed via slot4. Polygon contract (0xe111178a) has different storage layout; Ethereum is the primary verified deployment. Stellar issuer GC5FGD… confirmed as 5/3 multisig via Horizon API. STASIS advertises quarterly and annual BDO Malta work, but the latest public independent reserve procedures report is dated August 1, 2024; the latest issuer page entry is only a December 12, 2025 account statement. Challenge searches found no 2025 or 2026 independent supply-to-reserve reconciliation, so the stale BDO cadence is not treated as current and reconciliation is unknown. The MFSA registry search did not produce a stable exact issuer authorization for EURS/STSS, and no bank, trust, EMI, or equivalent prudential charter was verified; supervision is none.",
-      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
-      "reviewedAt": "2026-07-15",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "STASIS Transparency",

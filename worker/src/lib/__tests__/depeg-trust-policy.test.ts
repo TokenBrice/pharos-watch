@@ -180,10 +180,11 @@ describe("depeg confirmation source families", () => {
   });
 
   it.each([
-    ["coingecko+pyth", undefined, "defillama-confirm"],
-    ["pyth+coingecko", undefined, "defillama-confirm"],
+    ["coingecko+pyth", undefined, null],
+    ["pyth+coingecko", undefined, null],
     ["defillama-list+coingecko", undefined, null],
-    ["pyth", ["pyth", "coingecko"], "defillama-confirm"],
+    ["pyth", ["pyth", "coingecko"], null],
+    ["pyth", ["pyth"], "coingecko-confirm"],
   ])("chooses an independent off-chain confirmer for %s", (priceSource, agreeSources, expected) => {
     expect(chooseIndependentOffchainDepegConfirmer({ priceSource, agreeSources })).toBe(expected);
   });
@@ -199,6 +200,6 @@ describe("depeg confirmation source families", () => {
     expect(chooseIndependentOffchainDepegConfirmer({
       priceSource: "pyth",
       agreeSources: ["coingecko+geckoterminal"],
-    })).toBe("defillama-confirm");
+    })).toBeNull();
   });
 });

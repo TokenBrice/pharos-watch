@@ -28,9 +28,9 @@
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
     "summary": "Wrapped Savings rUSD is deployed across many chains and the L2BEAT candidate route resolves Across liquidity/intent routing. The reviewed profile treats cross-chain movement as liquidity/intent route exposure rather than issuer-native finality.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "l2beat",
@@ -61,242 +61,647 @@
       {
         "id": "ethereum:0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Reservoir native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native wsrUSD (wrapped srUSD) on Ethereum (6,261-byte wrapper token, no LayerZero endpoint). totalSupply read 2026-07-20.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Etherscan token",
+            "url": "https://etherscan.io/token/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
+          },
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          },
+          {
+            "label": "DefiLlama reservoir-stablecoin layerzeroConfig + adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/tree/master/src/adapters/peggedAssets/reservoir-stablecoin"
+          }
+        ]
       },
       {
         "id": "base:0x62344be8ca1c339b46274a4017dd87af436900b1",
+        "sourceChain": "ethereum",
         "destinationChain": "base",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x62344be8ca1c339b46274a4017dd87af436900b1",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero NativeOFT (Reservoir)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "NativeOFT wsrUSD: the token contract itself is the LayerZero OFT (12,275-byte code, endpoint() = the chain's LZ V2 endpoint, read 2026-07-20) with owner() = Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 on every chain. DefiLlama records this chain's wsrUSD as bridgedFromETH; the OFT burns/mints under LayerZero verification.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "base",
+        "controllerAddress": "0x62344be8ca1c339b46274a4017dd87af436900b1",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:base:0x62344be8ca1c339b46274a4017dd87af436900b1"
+        ],
+        "sources": [
+          {
+            "label": "base explorer token",
+            "url": "https://basescan.org/token/0x62344be8ca1c339b46274a4017dd87af436900b1"
+          },
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "DefiLlama reservoir-stablecoin layerzeroConfig + adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/tree/master/src/adapters/peggedAssets/reservoir-stablecoin"
+          }
+        ]
       },
       {
         "id": "berachain:0x316cd39632cac4f4cdfc21757c4500fe12f64514",
+        "sourceChain": "ethereum",
         "destinationChain": "berachain",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x316cd39632cac4f4cdfc21757c4500fe12f64514",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero NativeOFT (Reservoir)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "NativeOFT wsrUSD: the token contract itself is the LayerZero OFT (12,275-byte code, endpoint() = the chain's LZ V2 endpoint, read 2026-07-20) with owner() = Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 on every chain. DefiLlama records this chain's wsrUSD as bridgedFromETH; the OFT burns/mints under LayerZero verification.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "berachain",
+        "controllerAddress": "0x316cd39632cac4f4cdfc21757c4500fe12f64514",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:berachain:0x316cd39632cac4f4cdfc21757c4500fe12f64514"
+        ],
+        "sources": [
+          {
+            "label": "berachain explorer token",
+            "url": "https://berascan.com/token/0x316cd39632cac4f4cdfc21757c4500fe12f64514"
+          },
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "DefiLlama reservoir-stablecoin layerzeroConfig + adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/tree/master/src/adapters/peggedAssets/reservoir-stablecoin"
+          }
+        ]
       },
       {
         "id": "sonic:0x4809010926aec940b550d34a46a52739f996d75d",
+        "sourceChain": "ethereum",
         "destinationChain": "sonic",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero NativeOFT (Reservoir)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "NativeOFT wsrUSD: the token contract itself is the LayerZero OFT (12,275-byte code, endpoint() = the chain's LZ V2 endpoint, read 2026-07-20) with owner() = Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 on every chain. DefiLlama records this chain's wsrUSD as bridgedFromETH; the OFT burns/mints under LayerZero verification.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "sonic",
+        "controllerAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:sonic:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "sources": [
+          {
+            "label": "sonic explorer token",
+            "url": "https://sonicscan.org/token/0x4809010926aec940b550d34a46a52739f996d75d"
+          },
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "DefiLlama reservoir-stablecoin layerzeroConfig + adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/tree/master/src/adapters/peggedAssets/reservoir-stablecoin"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x4809010926aec940b550d34a46a52739f996d75d",
+        "sourceChain": "ethereum",
         "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero NativeOFT (Reservoir)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "NativeOFT wsrUSD: the token contract itself is the LayerZero OFT (12,275-byte code, endpoint() = the chain's LZ V2 endpoint, read 2026-07-20) with owner() = Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 on every chain. DefiLlama records this chain's wsrUSD as bridgedFromETH; the OFT burns/mints under LayerZero verification.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:arbitrum:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "sources": [
+          {
+            "label": "arbitrum explorer token",
+            "url": "https://arbiscan.io/token/0x4809010926aec940b550d34a46a52739f996d75d"
+          },
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "DefiLlama reservoir-stablecoin layerzeroConfig + adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/tree/master/src/adapters/peggedAssets/reservoir-stablecoin"
+          }
+        ]
       },
       {
         "id": "bsc:0x4809010926aec940b550d34a46a52739f996d75d",
+        "sourceChain": "ethereum",
         "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero NativeOFT (Reservoir)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "NativeOFT wsrUSD: the token contract itself is the LayerZero OFT (12,275-byte code, endpoint() = the chain's LZ V2 endpoint, read 2026-07-20) with owner() = Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 on every chain. DefiLlama records this chain's wsrUSD as bridgedFromETH; the OFT burns/mints under LayerZero verification.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "bsc",
+        "controllerAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:bsc:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "sources": [
+          {
+            "label": "bsc explorer token",
+            "url": "https://bscscan.com/token/0x4809010926aec940b550d34a46a52739f996d75d"
+          },
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "DefiLlama reservoir-stablecoin layerzeroConfig + adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/tree/master/src/adapters/peggedAssets/reservoir-stablecoin"
+          }
+        ]
       },
       {
         "id": "avalanche:0x4809010926aec940b550d34a46a52739f996d75d",
+        "sourceChain": "ethereum",
         "destinationChain": "avalanche",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero NativeOFT (Reservoir)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "NativeOFT wsrUSD: the token contract itself is the LayerZero OFT (12,275-byte code, endpoint() = the chain's LZ V2 endpoint, read 2026-07-20) with owner() = Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 on every chain. DefiLlama records this chain's wsrUSD as bridgedFromETH; the OFT burns/mints under LayerZero verification.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "avalanche",
+        "controllerAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:avalanche:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "sources": [
+          {
+            "label": "avalanche explorer token",
+            "url": "https://snowtrace.io/token/0x4809010926aec940b550d34a46a52739f996d75d"
+          },
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "DefiLlama reservoir-stablecoin layerzeroConfig + adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/tree/master/src/adapters/peggedAssets/reservoir-stablecoin"
+          }
+        ]
       },
       {
         "id": "unichain:0x4809010926aec940b550d34a46a52739f996d75d",
+        "sourceChain": "ethereum",
         "destinationChain": "unichain",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero NativeOFT (Reservoir)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "NativeOFT wsrUSD: the token contract itself is the LayerZero OFT (12,275-byte code, endpoint() = the chain's LZ V2 endpoint, read 2026-07-20) with owner() = Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 on every chain. DefiLlama records this chain's wsrUSD as bridgedFromETH; the OFT burns/mints under LayerZero verification.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "unichain",
+        "controllerAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:unichain:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "sources": [
+          {
+            "label": "unichain explorer token",
+            "url": "https://uniscan.xyz/token/0x4809010926aec940b550d34a46a52739f996d75d"
+          },
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "DefiLlama reservoir-stablecoin layerzeroConfig + adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/tree/master/src/adapters/peggedAssets/reservoir-stablecoin"
+          }
+        ]
       },
       {
         "id": "plume:0x0bbcc2c1991d0af8ec6a5ed922e6f5606923fe15",
+        "sourceChain": "ethereum",
         "destinationChain": "plume",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x0bbcc2c1991d0af8ec6a5ed922e6f5606923fe15",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero NativeOFT (Reservoir)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "NativeOFT wsrUSD: the token contract itself is the LayerZero OFT (12,275-byte code, endpoint() = the chain's LZ V2 endpoint, read 2026-07-20) with owner() = Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 on every chain. DefiLlama records this chain's wsrUSD as bridgedFromETH; the OFT burns/mints under LayerZero verification.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "plume",
+        "controllerAddress": "0x0bbcc2c1991d0af8ec6a5ed922e6f5606923fe15",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:plume:0x0bbcc2c1991d0af8ec6a5ed922e6f5606923fe15"
+        ],
+        "sources": [
+          {
+            "label": "plume explorer token",
+            "url": "https://explorer.plume.org/token/0x0bbcc2c1991d0af8ec6a5ed922e6f5606923fe15"
+          },
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "DefiLlama reservoir-stablecoin layerzeroConfig + adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/tree/master/src/adapters/peggedAssets/reservoir-stablecoin"
+          }
+        ]
       },
       {
         "id": "sei:0x4809010926aec940b550d34a46a52739f996d75d",
+        "sourceChain": "ethereum",
         "destinationChain": "sei",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero NativeOFT (Reservoir)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "NativeOFT wsrUSD: the token contract itself is the LayerZero OFT (12,275-byte code, endpoint() = the chain's LZ V2 endpoint, read 2026-07-20) with owner() = Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 on every chain. DefiLlama records this chain's wsrUSD as bridgedFromETH; the OFT burns/mints under LayerZero verification.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "sei",
+        "controllerAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:sei:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "sources": [
+          {
+            "label": "sei explorer token",
+            "url": "https://seitrace.com/token/0x4809010926aec940b550d34a46a52739f996d75d"
+          },
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "DefiLlama reservoir-stablecoin layerzeroConfig + adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/tree/master/src/adapters/peggedAssets/reservoir-stablecoin"
+          }
+        ]
       },
       {
         "id": "worldchain:0x4809010926aec940b550d34a46a52739f996d75d",
+        "sourceChain": "ethereum",
         "destinationChain": "worldchain",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero NativeOFT (Reservoir)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "NativeOFT wsrUSD: the token contract itself is the LayerZero OFT (12,275-byte code, endpoint() = the chain's LZ V2 endpoint, read 2026-07-20) with owner() = Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 on every chain. DefiLlama records this chain's wsrUSD as bridgedFromETH; the OFT burns/mints under LayerZero verification.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "worldchain",
+        "controllerAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:worldchain:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "sources": [
+          {
+            "label": "worldchain explorer token",
+            "url": "https://worldscan.org/token/0x4809010926aec940b550d34a46a52739f996d75d"
+          },
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "DefiLlama reservoir-stablecoin layerzeroConfig + adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/tree/master/src/adapters/peggedAssets/reservoir-stablecoin"
+          }
+        ]
       },
       {
         "id": "katana:0x4809010926aec940b550d34a46a52739f996d75d",
+        "sourceChain": "ethereum",
         "destinationChain": "katana",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero NativeOFT (Reservoir)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "NativeOFT wsrUSD: the token contract itself is the LayerZero OFT (12,275-byte code, endpoint() = the chain's LZ V2 endpoint, read 2026-07-20) with owner() = Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 on every chain. DefiLlama records this chain's wsrUSD as bridgedFromETH; the OFT burns/mints under LayerZero verification.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "katana",
+        "controllerAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:katana:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "sources": [
+          {
+            "label": "katana explorer token",
+            "url": "https://katanascan.com/token/0x4809010926aec940b550d34a46a52739f996d75d"
+          },
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "DefiLlama reservoir-stablecoin layerzeroConfig + adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/tree/master/src/adapters/peggedAssets/reservoir-stablecoin"
+          }
+        ]
       },
       {
         "id": "hyperevm:0x04716db62c085d9e08050fcf6f7d775a03d07720",
+        "sourceChain": "ethereum",
         "destinationChain": "hyperevm",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x04716db62c085d9e08050fcf6f7d775a03d07720",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero NativeOFT (Reservoir)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "NativeOFT wsrUSD: the token contract itself is the LayerZero OFT (12,275-byte code, endpoint() = the chain's LZ V2 endpoint, read 2026-07-20) with owner() = Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 on every chain. DefiLlama records this chain's wsrUSD as bridgedFromETH; the OFT burns/mints under LayerZero verification.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x04716db62c085d9e08050fcf6f7d775a03d07720",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:hyperevm:0x04716db62c085d9e08050fcf6f7d775a03d07720"
+        ],
+        "sources": [
+          {
+            "label": "hyperevm explorer token",
+            "url": "https://purrsec.com/token/0x04716db62c085d9e08050fcf6f7d775a03d07720"
+          },
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "DefiLlama reservoir-stablecoin layerzeroConfig + adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/tree/master/src/adapters/peggedAssets/reservoir-stablecoin"
+          }
+        ]
       },
       {
         "id": "linea:0x4809010926aec940b550d34a46a52739f996d75d",
+        "sourceChain": "ethereum",
         "destinationChain": "linea",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero NativeOFT (Reservoir)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "NativeOFT wsrUSD: the token contract itself is the LayerZero OFT (12,275-byte code, endpoint() = the chain's LZ V2 endpoint, read 2026-07-20) with owner() = Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 on every chain. DefiLlama records this chain's wsrUSD as bridgedFromETH; the OFT burns/mints under LayerZero verification.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "linea",
+        "controllerAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:linea:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "sources": [
+          {
+            "label": "linea explorer token",
+            "url": "https://lineascan.build/token/0x4809010926aec940b550d34a46a52739f996d75d"
+          },
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "DefiLlama reservoir-stablecoin layerzeroConfig + adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/tree/master/src/adapters/peggedAssets/reservoir-stablecoin"
+          }
+        ]
       },
       {
         "id": "monad:0x4809010926aec940b550d34a46a52739f996d75d",
+        "sourceChain": "ethereum",
         "destinationChain": "monad",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero NativeOFT (Reservoir)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "NativeOFT wsrUSD: the token contract itself is the LayerZero OFT (12,275-byte code, endpoint() = the chain's LZ V2 endpoint, read 2026-07-20) with owner() = Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 on every chain. DefiLlama records this chain's wsrUSD as bridgedFromETH; the OFT burns/mints under LayerZero verification.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "monad",
+        "controllerAddress": "0x4809010926aec940b550d34a46a52739f996d75d",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:monad:0x4809010926aec940b550d34a46a52739f996d75d"
+        ],
+        "sources": [
+          {
+            "label": "monad explorer token",
+            "url": "https://monadscan.com/token/0x4809010926aec940b550d34a46a52739f996d75d"
+          },
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "DefiLlama reservoir-stablecoin layerzeroConfig + adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/tree/master/src/adapters/peggedAssets/reservoir-stablecoin"
+          }
+        ]
       },
       {
         "id": "solana:7bxM8cRFZpzonzZtzmrcWHNX1dijrEVU4VkjjtVyBmqE",
+        "sourceChain": "ethereum",
         "destinationChain": "solana",
+        "canonicalChain": "ethereum",
         "contractAddress": "7bxM8cRFZpzonzZtzmrcWHNX1dijrEVU4VkjjtVyBmqE",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT on Solana (Reservoir)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "wsrUSD SPL mint 7bxM8cRFZpzonzZtzmrcWHNX1dijrEVU4VkjjtVyBmqE (supply 10,000 raw at 9 decimals, read 2026-07-20 via Solana RPC) has mintAuthority ikwucBfDFvoJXimgvNHvxoFE5vZaLKmS8Ja3NqxUbYp \u2014 a program-owned PDA (owner program GYdh9iATa8RUVBHSyoxuWyP17v8bmL6VYsM7P4qMFCVq) consistent with the LayerZero OFT mint-authority account; freezeAuthority is unset.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "solana",
+        "controllerAddress": "ikwucBfDFvoJXimgvNHvxoFE5vZaLKmS8Ja3NqxUbYp",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:solana:ikwucBfDFvoJXimgvNHvxoFE5vZaLKmS8Ja3NqxUbYp"
+        ],
+        "sources": [
+          {
+            "label": "Solana explorer token",
+            "url": "https://solscan.io/token/7bxM8cRFZpzonzZtzmrcWHNX1dijrEVU4VkjjtVyBmqE"
+          },
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "DefiLlama reservoir-stablecoin layerzeroConfig + adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/tree/master/src/adapters/peggedAssets/reservoir-stablecoin"
+          }
+        ]
       }
     ]
   },
@@ -594,8 +999,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
     "confidence": "verified",
     "sources": [
       {
@@ -611,12 +1016,43 @@
         "url": "https://app.reservoir.xyz/api/reserves/raw"
       }
     ],
-    "rationale": "The verified wsrUSD ERC-4626 wrapper reports rUSD as its underlying asset, and the current record's fixed-block review confirms that wrapper shares are minted through deposits rather than an independent reserve claim. The direct wsrUSD reserve is therefore one 100% wrapper position linked to tracked asset rusd-reservoir; the underlying rUSD basket is inherited and is not duplicated here.",
-    "compositionBasis": "Verified wsrUSD ERC-4626 asset() relationship and Reservoir reserve documentation",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "The verified wsrUSD ERC-4626 wrapper reports rUSD as its underlying asset; asset() on 0xd3fd63209fa2d55b07a0f6db36c2f43900be3094 returned rUSD 0x09D4214C03D01F49544C0448DBE3A27f768F2b34 when re-read via public RPC on 2026-07-20, and Reservoir's product documentation re-fetched today confirms wsrUSD is minted with rUSD and redeemable for rUSD at any time up to available PSM liquidity. The direct wsrUSD reserve is therefore one 100% wrapper position linked to tracked asset rusd-reservoir; the underlying rUSD basket is inherited and is not duplicated here. The parent rUSD composition was re-aligned to the 2026-07-20 Reservoir API on this same date (USD1 bucket fell from 8.4% to 2.1%).",
+    "compositionBasis": "Verified wsrUSD ERC-4626 asset() relationship (public RPC read 2026-07-20) and Reservoir reserve documentation",
+    "compositionAsOf": "2026-07-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "The direct dependency is fully identified as rUSD, but the underlying rUSD reserve composition, strategy allocation, and legal custody terms remain upstream facts.",
+    "knownUnknownExposure": "The direct dependency is fully identified as rUSD, but the underlying rUSD reserve composition, strategy allocation, and legal custody terms remain upstream facts tracked on the rusd-reservoir record.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Reservoir wsrUSD Savingcoin ERC-4626 wrapper contract 0xd3fd63209fa2d55b07a0f6db36c2f43900be3094 (self-custodied; wraps rUSD held in upstream Reservoir protocol contracts)",
+        "role": "other",
+        "sharePct": 100,
+        "jurisdiction": "Cayman Islands"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "none",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Reservoir wsrUSD product documentation",
+        "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd"
+      },
+      {
+        "label": "Reservoir Terms of Service (last revised 2024-08-23)",
+        "url": "https://docs.reservoir.xyz/security-and-compliance/terms-of-service"
+      },
+      {
+        "label": "Blockscout verified wsrUSD Savingcoin source",
+        "url": "https://eth.blockscout.com/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094?tab=contract"
+      }
+    ],
+    "uncertainty": "wsrUSD's only direct reserve is rUSD deposited in the non-upgradeable ERC-4626 wrapper contract (asset() = rUSD 0x09D4214C03D01F49544C0448DBE3A27f768F2b34, re-verified 2026-07-20), so custody of the economic backing is inherited entirely from rUSD: the upstream Reservoir balance sheet sits in protocol-controlled adapter contracts with no named third-party custodian, trust, SPV, or holder claim documented in the ToS (2024-08-23) or product docs. The wrapper itself does not re-lend its rUSD, but the upstream rUSD reserve model is active re-deployment into lending markets, vaults, and RWA credit, so rehypothecation is marked permitted at the economic level. Redemption is documented as immediate only up to available PSM liquidity. Wrapper parameters (setCap, update) are governed by the 3-of-5 MANAGER Safe 0x4E8a4894275780f571AaD53122e641D9f50Ff04f, while DEFAULT_ADMIN_ROLE remains with EOA 0xb7570e32 and can grant or revoke MANAGER (mint-authority review, 2026-07-14). No bankruptcy-remoteness structure for wsrUSD holders is documented."
   },
   "liveReservesConfig": {
     "adapter": "reservoir",

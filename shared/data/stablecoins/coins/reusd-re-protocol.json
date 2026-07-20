@@ -123,7 +123,7 @@
     "reserveDisclosureUrl": "https://app.re.xyz/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "reUSD is a yield-bearing, NAV-based insurance capital token restricted to non-U.S. persons under Regulation S. The issuer is Resilience Foundation (full legal name: Resilience Foundation Company), an Exempted Limited Guarantee Foundation Company incorporated in the Cayman Islands (IC-414560), not a BVI entity. A related entity Resilience (BVI) Ltd exists in BVI but is not the token issuer. Prior entry listed issuerDomicile as British Virgin Islands — corrected to Cayman Islands. No GENIUS payment-stablecoin applicability; not-applicable status is appropriate.",
+    "notes": "reUSD is a yield-bearing, NAV-based insurance capital token restricted to non-U.S. persons under Regulation S. The issuer is Resilience Foundation (full legal name: Resilience Foundation Company), an Exempted Limited Guarantee Foundation Company incorporated in the Cayman Islands (IC-414560), not a BVI entity. A related entity Resilience (BVI) Ltd exists in BVI but is not the token issuer. Prior entry listed issuerDomicile as British Virgin Islands \u2014 corrected to Cayman Islands. No GENIUS payment-stablecoin applicability; not-applicable status is appropriate.",
     "references": [
       {
         "label": "Re Protocol disclosure page",
@@ -177,6 +177,21 @@
       "chain": "ink",
       "address": "0x5bcf6b008bf80b9296238546bace1797657b05d6",
       "decimals": 18
+    },
+    {
+      "chain": "plasma",
+      "address": "0xe08853433fdbc504240455e295b644e0f44c3b29",
+      "decimals": 18
+    },
+    {
+      "chain": "katana",
+      "address": "0xe08853433fdbc504240455e295b644e0f44c3b29",
+      "decimals": 18
+    },
+    {
+      "chain": "tempo",
+      "address": "0x20c000000000000000000000e09a4cfec804f102",
+      "decimals": 6
     }
   ],
   "canBeBlacklisted": "possible",
@@ -485,7 +500,14 @@
       "depType": "collateral",
       "assetClass": "hedged-crypto",
       "issuerOrObligor": "Ethena Labs and hedge counterparties",
-      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity", "smart-contract"],
+      "riskFactors": [
+        "market",
+        "basis",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
       "liquidityHorizon": "seven-days"
     },
     {
@@ -495,7 +517,11 @@
       "coinId": "usdc-circle",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle Internet Financial",
-      "riskFactors": ["counterparty", "custody", "liquidity"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
@@ -504,7 +530,13 @@
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Re Protocol and Ethena liquidity contracts",
-      "riskFactors": ["market", "basis", "counterparty", "liquidity", "smart-contract"],
+      "riskFactors": [
+        "market",
+        "basis",
+        "counterparty",
+        "liquidity",
+        "smart-contract"
+      ],
       "liquidityHorizon": "one-day"
     },
     {
@@ -514,7 +546,11 @@
       "coinId": "usdt-tether",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Tether Holdings",
-      "riskFactors": ["counterparty", "custody", "liquidity"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
@@ -524,7 +560,14 @@
       "coinId": "usde-ethena",
       "assetClass": "hedged-crypto",
       "issuerOrObligor": "Ethena Labs and hedge counterparties",
-      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity", "smart-contract"],
+      "riskFactors": [
+        "market",
+        "basis",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
       "liquidityHorizon": "one-day"
     }
   ],
@@ -536,8 +579,8 @@
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "reUSD is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "probable",
     "protocols": [
       {
@@ -563,91 +606,298 @@
         "id": "ethereum:0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
         "destinationChain": "ethereum",
         "contractAddress": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Re Protocol native reUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native reUSD on Ethereum: minted by the InsuranceCapitalLayer MINTER_ROLE holder and InstantRedemption module per the verified mint-authority review; a Chainlink CCIP BurnWithFromMintTokenPool 2.0.0 (0xf00b3b06690bc7e2bc6a9ccae55d17b7cd818465, per TokenAdminRegistry.getPool) also holds burn/mint rights for cross-chain supply.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "canonicalChain": "ethereum",
+        "observedBlock": 25570987,
+        "sources": [
+          {
+            "label": "Re Protocol docs",
+            "url": "https://docs.re.xyz/"
+          },
+          {
+            "label": "reUSD on Etherscan",
+            "url": "https://etherscan.io/address/0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
+          }
+        ]
       },
       {
         "id": "avalanche:0x180af87b47bf272b2df59dccf2d76a6eafa625bf",
         "destinationChain": "avalanche",
         "contractAddress": "0x180af87b47bf272b2df59dccf2d76a6eafa625bf",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP (reUSD BurnWithFromMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on avalanche 2026-07-20 (block 90755315): TokenAdminRegistry.getPool(reUSD) = 0xd75e543c68a80a05f281aacad649c18661719ddd, whose typeAndVersion() = 'BurnWithFromMintTokenPool 2.0.0'; eth_call mint() simulation succeeds from the pool and reverts from other senders, so the CCIP pool is the mint/burn authority for this representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xd75e543c68a80a05f281aacad649c18661719ddd",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:avalanche:0xd75e543c68a80a05f281aacad649c18661719ddd"
+        ],
+        "observedBlock": 90755315,
+        "sources": [
+          {
+            "label": "Chainlink CCIP token directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet"
+          },
+          {
+            "label": "reUSD CCIP pool on avalanche explorer (verified 2026-07-20)",
+            "url": "https://snowscan.xyz/address/0xd75e543c68a80a05f281aacad649c18661719ddd"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609",
         "destinationChain": "arbitrum",
         "contractAddress": "0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP (reUSD BurnWithFromMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on arbitrum 2026-07-20 (block 485696031): TokenAdminRegistry.getPool(reUSD) = 0xd156a8e80a6593ddafa099f76754fdce0f808a55, whose typeAndVersion() = 'BurnWithFromMintTokenPool 2.0.0'; eth_call mint() simulation succeeds from the pool and reverts from other senders, so the CCIP pool is the mint/burn authority for this representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xd156a8e80a6593ddafa099f76754fdce0f808a55",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:arbitrum:0xd156a8e80a6593ddafa099f76754fdce0f808a55"
+        ],
+        "observedBlock": 485696031,
+        "sources": [
+          {
+            "label": "Chainlink CCIP token directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet"
+          },
+          {
+            "label": "reUSD CCIP pool on arbitrum explorer (verified 2026-07-20)",
+            "url": "https://arbiscan.io/address/0xd156a8e80a6593ddafa099f76754fdce0f808a55"
+          }
+        ]
       },
       {
         "id": "base:0x7d214438d0f27afccc23b3d1e1a53906ace5cfea",
         "destinationChain": "base",
         "contractAddress": "0x7d214438d0f27afccc23b3d1e1a53906ace5cfea",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP (reUSD BurnWithFromMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on base 2026-07-20 (block 48862869): TokenAdminRegistry.getPool(reUSD) = 0x76eb70425066b4f260e23492575a5835daf9ef46, whose typeAndVersion() = 'BurnWithFromMintTokenPool 2.0.0'; eth_call mint() simulation succeeds from the pool and reverts from other senders, so the CCIP pool is the mint/burn authority for this representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "base",
+        "controllerAddress": "0x76eb70425066b4f260e23492575a5835daf9ef46",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0x76eb70425066b4f260e23492575a5835daf9ef46"
+        ],
+        "observedBlock": 48862869,
+        "sources": [
+          {
+            "label": "Chainlink CCIP token directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet"
+          },
+          {
+            "label": "reUSD CCIP pool on base explorer (verified 2026-07-20)",
+            "url": "https://basescan.org/address/0x76eb70425066b4f260e23492575a5835daf9ef46"
+          }
+        ]
       },
       {
         "id": "bsc:0xba9425ec55ee0e72216d18e0ad8bbba2553bfb60",
         "destinationChain": "bsc",
         "contractAddress": "0xba9425ec55ee0e72216d18e0ad8bbba2553bfb60",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP (reUSD BurnWithFromMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on bsc 2026-07-20 (block 111012440): TokenAdminRegistry.getPool(reUSD) = 0x891b473fe15ccce37827dde41f70d6ed4d607dfe, whose typeAndVersion() = 'BurnWithFromMintTokenPool 2.0.0'; eth_call mint() simulation succeeds from the pool and reverts from other senders, so the CCIP pool is the mint/burn authority for this representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "bsc",
+        "controllerAddress": "0x891b473fe15ccce37827dde41f70d6ed4d607dfe",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:bsc:0x891b473fe15ccce37827dde41f70d6ed4d607dfe"
+        ],
+        "observedBlock": 111012440,
+        "sources": [
+          {
+            "label": "Chainlink CCIP token directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet"
+          },
+          {
+            "label": "reUSD CCIP pool on bsc explorer (verified 2026-07-20)",
+            "url": "https://bscscan.com/address/0x891b473fe15ccce37827dde41f70d6ed4d607dfe"
+          }
+        ]
       },
       {
         "id": "ink:0x5bcf6b008bf80b9296238546bace1797657b05d6",
         "destinationChain": "ink",
         "contractAddress": "0x5bcf6b008bf80b9296238546bace1797657b05d6",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP (reUSD BurnWithFromMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on ink 2026-07-20 (block 51016671): TokenAdminRegistry.getPool(reUSD) = 0xdde19a4c562069cb4136ccb0debcfbbd67aaf23f, whose typeAndVersion() = 'BurnWithFromMintTokenPool 2.0.0'; eth_call mint() simulation succeeds from the pool and reverts from other senders, so the CCIP pool is the mint/burn authority for this representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "ink",
+        "controllerAddress": "0xdde19a4c562069cb4136ccb0debcfbbd67aaf23f",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:ink:0xdde19a4c562069cb4136ccb0debcfbbd67aaf23f"
+        ],
+        "observedBlock": 51016671,
+        "sources": [
+          {
+            "label": "Chainlink CCIP token directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet"
+          },
+          {
+            "label": "reUSD CCIP pool on ink explorer (verified 2026-07-20)",
+            "url": "https://explorer.inkonchain.com/address/0xdde19a4c562069cb4136ccb0debcfbbd67aaf23f"
+          }
+        ]
+      },
+      {
+        "id": "plasma:0xe08853433fdbc504240455e295b644e0f44c3b29",
+        "sourceChain": "ethereum",
+        "destinationChain": "plasma",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe08853433fdbc504240455e295b644e0f44c3b29",
+        "protocol": "Chainlink CCIP (reUSD BurnWithFromMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Plasma 2026-07-20: reUSD token 0xe08853433fdbc504240455e295b644e0f44c3b29 (symbol reUSD, EIP-1967 proxy to implementation 0xc84110aa47171452bacc2b6ca08ff2d862cbf968) is registered in the Plasma CCIP TokenAdminRegistry 0xc23071a8AE83671f37bdA1DaDBC745a9780f632A with getPool() = 0x6530660eb4834d8758e5c12946a8d0420af45fd7, whose typeAndVersion() = 'BurnWithFromMintTokenPool 2.0.0'. The CCIP pool is the mint/burn authority for this representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "plasma",
+        "controllerAddress": "0x6530660eb4834d8758e5c12946a8d0420af45fd7",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:plasma:0x6530660eb4834d8758e5c12946a8d0420af45fd7"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Chainlink CCIP token directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet"
+          },
+          {
+            "label": "reUSD on Plasmascan (verified 2026-07-20)",
+            "url": "https://plasmascan.to/address/0xe08853433fdbc504240455e295b644e0f44c3b29"
+          }
+        ]
+      },
+      {
+        "id": "katana:0xe08853433fdbc504240455e295b644e0f44c3b29",
+        "sourceChain": "ethereum",
+        "destinationChain": "katana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe08853433fdbc504240455e295b644e0f44c3b29",
+        "protocol": "Chainlink CCIP (reUSD BurnWithFromMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Katana 2026-07-20 (block 37777123): reUSD token 0xe08853433fdbc504240455e295b644e0f44c3b29 (symbol reUSD, EIP-1967 proxy to implementation 0xc84110aa47171452bacc2b6ca08ff2d862cbf968) is registered in the Katana CCIP TokenAdminRegistry 0x048B911A1AE5dD4f0aEE5241A30d3DEDa3501D54 with getPool() = 0xd156a8e80a6593ddafa099f76754fdce0f808a55, whose typeAndVersion() = 'BurnWithFromMintTokenPool 2.0.0' and whose getRemoteToken() mappings enumerate the reUSD CCIP mesh (ethereum, arbitrum, base, avalanche, bsc, ink, katana, berachain, tempo, monad, solana). The CCIP pool is the mint/burn authority for this representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "katana",
+        "controllerAddress": "0xd156a8e80a6593ddafa099f76754fdce0f808a55",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:katana:0xd156a8e80a6593ddafa099f76754fdce0f808a55"
+        ],
+        "observedAt": "2026-07-20",
+        "observedBlock": 37777123,
+        "sources": [
+          {
+            "label": "Chainlink CCIP token directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet"
+          },
+          {
+            "label": "reUSD on Katana explorer (verified 2026-07-20)",
+            "url": "https://explorer.katanarpc.com/address/0xe08853433fdbc504240455e295b644e0f44c3b29"
+          }
+        ]
+      },
+      {
+        "id": "tempo:0x20c000000000000000000000e09a4cfec804f102",
+        "sourceChain": "ethereum",
+        "destinationChain": "tempo",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x20c000000000000000000000e09a4cfec804f102",
+        "protocol": "Chainlink CCIP (reUSD BurnMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Tempo 2026-07-20: TIP-20 token 0x20c000000000000000000000e09a4cfec804f102 (symbol reUSD) is registered in the Tempo CCIP TokenAdminRegistry 0x60A97bd9ACf755954Ff0fE85837224f2920a57F3 with getPool() = 0x258feb106e6d9ba23d61a1ec0f59fade3aaba89e, whose typeAndVersion() = 'BurnMintTokenPool 2.0.0'; the Katana reUSD CCIP pool's getRemoteToken(Tempo selector 7281642695469137430) returns this token address. The CCIP pool is the mint/burn authority for this representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "tempo",
+        "controllerAddress": "0x258feb106e6d9ba23d61a1ec0f59fade3aaba89e",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:tempo:0x258feb106e6d9ba23d61a1ec0f59fade3aaba89e"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Chainlink CCIP token directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet"
+          },
+          {
+            "label": "reUSD on Tempo explorer (verified 2026-07-20)",
+            "url": "https://explore.tempo.xyz/address/0x20c000000000000000000000e09a4cfec804f102"
+          }
+        ]
       }
     ]
   }

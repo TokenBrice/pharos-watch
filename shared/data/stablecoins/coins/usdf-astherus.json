@@ -271,7 +271,11 @@
     {
       "name": "USDT-funded spot crypto and corresponding short futures positions",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Aster (Astherus) strategy accounts with Ceffu custody and Binance futures counterparties via Ceffu MirrorX",
+      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -306,6 +310,35 @@
         ]
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Ceffu (MirrorX off-exchange settlement)",
+        "role": "custodian"
+      },
+      {
+        "name": "Binance (futures execution venue via MirrorX)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "conditional",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Aster USDF",
+        "url": "https://www.asterdex.com/en/usdf"
+      },
+      {
+        "label": "Ceffu MirrorX",
+        "url": "https://www.ceffu.com/solutions/mirrorx"
+      }
+    ],
+    "uncertainty": "Aster documents Ceffu custody with MirrorX off-exchange settlement onto Binance, under which assets remain with the custodian while balances are mirrored to the exchange for the delta-neutral strategy. Account-level segregation, insolvency treatment, and the exact scope of assets deployed as futures margin are not established by the reviewed sources."
   },
   "dependencies": [
     {

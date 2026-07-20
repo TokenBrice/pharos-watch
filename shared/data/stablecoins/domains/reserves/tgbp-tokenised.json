@@ -6,6 +6,7 @@
       "pct": 100,
       "risk": "very-low",
       "assetClass": "other",
+      "issuerOrObligor": "BCP Technologies Ltd reserve accounts at regulated UK banking partners; UK government gilt exposure",
       "riskFactors": ["counterparty", "duration", "liquidity", "custody", "concentration"],
       "liquidityHorizon": "unknown"
     }

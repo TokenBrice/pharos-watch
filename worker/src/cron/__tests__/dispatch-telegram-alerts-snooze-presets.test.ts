@@ -444,7 +444,7 @@ describe("dispatchTelegramAlerts", () => {
     ).toMatchObject({ alert_type: "reserve", status: "sent", final_delivery_state: "accepted" });
   });
 
-  it("emits only the new trigger when an active depeg closes and reopens within one window", async () => {
+  it("deduplicates a close-and-reopen transition at stablecoin incident level", async () => {
     const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();
     sources(harness, {
@@ -477,11 +477,8 @@ describe("dispatchTelegramAlerts", () => {
       subscriptions: [{ chatId: "12345", stablecoinId: "usdc-circle", alerts: { depeg: true } }],
     });
     const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
-    const html = telegramDeliveryTranscript[0]?.html ?? "";
 
-    expect(metadata.eventsDetected).toMatchObject({ depegTriggered: 1, depegResolved: 0, depegWorsening: 0 });
-    expect(html).toContain("Depeg Detected");
-    expect(html).not.toContain("Depeg Resolved");
-    expect(html).toContain("Re-depegged after 29m recovery");
+    expect(metadata.eventsDetected).toMatchObject({ depegTriggered: 0, depegResolved: 0, depegWorsening: 0 });
+    expect(telegramDeliveryTranscript).toEqual([]);
   });
 });

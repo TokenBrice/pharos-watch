@@ -19,6 +19,7 @@ This file is mirrored to `AGENTS.md`. Durable process guidance belongs in `/docs
 - State assumptions for non-trivial work; ask only when ambiguity blocks a safe choice.
 - Prefer the smallest root-cause fix. Match existing style and avoid unrelated refactors.
 - Preserve existing product and design-system patterns unless explicitly asked for a redesign.
+- Before reporting a required local credential as missing, check the ignored root `.env.local` and the command's documented environment source. Report presence or absence by variable name only; never print, copy, or log secret values. Production Worker secrets remain Cloudflare/Wrangler-managed and must not be copied into local files.
 - Update matching docs for behavior, API, pipeline, methodology, or data-source changes; new data sources also update the about page.
 - Methodology changes update `/methodology`, the owning methodology doc, and the structured entry under `shared/data/methodology-changelogs/`. Versions increase numerically: after `v5.9`, use `v5.91` or `v6.0`, not `v5.10`.
 - When committing, use a descriptive and informative subject plus a useful body that explains what changed and why. Group pending work into logical/thematic commits; avoid empty, generic, or placeholder commit messages.

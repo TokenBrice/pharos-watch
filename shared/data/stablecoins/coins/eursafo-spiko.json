@@ -157,7 +157,7 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "evidence": "At Ethereum block 25295046, PermissionManager (0x344278aff…, ERC1967Proxy → PermissionManager impl) initialization logs (block 19690268) assign mint function (0x40c10f19) and burn (0x9dc29fac) access to 0xa0769f7a8fc65e47de93797b4e21c073c117fc80 and 0xe4880249745eac5f1ed9d8f7df844792d560e750. Both are UUPS proxies (impl 0x15ea0ec4, 'Token' contract) with owner() = 0x0 — operated as issuer backend relayers via the PermissionManager system.",
+        "evidence": "At Ethereum block 25295046, PermissionManager (0x344278aff\u2026, ERC1967Proxy \u2192 PermissionManager impl) initialization logs (block 19690268) assign mint function (0x40c10f19) and burn (0x9dc29fac) access to 0xa0769f7a8fc65e47de93797b4e21c073c117fc80 and 0xe4880249745eac5f1ed9d8f7df844792d560e750. Both are UUPS proxies (impl 0x15ea0ec4, 'Token' contract) with owner() = 0x0 \u2014 operated as issuer backend relayers via the PermissionManager system.",
         "sources": [
           {
             "label": "Spiko smart contracts",
@@ -207,15 +207,18 @@
             "label": "PermissionManager on Etherscan",
             "url": "https://etherscan.io/address/0x344278aff344d6fb960705dc18a4912221608472"
           }
-        ]
+        ],
+        "chain": "ethereum",
+        "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "observedAt": "2026-07-20"
       }
     ],
     "reconciliation": "periodic",
     "supervision": "prudential",
     "review": {
-      "evidence": "Verified at Ethereum block 25295092. EURSAFO is a UUPS proxy at 0x0990b149 (impl 0x13ae01cb, Token contract); authority() = PermissionManager proxy at 0x344278aff (ERC1967Proxy → PermissionManager impl 0xd3f5f152). PermissionManager deployed at block 19690257; initialization logs confirm: ADMIN group (group 0) → 0x4eaa52b6 (Safe 1.4.1, 8/3, no modules/guard); minter/burner access → two issuer-backend relayer proxies (0xa0769f7a, 0xe4880249). PermissionManager UUPS has no separate proxy admin; the ADMIN group itself gates upgradeToAndCall. Economic-control evidence reviewed 2026-07-15: CACEIS independently calculates daily fund NAV and PwC performs four statutory audits per year; the latest holdings data disclosed by Spiko was updated 2026-03-03. The AMF GECO registry matches the exact Spiko Amundi Overnight Swap Fund containing EUR share class FR0014015LD3.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-07-15",
+      "evidence": "Verified at Ethereum block 25295092. EURSAFO is a UUPS proxy at 0x0990b149 (impl 0x13ae01cb, Token contract); authority() = PermissionManager proxy at 0x344278aff (ERC1967Proxy \u2192 PermissionManager impl 0xd3f5f152). PermissionManager deployed at block 19690257; initialization logs confirm: ADMIN group (group 0) \u2192 0x4eaa52b6 (Safe 1.4.1, 8/3, no modules/guard); minter/burner access \u2192 two issuer-backend relayer proxies (0xa0769f7a, 0xe4880249). PermissionManager UUPS has no separate proxy admin; the ADMIN group itself gates upgradeToAndCall. Economic-control evidence reviewed 2026-07-15: CACEIS independently calculates daily fund NAV and PwC performs four statutory audits per year; the latest holdings data disclosed by Spiko was updated 2026-03-03. The AMF GECO registry matches the exact Spiko Amundi Overnight Swap Fund containing EUR share class FR0014015LD3.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+      "reviewedAt": "2026-07-20",
       "disposition": "scoreable",
       "sources": [
         {
@@ -242,16 +245,19 @@
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "Spiko announced Chainlink CCIP integration for regulated money-market fund tokens across multiple blockchains. EURSAFO therefore carries external CCIP validation assumptions instead of an issuer-only native route.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "l2beat",
         "name": "Chainlink CCIP",
         "slug": "ccip",
         "url": "https://l2beat.com/interop/protocols/ccip",
-        "bridgeTypes": ["burnAndMint", "lockRelease"]
+        "bridgeTypes": [
+          "burnAndMint",
+          "lockRelease"
+        ]
       }
     ],
     "sources": [
@@ -268,107 +274,184 @@
       {
         "id": "arbitrum:0x1412632f2b89e87bfa20c1318a43ced25f1d7b76",
         "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x1412632f2b89e87bfa20c1318a43ced25f1d7b76",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native EURSAFO on Arbitrum: authority() = PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a (read 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "arbitrum explorer EURSAFO token",
+            "url": "https://arbiscan.io/token/0x1412632f2b89e87bfa20c1318a43ced25f1d7b76"
+          },
+          {
+            "label": "Spiko smart contracts",
+            "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+          }
+        ]
       },
       {
         "id": "ethereum:0x0990b149e915cb08e2143a5c6f669c907eddc8b0",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x0990b149e915cb08e2143a5c6f669c907eddc8b0",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native EURSAFO: 212-byte EIP-1967 proxy whose authority() = the Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (read 2026-07-20); mint access sits with Spiko's issuer-backend relayer proxies under the 8-of-3 super-admin Safe (mint-authority review). Spiko mints natively on this chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "ethereum explorer EURSAFO token",
+            "url": "https://etherscan.io/token/0x0990b149e915cb08e2143a5c6f669c907eddc8b0"
+          },
+          {
+            "label": "Spiko smart contracts",
+            "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+          }
+        ]
       },
       {
         "id": "polygon:0x272ea767712cc4839f4a27ee35eb73116158c8a2",
         "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x272ea767712cc4839f4a27ee35eb73116158c8a2",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native EURSAFO on Polygon: authority() = the same PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (read 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "polygon explorer EURSAFO token",
+            "url": "https://polygonscan.com/token/0x272ea767712cc4839f4a27ee35eb73116158c8a2"
+          },
+          {
+            "label": "Spiko smart contracts",
+            "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+          }
+        ]
       },
       {
         "id": "base:0xd879846cbe20751bde8a9342a3cca00a3e56ca47",
         "destinationChain": "base",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xd879846cbe20751bde8a9342a3cca00a3e56ca47",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native EURSAFO on Base: authority() = the same PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (read 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "base explorer EURSAFO token",
+            "url": "https://basescan.org/token/0xd879846cbe20751bde8a9342a3cca00a3e56ca47"
+          },
+          {
+            "label": "Spiko smart contracts",
+            "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+          }
+        ]
       },
       {
         "id": "etherlink:0x35dfec1813c43d82e6b87c682f560bbb8ea0c121",
         "destinationChain": "etherlink",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x35dfec1813c43d82e6b87c682f560bbb8ea0c121",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native EURSAFO on Etherlink: authority() = the same PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (read 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "etherlink explorer EURSAFO token",
+            "url": "https://explorer.etherlink.com/token/0x35dfec1813c43d82e6b87c682f560bbb8ea0c121"
+          },
+          {
+            "label": "Spiko smart contracts",
+            "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+          }
+        ]
       },
       {
         "id": "starknet:0x0128f41ef8017ab56140ffad6439305a3196ed862841ba61ff4d78e380c346a6",
         "destinationChain": "starknet",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x0128f41ef8017ab56140ffad6439305a3196ed862841ba61ff4d78e380c346a6",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native EURSAFO on Starknet: starknet_call name() on 0x0128f41ef8017ab56140ffad6439305a3196ed862841ba61ff4d78e380c346a6 returns 'Spiko Amundi Overnight Swap Fund (EUR)' (read 2026-07-20); Spiko's own Starknet deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "starknet explorer EURSAFO token",
+            "url": "https://voyager.online/contract/0x0128f41ef8017ab56140ffad6439305a3196ed862841ba61ff4d78e380c346a6"
+          },
+          {
+            "label": "Spiko smart contracts",
+            "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+          }
+        ]
       },
       {
         "id": "stellar:CBOOCGZSVRSZFRE4U2NWR2B4RXYVJWRCBTGOUD2JPI2TDJPWMTJX7FZP",
         "destinationChain": "stellar",
+        "canonicalChain": "ethereum",
         "contractAddress": "CBOOCGZSVRSZFRE4U2NWR2B4RXYVJWRCBTGOUD2JPI2TDJPWMTJX7FZP",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native EURSAFO on Stellar: Soroban contract CBOOCGZSVRSZFRE4U2NWR2B4RXYVJWRCBTGOUD2JPI2TDJPWMTJX7FZP is live (created 2026-02-26 with ongoing invocations, read 2026-07-20 via stellar.expert); Spiko's own Stellar deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "stellar explorer EURSAFO token",
+            "url": "https://stellar.expert/explorer/public/contract/CBOOCGZSVRSZFRE4U2NWR2B4RXYVJWRCBTGOUD2JPI2TDJPWMTJX7FZP"
+          },
+          {
+            "label": "Spiko smart contracts",
+            "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+          }
+        ]
       }
     ]
   },
@@ -382,7 +465,14 @@
       "risk": "medium",
       "assetClass": "other",
       "issuerOrObligor": "BNP Paribas",
-      "riskFactors": ["counterparty", "market", "liquidity", "custody", "legal", "smart-contract"],
+      "riskFactors": [
+        "counterparty",
+        "market",
+        "liquidity",
+        "custody",
+        "legal",
+        "smart-contract"
+      ],
       "liquidityHorizon": "one-day"
     }
   ],

@@ -83,6 +83,12 @@
             "label": "GoldfishTokenFactory implementation (Blockscout)",
             "url": "https://eth.blockscout.com/address/0x05a106559954a372baad1af06fe644f8c4796ed1"
           }
+        ],
+        "chain": "ethereum",
+        "address": "0xd22d50e306b439015a5b01be65bb8e7ebc0bc2f4",
+        "failureDomainKeys": [
+          "eoa:ethereum:0xd22d50e306b439015a5b01be65bb8e7ebc0bc2f4",
+          "contract:ethereum:0x765c0af86952604f1576ca3b5beb75420d75ff62"
         ]
       },
       {
@@ -108,19 +114,24 @@
           "observedBlock": 25295025,
           "source": "onchain"
         },
-        "evidence": "At Ethereum block 25295025, GoldfishToken DEFAULT_ADMIN_ROLE is held by 0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4 (Blockscout: SafeProxy). getOwners() = 3 owners; getThreshold() = 2; getModulesPaginated() = sentinel only (no modules); guard slot = 0x0; fallbackHandler slot = 0xfd0732dc... (CompatibilityFallbackHandler); Safe VERSION() = 1.4.1. DEFAULT_ADMIN controls setMinterContract() and _authorizeUpgrade() on the token.",
+        "evidence": "At Ethereum block 25295025, GoldfishToken DEFAULT_ADMIN_ROLE is held by 0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4 (Blockscout: SafeProxy). getOwners() = 3 owners; getThreshold() = 2; getModulesPaginated() = sentinel only (no modules); guard slot = 0x0; fallbackHandler slot = 0xfd0732dc... (CompatibilityFallbackHandler); Safe VERSION() = 1.4.1. DEFAULT_ADMIN controls setMinterContract() and _authorizeUpgrade() on the token. Follow-up 2026-07-20: the 2-of-3 Safe address is 0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4 — getThreshold()=2 and getOwners() returns exactly the three recorded owner EOAs on Ethereum.",
         "sources": [
           {
             "label": "GoldfishToken admin Safe (Etherscan)",
             "url": "https://etherscan.io/address/0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4"
           }
+        ],
+        "chain": "ethereum",
+        "address": "0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4",
+        "failureDomainKeys": [
+          "safe:ethereum:0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4"
         ]
       }
     ],
     "review": {
       "evidence": "At Ethereum block 25295025: GoldfishToken (ERC1967Proxy, UUPS) minterContract slot 2 == GoldfishTokenFactory proxy 0x765c0af86952604f1576ca3b5beb75420d75ff62. Factory MINT_OPERATOR_ROLE and DEFAULT_ADMIN = EOA 0xd22d50e306b439015a5b01be65bb8e7ebc0bc2f4. Token DEFAULT_ADMIN = 2-of-3 Safe v1.4.1 (no modules). Mint path: EOA calls factory.issueTokens() which calls token.mint(). Safe holds token upgrade and minterContract rotation authority.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Goldfish Gold",

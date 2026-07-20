@@ -187,9 +187,9 @@
   "launchDate": "2026-04-20",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "wiTRY uses LayerZero OFT Adapter infrastructure between Ethereum and MegaETH. Brix docs list an Ethereum wiTRY OFT Adapter and a MegaETH wiTRY OFT representation bridged through LayerZero messaging, so the route is external lock/mint rather than MegaETH canonical rollup bridging.",
-    "reviewedAt": "2026-06-30",
-    "reviewer": "Codex static correction review",
+    "summary": "wiTRY uses LayerZero OFT Adapter infrastructure between Ethereum and MegaETH. Brix docs list an Ethereum wiTRY OFT Adapter and a MegaETH wiTRY OFT representation bridged through LayerZero messaging, so the route is external lock/mint rather than MegaETH canonical rollup bridging. 2026-07-20 cohort dc-1 pass: Ethereum row confirmed native wiTRY; MegaETH row confirmed Brix multichain deployment (uniform owner read).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
     "confidence": "verified",
     "protocols": [
       {
@@ -218,31 +218,51 @@
         "id": "ethereum:0xe346c29b5b60ef870b9724c57ccfbbc631e47dee",
         "destinationChain": "ethereum",
         "contractAddress": "0xe346c29b5b60ef870b9724c57ccfbbc631e47dee",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Brix wiTRY (native issuance on Ethereum)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'wiTRY', symbol wiTRY, 18 decimals; owner() = 0x7ac3bb10225a4ef27134bcf54454d545a1738662 — Brix issuer-native deployment on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-30"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "wiTRY on Etherscan",
+            "url": "https://etherscan.io/address/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee"
+          }
+        ]
       },
       {
         "id": "megaeth:0x15b271d9012b5820fc42b1c495b4c1e206547de5",
         "destinationChain": "megaeth",
         "contractAddress": "0x15b271d9012b5820fc42b1c495b4c1e206547de5",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Brix wiTRY multichain deployment (uniform owner)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Wrapped iTRY', symbol wiTRY, 18 decimals on MegaETH; owner() = 0x7ac3bb10225a4ef27134bcf54454d545a1738662 — identical to the Ethereum deployment owner (Brix uniform multichain deployment). The owner contract holds the mint authority.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-30"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "megaeth",
+        "controllerAddress": "0x7ac3bb10225a4ef27134bcf54454d545a1738662",
+        "failureDomainKeys": [
+          "protocol:brix-multichain",
+          "contract:megaeth:0x7ac3bb10225a4ef27134bcf54454d545a1738662"
+        ],
+        "sources": [
+          {
+            "label": "wiTRY on Etherscan",
+            "url": "https://etherscan.io/address/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee"
+          }
+        ]
       }
     ]
   },

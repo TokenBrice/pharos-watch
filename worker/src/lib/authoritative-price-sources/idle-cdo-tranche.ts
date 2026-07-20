@@ -1,12 +1,14 @@
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { CIRCUIT_SOURCE } from "../constants";
 import {
+  buildCachedRateLiveOverride,
   buildParentDerivedLiveOverride,
   encodeAddress,
   fetchBoundedVaultQuote,
   ETHEREUM_CHAIN,
   PROTOCOL_REDEEM_SOURCE,
   resolveTrustedOverrideParent,
+  resolveVaultAssetsPerShareWithCache,
   USDC_CIRCLE_ID,
   type CurrentPriceOverride,
   type LivePriceContext,
@@ -83,14 +85,13 @@ export const idleCdoTrancheProvider: PriceSourceProvider = {
     );
     if (!parent) return null;
 
-    const assetsPerShare = await fetchIdleCdoTrancheAssetsPerShare(
-      config,
-      "latest",
-      signal,
-      { throwOnNullQuote: true },
+    const resolved = await resolveVaultAssetsPerShareWithCache(asset, context, () =>
+      fetchIdleCdoTrancheAssetsPerShare(config, "latest", signal, { throwOnNullQuote: true }),
     );
-    if (assetsPerShare == null) return null;
+    if (!resolved) return null;
 
-    return buildParentDerivedLiveOverride(parent, assetsPerShare);
+    return resolved.cachedObservedAt == null
+      ? buildParentDerivedLiveOverride(parent, resolved.rate)
+      : buildCachedRateLiveOverride(parent, resolved.rate, resolved.cachedObservedAt);
   },
 };

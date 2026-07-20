@@ -565,6 +565,11 @@
       "chain": "polygon-zkevm",
       "address": "0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035",
       "decimals": 6
+    },
+    {
+      "chain": "pharos",
+      "address": "0xc879c018db60520f4355c26ed1a6d572cdac1815",
+      "decimals": 6
     }
   ],
   "blacklistabilityReview": {
@@ -705,8 +710,8 @@
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Circle's contract registry identifies the reviewed native USDC deployments below, while Circle documents CCTP as native USDC burn/mint infrastructure. Hyperliquid's official bridge documentation identifies its HyperCore USDC as an Arbitrum lock-and-mint representation controlled by the stake-weighted validator set. Deployments not supported by these primary sources remain unresolved.",
-    "reviewedAt": "2026-07-19",
-    "reviewer": "SOL-FEEDER primary-source deployment review; Kimi USDC controller curation (2026-07-19)",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "SOL-FEEDER primary-source deployment review; Kimi USDC controller curation (2026-07-19); Kimi P2 control cohort dc-2 (lead usdc-circle)",
     "confidence": "verified",
     "protocols": [
       {
@@ -1299,16 +1304,33 @@
         "id": "moonriver:0xe3f5a90f9cb311505cd691a46596599aa1a0ad7d",
         "destinationChain": "moonriver",
         "contractAddress": "0xe3f5a90f9cb311505cd691a46596599aa1a0ad7d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Row contract is inert on Moonriver: name()/symbol()/decimals()/totalSupply() all return empty via rpc.api.moonriver.moonbeam.network and publicnode (2026-07-19). The same address is live on Moonbeam as xcUSDC (Polkadot Asset Hub USDC via XCM), so the row likely maps a Moonbeam asset to Moonriver. DefiLlama attributes Moonriver USDC to the Multichain-bridged token 0xE3F5a90F9cb311505cd691a46596599aA1A0AD7D (verified live on Moonriver: name 'USD Coin', symbol USDC, 6 decimals, totalSupply ~3.9M). Needs coordinator decision on correcting the contract before review can complete.",
+        "protocol": "Multichain",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "DefiLlama labels this the Multichain USDC representation on Moonriver; token owner() resolves to 0x10c6b61dbf44a083aec3780acf769c77be747e23, a codeless EOA that is also the Ethereum-side Multichain escrow address in the DefiLlama config (read at block 17122164, 2026-07-20) — the same MPC custody pattern documented for the Moonbeam Multichain route. The Multichain MPC bridge ceased operations in July 2023, so this representation has no active issuer redemption path.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-19"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "controllerChain": "moonriver",
+        "controllerAddress": "0x10c6b61dbf44a083aec3780acf769c77be747e23",
+        "failureDomainKeys": [
+          "protocol:multichain"
+        ],
+        "sources": [
+          {
+            "label": "Moonriver USDC token (owner() read 2026-07-20)",
+            "url": "https://moonriver.moonscan.io/token/0xe3f5a90f9cb311505cd691a46596599aa1a0ad7d"
+          },
+          {
+            "label": "DefiLlama pegged-assets USDC config (moonriver multichain entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/config.ts"
+          }
+        ],
+        "observedBlock": 17122164
       },
       {
         "id": "plume:0x222365ef19f7947e5484218551b56bb3965aa7af",
@@ -1905,26 +1927,32 @@
         "destinationChain": "bsc",
         "canonicalChain": "ethereum",
         "contractAddress": "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
-        "protocol": "Binance-Peg authority unresolved",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Binance-Peg USDC: getOwner() returns 0xF68a4b64162906efF0fF6aE34E2bB1Cd42FEf62d, which has no BSC bytecode (eth_getCode = 0x). The bridge-route model cannot honestly encode this EOA as a contract controller, and no separate route-specific mint-controller contract was established.",
+        "protocol": "Binance Bridge (Binance-Peg)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Binance-Peg USDC (DefiLlama bridgedFromETH18 entry): the BSC token's BEP20 getOwner() returns 0xf68a4b64162906eff0ff6ae34e2bb1cd42fef62d and its EIP-1967 proxy admin slot returns 0xd2f93484f2d319194cba95c5171b18c1d8cfd6c4 — both codeless Binance-operated EOAs (reads at block 110979443, 2026-07-20). The Ethereum-side escrow is the Binance bridge wallet 0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503 per the DefiLlama config.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-19",
-        "observedBlock": 110867836,
+        "observedAt": "2026-07-20",
+        "observedBlock": 110979443,
         "sources": [
           {
-            "label": "BscScan Binance-Peg USDC token",
-            "url": "https://bscscan.com/token/0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d"
+            "label": "BscScan — Binance-Peg USD Coin (getOwner read 2026-07-20)",
+            "url": "https://bscscan.com/address/0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"
           },
           {
-            "label": "Binance-Peg token collateralization info",
-            "url": "https://www.binance.com/en/proof-of-reserves"
+            "label": "DefiLlama pegged-assets USDC config (bsc Binance-Peg entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/config.ts"
           }
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xf68a4b64162906eff0ff6ae34e2bb1cd42fef62d",
+        "failureDomainKeys": [
+          "protocol:binance-bridge",
+          "contract:bsc:0xf68a4b64162906eff0ff6ae34e2bb1cd42fef62d"
         ]
       },
       {
@@ -1933,26 +1961,35 @@
         "destinationChain": "fantom",
         "canonicalChain": "ethereum",
         "contractAddress": "0x04068da6c83afcfa0e13ba15a6696662335d5b75",
-        "protocol": "Multichain authority unresolved",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Multichain-bridged USDC ($181.1M of Fantom's attributed supply): owner() returns 0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE, which has no Fantom bytecode (eth_getCode = 0x). The bridge-route model cannot honestly encode this EOA as a contract controller, and no separate route-specific mint-controller contract was established.",
+        "protocol": "Multichain",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "DefiLlama labels this the Multichain USDC representation on Fantom; token owner() resolves to 0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe, which Multichain's own developer documentation lists as the bridge DepositAddress/DcrmAddress (MPC custody address) — read at block 122576491, 2026-07-20. The Multichain MPC bridge ceased operations in July 2023 and its estate was ordered liquidated by the Singapore High Court, so this representation has no active issuer redemption path and trades de-pegged; Circle never shipped native USDC on Fantom Opera (the ecosystem's Circle-bridged-standard USDC.e over Wormhole NTT is a different token, and native USDC+CCTP launched on Sonic instead).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-19",
-        "observedBlock": 122571308,
+        "observedAt": "2026-07-20",
+        "observedBlock": 122576491,
         "sources": [
           {
-            "label": "FtmScan Multichain USDC token",
+            "label": "FTMScan — USD Coin (Multichain) token (owner() read 2026-07-20)",
             "url": "https://ftmscan.com/token/0x04068da6c83afcfa0e13ba15a6696662335d5b75"
           },
           {
-            "label": "Multichain bridge repository",
-            "url": "https://github.com/anyswap/CrossChain-Router"
+            "label": "Multichain developer docs (DcrmAddress listing)",
+            "url": "https://docs.multichain.org/developer-guide/how-to-integrate-front-end-bridges"
+          },
+          {
+            "label": "DefiLlama pegged-assets USDC config (fantom multichain entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/usd-coin/config.ts"
           }
+        ],
+        "controllerChain": "fantom",
+        "controllerAddress": "0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe",
+        "failureDomainKeys": [
+          "protocol:multichain"
         ]
       },
       {
@@ -2031,26 +2068,35 @@
         "destinationChain": "xlayer",
         "canonicalChain": "ethereum",
         "contractAddress": "0x74b7f16337b8972027f6196a17a631ac6de26d22",
-        "protocol": "X Layer USDC authority unresolved",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
+        "protocol": "USDC proxy (X Layer team-administered)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
         "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "X Layer USDC: owner() and masterMinter() both return 0xA07Ae4BDFA7ba8BC0e8a8525bCC768300a8970BB, an EOA with no bytecode on X Layer or Ethereum. The AggLayer shared bridge 0x2a3DD3EB832aF982ec71669E178424b10Dca2EDe (X Layer's only canonical escrow per L2BEAT) is not a configured minter (isMinter = false) and holds less USDC than the token supply; the mint controller/escrow for this deployment could not be established.",
+        "semantics": "other",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "FiatToken-style USDC proxy administered by the single unlabeled EOA 0xa07ae4bdfa7ba8bc0e8a8525bcc768300a8970bb (owner() = masterMinter() = pauser(); ZeppelinOS proxy slots populated; reads at block 65731195, 2026-07-20). The implementation bytecode (23,464 bytes) does not match Circle's canonical FiatTokenV2_2 (21,483 bytes), Circle's CCTP directory does not list X Layer, and no native Circle USDC announcement for X Layer exists — so this is a custom X Layer team-administered deployment, not a Circle issuance and not the Agglayer canonical-bridge token (the L1StandardBridge is neutered per L2BEAT). DefiLlama classifies it bridgedFromETH; the ecosystem (OKX explorer, Dolomite) treats it as the canonical USDC on X Layer. Backing is not independently verifiable, hence the opaque tier despite the identified controller.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-19",
-        "observedBlock": 65680938,
+        "observedAt": "2026-07-20",
+        "observedBlock": 65731195,
         "sources": [
           {
-            "label": "OKLink X Layer USDC token",
+            "label": "OKX X Layer explorer — USDC token",
             "url": "https://www.oklink.com/xlayer/token/0x74b7f16337b8972027f6196a17a631ac6de26d22"
           },
           {
-            "label": "L2BEAT X Layer (AggLayer shared bridge escrow)",
+            "label": "Circle CCTP supported blockchains (X Layer absent)",
+            "url": "https://developers.circle.com/cctp/cctp-supported-blockchains"
+          },
+          {
+            "label": "L2BEAT X Layer",
             "url": "https://l2beat.com/scaling/projects/xlayer"
           }
+        ],
+        "controllerChain": "xlayer",
+        "controllerAddress": "0xa07ae4bdfa7ba8bc0e8a8525bcc768300a8970bb",
+        "failureDomainKeys": [
+          "contract:xlayer:0xa07ae4bdfa7ba8bc0e8a8525bcc768300a8970bb"
         ]
       },
       {
@@ -3128,16 +3174,30 @@
         "id": "corn:0xdf0b24095e15044538866576754f3c964e902ee6",
         "destinationChain": "corn",
         "contractAddress": "0xdf0b24095e15044538866576754f3c964e902ee6",
-        "protocol": "unresolved route",
+        "protocol": "Corn canonical bridge (LayerZero-powered)",
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "DefiLlama's USDC config lists 0xDF0B24095e15044538866576754F3C964e902Ee6 as Corn's Ethereum-bridged USDC, but that address holds no contract code on Corn mainnet (chainId 21000000, verified via two independent RPCs on 2026-07-19) and DefiLlama shows zero supply. No alternative USDC deployment on Corn could be verified from primary sources, so the route is unresolved with the best-known (DefiLlama-configured) address.",
+        "reviewNote": "Corn's own Known-Assets documentation maps USDC.e Ethereum 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 to Corn 0xDF0B24095e15044538866576754F3C964e902Ee6, and Corn states LayerZero powers its canonical bridge — but the mint controller contract on Corn is not published in those docs and cannot be read on-chain right now: all public Corn RPC endpoints are Conduit-key-gated (403) and cornscan.org is down (HTTP 526), so owner()/minter() verification failed on 2026-07-20. L2BEAT additionally marks Corn Maizenet archived (2026-06-30, sole BoLD staker unstaked). The route stays unresolved until a live RPC or explorer permits the controller read.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-19"
+        "observedAt": "2026-07-19",
+        "sources": [
+          {
+            "label": "Corn docs — Known Assets (USDC.e mapping)",
+            "url": "https://docs.usecorn.com/docs/developers/Network/Deployed_Contracts/Know_Assets"
+          },
+          {
+            "label": "Corn docs — Bridges (LayerZero canonical)",
+            "url": "https://docs.usecorn.com/docs/developers/Network/Infrastructure/Bridges"
+          },
+          {
+            "label": "L2BEAT Corn",
+            "url": "https://l2beat.com/scaling/projects/corn"
+          }
+        ]
       },
       {
         "id": "polygon-zkevm:0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035",
@@ -3169,6 +3229,32 @@
           {
             "label": "Polygon zkEVM USDC.e token on Polygonscan (contract verified live on-chain 2026-07-19; bridge contract bytecode present at the canonical bridge address)",
             "url": "https://zkevm.polygonscan.com/token/0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035"
+          }
+        ]
+      },
+      {
+        "id": "pharos:0xc879c018db60520f4355c26ed1a6d572cdac1815",
+        "destinationChain": "pharos",
+        "contractAddress": "0xc879c018db60520f4355c26ed1a6d572cdac1815",
+        "protocol": "Circle native USDC",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Circle launched native USDC and CCTP on Pharos (Circle blog, 2026-04-28); the deployment at 0xC879C018dB60520F4355C26eD1a6D572cdAC1815 returns name 'USDC' with owner() = 0x9f8ea09770dc38fc61f5a62031b3be0526d54d92 (read at block 12798471, 2026-07-20), and DefiLlama classifies it as issued (native) rather than bridged.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 12798471,
+        "sources": [
+          {
+            "label": "Circle blog — Now Available: USDC and CCTP on Pharos",
+            "url": "https://www.circle.com/blog/now-available-usdc-cctp-on-pharos"
+          },
+          {
+            "label": "Pharos USDC token (pharosscan)",
+            "url": "https://pharosscan.xyz/address/0xC879C018dB60520F4355C26eD1a6D572cdAC1815"
           }
         ]
       }

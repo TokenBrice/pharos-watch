@@ -101,9 +101,9 @@
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "JAAA represents fund shares issued by the Janus Henderson/Anemoy/Centrifuge tokenization stack. The reviewed sources support tokenized fund issuance rather than a user-facing external bridge route, so the multichain posture is treated as issuer-native at probable confidence.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Janus Henderson Anemoy partnership",
@@ -118,92 +118,134 @@
       {
         "id": "ethereum:0x5a0f93d040de44e78f251b03c43be9cf317dcf64",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x5a0f93d040de44e78f251b03c43be9cf317dcf64",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Centrifuge V3 issuer-native fund shares",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native JAAA issuance on ethereum: wards() of the JAAA token returns 1 for the Centrifuge V3 Root, BalanceSheet and Spoke contracts (the same CREATE2 addresses as the reviewed Ethereum deployment), so mint authority is the Centrifuge issuer stack (verified on-chain 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "JAAA on ethereum explorer (wards() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0x5a0f93d040de44e78f251b03c43be9cf317dcf64"
+          }
+        ]
       },
       {
         "id": "base:0x5a0f93d040de44e78f251b03c43be9cf317dcf64",
         "destinationChain": "base",
+        "canonicalChain": "base",
         "contractAddress": "0x5a0f93d040de44e78f251b03c43be9cf317dcf64",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Centrifuge V3 issuer-native fund shares",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native JAAA issuance on base: wards() of the JAAA token returns 1 for the Centrifuge V3 Root, BalanceSheet and Spoke contracts (the same CREATE2 addresses as the reviewed Ethereum deployment), so mint authority is the Centrifuge issuer stack (verified on-chain 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "JAAA on base explorer (wards() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0x5a0f93d040de44e78f251b03c43be9cf317dcf64"
+          }
+        ]
       },
       {
         "id": "bsc:0x58f93d6b1ef2f44ec379cb975657c132cbed3b6b",
         "destinationChain": "bsc",
+        "canonicalChain": "bsc",
         "contractAddress": "0x58f93d6b1ef2f44ec379cb975657c132cbed3b6b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Centrifuge V3 issuer-native fund shares",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native JAAA issuance on bsc: wards() of the JAAA token returns 1 for the Centrifuge V3 Root, BalanceSheet and Spoke contracts (the same CREATE2 addresses as the reviewed Ethereum deployment), so mint authority is the Centrifuge issuer stack (verified on-chain 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "JAAA on bsc explorer (wards() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0x58f93d6b1ef2f44ec379cb975657c132cbed3b6b"
+          }
+        ]
       },
       {
         "id": "avalanche:0x58f93d6b1ef2f44ec379cb975657c132cbed3b6b",
         "destinationChain": "avalanche",
+        "canonicalChain": "avalanche",
         "contractAddress": "0x58f93d6b1ef2f44ec379cb975657c132cbed3b6b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Centrifuge V3 issuer-native fund shares",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native JAAA issuance on avalanche: wards() of the JAAA token returns 1 for the Centrifuge V3 Root, BalanceSheet and Spoke contracts (the same CREATE2 addresses as the reviewed Ethereum deployment), so mint authority is the Centrifuge issuer stack (verified on-chain 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "JAAA on avalanche explorer (wards() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0x58f93d6b1ef2f44ec379cb975657c132cbed3b6b"
+          }
+        ]
       },
       {
         "id": "monad:0xad48f183e586e92a591a610397ebf534609df797",
         "destinationChain": "monad",
+        "canonicalChain": "monad",
         "contractAddress": "0xad48f183e586e92a591a610397ebf534609df797",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Centrifuge V3 issuer-native fund shares",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native JAAA issuance on monad: wards() of the JAAA token returns 1 for the Centrifuge V3 Root, BalanceSheet and Spoke contracts (the same CREATE2 addresses as the reviewed Ethereum deployment; Root ward is 0 on Monad with Spoke/BalanceSheet still wards), so mint authority is the Centrifuge issuer stack (verified on-chain 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "JAAA on monad explorer (wards() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xad48f183e586e92a591a610397ebf534609df797"
+          }
+        ]
       },
       {
         "id": "solana:AAAJXeGjpKu7W3X4QTSU4pm1Wbj4G2LPcdg7A6xJLLyG",
         "destinationChain": "solana",
+        "canonicalChain": "solana",
         "contractAddress": "AAAJXeGjpKu7W3X4QTSU4pm1Wbj4G2LPcdg7A6xJLLyG",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Centrifuge V3 issuer-native fund shares",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native JAAA issuance on solana: the Token-2022 mint's authority is the issuer keypair BUo4FKP1hSAZ1zcNGzJHTS1V9zcQM8fzUFpYj1NboRK4 (a plain funded signer account, not a bridge program) (verified on-chain 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "JAAA mint on Solana explorer (mint authority probed 2026-07-20)",
+            "url": "https://solscan.io/token/AAAJXeGjpKu7W3X4QTSU4pm1Wbj4G2LPcdg7A6xJLLyG"
+          }
+        ]
       }
     ]
   },
@@ -328,7 +370,9 @@
             "url": "https://etherscan.io/token/0x5a0f93d040de44e78f251b03c43be9cf317dcf64"
           }
         ],
-        "evidence": "At Ethereum block 25,296,225, the JAAA Tranche token wards are: Root (0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f, contract), BalanceSheet (0x12a110cE5f0FC871cC72Bc7ECaF35cf39DD0f43e, contract), Spoke (0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB, contract). No EOA has direct ward access. Root's ProtocolGuardian (0xCEb7eD5d5B3bAD3088f6A1697738B60d829635c6) routes to the Centrifuge protocol Safe."
+        "evidence": "At Ethereum block 25,296,225, the JAAA Tranche token wards are: Root (0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f, contract), BalanceSheet (0x12a110cE5f0FC871cC72Bc7ECaF35cf39DD0f43e, contract), Spoke (0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB, contract). No EOA has direct ward access. Root's ProtocolGuardian (0xCEb7eD5d5B3bAD3088f6A1697738B60d829635c6) routes to the Centrifuge protocol Safe.",
+        "chain": "ethereum",
+        "address": "0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f"
       },
       {
         "label": "Centrifuge protocol Gnosis Safe (4-of-9)",
@@ -365,7 +409,9 @@
             "url": "https://app.safe.global/eth:0x9711730060C73Ee7Fcfe1890e8A0993858a7D225"
           }
         ],
-        "evidence": "Safe API at Ethereum block 25,296,225: Safe 0x9711730060C73Ee7Fcfe1890e8A0993858a7D225, threshold 4-of-9, version 1.4.1, no modules, no guard. Root's ProtocolGuardian has onlySafe modifier routing control to this Safe."
+        "evidence": "Safe API at Ethereum block 25,296,225: Safe 0x9711730060C73Ee7Fcfe1890e8A0993858a7D225, threshold 4-of-9, version 1.4.1, no modules, no guard. Root's ProtocolGuardian has onlySafe modifier routing control to this Safe.",
+        "chain": "ethereum",
+        "address": "0x9711730060C73Ee7Fcfe1890e8A0993858a7D225"
       },
       {
         "label": "Anemoy / Janus Henderson issuer rail",
@@ -378,8 +424,8 @@
     ],
     "review": {
       "evidence": "At Ethereum block 25,296,225: JAAA Tranche is non-upgradeable, ward-based. Active wards: Root (0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f), BalanceSheet (0x12a110cE5f0FC871cC72Bc7ECaF35cf39DD0f43e), Spoke (0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB). Protocol guardian routes to Centrifuge 4-of-9 Safe (0x9711730060C73Ee7Fcfe1890e8A0993858a7D225, v1.4.1, no modules). Full mint surface confirmed on Ethereum; cross-chain deployments follow same Centrifuge ward pattern.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Anemoy JAAA fund",

@@ -2,7 +2,7 @@
   "id": "brz-transfero",
   "reserves": [
     {
-      "name": "Brazilian-real deposit at an authorized financial institution",
+      "name": "BRL fiat reserves",
       "pct": 100,
       "risk": "low",
       "assetClass": "bank-deposit",
@@ -12,8 +12,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
     "confidence": "probable",
     "sources": [
       {
@@ -25,7 +25,7 @@
         "url": "https://transfero.com/brz"
       }
     ],
-    "rationale": "Transfero's issuer report describes BRZ as redeemable one-for-one for reais and states that the reserve is held at a financial institution authorized by the Central Bank of Brazil. The accessible report is dated March 31, 2024 and does not name the institution or disclose additional reserve instruments.",
+    "rationale": "The live single-asset adapter publishes one aggregate BRL fiat reserves row, so the reviewed classification is keyed to that exact 100% identity. Transfero's issuer report describes BRZ as redeemable one-for-one for reais and states that the reserve is held at a financial institution authorized by the Central Bank of Brazil. The accessible report is dated March 31, 2024 and does not name the institution or disclose additional reserve instruments.",
     "compositionBasis": "Transfero BRZ transparency report dated March 31, 2024",
     "compositionAsOf": "2024-03-31",
     "scope": "full-composition",
@@ -34,7 +34,7 @@
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Brazilian-real deposit at an authorized financial institution",
+        "reserveName": "BRL fiat reserves",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
         "rationale": "A Brazilian-real bank deposit is an external reserve asset rather than a tracked stablecoin dependency."

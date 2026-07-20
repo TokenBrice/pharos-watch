@@ -225,10 +225,10 @@
   "launchDate": "2025-03-15",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "nTBILL is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "summary": "nTBILL is an issuer-native Nest BoringVault share deployed at the identical CREATE2 address 0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9 on Ethereum, Plume, and Arbitrum. Row-level on-chain verification on 2026-07-20: Ethereum and Plume owner() both return the Nest admin contract 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a (the same uniform owner seen on the reviewed nWISDOM deployments), and Arbitrum owner() returns the Nest 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 that also owns the nTBILL Teller and Manager on Ethereum. Shares mint only through Nest's own Teller at vault NAV; no third-party bridge mints any deployment.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "issuer",
@@ -249,46 +249,82 @@
         "id": "ethereum:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
         "destinationChain": "ethereum",
         "contractAddress": "0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Nest nTBILL vault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain reads 2026-07-20 (Ethereum block 25570877): owner() returned the Nest admin contract 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a (5450-byte contract; not a Safe \u2014 getThreshold/getOwners revert), the same uniform owner read on the reviewed nWISDOM Nest deployments. The mint-authority review (2026-07-15, scoreable) confirms nTBILL shares mint only through Nest's own Teller 0x1492062b3ae7996c71f87a2b390b6b82afea0c59 against deposits at vault NAV, with Teller/Manager owned by the Nest 3-of-6 Safe. Identical CREATE2 address on all three chains. Native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "observedBlock": 25570877,
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "nTBILL Ethereum token",
+            "url": "https://etherscan.io/address/0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9"
+          },
+          {
+            "label": "Nest smart contracts (Teller/Manager addresses)",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          }
+        ]
       },
       {
         "id": "plume:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
         "destinationChain": "plume",
         "contractAddress": "0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Nest nTBILL vault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain reads 2026-07-20 (Plume block 82159591 via rpc.plume.org): owner() returned the same Nest admin contract 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a as the Ethereum deployment, at the identical CREATE2 address with deployed bytecode. Cross-chain share movement runs through Nest's own vault rails (same uniform-owner pattern as the reviewed inALPHA/nWISDOM Nest deployments); shares mint only through Nest's own Teller contracts. No third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "observedBlock": 82159591,
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "nTBILL Plume token",
+            "url": "https://explorer.plume.org/address/0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9"
+          },
+          {
+            "label": "Nest docs",
+            "url": "https://docs.nest.credit/"
+          }
+        ]
       },
       {
         "id": "arbitrum:0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
         "destinationChain": "arbitrum",
         "contractAddress": "0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Nest nTBILL vault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain reads 2026-07-20 (Arbitrum block 485690675): owner() returned the Nest 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (the same Safe that owns the nTBILL Teller and Manager on Ethereum per the 2026-07-15 mint-authority review), at the identical CREATE2 address with 7935-byte bytecode identical in size to the Ethereum deployment. Issuer-native deployment; no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "observedBlock": 485690675,
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "nTBILL Arbitrum token",
+            "url": "https://arbiscan.io/address/0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9"
+          },
+          {
+            "label": "Nest docs",
+            "url": "https://docs.nest.credit/"
+          }
+        ]
       }
     ]
   }

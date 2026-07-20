@@ -132,9 +132,12 @@
         "role": "governor",
         "authorityType": "contract",
         "directMintAbility": "parameter-only",
+        "chain": "rootstock",
+        "address": "0x3b8853df65afbd94853e6d77ee0ab5590f41bb08",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
-        "evidence": "RIF On Chain uses the Money on Chain Governor/Changer pattern: parameter changes and proxy upgrades are executed on-chain via changer contracts after community votes (e.g., V2.0 and V3 upgrades were governance-executed proxy upgrades).",
+        "observedAt": "2026-07-20",
+        "evidence": "2026-07-20 on-chain (Rootstock public RPC): governor() on the USDRIF token returns this contract (2240 bytes); its owner() = 0x65a5681be95d212f0c90ead40170d8277de81169, the MoC governance-owner contract (also a deployed contract). RIF On Chain uses the Money on Chain Governor/Changer pattern: parameter changes and proxy upgrades are executed on-chain via changer contracts after community votes (e.g., V2.0 and V3 upgrades were governance-executed proxy upgrades).",
         "sources": [
           {
             "label": "USDRIF V2.0 upgrade",
@@ -144,9 +147,9 @@
       }
     ],
     "review": {
-      "evidence": "At Rootstock block 8935202: USDRIF token 0x3a15461d governor() selector (0x0c340a24) returned Governor proxy 0x3b8853df65afbd94853e6d77ee0ab5590f41bb08 (confirmed as a contract). Governor proxy EIP-1967 admin = ProxyAdmin 0x1a1824f39d79937dcb80c9d9938ae77e431c2def; ProxyAdmin storage slot 0 (owner) = 0x131564703310a294c1bfdc09d10ec0659f18e253 (also a proxy with ProxyAdmin = 0x1a1824, circular). Governor proxy owner() = 0x65a5681be95d212f0c90ead40170d8277de81169 (proxy, impl = 0x00594d5456c4650d10edbb62d7a482d8fa9a5b53); calling governor() on 0x65a5681 returned 0x3b8853 (back to the Governor proxy). USDRIF token EIP-1967 implementation = 0x6d1bb87856a2b2351d87ba5772a93dc911325af9. The governance chain forms a RIF-On-Chain Foundation control set (same MoC BitVoting / Foundation architecture as DOC). Final controlling authority cannot be confirmed as a Safe or timelock on-chain — it terminates in a recursive proxy-of-proxies controlled by RIF Foundation keys.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Rootstock block 8935202: USDRIF token 0x3a15461d governor() selector (0x0c340a24) returned Governor proxy 0x3b8853df65afbd94853e6d77ee0ab5590f41bb08 (confirmed as a contract). Governor proxy EIP-1967 admin = ProxyAdmin 0x1a1824f39d79937dcb80c9d9938ae77e431c2def; ProxyAdmin storage slot 0 (owner) = 0x131564703310a294c1bfdc09d10ec0659f18e253 (also a proxy with ProxyAdmin = 0x1a1824, circular). Governor proxy owner() = 0x65a5681be95d212f0c90ead40170d8277de81169 (proxy, impl = 0x00594d5456c4650d10edbb62d7a482d8fa9a5b53); calling governor() on 0x65a5681 returned 0x3b8853 (back to the Governor proxy). USDRIF token EIP-1967 implementation = 0x6d1bb87856a2b2351d87ba5772a93dc911325af9. The governance chain forms a RIF-On-Chain Foundation control set (same MoC BitVoting / Foundation architecture as DOC). Final controlling authority cannot be confirmed as a Safe or timelock on-chain — it terminates in a recursive proxy-of-proxies controlled by RIF Foundation keys. 2026-07-20 follow-up: the enumerable on-chain control point is the MoC Governor proxy 0x3b8853df65afbd94853e6d77ee0ab5590f41bb08, which is recorded as the governance control; the terminal BitVoting/Foundation keyholders are documented as not enumerable rather than left open. The Arbitrum bridge mint authority is resolved: the USDRIF OFT 0x8eef5ed361c6823156d936209e23a8e0349e5c61 (endpoint() = LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c) mints on verified LayerZero messages against native USDRIF locked in the Rootstock OFT adapter lockbox.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Rootstock: Introducing USDRIF",
@@ -160,9 +163,6 @@
           "label": "Rootstock explorer: USDRIF token",
           "url": "https://rootstock.blockscout.com/address/0x3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37"
         }
-      ],
-      "unresolvedQuestions": [
-        "The RIF On Chain Governor proxy control chain terminates in a recursive proxy set (0x65a5681 ↔ 0x3b8853 ↔ 0x131564 ↔ 0x1a1824); the final human-controlled authority (multisig threshold/keyholders) is not enumerable from on-chain state — characteristic of MoC Foundation BitVoting; Arbitrum bridge mint authority also unresolved."
       ]
     }
   },
@@ -170,8 +170,8 @@
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "USDRIF is native to Rootstock (a RIF/DOC-collateralized CDP stablecoin launched Sep 2023, contract 0x3a15461d..., a plain ERC-20 with no cross-chain code). Its sole cross-chain supply path is a LayerZero OFT route: a dedicated OFT Adapter (lockbox) on Rootstock (0xb2ee5502...) locks native USDRIF and a burn/mint OFT representation (the verified \"MyOFT\" contract 0x8eef5ed..., Endpoint V2) is minted on Arbitrum. On-chain checks confirm the lockbox (adapter token()=native USDRIF, approvalRequired=true) holds ~61,268 USDRIF locked, matching the Arbitrum OFT supply 1:1, and the OFT is peered only to Rootstock (EID 30333). Because the durable route is a third-party LayerZero OFT Adapter/lockbox control surface, it is classified external-lock-mint.",
-    "reviewedAt": "2026-06-21",
-    "reviewer": "Pharos bridge-route re-verification",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
     "confidence": "verified",
     "protocols": [
       {
@@ -219,32 +219,61 @@
       {
         "id": "rootstock:0x3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37",
         "destinationChain": "rootstock",
+        "canonicalChain": "rootstock",
         "contractAddress": "0x3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "RIF On Chain native CDP issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: native USDRIF token on Rootstock whose governor() resolves to the MoC Governor 0x3b8853df65afbd94853e6d77ee0ab5590f41bb08; USDRIF is minted natively against overcollateralized RIF/DOC via the RIF On Chain protocol. No bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDRIF token on Rootstock explorer",
+            "url": "https://explorer.rootstock.io/address/0x3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37"
+          },
+          {
+            "label": "RIF On Chain documentation",
+            "url": "https://rifonchain.com/"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x8eef5ed361c6823156d936209e23a8e0349e5c61",
+        "sourceChain": "rootstock",
         "destinationChain": "arbitrum",
+        "canonicalChain": "rootstock",
         "contractAddress": "0x8eef5ed361c6823156d936209e23a8e0349e5c61",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT (via Rootstock OFT adapter lockbox)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: this USDRIF deployment is a LayerZero OFT (endpoint() = LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c, owner/delegate 0xb2395eaaeb03fb1f46647c423378b24f2e906305) minted against native USDRIF locked in the Rootstock OFT adapter 0xb2ee5502... (adapter token() = native USDRIF, approvalRequired = true, ~61k USDRIF locked matching OFT supply 1:1, peered only to Rootstock EID 30333). Mint authority is the OFT contract itself on verified LayerZero messages.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x8eef5ed361c6823156d936209e23a8e0349e5c61",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:arbitrum:0x8eef5ed361c6823156d936209e23a8e0349e5c61"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDRIF token on Arbiscan",
+            "url": "https://arbiscan.io/address/0x8eef5ed361c6823156d936209e23a8e0349e5c61"
+          },
+          {
+            "label": "RIF On Chain documentation",
+            "url": "https://rifonchain.com/"
+          }
+        ]
       }
     ]
   },

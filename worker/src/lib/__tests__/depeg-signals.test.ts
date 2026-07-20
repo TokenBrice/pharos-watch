@@ -10,13 +10,13 @@ import {
 
 describe("deriveDepegSignal", () => {
   it("derives signed deviation and direction from price and peg", () => {
-    expect(deriveDepegSignal(1.02, 1)).toEqual({
+    expect(deriveDepegSignal(1.02, 1)).toMatchObject({
       bps: 200,
       absBps: 200,
       direction: "above",
     });
 
-    expect(deriveDepegSignal(0.98, 1)).toEqual({
+    expect(deriveDepegSignal(0.98, 1)).toMatchObject({
       bps: -200,
       absBps: 200,
       direction: "below",
@@ -63,6 +63,14 @@ describe("threshold helpers", () => {
 
     expect(signalCrossesThreshold(signal, 100)).toBe(true);
     expect(signalCrossesThreshold(recovered, 100)).toBe(false);
+  });
+
+  it("uses unrounded deviation at the threshold boundary", () => {
+    const roundedToThreshold = deriveDepegSignal(0.99005, 1)!;
+
+    expect(roundedToThreshold.bps).toBe(-100);
+    expect(roundedToThreshold.absRawBps).toBeCloseTo(99.5);
+    expect(signalCrossesThreshold(roundedToThreshold, 100)).toBe(false);
   });
 });
 

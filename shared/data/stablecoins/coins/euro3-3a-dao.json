@@ -71,8 +71,12 @@
         "label": "WMATIC Polygon vaults",
         "tier": "single-source-or-laggy",
         "summary": "WMATIC is converted from Chainlink MATIC/USD to EUR through the shared Chainlink EUR/USD denominator.",
-        "collateralAssets": ["WMATIC"],
-        "chains": ["polygon"],
+        "collateralAssets": [
+          "WMATIC"
+        ],
+        "chains": [
+          "polygon"
+        ],
         "feeds": [
           {
             "provider": "3A ConvertedPriceFeed over Chainlink",
@@ -83,21 +87,43 @@
             "stalenessBoundSec": 86400,
             "observedAt": "2026-07-14",
             "observedBlock": 90225687,
-            "failureDomainKeys": ["3a-chainlink-matic-usd", "3a-chainlink-eur-usd-polygon", "3a-converted-price-feed", "polygon"]
+            "failureDomainKeys": [
+              "3a-chainlink-matic-usd",
+              "3a-chainlink-eur-usd-polygon",
+              "3a-converted-price-feed",
+              "polygon"
+            ]
           }
         ],
         "fallbackBehavior": "Both Chainlink wrappers require an update no older than 86,400 seconds. A stale or reverting numerator or denominator reverts valuation; no fallback or cache is present.",
         "observedAt": "2026-07-14",
         "observedBlock": 90225687,
-        "collateralParameters": [{"asset":"WMATIC","minimumCollateralRatioPct":120,"note":"Minimum liquidation ratio 110%; six vaults retained 0.294790339657197571 EURO3 debt in aggregate; collateral cap was zero."}],
+        "collateralParameters": [
+          {
+            "asset": "WMATIC",
+            "minimumCollateralRatioPct": 120,
+            "note": "Minimum liquidation ratio 110%; six vaults retained 0.294790339657197571 EURO3 debt in aggregate; collateral cap was zero."
+          }
+        ],
         "liquidationMechanism": "Below the 110% minimum liquidation ratio, liquidation routes collateral and debt through the Stability Pool, then AuctionManager, then LastResortLiquidation/community path.",
         "liquidationDelaySec": 0,
         "backstop": "The Stability Pool is first in the configured router, auctions are second, and LastResortLiquidation manages remaining collateral and bad-debt distribution.",
         "shutdownOrBadDebtBehavior": "The collateral cap is zero, preventing new WMATIC deposits while residual debt remains callable. Exhausted normal routes pass to the last-resort collateral and bad-debt distribution contract.",
-        "failureDomainKeys": ["3a-wmatic-vaults", "3a-liquidation-router-polygon", "3a-chainlink-eur-usd-polygon", "polygon"],
+        "failureDomainKeys": [
+          "3a-wmatic-vaults",
+          "3a-liquidation-router-polygon",
+          "3a-chainlink-eur-usd-polygon",
+          "polygon"
+        ],
         "sources": [
-          {"label":"Verified WMATIC ConvertedPriceFeed","url":"https://repo.sourcify.dev/contracts/full_match/137/0x99782c90eAA2B9aB311AAa7F928322F23FfAf71B/"},
-          {"label":"Finalized Polygon block 90225687","url":"https://polygonscan.com/block/90225687"}
+          {
+            "label": "Verified WMATIC ConvertedPriceFeed",
+            "url": "https://repo.sourcify.dev/contracts/full_match/137/0x99782c90eAA2B9aB311AAa7F928322F23FfAf71B/"
+          },
+          {
+            "label": "Finalized Polygon block 90225687",
+            "url": "https://polygonscan.com/block/90225687"
+          }
         ]
       },
       {
@@ -105,8 +131,12 @@
         "label": "USDC.e Polygon vaults",
         "tier": "single-source-or-laggy",
         "summary": "USDC.e is converted from Chainlink USDC/USD to EUR through the shared Chainlink EUR/USD denominator.",
-        "collateralAssets": ["USDC.e"],
-        "chains": ["polygon"],
+        "collateralAssets": [
+          "USDC.e"
+        ],
+        "chains": [
+          "polygon"
+        ],
         "feeds": [
           {
             "provider": "3A ConvertedPriceFeed over Chainlink",
@@ -117,21 +147,43 @@
             "stalenessBoundSec": 86400,
             "observedAt": "2026-07-14",
             "observedBlock": 90225687,
-            "failureDomainKeys": ["3a-chainlink-usdc-usd", "3a-chainlink-eur-usd-polygon", "3a-converted-price-feed", "polygon"]
+            "failureDomainKeys": [
+              "3a-chainlink-usdc-usd",
+              "3a-chainlink-eur-usd-polygon",
+              "3a-converted-price-feed",
+              "polygon"
+            ]
           }
         ],
         "fallbackBehavior": "Both Chainlink wrappers enforce 86,400-second freshness and revert on failure, without fallback or cached prices.",
         "observedAt": "2026-07-14",
         "observedBlock": 90225687,
-        "collateralParameters": [{"asset":"USDC.e","minimumCollateralRatioPct":110,"note":"Minimum liquidation ratio 105%; two vaults retained 0.035173385018764191 EURO3 debt in aggregate; collateral cap was zero."}],
+        "collateralParameters": [
+          {
+            "asset": "USDC.e",
+            "minimumCollateralRatioPct": 110,
+            "note": "Minimum liquidation ratio 105%; two vaults retained 0.035173385018764191 EURO3 debt in aggregate; collateral cap was zero."
+          }
+        ],
         "liquidationMechanism": "Below the 105% minimum liquidation ratio, liquidation routes through Stability Pool, AuctionManager, and LastResortLiquidation/community in order.",
         "liquidationDelaySec": 0,
         "backstop": "Stability Pool first, auctions second, then LastResortLiquidation for residual collateral and bad debt.",
         "shutdownOrBadDebtBehavior": "The zero collateral cap prevents new deposits while residual debt remains; exhausted routes reach the last-resort bad-debt distribution path.",
-        "failureDomainKeys": ["3a-usdc-vaults", "3a-liquidation-router-polygon", "3a-chainlink-eur-usd-polygon", "polygon"],
+        "failureDomainKeys": [
+          "3a-usdc-vaults",
+          "3a-liquidation-router-polygon",
+          "3a-chainlink-eur-usd-polygon",
+          "polygon"
+        ],
         "sources": [
-          {"label":"Verified USDC.e ConvertedPriceFeed","url":"https://repo.sourcify.dev/contracts/full_match/137/0xf03552d5E9a135E759BDf9969Ba544A0f63342b9/"},
-          {"label":"Finalized Polygon block 90225687","url":"https://polygonscan.com/block/90225687"}
+          {
+            "label": "Verified USDC.e ConvertedPriceFeed",
+            "url": "https://repo.sourcify.dev/contracts/full_match/137/0xf03552d5E9a135E759BDf9969Ba544A0f63342b9/"
+          },
+          {
+            "label": "Finalized Polygon block 90225687",
+            "url": "https://polygonscan.com/block/90225687"
+          }
         ]
       },
       {
@@ -139,8 +191,12 @@
         "label": "WETH Polygon vault",
         "tier": "single-source-or-laggy",
         "summary": "WETH is converted from Chainlink ETH/USD to EUR through the shared Chainlink EUR/USD denominator.",
-        "collateralAssets": ["WETH"],
-        "chains": ["polygon"],
+        "collateralAssets": [
+          "WETH"
+        ],
+        "chains": [
+          "polygon"
+        ],
         "feeds": [
           {
             "provider": "3A ConvertedPriceFeed over Chainlink",
@@ -151,21 +207,43 @@
             "stalenessBoundSec": 86400,
             "observedAt": "2026-07-14",
             "observedBlock": 90225687,
-            "failureDomainKeys": ["3a-chainlink-eth-usd", "3a-chainlink-eur-usd-polygon", "3a-converted-price-feed", "polygon"]
+            "failureDomainKeys": [
+              "3a-chainlink-eth-usd",
+              "3a-chainlink-eur-usd-polygon",
+              "3a-converted-price-feed",
+              "polygon"
+            ]
           }
         ],
         "fallbackBehavior": "Both Chainlink wrappers enforce 86,400-second freshness and revert on failure, without fallback or cache.",
         "observedAt": "2026-07-14",
         "observedBlock": 90225687,
-        "collateralParameters": [{"asset":"WETH","minimumCollateralRatioPct":120,"note":"Minimum liquidation ratio 110%; one vault retained 0.143824222327955801 EURO3 debt; collateral cap was zero."}],
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "minimumCollateralRatioPct": 120,
+            "note": "Minimum liquidation ratio 110%; one vault retained 0.143824222327955801 EURO3 debt; collateral cap was zero."
+          }
+        ],
         "liquidationMechanism": "Below the 110% minimum liquidation ratio, liquidation routes through Stability Pool, AuctionManager, and LastResortLiquidation/community in order.",
         "liquidationDelaySec": 0,
         "backstop": "Stability Pool first, auctions second, then LastResortLiquidation for residual collateral and bad debt.",
         "shutdownOrBadDebtBehavior": "The zero collateral cap prevents new deposits while residual debt remains; exhausted routes reach the last-resort bad-debt distribution path.",
-        "failureDomainKeys": ["3a-weth-vault", "3a-liquidation-router-polygon", "3a-chainlink-eur-usd-polygon", "polygon"],
+        "failureDomainKeys": [
+          "3a-weth-vault",
+          "3a-liquidation-router-polygon",
+          "3a-chainlink-eur-usd-polygon",
+          "polygon"
+        ],
         "sources": [
-          {"label":"Verified WETH ConvertedPriceFeed","url":"https://repo.sourcify.dev/contracts/full_match/137/0xcFD9c639E84DCB9D8B9004840f12381E540d57Fb/"},
-          {"label":"Finalized Polygon block 90225687","url":"https://polygonscan.com/block/90225687"}
+          {
+            "label": "Verified WETH ConvertedPriceFeed",
+            "url": "https://repo.sourcify.dev/contracts/full_match/137/0xcFD9c639E84DCB9D8B9004840f12381E540d57Fb/"
+          },
+          {
+            "label": "Finalized Polygon block 90225687",
+            "url": "https://polygonscan.com/block/90225687"
+          }
         ]
       },
       {
@@ -173,8 +251,12 @@
         "label": "QNT Polygon vaults",
         "tier": "single-source-or-laggy",
         "summary": "QNT is converted from Chainlink QNT/USD to EUR through the shared Chainlink EUR/USD denominator.",
-        "collateralAssets": ["QNT"],
-        "chains": ["polygon"],
+        "collateralAssets": [
+          "QNT"
+        ],
+        "chains": [
+          "polygon"
+        ],
         "feeds": [
           {
             "provider": "3A ConvertedPriceFeed over Chainlink",
@@ -185,21 +267,43 @@
             "stalenessBoundSec": 86400,
             "observedAt": "2026-07-14",
             "observedBlock": 90225687,
-            "failureDomainKeys": ["3a-chainlink-qnt-usd", "3a-chainlink-eur-usd-polygon", "3a-converted-price-feed", "polygon"]
+            "failureDomainKeys": [
+              "3a-chainlink-qnt-usd",
+              "3a-chainlink-eur-usd-polygon",
+              "3a-converted-price-feed",
+              "polygon"
+            ]
           }
         ],
         "fallbackBehavior": "Both Chainlink wrappers enforce 86,400-second freshness and revert on failure, without fallback or cache.",
         "observedAt": "2026-07-14",
         "observedBlock": 90225687,
-        "collateralParameters": [{"asset":"QNT","minimumCollateralRatioPct":175,"note":"Minimum liquidation ratio 130%; two vaults retained 0.000140475490889085 EURO3 debt in aggregate, including one 24-wei debt; collateral cap was zero."}],
+        "collateralParameters": [
+          {
+            "asset": "QNT",
+            "minimumCollateralRatioPct": 175,
+            "note": "Minimum liquidation ratio 130%; two vaults retained 0.000140475490889085 EURO3 debt in aggregate, including one 24-wei debt; collateral cap was zero."
+          }
+        ],
         "liquidationMechanism": "Below the 130% minimum liquidation ratio, liquidation routes through Stability Pool, AuctionManager, and LastResortLiquidation/community in order.",
         "liquidationDelaySec": 0,
         "backstop": "Stability Pool first, auctions second, then LastResortLiquidation for residual collateral and bad debt.",
         "shutdownOrBadDebtBehavior": "The zero collateral cap prevents new deposits while residual debt remains; exhausted routes reach the last-resort bad-debt distribution path.",
-        "failureDomainKeys": ["3a-qnt-vaults", "3a-liquidation-router-polygon", "3a-chainlink-eur-usd-polygon", "polygon"],
+        "failureDomainKeys": [
+          "3a-qnt-vaults",
+          "3a-liquidation-router-polygon",
+          "3a-chainlink-eur-usd-polygon",
+          "polygon"
+        ],
         "sources": [
-          {"label":"Verified QNT ConvertedPriceFeed","url":"https://repo.sourcify.dev/contracts/full_match/137/0xD78fF234A0d5ddea664f4478D72B621715EF03E5/"},
-          {"label":"Finalized Polygon block 90225687","url":"https://polygonscan.com/block/90225687"}
+          {
+            "label": "Verified QNT ConvertedPriceFeed",
+            "url": "https://repo.sourcify.dev/contracts/full_match/137/0xD78fF234A0d5ddea664f4478D72B621715EF03E5/"
+          },
+          {
+            "label": "Finalized Polygon block 90225687",
+            "url": "https://polygonscan.com/block/90225687"
+          }
         ]
       },
       {
@@ -207,8 +311,12 @@
         "label": "USDT Polygon vault",
         "tier": "single-source-or-laggy",
         "summary": "USDT is converted from Chainlink USDT/USD to EUR through the shared Chainlink EUR/USD denominator.",
-        "collateralAssets": ["USDT"],
-        "chains": ["polygon"],
+        "collateralAssets": [
+          "USDT"
+        ],
+        "chains": [
+          "polygon"
+        ],
         "feeds": [
           {
             "provider": "3A ConvertedPriceFeed over Chainlink",
@@ -219,21 +327,43 @@
             "stalenessBoundSec": 86400,
             "observedAt": "2026-07-14",
             "observedBlock": 90225687,
-            "failureDomainKeys": ["3a-chainlink-usdt-usd", "3a-chainlink-eur-usd-polygon", "3a-converted-price-feed", "polygon"]
+            "failureDomainKeys": [
+              "3a-chainlink-usdt-usd",
+              "3a-chainlink-eur-usd-polygon",
+              "3a-converted-price-feed",
+              "polygon"
+            ]
           }
         ],
         "fallbackBehavior": "Both Chainlink wrappers enforce 86,400-second freshness and revert on failure, without fallback or cache.",
         "observedAt": "2026-07-14",
         "observedBlock": 90225687,
-        "collateralParameters": [{"asset":"USDT","minimumCollateralRatioPct":110,"note":"Minimum liquidation ratio 105%; one vault retained 0.000000603105734829 EURO3 debt; collateral cap was zero."}],
+        "collateralParameters": [
+          {
+            "asset": "USDT",
+            "minimumCollateralRatioPct": 110,
+            "note": "Minimum liquidation ratio 105%; one vault retained 0.000000603105734829 EURO3 debt; collateral cap was zero."
+          }
+        ],
         "liquidationMechanism": "Below the 105% minimum liquidation ratio, liquidation routes through Stability Pool, AuctionManager, and LastResortLiquidation/community in order.",
         "liquidationDelaySec": 0,
         "backstop": "Stability Pool first, auctions second, then LastResortLiquidation for residual collateral and bad debt.",
         "shutdownOrBadDebtBehavior": "The zero collateral cap prevents new deposits while residual debt remains; exhausted routes reach the last-resort bad-debt distribution path.",
-        "failureDomainKeys": ["3a-usdt-vault", "3a-liquidation-router-polygon", "3a-chainlink-eur-usd-polygon", "polygon"],
+        "failureDomainKeys": [
+          "3a-usdt-vault",
+          "3a-liquidation-router-polygon",
+          "3a-chainlink-eur-usd-polygon",
+          "polygon"
+        ],
         "sources": [
-          {"label":"Verified USDT ConvertedPriceFeed","url":"https://repo.sourcify.dev/contracts/full_match/137/0xA6fD86886089d6A6144e3134e51a4CF8cd8A5Dd5/"},
-          {"label":"Finalized Polygon block 90225687","url":"https://polygonscan.com/block/90225687"}
+          {
+            "label": "Verified USDT ConvertedPriceFeed",
+            "url": "https://repo.sourcify.dev/contracts/full_match/137/0xA6fD86886089d6A6144e3134e51a4CF8cd8A5Dd5/"
+          },
+          {
+            "label": "Finalized Polygon block 90225687",
+            "url": "https://polygonscan.com/block/90225687"
+          }
         ]
       }
     ]
@@ -279,7 +409,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "EURO3 on Polygon and Linea uses a MintableToken + MintableTokenOwner pattern. Authorized vault contracts (VaultFactory 0x47608470... and a second contract) are registered as minters in MintableTokenOwner and call mint() on the token. The MintableTokenOwner is owned by an OwnerProxy, which is owned by a single EOA (0x84d28251143df55df1768870fc26983f50364557) — no multisig. This EOA can add/revoke minters and transfer control unilaterally, making this a concentrated-admin posture.",
+    "summary": "EURO3 on Polygon and Linea uses a MintableToken + MintableTokenOwner pattern. Authorized vault contracts (VaultFactory 0x47608470... and a second contract) are registered as minters in MintableTokenOwner and call mint() on the token. The MintableTokenOwner is owned by an OwnerProxy, which is owned by a single EOA (0x84d28251143df55df1768870fc26983f50364557) \u2014 no multisig. This EOA can add/revoke minters and transfer control unilaterally, making this a concentrated-admin posture.",
     "controls": [
       {
         "label": "3A VaultFactory and VaultCore contracts (authorized minters)",
@@ -294,6 +424,14 @@
             "label": "EURO3 MintableTokenOwner on Polygonscan",
             "url": "https://polygonscan.com/address/0xb3857f86a95516902c953d530d3e5c29b1518a85"
           }
+        ],
+        "chain": "polygon",
+        "address": "0x4760847023fa0833221ae76e01db1e483a5d20e0",
+        "observedAt": "2026-07-20",
+        "failureDomainKeys": [
+          "polygon:0x4760847023fa0833221ae76e01db1e483a5d20e0",
+          "polygon:0x027a597ad044bddb7a6b7ef9ed2b641122801220",
+          "linea:0x027a597ad044bddb7a6b7ef9ed2b641122801220"
         ]
       },
       {
@@ -308,13 +446,16 @@
             "label": "EURO3 MintableToken on Polygonscan",
             "url": "https://polygonscan.com/address/0xa0e4c84693266a9d3bbef2f394b33712c76599ab"
           }
-        ]
+        ],
+        "chain": "polygon",
+        "address": "0x84d28251143df55df1768870fc26983f50364557",
+        "observedAt": "2026-07-20"
       }
     ],
     "review": {
       "evidence": "At Polygon block 88325316 / Linea block 30997860: EURO3 MintableToken (Polygon 0xa0e4c84..., Linea 0x3f817b28...) is a non-proxied OZ Ownable contract whose owner is a MintableTokenOwner contract. MintableTokenOwner source (verified on Blockscout) has mint()/addMinter()/revokeMinter() functions. Authorized minters: VaultFactory (0x4760847023fa0833221ae76e01db1e483a5d20e0, minters()=true) and 0x027a597ad044bddb7a6b7ef9ed2b641122801220 (minters()=true). MintableTokenOwner.owner()=OwnerProxy (0xdfeeed605b30...) whose slot0=EOA 0x84d28251143df55df1768870fc26983f50364557 (eth_getCode=empty). Same EOA controls both Polygon and Linea deployments. No multisig in minting chain; posture upgraded to concentrated-admin.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "3A docs: EURO3 coin",
@@ -335,8 +476,8 @@
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "EURO3 has no cross-chain bridge route. It is minted natively and independently on each chain (Polygon and Linea) by 3A's local CDP vault contracts: supply is created when users open EURO3 loans against that chain's whitelisted collateral and burned when they repay or redeem. Both token contracts are verified as a plain MintableToken (ERC20, Ownable) exposing only mint()/burn(), with the owner being a per-chain MintableTokenOwner that registers that chain's VaultFactory/vault minters. There is no OFT/CCIP/NTT/Hyperlane/Axelar or any cross-chain function in either contract, and the deployments use different addresses (ruling out deterministic omnichain-token patterns), so each chain's supply carries no cross-chain dependency. Holders can move EURO3 via third-party aggregators (Symbiosis, MetaMask Bridge, etc.), but that is not the durable issuance/supply path.",
-    "reviewedAt": "2026-06-21",
-    "reviewer": "Pharos bridge-route re-verification",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
     "confidence": "verified",
     "sources": [
       {
@@ -360,32 +501,54 @@
       {
         "id": "polygon:0xa0e4c84693266a9d3bbef2f394b33712c76599ab",
         "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xa0e4c84693266a9d3bbef2f394b33712c76599ab",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "3A DAO native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native EURO3: non-proxied MintableToken whose owner() = MintableTokenOwner 0xb3857f86a95516902c953d530d3e5c29b1518a85 (read 2026-07-20); mint rights sit with the 3A VaultFactory 0x4760847023fa0833221ae76e01db1e483a5d20e0 and second minter contract 0x027a597ad044bddb7a6b7ef9ed2b641122801220 under the 3A operator EOA 0x84d28251143df55df1768870fc26983f50364557 (mint-authority review). 3A DAO mints natively on this chain; no bridge contract mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "polygon explorer EURO3 token",
+            "url": "https://polygonscan.com/token/0xa0e4c84693266a9d3bbef2f394b33712c76599ab"
+          },
+          {
+            "label": "3A DAO",
+            "url": "https://3adao.org/"
+          }
+        ]
       },
       {
         "id": "linea:0x3f817b28da4940f018c6b5c0a11c555ebb1264f9",
         "destinationChain": "linea",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x3f817b28da4940f018c6b5c0a11c555ebb1264f9",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "3A DAO native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native EURO3: non-proxied MintableToken whose owner() = MintableTokenOwner 0x1ba31e955a3e1fbc8caffa64056c58a3e4d86082 (read 2026-07-20); mint rights sit with the 3A VaultFactory 0x4760847023fa0833221ae76e01db1e483a5d20e0 and second minter contract 0x027a597ad044bddb7a6b7ef9ed2b641122801220 under the 3A operator EOA 0x84d28251143df55df1768870fc26983f50364557 (mint-authority review). 3A DAO mints natively on this chain; no bridge contract mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "linea explorer EURO3 token",
+            "url": "https://lineascan.build/token/0x3f817b28da4940f018c6b5c0a11c555ebb1264f9"
+          },
+          {
+            "label": "3A DAO",
+            "url": "https://3adao.org/"
+          }
+        ]
       }
     ]
   },
@@ -394,14 +557,23 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "Whitelisted vault crypto and stablecoin collateral",
+      "name": "Whitelisted 3A Vault collateral (USDC.e, DAI, WETH/ETH, USDT, WBTC, wstETH and other approved assets; mix undisclosed)",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "3A Lending Protocol vaults on Polygon and Linea",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-6 V9 reserve review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
     "confidence": "manual-review",
     "sources": [
       {
@@ -416,18 +588,41 @@
     "rationale": "3A documentation identifies the approved vault collateral categories and redemption model, but no reproducible current collateral-composition feed was found for Polygon or Linea. The category envelope is retained while the live allocation remains explicitly unknown.",
     "compositionBasis": "3A DAO documented EURO3 vault collateral allowlist",
     "compositionAsOf": "2026-07-14",
-    "scope": "selected-slices",
+    "scope": "full-composition",
     "knownUnknownExposure": "Current balances by collateral asset, chain, vault, and liquidation liquidity are not published in a reproducible source.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Whitelisted vault crypto and stablecoin collateral",
+        "reserveName": "Whitelisted 3A Vault collateral (USDC.e, DAI, WETH/ETH, USDT, WBTC, wstETH and other approved assets; mix undisclosed)",
         "pct": 100,
         "disposition": "basket-needs-split",
         "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "3A Vault contracts on Polygon and Linea (non-custodial)",
+        "role": "other",
+        "jurisdiction": "Polygon, Linea"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "3A DAO EURO3 documentation",
+        "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+      }
+    ],
+    "uncertainty": "Collateral is held in the protocol's on-chain vault contracts on Polygon and Linea rather than with a conventional custodian; segregation, bankruptcy remoteness, and reuse terms are not applicable or documented, and contract integrity is the operative risk.",
+    "knownUnknownExposurePct": 100
   },
   "notices": [
     {
@@ -441,15 +636,15 @@
     "tokenType": "ART",
     "references": [
       {
-        "label": "ESMA Interim MiCA Register – EMT issuers (EMTWP.csv, updated 2026-06-04): no entry for 3A DAO or EURO3",
+        "label": "ESMA Interim MiCA Register \u2013 EMT issuers (EMTWP.csv, updated 2026-06-04): no entry for 3A DAO or EURO3",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       },
       {
-        "label": "3A DAO website – issuer disclosed as 3A DAO LLC, Marshall Islands (Reg. RMI-2022-33), no EU regulatory entity",
+        "label": "3A DAO website \u2013 issuer disclosed as 3A DAO LLC, Marshall Islands (Reg. RMI-2022-33), no EU regulatory entity",
         "url": "https://3adao.org/"
       },
       {
-        "label": "3A DAO docs – EURO3 described as decentralized EUR-pegged CDP stablecoin; no MiCA authorization or EMI license mentioned",
+        "label": "3A DAO docs \u2013 EURO3 described as decentralized EUR-pegged CDP stablecoin; no MiCA authorization or EMI license mentioned",
         "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
       }
     ]

@@ -348,6 +348,7 @@ vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
 // Stub coingecko helpers
 vi.mock("../../lib/coingecko", () => ({
   cgUrl: vi.fn((path: string) => `https://api.coingecko.com${path}`),
+  cgSimplePricePath: vi.fn((query: string) => `/simple/price?${query}&precision=full`),
   cgHeaders: vi.fn((extra: Record<string, string>) => extra),
 }));
 

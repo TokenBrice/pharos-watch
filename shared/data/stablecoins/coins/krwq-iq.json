@@ -424,11 +424,11 @@
   },
   "launchDate": "2025-10-30",
   "bridgeRouteRisk": {
-    "tier": "external-lock-mint",
+    "tier": "external-validated-network",
     "summary": "KRWQ uses or is linked to LayerZero/OFT-style cross-chain token infrastructure. Because OFT/adapter routes depend on external messaging, endpoint configuration, and lock/mint or burn/mint token contracts outside issuer-native redemption alone, Pharos scores the reviewed route as external lock/mint.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "l2beat",
@@ -460,92 +460,193 @@
       {
         "id": "ethereum:0xc00db6b41473d065027f5ed6fada20fde75f142e",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xc00db6b41473d065027f5ed6fada20fde75f142e",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "KRWQ issuer-native (IQ/Frax)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Reviewed mintAuthority documents this canonical TransparentUpgradeableProxy with an owner-managed minter set (owner 3/5 Safe 0x56398b89...). Issuer-native deployment; no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "KRWQ token on Etherscan",
+            "url": "https://etherscan.io/address/0xc00db6b41473d065027f5ed6fada20fde75f142e"
+          },
+          {
+            "label": "KRWQ documentation",
+            "url": "https://krwq.io/"
+          }
+        ]
       },
       {
         "id": "base:0x370923d39f139c64813f173a1bf0b4f9ba36a24f",
+        "sourceChain": "ethereum",
         "destinationChain": "base",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x370923d39f139c64813f173a1bf0b4f9ba36a24f",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: this KRWQ deployment is a LayerZero OFT (endpoint() returns the chain's LayerZero V2 endpoint); mint authority is the OFT contract itself, executing mints only on verified LayerZero messages.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "base",
+        "controllerAddress": "0x370923d39f139c64813f173a1bf0b4f9ba36a24f",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:base:0x370923d39f139c64813f173a1bf0b4f9ba36a24f"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "KRWQ token on Basescan",
+            "url": "https://basescan.org/address/0x370923d39f139c64813f173a1bf0b4f9ba36a24f"
+          },
+          {
+            "label": "KRWQ documentation",
+            "url": "https://krwq.io/"
+          }
+        ]
       },
       {
         "id": "polygon:0x44c3950a6ed303c863a6568ea18c1a01e504ffd2",
+        "sourceChain": "ethereum",
         "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x44c3950a6ed303c863a6568ea18c1a01e504ffd2",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: this KRWQ deployment is a LayerZero OFT (endpoint() returns the chain's LayerZero V2 endpoint); mint authority is the OFT contract itself, executing mints only on verified LayerZero messages.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "polygon",
+        "controllerAddress": "0x44c3950a6ed303c863a6568ea18c1a01e504ffd2",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:polygon:0x44c3950a6ed303c863a6568ea18c1a01e504ffd2"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "KRWQ token on Polygonscan",
+            "url": "https://polygonscan.com/address/0x44c3950a6ed303c863a6568ea18c1a01e504ffd2"
+          },
+          {
+            "label": "KRWQ documentation",
+            "url": "https://krwq.io/"
+          }
+        ]
       },
       {
         "id": "fraxtal:0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6",
+        "sourceChain": "ethereum",
         "destinationChain": "fraxtal",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: this KRWQ deployment is a LayerZero OFT (endpoint() returns the chain's LayerZero V2 endpoint); mint authority is the OFT contract itself, executing mints only on verified LayerZero messages.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "fraxtal",
+        "controllerAddress": "0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:fraxtal:0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "KRWQ token on Fraxscan",
+            "url": "https://fraxscan.com/address/0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6"
+          },
+          {
+            "label": "KRWQ documentation",
+            "url": "https://krwq.io/"
+          }
+        ]
       },
       {
         "id": "codex:0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16",
+        "sourceChain": "ethereum",
         "destinationChain": "codex",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: this KRWQ deployment is a LayerZero OFT (endpoint() returns the chain's LayerZero V2 endpoint); mint authority is the OFT contract itself, executing mints only on verified LayerZero messages.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "codex",
+        "controllerAddress": "0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:codex:0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "KRWQ token on Codex explorer",
+            "url": "https://explorer.codex.xyz/address/0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16"
+          },
+          {
+            "label": "KRWQ documentation",
+            "url": "https://krwq.io/"
+          }
+        ]
       },
       {
         "id": "morph-l2:0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16",
+        "sourceChain": "ethereum",
         "destinationChain": "morph-l2",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: this KRWQ deployment is a LayerZero OFT (endpoint() returns the chain's LayerZero V2 endpoint); mint authority is the OFT contract itself, executing mints only on verified LayerZero messages.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "morph-l2",
+        "controllerAddress": "0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:morph-l2:0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "KRWQ token on Morph explorer",
+            "url": "https://explorer.morphl2.io/address/0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16"
+          },
+          {
+            "label": "KRWQ documentation",
+            "url": "https://krwq.io/"
+          }
+        ]
       }
     ]
   }

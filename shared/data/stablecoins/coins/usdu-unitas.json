@@ -198,9 +198,9 @@
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "USDU has independent native deployments on Solana and BSC, each minted/redeemed against USDC by whitelisted participants on that chain with no live cross-chain supply route between them. The BSC token is a plain BEP20 (Safe-controlled mint, no OFT/LayerZero interface) and the Solana Token-2022 mint is self-referential/effectively frozen. A LayerZero cross-chain USDU route is roadmapped (ETA Q4 2025, \"Design\" phase) but not yet live, so the durable mechanism today is native per-chain issuance, not a bridge.",
-    "reviewedAt": "2026-06-21",
-    "reviewer": "Pharos bridge-route re-verification",
+    "summary": "USDU has independent native deployments on BSC and Solana, each minted by the issuer on that chain (BSC owner is the reviewed 3-of-5 Safe); no live cross-chain supply route exists.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
     "confidence": "probable",
     "protocols": [
       {
@@ -266,31 +266,43 @@
         "id": "bsc:0xea953ea6634d55dac6697c436b1e81a679db5882",
         "destinationChain": "bsc",
         "contractAddress": "0xea953ea6634d55dac6697c436b1e81a679db5882",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Unitas native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "BSC USDU is a plain BEP20 minted by owner() = Gnosis Safe 3-of-5 0x8e3811b4dc5022ab9c8afbb54be4aa23780c62b3 (verified on BSC at 2026-07-20); no bridge carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Unitas Foundation",
+            "url": "https://unitas.foundation/"
+          }
+        ]
       },
       {
         "id": "solana:9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy",
         "destinationChain": "solana",
         "contractAddress": "9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Unitas native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Solana USDU is a native Token-2022 mint issued by Unitas (mint-authority posture documented in the mint-authority review); no bridge carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Unitas Foundation",
+            "url": "https://unitas.foundation/"
+          }
+        ]
       }
     ]
   },
@@ -298,23 +310,66 @@
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
-      "name": "On-chain collateral and off-exchange delta-neutral strategy basket",
-      "pct": 100,
+      "name": "Binance",
+      "pct": 49,
       "risk": "high",
       "assetClass": "hedged-crypto",
-      "issuerOrObligor": "Unitas protocol, Copper/Ceffu custody routes, and undisclosed hedge venues",
-      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity", "concentration"],
+      "issuerOrObligor": "Binance off-exchange settlement venue (Copper/Ceffu-style custody route)",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "basis",
+        "market",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Solana",
+      "pct": 48.5,
+      "risk": "high",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Solana on-chain collateral and hedge positions",
+      "riskFactors": [
+        "market",
+        "basis",
+        "smart-contract",
+        "custody",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Bnb_smartchain",
+      "pct": 2.5,
+      "risk": "high",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "BNB Smart Chain on-chain collateral and hedge positions",
+      "riskFactors": [
+        "market",
+        "basis",
+        "smart-contract",
+        "custody",
+        "liquidity",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-16",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "Accountable Unitas proof-of-solvency snapshot (2026-07-16)",
+        "label": "Accountable Unitas proof-of-solvency dashboard",
         "url": "https://accountable.unitas.so/"
+      },
+      {
+        "label": "Accountable Unitas dashboard API (reserves_split capture of 2026-07-19)",
+        "url": "https://cache.accountable.capital/dashboard/unitas"
       },
       {
         "label": "Unitas backing, custody, and security overview",
@@ -325,21 +380,65 @@
         "url": "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas"
       }
     ],
-    "rationale": "Accountable's dated proof-of-solvency snapshot verifies aggregate assets and liabilities but does not expose a current asset- or venue-level reserve split. Unitas documents an on-chain collateral layer plus off-exchange perpetual hedges and names Copper/Ceffu as example custody routes, but the reviewed issuer pages do not publish current weights. The prior fixed Binance/Solana/BSC percentages are therefore replaced with one unresolved strategy basket.",
-    "compositionBasis": "Accountable aggregate solvency snapshot and Unitas's complete documented strategy envelope; current constituent weights undisclosed",
-    "compositionAsOf": "2026-07-16",
+    "rationale": "Accountable's zkTLS dashboard API exposed a venue-level reserves_split on 2026-07-19 (Binance 49%, Solana 48.5%, Bnb_smartchain 2.5%), superseding the prior unresolved aggregate basket; the slices are restated on those exact adapter identities so the reviewed classification overlays the live rows. The same bucket returned empty on 2026-07-20, so the venue weights are bounded to the last dated capture while Unitas's documented delta-neutral envelope (on-chain collateral plus off-exchange perpetual hedges via Copper/Ceffu-style settlement) bounds what each venue slice contains.",
+    "compositionBasis": "Accountable dashboard API reserves_split venue allocation captured 2026-07-19; per-venue instrument composition undisclosed",
+    "compositionAsOf": "2026-07-19",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current collateral assets, chain and venue weights, long and short notionals, hedge counterparties, margin, custody-provider shares, and insurance-fund balances are not exposed in the reviewed dated snapshot.",
+    "knownUnknownExposure": "The venue split identifies where reserves are attested but not what each venue holds: collateral assets, long and short notionals, hedge counterparties, margin, custody-provider shares, and insurance-fund balances per venue remain undisclosed.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "On-chain collateral and off-exchange delta-neutral strategy basket",
-        "pct": 100,
+        "reserveName": "Binance",
+        "pct": 49,
         "disposition": "basket-needs-split",
-        "rationale": "The solvency proof verifies the aggregate while withholding the current constituent and venue allocation needed for defensible reserve slices."
+        "rationale": "The Binance venue bucket aggregates off-exchange custodied collateral and hedge positions without disclosing current instrument-level composition."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Solana",
+        "pct": 48.5,
+        "disposition": "basket-needs-split",
+        "rationale": "The Solana venue bucket aggregates on-chain collateral and hedge positions without disclosing current instrument-level composition."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Bnb_smartchain",
+        "pct": 2.5,
+        "disposition": "basket-needs-split",
+        "rationale": "The BNB Smart Chain venue bucket aggregates on-chain collateral and hedge positions without disclosing current instrument-level composition."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Copper / Ceffu off-exchange settlement custody routes",
+        "role": "custodian"
+      },
+      {
+        "name": "On-chain protocol contracts (Solana, BNB Smart Chain)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Unitas backing, custody, and security overview",
+        "url": "https://docs.unitas.so/backing-custody-and-security/overview"
+      },
+      {
+        "label": "Unitas off-exchange settlement documentation",
+        "url": "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas"
+      }
+    ],
+    "uncertainty": "Unitas documents Copper/Ceffu-style off-exchange settlement custody plus on-chain collateral contracts, but the reviewed sources do not establish provider shares, legal segregation, bankruptcy-remoteness, or reuse restrictions for the custodied legs.",
+    "knownUnknownExposurePct": 100
   },
   "yieldConfig": {
     "yieldSource": "Unitas savings (sUSDu)",

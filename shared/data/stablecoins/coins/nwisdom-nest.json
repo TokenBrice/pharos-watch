@@ -63,9 +63,9 @@
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "nWISDOM is a Nest BoringVault share whose ERC20 (identical CREATE2 address 0x29bf...0240 on Plume and Ethereum) contains no LayerZero code itself. Cross-chain movement runs through Plume's SkyLink on LayerZero's OVault standard, orchestrated by the Plume-side NestVaultComposer (LayerZero OVaultComposer, 0x312a0219...). Plume is the canonical accounting/settlement hub. Per LayerZero's OVault Share mesh design, vault shares move via a ShareOFTAdapter (lockbox) on the hub chain plus standard ShareOFT mint/burn on spokes, with deposits/redemptions routed through the hub ERC-4626 vault (ABA pattern). This is an external LayerZero OFT-Adapter/lockbox route with a third-party control surface (composer + OFT peers), not a pure validated-network burn/mint, so it maps to external-lock-mint. The specific adapter contract and the named DVN set were not enumerated, hence probable rather than verified.",
-    "reviewedAt": "2026-06-21",
-    "reviewer": "Pharos bridge-route re-verification",
+    "summary": "nWISDOM is a Nest BoringVault share whose ERC20 (identical CREATE2 address 0x29bf...0240 on Plume and Ethereum) contains no LayerZero code itself. Cross-chain movement runs through Plume's SkyLink on LayerZero's OVault standard, orchestrated by the Plume-side NestVaultComposer (LayerZero OVaultComposer, 0x312a0219...). Plume is the canonical accounting/settlement hub. Per LayerZero's OVault Share mesh design, vault shares move via a ShareOFTAdapter (lockbox) on the hub chain plus standard ShareOFT mint/burn on spokes, with deposits/redemptions routed through the hub ERC-4626 vault (ABA pattern). This is an external LayerZero OFT-Adapter/lockbox route with a third-party control surface (composer + OFT peers), not a pure validated-network burn/mint, so it maps to external-lock-mint. The specific adapter contract and the named DVN set were not enumerated, hence probable rather than verified. 2026-07-20 cohort dc-1 pass: Plume and Ethereum rows both confirmed issuer-native Nest deployments (uniform address + uniform owner reads).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
     "confidence": "probable",
     "protocols": [
       {
@@ -131,31 +131,43 @@
         "id": "ethereum:0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
         "destinationChain": "ethereum",
         "contractAddress": "0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Nest nWISDOM (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Nest WisdomTree Vault', symbol nWISDOM, 6 decimals on ethereum; uniform address with uniform owner() 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a on both Plume and Ethereum — issuer-native Nest deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Nest",
+            "url": "https://nest.credit/"
+          }
+        ]
       },
       {
         "id": "plume:0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
         "destinationChain": "plume",
         "contractAddress": "0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Nest nWISDOM (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Nest WisdomTree Vault', symbol nWISDOM, 6 decimals on plume; uniform address with uniform owner() 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a on both Plume and Ethereum — issuer-native Nest deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Nest",
+            "url": "https://nest.credit/"
+          }
+        ]
       }
     ]
   },

@@ -13,7 +13,24 @@ import type { LiquidityPoolSourceFamily } from "@shared/types/market";
 export const DEFILLAMA_YIELDS_URL = "https://yields.llama.fi/pools";
 export const DEFILLAMA_PROTOCOLS_URL = "https://api.llama.fi/protocols";
 export const CURVE_API_BASE = "https://api.curve.finance/v1/getPools/all";
-export const CURVE_CHAINS = ["ethereum", "base", "arbitrum", "polygon", "fraxtal", "sonic", "taiko", "zksync"] as const;
+// Chains the Curve getPools/all endpoint serves and the join consumes. The
+// endpoint also covers optimism, avalanche, fantom, and kava (verified
+// 2026-07-19); it does not serve gnosis, monad, or plasma. New entries are
+// appended so persisted payload indexes stay aligned with earlier captures.
+export const CURVE_CHAINS = [
+  "ethereum",
+  "base",
+  "arbitrum",
+  "polygon",
+  "fraxtal",
+  "sonic",
+  "taiko",
+  "zksync",
+  "optimism",
+  "avalanche",
+  "fantom",
+  "kava",
+] as const;
 export const DEX_LIQUIDITY_POOL_MIN_TVL_USD = 10_000;
 
 // Uniswap V3 subgraph IDs per chain

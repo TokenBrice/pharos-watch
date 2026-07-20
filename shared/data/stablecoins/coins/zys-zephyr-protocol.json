@@ -139,7 +139,10 @@
             "url": "https://zephyrprotocol.com/yield"
           }
         ],
-        "evidence": "Local metadata and official Zephyr materials describe ZYS as a NAV-style yield-share token tied to the ZSD yield reserve."
+        "evidence": "Local metadata and official Zephyr materials describe ZYS as a NAV-style yield-share token tied to the ZSD yield reserve.",
+        "failureDomainKeys": [
+          "protocol:zephyr-yield-reserve"
+        ]
       }
     ],
     "review": {
@@ -149,13 +152,13 @@
           "url": "https://zephyrprotocol.com/documentation"
         },
         {
-          "label": "Zephyr GitHub — enums.h",
+          "label": "Zephyr GitHub \u2014 enums.h",
           "url": "https://github.com/ZephyrProtocol/zephyr/blob/master/src/cryptonote_protocol/enums.h"
         }
       ],
       "evidence": "ZYS inherits the ZSD mint-authority profile. ZSD was verified 2026-06-11: source code review confirmed no admin/emergency mint bypass (see zsd-zephyr-protocol). ZYS share accounting is governed by the same reserve-ratio rules with no separate privileged mint surface.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+      "reviewedAt": "2026-07-20"
     }
   },
   "reserves": [
@@ -164,7 +167,17 @@
       "pct": 100,
       "risk": "high",
       "coinId": "zsd-zephyr-protocol",
-      "depType": "wrapper"
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Zephyr Protocol on-chain ZSD yield reserve",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "market",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -190,6 +203,32 @@
     "scope": "full-composition",
     "knownUnknownExposure": "No additional direct ZYS reserve slice is identified; underlying ZSD backing remains the upstream asset's reserve question.",
     "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Zephyr Protocol on-chain ZSD yield reserve",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Zephyr Protocol yield documentation",
+        "url": "https://zephyrprotocol.com/yield"
+      },
+      {
+        "label": "Zephyr reserve snapshots API",
+        "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
+      }
+    ],
+    "uncertainty": "ZYS is a share claim on Zephyr's on-chain ZSD yield reserve rather than assets held by a legal custodian; the reviewed sources do not establish account segregation, insolvency treatment, or reuse terms, and the underlying ZSD backing composition is the upstream asset's reserve question.",
+    "knownUnknownExposurePct": 100
   },
   "yieldConfig": {
     "yieldSource": "Zephyr Scanner ZYS returns",

@@ -130,6 +130,11 @@
       "chain": "mantra",
       "address": "ibc/6749D16BC09F419C090C330FC751FFF1C96143DB7A4D2FCAEC2F348A3E17618A",
       "decimals": 6
+    },
+    {
+      "chain": "injective",
+      "address": "ibc/93EAE5F9D6C14BFAC8DD1AFDBE95501055A7B22C5D8FA8C986C31D6EFADCA8A9",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {
@@ -261,10 +266,10 @@
   },
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
-    "tier": "external-lock-mint",
-    "summary": "Ondo documents USDY bridging through LayerZero's OFT standard, using burn/mint native USDY on supported chains. Because bridge accounting depends on a third-party OFT route, USDY is scored as external-lock-mint.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "tier": "external-validated-network",
+    "summary": "USDY is natively issued by Ondo on Ethereum, Plume, Solana, Sui, Aptos, Stellar, and Noble. On Arbitrum, Mantle, and Sei the token is a LayerZero burn/mint representation minted by Ondo's own OApp (LayerZero EndpointV2-verified, Ondo Safe-owned; verified on-chain 2026-07-20). Cosmos deployments on Osmosis, Mantra, and Injective are IBC vouchers of Noble-native ausdy whose Noble-side ICS-20 escrows match voucher supplies exactly (verified 2026-07-20). DefiLlama also reports trace Penumbra and Glue labels (~$500 combined) that have no canonical chain mapping and remain an accepted bounded pool.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
     "confidence": "verified",
     "protocols": [
       {
@@ -274,6 +279,15 @@
         "url": "https://l2beat.com/interop/protocols/layerzero",
         "bridgeTypes": [
           "burnAndMint"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "IBC (Cosmos ics20)",
+        "slug": "ibc",
+        "url": "https://github.com/cosmos/chain-registry",
+        "bridgeTypes": [
+          "lockAndMint"
         ]
       }
     ],
@@ -291,182 +305,398 @@
       {
         "id": "ethereum:0x96f6ef951840721adbf46ac996b59e0235cb985c",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x96f6ef951840721adbf46ac996b59e0235cb985c",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ondo issuer-native USDY",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical USDY home deployment: TransparentUpgradeableProxy whose AccessControl DEFAULT_ADMIN_ROLE and MINTER_ROLE are both held by the Ondo 4/7 Safe 0x1a694A09494E214a3Be3652e4B343B7B81A73ad7 (hasRole verified on-chain 2026-07-20). No bridge contract holds mint rights on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDY Ethereum token (AccessControl role reads, 2026-07-20)",
+            "url": "https://etherscan.io/address/0x96F6eF951840721AdBF46Ac996b59E0235CB985C#readContract"
+          },
+          {
+            "label": "Safe Transaction Service (Ondo 4/7 Safe)",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1a694A09494E214a3Be3652e4B343B7B81A73ad7/"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x35e050d3c0ec2d29d269a8ecea763a183bdf9a9d",
+        "sourceChain": "ethereum",
         "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x35e050d3c0ec2d29d269a8ecea763a183bdf9a9d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ondo USDY via LayerZero (issuer-operated OApp)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: EIP-1967 proxy (impl 0x5692349f8e7081e2ad0ba629e01761b43187304c) with AccessControl DEFAULT_ADMIN_ROLE count 1 and MINTER_ROLE count 2. Admin = Ondo 4/7 Safe 0xc4ac5c2fa461901b4d91832d03a7018092edcb4d (Safe getThreshold=4, 7 owners). Minters = that Safe plus Ondo's LayerZero OApp 0x0be393dc46248e4285dc5caca3084bc7e9bfbb41, whose endpoint() returns LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and token() returns the USDY proxy; the OApp is owned by the same Safe. Cross-chain mint therefore requires LayerZero DVN verification plus Ondo Safe governance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x0be393dc46248e4285dc5caca3084bc7e9bfbb41",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:arbitrum:0x0be393dc46248e4285dc5caca3084bc7e9bfbb41"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDY Arbitrum token (role + EIP-1967 reads, 2026-07-20)",
+            "url": "https://arbiscan.io/address/0x35e050d3c0ec2d29d269a8ecea763a183bdf9a9d#readProxyContract"
+          },
+          {
+            "label": "Ondo LayerZero OApp on Arbitrum (endpoint/token reads, 2026-07-20)",
+            "url": "https://arbiscan.io/address/0x0be393dc46248e4285dc5caca3084bc7e9bfbb41#readContract"
+          },
+          {
+            "label": "L2BEAT LayerZero",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
       },
       {
         "id": "mantle:0x5be26527e817998a7206475496fde1e68957c5a6",
+        "sourceChain": "ethereum",
         "destinationChain": "mantle",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x5be26527e817998a7206475496fde1e68957c5a6",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ondo USDY via LayerZero (issuer-operated OApp)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: EIP-1967 proxy (impl 0x3b355a7a25e75a320f631f9736afb3dcc9f3ef66) with AccessControl DEFAULT_ADMIN_ROLE count 1 and MINTER_ROLE count 2. Admin = Ondo 4/7 Safe 0xc8a7870ffe41054612f7f3433e173d8b5bfca8e3 (getThreshold=4). Minters = that Safe plus the same Ondo LayerZero OApp 0x0be393dc46248e4285dc5caca3084bc7e9bfbb41 (endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "mantle",
+        "controllerAddress": "0x0be393dc46248e4285dc5caca3084bc7e9bfbb41",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:mantle:0x0be393dc46248e4285dc5caca3084bc7e9bfbb41"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDY Mantle token (role reads, 2026-07-20)",
+            "url": "https://mantlescan.xyz/address/0x5be26527e817998a7206475496fde1e68957c5a6"
+          },
+          {
+            "label": "Ondo LayerZero OApp on Mantle (2026-07-20)",
+            "url": "https://mantlescan.xyz/address/0x0be393dc46248e4285dc5caca3084bc7e9bfbb41"
+          },
+          {
+            "label": "L2BEAT LayerZero",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
+      },
+      {
+        "id": "sei:0x54cd901491aef397084453f4372b93c33260e2a6",
+        "sourceChain": "ethereum",
+        "destinationChain": "sei",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x54cd901491aef397084453f4372b93c33260e2a6",
+        "protocol": "Ondo USDY via LayerZero (issuer-operated OApp)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: EIP-1967 proxy (impl 0x66c33eb9158a2b9bf161271d5e6048b03174ecd6) with AccessControl DEFAULT_ADMIN_ROLE count 1 and MINTER_ROLE count 2. Admin = Ondo 4/7 Safe 0x17813b63cc706111894190ae25d10af5cf586e58 (getThreshold=4). Minters = that Safe plus Ondo LayerZero OApp 0x6f04b655d5209e85e47d3920a2ef407a66e83f6c (endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "sei",
+        "controllerAddress": "0x6f04b655d5209e85e47d3920a2ef407a66e83f6c",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:sei:0x6f04b655d5209e85e47d3920a2ef407a66e83f6c"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDY Sei token (role reads, 2026-07-20)",
+            "url": "https://seiscan.io/token/0x54cd901491aef397084453f4372b93c33260e2a6"
+          },
+          {
+            "label": "Ondo LayerZero OApp on Sei (2026-07-20)",
+            "url": "https://seiscan.io/address/0x6f04b655d5209e85e47d3920a2ef407a66e83f6c"
+          },
+          {
+            "label": "L2BEAT LayerZero",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
       },
       {
         "id": "plume:0xd2b65e851be3d80d3c2ce795eb2e78f16cb088b2",
         "destinationChain": "plume",
+        "canonicalChain": "plume",
         "contractAddress": "0xd2b65e851be3d80d3c2ce795eb2e78f16cb088b2",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ondo issuer-native USDY",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (rpc.plume.org): EIP-1967 proxy (impl 0xbbfe105992808f4f92d2becd9e586358014ce613) with AccessControl DEFAULT_ADMIN_ROLE and MINTER_ROLE each count 1, both held by Ondo 3/7 Safe 0x8df2b047e5d7c854fa2e96d558496b04362c03da (getThreshold=3, 7 owners overlapping the Ethereum Ondo signer set). No bridge minter exists on Plume; Ondo mints directly.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
-      },
-      {
-        "id": "sei:0x54cd901491aef397084453f4372b93c33260e2a6",
-        "destinationChain": "sei",
-        "contractAddress": "0x54cd901491aef397084453f4372b93c33260e2a6",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
-      },
-      {
-        "id": "sui:0x960b531667636f39e85867775f52f6b1f220a058c4de786905bdf761e06a56bb::usdy::USDY",
-        "destinationChain": "sui",
-        "contractAddress": "0x960b531667636f39e85867775f52f6b1f220a058c4de786905bdf761e06a56bb::usdy::USDY",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDY Plume token (role + Safe reads, 2026-07-20)",
+            "url": "https://explorer.plume.org/address/0xd2b65e851be3d80d3c2ce795eb2e78f16cb088b2"
+          },
+          {
+            "label": "Ondo 3/7 Safe on Plume (2026-07-20)",
+            "url": "https://explorer.plume.org/address/0x8df2b047e5d7c854fa2e96d558496b04362c03da"
+          }
+        ]
       },
       {
         "id": "solana:A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6",
         "destinationChain": "solana",
+        "canonicalChain": "solana",
         "contractAddress": "A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ondo issuer-native USDY",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (Solana getAccountInfo): SPL mint with mintAuthority 8n2uiRUd1A9NN78PKESkJe6k6zMqtKCZh3MrK1j9qkB1, an SPL Token multisig account requiring 1 of 2 signers (7YNReenG6AXgVUfmSizt6hoVXrznS4zDdgCj1UTLJ2S3, BB7W8gZouRNRGyr8Djx8zyoRcgckrDXkKiMjNMtPwaAQ); freezeAuthority 51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK is a plain system-owned account. Native Ondo-operated mint, not a bridge voucher.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDY Solana mint (2026-07-20)",
+            "url": "https://solscan.io/token/A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6"
+          },
+          {
+            "label": "USDY Solana mint-authority multisig (2026-07-20)",
+            "url": "https://solscan.io/account/8n2uiRUd1A9NN78PKESkJe6k6zMqtKCZh3MrK1j9qkB1"
+          }
+        ]
+      },
+      {
+        "id": "sui:0x960b531667636f39e85867775f52f6b1f220a058c4de786905bdf761e06a56bb::usdy::USDY",
+        "destinationChain": "sui",
+        "canonicalChain": "sui",
+        "contractAddress": "0x960b531667636f39e85867775f52f6b1f220a058c4de786905bdf761e06a56bb::usdy::USDY",
+        "protocol": "Ondo issuer-native USDY",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: first-class Sui coin (suix_getCoinMetadata returns Ondo US Dollar Yield, decimals 6, metadata object 0x81b008387aa52c1a18d3db8e51d1d78d31dbea6295b3cabddbe1fa3c5c00e9c4) published from package 0x960b531667636f39e85867775f52f6b1f220a058c4de786905bdf761e06a56bb; this is a native Sui issuance, not a bridge voucher. The TreasuryCap holder is not enumerable via public Sui RPC in this pass, so the chain-local mint operator identity is asserted from Ondo's documented issuer role rather than an on-chain read.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDY Sui coin metadata (2026-07-20)",
+            "url": "https://suiscan.xyz/mainnet/coin/0x960b531667636f39e85867775f52f6b1f220a058c4de786905bdf761e06a56bb::usdy::USDY"
+          },
+          {
+            "label": "Ondo docs",
+            "url": "https://docs.ondo.finance/"
+          }
+        ]
       },
       {
         "id": "aptos:0xcfea864b32833f157f042618bd845145256b1bf4c0da34a7013b76e42daa53cc",
         "destinationChain": "aptos",
+        "canonicalChain": "aptos",
         "contractAddress": "0xcfea864b32833f157f042618bd845145256b1bf4c0da34a7013b76e42daa53cc",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ondo issuer-native USDY",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (Aptos fullnode resources): legacy coin 0xcfea864b...::usdy::USDY whose mint/burn/freeze capabilities (managed_coin::Capabilities) are held by the deployment account itself, an Aptos 0x1::multisig_account requiring 4 of 7 owners (owners enumerated on-chain). Native issuer-minted deployment, not a bridge voucher.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDY Aptos deployment account (multisig + capabilities, 2026-07-20)",
+            "url": "https://explorer.aptoslabs.com/account/0xcfea864b32833f157f042618bd845145256b1bf4c0da34a7013b76e42daa53cc?network=mainnet"
+          }
+        ]
       },
       {
         "id": "stellar:USDY-GAJMPX5NBOG6TQFPQGRABJEEB2YE7RFRLUKJDZAZGAD5GFX4J7TADAZ6",
         "destinationChain": "stellar",
+        "canonicalChain": "stellar",
         "contractAddress": "USDY-GAJMPX5NBOG6TQFPQGRABJEEB2YE7RFRLUKJDZAZGAD5GFX4J7TADAZ6",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ondo issuer-native USDY",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (Horizon): Stellar asset USDY issued by GAJMPX5NBOG6TQFPQGRABJEEB2YE7RFRLUKJDZAZGAD5GFX4J7TADAZ6; the issuer account has low/med/high thresholds 0/0/0 and a single ed25519 master signer of weight 1, i.e. an Ondo-operated single-signer issuance account. Native Stellar issuance, not a bridge voucher.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDY Stellar issuer account (Horizon, 2026-07-20)",
+            "url": "https://stellar.expert/explorer/public/account/GAJMPX5NBOG6TQFPQGRABJEEB2YE7RFRLUKJDZAZGAD5GFX4J7TADAZ6"
+          }
+        ]
       },
       {
         "id": "noble:ausdy",
         "destinationChain": "noble",
+        "canonicalChain": "noble",
         "contractAddress": "ausdy",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ondo issuer-native USDY",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Noble is USDY's native IBC distribution chain: ausdy is the base denom (cosmos chain-registry Noble assetlist) with a live supply of 13,202,477.20682 ausdy (Noble LCD by_denom, 2026-07-20). All Cosmos USDY vouchers trace back to this Noble-native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Cosmos chain-registry Noble assetlist (ausdy native)",
+            "url": "https://github.com/cosmos/chain-registry/blob/master/noble/assetlist.json"
+          },
+          {
+            "label": "Noble LCD ausdy supply (2026-07-20)",
+            "url": "https://lcd.mainnet.noble.xyz/cosmos/bank/v1beta1/supply/by_denom?denom=ausdy"
+          }
+        ]
       },
       {
         "id": "osmosis:ibc/23104D411A6EB6031FA92FB75F227422B84989969E91DCAD56A535DD7FF0A373",
+        "sourceChain": "noble",
         "destinationChain": "osmosis",
+        "canonicalChain": "noble",
         "contractAddress": "ibc/23104D411A6EB6031FA92FB75F227422B84989969E91DCAD56A535DD7FF0A373",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Noble USDY via IBC",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "IBC voucher path verified 2026-07-20: Osmosis LCD denom trace resolves ibc/23104D41... to transfer/channel-750/ausdy, the ACTIVE preferred Noble channel-1 to Osmosis channel-750 ics20-1 channel. The controller is the Noble-side ICS-20 escrow noble1kq2rzz6fq2q7fsu75a9g7cpzjeanmk68qxshr6 (Noble escrow_address query for transfer/channel-1), which held exactly 6,135,224,374,098,694,966,821,693 ausdy, matching the Osmosis voucher supply 1:1 at query time.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "noble",
+        "controllerAddress": "noble1kq2rzz6fq2q7fsu75a9g7cpzjeanmk68qxshr6",
+        "failureDomainKeys": [
+          "protocol:ibc-ics20",
+          "contract:noble:noble1kq2rzz6fq2q7fsu75a9g7cpzjeanmk68qxshr6"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Osmosis LCD denom trace (transfer/channel-750/ausdy, 2026-07-20)",
+            "url": "https://lcd.osmosis.zone/ibc/apps/transfer/v1/denom_traces/23104D411A6EB6031FA92FB75F227422B84989969E91DCAD56A535DD7FF0A373"
+          },
+          {
+            "label": "Cosmos chain-registry Noble-Osmosis IBC channel (noble channel-1 / osmosis channel-750, ics20-1, ACTIVE)",
+            "url": "https://github.com/cosmos/chain-registry/blob/master/_IBC/noble-osmosis.json"
+          },
+          {
+            "label": "Noble escrow noble1kq2rzz... ausdy balance equals Osmosis voucher supply (2026-07-20)",
+            "url": "https://www.mintscan.io/noble/address/noble1kq2rzz6fq2q7fsu75a9g7cpzjeanmk68qxshr6"
+          }
+        ]
       },
       {
         "id": "mantra:ibc/6749D16BC09F419C090C330FC751FFF1C96143DB7A4D2FCAEC2F348A3E17618A",
+        "sourceChain": "noble",
         "destinationChain": "mantra",
+        "canonicalChain": "noble",
         "contractAddress": "ibc/6749D16BC09F419C090C330FC751FFF1C96143DB7A4D2FCAEC2F348A3E17618A",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Noble USDY via IBC",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "IBC voucher path verified 2026-07-20: Mantra LCD (ibc-go v8 denoms endpoint) resolves ibc/6749D16B... to transfer/channel-1/ausdy; the ACTIVE preferred channel pair is Mantra channel-1 to Noble channel-101 (chain-registry). The controller is the Noble-side ICS-20 escrow noble1j3mmq2dsfws0pv5fut3ce2252w0ere8g8r9amg (Noble escrow_address query for transfer/channel-101), which held exactly 29,580,752,771,797,603,199,844 ausdy, matching the Mantra voucher supply 1:1 at query time.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "noble",
+        "controllerAddress": "noble1j3mmq2dsfws0pv5fut3ce2252w0ere8g8r9amg",
+        "failureDomainKeys": [
+          "protocol:ibc-ics20",
+          "contract:noble:noble1j3mmq2dsfws0pv5fut3ce2252w0ere8g8r9amg"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Mantra LCD denom trace (transfer/channel-1/ausdy, 2026-07-20)",
+            "url": "https://api.mantrachain.io/ibc/apps/transfer/v1/denoms/6749D16BC09F419C090C330FC751FFF1C96143DB7A4D2FCAEC2F348A3E17618A"
+          },
+          {
+            "label": "Cosmos chain-registry Mantra-Noble IBC channel (mantra channel-1 / noble channel-101, ics20-1, ACTIVE)",
+            "url": "https://github.com/cosmos/chain-registry/blob/master/_IBC/mantrachain-noble.json"
+          },
+          {
+            "label": "Noble escrow noble1j3mmq... ausdy balance equals Mantra voucher supply (2026-07-20)",
+            "url": "https://www.mintscan.io/noble/address/noble1j3mmq2dsfws0pv5fut3ce2252w0ere8g8r9amg"
+          }
+        ]
+      },
+      {
+        "id": "injective:ibc/93EAE5F9D6C14BFAC8DD1AFDBE95501055A7B22C5D8FA8C986C31D6EFADCA8A9",
+        "sourceChain": "noble",
+        "destinationChain": "injective",
+        "canonicalChain": "noble",
+        "contractAddress": "ibc/93EAE5F9D6C14BFAC8DD1AFDBE95501055A7B22C5D8FA8C986C31D6EFADCA8A9",
+        "protocol": "Noble USDY via IBC",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "IBC voucher path verified 2026-07-20: sha256(\"transfer/channel-148/ausdy\") equals this denom hash, matching the ACTIVE preferred Injective channel-148 to Noble channel-31 ics20-1 channel (chain-registry); the Injective bank module holds a live supply of 523,896,789,593,744,392,742. The controller is the Noble-side ICS-20 escrow noble1vn26uz7pxhz5aqd4s4q8kuar84ev9emhhgxuc2 (Noble escrow_address query for transfer/channel-31), which held exactly that amount of ausdy at query time. This row absorbs the previously unmatched DefiLlama Injective supply.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "noble",
+        "controllerAddress": "noble1vn26uz7pxhz5aqd4s4q8kuar84ev9emhhgxuc2",
+        "failureDomainKeys": [
+          "protocol:ibc-ics20",
+          "contract:noble:noble1vn26uz7pxhz5aqd4s4q8kuar84ev9emhhgxuc2"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Injective LCD supply of ibc/93EAE5F9... (2026-07-20)",
+            "url": "https://lcd.injective.network/cosmos/bank/v1beta1/supply/by_denom?denom=ibc/93EAE5F9D6C14BFAC8DD1AFDBE95501055A7B22C5D8FA8C986C31D6EFADCA8A9"
+          },
+          {
+            "label": "Cosmos chain-registry Injective-Noble IBC channel (injective channel-148 / noble channel-31, ics20-1, ACTIVE)",
+            "url": "https://github.com/cosmos/chain-registry/blob/master/_IBC/injective-noble.json"
+          },
+          {
+            "label": "Noble escrow noble1vn26uz... ausdy balance equals Injective voucher supply (2026-07-20)",
+            "url": "https://www.mintscan.io/noble/address/noble1vn26uz7pxhz5aqd4s4q8kuar84ev9emhhgxuc2"
+          }
+        ]
       }
     ]
   },
@@ -478,7 +708,12 @@
       "risk": "very-low",
       "assetClass": "other",
       "issuerOrObligor": "United States Treasury, iShares SHV, and U.S. bank counterparties",
-      "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody"
+      ],
       "liquidityHorizon": "one-day"
     }
   ],

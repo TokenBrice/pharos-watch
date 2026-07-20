@@ -84,12 +84,12 @@
     "notes": "Paxos converted its NYDFS limited purpose trust charter to an OCC national trust bank charter on December 12, 2025 (conditional approval). This positions Paxos on the federal-qualified-nonbank pathway under GENIUS. No PPSI application framework exists yet (still in proposed-rule stage as of 2026-06-18); no PPSI approval has been granted to any issuer. USDP continues to be Paxos-issued and covered by federal OCC oversight but has no GENIUS PPSI authorization.",
     "references": [
       {
-        "label": "OCC Conditional Approval — Paxos Trust Company Charter Conversion (December 2025)",
+        "label": "OCC Conditional Approval \u2014 Paxos Trust Company Charter Conversion (December 2025)",
         "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125e.pdf",
         "sourceKind": "federal-regulator"
       },
       {
-        "label": "OCC National Trust Charter Announcement — Five Digital Asset Firms (December 12, 2025)",
+        "label": "OCC National Trust Charter Announcement \u2014 Five Digital Asset Firms (December 12, 2025)",
         "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125.html",
         "sourceKind": "federal-regulator"
       },
@@ -99,7 +99,7 @@
         "sourceKind": "federal-regulator"
       },
       {
-        "label": "Paxos newsroom — OCC national trust charter approval",
+        "label": "Paxos newsroom \u2014 OCC national trust charter approval",
         "url": "https://www.paxos.com/newsroom/occ-approves-paxos-application-to-convert-to-occ-trust-paxos-to-complete-conversion-imminently-to-become-a-federally-regulated-blockchain-infrastructure-provider",
         "sourceKind": "issuer-disclosure"
       },
@@ -168,6 +168,11 @@
     {
       "chain": "bsc",
       "address": "0xb7f8cd00c5a06c0537e2abff0b58033d02e5e094",
+      "decimals": 18
+    },
+    {
+      "chain": "linea",
+      "address": "0xd2bc272EA0154A93bf00191c8a1DB23E67643EC5",
       "decimals": 18
     }
   ],
@@ -534,8 +539,8 @@
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "USDP is Paxos-issued and Paxos documentation describes the asset as available on multiple blockchains, with Paxos expansion to Solana separately announced. The multichain route is reviewed as issuer-native issuance/redemption.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
     "confidence": "verified",
     "sources": [
       {
@@ -610,18 +615,63 @@
       },
       {
         "id": "bsc:0xb7f8cd00c5a06c0537e2abff0b58033d02e5e094",
+        "sourceChain": "ethereum",
         "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xb7f8cd00c5a06c0537e2abff0b58033d02e5e094",
-        "protocol": "unresolved route",
+        "protocol": "Binance-Peg USDP (authority unresolved)",
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "BSC carries two Binance-Peg Paxos tokens: this one ('Paxos Standard' PAX, totalSupply $2.06M) and 'Pax Dollar' USDP 0xb3c11196A4f3b1da7c23d9FB0A3dDE9c6340934F ($1.43M). getOwner() on the first returns 0xf68a4b64162906eff0ff6ae34e2bb1cd42fef62d and getOwner() on the second returns 0xa6ca52ee6bc23329860c8943631d767b001ad2aa \u2014 BOTH are bytecode-less EOAs on BSC (eth_getCode empty, read 2026-07-20), the same Binance-Peg operations pattern as Binance-Peg DAI. No enumerable route-specific mint-controller contract can be established, so the route stays unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "BscScan Binance-Peg Paxos Standard",
+            "url": "https://bscscan.com/token/0xb7f8cd00c5a06c0537e2abff0b58033d02e5e094"
+          },
+          {
+            "label": "BscScan Binance-Peg Pax Dollar USDP",
+            "url": "https://bscscan.com/token/0xb3c11196A4f3b1da7c23d9FB0A3dDE9c6340934F"
+          }
+        ]
+      },
+      {
+        "id": "linea:0xd2bc272ea0154a93bf00191c8a1db23e67643ec5",
+        "sourceChain": "ethereum",
+        "destinationChain": "linea",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xd2bc272EA0154A93bf00191c8a1DB23E67643EC5",
+        "protocol": "Linea canonical TokenBridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "USDP on Linea is the canonical-bridged representation: bridge() on the token reads 0x353012dc4a9a6cf55c941badc267f82004a8ceb9 \u2014 the Linea L2 TokenBridge (2,227-byte code, read 2026-07-20) \u2014 which is the mint authority for the representation. totalSupply $2.0 dust. DefiLlama lists this address in its paxos-standard linea entry.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "controllerChain": "linea",
+        "controllerAddress": "0x353012dc4a9a6cf55c941badc267f82004a8ceb9",
+        "failureDomainKeys": [
+          "protocol:linea-canonical-messaging",
+          "contract:linea:0x353012dc4a9a6cf55c941badc267f82004a8ceb9"
+        ],
+        "sources": [
+          {
+            "label": "Lineascan USDP token",
+            "url": "https://lineascan.build/token/0xd2bc272EA0154A93bf00191c8a1DB23E67643EC5"
+          },
+          {
+            "label": "DefiLlama paxos-standard adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/paxos-standard/index.ts"
+          }
+        ]
       }
     ]
   },

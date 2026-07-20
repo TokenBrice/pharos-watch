@@ -2,7 +2,7 @@ import { isRecord } from "@shared/lib/type-guards";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { rethrowIfAborted } from "./abort";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC, USER_AGENT } from "./constants";
-import { cgHeaders, cgUrl } from "./coingecko";
+import { cgHeaders, cgSimplePricePath, cgUrl } from "./coingecko";
 import { fetchWithRetry } from "./fetch-retry";
 import {
   endpointLabel,
@@ -180,7 +180,7 @@ export async function fetchCurrentNativePegQuotes(
         if (pendingRequests.length === 0) break;
 
         const url = cgUrl(
-          `/simple/price?ids=${encodeURIComponent(uniqueGeckoIds.join(","))}&vs_currencies=${vsCurrency}&include_last_updated_at=true`,
+          cgSimplePricePath(`ids=${encodeURIComponent(uniqueGeckoIds.join(","))}&vs_currencies=${vsCurrency}&include_last_updated_at=true`),
           coingeckoApiKey ?? null,
         );
         const diagnostic: PricingProviderAttemptDiagnostic = {

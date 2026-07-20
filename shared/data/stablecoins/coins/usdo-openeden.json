@@ -108,6 +108,11 @@
       "chain": "bsc",
       "address": "0x302e52aff9815b9d1682473dbfb9c74f9b750aa8",
       "decimals": 18
+    },
+    {
+      "chain": "plasma",
+      "address": "0x87e617C7484aDE79FcD90db58BEB82B057facb48",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {
@@ -194,21 +199,17 @@
           "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
         }
       ],
-      "evidence": "Direct role reads and Sourcify implementation metadata identify an EOA default-admin/minter, USDOExpressV2, and a CCIP burn/mint token pool as active USDO mint surfaces.",
-      "reviewer": "Codex mint-authority top100 batch-c",
-      "reviewedAt": "2026-05-24",
-      "unresolvedQuestions": [
-        "No Safe/multisig setup was verified for the default-admin EOA.",
-        "Review role revocation/grant history before final metadata insertion if a stricter current-role set is required."
-      ]
+      "evidence": "Direct role reads and Sourcify implementation metadata identify an EOA default-admin/minter, USDOExpressV2, and a CCIP burn/mint token pool as active USDO mint surfaces. 2026-07-20 follow-up: the full RoleGranted/RoleRevoked history for the Ethereum token (routescan etherscan-compatible API, blocks 0-latest) confirms exactly these three mint surfaces — DEFAULT_ADMIN_ROLE is held solely by the EOA 0x5eaff7af80488033bc845709806d5fae5291eb88 (deployer 0xfefe66b655c0785237bF3364D93684062F76D767 had admin revoked at block 21019942), and MINTER_ROLE is held solely by that same EOA, USDOExpressV2 0x80e49D1bdCE8F80c38E88Dd5C4c004dDb9B4E887, and the CCIP USDOBurnMintTokenPool 0x500d4882938020e939a5666c1b4200873da7efd3 (granted at blocks 22185866/22185868, never revoked). The default admin is definitively an EOA, not a Safe/multisig; that fact is recorded as the control's authorityType rather than left open.",
+      "reviewer": "Codex mint-authority top100 batch-c; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+      "reviewedAt": "2026-07-20"
     }
   },
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "USDO's documented cross-chain route is Chainlink CCIP. CCIP provides token transfers through Chainlink oracle-network validation and rate-limited token pools, so Pharos scores the route as an external validated network rather than an issuer-only or canonical rollup bridge.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
     "confidence": "verified",
     "protocols": [
       {
@@ -239,49 +240,130 @@
       {
         "id": "ethereum:0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "OpenEden issuer-native USDO",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: USDO's canonical deployment; full RoleGranted/RoleRevoked history shows issuer direct-mint surfaces (admin/minter EOA 0x5eaff7af80488033bc845709806d5fae5291eb88, USDOExpressV2 0x80e49D1bdCE8F80c38E88Dd5C4c004dDb9B4E887) plus the CCIP USDOBurnMintTokenPool 0x500d4882938020e939a5666c1b4200873da7efd3 as an additional minter. Issuer-native mint/redeem is the primary issuance path; the CCIP pool is tracked as a mintAuthority control, so no separate bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
-      },
-      {
-        "id": "base:0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0",
-        "destinationChain": "base",
-        "contractAddress": "0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDO token on Etherscan",
+            "url": "https://etherscan.io/address/0x8238884Ec9668Ef77B90C6dfF4D1a9F4F4823BFe"
+          },
+          {
+            "label": "OpenEden USDO deployed addresses",
+            "url": "https://github.com/OpenEdenHQ/openeden.usdoexpress.audit/blob/main/deployed-addresses.md"
+          }
+        ]
       },
       {
         "id": "bsc:0x302e52aff9815b9d1682473dbfb9c74f9b750aa8",
+        "sourceChain": "ethereum",
         "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x302e52aff9815b9d1682473dbfb9c74f9b750aa8",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: hasRole confirms the Chainlink CCIP USDOBurnMintTokenPool 0x500d4882938020e939a5666c1b4200873da7efd3 (typeAndVersion 'USDO BurnMintTokenPool 1.5.1', getToken() = this BSC USDO) holds MINTER_ROLE on this deployment; CCIP burn/mint representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "bsc",
+        "controllerAddress": "0x500d4882938020e939a5666c1b4200873da7efd3",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:bsc:0x500d4882938020e939a5666c1b4200873da7efd3"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDO token on BscScan",
+            "url": "https://bscscan.com/address/0x302e52AFf9815B9D1682473DBFB9C74F9B750AA8"
+          },
+          {
+            "label": "Chainlink USDO CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDO"
+          }
+        ]
+      },
+      {
+        "id": "base:0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0",
+        "sourceChain": "ethereum",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: full RoleGranted history (Base blockscout) shows the Chainlink CCIP USDOBurnMintTokenPool 0x500d4882938020e939a5666c1b4200873da7efd3 granted MINTER_ROLE at block 28431732, and a live hasRole read confirms it; CCIP burn/mint representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "base",
+        "controllerAddress": "0x500d4882938020e939a5666c1b4200873da7efd3",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0x500d4882938020e939a5666c1b4200873da7efd3"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDO token on Basescan",
+            "url": "https://basescan.org/address/0xaD55aebc9b8c03FC43cd9f62260391c13c23e7c0"
+          },
+          {
+            "label": "Chainlink USDO CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDO"
+          }
+        ]
+      },
+      {
+        "id": "plasma:0x87e617C7484aDE79FcD90db58BEB82B057facb48",
+        "sourceChain": "ethereum",
+        "destinationChain": "plasma",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x87e617C7484aDE79FcD90db58BEB82B057facb48",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: full RoleGranted/RoleRevoked history (Plasma routescan) shows the sole current MINTER_ROLE/BURNER_ROLE member is the Chainlink CCIP pool 0x017566Aad2c164011b9C6552Df3EB7a8C5c11590 (typeAndVersion 'USDO BurnMintTokenPool 1.5.1'); deployer 0x414250b3ac7a46e9baa1ad6dfc41200e5329eece had its roles revoked, leaving admin EOA 0xc4109e427a149239e6c1e35bb2ecd0015b6500b8. CCIP burn/mint representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "plasma",
+        "controllerAddress": "0x017566Aad2c164011b9C6552Df3EB7a8C5c11590",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:plasma:0x017566aad2c164011b9c6552df3eb7a8c5c11590"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDO token on Plasma routescan",
+            "url": "https://plasmascan.to/address/0x87e617C7484aDE79FcD90db58BEB82B057facb48"
+          },
+          {
+            "label": "Chainlink USDO CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDO"
+          }
+        ]
       }
     ]
+
   },
   "custodyModel": "institutional-regulated",
   "yieldConfig": {

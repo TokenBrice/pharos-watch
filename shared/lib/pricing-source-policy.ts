@@ -27,21 +27,32 @@ export function isReplaySafePriceSource(source: string | null | undefined): bool
   );
 }
 
-/** Returns the per-source max trusted age (seconds), or the composite cap when the source has no per-source window. */
+/**
+ * Returns the per-source max trusted age (seconds), or the composite cap when the source has no per-source window.
+ *
+ * Trust monotonicity: the window is computed over the composite's replay-safe
+ * core. An agreeing non-replay-safe corroborator (e.g. an exact-address
+ * augmentation lane joining a consensus label) must not zero the window the
+ * core earns on its own. Unknown source keys and cached-replay lineage remain
+ * hard failures — a mislabeled or cache-of-cache row never replays.
+ */
 export function getPriceCacheMaxAgeSec(source: string | null | undefined, compositeCapSec: number): number {
   if (!source) return compositeCapSec;
   let maxAgeSec = compositeCapSec;
+  let replaySafeParts = 0;
   for (const part of normalizePricingSourceKeys(source)) {
     const entry = getPricingSourceRegistryEntry(part);
-    if (!entry?.isReplaySafe) {
+    if (!entry || entry.trustTier === "cached_replay") {
       return 0;
     }
+    if (!entry.isReplaySafe) continue;
+    replaySafeParts += 1;
     const sourceWindow = entry.maxTrustedAgeSec;
     if (typeof sourceWindow === "number" && Number.isFinite(sourceWindow) && sourceWindow > 0) {
       maxAgeSec = Math.min(maxAgeSec, sourceWindow);
     }
   }
-  return maxAgeSec;
+  return replaySafeParts > 0 ? maxAgeSec : 0;
 }
 
 export function hasDepegAuthoritativeSource(sources: string[] | null | undefined): boolean {

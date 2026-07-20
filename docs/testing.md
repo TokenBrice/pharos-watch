@@ -27,6 +27,7 @@ Use `package.json` for the full live npm-script list. Use `scripts/lib/validatio
 Common targeted runners:
 
 ```bash
+npx vitest run scripts/maintenance/__tests__/generate-capability-review.test.ts
 npm run test:merge-gate:discover
 npm run test:profile -- --output /tmp/pharos-vitest-profile.json
 npm run test:critical-contracts
@@ -392,7 +393,7 @@ CI does **not** run a full-suite coverage gate. The blocking PR/deploy validate 
 - Scopes v8 remapping to the enrolled critical source via per-file `--coverage.include` flags (built in `buildCriticalCoverageArgs`); per-file numbers are unchanged, the reporter just stops remapping the rest of the module graph
 - Parses `coverage/lcov.info`
 - Fails CI if any critical file falls below `CRITICAL_COVERAGE_THRESHOLD` (default: 40%, currently pinned to 40 in CI)
-- Applies explicit per-file minimums for selected reliability paths (`alerts`, `auth`, `evm-rpc`, `discovery`, `health`, `stablecoin-detail`, `dex-liquidity/orchestrator`, plus the other file-specific overrides in `scripts/ci/check-critical-coverage.mjs`)
+- Applies explicit per-file minimums for selected reliability paths (`alerts`, `auth`, `evm-rpc`, `health`, `stablecoin-detail`, `dex-liquidity/orchestrator`, plus the other file-specific overrides in `scripts/ci/check-critical-coverage.mjs`)
 - For touched critical files, enforces a no-regression ratchet using `.ci/critical-coverage-baseline.json`
 - Fails closed when an explicit `CRITICAL_COVERAGE_COMPARE_REF` cannot be diffed, so a bad ref cannot silently disable the touched-file ratchet
 - The weekly `Critical Coverage Ratchet` workflow sets `CRITICAL_COVERAGE_RATCHET_ALL=1` so untouched critical files are checked regularly without making every PR/deploy validate run pay that full ratchet cost.
@@ -412,7 +413,7 @@ Useful env controls:
 - `CRITICAL_COVERAGE_RATCHET_TOLERANCE`
 - `CRITICAL_COVERAGE_RATCHET_ALL`
 - `CRITICAL_COVERAGE_BASELINE_FILE`
-- Per-file overrides: `CRITICAL_COVERAGE_THRESHOLD_ALERTS`, `CRITICAL_COVERAGE_THRESHOLD_AUTH`, `CRITICAL_COVERAGE_THRESHOLD_EVM_RPC`, `CRITICAL_COVERAGE_THRESHOLD_STABLECOINS_CACHE`, `CRITICAL_COVERAGE_THRESHOLD_SAFETY_SCORES`, `CRITICAL_COVERAGE_THRESHOLD_SCHEDULED`, `CRITICAL_COVERAGE_THRESHOLD_DAILY_DIGEST`, `CRITICAL_COVERAGE_THRESHOLD_STABLECOIN_DETAIL`, `CRITICAL_COVERAGE_THRESHOLD_DISCOVERY`, `CRITICAL_COVERAGE_THRESHOLD_HEALTH`, `CRITICAL_COVERAGE_THRESHOLD_STATUS`, `CRITICAL_COVERAGE_THRESHOLD_DEX_ORCHESTRATOR`, `CRITICAL_COVERAGE_THRESHOLD_API_PAGINATION`
+- Per-file overrides: `CRITICAL_COVERAGE_THRESHOLD_ALERTS`, `CRITICAL_COVERAGE_THRESHOLD_AUTH`, `CRITICAL_COVERAGE_THRESHOLD_EVM_RPC`, `CRITICAL_COVERAGE_THRESHOLD_STABLECOINS_CACHE`, `CRITICAL_COVERAGE_THRESHOLD_SAFETY_SCORES`, `CRITICAL_COVERAGE_THRESHOLD_SCHEDULED`, `CRITICAL_COVERAGE_THRESHOLD_DAILY_DIGEST`, `CRITICAL_COVERAGE_THRESHOLD_STABLECOIN_DETAIL`, `CRITICAL_COVERAGE_THRESHOLD_HEALTH`, `CRITICAL_COVERAGE_THRESHOLD_STATUS`, `CRITICAL_COVERAGE_THRESHOLD_DEX_ORCHESTRATOR`, `CRITICAL_COVERAGE_THRESHOLD_API_PAGINATION`
 
 Selected files have explicit threshold overrides in `scripts/ci/check-critical-coverage.mjs`; keep that map as the source of truth instead of duplicating override values in prose.
 

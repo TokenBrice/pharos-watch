@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "TRX",
-      "pct": 57.7,
+      "pct": 58.4,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "TRON Network",
@@ -18,7 +18,7 @@
     },
     {
       "name": "Smart Allocator (stablecoin DeFi via Aave/JustLend)",
-      "pct": 41.4,
+      "pct": 35.5,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "USDD Smart Allocator",
@@ -32,7 +32,7 @@
     },
     {
       "name": "USDT (PSM vaults)",
-      "pct": 0.5,
+      "pct": 5.6,
       "risk": "low",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -48,7 +48,7 @@
     },
     {
       "name": "sTRX (direct vaults)",
-      "pct": 0.4,
+      "pct": 0.5,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "TRON Network",
@@ -63,8 +63,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
     "confidence": "verified",
     "sources": [
       {
@@ -92,31 +92,31 @@
         "url": "https://docs.usdd.io/introduction/core-features"
       }
     ],
-    "rationale": "The exact fixed input captured at 2026-07-15T14:05:41Z contains the current independent USDD Data Platform producer row fetched at 2026-07-15T12:11:55Z. Its reviewed identities and weights are TRX 57.7%, Smart Allocator 41.4%, USDT PSM 0.5%, and direct sTRX 0.4%. The Smart Allocator remains one protocol-position exposure because USDD names managed platforms but does not publish constituent weights; USDT is a proportional collateral dependency, not a serial mechanism dependency.",
-    "compositionBasis": "Exact fixed-input USDD Data Platform live producer row captured on 2026-07-15",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "The USDD Data Platform latest-collateral feed fetched on 2026-07-20 (latest weekly statistic timestamp 2026-07-19T16:00Z) aggregates to TRX vaults 58.4%, Smart Allocator 35.5%, PSM USDT 5.6%, and direct sTRX 0.5% of $1.94B locked value; the residual direct USDT vault rounds to 0.0% and drops out. Since the 2026-07-15 review, the Smart Allocator share fell from 41.4% to 35.5% and the PSM USDT share rose from 0.5% to 5.6%, which broke the previous classification binding. The Smart Allocator remains one protocol-position exposure because USDD names managed platforms but does not publish constituent weights; USDT is a proportional collateral dependency, not a serial mechanism dependency.",
+    "compositionBasis": "USDD Data Platform live producer feed fetched on 2026-07-20, latest weekly statistic 2026-07-19",
+    "compositionAsOf": "2026-07-19",
     "scope": "full-composition",
     "knownUnknownExposure": "Stablecoin positions inside Smart Allocator cannot be assigned individual dependency weights.",
-    "knownUnknownExposurePct": 41.4,
+    "knownUnknownExposurePct": 35.5,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "TRX",
-        "pct": 57.7,
+        "pct": 58.4,
         "disposition": "untracked-exogenous-asset",
         "rationale": "TRX is volatile crypto collateral issued by the TRON network, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Smart Allocator (stablecoin DeFi via Aave/JustLend)",
-        "pct": 41.4,
+        "pct": 35.5,
         "disposition": "basket-needs-split",
         "rationale": "The allocator bucket aggregates multiple positions and does not expose stablecoin-level percentages."
       },
       {
         "reserveIndex": 3,
         "reserveName": "sTRX (direct vaults)",
-        "pct": 0.4,
+        "pct": 0.5,
         "disposition": "untracked-exogenous-asset",
         "rationale": "sTRX is a TRON staking receipt and not a tracked stablecoin dependency."
       }
@@ -159,6 +159,6 @@
         "url": "https://docs.usdd.io/developers/deployment-addresses"
       }
     ],
-    "uncertainty": "No third-party custodian exists: reserves sit in USDD protocol contracts (CDP vaults, PSM-USDT vault TSUYvQ5tdd3DijCD1uGunGLpftHuSZ12sQ, Smart Allocator vault TYyC3kxzMYC1sGKpui79VAzwn992jCA6fN per the issuer API on 2026-07-17) whose governance resolves to single-key accounts documented in the mint-authority review (2026-07-13/2026-07-14). Smart Allocator documentation states the USDD team selects platforms (Aave named) and deploys 'USDD's cash reserve' under team monitoring, so reserve redeployment is discretionary and ongoing; constituent Smart Allocator positions and weights are unpublished. No trust, SPV, segregation vehicle, or holder claim appears in the Terms of Use (2025-01-04) or any docs.usdd.io page reviewed 2026-07-17, so no bankruptcy-remoteness structure is documented. Precedent for unilateral reserve control: roughly 12,000 BTC removed from collateral in August 2024 without prior DAO approval (existing coin notice). TRX, 57.7% of reviewed reserves (2026-07-15), is the subject of the open Clifford et al. v. Tron Foundation et al. class action (SDNY 1:20-cv-2804; discovery hearing calendared 2026-04-28)."
+    "uncertainty": "No third-party custodian exists: reserves sit in USDD protocol contracts (CDP vaults, PSM-USDT vault TSUYvQ5tdd3DijCD1uGunGLpftHuSZ12sQ, Smart Allocator vault TYyC3kxzMYC1sGKpui79VAzwn992jCA6fN per the issuer API on 2026-07-17) whose governance resolves to single-key accounts documented in the mint-authority review (2026-07-13/2026-07-14). Smart Allocator documentation states the USDD team selects platforms (Aave named) and deploys 'USDD's cash reserve' under team monitoring, so reserve redeployment is discretionary and ongoing; constituent Smart Allocator positions and weights are unpublished. No trust, SPV, segregation vehicle, or holder claim appears in the Terms of Use (2025-01-04) or any docs.usdd.io page reviewed 2026-07-17, so no bankruptcy-remoteness structure is documented. Precedent for unilateral reserve control: roughly 12,000 BTC removed from collateral in August 2024 without prior DAO approval (existing coin notice). TRX, 58.4% of reviewed reserves (2026-07-19), is the subject of the open Clifford et al. v. Tron Foundation et al. class action (SDNY 1:20-cv-2804; discovery hearing calendared 2026-04-28)."
   }
 }

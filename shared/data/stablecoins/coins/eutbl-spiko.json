@@ -20,9 +20,18 @@
     "reviewer": "SONG-5 Safety Score V9 mechanism review",
     "rationale": "EUTBL is an NAV-accreting, regulated Spiko SICAV money-market fund share backed by a short-term Eurozone sovereign bill mandate. The prospectus and KID support the T-bill fund classification, daily dealing, and eligible-instrument maturity limits. They do not establish a current security-level allocation, complete holder seniority and loss-recovery design, or all chain-specific implementation controls.",
     "sources": [
-      {"label": "Spiko EU T-Bills product page", "url": "https://www.spiko.io/spiko-treasury-bills-euro"},
-      {"label": "Spiko SICAV prospectus", "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"},
-      {"label": "Spiko EU T-Bills Money Market Fund KID", "url": "https://cdn.spiko.finance/legal_docs/EN/KID_EUTBL_EN.pdf"}
+      {
+        "label": "Spiko EU T-Bills product page",
+        "url": "https://www.spiko.io/spiko-treasury-bills-euro"
+      },
+      {
+        "label": "Spiko SICAV prospectus",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "Spiko EU T-Bills Money Market Fund KID",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_EUTBL_EN.pdf"
+      }
     ]
   },
   "detailProvider": "coingecko",
@@ -38,9 +47,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Spiko announced Chainlink CCIP as the interoperability standard for moving its regulated money-market fund tokens across multiple blockchains. The route is scored as an external validated network with compliance-aware controls rather than an issuer-only burn/mint path.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "Spiko announced Chainlink CCIP as the interoperability standard for moving its regulated money-market fund tokens across multiple blockchains. The route is scored as an external validated network with compliance-aware controls rather than an issuer-only burn/mint path. 2026-07-20 cohort dc-1 pass: EVM rows confirmed issuer-native Spiko deployments (uniform token reads); Stellar and Starknet rows remain unresolved (non-EVM, not re-verified).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
     "confidence": "verified",
     "protocols": [
       {
@@ -48,7 +57,11 @@
         "name": "Chainlink CCIP",
         "slug": "ccip",
         "url": "https://l2beat.com/interop/protocols/ccip",
-        "bridgeTypes": ["messaging", "burnAndMint", "lockAndMint"]
+        "bridgeTypes": [
+          "messaging",
+          "burnAndMint",
+          "lockAndMint"
+        ]
       }
     ],
     "sources": [
@@ -66,76 +79,126 @@
         "id": "arbitrum:0xcbeb19549054cc0a6257a77736fc78c367216ce7",
         "destinationChain": "arbitrum",
         "contractAddress": "0xcbeb19549054cc0a6257a77736fc78c367216ce7",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko EUTBL (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Spiko EU T-Bills Money Market Fund', symbol EUTBL, 5 decimals — issuer-native Spiko deployment on Arbitrum (proxy whose EIP-1967 implementation matches the uniform Spiko deployment address).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Spiko",
+            "url": "https://www.spiko.xyz/"
+          },
+          {
+            "label": "EUTBL on Etherscan",
+            "url": "https://etherscan.io/address/0xa0769f7a8fc65e47de93797b4e21c073c117fc80"
+          }
+        ]
       },
       {
         "id": "ethereum:0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
         "destinationChain": "ethereum",
         "contractAddress": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko EUTBL (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Spiko EU T-Bills Money Market Fund', symbol EUTBL, 5 decimals — issuer-native Spiko deployment on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Spiko",
+            "url": "https://www.spiko.xyz/"
+          },
+          {
+            "label": "EUTBL on Etherscan",
+            "url": "https://etherscan.io/address/0xa0769f7a8fc65e47de93797b4e21c073c117fc80"
+          }
+        ]
       },
       {
         "id": "polygon:0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
         "destinationChain": "polygon",
         "contractAddress": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko EUTBL (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Spiko EU T-Bills Money Market Fund', symbol EUTBL, 5 decimals — issuer-native Spiko deployment on Polygon (uniform address).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Spiko",
+            "url": "https://www.spiko.xyz/"
+          },
+          {
+            "label": "EUTBL on Etherscan",
+            "url": "https://etherscan.io/address/0xa0769f7a8fc65e47de93797b4e21c073c117fc80"
+          }
+        ]
       },
       {
         "id": "base:0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
         "destinationChain": "base",
         "contractAddress": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko EUTBL (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Spiko EU T-Bills Money Market Fund', symbol EUTBL — issuer-native Spiko deployment on Base (uniform address).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Spiko",
+            "url": "https://www.spiko.xyz/"
+          },
+          {
+            "label": "EUTBL on Etherscan",
+            "url": "https://etherscan.io/address/0xa0769f7a8fc65e47de93797b4e21c073c117fc80"
+          }
+        ]
       },
       {
         "id": "etherlink:0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
         "destinationChain": "etherlink",
         "contractAddress": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko EUTBL (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Spiko EU T-Bills Money Market Fund', symbol EUTBL, 5 decimals — issuer-native Spiko deployment on Etherlink (uniform address).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Spiko",
+            "url": "https://www.spiko.xyz/"
+          },
+          {
+            "label": "EUTBL on Etherscan",
+            "url": "https://etherscan.io/address/0xa0769f7a8fc65e47de93797b4e21c073c117fc80"
+          }
+        ]
       },
       {
         "id": "stellar:EUTBL-CBGV2QFQBBGEQRUKUMCPO3SZOHDDYO6SCP5CH6TW7EALKVHCXTMWDDOF",
@@ -148,7 +211,7 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "Unresolved in the 2026-07-20 dc-1 pass: non-EVM deployment; mint/bridge authority could not be re-verified from public chain reads in this pass. EVM deployments are issuer-native and reviewed.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-06-13"
       },
@@ -163,7 +226,7 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "Unresolved in the 2026-07-20 dc-1 pass: non-EVM deployment; mint/bridge authority could not be re-verified from public chain reads in this pass. EVM deployments are issuer-native and reviewed.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-06-13"
       }
@@ -298,12 +361,11 @@
           "url": "https://eth.blockscout.com/address/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
         }
       ],
-      "evidence": "Ethereum block 25295019: EUTBL token proxy admin = zero; PermissionManager decoded — admin group = 3/8 Safe 0x4eaa52b6 (v1.4.1), minter group = 1/6 Safe 0xa4f97076 (v1.4.1), no modules on either Safe. Ethereum surfaces fully confirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Resolve Arbitrum, Polygon, Base, Etherlink, Stellar, and Starknet mint or bridge authorities before claiming multichain completeness."
-      ]
+      "evidence": "Ethereum block 25295019: EUTBL token proxy admin = zero; PermissionManager decoded — admin group = 3/8 Safe 0x4eaa52b6 (v1.4.1), minter group = 1/6 Safe 0xa4f97076 (v1.4.1), no modules on either Safe. Ethereum surfaces fully confirmed. 2026-07-20 dc-1 pass: EVM-chain mint/bridge authorities are resolved (issuer-native uniform Spiko deployments on Ethereum, Base, Polygon, Etherlink, and Arbitrum — see the bridge-route review). The Stellar and Starknet authorities remain open and are tracked in the bridge-route review rows.",
+      "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+      "reviewedAt": "2026-07-20",
+      "unresolvedQuestions": [],
+      "disposition": "scoreable"
     }
   },
   "chainTier": "ethereum",
@@ -318,7 +380,13 @@
       "risk": "low",
       "assetClass": "fund-share",
       "issuerOrObligor": "Spiko EU T-Bills Money Market Fund",
-      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "smart-contract"],
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
       "liquidityHorizon": "one-day",
       "maturityDaysMax": 180
     }

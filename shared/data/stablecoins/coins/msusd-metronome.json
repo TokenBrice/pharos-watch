@@ -11,8 +11,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "USDC, DAI, ETH, WBTC, sfrxETH, and Vesper Finance yield-bearing tokens (vaUSDC, vaETH, vaSTETH, vaRETH, vaCBETH); FRAX and vaFRAX accepted but currently inactive; collateral factors range 75–85%",
-  "pegMechanism": "Overcollateralized CDP: users deposit crypto collateral (CF 75–85%) to mint msUSD at a fixed 1% annual fee; no direct redemption — only debt repayment to reclaim collateral. Peg maintained by zero-slippage intra-protocol synth swaps (Synth Marketplace) that arbitrageurs exploit when msUSD trades below par, plus collateral-provider buybacks of discounted msUSD",
+  "collateral": "USDC, DAI, ETH, WBTC, sfrxETH, and Vesper Finance yield-bearing tokens (vaUSDC, vaETH, vaSTETH, vaRETH, vaCBETH); FRAX and vaFRAX accepted but currently inactive; collateral factors range 75\u201385%",
+  "pegMechanism": "Overcollateralized CDP: users deposit crypto collateral (CF 75\u201385%) to mint msUSD at a fixed 1% annual fee; no direct redemption \u2014 only debt repayment to reclaim collateral. Peg maintained by zero-slippage intra-protocol synth swaps (Synth Marketplace) that arbitrageurs exploit when msUSD trades below par, plus collateral-provider buybacks of discounted msUSD",
   "mechanismArchetype": "cdp",
   "reserves": [
     {
@@ -59,6 +59,36 @@
         "rationale": "The issuer names eligible collateral and limits but does not disclose current composition weights."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Metronome Synth per-asset DepositToken and Pool contracts (Ethereum, Optimism, Base, Hemi)",
+        "role": "other"
+      },
+      {
+        "name": "Vesper pool contracts underlying va-token collateral",
+        "role": "other"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "conditional",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Metronome Synth supported assets",
+        "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol/supported-assets"
+      },
+      {
+        "label": "Metronome Synth contract addresses",
+        "url": "https://docs.metronome.io/metronome-synth/contracts"
+      }
+    ],
+    "uncertainty": "Collateral is pooled per asset in non-custodial DepositToken contracts with per-user debt tracked separately; plain assets (ETH, WBTC, USDC, DAI, FRAX) sit idle in those contracts, while Vesper va-token collateral (vaETH, vaUSDC, vaFRAX, and similar) represents positions whose underlying Vesper pools deploy capital into yield strategies by design \u2014 hence conditional reuse. No legal segregation, bankruptcy-remoteness, or rehypothecation terms exist for contract custody; published audits could not be located in primary sources.",
+    "knownUnknownExposurePct": 100
   },
   "llamaId": "326",
   "detailProvider": "defillama",
@@ -917,10 +947,10 @@
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Metronome msUSD is deployed on several chains and available route evidence points to omnichain token behavior. Without stronger issuer-specific control documentation, this is conservatively treated as an external LayerZero-style lock/burn-and-mint route.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "manual-review",
+    "summary": "Metronome Synth msUSD is natively issued on every deployed chain: each deployment is a 2,739-byte EIP-1967 proxy whose minting is controlled by that chain's Metronome Synth core under Metronome DAO governance, not by a third-party bridge. DefiLlama records every chain's msUSD supply as issued.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "l2beat",
@@ -947,77 +977,132 @@
       {
         "id": "ethereum:0xab5eb14c09d416f0ac63661e57edb7aecdb9befa",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Metronome Synth native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native msUSD deployment: 2,739-byte EIP-1967 proxy (impl 0x206b88b20d9b2709153ab596add007b21124eb26, admin 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc) exposing no LayerZero endpoint; DefiLlama records this chain's msUSD as issued (Metronome Synth mints natively on each chain). The Ethereum proxy admin 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc is owned by the Metronome DAO multisig 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33 (read 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "ethereum explorer msUSD token",
+            "url": "https://etherscan.io/token/0xab5eb14c09d416f0ac63661e57edb7aecdb9befa"
+          },
+          {
+            "label": "DefiLlama metronome-synth-usd adapter (all chains issued)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/metronome-synth-usd/index.ts"
+          }
+        ]
       },
       {
         "id": "optimism:0x9dabae7274d28a45f0b65bf8ed201a5731492ca0",
         "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x9dabae7274d28a45f0b65bf8ed201a5731492ca0",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Metronome Synth native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native msUSD deployment: 2,739-byte EIP-1967 proxy (impl 0xe8f4d8cf2cc7fd70d048b6188bc1d17e6a58245e, admin 0xc44f15dde7b39da0e687a86b3201b4c8e8ce8cc3) exposing no LayerZero endpoint; DefiLlama records this chain's msUSD as issued (Metronome Synth mints natively on each chain). The Ethereum proxy admin 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc is owned by the Metronome DAO multisig 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33 (read 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "optimism explorer msUSD token",
+            "url": "https://optimistic.etherscan.io/token/0x9dabae7274d28a45f0b65bf8ed201a5731492ca0"
+          },
+          {
+            "label": "DefiLlama metronome-synth-usd adapter (all chains issued)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/metronome-synth-usd/index.ts"
+          }
+        ]
       },
       {
         "id": "base:0x526728dbc96689597f85ae4cd716d4f7fccbae9d",
         "destinationChain": "base",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x526728dbc96689597f85ae4cd716d4f7fccbae9d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Metronome Synth native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native msUSD deployment: 2,739-byte EIP-1967 proxy (impl 0xb0bb44f501fc5d45861086a49361df21164bf644, admin 0xf3f1b456fb3a61d96024dfbb8ef9be510b689ba6) exposing no LayerZero endpoint; DefiLlama records this chain's msUSD as issued (Metronome Synth mints natively on each chain). The Ethereum proxy admin 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc is owned by the Metronome DAO multisig 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33 (read 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "base explorer msUSD token",
+            "url": "https://basescan.org/token/0x526728dbc96689597f85ae4cd716d4f7fccbae9d"
+          },
+          {
+            "label": "DefiLlama metronome-synth-usd adapter (all chains issued)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/metronome-synth-usd/index.ts"
+          }
+        ]
       },
       {
         "id": "hemi:0x3ea24e3727a85a479e29e02cc70e792936fbbcad",
         "destinationChain": "hemi",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x3ea24e3727a85a479e29e02cc70e792936fbbcad",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Metronome Synth native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native msUSD deployment: 2,739-byte EIP-1967 proxy (impl 0x952a7dfa706806f1d744ff150dd231c0616e33d1, admin 0x51bc603a29bef7181e9866ed27beaae215865761) exposing no LayerZero endpoint; DefiLlama records this chain's msUSD as issued (Metronome Synth mints natively on each chain). The Ethereum proxy admin 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc is owned by the Metronome DAO multisig 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33 (read 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "hemi explorer msUSD token",
+            "url": "https://explorer.hemi.xyz/token/0x3ea24e3727a85a479e29e02cc70e792936fbbcad"
+          },
+          {
+            "label": "DefiLlama metronome-synth-usd adapter (all chains issued)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/metronome-synth-usd/index.ts"
+          }
+        ]
       },
       {
         "id": "plasma:0x29ad7fe4516909b9e498b5a65339e54791293234",
         "destinationChain": "plasma",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x29ad7fe4516909b9e498b5a65339e54791293234",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Metronome Synth native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native msUSD deployment: 2,739-byte EIP-1967 proxy (impl 0x68c87ff1ce2630a180294b211d755e416a681245, admin 0xd7c751fa32590451548b100c4f6442f062c9bc8e) exposing no LayerZero endpoint; DefiLlama records this chain's msUSD as issued (Metronome Synth mints natively on each chain). The Ethereum proxy admin 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc is owned by the Metronome DAO multisig 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33 (read 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "plasma explorer msUSD token",
+            "url": "https://plasmascan.to/token/0x29ad7fe4516909b9e498b5a65339e54791293234"
+          },
+          {
+            "label": "DefiLlama metronome-synth-usd adapter (all chains issued)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/metronome-synth-usd/index.ts"
+          }
+        ]
       }
     ]
   },
@@ -1083,7 +1168,7 @@
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25,290,617: msUSD proxy admin = 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc (OZ ProxyAdmin) → owner = 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33 (Gnosis Safe v1.3.0, 3-of-5, no modules). No timelock. Full governance chain verified on-chain.",
+      "evidence": "At Ethereum block 25,290,617: msUSD proxy admin = 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc (OZ ProxyAdmin) \u2192 owner = 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33 (Gnosis Safe v1.3.0, 3-of-5, no modules). No timelock. Full governance chain verified on-chain.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [

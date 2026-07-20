@@ -88,7 +88,57 @@ describe("measured execution target inventory", () => {
     expect(target?.tokenOut.referencePriceUsd).not.toBe(candidate.token1Price);
   });
 
-  it("fails a Uniswap target closed when the output has no independent reference", () => {
+  it("repairs an untracked output reference from the candidate spot price", () => {
+    // USDC(token0)/WETH(token1): token0Price is WETH's price in USDC units
+    // (~1862 USDC per WETH), the convention the Uni V3 price indexer consumes.
+    const candidate: UniV3ExecutionCandidate = {
+      chain: "ethereum",
+      poolAddress: POOL,
+      feePips: 100,
+      tvlUsd: 4_000_000,
+      token0Price: 1_862.48,
+      token1Price: 0.0005369182777454345,
+      tokens: [
+        { address: USDC, symbol: "USDC", decimals: 6 },
+        { address: "0x4444444444444444444444444444444444444444", symbol: "WETH", decimals: 18 },
+      ],
+    };
+    const chainAddressToId = addressMap([[USDC, "usdc-circle"]]);
+
+    const forward = buildUniV3MeasuredExecutionTarget({
+      stablecoinId: "usdc-circle",
+      candidate,
+      stablecoinPriceById: new Map([["usdc-circle", 1]]),
+      chainAddressToId,
+      retainedTvlUsd: 3_000_000,
+      capturedAt: 1_752_560_000,
+    });
+    // inputIndex = 0: implied output reference = inputRef × token0Price.
+    expect(forward?.tokenOut.referencePriceUsd).toBeCloseTo(1_862.48, 6);
+    expect(forward?.tokenOut.trackedAssetId).toBeUndefined();
+
+    // Reverse direction (stablecoin is token1, prices swap with the legs):
+    // implied = inputRef × token1Price.
+    const reversed = buildUniV3MeasuredExecutionTarget({
+      stablecoinId: "usdc-circle",
+      candidate: {
+        ...candidate,
+        token0Price: 0.0005369182777454345,
+        token1Price: 1_862.48,
+        tokens: [
+          { address: "0x4444444444444444444444444444444444444444", symbol: "WETH", decimals: 18 },
+          { address: USDC, symbol: "USDC", decimals: 6 },
+        ],
+      },
+      stablecoinPriceById: new Map([["usdc-circle", 1]]),
+      chainAddressToId,
+      retainedTvlUsd: 3_000_000,
+      capturedAt: 1_752_560_000,
+    });
+    expect(reversed?.tokenOut.referencePriceUsd).toBeCloseTo(1_862.48, 6);
+  });
+
+  it("still fails closed when the output has neither a direct reference nor a usable spot", () => {
     const candidate: UniV3ExecutionCandidate = {
       chain: "ethereum",
       poolAddress: POOL,
@@ -101,17 +151,24 @@ describe("measured execution target inventory", () => {
         { address: "0x4444444444444444444444444444444444444444", symbol: "WETH", decimals: 18 },
       ],
     };
-
-    expect(
-      buildUniV3MeasuredExecutionTarget({
-        stablecoinId: "usdc-circle",
-        candidate,
-        stablecoinPriceById: new Map([["usdc-circle", 1]]),
-        chainAddressToId: addressMap([[USDC, "usdc-circle"]]),
-        retainedTvlUsd: 3_000_000,
-        capturedAt: 1_752_560_000,
-      }),
-    ).toBeNull();
+    const base = {
+      stablecoinId: "usdc-circle",
+      stablecoinPriceById: new Map([["usdc-circle", 1]]),
+      chainAddressToId: addressMap([[USDC, "usdc-circle"]]),
+      retainedTvlUsd: 3_000_000,
+      capturedAt: 1_752_560_000,
+    };
+    // Coherent 1:1 spot implies a usable output reference, so the target builds.
+    expect(buildUniV3MeasuredExecutionTarget({ ...base, candidate })).not.toBeNull();
+    // Broken spot values must not manufacture a reference.
+    for (const broken of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(
+        buildUniV3MeasuredExecutionTarget({
+          ...base,
+          candidate: { ...candidate, token0Price: broken },
+        }),
+      ).toBeNull();
+    }
   });
 
   it("builds exact two-token Pancake and Fluid targets but rejects self-output and multi-token pools", () => {

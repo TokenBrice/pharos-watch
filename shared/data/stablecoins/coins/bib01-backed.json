@@ -25,10 +25,10 @@
     "attestorJurisdiction": "United States"
   },
   "bridgeRouteRisk": {
-    "tier": "external-validated-network",
-    "summary": "Backed announced Chainlink CCIP as its interoperability infrastructure for moving Backed tokens across blockchains. bIB01 is therefore reviewed as a CCIP-backed external validated-network route rather than pure issuer-only settlement.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "tier": "issuer-native-burn-mint",
+    "summary": "Backed announced Chainlink CCIP as its interoperability infrastructure for moving Backed tokens across blockchains, but on-chain reads on 2026-07-20 confirm the seven live bIB01 deployments are independently mintable issuer-native transparent proxies (shared implementation and ProxyAdmin, chain-local owners), so no bridge representation currently carries the supply.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
     "confidence": "verified",
     "protocols": [
       {
@@ -61,107 +61,178 @@
       {
         "id": "ethereum:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Backed issuer-native bIB01",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: issuer-native transparent proxy (shared implementation 0x28a0b491650fe761c8a66528422bc7ca24ecaeda, shared ProxyAdmin 0xf2057bdff8439dbffce073e14a9854945d5e5644) with a chain-local owner; the reviewed mintAuthority documents independently mintable native proxies on all seven chains with direct-minter Safes per chain group. No bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "bIB01 token on Etherscan",
+            "url": "https://etherscan.io/address/0xca30c93b02514f86d5c86a6e375e3a330b435fb5"
+          },
+          {
+            "label": "Backed Finance documentation",
+            "url": "https://docs.backed.fi/"
+          }
+        ]
       },
       {
         "id": "base:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
         "destinationChain": "base",
         "contractAddress": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Backed issuer-native bIB01",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: issuer-native transparent proxy (shared implementation 0x28a0b491650fe761c8a66528422bc7ca24ecaeda, shared ProxyAdmin 0xf2057bdff8439dbffce073e14a9854945d5e5644) with a chain-local owner; the reviewed mintAuthority documents independently mintable native proxies on all seven chains with direct-minter Safes per chain group. No bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "bIB01 token on Basescan",
+            "url": "https://basescan.org/address/0xca30c93b02514f86d5c86a6e375e3a330b435fb5"
+          },
+          {
+            "label": "Backed Finance documentation",
+            "url": "https://docs.backed.fi/"
+          }
+        ]
       },
       {
         "id": "bsc:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
         "destinationChain": "bsc",
         "contractAddress": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Backed issuer-native bIB01",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: issuer-native transparent proxy (shared implementation 0x28a0b491650fe761c8a66528422bc7ca24ecaeda, shared ProxyAdmin 0xf2057bdff8439dbffce073e14a9854945d5e5644) with a chain-local owner; the reviewed mintAuthority documents independently mintable native proxies on all seven chains with direct-minter Safes per chain group. No bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "bIB01 token on BscScan",
+            "url": "https://bscscan.com/address/0xca30c93b02514f86d5c86a6e375e3a330b435fb5"
+          },
+          {
+            "label": "Backed Finance documentation",
+            "url": "https://docs.backed.fi/"
+          }
+        ]
       },
       {
         "id": "polygon:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
         "destinationChain": "polygon",
         "contractAddress": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Backed issuer-native bIB01",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: issuer-native transparent proxy (shared implementation 0x28a0b491650fe761c8a66528422bc7ca24ecaeda, shared ProxyAdmin 0xf2057bdff8439dbffce073e14a9854945d5e5644) with a chain-local owner; the reviewed mintAuthority documents independently mintable native proxies on all seven chains with direct-minter Safes per chain group. No bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "bIB01 token on Polygonscan",
+            "url": "https://polygonscan.com/address/0xca30c93b02514f86d5c86a6e375e3a330b435fb5"
+          },
+          {
+            "label": "Backed Finance documentation",
+            "url": "https://docs.backed.fi/"
+          }
+        ]
       },
       {
         "id": "arbitrum:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
         "destinationChain": "arbitrum",
         "contractAddress": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Backed issuer-native bIB01",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: issuer-native transparent proxy (shared implementation 0x28a0b491650fe761c8a66528422bc7ca24ecaeda, shared ProxyAdmin 0xf2057bdff8439dbffce073e14a9854945d5e5644) with a chain-local owner; the reviewed mintAuthority documents independently mintable native proxies on all seven chains with direct-minter Safes per chain group. No bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "bIB01 token on Arbiscan",
+            "url": "https://arbiscan.io/address/0xca30c93b02514f86d5c86a6e375e3a330b435fb5"
+          },
+          {
+            "label": "Backed Finance documentation",
+            "url": "https://docs.backed.fi/"
+          }
+        ]
       },
       {
         "id": "gnosis:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
         "destinationChain": "gnosis",
         "contractAddress": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Backed issuer-native bIB01",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: issuer-native transparent proxy (shared implementation 0x28a0b491650fe761c8a66528422bc7ca24ecaeda, shared ProxyAdmin 0xf2057bdff8439dbffce073e14a9854945d5e5644) with a chain-local owner; the reviewed mintAuthority documents independently mintable native proxies on all seven chains with direct-minter Safes per chain group. No bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "bIB01 token on Gnosisscan",
+            "url": "https://gnosisscan.io/address/0xca30c93b02514f86d5c86a6e375e3a330b435fb5"
+          },
+          {
+            "label": "Backed Finance documentation",
+            "url": "https://docs.backed.fi/"
+          }
+        ]
       },
       {
         "id": "avalanche:0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
         "destinationChain": "avalanche",
         "contractAddress": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Backed issuer-native bIB01",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: issuer-native transparent proxy (shared implementation 0x28a0b491650fe761c8a66528422bc7ca24ecaeda, shared ProxyAdmin 0xf2057bdff8439dbffce073e14a9854945d5e5644) with a chain-local owner; the reviewed mintAuthority documents independently mintable native proxies on all seven chains with direct-minter Safes per chain group. No bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "bIB01 token on Snowscan",
+            "url": "https://snowscan.xyz/address/0xca30c93b02514f86d5c86a6e375e3a330b435fb5"
+          },
+          {
+            "label": "Backed Finance documentation",
+            "url": "https://docs.backed.fi/"
+          }
+        ]
       }
     ]
   },
@@ -301,7 +372,7 @@
     },
     "params": {
       "porFeedAddress": "0xad4395fc414fc1575a7a38c20b0bfdbdb09ee41a",
-      "assetLabel": "IB01 ETF shares (Chainlink LedgerLens PoR)",
+      "assetLabel": "iShares IB01 0-1 year U.S. Treasury bond ETF shares",
       "assetRisk": "very-low"
     }
   },

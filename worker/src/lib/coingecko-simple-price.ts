@@ -1,7 +1,7 @@
 import type { PriceObservedAtMode } from "@shared/types/core";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import type { FetcherOutcome } from "./fetcher-result";
-import { cgUrl, cgHeaders } from "./coingecko";
+import { cgHeaders, cgSimplePricePath, cgUrl } from "./coingecko";
 import { USER_AGENT } from "./constants";
 import { fetchJsonWithRetry } from "./fetch-retry";
 import { throwIfAborted } from "./abort";
@@ -35,7 +35,7 @@ export async function fetchCoingeckoSimplePrices(
       const batch = geckoIds.slice(i, i + PRIMARY_CG_BATCH_SIZE);
       const ids = batch.join(",");
       const result = await fetchJsonWithRetry<unknown>(
-        cgUrl(`/simple/price?ids=${ids}&vs_currencies=usd&include_last_updated_at=true`, coingeckoApiKey),
+        cgUrl(cgSimplePricePath(`ids=${ids}&vs_currencies=usd&include_last_updated_at=true`), coingeckoApiKey),
         {
           headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey),
           signal,

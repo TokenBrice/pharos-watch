@@ -2,11 +2,11 @@
   "id": "jusd-juicedollar",
   "name": "Juice Dollar",
   "symbol": "JUSD",
-  "oneLiner": "JUSD is Juice Dollar's decentralized dollar on Citrea, minted from oracle-free overcollateralized BTC positions using a Frankencoin/d-EURO architecture.",
+  "oneLiner": "JUSD is Juice Dollar's Citrea dollar, minted through oracle-free BTC positions or 1:1 stablecoin bridge reserves using a Frankencoin/d-EURO architecture.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
-    "governance": "decentralized",
+    "governance": "centralized-dependent",
     "yieldBearing": false,
     "rwa": false,
     "navToken": false
@@ -136,17 +136,90 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "BTC collateral in oracle-free overcollateralized positions on Citrea",
-      "pct": 99.999,
-      "risk": "medium"
-    },
-    {
-      "name": "USDC.e/USDT.e/ctUSD bridge reserves",
-      "pct": 0.001,
+      "name": "USDT.e (bridged Tether USD) in StablecoinBridgeUSDT",
+      "pct": 100,
       "risk": "low",
-      "blacklistable": true
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether (USDT.e bridged on Citrea) via JuiceDollar StablecoinBridge 0x5CC0e668F8BA61E111B6168E19d17d3C65040614",
+      "riskFactors": ["counterparty", "custody", "legal", "liquidity", "smart-contract"],
+      "liquidityHorizon": "immediate"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "JuiceDollar API ecosystem stablecoin info",
+        "url": "https://api.juicedollar.com/ecosystem/stablecoin/info"
+      },
+      {
+        "label": "JuiceDollar API ecosystem collateral stats",
+        "url": "https://api.juicedollar.com/ecosystem/collateral/stats"
+      },
+      {
+        "label": "JuiceDollar API open positions",
+        "url": "https://api.juicedollar.com/positions/open"
+      },
+      {
+        "label": "Citrea public RPC",
+        "url": "https://rpc.mainnet.citrea.xyz"
+      },
+      {
+        "label": "JuiceDollar StablecoinBridge source (pinned commit)",
+        "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/StablecoinBridge.sol"
+      },
+      {
+        "label": "JuiceDollar opening positions",
+        "url": "https://docs.juicedollar.com/positions/open"
+      }
+    ],
+    "rationale": "Composition re-derived from issuer-side data on 2026-07-20, replacing the previous 99.999% BTC / 0.001% bridge placeholder. The JuiceDollar API collateral stats report zero WCBTC held across all positions (80 total, 2 open), and both open positions are dust clones with collateralBalance 0 and 56 JUSD principal each. JUSD totalSupply is 56,695.50 (API stablecoin info). Citrea RPC reads at the latest block show StablecoinBridgeUSDT (0x5CC0e668...0614) holding 56,695.422933 USDT.e (token 0x9f3096bac87e7f03dc09b0b416eb0df837304dc4, 6 decimals) against 56,695.4225 JUSD minted through it - about 99.9999% of supply. The USDC.e and ctUSD bridges hold only $0.069 and $0.010 respectively, and the StartUSD bridge is empty. JUSD is therefore currently backed ~100% by bridged USDT.e in the USDT bridge, not by BTC collateral; the BTC CDP path remains live and the composition will shift back if positions are funded. USDT.e is mapped to usdt-tether as a collateral dependency, matching the repo's bridged-stablecoin convention; the slice keeps the low stablecoin tier with custody/smart-contract risk factors covering the Citrea canonical-bridge layer.",
+    "compositionBasis": "JuiceDollar public API and Citrea mainnet RPC reads on 2026-07-20 (bridge stablecoin balances, bridge minted counters, open-position collateral)",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Residuals below rounding: dust USDC.e ($0.07) and ctUSD ($0.01) bridge balances, 112 JUSD of uncollateralized dust-position principal, and the small JUICE equity pool (~$1.7k). The WCBTC position path is live but holds zero collateral today, so no BTC slice is carried at this composition date.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "JuiceDollar StablecoinBridge and position contracts (ownerless, non-upgradeable) on Citrea - self-custodied, no third-party custodian",
+        "role": "other",
+        "sharePct": 100,
+        "jurisdiction": "Citrea (onchain)"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "none",
+    "rehypothecation": "prohibited",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "JuiceDollar StablecoinBridge source (pinned commit)",
+        "url": "https://github.com/JuiceDollar/smartContracts/blob/1469cf389d09eb6b6648aae321c5137b3262d381/contracts/StablecoinBridge.sol"
+      },
+      {
+        "label": "CitreaScan verified JUSD source",
+        "url": "https://api.citreascan.com/api/v2/smart-contracts/0x0987d3720d38847ac6dbb9d025b9de892a3ca35c"
+      },
+      {
+        "label": "Citrea public RPC",
+        "url": "https://rpc.mainnet.citrea.xyz"
+      },
+      {
+        "label": "JuiceDollar API ecosystem stablecoin info",
+        "url": "https://api.juicedollar.com/ecosystem/stablecoin/info"
+      }
+    ],
+    "uncertainty": "At the JUSD layer there is no legal custodian: the reviewed StablecoinBridge source (pinned commit) holds the bridged stable and releases it only against JUSD burns, with an emergencyStop that halts issuance but still lets users burn JUSD for the underlying; position contracts likewise hold WCBTC until repayment or liquidation, so no redeployment or rehypothecation path exists in contract logic. There is no trust, SPV, or holder-claim structure, hence bankruptcyRemoteness none. What is not established here: the custody of native USDT backing USDT.e inside Citrea's canonical bridge (an upstream dependency outside the JuiceDollar contracts), the Citrea bridge's operator/security model, and any off-chain arrangements of the team or gateways. USDT.e issuer freeze risk (Tether) applies to the bridge-held balance, as flagged by the blacklistable marker."
+  },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "unbounded-or-compromised",

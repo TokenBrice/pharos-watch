@@ -99,9 +99,9 @@
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "IDRX is issuer-backed rupiah stablecoin infrastructure available on multiple supported networks. Reviewed issuer materials did not identify a distinct bridge, lockbox, or liquidity route controlling durable supply, so Pharos treats the route as native issuance on listed chains.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "IDRX is issuer-backed rupiah stablecoin infrastructure available on multiple supported networks. Reviewed issuer materials did not identify a distinct bridge, lockbox, or liquidity route controlling durable supply, so Pharos treats the route as native issuance on listed chains. 2026-07-20 cohort dc-1 pass: EVM rows confirmed issuer-native IDRX deployments (uniform token reads per chain); Solana row remains unresolved (non-EVM, not re-verified).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
     "confidence": "probable",
     "sources": [
       {
@@ -118,106 +118,148 @@
         "id": "polygon:0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
         "destinationChain": "polygon",
         "contractAddress": "0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "IDRX (issuer-native multichain deployment by PT IDRX)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX — issuer-native IDRX deployment on Polygon.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "IDRX",
+            "url": "https://idrx.co/"
+          }
+        ]
       },
       {
         "id": "base:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
         "destinationChain": "base",
         "contractAddress": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "IDRX (issuer-native multichain deployment by PT IDRX)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX — issuer-native IDRX deployment on Base (uniform address; EIP-1967 impl 0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "IDRX",
+            "url": "https://idrx.co/"
+          }
+        ]
       },
       {
         "id": "bsc:0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
         "destinationChain": "bsc",
         "contractAddress": "0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "IDRX (issuer-native multichain deployment by PT IDRX)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX — issuer-native IDRX deployment on BSC.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "IDRX",
+            "url": "https://idrx.co/"
+          }
+        ]
       },
       {
         "id": "klaytn:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
         "destinationChain": "klaytn",
         "contractAddress": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "IDRX (issuer-native multichain deployment by PT IDRX)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, 2 decimals — issuer-native IDRX deployment on Klaytn (uniform address).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "IDRX",
+            "url": "https://idrx.co/"
+          }
+        ]
       },
       {
         "id": "gnosis:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
         "destinationChain": "gnosis",
         "contractAddress": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "IDRX (issuer-native multichain deployment by PT IDRX)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, 2 decimals — issuer-native IDRX deployment on Gnosis (uniform address).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "IDRX",
+            "url": "https://idrx.co/"
+          }
+        ]
       },
       {
         "id": "etherlink:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
         "destinationChain": "etherlink",
         "contractAddress": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "IDRX (issuer-native multichain deployment by PT IDRX)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, 2 decimals — issuer-native IDRX deployment on Etherlink (uniform address).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "IDRX",
+            "url": "https://idrx.co/"
+          }
+        ]
       },
       {
         "id": "worldchain:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
         "destinationChain": "worldchain",
         "contractAddress": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "IDRX (issuer-native multichain deployment by PT IDRX)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name/symbol IDRX, 2 decimals — issuer-native IDRX deployment on Worldchain (uniform address).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "IDRX",
+            "url": "https://idrx.co/"
+          }
+        ]
       },
       {
         "id": "solana:idrxZcP8xiKkYk6XGD4uz1dxEYCWSgKDHqgjsBbwDur",
@@ -230,7 +272,7 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "Unresolved in the 2026-07-20 dc-1 pass: Solana deployment; mint authority not re-verified from public chain reads in this pass. EVM deployments are issuer-native and reviewed.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-06-13"
       }

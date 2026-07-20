@@ -164,6 +164,7 @@
     "subset:fonts": "node scripts/maintenance/subset-fonts.mjs",
     "generate:public-datasets": "tsx scripts/maintenance/generate-public-datasets.ts",
     "digest:curation": "node scripts/maintenance/weekly-curation-digest.mjs",
+    "review:capabilities": "tsx scripts/maintenance/generate-capability-review.ts",
     "check:build-size": "node scripts/maintenance/report-build-size.mjs --check",
     "check:build-attribution": "node scripts/ci/check-build-attribution.mjs",
     "check:build-attribution:update-baseline": "node scripts/maintenance/update-build-attribution-baseline.mjs",
