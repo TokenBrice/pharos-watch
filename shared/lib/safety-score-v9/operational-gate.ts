@@ -16,6 +16,18 @@ export const V9_SHADOW_DAILY_START_OFFSET_SEC = 30 * 60;
 export const V9_SHADOW_MAX_START_DELAY_SEC = 60 * 60;
 export const V9_SHADOW_DIFF_ABSOLUTE_REVIEW_DELTA = 5;
 export const V9_SHADOW_DIFF_TOP_CUTOFF_REVIEW_DELTA = 2;
+/**
+ * Maximum score drift, in points, that a recorded movement disposition may carry across.
+ * Anchored to the reviewed V8 and V9 scores, so cumulative drift is bounded for the whole
+ * window rather than per run. Sits strictly inside the declared
+ * `V9_SHADOW_DIFF_ABSOLUTE_REVIEW_DELTA` materiality standard.
+ */
+export const V9_SHADOW_MOVEMENT_REVIEW_CARRY_SCORE_DRIFT = 3;
+/**
+ * Movement adjudication is a property of the methodology transition, not of the pipeline, so
+ * it is evaluated once at window end. Pipeline-stability floors still gate every day.
+ */
+export const V9_SHADOW_MOVEMENT_ADJUDICATION_SCOPE = "window-end-v1";
 const V9_SHADOW_ARCHIVE_SELECTION_POLICY = "first-final-distinct-anomaly-v1";
 
 export const V9_SHADOW_SCORE_BEARING_PRODUCER_INTERVALS_SEC = Object.freeze({
@@ -71,6 +83,8 @@ export const V9_SHADOW_RELEASE_COVERAGE_POLICY_DIGEST = digest("safety-score-v9.
   movementReview: {
     absoluteScoreDelta: V9_SHADOW_DIFF_ABSOLUTE_REVIEW_DELTA,
     topCutoffScoreDelta: V9_SHADOW_DIFF_TOP_CUTOFF_REVIEW_DELTA,
+    carryScoreDrift: V9_SHADOW_MOVEMENT_REVIEW_CARRY_SCORE_DRIFT,
+    adjudicationScope: V9_SHADOW_MOVEMENT_ADJUDICATION_SCOPE,
   },
   archiveSelectionPolicy: V9_SHADOW_ARCHIVE_SELECTION_POLICY,
 });

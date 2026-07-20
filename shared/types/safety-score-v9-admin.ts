@@ -218,9 +218,18 @@ const DiffCardSchema = z
     review: z
       .object({
         key: Sha256Schema.nullable(),
+        classKey: Sha256Schema.nullable(),
         status: z.enum(["not-required", "pending", "classified"]),
         disposition: z
           .enum(["intended-methodology-change", "evidence-correction", "producer-data-gap", "defect"])
+          .nullable(),
+        carriedFrom: z
+          .object({
+            reviewKey: Sha256Schema,
+            reviewedV8Score: z.number().finite().min(0).max(100).nullable(),
+            reviewedV9Score: z.number().finite().min(0).max(100).nullable(),
+          })
+          .strict()
           .nullable(),
       })
       .strict(),

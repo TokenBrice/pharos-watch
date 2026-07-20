@@ -349,6 +349,8 @@
     "summary": "On Base (primary chain confirmed), IDRX MINTER_ROLE is held by three issuer-controlled Safes (2-of-3, 2-of-8, 2-of-4) plus an ElevatedMinterBurner contract whose owner is an issuer EOA. DEFAULT_ADMIN_ROLE is an issuer EOA. The UUPS proxy has no external proxy admin; upgrade authority is DEFAULT_ADMIN. Other chains share the same contract address pattern and were not individually re-verified.",
     "controls": [
       {
+        "chain": "base",
+        "address": "0xf80fdf246928b7862b23e094b3a14c4e36ee117e",
         "label": "IDRX MINTER_ROLE Safe A (Base, 2-of-3)",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -366,20 +368,24 @@
           "threshold": 2,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0x0000000000000000000000000000000000000000",
-          "version": "unknown",
-          "observedBlock": 47200691,
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "version": "1.3.0",
+          "observedBlock": 48887752,
           "source": "onchain"
         },
-        "evidence": "At Base block 47200691, hasRole(MINTER_ROLE, 0xf80fdf246928b7862b23e094b3a14c4e36ee117e) = true; Blockscout: GnosisSafeL2. getOwners() = 3; getThreshold() = 2; getModulesPaginated() = sentinel only (no modules).",
+        "evidence": "Re-verified at Base block 48887752: hasRole(MINTER_ROLE, 0xf80fdf246928b7862b23e094b3a14c4e36ee117e) = true and hasRole(DEFAULT_ADMIN_ROLE, same) = true. Safe 1.3.0 proxy (singleton 0x3e5c63644e683549055b9be8653de26e0b4cd36e); owner linked list walked from storage slot 2 = 3 owners, ownerCount slot 3 = 3, threshold slot 4 = 2; modules sentinel-only, guard slot = 0x0, fallback handler = CompatibilityFallbackHandler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4.",
         "sources": [
           {
             "label": "IDRX Base token",
             "url": "https://basescan.org/address/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
           }
-        ]
+        ],
+        "observedAt": "2026-07-20",
+        "observedBlock": 48887752
       },
       {
+        "chain": "base",
+        "address": "0x942ca56d502c08e5f2d5de7097d4fa667fbc6c5f",
         "label": "IDRX MINTER_ROLE Safe B (Base, 2-of-8)",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -402,20 +408,24 @@
           "threshold": 2,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0x0000000000000000000000000000000000000000",
-          "version": "unknown",
-          "observedBlock": 47200691,
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "version": "1.3.0",
+          "observedBlock": 48887752,
           "source": "onchain"
         },
-        "evidence": "At Base block 47200691, hasRole(MINTER_ROLE, 0x942ca56d502c08e5f2d5de7097d4fa667fbc6c5f) = true; Blockscout: GnosisSafeL2. getOwners() = 8; getThreshold() = 2; no modules.",
+        "evidence": "Re-verified at Base block 48887752: hasRole(MINTER_ROLE, 0x942ca56d502c08e5f2d5de7097d4fa667fbc6c5f) = true; hasRole(DEFAULT_ADMIN_ROLE) = false. Safe 1.3.0 proxy; owner linked list walked from storage slot 2 = 8 owners, ownerCount = 8, threshold = 2; modules sentinel-only, guard = 0x0, fallback handler = 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4.",
         "sources": [
           {
             "label": "IDRX Base token",
             "url": "https://basescan.org/address/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
           }
-        ]
+        ],
+        "observedAt": "2026-07-20",
+        "observedBlock": 48887752
       },
       {
+        "chain": "base",
+        "address": "0x3274da26046eed0d315a81050507ff07d3993eb4",
         "label": "IDRX MINTER_ROLE Safe C (Base, 2-of-4)",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -434,46 +444,56 @@
           "threshold": 2,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0x0000000000000000000000000000000000000000",
-          "version": "unknown",
-          "observedBlock": 47200691,
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "version": "1.3.0",
+          "observedBlock": 48887752,
           "source": "onchain"
         },
-        "evidence": "At Base block 47200691, hasRole(MINTER_ROLE, 0x3274da26046eed0d315a81050507ff07d3993eb4) = true; Blockscout: GnosisSafeProxy. getOwners() = 4; getThreshold() = 2; no modules.",
+        "evidence": "Re-verified at Base block 48887752: hasRole(MINTER_ROLE, 0x3274da26046eed0d315a81050507ff07d3993eb4) = true; hasRole(DEFAULT_ADMIN_ROLE) = false. Safe 1.3.0 proxy; owner linked list walked from storage slot 2 = 4 owners, ownerCount = 4, threshold = 2; modules sentinel-only, guard = 0x0, fallback handler = 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4.",
         "sources": [
           {
             "label": "IDRX Base token",
             "url": "https://basescan.org/address/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
           }
-        ]
+        ],
+        "observedAt": "2026-07-20",
+        "observedBlock": 48887752
       },
       {
+        "chain": "base",
+        "address": "0xfe328208da684e2da63dc27837869e33507dd0ae",
         "label": "IDRX ElevatedMinterBurner (Base) — bridge/elevated mint contract",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "evidence": "At Base block 47200691, hasRole(MINTER_ROLE, 0xfe328208da684e2da63dc27837869e33507dd0ae) = true; Blockscout: ElevatedMinterBurner. This contract has MINTER_ROLE and its mint() is called by authorized operators set by its owner(). ElevatedMinterBurner.owner() = 0x46d58b6230be4af3dfa7883fffd6a17ba1db2965 (EOA — original deployer).",
+        "evidence": "Re-verified at Base block 48887752: hasRole(MINTER_ROLE, 0xfe328208da684e2da63dc27837869e33507dd0ae) = true; eth_getCode returns 3.5 kB of contract code. Blockscout: ElevatedMinterBurner; its mint() is callable by operators authorized by owner() = 0x46d58b6230be4af3dfa7883fffd6a17ba1db2965 (EOA — original deployer).",
         "sources": [
           {
             "label": "ElevatedMinterBurner source (Blockscout)",
             "url": "https://base.blockscout.com/address/0xfe328208da684e2da63dc27837869e33507dd0ae"
           }
-        ]
+        ],
+        "observedAt": "2026-07-20",
+        "observedBlock": 48887752
       },
       {
+        "chain": "base",
+        "address": "0x5515be1db2a513888f5cf375bf5c7956ee93c779",
         "label": "IDRX DEFAULT_ADMIN EOA (role admin + upgrade authority)",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
-        "evidence": "At Base block 47200691, hasRole(DEFAULT_ADMIN_ROLE, 0x5515be1db2a513888f5cf375bf5c7956ee93c779) = true; eth_getCode = 0x (EOA). DEFAULT_ADMIN can grant/revoke MINTER_ROLE and authorize UUPS upgrades (no separate proxy admin).",
+        "evidence": "Re-verified at Base block 48887752: hasRole(DEFAULT_ADMIN_ROLE, 0x5515be1db2a513888f5cf375bf5c7956ee93c779) = true, hasRole(MINTER_ROLE) = false; eth_getCode = 0x (EOA). DEFAULT_ADMIN can grant/revoke MINTER_ROLE and authorize UUPS upgrades (no separate proxy admin). Safe A above independently also holds DEFAULT_ADMIN_ROLE.",
         "sources": [
           {
             "label": "IDRX Base token",
             "url": "https://basescan.org/address/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
           }
-        ]
+        ],
+        "observedAt": "2026-07-20",
+        "observedBlock": 48887752
       }
     ],
     "reconciliation": "unknown",

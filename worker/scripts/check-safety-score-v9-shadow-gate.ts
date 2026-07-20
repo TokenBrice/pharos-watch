@@ -456,6 +456,7 @@ function evaluateDay(
   day: SafetyScoreV9ShadowDaily,
   baseline: ReturnType<typeof frozenIdentity> | null,
   blockers: SafetyScoreV9ShadowGateBlocker[],
+  isWindowEnd: boolean,
 ): void {
   if (day.attemptCounts.successful < 1) {
     addBlocker(blockers, "no-successful-attempt", day.utcDay, "At least one successful shadow run is required");
@@ -581,21 +582,26 @@ function evaluateDay(
       "The V9 shadow run blocked or corrupted the active V8 publication",
     );
   }
-  if (coverage.unresolvedCriticalMovementIds.length > 0) {
-    addBlocker(
-      blockers,
-      "unresolved-critical-movement",
-      day.utcDay,
-      `Critical movements remain unresolved: ${coverage.unresolvedCriticalMovementIds.join(", ")}`,
-    );
-  }
-  if (run.movement.pendingReviewCount > 0) {
-    addBlocker(
-      blockers,
-      "unresolved-review",
-      day.utcDay,
-      `${run.movement.pendingReviewCount} material movement review(s) remain pending`,
-    );
+  // Movement adjudication is a property of the methodology transition, so it is enforced once at
+  // window end rather than on every day. "Nothing ships unadjudicated" is preserved exactly; the
+  // spurious daily coupling is dropped. Pipeline-stability checks above remain per-day.
+  if (isWindowEnd) {
+    if (coverage.unresolvedCriticalMovementIds.length > 0) {
+      addBlocker(
+        blockers,
+        "unresolved-critical-movement",
+        day.utcDay,
+        `Critical movements remain unresolved at window end: ${coverage.unresolvedCriticalMovementIds.join(", ")}`,
+      );
+    }
+    if (run.movement.pendingReviewCount > 0) {
+      addBlocker(
+        blockers,
+        "unresolved-review",
+        day.utcDay,
+        `${run.movement.pendingReviewCount} material movement review(s) remain pending at window end`,
+      );
+    }
   }
   if (coverage.unresolvedReleaseBlockers.length > 0) {
     addBlocker(
@@ -668,7 +674,10 @@ export function evaluateSafetyScoreV9ShadowGate(input: {
     }
   }
   const baseline = firstSelectedRun === null ? null : frozenIdentity(firstSelectedRun);
-  for (const summary of summaries) evaluateDay(summary, baseline, blockers);
+  const windowEndUtcDay = summaries.length > 0 ? summaries[summaries.length - 1]!.utcDay : null;
+  for (const summary of summaries) {
+    evaluateDay(summary, baseline, blockers, summary.utcDay === windowEndUtcDay);
+  }
   if (baseline !== null && baseline.releaseCoveragePolicyDigest !== V9_SHADOW_RELEASE_COVERAGE_POLICY_DIGEST) {
     addBlocker(
       blockers,

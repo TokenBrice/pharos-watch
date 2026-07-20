@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Wrapped Compound USDT (wcUSDTv3)",
-      "pct": 32.1,
+      "pct": 33.33,
       "risk": "low",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -13,8 +13,8 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "Static Aave USDC (saEthUSDC) — Primary BM",
-      "pct": 29.8,
+      "name": "Static Aave USDC (saEthUSDC)",
+      "pct": 33.34,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -24,30 +24,8 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "Wrapped Compound USDC (wcUSDCv3) — Primary BM",
-      "pct": 29.4,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Compound III USDC market and its collateralized borrowers",
-      "riskFactors": ["credit", "liquidity", "counterparty", "smart-contract", "concentration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Static Aave USDC (saEthUSDC) — Secondary BM",
-      "pct": 4.4,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Aave V3 Ethereum USDC market and its supplied-liquidity borrowers",
-      "riskFactors": ["credit", "liquidity", "counterparty", "smart-contract", "concentration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Wrapped Compound USDC (wcUSDCv3) — Secondary BM",
-      "pct": 4.3,
+      "name": "Wrapped Compound USDC (wcUSDCv3)",
+      "pct": 33.33,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -58,13 +36,21 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Pharos contested-review re-measurement (pinned on-chain reads)",
     "confidence": "verified",
     "sources": [
       {
         "label": "EUSD Reserve Protocol deployment and live basket",
         "url": "https://app.reserve.org/ethereum/token/0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f/overview"
+      },
+      {
+        "label": "eUSD BasketHandler 0x6d309297ddDFeA104A6E89a132e2f05ce3828e07 on Etherscan",
+        "url": "https://etherscan.io/address/0x6d309297ddDFeA104A6E89a132e2f05ce3828e07"
+      },
+      {
+        "label": "eUSD BackingManager 0xF014FEF41cCB703975827C8569a3f0940cFD80A4 on Etherscan",
+        "url": "https://etherscan.io/address/0xF014FEF41cCB703975827C8569a3f0940cFD80A4"
       },
       {
         "label": "Reserve Protocol contracts",
@@ -79,11 +65,11 @@
         "url": "https://docs.compound.finance/collateral-and-borrowing/"
       }
     ],
-    "rationale": "The independent EVM branch snapshot observed at 2026-07-15T12:13:19Z contains five exact backing-manager rows. Each row is retained one-to-one with its live name and weight and classified as an Aave or Compound protocol position over the tracked USDC or USDT underlying. The classifications add the lending-market failure domain without weakening the canonical stablecoin dependency.",
-    "compositionBasis": "Independent Reserve Protocol backing-manager balances observed at 2026-07-15T12:13:19Z",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "Supersedes a contested prior review. The 2026-07-15 review recorded five backing-manager rows split into 'Primary BM' and 'Secondary BM' tranches (32.1 / 29.8 / 29.4 / 4.4 / 4.3); a competing 2026-07-20 read recorded a flat three-slice basket. The disagreement was settled by pinned on-chain reads rather than by choosing a source. At Ethereum block 25575568 (2026-07-20T17:58:47Z) Main 0x7697aE4dEf3C3Cd52493Ba3a6F57fc6d8c59108a resolves basketHandler 0x6d309297ddDFeA104A6E89a132e2f05ce3828e07 and backingManager 0xF014FEF41cCB703975827C8569a3f0940cFD80A4. BasketHandler.getPrimeBasket() returns exactly three USD-target collateral with governance-set weights 33.333% wcUSDCv3 (0x27F2f159Fe990Ba83D57f39Fd69661764BEbf37a), 33.333% wcUSDTv3 (0xEB74EC1d4C1DAB412D5d6674F6833FD19d3118Ce) and 33.334% saEthUSDC (0x0aDc69041a2B086f8772aCcE2A754f410F211bed). Measured BackingManager balances agree: 6,513,292.234353 wcUSDCv3, 7,129,655.677323 wcUSDTv3 and 6,595,709.630305 saEthUSDC, which at the same block's wrapper rates (exchangeRate 1.193840 and 1.090378; convertToAssets(1e6) 1.179116) are worth 7,775,828.80, 7,774,019.70 and 7,777,106.76 USD — 33.334% / 33.326% / 33.340% of 23,326,955.26 USD, within 0.01pp of the governance targets. No other registered ERC-20 holds a BackingManager balance. Both hypotheses behind the contested split were tested and rejected. A rebalance did not occur: BasketHandler.nonce() is 12 and BasketHandler.timestamp() is 1774270055 (2026-03-23T12:47:35Z) at both the current block and the archive block 25537982 (2026-07-15T12:13:23Z), which is the prior review's own cited observation time; quote(1e18, FLOOR) at that historical block already returned the same three collateral, and BackingManager held only wcUSDCv3, wcUSDTv3 and saEthUSDC. The prior review also did not capture a missed secondary basket: getBackupConfig('USD') returns a max-2 emergency list of raw USDC, USDT, DAI and PYUSD, all of which held a zero BackingManager balance and therefore contribute zero backing. The 'Secondary BM' tranches are an artifact with no on-chain counterpart, so the basket is recorded as the measured equal-thirds composition.",
+    "compositionBasis": "Reserve Protocol BasketHandler.getPrimeBasket() and BackingManager token balances read at pinned Ethereum block 25575568, cross-checked against archive block 25537982",
+    "compositionAsOf": "2026-07-20",
     "scope": "full-composition",
-    "knownUnknownExposure": "All five captured rows are classified and linked to their tracked underlying stablecoins; borrower-level collateral and utilization remain risks of the named lending protocols rather than unclassified reserve slices.",
+    "knownUnknownExposure": "All three rows are classified and linked to their tracked underlying stablecoins; borrower-level collateral and utilization remain risks of the named lending protocols rather than unclassified reserve slices. Weights are governance-set and can be changed by the eUSD basket authority.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

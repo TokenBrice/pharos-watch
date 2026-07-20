@@ -88,7 +88,7 @@
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC GENIUS Act proposed rule and public releases",
-        "Reservoir Terms of Service (docs.reservoir.xyz/security-and-compliance/terms-of-service) \u2014 confirmed US person exclusion and Cayman Islands governing law",
+        "Reservoir Terms of Service (docs.reservoir.xyz/security-and-compliance/terms-of-service) — confirmed US person exclusion and Cayman Islands governing law",
         "Reservoir rUSD docs and protocol documentation",
         "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
         "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -304,10 +304,14 @@
           "url": "https://github.com/reservoir-protocol/reservoir"
         }
       ],
-      "evidence": "At Ethereum block 25295029: PSM and Credit Enforcer DEFAULT_ADMIN_ROLE confirmed as EOA 0xb7570e32 via hasRole() and RoleGranted/RoleRevoked log scan on Blockscout. Both contracts are non-proxy AccessControl deployments. All mint-capable surfaces confirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
-    }
+      "evidence": "At Ethereum block 25295029: PSM and Credit Enforcer DEFAULT_ADMIN_ROLE confirmed as EOA 0xb7570e32 via hasRole() and RoleGranted/RoleRevoked log scan on Blockscout. Both contracts are non-proxy AccessControl deployments. All mint-capable surfaces confirmed. Re-verified at Ethereum block 25575157 on 2026-07-20: the Reservoir USDC Peg Stability Module 0x4809010926aec940b550D34a46A52739f996D75D and the Credit Enforcer 0x04716DB62C085D9e08050fcF6F7D775A03d07720 both still return hasRole(DEFAULT_ADMIN_ROLE, 0xb7570e32ded63b25163369d5eb4d8e89e70e5602) = true, both still read a zero EIP-1967 implementation slot confirming they are non-proxy deployments, and eth_getCode on the admin is still empty, confirming a codeless externally owned account. Economic-control adjudication: a single unprotected EOA administers both the PSM and the Credit Enforcer that sets the issuance ceiling, with no multisig, timelock, or independent bound, so the mint cap is economically unbounded. Reservoir publishes a real-time reserves view rather than a periodic report, so reconciliation cadence is continuous (the self attestor tier is already recorded separately under proofOfReserves), and no financial regulator supervises Reservoir.",
+      "reviewer": "Claude Phase 0c continuation; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20)",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable"
+    },
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "none"
   },
   "chainTier": "ethereum",
   "deploymentModel": "native-multichain",
@@ -945,7 +949,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "rUSD SPL mint Ejqkht2dyN1BaaEtK92zBKY6S8HbVH8APB5sDK9Rmokt (supply 200,030,000 raw at 9 decimals, read 2026-07-20 via Solana RPC) has mintAuthority Ac1YJtKZpkLh2ukJoLcmhPsa4bKsMFWz2bsUX3CJKyP7 \u2014 a program-owned PDA (owner program GYdh9iATa8RUVBHSyoxuWyP17v8bmL6VYsM7P4qMFCVq) consistent with the LayerZero OFT mint-authority account; freezeAuthority is unset.",
+        "reviewNote": "rUSD SPL mint Ejqkht2dyN1BaaEtK92zBKY6S8HbVH8APB5sDK9Rmokt (supply 200,030,000 raw at 9 decimals, read 2026-07-20 via Solana RPC) has mintAuthority Ac1YJtKZpkLh2ukJoLcmhPsa4bKsMFWz2bsUX3CJKyP7 — a program-owned PDA (owner program GYdh9iATa8RUVBHSyoxuWyP17v8bmL6VYsM7P4qMFCVq) consistent with the LayerZero OFT mint-authority account; freezeAuthority is unset.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "controllerChain": "solana",
@@ -1027,7 +1031,7 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "DefiLlama's reservoir-stablecoin adapter lists this Tempo Mainnet deployment as 'rUSD on Tempo Mainnet (Stargate Hydra OFT, decimals=6)'. On-chain 2026-07-20 it is a Tempo preinstalled TIP-20 token (1-byte code, name 'Reservoir Stablecoin', totalSupply 10 raw units \u2248 $0.00001 dust); the preinstall exposes no readable bridge controller (no owner(), no endpoint()), and no Stargate rUSD escrow/pool on Ethereum could be established, so the route controller stays honestly unresolved.",
+        "reviewNote": "DefiLlama's reservoir-stablecoin adapter lists this Tempo Mainnet deployment as 'rUSD on Tempo Mainnet (Stargate Hydra OFT, decimals=6)'. On-chain 2026-07-20 it is a Tempo preinstalled TIP-20 token (1-byte code, name 'Reservoir Stablecoin', totalSupply 10 raw units ≈ $0.00001 dust); the preinstall exposes no readable bridge controller (no owner(), no endpoint()), and no Stargate rUSD escrow/pool on Ethereum could be established, so the route controller stays honestly unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [

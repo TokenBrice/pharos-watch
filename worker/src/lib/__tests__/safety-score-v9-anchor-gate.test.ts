@@ -4,8 +4,10 @@ import { describe, expect, it } from "vitest";
 import {
   SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1,
   evaluateSafetyScoreV9AnchorGate,
+  type V9AnchorContract,
   type V9AnchorGateCard,
   type V9AnchorGateReport,
+  type V9RelativeRule,
 } from "../safety-score-v9-anchor-gate";
 
 function gradeForScore(score: number | null): V9Grade {
@@ -76,13 +78,47 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
     expect(entry.required).toBe("score ≥ 83 (A)");
   });
 
-  it("fails the PYUSD/PUSD relative rule on inversion", () => {
+  it("no longer pins the superseded PYUSD ≥ PUSD relative rule", () => {
+    // Owner ruling 2026-07-20: the inversion is honest measurement (PYUSD wins
+    // backing +11.4 and control +10; pUSD wins exit +21.96), so the rule was
+    // removed rather than tuned around. See the contract's supersession note.
+    const relativeRules: readonly V9RelativeRule[] = SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1.relative;
+    expect(
+      relativeRules.some(
+        (rule) => rule.kind === "pair" && rule.id === "pyusd-paypal" && rule.overId === "pusd-polymarket",
+      ),
+    ).toBe(false);
     const report = evaluateSafetyScoreV9AnchorGate({ cards: withScore(passingCards(), "pusd-polymarket", 72) });
-    expect(report.decision).toBe("no-go");
-    const entry = verdict(report, "relative:pyusd-paypal>=pusd-polymarket");
+    expect(report.decision).toBe("gate-passed");
+  });
+
+  it("still evaluates pair rules in both directions (machinery retained for future pairs)", () => {
+    const contract: V9AnchorContract = {
+      ...SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1,
+      relative: [{ kind: "pair", id: "pyusd-paypal", overId: "pusd-polymarket", label: "test pair rule" }],
+    };
+    const rule = "relative:pyusd-paypal>=pusd-polymarket";
+
+    const passing = evaluateSafetyScoreV9AnchorGate({ cards: passingCards(), contract });
+    expect(passing.decision).toBe("gate-passed");
+    expect(verdict(passing, rule).status).toBe("pass");
+    expect(verdict(passing, rule).observed).toBe("71 vs 64");
+
+    const inverted = evaluateSafetyScoreV9AnchorGate({
+      cards: withScore(passingCards(), "pusd-polymarket", 72),
+      contract,
+    });
+    expect(inverted.decision).toBe("no-go");
+    const entry = verdict(inverted, rule);
     expect(entry.status).toBe("fail");
     expect(entry.code).toBe("relative-inversion");
     expect(entry.observed).toBe("71 vs 72");
+
+    const missing = evaluateSafetyScoreV9AnchorGate({
+      cards: withoutId(passingCards(), "pusd-polymarket"),
+      contract,
+    });
+    expect(verdict(missing, rule).code).toBe("asset-missing");
   });
 
   it("fails USDC dominance when another centralized fiat asset outscores it", () => {

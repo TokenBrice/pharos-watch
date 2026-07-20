@@ -136,11 +136,11 @@
   ],
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
-    "tier": "single-chain-or-native",
-    "summary": "MetaMask describes mUSD as issued by Bridge and powered by M0, initially available on Ethereum and Linea. I did not resolve a separate user bridge or lockbox route for durable supply, so Pharos treats current route risk as native issuance on its supported deployments.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "tier": "external-validated-network",
+    "summary": "mUSD is an M0 extension token deployed at the same address on Ethereum, Linea, and Monad. Every mUSD unit is minted by wrapping M0's $M one-for-one, verified on-chain by mToken() and by $M balances held inside the mUSD contract. Ethereum is the hub: $M there is minted by the M0 MinterGateway with no proxy and no portal, so mUSD on Ethereum is native issuance. On Linea and Monad the local $M is a cross-chain representation whose sole mint authority is the M0 Portal at 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd, and essentially all local $M sits inside the mUSD wrapper, so those deployments carry M0 Portal burn-mint bridge risk.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Pharos V9 Phase 3 curation lane cur-4",
+    "confidence": "verified",
     "sources": [
       {
         "label": "MetaMask mUSD announcement",
@@ -153,53 +153,108 @@
       {
         "label": "M0 mUSD repository",
         "url": "https://github.com/m0-foundation/mUSD"
+      },
+      {
+        "label": "M0 documentation",
+        "url": "https://docs.m0.org/"
       }
     ],
     "routes": [
       {
         "id": "ethereum:0xaca92e438df0b2401ff60da7e4337b687a2435da",
+        "sourceChain": "ethereum",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xaca92e438df0b2401ff60da7e4337b687a2435da",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 extension minted by wrapping hub-native $M",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain at Ethereum block 25575129: the mUSD proxy reads name 'MetaMask USD', 6 decimals, and mToken() 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b. That hub $M has a zero EIP-1967 implementation slot, no portal(), and minterGateway() 0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e, so it is minted natively on Ethereum rather than bridged in. The mUSD contract holds 12,301,332.20 $M against 12,301,156.85 mUSD outstanding, confirming one-for-one hub wrapping with no inbound bridge leg.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "observedBlock": 25575129,
+        "sources": [
+          {
+            "label": "M0 documentation",
+            "url": "https://docs.m0.org/"
+          },
+          {
+            "label": "M0 mUSD repository",
+            "url": "https://github.com/m0-foundation/mUSD"
+          }
+        ]
       },
       {
         "id": "linea:0xaca92e438df0b2401ff60da7e4337b687a2435da",
+        "sourceChain": "ethereum",
         "destinationChain": "linea",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xaca92e438df0b2401ff60da7e4337b687a2435da",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 Portal (burn-mint cross-chain $M) wrapped into the local mUSD extension",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain at Linea block 31455579: mUSD reads name 'MetaMask USD', 6 decimals, and mToken() 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b. Local $M is a proxy whose portal() returns 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd, the M0 Portal that is its sole mint and burn authority. Local $M total supply is 7,592,236.26 and the mUSD contract holds 7,592,225.76 of it against 7,592,108.58 mUSD outstanding, so effectively all Linea $M backs mUSD and the deployment inherits M0 Portal bridge risk.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "observedBlock": 31455579,
+        "controllerChain": "linea",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:linea:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "sources": [
+          {
+            "label": "M0 documentation",
+            "url": "https://docs.m0.org/"
+          },
+          {
+            "label": "M0 mUSD repository",
+            "url": "https://github.com/m0-foundation/mUSD"
+          }
+        ]
       },
       {
         "id": "monad:0xaca92e438df0b2401ff60da7e4337b687a2435da",
+        "sourceChain": "ethereum",
         "destinationChain": "monad",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xaca92e438df0b2401ff60da7e4337b687a2435da",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 Portal (burn-mint cross-chain $M) wrapped into the local mUSD extension",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain at Monad block 89027653: mUSD reads name 'MetaMask USD', 6 decimals, and mToken() 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b. Local $M is a proxy whose portal() returns 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd, the M0 Portal that is its sole mint and burn authority. Local $M total supply is 9,802,235.94 and the mUSD contract holds 9,802,229.53 of it against 9,786,631.56 mUSD outstanding, so effectively all Monad $M backs mUSD and the deployment inherits M0 Portal bridge risk.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "observedBlock": 89027653,
+        "controllerChain": "monad",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:monad:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "sources": [
+          {
+            "label": "M0 documentation",
+            "url": "https://docs.m0.org/"
+          },
+          {
+            "label": "M0 mUSD repository",
+            "url": "https://github.com/m0-foundation/mUSD"
+          }
+        ]
       }
     ]
   },

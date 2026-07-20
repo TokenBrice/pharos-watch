@@ -1,0 +1,134 @@
+name: Shock Coverage Refresh
+
+# Keeps the V9 CDP shock-coverage fact inside its 72h policy freshness bound.
+#
+# Closes the last manual dependency under the LUSD and BOLD safety scores: the
+# measurement was previously produced by hand. Past the 72h bound the engine
+# fails closed to legacy LCR, dropping LUSD to `unsafe-backing:high` (~77/B+ ->
+# 59/C) and taking BOLD's rating down with it.
+#
+# Cadence is every other day at 03:41 UTC. Worst-case gap between runs is 48h,
+# leaving ~24h of slack against the 72h bound for one failed run. The freshness
+# clock runs on the measured BLOCK timestamp, not on merge time, so the PR this
+# opens must be merged promptly to bank the refresh.
+#
+# The 72h bound itself lives in
+# shared/data/safety-score-v9/methodology-policy-candidate-v1.json and is not
+# relaxed here.
+
+on:
+  schedule:
+    - cron: "41 3 */2 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shock-coverage-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-workspace
+
+      # Measurement uses the hardcoded public Ethereum archive RPC list in
+      # scripts/lib/mechanism-measurement/shock-targets.ts with per-endpoint
+      # failover. No RPC credential is required. Any target that cannot be
+      # measured on any endpoint fails the job before anything is committed.
+      - name: Measure Liquity V1 shock coverage
+        run: npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset lusd-liquity
+
+      - name: Measure Liquity V2 shock coverage
+        run: npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --asset bold-liquity
+
+      # Byte-replays every new journal offline and attests it. A journal that
+      # does not replay byte-identically throws here, so an unverified
+      # measurement can never reach the registry.
+      - name: Attest journal replays
+        run: npx tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-attestations.ts
+
+      - name: Regenerate shock-coverage registry
+        run: npx tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts
+
+      - name: Verify regenerated artifacts are self-consistent
+        run: |
+          set -euo pipefail
+          npx tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-attestations.ts --check
+          npx tsx scripts/maintenance/generate-safety-score-v9-shock-coverage-registry.ts --check
+
+      # Fail loudly on a partial or non-scoring refresh rather than committing
+      # a measurement the engine would reject.
+      - name: Assert both targets produced a fresh scoring measurement
+        run: node scripts/ci/check-shock-coverage-freshness.mjs
+
+      - name: Detect journal diff
+        id: diff
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- shared/data/safety-score-v9/ && \
+             [ -z "$(git ls-files --others --exclude-standard -- shared/data/safety-score-v9/)" ]; then
+            echo "has_diff=false" >> "$GITHUB_OUTPUT"
+            echo "No new shock-coverage measurement; the head block was already recorded."
+          else
+            echo "has_diff=true" >> "$GITHUB_OUTPUT"
+            git status --short -- shared/data/safety-score-v9/
+          fi
+
+      - name: Require automation token for checked PRs
+        if: steps.diff.outputs.has_diff == 'true'
+        env:
+          REFRESH_TOKEN: ${{ secrets.SHOCK_COVERAGE_GITHUB_TOKEN || secrets.OG_REFRESH_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${REFRESH_TOKEN:-}" ]; then
+            echo "::error title=Missing shock-coverage refresh token::Configure SHOCK_COVERAGE_GITHUB_TOKEN (or reuse OG_REFRESH_GITHUB_TOKEN) with a bot or PAT token so automated refresh PRs trigger normal pull_request checks."
+            exit 1
+          fi
+
+      - name: Open or update refresh PR
+        if: steps.diff.outputs.has_diff == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.SHOCK_COVERAGE_GITHUB_TOKEN || secrets.OG_REFRESH_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          BRANCH=automated/shock-coverage-refresh
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add shared/data/safety-score-v9/
+          git commit -m "chore(v9): refresh CDP shock-coverage measurements"
+          gh auth setup-git
+          git push --force-with-lease -u origin "$BRANCH"
+          if gh pr view "$BRANCH" --json state --jq '.state' 2>/dev/null | grep -qx OPEN; then
+            echo "Existing open PR for $BRANCH updated by force-push."
+          else
+            cat > /tmp/shock-coverage-pr-body.md <<'BODY'
+          Automated shock-coverage refresh for `lusd-liquity` and `bold-liquity`. Every journal in this PR replayed byte-identically offline before the registry was regenerated.
+
+          **Merge promptly.** The V9 CDP freshness bound is 72h measured from the pinned block timestamp, not from merge time. Past it the engine fails closed to legacy LCR and LUSD drops to `unsafe-backing:high`, taking BOLD's rating with it.
+
+          See [docs/process/shock-coverage-refresh.md](../blob/main/docs/process/shock-coverage-refresh.md).
+          BODY
+            gh pr create \
+              --base main \
+              --head "$BRANCH" \
+              --title "chore(v9): refresh CDP shock-coverage measurements" \
+              --body-file /tmp/shock-coverage-pr-body.md
+            # Owner ruling 2026-07-20: auto-merge this PR once required checks pass.
+            # The 72h freshness bound runs from the pinned block timestamp, not from
+            # merge time, so a refresh waiting on a human review can still go stale and
+            # drop LUSD to unsafe-backing:high. Branch protection still applies — this
+            # queues the merge behind the required checks, it does not bypass them, and
+            # the measurement is self-verifying (journals replay byte-identically or the
+            # job fails before opening a PR).
+            gh pr merge "$BRANCH" --squash --auto
+          fi

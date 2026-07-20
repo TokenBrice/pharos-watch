@@ -919,7 +919,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "unknown",
     "confidence": "unknown",
-    "summary": "USDp's Ethereum Parallelizer diamond mints and burns against a governed collateral basket under a 5/8 Safe-controlled AccessManager. Route data identifies many additional chain-local AccessManagers whose terminal managers and upgrade paths are not yet enumerated.",
+    "summary": "USDp's Ethereum Parallelizer diamond mints and burns against a governed collateral basket under a 5/8 Safe-controlled AccessManager. The 22 non-Ethereum deployments share four AccessManagers whose terminal administrator is the same 5/8 Parallel team signer set on 20 chains; Sei and Fraxtal remain unidentified.",
     "upgradeability": {
       "model": "unknown",
       "proxyAddresses": [
@@ -1012,18 +1012,63 @@
         ],
         "chain": "ethereum",
         "address": "0x25Fc7ffa8f9da3582a36633d04804F0004706F9b"
+      },
+      {
+        "chain": "base",
+        "address": "0xc5201ffe258a95af986e7cd1fcad54f3f63f2c95",
+        "label": "Parallel team Safe 5/8 (non-Ethereum ParallelAccessManager ADMIN_ROLE)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 5,
+        "signerCount": 8,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x35b3e718aafd5f932450eeb8690d022a96aad78a",
+            "0x8222624ae36fa6d21e32801cca2b5af54669e290",
+            "0xd758e17c0d96a6c753995d86e891e07286858130",
+            "0x79603115df2ba00659adc63192325cf104ca529c",
+            "0xbabb038737a7ae0dca02075e79ed5b7704c29827",
+            "0x244a875233a8898aa97753cd919857271079682c",
+            "0x06c24d990eaac2659565827788bddb8c8fe31142",
+            "0x4c5d1029c2c64fc6477529d5a391ca667a514b4c"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x2f55e8b20d0b9fefa187aa7d00b6cbe563605bf5",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 48888133,
+          "observedAt": "2026-07-20",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-20",
+        "evidence": "Verified on-chain 2026-07-20. USDp.authority() resolves to only four distinct non-Ethereum ParallelAccessManagers: 0x0e4e7ca9d7b1e6293d0713efefb4bca010debf46 (Base, Arbitrum, OP Mainnet), 0xfd28f108e95f4d41daae9dbfff707d677985998e (17 chains), 0x8efb3ded78fbaef2a4efe01e01bbd911e4094b78 (Sonic) and 0x7df74bbb6f82ec1bcb1562a30ef5bf5c326e2811 (Polygon); on every one of them getTargetFunctionRole(USDp, mint(address,uint256)) = role 110 and getRoleAdmin(110) = role 10. hasRole(ADMIN_ROLE=0, 0xc5201ffe258a95af986e7cd1fcad54f3f63f2c95) and hasRole(10, same) are both true on Base (block 48888065), Arbitrum, OP Mainnet, Avalanche, Sonic, Scroll, Ink, World Chain, BNB Chain, X Layer, Berachain, Gnosis, Unichain, Linea, Plasma, Katana, Hemi and HyperEVM. Polygon uses Safe 0x2046c0416a558c40cb112e5ebb0ca764c3c5c32a and Plume uses Safe 0xd22b9e8ee5b6490c667d90c6819e53e9503ee139; owner-linked-list walks from Safe storage slot 2 show all three Safes carry the identical eight signers and threshold 5 as the Ethereum team Safe. Safe state read from storage on Base: ownerCount 8, threshold 5, Safe 1.4.1 singleton 0x29fcb43b46531bca003ddc8fcb67ffe91900c762, module list sentinel-only, guard 0x0. The original deployer EOA 0x66ccec236bbce5f1bbd1b2fc0a4014e57a55ad02 was granted ADMIN_ROLE at deployment and no longer holds it on Base or OP Mainnet.",
+        "sources": [
+          {
+            "label": "ParallelAccessManager (Base)",
+            "url": "https://base.blockscout.com/address/0x0e4e7ca9D7b1e6293D0713EfEFB4bcA010DEbf46"
+          },
+          {
+            "label": "Parallel team Safe 5/8 (Base)",
+            "url": "https://base.blockscout.com/address/0xc5201FfE258a95Af986e7CD1FCaD54f3F63f2c95"
+          }
+        ]
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "Verified on-chain 2026-07-20: Ethereum USDp authority() = ParallelAccessManager 0x94Ea8800444017695345156319e96bdB1E355F7a; the Parallelizer diamond holds its minter role and the 5/8 team Safe holds ADMIN_ROLE and can diamondCut its mint-critical module logic. The route inventory, however, identifies 23 native deployments with distinct chain-local AccessManagers, including 0x0e4e... on Base/Arbitrum and 0xfd28... on several other chains. Their terminal administrators, Safe state, and upgrade paths have not been enumerated, so the asset-wide review remains unresolved.",
-      "reviewer": "P2 mint-free cohort",
+      "evidence": "Verified on-chain 2026-07-20: Ethereum USDp authority() = ParallelAccessManager 0x94Ea8800444017695345156319e96bdB1E355F7a; the Parallelizer diamond holds its minter role and the 5/8 team Safe holds ADMIN_ROLE and can diamondCut its mint-critical module logic. The non-Ethereum route inventory was enumerated on 2026-07-20: all 22 non-Ethereum deployments resolve to just four AccessManagers, each gating mint(address,uint256) behind role 110 with role 10 as its role admin, and on 20 of the 22 chains the terminal ADMIN_ROLE holder is a Parallel team 5/8 Safe carrying the same eight signers as the Ethereum Safe (0xc5201ffe... on 18 chains, 0x2046c041... on Polygon, 0xd22b9e8e... on Plume). Role-110 membership is chain-specific rather than shared: on Base four contracts hold it (0x08417cdb, 0xc3bef21e, 0x472ed57b, 0x4dde0e30) while the same manager grants none of them on OP Mainnet. The terminal administrator on Sei and Fraxtal could not be enumerated because no archive log range or Blockscout logs endpoint was reachable for those two chains, and none of the three known Parallel Safes or the deployer EOA holds ADMIN_ROLE there, so the asset-wide review stays unresolved.",
+      "reviewer": "P2 mint-free cohort; V9 Phase 3 curation lane cur-3 (2026-07-20)",
       "reviewedAt": "2026-07-20",
       "disposition": "unresolved",
       "unresolvedQuestions": [
-        "Enumerate each unique non-Ethereum ParallelAccessManager's minter-role holder, terminal administrator/Safe state, and mint-logic upgrade path before treating USDp as asset-wide scoreable."
+        "Identify the terminal ADMIN_ROLE holder of ParallelAccessManager 0xfd28f108e95f4d41daae9dbfff707d677985998e on Sei and Fraxtal; the three known Parallel team 5/8 Safes and the deployer EOA all return hasRole(0, account) = false on both chains, so the mint-grant authority for those two deployments is unidentified."
       ],
       "sources": [
         {
@@ -1041,6 +1086,14 @@
         {
           "label": "Parallel team Safe 5/8 (Ethereum)",
           "url": "https://eth.blockscout.com/address/0x25Fc7ffa8f9da3582a36633d04804F0004706F9b"
+        },
+        {
+          "label": "ParallelAccessManager (Base)",
+          "url": "https://base.blockscout.com/address/0x0e4e7ca9D7b1e6293D0713EfEFB4bcA010DEbf46"
+        },
+        {
+          "label": "Parallel team Safe 5/8 (Base)",
+          "url": "https://base.blockscout.com/address/0xc5201FfE258a95Af986e7CD1FCaD54f3F63f2c95"
         }
       ]
     }

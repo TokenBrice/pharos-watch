@@ -9,25 +9,34 @@
     "reviewedAt": "2026-05-12"
   },
   "bridgeRouteRisk": {
-    "tier": "external-validated-network",
-    "summary": "syrupUSDT's canonical home is Ethereum, where the immutable non-proxy ERC-4626 vault token 0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d is issued natively. BNB Chain and Plasma carry the same canonical syrupUSDT asset as Chainlink CCIP Cross-Chain Token (CCT) burn-mint deployments: no wrapped/lockbox representation, bridging validated by the CCIP oracle network. This mirrors the reviewed syrupUSDC Maple CCIP pattern.",
+    "tier": "external-lock-mint",
+    "summary": "syrupUSDT's canonical home is Ethereum, where the immutable non-proxy ERC-4626 vault token 0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d is issued natively against USDT deposits. Plasma, BNB Chain, Mantle and Ink carry Chainlink CCIP Cross-Chain Token (CCT) representations, but the route is asymmetric: the Ethereum leg is a LockReleaseTokenPool 1.5.1 lockbox at 0xDE76A096C5eadDdf97Af3fE15ee49d32AEDa9822 that held 272,587,979.695601 syrupUSDT — 78.04% of the vault's 349,308,558.995465 total supply — while each remote leg is a BurnMintTokenPool over a Chainlink BurnMintERC20. Remote units are therefore lock-mint claims on Ethereum-locked shares, not issuer-native burn-mint supply, and the third-party lockbox is the concentrating failure surface.",
     "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+    "reviewer": "Pharos contested-review re-measurement (pinned on-chain reads)",
     "confidence": "verified",
     "protocols": [
       {
-        "source": "docs",
-        "name": "Chainlink CCIP Token Directory — syrupUSDT",
+        "source": "explorer",
+        "name": "Chainlink CCIP (LockReleaseTokenPool on Ethereum, BurnMintTokenPool on remotes)",
         "slug": "chainlink-ccip",
-        "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDT",
+        "url": "https://etherscan.io/address/0xDE76A096C5eadDdf97Af3fE15ee49d32AEDa9822",
         "bridgeTypes": [
-          "external-validated-network",
-          "burn-mint"
+          "lock-mint",
+          "burn-mint",
+          "external-validated-network"
         ],
-        "note": "syrupUSDT is registered as a Chainlink CCIP Cross-Chain Token (CCT); the CCIP directory serves a dedicated syrupUSDT mainnet token page. On-chain reads 2026-07-20 corroborate: both spoke tokens expose getCCIPAdmin(), no owner() and no LayerZero endpoint() surface, and are non-proxy contracts."
+        "note": "Ethereum TokenAdminRegistry 1.5.0 (0xb22764f98dD05c789929716D677382Df22C05Cb6) getPool(syrupUSDT) returns 0xDE76A096C5eadDdf97Af3fE15ee49d32AEDa9822, whose typeAndVersion() is 'LockReleaseTokenPool 1.5.1' and getToken() is the Ethereum vault. The pool's getSupportedChains() enumerates exactly four lanes and its getRemotePools()/getRemoteToken() pair each lane to the deployment recorded below. Remote pool typeAndVersion() is 'BurnMintTokenPool 1.5.1' on Plasma, BNB Chain and Mantle and 'BurnMintTokenPool 1.6.1' on Ink. Because the home leg locks rather than burns, the repository's own tier rule (lockAndMint outranks burnAndMint in suggestBridgeRouteRiskTierFromL2BeatProtocol, shared/lib/chains/l2beat-interop.ts) places this route at external-lock-mint rather than external-validated-network."
       }
     ],
     "sources": [
+      {
+        "label": "Ethereum CCIP LockReleaseTokenPool 1.5.1 for syrupUSDT",
+        "url": "https://etherscan.io/address/0xDE76A096C5eadDdf97Af3fE15ee49d32AEDa9822"
+      },
+      {
+        "label": "Ethereum CCIP TokenAdminRegistry 1.5.0",
+        "url": "https://etherscan.io/address/0xb22764f98dD05c789929716D677382Df22C05Cb6"
+      },
       {
         "label": "Chainlink CCIP Token Directory — syrupUSDT",
         "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDT"
@@ -47,6 +56,14 @@
       {
         "label": "syrupUSDT contract on Plasmascan",
         "url": "https://plasmascan.to/address/0xc4374775489cb9c56003bf2c9b12495fc64f0771"
+      },
+      {
+        "label": "syrupUSDT contract on Mantlescan",
+        "url": "https://mantlescan.xyz/address/0x051665f2455116e929b9972c36d23070f5054ce0"
+      },
+      {
+        "label": "syrupUSDT contract on Ink Explorer",
+        "url": "https://explorer.inkonchain.com/address/0x8a76fe7fa6da27f85a626c5c53730b38d13603d7"
       }
     ],
     "routes": [
@@ -62,13 +79,18 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Canonical home chain. Existing mint-authority evidence (Ethereum block 25295160): EIP-1967 impl and admin slots zero, 11,660-byte non-proxy bytecode, owner()/admin() calls revert — the ERC-4626 vault is immutable and mints shares only against USDT deposits. 2026-07-20 re-check: getCCIPAdmin() reverts on the home vault, consistent with native issuance rather than a bridged representation.",
+        "reviewNote": "Canonical home chain. Existing mint-authority evidence (Ethereum block 25295160): EIP-1967 impl and admin slots zero, 11,660-byte non-proxy bytecode, owner()/admin() calls revert — the ERC-4626 vault is immutable and mints shares only against USDT deposits. Re-measured at pinned Ethereum block 25575599 (2026-07-20T18:04:59Z): name() 'Syrup USDT', symbol() 'syrupUSDT', decimals() 6, asset() = USDT 0xdAC17F958D2ee523a2206206994597C13D831ec7, totalSupply() 349,308,558.995465 shares, totalAssets() 396,690,439.777205 USDT, convertToAssets(1e6) 1.135644; getCCIPAdmin() still reverts on the home vault, so issuance here is native rather than bridged. Note that 272,587,979.695601 of this supply — 78.04% — is not freely circulating on Ethereum but sits locked in the CCIP LockReleaseTokenPool that collateralises the four remote representations.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
+        "observedBlock": 25575599,
         "sources": [
           {
             "label": "syrupUSDT contract on Etherscan",
             "url": "https://etherscan.io/address/0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d"
+          },
+          {
+            "label": "Ethereum CCIP LockReleaseTokenPool 1.5.1 for syrupUSDT",
+            "url": "https://etherscan.io/address/0xDE76A096C5eadDdf97Af3fE15ee49d32AEDa9822"
           },
           {
             "label": "Maple syrupUSDC and syrupUSDT lender documentation",
@@ -78,20 +100,33 @@
       },
       {
         "id": "bsc:0x8e9d4cea39299323fe8eda678cad449718556c4e",
+        "sourceChain": "ethereum",
         "destinationChain": "bsc",
         "canonicalChain": "ethereum",
         "contractAddress": "0x8e9d4cea39299323fe8eda678cad449718556c4e",
-        "protocol": "Chainlink CCIP",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "external-validated-network",
-        "semantics": "burn-mint",
+        "protocol": "Chainlink CCIP (LockReleaseTokenPool on Ethereum, BurnMintTokenPool on BNB Chain)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain reads at BSC block 111020040 (2026-07-20): symbol() = 'syrupUSDT'; 7,475-byte non-proxy bytecode with zero EIP-1967 impl/admin slots; owner() reverts; LayerZero endpoint() reverts; getCCIPAdmin() returns 0x950350b073956bd1d22bb1c18c4d45263b5aa3a5 (a 14,124-byte admin contract) — the CCIP CCT token-admin surface. The Chainlink CCIP directory serves a dedicated syrupUSDT mainnet token page, confirming CCT registration; burn-mint CCT semantics mirror the reviewed syrupUSDC Maple pattern.",
+        "reviewNote": "Supersedes a contested prior review that recorded this lane as issuer-native burn-mint with no lockbox. Lane confirmed from the Ethereum side: the LockReleaseTokenPool's getSupportedChains() includes selector 11344663589394136015, whose getRemoteToken() is this contract and whose getRemotePools() is 0xeaa7e1f805747ae29d5618b568d1b044a8b37a01. Read at BNB Chain block 111138167 (2026-07-20T18:21:14Z): that pool's typeAndVersion() is 'BurnMintTokenPool 1.5.1' and its getToken() is this token; the token itself reports name() 'Syrup USDT', symbol() 'syrupUSDT', decimals() 6, totalSupply() 2,731,830.779781, owner() reverts, and getCCIPAdmin() returns 0x950350b073956bD1d22BB1C18c4d45263b5Aa3a5. The prior review read only this remote surface and correctly saw a burn-mint CCT pool, but did not read the Ethereum leg, which locks rather than burns — so remote units are claims on Ethereum-locked shares.",
         "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "bsc",
+        "controllerAddress": "0x950350b073956bD1d22BB1C18c4d45263b5Aa3a5",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "lockbox:ethereum:0xde76a096c5eadddf97af3fe15ee49d32aeda9822",
+          "timelock:bsc:0x950350b073956bd1d22bb1c18c4d45263b5aa3a5"
+        ],
         "observedAt": "2026-07-20",
+        "observedBlock": 111138167,
         "sources": [
+          {
+            "label": "Ethereum CCIP LockReleaseTokenPool 1.5.1 for syrupUSDT",
+            "url": "https://etherscan.io/address/0xDE76A096C5eadDdf97Af3fE15ee49d32AEDa9822"
+          },
           {
             "label": "Chainlink CCIP Token Directory — syrupUSDT",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDT"
@@ -104,20 +139,33 @@
       },
       {
         "id": "plasma:0xc4374775489cb9c56003bf2c9b12495fc64f0771",
+        "sourceChain": "ethereum",
         "destinationChain": "plasma",
         "canonicalChain": "ethereum",
         "contractAddress": "0xc4374775489cb9c56003bf2c9b12495fc64f0771",
-        "protocol": "Chainlink CCIP",
-        "issuanceModel": "native-issuance",
-        "routeClass": "native",
-        "riskTier": "external-validated-network",
-        "semantics": "burn-mint",
+        "protocol": "Chainlink CCIP (LockReleaseTokenPool on Ethereum, BurnMintTokenPool on Plasma)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain reads at Plasma block 27590440 (2026-07-20, rpc.plasma.to): symbol() = 'syrupUSDT'; bytecode present with zero EIP-1967 impl slot; owner() reverts; LayerZero endpoint() reverts; getCCIPAdmin() returns 0x3ec62564f66874f619640cbb7fd42a157f21a442 — the CCIP CCT token-admin surface. The Chainlink CCIP directory serves a dedicated syrupUSDT mainnet token page, confirming CCT registration; burn-mint CCT semantics mirror the reviewed syrupUSDC Maple pattern.",
+        "reviewNote": "Supersedes a contested prior review that recorded this lane as issuer-native burn-mint with no lockbox. Lane confirmed from the Ethereum side: the LockReleaseTokenPool's getSupportedChains() includes selector 9335212494177455608, whose getRemoteToken() is this contract and whose getRemotePools() is 0x1d952d2f6ee86ef4940fa648aa7477c8ff175f09. Read at Plasma block 27631320 (2026-07-20T18:21:13Z, rpc.plasma.to): that pool's typeAndVersion() is 'BurnMintTokenPool 1.5.1' and its getToken() is this token; the token itself reports name() 'Syrup USDT', symbol() 'syrupUSDT', decimals() 6, totalSupply() 185,173,643.021608, owner() reverts, and getCCIPAdmin() returns 0x3eC62564F66874f619640cBb7Fd42A157f21A442. Plasma alone carries 53.01% of the vault's total share supply, making this the dominant bridged representation.",
         "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "plasma",
+        "controllerAddress": "0x3eC62564F66874f619640cBb7Fd42A157f21A442",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "lockbox:ethereum:0xde76a096c5eadddf97af3fe15ee49d32aeda9822",
+          "timelock:plasma:0x3ec62564f66874f619640cbb7fd42a157f21a442"
+        ],
         "observedAt": "2026-07-20",
+        "observedBlock": 27631320,
         "sources": [
+          {
+            "label": "Ethereum CCIP LockReleaseTokenPool 1.5.1 for syrupUSDT",
+            "url": "https://etherscan.io/address/0xDE76A096C5eadDdf97Af3fE15ee49d32AEDa9822"
+          },
           {
             "label": "Chainlink CCIP Token Directory — syrupUSDT",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDT"
@@ -125,6 +173,76 @@
           {
             "label": "syrupUSDT contract on Plasmascan",
             "url": "https://plasmascan.to/address/0xc4374775489cb9c56003bf2c9b12495fc64f0771"
+          }
+        ]
+      },
+      {
+        "id": "mantle:0x051665f2455116e929b9972c36d23070f5054ce0",
+        "sourceChain": "ethereum",
+        "destinationChain": "mantle",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x051665f2455116e929b9972c36d23070f5054ce0",
+        "protocol": "Chainlink CCIP (LockReleaseTokenPool on Ethereum, BurnMintTokenPool on Mantle)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Resolves a route previously left unresolved because two reviews contested the mechanism. The Ethereum LockReleaseTokenPool's getSupportedChains() includes selector 1556008542357238666, whose getRemoteToken() is this contract and whose getRemotePools() is 0x0aa145a62153190b8f0d3ca00c441e451529f755. Read at Mantle block 98219976 (2026-07-20T17:57:44Z): that pool's typeAndVersion() is 'BurnMintTokenPool 1.5.1' and its getToken() is this token; the token itself reports name() 'Syrup USDT', symbol() 'syrupUSDT', decimals() 6, totalSupply() 80,071,292.800904, owner() reverts, and getCCIPAdmin() returns 0x618699516a02F25Ad4a90511dad36cb9f272AC20. The lane is therefore established in both directions and the deployment no longer fails closed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "mantle",
+        "controllerAddress": "0x618699516a02F25Ad4a90511dad36cb9f272AC20",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "lockbox:ethereum:0xde76a096c5eadddf97af3fe15ee49d32aeda9822",
+          "timelock:mantle:0x618699516a02f25ad4a90511dad36cb9f272ac20"
+        ],
+        "observedAt": "2026-07-20",
+        "observedBlock": 98219976,
+        "sources": [
+          {
+            "label": "Ethereum CCIP LockReleaseTokenPool 1.5.1 for syrupUSDT",
+            "url": "https://etherscan.io/address/0xDE76A096C5eadDdf97Af3fE15ee49d32AEDa9822"
+          },
+          {
+            "label": "syrupUSDT contract on Mantlescan",
+            "url": "https://mantlescan.xyz/address/0x051665f2455116e929b9972c36d23070f5054ce0"
+          }
+        ]
+      },
+      {
+        "id": "ink:0x8a76fe7fa6da27f85a626c5c53730b38d13603d7",
+        "sourceChain": "ethereum",
+        "destinationChain": "ink",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x8a76fe7fa6da27f85a626c5c53730b38d13603d7",
+        "protocol": "Chainlink CCIP (LockReleaseTokenPool on Ethereum, BurnMintTokenPool on Ink)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Resolves a route previously left unresolved because two reviews contested the mechanism. The Ethereum LockReleaseTokenPool's getSupportedChains() includes selector 3461204551265785888, whose getRemoteToken() is this contract and whose getRemotePools() is 0x543164a51401a468b6fee3f7db27a30871448ff5. Read at Ink block 51069538 (2026-07-20T17:19:09Z): that pool's typeAndVersion() is 'BurnMintTokenPool 1.6.1' — a newer pool release than the 1.5.1 pools on the other three lanes — and its getToken() is this token; the token itself reports name() 'Syrup USDT', symbol() 'syrupUSDT', decimals() 6, totalSupply() 4,611,212.993308, owner() reverts, and getCCIPAdmin() returns 0x13Ac97663d19fF20fe467BFa580748505e664beB. The lane is therefore established in both directions and the deployment no longer fails closed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ink",
+        "controllerAddress": "0x13Ac97663d19fF20fe467BFa580748505e664beB",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "lockbox:ethereum:0xde76a096c5eadddf97af3fe15ee49d32aeda9822",
+          "timelock:ink:0x13ac97663d19ff20fe467bfa580748505e664beb"
+        ],
+        "observedAt": "2026-07-20",
+        "observedBlock": 51069538,
+        "sources": [
+          {
+            "label": "Ethereum CCIP LockReleaseTokenPool 1.5.1 for syrupUSDT",
+            "url": "https://etherscan.io/address/0xDE76A096C5eadDdf97Af3fE15ee49d32AEDa9822"
+          },
+          {
+            "label": "syrupUSDT contract on Ink Explorer",
+            "url": "https://explorer.inkonchain.com/address/0x8a76fe7fa6da27f85a626c5c53730b38d13603d7"
           }
         ]
       }

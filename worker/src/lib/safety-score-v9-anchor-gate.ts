@@ -95,7 +95,46 @@ export const SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1 = {
     { id: "fxusd-f-x-protocol", minGrade: "B", label: "B-anchor" },
   ],
   relative: [
-    { kind: "pair", id: "pyusd-paypal", overId: "pusd-polymarket", label: "PYUSD must score at least PUSD" },
+    /**
+     * SUPERSEDED (owner ruling, 2026-07-20) — the R8 pair rule
+     * `{ kind: "pair", id: "pyusd-paypal", overId: "pusd-polymarket" }` was
+     * removed, not amended. It asserted "PYUSD must score at least PUSD",
+     * encoding an issuer-quality intuition: an OCC-supervised, Big-4-examined
+     * issuer should outrank a six-month-old venue wrapper. The V9 exit pillar
+     * measures a different thing — in-window executable exit — and on measured
+     * facts the two disagree.
+     *
+     * Measured (pinned 2026-07-20 replay; PYUSD 76 / PUSD 77): PYUSD wins
+     * backing by +11.4 (75.49 vs 64.09) and control by +10 (80 vs 70), so the
+     * intuition is confirmed on both pillars that grade issuer quality. PYUSD
+     * loses only on exit, by 21.96 (74.79 vs 96.75), because pUSD's
+     * permissionless atomic unwrap clears the 300s stress horizon while PYUSD's
+     * documented T+1 issuer redemption is excluded as
+     * `unsupported-same-notional-route` — an exclusion that hits usdc-circle,
+     * usdt-tether, usdp-paxos, rlusd-ripple and fdusd-first-digital identically,
+     * so it is evenhanded rather than an asset-specific penalty.
+     *
+     * Both evidence levers were investigated and closed before the rule was
+     * dropped; neither is a live option:
+     *   - Realized-cost measurement on measured routes
+     *     (`agents/safety-score-v9/results/phase3-2026-07-20/pyusd-pusd-verification.md`):
+     *     unavailable to the consumer AND backwards. `executableUsd` is already
+     *     the producer's bisection to the largest input clearing 200bps, so
+     *     `executionCostBps = maxCostBps` is already correct; measured honestly
+     *     PYUSD moves *down* to 74.
+     *   - Admitting T+1 issuer redemption into the exit pillar
+     *     (`.../r8-t1-redemption-counterfactual.md`): four variants modelled —
+     *     two break adverse pins, one is a null set, and even where admitted
+     *     PYUSD's issuer route scores 52.19 and is never its primary route, so
+     *     the entire gain is the capped diversification bonus, not redemption
+     *     credit.
+     *
+     * The inversion is therefore honest measurement, and the rule was asserting
+     * an ordering the methodology does not produce. It was removed rather than
+     * tuned around: scores and constraints are not adjusted to force an
+     * ordering. The `kind: "pair"` machinery is deliberately retained for future
+     * pair rules.
+     */
     {
       kind: "archetype-set",
       id: "usdc-circle",

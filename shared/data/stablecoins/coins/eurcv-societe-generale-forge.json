@@ -45,14 +45,26 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Societe Generale-FORGE publishes EURCV as an issuer-managed EMT across Ethereum, XRPL, Stellar, and Solana. No external bridge route is documented, so the reviewed route is regulated issuer-native issuance on supported chains. 2026-07-20 cohort dc-1 pass: Ethereum row confirmed native EURCV; non-EVM rows remain unresolved (not re-verified in this pass).",
+    "summary": "EURCV is issued natively by SG Forge on each supported ledger: an Ethereum ERC-20, a Solana Token-2022 mint, an XRP Ledger issued currency, and a Stellar credit asset. Each deployment's issuing authority was read directly on-chain on 2026-07-20; no lock-and-mint or third-party bridge leg carries the claim.",
     "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
-    "confidence": "probable",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether); Phase 3 cur-2 non-EVM controller reads (2026-07-20)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "SG-FORGE CoinVertible",
         "url": "https://www.sgforge.com/product/coinvertible/"
+      },
+      {
+        "label": "EURCV Solana mint on Solscan",
+        "url": "https://solscan.io/token/DghpMkatCiUsofbTmid3M3kAbDTPqDwKiYHnudXeGG52"
+      },
+      {
+        "label": "EURCV XRPL issuer account on Bithomp",
+        "url": "https://bithomp.com/en/token/rUNaS5sqRuxZz6V7rBGhoSaZiVYA3ut4UL/4555524356000000000000000000000000000000"
+      },
+      {
+        "label": "EURCV Stellar issuing account on Stellar Expert",
+        "url": "https://stellar.expert/explorer/public/account/GCEYGIVOLAVBF2TG2RUSGTUJCIN75KEX3NGLMY4VPL4GFE5L355AXW3G"
       }
     ],
     "routes": [
@@ -85,46 +97,79 @@
         "id": "xrpl:4555524356000000000000000000000000000000.rUNaS5sqRuxZz6V7rBGhoSaZiVYA3ut4UL",
         "destinationChain": "xrpl",
         "contractAddress": "4555524356000000000000000000000000000000.rUNaS5sqRuxZz6V7rBGhoSaZiVYA3ut4UL",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Unresolved in the 2026-07-20 dc-1 pass: non-EVM deployment; controller/mint authority not re-verified from public chain reads in this pass.",
+        "protocol": "EUR CoinVertible (SG Forge native issued currency on the XRP Ledger)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (validated ledger 105731713): gateway_balances on issuer rUNaS5sqRuxZz6V7rBGhoSaZiVYA3ut4UL reports obligations of 10,000,000 for currency 4555524356... ('EURCV'). account_info shows defaultRipple true, allowTrustLineClawback true, globalFreeze false, noFreeze false, disableMasterKey false, and account_objects returns no SignerList, so the issuer's master key is the sole issuing authority. XRPL issued currencies are minted as obligations of this account, so the deployment is issuer-native rather than a bridged representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "observedBlock": 105731713,
+        "sources": [
+          {
+            "label": "SG Forge CoinVertible product page (chain availability)",
+            "url": "https://www.sgforge.com/product/coinvertible/"
+          },
+          {
+            "label": "EURCV XRPL issuer account on Bithomp",
+            "url": "https://bithomp.com/en/token/rUNaS5sqRuxZz6V7rBGhoSaZiVYA3ut4UL/4555524356000000000000000000000000000000"
+          }
+        ]
       },
       {
         "id": "stellar:GCEYGIVOLAVBF2TG2RUSGTUJCIN75KEX3NGLMY4VPL4GFE5L355AXW3G",
         "destinationChain": "stellar",
         "contractAddress": "GCEYGIVOLAVBF2TG2RUSGTUJCIN75KEX3NGLMY4VPL4GFE5L355AXW3G",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Unresolved in the 2026-07-20 dc-1 pass: non-EVM deployment; controller/mint authority not re-verified from public chain reads in this pass.",
+        "protocol": "EUR CoinVertible (SG Forge native issuing account on Stellar)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 via Horizon (account last_modified_ledger 60369778): issuing account GCEYGIVOLAVBF2TG2RUSGTUJCIN75KEX3NGLMY4VPL4GFE5L355AXW3G issues asset code EURCV (credit_alphanum12) with auth_required, auth_revocable and auth_clawback_enabled set and auth_immutable false. Signers are the master key plus GCYYFR4SR4RDSWTN64LSE4BGF2UQEDYZ32QTD7TMQXO6TXSGEDWP652D, each weight 1, with low/med/high thresholds all 0, so any single SG Forge key can issue. Stellar credit assets are direct obligations of this issuing account, so the deployment is issuer-native rather than a bridged representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "observedBlock": 60369778,
+        "sources": [
+          {
+            "label": "SG Forge CoinVertible product page (chain availability)",
+            "url": "https://www.sgforge.com/product/coinvertible/"
+          },
+          {
+            "label": "EURCV Stellar issuing account on Stellar Expert",
+            "url": "https://stellar.expert/explorer/public/account/GCEYGIVOLAVBF2TG2RUSGTUJCIN75KEX3NGLMY4VPL4GFE5L355AXW3G"
+          }
+        ]
       },
       {
         "id": "solana:DghpMkatCiUsofbTmid3M3kAbDTPqDwKiYHnudXeGG52",
         "destinationChain": "solana",
         "contractAddress": "DghpMkatCiUsofbTmid3M3kAbDTPqDwKiYHnudXeGG52",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Unresolved in the 2026-07-20 dc-1 pass: non-EVM deployment; controller/mint authority not re-verified from public chain reads in this pass.",
+        "protocol": "EUR CoinVertible (SG Forge native issuance on Solana, Token-2022)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (getAccountInfo, slot 434131854): Token-2022 mint DghpMkatCiUsofbTmid3M3kAbDTPqDwKiYHnudXeGG52 owned by program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb, tokenMetadata name 'EUR CoinVertible' symbol EURCV, decimals 2, supply 102390519 raw (EUR 1,023,905.19). mintAuthority = freezeAuthority = permanentDelegate = mintCloseAuthority = metadata updateAuthority = 5tg4qRdiXJ7XxYd6KK4UnnNvxgHJqfBUygPqZLwSnhnt, the SG Forge 'registrar' key named in the mint's own additionalMetadata. Issuance is direct to this mint with no lock/escrow leg, so this is issuer-native issuance rather than a bridged representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "observedBlock": 434131854,
+        "sources": [
+          {
+            "label": "SG Forge CoinVertible product page (chain availability)",
+            "url": "https://www.sgforge.com/product/coinvertible/"
+          },
+          {
+            "label": "EURCV Solana mint on Solscan",
+            "url": "https://solscan.io/token/DghpMkatCiUsofbTmid3M3kAbDTPqDwKiYHnudXeGG52"
+          }
+        ]
       }
     ]
   },

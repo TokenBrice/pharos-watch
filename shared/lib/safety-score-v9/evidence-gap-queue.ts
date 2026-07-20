@@ -9,11 +9,12 @@ import {
   type V9EvidenceGapQueueV1,
   type V9EvidenceGapSupplyWeightV1,
 } from "../../types/safety-score-v9-evidence-queue";
-import type {
-  CompiledV9FactSetV2,
-  V9AssetFactsV2,
-  V9FactGapV2,
-  V9FactStatusV2,
+import {
+  isUsdDenominatedSupplyKind,
+  type CompiledV9FactSetV2,
+  type V9AssetFactsV2,
+  type V9FactGapV2,
+  type V9FactStatusV2,
 } from "../../types/safety-score-v9-facts";
 import type { V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 import { sha256Hex } from "../sha256";
@@ -116,7 +117,7 @@ function supplyWeightForGap(
   });
   if (
     asset.supply.status.observationState !== "known" ||
-    asset.supply.sourceKind !== "usd-denominated-circulating" ||
+    !isUsdDenominatedSupplyKind(asset.supply.sourceKind) ||
     canonicalUsd === null ||
     !currentEvidence
   ) {

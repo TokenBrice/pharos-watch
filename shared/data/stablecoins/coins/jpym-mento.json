@@ -149,9 +149,9 @@
       }
     ],
     "review": {
-      "evidence": "At Celo block 69291577 and Monad block 80607801: JPYm owner on both chains = Safe 0x58099B...; Celo Safe now 4/6 (one signer rotated out since prior review); Monad Safe 4/7; BorrowerOperations confirmed immutable on Celo. Monad proxy admin owned by same Safe. All addressable mint surfaces confirmed on both chains.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Celo block 69291577 and Monad block 80607801: JPYm owner on both chains = Safe 0x58099B...; Celo Safe now 4/6 (one signer rotated out since prior review); Monad Safe 4/7; BorrowerOperations confirmed immutable on Celo. Monad proxy admin owned by same Safe. All addressable mint surfaces confirmed on both chains. Economic-control fields authored 2026-07-20: economicCapSemantics is unbounded because, unlike Mento V2 assets whose mint path sits behind the 48-hour Mento Timelock, the JPYm token owner is a plain 4-of-6 Safe on Celo and 4-of-7 Safe on Monad at 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 with no modules, no guard, and no delay, so it can authorize a different minter and issue without an independently enforced bound. reconciliation is continuous because JPYm is a Mento V3 CDP whose USDm collateral is held and observable on-chain rather than in an off-chain reserve requiring periodic attestation. supervision is none: Mento operates no named prudential regulator relationship for JPYm.",
+      "reviewer": "Claude Phase 0c continuation; Pharos V9 Phase 3 curation lane cur-4 (economic-control fields, 2026-07-20)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Mento V3 stablecoin docs",
@@ -170,7 +170,10 @@
           "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
         }
       ]
-    }
+    },
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "none"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "native-multichain",
@@ -184,7 +187,12 @@
       "risk": "low",
       "coinId": "cusd-celo",
       "assetClass": "stablecoin",
-      "riskFactors": ["smart-contract", "liquidity", "counterparty", "market"],
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "counterparty",
+        "market"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],

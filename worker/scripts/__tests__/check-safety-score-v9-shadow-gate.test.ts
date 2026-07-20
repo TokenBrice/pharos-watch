@@ -301,7 +301,7 @@ describe("Safety Score v9 offline shadow gate", () => {
     expect(blockerCodes(report)).toContain("selected-run-day-mismatch");
   });
 
-  it("rejects coverage, compiler, future-evidence, movement-review, and release blockers", () => {
+  it("rejects mid-window coverage, compiler, future-evidence, and release blockers", () => {
     const summaries = passingSummaries();
     const selectedRun = summaries[4]!.selectedRun!;
     summaries[4] = SafetyScoreV9ShadowDailySchema.parse({
@@ -355,12 +355,34 @@ describe("Safety Score v9 offline shadow gate", () => {
         "compiler-exception",
         "future-dated-evidence",
         "publication-regression",
-        "unresolved-critical-movement",
-        "unresolved-review",
         "unresolved-release-blocker",
         "qualification-failed",
       ]),
     );
+    // Adjudication is a window-end question, so an unresolved movement on a mid-window day is
+    // recorded but does not block. Every pipeline-stability blocker above still fires per-day.
+    expect(blockerCodes(report)).not.toContain("unresolved-critical-movement");
+    expect(blockerCodes(report)).not.toContain("unresolved-review");
+  });
+
+  it("rejects unresolved movement adjudication at window end", () => {
+    const summaries = passingSummaries();
+    const finalIndex = summaries.length - 1;
+    const selectedRun = summaries[finalIndex]!.selectedRun!;
+    summaries[finalIndex] = SafetyScoreV9ShadowDailySchema.parse({
+      ...summaries[finalIndex],
+      selectedRun: {
+        ...selectedRun,
+        coverage: { ...selectedRun.coverage, unresolvedCriticalMovementIds: ["asset:movement"] },
+        movement: { ...selectedRun.movement, pendingReviewCount: 1 },
+      },
+    });
+
+    const report = evaluateSafetyScoreV9ShadowGate({ summaries, replayEvidence: replayEvidence(summaries) });
+
+    expect(blockerCodes(report)).toContain("unresolved-critical-movement");
+    expect(blockerCodes(report)).toContain("unresolved-review");
+    expect(report.decision).toBe("no-go");
   });
 
   it("requires replay evidence bound to every first, final, and anomaly artifact set", () => {

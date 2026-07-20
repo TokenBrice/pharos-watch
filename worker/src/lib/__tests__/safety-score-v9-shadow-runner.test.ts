@@ -8,6 +8,7 @@ const mockLoadHistory = vi.fn();
 const mockPersistState = vi.fn();
 const mockLoadReviewDispositions = vi.fn();
 const mockAssessReleaseCoverage = vi.fn();
+const mockLoadSealedReleaseCandidateId = vi.fn();
 
 vi.mock("../safety-score-v9-store", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../safety-score-v9-store")>();
@@ -18,8 +19,11 @@ vi.mock("../safety-score-v9-store", async (importOriginal) => {
   };
 });
 
+const mockLoadReviewCarries = vi.fn();
+
 vi.mock("../safety-score-v9-movement-reviews", () => ({
   loadSafetyScoreV9MovementReviewDispositions: mockLoadReviewDispositions,
+  loadSafetyScoreV9MovementReviewCarries: mockLoadReviewCarries,
 }));
 
 vi.mock("../safety-score-v9-release-coverage", async (importOriginal) => {
@@ -27,6 +31,7 @@ vi.mock("../safety-score-v9-release-coverage", async (importOriginal) => {
   return {
     ...actual,
     assessSafetyScoreV9ShadowReleaseCoverage: mockAssessReleaseCoverage,
+    loadSafetyScoreV9SealedReleaseCandidateId: mockLoadSealedReleaseCandidateId,
   };
 });
 
@@ -149,10 +154,14 @@ describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_
     mockLoadHistory.mockReset();
     mockPersistState.mockReset();
     mockLoadReviewDispositions.mockReset();
+    mockLoadReviewCarries.mockReset();
     mockAssessReleaseCoverage.mockReset();
+    mockLoadSealedReleaseCandidateId.mockReset();
+    mockLoadSealedReleaseCandidateId.mockResolvedValue(null);
     mockLoadHistory.mockResolvedValue([]);
     mockPersistState.mockResolvedValue(undefined);
     mockLoadReviewDispositions.mockResolvedValue({});
+    mockLoadReviewCarries.mockResolvedValue({});
     mockAssessReleaseCoverage.mockResolvedValue({
       floor: {
         id: "ratified-release-coverage",
@@ -175,11 +184,7 @@ describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_
       qualifying: false,
     });
     if (result.status !== "published") throw new Error("Expected published shadow result");
-    expect(result.qualificationBlockers).toEqual([
-      "coverage-floor-failed",
-      "unresolved-critical-movement",
-      "unresolved-release-blocker",
-    ]);
+    expect(result.qualificationBlockers).toEqual(["coverage-floor-failed", "unresolved-release-blocker"]);
     expect(mockPersistState).toHaveBeenCalledTimes(1);
     const persisted = mockPersistState.mock.calls[0]![1];
     expect(persisted.envelope.candidate.baseInputGenerationId).toBe(input().fixedInput.baseInputGenerationId);
@@ -432,6 +437,7 @@ describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_
 
     mockLoadHistory.mockResolvedValue([failedDaily]);
     mockLoadReviewDispositions.mockResolvedValue({});
+    mockLoadReviewCarries.mockResolvedValue({});
     mockPersistState.mockClear();
     const result = await runSafetyScoreV9ShadowAfterV8Publication(input());
 
@@ -458,7 +464,7 @@ describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_
   });
 
   it.each(["producer-data-gap", "defect"] as const)(
-    "keeps a reviewed %s movement release-blocking",
+    "records a reviewed %s movement as unresolved without blocking the day",
     async (disposition) => {
       mockLoadReviewDispositions.mockImplementation((_db: D1Database, reviewKeys: readonly string[]) =>
         Promise.resolve(Object.fromEntries(reviewKeys.map((key) => [key, disposition]))),
@@ -468,7 +474,9 @@ describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_
 
       expect(result).toMatchObject({ status: "published", pendingReviewCount: 0 });
       if (result.status !== "published") throw new Error("Expected published shadow result");
-      expect(result.qualificationBlockers).toContain("unresolved-critical-movement");
+      // Adjudication is enforced once at window end by the offline gate, so an unresolved
+      // movement is recorded on the run but never gates a single day's qualification.
+      expect(result.qualificationBlockers).not.toContain("unresolved-critical-movement");
       const persisted = mockPersistState.mock.calls[0]![1];
       expect(persisted.envelope.coverage.unresolvedCriticalMovementIds).toEqual(["usdc-circle"]);
       expect(persisted.diff.cards[0]?.review).toMatchObject({ status: "classified", disposition });
@@ -535,6 +543,30 @@ describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_
 
     expect(result).toMatchObject({ status: "published", candidateId: "v9-rc-3" });
     expect(mockPersistState.mock.calls[0]![1].envelope.candidate.candidateId).toBe("v9-rc-3");
+    // An explicitly sealed run keys the cohort off its own label, not D1.
+    expect(mockLoadSealedReleaseCandidateId).not.toHaveBeenCalled();
+    expect(mockAssessReleaseCoverage.mock.calls[0]![0].releaseCandidateId).toBe("v9-rc-3");
+  });
+
+  it("forwards the owner's D1 sealed release-candidate designation alongside the content-addressed candidate", async () => {
+    mockLoadSealedReleaseCandidateId.mockResolvedValue("v9-rc-7");
+
+    const result = await runSafetyScoreV9ShadowAfterV8Publication(input());
+
+    if (result.status !== "published") throw new Error("Expected published shadow result");
+    const assessed = mockAssessReleaseCoverage.mock.calls[0]![0];
+    expect(assessed.releaseCandidateId).toBe("v9-rc-7");
+    // The designation must NOT seal the candidate id: it stays content-addressed.
+    expect(assessed.candidateId).toBe(result.candidateId);
+    expect(assessed.candidateId).toMatch(/^safety-score-v9-candidate:v1:[a-f0-9]{64}$/);
+  });
+
+  it("still assesses with a null designation when the owner has published none", async () => {
+    const result = await runSafetyScoreV9ShadowAfterV8Publication(input());
+
+    if (result.status !== "published") throw new Error("Expected published shadow result");
+    expect(mockAssessReleaseCoverage.mock.calls[0]![0].releaseCandidateId).toBeNull();
+    expect(result.qualificationBlockers).toContain("unresolved-release-blocker");
   });
 
   it("returns a shadow-write failure without throwing when D1 retention fails", async () => {

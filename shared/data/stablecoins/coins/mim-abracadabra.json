@@ -156,7 +156,7 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-or-compromised",
-    "confidence": "manual-review",
+    "confidence": "unknown",
     "summary": "The Ethereum MIM contract exposes owner-controlled mint functions. Owner is a 5/11 Safe with no modules or guard detected.",
     "mintIncidents": [
       {
@@ -240,7 +240,9 @@
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
-          "source": "safe-api"
+          "source": "safe-api",
+          "observedBlock": 25575152,
+          "observedAt": "2026-07-20"
         },
         "sources": [
           {
@@ -252,7 +254,9 @@
             "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5f0DeE98360d8200b20812e174d139A1a633EDd2/"
           }
         ],
-        "evidence": "MIM.owner() returns this Safe. Safe Transaction Service returned threshold 5 with 11 current owners, no modules, and nonce 260; Sourcify ABI for MagicInternetMoneyV1 exposes mint and mintToBentoBox."
+        "evidence": "MIM.owner() returns this Safe. Safe Transaction Service returned threshold 5 with 11 current owners, no modules, and nonce 260; Sourcify ABI for MagicInternetMoneyV1 exposes mint and mintToBentoBox.",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25575152
       }
     ],
     "review": {
@@ -270,13 +274,19 @@
           "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5f0DeE98360d8200b20812e174d139A1a633EDd2/"
         }
       ],
-      "evidence": "Ethereum MIM owner reads and Sourcify ABI identify a 5/11 Safe owner with direct owner-controlled mint functions on the token.",
-      "reviewer": "Codex mint-authority top100 batch-c",
-      "reviewedAt": "2026-05-24",
+      "evidence": "Ethereum MIM owner reads and Sourcify ABI identify a 5/11 Safe owner with direct owner-controlled mint functions on the token. Re-verified by direct chain reads at Ethereum block 25575152 on 2026-07-20: MIM 0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3 owner() returns Safe 0x5f0DeE98360d8200b20812e174d139A1a633EDd2, which returns getThreshold()=5 over the same eleven owners, an empty getModulesPaginated array, a zero guard slot, and Safe 1.3.0 masterCopy 0xd9db270c1b5e3bd161e8c8503c55ceabee709552. Economic-control adjudication: the token owner Safe holds unconditional mint and mintToBentoBox entry points with no on-chain cap, no timelock, and no independent bound, so the mint cap is economically unbounded. There is no supply-versus-reserve attestation of any cadence and the token-level owner mint means outstanding MIM cannot be reconciled to cauldron collateral from on-chain reads alone, so reconciliation stays unknown, and no financial regulator supervises Abracadabra. The mint surface is only enumerated on Ethereum: this profile records a single control for an asset deployed across fourteen chains, so the review remains unresolved rather than scoreable.",
+      "reviewer": "Codex mint-authority top100 batch-c; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20)",
+      "reviewedAt": "2026-07-20",
       "unresolvedQuestions": [
-        "Confirm whether current protocol cauldrons rely on owner minting directly or only through approved borrowing modules; the token-level owner path is still a direct mint surface."
-      ]
-    }
+        "Confirm whether current protocol cauldrons rely on owner minting directly or only through approved borrowing modules; the token-level owner path is still a direct mint surface.",
+        "Enumerate the mint-capable surface on the thirteen non-Ethereum MIM deployments (Arbitrum, Avalanche, Fantom, BSC, Optimism, Polygon, Kava, Blast, Moonriver, Nibiru, Base, Linea) — no owner, minter role, or bridge mint controller has been read on any of them.",
+        "Establish whether the 5-of-11 owner Safe is subject to any off-chain governance constraint; no timelock, guard, or module was detected on-chain at block 25575152."
+      ],
+      "disposition": "unresolved"
+    },
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none"
   },
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {

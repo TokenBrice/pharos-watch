@@ -234,6 +234,19 @@ The V9 implementation establishes candidate infrastructure without changing prod
   exact retained candidate state. Material movements use append-only semantic
   review keys through `POST /api/admin-safety-score-v9/reviews`; a review record
   cannot activate V9.
+- A recorded disposition **carries forward** across runs while the movement's
+  class is unchanged. The class is the movement with its exact magnitude
+  removed: grades, binding-cap kinds, reason codes, weakest-pillar name,
+  downstream threshold crossings and structural flags are retained, while exact
+  scores, deltas and the continuous weakest-pillar score are delegated to a
+  reviewed-score anchor. A carry applies only when both the reviewed V8 and V9
+  scores are within `V9_SHADOW_MOVEMENT_REVIEW_CARRY_SCORE_DRIFT` (3 points) of
+  today's, which bounds cumulative drift for the whole window rather than per
+  run. Any class change — a grade, reason code, cap kind or crossing-set move —
+  expires the carry and re-pends the movement, so a `defect`-class movement can
+  never inherit a benign disposition. The exact review key and the reviewed
+  scores stay recorded, and each carried card names the review it came from, so
+  a reviewer can always separate what was adjudicated from what was carried.
 - The read-only `safety-score-v9:shadow-gate` evaluator accepts compact daily
   summaries plus the selected immutable artifact rows and derives replay status
   by rebuilding each candidate. It requires at least 14 consecutive UTC days,
@@ -241,12 +254,45 @@ The V9 implementation establishes candidate infrastructure without changing prod
   and at least two distinct observed and archived `liveReserves` and
   `redemption` generations for one frozen candidate/policy/build/capability and
   operational-policy identity. It also requires exact active-ID and coverage
-  evidence, resolved reviews/blockers, and passed first/final/anomaly replays.
+  evidence, resolved blockers, and passed first/final/anomaly replays.
   It cannot authorize or activate production at runtime.
+- **Movement adjudication is evaluated at window end, not per day.** Pipeline
+  stability and methodology adjudication are distinct properties: whether V9's
+  treatment of an asset is correct is a one-time question about the transition,
+  not evidence that today's run was stable. Re-adjudicating an asset because its
+  score moved a point serves neither. `unresolvedCriticalMovementIds` and
+  `pendingReviewCount` are therefore recorded on every run but enforced once, on
+  the final day of the window, by the offline gate. "Nothing ships
+  unadjudicated" is preserved exactly. Every pipeline-stability floor —
+  active-result-count, minimum-rateable-assets, scheduled-start-latency,
+  ratified-release-coverage, replayability and no-compiler-exceptions — still
+  gates every single day.
 - The `ratified-release-coverage` floor intentionally fails closed until the
   frozen V9-9 release cohort and its passing report are wired into the shadow
   producer. Every daily run therefore remains non-qualifying and activation is
   hard-blocked even if the operational shadow infrastructure is deployed.
+  Wiring it requires TWO distinct owner-supplied artifacts, because the floor
+  works with two different identifiers:
+  - The **sealed release-candidate label** (`v9-rc-N`) names an owner-ratified
+    release line and is the primary key of `safety_score_v9_release_cohorts`.
+  - The **content-addressed candidate id**
+    (`safety-score-v9-candidate:v1:<sha256>`) names one day's exact evaluation
+    and is what the coverage report's policy, evaluation-build, fact-set, and
+    result digests bind to. It is computed per run and is never a cohort key.
+
+  A shadow run computes the second and must be told the first, so the owner
+  must supply, out of band in production D1:
+  1. the ratified cohort row itself, keyed by the sealed label; and
+  2. one `cache` row designating which sealed label is under the gate —
+     key `safety-score-v9:sealed-release-candidate`, value
+     `{"schemaVersion":1,"releaseCandidateId":"v9-rc-N"}`.
+
+  The designation only SELECTS a cohort; it authorizes nothing. A missing,
+  malformed, or wrong designation resolves to no cohort row, or to a cohort
+  whose policy/evaluation-build digests do not match the day's candidate, and
+  the floor fails closed with `ratified-release-coverage-unavailable` either
+  way. Until both artifacts exist the floor remains the standing release
+  blocker by design.
 - Safety history now dual-writes identity-rich V2 rows while preserving the
   public V8 compatibility response. Methodology-boundary rows are excluded from
   continuous V8 history, and no V9 cutover baseline writer exists yet.

@@ -72,6 +72,127 @@ const EXPECTED_BASELINE_BINDINGS = {
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const MAX_UNEXPLAINED_CAPTURE_MOVEMENT = 3;
 
+/**
+ * Distribution-gate thresholds (owner ruling D-C), re-derived 2026-07-20 against
+ * the corrected CHAIN_SUPPLY denominator.
+ *
+ * Source of truth for the metric definitions:
+ * `agents/safety-score-v9/results/phase3-2026-07-20/distribution-gate-derivation.md` §4.
+ * Re-derivation and measured values:
+ * `agents/safety-score-v9/results/phase3-2026-07-20/gate-rederivation-post-chain-supply.md`.
+ * This block is the single authoritative gate set — the plan record's legacy
+ * numbers (F<=150 / C-<=45 / B-<=8 / tuple<=15%) and the legacy script gates
+ * they diverged from are retired, not carried alongside.
+ *
+ * Measurement basis, re-measured 2026-07-20 after the curation sweep
+ * (`3a969e4b0`), the mechanism/transfer reviews (`5c0c836cb`) and the
+ * aggregate-circulating producer fix (`45bf41bd8`) landed: the 07-18 capture
+ * replayed at clockSec 1784613600 against the committed tree, 335/335 rated
+ * assets observed over $331.50B, USDT+USDC at 77.65% of observed supply. The
+ * earlier re-derivation measured a reconstructed fact-set patch on a moving
+ * tree; this basis measures shipped producer code on a settled one. Full
+ * arithmetic:
+ * `agents/safety-score-v9/results/phase3-2026-07-20/d1-bar-derivation-2026-07-20.md`.
+ *
+ * D2A and D1 have moved from the original re-derivation. Every other threshold
+ * is carried forward unchanged: corrected denominators shifted the measured
+ * values but not the bars they are judged against. Two gates fail on this
+ * measurement and are recorded as activation targets rather than tuned to pass
+ * — D1 (0.3350 vs >=0.40) and D5B (7 vs >=8).
+ */
+const DISTRIBUTION_GATE_THRESHOLDS = {
+  // D1: RE-SET 2026-07-20 to the reachable range (owner ruling: "re-set to what
+  // is reachable, keep 50% as the post-activation target"). Measured 0.3350
+  // against a $74.081B ex-top-2 denominator, so the bar still FAILS by 6.50pp
+  // and is an activation target, not a tuned pass.
+  //
+  // Derivation of the ceiling. Of the $49.265B floored ex-top-2 supply, only
+  // $11.803B (48 assets) is a drainable evidence gap — every floored pillar sits
+  // exactly AT its bounded-unknown floor with only `missing-data`-classified
+  // reasons. The rest cannot be lifted by closing an evidence queue:
+  //   $26.811B (127) `unsupported-design` — routes reviewed, none comparable;
+  //   $6.595B  (102) strictly sub-floor    — a measured-weak fact, not a gap;
+  //   $4.057B  (6)   at-floor, no reason   — a measured value that coincides
+  //                                          with the floor (usde-ethena's
+  //                                          `external-lock-mint` bridge posture
+  //                                          scores exactly 45), i.e. fully
+  //                                          evidenced and misread by the
+  //                                          `score <= floor` test.
+  // So the absolute ceiling with every evidence gap in the corpus closed is
+  // ($24.816B + $11.803B) / $74.081B = 0.4943, and 0.50 is therefore NOT
+  // reachable by curation at all — it exceeds the ceiling. $4.493B of that gap
+  // further depends on the P1 per-chain RPC programme, leaving a curation-only
+  // ceiling of ($24.816B + $7.309B) / $74.081B = 0.4337.
+  //
+  // 0.40 is set below the curation-only ceiling so activation is not hostage to
+  // the P1 data programme: reaching it needs $4.816B of the $11.803B drainable
+  // gap closed (40.8% of the queue), leaving 3.37pp of margin on the curation
+  // path and 9.43pp once P1 lands. Drift caveat: the ex-top-2 denominator is
+  // still concentrated (dai-makerdao 6.55%, susds-sky 6.42%), so a single large
+  // asset staling out of the evidenced set exceeds the curation-path margin.
+  // 0.50 stays the post-activation target and requires a methodology change —
+  // the fund-type exit-cap counterfactual (ruling D-D) against the
+  // `unsupported-design` cohort, or correcting the floor-coincidence artifact —
+  // not more curation. 0.60 (derivation §4) remains the long-run target.
+  materialEvidenceCoverageExTop2Min: 0.4,
+  // D2A: raised 0.75 -> 0.95. The 0.75 bar was calibrated against the producer
+  // defect itself (57.31% observed); with the fix at 99.10% it would tolerate a
+  // 24pp collapse in supply observation without tripping, which makes the gate
+  // vacuous. 0.95 leaves ~13 assets of headroom on a 335-asset corpus.
+  supplyObservationCoverageMin: 0.95,
+  maxNrSupplyUsd: 50_000_000,
+  unattributedFCountMax: 25,
+  // D3B: measured 0.000488, ~2x headroom. Note this metric only clears the bar
+  // once the engine is re-evaluated on the restored supply; a supply-join that
+  // does not re-score reads 0.001332 and fails.
+  unattributedFSupplyShareMax: 0.001,
+  freeFloatingLargestBucketShareMax: 0.12,
+  freeFloatingLargestTupleShareMax: 0.12,
+  // D5A: measured 0.74. 0.60 is recorded as the post-activation tightening
+  // (derivation §4, D5) and is not applied while D1 and D5B are still open.
+  top50CMinusOrBetterShareMin: 0.5,
+  // D5B: measured 7 (FAILS by one). No asset got worse — `usat-tether` (B) was
+  // pushed to rank 54 by 18 newly-visible assets entering the top-50 window.
+  // The bar holds; the fragility of a fixed-rank-window count is recorded in
+  // the re-derivation note.
+  top50BMinusOrBetterCountMin: 8,
+  scoreIqrMin: 12,
+};
+/** D1 excludes the N largest assets by supply so the gate measures the corpus, not the duopoly. */
+const MATERIAL_COHORT_EXCLUDED_TOP_RANKS = 2;
+/** D5 cohort size — "where users actually look". */
+const MATERIAL_COHORT_SIZE = 50;
+/** Diagnostic-only alternative to ex-top-2 concentration handling (derivation §2.3). */
+const WINSORIZED_WEIGHT_CAP = 0.05;
+
+const PILLAR_KEYS = ["backing", "exit", "control"];
+const PILLAR_BOUNDED_UNKNOWN_FLOORS = {
+  backing: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.boundedUnknownQuality,
+  exit: V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore,
+  control: V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality,
+};
+const COMPROMISED_MINT_POSTURE_QUALITY =
+  V9_CANDIDATE_POLICY_V1.policy.semantic.control.mintPostureQuality["unbounded-or-compromised"];
+/**
+ * Owner confirmation outstanding (derivation §5.4 open question 4): this value
+ * separates `usda-alpha-partner` (0.910, unattributed) from 25 measured-adverse
+ * assets. It is part of the D3 predicate, not a tunable calibration knob.
+ */
+const MEASURED_PEG_MULTIPLIER_FLOOR = 0.9;
+const UNSUPPORTED_DESIGN_REASON_CODES = new Set(
+  V9_CANDIDATE_POLICY_V1.policy.reasonRegistry
+    .filter((entry) => entry.auditClassification === "unsupported-design")
+    .map((entry) => entry.code),
+);
+const UNRESOLVED_METHODOLOGY_REASON_CODES = new Set(
+  V9_CANDIDATE_POLICY_V1.policy.reasonRegistry
+    .filter((entry) => entry.auditClassification === "unresolved-methodology")
+    .map((entry) => entry.code),
+);
+const METHODOLOGY_BLOCKED_ARCHETYPES = new Set(["rwa-credit-fund", "synthetic-delta-neutral"]);
+const METHODOLOGY_BLOCKED_RESIDUAL_REASON = "bounded-mechanism-review";
+const GRADE_BANDS = { A: ["A+", "A", "A-"], B: ["B+", "B", "B-"], C: ["C+", "C", "C-"], D: ["D"], F: ["F"] };
+
 function stableStringify(value) {
   if (value === null) return "null";
   if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
@@ -343,6 +464,11 @@ export function computeCalibrationBaseInputGenerationId(input) {
     resolvedBlacklistStatuses: fixedInput.resolvedBlacklistStatuses,
     liveReserveMap: fixedInput.liveReserveMap,
     chainCirculatingById: fixedInput.chainCirculatingById,
+    // Absent must project as an empty map, not as an absent key: the fixed-input
+    // schema parses this through Zod `.default({})`, so a capture predating the
+    // aggregate-supply fallback reaches the real path as `{}`. Omitting the key
+    // here instead would diverge from the TS projection unconditionally.
+    aggregateCirculatingById: fixedInput.aggregateCirculatingById ?? {},
     dexDeploymentSupplyCoverageById: fixedInput.dexDeploymentSupplyCoverageById,
   });
   const scoreBearingFreshnessSha256 = domainDigest("report-cards.base-input.score-bearing-freshness.v1", {
@@ -851,7 +977,256 @@ export function evaluateRealACandidateChecks(card, evaluated, facts) {
   return { checks, evidenceFreshness, controls, passed: Object.values(checks).every(Boolean) };
 }
 
-function summarizeDistribution(replay) {
+function pillarsAtOrBelowFloor(card) {
+  return PILLAR_KEYS.filter((pillar) => card.pillars[pillar].score <= PILLAR_BOUNDED_UNKNOWN_FLOORS[pillar]).length;
+}
+
+function knownSupplyUsd(facts) {
+  const supply = facts?.supply;
+  return supply?.status?.observationState === "known" && typeof supply.circulatingUsd === "number"
+    ? supply.circulatingUsd
+    : null;
+}
+
+function isAdverseStructuralCapKind(kind) {
+  return (
+    kind === "parent" || kind.startsWith("active-depeg:") || (kind.startsWith("signal:") && kind.endsWith(":critical"))
+  );
+}
+
+/**
+ * D3 attribution predicate — derivation §3.1 class (a).
+ *
+ * An F grade is *attributed* when at least one driver below fires, i.e. the F is
+ * held by a measured adverse fact rather than by an evidence gap. D3 gates the
+ * complement (unattributed F), so softening measurement cannot satisfy it:
+ * blunting a driver moves an asset from attributed to unattributed and makes the
+ * gate worse.
+ *
+ * OWNER RULING 2026-07-20 — the STATED definition is authoritative. D3's
+ * unattributed count is every F not held by a measured adverse fact, i.e.
+ * derivation §3.1 class (b) PLUS class (c). The §3.2 headline table's "14" is
+ * the class-(b) row alone and is NOT the gate metric; do not narrow this
+ * predicate to match it. The four class-(c) methodology-blocked assets
+ * (`iauon-ondo`, `srusd-reservoir`, `wsrusd-reservoir`, `susd1plus-lorenzo`) are
+ * correctly counted, because a methodology capability gap leaves an F just as
+ * un-held by a measured fact as a curation gap does. On the basis the ruling was
+ * issued against that made the count 18 with a margin of 7 against `<= 25`, not
+ * 14 with a margin of 11. `distributionDiagnostics.fCohortClassCounts` publishes
+ * the b/c split so the narrower reading stays visible without becoming the gate.
+ *
+ * POLICY-FREEZE OUTSTANDING. The derivation is emphatic that this predicate must
+ * be frozen in policy alongside the gate, because an unfrozen predicate is a
+ * tunable knob on a release gate. It is deliberately written as one named, pure
+ * function of a card plus module-level policy-derived constants, so freezing is
+ * mechanical: lift the driver list into
+ * `shared/data/safety-score-v9/methodology-policy-candidate-v1.json` and read it
+ * here instead. Until that lands, treat any edit to this function as a
+ * methodology change, not a script tweak.
+ */
+export function measuredAdverseFDrivers(card) {
+  return {
+    // Measured mint posture `unbounded-or-compromised`, not an unknown posture.
+    compromisedMintPosture: card.pillars.control.score <= COMPROMISED_MINT_POSTURE_QUALITY,
+    // Measured-weak beats unknown: strictly below the bounded-unknown floor.
+    subFloorPillar: PILLAR_KEYS.some((pillar) => card.pillars[pillar].score < PILLAR_BOUNDED_UNKNOWN_FLOORS[pillar]),
+    measuredPegHistory: typeof card.pegMultiplier === "number" && card.pegMultiplier < MEASURED_PEG_MULTIPLIER_FLOOR,
+    bindingAdverseCap: card.caps.some((cap) => cap.binding && isAdverseStructuralCapKind(cap.kind)),
+    // Routes were reviewed and none is comparable — a finding, not a gap.
+    unsupportedExitDesign: (card.reasonCodes ?? []).some((code) => UNSUPPORTED_DESIGN_REASON_CODES.has(code)),
+  };
+}
+
+function isMeasuredAdverseF(card) {
+  return Object.values(measuredAdverseFDrivers(card)).some(Boolean);
+}
+
+/**
+ * Derivation §3.1 class (c): not measured-adverse, and blocked by a methodology
+ * capability gap rather than by curable curation. Diagnostic only — class (c)
+ * still counts as unattributed for D3, because it is not held by a measured fact.
+ */
+function isMethodologyBlockedF(card, facts) {
+  const reasonCodes = card.reasonCodes ?? [];
+  return (
+    reasonCodes.some((code) => UNRESOLVED_METHODOLOGY_REASON_CODES.has(code)) ||
+    (METHODOLOGY_BLOCKED_ARCHETYPES.has(facts?.archetype) && reasonCodes.includes(METHODOLOGY_BLOCKED_RESIDUAL_REASON))
+  );
+}
+
+function supplyBuckets(entries, keyOf, totalSupply) {
+  const buckets = new Map();
+  for (const entry of entries) {
+    const key = keyOf(entry);
+    const bucket = buckets.get(key) ?? { count: 0, supplyUsd: 0 };
+    bucket.count += 1;
+    bucket.supplyUsd += entry.supplyUsd ?? 0;
+    buckets.set(key, bucket);
+  }
+  return Object.fromEntries(
+    [...buckets.entries()]
+      .sort((left, right) => compareText(left[0], right[0]))
+      .map(([key, bucket]) => [
+        key,
+        {
+          count: bucket.count,
+          supplyUsd: round(bucket.supplyUsd, 2),
+          supplyShare: totalSupply > 0 ? round(bucket.supplyUsd / totalSupply) : null,
+        },
+      ]),
+  );
+}
+
+/**
+ * Distribution gates D1-D6 (derivation §4) plus their report-only companions
+ * (§4.2). Pure function of one replay plus the candidate policy file: no
+ * network, no external data, reproducible from a pinned input.
+ */
+function distributionGateMetrics(replay, rated, scoreQuartiles) {
+  const cards = replay.pipeline.candidate.cards;
+  const factsById = new Map(replay.pipeline.compiledFacts.assets.map((asset) => [asset.assetId, asset]));
+  const ratedRows = rated.map((card) => ({
+    card,
+    supplyUsd: knownSupplyUsd(factsById.get(card.id)),
+    floorCount: pillarsAtOrBelowFloor(card),
+  }));
+  const observed = ratedRows.filter((row) => row.supplyUsd !== null);
+  const observedSupply = observed.reduce((sum, row) => sum + row.supplyUsd, 0);
+  const bySupply = [...observed].sort(
+    (left, right) => right.supplyUsd - left.supplyUsd || compareText(left.card.id, right.card.id),
+  );
+
+  // D1 — material-cohort evidence coverage, supply-weighted, ex-top-2.
+  const exTopRanks = bySupply.slice(MATERIAL_COHORT_EXCLUDED_TOP_RANKS);
+  const exTopSupply = exTopRanks.reduce((sum, row) => sum + row.supplyUsd, 0);
+  const exTopEvidenced = exTopRanks.filter((row) => row.floorCount === 0).reduce((sum, row) => sum + row.supplyUsd, 0);
+
+  // D2 — supply-observation coverage and NR materiality.
+  const nrSupplies = cards
+    .filter((card) => card.grade === "NR")
+    .map((card) => knownSupplyUsd(factsById.get(card.id)) ?? 0);
+
+  // D3 — under-evidenced F.
+  const fCards = rated.filter((card) => card.grade === "F");
+  const unattributedF = fCards.filter((card) => !isMeasuredAdverseF(card));
+  const unattributedFSupply = unattributedF.reduce(
+    (sum, card) => sum + (knownSupplyUsd(factsById.get(card.id)) ?? 0),
+    0,
+  );
+
+  // D4 — discrimination among assets policy leaves free to float.
+  const freeFloating = rated.filter((card) => !card.caps.some((cap) => cap.binding));
+  const freeFloatingBuckets = countsBy(freeFloating, (card) => String(card.score));
+  const freeFloatingTuples = countsBy(
+    freeFloating,
+    (card) => `${card.pillars.backing.score}/${card.pillars.exit.score}/${card.pillars.control.score}`,
+  );
+  const freeFloatingShare = (entries) =>
+    freeFloating.length > 0 && entries.length > 0 ? round(entries[0].count / freeFloating.length) : null;
+
+  // D5 — material-cohort sanity over the top 50 rated assets by supply.
+  const materialCohort = bySupply.slice(0, MATERIAL_COHORT_SIZE).map((row) => row.card);
+  const atOrAbove = (grade) =>
+    materialCohort.filter((card) => GRADE_ORDER.indexOf(card.grade) <= GRADE_ORDER.indexOf(grade)).length;
+
+  // Diagnostic — 5% winsorized weights, the alternative concentration handling.
+  const winsorizedWeights = observed.map((row) => ({
+    row,
+    weight: observedSupply > 0 ? Math.min(row.supplyUsd / observedSupply, WINSORIZED_WEIGHT_CAP) : 0,
+  }));
+  const winsorizedTotal = winsorizedWeights.reduce((sum, entry) => sum + entry.weight, 0);
+  const winsorizedEvidenced = winsorizedWeights
+    .filter((entry) => entry.row.floorCount === 0)
+    .reduce((sum, entry) => sum + entry.weight, 0);
+
+  return {
+    gated: {
+      materialEvidenceCoverageExTop2: exTopSupply > 0 ? round(exTopEvidenced / exTopSupply) : null,
+      supplyObservationCoverage: rated.length > 0 ? round(observed.length / rated.length) : null,
+      maxNrSupplyUsd: nrSupplies.length > 0 ? round(Math.max(...nrSupplies), 2) : 0,
+      unattributedFCount: unattributedF.length,
+      unattributedFSupplyShare: observedSupply > 0 ? round(unattributedFSupply / observedSupply) : null,
+      freeFloatingLargestBucketShare: freeFloatingShare(freeFloatingBuckets),
+      freeFloatingLargestTupleShare: freeFloatingShare(freeFloatingTuples),
+      top50CMinusOrBetterShare: materialCohort.length > 0 ? round(atOrAbove("C-") / materialCohort.length) : null,
+      top50BMinusOrBetterCount: atOrAbove("B-"),
+      scoreIqr: scoreQuartiles.iqr,
+    },
+    diagnostics: {
+      observedSupplyUsd: round(observedSupply, 2),
+      observedSupplyAssetCount: observed.length,
+      freeFloatingCount: freeFloating.length,
+      freeFloatingLargestBucket: freeFloatingBuckets[0] ?? null,
+      freeFloatingLargestTuple: freeFloatingTuples[0] ?? null,
+      materialCohortSize: materialCohort.length,
+      unattributedFAssetIds: unattributedF.map((card) => card.id).sort(compareText),
+      capLimitPinCounts: countsBy(
+        rated.filter((card) => card.bindingCap !== null),
+        (card) => String(card.bindingCap.limit),
+      ),
+      supplyShareByGradeBand: supplyBuckets(
+        ratedRows,
+        (row) => Object.keys(GRADE_BANDS).find((band) => GRADE_BANDS[band].includes(row.card.grade)) ?? "other",
+        observedSupply,
+      ),
+      supplyShareByFloorState: supplyBuckets(ratedRows, (row) => String(row.floorCount), observedSupply),
+      fCohortClassCounts: {
+        a: fCards.filter((card) => isMeasuredAdverseF(card)).length,
+        b: unattributedF.filter((card) => !isMethodologyBlockedF(card, factsById.get(card.id))).length,
+        c: unattributedF.filter((card) => isMethodologyBlockedF(card, factsById.get(card.id))).length,
+      },
+      winsorizedEvidenceCoverage: winsorizedTotal > 0 ? round(winsorizedEvidenced / winsorizedTotal) : null,
+    },
+  };
+}
+
+/**
+ * Gate booleans D1-D6 over the metrics above. A null metric fails closed.
+ *
+ * NOTE: D2 is derived as the replacement for the `ratedSupplyShare >= 0.9999`
+ * clause inside the preserved `coverage` gate (derivation §4, D2). That clause
+ * is deliberately left in place here — retiring it is outside this lane's scope
+ * and needs the owner ruling that reconciles `coverage` as a whole.
+ */
+function distributionGates(metrics) {
+  const atLeast = (value, minimum) => value !== null && value >= minimum;
+  const atMost = (value, maximum) => value !== null && value <= maximum;
+  return {
+    d1MaterialEvidenceCoverageExTop2: atLeast(
+      metrics.materialEvidenceCoverageExTop2,
+      DISTRIBUTION_GATE_THRESHOLDS.materialEvidenceCoverageExTop2Min,
+    ),
+    d2aSupplyObservationCoverage: atLeast(
+      metrics.supplyObservationCoverage,
+      DISTRIBUTION_GATE_THRESHOLDS.supplyObservationCoverageMin,
+    ),
+    d2bMaxNrSupplyUsd: atMost(metrics.maxNrSupplyUsd, DISTRIBUTION_GATE_THRESHOLDS.maxNrSupplyUsd),
+    d3aUnattributedFCount: atMost(metrics.unattributedFCount, DISTRIBUTION_GATE_THRESHOLDS.unattributedFCountMax),
+    d3bUnattributedFSupplyShare: atMost(
+      metrics.unattributedFSupplyShare,
+      DISTRIBUTION_GATE_THRESHOLDS.unattributedFSupplyShareMax,
+    ),
+    d4aFreeFloatingLargestBucketShare: atMost(
+      metrics.freeFloatingLargestBucketShare,
+      DISTRIBUTION_GATE_THRESHOLDS.freeFloatingLargestBucketShareMax,
+    ),
+    d4bFreeFloatingLargestTupleShare: atMost(
+      metrics.freeFloatingLargestTupleShare,
+      DISTRIBUTION_GATE_THRESHOLDS.freeFloatingLargestTupleShareMax,
+    ),
+    d5aTop50CMinusOrBetterShare: atLeast(
+      metrics.top50CMinusOrBetterShare,
+      DISTRIBUTION_GATE_THRESHOLDS.top50CMinusOrBetterShareMin,
+    ),
+    d5bTop50BMinusOrBetterCount: atLeast(
+      metrics.top50BMinusOrBetterCount,
+      DISTRIBUTION_GATE_THRESHOLDS.top50BMinusOrBetterCountMin,
+    ),
+    d6ScoreIqr: atLeast(metrics.scoreIqr, DISTRIBUTION_GATE_THRESHOLDS.scoreIqrMin),
+  };
+}
+
+export function summarizeDistribution(replay) {
   const cards = replay.pipeline.candidate.cards;
   const evaluatedById = new Map(replay.pipeline.evaluatedSet.assets.map((asset) => [asset.assetId, asset]));
   const rated = cards.filter((card) => card.grade !== "NR");
@@ -872,6 +1247,14 @@ function summarizeDistribution(replay) {
     (sum, card) => sum + (evaluatedById.get(card.id)?.stressState?.exitPortfolio?.circulatingUsd ?? 0),
     0,
   );
+  const scoreQuartiles = {
+    p25: quantile(scores, 0.25),
+    p75: quantile(scores, 0.75),
+    iqr: scores.length > 0 ? round(quantile(scores, 0.75) - quantile(scores, 0.25)) : null,
+  };
+  const rawLargestTupleShare = pillarTuples.length > 0 ? pillarTuples[0].count / rated.length : null;
+  const rawLargestBucketShare = scoreBuckets.length > 0 ? scoreBuckets[0].count / rated.length : null;
+  const gateMetrics = distributionGateMetrics(replay, rated, scoreQuartiles);
   return {
     expectedCount: cards.length,
     ratedCount: rated.length,
@@ -884,13 +1267,16 @@ function summarizeDistribution(replay) {
     cMinusOrBetter: rated.filter((card) => GRADE_ORDER.indexOf(card.grade) <= GRADE_ORDER.indexOf("C-")).length,
     bMinusOrBetter: rated.filter((card) => GRADE_ORDER.indexOf(card.grade) <= GRADE_ORDER.indexOf("B-")).length,
     largestPillarTuple: pillarTuples[0] ?? null,
-    largestPillarTupleShare: pillarTuples.length > 0 ? pillarTuples[0].count / rated.length : null,
+    largestPillarTupleShare: rawLargestTupleShare,
     largestScoreBucket: scoreBuckets[0] ?? null,
-    largestScoreBucketShare: scoreBuckets.length > 0 ? scoreBuckets[0].count / rated.length : null,
-    scoreQuartiles: {
-      p25: quantile(scores, 0.25),
-      p75: quantile(scores, 0.75),
-      iqr: scores.length > 0 ? round(quantile(scores, 0.75) - quantile(scores, 0.25)) : null,
+    largestScoreBucketShare: rawLargestBucketShare,
+    scoreQuartiles,
+    distributionMetrics: gateMetrics.gated,
+    distributionDiagnostics: {
+      ...gateMetrics.diagnostics,
+      rawLargestBucketShare: rawLargestBucketShare === null ? null : round(rawLargestBucketShare),
+      rawLargestTupleShare: rawLargestTupleShare === null ? null : round(rawLargestTupleShare),
+      gradeHistogram: histogram,
     },
   };
 }
@@ -1398,14 +1784,12 @@ export function analyzeV9Calibration(baseline, candidate, fridayEvidence = {}) {
       distribution.ratedSupplyShare !== null &&
       distribution.ratedSupplyShare >= 0.9999,
     realA: realA.length > 0,
-    fAtMost180: distribution.histogram.F <= 180,
-    cMinusOrBetterAtLeast35: distribution.cMinusOrBetter >= 35,
-    bMinusOrBetterAtLeast5: distribution.bMinusOrBetter >= 5,
-    largestPillarTupleAtMost20Pct:
-      distribution.largestPillarTupleShare !== null && distribution.largestPillarTupleShare <= 0.2,
-    largestScoreBucketAtMost15Pct:
-      distribution.largestScoreBucketShare !== null && distribution.largestScoreBucketShare <= 0.15,
-    scoreIqrAtLeast12: distribution.scoreQuartiles.iqr !== null && distribution.scoreQuartiles.iqr >= 12,
+    // D1-D6 (derivation §4) replace the retired legacy distribution gates
+    // `fAtMost180`, `cMinusOrBetterAtLeast35`, `bMinusOrBetterAtLeast5`,
+    // `largestPillarTupleAtMost20Pct`, `largestScoreBucketAtMost15Pct` and
+    // `scoreIqrAtLeast12`. Thresholds are provisional — see
+    // DISTRIBUTION_GATE_THRESHOLDS.
+    ...distributionGates(distribution.distributionMetrics),
     adverseControlsUnchanged: adverseControls.every((control) => !control.lifted),
     compositeAPlus: composite.passed,
     threeFreshCaptures,

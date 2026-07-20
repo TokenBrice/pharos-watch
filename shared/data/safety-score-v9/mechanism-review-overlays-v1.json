@@ -5640,7 +5640,7 @@
         "totalAssetsEur": 6810306.2,
         "totalShares": 6832189.70071,
         "navPerShareEur": 0.996797,
-        "navBufferPct": 4.3e-8
+        "navBufferPct": 4.3e-08
       },
       "components": {
         "venueAndCustody": {
@@ -7165,7 +7165,7 @@
         },
         {
           "venueKey": "hyperliquid",
-          "share": 0.000019,
+          "share": 1.9e-05,
           "failureDomains": [
             {
               "kind": "dex-protocol",
@@ -7457,7 +7457,7 @@
         "totalAssetsUsdc": 10696286.730934,
         "totalSupplyShares": 10712859.371583354,
         "navPerShareUsdc": 0.998453,
-        "navBufferPct": 0.00000143
+        "navBufferPct": 1.43e-06
       },
       "components": {
         "venueAndCustody": {
@@ -7944,7 +7944,7 @@
       "notes": "BIMA (bima-v1-core, Liquity-style multi-collateral CDP): per-collateral TroveManagers registered behind BorrowerOperations 0x87FED36c032EE7289a1d2f3C48798e4C7fCDfAEc; StabilityPool 0x5F2283c7C8967c5Fb3a959E63ea89865B882d627; DebtToken (USBD) 0x6bedE1c6009a78c222D9BDb7974bb67847fdB68c (same address on every chain); addresses from the official mainnet.md. Reads via cast eth_call at pinned blocks. Hemi block 4888613 (https://rpc.hemi.network/rpc): getTCR() = 1.159446855465023757; fetchBalances() shows 6 registered collaterals, two funded - idx3 0.01726035 and idx5 100.00421028 wrapped-BTC units, all priced $64,087.91 -> $6.41M collateral vs 5,528,642 USBD system debt. Ethereum block 25572229 (https://ethereum-rpc.publicnode.com): getTCR() = 1.731981202183397313; 0.01818855 wrapped WBTC x $63,774.35 = $1,160 vs 669.73 USBD debt. Sonic (block 76222612), Plume (82209576), BSC (111045598), Nibiru (43391769): zero vault debt (BSC getTCR returns uint256 max from zero-debt division; Plume oracle call reverts). Aggregate collateralizationRatio = (6,410,167 + 1,160) / (5,528,642 + 670) = 1.1595, Hemi-dominated. liquidationCapacityRatio = global StabilityPool deposits / global system debt = 11.84 USBD (Ethereum pool only; Hemi/Sonic/Plume/BSC/Nibiru pools = 0) / 5,529,312 USBD = 0.0000021 - the pool is effectively empty, so liquidations rely on external liquidators (0.5% + 200 USBD bounty) with defaulted-debt redistribution as fallback. Measured Hemi TCR 115.9% is BELOW the documented 160% CCR, i.e. the system sits inside its own recovery-mode band. Parameters (configuration-details): MCR 150%, CCR 160%, per-TroveManager debt ceilings, redemption fee coreRate + 0.75%, PSM 1:1 stablecoin swaps. NOT established: (1) Ethereum DebtToken totalSupply is 4.002B USBD but 4 wallets hold exactly 1B each (99.96%, Ethplorer) - pre-minted/non-circulating, while vault debt there is only 670 USBD and DefiLlama counts ~$7.5M circulating globally; issuer has not documented this pre-mint. (2) PSM stablecoin reserves: no PSM address appears in the official address list, so any PSM-minted USBD and its 1:1 stable collateral are EXCLUDED from the aggregate CR (conservative). (3) Which specific BTC LSTs back the funded Hemi branches. (4) Actual liquidation throughput with an empty stability pool.",
       "metrics": {
         "collateralizationRatio": 1.1595,
-        "liquidationCapacityRatio": 0.0000021
+        "liquidationCapacityRatio": 2.1e-06
       },
       "components": {
         "collateralizationParameters": {
@@ -9434,7 +9434,7 @@
       },
       "analogousMetrics": {
         "firmCollateralToTotalSupplyRatio": 0.55609,
-        "jrDolaFirstLossCoverageRatio": 0.00001431,
+        "jrDolaFirstLossCoverageRatio": 1.431e-05,
         "psmReservesDola": 0
       },
       "components": {
@@ -11674,6 +11674,778 @@
         },
         "assuranceAndReconciliation": {
           "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "sdai-sky",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Spark Savings documentation (legacy sDAI is an ERC-4626 DAI Savings Rate vault; no lockup; vault shares redeem into the underlying asset)",
+          "url": "https://docs.spark.fi/products/spark-savings"
+        },
+        {
+          "label": "Sky Vow documentation (upstream DAI system surplus buffer, debt queue, and debt-auction backstop)",
+          "url": "https://developers.skyeco.com/protocol/core/vow/"
+        },
+        {
+          "label": "Sky collateral-liquidation documentation (upstream DAI Dog and Clipper system)",
+          "url": "https://developers.skyeco.com/protocol/vaults/collateral-liquidation/"
+        },
+        {
+          "label": "Sky archived End documentation, marked deprecated (upstream shutdown limitation)",
+          "url": "https://developers.skyeco.com/archive/shutdown/shutdown/"
+        },
+        {
+          "label": "Ethereum PublicNode RPC used for pinned ERC-4626 eth_call reads at finalized block 25575027",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ],
+      "notes": "Reviewed 2026-07-20. sDAI is the legacy ERC-4626 savings wrapper over DAI and does not originate collateralized debt or operate a liquidation pool, so both CDP metrics and the two local origination components are structurally not applicable; DAI system risk remains upstream. At finalized Ethereum block 25575027 (hash 0x5fb037404fcfce25155c54e0abc4a42f1d56e5d7aa43950288e8748ffc9fda81, 2026-07-20T16:09:59Z), asset() on 0x83f20f44975d03b1b09e64809b757c47f942beea returned canonical DAI 0x6b175474e89094c44da98b954eedeac495271d0f; totalSupply was 147,076,552.306635 shares, totalAssets was 173,296,779.685168 DAI, and convertToAssets(totalSupply) equaled totalAssets exactly, a 1.178276 DAI-per-share conversion rate. This full-supply reconciliation plus the documented no-lockup ERC-4626 withdrawal path supports adequate structural redemption into DAI, without claiming a fiat exit. The wrapper has no independent cushion, branch controls, or shutdown facility, so backstop, branch isolation, and shutdown/bad-debt remain limited and serial to the separately reviewed DAI system. NOT established: Base and Optimism sDAI representations were not measured; the savings-rate accrual source was not independently reconciled to Sky revenue; no wrapper-specific insurance, emergency settlement, or legal redemption claim was found.",
+      "metrics": {
+        "collateralizationRatio": null,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "not-applicable",
+          "rationale": "sDAI is an ERC-4626 savings wrapper over DAI and does not originate a separate collateralized debt system; collateralization risk remains in the DAI parent.",
+          "sourceUrl": "https://docs.spark.fi/products/spark-savings"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "sDAI creates no borrower positions and operates no liquidation pool; DAI liquidations occur in the upstream Sky system.",
+          "sourceUrl": "https://docs.spark.fi/products/spark-savings"
+        }
+      },
+      "analogousMetrics": {
+        "underlyingDaiConversionRatio": 1.178276,
+        "wrapperBackingRatio": 1
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "not-applicable",
+          "rationale": "sDAI is an ERC-4626 savings share over DAI and has no local collateralization parameters.",
+          "sourceUrl": "https://docs.spark.fi/products/spark-savings"
+        },
+        "liquidationMechanics": {
+          "applicability": "not-applicable",
+          "rationale": "The wrapper does not create borrower positions or liquidate collateral; those mechanics live in the DAI parent system.",
+          "sourceUrl": "https://docs.spark.fi/products/spark-savings"
+        },
+        "backstop": {
+          "quality": "limited"
+        },
+        "branchIsolation": {
+          "quality": "limited"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "stcusd-cap",
+      "archetype": "rwa-credit-fund",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Cap stcUSD lending mechanics (cUSD staking, overcollateralized operator borrowing, liquidation redistribution, and withdrawal-liquidity design)",
+          "url": "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics"
+        },
+        {
+          "label": "Cap Vault documentation (oracle-valued mint/burn, proportional-basket redemption, regulated-asset whitelist, and reserve deployment)",
+          "url": "https://docs.cap.app/concepts/vault"
+        },
+        {
+          "label": "Cap Lender documentation (50% initial LTV, 80% liquidation threshold, grace/expiry rules, underwriting collateral, and Insurance Fund)",
+          "url": "https://docs.cap.app/concepts/lender"
+        },
+        {
+          "label": "WisdomTree Treasury Money Market Digital Fund SEC Form N-MFP3 for 2026-06-30 (43-day average portfolio maturity and 100% daily liquidity)",
+          "url": "https://www.sec.gov/Archives/edgar/data/1859001/000119312526296145/primary_doc.xml"
+        },
+        {
+          "label": "Cap cUSD real-time reserves dashboard",
+          "url": "https://cap.app/vault/reserves/cUSD"
+        },
+        {
+          "label": "Ethereum PublicNode RPC used for pinned stcUSD ERC-4626 reads at finalized block 25575027",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ],
+      "notes": "Reviewed 2026-07-20 as an ERC-4626 staking wrapper whose ultimate portfolio is the separately measured cUSD reserve and operator-lending system. At finalized Ethereum block 25575027 (hash 0x5fb037404fcfce25155c54e0abc4a42f1d56e5d7aa43950288e8748ffc9fda81, 2026-07-20T16:09:59Z), asset() on stcUSD 0x88887be419578051ff9f4eb6c858a951921d8888 returned cUSD 0xcccc62962d17b8914c62d74ffb843d73b2a3cccc; totalSupply was 59,602,036.700162 shares, totalAssets was 63,864,856.209207 cUSD, and convertToAssets(totalSupply) differed from totalAssets by one wei, a 1.071521 cUSD-per-share rate. weightedAverageMaturityDays 3.023155 and valuationCadenceDays 0 inherit the same-day cUSD portfolio measurement: 92.9694% demand USDC treated as zero-day and 7.0306% WTGXX multiplied by the fund's SEC-filed 43-day average maturity, with continuous oracle-valued accounting. Cap documents a regulated-asset whitelist, 2x initial borrower collateralization, liquidation redistribution, an Insurance Fund, and atomic proportional-basket redemption; together with measured on-chain custody and wrapper reconciliation this supports adequate credit quality, valuation cadence, maturity/liquidity, and custody. Seniority and recovery remain limited because stcUSD holder priority, current underwriting collateral, the Insurance Fund balance, and realized liquidation performance were not measured. NOT established: a legally enforceable stcUSD holder claim or bankruptcy-remote issuer, current per-operator exposure and collateral coverage, the wrapper's loss priority relative to unstaked cUSD, or maturity transformation from deployed fractional-reserve strategies; legalEnforceability is therefore omitted.",
+      "metrics": {
+        "weightedAverageMaturityDays": 3.023155,
+        "valuationCadenceDays": 0
+      },
+      "analogousMetrics": {
+        "underlyingCusdConversionRatio": 1.071521,
+        "wrapperBackingRatio": 1
+      },
+      "components": {
+        "creditQuality": {
+          "quality": "adequate"
+        },
+        "seniority": {
+          "quality": "limited"
+        },
+        "valuationCadence": {
+          "quality": "adequate"
+        },
+        "maturityAndLiquidity": {
+          "quality": "adequate"
+        },
+        "custody": {
+          "quality": "adequate"
+        },
+        "recovery": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "syusd-aegis",
+      "archetype": "synthetic-delta-neutral",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Aegis primary product disclosure (BTC spot plus matching COIN-M futures hedge and named custody providers)",
+          "url": "https://aegis.im/"
+        },
+        {
+          "label": "Aegis Accountable signed YUSD dashboard snapshot (reserves, supply, and insurance-fund balance)",
+          "url": "https://aegis.accountable.capital:10443/dashboard/YUSD"
+        },
+        {
+          "label": "Aegis sYUSD documentation (YUSD staking wrapper and seven-day unstaking cooldown)",
+          "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
+        },
+        {
+          "label": "Ethereum PublicNode RPC used for pinned sYUSD ERC-4626 reads at finalized block 25575027",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ],
+      "notes": "sYUSD is the yield-bearing wrapper of YUSD and runs no separate hedge, so its required synthetic metrics use the same parent-system evidence. The signed Accountable snapshot at 2026-07-20T16:32:34.825Z reports $36,105,482.81 of reserves excluding the Insurance Fund against $35,982,081.75 of supply and a separate $609,283.03 Insurance Fund: marginBufferPct 0.3429514191462868 is aggregate excess backing, not venue margin headroom, and lossAbsorptionShare 0.0169329566375075 is the Insurance Fund divided by supply. hedgeCoverageRatio 1 records Aegis's explicitly documented policy of matching BTC spot with COIN-M futures shorts; it is a policy value, not a position-level observation. At finalized Ethereum block 25575027, asset() on sYUSD 0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64 returned YUSD 0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a, totalSupply was 12,352,583.012268 shares, totalAssets was 12,911,668.505726 YUSD, and convertToAssets(totalSupply) matched totalAssets within one wei, a 1.045261 YUSD-per-share rate. Current primary disclosures support limited venue/custody, hedge-reconciliation, funding/basis-stress, and loss-absorption reviews because they establish the mechanism and aggregate balances but not the detailed stress and execution state required for a higher tier. marginAndLiquidation and unwindCapacity are omitted rather than inferred. NOT established: position-level net delta, hedge notionals or venue shares, leverage, initial/maintenance margin, liquidation thresholds, a quantified funding stress test, executable unwind or redemption capacity, custody segregation or legal terms, or the insurance-fund loss waterfall.",
+      "metrics": {
+        "hedgeCoverageRatio": 1,
+        "marginBufferPct": 0.3429514191462868,
+        "lossAbsorptionShare": 0.0169329566375075
+      },
+      "analogousMetrics": {
+        "underlyingYusdConversionRatio": 1.045261,
+        "wrapperBackingRatio": 1
+      },
+      "components": {
+        "venueAndCustody": {
+          "quality": "limited"
+        },
+        "hedgeReconciliation": {
+          "quality": "limited"
+        },
+        "fundingBasisStress": {
+          "quality": "limited"
+        },
+        "lossAbsorption": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "usde-ethena",
+      "archetype": "synthetic-delta-neutral",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Ethena collateralization status API snapshot at 2026-07-20 16:00:16 UTC (backing assets, token supply, and Reserve Fund)",
+          "url": "https://app.ethena.fi/api/collateralization/status"
+        },
+        {
+          "label": "Ethena weekly proof-of-reserves API (2026-07-17 deltaNeutral and overCollateralized confirmations by Harris & Trotter, Chainlink, and LlamaRisk)",
+          "url": "https://app.ethena.fi/api/por"
+        },
+        {
+          "label": "Ethena backing-asset custody documentation (Copper and Ceffu OES providers and hedge adjustment with mint/redeem flows)",
+          "url": "https://docs.ethena.fi/solution-design/backing-asset-custody"
+        },
+        {
+          "label": "Ethena funding-risk documentation (negative-funding response, dynamic allocation, and Reserve Fund use)",
+          "url": "https://docs.ethena.fi/solution-overview/risks/funding-risk"
+        },
+        {
+          "label": "Ethena Reserve Fund documentation (negative-funding coverage and last-resort open-market support)",
+          "url": "https://docs.ethena.fi/solution-design/reserve-fund"
+        },
+        {
+          "label": "Ethena mint/redeem contract documentation (atomic execution, supported assets, custodian routes, and per-block limits)",
+          "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+        }
+      ],
+      "notes": "Reviewed 2026-07-20 using the same current parent-system evidence already accepted for the live sUSDe mechanism review. hedgeCoverageRatio 1 is an attested policy-state value: Ethena's 2026-07-17 weekly PoR marks deltaNeutral=true and overCollateralized=true with confirmations from Harris & Trotter, Chainlink, and LlamaRisk; position-level notionals are not published. The collateralization API snapshot at 2026-07-20 16:00:16 UTC reports $4,012,242,125.44 backing against $4,008,043,480.5194864 token supply, giving marginBufferPct 0.104755 as the protocol-wide excess-backing buffer, not per-venue margin headroom. Reserve Fund assets of $62,095,100.46669457 divided by supply give lossAbsorptionShare 0.015493. Ethena documents off-exchange custody with providers including Copper and Ceffu, programmatic hedge adjustment as supply changes, dynamic allocation during adverse funding, a Reserve Fund that absorbs negative revenue before core backing, and bounded atomic mint/redeem operations. Those current measurements and independent weekly confirmations support adequate ratings across the six reviewed components, consistent with the same-system sUSDe precedent. NOT established: per-venue hedge notionals and shares, account-level segregation and legal treatment at each custodian, initial/maintenance margin and liquidation thresholds, executable stressed unwind depth, or a guarantee that the Reserve Fund will be replenished (its allocation remains governance-controlled).",
+      "metrics": {
+        "hedgeCoverageRatio": 1,
+        "marginBufferPct": 0.104755,
+        "lossAbsorptionShare": 0.015493
+      },
+      "components": {
+        "venueAndCustody": {
+          "quality": "adequate"
+        },
+        "hedgeReconciliation": {
+          "quality": "adequate"
+        },
+        "fundingBasisStress": {
+          "quality": "adequate"
+        },
+        "marginAndLiquidation": {
+          "quality": "adequate"
+        },
+        "unwindCapacity": {
+          "quality": "adequate"
+        },
+        "lossAbsorption": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "zys-zephyr-protocol",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Zephyr protocol documentation (native ZYS asset type and wallet-RPC conversion between native asset types)",
+          "url": "https://zephyrprotocol.com/documentation"
+        },
+        {
+          "label": "Zephyr ZSD Yield Mechanism page (ZYS is a share of the ZSD yield reserve)",
+          "url": "https://zephyrprotocol.com/yield"
+        },
+        {
+          "label": "Zephyr protocol reserve snapshot API at reserve height 822991 (ZSD yield reserve, ZYS circulation, yield price, and parent reserve ratios)",
+          "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
+        },
+        {
+          "label": "Zephyr whitepaper (underlying Minimal-Djed reserve, redemption, and reserve-share rules)",
+          "url": "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf"
+        }
+      ],
+      "notes": "Reviewed 2026-07-20. ZYS is a native yield-share claim on Zephyr's ZSD yield reserve, not a borrower-facing CDP, so it has no local collateralization parameters, borrowing positions, liquidation engine, system collateralization ratio, or committed liquidation pool. Those local CDP metrics and components are therefore structurally not applicable; ultimate ZSD solvency remains serial to the separately reviewed ZSD reserve mechanism. Zephyr's self-reported scanner snapshot captured 2026-07-19T23:46:28Z at reserve height 822991 reports 355,777.179070 ZSD in the yield reserve against 183,232.761929 ZYS, or 1.941668 ZSD per ZYS, while the upstream ZSD reserve ratios were 4.910867 spot and 4.537806 moving-average. Documentation identifies ZYS as a yield-reserve share and wallet RPC conversions as transfers between native asset types, but no independent assurance or executable conversion-capacity observation is available; backstop, branch isolation, shutdown/bad-debt, and structural redemption are therefore limited rather than credited from the parent. NOT established: independent verification of the scanner state, the ZYS conversion fee and capacity at a pinned native-chain transaction, yield-reserve segregation from broader protocol liabilities, oracle operator identity, a ZYS-specific loss waterfall, or any shutdown/wind-down process.",
+      "metrics": {
+        "collateralizationRatio": null,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "not-applicable",
+          "rationale": "ZYS is a yield-share claim on the ZSD yield reserve and does not originate a separate collateralized debt system; the ZSD parent carries the reserve ratio.",
+          "sourceUrl": "https://zephyrprotocol.com/yield"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "ZYS creates no borrowing positions and has no liquidation engine or debt-offset pool; native conversions settle against the yield reserve.",
+          "sourceUrl": "https://zephyrprotocol.com/documentation"
+        }
+      },
+      "analogousMetrics": {
+        "underlyingZsdPerZys": 1.941668,
+        "yieldReserveZsd": 355777.17907,
+        "parentZsdReserveRatio": 4.910867,
+        "parentZsdReserveRatioMa": 4.537806
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "not-applicable",
+          "rationale": "ZYS is a native yield-reserve share and has no local collateralization parameters or borrower positions.",
+          "sourceUrl": "https://zephyrprotocol.com/yield"
+        },
+        "liquidationMechanics": {
+          "applicability": "not-applicable",
+          "rationale": "The yield-share mechanism creates no debt positions and liquidates no collateral.",
+          "sourceUrl": "https://zephyrprotocol.com/documentation"
+        },
+        "backstop": {
+          "quality": "limited"
+        },
+        "branchIsolation": {
+          "quality": "limited"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "acred-apollo-securitize",
+      "archetype": "rwa-credit-fund",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Securitize ACRED launch disclosure: feeder structure, daily-NAV native redemptions, and Securitize fund administration",
+          "url": "https://investors.securitize.io/news/news-details/2025/Apollo-and-Securitize-Announce-Partnership-and-Launch-Tokenized-Access-to-Credit-Fund-on-Aptos-Avalanche-Ethereum-Ink-Polygon-and-Solana-Networks-01-30-2025/default.aspx"
+        },
+        {
+          "label": "SEC Form D for Securitize Tokenized Apollo Diversified Credit Fund, Ltd.",
+          "url": "https://www.sec.gov/Archives/edgar/data/2056038/000205603825000001/xslFormDX01/primary_doc.xml"
+        },
+        {
+          "label": "Apollo Diversified Credit Fund N-PORT-P as of 2026-03-31, used for the position-weighted stated-maturity calculation",
+          "url": "https://www.sec.gov/Archives/edgar/data/1676197/000104916926001344/primary_doc.xml"
+        },
+        {
+          "label": "Apollo Diversified Credit Fund 2025 annual report: daily NAV, portfolio quality, liquidity terms, administrator, custodian, and audit",
+          "url": "https://www.sec.gov/Archives/edgar/data/1676197/000139834426004660/fp0097839-1_ncsr.htm"
+        }
+      ],
+      "notes": "ACRED is a pooled-investment-fund interest issued by Securitize Tokenized Apollo Diversified Credit Fund, Ltd., a BVI business company whose SEC Form D states that it is not registered under the Investment Company Act. Securitize states that the vehicle invests substantially all assets in Apollo Diversified Credit Fund (ADCF), provides native redemption at daily NAV, and uses Securitize as digital transfer agent and fund administrator. The underlying ADCF is an SEC-registered closed-end interval fund. Its 2025 annual report reports 246 portfolio companies, 96.9% senior-secured exposure, 81.1% floating-rate exposure, 30.4% leverage, daily NAV, ALPS Fund Services as administrator/accounting agent, Bank of New York Mellon Trust Company, N.A. as custodian, Deloitte as auditor, and quarterly repurchase offers for no less than 5% of shares. creditQuality is adequate, following the accepted acrdx-anemoy-apollo precedent for the same ADCF portfolio: binding SEC portfolio reporting establishes a diversified, predominantly senior-secured loan book, but leverage and the performing, dislocated, structured-credit, and asset-backed mandate prevent a strong tier. valuationCadence is adequate because the underlying registered fund has daily NAV administered by ALPS and Securitize expressly offers ACRED native redemptions at daily NAV; the ACRED on-chain oracle update process was not independently measured. seniority, legalEnforceability, maturityAndLiquidity, custody, and recovery are limited: the public evidence establishes a feeder interest, the underlying interval-fund liquidity constraint, and the underlying custodian, but not ACRED's private offering terms, feeder-level asset custody, gates, claim priority, or wind-down waterfall. weightedAverageMaturityDays is 1840, the same underlying-fund measurement accepted for acrdx-anemoy-apollo: value-weighted days to stated maturity from the ADCF N-PORT-P as of 2026-03-31, renormalized over the 97.4% of positive long exposure carrying maturity dates (raw 1,839.6 days). valuationCadenceDays is 1 from the documented daily NAV. What was NOT established: ACRED's private offering memorandum and token-class rights; feeder-level custody, segregation, leverage, redemption gates, and insolvency waterfall; independent financial statements for the BVI feeder; current on-chain NAV update cadence; and stated maturities for the N-PORT positions excluded from the WAM denominator.",
+      "metrics": {
+        "weightedAverageMaturityDays": 1840,
+        "valuationCadenceDays": 1
+      },
+      "components": {
+        "creditQuality": {
+          "quality": "adequate"
+        },
+        "seniority": {
+          "quality": "limited"
+        },
+        "legalEnforceability": {
+          "quality": "limited"
+        },
+        "valuationCadence": {
+          "quality": "adequate"
+        },
+        "maturityAndLiquidity": {
+          "quality": "limited"
+        },
+        "custody": {
+          "quality": "limited"
+        },
+        "recovery": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "tgbp-tokenised",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "BCP Technologies tGBP terms: holder redemption right, segregated reserve accounts, eligible reserve assets, and third-party institution risk",
+          "url": "https://www.tokenisedgbp.com/terms"
+        },
+        {
+          "label": "Tokenised GBP reserve transparency page and monthly report archive",
+          "url": "https://www.tokenisedgbp.com/transparency"
+        },
+        {
+          "label": "Andersen LLP independent accountants report for tGBP reserves as of 2026-06-30",
+          "url": "https://hypzwtzgiiobtwtrskfq.supabase.co/storage/v1/object/public/Website%20Files/Independent%20Accounts%20Report%20-%20BCP%20Technologies%20Ltd%20-%20%2030%20June%202026.pdf"
+        }
+      ],
+      "notes": "BCP Technologies' binding tGBP terms state that reserves are held with regulated financial institutions in segregated accounts separate from BCP corporate funds, on behalf of and for the exclusive benefit of users, and that tGBP represents a right to redeem an equivalent GBP value through a BCP account. The terms also say BCP controls and manages the accounts, reserve assets may include bank deposits, money-market funds, and UK Treasuries, and BCP is not liable for insolvency or liquidity problems at reserve institutions. This issuer-documented segregation and redemption claim supports claimAndSegregation at limited under D1's 'self-reported disclosures only' line; no independent trust, safeguarding agreement, or bankruptcy-remoteness opinion was published. custodyContinuity is limited under the same D1 line: the terms describe regulated financial institutions and banking partners, and Andersen's 2026-06-30 agreed-upon-procedures report observed that identified reserve assets covered circulating tGBP throughout June, but neither source names a reserve bank, securities custodian, or fund custodian. D1 adequate is not met because its conjunctive requirement is documented segregation/custody plus a recent attestation naming custodians. The Andersen report expressly disclaims audit, review, or other assurance and does not establish internal controls, solvency, or liquidity. What was NOT established: custodian identities or allocation shares; multiple-provider continuity or replacement arrangements; reserve-wide non-rehypothecation; a holder trust, statutory safeguarding regime, or bankruptcy-remoteness protection; itemized reserve composition and amounts; and an assurance opinion over the reserve balance.",
+      "metrics": {},
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
+        },
+        "custodyContinuity": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "dusd-alto",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Alto current Ethereum deployment registry (DUSD, seven mint markets, USMs, oracles, and liquidation engines)",
+          "url": "https://github.com/altomoney/security-review-engagements/blob/e83cbb6efaf8d1ee84349cbf754be35f49d0c071/deployments/mainnet.md"
+        },
+        {
+          "label": "Alto DUSD issuance documentation (mint markets create DUSD; borrow markets only redistribute existing DUSD)",
+          "url": "https://docs.alto.money/alto-protocol/dusd"
+        },
+        {
+          "label": "Alto lending documentation (isolated parameters and permissionless partial-liquidation incentives)",
+          "url": "https://docs.alto.money/alto-protocol/lending"
+        },
+        {
+          "label": "Alto PSM documentation (bounded DUSD liquidity for externally funded liquidators and inventory-limited redemption)",
+          "url": "https://docs.alto.money/alto-protocol/psm"
+        },
+        {
+          "label": "Verified DUSD contract (allowedMinter, minterConfig, and totalSupply)",
+          "url": "https://eth.blockscout.com/address/0x63d74d22e689c715a04f2c13962b1f77f443d35b?tab=contract"
+        },
+        {
+          "label": "DUSD SetMinterStatus event history used to enumerate the current minter graph",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=latest&address=0x63d74d22e689c715a04f2c13962b1f77f443d35b&topic0=0x53b8f1e625ffdc96b26d9f5c6bba4ebc3f54077767495fa2619d32b285e193b9"
+        },
+        {
+          "label": "Verified Alto mint-market implementation (collateral accounting, debt ceilings, bad-debt accounting, pause controls, and liquidation entrypoint)",
+          "url": "https://etherscan.io/address/0x60da676bdf3d205e980a3276713796f8230572bd#code"
+        },
+        {
+          "label": "Verified permissioned frxUSD USM implementation and live reserve contract",
+          "url": "https://eth.blockscout.com/address/0x1bd08b43d1579881cfad0a35aeea5b547dbe4c91?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC used for pinned eth_call reads at finalized block 25575134",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Finalized Ethereum block 25575134",
+          "url": "https://etherscan.io/block/25575134"
+        }
+      ],
+      "notes": "Measured on-chain at finalized Ethereum block 25575134 (2026-07-20T16:31:35Z; hash 0x7db1dc5959f1991de4446ceea2db0659e7051687f90c885ae99971c568e583a5). The complete SetMinterStatus history produced eleven currently authorized minters; their minterConfig.minted balances sum exactly to DUSD totalSupply of 911,027.606757847365. Three authorized minters had zero issuance. The remaining issuance was 822,997.840132023505 DUSD from the permissioned frxUSD USM and 88,029.766625823860 DUSD from seven isolated mint markets. For each mint market, collateralToken.balanceOf(market) was valued by that market's oracle.getPrice() at the pinned block: WETH $7,039.950501, wstETH $78,262.808862, rETH $1,521.218753, mETH $18.735243, tBTC $1,065.985241, syrupUSDC $1,265.485900, and sUSDe $41,079.136265. Adding the USM's 822,997.840132 frxUSD balance gives $953,251.160897 of protocol-valued collateral and a collateralizationRatio of 1.046347. Mint-market debt ceilings, market-local oracles and liquidation parameters are explicit; the common verified implementation tracks residual badDebtAssets locally, supporting adequate collateralization parameters, liquidation mechanics, and operational branch isolation, but the shared DUSD claim prevents a strong isolation rating. Liquidations require external callers to source and repay DUSD; the PSM is a bounded liquidity source, not a DUSD-dedicated pool contractually committed to offset debt, so liquidationCapacityRatio is not applicable. The USM reserve equals 0.903373 of supply but is backing, not liquidation capacity. Backstop and shutdown/bad-debt handling are limited because residual bad debt is recorded and reduces mint capacity without an unconditional recapitalization facility. Structural redemption is limited because the documented PSM exit is fee-bearing and inventory-bounded, while the live reserve-bearing frxUSD USM is permissioned. NOT established: stress-tested liquidation throughput, any committed bidder or insurance pool, an unconditional bad-debt recapitalization source, or a permissionless redemption path covering the reserve-bearing frxUSD issuance.",
+      "metrics": {
+        "collateralizationRatio": 1.046347,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "measured"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "Alto liquidations are funded by external liquidators sourcing and repaying DUSD; the PSM supplies bounded swap liquidity but is not a DUSD-dedicated pool contractually committed to debt offset.",
+          "sourceUrl": "https://docs.alto.money/alto-protocol/psm"
+        }
+      },
+      "analogousMetrics": {
+        "permissionedUsmReserveCoverageRatio": 0.903373
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "backstop": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "branchIsolation": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "shutdownAndBadDebt": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "yusd-aegis",
+      "archetype": "synthetic-delta-neutral",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Aegis YUSD mechanism documentation",
+          "url": "https://docs.aegis.im/tokens/yusd-stablecoin"
+        },
+        {
+          "label": "Aegis Insurance Fund documentation",
+          "url": "https://docs.aegis.im/overview/aegis-insurance-fund"
+        },
+        {
+          "label": "Aegis product and custody disclosures",
+          "url": "https://aegis.im/"
+        },
+        {
+          "label": "Aegis Accountable proof-of-solvency API snapshot",
+          "url": "https://aegis.accountable.capital:10443/dashboard/YUSD"
+        }
+      ],
+      "notes": "Reviewed from Aegis issuer documentation and its designated Accountable proof-of-solvency feed at snapshot timestamp 2026-07-20T16:32:34.825Z. The feed reported $36,105,482.81 of reserves excluding the Insurance Fund against $35,982,081.75 of YUSD supply, giving marginBufferPct 0.342951. It separately reported a $609,283.03 Insurance Fund, giving lossAbsorptionShare 0.0169329566. hedgeCoverageRatio 1 is a documented-policy figure, not an observed position-level measurement: Aegis states that YUSD holds BTC spot and shorts COIN-M BTC futures to mirror that exposure, while the feed does not publish spot and futures notionals. The reserve feed attributed 72.1538323% of operating reserves to Copper, 27.8319197% to Fireblocks, 0.0142094% to Binance, and de minimis balances to BNB Chain and Ethereum. Venue/custody, hedge reconciliation, funding-basis stress, and loss absorption are limited because these are issuer disclosures plus an issuer-designated live feed, without an independent examination of position-level hedge state or the Insurance Fund waterfall. NOT established and deliberately omitted: leverage, derivatives margin balances, maintenance-margin or liquidation thresholds, position-level delta and hedge notional, any stress-test assumptions or results that could be independently reviewed, direct redemption terms, committed unwind liquidity or capacity, custody legal segregation and recovery terms, and a binding loss waterfall. marginAndLiquidation and unwindCapacity therefore remain bounded rather than being inferred from solvency or secondary-market liquidity.",
+      "metrics": {
+        "hedgeCoverageRatio": 1,
+        "marginBufferPct": 0.3429514191462868,
+        "lossAbsorptionShare": 0.0169329566375075
+      },
+      "analogousMetrics": {
+        "operatingReservesUsd": 36105482.81,
+        "yusdSupplyUsd": 35982081.75,
+        "insuranceFundUsd": 609283.03
+      },
+      "venueShares": [
+        {
+          "venueKey": "copper-custody",
+          "share": 0.7215383229366628,
+          "failureDomains": [
+            {
+              "kind": "reserve-custodian",
+              "key": "copper"
+            }
+          ]
+        },
+        {
+          "venueKey": "fireblocks-custody",
+          "share": 0.2783191974614589,
+          "failureDomains": [
+            {
+              "kind": "reserve-custodian",
+              "key": "fireblocks"
+            }
+          ]
+        },
+        {
+          "venueKey": "binance-position",
+          "share": 0.00014209433965819623,
+          "failureDomains": [
+            {
+              "kind": "dex-protocol",
+              "key": "binance"
+            }
+          ]
+        },
+        {
+          "venueKey": "bnb-chain-balance",
+          "share": 2.052162379585761e-07,
+          "failureDomains": [
+            {
+              "kind": "chain",
+              "key": "bsc"
+            }
+          ]
+        },
+        {
+          "venueKey": "ethereum-chain-balance",
+          "share": 1.8013106319233845e-07,
+          "failureDomains": [
+            {
+              "kind": "chain",
+              "key": "ethereum"
+            }
+          ]
+        }
+      ],
+      "components": {
+        "venueAndCustody": {
+          "quality": "limited"
+        },
+        "hedgeReconciliation": {
+          "quality": "limited"
+        },
+        "fundingBasisStress": {
+          "quality": "limited"
+        },
+        "lossAbsorption": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "usdu-unitas",
+      "archetype": "synthetic-delta-neutral",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Unitas protocol overview and risk controls",
+          "url": "https://docs.unitas.so/"
+        },
+        {
+          "label": "Unitas backing, custody, and security overview",
+          "url": "https://docs.unitas.so/backing-custody-and-security/overview"
+        },
+        {
+          "label": "Unitas off-exchange settlement design",
+          "url": "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas"
+        },
+        {
+          "label": "Unitas minting, hedging, and insurance design",
+          "url": "https://docs.unitas.so/solution-design/minting-usdu"
+        },
+        {
+          "label": "Unitas Accountable proof-of-solvency API snapshot",
+          "url": "https://cache.accountable.capital/dashboard/unitas"
+        }
+      ],
+      "notes": "Reviewed from Unitas issuer documentation and its designated Accountable proof-of-solvency feed at snapshot timestamp 2026-07-20T16:31:34.652Z. The feed reported $57,847,165.50 of reserves against $54,083,797.75 of USDu supply, giving marginBufferPct 6.958401 and a reserve excess of $3,763,367.75. Because Unitas publishes no current Insurance Fund balance or separate junior capital figure, lossAbsorptionShare 0.0695840142 uses that measured reserve excess as the only evidenced first-loss capacity and does not treat the documented fee allocation as funded capital. hedgeCoverageRatio 1 is a documented-policy figure, not an observed hedge measurement: Unitas states that short perpetual positions are sized to match long collateral exposure, rebalanced approximately hourly, with risk bots monitoring funding, collateral ratios, and margin health and topping up or deleveraging before internal thresholds. It documents Copper/Ceffu off-exchange custody, segregated storage, circuit breakers, an Insurance Fund funded from fees, and whitelisted mint/redemption flows. The live reserve buckets were 49.6077951% Solana, 49.1587700% Binance, and 1.2334349% BNB Chain. Every component remains limited because the current feed proves aggregate solvency but does not publish actual spot/perpetual notionals, net delta, leverage, margin-to-liquidation headroom, the Insurance Fund balance, stress outputs, or venue/custodian allocation behind each bucket. NOT established: observed hedge coverage, actual leverage and margin thresholds, a current funded Insurance Fund or binding loss waterfall, position-level funding/basis stress results, per-venue hedge and custodian shares, independently tested redemption/unwind capacity, and custody agreements or bankruptcy treatment.",
+      "metrics": {
+        "hedgeCoverageRatio": 1,
+        "marginBufferPct": 6.958401418842675,
+        "lossAbsorptionShare": 0.0695840141884267
+      },
+      "analogousMetrics": {
+        "totalReservesUsd": 57847165.5,
+        "totalSupplyUsd": 54083797.75,
+        "reserveExcessUsd": 3763367.75
+      },
+      "venueShares": [
+        {
+          "venueKey": "solana-onchain-reserves",
+          "share": 0.49607795113141717,
+          "failureDomains": [
+            {
+              "kind": "chain",
+              "key": "solana"
+            }
+          ]
+        },
+        {
+          "venueKey": "binance-offexchange-position",
+          "share": 0.4915877001786717,
+          "failureDomains": [
+            {
+              "kind": "dex-protocol",
+              "key": "binance"
+            },
+            {
+              "kind": "reserve-custodian",
+              "key": "ceffu"
+            }
+          ]
+        },
+        {
+          "venueKey": "bnb-chain-reserves",
+          "share": 0.012334348689911177,
+          "failureDomains": [
+            {
+              "kind": "chain",
+              "key": "bsc"
+            }
+          ]
+        }
+      ],
+      "components": {
+        "venueAndCustody": {
+          "quality": "limited"
+        },
+        "hedgeReconciliation": {
+          "quality": "limited"
+        },
+        "fundingBasisStress": {
+          "quality": "limited"
+        },
+        "marginAndLiquidation": {
+          "quality": "limited"
+        },
+        "unwindCapacity": {
+          "quality": "limited"
+        },
+        "lossAbsorption": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "usdh-hermetica",
+      "archetype": "synthetic-delta-neutral",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Hermetica USDh backing and attestation index",
+          "url": "https://docs.hermetica.fi/usdh/how-it-works/backing"
+        },
+        {
+          "label": "Hermetica USDh stability and hedge reconciliation design",
+          "url": "https://docs.hermetica.fi/usdh/how-it-works/stability"
+        },
+        {
+          "label": "Hermetica USDh custody and off-exchange settlement design",
+          "url": "https://docs.hermetica.fi/usdh/how-it-works/security"
+        },
+        {
+          "label": "Hermetica Reserve Fund design",
+          "url": "https://docs.hermetica.fi/usdh/hermetica-reserve-fund"
+        },
+        {
+          "label": "Hermetica March 2026 custodian attestation disclosure",
+          "url": "https://blog.hermetica.fi/p/custodian-attestations-of-assets-backing-usdh-march-2026"
+        }
+      ],
+      "notes": "Reviewed from Hermetica issuer documentation and its March 2026 custodian-attestation disclosure. At 2026-03-19 15:00 UTC the issuer reported $9,443,392.57 of backing assets against $9,441,388.43 of USDh supply, giving marginBufferPct 0.021227. It reported $6,891,105.93 at Copper, $2,411,932.27 at Ceffu, $136,764.24 in the Stacks redeeming reserve, and $3,590.12 in the Ethereum redeeming reserve. For lossAbsorptionShare, this review conservatively uses the page narrative's $100,148.12 Reserve Fund balance, yielding 0.0106073509; the same page's summary table instead says $104,531.76, but the lower narrative figure is the one that reconciles backing plus Reserve Fund to the issuer's published 101.08% total coverage. hedgeCoverageRatio 1 is a documented-policy figure, not an observed position-level measurement: Hermetica states that it maintains a short perpetual position fully hedging BTC and runs parallel risk engines every 100 milliseconds to reconcile liabilities, assets, and futures positions. It documents Copper/Ceffu off-exchange custody, diversification across five derivatives venues, Approved Participant mint/redemption, and a Reserve Fund intended to cover negative funding and exchange-failure PnL. Every component remains limited because the disclosure is issuer-authored and does not expose position notionals, venue weights, margin or liquidation state, or a binding Reserve Fund waterfall. NOT established: actual spot and short notionals or net delta at the attestation time, venue-level hedge allocation, leverage, initial/maintenance margin or liquidation thresholds, independent assurance methodology over the figures, committed redemption and unwind capacity, custody agreements and bankruptcy-remoteness enforceability, a binding loss waterfall, or the exact Reserve Fund balance because the issuer page contains the noted internal discrepancy.",
+      "metrics": {
+        "hedgeCoverageRatio": 1,
+        "marginBufferPct": 0.021227174529037107,
+        "lossAbsorptionShare": 0.01060735089362275
+      },
+      "analogousMetrics": {
+        "backingAssetsUsd": 9443392.57,
+        "usdhSupplyUsd": 9441388.43,
+        "conservativeReserveFundUsd": 100148.12
+      },
+      "venueShares": [
+        {
+          "venueKey": "copper-custody",
+          "share": 0.72972778362427,
+          "failureDomains": [
+            {
+              "kind": "reserve-custodian",
+              "key": "copper"
+            }
+          ]
+        },
+        {
+          "venueKey": "ceffu-custody",
+          "share": 0.2554095101015164,
+          "failureDomains": [
+            {
+              "kind": "reserve-custodian",
+              "key": "ceffu"
+            }
+          ]
+        },
+        {
+          "venueKey": "stacks-redeeming-reserve",
+          "share": 0.014482532520619333,
+          "failureDomains": [
+            {
+              "kind": "chain",
+              "key": "stacks"
+            }
+          ]
+        },
+        {
+          "venueKey": "ethereum-redeeming-reserve",
+          "share": 0.0003801726946526803,
+          "failureDomains": [
+            {
+              "kind": "chain",
+              "key": "ethereum"
+            }
+          ]
+        }
+      ],
+      "components": {
+        "venueAndCustody": {
+          "quality": "limited"
+        },
+        "hedgeReconciliation": {
+          "quality": "limited"
+        },
+        "fundingBasisStress": {
+          "quality": "limited"
+        },
+        "marginAndLiquidation": {
+          "quality": "limited"
+        },
+        "unwindCapacity": {
+          "quality": "limited"
+        },
+        "lossAbsorption": {
+          "quality": "limited"
         }
       }
     }

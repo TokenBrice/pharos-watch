@@ -212,6 +212,74 @@ describe("evaluateV9Exit", () => {
     expect(impaired.score).toBeLessThan(par.score!);
   });
 
+  it("floors a zero-capacity route to zero instead of letting an undisclosed cost carry it", () => {
+    // The exact shape that scored 35.61 before the floor: capacity carries 25%
+    // of the ladder, so access/settlement/execution/output plus a
+    // boundedCostScore awarded *because* the cost is undisclosed used to carry
+    // a route that provably clears $0 at the stress cost.
+    const zeroCapacity = route({
+      routeKey: "redemption:undisclosed-cost",
+      access: "issuer-api",
+      holderEligibility: "verified-customer",
+      settlement: "same-day",
+      settlementDelaySec: 86_400,
+      modelConfidence: "medium",
+      evidenceKind: "documented-terms",
+      capacityCurve: [
+        {
+          requestedNotionalUsd: 1_000_000,
+          maxCostBps: 200,
+          executableUsd: 0,
+          completionRatio: 0,
+          // At or above the request bound, so the cost component is the
+          // bounded-unknown midpoint rather than a measurement.
+          executionCostBps: 200,
+        },
+      ],
+    });
+    const result = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [zeroCapacity] }, V9_CANDIDATE_POLICY_V1);
+    const trace = result.routes.find((entry) => entry.routeKey === "redemption:undisclosed-cost");
+    expect(trace?.included).toBe(true);
+    expect(trace?.capacityPoint?.executableUsd).toBe(0);
+    // The non-capacity ladder is untouched — the floor, not a component change,
+    // is what removes the score.
+    expect(trace?.components?.cost).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedCostScore);
+    expect(trace?.components?.capacity).toBe(0);
+    expect(trace?.score).not.toBeCloseTo(35.61, 2);
+    expect(trace?.score).toBe(0);
+    expect(trace?.capsApplied).toContain("zero-executable-capacity");
+  });
+
+  it("does not award a diversification benefit off a zero-capacity independent route", () => {
+    const primary = route();
+    const zeroCapacityIndependent = route({
+      routeKey: "dex:zero-capacity-independent",
+      lane: "dex",
+      routeFamily: "dex-amm",
+      evidenceKind: "measured-executable-depth",
+      failureDomains: ["dex-protocol:independent"],
+      physicalResourceKeys: ["pool:independent"],
+      capacityCurve: [
+        {
+          requestedNotionalUsd: 1_000_000,
+          maxCostBps: 200,
+          executableUsd: 0,
+          completionRatio: 0,
+          executionCostBps: 200,
+        },
+      ],
+    });
+    const alone = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [primary] }, V9_CANDIDATE_POLICY_V1);
+    const withZero = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, routes: [primary, zeroCapacityIndependent] },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    // A failure-domain-independent route that can move no value is not
+    // diversification: it cannot lift the pillar above the single-route score.
+    expect(withZero.diversificationBonus).toBe(0);
+    expect(withZero.score).toBe(alone.score);
+  });
+
   it("is deterministic under route and capacity-curve permutation", () => {
     const first = route();
     const second = route({

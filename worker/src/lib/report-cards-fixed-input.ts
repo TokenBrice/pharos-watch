@@ -115,6 +115,21 @@ const FixedInputPayloadFields = {
       ),
     )
     .default({}),
+  // Top-level USD circulating buckets, carried beside the per-chain map because
+  // the supplemental/fallback intake lanes populate only the aggregate and
+  // hardcode an empty `chainCirculating`. Without this the v9 supply fact has
+  // no figure to fall back to for those assets. Values are already
+  // USD-denominated (DefiLlama list semantics); never multiply by price.
+  // Optional-with-default so captures predating the field parse unchanged.
+  aggregateCirculatingById: z
+    .record(
+      z.string(),
+      z.object({
+        circulating: z.record(z.string(), z.number().finite().nonnegative()),
+        observedAtSec: z.number().int().nonnegative().nullable(),
+      }),
+    )
+    .default({}),
   dexDeploymentSupplyCoverageById: z.record(z.string(), DexDeploymentSupplyCoverageSchema).default({}),
   collateralDriftCoins: z
     .array(z.object({ id: z.string(), liveScore: z.number(), curatedScore: z.number(), delta: z.number() }))
@@ -443,9 +458,13 @@ export type ReportCardsFixedInputDraft = Omit<
   | "registryFingerprint"
   | "inputMethodologyVersions"
   | "baseInputGenerationId"
+  | "aggregateCirculatingById"
 > & {
   captureKind: ReportCardsFixedInput["captureKind"];
   activeAssetIds?: string[];
+  // Optional so reconstruction and test drafts that carry no aggregate bucket
+  // keep compiling; the schema default fills in an empty record.
+  aggregateCirculatingById?: ReportCardsFixedInput["aggregateCirculatingById"];
 };
 
 export function createReportCardsFixedInput(draft: ReportCardsFixedInputDraft): ReportCardsFixedInput {
@@ -691,6 +710,7 @@ export function normalizeFixedInput(value: unknown): ReportCardsFixedInput {
     resolvedBlacklistStatuses: sortedRecord(input.resolvedBlacklistStatuses),
     liveReserveMap: sortedRecord(input.liveReserveMap),
     chainCirculatingById: sortedRecord(input.chainCirculatingById),
+    aggregateCirculatingById: sortedRecord(input.aggregateCirculatingById),
     dexDeploymentSupplyCoverageById: sortedRecord(input.dexDeploymentSupplyCoverageById),
     liveReserveProvenanceMap: sortedRecord(input.liveReserveProvenanceMap),
     collateralDriftCoins: [...input.collateralDriftCoins].sort((left, right) => left.id.localeCompare(right.id)),

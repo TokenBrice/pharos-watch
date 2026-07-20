@@ -391,6 +391,12 @@ export async function buildReportCardsSnapshot(
     liveReserveMap: Object.fromEntries(liveReserveMap),
     liveReserveProvenanceMap: Object.fromEntries(liveReserveProvenanceMap),
     chainCirculatingById: Object.fromEntries(peggedAssets.map((asset) => [asset.id, asset.chainCirculating])),
+    aggregateCirculatingById: Object.fromEntries(
+      peggedAssets.map((asset) => [
+        asset.id,
+        { circulating: asset.circulating, observedAtSec: asset.supplyObservedAt ?? null },
+      ]),
+    ),
     dexDeploymentSupplyCoverageById,
     collateralDriftCoins,
     liveToFallbackCoins,

@@ -373,12 +373,21 @@ function evaluateRoute(
     components.capacity * weights.capacity +
     components.outputAssetQuality * weights.outputAssetQuality +
     components.cost * weights.cost;
+  const capsApplied: string[] = [];
+  // Capacity carries only a minority of the component ladder, so access,
+  // settlement, execution certainty, output quality and a bounded-unknown cost
+  // would otherwise carry a route that provably moves no value at the stress
+  // request. A route that clears nothing has no exit value, and the cost of a
+  // trade that cannot happen is not a mitigating fact: it floors at zero.
+  if (valuedExecutableUsd === 0) {
+    score = 0;
+    capsApplied.push("zero-executable-capacity");
+  }
   const confidenceFactor = Math.min(
     policy.observationConfidenceFactors[route.observationConfidence],
     policy.modeledConfidenceFactors[route.modelConfidence],
   );
   score *= confidenceFactor * policy.holderEligibilityMultipliers[route.holderEligibility];
-  const capsApplied: string[] = [];
   const routeCap =
     route.routeScoreCap === "queue-redeem"
       ? policy.routeFamilyCaps.queueRedeem

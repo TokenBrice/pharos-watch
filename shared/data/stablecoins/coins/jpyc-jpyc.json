@@ -385,10 +385,12 @@
           "url": "https://www.fsa.go.jp/menkyo/menkyoj/shikin_idou.pdf"
         }
       ],
-      "evidence": "At Ethereum block 25294712: Blockscout MinterConfigured scan shows one ever-configured minter (0x11f14c2b…) with zero current allowance on all chains; minterAdmin() returns 0x029ba134… on all three chains; minterAdmin.owner() returns 2/3 Safe 0x5BA1b9aAf…; token owner() returns 3/5 Safe 0x8E4CddC4… on all three chains. Current EIP-1967 and owner() reads on Ethereum, Polygon, Avalanche, and Kaia on 2026-07-14 matched the structured upgrade review. All Safe snapshots confirmed via Safe API with no enabled modules and zero guard. Challenge searches of JPYC's corporate, legal, transparency, audit, and attestation materials found no recurring independent JPYC supply-to-reserve report, so no attestor, cadence, or latest qualifying report date is available and reconciliation is unknown. The FSA registry matches JPYC Co., Ltd. as Kanto Local Finance Bureau registration 00099, a Type II Funds Transfer Service Provider subject to statutory funds-preservation supervision, supporting prudential supervision of the issuer.",
-      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
-      "reviewedAt": "2026-07-15"
-    }
+      "evidence": "At Ethereum block 25294712: Blockscout MinterConfigured scan shows one ever-configured minter (0x11f14c2b…) with zero current allowance on all chains; minterAdmin() returns 0x029ba134… on all three chains; minterAdmin.owner() returns 2/3 Safe 0x5BA1b9aAf…; token owner() returns 3/5 Safe 0x8E4CddC4… on all three chains. Current EIP-1967 and owner() reads on Ethereum, Polygon, Avalanche, and Kaia on 2026-07-14 matched the structured upgrade review. All Safe snapshots confirmed via Safe API with no enabled modules and zero guard. Challenge searches of JPYC's corporate, legal, transparency, audit, and attestation materials found no recurring independent JPYC supply-to-reserve report, so no attestor, cadence, or latest qualifying report date is available and reconciliation is unknown. The FSA registry matches JPYC Co., Ltd. as Kanto Local Finance Bureau registration 00099, a Type II Funds Transfer Service Provider subject to statutory funds-preservation supervision, supporting prudential supervision of the issuer. Re-verified at Ethereum block 25575132 on 2026-07-20: token owner() still returns the 3/5 Safe 0x8E4CddC4712646ea5222B4f2E959AcecEfe763C9, minterAdmin() still returns 0x029ba134614B61EE129e2dc5Ae3eAd5f0A215694, and that minterAdmin's owner() still returns the 2/3 Safe 0x5BA1b9aAf56Af1B761519F924079681D8d061F94. Because the 2/3 minterAdmin Safe can call configureMinter with an arbitrary allowance and the 3/5 owner Safe can replace the minterAdmin or upgrade the implementation, with no timelock and no independent on-chain bound, the FiatToken minter allowance is economically unbounded even though JPYC's statutory funds-preservation duty constrains the issuer off-chain.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20)",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable"
+    },
+    "economicCapSemantics": "unbounded"
   },
   "custodyModel": "institutional-regulated",
   "liveReservesConfig": {
