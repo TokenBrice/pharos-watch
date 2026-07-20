@@ -173,6 +173,11 @@ describe("pricing source registry", () => {
       });
     }
 
+    expect(getPricingSourceRegistryEntry("coingecko-onchain-address")).toMatchObject({
+      key: "coingecko-onchain-address",
+      depegSourceFamily: "coingecko",
+    });
+
     expect(getPricingSourceRegistryEntry("dexscreener-search")).toMatchObject({
       key: "dexscreener-search",
       isSearchDerived: true,
