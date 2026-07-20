@@ -60,8 +60,8 @@ export interface DistributionGateMetrics {
   unattributedFSupplyShare: number | null;
   freeFloatingLargestBucketShare: number | null;
   freeFloatingLargestTupleShare: number | null;
-  top50CMinusOrBetterShare: number | null;
-  top50BMinusOrBetterCount: number;
+  materialCohortCMinusOrBetterShare: number | null;
+  materialCohortBMinusOrBetterCount: number;
   scoreIqr: number;
 }
 

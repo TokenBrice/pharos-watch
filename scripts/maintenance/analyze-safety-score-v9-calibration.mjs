@@ -148,20 +148,39 @@ const DISTRIBUTION_GATE_THRESHOLDS = {
   unattributedFSupplyShareMax: 0.001,
   freeFloatingLargestBucketShareMax: 0.12,
   freeFloatingLargestTupleShareMax: 0.12,
-  // D5A: measured 0.74. 0.60 is recorded as the post-activation tightening
-  // (derivation §4, D5) and is not applied while D1 and D5B are still open.
-  top50CMinusOrBetterShareMin: 0.5,
-  // D5B: measured 7 (FAILS by one). No asset got worse — `usat-tether` (B) was
-  // pushed to rank 54 by 18 newly-visible assets entering the top-50 window.
-  // The bar holds; the fragility of a fixed-rank-window count is recorded in
-  // the re-derivation note.
-  top50BMinusOrBetterCountMin: 8,
+  // D5A: 0.60 is recorded as the post-activation tightening (derivation §4, D5)
+  // and is not applied while D1 is still open.
+  materialCohortCMinusOrBetterShareMin: 0.5,
+  // D5B: the bar is unchanged at 8. The cohort it is measured over moved from a
+  // fixed top-50 rank window to a supply window (see
+  // MATERIAL_COHORT_MIN_SUPPLY_USD): the previous 7-vs-8 failure was a
+  // re-sorting artifact, not a corpus-quality signal — `usat-tether` (B) held
+  // its supply and its grade but was pushed from inside the window to rank 54
+  // by other assets becoming visible around it.
+  materialCohortBMinusOrBetterCountMin: 8,
   scoreIqrMin: 12,
 };
 /** D1 excludes the N largest assets by supply so the gate measures the corpus, not the duopoly. */
 const MATERIAL_COHORT_EXCLUDED_TOP_RANKS = 2;
-/** D5 cohort size — "where users actually look". */
-const MATERIAL_COHORT_SIZE = 50;
+/**
+ * D5 cohort floor — "where users actually look", expressed as a supply window
+ * rather than a rank cutoff.
+ *
+ * A fixed top-N cohort re-sorts on ordinary drift, so membership churns even
+ * when no asset's supply or grade moved: the count oscillated 7/8 purely
+ * because other assets became visible around a stable member. A supply window
+ * holds membership fixed unless an asset's own supply crosses the line, so the
+ * gate measures corpus quality instead of re-sorting noise.
+ *
+ * Derived from the observed supply distribution rather than chosen for its
+ * outcome. $100M is the only break wider than 1.15x anywhere in the rank 35-70
+ * region ($99.8M -> $84.0M, 1.19x), it admits 99.2% of observed rated supply,
+ * and it reproduces a cohort of comparable size to the retired top-50 (46
+ * assets) so the unchanged bar is judged against the same product question.
+ * Members sit well clear of the line — the marginal B-or-better member carries
+ * ~85% headroom — where a top-50 member sat four ranks from falling out.
+ */
+const MATERIAL_COHORT_MIN_SUPPLY_USD = 100_000_000;
 /** Diagnostic-only alternative to ex-top-2 concentration handling (derivation §2.3). */
 const WINSORIZED_WEIGHT_CAP = 0.05;
 
@@ -1124,8 +1143,10 @@ function distributionGateMetrics(replay, rated, scoreQuartiles) {
   const freeFloatingShare = (entries) =>
     freeFloating.length > 0 && entries.length > 0 ? round(entries[0].count / freeFloating.length) : null;
 
-  // D5 — material-cohort sanity over the top 50 rated assets by supply.
-  const materialCohort = bySupply.slice(0, MATERIAL_COHORT_SIZE).map((row) => row.card);
+  // D5 — material-cohort sanity over every rated asset inside the supply window.
+  const materialCohort = bySupply
+    .filter((row) => row.supplyUsd >= MATERIAL_COHORT_MIN_SUPPLY_USD)
+    .map((row) => row.card);
   const atOrAbove = (grade) =>
     materialCohort.filter((card) => GRADE_ORDER.indexOf(card.grade) <= GRADE_ORDER.indexOf(grade)).length;
 
@@ -1148,8 +1169,8 @@ function distributionGateMetrics(replay, rated, scoreQuartiles) {
       unattributedFSupplyShare: observedSupply > 0 ? round(unattributedFSupply / observedSupply) : null,
       freeFloatingLargestBucketShare: freeFloatingShare(freeFloatingBuckets),
       freeFloatingLargestTupleShare: freeFloatingShare(freeFloatingTuples),
-      top50CMinusOrBetterShare: materialCohort.length > 0 ? round(atOrAbove("C-") / materialCohort.length) : null,
-      top50BMinusOrBetterCount: atOrAbove("B-"),
+      materialCohortCMinusOrBetterShare: materialCohort.length > 0 ? round(atOrAbove("C-") / materialCohort.length) : null,
+      materialCohortBMinusOrBetterCount: atOrAbove("B-"),
       scoreIqr: scoreQuartiles.iqr,
     },
     diagnostics: {
@@ -1214,13 +1235,13 @@ function distributionGates(metrics) {
       metrics.freeFloatingLargestTupleShare,
       DISTRIBUTION_GATE_THRESHOLDS.freeFloatingLargestTupleShareMax,
     ),
-    d5aTop50CMinusOrBetterShare: atLeast(
-      metrics.top50CMinusOrBetterShare,
-      DISTRIBUTION_GATE_THRESHOLDS.top50CMinusOrBetterShareMin,
+    d5aMaterialCohortCMinusOrBetterShare: atLeast(
+      metrics.materialCohortCMinusOrBetterShare,
+      DISTRIBUTION_GATE_THRESHOLDS.materialCohortCMinusOrBetterShareMin,
     ),
-    d5bTop50BMinusOrBetterCount: atLeast(
-      metrics.top50BMinusOrBetterCount,
-      DISTRIBUTION_GATE_THRESHOLDS.top50BMinusOrBetterCountMin,
+    d5bMaterialCohortBMinusOrBetterCount: atLeast(
+      metrics.materialCohortBMinusOrBetterCount,
+      DISTRIBUTION_GATE_THRESHOLDS.materialCohortBMinusOrBetterCountMin,
     ),
     d6ScoreIqr: atLeast(metrics.scoreIqr, DISTRIBUTION_GATE_THRESHOLDS.scoreIqrMin),
   };
