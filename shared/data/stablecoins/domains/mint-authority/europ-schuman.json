@@ -251,11 +251,20 @@
         "evidence": "Schuman's official deployment page identifies rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK as the XRPL EUROP issuer account. XRPL issued-token supply is controlled by the issuer account rather than an upgradeable EVM token contract."
       }
     ],
+    "supervision": "prudential",
     "review": {
-      "evidence": "At current 2026-07-14 reads, Ethereum and Polygon EUROP proxies pointed to implementation 0xfbdaf974, Avalanche pointed to 0x57c2f3a0, and Plasma pointed to 0xa1058c5e. The verified implementations expose UUPS upgrade functions authorized by the chain-local owner or DEFAULT_ADMIN_ROLE. The same reads resolved the owner/admin Safe and MASTER_MINTER_ROLE Safe on each EVM deployment. XRPL is represented by Schuman's issuer account rather than EVM upgrade logic.",
-      "reviewer": "Codex CTRL batch 16",
-      "reviewedAt": "2026-07-14",
+      "evidence": "At current 2026-07-14 reads, Ethereum and Polygon EUROP proxies pointed to implementation 0xfbdaf974, Avalanche pointed to 0x57c2f3a0, and Plasma pointed to 0xa1058c5e. The verified implementations expose UUPS upgrade functions authorized by the chain-local owner or DEFAULT_ADMIN_ROLE. The same reads resolved the owner/admin Safe and MASTER_MINTER_ROLE Safe on each EVM deployment. XRPL is represented by Schuman's issuer account rather than EVM upgrade logic. Supervision reviewed 2026-07-20: the ESMA interim MiCA register of e-money-token issuers lists SALVUS (trading as Schuman Financial) with ACPR as competent authority, and Schuman's own EUROP page states the issuer is an electronic money institution licensed by the Autorite de controle prudentiel et de resolution with passporting across the EU/EEA. A named prudential financial regulator therefore supervises the issuing entity, so supervision is recorded as prudential rather than attestation-only. The mint-control identity findings above are unchanged.",
+      "reviewer": "Codex CTRL batch 16; cur-13 supervision review (2026-07-20)",
+      "reviewedAt": "2026-07-20",
       "sources": [
+        {
+          "label": "ESMA interim MiCA register - EMT issuers (EMTWP.csv), SALVUS entry, competent authority ACPR",
+          "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+        },
+        {
+          "label": "Schuman EUROP issuer page - ACPR electronic money institution licence",
+          "url": "https://schuman.io/europ/"
+        },
         {
           "label": "Schuman EUROP smart-contract addresses",
           "url": "https://schuman.io/smart-contracts/"

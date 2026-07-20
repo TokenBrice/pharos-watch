@@ -3,58 +3,92 @@
   "reserves": [
     {
       "name": "Overnight Treasury repo agreements (UMB Bank)",
-      "pct": 64.76,
+      "pct": 73.7244,
       "risk": "very-low",
       "assetClass": "repo",
       "issuerOrObligor": "UMB Bank N.A.",
-      "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody"
+      ],
       "liquidityHorizon": "one-day",
-      "maturityDaysMax": 1
+      "maturityDaysMax": 2
     },
     {
       "name": "U.S. Treasury bills",
-      "pct": 34.73,
+      "pct": 25.6875,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
-      "riskFactors": ["duration", "liquidity", "custody"],
+      "riskFactors": [
+        "duration",
+        "liquidity",
+        "custody"
+      ],
       "liquidityHorizon": "seven-days",
-      "maturityDaysMax": 49
+      "maturityDaysMax": 55
     },
     {
-      "name": "Goldman Sachs Financial Square money market fund",
-      "pct": 0.39,
+      "name": "Cash at UMB Bank N.A.",
+      "pct": 0.3587,
       "risk": "very-low",
-      "assetClass": "money-market-fund",
-      "issuerOrObligor": "Goldman Sachs Asset Management",
-      "riskFactors": ["credit", "liquidity", "custody"],
-      "liquidityHorizon": "one-day"
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "UMB Bank N.A.",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "Cash at Flagstar Bank N.A.",
-      "pct": 0.12,
+      "pct": 0.2124,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Flagstar Bank N.A.",
-      "riskFactors": ["counterparty", "custody", "concentration"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Cash at Lead Bank (held via Figure Payments Corporation)",
+      "pct": 0.017,
+      "risk": "low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Lead Bank (account held by affiliate Figure Payments Corporation)",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
       "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Pharos V9 Phase 3 curation lane cur-12 (SEC EDGAR primary filings)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Figure Certificate Company Form 10-Q - March 31, 2026",
-        "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000008/fcc-20260331.htm"
+        "label": "Figure Certificate Company FY2025 Form 10-K (KPMG audit opinion covers the schedules of investments as of December 31, 2025)",
+        "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000006/fcc-20251231.htm"
+      },
+      {
+        "label": "SEC EDGAR filing index, accession 0001974395-26-000006 (filed 2026-03-20)",
+        "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000006/"
       }
     ],
-    "rationale": "FCC's SEC-filed Schedule I reports $389.556 million of overnight UMB Bank repo, $208.906 million of U.S. Treasury bills, and $2.362 million in Goldman Sachs Financial Square against $600.824 million of investments. Schedule V adds $0.700 million of cash at Flagstar Bank, producing $601.524 million of qualified assets; the normalized weights are 64.76%, 34.73%, 0.39%, and 0.12%.",
-    "compositionBasis": "Figure Certificate Company qualified assets and investment schedules as of March 31, 2026",
-    "compositionAsOf": "2026-03-31",
+    "rationale": "Restated onto the audited period end so the composition and the independent attestor's report cover the same date. FCC's FY2025 Form 10-K Schedule I (Reg S-X Rule 12-21, investments of unaffiliated issuers as of December 31, 2025) reports $242.941 million of UMB Bank repurchase agreements collateralized by U.S. Treasury securities maturing 1/2/2026 and nine U.S. Treasury bills totalling $84.647 million maturing between 1/6/2026 and 2/24/2026, for $327.588 million of investments. Schedule V (Rule 12-27, qualified assets on deposit) adds $1.182 million of cash at UMB Bank, $0.700 million at Flagstar Bank and $0.056 million at Lead Bank (held via affiliate Figure Payments Corporation), for $329.526 million of qualified assets. Normalized weights are 73.7244%, 25.6875%, 0.3587%, 0.2124% and 0.0170%. The KPMG LLP report of independent registered public accounting firm dated 2026-03-19 states it audited the balance sheets 'including the schedules of investments' as of December 31, 2025, so these slices sit inside the audit opinion. The later 10-Q for the quarter ended 2026-03-31 (accession 0001974395-26-000008) shows a comparable but larger mix ($389.556 million repo, $208.906 million T-bills, $2.362 million Goldman Sachs Financial Square money market fund, $0.700 million Flagstar cash on $601.524 million of qualified assets); that filing carries no accountant's review report and its interim statements are labelled unaudited, so it is not used as the attested composition.",
+    "compositionBasis": "Figure Certificate Company FY2025 Form 10-K Schedules I and V (audited qualified assets and investment schedules as of December 31, 2025)",
+    "compositionAsOf": "2025-12-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The filing identifies every material asset class, issuer or repo counterparty, maturity, and depositary in the qualified-asset schedule; no material reserve exposure remains unclassified.",
+    "knownUnknownExposure": "The audited schedules identify every asset class, repo counterparty, Treasury maturity and depositary bank in the qualified-asset pool; no material reserve exposure remains unclassified. The Lead Bank line is disclosed as the FCC-attributable portion of an account held by affiliate Figure Payments Corporation.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
@@ -62,28 +96,38 @@
       {
         "name": "UMB Bank N.A.",
         "role": "custodian",
-        "sharePct": 99.88,
+        "sharePct": 99.7706,
         "jurisdiction": "United States"
       },
       {
         "name": "Flagstar Bank N.A.",
         "role": "bank",
-        "sharePct": 0.12,
+        "sharePct": 0.2124,
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Lead Bank (account held by affiliate Figure Payments Corporation)",
+        "role": "bank",
+        "sharePct": 0.017,
         "jurisdiction": "United States"
       }
     ],
     "segregation": "segregated",
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Pharos V9 Phase 3 curation lane cur-12 (SEC EDGAR primary filings)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Figure Certificate Company Form 10-Q - March 31, 2026",
-        "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000008/fcc-20260331.htm"
+        "label": "Figure Certificate Company FY2025 Form 10-K (KPMG audit opinion covers the schedules of investments as of December 31, 2025)",
+        "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000006/fcc-20251231.htm"
+      },
+      {
+        "label": "SEC EDGAR filing index, accession 0001974395-26-000006 (filed 2026-03-20)",
+        "url": "https://www.sec.gov/Archives/edgar/data/1974395/000197439526000006/"
       }
     ],
-    "uncertainty": "The SEC schedule identifies the qualified assets on deposit with UMB and Flagstar, but the certificates are unsecured obligations of FCC and the filing does not establish statutory bankruptcy remoteness or a general prohibition on collateral reuse."
+    "uncertainty": "Schedule V of the audited FY2025 10-K names the depositaries holding qualified assets: UMB Bank N.A. ($328.770 million of the $329.526 million total, custodying all investments plus cash), Flagstar Bank N.A. ($0.700 million cash) and Lead Bank ($0.056 million, the FCC-attributable portion of an account held by affiliate Figure Payments Corporation). The certificates remain unsecured obligations of FCC and the filing does not establish statutory bankruptcy remoteness, so remoteness stays contractual-only. The filing does not state a general prohibition on reuse of the deposited collateral, so rehypothecation stays unknown."
   }
 }

@@ -262,7 +262,8 @@
             "label": "Theo Network docs",
             "url": "https://docs.theo.xyz"
           }
-        ]
+        ],
+        "modulesOrGuardsStatus": "not-applicable"
       },
       {
         "label": "thBILL DEFAULT_ADMIN TimelockController (minDelay=0)",
@@ -278,7 +279,8 @@
             "label": "thBILL ETH contract on Blockscout",
             "url": "https://eth.blockscout.com/address/0x5fa487bca6158c64046b2813623e20755091da0b"
           }
-        ]
+        ],
+        "modulesOrGuardsStatus": "not-applicable"
       },
       {
         "label": "Theo governance Safe (4-of-6, ETH)",
@@ -321,8 +323,8 @@
     "reconciliation": "unknown",
     "supervision": "unknown",
     "review": {
-      "evidence": "The last complete Ethereum authority observation is dated 2026-06-11. It identified a zero-delay timelock and a 4-of-6 Safe, but it does not constitute a fresh, complete review of current DEFAULT_ADMIN, minter, Safe module, OFT owner, delegate, and cross-chain controls. The historical facts are retained as candidate evidence rather than a current deployment-wide conclusion.",
-      "reviewer": "P2 mint-free cohort",
+      "evidence": "The last complete Ethereum authority observation is dated 2026-06-11. It identified a zero-delay timelock and a 4-of-6 Safe, but it does not constitute a fresh, complete review of current DEFAULT_ADMIN, minter, Safe module, OFT owner, delegate, and cross-chain controls. The historical facts are retained as candidate evidence rather than a current deployment-wide conclusion. modulesOrGuardsStatus recorded as not-applicable on 2 control(s) in this profile that are not Gnosis Safes (an issuer backend, a plain contract gateway, or a TimelockController expose no Safe module or guard surface); reviewed 2026-07-20.",
+      "reviewer": "P2 mint-free cohort; Claude V9 Phase 3 curation lane cur-14 (2026-07-20)",
       "reviewedAt": "2026-07-20",
       "sources": [
         {

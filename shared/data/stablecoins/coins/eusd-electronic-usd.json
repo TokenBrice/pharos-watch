@@ -219,9 +219,9 @@
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25,294,956: eUSD RToken main = 0x7697ae4def3c3cd52493ba3a6f57fc6d8c59108a (UUPS, Main v4). Central Auth 0xe1ec57c8…: DEFAULT_ADMIN = 0xe8259842… (Gnosis Safe L2 v1.3.0, 3-of-5, no modules). No OWNER/PAUSER/FREEZER holders. No TimelockController on-chain (prior docs reference was inaccurate). Permissionless mint confirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25,294,956: eUSD RToken main = 0x7697ae4def3c3cd52493ba3a6f57fc6d8c59108a (UUPS, Main v4). Central Auth 0xe1ec57c8…: DEFAULT_ADMIN = 0xe8259842… (Gnosis Safe L2 v1.3.0, 3-of-5, no modules). No OWNER/PAUSER/FREEZER holders. No TimelockController on-chain (prior docs reference was inaccurate). Permissionless mint confirmed. Re-verified at Ethereum block 25575142 on 2026-07-20: Safe 0xe8259842e71f4E44F2F68D6bfbC15EDA56E63064 still returns getThreshold()=3 over the same five owners, getModulesPaginated returned an empty array, and the Safe guard slot reads zero; Auth 0xe1ec57c8ee970280f237863910b606059e9641c9 still reports exactly one DEFAULT_ADMIN_ROLE member, that Safe. RToken 0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f remains a UUPS proxy (EIP-1967 implementation slot = 0x258ce833cf9ad19208372763a00aa1565dd40b3c) whose main() is 0x7697aE4dEf3C3Cd52493Ba3a6F57fc6d8c59108a. Economic-control adjudication: issuance itself is permissionless and 1:1 against deposited collateral, but the same 3-of-5 Safe can grant itself OWNER instantly, change the basket, and upgrade the RToken implementation with no timelock and no independent bound, so the cap is economically unbounded rather than raiseable (this is the point of difference from the Reserve Protocol sibling USD3, which routes OWNER_ROLE through a 3-day TimelockController). The basket is held on-chain and continuously readable, so there is no off-chain supply-versus-reserve attestation cadence, and no financial regulator supervises the eUSD RToken.",
+      "reviewer": "Claude Phase 0c continuation; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Reserve docs",
@@ -239,8 +239,43 @@
           "label": "eUSD governance Safe on Etherscan",
           "url": "https://etherscan.io/address/0xe8259842e71f4E44F2F68D6bfbC15EDA56E63064"
         }
+      ],
+      "disposition": "scoreable"
+    },
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f",
+        "0x7697aE4dEf3C3Cd52493Ba3a6F57fc6d8c59108a"
+      ],
+      "implementationAddresses": [
+        "0x258ce833cf9ad19208372763a00aa1565dd40b3c"
+      ],
+      "adminAddresses": [
+        "0xe8259842e71f4E44F2F68D6bfbC15EDA56E63064"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "eUSD Central Auth (DEFAULT_ADMIN = 3-of-5 Gnosis Safe)",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25575142,
+      "sources": [
+        {
+          "label": "eUSD RToken on Etherscan",
+          "url": "https://etherscan.io/address/0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f"
+        },
+        {
+          "label": "eUSD Central Auth on Etherscan",
+          "url": "https://etherscan.io/address/0xe1ec57c8ee970280f237863910b606059e9641c9"
+        },
+        {
+          "label": "eUSD governance Safe on Etherscan",
+          "url": "https://etherscan.io/address/0xe8259842e71f4E44F2F68D6bfbC15EDA56E63064"
+        }
       ]
-    }
+    },
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none"
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {

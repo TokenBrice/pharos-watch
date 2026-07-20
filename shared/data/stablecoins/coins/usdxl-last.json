@@ -131,17 +131,17 @@
             ]
           }
         ],
-      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
         "observedAt": "2026-07-14",
         "observedBlock": 40451813,
         "collateralParameters": [
           {
             "asset": "WHYPE",
             "maximumLtvPct": 68,
-          "note": "Liquidation threshold 80%; bonus 12%. Reserve was active and not frozen at the observation block. In eMode category 1 (HYPE Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/95%/3%."
+            "note": "Liquidation threshold 80%; bonus 12%. Reserve was active and not frozen at the observation block. In eMode category 1 (HYPE Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/95%/3%."
           }
         ],
-      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
         "liquidationDelaySec": 0,
         "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
         "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
@@ -202,17 +202,17 @@
             ]
           }
         ],
-      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
         "observedAt": "2026-07-14",
         "observedBlock": 40451813,
         "collateralParameters": [
           {
             "asset": "wstHYPE",
             "maximumLtvPct": 60,
-          "note": "Liquidation threshold 75%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. In eMode category 1 (HYPE Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/95%/3%."
+            "note": "Liquidation threshold 75%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. In eMode category 1 (HYPE Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/95%/3%."
           }
         ],
-      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
         "liquidationDelaySec": 0,
         "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
         "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
@@ -273,7 +273,7 @@
             ]
           }
         ],
-      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
         "observedAt": "2026-07-14",
         "observedBlock": 40451813,
         "collateralParameters": [
@@ -283,7 +283,7 @@
             "note": "Liquidation threshold 70%; bonus 12%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable."
           }
         ],
-      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
         "liquidationDelaySec": 0,
         "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
         "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
@@ -343,7 +343,7 @@
             ]
           }
         ],
-      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
         "observedAt": "2026-07-14",
         "observedBlock": 40451813,
         "collateralParameters": [
@@ -353,7 +353,7 @@
             "note": "Liquidation threshold 83%; bonus 12%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable."
           }
         ],
-      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
         "liquidationDelaySec": 0,
         "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
         "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
@@ -413,17 +413,17 @@
             ]
           }
         ],
-      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
         "observedAt": "2026-07-14",
         "observedBlock": 40451813,
         "collateralParameters": [
           {
             "asset": "USD₮0",
             "maximumLtvPct": 65,
-          "note": "Liquidation threshold 80%; bonus 8%. Reserve was active and not frozen at the observation block. In eMode category 2 (USD Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/93%/3%."
+            "note": "Liquidation threshold 80%; bonus 8%. Reserve was active and not frozen at the observation block. In eMode category 2 (USD Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/93%/3%."
           }
         ],
-      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
         "liquidationDelaySec": 0,
         "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
         "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
@@ -483,17 +483,17 @@
             ]
           }
         ],
-      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
         "observedAt": "2026-07-14",
         "observedBlock": 40451813,
         "collateralParameters": [
           {
             "asset": "USDHL",
             "maximumLtvPct": 60,
-          "note": "Liquidation threshold 80%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. In eMode category 2 (USD Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/93%/3%."
+            "note": "Liquidation threshold 80%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. In eMode category 2 (USD Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/93%/3%."
           }
         ],
-      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
         "liquidationDelaySec": 0,
         "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
         "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
@@ -553,7 +553,7 @@
             ]
           }
         ],
-      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
         "observedAt": "2026-07-14",
         "observedBlock": 40451813,
         "collateralParameters": [
@@ -563,7 +563,7 @@
             "note": "Liquidation threshold 70%; bonus 12%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable."
           }
         ],
-      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
         "liquidationDelaySec": 0,
         "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
         "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
@@ -624,17 +624,17 @@
             ]
           }
         ],
-      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
         "observedAt": "2026-07-14",
         "observedBlock": 40451813,
         "collateralParameters": [
           {
             "asset": "kHYPE",
             "maximumLtvPct": 60,
-          "note": "Liquidation threshold 75%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. In eMode category 1 (HYPE Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/95%/3%."
+            "note": "Liquidation threshold 75%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. In eMode category 1 (HYPE Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/95%/3%."
           }
         ],
-      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
         "liquidationDelaySec": 0,
         "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
         "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
@@ -695,7 +695,7 @@
             ]
           }
         ],
-      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
         "observedAt": "2026-07-14",
         "observedBlock": 40451813,
         "collateralParameters": [
@@ -705,7 +705,7 @@
             "note": "Liquidation threshold 40%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable."
           }
         ],
-      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
         "liquidationDelaySec": 0,
         "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
         "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
@@ -765,17 +765,17 @@
             ]
           }
         ],
-      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
         "observedAt": "2026-07-14",
         "observedBlock": 40451813,
         "collateralParameters": [
           {
             "asset": "thBILL",
             "maximumLtvPct": 40,
-          "note": "Liquidation threshold 60%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. In eMode category 2 (USD Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/93%/3%."
+            "note": "Liquidation threshold 60%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. In eMode category 2 (USD Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/93%/3%."
           }
         ],
-      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
         "liquidationDelaySec": 0,
         "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
         "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
@@ -835,17 +835,17 @@
             ]
           }
         ],
-      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
         "observedAt": "2026-07-14",
         "observedBlock": 40451813,
         "collateralParameters": [
           {
             "asset": "sUSDe",
             "maximumLtvPct": 20,
-          "note": "Liquidation threshold 40%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. Borrowing this collateral asset itself was disabled; collateral use remained enabled. In eMode category 2 (USD Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/93%/3%."
+            "note": "Liquidation threshold 40%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. Borrowing this collateral asset itself was disabled; collateral use remained enabled. In eMode category 2 (USD Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/93%/3%."
           }
         ],
-      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
         "liquidationDelaySec": 0,
         "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
         "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
@@ -906,17 +906,17 @@
             ]
           }
         ],
-      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
         "observedAt": "2026-07-14",
         "observedBlock": 40451813,
         "collateralParameters": [
           {
             "asset": "PT-kHYPE-13NOV2025",
             "maximumLtvPct": 1,
-          "note": "Liquidation threshold 20%; bonus 8%; matured and retained because it remains collateral-enabled. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. Borrowing this collateral asset itself was disabled; collateral use remained enabled. The matured PT branch is retained because it remains collateral-enabled and callable for existing positions. In eMode category 1 (HYPE Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/95%/3%."
+            "note": "Liquidation threshold 20%; bonus 8%; matured and retained because it remains collateral-enabled. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. Borrowing this collateral asset itself was disabled; collateral use remained enabled. The matured PT branch is retained because it remains collateral-enabled and callable for existing positions. In eMode category 1 (HYPE Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/95%/3%."
           }
         ],
-      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
         "liquidationDelaySec": 0,
         "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
         "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
@@ -977,17 +977,17 @@
             ]
           }
         ],
-      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
         "observedAt": "2026-07-14",
         "observedBlock": 40451813,
         "collateralParameters": [
           {
             "asset": "beHYPE",
             "maximumLtvPct": 60,
-          "note": "Liquidation threshold 75%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. In eMode category 1 (HYPE Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/95%/3%."
+            "note": "Liquidation threshold 75%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. In eMode category 1 (HYPE Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/95%/3%."
           }
         ],
-      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
         "liquidationDelaySec": 0,
         "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
         "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
@@ -1047,17 +1047,17 @@
             ]
           }
         ],
-      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
         "observedAt": "2026-07-14",
         "observedBlock": 40451813,
         "collateralParameters": [
           {
             "asset": "USDC",
             "maximumLtvPct": 65,
-          "note": "Liquidation threshold 80%; bonus 8%. Reserve was active and not frozen at the observation block. In eMode category 2 (USD Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/93%/3%."
+            "note": "Liquidation threshold 80%; bonus 8%. Reserve was active and not frozen at the observation block. In eMode category 2 (USD Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/93%/3%."
           }
         ],
-      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
         "liquidationDelaySec": 0,
         "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
         "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
@@ -1117,17 +1117,17 @@
             ]
           }
         ],
-      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
         "observedAt": "2026-07-14",
         "observedBlock": 40451813,
         "collateralParameters": [
           {
             "asset": "USDH",
             "maximumLtvPct": 65,
-          "note": "Liquidation threshold 80%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. In eMode category 2 (USD Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/93%/3%."
+            "note": "Liquidation threshold 80%; bonus 8%. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. In eMode category 2 (USD Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/93%/3%."
           }
         ],
-      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
         "liquidationDelaySec": 0,
         "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
         "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
@@ -1188,17 +1188,17 @@
             ]
           }
         ],
-      "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
+        "fallbackBehavior": "HyFiOracle calls the selected source address, which is either a direct Pyth adapter or a collateral wrapper that invokes its nested Pyth adapter and exchange/redemption-rate dependency. getPriceUnsafe has no recency bound, so positive stale values pass. Absent or nonpositive answers select the configured zero-address fallback and fail; selected-source reverts propagate.",
         "observedAt": "2026-07-14",
         "observedBlock": 40451813,
         "collateralParameters": [
           {
             "asset": "PT-kHYPE-19MAR2026",
             "maximumLtvPct": 1,
-          "note": "Liquidation threshold 20%; bonus 8%; matured and retained because it remains collateral-enabled. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. Borrowing this collateral asset itself was disabled; collateral use remained enabled. The matured PT branch is retained because it remains collateral-enabled and callable for existing positions. In eMode category 1 (HYPE Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/95%/3%."
+            "note": "Liquidation threshold 20%; bonus 8%; matured and retained because it remains collateral-enabled. Reserve was active but frozen at the observation block; existing supplied collateral and debt remain repayable and liquidatable. Borrowing this collateral asset itself was disabled; collateral use remained enabled. The matured PT branch is retained because it remains collateral-enabled and callable for existing positions. In eMode category 1 (HYPE Correlated), user-selected eMode overrides LTV/threshold/bonus to 90%/95%/3%."
           }
         ],
-      "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
+        "liquidationMechanism": "Permissionless Aave V3 liquidationCall is immediate below health factor 1. A liquidator normally covers at most 50% of debt, or 100% when health factor is at or below 0.95; 50% of the liquidation bonus is the protocol share.",
         "liquidationDelaySec": 0,
         "backstop": "No Stability Pool, auction, insurance, or automatic USDXL deficit backstop is present in the reviewed deployed fork.",
         "shutdownOrBadDebtBehavior": "Pool roles can freeze or pause reserves. At the observation block USDXL and most collateral reserves were frozen, preventing new activity while existing USDXL debt and supplied collateral remained repayable and liquidatable. The deployed Pool lacks V3.3 deficit APIs and exposes no reviewed automatic residual-debt elimination path; unrecovered debt remains outstanding pending governance or admin action.",
@@ -1361,7 +1361,12 @@
       "risk": "very-high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "HypurrFi borrowers depositing HYPE and HYPE liquid-staking tokens",
-      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
       "liquidityHorizon": "one-day"
     },
     {
@@ -1370,7 +1375,13 @@
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "HypurrFi borrowers depositing Unit-bridged BTC (UBTC) and ETH (UETH)",
-      "riskFactors": ["market", "liquidity", "custody", "smart-contract", "concentration"],
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "concentration"
+      ],
       "liquidityHorizon": "one-day"
     },
     {
@@ -1382,7 +1393,11 @@
       "blacklistable": true,
       "assetClass": "stablecoin",
       "issuerOrObligor": "Tether (USDT0) protocol-owned liquidity and stablecoin reserves",
-      "riskFactors": ["counterparty", "liquidity", "smart-contract"],
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "smart-contract"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
@@ -1391,7 +1406,12 @@
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Last protocol-owned USDXL liquidity positions",
-      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
       "liquidityHorizon": "one-day"
     }
   ],
@@ -1540,9 +1560,9 @@
       }
     ],
     "review": {
-      "evidence": "At HyperEVM block 40440697: the USDXL proxy (0xca79db4b49f608ef54a5cb813fbed3a6387bc645) EIP-1967 implementation slot returned 0xce23355599cdbe5dca05186c5d9d5b37d959b27f and the admin slot returned Safe 0xf050623d497be7ea6653fd205a537d10300b4c6e. Safe getOwners() returned [0x67a6d918..., 0xae04ce2f...] and getThreshold() returned 2; getModulesPaginated() returned no enabled modules, and the guard storage slot was zero. Mint reverts FACILITATOR_BUCKET_CAPACITY_EXCEEDED (buckets exhausted, wind-down active). At block 37556224 the facilitator-bucket ACL was resolved: getFacilitatorsList() = 3 facilitators (market loans, flash loans, USDT0 PSM) and hasRole(DEFAULT_ADMIN_ROLE / FACILITATOR_MANAGER_ROLE / BUCKET_MANAGER_ROLE) = false for the Safe, all facilitators, the implementation, and HypurrFi governance addresses, with no RoleGranted events in history — the GHO role set has zero members and the facilitator/bucket configuration is frozen. The sole remaining mint-capable authority is the 2/2 proxy-admin Safe via implementation upgrade.",
-      "reviewer": "Codex CTRL curation batch 18",
-      "reviewedAt": "2026-07-14",
+      "evidence": "At HyperEVM block 40440697: the USDXL proxy (0xca79db4b49f608ef54a5cb813fbed3a6387bc645) EIP-1967 implementation slot returned 0xce23355599cdbe5dca05186c5d9d5b37d959b27f and the admin slot returned Safe 0xf050623d497be7ea6653fd205a537d10300b4c6e. Safe getOwners() returned [0x67a6d918..., 0xae04ce2f...] and getThreshold() returned 2; getModulesPaginated() returned no enabled modules, and the guard storage slot was zero. Mint reverts FACILITATOR_BUCKET_CAPACITY_EXCEEDED (buckets exhausted, wind-down active). At block 37556224 the facilitator-bucket ACL was resolved: getFacilitatorsList() = 3 facilitators (market loans, flash loans, USDT0 PSM) and hasRole(DEFAULT_ADMIN_ROLE / FACILITATOR_MANAGER_ROLE / BUCKET_MANAGER_ROLE) = false for the Safe, all facilitators, the implementation, and HypurrFi governance addresses, with no RoleGranted events in history — the GHO role set has zero members and the facilitator/bucket configuration is frozen. The sole remaining mint-capable authority is the 2/2 proxy-admin Safe via implementation upgrade. Economic-control fields authored 2026-07-20: economicCapSemantics is unbounded because the contract-level bucket freeze is not independently enforced — the same 2-of-2 proxy-admin Safe (0xf050623d497be7ea6653fd205a537d10300b4c6e, no modules, zero guard) can replace the implementation with no timelock and reinstate uncapped issuance. reconciliation is not-applicable because USDXL is a CDP against on-chain HypurrFi collateral with no off-chain reserve to attest. supervision is none: Last operates no named financial regulator relationship for USDXL.",
+      "reviewer": "Codex CTRL curation batch 18; Pharos V9 Phase 3 curation lane cur-4 (economic-control fields, 2026-07-20)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "USDXL token proxy on HyperEVM Blockscout",
@@ -1561,6 +1581,9 @@
           "url": "https://rpc.hyperliquid.xyz/evm"
         }
       ]
-    }
+    },
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none"
   }
 }

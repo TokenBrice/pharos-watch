@@ -142,7 +142,8 @@
       ],
       "evidence": "At Solana slot 425778559: mint authority Ze3CQhTMi6KMU3nWZQUegA2JpeFd2eMx1Y2Gswqnto4 (program-owned account) confirmed as direct-minter; program upgrade authority BzMuMbtah9bqN4HERkPo2PsVoaQKD2xfvYq1xfDCFwEb confirmed as funded EOA (owner: System Program, not executable, 8M lamports). All mint-capable controls are issuer-operated EOA/program-owned — consistent with centralized-dependent permissioned-minter model.",
       "reviewer": "Claude Phase 0c continuation / SOL-IV calibration",
-      "reviewedAt": "2026-07-15"
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable"
     },
     "upgradeability": {
       "model": "custom",

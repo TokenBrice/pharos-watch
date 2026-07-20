@@ -324,16 +324,48 @@
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
     "authorityPosture": "concentrated-admin",
-    "confidence": "unknown",
-    "summary": "Ethereum dUSD mint controls are partially enumerated: two contracts hold MINTER_ROLE and a 1-day timelocked 3-of-5 Safe administers roles, while the chain-isolated Fraxtal, Katana, and Sonic mint and upgrade inventories are not complete. The profile remains unresolved rather than extrapolating Ethereum authority across deployments.",
+    "confidence": "verified",
+    "summary": "dUSD mint authority is now enumerated on all four deployments. Every chain runs a transparent proxy whose ProxyAdmin is governed by a 3-of-5 Safe behind a 1-day TimelockController on Ethereum, Fraxtal and Katana, while Sonic's ProxyAdmin and token DEFAULT_ADMIN_ROLE sit directly under a 2-of-4 Safe with no timelock. Six contracts hold MINTER_ROLE across the four tokens and the dUSD token exposes no supply cap, so authorized minting is economically unbounded.",
     "upgradeability": {
-      "model": "unknown",
-      "canChangeMintLogic": "unknown",
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x07fff99e1664d9b116fbc158c0e99785f81ca236",
+        "0x788d96f655735f52c676a133f4dfc53cec614d4a",
+        "0xca52d08737e6af8763a2bf6034b3b03868f24dda",
+        "0x53a6abb52b2f968fa80df6a894e4f1b1020da975"
+      ],
+      "implementationAddresses": [
+        "0x6f83cbdf37863eaf43d11b3af1d024c336814d1b",
+        "0xaf2d757bfbded5f84f71d28223acda06352fddb6",
+        "0x4e23ca2a7e5ab4d1beade95203d5298e447b3a1c",
+        "0xa140c97eff565d50cfd320fe66d27c466cc0d327"
+      ],
+      "adminAddresses": [
+        "0xbe90db309b80357631069b689fc3481aca2c65be",
+        "0x1e5be5059d4a95297604355dc6abd0baf036cc95",
+        "0xe8829ff0db7dd1ff727a6052f419dcaceda9d962",
+        "0x0a0808f20743278d566fc954d3dcf8c082fb0bc5"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "dTRINITY Sonic Governance 2-of-4 Safe (no timelock)",
       "observedAt": "2026-07-20",
       "sources": [
         {
           "label": "Ethereum dUSD proxy",
           "url": "https://etherscan.io/address/0x07fff99e1664d9b116fbc158c0e99785f81ca236"
+        },
+        {
+          "label": "Fraxtal dUSD proxy",
+          "url": "https://fraxscan.com/address/0x788d96f655735f52c676a133f4dfc53cec614d4a"
+        },
+        {
+          "label": "Katana dUSD proxy",
+          "url": "https://explorer.katanarpc.com/address/0xca52d08737e6af8763a2bf6034b3b03868f24dda"
+        },
+        {
+          "label": "Sonic dUSD proxy",
+          "url": "https://sonicscan.org/address/0x53a6abb52b2f968fa80df6a894e4f1b1020da975"
         },
         {
           "label": "dTRINITY docs — contract addresses",
@@ -460,14 +492,232 @@
           }
         ],
         "evidence": "This 5-of-5 Safe (owners read on-chain 2026-07-20) holds PAUSER_ROLE on the Ethereum dUSD token (granted at block 25112809; hasRole re-verified 2026-07-20) — emergency pause only, no mint or admin capability."
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x9e8d871077bb496e388fd48f659cedd6d0abdc3a",
+        "label": "dTRINITY Fraxtal dUSD MINTER_ROLE holder A",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-20",
+        "observedBlock": 38877208,
+        "sources": [
+          {
+            "label": "Fraxtal dUSD token (MINTER_ROLE hasRole read 2026-07-20)",
+            "url": "https://fraxscan.com/address/0x788d96f655735f52c676a133f4dfc53cec614d4a"
+          },
+          {
+            "label": "Fraxtal minter contract A",
+            "url": "https://fraxscan.com/address/0x9e8d871077bb496e388fd48f659cedd6d0abdc3a"
+          }
+        ],
+        "evidence": "RoleGranted(MINTER_ROLE) at Fraxtal block 28,872,499 with no matching RoleRevoked; hasRole(MINTER_ROLE, 0x9e8d87…) = true re-read at block 38,877,208 on 2026-07-20. The holder is a 10,734-byte contract (not an EOA, not a proxy)."
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x57bbd5026503bb54cc50a4129c4896cba40bebae",
+        "label": "dTRINITY Fraxtal dUSD MINTER_ROLE holder B",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-20",
+        "observedBlock": 38877208,
+        "sources": [
+          {
+            "label": "Fraxtal dUSD token (MINTER_ROLE hasRole read 2026-07-20)",
+            "url": "https://fraxscan.com/address/0x788d96f655735f52c676a133f4dfc53cec614d4a"
+          },
+          {
+            "label": "Fraxtal minter contract B",
+            "url": "https://fraxscan.com/address/0x57bbd5026503bb54cc50a4129c4896cba40bebae"
+          }
+        ],
+        "evidence": "RoleGranted(MINTER_ROLE) at Fraxtal block 28,872,499 with no matching RoleRevoked; hasRole(MINTER_ROLE, 0x57bbd5…) = true re-read at block 38,877,208 on 2026-07-20. The holder is a 19,540-byte contract. Three earlier Fraxtal minters (0x0f5e3d…, 0x80fd39…, 0x823fd0…, 0x1ec13e…, 0xd95f1c…) were revoked on-chain and are not active."
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xfc2f89f9982be98a9672cefc3ea6dbbdd88bc8e9",
+        "label": "dTRINITY Fraxtal Governance 3-of-5 Safe (1-day TimelockController)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 86400,
+        "safe": {
+          "owners": [
+            "0x4b58ff1aae6add7465a5584ebcaeb876ec8f21fd",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x64dbdd2aad00383defc305398f18a019161558cb",
+            "0xdc672ba6e55b71b39fa5423d42b88e7adf9d24a4",
+            "0x9e0c8376940abe845a89b7304147a95c72644f59"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 38877208,
+          "observedAt": "2026-07-20",
+          "source": "onchain"
+        },
+        "failureDomainKeys": [
+          "safe:fraxtal:0xfc2f89f9982be98a9672cefc3ea6dbbdd88bc8e9"
+        ],
+        "observedAt": "2026-07-20",
+        "observedBlock": 38877208,
+        "sources": [
+          {
+            "label": "Fraxtal dUSD TimelockController (getMinDelay = 86400, read 2026-07-20)",
+            "url": "https://fraxscan.com/address/0x0bafada2a5824864720873ee40cd960b36445212"
+          },
+          {
+            "label": "Fraxtal Governance Safe (3-of-5 owners read 2026-07-20)",
+            "url": "https://fraxscan.com/address/0xfc2f89f9982be98a9672cefc3ea6dbbdd88bc8e9"
+          }
+        ],
+        "evidence": "Fraxtal dUSD DEFAULT_ADMIN_ROLE is held by TimelockController 0x0bafada2a5824864720873ee40cd960b36445212 (hasRole = true; getMinDelay() = 86,400 s), which also owns the Fraxtal ProxyAdmin 0x1e5be5059d4a95297604355dc6abd0baf036cc95. That timelock's sole PROPOSER, EXECUTOR and CANCELLER is this Safe (RoleGranted events at Fraxtal block 35,709,939; getOwners/getThreshold read 2026-07-20 = 3-of-5, no modules, zero guard). Its owner set is identical to the Ethereum governance Safe."
+      },
+      {
+        "chain": "katana",
+        "address": "0xfdb85fdfcee413eb05287f9d4157c1ef1f336207",
+        "label": "dTRINITY Katana dUSD MINTER_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-20",
+        "observedBlock": 37822317,
+        "sources": [
+          {
+            "label": "Katana dUSD token (MINTER_ROLE hasRole read 2026-07-20)",
+            "url": "https://explorer.katanarpc.com/address/0xca52d08737e6af8763a2bf6034b3b03868f24dda"
+          },
+          {
+            "label": "Katana minter contract",
+            "url": "https://explorer.katanarpc.com/address/0xfdb85fdfcee413eb05287f9d4157c1ef1f336207"
+          }
+        ],
+        "evidence": "The single RoleGranted(MINTER_ROLE) event on the Katana dUSD token (block 11,001,261) has no matching RoleRevoked; hasRole(MINTER_ROLE, 0xfdb85f…) = true re-read at block 37,822,317 on 2026-07-20. The holder is an 11,760-byte contract."
+      },
+      {
+        "chain": "katana",
+        "address": "0xE83c188a7BE46B90715C757A06cF917175f30262",
+        "label": "dTRINITY Katana Governance 3-of-5 Safe (1-day TimelockController)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 86400,
+        "safe": {
+          "owners": [
+            "0x4b58ff1aae6add7465a5584ebcaeb876ec8f21fd",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x64dbdd2aad00383defc305398f18a019161558cb",
+            "0xdc672ba6e55b71b39fa5423d42b88e7adf9d24a4",
+            "0x9e0c8376940abe845a89b7304147a95c72644f59"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 37822317,
+          "observedAt": "2026-07-20",
+          "source": "onchain"
+        },
+        "failureDomainKeys": [
+          "safe:katana:0xe83c188a7be46b90715c757a06cf917175f30262"
+        ],
+        "observedAt": "2026-07-20",
+        "observedBlock": 37822317,
+        "sources": [
+          {
+            "label": "Katana dUSD TimelockController (getMinDelay = 86400, read 2026-07-20)",
+            "url": "https://explorer.katanarpc.com/address/0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b"
+          },
+          {
+            "label": "Katana Governance Safe (3-of-5 owners read 2026-07-20)",
+            "url": "https://explorer.katanarpc.com/address/0xE83c188a7BE46B90715C757A06cF917175f30262"
+          }
+        ],
+        "evidence": "Katana dUSD DEFAULT_ADMIN_ROLE is held by TimelockController 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b (hasRole = true; getMinDelay() = 86,400 s), which also owns the Katana ProxyAdmin 0xe8829ff0db7dd1ff727a6052f419dcaceda9d962. hasRole(PROPOSER/EXECUTOR/CANCELLER) on that timelock is true only for this Safe; getOwners/getThreshold read 2026-07-20 = 3-of-5, no modules, zero guard. The address matches the Ethereum deployment but is a chain-local Safe."
+      },
+      {
+        "chain": "sonic",
+        "address": "0x9b93c3995235c2c16b87976c763360d08c725ddc",
+        "label": "dTRINITY Sonic dUSD MINTER_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-20",
+        "observedBlock": 76243494,
+        "sources": [
+          {
+            "label": "Sonic dUSD token (MINTER_ROLE hasRole read 2026-07-20)",
+            "url": "https://sonicscan.org/address/0x53a6abb52b2f968fa80df6a894e4f1b1020da975"
+          },
+          {
+            "label": "Sonic minter contract",
+            "url": "https://sonicscan.org/address/0x9b93c3995235c2c16b87976c763360d08c725ddc"
+          }
+        ],
+        "evidence": "RoleGranted(MINTER_ROLE) at Sonic block 43,166,024 with no matching RoleRevoked; hasRole(MINTER_ROLE, 0x9b93c3…) = true re-read at block 76,243,494 on 2026-07-20. The earlier Sonic minter 0x5e8352… was revoked at block 42,123,733. The active holder is an 11,760-byte contract."
+      },
+      {
+        "chain": "sonic",
+        "address": "0xE83c188a7BE46B90715C757A06cF917175f30262",
+        "label": "dTRINITY Sonic Governance 2-of-4 Safe (no timelock)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 2,
+        "signerCount": 4,
+        "safe": {
+          "owners": [
+            "0x64dbdd2aad00383defc305398f18a019161558cb",
+            "0xdc672ba6e55b71b39fa5423d42b88e7adf9d24a4",
+            "0x4b58ff1aae6add7465a5584ebcaeb876ec8f21fd",
+            "0x9e0c8376940abe845a89b7304147a95c72644f59"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 76243494,
+          "observedAt": "2026-07-20",
+          "source": "onchain"
+        },
+        "failureDomainKeys": [
+          "safe:sonic:0xe83c188a7be46b90715c757a06cf917175f30262"
+        ],
+        "observedAt": "2026-07-20",
+        "observedBlock": 76243494,
+        "sources": [
+          {
+            "label": "Sonic dUSD token (DEFAULT_ADMIN_ROLE hasRole read 2026-07-20)",
+            "url": "https://sonicscan.org/address/0x53a6abb52b2f968fa80df6a894e4f1b1020da975"
+          },
+          {
+            "label": "Sonic Governance Safe (2-of-4 owners read 2026-07-20)",
+            "url": "https://sonicscan.org/address/0xE83c188a7BE46B90715C757A06cF917175f30262"
+          }
+        ],
+        "evidence": "Sonic is the weakest deployment: this Safe holds dUSD DEFAULT_ADMIN_ROLE directly (hasRole = true) and owns the Sonic ProxyAdmin 0x0a0808f20743278d566fc954d3dcf8c082fb0bc5 with no TimelockController in the path. getOwners/getThreshold read at block 76,243,494 on 2026-07-20 return 4 owners and threshold 2 — a lower quorum and shorter delay than the 3-of-5 plus 1-day timelock used on Ethereum, Fraxtal and Katana."
       }
     ],
-    "economicCapSemantics": "unknown",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
-    "supervision": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "Ethereum evidence at the cited token and Safe contracts identifies two active MINTER_ROLE holders, a 1-day TimelockController behind the 3-of-5 Governance Safe, and a pause-only 5-of-5 Safe. It does not establish a complete mint-role, cap, and upgrade-controller inventory for every chain-isolated dUSD deployment. The second Ethereum minter is not documented in the issuer registry, and the available Sonic administration observation does not substitute for a complete Sonic/Fraxtal/Katana mint review.",
-      "reviewer": "P2 mint-free cohort",
+      "evidence": "EIP-1967 implementation and admin slots, ProxyAdmin owner(), TimelockController getMinDelay()/hasRole(), Safe getOwners()/getThreshold()/getModulesPaginated()/guard-slot, and token hasRole(MINTER_ROLE)/hasRole(DEFAULT_ADMIN_ROLE) were read on public RPCs on 2026-07-20 at Ethereum block 25,575,127, Fraxtal 38,877,208, Katana 37,822,317 and Sonic 76,243,494; live MINTER_ROLE holders were derived from the full RoleGranted/RoleRevoked log history on Fraxtal, Katana and Sonic. Active minters: two on Ethereum, two on Fraxtal, one on Katana, one on Sonic. Upgrade and role authority resolves to a 3-of-5 Safe behind a 1-day timelock on Ethereum, Fraxtal and Katana, and to a 2-of-4 Safe with no timelock on Sonic (flagged as the binding worst-case path, so the profile records delaySec 0). The dUSD token exposes neither cap() nor maxSupply() (both revert), so a MINTER_ROLE holder faces no token-level supply ceiling and economicCapSemantics is unbounded. Residual, deliberately not extrapolated: the second Ethereum MINTER_ROLE holder 0xf84cc8217713a53fc3e3eb2d62d2af33a084ff85 is absent from the issuer contract registry and exposes no identifying view function, so its internal collateral checks are unknown; any such check can only narrow, never widen, the uncapped mint capability already scored here.",
+      "reviewer": "Pharos V9 Phase 3 curation lane cur-11 (on-chain reads)",
       "reviewedAt": "2026-07-20",
       "sources": [
         {
@@ -475,16 +725,27 @@
           "url": "https://docs.dtrinity.org/core-components/dusd-stablecoin"
         },
         {
+          "label": "dTRINITY docs — contract addresses",
+          "url": "https://docs.dtrinity.org/security/addresses"
+        },
+        {
           "label": "Ethereum dUSD proxy",
           "url": "https://etherscan.io/address/0x07fff99e1664d9b116fbc158c0e99785f81ca236"
+        },
+        {
+          "label": "Fraxtal dUSD proxy",
+          "url": "https://fraxscan.com/address/0x788d96f655735f52c676a133f4dfc53cec614d4a"
+        },
+        {
+          "label": "Katana dUSD proxy",
+          "url": "https://explorer.katanarpc.com/address/0xca52d08737e6af8763a2bf6034b3b03868f24dda"
+        },
+        {
+          "label": "Sonic dUSD proxy",
+          "url": "https://sonicscan.org/address/0x53a6abb52b2f968fa80df6a894e4f1b1020da975"
         }
       ],
-      "disposition": "unresolved",
-      "unresolvedQuestions": [
-        "Enumerate current minter, administrator, and upgrade-controller relationships for the Fraxtal and Katana dUSD deployments.",
-        "Verify the Sonic token's active minters and complete proxy/implementation authority path rather than relying on the documented Safe admin alone.",
-        "Identify the undocumented Ethereum MINTER_ROLE holder's mint constraints and any collateral or cap checks."
-      ]
+      "disposition": "scoreable"
     }
   },
   "launchDate": "2024-12-18",

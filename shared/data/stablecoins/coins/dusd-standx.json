@@ -356,9 +356,13 @@
           {
             "label": "Minting $DUSD",
             "url": "https://docs.standx.com/docs/dusd-solutions/minting-dusd"
+          },
+          {
+            "label": "BSC public RPC (eth_getStorageAt / eth_call / eth_getLogs, 2026-07-20)",
+            "url": "https://bsc-dataseed.binance.org"
           }
         ],
-        "evidence": "2026-07-20: a full RoleGranted/RoleRevoked log scan of the BSC DUSD token from deployment (block 47,000,000) through block 111,600,000 confirms MINTER_ROLE was granted to this Gateway controller proxy at block 47,451,545 and revoked from the deployer in the same transaction — it is the only MINTER_ROLE holder that has ever existed. Docs describe Gateway contract minting on USDT/USDC collateral deposit with a 7-day redemption lock."
+        "evidence": "2026-07-20: a full RoleGranted/RoleRevoked log scan of the BSC DUSD token from deployment (block 47,000,000) through block 111,600,000 confirms MINTER_ROLE was granted to this Gateway controller proxy at block 47,451,545 and revoked from the deployer in the same transaction — it is the only MINTER_ROLE holder that has ever existed. Docs describe Gateway contract minting on USDT/USDC collateral deposit with a 7-day redemption lock. 2026-07-20 follow-up (BSC block 111,123,001+, bsc-dataseed.binance.org): the Gateway 0x2c02f575cdd0cc87de89ae6a493b05a5ed95065a is a 130-byte ERC-1822/UUPS delegating proxy that loads its implementation from the non-ERC1967 slot 0x827d913d90d0c987a6f064bb327aef37980afaf247de25f9b07747de0af89dd1 (currently 0xdf09ebf9a24080deedb0a9a85db0b3aa9a90caa1); both ERC-1967 slots on the proxy read zero, and the implementation's proxiableUUID() returns that same custom slot with UPGRADE_INTERFACE_VERSION() = \"5.0.0\" (OpenZeppelin Contracts v5 UUPSUpgradeable). The Gateway proxy carries its own AccessControl: hasRole(DEFAULT_ADMIN_ROLE, 0x6c2404092cb1acfe9a06bc7de61bf619933edba5) = true and hasRole(DEFAULT_ADMIN_ROLE, 0x649b82c8de192e92f8dc9c88f63038016ce56310) = false."
       },
       {
         "chain": "bsc",
@@ -390,9 +394,13 @@
           {
             "label": "DEFAULT_ADMIN Safe on BscScan",
             "url": "https://bscscan.com/address/0x6c2404092cb1acfe9a06bc7de61bf619933edba5"
+          },
+          {
+            "label": "BSC public RPC (upgradeToAndCall authorization probe + hasRole reads, 2026-07-20)",
+            "url": "https://bsc-dataseed.binance.org"
           }
         ],
-        "evidence": "2026-07-20: the previously unresolved 171-byte DEFAULT_ADMIN contract is a Gnosis Safe 1.1.1 proxy (masterCopy() = 0x29fcB43b46531BcA003ddC8FCB67FFE91900C762) with owners 0x222542fac5d6f5c2562312f907d202be807ee415, 0x955703b14f475bc0c53db9522283ba1bf1c8a8e1, 0x649b82c8de192e92f8dc9c88f63038016ce56310, and 0x56383a4af4482a708dbbac53bf03ad706028b203, threshold 3. The full role-event scan confirms DEFAULT_ADMIN_ROLE was granted to this Safe at block 48,266,832 and revoked from the deployer, with no later role events."
+        "evidence": "2026-07-20: the previously unresolved 171-byte DEFAULT_ADMIN contract is a Gnosis Safe 1.1.1 proxy (masterCopy() = 0x29fcB43b46531BcA003ddC8FCB67FFE91900C762) with owners 0x222542fac5d6f5c2562312f907d202be807ee415, 0x955703b14f475bc0c53db9522283ba1bf1c8a8e1, 0x649b82c8de192e92f8dc9c88f63038016ce56310, and 0x56383a4af4482a708dbbac53bf03ad706028b203, threshold 3. The full role-event scan confirms DEFAULT_ADMIN_ROLE was granted to this Safe at block 48,266,832 and revoked from the deployer, with no later role events. 2026-07-20 follow-up: this same Safe is also the Gateway's terminal upgrade authority. A simulated eth_call of upgradeToAndCall(0xdf09ebf9a24080deedb0a9a85db0b3aa9a90caa1, \"\") against the Gateway proxy succeeds from this Safe and reverts from every other tested sender with the OpenZeppelin v5 error AccessControlUnauthorizedAccount(address,bytes32) (selector 0xe2517d3f) naming upgrade role 0x189ab7a9244df0848122154315af71fe140f3db0fe014031783b0946b8c9d2e3. Direct reads confirm hasRole(0x189ab7a9..., Safe) = true and hasRole(0x189ab7a9..., deployer EOA 0x649b82c8...) = false, and getRoleAdmin(0x189ab7a9...) = DEFAULT_ADMIN_ROLE, which the Safe also holds."
       },
       {
         "label": "StandX Settler / backend + RSV Fund multisig",
@@ -419,12 +427,28 @@
     "reconciliation": "unknown",
     "supervision": "unknown",
     "upgradeability": {
-      "model": "unknown",
-      "canChangeMintLogic": "unknown",
+      "model": "uups",
+      "proxyAddresses": [
+        "0x2c02f575cdd0cc87de89ae6a493b05a5ed95065a"
+      ],
+      "implementationAddresses": [
+        "0xdf09ebf9a24080deedb0a9a85db0b3aa9a90caa1"
+      ],
+      "adminAddresses": [
+        "0x6c2404092cb1acfe9a06bc7de61bf619933edba5"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "StandX BSC DEFAULT_ADMIN Safe (3-of-4)",
+      "observedAt": "2026-07-20",
+      "observedBlock": 111123001,
       "sources": [
         {
           "label": "DUSD BSC token on BscScan",
           "url": "https://bscscan.com/address/0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122"
+        },
+        {
+          "label": "BSC public RPC (UUPS slot, proxiableUUID, upgrade-authorization probe, 2026-07-20)",
+          "url": "https://bsc-dataseed.binance.org"
         },
         {
           "label": "Solana RPC getAccountInfo",
@@ -433,13 +457,12 @@
       ]
     },
     "review": {
-      "evidence": "StandX operates a two-layer model (on-chain Gateway + off-chain Settler/RSV multisig). Solana: at slot 425778638, DUSD mint DUSDt4AeLZHWYmcXnVGYdgAzjtzU5mXUVnTMdnSzAttM (Token-2022) has mintAuthority and freezeAuthority H4Mp7WL282pdbY9V9N7AJnsQwB5yyrU1E7svfsH2Ur5h, which is owned by StandX program STANDKqqZERMKosYH2PAtNtnt6mig4CRPycsRwjuVhB. StandX program has upgradeAuthority: None (immutable, programData 4XNF9sPKbX3SAor8mm8HDbWycw7qGC642NJs6mePqXQe at slot 425779135). Solana mint authority is a PDA of an immutable program. BSC: DUSD token 0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122 has slot 0 = 0x2c02f575cdd0cc87de89ae6a493b05a5ed95065a (admin proxy pointing to implementation 0xdf09ebf9a24080deedb0a9a85db0b3aa9a90caa1); slot 1 of that proxy = 0x00b4f9b510893505acefb10ec91cbc972185088e (a second proxy pointing to 0xb69f4f80ec472ff9fe86933ac739329f8f72dc3b, a 31KB AccessControl+UUPS implementation). Partial role resolution on 2026-06-11 at BSC block 103642466: hasRole(DEFAULT_ADMIN_ROLE, 0x6c2404092cb1acfe9a06bc7de61bf619933edba5) = true (a 171-byte unverified contract, structure unresolved) and hasRole(MINTER_ROLE, 0x2c02f575…) = true (the Gateway controller proxy); hasRole(MINTER_ROLE, 0x6c2404…) = false. 2026-07-20 follow-up resolved both open questions: the 171-byte DEFAULT_ADMIN contract is a Gnosis Safe 1.1.1 proxy (masterCopy 0x29fcB43b46531BcA003ddC8FCB67FFE91900C762) with 4 owners and threshold 3, and a complete RoleGranted/RoleRevoked scan from deployment (block 47,000,000) through block 111,600,000 via bsc.lava.build found no role events after block 48,346,672 — MINTER_ROLE has only ever been held by the Gateway proxy 0x2c02f575cdd0cc87de89ae6a493b05a5ed95065a, and DEFAULT_ADMIN_ROLE only by the Safe.",
+      "evidence": "StandX operates a two-layer model (on-chain Gateway + off-chain Settler/RSV multisig). Solana: at slot 425778638, DUSD mint DUSDt4AeLZHWYmcXnVGYdgAzjtzU5mXUVnTMdnSzAttM (Token-2022) has mintAuthority and freezeAuthority H4Mp7WL282pdbY9V9N7AJnsQwB5yyrU1E7svfsH2Ur5h, which is owned by StandX program STANDKqqZERMKosYH2PAtNtnt6mig4CRPycsRwjuVhB. StandX program has upgradeAuthority: None (immutable, programData 4XNF9sPKbX3SAor8mm8HDbWycw7qGC642NJs6mePqXQe at slot 425779135). Solana mint authority is a PDA of an immutable program. BSC: DUSD token 0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122 has slot 0 = 0x2c02f575cdd0cc87de89ae6a493b05a5ed95065a (admin proxy pointing to implementation 0xdf09ebf9a24080deedb0a9a85db0b3aa9a90caa1); slot 1 of that proxy = 0x00b4f9b510893505acefb10ec91cbc972185088e (a second proxy pointing to 0xb69f4f80ec472ff9fe86933ac739329f8f72dc3b, a 31KB AccessControl+UUPS implementation). Partial role resolution on 2026-06-11 at BSC block 103642466: hasRole(DEFAULT_ADMIN_ROLE, 0x6c2404092cb1acfe9a06bc7de61bf619933edba5) = true (a 171-byte unverified contract, structure unresolved) and hasRole(MINTER_ROLE, 0x2c02f575…) = true (the Gateway controller proxy); hasRole(MINTER_ROLE, 0x6c2404…) = false. 2026-07-20 follow-up resolved both open questions: the 171-byte DEFAULT_ADMIN contract is a Gnosis Safe 1.1.1 proxy (masterCopy 0x29fcB43b46531BcA003ddC8FCB67FFE91900C762) with 4 owners and threshold 3, and a complete RoleGranted/RoleRevoked scan from deployment (block 47,000,000) through block 111,600,000 via bsc.lava.build found no role events after block 48,346,672 — MINTER_ROLE has only ever been held by the Gateway proxy 0x2c02f575cdd0cc87de89ae6a493b05a5ed95065a, and DEFAULT_ADMIN_ROLE only by the Safe. 2026-07-20 (cur-9) resolved the BSC Gateway upgrade path: the Gateway is a UUPS (OZ v5) proxy reading implementation slot 0x827d913d90d0c987a6f064bb327aef37980afaf247de25f9b07747de0af89dd1, and upgradeToAndCall is gated by role 0x189ab7a9244df0848122154315af71fe140f3db0fe014031783b0946b8c9d2e3 held only by the 3-of-4 Safe 0x6c2404092cb1acfe9a06bc7de61bf619933edba5. The BSC mint surface is therefore fully enumerated and terminates at that Safe. The profile stays unresolved solely because the off-chain StandX Settler and RSV Fund backend still participates in the mint/redeem lifecycle with no published signer set or threshold.",
       "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
       "disposition": "unresolved",
       "unresolvedQuestions": [
-        "Identify the current terminal signer set, threshold, and authorization rules for the StandX Settler and RSV Fund backend that participates in the mint/redeem lifecycle.",
-        "Reconcile the BSC Gateway controller's nested proxy implementation and terminal upgrade authority; the Solana program is immutable, but the BSC Gateway path is not fully established."
+        "Identify the current terminal signer set, threshold, and authorization rules for the StandX Settler and RSV Fund backend that participates in the mint/redeem lifecycle. StandX publishes no signer roster or threshold for this off-chain control and it is not addressable on-chain, so it cannot be enumerated from primary sources."
       ],
       "sources": [
         {
@@ -453,6 +476,10 @@
         {
           "label": "Solana RPC getAccountInfo",
           "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "BSC public RPC (Gateway UUPS + role reads, 2026-07-20)",
+          "url": "https://bsc-dataseed.binance.org"
         }
       ]
     }

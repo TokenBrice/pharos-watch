@@ -72,6 +72,16 @@
       "chain": "bsc",
       "address": "0x8e9d4cea39299323fe8eda678cad449718556c4e",
       "decimals": 6
+    },
+    {
+      "chain": "mantle",
+      "address": "0x051665f2455116e929b9972c36d23070f5054ce0",
+      "decimals": 6
+    },
+    {
+      "chain": "ink",
+      "address": "0x8a76fe7fa6da27f85a626c5c53730b38d13603d7",
+      "decimals": 6
     }
   ],
   "deploymentModel": "third-party-bridge",

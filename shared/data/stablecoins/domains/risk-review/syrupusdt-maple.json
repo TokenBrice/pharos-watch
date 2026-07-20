@@ -127,6 +127,52 @@
             "url": "https://plasmascan.to/address/0xc4374775489cb9c56003bf2c9b12495fc64f0771"
           }
         ]
+      },
+      {
+        "id": "mantle:0x051665f2455116e929b9972c36d23070f5054ce0",
+        "sourceChain": "ethereum",
+        "destinationChain": "mantle",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x051665f2455116e929b9972c36d23070f5054ce0",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "2026-07-20 (coordinator): the mantle deployment was added to contracts[] with decimals() verified on-chain, but its bridge route is NOT established. The authoring lane asserted a LockReleaseTokenPool 1.5.1 lock-release mechanism against syrupUSDT locked on Ethereum, which directly contradicts this profile's verified burn-mint CCIP CCT finding for the reviewed chains; that conflict is unreconciled and is tracked for owner adjudication. No route disposition is claimed here rather than inheriting either contested mechanism. Fails closed: this deployment counts toward unreviewed share until the mechanism is verified on-chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "syrupUSDT contract on mantle",
+            "url": "https://app.maple.finance/"
+          }
+        ]
+      },
+      {
+        "id": "ink:0x8a76fe7fa6da27f85a626c5c53730b38d13603d7",
+        "sourceChain": "ethereum",
+        "destinationChain": "ink",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x8a76fe7fa6da27f85a626c5c53730b38d13603d7",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "2026-07-20 (coordinator): the ink deployment was added to contracts[] with decimals() verified on-chain, but its bridge route is NOT established. The authoring lane asserted a LockReleaseTokenPool 1.5.1 lock-release mechanism against syrupUSDT locked on Ethereum, which directly contradicts this profile's verified burn-mint CCIP CCT finding for the reviewed chains; that conflict is unreconciled and is tracked for owner adjudication. No route disposition is claimed here rather than inheriting either contested mechanism. Fails closed: this deployment counts toward unreviewed share until the mechanism is verified on-chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "syrupUSDT contract on ink",
+            "url": "https://app.maple.finance/"
+          }
+        ]
       }
     ]
   }

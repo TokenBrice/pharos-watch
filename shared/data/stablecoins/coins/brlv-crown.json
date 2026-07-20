@@ -313,7 +313,7 @@
       {
         "chain": "base",
         "address": "0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea",
-        "label": "BRLV Base MINTER_ROLE \u2014 gasless relay EOA 0x8e7e9b",
+        "label": "BRLV Base MINTER_ROLE — gasless relay EOA 0x8e7e9b",
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
@@ -332,7 +332,7 @@
       {
         "chain": "base",
         "address": "0x7e0d3f1a390209d87d9e1425d03066eb567a9844",
-        "label": "BRLV Base MINTER_ROLE \u2014 BRLVCanonicalGateway proxy 0x7e0d3f",
+        "label": "BRLV Base MINTER_ROLE — BRLVCanonicalGateway proxy 0x7e0d3f",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
@@ -354,7 +354,7 @@
       {
         "chain": "base",
         "address": "0x5315c03f8cf027d1b67dac72ef9eec8988d80f88",
-        "label": "BRLV Base MINTER_ROLE \u2014 BRLVRewards proxy 0x5315c0",
+        "label": "BRLV Base MINTER_ROLE — BRLVRewards proxy 0x5315c0",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
@@ -400,7 +400,7 @@
       {
         "chain": "ethereum",
         "address": "0x039b419dafc801c3e375046efabd00813b0c48b6",
-        "label": "BRLV Ethereum MINTER_ROLE \u2014 gasless relay EOA 0x039b41",
+        "label": "BRLV Ethereum MINTER_ROLE — gasless relay EOA 0x039b41",
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",

@@ -236,10 +236,13 @@
           "url": "https://celo.blockscout.com/address/0x7175504c455076f15c04a2f90a8e352281f492f9"
         }
       ],
-      "evidence": "At Celo block 69287341: owner() = Timelock 0x890DB8A597940165901372Dd7DB61C9f246e2147 (confirmed); EIP-1967 proxy admin slot = same Timelock; getMinDelay() = 172800s (48h); broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD (Mento BrokerProxy, confirmed as sole authorized minter); Broker EIP-1967 proxy admin = same Timelock. Celo Registry confirms Broker = 0x777A... (keccak256('Broker') lookup). All mint-capable surfaces resolved. Economically, Broker issuance is the collateral-exchange path; changing that path or authorizing different mint logic requires the independently enforced 48-hour Mento Timelock, so the encoding-derived unbounded cap is superseded by raiseable semantics.",
-      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review",
-      "reviewedAt": "2026-07-15"
-    }
+      "evidence": "At Celo block 69287341: owner() = Timelock 0x890DB8A597940165901372Dd7DB61C9f246e2147 (confirmed); EIP-1967 proxy admin slot = same Timelock; getMinDelay() = 172800s (48h); broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD (Mento BrokerProxy, confirmed as sole authorized minter); Broker EIP-1967 proxy admin = same Timelock. Celo Registry confirms Broker = 0x777A... (keccak256('Broker') lookup). All mint-capable surfaces resolved. Economically, Broker issuance is the collateral-exchange path; changing that path or authorizing different mint logic requires the independently enforced 48-hour Mento Timelock, so the encoding-derived unbounded cap is superseded by raiseable semantics. Re-verified at Celo block 72664674 on 2026-07-20: AUDm 0x7175504C455076F15c04A2F90a8e352281f492F9 still returns owner() = Mento Timelock 0x890DB8A597940165901372Dd7DB61C9f246e2147 and broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD, and that Timelock still returns getMinDelay() = 172800 seconds. Mento publishes a live reserve dashboard rather than a periodic report, so reconciliation cadence is continuous (the self attestor tier is already recorded separately under proofOfReserves), and no financial regulator supervises Mento.",
+      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20)",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable"
+    },
+    "reconciliation": "continuous",
+    "supervision": "none"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
@@ -501,13 +504,20 @@
         "pools": [
           {
             "selfTokenAddress": "0x7175504C455076F15c04A2F90a8e352281F492F9",
-            "counterAsset": { "address": "0x765De816845861e75A25fCA122bb6898B8B1282a", "label": "USDm" }
+            "counterAsset": {
+              "address": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+              "label": "USDm"
+            }
           }
         ],
-        "sourceUrls": ["https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"]
+        "sourceUrls": [
+          "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"
+        ]
       }
     }
   },
-  "infrastructures": ["liquity-v2"],
+  "infrastructures": [
+    "liquity-v2"
+  ],
   "launchDate": "2025-03-22"
 }

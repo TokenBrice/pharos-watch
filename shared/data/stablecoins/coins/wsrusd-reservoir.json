@@ -675,7 +675,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "wsrUSD SPL mint 7bxM8cRFZpzonzZtzmrcWHNX1dijrEVU4VkjjtVyBmqE (supply 10,000 raw at 9 decimals, read 2026-07-20 via Solana RPC) has mintAuthority ikwucBfDFvoJXimgvNHvxoFE5vZaLKmS8Ja3NqxUbYp \u2014 a program-owned PDA (owner program GYdh9iATa8RUVBHSyoxuWyP17v8bmL6VYsM7P4qMFCVq) consistent with the LayerZero OFT mint-authority account; freezeAuthority is unset.",
+        "reviewNote": "wsrUSD SPL mint 7bxM8cRFZpzonzZtzmrcWHNX1dijrEVU4VkjjtVyBmqE (supply 10,000 raw at 9 decimals, read 2026-07-20 via Solana RPC) has mintAuthority ikwucBfDFvoJXimgvNHvxoFE5vZaLKmS8Ja3NqxUbYp — a program-owned PDA (owner program GYdh9iATa8RUVBHSyoxuWyP17v8bmL6VYsM7P4qMFCVq) consistent with the LayerZero OFT mint-authority account; freezeAuthority is unset.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "controllerChain": "solana",
@@ -971,10 +971,14 @@
           "url": "https://ethereum.publicnode.com"
         }
       ],
-      "evidence": "At Ethereum block 25531314, wsrUSD remains an immutable constructor-deployed Savingcoin ERC-4626 wrapper over rUSD. Reservoir Safe 0x4E8a4894275780f571AaD53122e641D9f50Ff04f actively holds MANAGER and is 3-of-5 with no enabled modules, while EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 still holds DEFAULT_ADMIN_ROLE and can grant or revoke MANAGER. The wrapper has no privileged net-claim mint surface; base rUSD controls remain tracked on the parent.",
-      "reviewer": "owner-triage",
-      "reviewedAt": "2026-07-14"
-    }
+      "evidence": "At Ethereum block 25531314, wsrUSD remains an immutable constructor-deployed Savingcoin ERC-4626 wrapper over rUSD. Reservoir Safe 0x4E8a4894275780f571AaD53122e641D9f50Ff04f actively holds MANAGER and is 3-of-5 with no enabled modules, while EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 still holds DEFAULT_ADMIN_ROLE and can grant or revoke MANAGER. The wrapper has no privileged net-claim mint surface; base rUSD controls remain tracked on the parent. Re-verified at Ethereum block 25575162 on 2026-07-20: wsrUSD 0xd3fd63209fa2d55b07a0f6db36c2f43900be3094 still reads a zero EIP-1967 implementation slot, confirming the wrapper is still the immutable constructor-deployed contract, its asset() still resolves to rUSD 0x09D4214C03D01F49544C0448DBE3A27f768F2b34, hasRole(DEFAULT_ADMIN_ROLE, 0xb7570e32ded63b25163369d5eb4d8e89e70e5602) is still true, and the MANAGER Safe 0x4E8a4894275780f571AaD53122e641D9f50Ff04f still returns getThreshold() = 3 over five owners. Economic-control adjudication: the wrapper mints shares only against rUSD actually deposited into it and exposes no privileged net-claim mint entry point, so its own cap is economically bounded; the unbounded issuer discretion sits on the parent rUSD profile, where it is scored. As a pure on-chain ERC-4626 wrapper there is no separate supply-versus-reserve attestation cadence for wsrUSD, and no financial regulator supervises Reservoir.",
+      "reviewer": "owner-triage; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20)",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable"
+    },
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none"
   },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",

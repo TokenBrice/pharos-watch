@@ -135,8 +135,8 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
-    "confidence": "unknown",
-    "summary": "YieldFi yUSD is an ERC-4626-style USDC strategy vault; wrapper shares mint against USDC deposits or manager calls, while base USDC mint authority is inherited from Circle.",
+    "confidence": "verified",
+    "summary": "YieldFi yUSD is an ERC-4626-style USDC strategy vault. Deposits mint shares, and the Manager additionally exposes a discretionary manageAssetAndShares mint/burn path with no supply ceiling. That path is gated on the Administrator's BRIDGE, LOCKBOX, or YIELD roles, which at Ethereum block 25575158 are held by eleven contracts. Two externally owned accounts hold ADMIN and can grant or revoke every non-ADMIN role instantly, so the operator set and therefore the uncapped mint path are under unilateral EOA control; only adding a new ADMIN is delayed, by a four-hour timelock. Base USDC mint authority remains inherited from Circle, and non-Ethereum yUSD is a LayerZero OFT representation with no independent local mint path.",
     "inheritedFrom": "usdc-circle",
     "upgradeability": {
       "model": "unknown",
@@ -153,9 +153,9 @@
         "0x8e31efda4453494a84fa6168d53eb1418c0b4ac4"
       ],
       "canChangeMintLogic": "unknown",
-      "controlRef": "YieldFi Manager runtime share-mint authority (Ethereum)",
+      "controlRef": "YieldFi Administrator ADMIN-role EOAs",
       "observedAt": "2026-07-20",
-      "observedBlock": 25295175,
+      "observedBlock": 25575158,
       "sources": [
         {
           "label": "Sourcify YieldFi YToken source",
@@ -180,12 +180,24 @@
         "capDescription": "Verified source mints shares during deposit and permits manager-only mintYToken/burnYToken accounting; it does not mint base USDC.",
         "sources": [
           {
+            "label": "YieldFi yUSD terms",
+            "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
+          },
+          {
             "label": "Sourcify YieldFi YToken source",
             "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5bf44d32260aee6b807c490e92ef0481d15ab493/sources/src/core/tokens/YToken.sol"
           },
           {
-            "label": "YieldFi yUSD terms",
-            "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
+            "label": "Verified YieldFi Manager implementation (Ethereum)",
+            "url": "https://eth.blockscout.com/address/0x7b7e9dc2ff8e48e311d727786ed6aa7b1ce6bfa8?tab=contract"
+          },
+          {
+            "label": "Verified YieldFi Administrator implementation (Ethereum)",
+            "url": "https://eth.blockscout.com/address/0xccaa27e3db44e06bd9001958de5b41301fd28002?tab=contract"
+          },
+          {
+            "label": "YieldFi Administrator RoleGranted/RoleRevoked logs",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x10472f91f67c49260bdd65f016ea0757bb1fc91e&fromBlock=22364994&toBlock=25575158&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
           }
         ],
         "evidence": "Ethereum reads returned asset() = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48, implementation 0x5bf44d32260aee6b807c490e92ef0481d15ab493, admin 0xe26e1d2ae51dcb89e382ca7400b080e6632117b9, manager() = 0x03ACc35286bAAE6D73d99a9f14Ef13752208C8dC, and administrator() = 0x10472f91f67C49260BDD65F016ea0757bb1Fc91e. Deposits mint vault shares but do not provide an independent base-USDC mint path."
@@ -193,27 +205,117 @@
       {
         "chain": "ethereum",
         "address": "0x03acc35286baae6d73d99a9f14ef13752208c8dc",
-        "label": "YieldFi Manager runtime share-mint authority (Ethereum)",
+        "label": "YieldFi Manager discretionary share mint/burn (Ethereum)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Verified YToken source restricts mintYToken and burnYToken to the configured Manager; the Manager proxy's terminal operator and role configuration are not established.",
+        "capDescription": "The Manager's manageAssetAndShares path mints or burns arbitrary yUSD shares with no supply ceiling. It is gated on Administrator BRIDGE, LOCKBOX, or YIELD roles, and holders of those roles can be added at will by the ADMIN EOAs, so no effective cap binds this path.",
         "sources": [
+          {
+            "label": "YieldFi yUSD terms",
+            "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
+          },
           {
             "label": "Sourcify YieldFi YToken source",
             "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5bf44d32260aee6b807c490e92ef0481d15ab493/sources/src/core/tokens/YToken.sol"
           },
           {
-            "label": "YieldFi yUSD terms",
-            "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
+            "label": "Verified YieldFi Manager implementation (Ethereum)",
+            "url": "https://eth.blockscout.com/address/0x7b7e9dc2ff8e48e311d727786ed6aa7b1ce6bfa8?tab=contract"
+          },
+          {
+            "label": "Verified YieldFi Administrator implementation (Ethereum)",
+            "url": "https://eth.blockscout.com/address/0xccaa27e3db44e06bd9001958de5b41301fd28002?tab=contract"
+          },
+          {
+            "label": "YieldFi Administrator RoleGranted/RoleRevoked logs",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x10472f91f67c49260bdd65f016ea0757bb1fc91e&fromBlock=22364994&toBlock=25575158&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
           }
         ],
-        "evidence": "At Ethereum block 25295175, YToken manager() returned this Manager transparent-proxy address. The verified YToken source permits manager-only mintYToken and burnYToken calls; the current Manager proxy's terminal operator, roles, and any corresponding non-Ethereum authority paths are not established by the reviewed sources."
+        "evidence": "Verified Manager implementation 0x7b7e9dc2ff8e48e311d727786ed6aa7b1ce6bfa8 gates manageAssetAndShares on modifier onlyOperator, which requires Administrator hasRole for keccak256(\"BRIDGE\"), keccak256(\"LOCKBOX\"), or keccak256(\"YIELD\"). A complete RoleGranted/RoleRevoked replay of Administrator proxy 0x10472f91f67c49260bdd65f016ea0757bb1fc91e from its deployment block 22364994, confirmed by live hasRole reads at block 25575158, returns five BRIDGE holders (0x7cccd8ef51227a6c76c3824ed5e176cdc9598f7b, 0xce6beb6b0d349161a71cf547be769900ebcde358, 0x6d4f2f0a647c29983afb77ce3d35c085e851a97f, 0x6be164af10879a86e4643089638b6864ef12b1ee, 0xace45ffffafb20a5b0b68ff3c4cf312551d4cfff), one LOCKBOX holder (0x659b5bc7f2f888db3d5901b78cdb34df270e2231), and five YIELD holders (0x392017161a9507f19644e8886a237c58809212b5, 0xe017bc7793b649ffcfe30d55fa1474f03e1714f7, 0x2e3c5e514eef46727de1fe44618027a9b70d92fc, 0x3073112c2c4800b89764973d5790ccc7fba5c9f9, 0x1e2a5622178f93efd4349e2eb3dbdf2761749e1b). eth_getCode confirms all eleven are contracts. The Manager proxy 0x03acc35286baae6d73d99a9f14ef13752208c8dc also holds MANAGER role and reads administrator() = 0x10472f91f67c49260bdd65f016ea0757bb1fc91e."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x10472f91f67c49260bdd65f016ea0757bb1fc91e",
+        "label": "YieldFi Administrator role registry (Ethereum)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The Administrator is the single role registry the Manager consults. Granting BRIDGE, LOCKBOX, or YIELD here immediately confers the uncapped discretionary share-mint path.",
+        "observedBlock": 25575158,
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "YieldFi yUSD terms",
+            "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
+          },
+          {
+            "label": "Sourcify YieldFi YToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5bf44d32260aee6b807c490e92ef0481d15ab493/sources/src/core/tokens/YToken.sol"
+          },
+          {
+            "label": "Verified YieldFi Manager implementation (Ethereum)",
+            "url": "https://eth.blockscout.com/address/0x7b7e9dc2ff8e48e311d727786ed6aa7b1ce6bfa8?tab=contract"
+          },
+          {
+            "label": "Verified YieldFi Administrator implementation (Ethereum)",
+            "url": "https://eth.blockscout.com/address/0xccaa27e3db44e06bd9001958de5b41301fd28002?tab=contract"
+          },
+          {
+            "label": "YieldFi Administrator RoleGranted/RoleRevoked logs",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x10472f91f67c49260bdd65f016ea0757bb1fc91e&fromBlock=22364994&toBlock=25575158&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "Verified Administrator implementation 0xccaa27e3db44e06bd9001958de5b41301fd28002 stores roles in a plain mapping and exposes hasRole(bytes32,address). Its grantRoles and revokeRoles functions carry modifier onlyAdmin and take effect in the same transaction; only ADMIN-role grants are deferred, through scheduleAdminRole/executeAdminRole with timeLockPeriod() = 14400 seconds read live at block 25575158."
+      },
+      {
+        "chain": "ethereum",
+        "label": "YieldFi Administrator ADMIN-role EOAs",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "Either ADMIN key can grant itself or any address a BRIDGE, LOCKBOX, or YIELD role in one transaction and then mint uncapped yUSD shares through the Manager. No timelock, quorum, or guard stands between an ADMIN key and unlimited share issuance.",
+        "failureDomainKeys": [
+          "eoa:evm:0xa6e98a21ea3cbe891b8a24f7233443748c17b387",
+          "eoa:evm:0x241ac00dc77fc1981e0483de3da3828b787b8764"
+        ],
+        "bypassSurfaces": [
+          "A single ADMIN key can self-appoint as an operator and mint unbounded yUSD shares in the same block."
+        ],
+        "observedBlock": 25575158,
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "YieldFi yUSD terms",
+            "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
+          },
+          {
+            "label": "Sourcify YieldFi YToken source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5bf44d32260aee6b807c490e92ef0481d15ab493/sources/src/core/tokens/YToken.sol"
+          },
+          {
+            "label": "Verified YieldFi Manager implementation (Ethereum)",
+            "url": "https://eth.blockscout.com/address/0x7b7e9dc2ff8e48e311d727786ed6aa7b1ce6bfa8?tab=contract"
+          },
+          {
+            "label": "Verified YieldFi Administrator implementation (Ethereum)",
+            "url": "https://eth.blockscout.com/address/0xccaa27e3db44e06bd9001958de5b41301fd28002?tab=contract"
+          },
+          {
+            "label": "YieldFi Administrator RoleGranted/RoleRevoked logs",
+            "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x10472f91f67c49260bdd65f016ea0757bb1fc91e&fromBlock=22364994&toBlock=25575158&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "The complete Administrator RoleGranted/RoleRevoked replay from block 22364994, confirmed by live hasRole reads at block 25575158, returns exactly two current ADMIN holders: 0xa6e98a21ea3cbe891b8a24f7233443748c17b387 and 0x241ac00dc77fc1981e0483de3da3828b787b8764. eth_getCode returns empty bytecode for both, so neither is a Safe, multisig, or timelock. Verified source shows grantRoles and revokeRoles are onlyAdmin and immediate."
       }
     ],
-    "economicCapSemantics": "unknown",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
@@ -225,14 +327,26 @@
         {
           "label": "Sourcify YieldFi YToken source",
           "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x5bf44d32260aee6b807c490e92ef0481d15ab493/sources/src/core/tokens/YToken.sol"
+        },
+        {
+          "label": "Verified YieldFi Manager implementation (Ethereum)",
+          "url": "https://eth.blockscout.com/address/0x7b7e9dc2ff8e48e311d727786ed6aa7b1ce6bfa8?tab=contract"
+        },
+        {
+          "label": "Verified YieldFi Administrator implementation (Ethereum)",
+          "url": "https://eth.blockscout.com/address/0xccaa27e3db44e06bd9001958de5b41301fd28002?tab=contract"
+        },
+        {
+          "label": "YieldFi Administrator RoleGranted/RoleRevoked logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x10472f91f67c49260bdd65f016ea0757bb1fc91e&fromBlock=22364994&toBlock=25575158&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
         }
       ],
-      "evidence": "At Ethereum block 25295175: vault proxy admin (0xe26e1d2ae51dcb89e382ca7400b080e6632117b9, OZ ProxyAdmin) is owned by YieldFiTimelockController (0x8e31efda4453494a84fa6168d53eb1418c0b4ac4) with 1-day minDelay (86400 seconds). The timelock has 0 holders for all roles (PROPOSER, EXECUTOR, DEFAULT_ADMIN), so the observed upgrade path is inactive. Administrator proxy (0x10472...) and Manager proxy (0x03ACc...) ProxyAdmins are also owned by the same timelock. Runtime minting (mintYToken/burnYToken) flows through the Manager contract (TransparentUpgradeableProxy, impl: Manager), but its terminal operator and role configuration cannot be confirmed from the reviewed chain state or issuer materials.",
-      "reviewer": "P2 mint-free cohort",
+      "evidence": "Ethereum block 25575158. The prior open question on the Manager's terminal operator is resolved: manageAssetAndShares is gated on Administrator BRIDGE, LOCKBOX, or YIELD, whose complete current membership is eleven contracts enumerated by full event replay plus live hasRole reads, and whose grant authority sits with two bytecode-less ADMIN EOAs able to act with no delay. The uncapped nature of the path is read from the verified Manager source, which applies no supply ceiling. Vault proxy admin 0xe26e1d2ae51dcb89e382ca7400b080e6632117b9 is an OZ ProxyAdmin owned by YieldFiTimelockController 0x8e31efda4453494a84fa6168d53eb1418c0b4ac4 with an 86400-second minimum delay and zero holders across PROPOSER, EXECUTOR, and DEFAULT_ADMIN, so the upgrade path is inert while the role path is live. The non-Ethereum question is resolved at the route layer: every tracked non-Ethereum yUSD deployment is a LayerZero OFT representation of the Ethereum token with no independent local mint path. Reconciliation cadence stays unknown because YieldFi publishes no supply-versus-reserve attestation schedule and the vault's totalAssets is updated by the Manager rather than proven on-chain.",
+      "reviewer": "Pharos V9 Phase 3 curation lane cur-4",
       "reviewedAt": "2026-07-20",
-      "disposition": "unresolved",
+      "disposition": "scoreable",
       "unresolvedQuestions": [
-        "Enumerate the Manager proxy's terminal operator and role authority for Ethereum share minting, and establish the corresponding mint authority across each tracked non-Ethereum yUSD deployment."
+        "Establish YieldFi's supply-versus-reserve reconciliation cadence; no attestation schedule is published and vault totalAssets is set by the Manager."
       ]
     }
   },

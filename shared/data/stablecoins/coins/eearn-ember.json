@@ -29,9 +29,9 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "partially-bounded-admin",
-    "confidence": "unknown",
-    "summary": "eEARN is a UUPS USDC vault-share wrapper: current shares are minted against deposited USDC, base USDC issuance is inherited from Circle, and the local implementation can be replaced by a one-day CTG One Governance timelock whose role members are not publicly enumerable.",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "eEARN is a UUPS USDC vault-share wrapper: current shares are minted against deposited USDC, base USDC issuance is inherited from Circle, and the local implementation can be replaced through the CTG One Governance timelock, whose proposer, executor, and canceller roles are each held by a single externally owned account behind a one-day delay.",
     "inheritedFrom": "usdc-circle",
     "controls": [
       {
@@ -81,12 +81,90 @@
             "url": "https://etherscan.io/address/0x12917e06b55995e7a5d73681ce491774c73b7c6a#code"
           }
         ],
-        "evidence": "At Ethereum block 25573289, eEARN owner() returned this 5,457-byte CTGOneGovernance contract and UPGRADE_INTERFACE_VERSION() returned 5.0.0. The verified implementation source restricts _authorizeUpgrade to onlyOwner. CTGOneGovernance is a TimelockController; getMinDelay() returned 86400 seconds at block 25573295."
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Ethereum block 25575114 the timelock's role holders are: PROPOSER_ROLE 0x203d4cec733dcda6ed87bd3b7ab6cb37149201c2, EXECUTOR_ROLE 0xa2160f1dee338b921d13c9d02a7e2cadb02af38f, CANCELLER_ROLE 0x71aa7564fae10a393f2bf0efa9e6350d872f07f7. DEFAULT_ADMIN_ROLE is held only by the timelock itself; the deploying account renounced it at block 25295347."
+        },
+        "evidence": "At Ethereum block 25573289, eEARN owner() returned this 5,457-byte CTGOneGovernance contract and UPGRADE_INTERFACE_VERSION() returned 5.0.0. The verified implementation source restricts _authorizeUpgrade to onlyOwner. CTGOneGovernance is a TimelockController; getMinDelay() returned 86400 seconds at block 25573295 and again at block 25575114. A complete RoleGranted/RoleRevoked scan of this contract from its creation block 25295344 through block 25580000 returns six grants and two revocations and no later role change; hasRole() at block 25575114 confirms the surviving assignments."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x203d4cec733dcda6ed87bd3b7ab6cb37149201c2",
+        "label": "eEARN timelock proposer (EOA)",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 86400,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Sole holder of PROPOSER_ROLE on the timelock that owns the eEARN UUPS proxy; can schedule an implementation replacement subject to the one-day delay.",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25575114,
+        "sources": [
+          {
+            "label": "CTG One Governance Timelock role events",
+            "url": "https://eth.blockscout.com/address/0x12917e06b55995e7a5d73681ce491774c73b7c6a?tab=logs"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "RoleGranted at block 25295344 assigned PROPOSER_ROLE to this account, and hasRole(PROPOSER_ROLE, 0x203d4cec...) returned true at block 25575114. Its CANCELLER_ROLE grant from the same block was revoked at block 25295346. eth_getCode at block 25575114 returned 0x, so the account is externally owned and no signer quorum bounds it."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xa2160f1dee338b921d13c9d02a7e2cadb02af38f",
+        "label": "eEARN timelock executor (EOA)",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 86400,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Sole holder of EXECUTOR_ROLE on the timelock that owns the eEARN UUPS proxy; executes a scheduled implementation replacement once the one-day delay elapses.",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25575114,
+        "sources": [
+          {
+            "label": "CTG One Governance Timelock role events",
+            "url": "https://eth.blockscout.com/address/0x12917e06b55995e7a5d73681ce491774c73b7c6a?tab=logs"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "RoleGranted at block 25295344 assigned EXECUTOR_ROLE to this account, and hasRole(EXECUTOR_ROLE, 0xa2160f1d...) returned true at block 25575114. eth_getCode at block 25575114 returned 0x, so the account is externally owned and no signer quorum bounds it."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x71aa7564fae10a393f2bf0efa9e6350d872f07f7",
+        "label": "eEARN timelock canceller (EOA)",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "timelockDelaySec": 86400,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Sole holder of CANCELLER_ROLE on the timelock that owns the eEARN UUPS proxy; can cancel a scheduled operation but cannot schedule or execute one.",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25575114,
+        "sources": [
+          {
+            "label": "CTG One Governance Timelock role events",
+            "url": "https://eth.blockscout.com/address/0x12917e06b55995e7a5d73681ce491774c73b7c6a?tab=logs"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "RoleGranted at block 25295345 assigned CANCELLER_ROLE to this account, and hasRole(CANCELLER_ROLE, 0x71aa7564...) returned true at block 25575114. eth_getCode at block 25575114 returned 0x, so the account is externally owned."
       }
     ],
     "economicCapSemantics": "unknown",
     "reconciliation": "not-applicable",
-    "supervision": "unknown",
+    "supervision": "none",
     "upgradeability": {
       "model": "uups",
       "proxyAddresses": [
@@ -127,15 +205,20 @@
         {
           "label": "CTG One Governance Timelock",
           "url": "https://etherscan.io/address/0x12917e06b55995e7a5d73681ce491774c73b7c6a#code"
+        },
+        {
+          "label": "CTG One Governance Timelock role events",
+          "url": "https://eth.blockscout.com/address/0x12917e06b55995e7a5d73681ce491774c73b7c6a?tab=logs"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
         }
       ],
-      "evidence": "Re-reviewed 2026-07-20. eEARN is a USDC strategy-vault variant and asset() confirms the current USDC backing. The ERC-1967 proxy resolves to implementation 0xab222201c5bd8a18dc6b340ba78a709589e01781 with no external proxy-admin slot; owner() resolves to CTGOneGovernance 0x12917e06b55995e7a5d73681ce491774c73b7c6a. Its verified TimelockController exposes a one-day minimum delay. However, getRoleMemberCount for its proposer, executor, canceller, and timelock-admin roles is unavailable, and public RPC historical RoleGranted enumeration requires archive access, so the entities able to schedule or cancel an upgrade are not assigned by inference. The wrapper has no independent reserve-reconciliation or named prudential-supervision evidence.",
-      "reviewer": "P2 mint-free cohort",
+      "evidence": "Re-reviewed 2026-07-20. eEARN is a USDC strategy-vault variant and asset() confirms the current USDC backing. The ERC-1967 proxy resolves to implementation 0xab222201c5bd8a18dc6b340ba78a709589e01781 with no external proxy-admin slot; owner() resolves to CTGOneGovernance 0x12917e06b55995e7a5d73681ce491774c73b7c6a, whose getMinDelay() is 86400 seconds. The prior review could not enumerate the timelock's role holders; an explorer log scan of RoleGranted and RoleRevoked on that contract from its creation block 25295344 through block 25580000 now closes that gap. The creation block granted DEFAULT_ADMIN_ROLE to the timelock itself and to deployer 0xeed5bd26ad1608b13577bdc5d1f6912a5d40a3ac, PROPOSER_ROLE and CANCELLER_ROLE to 0x203d4cec733dcda6ed87bd3b7ab6cb37149201c2, and EXECUTOR_ROLE to 0xa2160f1dee338b921d13c9d02a7e2cadb02af38f; block 25295345 granted CANCELLER_ROLE to 0x71aa7564fae10a393f2bf0efa9e6350d872f07f7; block 25295346 revoked 0x203d4cec's CANCELLER_ROLE and block 25295347 revoked the deployer's DEFAULT_ADMIN_ROLE. No further role event exists. hasRole() at block 25575114 confirms the three surviving assignments and returns false for the deployer's admin role, and eth_getCode at the same block returns 0x for all three holders, so each role sits with a single externally owned account and no signer quorum. TIMELOCK_ADMIN_ROLE was never granted, consistent with the OpenZeppelin v5 self-administered pattern. The upgrade surface is therefore a single-EOA proposer plus a single-EOA executor behind a one-day delay. The wrapper has no independent reserve-reconciliation evidence and no named financial regulator supervises the issuer, so supervision is recorded as none.",
+      "reviewer": "V9 Phase 3 curation lane cur-6",
       "reviewedAt": "2026-07-20",
-      "disposition": "unresolved",
-      "unresolvedQuestions": [
-        "Enumerate current CTGOneGovernance PROPOSER_ROLE, EXECUTOR_ROLE, CANCELLER_ROLE, and TIMELOCK_ADMIN_ROLE holders. Direct getRoleMemberCount reads are unavailable and the public RPC does not serve the required historical RoleGranted scan without archive access."
-      ]
+      "disposition": "scoreable"
     }
   },
   "variantOf": "usdc-circle",
