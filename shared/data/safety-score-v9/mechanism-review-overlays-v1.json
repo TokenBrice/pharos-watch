@@ -12448,6 +12448,1044 @@
           "quality": "limited"
         }
       }
+    },
+    {
+      "assetId": "aa-falconx-mev-capital",
+      "archetype": "rwa-credit-fund",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Pareto live-vault documentation: FalconX one-month credit cycle, monthly redemption, notice, and early-exit mechanics",
+          "url": "https://docs.pareto.credit/product/credit-vaults/live-vaults"
+        },
+        {
+          "label": "Pareto credit-vault documentation: fixed-duration borrower facilities and epoch accounting",
+          "url": "https://docs.pareto.credit/product/credit-vaults"
+        },
+        {
+          "label": "FalconX issuer announcement for the on-chain structured credit facility",
+          "url": "https://www.falconx.io/newsroom/falconx-launches-the-first-tokenized-structured-credit-facility-in-digital-assets"
+        },
+        {
+          "label": "Pinned Idle/Pareto tranche implementation used to interpret epoch and NAV reads",
+          "url": "https://github.com/Idle-Labs/idle-tranches/tree/d7b98b98328e1506b4322c81d44f0a97f5944852"
+        },
+        {
+          "label": "Ethereum PublicNode RPC used for finalized reads of the FalconX credit-vault proxy at block 25575382",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ],
+      "notes": "Measured at finalized Ethereum block 25575382 (2026-07-20T17:20:23Z; hash 0x93441c8a17df118958d0f86811ea987a30ebac0511b3feac31f3a1876837a8e6) from the FalconX credit-vault proxy 0x433D5B and AA tranche 0xC26A6Fa2. The current epoch was running and not defaulted; epochDuration was 2,820,960 seconds (32.65 days), epochEndDate was 2026-08-03T14:49:47Z, and 13.895417 days remained. The contract reported getContractValue and lastNAVAA of 159,692,472.893291 USDC, no BB NAV, AA price 1.094752, expected interest 1,158,719.122162 USDC, 8.25% APR, and both ordinary and instant AA withdrawals enabled. weightedAverageMaturityDays uses the remaining term of the single current fixed borrower cycle, not the one-month redemption notice; valuationCadenceDays uses the explicit epoch duration. All reviewed components are limited: the primary packet establishes a current single-obligor facility, senior AA tranche accounting, epoch valuation, and documented exit mechanics, but does not expose the underlying loan tape or legal waterfall. What was NOT established: FalconX borrower entities beneath the facility; instruments, weights, origination dates, or individual maturities inside the facility; the governing master loan agreement; perfected collateral and claim priority; bankruptcy-remoteness or reserve segregation; custodian identities; independent NAV verification; stressed instant-withdraw depth; or the recovery waterfall after default.",
+      "metrics": {
+        "weightedAverageMaturityDays": 13.895417,
+        "valuationCadenceDays": 32.65
+      },
+      "metricApplicability": {
+        "weightedAverageMaturityDays": {
+          "state": "measured"
+        },
+        "valuationCadenceDays": {
+          "state": "measured"
+        }
+      },
+      "analogousMetrics": {
+        "currentEpochContractValueUsd": 159692472.893291,
+        "aaPrice": 1.094752,
+        "currentEpochAprPct": 8.25
+      },
+      "components": {
+        "creditQuality": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "seniority": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "valuationCadence": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "maturityAndLiquidity": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "custody": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "recovery": {
+          "applicability": "measured",
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "avusd-avant",
+      "archetype": "synthetic-delta-neutral",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Avant avUSD transparency API (NAV, category totals, and position-level long and perpetual values; period ended 2026-07-14)",
+          "url": "https://app.avantprotocol.com/api/metrics/avusd"
+        },
+        {
+          "label": "Avant current contract-address registry (Avalanche avUSD, avUSDx, and PriceStorage)",
+          "url": "https://docs.avantprotocol.com/security/contract-addresses.md"
+        },
+        {
+          "label": "Avant Reserve Fund documentation",
+          "url": "https://docs.avantprotocol.com/security/reserve-fund.md"
+        },
+        {
+          "label": "Avant risk-management documentation (senior and junior tranche loss order)",
+          "url": "https://docs.avantprotocol.com/security/risk-management.md"
+        },
+        {
+          "label": "Avant yield-strategy documentation (spot-plus-short basis strategy and other permitted strategies)",
+          "url": "https://docs.avantprotocol.com/yield-strategies-and-revenue/yield-generation.md"
+        },
+        {
+          "label": "Avalanche C-Chain PublicNode RPC used for pinned eth_call reads at block 90805928",
+          "url": "https://avalanche-c-chain-rpc.publicnode.com"
+        },
+        {
+          "label": "Pinned Avalanche C-Chain block 90805928",
+          "url": "https://snowtrace.io/block/90805928"
+        }
+      ],
+      "notes": "The issuer transparency API snapshot for period end 2026-07-14T23:59:59Z reported net NAV $109,542,061.586870. Its full non-stable long buckets totaled $7,778,586.877108 (Other $7,772,670.011409, ETH and derivatives $3,784.872934, AVAX and derivatives $2,128.729902, BTC and derivatives $3.262863), while two Hyperliquid shorts totaled $7,764,260.363849 (HYPE $7,256,093.408 and ENA $508,166.955849), giving hedgeCoverageRatio 0.998158. This is an observed aggregate delta proxy, not a venue-account reconciliation; stablecoin lending and borrowing exposures were excluded from both numerator and denominator. At Avalanche block 90805928 (2026-07-20T17:04:34Z; hash 0x21fa976fc596bc2a07dbebfa97c53b10cd4ccd6f65f4781649ede079ff7d676a), avUSD totalSupply was 115,456,958.7139768425, avUSDx totalSupply was 11,808,378.3524378076, and PriceStorage.lastPrice was 1.228506 (timestamp 2026-07-16T23:59:25Z), valuing the documented junior tranche at $14,506,663.656240. That gives marginBufferPct 12.564564 as junior capital divided by senior avUSD supply and lossAbsorptionShare 0.111621 as junior capital divided by combined senior-plus-junior capital. Avant documents that its Reserve Fund and future governance layer precede avUSDx in the loss order, but their current funded balances were not established and therefore are excluded from the numeric loss-absorption metric. All components remain limited: the issuer publishes aggregate strategy values and a structural tranche, but not current venue account equity, maintenance margin, liquidation thresholds, per-venue hedge reconciliation, funding stress outputs, or executable unwind depth. NOT established: derivatives-account margin and liquidation headroom; current state after the 2026-07-14 portfolio snapshot; the Reserve Fund's current balance, assets, and enforceable availability; identities and terms behind the API's Unknown locations and private-deal exposures; counterparties for pending transfers and bridges; or a stress-tested 1-7-day redemption capacity.",
+      "metrics": {
+        "hedgeCoverageRatio": 0.998158,
+        "marginBufferPct": 12.564564,
+        "lossAbsorptionShare": 0.111621
+      },
+      "metricApplicability": {
+        "hedgeCoverageRatio": {
+          "state": "measured"
+        },
+        "marginBufferPct": {
+          "state": "measured"
+        },
+        "lossAbsorptionShare": {
+          "state": "measured"
+        }
+      },
+      "analogousMetrics": {
+        "juniorToSeniorCoverageRatio": 0.125646
+      },
+      "components": {
+        "venueAndCustody": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "hedgeReconciliation": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "fundingBasisStress": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "marginAndLiquidation": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "unwindCapacity": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "lossAbsorption": {
+          "applicability": "measured",
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "savusd-avant",
+      "archetype": "synthetic-delta-neutral",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Avant issuer transparency/metrics API for the avUSD system (net NAV, long buckets, Hyperliquid short positions)",
+          "url": "https://app.avantprotocol.com/api/metrics/avusd"
+        },
+        {
+          "label": "Avant risk-management documentation (capital structure and tranches: savUSD senior, avUSDx junior, Reserve Fund loss ordering)",
+          "url": "https://docs.avantprotocol.com/security/risk-management.md"
+        },
+        {
+          "label": "Avant Reserve Fund documentation",
+          "url": "https://docs.avantprotocol.com/security/reserve-fund.md"
+        },
+        {
+          "label": "Avant contract addresses (avUSD, savUSD ERC-4626 vault, avUSDx MAX token, PriceStorage)",
+          "url": "https://docs.avantprotocol.com/security/contract-addresses.md"
+        },
+        {
+          "label": "Avalanche C-Chain public RPC used for the pinned savUSD/avUSD/avUSDx reads",
+          "url": "https://avalanche-c-chain-rpc.publicnode.com"
+        }
+      ],
+      "notes": "savUSD is the senior-tranche ERC-4626 staking wrapper of avUSD; its mechanism is the avUSD market-neutral strategy engine plus tranche seniority (avUSDx junior and the Reserve Fund absorb losses before savUSD). Measured on Avalanche at a finalized block on 2026-07-20 (~20:10 UTC): savUSD totalSupply 82,479,895.708400 with totalAssets 97,808,077.405048 avUSD (convertToAssets(1e18)=1.185841), avUSD system totalSupply 115,456,958.713977, and avUSDx junior totalSupply 11,808,378.352438 valued at PriceStorage.lastPrice 1.228506 (timestamp 2026-07-16T23:59:25Z) for $14,506,663.66 of junior first-loss capital. The three metrics are reported at the avUSD SYSTEM level rather than allocated to savUSD alone, which is the conservative choice: hedgeCoverageRatio 0.998158 is the issuer transparency API's period-end 2026-07-14 aggregate delta proxy (full non-stable long buckets $7,778,586.88 vs two Hyperliquid shorts $7,764,260.36, an observed aggregate not a venue-account reconciliation); marginBufferPct 12.564564 is junior capital over avUSD senior supply; lossAbsorptionShare 0.111621 is junior capital over combined senior-plus-junior capital. savUSD sits senior to avUSDx so its realized protection is at least the measured junior tranche, but the junior also protects unstaked avUSD, so no larger savUSD-specific buffer is claimed. All components are limited: the evidence is issuer-operated telemetry with weekly NAV (Pennyworks) and no independent position-level attestation. NOT established: the current funded Reserve Fund balance (documented to precede avUSDx in the loss order but excluded from the numeric metric); a venue-account reconciliation of the hedges; the savUSD cooldown-queue depth under stress; and any independently reproduced pinned-block proof of every strategy balance.",
+      "metrics": {
+        "hedgeCoverageRatio": 0.998158,
+        "marginBufferPct": 12.564564,
+        "lossAbsorptionShare": 0.111621
+      },
+      "analogousMetrics": {
+        "savusdRate": 1.185841,
+        "savusdSupply": 82479895.7084,
+        "savusdTotalAssetsAvusd": 97808077.405048,
+        "avusdxJuniorCapitalUsd": 14506663.66
+      },
+      "components": {
+        "venueAndCustody": {
+          "quality": "limited"
+        },
+        "hedgeReconciliation": {
+          "quality": "limited"
+        },
+        "fundingBasisStress": {
+          "quality": "limited"
+        },
+        "marginAndLiquidation": {
+          "quality": "limited"
+        },
+        "unwindCapacity": {
+          "quality": "limited"
+        },
+        "lossAbsorption": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "ftusd-flying-tulip",
+      "archetype": "synthetic-delta-neutral",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Flying Tulip live ftUSD status API (per-chain TVL, supply, wrapper capital, delta-neutral strategy legs, circuit-breaker buffers)",
+          "url": "https://api.flyingtulip.com/status/ftusd/dashboard?days=30&include_series=false&include_events=false"
+        },
+        {
+          "label": "Flying Tulip ftUSD product documentation (mint/redeem 1:1 vs USDC/USDT, Aave carry, staged delta-neutral leg, circuit-breaker position caps and withdrawal rate limits)",
+          "url": "https://docs.flyingtulip.com/product-suite/ft-usd/"
+        }
+      ],
+      "notes": "Measured from Flying Tulip's live dashboard API snapshot lastUpdated 2026-07-20T20:16:15Z. Aggregate reserve TVL was $4,275,666.26 against $4,274,474.63 of ftUSD supply across Ethereum ($3,901,393.02 TVL / $3,900,861.15 supply) and Sonic ($374,273.24 TVL / $373,613.48 supply), a reserve excess of $1,191.63 giving marginBufferPct 0.027878 and lossAbsorptionShare 0.000279; the excess is the only first-loss capital because Flying Tulip documents no separately funded insurance pool, junior tranche, or binding treasury top-up. hedgeCoverageRatio is recorded as 1.0 as a structural characterization, not a position-level reconciliation: at this snapshot backing was ~99.98% stablecoin strategy wrappers (USDC/USDT/USSD), the two Ethereum delta-neutral legs were dormant (currentBorrows 0.00 WETH, leverage 1.000x, ~0 wstETH staked), and the only live volatile leg was one Sonic USDC->stS/wS loop (leverage 1.126x, health factor 15.95, $46,062.23 wS short) whose staked long offsets the borrow, so the system carried no material open volatile delta. All curated components are limited because the evidence is issuer-operated telemetry without an independent attestation. NOT established: an independently reproduced pinned-block reconciliation of every wrapper and strategy balance; a position-level stS long balance to reconcile the Sonic hedge exactly; a separately funded insurance/first-loss pool; the maturity or stability of the staged delta-neutral roadmap; and venue-level failure weights (venueShares omitted).",
+      "metrics": {
+        "hedgeCoverageRatio": 1.0,
+        "marginBufferPct": 0.027878,
+        "lossAbsorptionShare": 0.000279
+      },
+      "analogousMetrics": {
+        "aggregateReserveTvlUsd": 4275666.2614,
+        "aggregateSupplyUsd": 4274474.6335,
+        "reserveExcessUsd": 1191.6279,
+        "sonicVolatileShortUsd": 46062.23
+      },
+      "components": {
+        "venueAndCustody": {
+          "quality": "limited"
+        },
+        "hedgeReconciliation": {
+          "quality": "limited"
+        },
+        "marginAndLiquidation": {
+          "quality": "limited"
+        },
+        "unwindCapacity": {
+          "quality": "limited"
+        },
+        "lossAbsorption": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "iusd-initia",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Initia iUSD FAQ (1:1 AUSD backing and contract-managed supply)",
+          "url": "https://contents.initia.xyz/app/iusd-faq.json"
+        },
+        {
+          "label": "Initia iUSD vault Move module ABI, bytecode, and compatible upgrade policy",
+          "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/modules/vault"
+        },
+        {
+          "label": "Initia iUSD package, vault, and 3-of-4 multisig resources",
+          "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/resources"
+        },
+        {
+          "label": "Initia Move view endpoint used for pinned vault and fungible-store reads",
+          "url": "https://rest.initia.xyz/initia/move/v1/view/json"
+        },
+        {
+          "label": "Initia pinned iUSD bank supply endpoint",
+          "url": "https://rest.initia.xyz/cosmos/bank/v1beta1/supply/by_denom?denom=move%2F6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e"
+        },
+        {
+          "label": "Initia AUSD0 fungible-asset metadata and supply resources",
+          "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x8078cf9fee50e15069402e9d1d9db70b28fc0d5197d79e8a2b41e2ade432efef/resources"
+        },
+        {
+          "label": "Initia block 19708949 header",
+          "url": "https://rest.initia.xyz/cosmos/base/tendermint/v1beta1/blocks/19708949"
+        }
+      ],
+      "notes": "Reviewed and measured on Initia at height 19708949 (2026-07-20T17:20:30.053030593Z). Initia's FAQ states that iUSD is backed 1:1 by Agora AUSD, that supply expands only when users deposit and contracts when they withdraw, and that withdrawal converts iUSD back to AUSD before any subsequent bridge or swap. Pinned Move view calls resolved the vault to 0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a and iUSD metadata to 0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e. primary_fungible_store::balances on that vault returned exactly 3,309,388.939362 AUSD0 and zero iUSD; the pinned bank-supply query returned exactly 3,309,388.939362 iUSD. The base-token resource identifies AUSD0, 6 decimals, project URI agora.finance, and a total AUSD0 supply of 3,309,391.497341. This complete fixed-height wrapper assets-and-liabilities match supports limited assurance and reconciliation under D1: it is reproducible primary state, but there is no recent independent attestation naming custodians and no issuer-term segregation, so D1's conjunctive adequate line is not met. The direct programmatic iUSD-for-AUSD withdrawal claim and single-purpose on-chain vault support only limited claim/segregation and custody continuity: they are contract mechanics rather than holder legal terms or institutional custody protections. The package is COMPATIBLE-upgradeable and its resources show a weighted 3-of-4 `iusd-vault` multisig, so the reserve logic is administratively changeable. NOT established: any binding iUSD holder terms, trust or bankruptcy-remoteness protection, pass-through of Agora reserve rights to iUSD holders, the legal owner of vault assets, signer identities, an upgrade delay, LayerZero or upstream AUSD recovery mechanics, institutional custodian-failure continuity, a recent attestation naming custodians, or an independent examination of the iUSD wrapper. The exact reconciliation proves AUSD0 units in the wrapper vault, not the composition or legal availability of Agora's off-chain reserves.",
+      "metrics": {},
+      "analogousMetrics": {
+        "vaultAusd0": 3309388.939362,
+        "iusdSupply": 3309388.939362,
+        "wrapperCoverageRatio": 1
+      },
+      "components": {
+        "claimAndSegregation": {
+          "quality": "limited"
+        },
+        "custodyContinuity": {
+          "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "pmusd-precious-metals",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "RAAC RWf(x) documentation (pmUSD/xPM capital structure, collateral-ratio formula, no liquidation or reserve pool, and undercollateralized pro-rata redemption)",
+          "url": "https://docs.raac.io/rw-fx/"
+        },
+        {
+          "label": "Sourcify exact-match verification for the deployed Treasury implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x5fe0f17975819a2c40791e7cf8148c23b902c1d9"
+        },
+        {
+          "label": "Verified pmUSD Treasury proxy read page",
+          "url": "https://eth.blockscout.com/address/0x51c4348af0c6066a2fd31bd968bc0c039fe27342?tab=read_contract"
+        },
+        {
+          "label": "Verified pmUSD token read page",
+          "url": "https://eth.blockscout.com/address/0xc0c17dd08263c16f6b64e772fb9b723bf1344ddf?tab=read_contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC used for pinned eth_call reads at finalized block 25575345",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Finalized Ethereum block 25575345",
+          "url": "https://etherscan.io/block/25575345"
+        }
+      ],
+      "notes": "Measured at finalized Ethereum block 25575345 (2026-07-20; hash 0x0317f98d22251ec3d9e2df4792296884511771116b8d1dbed6e7ad3ed5c27c7f). Treasury.collateralRatio() returned 1.130046869526337937, recorded as collateralizationRatio 1.130047. Cross-checking the inputs, totalBaseToken was 26,528.785212665816068303 gold-share tokens, currentBaseTokenPrice was $4,004.17, pmUSD totalSupply was 94,001,203.622222222222222208, and the contract-reported fNAV was $1. The xPM supply was 11,510,159.280758 and xNAV was 1.062067167325317116, reconciling the approximately 13.0047% excess above the senior pmUSD liability; the xPM share of combined protocol capital was 0.115081. The official RWf(x) documentation explicitly states that xPM is the leveraged junior token, that there is no reservePool or registry and no liquidation or self-liquidation mechanism, and that when xNAV reaches zero mint/addBase/liquidation operations are blocked while fToken holders retain pro-rata base-token redemption. Therefore liquidationCapacityRatio and liquidationMechanics are structurally not applicable: xPM is first-loss capital, not a pool committed to debt-offset liquidation. Backstop is adequate because the junior claim and its current size are both explicit and measured on-chain; it is capped below strong because no external recapitalization commitment exists. Collateralization parameters, shutdown/bad-debt handling, and structural redemption remain limited because a manager can mint pmUSD without adding base collateral, the pro-rata path is permissioned through the Market, and no unconditional restoration rule was established. NOT established: legal ownership, custody, or bankruptcy treatment of the ION.au/fractional-gold claim; independent proof that the base-token supply is fully backed by bullion; oracle reporter identity, update cadence, or price freshness; a hard minimum collateral ratio that the manager cannot bypass; permissionless holder redemption; secondary gold-token liquidity; or an unconditional recapitalization source after xPM is exhausted.",
+      "metrics": {
+        "collateralizationRatio": 1.130047,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "measured"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "RWf(x) explicitly operates without a reservePool, liquidation, or self-liquidation mechanism; xPM absorbs collateral volatility as junior capital and is not a pmUSD-dedicated pool committed to debt offset.",
+          "sourceUrl": "https://docs.raac.io/rw-fx/"
+        }
+      },
+      "analogousMetrics": {
+        "xPmJuniorToSeniorCoverageRatio": 0.130047,
+        "xPmJuniorCapitalShare": 0.115081
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "liquidationMechanics": {
+          "applicability": "not-applicable",
+          "rationale": "pmUSD has no borrower-position liquidation path or self-liquidation mechanism; undercollateralization instead zeros xNAV and leaves pro-rata fToken redemption.",
+          "sourceUrl": "https://docs.raac.io/rw-fx/"
+        },
+        "backstop": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "branchIsolation": {
+          "applicability": "not-applicable",
+          "rationale": "The deployed pmUSD system is one Treasury with one baseToken and one fToken/xToken pair, not a set of borrower or collateral branches.",
+          "sourceUrl": "https://docs.raac.io/rw-fx/"
+        },
+        "shutdownAndBadDebt": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "susdai-usd-ai",
+      "archetype": "rwa-credit-fund",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "USD.AI live loans and proof-of-reserves page (server-rendered active-deal balances, loan timestamps, terms, and PYUSD sleeve)",
+          "url": "https://app.usd.ai/loans"
+        },
+        {
+          "label": "USD.AI proof-of-reserves API",
+          "url": "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161"
+        },
+        {
+          "label": "USD.AI technical protocol overview (ERC-4626/7540 vault, loan deployment, continuous NAV method, and default adjustment)",
+          "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview"
+        },
+        {
+          "label": "USD.AI sUSDai documentation (Depositor NFT claim, loan and liquid sleeve, and 30-day FIFO redemption epochs)",
+          "url": "https://docs.usd.ai/depositor/susdai"
+        },
+        {
+          "label": "USD.AI borrower overview (loan SPVs, liens, escrow, LTV, DSRA, repayment, and recovery process)",
+          "url": "https://docs.usd.ai/borrower/overview"
+        },
+        {
+          "label": "USD.AI onchain/offchain interplay (lender register, payment waterfall, Agent role, and real-time loan state)",
+          "url": "https://docs.usd.ai/borrower/onchain-offchain-interplay"
+        }
+      ],
+      "notes": "Measured from the official server-rendered loans page at 2026-07-20T17:40:01Z. The active reserve set contained 11 displayed deal aggregates representing 18 active loan records with official remaining balances totaling $100,739,396.884643 and a liquid PYUSD sleeve of $202,887,419.907194, for $303,626,816.791837 total displayed reserves and a 0.331787 active-loan share. For each active aggregate, its current remainingAmount was weighted by remaining days to loan.maturity; grouped deals were split across their member maturities in proportion to the member sUSDai remaining-principal records. PYUSD was treated as a zero-day demand claim, consistent with the issuer's documented 1:1 PYUSD mint/burn rail. This gives weightedAverageMaturityDays 313.909809 for the full displayed portfolio; the active loan book alone had a 946.118789-day weighted remaining term. Upcoming stage 1-3 deals, including loans already instantiated on-chain but not yet classified as active reserves, were excluded. valuationCadenceDays is 0 because the technical documentation defines continuous loan-interest and USDai-yield accrual in NAV, with principal updated by repayment events and a discrete write-down when default recovery is returned; this is protocol accounting cadence, not an independent collateral appraisal cadence. Credit quality, seniority, legal enforceability, valuation cadence, maturity/liquidity, custody, and recovery are all limited: the issuer documents 70-80% LTV GPU loans, borrower equity, DSRA, first-priority liens, bankruptcy-remote SPVs, Wilmington Trust escrow, Depositor NFT payment rights, monthly amortization, a 30-day FIFO redemption queue, and a recovery process, but the evidence is issuer-authored and no independent loan-tape, legal-opinion, valuation, custody, delinquency, or recovery examination was located. NOT established: executed loan/security agreements or UCC filings for the live deals; independent borrower identities, credit performance, hardware appraisals, insurance-policy terms, or collateral-monitoring results; the legal priority of an sUSDai holder versus GPU Finance, other loan participants, and operating creditors; bank/custodian identities for every live collection and DSRA account; realized default recoveries; an independently struck NAV; or a maximum redemption delay when the 30-day queue lacks cash.",
+      "metrics": {
+        "weightedAverageMaturityDays": 313.909809,
+        "valuationCadenceDays": 0
+      },
+      "metricApplicability": {
+        "weightedAverageMaturityDays": {
+          "state": "measured"
+        },
+        "valuationCadenceDays": {
+          "state": "measured"
+        }
+      },
+      "analogousMetrics": {
+        "activeLoanReserveShare": 0.331787,
+        "activeLoanBookWeightedRemainingTermDays": 946.118789
+      },
+      "components": {
+        "creditQuality": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "seniority": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "legalEnforceability": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "valuationCadence": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "maturityAndLiquidity": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "custody": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "recovery": {
+          "applicability": "measured",
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "meusd-mezo",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Mezo MUSD developer guide (Liquity-v1 single-BTC-collateral trove system: TroveManager, StabilityPool, redistribution)",
+          "url": "https://mezo.org/docs/developers/musd/"
+        },
+        {
+          "label": "Mezo MUSD liquidation and redemption mechanics (110% MCR, StabilityPool offset then redistribution, par BTC redemption)",
+          "url": "https://mezo.org/docs/users/borrow/liquidation-mechanics/"
+        },
+        {
+          "label": "Mezo mainnet MUSD deployment addresses (TroveManager 0x94AfB5..., StabilityPool 0x73245E..., MUSD 0xdD468A..., PriceFeed)",
+          "url": "https://raw.githubusercontent.com/mezo-org/musd/main/solidity/artifacts/deployments/mainnet/TroveManager.json"
+        },
+        {
+          "label": "Mezo mainnet MUSD token supply and holders (Blockscout: StabilityPool, IdleStrategy, CLPool, and Safe MUSD balances)",
+          "url": "https://api.explorer.mezo.org/api/v2/tokens/0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186/holders"
+        }
+      ],
+      "notes": "Measured on-chain 2026-07-20 at Mezo mainnet (chainId 31612) block 10543075 via journaled eth_call against https://mainnet.mezo.public.validationcloud.io. Contract graph is the official mezo-org/musd mainnet deployment (TroveManager 0x94AfB503dBca74aC3E4929BACEeDfCe19B93c193, StabilityPool 0x73245Eff485aB3AAc1158B3c4d8f4b23797B0e32, MUSD 0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186, PriceFeed 0xc5aC5A8892230E0A3e1c473881A2de7353fFcA88). collateralizationRatio 2.266891 is TroveManager.getTCR(fetchPrice=65220.79701 USD/BTC) and reconciles exactly to getEntireSystemColl (59.540568 BTC) * price / getEntireSystemDebt (1,713,043.72 MUSD). MCR() = 1.10, CCR() = 1.50, checkRecoveryMode() = false. liquidationCapacityRatio 0.454476 = StabilityPool.getTotalMUSDDeposits (14,175,086.10 MUSD) / MUSD.totalSupply (31,189,951.00). CENTRAL FINDING I COULD NOT REDUCE: the BTC trove system backs only 1,713,043.72 MUSD -- ~5.5% of the 31,189,951.00 total supply -- against 59.54 BTC (~$3.88M) of collateral; the remaining ~94% of supply is minted outside the trove system by other addresses on MUSD's authorized mint list and held largely in protocol/DeFi contracts (StabilityPool ~14.18M, IdleStrategy ~5.53M, a Volatile-AMM CLPool ~5.30M, a GnosisSafe ~4.00M). Consequently the BTC hard-collateral ratio against FULL supply is only ~0.1245, not 2.27, and the StabilityPool's loss-absorption capacity is itself largely protocol/PCV-minted MUSD rather than independent user deposits. What I could NOT establish: the precise split of externally-circulating vs protocol-owned MUSD, the backing (if any) of the ~94% non-trove supply, and whether Pharos canonical supply should treat protocol-held MUSD as circulating. Components are rated conservatively to reflect that the sound Liquity-v1 trove mechanism governs only a small minority of supply.",
+      "metrics": {
+        "collateralizationRatio": 2.266891,
+        "liquidationCapacityRatio": 0.454476
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "measured"
+        },
+        "liquidationCapacityRatio": {
+          "state": "measured"
+        }
+      },
+      "analogousMetrics": {
+        "btcHardCollateralToSupplyRatio": 0.124504,
+        "troveDebtToSupplyRatio": 0.054923
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "liquidationMechanics": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "backstop": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "branchIsolation": {
+          "applicability": "not-applicable",
+          "rationale": "MUSD is a single-collateral (BTC-only) Liquity-v1-style trove system with one ActivePool/DefaultPool/StabilityPool; there are no isolated per-collateral branches to assess.",
+          "sourceUrl": "https://mezo.org/docs/developers/musd/"
+        },
+        "shutdownAndBadDebt": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "ebusd-ebisu",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Ebisu Money documentation (Liquity-v2 credit-market mechanics and per-chain contract address tables for Ethereum and Plasma branches)",
+          "url": "https://ebisu.gitbook.io/ebisu-money"
+        },
+        {
+          "label": "ebUSD Ethereum token and CollateralRegistry (Etherscan)",
+          "url": "https://etherscan.io/token/0x09fd37d9aa613789c517e76df1c53aece2b60df4"
+        }
+      ],
+      "notes": "Measured on-chain 2026-07-20 via journaled eth_call. Ethereum (block 25576235, https://ethereum-rpc.publicnode.com): ebUSD 0x09fd37d9aa613789c517e76df1c53aece2b60df4, CollateralRegistry 0x5e159fac2d137f7b83a12b9f30ac6ab2ba6d45e7, 5 active branches (weETH, sUSDe, WBTC, LBTC, stcUSD) with measured collateral value $53,773 combined... per-branch getEntireBranchColl/getEntireBranchDebt and BranchManager.getUnbackedPortionPriceAndRedeemability price. Plasma (chainId 9745, block 27638683, https://rpc.plasma.to): ebUSD 0xef7b1a03e0897c33b63159e38d779e3970c0e2fc, CollateralRegistry 0x602096a2f43b43d11dcb3713702dda963c45adc6, 7 branches. System-wide across both chains: total collateral value $53,773, total branch debt $32,079, total StabilityPool deposits $6,026, total supply $32,023 (ETH $30,589 + Plasma $1,434; total debt reconciles to total supply within 0.2%). collateralizationRatio 1.6763 = totalCollateralValue / totalBranchDebt. liquidationCapacityRatio 0.1882 = totalStabilityPoolDeposits / totalSupply. Per-branch MCR() measured 1.10-1.35 (weETH/WBTC 1.20, sUSDe/stcUSD 1.15, LBTC 1.35); all branches shutdownTime()=0 (none shut down). The contract graph, getters, and CollateralRegistry match canonical Liquity v2 exactly, confirming a faithful fork. What I could NOT establish: an independent audit of THIS fork's deployed bytecode versus canonical Liquity v2, and the depth/robustness of the StabilityPools (liqCap 0.188 is thin and total supply is only ~$32k, so the mechanism is structurally sound but operates at trivial scale). liquidationMechanics/backstop/shutdownAndBadDebt are held at limited on that basis.",
+      "metrics": {
+        "collateralizationRatio": 1.6763,
+        "liquidationCapacityRatio": 0.1882
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "measured"
+        },
+        "liquidationCapacityRatio": {
+          "state": "measured"
+        }
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "backstop": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "branchIsolation": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "shutdownAndBadDebt": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "btcusd-btcfi",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "BTCFi current market API (per-handler deposit/borrow values and oracle prices)",
+          "url": "https://www.btcfi.one/api/getBtcfiMarket?isTestnet=false"
+        },
+        {
+          "label": "BTCFi supported-handler API (collateral handlers: WBTC, BTCB, BtcUSD, native BTC, cbBTC)",
+          "url": "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false"
+        },
+        {
+          "label": "BTCFi mint-BtcUSD documentation (max mint 50% of held collateral; 5.5% loan interest)",
+          "url": "https://docs.bifrostnetwork.com/eng.btcfi.one/dashboard/3.-mint-btcusd"
+        }
+      ],
+      "notes": "Measured 2026-07-20 from the issuer market API. BtcUSD is issued by a shared Compound/Aave-style over-collateralized lending market on the Bifrost Network (chainId 3068): users deposit BTC wrappers and native BTC and borrow BtcUSD. collateralizationRatio 1.3279 = total collateral deposit value ($8,325,747) / BtcUSD borrows ($6,270,026); a conservative BTC-only ratio (excluding a $571,843 non-BTC handler-5 collateral priced $0.00616) is 1.2367. Borrows ($6.27M) reconcile with Pharos canonical supply (~$6.00M) within ~4%. UNRECONCILED DISCREPANCY (the key caveat): the mint documentation states a maximum mint of 50% of collateral (i.e. a 200% per-position minimum), yet the observed system-wide collateralization is only ~133%; I could not reconcile the documented 50% cap with the market state (possible causes: the cap applies per-mint not to maintained positions, accrued 5.5% interest, or oracle staleness -- the API prices BTC at ~$65k). liquidationCapacityRatio is not-applicable: this is a lending market where liquidations are performed by external keepers repaying debt for discounted collateral, with no dedicated BtcUSD-committed stability/offset pool in the market state. What I could NOT establish: the exact liquidation penalty/threshold parameters, any surplus buffer or bad-debt socialization, and whether the API oracle prices are current. Components are held at limited given the reconciliation gap.",
+      "metrics": {
+        "collateralizationRatio": 1.3279,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "measured"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "BtcUSD is issued from a shared over-collateralized lending market; liquidations are executed by external keepers repaying debt for discounted collateral, and no dedicated BtcUSD-committed stability/offset pool exists in the market state, so a pool-to-supply liquidation-capacity ratio is not applicable.",
+          "sourceUrl": "https://www.btcfi.one/api/getBtcfiMarket?isTestnet=false"
+        }
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "liquidationMechanics": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "branchIsolation": {
+          "applicability": "not-applicable",
+          "rationale": "BtcUSD is issued from a single shared collateral market (all deposited BTC-wrapper and native-BTC collateral backs all BtcUSD); there are no isolated per-collateral branches to assess.",
+          "sourceUrl": "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "alusd-alchemix",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Alchemix v2 documentation (self-repaying loans, max 50% LTV / 200% minimum collateralization, Transmuter 1:1 conversion)",
+          "url": "https://v2-docs.alchemix.fi/"
+        },
+        {
+          "label": "Alchemix AlchemistV2 (alUSD) on Etherscan (minimumCollateralization, transmuter, debtToken reads)",
+          "url": "https://etherscan.io/address/0x5C6374a2ac4EBC38DeA0Fc1F8716e5Ea1AdD94dd"
+        }
+      ],
+      "notes": "Reviewed 2026-07-20 with on-chain reads (https://ethereum-rpc.publicnode.com) against the Alchemix AlchemistV2 for alUSD 0x5C6374a2ac4EBC38DeA0Fc1F8716e5Ea1AdD94dd. minimumCollateralization() = 2.0 (2e18) is enforced on every mint/withdraw, so no position can exceed 50% LTV and the system-wide ratio is structurally >= 2.0 by invariant; debtToken() = alUSD 0xBC6DA0FE9aD5f3b0d58160288917AA56653660E9; 14 supported yield tokens and 4 underlying tokens; transmuter() = 0x1EeD2dbeb9Fc23Ab483F447F38f289cA15f79Bac. collateralizationRatio is recorded not-applicable-as-a-single-aggregate because AlchemistV2 exposes only per-account collateralization (totalValue(owner)); there is no global debt or aggregate-collateralization accessor (totalDebt(), getTotalDebt(), totalValue() all revert), so a system-wide live ratio cannot be read on-chain -- the meaningful, verifiable collateralization fact is the hard 200% per-position floor, captured in collateralizationParameters. liquidationCapacityRatio is not-applicable: Alchemix has no stability pool; positions self-liquidate against their own collateral and the Transmuter converts alUSD to underlying as loans self-repay. What I could NOT establish: the live aggregate system collateralization, the Transmuter's current queue depth / time-to-1:1, and any emergency-shutdown or bad-debt socialization design (shutdownAndBadDebt left uncurated/bounded).",
+      "metrics": {
+        "collateralizationRatio": null,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "not-applicable",
+          "rationale": "AlchemistV2 enforces a hard per-position minimum collateralization of 2.0 (minimumCollateralization() = 2e18, verified on-chain) but exposes no global debt or aggregate-collateralization accessor (totalDebt/getTotalDebt/totalValue revert), so a system-wide measured collateralization ratio cannot be read on-chain; the 200% per-position floor is captured qualitatively in collateralizationParameters.",
+          "sourceUrl": "https://etherscan.io/address/0x5C6374a2ac4EBC38DeA0Fc1F8716e5Ea1AdD94dd"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "Alchemix v2 has no stability pool or dedicated committed liquidation pool; positions self-liquidate against their own collateral and the Transmuter provides eventual 1:1 conversion, so there is no external committed capacity expressible as a pool-to-supply ratio.",
+          "sourceUrl": "https://v2-docs.alchemix.fi/"
+        }
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "backstop": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "branchIsolation": {
+          "applicability": "not-applicable",
+          "rationale": "alUSD is issued from a single AlchemistV2 debt system whose supported yield strategies share one debt accounting; there are no isolated per-collateral branches to assess.",
+          "sourceUrl": "https://v2-docs.alchemix.fi/"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "jpyt-dephaser",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "DePhaser JPYT documentation (1:1 USD-collateral yen wrapper; USDT/USDC locked and routed to Aave; recalculated-rate redemption; no liquidation)",
+          "url": "https://docs.dephaser.com/"
+        }
+      ],
+      "notes": "Reviewed 2026-07-20 from issuer documentation. Despite the CDP archetype assignment, JPYT is mechanically a fully-reserved FX wrapper, not an over-collateralized liquidation-CDP: users lock USDT (Optimism) or USDC (Base) 1:1 by USD value and mint JPYT at a real-time USD/JPY oracle rate, with the locked collateral routed into Aave for custody. There is no over-collateralization buffer, no liquidation mechanism, and no stability pool. Redemption burns JPYT and returns USDT/USDC at a recalculated 'Lock-In Exchange Rate' (the average market rate across active positions), and the docs explicitly state users 'might not retrieve their initial USDT or USDC amount exactly' -- so USD/JPY FX risk is borne by redeemers. Both CDP metrics are therefore not-applicable (no debt position, no liquidation). What I could NOT establish (no attestation or on-chain reserve read performed here; reserve composition is covered separately by the reserve review): the DepositManager/Aave aToken balances proving live 1:1 backing, the oracle provider's redundancy, and any protocol surplus or insurance backstop (left uncurated/bounded).",
+      "metrics": {
+        "collateralizationRatio": null,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "not-applicable",
+          "rationale": "JPYT is a fully-reserved 1:1 FX wrapper (USD-denominated USDT/USDC reserves back a JPY-denominated liability); there is no over-collateralized debt position and the protocol publishes no CDP collateralization ratio, with USD/JPY FX borne by redeemers via a recalculated redemption rate.",
+          "sourceUrl": "https://docs.dephaser.com/"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "JPYT has no liquidation mechanism or stability pool (a 1:1 reserve wrapper with no over-collateralized positions to liquidate).",
+          "sourceUrl": "https://docs.dephaser.com/"
+        }
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "liquidationMechanics": {
+          "applicability": "not-applicable",
+          "rationale": "No liquidation mechanism exists; JPYT is a 1:1 reserve wrapper with no over-collateralized debt positions to liquidate.",
+          "sourceUrl": "https://docs.dephaser.com/"
+        },
+        "branchIsolation": {
+          "applicability": "not-applicable",
+          "rationale": "Single collateral route (USDT/USDC locked and routed into Aave); there are no isolated per-collateral branches to assess.",
+          "sourceUrl": "https://docs.dephaser.com/"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "jusd-juicedollar",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "JuiceDollar positions documentation (owner-set liquidation price bounds mintable debt; Frankencoin-style collateralized minting)",
+          "url": "https://docs.juicedollar.com/positions.html"
+        },
+        {
+          "label": "JuiceDollar challenges and auctions documentation (2% challenger reward, minimum one-day challenge period, bid-switching design, externally funded bids, no external oracle)",
+          "url": "https://docs.juicedollar.com/positions/auctions.html"
+        },
+        {
+          "label": "JuiceDollar reserve and equity documentation (JUICE pool shares as loss-absorbing equity layer)",
+          "url": "https://docs.juicedollar.com/reserve.html"
+        },
+        {
+          "label": "JuiceDollar stablecoin bridge documentation (1:1 mint and burn against external Citrea stablecoins)",
+          "url": "https://docs.juicedollar.com/swap.html"
+        },
+        {
+          "label": "JuiceDollar smart-contract address list (JUSD token, Equity, MintingHub V2/V3, USDC/USDT/CTUSD StablecoinBridge addresses, Citrea chain id 4114)",
+          "url": "https://docs.juicedollar.com/smart-contracts.html"
+        },
+        {
+          "label": "JuiceDollar contracts source repository (StablecoinBridge and Frankencoin-fork position contracts)",
+          "url": "https://github.com/JuiceDollar/smartContracts"
+        },
+        {
+          "label": "Citrea mainnet public RPC used for the journaled eth_call reads at block 10237871",
+          "url": "https://rpc.mainnet.citrea.xyz"
+        },
+        {
+          "label": "Citrea mainnet explorer (JUSD token and StablecoinBridge contract pages)",
+          "url": "https://citreascan.com"
+        }
+      ],
+      "notes": "Reviewed 2026-07-20 by mechanism-drain lane mechY-3. Measured at Citrea mainnet block 10237871 (2026-07-20T20:07:43Z, chain id 4114) via eth_call against the documented contract addresses. JUSD is a Frankencoin/d-EURO architecture fork, but the measurement shows its collateralized-minting engine is currently inert and the token is in practice a 1:1 wrapper over one bridged stablecoin. totalSupply() = 56650.338747215709827641 JUSD. The three StablecoinBridge contracts report minted() of 56650.262522057361950443 (USDT.e), 0.067761203702540029 (USDC.e) and 0.008463954645337169 (ctUSD), which sum to exactly totalSupply to the last wei; minterReserve() is 0. Bridge-route minting therefore accounts for 100.000000% of supply and position-minted JUSD is exactly zero, so no collateralized position is outstanding for the documented CDP machinery to govern. The bridges hold 56650.342015 units of underlying (USDT.e 56650.262935, USDC.e 0.069368, ctUSD 0.009712), giving collateralizationRatio 1.000000058 - fully backed but with no overcollateralization whatsoever, and 99.99986% of that backing is a single asset, bridged Tether USDT.e. Collateralization parameters: the position documentation defines owner-set liquidation prices, per-position minimum collateral and challenge periods, but these govern 0% of supply; the live route is the bridge, whose on-chain limit() reads 1e20 raw against a 6-decimal underlying (about 1e14 tokens), i.e. effectively uncapped 1:1 minting against USDT.e, and whose horizon() is 2030-01-21T04:33:31Z. NOT established: any protocol-enforced minimum collateral ratio, any debt ceiling that is economically binding, and whether any position has ever been opened. Liquidation mechanics are documented (permissionless challenges, Dutch auctions, 2% challenger reward, oracle-free bid-switching inherited from the audited Frankencoin design) but are inert at zero position debt, and the bridge route has no liquidation path at all - rated limited rather than adequate because the mechanism currently protects nothing. Backstop: equity() = 172.402256388877894161 JUSD against 56650.34 supply = 0.3043% equity coverage, with minterReserve() at 0, so the loss-absorbing layer is 0.30% of supply against a backing book that is essentially 100% USDT.e counterparty and bridge-contract risk. NOT established: any pre-funded backstop beyond JUICE equity, and JUICE's quoted price() of 0.000542401159122236 against a 3178500.88 share supply was not independently corroborated as realisable value. Branch isolation: each bridge is a separate contract with its own limit and horizon and each position would be a separate single-collateral contract, but with 99.99986% of backing in one bridged asset the documented isolation delivers no practical diversification - limited. Shutdown and bad debt: no global settlement or shutdown mechanism exists; bad debt would be socialised by minting uncovered JUSD as in the parent Frankencoin design - limited. NOT established: the post-horizon behaviour of the bridges after 2030-01-21 was read from contract state but the redemption consequences were not confirmed against a pinned source commit. Structural redemption is the one component measured as adequate: the StablecoinBridge burn path is permissionless and the bridges verifiably hold 100.000006% of the underlying needed to honour every outstanding JUSD at 1:1 at the measured block, so every holder has a funded, contract-enforced exit that does not depend on an auction or a governance decision. NOT established: whether that exit survives a USDT.e depeg, freeze or blacklist event, since the redemption asset is itself a blacklistable third-party stablecoin, and no bridge-level circuit breaker was found. NOT established more broadly: the CDP archetype's parameters could not be exercised against live positions because none exist, so this review measures a wrapper, not a working CDP; if positions are opened later the collateralizationParameters, liquidationMechanics and branchIsolation ratings should be re-derived rather than carried forward.",
+      "metrics": {
+        "collateralizationRatio": 1.000000058,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "measured"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "JuiceDollar inherits Frankencoin challenge auctions, which are funded by external bidders rather than by a JUSD-dedicated pool contractually committed to debt offset; additionally, position-minted JUSD measured exactly zero at block 10237871, so there is no liquidatable debt for any capacity ratio to cover. The measured JUICE equity layer (0.003043 of supply) is loss-absorption capital reported under backstop and in analogousMetrics, not committed liquidation capacity.",
+          "sourceUrl": "https://docs.juicedollar.com/positions/auctions.html"
+        }
+      },
+      "analogousMetrics": {
+        "bridgeMintedShareOfSupply": 1.0,
+        "positionMintedShareOfSupply": 0.0,
+        "bridgeUnderlyingCoverageRatio": 1.000000058,
+        "equityCoverageRatio": 0.003043,
+        "largestSingleBackingAssetShare": 0.999998604
+      },
+      "components": {
+        "collateralizationParameters": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "liquidationMechanics": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "backstop": {
+          "applicability": "measured",
+          "quality": "weak"
+        },
+        "branchIsolation": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "shutdownAndBadDebt": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "applicability": "measured",
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "crvusd-curve",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Curve official crvUSD markets API (prices.curve.finance, backend of the crvUSD/Llamalend UI) markets/ethereum with fetch_on_chain: per-market collateral, borrower debt, LLAMMA soft-liquidated crvUSD, loan_discount, liquidation_discount, AMM amplification A, and debt ceilings",
+          "url": "https://prices.curve.finance/v1/crvusd/markets/ethereum"
+        },
+        {
+          "label": "Curve official PegKeeper API (per-keeper deployed debt and active/inactive state for the crvUSD/USDC, crvUSD/USDT, pyUSD, GHO and frxUSD stableswap keepers)",
+          "url": "https://prices.curve.finance/v1/crvusd/pegkeepers/ethereum"
+        },
+        {
+          "label": "Curve crvUSD LLAMMA explainer (continuous soft-liquidation across price bands, de-liquidation, and the arbitrage-driven conversion of collateral to crvUSD)",
+          "url": "https://docs.curve.finance/developer/crvusd/llamma-explainer"
+        },
+        {
+          "label": "Curve crvUSD Controller documentation (health, hard liquidation, loan_discount/liquidation_discount, and per-market parameters)",
+          "url": "https://docs.curve.finance/developer/crvusd/controller"
+        },
+        {
+          "label": "Curve crvUSD Factory documentation (per-market debt ceilings and market registry)",
+          "url": "https://docs.curve.finance/developer/crvusd/factory"
+        },
+        {
+          "label": "Curve crvUSD PegKeeper overview and PegKeeperRegulator documentation (debt-limited mint/absorb into Curve stableswap pools, admin/emergency_admin pause powers)",
+          "url": "https://docs.curve.finance/developer/crvusd/pegkeepers/peg-keeper-regulator"
+        },
+        {
+          "label": "crvUSD verified token contract read page (totalSupply)",
+          "url": "https://etherscan.io/address/0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E"
+        },
+        {
+          "label": "Ethereum PublicNode RPC used for the journaled eth_call totalSupply read at finalized block 25576275",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ],
+      "notes": "Reviewed 2026-07-20. Measured on Ethereum via the Curve official crvUSD markets API (fetch_on_chain, the backend of the crvUSD/Llamalend UI) cross-checked with an eth_call crvUSD.totalSupply() at finalized block 25576275. The nine Ethereum crvUSD mint markets held aggregate collateral 64,591,557.26 USD against aggregate borrower debt 33,455,016.14 crvUSD, giving collateralizationRatio 1.930699 (1.968426 including the 1,262,153.63 crvUSD of soft-liquidated collateral currently sitting in the LLAMMA AMMs). crvUSD totalSupply was 2,089,809,204.98 at that block, far above mint-market debt because most crvUSD is pre-minted into PegKeeper-paired stableswap pools, the FlashLender, and Llamalend lending markets rather than circulating as CDP debt (DefiLlama circulating ~225M); this overlay's collateralizationRatio is scoped to the crvUSD mint/Controller markets, the CDP minting facility. collateralizationParameters is adequate: per-market loan_discount and liquidation_discount (measured, e.g. WBTC 9e16/6e16, WETH 1.429e17/9.21e16, tBTC 9e16/6e16), AMM amplification A (measured 75-100), per-market debt ceilings (measured up to 200,000,000), and delayed-oracle routing are documented and governance-mutable, but there is no protocol-enforced minimum health beyond the owner-chosen band range. liquidationMechanics is adequate: LLAMMA performs continuous soft-liquidation, converting collateral into crvUSD band-by-band through external arbitrage as the oracle price crosses a position's bands, with hard liquidation available below the health threshold and no keeper-auction latency; the design is oracle-delayed and arbitrage-driven. liquidationCapacityRatio is structurally not applicable: LLAMMA rebalancing and hard-liquidation are funded by external arbitrageurs and keepers, not by a crvUSD-dedicated pool contractually committed to debt offset (matching the USDD, ZCHF, and DAI precedents). backstop is limited: the soft-liquidation design materially reduces bad-debt probability, but crvUSD mint markets carry no dedicated reserve or stability-pool backstop capital and no gov-token recapitalization path for a mint-market shortfall. branchIsolation is adequate: each collateral has its own isolated Controller/LLAMMA market with an independent debt ceiling (measured across 9 markets), so a shortfall is bounded to its market. shutdownAndBadDebt is limited: crvUSD has no global-settlement or emergency-shutdown (End) module; the admin and emergency_admin can pause PegKeepers and kill markets, but a mint-market shortfall is carried as under-backing without automatic recapitalization. structuralRedemption is limited: crvUSD holders have no direct redemption claim on collateral; the peg is defended by PegKeepers that mint or absorb crvUSD into Curve stableswap pools (measured: the crvUSD/USDT keeper had 33,750,000 crvUSD deployed) bounded by pool depth and PegKeeperRegulator debt limits. NOT established: the per-market health distribution and whether any position is currently in bad debt were not enumerated; oracle-manipulation resistance under thin-liquidity stress was not tested; the non-Ethereum mint markets (Arbitrum, Base, Fraxtal, etc.) were not measured; and PegKeeper pool depth under a sustained depeg was not measured.",
+      "metrics": {
+        "collateralizationRatio": 1.930699,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "measured"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "crvUSD LLAMMA soft-liquidation and hard liquidation are funded by external AMM arbitrageurs and keepers, not by a crvUSD-dedicated pool contractually committed to debt offset.",
+          "sourceUrl": "https://docs.curve.finance/developer/crvusd/llamma-explainer"
+        }
+      },
+      "analogousMetrics": {
+        "collateralPlusSoftLiquidationRatio": 1.968426,
+        "mintMarketDebtUsd": 33455016.14,
+        "mintMarketCollateralUsd": 64591557.26,
+        "pegKeeperDeployedDebtUsd": 33750000
+      },
+      "components": {
+        "collateralizationParameters": {
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "quality": "adequate"
+        },
+        "backstop": {
+          "quality": "limited"
+        },
+        "branchIsolation": {
+          "quality": "adequate"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "lisusd-lista",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Lista lisUSD CDP developer smart-contract registry (BSC Vat 0x33A34eAB3ee892D40420507B820347b1cA2201c4, Dog, Spot, Vow, Jug, per-ilk GemJoin and Clipper addresses)",
+          "url": "https://docs.bsc.lista.org/for-developer/collateral-debt-position/smart-contract.md"
+        },
+        {
+          "label": "Lista lisUSD loan-liquidation documentation (Dutch-auction liquidation, 10% liquidation penalty, top/buf, tau/tail/cusp restart, tip 5 lisUSD keeper reward, debt absorbed by Lista)",
+          "url": "https://docs.bsc.lista.org/introduction/collateral-debt-position-lisusd/collateral/loan-liquidation.md"
+        },
+        {
+          "label": "Lista Liquidation Zone documentation (manual, team-activated community liquidation for positions exceeding $1M or after repeated failed bot liquidations)",
+          "url": "https://docs.bsc.lista.org/introduction/lista-lending/liquidation/liquidation-zone.md"
+        },
+        {
+          "label": "Lista lisUSD PSM documentation (5M lisUSD pre-minted mint cap at 0% fee 1:1 vs USDT/USDC; 500,000 lisUSD/day redemption limit at 2% fee)",
+          "url": "https://docs.bsc.lista.org/introduction/collateral-debt-position-lisusd/lisusd/stable-pool-price-stability-module-psm.md"
+        },
+        {
+          "label": "Lista D3M documentation (credit-based minting of lisUSD directly into Aave/Venus without collateral, phase-1 cap 2.5M lisUSD)",
+          "url": "https://docs.bsc.lista.org/introduction/collateral-debt-position-lisusd/lisusd/d3m-direct-deposit-module.md"
+        },
+        {
+          "label": "Lista CDP mechanics documentation (MakerDAO-modelled Vat/GemJoin/HayJoin engine, per-collateral collateral ratio as the liquidation bar, fixed governance-set interest)",
+          "url": "https://docs.bsc.lista.org/for-developer/collateral-debt-position/mechanics.md"
+        },
+        {
+          "label": "lisUSD verified BSC token contract read page (totalSupply)",
+          "url": "https://bscscan.com/address/0x0782b6d8c4551B9760e74c0545a9bCD90bdc41E5"
+        },
+        {
+          "label": "Lista Vat verified BSC contract read page (debt, vice, per-ilk ilks accounting) used for the journaled eth_call reads at BSC block ~111154135",
+          "url": "https://bscscan.com/address/0x33A34eAB3ee892D40420507B820347b1cA2201c4"
+        },
+        {
+          "label": "BSC PublicNode RPC used for the journaled eth_call reads (Vat.debt, Vat.vice, per-ilk ilks/Spot, GemJoin balances, lisUSD.totalSupply)",
+          "url": "https://bsc-rpc.publicnode.com"
+        }
+      ],
+      "notes": "Reviewed 2026-07-20. Measured on BSC at block ~111154135 via journaled eth_call reads against the Lista Vat (0x33A34eAB3ee892D40420507B820347b1cA2201c4) plus the per-ilk GemJoin and Spot contracts from the developer registry. Vat.debt() = 24,622,565.46 lisUSD of internal credit and, critically, Vat.vice() = 2,821,803.63 lisUSD of realized, uncovered system bad debt = 11.46% of internal credit; this is a measured adverse fact and the anchor of the conservative ratings below. Enumerating the per-ilk GemJoin balances valued at each ilk's on-chain Spot*mat price gave aggregate CDP collateral 314,713,592.63 USD against enumerated ilk debt 21,796,591.81 lisUSD (aggregate collateralizationRatio 14.4387). That aggregate is high because collateral utilization is low: users deposit far more collateral than they borrow (e.g. the slisBNB ilk holds ~202M USD of collateral against only ~1.46M debt), while the dominant ceaBNBc ilk carries 89% of CDP debt at a 5.39 ratio. The risk-relevant measured fact is therefore the 11.46% realized bad debt, not the headline ratio. BSC lisUSD totalSupply was 75,097,217.50, well above Vat.debt because lisUSD is a cross-chain LayerZero OFT and because PSM pre-mint and D3M/AMO credit-minting expand supply without CDP collateral. collateralizationParameters is adequate: per-ilk liquidation ratios mat (measured 1.1-3.0) and debt ceilings line are enforced on-chain and governance-set. liquidationMechanics is limited rather than adequate: the documented Dutch auctions (10% penalty, tip/chip keeper rewards, tau/tail/cusp restart) rely on Lista-whitelisted bots and, for positions over $1M or after repeated failures, a manually team-activated community Liquidation Zone; the measured 2.82M of realized bad debt is direct evidence that liquidations did not fully protect the system. backstop is weak: there is measured uncovered bad debt in the Vat and no gov-token recapitalization mechanism is documented, while D3M/AMO credit-mint lisUSD into Aave/Venus without collateral. branchIsolation is adequate: each collateral is an isolated ilk with its own mat, line, and Clipper (measured), so risk admission is bounded per ilk, though losses mutualize in the shared Vow. shutdownAndBadDebt is limited: no emergency-shutdown or global-settlement mechanism is documented and the measured bad debt is simply carried in the Vat/Vow. structuralRedemption is limited: the PSM offers 1:1 lisUSD-to-USDT/USDC redemption but is capped at 500,000 lisUSD/day at a 2% fee (documented), and holders have no direct claim on vault collateral. liquidationCapacityRatio is structurally not applicable: liquidations are externally funded Dutch auctions and community liquidators, with no lisUSD-dedicated pool contractually committed to debt offset. NOT established: the split of each GemJoin balance between locked ink and unlocked free gem (so the aggregate collateralizationRatio is an upper bound on actively-borrowed collateralization), the PSM and D3M/AMO ilk debt outside the enumerated gemjoins, the cross-chain distribution of the OFT supply, and whether the 2.82M vice is being actively worked down.",
+      "metrics": {
+        "collateralizationRatio": 14.4387,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "measured"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "lisUSD liquidations are externally funded Dutch auctions and manually-activated community liquidators, with no lisUSD-dedicated pool contractually committed to debt offset.",
+          "sourceUrl": "https://docs.bsc.lista.org/introduction/collateral-debt-position-lisusd/collateral/loan-liquidation.md"
+        }
+      },
+      "analogousMetrics": {
+        "realizedBadDebtRatio": 0.1146,
+        "dominantIlkCollateralizationRatio": 5.39,
+        "bscVatDebtToSupplyRatio": 0.3279
+      },
+      "components": {
+        "collateralizationParameters": {
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "quality": "limited"
+        },
+        "backstop": {
+          "quality": "weak"
+        },
+        "branchIsolation": {
+          "quality": "adequate"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "wsrusd-reservoir",
+      "archetype": "rwa-credit-fund",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Reservoir Savings (srUSD/wsrUSD) product documentation",
+          "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd"
+        },
+        {
+          "label": "Reservoir live on-chain reserves balance sheet (raw API)",
+          "url": "https://app.reservoir.xyz/api/reserves/raw"
+        },
+        {
+          "label": "Blockscout verified wsrUSD Savingcoin contract source",
+          "url": "https://eth.blockscout.com/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094?tab=contract"
+        }
+      ],
+      "notes": "wsrUSD is a non-rebasing ERC-4626 wrapper over rUSD; rUSD's backing basket carries the credit-fund exposure. Measured 2026-07-20 from Reservoir's own live on-chain reserves API (app.reservoir.xyz/api/reserves/raw): totalAssets $35,588,399.04 versus totalLiabilities $35,301,674.85 (wsrUSD $34,375,143, srUSD $725,455, rUSD circulating $201,076) leaves $286,724 equity, a measured system collateralization of 1.008122 (100.81%). Asset composition: 70.18% DeFi lending markets (Aave GHO on Plasma/Monad, Morpho Steakhouse High-Yield USD1), 25.65% Pendle PT-USDat-27AUG2026, 3.38% Agua Global Carry ERC-4626 vault, 0.44% USDC, 0.34% Hastra PRIME RWA. weightedAverageMaturityDays 9.7488 treats the 70.18% redeemable-on-demand lending, 3.38% redeemable vault, and 0.44% USDC sleeves as 0-day and the 25.65% Pendle PT as its documented fixed maturity 2026-08-27 (38 days from the 2026-07-20 read); valuationCadenceDays 0 reflects the continuously readable on-chain balance sheet. NOT ESTABLISHED: no external credit rating or per-obligor credit quality for the underlying DeFi and RWA positions; no legal SPV, trust, or bankruptcy-remote claim wrapper for wsrUSD/rUSD holders (enforcement is smart-contract Credit Enforcer only); no independent fund administrator or auditor strikes the NAV (self-administered on-chain); the documented 105% Credit Enforcer minimum ratios could not be independently confirmed against the measured 100.81% live collateralization; the Hastra PRIME RWA sleeve's own maturity profile is undisclosed; and PSM redemption of rUSD is documented as subject to available protocol liquidity rather than a guaranteed at-par redemption.",
+      "metrics": {
+        "weightedAverageMaturityDays": 9.7488,
+        "valuationCadenceDays": 0
+      },
+      "components": {
+        "creditQuality": {
+          "quality": "limited"
+        },
+        "seniority": {
+          "quality": "limited"
+        },
+        "legalEnforceability": {
+          "quality": "limited"
+        },
+        "valuationCadence": {
+          "quality": "limited"
+        },
+        "maturityAndLiquidity": {
+          "quality": "limited"
+        },
+        "custody": {
+          "quality": "limited"
+        },
+        "recovery": {
+          "quality": "limited"
+        }
+      }
     }
   ]
 }

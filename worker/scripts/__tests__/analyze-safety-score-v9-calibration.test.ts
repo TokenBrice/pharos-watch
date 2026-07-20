@@ -600,18 +600,40 @@ describe("Safety Score V9 distribution gates D1-D6", () => {
     expect(metrics.freeFloatingLargestTupleShare).toBe(0.5);
   });
 
-  it("D5 ranks the material cohort by supply and ignores assets with no observation", () => {
+  it("D5 scopes the material cohort by a supply window and ignores assets with no observation", () => {
     const metrics = metricsFor([
-      { id: "material-a", grade: "B-", supplyUsd: 400 },
-      { id: "material-b", grade: "C-", supplyUsd: 300 },
-      { id: "material-c", grade: "F", supplyUsd: 200 },
-      { id: "material-d", grade: "F", supplyUsd: 100 },
+      { id: "material-a", grade: "B-", supplyUsd: 400_000_000 },
+      { id: "material-b", grade: "C-", supplyUsd: 300_000_000 },
+      { id: "material-c", grade: "F", supplyUsd: 200_000_000 },
+      { id: "material-d", grade: "F", supplyUsd: 100_000_000 },
+      // Below the window: immaterial supply cannot dilute the cohort.
+      { id: "sub-window", grade: "F", supplyUsd: 99_999_999 },
       // No supply observation: outside the cohort, so it cannot dilute it.
       { id: "immaterial", grade: "F", supplyUsd: null },
     ]);
 
-    expect(metrics.top50CMinusOrBetterShare).toBe(0.5);
-    expect(metrics.top50BMinusOrBetterCount).toBe(1);
+    expect(metrics.materialCohortCMinusOrBetterShare).toBe(0.5);
+    expect(metrics.materialCohortBMinusOrBetterCount).toBe(1);
+  });
+
+  it("D5 membership is stable when a lower-ranked asset appears above a cohort member", () => {
+    // The retired top-50 cutoff dropped a stable member whenever enough assets
+    // sorted above it; a supply window only moves when the member's own supply
+    // crosses the line.
+    const member = { id: "stable-member", grade: "B-" as const, supplyUsd: 150_000_000 };
+    const before = metricsFor([member, { id: "other", grade: "F", supplyUsd: 120_000_000 }]);
+    const after = metricsFor([
+      member,
+      { id: "other", grade: "F", supplyUsd: 120_000_000 },
+      ...Array.from({ length: 60 }, (_, index) => ({
+        id: `newly-visible-${index}`,
+        grade: "F" as const,
+        supplyUsd: 200_000_000,
+      })),
+    ]);
+
+    expect(before.materialCohortBMinusOrBetterCount).toBe(1);
+    expect(after.materialCohortBMinusOrBetterCount).toBe(1);
   });
 
   it("splits the unattributed F cohort into curable and methodology-blocked classes", () => {
@@ -655,8 +677,8 @@ describe("Safety Score V9 distribution gates D1-D6", () => {
       "d3bUnattributedFSupplyShare",
       "d4aFreeFloatingLargestBucketShare",
       "d4bFreeFloatingLargestTupleShare",
-      "d5aTop50CMinusOrBetterShare",
-      "d5bTop50BMinusOrBetterCount",
+      "d5aMaterialCohortCMinusOrBetterShare",
+      "d5bMaterialCohortBMinusOrBetterCount",
       "d6ScoreIqr",
     ]) {
       expect(report.gates).toHaveProperty(gate);
@@ -676,7 +698,7 @@ describe("Safety Score V9 distribution gates D1-D6", () => {
     // Null metrics fail their gate closed rather than reading as a pass.
     expect(metrics.materialEvidenceCoverageExTop2).toBeNull();
     expect(metrics.unattributedFSupplyShare).toBeNull();
-    expect(metrics.top50CMinusOrBetterShare).toBeNull();
+    expect(metrics.materialCohortCMinusOrBetterShare).toBeNull();
     expect(metrics.supplyObservationCoverage).toBe(0);
     expect(metrics.maxNrSupplyUsd).toBe(0);
   });
