@@ -87,6 +87,16 @@ describe("adaptRippleTransparency", () => {
     expect(result.slices.map((slice) => slice.pct)).toEqual([65.41, 19.44, 15.15]);
   });
 
+  it("falls back to the attested split when percentages are malformed numeric tokens", () => {
+    const result = adaptRippleTransparency(
+      RIPPLE_HTML_WITH_BREAKDOWN.replace("60.10%", "1060.10%")
+        .replace("25.20%", "1025.20%")
+        .replace("14.70%", "1014.70%"),
+    );
+
+    expect(result.slices.map((slice) => slice.pct)).toEqual([65.41, 19.44, 15.15]);
+  });
+
   it("keeps the undercollateralization breaker on the aggregate ratio", () => {
     const result = adaptRippleTransparency(RIPPLE_HTML.replace("$1,546.6M", "$900.0M"));
 
@@ -110,8 +120,30 @@ describe("parseRippleReserveBreakdown", () => {
   });
 
   it("returns null when a class percentage is missing", () => {
+    expect(parseRippleReserveBreakdown("U.S. Treasury bills 65.41%, Government money-market funds 19.44%")).toBeNull();
+  });
+
+  it("rejects percentage suffixes inside malformed numeric tokens", () => {
     expect(
-      parseRippleReserveBreakdown("U.S. Treasury bills 65.41%, Government money-market funds 19.44%"),
+      parseRippleReserveBreakdown(
+        "U.S. Treasury bills 1060.10%, Government money-market funds 1025.20%, Cash and deposit accounts 1014.70%",
+      ),
+    ).toBeNull();
+  });
+
+  it("does not borrow the next class percentage when the labeled token is malformed", () => {
+    expect(
+      parseRippleReserveBreakdown(
+        "U.S. Treasury bills 1060.10%, Government money-market funds 25.20%, Cash and deposit accounts 14.70%",
+      ),
+    ).toBeNull();
+  });
+
+  it("rejects over-precision percentages instead of parsing a valid-looking prefix", () => {
+    expect(
+      parseRippleReserveBreakdown(
+        "U.S. Treasury bills 60.1000000%, Government money-market funds 25.20%, Cash and deposit accounts 14.70%",
+      ),
     ).toBeNull();
   });
 });
