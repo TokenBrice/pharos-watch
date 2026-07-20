@@ -578,7 +578,8 @@ Schedules are owned by `worker/wrangler.toml`, `shared/lib/cron-jobs.ts`, and `s
 - Negative APY remains valid input; non-positive trailing APY produces a zero PYS.
 - A circuit-broken provider removes only that source family. Independent tiers may still publish.
 - Trailing windows are timestamp-based, so cron gaps do not shift their boundaries.
-- Stale or incomplete live safety hydration preserves the published yield snapshot with explicit degradation metadata.
+- Live safety hydration accepts ordinary newer report-card input/publication generations only when the V8 model, schema, methodology, and evaluation-build digest still match, then recomputes safety-derived row fields and ordering against that live snapshot.
+- Missing, incomplete, or evaluation-incompatible live safety hydration clears safety-derived public fields and emits explicit degradation metadata while preserving the immutable hourly snapshot provenance.
 - Malformed persisted warning payloads decode to an empty warning list so one row cannot fail an endpoint.
 
 ### Presentation Boundaries

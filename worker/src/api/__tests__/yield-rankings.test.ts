@@ -502,7 +502,7 @@ describe("handleYieldRankings", () => {
     expect(body._meta.ageSeconds).toBe(30);
   });
 
-  it("returns explicit NR fields instead of crossing compact publication generations", async () => {
+  it("hydrates across compatible compact publication and base-input generations", async () => {
     const hourlyPublishedAt = Math.floor(Date.now() / 1000) - 3_600;
     const hourlyGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${hourlyPublishedAt}`;
     const payload = {
@@ -533,34 +533,33 @@ describe("handleYieldRankings", () => {
     } satisfies YieldRankingsResponse;
     const db = makeCacheDb(payload, hourlyPublishedAt);
     const liveGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${hourlyPublishedAt + 900}`;
-    currentSafetyIdentity = v8Identity(liveGenerationId);
+    currentSafetyIdentity = {
+      ...v8Identity(liveGenerationId),
+      baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
+    };
 
     const res = await handleYieldRankings(db);
     const body = await res.json() as YieldRankingsResponse;
 
-    expect(res.status).toBe(200);
     expect(body.rankings[0]).toMatchObject({
       id: "rated-coin",
-      safetyScore: null,
-      safetyGrade: "NR",
-      safetyReason: "safety-identity-mismatch",
-      pharosYieldScore: null,
-      pysNullReason: "safety-unrated",
+      safetyScore: 66,
+      safetyGrade: "B-",
     });
     expect(body.provenance?.safetySnapshot).toMatchObject(payload.provenance.safetySnapshot);
     expect(body.provenance?.liveSafetyHydration).toMatchObject({
-      kind: "degraded",
-      coverageRatio: 0,
-      coveredCount: 0,
+      kind: "ok",
+      coverageRatio: 1,
+      coveredCount: 1,
       trackedCount: 1,
-      reason: "safety-identity-mismatch",
+      reason: null,
       source: "report-card-cache",
       publicationGenerationId: liveGenerationId,
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
       publishedAt: expect.any(Number),
     });
     expect(body.provenance?.liveSafetyHydration?.publicationGenerationId).toBe(liveGenerationId);
-    expect(body.warnings?.some((warning) => warning.code === "yield-safety-hydration-degraded")).toBe(true);
+    expect(body.rankings[0]?.provenance?.safetyScoreIdentity).toEqual(currentSafetyIdentity);
   });
 
   it("returns explicit NR fields instead of crossing compact safety identities", async () => {
