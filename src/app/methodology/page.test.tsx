@@ -27,7 +27,7 @@ describe("MethodologyPage", () => {
     expect(html).toContain("Feeds Decentralization via a penalty-only blend");
     expect(html).toContain("Reader");
     expect(html).toContain("Analyst");
-    expect(html).toContain("same-direction corroboration");
+    expect(html).toContain("universal 15-minute onset confirmation window");
     expect(html).toContain("$1M");
     expect(html).toContain("March 9, 2026 trust-floor boundary");
   });

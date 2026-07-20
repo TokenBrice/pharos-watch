@@ -65,6 +65,11 @@ describe("PRICING_SOURCE_TO_CIRCUIT contract", () => {
       enforced: true,
       enforcementPath: "direct-provider",
     });
+    expect(PRICING_SOURCE_CIRCUIT_METADATA["protocol-redeem-cached-rate"]).toMatchObject({
+      circuit: CIRCUIT_SOURCE.PROTOCOL_REDEEM,
+      enforced: true,
+      enforcementPath: "direct-provider",
+    });
     expect(PRICING_SOURCE_CIRCUIT_METADATA["kava-pricefeed"]).toMatchObject({
       circuit: CIRCUIT_SOURCE.KAVA_PRICEFEED,
       enforced: true,

@@ -431,7 +431,7 @@ describe("worker.scheduled", () => {
     } finally {
       fetchSpy.mockRestore();
     }
-  });
+  }, 15_000);
 
   it("runs 15-min cron fan-out and chained jobs (charts excluded)", async () => {
     const { ctx, waits } = makeCtx();

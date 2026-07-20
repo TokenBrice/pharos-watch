@@ -126,6 +126,10 @@ export const PRICING_SOURCE_CIRCUIT_METADATA: Record<string, PricingCircuitMetad
     CIRCUIT_SOURCE.PROTOCOL_REDEEM,
     "External live protocol-redeem RPC overrides share a grouped circuit; local par and inherited tracked-base overrides do not create upstream failures.",
   ),
+  "protocol-redeem-cached-rate": direct(
+    CIRCUIT_SOURCE.PROTOCOL_REDEEM,
+    "Cached vault-rate recovery is available only inside the directly circuit-gated protocol redemption route.",
+  ),
   "zephyr-scanner": synthesized(
     "Zephyr Scanner live-stats price telemetry is fetched inside the supplemental Zephyr asset path; no dedicated pricing-source circuit is registered.",
   ),

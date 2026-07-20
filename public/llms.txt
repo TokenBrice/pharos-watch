@@ -420,7 +420,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [YieldFi yUSD (YUSD)](https://pharos.watch/stablecoin/yusd-yieldfi/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [SoulPeg USD (spUSD)](https://pharos.watch/stablecoin/spusd-soulpeg/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Unity USD (UUSD)](https://pharos.watch/stablecoin/uusd-anything-labs/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [Juice Dollar (JUSD)](https://pharos.watch/stablecoin/jusd-juicedollar/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Juice Dollar (JUSD)](https://pharos.watch/stablecoin/jusd-juicedollar/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Alpha Partner USDA (USDA)](https://pharos.watch/stablecoin/usda-alpha-partner/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [GAIB AID (AID)](https://pharos.watch/stablecoin/aid-gaib/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [GAIB sAID (sAID)](https://pharos.watch/stablecoin/said-gaib/): centralized stablecoin backed by real-world assets pegged to US Dollar.

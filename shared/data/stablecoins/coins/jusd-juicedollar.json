@@ -2,11 +2,11 @@
   "id": "jusd-juicedollar",
   "name": "Juice Dollar",
   "symbol": "JUSD",
-  "oneLiner": "JUSD is Juice Dollar's decentralized dollar on Citrea, minted from oracle-free overcollateralized BTC positions using a Frankencoin/d-EURO architecture.",
+  "oneLiner": "JUSD is Juice Dollar's Citrea dollar, minted through oracle-free BTC positions or 1:1 stablecoin bridge reserves using a Frankencoin/d-EURO architecture.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
-    "governance": "decentralized",
+    "governance": "centralized-dependent",
     "yieldBearing": false,
     "rwa": false,
     "navToken": false

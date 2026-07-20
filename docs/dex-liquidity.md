@@ -2,7 +2,7 @@
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v5.84`
+- **Current methodology version:** `v5.85`
 - **Runtime/version source:** `shared/lib/liquidity-score-version.ts`
 - **Public changelog route:** `/methodology/liquidity-score-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/liquidity-score/`
