@@ -2,27 +2,18 @@
   "id": "audd-novatti",
   "reserves": [
     {
-      "name": "AUD cash at Banking Circle",
-      "pct": 15.67,
+      "name": "AUD bank deposits",
+      "pct": 100,
       "risk": "very-low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "Banking Circle",
-      "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "AUD cash at Westpac under AMAL bare trust",
-      "pct": 84.33,
-      "risk": "very-low",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "Westpac Banking Corporation",
+      "issuerOrObligor": "Banking Circle and Westpac Banking Corporation (AMAL bare trust)",
       "riskFactors": ["counterparty", "liquidity", "custody", "legal", "concentration"],
       "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
     "confidence": "verified",
     "sources": [
       {
@@ -34,7 +25,7 @@
         "url": "https://www.audd.digital/transparency/"
       }
     ],
-    "rationale": "The June 30, 2026 reserve report records AUD 2,076,942.59 of cash at Banking Circle and AUD 11,176,571.25 of cash at Westpac under the AMAL bare trust, for AUD 13,253,513.84 total reserves against AUD 13,038,732.34 on-chain. The reserve balances normalize to 15.67% and 84.33%.",
+    "rationale": "The live single-asset adapter publishes one aggregate AUD bank deposits row, so the reviewed classification is keyed to that exact 100% identity. The June 30, 2026 reserve report preserves the underlying detail: AUD 2,076,942.59 of cash at Banking Circle and AUD 11,176,571.25 of cash at Westpac under the AMAL bare trust, for AUD 13,253,513.84 total reserves against AUD 13,038,732.34 on-chain (15.67% and 84.33% of the reserve). The report does not disclose deposit terms or deposit-insurance coverage.",
     "compositionBasis": "AUDC reserve report subject to William Buck agreed-upon procedures as of June 30, 2026",
     "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
@@ -43,17 +34,10 @@
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "AUD cash at Banking Circle",
-        "pct": 15.67,
+        "reserveName": "AUD bank deposits",
+        "pct": 100,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "AUD cash at a bank is an external reserve asset rather than a tracked stablecoin dependency."
-      },
-      {
-        "reserveIndex": 1,
-        "reserveName": "AUD cash at Westpac under AMAL bare trust",
-        "pct": 84.33,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "AUD cash at a bank is an external reserve asset rather than a tracked stablecoin dependency."
+        "rationale": "AUD cash at banks is an external reserve asset rather than a tracked stablecoin dependency."
       }
     ]
   },

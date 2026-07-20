@@ -10,134 +10,123 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "syrupUSDT moves cross-chain via Chainlink CCIP using the Cross-Chain Token (CCT) standard: each chain (Ethereum canonical plus Plasma, BNB Chain, Arbitrum, Base, Solana) hosts a native syrupUSDT token paired with a BurnMintTokenPool, so circulating supply is burned on the source and minted on the destination over CCIP's validated DON messaging with the Risk Management Network backstop. Maple adopted CCT for its Syrup tokens and a dedicated CCIP directory entry exists for syrupUSDT, explaining the different per-chain addresses (no lockbox/wrapped model).",
-    "reviewedAt": "2026-06-21",
-    "reviewer": "Pharos bridge-route re-verification",
+    "summary": "syrupUSDT's canonical home is Ethereum, where the immutable non-proxy ERC-4626 vault token 0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d is issued natively. BNB Chain and Plasma carry the same canonical syrupUSDT asset as Chainlink CCIP Cross-Chain Token (CCT) burn-mint deployments: no wrapped/lockbox representation, bridging validated by the CCIP oracle network. This mirrors the reviewed syrupUSDC Maple CCIP pattern.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
     "confidence": "verified",
     "protocols": [
       {
         "source": "docs",
-        "name": "Chainlink CCIP - syrupUSDT Cross-Chain Token directory entry",
+        "name": "Chainlink CCIP Token Directory — syrupUSDT",
         "slug": "chainlink-ccip",
         "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDT",
         "bridgeTypes": [
           "external-validated-network",
-          "burn-mint",
-          "CCT"
+          "burn-mint"
         ],
-        "note": "Dedicated CCIP mainnet directory page lists syrupUSDT as a Cross-Chain Token across 5 networks using the CCT (burn-and-mint) standard."
-      },
-      {
-        "source": "docs",
-        "name": "Chainlink CCIP - syrupUSDC Cross-Chain Token directory entry (sibling, shared infra)",
-        "slug": "chainlink-ccip",
-        "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDC",
-        "bridgeTypes": [
-          "external-validated-network",
-          "burn-mint",
-          "CCT"
-        ],
-        "note": "Sibling Syrup token on the same Maple CCIP/CCT infrastructure; 7 networks."
-      },
-      {
-        "source": "issuer",
-        "name": "Maple Finance - syrupUSDC/syrupUSDT Built for Scale + Solana CCT expansion",
-        "slug": "maple-finance",
-        "url": "https://maple.finance/insights/syrupusdc-expands-to-solana",
-        "bridgeTypes": [
-          "external-validated-network",
-          "CCT"
-        ],
-        "note": "Maple states syrupUSDC/syrupUSDT became natively interoperable via the CCT standard powered by Chainlink CCIP, not traditional bridges; deployments on Ethereum, Solana, Plasma, Arbitrum, Base."
-      },
-      {
-        "source": "manual",
-        "name": "TID Research syrupUSDC risk assessment",
-        "slug": "tid-research",
-        "url": "https://tidresearch.com/reports/syrupusdc/",
-        "bridgeTypes": [
-          "external-validated-network",
-          "burn-mint",
-          "CCT"
-        ],
-        "note": "Independent assessment: multi-chain bridging uses Chainlink CCIP with the CCT standard, burn-and-mint native deployments per chain, not a wrapped/lockbox model."
+        "note": "syrupUSDT is registered as a Chainlink CCIP Cross-Chain Token (CCT); the CCIP directory serves a dedicated syrupUSDT mainnet token page. On-chain reads 2026-07-20 corroborate: both spoke tokens expose getCCIPAdmin(), no owner() and no LayerZero endpoint() surface, and are non-proxy contracts."
       }
     ],
     "sources": [
       {
-        "label": "Chainlink CCIP directory - syrupUSDT (Cross-Chain Token, 5 mainnet networks)",
+        "label": "Chainlink CCIP Token Directory — syrupUSDT",
         "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDT"
       },
       {
-        "label": "Chainlink CCIP directory - syrupUSDC (sibling Syrup token, 7 networks)",
-        "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDC"
+        "label": "Maple syrupUSDC and syrupUSDT lender documentation",
+        "url": "https://docs.maple.finance/syrupusdc-for-lenders/introduction"
       },
       {
-        "label": "Maple Finance - syrupUSDC Expands to Solana (CCT standard via Chainlink CCIP)",
-        "url": "https://maple.finance/insights/syrupusdc-expands-to-solana"
+        "label": "syrupUSDT contract on Etherscan",
+        "url": "https://etherscan.io/address/0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d"
       },
       {
-        "label": "Maple Finance - syrupUSDC and syrupUSDT: Built for Scale (multichain deployments)",
-        "url": "https://maple.finance/insights/syrupusdc-and-syrupusdt-built-for-scale"
+        "label": "syrupUSDT contract on BscScan",
+        "url": "https://bscscan.com/address/0x8e9d4cea39299323fe8eda678cad449718556c4e"
       },
       {
-        "label": "Chainlink (X) - Maple upgraded to CCIP via the CCT standard for native cross-chain Syrup tokens",
-        "url": "https://x.com/chainlink/status/1930656909226315932"
-      },
-      {
-        "label": "TID Research - syrupUSDC Risk Assessment (CCIP CCT burn-and-mint, not lockbox)",
-        "url": "https://tidresearch.com/reports/syrupusdc/"
-      },
-      {
-        "label": "Maple Finance - syrupUSDT on Plasma (cross-chain expansion)",
-        "url": "https://maple.finance/insights/syrupusdt-on-plasma"
+        "label": "syrupUSDT contract on Plasmascan",
+        "url": "https://plasmascan.to/address/0xc4374775489cb9c56003bf2c9b12495fc64f0771"
       }
     ],
     "routes": [
       {
         "id": "ethereum:0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Maple",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical home chain. Existing mint-authority evidence (Ethereum block 25295160): EIP-1967 impl and admin slots zero, 11,660-byte non-proxy bytecode, owner()/admin() calls revert — the ERC-4626 vault is immutable and mints shares only against USDT deposits. 2026-07-20 re-check: getCCIPAdmin() reverts on the home vault, consistent with native issuance rather than a bridged representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
-      },
-      {
-        "id": "plasma:0xc4374775489cb9c56003bf2c9b12495fc64f0771",
-        "destinationChain": "plasma",
-        "contractAddress": "0xc4374775489cb9c56003bf2c9b12495fc64f0771",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "syrupUSDT contract on Etherscan",
+            "url": "https://etherscan.io/address/0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d"
+          },
+          {
+            "label": "Maple syrupUSDC and syrupUSDT lender documentation",
+            "url": "https://docs.maple.finance/syrupusdc-for-lenders/introduction"
+          }
+        ]
       },
       {
         "id": "bsc:0x8e9d4cea39299323fe8eda678cad449718556c4e",
         "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x8e9d4cea39299323fe8eda678cad449718556c4e",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain reads at BSC block 111020040 (2026-07-20): symbol() = 'syrupUSDT'; 7,475-byte non-proxy bytecode with zero EIP-1967 impl/admin slots; owner() reverts; LayerZero endpoint() reverts; getCCIPAdmin() returns 0x950350b073956bd1d22bb1c18c4d45263b5aa3a5 (a 14,124-byte admin contract) — the CCIP CCT token-admin surface. The Chainlink CCIP directory serves a dedicated syrupUSDT mainnet token page, confirming CCT registration; burn-mint CCT semantics mirror the reviewed syrupUSDC Maple pattern.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Chainlink CCIP Token Directory — syrupUSDT",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDT"
+          },
+          {
+            "label": "syrupUSDT contract on BscScan",
+            "url": "https://bscscan.com/address/0x8e9d4cea39299323fe8eda678cad449718556c4e"
+          }
+        ]
+      },
+      {
+        "id": "plasma:0xc4374775489cb9c56003bf2c9b12495fc64f0771",
+        "destinationChain": "plasma",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xc4374775489cb9c56003bf2c9b12495fc64f0771",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain reads at Plasma block 27590440 (2026-07-20, rpc.plasma.to): symbol() = 'syrupUSDT'; bytecode present with zero EIP-1967 impl slot; owner() reverts; LayerZero endpoint() reverts; getCCIPAdmin() returns 0x3ec62564f66874f619640cbb7fd42a157f21a442 — the CCIP CCT token-admin surface. The Chainlink CCIP directory serves a dedicated syrupUSDT mainnet token page, confirming CCT registration; burn-mint CCT semantics mirror the reviewed syrupUSDC Maple pattern.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Chainlink CCIP Token Directory — syrupUSDT",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDT"
+          },
+          {
+            "label": "syrupUSDT contract on Plasmascan",
+            "url": "https://plasmascan.to/address/0xc4374775489cb9c56003bf2c9b12495fc64f0771"
+          }
+        ]
       }
     ]
   }

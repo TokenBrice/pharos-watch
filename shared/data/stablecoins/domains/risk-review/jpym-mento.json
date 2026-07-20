@@ -161,9 +161,9 @@
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "JPYm's durable cross-chain supply path is Wormhole Native Token Transfers (NTT), Mento's officially selected interoperability provider for its full stablecoin suite. Mento runs a hub-and-spoke model: issuance and risk management stay anchored on Celo (the CDP hub) while spoke chains like Monad hold NTT-Manager-minted deployments, with cross-chain supply attested by Wormhole's Guardian network and enforced by the NTT Global Accountant. This is an external-validated messaging-network route, not an opaque/undocumented one. (Probable, not verified: Monad launched with the GBPm/USDm pair first; JPYm's specific NTT-Manager wiring on Monad was not independently confirmed on-chain, though JPYm is already deployed there as a Mento-Safe-owned proxy.)",
-    "reviewedAt": "2026-06-21",
-    "reviewer": "Pharos bridge-route re-verification",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "issuer",
@@ -208,32 +208,65 @@
       {
         "id": "celo:0xc45ecf20f3cd864b32d9794d6f76814ae8892e20",
         "destinationChain": "celo",
+        "canonicalChain": "celo",
         "contractAddress": "0xc45ecf20f3cd864b32d9794d6f76814ae8892e20",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Mento (native CDP hub)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native JPYm hub on Celo: Mento's issuance and risk management anchor on Celo (CDP hub); the token owner is the Mento Safe 0x58099b74f4acd642da77b4b7966b4138ec5ba458 (threshold 4 of 6, verified on-chain 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Mento stablecoin docs",
+            "url": "https://docs.mento.org/"
+          },
+          {
+            "label": "JPYm on Celo explorer (owner() probed 2026-07-20)",
+            "url": "https://celoscan.io/address/0xc45ecf20f3cd864b32d9794d6f76814ae8892e20"
+          }
+        ]
       },
       {
         "id": "monad:0x22f6a6752800eab67b84748fefc3cc658384af72",
+        "sourceChain": "celo",
         "destinationChain": "monad",
+        "canonicalChain": "celo",
         "contractAddress": "0x22f6a6752800eab67b84748fefc3cc658384af72",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Wormhole NTT (Mento spoke)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: the Wormhole NTT manager 0x7431419fe761e7da37587245c55a35e5a356c91b on Monad returns token() = this JPYm and mode() = 1 (burning), with registered transceiver 0x01c9d280150f932d4a2fe11f40b0d72bffbcd339 and owner() = the Mento Safe 0x58099b74f4acd642da77b4b7966b4138ec5ba458; Mento's DeployNTT/DeployStableTokenSpoke broadcasts created this token and manager, so the NTT manager is the mint authority for this spoke representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "controllerChain": "monad",
+        "controllerAddress": "0x7431419fe761e7da37587245c55a35e5a356c91b",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "contract:monad:0x7431419fe761e7da37587245c55a35e5a356c91b"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Mento DeployNTT + DeployStableTokenSpoke broadcasts (Monad, chain 143)",
+            "url": "https://github.com/mento-protocol/deployments-v2/tree/main/broadcast"
+          },
+          {
+            "label": "JPYm NTT manager on Monad explorer (token()/mode() probed 2026-07-20)",
+            "url": "https://monadscan.com/address/0x7431419fe761e7da37587245c55a35e5a356c91b"
+          },
+          {
+            "label": "Wormhole NTT docs",
+            "url": "https://wormhole.com/docs/products/token-transfers/native-token-transfers/concepts/architecture/"
+          }
+        ]
       }
     ]
   }

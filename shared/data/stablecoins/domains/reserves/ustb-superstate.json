@@ -2,7 +2,7 @@
   "id": "ustb-superstate",
   "reserves": [
     {
-      "name": "Short-duration U.S. Treasury bills",
+      "name": "Short-duration U.S. government securities",
       "pct": 100,
       "risk": "very-low",
       "assetClass": "treasury-bill",
@@ -12,8 +12,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-13",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
     "confidence": "verified",
     "sources": [
       {
@@ -25,12 +25,21 @@
         "url": "https://docs.superstate.com/superstate-funds/ustb"
       }
     ],
-    "rationale": "Superstate publishes the fund's Treasury-bill holdings and daily liquidity. The curated slice records the complete asset class without converting weighted-average maturity into an unsupported maximum maturity.",
+    "rationale": "Superstate publishes the fund's short-duration U.S. government securities holdings and daily liquidity. The slice is named to match the configured Superstate live-reserve surface so the curated classification overlays the live row; the complete asset class is recorded without converting weighted-average maturity into an unsupported maximum maturity.",
     "compositionBasis": "Superstate public USTB holdings and fund mandate",
     "compositionAsOf": "2026-07-09",
     "scope": "full-composition",
     "knownUnknownExposure": "No material unclassified reserve exposure is present in the reviewed holdings.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Short-duration U.S. government securities",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Short-duration U.S. government securities are exogenous sovereign backing rather than a tracked stablecoin dependency."
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [

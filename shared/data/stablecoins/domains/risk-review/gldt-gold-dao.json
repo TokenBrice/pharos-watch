@@ -18,10 +18,10 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "GLDT is native to the Internet Computer (GLDT ledger canister 6c7su-kiaaa-aaaar-qaira-cai); its Ethereum/Base/Arbitrum deployments share address 0x86856814e74456893cfc8946bedcbb472b5fa856 via deterministic deployment, not an omnichain standard. The verified EVM source is a custom OpenZeppelin ERC20+Ownable+ERC20Permit token with an owner-only payable mint() (proven on-chain: non-owner calls revert with OwnableUnauthorizedAccount) plus withdrawEth and burn1-burn4 functions that emit bytes32 data encoding the ICP destination, with no LayerZero/Wormhole/Axelar/Hyperlane/CCIP imports (no OFT or CCIP selectors in the deployed bytecode). The contract was deployed by 0x475c65F3f34b069d3e8382090e6e17859b194a5e, which then transferred ownership; the live owner/minter on all three EVM chains is the active EOA 0x70ae25592209b57f62b3a3e832ab356228a2192c, a Gold-DAO-controlled off-chain bridge signer. This makes GLDT's EVM supply a centralized issuer-operated lock/mint bridge with a single third-party off-chain control surface and no published settlement/attestation controls.",
-    "reviewedAt": "2026-06-21",
-    "reviewer": "Pharos bridge-route re-verification",
-    "confidence": "probable",
+    "summary": "GLDT is native to the Internet Computer (ledger minting account = SNS-controlled GLDT swap canister, verified via IC APIs 2026-07-20). Its Ethereum/Base/Arbitrum deployments are a custom Ownable lock-mint bridge token operated by a single bridge-operator EOA (attributed to Omnity Network, which officially lists GLDT for ICP-to-EVM routes); EVM footprint is tiny.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "explorer",
@@ -99,61 +99,122 @@
         "id": "ethereum:0x86856814e74456893cfc8946bedcbb472b5fa856",
         "destinationChain": "ethereum",
         "contractAddress": "0x86856814e74456893cfc8946bedcbb472b5fa856",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Omnity Network (ICP-to-EVM route, attribution inferred)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The ethereum GLDT token is the verified custom Ownable ERC-20 (owner-only payable mint()/batchMint() and burn1-burn4 events carrying bytes32 ICP destinations — a canister/chain-key bridge pattern) whose owner() on all three EVM chains is the bridge-operator EOA 0x70ae25592209b57f62b3a3e832ab356228a2192c (read 2026-07-20). Omnity's official token table lists GLDT (ICP ledger 6c7su-kiaaa-aaaar-qaira-cai) for ICP-to-EVM routes, so the bridge is attributed to Omnity Network; the EOA's operational identity is not officially labeled (attribution inferred). EVM footprint is tiny (~5.3k GLDT on Base, single-digit elsewhere).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "sourceChain": "icp",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x70ae25592209b57f62b3a3e832ab356228a2192c",
+        "failureDomainKeys": [
+          "protocol:omnity-network",
+          "contract:ethereum:0x86856814e74456893cfc8946bedcbb472b5fa856"
+        ],
+        "sources": [
+          {
+            "label": "Omnity docs — references (GLDT listed token)",
+            "url": "https://docs.omnity.network/docs/Omnity-Hub/references"
+          },
+          {
+            "label": "GLDT ethereum token (owner() = 0x70ae25592209b57f62b3a3e832ab356228a2192c, read 2026-07-20)",
+            "url": "https://etherscan.io/address/0x86856814e74456893cfc8946bedcbb472b5fa856"
+          }
+        ]
       },
       {
         "id": "base:0x86856814e74456893cfc8946bedcbb472b5fa856",
         "destinationChain": "base",
         "contractAddress": "0x86856814e74456893cfc8946bedcbb472b5fa856",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Omnity Network (ICP-to-EVM route, attribution inferred)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The base GLDT token is the verified custom Ownable ERC-20 (owner-only payable mint()/batchMint() and burn1-burn4 events carrying bytes32 ICP destinations — a canister/chain-key bridge pattern) whose owner() on all three EVM chains is the bridge-operator EOA 0x70ae25592209b57f62b3a3e832ab356228a2192c (read 2026-07-20). Omnity's official token table lists GLDT (ICP ledger 6c7su-kiaaa-aaaar-qaira-cai) for ICP-to-EVM routes, so the bridge is attributed to Omnity Network; the EOA's operational identity is not officially labeled (attribution inferred). EVM footprint is tiny (~5.3k GLDT on Base, single-digit elsewhere).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "sourceChain": "icp",
+        "controllerChain": "base",
+        "controllerAddress": "0x70ae25592209b57f62b3a3e832ab356228a2192c",
+        "failureDomainKeys": [
+          "protocol:omnity-network",
+          "contract:base:0x86856814e74456893cfc8946bedcbb472b5fa856"
+        ],
+        "sources": [
+          {
+            "label": "Omnity docs — references (GLDT listed token)",
+            "url": "https://docs.omnity.network/docs/Omnity-Hub/references"
+          },
+          {
+            "label": "GLDT base token (owner() = 0x70ae25592209b57f62b3a3e832ab356228a2192c, read 2026-07-20)",
+            "url": "https://basescan.org/address/0x86856814e74456893cfc8946bedcbb472b5fa856"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x86856814e74456893cfc8946bedcbb472b5fa856",
         "destinationChain": "arbitrum",
         "contractAddress": "0x86856814e74456893cfc8946bedcbb472b5fa856",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Omnity Network (ICP-to-EVM route, attribution inferred)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The arbitrum GLDT token is the verified custom Ownable ERC-20 (owner-only payable mint()/batchMint() and burn1-burn4 events carrying bytes32 ICP destinations — a canister/chain-key bridge pattern) whose owner() on all three EVM chains is the bridge-operator EOA 0x70ae25592209b57f62b3a3e832ab356228a2192c (read 2026-07-20). Omnity's official token table lists GLDT (ICP ledger 6c7su-kiaaa-aaaar-qaira-cai) for ICP-to-EVM routes, so the bridge is attributed to Omnity Network; the EOA's operational identity is not officially labeled (attribution inferred). EVM footprint is tiny (~5.3k GLDT on Base, single-digit elsewhere).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "sourceChain": "icp",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x70ae25592209b57f62b3a3e832ab356228a2192c",
+        "failureDomainKeys": [
+          "protocol:omnity-network",
+          "contract:arbitrum:0x86856814e74456893cfc8946bedcbb472b5fa856"
+        ],
+        "sources": [
+          {
+            "label": "Omnity docs — references (GLDT listed token)",
+            "url": "https://docs.omnity.network/docs/Omnity-Hub/references"
+          },
+          {
+            "label": "GLDT arbitrum token (owner() = 0x70ae25592209b57f62b3a3e832ab356228a2192c, read 2026-07-20)",
+            "url": "https://arbiscan.io/address/0x86856814e74456893cfc8946bedcbb472b5fa856"
+          }
+        ]
       },
       {
         "id": "icp:6c7su-kiaaa-aaaar-qaira-cai",
         "destinationChain": "icp",
         "contractAddress": "6c7su-kiaaa-aaaar-qaira-cai",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Gold DAO GLDT (ICRC-1 ledger)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical home deployment: the GLDT ICRC-1 ledger canister 6c7su-kiaaa-aaaar-qaira-cai is the native issuance; its icrc1 minting account is the GLDT swap canister 6f6ua-hqaaa-aaaar-qairq-cai (minting-account read via the ICRC API 2026-07-20), whose sole controller is the Gold DAO SNS root tw2vt-hqaaa-aaaaq-aab6a-cai (ic-api canister read). GLDT mints only when GLD NFT gold certificates are locked in the swap canister.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "ICRC API — GLDT ledger (minting account read 2026-07-20)",
+            "url": "https://icrc-api.internetcomputer.org/api/v1/ledgers/6c7su-kiaaa-aaaar-qaira-cai"
+          },
+          {
+            "label": "Gold DAO whitepaper — GLDT swap canister",
+            "url": "https://docs.gold-dao.org/v/gold-dao-whitepaper/the-ecosystem/products/gold-token-gldt"
+          }
+        ]
       }
     ]
   }
