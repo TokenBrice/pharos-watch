@@ -7,9 +7,11 @@ import {
   captureMovements,
   computeCalibrationResultDigest,
   evaluateRealACandidateChecks,
+  measuredAdverseFDrivers,
   projectScoreBearingCalibrationInput,
   qualifyingCompositeCards,
   repeatedRealAAssetIds,
+  summarizeDistribution,
 } from "../../../scripts/maintenance/analyze-safety-score-v9-calibration.mjs";
 
 const BASE_CLOCK_SEC = 2_000_000_000;
@@ -451,5 +453,231 @@ describe("Safety Score V9 calibration analysis", { timeout: 30_000 }, () => {
     expect(projectScoreBearingCalibrationInput(target(candidate))).toEqual(
       projectScoreBearingCalibrationInput(target(baseline)),
     );
+  });
+});
+
+interface DistributionAssetOptions {
+  id: string;
+  grade: string;
+  score?: number;
+  backing?: number;
+  exit?: number;
+  control?: number;
+  supplyUsd?: number | null;
+  supplyObservationState?: "known" | "bounded-unknown" | "missing";
+  pegMultiplier?: number;
+  caps?: { kind: string; limit: number; binding: boolean }[];
+  reasonCodes?: string[];
+  archetype?: string;
+}
+
+/**
+ * Minimal replay shaped for the distribution gates only. `summarizeDistribution`
+ * reads exactly `candidate.cards` plus `compiledFacts.assets`, so the identity
+ * envelope the rest of the analyzer asserts is deliberately omitted.
+ */
+function distributionReplay(assets: DistributionAssetOptions[]) {
+  const cards = assets.map((asset) => {
+    const caps = asset.caps ?? [];
+    return {
+      id: asset.id,
+      score: asset.score ?? 50,
+      grade: asset.grade,
+      pegMultiplier: asset.pegMultiplier ?? 1,
+      pillars: {
+        backing: { score: asset.backing ?? 60 },
+        exit: { score: asset.exit ?? 60 },
+        control: { score: asset.control ?? 60 },
+      },
+      caps,
+      bindingCap: caps.find((cap) => cap.binding) ?? null,
+      reasonCodes: asset.reasonCodes ?? [],
+    };
+  });
+  const compiled = assets.map((asset) => ({
+    assetId: asset.id,
+    archetype: asset.archetype ?? "fiat-cash",
+    supply: {
+      status: { observationState: asset.supplyObservationState ?? (asset.supplyUsd == null ? "missing" : "known") },
+      circulatingUsd: asset.supplyUsd ?? null,
+    },
+  }));
+  return { pipeline: { candidate: { cards }, compiledFacts: { assets: compiled }, evaluatedSet: { assets: [] } } };
+}
+
+function metricsFor(assets: DistributionAssetOptions[]) {
+  return summarizeDistribution(distributionReplay(assets)).distributionMetrics;
+}
+
+describe("Safety Score V9 distribution gates D1-D6", () => {
+  it("D1 excludes the two largest assets and treats a pillar exactly at its floor as unevidenced", () => {
+    const evidenced = { backing: 60, exit: 60, control: 60 };
+    const metrics = metricsFor([
+      // The duopoly: fully evidenced, and excluded so it cannot carry the gate.
+      { id: "top-1", grade: "A", supplyUsd: 800, ...evidenced },
+      { id: "top-2", grade: "A", supplyUsd: 100, ...evidenced },
+      { id: "evidenced", grade: "C", supplyUsd: 30, ...evidenced },
+      // control exactly at the bounded-unknown floor of 45 counts as at floor.
+      { id: "at-floor", grade: "C", supplyUsd: 70, backing: 60, exit: 60, control: 45 },
+    ]);
+
+    expect(metrics.materialEvidenceCoverageExTop2).toBe(0.3);
+  });
+
+  it("D2 counts only known supply observations and reports the largest NR supply", () => {
+    const metrics = metricsFor([
+      { id: "known", grade: "C", supplyUsd: 100 },
+      { id: "bounded", grade: "F", supplyUsd: 0, supplyObservationState: "bounded-unknown" },
+      { id: "missing", grade: "F", supplyUsd: null },
+      { id: "unrated", grade: "NR", supplyUsd: 42 },
+    ]);
+
+    // A bounded-unknown supply is not an observation: 1 known of 3 rated.
+    expect(metrics.supplyObservationCoverage).toBeCloseTo(1 / 3, 6);
+    expect(metrics.maxNrSupplyUsd).toBe(42);
+  });
+
+  it.each([
+    { driver: "compromisedMintPosture", asset: { control: 25 } },
+    { driver: "subFloorPillar", asset: { backing: 34 } },
+    { driver: "measuredPegHistory", asset: { pegMultiplier: 0.89 } },
+    {
+      driver: "bindingAdverseCap",
+      asset: { caps: [{ kind: "signal:centralized-mint:critical", limit: 39, binding: true }] },
+    },
+    { driver: "unsupportedExitDesign", asset: { reasonCodes: ["unsupported-same-notional-route"] } },
+  ])("D3 attributes an F held by $driver to a measured adverse fact", ({ driver, asset }) => {
+    const adverse = { id: "adverse", grade: "F", supplyUsd: 10, ...asset } as DistributionAssetOptions;
+    const drivers = measuredAdverseFDrivers(distributionReplay([adverse]).pipeline.candidate.cards[0]);
+
+    expect(drivers[driver as keyof typeof drivers]).toBe(true);
+    expect(metricsFor([adverse]).unattributedFCount).toBe(0);
+  });
+
+  it("D3 counts an F with no adverse driver as unattributed and shares its supply over observed supply", () => {
+    const metrics = metricsFor([
+      { id: "big", grade: "C", supplyUsd: 900 },
+      // Sits on the bounded-unknown floors, not below them: an evidence gap.
+      { id: "under-evidenced", grade: "F", supplyUsd: 100, backing: 35, exit: 35, control: 45 },
+    ]);
+
+    expect(metrics.unattributedFCount).toBe(1);
+    expect(metrics.unattributedFSupplyShare).toBe(0.1);
+  });
+
+  it("D3 does not count a non-binding adverse cap as attribution", () => {
+    const metrics = metricsFor([
+      {
+        id: "unpinned",
+        grade: "F",
+        backing: 35,
+        exit: 35,
+        control: 45,
+        caps: [{ kind: "signal:unsafe-backing:critical", limit: 39, binding: false }],
+      },
+    ]);
+
+    expect(metrics.unattributedFCount).toBe(1);
+  });
+
+  it("D4 measures discrimination only where policy leaves the score free to float", () => {
+    const pinned = (id: string) => ({
+      id,
+      grade: "C",
+      score: 55,
+      caps: [{ kind: "bounded-compensability", limit: 55, binding: true }],
+    });
+    const metrics = metricsFor([
+      pinned("pin-a"),
+      pinned("pin-b"),
+      pinned("pin-c"),
+      { id: "free-a", grade: "C", score: 41, backing: 41, exit: 60, control: 60 },
+      { id: "free-b", grade: "C", score: 42, backing: 42, exit: 60, control: 60 },
+    ]);
+
+    // The 3-asset cap pile-up is 60% of the corpus but is excluded outright.
+    expect(metrics.freeFloatingLargestBucketShare).toBe(0.5);
+    expect(metrics.freeFloatingLargestTupleShare).toBe(0.5);
+  });
+
+  it("D5 ranks the material cohort by supply and ignores assets with no observation", () => {
+    const metrics = metricsFor([
+      { id: "material-a", grade: "B-", supplyUsd: 400 },
+      { id: "material-b", grade: "C-", supplyUsd: 300 },
+      { id: "material-c", grade: "F", supplyUsd: 200 },
+      { id: "material-d", grade: "F", supplyUsd: 100 },
+      // No supply observation: outside the cohort, so it cannot dilute it.
+      { id: "immaterial", grade: "F", supplyUsd: null },
+    ]);
+
+    expect(metrics.top50CMinusOrBetterShare).toBe(0.5);
+    expect(metrics.top50BMinusOrBetterCount).toBe(1);
+  });
+
+  it("splits the unattributed F cohort into curable and methodology-blocked classes", () => {
+    const floors = { backing: 35, exit: 35, control: 45 };
+    const diagnostics = summarizeDistribution(
+      distributionReplay([
+        { id: "adverse", grade: "F", control: 25 },
+        { id: "curable", grade: "F", archetype: "cdp", reasonCodes: ["bounded-mechanism-review"], ...floors },
+        {
+          id: "blocked",
+          grade: "F",
+          archetype: "rwa-credit-fund",
+          reasonCodes: ["bounded-mechanism-review"],
+          ...floors,
+        },
+      ]),
+    ).distributionDiagnostics;
+
+    expect(diagnostics.fCohortClassCounts).toEqual({ a: 1, b: 1, c: 1 });
+  });
+
+  it("retires the legacy distribution gates in favour of D1-D6", () => {
+    const replay = productionReplay();
+    const report = analyzeV9Calibration(structuredClone(replay), replay);
+
+    for (const retired of [
+      "fAtMost180",
+      "cMinusOrBetterAtLeast35",
+      "bMinusOrBetterAtLeast5",
+      "largestPillarTupleAtMost20Pct",
+      "largestScoreBucketAtMost15Pct",
+      "scoreIqrAtLeast12",
+    ]) {
+      expect(report.gates).not.toHaveProperty(retired);
+    }
+    for (const gate of [
+      "d1MaterialEvidenceCoverageExTop2",
+      "d2aSupplyObservationCoverage",
+      "d2bMaxNrSupplyUsd",
+      "d3aUnattributedFCount",
+      "d3bUnattributedFSupplyShare",
+      "d4aFreeFloatingLargestBucketShare",
+      "d4bFreeFloatingLargestTupleShare",
+      "d5aTop50CMinusOrBetterShare",
+      "d5bTop50BMinusOrBetterCount",
+      "d6ScoreIqr",
+    ]) {
+      expect(report.gates).toHaveProperty(gate);
+    }
+    // The preserved non-distribution gates are untouched.
+    for (const preserved of ["baselineLocked", "sameInput", "coverage", "realA", "adverseControlsUnchanged"]) {
+      expect(report.gates).toHaveProperty(preserved);
+    }
+  });
+
+  it("reports a supply-weighted metric as unavailable when no supply is observed", () => {
+    const metrics = metricsFor([
+      { id: "no-supply-a", grade: "C", supplyUsd: null },
+      { id: "no-supply-b", grade: "F", supplyUsd: null },
+    ]);
+
+    // Null metrics fail their gate closed rather than reading as a pass.
+    expect(metrics.materialEvidenceCoverageExTop2).toBeNull();
+    expect(metrics.unattributedFSupplyShare).toBeNull();
+    expect(metrics.top50CMinusOrBetterShare).toBeNull();
+    expect(metrics.supplyObservationCoverage).toBe(0);
+    expect(metrics.maxNrSupplyUsd).toBe(0);
   });
 });

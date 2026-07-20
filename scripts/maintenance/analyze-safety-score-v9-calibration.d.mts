@@ -45,6 +45,43 @@ export function repeatedRealAAssetIds(
   qualifyingByCapture: readonly (readonly string[])[],
 ): string[];
 export function qualifyingCompositeCards(cards: readonly unknown[]): QualifyingCard[];
+export function measuredAdverseFDrivers(card: unknown): Record<string, boolean>;
+
+/**
+ * The re-derived D1-D6 gate metrics. Supply-weighted members are nullable and
+ * read as null - not zero - when no supply is observed, so their gates fail
+ * closed rather than passing vacuously.
+ */
+export interface DistributionGateMetrics {
+  materialEvidenceCoverageExTop2: number | null;
+  supplyObservationCoverage: number;
+  maxNrSupplyUsd: number;
+  unattributedFCount: number;
+  unattributedFSupplyShare: number | null;
+  freeFloatingLargestBucketShare: number | null;
+  freeFloatingLargestTupleShare: number | null;
+  top50CMinusOrBetterShare: number | null;
+  top50BMinusOrBetterCount: number;
+  scoreIqr: number;
+}
+
+export interface DistributionSummary {
+  expectedCount: number;
+  ratedCount: number;
+  nrIds: string[];
+  ratedSupplyShare: number;
+  totalSupply: number;
+  cMinusOrBetter: number;
+  bMinusOrBetter: number;
+  largestPillarTuple: string | null;
+  largestPillarTupleShare: number | null;
+  largestScoreBucket: string | null;
+  largestScoreBucketShare: number | null;
+  distributionMetrics: DistributionGateMetrics;
+  distributionDiagnostics: Record<string, unknown>;
+}
+
+export function summarizeDistribution(replay: unknown): DistributionSummary;
 export function projectScoreBearingCalibrationInput(evaluatedAsset: unknown): Record<string, unknown>;
 export function analyzeV9Calibration(
   baseline: unknown,
