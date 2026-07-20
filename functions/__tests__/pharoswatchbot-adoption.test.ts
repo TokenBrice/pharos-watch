@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { onRequest } from "../pharoswatchbot-adoption";
 import { createMockD1 } from "./helpers/mock-d1";
 
@@ -17,6 +17,7 @@ function request(body: unknown, headers: HeadersInit = {}): Request {
 
 describe("PharosWatchBot adoption Pages Function", () => {
   beforeEach(() => vi.useFakeTimers().setSystemTime(new Date("2026-07-10T12:34:56Z")));
+  afterEach(() => vi.useRealTimers());
 
   it("admits a catalog click through per-client and global quotas", async () => {
     const db = createMockD1([
