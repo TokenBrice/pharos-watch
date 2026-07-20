@@ -1,4 +1,5 @@
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
+import { mapWithConcurrency } from "../../lib/concurrency";
 import { setCache } from "../../lib/db-cache";
 import { USER_AGENT, CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
@@ -35,6 +36,7 @@ import { toErrorMessage } from "../../lib/error-utils";
 import { resolveLlamaPoolStablecoinMatches } from "./pool-match-resolution";
 
 const PRIMARY_SOURCE_JSON_TIMEOUT_MS = 30_000;
+const CURVE_API_FETCH_CONCURRENCY = 4;
 
 interface DefiLlamaYieldsPayload {
   data?: LlamaPool[];
@@ -247,19 +249,17 @@ export async function fetchDataSources(
     );
   }
 
-  // Now safe to start Curve batch — DL connections are released (max 4 concurrent)
+  // DeFiLlama bodies are consumed before Curve opens its bounded request batch.
   let curvePayloads: (CurveApiPayload | null)[];
   const curveCircuitAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CURVE_LIQUIDITY_API);
 
   if (curveCircuitAllowed) {
-    const curveResults = await Promise.all(
-      CURVE_CHAINS.map((chain) =>
-        fetchJsonWithRetry<CurveApiPayload>(
-          `${CURVE_API_BASE}/${chain}`,
-          { headers: { "User-Agent": USER_AGENT }, signal },
-          2,
-          { timeoutMs: PRIMARY_SOURCE_JSON_TIMEOUT_MS },
-        ),
+    const curveResults = await mapWithConcurrency(CURVE_CHAINS, CURVE_API_FETCH_CONCURRENCY, (chain) =>
+      fetchJsonWithRetry<CurveApiPayload>(
+        `${CURVE_API_BASE}/${chain}`,
+        { headers: { "User-Agent": USER_AGENT }, signal },
+        2,
+        { timeoutMs: PRIMARY_SOURCE_JSON_TIMEOUT_MS },
       ),
     );
     curvePayloads = curveResults.map((result) => result?.body ?? null);
