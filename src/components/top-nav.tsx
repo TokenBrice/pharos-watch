@@ -304,7 +304,7 @@ export function TopNav() {
             <DropdownMenuItem asChild className="gap-2.5 rounded-lg px-2.5 py-2">
               <Link href="/pharoswatchbot/" prefetch={false}>
                 <Send className="size-4 text-muted-foreground" aria-hidden />
-                <span className="text-sm font-medium">Telegram Bot</span>
+                <span className="text-sm font-medium">Alert Bot</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild className="gap-2.5 rounded-lg px-2.5 py-2">
