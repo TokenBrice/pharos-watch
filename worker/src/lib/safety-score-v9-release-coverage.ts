@@ -17,6 +17,7 @@ import {
 import { z } from "zod";
 import { throwIfAborted } from "./abort";
 import { runWithOverloadRetry } from "./cron-lease";
+import { getCache } from "./db-cache";
 import { parseJson } from "./json-parse";
 import type { SafetyScoreV9CoverageFloor } from "./safety-score-v9-shadow";
 
@@ -254,6 +255,59 @@ export async function persistSafetyScoreV9ReleaseCohort(
   return { status: "unchanged", record: raced };
 }
 
+/**
+ * TWO DIFFERENT IDENTIFIERS, TWO DIFFERENT JOBS.
+ *
+ * - The SEALED RELEASE-CANDIDATE LABEL (`v9-rc-N`) names an owner-ratified
+ *   release line. It is the primary key of `safety_score_v9_release_cohorts`,
+ *   so it is the only thing that can look a frozen cohort up. It is chosen by
+ *   the owner at ratification time and cannot be derived from a day's facts.
+ * - The CONTENT-ADDRESSED CANDIDATE ID
+ *   (`safety-score-v9-candidate:v1:<sha256>`) names one exact evaluation. It
+ *   changes whenever the inputs change, and it is what binds a coverage
+ *   report's digests to the day being assessed.
+ *
+ * The shadow run computes the second and must be TOLD the first. This
+ * owner-written cache row is that designation.
+ *
+ * OWNER MUST SUPPLY (production D1, out of band, alongside the ratified cohort
+ * row itself) exactly one `cache` row:
+ *   key   = `safety-score-v9:sealed-release-candidate`
+ *   value = `{"schemaVersion":1,"releaseCandidateId":"v9-rc-1"}`
+ *
+ * The designation SELECTS a cohort; it authorizes nothing. A missing,
+ * malformed, or wrong designation yields either no cohort row or a cohort
+ * whose policy/evaluation-build digests do not match the candidate, and the
+ * ratified-release-coverage floor fails closed in both cases.
+ */
+export const SAFETY_SCORE_V9_SEALED_RELEASE_CANDIDATE_CACHE_KEY = "safety-score-v9:sealed-release-candidate";
+
+const SafetyScoreV9SealedReleaseCandidateMarkerSchema = z
+  .object({ schemaVersion: z.literal(1), releaseCandidateId: ReleaseCandidateIdSchema })
+  .strict();
+
+/** Reads the owner's sealed release-candidate designation; null when absent or malformed. */
+export async function loadSafetyScoreV9SealedReleaseCandidateId(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  throwIfAborted(signal);
+  const row = await getCache(db, SAFETY_SCORE_V9_SEALED_RELEASE_CANDIDATE_CACHE_KEY);
+  throwIfAborted(signal);
+  if (row === null) return null;
+  const parsed = parseJson(row.value);
+  if (!parsed.ok) {
+    console.warn("[safety-score-v9] sealed release-candidate designation is not JSON:", parsed.message);
+    return null;
+  }
+  const marker = SafetyScoreV9SealedReleaseCandidateMarkerSchema.safeParse(parsed.value);
+  if (!marker.success) {
+    console.warn("[safety-score-v9] sealed release-candidate designation failed schema validation");
+    return null;
+  }
+  return marker.data.releaseCandidateId;
+}
+
 const EVALUATION_SOURCE_KEYS = [
   "registry",
   "dex",
@@ -379,14 +433,25 @@ function failAssessment(detail: string): SafetyScoreV9ShadowReleaseCoverageAsses
 }
 
 /**
- * Evaluates the ratified-release-coverage floor for one shadow candidate. The
- * floor passes only when a frozen cohort ratified for this exact release
- * candidate exists, its policy/build identity matches, and the freshly
- * computed V9-9 release coverage report — bound to the candidate's policy,
- * evaluation-build, fact-set, and result digests — is gate-passed.
+ * Evaluates the ratified-release-coverage floor for one shadow candidate.
+ *
+ * `releaseCandidateId` is the SEALED owner-ratified label (`v9-rc-N`) and is
+ * the only key that can retrieve a frozen cohort. `candidateId` is the
+ * CONTENT-ADDRESSED id of the day's evaluation and is never used for cohort
+ * lookup — the report's binding to the day is proved by the policy,
+ * evaluation-build, fact-set, and result digests below.
+ *
+ * The floor passes only when the owner has designated a sealed release
+ * candidate, a frozen cohort ratified under that label exists, its
+ * policy/build identity matches the day's candidate, and the freshly computed
+ * V9-9 release coverage report is gate-passed and digest-bound to that exact
+ * candidate. Every other path fails closed with the legacy blocker.
  */
 export async function assessSafetyScoreV9ShadowReleaseCoverage(args: {
   db: D1Database;
+  /** Sealed owner-ratified release label (`v9-rc-N`); null when undesignated. */
+  releaseCandidateId: string | null;
+  /** Content-addressed id of the day's evaluation; NOT a cohort key. */
   candidateId: string;
   candidatePolicyDigest: string;
   candidateEvaluationBuildDigest: string;
@@ -397,9 +462,16 @@ export async function assessSafetyScoreV9ShadowReleaseCoverage(args: {
   producerCapabilityDigest: string;
   signal?: AbortSignal;
 }): Promise<SafetyScoreV9ShadowReleaseCoverageAssessment> {
+  const sealed = ReleaseCandidateIdSchema.safeParse(args.releaseCandidateId);
+  if (!sealed.success) {
+    return failAssessment(
+      "No sealed V9-9 release candidate is designated for this shadow run; the owner must publish the sealed release-candidate designation before the floor can be evaluated",
+    );
+  }
+  const releaseCandidateId = sealed.data;
   let cohort: SafetyScoreV9ReleaseCohortRecord | null;
   try {
-    cohort = await loadSafetyScoreV9ReleaseCohort(args.db, args.candidateId, args.signal);
+    cohort = await loadSafetyScoreV9ReleaseCohort(args.db, releaseCandidateId, args.signal);
   } catch (error) {
     console.warn(
       "[safety-score-v9] release cohort record failed integrity verification:",
@@ -424,7 +496,7 @@ export async function assessSafetyScoreV9ShadowReleaseCoverage(args: {
   const report = evaluateV9ReleaseCoverage({ factSet: args.compiledFacts, evaluation, manifest });
   const identities = report.identities;
   if (
-    report.releaseCandidateId !== args.candidateId ||
+    report.releaseCandidateId !== releaseCandidateId ||
     identities.policyDigest !== args.candidatePolicyDigest ||
     identities.evaluationBuildDigest !== args.candidateEvaluationBuildDigest ||
     identities.factSetDigest !== args.candidateFactSetDigest ||
@@ -444,7 +516,7 @@ export async function assessSafetyScoreV9ShadowReleaseCoverage(args: {
       status: "pass",
       observed: report.rateability.rateableCount,
       required: RATIFIED_RELEASE_COVERAGE_REQUIRED,
-      detail: `Gate-passed V9-9 release coverage report ${report.reportDigest} covers ${report.activeSet.factCount} active assets with ${report.rateability.rateableCount} rateable`,
+      detail: `Gate-passed V9-9 release coverage report ${report.reportDigest} for sealed release candidate ${releaseCandidateId} bound to candidate ${args.candidateId} covers ${report.activeSet.factCount} active assets with ${report.rateability.rateableCount} rateable`,
     },
     unresolvedReleaseBlockers: [],
     report,

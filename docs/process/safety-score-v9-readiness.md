@@ -247,6 +247,28 @@ The V9 implementation establishes candidate infrastructure without changing prod
   frozen V9-9 release cohort and its passing report are wired into the shadow
   producer. Every daily run therefore remains non-qualifying and activation is
   hard-blocked even if the operational shadow infrastructure is deployed.
+  Wiring it requires TWO distinct owner-supplied artifacts, because the floor
+  works with two different identifiers:
+  - The **sealed release-candidate label** (`v9-rc-N`) names an owner-ratified
+    release line and is the primary key of `safety_score_v9_release_cohorts`.
+  - The **content-addressed candidate id**
+    (`safety-score-v9-candidate:v1:<sha256>`) names one day's exact evaluation
+    and is what the coverage report's policy, evaluation-build, fact-set, and
+    result digests bind to. It is computed per run and is never a cohort key.
+
+  A shadow run computes the second and must be told the first, so the owner
+  must supply, out of band in production D1:
+  1. the ratified cohort row itself, keyed by the sealed label; and
+  2. one `cache` row designating which sealed label is under the gate —
+     key `safety-score-v9:sealed-release-candidate`, value
+     `{"schemaVersion":1,"releaseCandidateId":"v9-rc-N"}`.
+
+  The designation only SELECTS a cohort; it authorizes nothing. A missing,
+  malformed, or wrong designation resolves to no cohort row, or to a cohort
+  whose policy/evaluation-build digests do not match the day's candidate, and
+  the floor fails closed with `ratified-release-coverage-unavailable` either
+  way. Until both artifacts exist the floor remains the standing release
+  blocker by design.
 - Safety history now dual-writes identity-rich V2 rows while preserving the
   public V8 compatibility response. Methodology-boundary rows are excluded from
   continuous V8 history, and no V9 cutover baseline writer exists yet.

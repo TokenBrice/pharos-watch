@@ -10,10 +10,12 @@ import { describe, expect, it } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
   SAFETY_SCORE_V9_RELEASE_COVERAGE_UNAVAILABLE_BLOCKER,
+  SAFETY_SCORE_V9_SEALED_RELEASE_CANDIDATE_CACHE_KEY,
   SafetyScoreV9ReleaseCohortConflictError,
   assessSafetyScoreV9ShadowReleaseCoverage,
   createSafetyScoreV9ReleaseCohortRecord,
   loadSafetyScoreV9ReleaseCohort,
+  loadSafetyScoreV9SealedReleaseCandidateId,
   persistSafetyScoreV9ReleaseCohort,
   projectSafetyScoreV9CoverageEvaluation,
   type SafetyScoreV9ReleaseCohortRecord,
@@ -34,6 +36,9 @@ const EVALUATED_SET_DIGEST = digest("9");
 const SCORE_RESULT_DIGEST = digest("b");
 const PRODUCER_CAPABILITY_DIGEST = digest("c");
 const RELEASE_CANDIDATE_ID = "v9-rc-1";
+// Deliberately NOT the sealed label: the shadow run's candidate id is content
+// addressed, and the cohort lookup must key off the sealed label instead.
+const CANDIDATE_ID = `safety-score-v9-candidate:v1:${digest("d")}`;
 
 function source(generationId: string, character: string) {
   return { generationId, payloadSha256: character.repeat(64), observedAtSec: 900 };
@@ -382,7 +387,8 @@ function buildFixture(options: FixtureOptions = {}) {
 function assessmentInput(fixture: ReturnType<typeof buildFixture>, db: D1Database) {
   return {
     db,
-    candidateId: RELEASE_CANDIDATE_ID,
+    releaseCandidateId: RELEASE_CANDIDATE_ID,
+    candidateId: CANDIDATE_ID,
     candidatePolicyDigest: POLICY_DIGEST,
     candidateEvaluationBuildDigest: SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST,
     candidateFactSetDigest: fixture.factSet.v9FactSetDigest,
@@ -439,6 +445,44 @@ describe("Safety Score V9 release cohort store", () => {
     await expect(loadSafetyScoreV9ReleaseCohort(db, RELEASE_CANDIDATE_ID)).rejects.toThrow(
       "release cohort digest does not match",
     );
+  });
+});
+
+describe("Safety Score V9 sealed release-candidate designation", () => {
+  function cacheDatabase(): { sqlite: DatabaseSync; db: D1Database } {
+    const sqlite = new DatabaseSync(":memory:");
+    sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)");
+    return { sqlite, db: createSqliteD1(sqlite) };
+  }
+
+  function writeDesignation(sqlite: DatabaseSync, value: string): void {
+    sqlite
+      .prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(SAFETY_SCORE_V9_SEALED_RELEASE_CANDIDATE_CACHE_KEY, value, 1_000);
+  }
+
+  it("reads the owner-written sealed label", async () => {
+    const { sqlite, db } = cacheDatabase();
+    writeDesignation(sqlite, JSON.stringify({ schemaVersion: 1, releaseCandidateId: RELEASE_CANDIDATE_ID }));
+
+    expect(await loadSafetyScoreV9SealedReleaseCandidateId(db)).toBe(RELEASE_CANDIDATE_ID);
+  });
+
+  it("returns null when the designation is absent, malformed, or not a sealed label", async () => {
+    const { sqlite, db } = cacheDatabase();
+    expect(await loadSafetyScoreV9SealedReleaseCandidateId(db)).toBeNull();
+
+    for (const value of [
+      "not json",
+      JSON.stringify(RELEASE_CANDIDATE_ID),
+      JSON.stringify({ releaseCandidateId: RELEASE_CANDIDATE_ID }),
+      JSON.stringify({ schemaVersion: 1, releaseCandidateId: CANDIDATE_ID }),
+      JSON.stringify({ schemaVersion: 1, releaseCandidateId: "v9-rc-0" }),
+      JSON.stringify({ schemaVersion: 1, releaseCandidateId: RELEASE_CANDIDATE_ID, extra: true }),
+    ]) {
+      writeDesignation(sqlite, value);
+      expect(await loadSafetyScoreV9SealedReleaseCandidateId(db)).toBeNull();
+    }
   });
 });
 
@@ -510,6 +554,53 @@ describe("Safety Score V9 ratified release coverage floor", () => {
       detail: "No frozen V9-9 release cohort and passing coverage report is wired into the shadow candidate",
     });
     expect(result.report).toBeNull();
+  });
+
+  it("fails closed when the owner has designated no sealed release candidate", async () => {
+    const fixture = buildFixture();
+    // The cohort IS ratified and would pass — only the designation is missing.
+    const { db } = await seedCohort(fixture.cohort);
+
+    for (const releaseCandidateId of [null, "", "v9-rc-0", "not-a-release-candidate", CANDIDATE_ID]) {
+      const result = await assessSafetyScoreV9ShadowReleaseCoverage({
+        ...assessmentInput(fixture, db),
+        releaseCandidateId,
+      });
+      expect(result.floor).toMatchObject({ id: "ratified-release-coverage", status: "fail", observed: 0 });
+      expect(result.floor.detail).toContain("No sealed V9-9 release candidate is designated");
+      expect(result.unresolvedReleaseBlockers).toEqual([SAFETY_SCORE_V9_RELEASE_COVERAGE_UNAVAILABLE_BLOCKER]);
+      expect(result.report).toBeNull();
+    }
+  }, 30_000);
+
+  it("fails closed when the designation points at a release candidate with no ratified cohort", async () => {
+    const fixture = buildFixture();
+    const { db } = await seedCohort(fixture.cohort);
+
+    const result = await assessSafetyScoreV9ShadowReleaseCoverage({
+      ...assessmentInput(fixture, db),
+      releaseCandidateId: "v9-rc-99",
+    });
+
+    expect(result.floor.status).toBe("fail");
+    expect(result.floor.detail).toBe(
+      "No frozen V9-9 release cohort and passing coverage report is wired into the shadow candidate",
+    );
+    expect(result.unresolvedReleaseBlockers).toEqual([SAFETY_SCORE_V9_RELEASE_COVERAGE_UNAVAILABLE_BLOCKER]);
+  });
+
+  it("passes on a content-addressed candidate once the sealed designation resolves its cohort", async () => {
+    const fixture = buildFixture();
+    const { db } = await seedCohort(fixture.cohort);
+
+    const result = await assessSafetyScoreV9ShadowReleaseCoverage(assessmentInput(fixture, db));
+
+    expect(result.floor.status).toBe("pass");
+    expect(result.unresolvedReleaseBlockers).toEqual([]);
+    // Both identifiers are reported, and neither has been substituted for the other.
+    expect(result.report?.releaseCandidateId).toBe(RELEASE_CANDIDATE_ID);
+    expect(result.floor.detail).toContain(RELEASE_CANDIDATE_ID);
+    expect(result.floor.detail).toContain(CANDIDATE_ID);
   });
 
   it("fails closed on candidate-identity mismatch", async () => {

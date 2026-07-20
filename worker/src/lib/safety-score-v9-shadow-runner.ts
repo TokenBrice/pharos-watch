@@ -18,7 +18,10 @@ import {
 } from "./safety-score-v9-candidate";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "./safety-score-v9-extension";
 import { loadSafetyScoreV9MovementReviewDispositions } from "./safety-score-v9-movement-reviews";
-import { assessSafetyScoreV9ShadowReleaseCoverage } from "./safety-score-v9-release-coverage";
+import {
+  assessSafetyScoreV9ShadowReleaseCoverage,
+  loadSafetyScoreV9SealedReleaseCandidateId,
+} from "./safety-score-v9-release-coverage";
 import {
   assessSafetyScoreV9ShadowQualification,
   buildSafetyScoreV9DiffReport,
@@ -72,6 +75,12 @@ export interface RunSafetyScoreV9ShadowInput {
   v8MethodologyVersion: string;
   signal?: AbortSignal;
   nowSec?: number;
+  /**
+   * Sealed release-candidate label (`v9-rc-N`) for an explicitly sealed run.
+   * It both seals the candidate id and keys the ratified cohort lookup. Left
+   * unset, the run stays content-addressed and the cohort key comes from the
+   * owner's D1 sealed release-candidate designation.
+   */
   releaseCandidateId?: string;
   archiveSelectionReasons?: readonly Exclude<SafetyScoreV9ShadowArchiveSelectionReason, "first" | "final">[];
 }
@@ -439,8 +448,15 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
     const completedAtSec = nowSecAtLeast(startedAtSec, input.nowSec);
     const expectedActiveIds = [...fixedInput.activeAssetIds].sort(compareText);
     stage = "serialize";
+    // The sealed `v9-rc-N` label keys the ratified cohort and is distinct from
+    // the content-addressed `candidateId` above. An explicitly sealed run
+    // carries its own label; otherwise the owner's D1 designation supplies it,
+    // and an absent designation leaves the floor failing closed.
+    const sealedReleaseCandidateId =
+      input.releaseCandidateId ?? (await loadSafetyScoreV9SealedReleaseCandidateId(input.db, shadowSignal));
     const releaseCoverage = await assessSafetyScoreV9ShadowReleaseCoverage({
       db: input.db,
+      releaseCandidateId: sealedReleaseCandidateId,
       candidateId,
       candidatePolicyDigest: pipeline.candidate.policy.semanticDigest,
       candidateEvaluationBuildDigest: pipeline.candidate.evaluationBuildDigest,

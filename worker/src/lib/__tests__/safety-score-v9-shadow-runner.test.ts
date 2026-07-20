@@ -8,6 +8,7 @@ const mockLoadHistory = vi.fn();
 const mockPersistState = vi.fn();
 const mockLoadReviewDispositions = vi.fn();
 const mockAssessReleaseCoverage = vi.fn();
+const mockLoadSealedReleaseCandidateId = vi.fn();
 
 vi.mock("../safety-score-v9-store", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../safety-score-v9-store")>();
@@ -27,6 +28,7 @@ vi.mock("../safety-score-v9-release-coverage", async (importOriginal) => {
   return {
     ...actual,
     assessSafetyScoreV9ShadowReleaseCoverage: mockAssessReleaseCoverage,
+    loadSafetyScoreV9SealedReleaseCandidateId: mockLoadSealedReleaseCandidateId,
   };
 });
 
@@ -150,6 +152,8 @@ describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_
     mockPersistState.mockReset();
     mockLoadReviewDispositions.mockReset();
     mockAssessReleaseCoverage.mockReset();
+    mockLoadSealedReleaseCandidateId.mockReset();
+    mockLoadSealedReleaseCandidateId.mockResolvedValue(null);
     mockLoadHistory.mockResolvedValue([]);
     mockPersistState.mockResolvedValue(undefined);
     mockLoadReviewDispositions.mockResolvedValue({});
@@ -535,6 +539,30 @@ describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_
 
     expect(result).toMatchObject({ status: "published", candidateId: "v9-rc-3" });
     expect(mockPersistState.mock.calls[0]![1].envelope.candidate.candidateId).toBe("v9-rc-3");
+    // An explicitly sealed run keys the cohort off its own label, not D1.
+    expect(mockLoadSealedReleaseCandidateId).not.toHaveBeenCalled();
+    expect(mockAssessReleaseCoverage.mock.calls[0]![0].releaseCandidateId).toBe("v9-rc-3");
+  });
+
+  it("forwards the owner's D1 sealed release-candidate designation alongside the content-addressed candidate", async () => {
+    mockLoadSealedReleaseCandidateId.mockResolvedValue("v9-rc-7");
+
+    const result = await runSafetyScoreV9ShadowAfterV8Publication(input());
+
+    if (result.status !== "published") throw new Error("Expected published shadow result");
+    const assessed = mockAssessReleaseCoverage.mock.calls[0]![0];
+    expect(assessed.releaseCandidateId).toBe("v9-rc-7");
+    // The designation must NOT seal the candidate id: it stays content-addressed.
+    expect(assessed.candidateId).toBe(result.candidateId);
+    expect(assessed.candidateId).toMatch(/^safety-score-v9-candidate:v1:[a-f0-9]{64}$/);
+  });
+
+  it("still assesses with a null designation when the owner has published none", async () => {
+    const result = await runSafetyScoreV9ShadowAfterV8Publication(input());
+
+    if (result.status !== "published") throw new Error("Expected published shadow result");
+    expect(mockAssessReleaseCoverage.mock.calls[0]![0].releaseCandidateId).toBeNull();
+    expect(result.qualificationBlockers).toContain("unresolved-release-blocker");
   });
 
   it("returns a shadow-write failure without throwing when D1 retention fails", async () => {
