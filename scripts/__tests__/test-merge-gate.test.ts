@@ -41,6 +41,7 @@ import {
   buildDiscoveryExecutionGroups,
   getDiscoveryCommandEnv,
   resolveDiscoveryMaxParallel,
+  resolveDiscoveryPhaseMaxParallel,
   runMergeGateDiscovery,
 } from "../maintenance/run-merge-gate-discovery.mjs";
 
@@ -545,10 +546,21 @@ describe("buildCommandPlan", () => {
     });
   });
 
-  it("bounds discovery parallelism with an explicit override", () => {
-    expect(resolveDiscoveryMaxParallel(testEnv(), 16)).toBe(3);
-    expect(resolveDiscoveryMaxParallel(testEnv(), 4)).toBe(2);
+  it("defaults discovery postbuild work to serial and honors explicit controls", () => {
+    expect(resolveDiscoveryMaxParallel(testEnv(), 16)).toBe(1);
+    expect(resolveDiscoveryMaxParallel(testEnv(), 4)).toBe(1);
+    expect(resolveDiscoveryMaxParallel(testEnv({ MERGE_GATE_PARALLEL: "0" }), 16)).toBe(1);
     expect(resolveDiscoveryMaxParallel(testEnv({ MERGE_GATE_DISCOVERY_MAX_PARALLEL: "3" }), 16)).toBe(3);
+    expect(
+      resolveDiscoveryMaxParallel(testEnv({ MERGE_GATE_DISCOVERY_MAX_PARALLEL: "3", MERGE_GATE_PARALLEL: "0" }), 16),
+    ).toBe(3);
+  });
+
+  it("keeps lightweight discovery phases bounded independently from postbuild work", () => {
+    expect(resolveDiscoveryPhaseMaxParallel(10, 1)).toBe(8);
+    expect(resolveDiscoveryPhaseMaxParallel(20, 1)).toBe(4);
+    expect(resolveDiscoveryPhaseMaxParallel(23, 3)).toBe(4);
+    expect(resolveDiscoveryPhaseMaxParallel(40, 1)).toBe(1);
   });
 
   it("passes no coverage-ratchet env during local merge-gate execution", async () => {
@@ -875,6 +887,7 @@ describe("runMergeGate fetch and node_modules wiring", () => {
     const result = await runMergeGateDiscovery({
       argv: [],
       env: testEnv({ MERGE_GATE_NO_FETCH: "1", MERGE_GATE_DISCOVERY_MAX_PARALLEL: "3" }),
+      availableCores: 16,
       runCommandImpl,
       execFile,
       exit: captureProcessExit((status) => {
@@ -885,6 +898,11 @@ describe("runMergeGate fetch and node_modules wiring", () => {
 
     expect(result.status).toBe(7);
     expect(exitStatus).toBe(7);
+    expect(result.report?.scheduler).toMatchObject({
+      availableParallelism: 16,
+      phaseMaxParallel: { 10: 8, 20: 4, 40: 3 },
+      postbuildMaxParallel: 3,
+    });
     expect(runCommandCalls[0]).toBe("node scripts/ci/check-node-modules-fresh.mjs --strict");
     expect(runCommandCalls).not.toContain("npm run validate:prebuild");
     expect(runCommandCalls).toContain("npm run typecheck");

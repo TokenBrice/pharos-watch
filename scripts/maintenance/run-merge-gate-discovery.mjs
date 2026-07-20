@@ -59,10 +59,17 @@ function takePlanItem(plan, matched, cmd) {
   return item;
 }
 
-export function resolveDiscoveryMaxParallel(env = process.env, availableCores = os.availableParallelism()) {
+export function resolveDiscoveryMaxParallel(env = process.env, _availableCores = os.availableParallelism()) {
   const explicit = Number.parseInt(env.MERGE_GATE_DISCOVERY_MAX_PARALLEL ?? "", 10);
   if (Number.isFinite(explicit) && explicit > 0) return explicit;
-  return Math.max(1, Math.min(3, availableCores - 2));
+  if (env.MERGE_GATE_PARALLEL === "0") return 1;
+  return 1;
+}
+
+export function resolveDiscoveryPhaseMaxParallel(phase, postbuildMaxParallel) {
+  if (phase === 10) return Math.max(postbuildMaxParallel, 8);
+  if (phase >= 20 && phase < 30) return 4;
+  return postbuildMaxParallel;
 }
 
 // Compatibility helper for code/tests that inspect the legacy top-level plan.
@@ -182,7 +189,8 @@ Environment:
   MERGE_GATE_BASE_REF=<ref>                 Compare base (default origin/main).
   MERGE_GATE_HEAD_REF=<ref>                 Compare head (default HEAD).
   MERGE_GATE_FULL_DEPLOY=1                  Force full Pages and Worker classification.
-  MERGE_GATE_DISCOVERY_MAX_PARALLEL=<n>     Cap independent postbuild fan-out.
+  MERGE_GATE_DISCOVERY_MAX_PARALLEL=<n>     Set independent postbuild fan-out (default 1).
+  MERGE_GATE_PARALLEL=0                     Compatibility alias for serial discovery postbuild work.
   MERGE_GATE_PRODUCTION_ENV=1               Confirm release public configuration was loaded.`);
 }
 
@@ -241,7 +249,7 @@ export async function executeDiscoveryGraph({
     }
 
     if (runnable.length === 0) continue;
-    const phaseMaxParallel = phase === 10 ? Math.max(maxParallel, 8) : phase >= 20 && phase < 30 ? 4 : maxParallel;
+    const phaseMaxParallel = resolveDiscoveryPhaseMaxParallel(phase, maxParallel);
     const execution = await runParallelExecutionUnits(runnable, {
       continueOnError: true,
       getCommandEnv: (command) => getDiscoveryCommandEnv(command, changedFiles, env, options),
@@ -405,6 +413,10 @@ export function printDiscoverySummary(report, { log = console.log } = {}) {
     }, Node ${report.environment.node.actual}`,
   );
   log(`[merge-gate:discover] Coverage: ${counts || "no planned nodes"}`);
+  log(
+    `[merge-gate:discover] Scheduler: ${report.scheduler.availableParallelism} available CPU(s), ` +
+      `postbuild max parallel ${report.scheduler.postbuildMaxParallel}`,
+  );
   log(`[merge-gate:discover] Outcome: ${report.outcome}`);
 
   for (const [heading, findings] of [
@@ -543,6 +555,11 @@ export async function runMergeGateDiscovery({
     descriptors = resume.descriptors;
   }
   const maxParallel = resolveDiscoveryMaxParallel(env, availableCores);
+  const phaseMaxParallel = Object.fromEntries(
+    [...new Set(descriptors.map((descriptor) => descriptor.phase))]
+      .sort((left, right) => left - right)
+      .map((phase) => [phase, resolveDiscoveryPhaseMaxParallel(phase, maxParallel)]),
+  );
   printPlan(plan, descriptors, options, maxParallel, resume);
 
   const environmentResults = plan.selected.length > 0 ? buildEnvironmentResults(environment, plan, options, startSnapshot) : [];
@@ -667,6 +684,11 @@ export async function runMergeGateDiscovery({
     reportPath: options.reportPath,
     resume: resume ? { reason: resume.reason, targeted: resume.targeted } : null,
     results,
+    scheduler: {
+      availableParallelism: availableCores,
+      phaseMaxParallel,
+      postbuildMaxParallel: maxParallel,
+    },
     snapshot: {
       changedDuringRun: [...new Set([...snapshotComparison.changedPaths, ...pathMovement])].sort(),
       end: endSnapshot,

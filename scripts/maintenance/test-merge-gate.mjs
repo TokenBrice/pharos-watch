@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import os from "node:os";
 import {
   hasDeployImpact,
   hasPagesDeployImpact,
@@ -402,16 +401,12 @@ export function buildExecutionBatches(plan) {
   ];
 }
 
-// Auto-parallel threshold: enough cores to absorb the post-validate matrix
-// while leaving headroom for other local work (this tree often hosts
-// concurrent agent sessions). MERGE_GATE_PARALLEL=1/0 remains the explicit
-// override in either direction.
-const MERGE_GATE_AUTO_PARALLEL_MIN_CORES = 12;
-
-export function resolveMergeGateParallelMode(env, availableCores = os.availableParallelism()) {
+// The build and Vitest commands manage their own worker pools, so logical CPU
+// count alone cannot establish that running those commands together is safe.
+export function resolveMergeGateParallelMode(env, _availableCores) {
   if (env.MERGE_GATE_PARALLEL === "1") return true;
   if (env.MERGE_GATE_PARALLEL === "0") return false;
-  return availableCores >= MERGE_GATE_AUTO_PARALLEL_MIN_CORES;
+  return false;
 }
 
 export async function runExecutionBatches(
@@ -420,7 +415,7 @@ export async function runExecutionBatches(
   env = process.env,
   { runCommandImpl = runShellCommand, exit = process.exit, availableCores } = {},
 ) {
-  const parallelMode = resolveMergeGateParallelMode(env, availableCores ?? os.availableParallelism());
+  const parallelMode = resolveMergeGateParallelMode(env, availableCores);
   const batches = parallelMode ? buildExecutionBatches(plan) : plan.map((item) => [createExecutionUnit([item])]);
 
   const result = await runCommandBatches(batches, {
