@@ -123,4 +123,12 @@ jobs:
               --head "$BRANCH" \
               --title "chore(v9): refresh CDP shock-coverage measurements" \
               --body-file /tmp/shock-coverage-pr-body.md
+            # Owner ruling 2026-07-20: auto-merge this PR once required checks pass.
+            # The 72h freshness bound runs from the pinned block timestamp, not from
+            # merge time, so a refresh waiting on a human review can still go stale and
+            # drop LUSD to unsafe-backing:high. Branch protection still applies — this
+            # queues the merge behind the required checks, it does not bypass them, and
+            # the measurement is self-verifying (journals replay byte-identically or the
+            # job fails before opening a PR).
+            gh pr merge "$BRANCH" --squash --auto
           fi
