@@ -37,6 +37,51 @@ const ATTESTED_BREAKDOWN_2026_05: ReserveBreakdown = {
 
 const BREAKDOWN_TOTAL_TOLERANCE_PCT = 0.5;
 
+function isAsciiDigits(value: string): boolean {
+  if (value.length === 0) return false;
+  for (let index = 0; index < value.length; index++) {
+    const code = value.charCodeAt(index);
+    if (code < 48 || code > 57) return false;
+  }
+  return true;
+}
+
+function parsePercentageToken(raw: string): number | null {
+  const dotIndex = raw.indexOf(".");
+  if (dotIndex !== raw.lastIndexOf(".")) return null;
+
+  const whole = dotIndex === -1 ? raw : raw.slice(0, dotIndex);
+  const fraction = dotIndex === -1 ? null : raw.slice(dotIndex + 1);
+  if (whole.length > 3 || !isAsciiDigits(whole)) return null;
+  if (fraction !== null && (fraction.length > 6 || !isAsciiDigits(fraction))) return null;
+
+  const pct = Number.parseFloat(raw);
+  return Number.isFinite(pct) && pct >= 0 && pct <= 100 ? pct : null;
+}
+
+function parseFirstPercentage(window: string): number | null {
+  const percentIndex = window.indexOf("%");
+  if (percentIndex === -1) return null;
+  const suffix = window[percentIndex + 1];
+  if (suffix === "." || (suffix >= "0" && suffix <= "9")) return null;
+
+  let tokenEnd = percentIndex;
+  let whitespaceCount = 0;
+  while (tokenEnd > 0 && /\s/.test(window[tokenEnd - 1]) && whitespaceCount < 3) {
+    tokenEnd--;
+    whitespaceCount++;
+  }
+  if (tokenEnd > 0 && /\s/.test(window[tokenEnd - 1])) return null;
+
+  let tokenStart = tokenEnd;
+  while (tokenStart > 0) {
+    const char = window[tokenStart - 1];
+    if (char !== "." && (char < "0" || char > "9")) break;
+    tokenStart--;
+  }
+  return parsePercentageToken(window.slice(tokenStart, tokenEnd));
+}
+
 function parseUsdAmount(raw: string): number | null {
   const match = raw.match(/\$\s*([\d,.]+)\s*([KMB])?/i);
   if (!match) return null;
@@ -66,10 +111,7 @@ function parseLabeledPct(normalized: string, label: RegExp): number | null {
   const match = normalized.match(label);
   if (!match || match.index === undefined) return null;
   const window = normalized.slice(match.index, match.index + 300);
-  const pctMatch = window.match(/\d{1,3}\.\d{1,6}\s{0,3}%/) ?? window.match(/\d{1,3}\s{0,3}%/);
-  if (!pctMatch) return null;
-  const pct = Number.parseFloat(pctMatch[0]);
-  return Number.isFinite(pct) && pct >= 0 && pct <= 100 ? pct : null;
+  return parseFirstPercentage(window);
 }
 
 /**
@@ -145,10 +187,12 @@ export function adaptRippleTransparency(html: string): AdapterResult {
   const collateralizationRatio = reservesUsd / circulatingUsd;
   const warnings: LiveReserveWarning[] = [];
   if (collateralizationRatio < MIN_RESERVE_RATIO) {
-    warnings.push(reserveDegradedWarning(
-      "reserve-undercollateralized",
-      `Ripple RLUSD reserves cover ${(collateralizationRatio * 100).toFixed(2)}% of circulating supply`,
-    ));
+    warnings.push(
+      reserveDegradedWarning(
+        "reserve-undercollateralized",
+        `Ripple RLUSD reserves cover ${(collateralizationRatio * 100).toFixed(2)}% of circulating supply`,
+      ),
+    );
   }
 
   return {
