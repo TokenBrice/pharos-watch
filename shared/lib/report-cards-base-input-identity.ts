@@ -34,6 +34,10 @@ export interface ReportCardsBaseInputSourceV1 {
   liveReserveMap: Readonly<Record<string, unknown>>;
   liveReserveProvenanceMap: Readonly<Record<string, unknown>>;
   chainCirculatingById: Readonly<Record<string, unknown>>;
+  // Optional because captures predating the aggregate-supply fallback carry no
+  // such field. Absent projects as an empty map — the same value the fixed-input
+  // schema default supplies — so a pre-field envelope has exactly one identity.
+  aggregateCirculatingById?: Readonly<Record<string, unknown>>;
   dexDeploymentSupplyCoverageById: Readonly<Record<string, unknown>>;
   liquidityStale: boolean;
   redemptionStale: boolean;
@@ -61,6 +65,7 @@ export function projectReportCardsBaseInputIdentityV1(
     resolvedBlacklistStatuses: source.resolvedBlacklistStatuses,
     liveReserveMap: source.liveReserveMap,
     chainCirculatingById: source.chainCirculatingById,
+    aggregateCirculatingById: source.aggregateCirculatingById ?? {},
     dexDeploymentSupplyCoverageById: source.dexDeploymentSupplyCoverageById,
   });
   const scoreBearingFreshnessSha256 = domainDigest("report-cards.base-input.score-bearing-freshness.v1", {

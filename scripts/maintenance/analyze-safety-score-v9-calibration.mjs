@@ -84,26 +84,57 @@ const MAX_UNEXPLAINED_CAPTURE_MOVEMENT = 3;
  * numbers (F<=150 / C-<=45 / B-<=8 / tuple<=15%) and the legacy script gates
  * they diverged from are retired, not carried alongside.
  *
- * Measurement basis: `agents/tmp/p2-final-replay.json` with the CHAIN_SUPPLY
- * aggregate-circulating fallback applied to its compiled fact set and the
- * engine re-evaluated, i.e. 332/335 rated assets observed over $330.91B, with
- * USDT+USDC at 77.79% of observed supply (was 192/335 over $308.02B at 83.57%).
+ * Measurement basis, re-measured 2026-07-20 after the curation sweep
+ * (`3a969e4b0`), the mechanism/transfer reviews (`5c0c836cb`) and the
+ * aggregate-circulating producer fix (`45bf41bd8`) landed: the 07-18 capture
+ * replayed at clockSec 1784613600 against the committed tree, 335/335 rated
+ * assets observed over $331.50B, USDT+USDC at 77.65% of observed supply. The
+ * earlier re-derivation measured a reconstructed fact-set patch on a moving
+ * tree; this basis measures shipped producer code on a settled one. Full
+ * arithmetic:
+ * `agents/safety-score-v9/results/phase3-2026-07-20/d1-bar-derivation-2026-07-20.md`.
  *
- * Only D2A moved. Every other threshold is carried forward unchanged: the
- * corrected denominator shifted the measured values but not the bars they are
- * judged against. Two gates fail on this measurement and are recorded as
- * activation targets rather than tuned to pass — D1 (0.3385 vs >=0.50) and D5B
- * (7 vs >=8).
+ * D2A and D1 have moved from the original re-derivation. Every other threshold
+ * is carried forward unchanged: corrected denominators shifted the measured
+ * values but not the bars they are judged against. Two gates fail on this
+ * measurement and are recorded as activation targets rather than tuned to pass
+ * — D1 (0.3350 vs >=0.40) and D5B (7 vs >=8).
  */
 const DISTRIBUTION_GATE_THRESHOLDS = {
-  // D1: derivation §4 proposes >=0.60. Owner accepted >=0.50 near-term
-  // (§5.4 open question 1) with 0.60 retained as the post-activation target.
-  // Measured 0.3385 (FAILS by 16.15pp). The correction moved this the "wrong"
-  // way by design: the old 45.34% was computed over a denominator that silently
-  // excluded 140 assets which lacked supply *because* they lacked evidence, so
-  // it flattered the corpus. 0.3385 is the first honest reading, not a
-  // regression, and the bar stays where the owner set it.
-  materialEvidenceCoverageExTop2Min: 0.5,
+  // D1: RE-SET 2026-07-20 to the reachable range (owner ruling: "re-set to what
+  // is reachable, keep 50% as the post-activation target"). Measured 0.3350
+  // against a $74.081B ex-top-2 denominator, so the bar still FAILS by 6.50pp
+  // and is an activation target, not a tuned pass.
+  //
+  // Derivation of the ceiling. Of the $49.265B floored ex-top-2 supply, only
+  // $11.803B (48 assets) is a drainable evidence gap — every floored pillar sits
+  // exactly AT its bounded-unknown floor with only `missing-data`-classified
+  // reasons. The rest cannot be lifted by closing an evidence queue:
+  //   $26.811B (127) `unsupported-design` — routes reviewed, none comparable;
+  //   $6.595B  (102) strictly sub-floor    — a measured-weak fact, not a gap;
+  //   $4.057B  (6)   at-floor, no reason   — a measured value that coincides
+  //                                          with the floor (usde-ethena's
+  //                                          `external-lock-mint` bridge posture
+  //                                          scores exactly 45), i.e. fully
+  //                                          evidenced and misread by the
+  //                                          `score <= floor` test.
+  // So the absolute ceiling with every evidence gap in the corpus closed is
+  // ($24.816B + $11.803B) / $74.081B = 0.4943, and 0.50 is therefore NOT
+  // reachable by curation at all — it exceeds the ceiling. $4.493B of that gap
+  // further depends on the P1 per-chain RPC programme, leaving a curation-only
+  // ceiling of ($24.816B + $7.309B) / $74.081B = 0.4337.
+  //
+  // 0.40 is set below the curation-only ceiling so activation is not hostage to
+  // the P1 data programme: reaching it needs $4.816B of the $11.803B drainable
+  // gap closed (40.8% of the queue), leaving 3.37pp of margin on the curation
+  // path and 9.43pp once P1 lands. Drift caveat: the ex-top-2 denominator is
+  // still concentrated (dai-makerdao 6.55%, susds-sky 6.42%), so a single large
+  // asset staling out of the evidenced set exceeds the curation-path margin.
+  // 0.50 stays the post-activation target and requires a methodology change —
+  // the fund-type exit-cap counterfactual (ruling D-D) against the
+  // `unsupported-design` cohort, or correcting the floor-coincidence artifact —
+  // not more curation. 0.60 (derivation §4) remains the long-run target.
+  materialEvidenceCoverageExTop2Min: 0.4,
   // D2A: raised 0.75 -> 0.95. The 0.75 bar was calibrated against the producer
   // defect itself (57.31% observed); with the fix at 99.10% it would tolerate a
   // 24pp collapse in supply observation without tripping, which makes the gate
@@ -117,6 +148,8 @@ const DISTRIBUTION_GATE_THRESHOLDS = {
   unattributedFSupplyShareMax: 0.001,
   freeFloatingLargestBucketShareMax: 0.12,
   freeFloatingLargestTupleShareMax: 0.12,
+  // D5A: measured 0.74. 0.60 is recorded as the post-activation tightening
+  // (derivation §4, D5) and is not applied while D1 and D5B are still open.
   top50CMinusOrBetterShareMin: 0.5,
   // D5B: measured 7 (FAILS by one). No asset got worse — `usat-tether` (B) was
   // pushed to rank 54 by 18 newly-visible assets entering the top-50 window.
@@ -431,6 +464,11 @@ export function computeCalibrationBaseInputGenerationId(input) {
     resolvedBlacklistStatuses: fixedInput.resolvedBlacklistStatuses,
     liveReserveMap: fixedInput.liveReserveMap,
     chainCirculatingById: fixedInput.chainCirculatingById,
+    // Absent must project as an empty map, not as an absent key: the fixed-input
+    // schema parses this through Zod `.default({})`, so a capture predating the
+    // aggregate-supply fallback reaches the real path as `{}`. Omitting the key
+    // here instead would diverge from the TS projection unconditionally.
+    aggregateCirculatingById: fixedInput.aggregateCirculatingById ?? {},
     dexDeploymentSupplyCoverageById: fixedInput.dexDeploymentSupplyCoverageById,
   });
   const scoreBearingFreshnessSha256 = domainDigest("report-cards.base-input.score-bearing-freshness.v1", {
@@ -964,6 +1002,18 @@ function isAdverseStructuralCapKind(kind) {
  * complement (unattributed F), so softening measurement cannot satisfy it:
  * blunting a driver moves an asset from attributed to unattributed and makes the
  * gate worse.
+ *
+ * OWNER RULING 2026-07-20 — the STATED definition is authoritative. D3's
+ * unattributed count is every F not held by a measured adverse fact, i.e.
+ * derivation §3.1 class (b) PLUS class (c). The §3.2 headline table's "14" is
+ * the class-(b) row alone and is NOT the gate metric; do not narrow this
+ * predicate to match it. The four class-(c) methodology-blocked assets
+ * (`iauon-ondo`, `srusd-reservoir`, `wsrusd-reservoir`, `susd1plus-lorenzo`) are
+ * correctly counted, because a methodology capability gap leaves an F just as
+ * un-held by a measured fact as a curation gap does. On the basis the ruling was
+ * issued against that made the count 18 with a margin of 7 against `<= 25`, not
+ * 14 with a margin of 11. `distributionDiagnostics.fCohortClassCounts` publishes
+ * the b/c split so the narrower reading stays visible without becoming the gate.
  *
  * POLICY-FREEZE OUTSTANDING. The derivation is emphatic that this predicate must
  * be frozen in policy alongside the gate, because an unfrozen predicate is a

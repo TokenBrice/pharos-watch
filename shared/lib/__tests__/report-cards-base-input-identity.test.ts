@@ -36,6 +36,9 @@ function source(): ReportCardsBaseInputSourceV1 {
     liveReserveMap: { "usdc-circle": [{ name: "cash", pct: 100 }] },
     liveReserveProvenanceMap: { "usdc-circle": { source: "fixture", fetchedAt: 1_799_999_700 } },
     chainCirculatingById: { "usdc-circle": { ethereum: { current: 1_000_000 } } },
+    aggregateCirculatingById: {
+      "usdc-circle": { circulating: { peggedUSD: 1_000_000 }, observedAtSec: 1_799_999_600 },
+    },
     dexDeploymentSupplyCoverageById: { "usdc-circle": { observedSupplyRatio: 1 } },
     liquidityStale: false,
     redemptionStale: false,
@@ -108,6 +111,41 @@ describe("report-card base-input identity", () => {
 
     expect(deriveReportCardsBaseInputGenerationId(producerChanged)).not.toBe(baseline);
     expect(deriveReportCardsBaseInputGenerationId(methodologyChanged)).not.toBe(baseline);
+  });
+
+  it("binds aggregate circulating supply as a score-bearing fact", () => {
+    const baseline = source();
+    const supplyChanged = source();
+    supplyChanged.aggregateCirculatingById = {
+      "usdc-circle": { circulating: { peggedUSD: 2_000_000 }, observedAtSec: 1_799_999_600 },
+    };
+
+    expect(deriveReportCardsBaseInputGenerationId(supplyChanged)).not.toBe(
+      deriveReportCardsBaseInputGenerationId(baseline),
+    );
+    // Aggregate supply is a fact, not freshness.
+    expect(projectReportCardsBaseInputIdentityV1(supplyChanged).normalizedSnapshotDigests.scoreBearingFreshnessSha256).toBe(
+      projectReportCardsBaseInputIdentityV1(baseline).normalizedSnapshotDigests.scoreBearingFreshnessSha256,
+    );
+  });
+
+  it("keeps the generation stable for inputs that agree on aggregate supply", () => {
+    expect(deriveReportCardsBaseInputGenerationId(source())).toBe(deriveReportCardsBaseInputGenerationId(source()));
+  });
+
+  it("projects a pre-field capture deterministically as an empty aggregate map", () => {
+    const absent = source();
+    delete absent.aggregateCirculatingById;
+    const explicitlyEmpty = { ...source(), aggregateCirculatingById: {} };
+
+    // A capture predating the field must land on exactly one identity, and it
+    // must be the identity of an empty map — matching the fixed-input schema
+    // default that fills the field in before this projection ever sees it.
+    expect(deriveReportCardsBaseInputGenerationId(absent)).toBe(
+      deriveReportCardsBaseInputGenerationId(explicitlyEmpty),
+    );
+    expect(deriveReportCardsBaseInputGenerationId(absent)).toBe(deriveReportCardsBaseInputGenerationId(absent));
+    expect(deriveReportCardsBaseInputGenerationId(absent)).not.toBe(deriveReportCardsBaseInputGenerationId(source()));
   });
 
   it("computes the same generation from an already projected identity", () => {
