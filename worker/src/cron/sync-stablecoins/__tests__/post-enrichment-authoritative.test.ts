@@ -81,7 +81,7 @@ describe("runSharedPriceCompletion authoritative repair", () => {
     expect(result).toMatchObject({ authoritativeOverrideCount: 1 });
   });
 
-  it("keeps a reviewed AZND Curve exact-pool override through final publication validation", async () => {
+  it("withholds an uncorroborated AZND Curve exact-pool override", async () => {
     const asset: PeggedAsset = {
       id: "aznd-mu-digital",
       name: "Anzen USDz NZD",
@@ -127,13 +127,22 @@ describe("runSharedPriceCompletion authoritative repair", () => {
       "",
     );
 
-    expect(result).toMatchObject({ authoritativeOverrideCount: 1, rejectedCount: 0 });
-    expect(asset).toMatchObject({
-      price: 0.194,
-      priceSource: "curve-thin-onchain",
-      priceConfidence: "fallback",
-      priceObservedAt: 1_799_999_940,
-      priceObservedAtMode: "upstream",
-    });
+    expect("authoritativeOverrideStats" in result).toBe(true);
+    if (!("authoritativeOverrideStats" in result)) {
+      throw new Error("Expected shared price completion result");
+    }
+    expect(result).toMatchObject({ authoritativeOverrideCount: 0, rejectedCount: 0 });
+    expect(result.authoritativeOverrideStats.assetAttempts).toEqual([
+      expect.objectContaining({
+        assetId: asset.id,
+        adapter: "curve-thin-onchain",
+        source: "curve-thin-onchain",
+        state: "attempted",
+        result: "rejected",
+        rejectionClass: "severe_downside_requires_corroboration",
+      }),
+    ]);
+    expect(asset.price).toBeNull();
+    expect(asset.priceSource).toBeUndefined();
   });
 });

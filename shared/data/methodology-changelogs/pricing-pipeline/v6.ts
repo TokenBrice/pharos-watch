@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.205",
+    title: "Thin Curve quote corroboration guard",
+    date: "2026-07-20",
+    effectiveAt: 1784554468,
+    summary:
+      "AZND Curve exact-pool fallback quotes now remain subject to soft-source corroboration before publishing severe fixed-peg downside or large temporal jumps.",
+    impact: [
+      "`curve-thin-onchain` still requires the asset-specific Curve identity, freshness, balance, and quote-impact checks before producing fallback evidence",
+      "The source no longer bypasses severe fixed-peg downside corroboration or temporal-jump withholding solely because the route-level checks passed",
+      "A single thin-pool AZND quote remains non-replay-safe, non-depeg-authoritative, and insufficient by itself to publish a severe or jumpy fixed-peg price",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.204",
     title: "Full-precision CoinGecko simple prices",
     date: "2026-07-20",
