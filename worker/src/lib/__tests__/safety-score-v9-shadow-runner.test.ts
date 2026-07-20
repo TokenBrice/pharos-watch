@@ -19,8 +19,11 @@ vi.mock("../safety-score-v9-store", async (importOriginal) => {
   };
 });
 
+const mockLoadReviewCarries = vi.fn();
+
 vi.mock("../safety-score-v9-movement-reviews", () => ({
   loadSafetyScoreV9MovementReviewDispositions: mockLoadReviewDispositions,
+  loadSafetyScoreV9MovementReviewCarries: mockLoadReviewCarries,
 }));
 
 vi.mock("../safety-score-v9-release-coverage", async (importOriginal) => {
@@ -151,12 +154,14 @@ describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_
     mockLoadHistory.mockReset();
     mockPersistState.mockReset();
     mockLoadReviewDispositions.mockReset();
+    mockLoadReviewCarries.mockReset();
     mockAssessReleaseCoverage.mockReset();
     mockLoadSealedReleaseCandidateId.mockReset();
     mockLoadSealedReleaseCandidateId.mockResolvedValue(null);
     mockLoadHistory.mockResolvedValue([]);
     mockPersistState.mockResolvedValue(undefined);
     mockLoadReviewDispositions.mockResolvedValue({});
+    mockLoadReviewCarries.mockResolvedValue({});
     mockAssessReleaseCoverage.mockResolvedValue({
       floor: {
         id: "ratified-release-coverage",
@@ -179,11 +184,7 @@ describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_
       qualifying: false,
     });
     if (result.status !== "published") throw new Error("Expected published shadow result");
-    expect(result.qualificationBlockers).toEqual([
-      "coverage-floor-failed",
-      "unresolved-critical-movement",
-      "unresolved-release-blocker",
-    ]);
+    expect(result.qualificationBlockers).toEqual(["coverage-floor-failed", "unresolved-release-blocker"]);
     expect(mockPersistState).toHaveBeenCalledTimes(1);
     const persisted = mockPersistState.mock.calls[0]![1];
     expect(persisted.envelope.candidate.baseInputGenerationId).toBe(input().fixedInput.baseInputGenerationId);
@@ -436,6 +437,7 @@ describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_
 
     mockLoadHistory.mockResolvedValue([failedDaily]);
     mockLoadReviewDispositions.mockResolvedValue({});
+    mockLoadReviewCarries.mockResolvedValue({});
     mockPersistState.mockClear();
     const result = await runSafetyScoreV9ShadowAfterV8Publication(input());
 
@@ -462,7 +464,7 @@ describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_
   });
 
   it.each(["producer-data-gap", "defect"] as const)(
-    "keeps a reviewed %s movement release-blocking",
+    "records a reviewed %s movement as unresolved without blocking the day",
     async (disposition) => {
       mockLoadReviewDispositions.mockImplementation((_db: D1Database, reviewKeys: readonly string[]) =>
         Promise.resolve(Object.fromEntries(reviewKeys.map((key) => [key, disposition]))),
@@ -472,7 +474,9 @@ describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_
 
       expect(result).toMatchObject({ status: "published", pendingReviewCount: 0 });
       if (result.status !== "published") throw new Error("Expected published shadow result");
-      expect(result.qualificationBlockers).toContain("unresolved-critical-movement");
+      // Adjudication is enforced once at window end by the offline gate, so an unresolved
+      // movement is recorded on the run but never gates a single day's qualification.
+      expect(result.qualificationBlockers).not.toContain("unresolved-critical-movement");
       const persisted = mockPersistState.mock.calls[0]![1];
       expect(persisted.envelope.coverage.unresolvedCriticalMovementIds).toEqual(["usdc-circle"]);
       expect(persisted.diff.cards[0]?.review).toMatchObject({ status: "classified", disposition });

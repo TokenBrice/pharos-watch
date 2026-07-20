@@ -4,6 +4,7 @@ import {
   V9_SHADOW_DIFF_ABSOLUTE_REVIEW_DELTA,
   V9_SHADOW_DIFF_TOP_CUTOFF_REVIEW_DELTA,
   V9_SHADOW_MINIMUM_QUALIFYING_DAYS,
+  V9_SHADOW_MOVEMENT_REVIEW_CARRY_SCORE_DRIFT,
   V9_SHADOW_RELEASE_COVERAGE_POLICY_DIGEST,
   V9_SHADOW_REQUIRED_COVERAGE_FLOOR_IDS,
 } from "@shared/lib/safety-score-v9/operational-gate";
@@ -439,9 +440,11 @@ export function assessSafetyScoreV9ShadowQualification(
   if (coverage.unresolvedReleaseBlockers.length > 0) {
     blockers.add("unresolved-release-blocker");
   }
-  if (coverage.unresolvedCriticalMovementIds.length > 0) {
-    blockers.add("unresolved-critical-movement");
-  }
+  // Movement adjudication is deliberately NOT a daily blocker. Whether V9's treatment of an
+  // asset is correct is a one-time question about the methodology transition, not evidence that
+  // the pipeline ran stably today; re-adjudicating because a score moved a point measures
+  // neither. `unresolvedCriticalMovementIds` stays recorded on every run and is enforced once,
+  // at window end, by the offline gate. Every pipeline-stability floor above still gates daily.
   const canonicalBlockers = [...blockers].sort(compareText);
   return SafetyScoreV9ShadowQualificationSchema.parse({
     qualifies: canonicalBlockers.length === 0,
@@ -580,20 +583,40 @@ const SafetyScoreV9DiffCardSchema = SafetyScoreV9DiffMovementSchema.extend({
   review: z
     .object({
       key: Sha256Schema.nullable(),
+      classKey: Sha256Schema.nullable(),
       status: z.enum(["not-required", "pending", "classified"]),
       disposition: SafetyScoreV9DiffReviewDispositionSchema.nullable(),
+      /**
+       * Non-null when the disposition was carried from a review of a different exact movement
+       * in the same class. Retains the exact movement that was actually adjudicated so a
+       * reviewer can always separate what was ruled on from what was carried.
+       */
+      carriedFrom: z
+        .object({
+          reviewKey: Sha256Schema,
+          reviewedV8Score: ScoreSchema.nullable(),
+          reviewedV9Score: ScoreSchema.nullable(),
+        })
+        .strict()
+        .nullable(),
     })
     .strict(),
 })
   .strict()
   .superRefine((card, ctx) => {
     if (!card.flags.requiresReview) {
-      if (card.review.key !== null || card.review.status !== "not-required" || card.review.disposition !== null) {
+      if (
+        card.review.key !== null ||
+        card.review.classKey !== null ||
+        card.review.status !== "not-required" ||
+        card.review.disposition !== null ||
+        card.review.carriedFrom !== null
+      ) {
         ctx.addIssue({ code: "custom", path: ["review"], message: "Non-material movements cannot carry a review" });
       }
       return;
     }
-    if (card.review.key === null || card.review.status === "not-required") {
+    if (card.review.key === null || card.review.classKey === null || card.review.status === "not-required") {
       ctx.addIssue({ code: "custom", path: ["review"], message: "Material movements require a review key" });
     }
     if ((card.review.status === "classified") !== (card.review.disposition !== null)) {
@@ -601,6 +624,20 @@ const SafetyScoreV9DiffCardSchema = SafetyScoreV9DiffMovementSchema.extend({
         code: "custom",
         path: ["review", "disposition"],
         message: "Classified review status must agree with its disposition",
+      });
+    }
+    if (card.review.carriedFrom !== null && card.review.status !== "classified") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["review", "carriedFrom"],
+        message: "A carried disposition must resolve to a classified review",
+      });
+    }
+    if (card.review.carriedFrom !== null && card.review.carriedFrom.reviewKey === card.review.key) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["review", "carriedFrom"],
+        message: "An exact-key review is not a carry",
       });
     }
   });
@@ -628,6 +665,87 @@ function computeSafetyScoreV9DiffReviewKey(input: {
       movement: semanticMovement,
     }),
   );
+}
+
+/**
+ * Class of a movement: everything that states *what kind of change this is*, with exact
+ * magnitude removed. Magnitude is not dropped — it is delegated to the reviewed-score anchor,
+ * which bounds drift at `V9_SHADOW_MOVEMENT_REVIEW_CARRY_SCORE_DRIFT` for the whole window
+ * rather than bucketing it (buckets would reintroduce boundary oscillation).
+ *
+ * Retained, deliberately: full V8 and V9 reason-code sets plus the new/removed sets. Cause must
+ * stay in the class, otherwise a movement could swap a benign reason code for a defect-class one
+ * at the same score and silently inherit a benign disposition.
+ *
+ * Dropped, and why it is safe:
+ * - `v8.score`, `v9.score`, `scoreDelta`, `absoluteScoreDelta` — bounded by the anchor.
+ * - `v9WeakestPillar.score` — continuous and unquantised, so it has no rounding deadband; the
+ *   pillar *name* is retained, and the score is bounded by the anchor.
+ * - `bindingCap.limit` — a cap retune is a policy change, which moves `policyDigest` and so
+ *   breaks the frozen window identity outright.
+ * - `flags.absoluteScoreDeltaAtLeast5`, `flags.topCutoffScoreDeltaAtLeast2` — pure restatements
+ *   of magnitude against a fixed threshold, already bounded by the anchor.
+ */
+function safetyScoreV9DiffReviewClassProjection(movement: SafetyScoreV9DiffMovement) {
+  const classCard = (card: SafetyScoreV9DiffMovement["v8"]) =>
+    card === null
+      ? null
+      : {
+          grade: card.grade,
+          bindingCapKind: card.bindingCap === null ? null : card.bindingCap.kind,
+          reasonCodes: card.reasonCodes,
+        };
+  return {
+    id: movement.id,
+    transition: movement.transition,
+    v8: classCard(movement.v8),
+    v9: classCard(movement.v9),
+    v9WeakestPillar: movement.v9WeakestPillar === null ? null : { pillar: movement.v9WeakestPillar.pillar },
+    newReasonCodes: movement.newReasonCodes,
+    removedReasonCodes: movement.removedReasonCodes,
+    flags: {
+      inputMissing: movement.flags.inputMissing,
+      gradeOrNrTransition: movement.flags.gradeOrNrTransition,
+      bindingCapChanged: movement.flags.bindingCapChanged,
+      downstreamThresholdCrossingIds: movement.flags.downstreamThresholdCrossingIds,
+      requiresReview: movement.flags.requiresReview,
+    },
+  };
+}
+
+function computeSafetyScoreV9DiffReviewClassKey(input: {
+  v8Identity: { methodologyVersion: string; evaluationBuildDigest: string };
+  v9Identity: {
+    candidateId: string;
+    policyVersion: string;
+    policyId: string;
+    policyDigest: string;
+    evaluationBuildDigest: string;
+  };
+  movement: SafetyScoreV9DiffMovement;
+}): string {
+  const movement = SafetyScoreV9DiffMovementSchema.parse(input.movement);
+  return sha256Hex(
+    stableJsonStringifyV1({
+      domain: "safety-score-v9.movement-review-class-key.v1",
+      v8Identity: input.v8Identity,
+      v9Identity: input.v9Identity,
+      movementClass: safetyScoreV9DiffReviewClassProjection(movement),
+    }),
+  );
+}
+
+/** A recorded disposition offered for carry into a later run of the same movement class. */
+export interface SafetyScoreV9DiffReviewCarry {
+  reviewKey: string;
+  disposition: SafetyScoreV9DiffReviewDisposition;
+  reviewedV8Score: number | null;
+  reviewedV9Score: number | null;
+}
+
+function withinCarryAnchor(reviewed: number | null, current: number | null): boolean {
+  if (reviewed === null || current === null) return reviewed === current;
+  return Math.abs(current - reviewed) <= V9_SHADOW_MOVEMENT_REVIEW_CARRY_SCORE_DRIFT;
 }
 
 const SafetyScoreV9DiffSummarySchema = z
@@ -777,6 +895,8 @@ export interface BuildSafetyScoreV9DiffReportInput {
   downstreamThresholds: readonly SafetyScoreV9DownstreamThreshold[];
   supplyUsdById: Readonly<Record<string, number>>;
   reviewDispositionsByKey?: Readonly<Record<string, SafetyScoreV9DiffReviewDisposition>>;
+  /** Recorded dispositions eligible to carry, indexed by the class key they were recorded under. */
+  reviewCarriesByClassKey?: Readonly<Record<string, SafetyScoreV9DiffReviewCarry>>;
   topMovementLimit?: number;
 }
 
@@ -858,29 +978,52 @@ export function buildSafetyScoreV9DiffReport(input: BuildSafetyScoreV9DiffReport
         requiresReview,
       },
     });
-    const reviewKey = requiresReview
-      ? computeSafetyScoreV9DiffReviewKey({
-          v8Identity: {
-            methodologyVersion: v8.methodologyVersion,
-            evaluationBuildDigest: v8.evaluationBuildDigest,
-          },
-          v9Identity: {
-            candidateId: v9.candidate.candidateId,
-            policyVersion: v9.candidate.policyVersion,
-            policyId: v9.candidate.policy.id,
-            policyDigest: v9.candidate.policy.semanticDigest,
-            evaluationBuildDigest: v9.candidate.evaluationBuildDigest,
-          },
-          movement,
-        })
+    const keyIdentity = {
+      v8Identity: {
+        methodologyVersion: v8.methodologyVersion,
+        evaluationBuildDigest: v8.evaluationBuildDigest,
+      },
+      v9Identity: {
+        candidateId: v9.candidate.candidateId,
+        policyVersion: v9.candidate.policyVersion,
+        policyId: v9.candidate.policy.id,
+        policyDigest: v9.candidate.policy.semanticDigest,
+        evaluationBuildDigest: v9.candidate.evaluationBuildDigest,
+      },
+    };
+    const reviewKey = requiresReview ? computeSafetyScoreV9DiffReviewKey({ ...keyIdentity, movement }) : null;
+    const reviewClassKey = requiresReview
+      ? computeSafetyScoreV9DiffReviewClassKey({ ...keyIdentity, movement })
       : null;
-    const disposition = reviewKey ? (input.reviewDispositionsByKey?.[reviewKey] ?? null) : null;
+
+    // Exact-key dispositions win. A carry only applies when no review exists for this exact
+    // movement, the class is unchanged, and both score anchors are still inside the drift cap.
+    const exactDisposition = reviewKey ? (input.reviewDispositionsByKey?.[reviewKey] ?? null) : null;
+    const offeredCarry =
+      exactDisposition === null && reviewClassKey ? (input.reviewCarriesByClassKey?.[reviewClassKey] ?? null) : null;
+    const carry =
+      offeredCarry !== null &&
+      offeredCarry.reviewKey !== reviewKey &&
+      withinCarryAnchor(offeredCarry.reviewedV8Score, v8Card?.score ?? null) &&
+      withinCarryAnchor(offeredCarry.reviewedV9Score, v9Card?.score ?? null)
+        ? offeredCarry
+        : null;
+    const disposition = exactDisposition ?? carry?.disposition ?? null;
     return SafetyScoreV9DiffCardSchema.parse({
       ...movement,
       review: {
         key: reviewKey,
+        classKey: reviewClassKey,
         status: !requiresReview ? "not-required" : disposition ? "classified" : "pending",
         disposition,
+        carriedFrom:
+          carry === null
+            ? null
+            : {
+                reviewKey: carry.reviewKey,
+                reviewedV8Score: carry.reviewedV8Score,
+                reviewedV9Score: carry.reviewedV9Score,
+              },
       },
     });
   });

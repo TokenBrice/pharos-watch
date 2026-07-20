@@ -284,7 +284,6 @@ describe("Safety Score V9 shadow envelope", () => {
         "coverage-floor-failed",
         "future-dated-evidence",
         "publication-regression",
-        "unresolved-critical-movement",
         "unresolved-release-blocker",
       ],
     });
@@ -808,5 +807,233 @@ describe("Safety Score V8/V9 shadow diff", () => {
       supplyUsdById: {},
     });
     expect(SafetyScoreV9DiffReportSchema.safeParse({ ...report, reportDigest: digest("0") }).success).toBe(false);
+  });
+});
+
+describe("Safety Score V8/V9 movement disposition carry", () => {
+  const expectedIds = ["carry"];
+  const downstreamThresholds = [
+    { id: "selector-min-70", label: "Selector minimum score", score: 70, comparison: "at-least" as const },
+  ];
+
+  /** Builds one reviewable movement: a V8 A at 90 against a V9 B+ at the supplied score. */
+  function scenario(options: {
+    v9Score: number;
+    v8Score?: number;
+    v9Grade?: SafetyScoreV9Response["cards"][number]["grade"];
+    v9ReasonCodes?: SafetyScoreV9Response["cards"][number]["reasonCodes"];
+    v9BindingCap?: { kind: string; limit: number; source: "structural" } | null;
+  }) {
+    return {
+      generatedAtSec: 1_700_000_180,
+      expectedActiveIds: expectedIds,
+      v8: v8Snapshot([
+        { id: "carry", score: options.v8Score ?? 90, grade: "A", bindingCap: null, reasonCodes: ["legacy-quality"] },
+      ]),
+      v9: envelope(
+        [
+          v9Card("carry", options.v9Score, options.v9Grade ?? "B+", {
+            reasonCodes: options.v9ReasonCodes ?? ["partial-reserve-review"],
+            bindingCap: options.v9BindingCap ?? null,
+          }),
+        ],
+        { expectedActiveIds: expectedIds },
+      ),
+      topCutoffIds: new Set<string>(),
+      downstreamThresholds,
+      supplyUsdById: { carry: 1_000 },
+    };
+  }
+
+  /** The recorded review a reviewer produced against the reviewed movement. */
+  function recordedCarry(reviewedInput: ReturnType<typeof scenario>, disposition: "intended-methodology-change" | "defect") {
+    const reviewed = buildSafetyScoreV9DiffReport(reviewedInput).cards[0]!;
+    return {
+      classKey: reviewed.review.classKey!,
+      carry: {
+        reviewKey: reviewed.review.key!,
+        disposition,
+        reviewedV8Score: reviewed.v8?.score ?? null,
+        reviewedV9Score: reviewed.v9?.score ?? null,
+      },
+    };
+  }
+
+  it("carries a recorded disposition across a sub-threshold score wobble", () => {
+    const { classKey, carry } = recordedCarry(scenario({ v9Score: 84 }), "intended-methodology-change");
+
+    // Two points of drift: a new exact key, an unchanged class, inside the D=3 anchor.
+    const wobbled = buildSafetyScoreV9DiffReport({
+      ...scenario({ v9Score: 82 }),
+      reviewCarriesByClassKey: { [classKey]: carry },
+    }).cards[0]!;
+
+    expect(wobbled.review.key).not.toBe(carry.reviewKey);
+    expect(wobbled.review.classKey).toBe(classKey);
+    expect(wobbled.review).toMatchObject({
+      status: "classified",
+      disposition: "intended-methodology-change",
+      carriedFrom: { reviewKey: carry.reviewKey, reviewedV9Score: 84 },
+    });
+  });
+
+  it("carries across a drifting continuous weakest-pillar score", () => {
+    // v9Card derives weakestPillar.score from the card score, so an unquantised pillar move is
+    // exactly the zero-deadband case the class key drops in favour of the anchor.
+    const { classKey, carry } = recordedCarry(scenario({ v9Score: 84 }), "intended-methodology-change");
+    const drifted = buildSafetyScoreV9DiffReport({
+      ...scenario({ v9Score: 83.5 }),
+      reviewCarriesByClassKey: { [classKey]: carry },
+    }).cards[0]!;
+
+    expect(drifted.review.status).toBe("classified");
+    expect(drifted.review.carriedFrom).not.toBeNull();
+  });
+
+  it("expires the carry when drift exceeds the anchor and re-pends the movement", () => {
+    const { classKey, carry } = recordedCarry(scenario({ v9Score: 84 }), "intended-methodology-change");
+
+    const inside = buildSafetyScoreV9DiffReport({
+      ...scenario({ v9Score: 81 }),
+      reviewCarriesByClassKey: { [classKey]: carry },
+    }).cards[0]!;
+    expect(inside.review.status).toBe("classified");
+
+    // 84 -> 80.9 is 3.1 points, past the ratified cap.
+    const beyond = buildSafetyScoreV9DiffReport({
+      ...scenario({ v9Score: 80.9 }),
+      reviewCarriesByClassKey: { [classKey]: carry },
+    }).cards[0]!;
+    expect(beyond.review).toMatchObject({ status: "pending", disposition: null, carriedFrom: null });
+  });
+
+  it("expires the carry when the V8 anchor drifts past the cap", () => {
+    const { classKey, carry } = recordedCarry(scenario({ v9Score: 84, v8Score: 90 }), "intended-methodology-change");
+
+    const drifted = buildSafetyScoreV9DiffReport({
+      ...scenario({ v9Score: 84, v8Score: 86 }),
+      reviewCarriesByClassKey: { [classKey]: carry },
+    }).cards[0]!;
+
+    expect(drifted.review).toMatchObject({ status: "pending", carriedFrom: null });
+  });
+
+  const classChanges: Array<[string, Parameters<typeof scenario>[0]]> = [
+    ["a grade change", { v9Score: 84, v9Grade: "B" }],
+    ["a reason-code change", { v9Score: 84, v9ReasonCodes: ["critical-unresolved"] }],
+    [
+      "a binding-cap change",
+      { v9Score: 84, v9BindingCap: { kind: "unsafe-backing", limit: 84, source: "structural" } },
+    ],
+  ];
+  it.each(classChanges)("expires the carry on %s", (_label, changed) => {
+    const { classKey, carry } = recordedCarry(scenario({ v9Score: 84 }), "intended-methodology-change");
+
+    const report = buildSafetyScoreV9DiffReport({
+      ...scenario(changed),
+      reviewCarriesByClassKey: { [classKey]: carry },
+    }).cards[0]!;
+
+    expect(report.review.classKey).not.toBe(classKey);
+    expect(report.review).toMatchObject({ status: "pending", disposition: null, carriedFrom: null });
+  });
+
+  it("never lets a defect-class movement inherit a benign disposition", () => {
+    // A benign movement is adjudicated, then the asset swaps its cause for a defect-class reason
+    // code at an identical score. Cause is part of the class, so the benign ruling cannot follow.
+    const { classKey, carry } = recordedCarry(
+      scenario({ v9Score: 84, v9ReasonCodes: ["partial-reserve-review"] }),
+      "intended-methodology-change",
+    );
+
+    const substituted = buildSafetyScoreV9DiffReport({
+      ...scenario({ v9Score: 84, v9ReasonCodes: ["critical-unresolved"] }),
+      reviewCarriesByClassKey: { [classKey]: carry },
+    }).cards[0]!;
+
+    expect(substituted.review.disposition).toBeNull();
+    expect(substituted.review.status).toBe("pending");
+  });
+
+  it("carries a defect disposition without laundering it into a clean review", () => {
+    const { classKey, carry } = recordedCarry(scenario({ v9Score: 84 }), "defect");
+
+    const carried = buildSafetyScoreV9DiffReport({
+      ...scenario({ v9Score: 83 }),
+      reviewCarriesByClassKey: { [classKey]: carry },
+    }).cards[0]!;
+
+    expect(carried.review).toMatchObject({ status: "classified", disposition: "defect" });
+  });
+
+  it("prefers an exact-key disposition over any offered carry", () => {
+    const input = scenario({ v9Score: 84 });
+    const exact = buildSafetyScoreV9DiffReport(input).cards[0]!;
+    const { classKey, carry } = recordedCarry(input, "defect");
+
+    const report = buildSafetyScoreV9DiffReport({
+      ...input,
+      reviewDispositionsByKey: { [exact.review.key!]: "evidence-correction" },
+      reviewCarriesByClassKey: { [classKey]: carry },
+    }).cards[0]!;
+
+    expect(report.review).toMatchObject({
+      status: "classified",
+      disposition: "evidence-correction",
+      carriedFrom: null,
+    });
+  });
+});
+
+describe("Safety Score V9 daily qualification scope", () => {
+  it("does not block a day on unresolved movement adjudication alone", () => {
+    const result = envelope([v9Card("alpha", 90, "A")], {
+      unresolvedCriticalMovementIds: ["alpha"],
+    });
+
+    expect(assessSafetyScoreV9ShadowQualification(result)).toEqual({ qualifies: true, blockers: [] });
+    // The record is still carried on the run for the window-end gate to enforce.
+    expect(result.coverage.unresolvedCriticalMovementIds).toEqual(["alpha"]);
+  });
+
+  it.each([
+    [
+      "a failing coverage floor",
+      {
+        coverageFloors: [
+          { id: "active-result-count", status: "fail" as const, observed: 0, required: "1", detail: "No results" },
+        ],
+      },
+      "coverage-floor-failed",
+    ],
+    [
+      "a compiler exception",
+      { compilerExceptions: ["alpha:compile"] },
+      "compiler-exception",
+    ],
+    [
+      "an active-ID bijection break",
+      { expectedActiveIds: ["alpha", "beta"] },
+      "active-id-bijection-failed",
+    ],
+    [
+      "a publication regression",
+      { publicationRegression: true },
+      "publication-regression",
+    ],
+    [
+      "future-dated evidence",
+      { futureDatedEvidenceIds: ["alpha:future"] },
+      "future-dated-evidence",
+    ],
+  ])("still fails the day on %s", (_label, options, expected) => {
+    const result = envelope([v9Card("alpha", 90, "A")], {
+      ...options,
+      unresolvedCriticalMovementIds: ["alpha"],
+    });
+
+    const qualification = assessSafetyScoreV9ShadowQualification(result);
+    expect(qualification.qualifies).toBe(false);
+    expect(qualification.blockers).toContain(expected);
   });
 });

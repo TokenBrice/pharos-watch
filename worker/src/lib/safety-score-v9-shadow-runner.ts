@@ -17,7 +17,10 @@ import {
   type SafetyScoreV9CandidatePipelineResult,
 } from "./safety-score-v9-candidate";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "./safety-score-v9-extension";
-import { loadSafetyScoreV9MovementReviewDispositions } from "./safety-score-v9-movement-reviews";
+import {
+  loadSafetyScoreV9MovementReviewCarries,
+  loadSafetyScoreV9MovementReviewDispositions,
+} from "./safety-score-v9-movement-reviews";
 import {
   assessSafetyScoreV9ShadowReleaseCoverage,
   loadSafetyScoreV9SealedReleaseCandidateId,
@@ -505,6 +508,11 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       pendingDiff.cards.flatMap((card) => (card.review.key === null ? [] : [card.review.key])),
       shadowSignal,
     );
+    const reviewCarriesByClassKey = await loadSafetyScoreV9MovementReviewCarries(
+      input.db,
+      pendingDiff.cards.flatMap((card) => (card.review.classKey === null ? [] : [card.review.classKey])),
+      shadowSignal,
+    );
     const reviewedDiff = buildSafetyScoreV9DiffReport({
       generatedAtSec: completedAtSec,
       expectedActiveIds,
@@ -514,6 +522,7 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       downstreamThresholds: downstreamThresholds(),
       supplyUsdById: supply.supplyUsdById,
       reviewDispositionsByKey,
+      reviewCarriesByClassKey,
     });
     const unresolvedCriticalMovementIds = reviewedDiff.cards
       .filter(
@@ -653,6 +662,7 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
         downstreamThresholds: downstreamThresholds(),
         supplyUsdById: supply.supplyUsdById,
         reviewDispositionsByKey,
+        reviewCarriesByClassKey,
       });
     }
 

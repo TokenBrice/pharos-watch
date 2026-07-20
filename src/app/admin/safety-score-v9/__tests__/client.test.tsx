@@ -80,11 +80,14 @@ describe("SafetyScoreV9Client", () => {
     const card = response.diff.cards[0]!;
     adminMutationMock.mockResolvedValue({
       data: {
-        schemaVersion: 1,
+        schemaVersion: 2,
         status: "recorded",
         review: {
-          schemaVersion: 1,
+          schemaVersion: 2,
           reviewKey: card.review.key,
+          reviewClassKey: card.review.classKey,
+          reviewedV8Score: card.v8?.score ?? null,
+          reviewedV9Score: card.v9?.score ?? null,
           assetId: card.id,
           sourceDiffReportDigest: response.diff.reportDigest,
           candidateId: response.diff.v9Identity.candidateId,

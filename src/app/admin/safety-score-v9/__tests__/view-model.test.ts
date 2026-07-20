@@ -46,8 +46,11 @@ describe("Safety Score V9 admin view model", () => {
     const card = response.diff.cards[0]!;
     response.movementReviews = [
       {
-        schemaVersion: 1,
+        schemaVersion: 2,
         reviewKey: card.review.key!,
+        reviewClassKey: card.review.classKey!,
+        reviewedV8Score: card.v8?.score ?? null,
+        reviewedV9Score: card.v9?.score ?? null,
         assetId: card.id,
         sourceDiffReportDigest: response.diff.reportDigest,
         candidateId: response.diff.v9Identity.candidateId,

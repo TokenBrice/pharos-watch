@@ -33,10 +33,12 @@ const migrationPath = resolve(
   "../../../migrations/0200_safety_score_v9_shadow_history.sql",
 );
 const migration = readFileSync(migrationPath, "utf8");
-const movementReviewMigration = readFileSync(
-  resolve(dirname(fileURLToPath(import.meta.url)), "../../../migrations/0202_safety_score_v9_movement_reviews.sql"),
-  "utf8",
-);
+const movementReviewMigration = [
+  "../../../migrations/0202_safety_score_v9_movement_reviews.sql",
+  "../../../migrations/0220_safety_score_v9_movement_review_carry.sql",
+]
+  .map((path) => readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), path), "utf8"))
+  .join("\n");
 const digest = (character: string) => character.repeat(64);
 const scheduledForSec = 1_700_000_000;
 const baseInputGenerationId = `report-cards-input:v1:${digest("a")}`;

@@ -20,6 +20,9 @@ const SAFETY_SCORE_V9_MOVEMENT_REVIEW_DIGEST_DOMAIN = "safety-score-v9.movement-
 
 interface MovementReviewRow {
   review_key: string;
+  review_class_key: string;
+  reviewed_v8_score: number | null;
+  reviewed_v9_score: number | null;
   asset_id: string;
   source_diff_report_digest: string;
   candidate_id: string;
@@ -57,6 +60,9 @@ function hasSameImmutableReviewIntent(
 ): boolean {
   return (
     left.reviewKey === right.reviewKey &&
+    left.reviewClassKey === right.reviewClassKey &&
+    left.reviewedV8Score === right.reviewedV8Score &&
+    left.reviewedV9Score === right.reviewedV9Score &&
     left.assetId === right.assetId &&
     left.candidateId === right.candidateId &&
     left.policyDigest === right.policyDigest &&
@@ -100,10 +106,18 @@ export function createSafetyScoreV9MovementReview(input: {
   if (request.reviewKey !== card.review.key) {
     throw new SafetyScoreV9MovementReviewConflictError("Safety Score v9 movement review key is stale");
   }
+  if (card.review.classKey === null) {
+    throw new Error(`Safety Score v9 movement ${request.assetId} has no review class key`);
+  }
 
+  // The class key and score anchors are derived from the diff card, never supplied by the caller,
+  // so a client cannot widen the class its ruling will carry across.
   const payload = {
     schemaVersion: SAFETY_SCORE_V9_MOVEMENT_REVIEW_SCHEMA_VERSION,
     reviewKey: request.reviewKey,
+    reviewClassKey: card.review.classKey,
+    reviewedV8Score: card.v8?.score ?? null,
+    reviewedV9Score: card.v9?.score ?? null,
     assetId: request.assetId,
     sourceDiffReportDigest: request.sourceDiffReportDigest,
     candidateId: diff.v9Identity.candidateId,
@@ -135,6 +149,9 @@ function parseReviewRow(row: MovementReviewRow): SafetyScoreV9MovementReviewReco
   const projection = {
     schemaVersion: SAFETY_SCORE_V9_MOVEMENT_REVIEW_SCHEMA_VERSION,
     reviewKey: row.review_key,
+    reviewClassKey: row.review_class_key,
+    reviewedV8Score: row.reviewed_v8_score,
+    reviewedV9Score: row.reviewed_v9_score,
     assetId: row.asset_id,
     sourceDiffReportDigest: row.source_diff_report_digest,
     candidateId: row.candidate_id,
@@ -154,7 +171,8 @@ function parseReviewRow(row: MovementReviewRow): SafetyScoreV9MovementReviewReco
   return review;
 }
 
-const REVIEW_SELECT = `SELECT review_key, asset_id, source_diff_report_digest, candidate_id,
+const REVIEW_SELECT = `SELECT review_key, review_class_key, reviewed_v8_score, reviewed_v9_score,
+  asset_id, source_diff_report_digest, candidate_id,
   source_publication_generation_id, policy_digest, evaluation_build_digest,
   v8_methodology_version, disposition, reviewer_id, rationale, reviewed_at_sec,
   review_digest, review_json FROM safety_score_v9_movement_reviews`;
@@ -203,15 +221,19 @@ export async function persistSafetyScoreV9MovementReview(
       db
         .prepare(
           `INSERT INTO safety_score_v9_movement_reviews
-           (review_key, asset_id, source_diff_report_digest, candidate_id,
+           (review_key, review_class_key, reviewed_v8_score, reviewed_v9_score,
+            asset_id, source_diff_report_digest, candidate_id,
             source_publication_generation_id, policy_digest, evaluation_build_digest,
             v8_methodology_version, disposition, reviewer_id, rationale, reviewed_at_sec,
             review_digest, review_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT DO NOTHING`,
         )
         .bind(
           review.reviewKey,
+          review.reviewClassKey,
+          review.reviewedV8Score,
+          review.reviewedV9Score,
           review.assetId,
           review.sourceDiffReportDigest,
           review.candidateId,
@@ -277,6 +299,70 @@ export async function loadSafetyScoreV9MovementReviewDispositions(
     (await loadSafetyScoreV9MovementReviews(db, reviewKeys, signal)).map((review) => [
       review.reviewKey,
       review.disposition,
+    ]),
+  );
+}
+
+/**
+ * Loads the dispositions eligible to carry into today's run, indexed by movement class key.
+ *
+ * A class can hold several recorded reviews once a movement's exact key has churned; the most
+ * recent ruling wins, since it adjudicated the closest observation. The score anchors travel with
+ * it so the caller can enforce the drift cap. This never decides whether a carry applies — it
+ * only supplies what was recorded.
+ */
+export async function loadSafetyScoreV9MovementReviewCarries(
+  db: D1Database,
+  classKeysInput: readonly string[],
+  signal?: AbortSignal,
+): Promise<
+  Record<
+    string,
+    {
+      reviewKey: string;
+      disposition: SafetyScoreV9MovementReviewDisposition;
+      reviewedV8Score: number | null;
+      reviewedV9Score: number | null;
+    }
+  >
+> {
+  const classKeys = [...new Set(classKeysInput)].sort(compareText);
+  if (classKeys.length === 0) return {};
+  const reviews: SafetyScoreV9MovementReviewRecord[] = [];
+  for (let offset = 0; offset < classKeys.length; offset += 100) {
+    throwIfAborted(signal);
+    const chunk = classKeys.slice(offset, offset + 100);
+    const placeholders = chunk.map(() => "?").join(", ");
+    const rows = await runWithOverloadRetry(
+      () =>
+        db
+          .prepare(`${REVIEW_SELECT} WHERE review_class_key IN (${placeholders}) ORDER BY review_key`)
+          .bind(...chunk)
+          .all<MovementReviewRow>(),
+      3,
+      signal,
+    );
+    reviews.push(...(rows.results ?? []).map(parseReviewRow));
+  }
+  throwIfAborted(signal);
+  const byClassKey = new Map<string, SafetyScoreV9MovementReviewRecord>();
+  for (const review of reviews) {
+    const existing = byClassKey.get(review.reviewClassKey);
+    const supersedes =
+      existing === undefined ||
+      review.reviewedAtSec > existing.reviewedAtSec ||
+      (review.reviewedAtSec === existing.reviewedAtSec && compareText(review.reviewKey, existing.reviewKey) > 0);
+    if (supersedes) byClassKey.set(review.reviewClassKey, review);
+  }
+  return Object.fromEntries(
+    [...byClassKey.entries()].map(([classKey, review]) => [
+      classKey,
+      {
+        reviewKey: review.reviewKey,
+        disposition: review.disposition,
+        reviewedV8Score: review.reviewedV8Score,
+        reviewedV9Score: review.reviewedV9Score,
+      },
     ]),
   );
 }

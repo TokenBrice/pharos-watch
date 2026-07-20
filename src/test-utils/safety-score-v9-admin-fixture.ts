@@ -190,7 +190,7 @@ export function makeSafetyScoreV9AdminAvailableResponse(): Extract<
             downstreamThresholdCrossingIds: [],
             requiresReview: true,
           },
-          review: { key: DIGEST, status: "pending", disposition: null },
+          review: { key: DIGEST, classKey: DIGEST, status: "pending", disposition: null, carriedFrom: null },
         },
       ],
       reportDigest: DIGEST,
