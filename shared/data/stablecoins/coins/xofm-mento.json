@@ -76,8 +76,8 @@
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "XOFm is documented as a Mento stable on Celo and the editable registry has only a Celo deployment. The row was reviewed as native/single-chain for bridge-route scoring.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
     "confidence": "verified",
     "protocols": [
       {
@@ -95,6 +95,38 @@
       {
         "label": "Mento addresses",
         "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+      }
+    ],
+    "routes": [
+      {
+        "id": "celo:0x73f93dcc49cb8a239e2032663e9475dd5ef29a08",
+        "destinationChain": "celo",
+        "canonicalChain": "celo",
+        "contractAddress": "0x73f93dcc49cb8a239e2032663e9475dd5ef29a08",
+        "protocol": "Mento (native)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Mento XOFm on Celo: name 'Mento West African CFA franc', symbol XOFm, totalSupply 19,186,531.6 XOFm (verified on-chain 2026-07-20), matching the exact captured supply; Mento stables are minted natively on Celo by the Mento protocol.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Mento stablecoin docs",
+            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          },
+          {
+            "label": "Mento addresses",
+            "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+          },
+          {
+            "label": "XOFm on Celo explorer (supply probed 2026-07-20)",
+            "url": "https://celoscan.io/address/0x73f93dcc49cb8a239e2032663e9475dd5ef29a08"
+          }
+        ]
       }
     ]
   },
@@ -172,9 +204,68 @@
       "pct": 100,
       "risk": "low",
       "coinId": "cusd-celo",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Mento V3 CDP documentation",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp"
+      },
+      {
+        "label": "Mento V3 stablecoin acquisition documentation",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "Mento Reserve dashboard",
+        "url": "https://reserve.mento.org/"
+      }
+    ],
+    "rationale": "Mento documents every V3 FX CDP instance as an independent Liquity-style system that uses USDm as its sole collateral asset, so XOFm's reserve-derived dependency is exactly 100% Mento Dollar. The live Mento reserve analytics API exposes no active XOFm CDP troves as of 2026-07-20, so the collateralization level cannot be independently observed; the documented single-collateral path is retained with the structured classification now explicit.",
+    "compositionBasis": "Documented single-collateral Mento V3 FX CDP architecture",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unidentified direct stablecoin dependency remains in the documented USDm-only CDP path; USDm's reserve look-through is reviewed on the upstream asset.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Mento CDP and stable-token contracts (Celo)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Mento Reserve dashboard",
+        "url": "https://reserve.mento.org/"
+      },
+      {
+        "label": "Mento protocol documentation",
+        "url": "https://docs.mento.org/"
+      }
+    ],
+    "uncertainty": "USDm collateral is held in Mento's on-chain CDP contracts under Mento governance rather than with a legal custodian, so legal segregation, insolvency treatment, and reuse restrictions are not established by the reviewed sources; upstream USDm reserve custody sits with the Mento Reserve contract and each basket issuer.",
+    "knownUnknownExposurePct": 100
+  },
   "notices": [
     {
       "type": "info",

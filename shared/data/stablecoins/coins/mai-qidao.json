@@ -146,9 +146,9 @@
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "MAI historically expanded across many chains through third-party bridge allocations, with public governance and post-incident reporting tying MAI's cross-chain supply to Multichain-era bridge exposure. Because supply integrity depended on external lock/mint infrastructure rather than issuer-native settlement, MAI is scored as external-lock-mint.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "MAI historically expanded across many chains through third-party bridge allocations (Multichain era), and public governance and post-incident reporting tied MAI's cross-chain supply to Multichain-era bridge exposure. 2026-07-20 on-chain re-verification: current per-chain MAI tokens are owned by QiDao per-chain Safe multisigs (enumerated per row), so present-day mint control is issuer-administered; tracked MAI supply is ~zero across chains. Because legacy supply integrity depended on external lock/mint infrastructure, the profile keeps external-lock-mint tiering history while current deployments are issuer-native.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "probable",
     "protocols": [
       {
@@ -177,181 +177,337 @@
         "id": "polygon:0xa3fa99a148fa48d14ed51d610c367c61876997f1",
         "destinationChain": "polygon",
         "contractAddress": "0xa3fa99a148fa48d14ed51d610c367c61876997f1",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "QiDao native multichain MAI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on polygon at block 90539741: MAI token 0xa3fa99a148fa48d14ed51d610c367c61876997f1 (symbol miMATIC) owner() = 0x3feacf904b152b1880bde8bf04ac9eb636fee4d8, a Safe multisig with getThreshold/getOwners = 3-of-5. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract. Polygon is QiDao's canonical home chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "polygon",
+        "canonicalChain": "polygon",
+        "observedBlock": 90539741,
+        "sources": [
+          {
+            "label": "MAI on polygon explorer (owner verified 2026-07-20)",
+            "url": "https://polygonscan.com/address/0xa3fa99a148fa48d14ed51d610c367c61876997f1"
+          },
+          {
+            "label": "QiDao documentation",
+            "url": "https://docs.mai.finance/"
+          }
+        ]
       },
       {
         "id": "ethereum:0x8d6cebd76f18e1558d4db88138e2defb3909fad6",
         "destinationChain": "ethereum",
         "contractAddress": "0x8d6cebd76f18e1558d4db88138e2defb3909fad6",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "QiDao native multichain MAI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on ethereum at block 25570948: MAI token 0x8d6cebd76f18e1558d4db88138e2defb3909fad6 (symbol MAI) owner() = 0x3182e6856c3b59c39114416075770ec9dc9ff436, a Safe multisig with getThreshold/getOwners = 4-of-6. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "polygon",
+        "canonicalChain": "polygon",
+        "observedBlock": 25570948,
+        "sources": [
+          {
+            "label": "MAI on ethereum explorer (owner verified 2026-07-20)",
+            "url": "https://etherscan.io/address/0x8d6cebd76f18e1558d4db88138e2defb3909fad6"
+          },
+          {
+            "label": "QiDao documentation",
+            "url": "https://docs.mai.finance/"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x3f56e0c36d275367b8c502090edf38289b3dea0d",
         "destinationChain": "arbitrum",
         "contractAddress": "0x3f56e0c36d275367b8c502090edf38289b3dea0d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "QiDao native multichain MAI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on arbitrum at block 485694120: MAI token 0x3f56e0c36d275367b8c502090edf38289b3dea0d (symbol MAI) owner() = 0xf32e759d5f1c63ed62042497d3a50f044ee0982b, a Safe multisig with getThreshold/getOwners = 2-of-4. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "polygon",
+        "canonicalChain": "polygon",
+        "observedBlock": 485694120,
+        "sources": [
+          {
+            "label": "MAI on arbitrum explorer (owner verified 2026-07-20)",
+            "url": "https://arbiscan.io/address/0x3f56e0c36d275367b8c502090edf38289b3dea0d"
+          },
+          {
+            "label": "QiDao documentation",
+            "url": "https://docs.mai.finance/"
+          }
+        ]
       },
       {
         "id": "optimism:0xdfa46478f9e5ea86d57387849598dbfb2e964b02",
         "destinationChain": "optimism",
         "contractAddress": "0xdfa46478f9e5ea86d57387849598dbfb2e964b02",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "QiDao native multichain MAI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on optimism at block 154457915: MAI token 0xdfa46478f9e5ea86d57387849598dbfb2e964b02 (symbol MAI) owner() = 0xb1a8d1d6dc07ca0e1e78a0004aa0bb034fa73d60, a Safe multisig with getThreshold/getOwners = 2-of-4. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "polygon",
+        "canonicalChain": "polygon",
+        "observedBlock": 154457915,
+        "sources": [
+          {
+            "label": "MAI on optimism explorer (owner verified 2026-07-20)",
+            "url": "https://optimistic.etherscan.io/address/0xdfa46478f9e5ea86d57387849598dbfb2e964b02"
+          },
+          {
+            "label": "QiDao documentation",
+            "url": "https://docs.mai.finance/"
+          }
+        ]
       },
       {
         "id": "base:0xbf1aea8670d2528e08334083616dd9c5f3b087ae",
         "destinationChain": "base",
         "contractAddress": "0xbf1aea8670d2528e08334083616dd9c5f3b087ae",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "QiDao native multichain MAI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on base at block 48862632: MAI token 0xbf1aea8670d2528e08334083616dd9c5f3b087ae (symbol MAI) owner() = 0xe816f03e31a75cabe64861064a6219ebe62c613d, a Safe multisig with getThreshold/getOwners = 4-of-6. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "polygon",
+        "canonicalChain": "polygon",
+        "observedBlock": 48862632,
+        "sources": [
+          {
+            "label": "MAI on base explorer (owner verified 2026-07-20)",
+            "url": "https://basescan.org/address/0xbf1aea8670d2528e08334083616dd9c5f3b087ae"
+          },
+          {
+            "label": "QiDao documentation",
+            "url": "https://docs.mai.finance/"
+          }
+        ]
       },
       {
         "id": "avalanche:0x5c49b268c9841aff1cc3b0a418ff5c3442ee3f3b",
         "destinationChain": "avalanche",
         "contractAddress": "0x5c49b268c9841aff1cc3b0a418ff5c3442ee3f3b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "QiDao native multichain MAI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on avalanche at block 90754854: MAI token 0x5c49b268c9841aff1cc3b0a418ff5c3442ee3f3b (symbol MAI) owner() = 0x3cf6a36876bdecadeab420aff93171439abf9ca2, a Safe multisig with getThreshold/getOwners = 2-of-4. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "polygon",
+        "canonicalChain": "polygon",
+        "observedBlock": 90754854,
+        "sources": [
+          {
+            "label": "MAI on avalanche explorer (owner verified 2026-07-20)",
+            "url": "https://snowscan.xyz/address/0x5c49b268c9841aff1cc3b0a418ff5c3442ee3f3b"
+          },
+          {
+            "label": "QiDao documentation",
+            "url": "https://docs.mai.finance/"
+          }
+        ]
       },
       {
         "id": "fantom:0xfb98b335551a418cd0737375a2ea0ded62ea213b",
         "destinationChain": "fantom",
         "contractAddress": "0xfb98b335551a418cd0737375a2ea0ded62ea213b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "QiDao native multichain MAI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on fantom at block 122578793: MAI token 0xfb98b335551a418cd0737375a2ea0ded62ea213b (symbol miMATIC) owner() = 0x679016b3f8e98673f85c6f72567f22b58aa15a54, a Safe multisig with getThreshold/getOwners = 2-of-3. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "polygon",
+        "canonicalChain": "polygon",
+        "observedBlock": 122578793,
+        "sources": [
+          {
+            "label": "MAI on fantom explorer (owner verified 2026-07-20)",
+            "url": "https://ftmscan.com/address/0xfb98b335551a418cd0737375a2ea0ded62ea213b"
+          },
+          {
+            "label": "QiDao documentation",
+            "url": "https://docs.mai.finance/"
+          }
+        ]
       },
       {
         "id": "gnosis:0x3f56e0c36d275367b8c502090edf38289b3dea0d",
         "destinationChain": "gnosis",
         "contractAddress": "0x3f56e0c36d275367b8c502090edf38289b3dea0d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "QiDao native multichain MAI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on gnosis at block 47292558: MAI token 0x3f56e0c36d275367b8c502090edf38289b3dea0d (symbol MAI) owner() = 0x4f5af8bc14812fe5e4c7253ebf5335481e3a9e80, a Safe multisig with getThreshold/getOwners = 4-of-6. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "polygon",
+        "canonicalChain": "polygon",
+        "observedBlock": 47292558,
+        "sources": [
+          {
+            "label": "MAI on gnosis explorer (owner verified 2026-07-20)",
+            "url": "https://gnosisscan.io/address/0x3f56e0c36d275367b8c502090edf38289b3dea0d"
+          },
+          {
+            "label": "QiDao documentation",
+            "url": "https://docs.mai.finance/"
+          }
+        ]
       },
       {
         "id": "metis:0xdfa46478f9e5ea86d57387849598dbfb2e964b02",
         "destinationChain": "metis",
         "contractAddress": "0xdfa46478f9e5ea86d57387849598dbfb2e964b02",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "QiDao native multichain MAI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on metis at block 22922619: MAI token 0xdfa46478f9e5ea86d57387849598dbfb2e964b02 (symbol MAI) owner() = 0xc9d3750d3ccb25835799087a34bf9ed9cad854d8, a Safe multisig with getThreshold/getOwners = 4-of-6. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "polygon",
+        "canonicalChain": "polygon",
+        "observedBlock": 22922619,
+        "sources": [
+          {
+            "label": "MAI on metis explorer (owner verified 2026-07-20)",
+            "url": "https://andromeda-explorer.metis.io/address/0xdfa46478f9e5ea86d57387849598dbfb2e964b02"
+          },
+          {
+            "label": "QiDao documentation",
+            "url": "https://docs.mai.finance/"
+          }
+        ]
       },
       {
         "id": "moonbeam:0xdfa46478f9e5ea86d57387849598dbfb2e964b02",
         "destinationChain": "moonbeam",
         "contractAddress": "0xdfa46478f9e5ea86d57387849598dbfb2e964b02",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "QiDao native multichain MAI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on moonbeam at block 16514101: MAI token 0xdfa46478f9e5ea86d57387849598dbfb2e964b02 (symbol MAI) owner() = 0x75c7b52899b435ea81e118b429481b0ecbc0104d, a Safe multisig with getThreshold/getOwners = 4-of-6. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "polygon",
+        "canonicalChain": "polygon",
+        "observedBlock": 16514101,
+        "sources": [
+          {
+            "label": "MAI on moonbeam explorer (owner verified 2026-07-20)",
+            "url": "https://moonscan.io/address/0xdfa46478f9e5ea86d57387849598dbfb2e964b02"
+          },
+          {
+            "label": "QiDao documentation",
+            "url": "https://docs.mai.finance/"
+          }
+        ]
       },
       {
         "id": "kava:0xb84df10966a5d7e1ab46d9276f55d57bd336afc7",
         "destinationChain": "kava",
         "contractAddress": "0xb84df10966a5d7e1ab46d9276f55d57bd336afc7",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "QiDao native multichain MAI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on kava at block 21715995: MAI token 0xb84df10966a5d7e1ab46d9276f55d57bd336afc7 (symbol MAI) owner() = 0xe43d58b8e376650440ff8b249226b1d8c95c3a83, a Safe multisig with getThreshold/getOwners = 4-of-6. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "polygon",
+        "canonicalChain": "polygon",
+        "observedBlock": 21715995,
+        "sources": [
+          {
+            "label": "MAI on kava explorer (owner verified 2026-07-20)",
+            "url": "https://kavascan.com/address/0xb84df10966a5d7e1ab46d9276f55d57bd336afc7"
+          },
+          {
+            "label": "QiDao documentation",
+            "url": "https://docs.mai.finance/"
+          }
+        ]
       },
       {
         "id": "polygon-zkevm:0x615b25500403eb688be49221b303084d9cf0e5b4",
         "destinationChain": "polygon-zkevm",
         "contractAddress": "0x615b25500403eb688be49221b303084d9cf0e5b4",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "QiDao native multichain MAI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on polygon-zkevm at block 33391890: MAI token 0x615b25500403eb688be49221b303084d9cf0e5b4 (symbol MAI) owner() = 0x20265d77e0f5a7e86fdb013e408c4adf11289355, a Safe multisig with getThreshold/getOwners = 2-of-4. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "polygon",
+        "canonicalChain": "polygon",
+        "observedBlock": 33391890,
+        "sources": [
+          {
+            "label": "MAI on polygon-zkevm explorer (owner verified 2026-07-20)",
+            "url": "https://zkevm.polygonscan.com/address/0x615b25500403eb688be49221b303084d9cf0e5b4"
+          },
+          {
+            "label": "QiDao documentation",
+            "url": "https://docs.mai.finance/"
+          }
+        ]
       },
       {
         "id": "fraxtal:0xb84df10966a5d7e1ab46d9276f55d57bd336afc7",
@@ -364,39 +520,66 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "Verified on Fraxtal at block 38851950: the contract 0xb84df10966a5d7e1ab46d9276f55d57bd336afc7 reports name 'Mai Stablecoin' with totalSupply() = 0, and owner()/authority()/endpoint() reads all revert, so no controller can be honestly identified for this dormant zero-supply deployment. Left unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "observedBlock": 38851950
       },
       {
         "id": "bsc:0x3f56e0c36d275367b8c502090edf38289b3dea0d",
         "destinationChain": "bsc",
         "contractAddress": "0x3f56e0c36d275367b8c502090edf38289b3dea0d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "QiDao native multichain MAI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on bsc at block 111011381: MAI token 0x3f56e0c36d275367b8c502090edf38289b3dea0d (symbol MAI) owner() = 0xff34fdcf12174293a518e585807c9b60decf5843, a Safe multisig with getThreshold/getOwners = 2-of-4. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "polygon",
+        "canonicalChain": "polygon",
+        "observedBlock": 111011381,
+        "sources": [
+          {
+            "label": "MAI on bsc explorer (owner verified 2026-07-20)",
+            "url": "https://bscscan.com/address/0x3f56e0c36d275367b8c502090edf38289b3dea0d"
+          },
+          {
+            "label": "QiDao documentation",
+            "url": "https://docs.mai.finance/"
+          }
+        ]
       },
       {
         "id": "linea:0xf3b001d64c656e30a62fbaaca003b1336b4ce12a",
         "destinationChain": "linea",
         "contractAddress": "0xf3b001d64c656e30a62fbaaca003b1336b4ce12a",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "QiDao native multichain MAI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on linea at block 31447174: MAI token 0xf3b001d64c656e30a62fbaaca003b1336b4ce12a (symbol MAI) owner() = 0xf1da2623e31be26d8faea038c3046d142341cf20, a Safe multisig with getThreshold/getOwners = 2-of-4. Current MAI deployments are QiDao-administered contracts whose mint authority is the issuer's per-chain Safe, not a third-party bridge contract.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "polygon",
+        "canonicalChain": "polygon",
+        "observedBlock": 31447174,
+        "sources": [
+          {
+            "label": "MAI on linea explorer (owner verified 2026-07-20)",
+            "url": "https://lineascan.build/address/0xf3b001d64c656e30a62fbaaca003b1336b4ce12a"
+          },
+          {
+            "label": "QiDao documentation",
+            "url": "https://docs.mai.finance/"
+          }
+        ]
       }
     ]
   },
@@ -408,7 +591,13 @@
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "QiDao vault borrowers across multi-chain markets",
-      "riskFactors": ["market", "liquidity", "smart-contract", "custody", "concentration"],
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "custody",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
@@ -416,13 +605,26 @@
     "reviewedAt": "2026-07-14",
     "reviewer": "SONG Safety Score V9 reserve review",
     "confidence": "unknown",
-    "sources": [{ "label": "QiDao documentation", "url": "https://docs.mai.finance/" }],
+    "sources": [
+      {
+        "label": "QiDao documentation",
+        "url": "https://docs.mai.finance/"
+      }
+    ],
     "rationale": "BLOCKED: QiDao documents overcollateralized multi-market vaults but does not publish a current all-chain collateral composition or market weights for MAI.",
     "compositionBasis": "QiDao CDP design; current vault composition undisclosed",
     "scope": "selected-slices",
     "knownUnknownExposure": "The full recorded multi-market crypto-vault category lacks current public constituent weights.",
     "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [{ "reserveIndex": 0, "reserveName": "QiDao overcollateralized crypto vaults", "pct": 100, "disposition": "insufficient-evidence", "rationale": "No current cross-market collateral allocation is published." }]
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "QiDao overcollateralized crypto vaults",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "No current cross-market collateral allocation is published."
+      }
+    ]
   },
   "notices": [
     {
@@ -452,7 +654,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "MAI is minted by borrowing against overcollateralized QiDao vault positions. Token owners confirmed on primary chains: Polygon 3/5 Safe, Ethereum 4/6 Safe, Arbitrum 2/4 Safe — all with overlapping signers and no modules. Other chains note-only per task scope.",
+    "summary": "MAI is minted by borrowing against overcollateralized QiDao vault positions. Token owners confirmed on primary chains: Polygon 3/5 Safe, Ethereum 4/6 Safe, Arbitrum 2/4 Safe \u2014 all with overlapping signers and no modules. Other chains note-only per task scope.",
     "controls": [
       {
         "chain": "polygon",
@@ -571,7 +773,7 @@
       }
     ],
     "review": {
-      "evidence": "Polygon (block 88326121): 3/5 Safe owner, no modules. Ethereum (block 25361903): 4/6 Safe owner, no modules. Arbitrum (block 471552027): 2/4 Safe owner, no modules. All three chains use GnosisProxy multisigs with overlapping signers. masterMinter()/MINTER_ROLE both revert — owner-only mint pattern. Other minor chains (Optimism, Base, Avalanche, BSC, etc.) use the same Ownable pattern but their admins are note-only per brief scope; primary covered chains verified.",
+      "evidence": "Polygon (block 88326121): 3/5 Safe owner, no modules. Ethereum (block 25361903): 4/6 Safe owner, no modules. Arbitrum (block 471552027): 2/4 Safe owner, no modules. All three chains use GnosisProxy multisigs with overlapping signers. masterMinter()/MINTER_ROLE both revert \u2014 owner-only mint pattern. Other minor chains (Optimism, Base, Avalanche, BSC, etc.) use the same Ownable pattern but their admins are note-only per brief scope; primary covered chains verified.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11",
       "sources": [

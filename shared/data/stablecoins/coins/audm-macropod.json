@@ -44,8 +44,8 @@
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Macropod describes AUDM as an issuer-backed Australian dollar token and announced direct deployment on Base after earlier Ethereum, Solana, and Redbelly support. No third-party bridge dependency was resolved, so the route is reviewed as issuer-native multichain issuance.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "probable",
     "sources": [
       {
@@ -66,61 +66,112 @@
         "id": "ethereum:0x081599e4936d12c46bd48913b2329115cd26cbdd",
         "destinationChain": "ethereum",
         "contractAddress": "0x081599e4936d12c46bd48913b2329115cd26cbdd",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Macropod issuer-native AUDM (multichain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on ethereum at block 25570987: AUDM token 0x081599e4936d12c46bd48913b2329115cd26cbdd resolves to Macropod's shared UUPS implementation 0xebadaf3d0ee4bbaa94717bd9029244b1df2f47aa; the verified mint-authority review (2026-07-15) confirms DEFAULT_ADMIN EOA 0x999071576cc6d7feadb908bede992ab9e19212cf and MINTER_ROLE EOA 0x3529a9f8193cce36df81123b59cdb4250219db39 on all EVM chains. Issuer-minted natively on this chain; no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 25570987,
+        "sources": [
+          {
+            "label": "AUDM on ethereum explorer (verified 2026-07-20)",
+            "url": "https://etherscan.io/address/0x081599e4936d12c46bd48913b2329115cd26cbdd"
+          },
+          {
+            "label": "Macropod AUDM",
+            "url": "https://macropod.com/"
+          }
+        ]
       },
       {
         "id": "solana:CiYXBwHPrdNkMtxR8YEWKv78K6bQjFoEWhPQrZqEmubi",
         "destinationChain": "solana",
         "contractAddress": "CiYXBwHPrdNkMtxR8YEWKv78K6bQjFoEWhPQrZqEmubi",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Macropod issuer-native AUDM (Solana Token-2022)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "AUDM Solana Token-2022 mint CiYXBwHPrdNkMtxR8YEWKv78K6bQjFoEWhPQrZqEmubi has a distinct System Program-owned wallet BS6KEeboF6Z2yDbxa8FD6U as mint authority, per the verified mint-authority review (2026-07-15). Issuer-minted natively on Solana; no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "AUDM mint on Solscan",
+            "url": "https://solscan.io/token/CiYXBwHPrdNkMtxR8YEWKv78K6bQjFoEWhPQrZqEmubi"
+          },
+          {
+            "label": "Macropod AUDM",
+            "url": "https://macropod.com/"
+          }
+        ]
       },
       {
         "id": "redbelly:0x081599e4936d12c46bd48913b2329115cd26cbdd",
         "destinationChain": "redbelly",
         "contractAddress": "0x081599e4936d12c46bd48913b2329115cd26cbdd",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Macropod issuer-native AUDM (multichain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on redbelly at block 3075403: AUDM token 0x081599e4936d12c46bd48913b2329115cd26cbdd resolves to Macropod's shared UUPS implementation 0xebadaf3d0ee4bbaa94717bd9029244b1df2f47aa; the verified mint-authority review (2026-07-15) confirms DEFAULT_ADMIN EOA 0x999071576cc6d7feadb908bede992ab9e19212cf and MINTER_ROLE EOA 0x3529a9f8193cce36df81123b59cdb4250219db39 on all EVM chains. Issuer-minted natively on this chain; no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 3075403,
+        "sources": [
+          {
+            "label": "AUDM on redbelly explorer (verified 2026-07-20)",
+            "url": "https://explorer.redbelly.network/address/0x081599e4936d12c46bd48913b2329115cd26cbdd"
+          },
+          {
+            "label": "Macropod AUDM",
+            "url": "https://macropod.com/"
+          }
+        ]
       },
       {
         "id": "base:0xeded6ae915b129b67a4ad49901518f2736427063",
         "destinationChain": "base",
         "contractAddress": "0xeded6ae915b129b67a4ad49901518f2736427063",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Macropod issuer-native AUDM (multichain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on base at block 48862874: AUDM token 0xeded6ae915b129b67a4ad49901518f2736427063 resolves to Macropod's shared UUPS implementation 0xebadaf3d0ee4bbaa94717bd9029244b1df2f47aa; the verified mint-authority review (2026-07-15) confirms DEFAULT_ADMIN EOA 0x999071576cc6d7feadb908bede992ab9e19212cf and MINTER_ROLE EOA 0x3529a9f8193cce36df81123b59cdb4250219db39 on all EVM chains. Issuer-minted natively on this chain; no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 48862874,
+        "sources": [
+          {
+            "label": "AUDM on base explorer (verified 2026-07-20)",
+            "url": "https://basescan.org/address/0xeded6ae915b129b67a4ad49901518f2736427063"
+          },
+          {
+            "label": "Macropod AUDM",
+            "url": "https://macropod.com/"
+          }
+        ]
       }
     ]
   },

@@ -274,6 +274,84 @@
       "disposition": "scoreable"
     }
   },
+  "reserves": [
+    {
+      "name": "U.S. dollar cash and cash-equivalent reserves held for USDPT (allocation undisclosed)",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "cash",
+      "issuerOrObligor": "Anchorage Digital Bank, N.A. (issuer; reserves custodied at U.S. Bank)",
+      "riskFactors": ["credit", "counterparty", "custody", "concentration", "legal"],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Western Union USDPT product page",
+        "url": "https://www.westernunion.com/global/en/digital-assets-stablecoin.html"
+      },
+      {
+        "label": "Anchorage Digital USDPT launch announcement",
+        "url": "https://www.anchorage.com/insights/anchorage-digital-western-union-partner-launch-usdpt-federally-regulated-stablecoin-solana"
+      }
+    ],
+    "rationale": "Western Union states USDPT is redeemable 1:1 for U.S. dollars, and issuer Anchorage Digital Bank confirms federally regulated issuance, custody, settlement, and treasury management for the token launched on Solana on May 4, 2026. Neither party publishes an attestation or a reserve allocation across cash, bank deposits, Treasury bills, or other cash equivalents, so the reserve is recorded as one bounded U.S.-dollar basket.",
+    "compositionBasis": "Issuer and distribution-partner launch statements of full U.S. dollar backing; no attested reserve breakdown is published",
+    "compositionAsOf": "2026-05-04",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The allocation across cash, bank deposits, Treasury bills, and other cash equivalents, plus any sub-custodian split, is undisclosed; no third-party attestation has been published for USDPT.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "U.S. dollar cash and cash-equivalent reserves held for USDPT (allocation undisclosed)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Launch statements confirm full U.S. dollar backing but do not disclose the split between cash deposits, Treasury bills, and other cash-equivalent reserve assets."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "U.S. Bank (reserve custodian for Anchorage's stablecoin issuance platform)",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Anchorage Digital Bank, N.A. (issuer; issuance, custody, settlement and treasury platform)",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Fireblocks (wallet and settlement infrastructure)",
+        "role": "other",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Western Union USDPT product page",
+        "url": "https://www.westernunion.com/global/en/digital-assets-stablecoin.html"
+      },
+      {
+        "label": "Anchorage Digital USDPT launch announcement",
+        "url": "https://www.anchorage.com/insights/anchorage-digital-western-union-partner-launch-usdpt-federally-regulated-stablecoin-solana"
+      }
+    ],
+    "uncertainty": "American Banker reported in October 2025 that Anchorage Digital Bank hired U.S. Bank as custodian for its stablecoin platform reserves; Anchorage's launch note confirms issuance, custody, settlement, and treasury management under one federally regulated platform, and launch coverage identifies Fireblocks for wallet and settlement infrastructure. Segregation terms, bankruptcy remoteness, rehypothecation permissions, and the split between the two custodians are not disclosed.",
+    "knownUnknownExposurePct": 100
+  },
   "milestones": [
     {
       "date": "2025-10-28",

@@ -86,6 +86,21 @@
       "chain": "monad",
       "address": "0x4d502d735b4c574b487ed641ae87ceae884731c7",
       "decimals": 18
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x977453366b8d205f5c9266b6ba271e850a814a50",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x2f0173dFE97a7Dc670D5A10b35C4263cfEcFa853",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "7g166TuBmnoHKvS2PEkZx6kREZtbfjUxCHGWjCqoDXZv",
+      "decimals": 9
     }
   ],
   "deploymentModel": "native-multichain",
@@ -142,7 +157,7 @@
         "directMintAbility": "can-authorize",
         "threshold": 4,
         "signerCount": 6,
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "version": "1.4.1+L2",
@@ -163,7 +178,7 @@
             "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
           }
         ],
-        "evidence": "At Celo block 69291541, owner() returned 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458. Safe API returned threshold 4, 6 owners (down from 7 recorded previously — signer was rotated out), no modules, zero guard."
+        "evidence": "At Celo block 69291541, owner() returned 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458. Safe API returned threshold 4, 6 owners (down from 7 recorded previously — signer was rotated out), no modules, zero guard. Follow-up 2026-07-20: as EURm token owner this Safe administers the minter set (it can authorize or replace the Broker and its exchange limits), so the Broker's mint cap is raiseable by this control."
       }
     ],
     "review": {
@@ -182,8 +197,8 @@
         }
       ],
       "evidence": "Celo block 69291541: owner() = 4/6 Safe (threshold 4, 6 owners, no modules); isMinter(Broker 0x777A...) = true. Both mint-capable surfaces confirmed. Safe lost one signer since prior review (7→6); threshold unchanged at 4. Identical pattern to verified gbpm-mento.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+      "reviewedAt": "2026-07-20"
     }
   },
   "chainTier": "established-alt-l1",
@@ -241,16 +256,19 @@
   "launchDate": "2021-04-22",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "EURm now has native Celo and Monad spoke deployments connected through Mento's Wormhole NTT configuration. Both token contracts are issuer-issued, but durable cross-chain movement depends on Wormhole's external messaging and validation network.",
-    "reviewedAt": "2026-07-15",
-    "reviewer": "Codex bridge route review",
+    "summary": "EURm has native Celo and Monad deployments connected through Mento's Wormhole NTT configuration. The residual Ethereum and Polygon supply is legacy Optics-bridged cEUR (token owner is the Optics BridgeRouter, verified on-chain), and the Solana supply is legacy Allbridge cEUR (mint authority verified).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
     "confidence": "verified",
     "protocols": [
       {
         "source": "issuer",
         "name": "Mento Wormhole Native Token Transfer",
         "url": "https://forum.mento.org/t/mgp-14-mento-v3-deployment-phase-1/103",
-        "bridgeTypes": ["burn-mint", "external-validated-network"],
+        "bridgeTypes": [
+          "burn-mint",
+          "external-validated-network"
+        ],
         "note": "MGP-14 authorizes Wormhole NTT for Mento stablecoin expansion, and the current Mento NTT configuration maps EURm between Celo and Monad."
       }
     ],
@@ -286,7 +304,9 @@
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "failureDomainKeys": ["wormhole:ntt:eurm"],
+        "failureDomainKeys": [
+          "wormhole:ntt:eurm"
+        ],
         "observedAt": "2026-07-15",
         "sources": [
           {
@@ -312,7 +332,9 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "failureDomainKeys": ["wormhole:ntt:eurm"],
+        "failureDomainKeys": [
+          "wormhole:ntt:eurm"
+        ],
         "observedAt": "2026-07-15",
         "observedBlock": 87876757,
         "sources": [
@@ -328,6 +350,105 @@
             "label": "Mento NTT configuration",
             "url": "https://github.com/mento-protocol/deployments-v2/blob/main/script/config/wormhole/NTTConfig.sol"
           }
+        ]
+      },
+      {
+        "id": "ethereum:0x977453366b8d205f5c9266b6ba271e850a814a50",
+        "sourceChain": "celo",
+        "destinationChain": "ethereum",
+        "canonicalChain": "celo",
+        "contractAddress": "0x977453366b8d205f5c9266b6ba271e850a814a50",
+        "protocol": "Optics v1 bridge (legacy cEUR)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x4fc16de11deac71e8b2db539d82d93be4b486892",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Legacy Optics-bridged cEUR: token owner() = Optics BridgeRouter 0x4fc16de11deac71e8b2db539d82d93be4b486892 (contract) verified on Ethereum at 2026-07-20.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Mento",
+            "url": "https://www.mento.org/"
+          },
+          {
+            "label": "DefiLlama cEUR adapter (route attribution)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/celo-euro/index.ts"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:optics-bridge",
+          "contract:ethereum:0x4fc16de11deac71e8b2db539d82d93be4b486892"
+        ]
+      },
+      {
+        "id": "polygon:0x2f0173dfe97a7dc670d5a10b35c4263cfecfa853",
+        "sourceChain": "celo",
+        "destinationChain": "polygon",
+        "canonicalChain": "celo",
+        "contractAddress": "0x2f0173dFE97a7Dc670D5A10b35C4263cfEcFa853",
+        "protocol": "Optics v1 bridge (legacy cEUR)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "polygon",
+        "controllerAddress": "0x3a5846882c0d5f8b0fa4bb04dc90c013104d125d",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Legacy Optics-bridged cEUR: token owner() = Optics BridgeRouter 0x3a5846882c0d5f8b0fa4bb04dc90c013104d125d (contract) verified on Polygon at 2026-07-20.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Mento",
+            "url": "https://www.mento.org/"
+          },
+          {
+            "label": "DefiLlama cEUR adapter (route attribution)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/celo-euro/index.ts"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:optics-bridge",
+          "contract:polygon:0x3a5846882c0d5f8b0fa4bb04dc90c013104d125d"
+        ]
+      },
+      {
+        "id": "solana:7g166TuBmnoHKvS2PEkZx6kREZtbfjUxCHGWjCqoDXZv",
+        "sourceChain": "celo",
+        "destinationChain": "solana",
+        "canonicalChain": "celo",
+        "contractAddress": "7g166TuBmnoHKvS2PEkZx6kREZtbfjUxCHGWjCqoDXZv",
+        "protocol": "Allbridge (legacy cEUR)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "solana",
+        "controllerAddress": "BTb346DSozfTScyDt1q26YLz1Drs1PwBWeSqHBJDF8wW",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Legacy Allbridge cEUR on Solana: SPL mint authority = BTb346DSozfTScyDt1q26YLz1Drs1PwBWeSqHBJDF8wW (getAccountInfo verified at 2026-07-20), the Allbridge mint authority per DefiLlama's route attribution.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Mento",
+            "url": "https://www.mento.org/"
+          },
+          {
+            "label": "DefiLlama cEUR adapter (route attribution)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/celo-euro/index.ts"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:allbridge",
+          "contract:solana:BTb346DSozfTScyDt1q26YLz1Drs1PwBWeSqHBJDF8wW"
         ]
       }
     ]

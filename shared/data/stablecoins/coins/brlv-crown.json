@@ -95,8 +95,8 @@
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
     "summary": "BRLV has a Base canonical deployment and an Ethereum bridged variant in the existing on-chain review. The route is limited to Base/Ethereum and maps to the Base canonical bridge family, so it is scored as canonical-rollup-bridge.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "verified",
     "protocols": [
       {
@@ -104,7 +104,9 @@
         "name": "Base Canonical",
         "slug": "base",
         "url": "https://l2beat.com/interop/protocols/base",
-        "bridgeTypes": ["lockAndMint"]
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
       }
     ],
     "sources": [
@@ -122,31 +124,57 @@
         "id": "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36",
         "destinationChain": "base",
         "contractAddress": "0xd2047ebdb205ee6862b69ae9fb3501652cc97d36",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Crown issuer-native BRLV",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on base at block 48862878: BRLV token 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 (symbol BRLV, EIP-1967 proxy). The verified mint-authority review confirms BRLV is Crown-issued with MINTER_ROLE held by Crown's gasless relay EOA and gateway contracts on this chain. Issuer-minted natively; no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 48862878,
+        "sources": [
+          {
+            "label": "BRLV on base explorer (verified 2026-07-20)",
+            "url": "https://basescan.org/address/0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+          },
+          {
+            "label": "Crown BRLV",
+            "url": "https://www.crown.finance/"
+          }
+        ]
       },
       {
         "id": "ethereum:0xd7ca0e2c36d647446b782d1b72308e598373e2f5",
         "destinationChain": "ethereum",
         "contractAddress": "0xd7ca0e2c36d647446b782d1b72308e598373e2f5",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Crown issuer-native BRLV",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on ethereum at block 25570988: BRLV token 0xd7ca0e2c36d647446b782d1b72308e598373e2f5 (symbol BRLV, EIP-1967 proxy). The verified mint-authority review confirms BRLV is Crown-issued with MINTER_ROLE held by Crown's gasless relay EOA and gateway contracts on this chain. Issuer-minted natively; no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 25570988,
+        "sources": [
+          {
+            "label": "BRLV on ethereum explorer (verified 2026-07-20)",
+            "url": "https://etherscan.io/address/0xd7ca0e2c36d647446b782d1b72308e598373e2f5"
+          },
+          {
+            "label": "Crown BRLV",
+            "url": "https://www.crown.finance/"
+          }
+        ]
       }
     ]
   },
@@ -285,7 +313,7 @@
       {
         "chain": "base",
         "address": "0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea",
-        "label": "BRLV Base MINTER_ROLE — gasless relay EOA 0x8e7e9b",
+        "label": "BRLV Base MINTER_ROLE \u2014 gasless relay EOA 0x8e7e9b",
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",
@@ -304,7 +332,7 @@
       {
         "chain": "base",
         "address": "0x7e0d3f1a390209d87d9e1425d03066eb567a9844",
-        "label": "BRLV Base MINTER_ROLE — BRLVCanonicalGateway proxy 0x7e0d3f",
+        "label": "BRLV Base MINTER_ROLE \u2014 BRLVCanonicalGateway proxy 0x7e0d3f",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
@@ -326,7 +354,7 @@
       {
         "chain": "base",
         "address": "0x5315c03f8cf027d1b67dac72ef9eec8988d80f88",
-        "label": "BRLV Base MINTER_ROLE — BRLVRewards proxy 0x5315c0",
+        "label": "BRLV Base MINTER_ROLE \u2014 BRLVRewards proxy 0x5315c0",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
@@ -372,7 +400,7 @@
       {
         "chain": "ethereum",
         "address": "0x039b419dafc801c3e375046efabd00813b0c48b6",
-        "label": "BRLV Ethereum MINTER_ROLE — gasless relay EOA 0x039b41",
+        "label": "BRLV Ethereum MINTER_ROLE \u2014 gasless relay EOA 0x039b41",
         "role": "direct-minter",
         "authorityType": "eoa",
         "directMintAbility": "direct",

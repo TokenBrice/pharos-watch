@@ -275,9 +275,9 @@
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
     "summary": "WARS is one of Ripio's wrapped local stablecoins deployed across several chains. The workflow's route signal points to Across/World-style liquidity routing rather than issuer-native bridging, so Pharos scores this as a liquidity-or-intent route with probable confidence.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "l2beat",
@@ -307,92 +307,134 @@
       {
         "id": "ethereum:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ripio native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native wARS: 163-byte EIP-1967 proxy, identical implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 on every chain (read 2026-07-20). Ripio mints natively on each chain via the WARS admin/MINTER_ROLE holder 0x466c02e2cc67b81a696af5afdb61605c41fe247b and minter-router contracts (per the mint-authority review); no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ripio",
+            "url": "https://www.ripio.com/"
+          }
+        ]
       },
       {
         "id": "base:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
         "destinationChain": "base",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ripio native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native wARS: 163-byte EIP-1967 proxy, identical implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 on every chain (read 2026-07-20). Ripio mints natively on each chain via the WARS admin/MINTER_ROLE holder 0x466c02e2cc67b81a696af5afdb61605c41fe247b and minter-router contracts (per the mint-authority review); no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ripio",
+            "url": "https://www.ripio.com/"
+          }
+        ]
       },
       {
         "id": "worldchain:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
         "destinationChain": "worldchain",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ripio native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native wARS: 163-byte EIP-1967 proxy, identical implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 on every chain (read 2026-07-20). Ripio mints natively on each chain via the WARS admin/MINTER_ROLE holder 0x466c02e2cc67b81a696af5afdb61605c41fe247b and minter-router contracts (per the mint-authority review); no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ripio",
+            "url": "https://www.ripio.com/"
+          }
+        ]
       },
       {
         "id": "bsc:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
         "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ripio native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native wARS: 163-byte EIP-1967 proxy, identical implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 on every chain (read 2026-07-20). Ripio mints natively on each chain via the WARS admin/MINTER_ROLE holder 0x466c02e2cc67b81a696af5afdb61605c41fe247b and minter-router contracts (per the mint-authority review); no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ripio",
+            "url": "https://www.ripio.com/"
+          }
+        ]
       },
       {
         "id": "polygon:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
         "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ripio native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native wARS: 163-byte EIP-1967 proxy, identical implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 on every chain (read 2026-07-20). Ripio mints natively on each chain via the WARS admin/MINTER_ROLE holder 0x466c02e2cc67b81a696af5afdb61605c41fe247b and minter-router contracts (per the mint-authority review); no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ripio",
+            "url": "https://www.ripio.com/"
+          }
+        ]
       },
       {
         "id": "gnosis:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
         "destinationChain": "gnosis",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ripio native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native wARS: 163-byte EIP-1967 proxy, identical implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 on every chain (read 2026-07-20). Ripio mints natively on each chain via the WARS admin/MINTER_ROLE holder 0x466c02e2cc67b81a696af5afdb61605c41fe247b and minter-router contracts (per the mint-authority review); no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ripio",
+            "url": "https://www.ripio.com/"
+          }
+        ]
       }
     ]
   },

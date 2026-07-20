@@ -167,9 +167,71 @@
       "name": "LUA floor-price collateral, protocol-owned liquidity, and stablecoin reserves",
       "pct": 100,
       "risk": "very-high",
-      "blacklistable": true
+      "blacklistable": true,
+      "assetClass": "other",
+      "issuerOrObligor": "Lumi Finance protocol (LUA bonding-curve reserve, protocol-owned USDT/USDC liquidity, and Lumi's Curve pool)",
+      "riskFactors": ["market", "liquidity", "smart-contract", "concentration", "counterparty"],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Lumi Finance documentation",
+        "url": "https://lumi-finance.gitbook.io/docs/"
+      },
+      {
+        "label": "Lumi Finance",
+        "url": "https://lumi.finance/"
+      }
+    ],
+    "rationale": "Lumi documents LUAUSD as over-collateralized by LUA staked at the protocol floor price plus a diversified USDT/USDC protocol-owned liquidity reserve; the split between LUA collateral and stablecoin POL is not published as a dated figure, so one bounded basket is retained with the governance-token support driving the very-high risk tier.",
+    "compositionBasis": "Lumi Finance documented backing model; current split between LUA collateral and stablecoin protocol-owned liquidity undisclosed",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The current split between LUA floor-price collateral, USDT/USDC protocol-owned liquidity, and Curve pool positions is not published as a dated aggregate.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "LUA floor-price collateral, protocol-owned liquidity, and stablecoin reserves",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Both documented constituents are known but no current weights are published, so stablecoin dependency edges cannot be weighted.",
+        "candidateCoinIds": ["usdt-tether", "usdc-circle"]
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Lumi Finance protocol contracts (Arbitrum: bonding curve, AMO, and protocol-owned liquidity)",
+        "role": "other",
+        "jurisdiction": "Arbitrum"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Lumi Finance documentation",
+        "url": "https://lumi-finance.gitbook.io/docs/"
+      },
+      {
+        "label": "Lumi Finance",
+        "url": "https://lumi.finance/"
+      }
+    ],
+    "uncertainty": "Backing assets sit in Lumi's on-chain protocol contracts (bonding-curve reserve, AMO, and Curve pool liquidity) rather than with a disclosed custodian; segregation, bankruptcy remoteness, and reuse terms are not documented.",
+    "knownUnknownExposurePct": 100
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

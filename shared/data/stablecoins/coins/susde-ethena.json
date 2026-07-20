@@ -291,8 +291,8 @@
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "LayerZero metadata identifies Ethereum's sUSDe OFT adapter and 22 non-native OFT or OFT Adapter deployments. Those reviewed routes depend on LayerZero V2 messaging, the Ethereum source adapter, and destination token or adapter controls; Plasma, TON, and X Layer remain unresolved because the API does not list them.",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "owner-triage",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "owner-triage; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "probable",
     "protocols": [
       {
@@ -364,15 +364,15 @@
         "destinationChain": "plasma",
         "canonicalChain": "ethereum",
         "contractAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-07-20",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -383,11 +383,23 @@
             "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
           },
           {
-            "label": "LayerZero OFT API documentation",
-            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "sUSDe OFT on plasma explorer (verified 2026-07-20)",
+            "url": "https://plasma-explorer.com/address/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
           }
         ],
-        "reviewNote": "The LayerZero sUSDe metadata API did not list this deployment on 2026-07-14, so its bridge protocol, semantics, scope, and controller remain unresolved."
+        "reviewNote": "Verified on plasma at block 27570608: sUSDe OFT symbol()='sUSDe', endpoint() = LayerZero endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, owner() = Ethena Safe 0x2c57434603f21f580c91a3bdc0cc5f3f20278632 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2 escrowing canonical sUSDe 0x9d39a5de30e57443bff2a8307a4256c8797a3497.",
+        "controllerChain": "plasma",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:plasma:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+        ],
+        "observedBlock": 27570608
       },
       {
         "id": "linea:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -641,15 +653,15 @@
         "destinationChain": "xlayer",
         "canonicalChain": "ethereum",
         "contractAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
+        "protocol": "LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-07-20",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -660,11 +672,23 @@
             "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
           },
           {
-            "label": "LayerZero OFT API documentation",
-            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "sUSDe OFT on xlayer explorer (verified 2026-07-20)",
+            "url": "https://www.oklink.com/xlayer/address/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
           }
         ],
-        "reviewNote": "The LayerZero sUSDe metadata API did not list this deployment on 2026-07-14, so its bridge protocol, semantics, scope, and controller remain unresolved."
+        "reviewNote": "Verified on xlayer at block 65741928: sUSDe OFT symbol()='sUSDe', endpoint() = LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c, owner() = Ethena Safe 0xce2f77841a8b974ce8e79157bccbecf17599f0e8 (getThreshold/getOwners = 5-of-10). Mint/burn of this representation is driven by LayerZero-verified messages against the Ethereum OFT adapter 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2 escrowing canonical sUSDe 0x9d39a5de30e57443bff2a8307a4256c8797a3497.",
+        "controllerChain": "xlayer",
+        "controllerAddress": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:xlayer:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+        ],
+        "observedBlock": 65741928
       },
       {
         "id": "base:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
@@ -1164,30 +1188,37 @@
         "destinationChain": "ton",
         "canonicalChain": "ethereum",
         "contractAddress": "EQDQ5UUyPHrLcQJlPAczd_fjxn8SLrlNQwolBznxCdSlfQwr",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
+        "protocol": "LayerZero OFT (TON jetton)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-07-20",
         "sources": [
           {
             "label": "Ethena key addresses",
             "url": "https://docs.ethena.fi/solution-design/key-addresses"
           },
           {
-            "label": "LayerZero OFT metadata API (sUSDe)",
-            "url": "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=sUSDe"
+            "label": "tsUSDe jetton on TONviewer (mintable, admin observed 2026-07-20)",
+            "url": "https://tonviewer.com/EQDQ5UUyPHrLcQJlPAczd_fjxn8SLrlNQwolBznxCdSlfQwr"
           },
           {
-            "label": "LayerZero OFT API documentation",
-            "url": "https://docs.layerzero.network/api-reference/ofts/get-list"
+            "label": "Jetton admin account on TONviewer",
+            "url": "https://tonviewer.com/EQAfYnfDyjgtyBuQyKKdRlbWQWt5aAuhGIvGQCfkNPJ7_Ni5"
           }
         ],
-        "reviewNote": "The LayerZero sUSDe metadata API did not list this deployment on 2026-07-14, so its bridge protocol, semantics, scope, and controller remain unresolved."
+        "reviewNote": "TON jetton master EQDQ5UUyPHrLcQJlPAczd_fjxn8SLrlNQwolBznxCdSlfQwr ('Ethena tsUSDe', tonapi.io whitelisted, metadata hosted on metadata.layerzero-api.com, queried 2026-07-20) reports mintable=true with admin 0:1f6277c3ca382dc81b90c8a29d4656d6416b79680ba1188bc64027e434f27bfc (EQAfYnfDyjgtyBuQyKKdRlbWQWt5aAuhGIvGQCfkNPJ7_Ni5, wallet-type account). The jetton admin is the mint authority for the TON representation; its internal signer set is not enumerable via public APIs \u2014 controller identity recorded, composition unverified.",
+        "controllerChain": "ton",
+        "controllerAddress": "EQAfYnfDyjgtyBuQyKKdRlbWQWt5aAuhGIvGQCfkNPJ7_Ni5",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+          "contract:ton:EQAfYnfDyjgtyBuQyKKdRlbWQWt5aAuhGIvGQCfkNPJ7_Ni5"
+        ]
       },
       {
         "id": "solana:Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN",

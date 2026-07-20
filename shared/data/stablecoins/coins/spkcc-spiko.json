@@ -129,8 +129,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "SPKCC Ethereum mint/burn routes through Spiko's PermissionManager (ERC1967Proxy). Mint requires PermissionManager group 0 (ADMIN) or group 2 (daily-operator). Group 2 is a rotating Spiko EOA; group 0 ADMIN holder is not identifiable from on-chain state alone.",
+    "confidence": "probable",
+    "summary": "SPKCC mint/burn routes through Spiko's PermissionManager (ERC1967Proxy) on each EVM chain. Mint requires PermissionManager group 0 (ADMIN) or group 2 (daily-operator). Group 2 is a rotating Spiko EOA; group 0 ADMIN is the Spiko admin Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea (3/8, verified on-chain 2026-07-20). Polygon/Base deployments share the Ethereum PermissionManager address; Arbitrum uses a chain-local proxy to the same implementation; Starknet/Stellar deployments were verified 2026-07-20.",
     "controls": [
       {
         "chain": "ethereum",
@@ -151,12 +151,12 @@
             "url": "https://docs.spiko.io/"
           }
         ],
-        "evidence": "At Ethereum block 25295096, EIP-1967 impl slot = 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74 (Token.sol). Token authority() = PermissionManager proxy 0x344278aff. mint() requires restricted() → PermissionManager.canCall(msg.sender, token, mint_selector). getRequirements(token, mint) = groups {0, 2}."
+        "evidence": "At Ethereum block 25295096, EIP-1967 impl slot = 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74 (Token.sol). Token authority() = PermissionManager proxy 0x344278aff. mint() requires restricted() \u2192 PermissionManager.canCall(msg.sender, token, mint_selector). getRequirements(token, mint) = groups {0, 2}."
       },
       {
         "chain": "ethereum",
         "address": "0x344278aff344d6fb960705dc18a4912221608472",
-        "label": "Spiko PermissionManager (ERC1967Proxy) — shared authority policy",
+        "label": "Spiko PermissionManager (ERC1967Proxy) \u2014 shared authority policy",
         "role": "minter-admin",
         "authorityType": "contract",
         "directMintAbility": "can-authorize",
@@ -168,7 +168,9 @@
             "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e/sources/contracts/permissions/PermissionManager.sol"
           }
         ],
-        "evidence": "At Ethereum block 25295096, ERC1967 impl = 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e (PermissionManager). Group structure: group 0 = ADMIN (controls everything), group 2 = daily-operator/minter, group 5 = KYC operator (manages group 6 user allowlist). Group 2 admins = group 0 only. getGroupAdmins(0) = {0} (self-referential). Group 0 holder not determinable from on-chain state."
+        "evidence": "At Ethereum block 25295096, ERC1967 impl = 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e (PermissionManager). Group structure: group 0 = ADMIN (controls everything), group 2 = daily-operator/minter, group 5 = KYC operator (manages group 6 user allowlist). Group 2 admins = group 0 only; getGroupAdmins(0) = {0} (self-referential). 2026-07-20 (block 25571110): group 0 holder identified \u2014 getGroups(0x4eaa52b6280593a8820c45ce38f974290ae52cea) returns the group-0 bitmap, and the address is a Gnosis Safe proxy (171-byte bytecode) with getThreshold() = 3 and getOwners() = 8 signers (0x75e0092e7d2c8d854fcf5334f95554852d62746a, 0xe9106c617d7180bf6badcfa5edc664b726c5dcbb, 0x6c00be5d1013a5bca938ef6aa8f1e5e706ff384d, 0x4d1d9c5b5d9ca448194313d799de374f362bd460, 0x0da47bd72438f11bef7cc54f18cd02426dd86a5a2, 0xe67d2cbeae3090be017c66e7a6943961619a5d350, 0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949, 0xa6e06dfe42064b7cd6dc902a62e74ca5bb574011) \u2014 the same Spiko admin Safe enumerated in the EURSPKCC 2026-07-15 sweep.",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25571110
       }
     ],
     "review": {
@@ -182,133 +184,207 @@
           "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
         }
       ],
-      "evidence": "At Ethereum block 25295096: PermissionManager fully decoded — group 0 (ADMIN) controls mint authorization; group 2 (daily-operator) is the rotating EOA minter; minting at block 23169041 confirmed EOA 0x2B3755 in group 2. Group 0 ADMIN not found via getGroups() queries on known addresses; _permissions mapping not enumerable without brute force. Polygon, Arbitrum, Base, Starknet, Stellar lanes not verified.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Identify and verify the PermissionManager group 0 (ADMIN) holder — the entity that controls minter group 2 membership — before promoting to verified.",
-        "Resolve Polygon, Arbitrum, Base, Starknet, and Stellar mint or bridge authorities before claiming multichain completeness."
-      ]
+      "evidence": "At Ethereum block 25295096: PermissionManager decoded \u2014 group 0 (ADMIN) controls mint authorization; group 2 (daily-operator) is the rotating EOA minter; minting at block 23169041 confirmed EOA 0x2B3755 in group 2. 2026-07-20 dc-8 verification: group 0 ADMIN = Spiko Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea (3/8; getGroups bitmap + getThreshold/getOwners verified on Ethereum block 25571110). Multichain lanes resolved: authority() = 0x344278aff... on ethereum/polygon/base SPKCC tokens and 0xa925c217... on arbitrum (blocks 25571110/90541049/48863611/485706358); Starknet token owner() = 0x7bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d (symbol 'SPKCC', decimals 5; name storage partially corrupted \u2014 noted); Stellar SPKCC = Soroban contract CDS2GCAQTNQINSCJUJIVBJXILKBWP5PU7LOBGHMP3X47QCQBFKPMTCNT per Spiko's stellar-contracts production.json, created 2025-10-01 by single-signer GBYIQXBK... (Horizon).",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable"
     }
   },
   "chainTier": "ethereum",
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "SPKCC has source-visible deployments across several chains, including Arbitrum, but public issuer pages do not document the bridge or cross-chain mint controls for the fund shares. The route remains unresolved and is reviewed conservatively.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "manual-review",
+    "tier": "external-validated-network",
+    "summary": "SPKCC is issued natively by Spiko on all six chains: every deployment was re-verified on-chain 2026-07-20 as the canonical Spiko fund share (EVM authority() = Spiko PermissionManager; Starknet owner = Spiko's Starknet owner account; Stellar contract in Spiko's official stellar-contracts registry). Cross-chain transfers run over Chainlink CCIP, Spiko's documented interoperability rail, so the profile tier reflects an external validated-network transfer rail over issuer-native deployments.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "l2beat",
-        "name": "Arbitrum One",
-        "url": "https://l2beat.com/scaling/projects/arbitrum",
+        "name": "Chainlink CCIP",
+        "slug": "ccip",
+        "url": "https://l2beat.com/interop/protocols/ccip",
         "bridgeTypes": [
-          "canonical"
+          "messaging",
+          "burnAndMint",
+          "lockAndMint"
         ]
       }
     ],
     "sources": [
       {
-        "label": "Spiko Cash and Carry",
-        "url": "https://www.spiko.io/spiko-cash-and-carry"
+        "label": "Spiko CCIP announcement",
+        "url": "https://www.spiko.io/blog/spiko-chainlink-ccip"
       },
       {
-        "label": "L2BEAT Arbitrum One",
-        "url": "https://l2beat.com/scaling/projects/arbitrum"
+        "label": "Chainlink CCIP docs",
+        "url": "https://docs.chain.link/ccip"
+      },
+      {
+        "label": "Spiko Cash and Carry",
+        "url": "https://www.spiko.io/spiko-cash-and-carry"
       }
     ],
     "routes": [
       {
         "id": "ethereum:0x4f33acf823e6eeb697180d553ce0c710124c8d59",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x4f33acf823e6eeb697180d553ce0c710124c8d59",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko SPKCC (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (ethereum block 25571110): name() = 'Spiko Digital Assets Cash and Carry Fund', symbol() = 'SPKCC', decimals() = 5; authority() = Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. Issuer-native Spiko fund share on ethereum, minted/burned via the PermissionManager (mint restricted to Spiko operator groups) \u2014 no third-party wrapped representation; cross-chain transfers use Spiko's documented Chainlink CCIP rail.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "observedBlock": 25571110,
+        "sources": [
+          {
+            "label": "Spiko Cash and Carry",
+            "url": "https://www.spiko.io/spiko-cash-and-carry"
+          },
+          {
+            "label": "SPKCC on ethereum explorer (authority() probed 2026-07-20)",
+            "url": "https://etherscan.io/address/0x4f33acf823e6eeb697180d553ce0c710124c8d59"
+          }
+        ]
       },
       {
         "id": "polygon:0x903d5990119bc799423e9c25c56518ba7dd19474",
         "destinationChain": "polygon",
+        "canonicalChain": "polygon",
         "contractAddress": "0x903d5990119bc799423e9c25c56518ba7dd19474",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko SPKCC (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (polygon block 90541049): name() = 'Spiko Digital Assets Cash and Carry Fund', symbol() = 'SPKCC', decimals() = 5; authority() = Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. Issuer-native Spiko fund share on polygon, minted/burned via the PermissionManager (mint restricted to Spiko operator groups) \u2014 no third-party wrapped representation; cross-chain transfers use Spiko's documented Chainlink CCIP rail.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "observedBlock": 90541049,
+        "sources": [
+          {
+            "label": "Spiko Cash and Carry",
+            "url": "https://www.spiko.io/spiko-cash-and-carry"
+          },
+          {
+            "label": "SPKCC on polygon explorer (authority() probed 2026-07-20)",
+            "url": "https://polygonscan.com/address/0x903d5990119bc799423e9c25c56518ba7dd19474"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x99f70a0e1786402a6796c6b0aa997ef340a5c6da",
         "destinationChain": "arbitrum",
+        "canonicalChain": "arbitrum",
         "contractAddress": "0x99f70a0e1786402a6796c6b0aa997ef340a5c6da",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko SPKCC (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (arbitrum block 485706358): name() = 'Spiko Digital Assets Cash and Carry Fund', symbol() = 'SPKCC', decimals() = 5; authority() = Spiko PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a (Arbitrum proxy to the same PermissionManager implementation as Ethereum). Issuer-native Spiko fund share on arbitrum, minted/burned via the PermissionManager (mint restricted to Spiko operator groups) \u2014 no third-party wrapped representation; cross-chain transfers use Spiko's documented Chainlink CCIP rail.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "observedBlock": 485706358,
+        "sources": [
+          {
+            "label": "Spiko Cash and Carry",
+            "url": "https://www.spiko.io/spiko-cash-and-carry"
+          },
+          {
+            "label": "SPKCC on arbitrum explorer (authority() probed 2026-07-20)",
+            "url": "https://arbiscan.io/address/0x99f70a0e1786402a6796c6b0aa997ef340a5c6da"
+          }
+        ]
       },
       {
         "id": "base:0xf695df6c0f3bb45918a7a82e83348fc59517734e",
         "destinationChain": "base",
+        "canonicalChain": "base",
         "contractAddress": "0xf695df6c0f3bb45918a7a82e83348fc59517734e",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko SPKCC (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (base block 48863611): name() = 'Spiko Digital Assets Cash and Carry Fund', symbol() = 'SPKCC', decimals() = 5; authority() = Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. Issuer-native Spiko fund share on base, minted/burned via the PermissionManager (mint restricted to Spiko operator groups) \u2014 no third-party wrapped representation; cross-chain transfers use Spiko's documented Chainlink CCIP rail.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "observedBlock": 48863611,
+        "sources": [
+          {
+            "label": "Spiko Cash and Carry",
+            "url": "https://www.spiko.io/spiko-cash-and-carry"
+          },
+          {
+            "label": "SPKCC on base explorer (authority() probed 2026-07-20)",
+            "url": "https://basescan.org/address/0xf695df6c0f3bb45918a7a82e83348fc59517734e"
+          }
+        ]
       },
       {
         "id": "starknet:0x04bade88e79a6120f893d64e51006ac6853eceeefa1a50868d19601b1f0a567d",
         "destinationChain": "starknet",
+        "canonicalChain": "starknet",
         "contractAddress": "0x04bade88e79a6120f893d64e51006ac6853eceeefa1a50868d19601b1f0a567d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko SPKCC (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified via starknet_call 2026-07-20 (rpc.starknet.lava.build, cross-checked on 1rpc.io/onfinality): token 0x04bade88e79a6120f893d64e51006ac6853eceeefa1a50868d19601b1f0a567d reports symbol() = 'SPKCC', decimals() = 5 and owner() = 0x7bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d \u2014 the same Spiko Starknet owner account as USTBL/EURSPKCC (3/5 Argent multisig per the EURSPKCC 2026-07-15 mint-authority sweep). name() string storage reads back partially corrupted (zero-padded after the first bytes) identically on two independent RPCs \u2014 a storage quirk of this deployment, recorded as a data-quality note. Issuer-native Spiko deployment; no third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Spiko Cash and Carry",
+            "url": "https://www.spiko.io/spiko-cash-and-carry"
+          },
+          {
+            "label": "SPKCC on Starknet Voyager (probed 2026-07-20)",
+            "url": "https://voyager.online/contract/0x04bade88e79a6120f893d64e51006ac6853eceeefa1a50868d19601b1f0a567d"
+          }
+        ]
       },
       {
         "id": "stellar:CDS2GCAQTNQINSCJUJIVBJXILKBWP5PU7LOBGHMP3X47QCQBFKPMTCNT",
         "destinationChain": "stellar",
+        "canonicalChain": "stellar",
         "contractAddress": "CDS2GCAQTNQINSCJUJIVBJXILKBWP5PU7LOBGHMP3X47QCQBFKPMTCNT",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko SPKCC (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified 2026-07-20: Spiko's stellar-contracts repository (spiko-tech/stellar-contracts, address/production.json) lists SPKCC at Soroban contract CDS2GCAQTNQINSCJUJIVBJXILKBWP5PU7LOBGHMP3X47QCQBFKPMTCNT under the shared Spiko PermissionManager CBGHLRSX5D5YMBPNK4ZGMUTJUHFIT7YGXGJURM5LFNZ7B6WNSXLGS26M. stellar.expert shows the contract created 2025-10-01 (ledger epoch 1759338356) by Spiko owner account GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H (Horizon: single ed25519 signer, all thresholds 0) with the same token wasm (f48f10d9...) as the EURSPKCC contract. Issuer-native Spiko deployment; no third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Spiko stellar-contracts production addresses",
+            "url": "https://github.com/spiko-tech/stellar-contracts/blob/main/address/production.json"
+          },
+          {
+            "label": "SPKCC contract on stellar.expert (verified 2026-07-20)",
+            "url": "https://stellar.expert/explorer/public/contract/CDS2GCAQTNQINSCJUJIVBJXILKBWP5PU7LOBGHMP3X47QCQBFKPMTCNT"
+          }
+        ]
       }
     ]
   },

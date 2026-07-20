@@ -187,9 +187,35 @@
           "url": "https://www.sec.gov/Archives/edgar/data/2004367/0000945621-25-000419-index.htm"
         }
       ],
-      "evidence": "At block 25294990: owner() = 0xad309BB6f13074128b4F23EF9EA2fe8552AfCA83, eth_getCode = '0x' (EOA confirmed). ProxyAdmin owner() = same address. Token and ProxyAdmin both confirmed under same issuer EOA. No on-chain roles beyond owner; issuance is issuer-backend via Superstate's fund subscription API. Economic-control evidence reviewed 2026-07-15: NAV Fund Services independently calculates recurring USTB NAV and PwC audits the fund; the current product page exposes continuous NAV per share. The same page states that the fund is not registered under the Investment Company Act, and its Rule 506(c)/Section 3(c)(7) filing is not prudential supervision.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-07-15"
+      "evidence": "At block 25294990: owner() = 0xad309BB6f13074128b4F23EF9EA2fe8552AfCA83, eth_getCode = '0x' (EOA confirmed). ProxyAdmin owner() = same address. Token and ProxyAdmin both confirmed under same issuer EOA. No on-chain roles beyond owner; issuance is issuer-backend via Superstate's fund subscription API. Economic-control evidence reviewed 2026-07-15: NAV Fund Services independently calculates recurring USTB NAV and PwC audits the fund; the current product page exposes continuous NAV per share. The same page states that the fund is not registered under the Investment Company Act, and its Rule 506(c)/Section 3(c)(7) filing is not prudential supervision. 2026-07-20 follow-up: the token is a transparent proxy (EIP-1967 implementation 0x1f50a1ee0ec8275d0c83b7bb08896b4b47d6e8c4, admin 0xb9d285dcad879513dc9c1a3b2e0cccb21c3c2146) whose ProxyAdmin owner() = 0xad309bb6f13074128b4f23ef9ea2fe8552afca83, matching the reviewed control; the proxy admin can change mint-critical logic with no on-chain delay.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+      "reviewedAt": "2026-07-20"
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e"
+      ],
+      "implementationAddresses": [
+        "0x1f50a1ee0ec8275d0c83b7bb08896b4b47d6e8c4"
+      ],
+      "adminAddresses": [
+        "0xb9d285dcad879513dc9c1a3b2e0cccb21c3c2146"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "USTB token owner / ProxyAdmin owner",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25570980,
+      "sources": [
+        {
+          "label": "USTB Ethereum token proxy (EIP-1967 slots)",
+          "url": "https://etherscan.io/address/0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e#readProxyContract"
+        },
+        {
+          "label": "USTB ProxyAdmin (owner() = 0xad309bb6f13074128b4f23ef9ea2fe8552afca83)",
+          "url": "https://etherscan.io/address/0xb9d285dcad879513dc9c1a3b2e0cccb21c3c2146#code"
+        }
+      ]
     }
   },
   "deploymentModel": "native-multichain",

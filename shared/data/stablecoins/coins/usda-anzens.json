@@ -147,8 +147,8 @@
       }
     ],
     "review": {
-      "evidence": "Anzens (FinCEN MSB) is the sole issuer of USDA on Cardano; mint/redeem is centralized 1:1 via KYC bank transfers against BitGo Trust-custodied reserves. Policy ID fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456 confirmed via Koios as a PlutusV2 script (type=plutusV2, 154 mints / 123 burns confirmed, policy_asset_list verified). Minting transactions include uid metadata but no required_signers field is exposed in Koios tx_info; the PlutusV2 script validates internally with signing key(s) embedded as script parameters — not observable from chain state without full script parameter decoding.",
-      "reviewer": "Claude Phase 0c continuation",
+      "evidence": "Anzens (FinCEN MSB) is the sole issuer of USDA on Cardano; mint/redeem is centralized 1:1 via KYC bank transfers against BitGo Trust-custodied reserves. Policy ID fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456 confirmed via Koios as a PlutusV2 script (type=plutusV2, 154 mints / 123 burns confirmed, policy_asset_list verified). Minting transactions include uid metadata but no required_signers field is exposed in Koios tx_info; the PlutusV2 script validates internally with signing key(s) embedded as script parameters — not observable from chain state without full script parameter decoding. 2026-07-20 (Kimi P2 dc-2): Koios script_info confirms the minting policy is a plutusV2 script created in tx 77f120599d05ed304970bb9bda15f2a8f56aa6495178065444c601f0212e675a with the USDA asset name embedded; Anzens/EMURGO publish only custody-adjacent statements (EMURGO key-management blog; BitGo custodial services for USDA mint/burn operations) and no script parameterization, so the controlling signing keys remain unestablished from public sources.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-2 (lead usdc-circle)",
       "reviewedAt": "2026-06-11",
       "sources": [
         {
@@ -158,6 +158,14 @@
         {
           "label": "Koios policy_asset_list for USDA policy",
           "url": "https://api.koios.rest/api/v1/policy_asset_list?_policy_id=fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456"
+        },
+        {
+          "label": "Cardano Token Registry — Anzens USDA",
+          "url": "https://raw.githubusercontent.com/cardano-foundation/cardano-token-registry/master/mappings/fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae45655534441.json"
+        },
+        {
+          "label": "BitGo custodial services for Cardano USDA",
+          "url": "https://cryptoslate.com/bitgo-to-provide-custodial-services-for-cardano-based-usda-stablecoin/"
         }
       ],
       "unresolvedQuestions": [
@@ -172,7 +180,14 @@
       "risk": "very-low",
       "assetClass": "other",
       "issuerOrObligor": "Anzens reserve counterparties and U.S. government securities; individual holdings are not disclosed",
-      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "concentration"],
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],

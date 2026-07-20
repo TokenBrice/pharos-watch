@@ -313,9 +313,9 @@
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "USD1 cross-chain transfers use Chainlink CCIP Burn/Mint pools on eight catalog deployments with token-specific directory evidence. Those pools establish an external validated-network control path without proving that every token on Ethereum or BNB Chain was issued through CCIP rather than the issuer's native mint authority.",
-    "reviewedAt": "2026-07-16",
-    "reviewer": "Codex V9 bridge route curation",
+    "summary": "USD1 cross-chain transfers use Chainlink CCIP Burn/Mint pools on nine catalog deployments with token-specific directory and on-chain pool evidence; the Tron deployment is the issuer's own upgradeable TRC20 token with no CCIP route, so it is native issuance. Those pools establish an external validated-network control path without proving that every token on Ethereum or BNB Chain was issued through CCIP rather than the issuer's native mint authority.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex V9 bridge route curation; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
     "confidence": "verified",
     "protocols": [
       {
@@ -411,16 +411,30 @@
         "id": "tron:TPFqcBAaaUMCSVRCqPaQ9QnzKhmuoLR6Rc",
         "destinationChain": "tron",
         "contractAddress": "TPFqcBAaaUMCSVRCqPaQ9QnzKhmuoLR6Rc",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "World Liberty Financial lists this as the official Tron token, but neither its bridge route matrix nor Chainlink's token-specific USD1 directory lists a Tron CCIP route or pool controller.",
+        "protocol": "World Liberty Financial native USD1 (TRC20)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain reads via TronGrid show this is the issuer's own TransparentUpgradeableProxy TRC20 (name 'World Liberty Financial USD', 18 decimals, implementation TTuTMNMSCAfGNfAsEMn4JbvFQx9UEPmZCA, EIP-1967 admin TKk4R4sjAhKij7NNTpvmnGq9bCpNPiSQeW, owner contract TBZbFrVxJ8uoRQUwGSFXucpa8i2aXzGqJ8) — the same issuer-controlled deployment pattern as the canonical Ethereum token, not a bridge representation. World Liberty Financial's current CCIP route matrix does not list Tron, so Tron supply is issuer-minted directly and no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-16"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USD1 TRC20 token on TronScan",
+            "url": "https://tronscan.org/#/token20/TPFqcBAaaUMCSVRCqPaQ9QnzKhmuoLR6Rc"
+          },
+          {
+            "label": "World Liberty Financial USD1 contract addresses",
+            "url": "https://docs.worldlibertyfinancial.com/usd1-token/contract-addresses"
+          },
+          {
+            "label": "World Liberty Financial bridge docs (no Tron CCIP route)",
+            "url": "https://docs.worldlibertyfinancial.com/wlfi-tools/bridge"
+          }
+        ]
       },
       {
         "id": "solana:USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB",
@@ -581,16 +595,36 @@
         "id": "aptos:0x05fabd1b12e39967a3c24e91b7b8f67719a6dacee74f3c8b9fb7d93e855437d2",
         "destinationChain": "aptos",
         "contractAddress": "0x05fabd1b12e39967a3c24e91b7b8f67719a6dacee74f3c8b9fb7d93e855437d2",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "World Liberty Financial documents Aptos as a bidirectional USD1 bridge route through the CCIP Transporter interface, but Chainlink's current token-specific USD1 directory has no Aptos token-pool row, so the pool controller and issuance semantics remain unresolved.",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain reads of the Aptos token object confirm the Chainlink CCT regulated-token standard: the metadata object carries regulated_token::TokenMetadataRefs from publisher 0x6febdb5695dab42c3edf6baaebf7b49b4ae32fbb1411a5c33917f442ebe77daa, and the regulated_token get_bridge_minters_or_burners view returns exactly the regulated_token_pool object 0x99b3dbb793b04ee5b4551612bc78d23b2992d592c83992bd7ab2713b3296507c (RegulatedTokenPoolState from publisher 0x1eb155d08acc900954b6ccee01659b390399ae81ad4c582b73d41374c475caf6) as the sole CCIP burn/mint bridge controller. World Liberty Financial documents Aptos as a bidirectional USD1 route through the CCIP Transporter interface; two plain-account minters/burners (0xbd9c812b..., 0xf6bf5563...) are issuer direct-mint signers, not bridge controllers.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-16"
+        "controllerChain": "aptos",
+        "controllerAddress": "0x99b3dbb793b04ee5b4551612bc78d23b2992d592c83992bd7ab2713b3296507c",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:aptos:0x99b3dbb793b04ee5b4551612bc78d23b2992d592c83992bd7ab2713b3296507c"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USD1 Aptos token object on AptoScan",
+            "url": "https://aptoscan.com/fungible-asset/0x05fabd1b12e39967a3c24e91b7b8f67719a6dacee74f3c8b9fb7d93e855437d2"
+          },
+          {
+            "label": "Chainlink USD1 CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USD1"
+          },
+          {
+            "label": "World Liberty Financial bridge docs",
+            "url": "https://docs.worldlibertyfinancial.com/wlfi-tools/bridge"
+          }
+        ]
       },
       {
         "id": "abcore:0x111111d2bf19e43c34263401e0cad979ed1cdb61",

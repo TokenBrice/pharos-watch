@@ -42,13 +42,36 @@
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "ISC has a single Solana deployment in the reviewed metadata and no sourced bridge, lockbox, or cross-chain route was resolved. Pharos treats this secondary-triage row as single-chain/native.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
     "confidence": "probable",
     "sources": [
       {
         "label": "ISC docs",
         "url": "https://wp.isc.money/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "solana:J9BcrQfX4p9D1bvLzRNCbMDv8f44a9LFdeqNE4Yk2WMD",
+        "destinationChain": "solana",
+        "contractAddress": "J9BcrQfX4p9D1bvLzRNCbMDv8f44a9LFdeqNE4Yk2WMD",
+        "protocol": "ISC native Solana issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "ISC is native on Solana: mint and freeze authority are the reviewed 2-of-3 SPL multisig 3XM6WqYLx5gKpRNwnCcUrBmJAhRHx3imktwEvbRwXavZ (mint-authority profile).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "ISC docs",
+            "url": "https://wp.isc.money/"
+          }
+        ]
       }
     ]
   },
@@ -77,49 +100,154 @@
     {
       "name": "Physical gold holdings",
       "pct": 20,
-      "risk": "very-low"
+      "risk": "low",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed gold bullion or gold-vehicle providers",
+      "riskFactors": [
+        "market",
+        "custody",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Investment-grade bonds",
       "pct": 20,
-      "risk": "low"
+      "risk": "low",
+      "assetClass": "public-credit",
+      "issuerOrObligor": "Undisclosed global investment-grade bond issuers",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Short-term Treasury bills",
       "pct": 20,
-      "risk": "very-low"
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "Undisclosed sovereign short-term Treasury issuers",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Global equity exposure",
       "pct": 20,
-      "risk": "medium"
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed global equity index vehicles",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Cash reserves",
       "pct": 20,
-      "risk": "very-low"
+      "risk": "very-low",
+      "assetClass": "cash",
+      "issuerOrObligor": "Undisclosed cash deposit institutions",
+      "riskFactors": [
+        "credit",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SONG-5 Safety Score V9 backing review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "confidence": "manual-review",
     "sources": [
-      {"label": "ISC reserves whitepaper", "url": "https://wp.isc.money/how-isc-works/the-isc-reserves"},
-      {"label": "ISC reserve dashboard", "url": "https://dashboard.isc.money/"}
+      {
+        "label": "ISC reserves whitepaper",
+        "url": "https://wp.isc.money/how-isc-works/the-isc-reserves"
+      },
+      {
+        "label": "ISC reserve dashboard",
+        "url": "https://dashboard.isc.money/"
+      }
     ],
-    "rationale": "ISC's whitepaper specifies an initial target allocation of 20% each to global equity, gold, global bonds, short-term Treasuries, and cash. It directs readers to the dashboard for the current allocation, but the reviewed dashboard requires JavaScript and did not expose a dated, verifiable allocation snapshot. The static rows therefore represent the issuer's initial target, not a verified current reserve composition.",
+    "rationale": "ISC's whitepaper specifies an initial target allocation of 20% each to global equity, gold, global bonds, short-term Treasuries, and cash. It directs readers to the dashboard for the current allocation, but the reviewed dashboard requires JavaScript and did not expose a dated, verifiable allocation snapshot. The static rows therefore represent the issuer's initial target, not a verified current reserve composition. The gold slice is classified low rather than very-low because the gold vehicle (allocated bars versus fund or tokenized exposure) is not identified in the reviewed sources.",
     "compositionBasis": "ISC whitepaper initial target percentage allocation",
     "scope": "full-composition",
     "knownUnknownExposure": "The current reserve allocation, holdings, custody providers, valuation date, liability reconciliation, and implementation launch date are not established by the reviewed primary sources.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
-      {"reserveIndex": 0, "reserveName": "Physical gold holdings", "pct": 20, "disposition": "insufficient-evidence", "rationale": "This is an initial target allocation, not a current holding disclosure."},
-      {"reserveIndex": 1, "reserveName": "Investment-grade bonds", "pct": 20, "disposition": "insufficient-evidence", "rationale": "This is an initial target allocation, not a current holding disclosure."},
-      {"reserveIndex": 2, "reserveName": "Short-term Treasury bills", "pct": 20, "disposition": "insufficient-evidence", "rationale": "This is an initial target allocation, not a current holding disclosure."},
-      {"reserveIndex": 3, "reserveName": "Global equity exposure", "pct": 20, "disposition": "insufficient-evidence", "rationale": "This is an initial target allocation, not a current holding disclosure."},
-      {"reserveIndex": 4, "reserveName": "Cash reserves", "pct": 20, "disposition": "insufficient-evidence", "rationale": "This is an initial target allocation, not a current holding disclosure."}
+      {
+        "reserveIndex": 0,
+        "reserveName": "Physical gold holdings",
+        "pct": 20,
+        "disposition": "insufficient-evidence",
+        "rationale": "This is an initial target allocation, not a current holding disclosure."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Investment-grade bonds",
+        "pct": 20,
+        "disposition": "insufficient-evidence",
+        "rationale": "This is an initial target allocation, not a current holding disclosure."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Short-term Treasury bills",
+        "pct": 20,
+        "disposition": "insufficient-evidence",
+        "rationale": "This is an initial target allocation, not a current holding disclosure."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "Global equity exposure",
+        "pct": 20,
+        "disposition": "insufficient-evidence",
+        "rationale": "This is an initial target allocation, not a current holding disclosure."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "Cash reserves",
+        "pct": 20,
+        "disposition": "insufficient-evidence",
+        "rationale": "This is an initial target allocation, not a current holding disclosure."
+      }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "ISC Reserve accounts and undisclosed reserve managers",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "ISC reserves whitepaper",
+        "url": "https://wp.isc.money/how-isc-works/the-isc-reserves"
+      },
+      {
+        "label": "ISC reserve dashboard",
+        "url": "https://dashboard.isc.money/"
+      }
+    ],
+    "uncertainty": "The whitepaper describes a community-governed ISC Reserve basket but does not name custody providers, account segregation, insolvency treatment, rehypothecation terms, or the managers behind the target allocation.",
+    "knownUnknownExposurePct": 100
   },
   "yieldConfig": {
     "yieldSource": "ISC purchasing-power basket appreciation",

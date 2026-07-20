@@ -188,6 +188,11 @@
       "chain": "fantom",
       "address": "0x9879abdea01a879644185341f7af7d8343556b7a",
       "decimals": 18
+    },
+    {
+      "chain": "near",
+      "address": "0000000000085d4780b73119b644ae5ecd22b376.factory.bridge.near",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {
@@ -518,9 +523,9 @@
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "TrueUSD documents support on multiple chains through its issuer ecosystem. The reviewed evidence supports native issuer mint/redeem availability rather than a single external bridge route.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "TrueUSD has four issuer-native mintable deployments (Ethereum, BSC, Avalanche, Tron) whose controllers match the reviewed mintAuthority profile; the Polygon, Arbitrum, and Optimism deployments are canonical-bridge lock-mint representations (Polygon PoS ChildChainManager, Arbitrum L2ERC20Gateway, OP L2StandardBridge), the Fantom deployment is a legacy Multichain representation controlled by the defunct Multichain MPC EOA, and the NEAR deployment is a Rainbow Bridge factory representation.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
     "confidence": "verified",
     "sources": [
       {
@@ -536,122 +541,268 @@
       {
         "id": "ethereum:0x0000000000085d4780b73119b644ae5ecd22b376",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x0000000000085d4780b73119b644ae5ecd22b376",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "TrueUSD issuer-native (Techteryx)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "owner() read on-chain 2026-07-20 returns the issuer TokenController 0x0000000000075efbee23fe2de1bd0b7690883cc9, matching the reviewed mintAuthority profile; canonical issuer-native deployment, no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "TrueUSD Ethereum token on Etherscan",
+            "url": "https://etherscan.io/address/0x0000000000085d4780b73119b644ae5ecd22b376"
+          },
+          {
+            "label": "TrueUSD website",
+            "url": "https://tusd.io/"
+          }
+        ]
       },
       {
         "id": "tron:TUpMhErZL2fhh4sVNULAbNKLokS4GjC1F4",
         "destinationChain": "tron",
         "contractAddress": "TUpMhErZL2fhh4sVNULAbNKLokS4GjC1F4",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "TrueUSD issuer-native (Techteryx)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Reviewed mintAuthority documents this Tron proxy and its controller TTfLBC7hVJMbHxiBqmKFUaW5dtoPfUWaMA under issuer-native owner account TTYymuCMsVEGpGKasgVowppBufuvDGnXaY; issuer-native deployment, no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "TrueUSD Tron token on TronScan",
+            "url": "https://tronscan.org/#/token20/TUpMhErZL2fhh4sVNULAbNKLokS4GjC1F4"
+          },
+          {
+            "label": "TrueUSD website",
+            "url": "https://tusd.io/"
+          }
+        ]
       },
       {
         "id": "avalanche:0x1c20e891bab6b1727d14da358fae2984ed9b59eb",
         "destinationChain": "avalanche",
         "contractAddress": "0x1c20e891bab6b1727d14da358fae2984ed9b59eb",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "TrueUSD issuer-native (Techteryx)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "owner() read on-chain 2026-07-20 returns the issuer controller 0xc3a247ace92a6a36fb69f70873a85fb8a66adc1c, matching the reviewed mintAuthority profile; issuer-native deployment, no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "TrueUSD Avalanche token on Snowscan",
+            "url": "https://snowscan.xyz/address/0x1c20e891bab6b1727d14da358fae2984ed9b59eb"
+          },
+          {
+            "label": "TrueUSD website",
+            "url": "https://tusd.io/"
+          }
+        ]
       },
       {
         "id": "polygon:0x2e1ad108ff1d8c782fcbbb89aad783ac49586756",
         "destinationChain": "polygon",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x2e1ad108ff1d8c782fcbbb89aad783ac49586756",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Polygon PoS bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "name() on-chain reads 'TrueUSD (PoS)' 2026-07-20; DEPOSITOR_ROLE enumeration shows the sole depositor is the Polygon ChildChainManagerProxy 0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa (DEFAULT_ADMIN_ROLE has zero members). Canonical PoS lock-mint representation of the Ethereum TUSD.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "polygon",
+        "controllerAddress": "0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa",
+        "failureDomainKeys": [
+          "protocol:polygon-pos-bridge",
+          "contract:polygon:0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "TrueUSD (PoS) on Polygonscan",
+            "url": "https://polygonscan.com/address/0x2e1ad108ff1d8c782fcbbb89aad783ac49586756"
+          },
+          {
+            "label": "Polygon PoS ChildChainManagerProxy",
+            "url": "https://polygonscan.com/address/0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x4d15a3a2286d883af0aa1b3f21367843fac63e07",
         "destinationChain": "arbitrum",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x4d15a3a2286d883af0aa1b3f21367843fac63e07",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Arbitrum canonical ERC20 gateway",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: l1Address() returns the canonical Ethereum TUSD 0x0000000000085d4780b73119b644ae5ecd22b376 and l2Gateway() returns the Arbitrum L2ERC20Gateway 0x09e9222E96E7B4AE2a407B98d48e330053351EEe, which is the sole bridgeMint authority for this standard L2 representation; L1GatewayRouter.l1TokenToGateway maps TUSD to the standard L1ERC20Gateway.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x09e9222E96E7B4AE2a407B98d48e330053351EEe",
+        "failureDomainKeys": [
+          "protocol:arbitrum-canonical-bridge",
+          "contract:arbitrum:0x09e9222e96e7b4ae2a407b98d48e330053351eee"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "TrueUSD on Arbiscan",
+            "url": "https://arbiscan.io/address/0x4d15a3a2286d883af0aa1b3f21367843fac63e07"
+          },
+          {
+            "label": "Arbitrum L2ERC20Gateway",
+            "url": "https://arbiscan.io/address/0x09e9222E96E7B4AE2a407B98d48e330053351EEe"
+          }
+        ]
       },
       {
         "id": "optimism:0xcb59a0a753fdb7491d5f3d794316f1ade197b21e",
         "destinationChain": "optimism",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xcb59a0a753fdb7491d5f3d794316f1ade197b21e",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "OP canonical L2 standard bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: l1Token() returns the canonical Ethereum TUSD 0x0000000000085d4780b73119b644ae5ecd22b376 and l2Bridge() returns the predeployed L2StandardBridge 0x4200000000000000000000000000000000000010, the sole mint authority for this standard L2 representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "optimism",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:op-canonical-bridge",
+          "contract:optimism:0x4200000000000000000000000000000000000010"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "TrueUSD on Optimistic Etherscan",
+            "url": "https://optimistic.etherscan.io/address/0xcb59a0a753fdb7491d5f3d794316f1ade197b21e"
+          },
+          {
+            "label": "OP L2StandardBridge predeploy",
+            "url": "https://optimistic.etherscan.io/address/0x4200000000000000000000000000000000000010"
+          }
+        ]
       },
       {
         "id": "bsc:0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9",
         "destinationChain": "bsc",
         "contractAddress": "0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "TrueUSD issuer-native (Techteryx)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "owner() read on-chain 2026-07-20 returns the issuer controller 0xb25e3c3493fc61bdd02661bcc27058022716c66a, matching the reviewed mintAuthority profile; issuer-native deployment, no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "TrueUSD BSC token on BscScan",
+            "url": "https://bscscan.com/address/0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9"
+          },
+          {
+            "label": "TrueUSD website",
+            "url": "https://tusd.io/"
+          }
+        ]
       },
       {
         "id": "fantom:0x9879abdea01a879644185341f7af7d8343556b7a",
         "destinationChain": "fantom",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x9879abdea01a879644185341f7af7d8343556b7a",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Multichain (Anyswap)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "owner() read on-chain 2026-07-20 returns the Multichain MPC EOA 0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe (no contract code), so this is a legacy Multichain lock-mint representation whose mint/upgrade authority is the defunct Multichain MPC key set; Multichain ceased operations in July 2023, so remaining supply is a stranded representation with an unresponsive controller.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "fantom",
+        "controllerAddress": "0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe",
+        "failureDomainKeys": [
+          "protocol:multichain",
+          "eoa:fantom:0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "TrueUSD on FtmScan",
+            "url": "https://ftmscan.com/address/0x9879abdea01a879644185341f7af7d8343556b7a"
+          },
+          {
+            "label": "Multichain shutdown notice (July 2023)",
+            "url": "https://twitter.com/MultichainOrg/status/1679767627628187648"
+          }
+        ]
+      },
+      {
+        "id": "near:0000000000085d4780b73119b644ae5ecd22b376.factory.bridge.near",
+        "destinationChain": "near",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0000000000085d4780b73119b644ae5ecd22b376.factory.bridge.near",
+        "protocol": "Rainbow Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "NEAR RPC reads 2026-07-20 confirm this NEP-141 (name TrueUSD, ~510k supply) is a Rainbow Bridge factory-minted subaccount of factory.bridge.near, which is the sole mint/burn authority on NEAR against proofs of lock in the Ethereum-side locker.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "near",
+        "controllerAddress": "factory.bridge.near",
+        "failureDomainKeys": [
+          "protocol:rainbow-bridge",
+          "contract:near:factory.bridge.near"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "TrueUSD NEP-141 on NearBlocks",
+            "url": "https://nearblocks.io/token/0000000000085d4780b73119b644ae5ecd22b376.factory.bridge.near"
+          },
+          {
+            "label": "Rainbow Bridge documentation",
+            "url": "https://docs.rainbowbridge.app/"
+          }
+        ]
       }
     ]
   },

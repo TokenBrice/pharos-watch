@@ -879,8 +879,8 @@
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "crvUSD is native on Ethereum and uses canonical bridges for Arbitrum, Base, Optimism, ZKsync, Polygon, Gnosis, Taiko, Fraxtal, and Sonic. Its BNB Chain representation instead depends on Curve's X-DAO LayerZero bridge and minter, so that external messaging route determines the aggregate tier.",
-    "reviewedAt": "2026-07-17",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
     "confidence": "verified",
     "protocols": [
       {
@@ -1012,27 +1012,34 @@
         "destinationChain": "arbitrum",
         "canonicalChain": "ethereum",
         "contractAddress": "0x498bf2b1e120fed3ad3d42ea2165e9b73f99c1e5",
-        "protocol": "Canonical rollup bridge",
+        "protocol": "Arbitrum Canonical ERC20 Bridge",
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
         "riskTier": "canonical-rollup-bridge",
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: l2Gateway() of the Arbitrum crvUSD token returns 0x09e9222e96e7b4ae2a407b98d48e330053351eee, the Arbitrum One L2 ERC20 gateway, the mint authority for this canonically bridged representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x09e9222e96e7b4ae2a407b98d48e330053351eee",
+        "failureDomainKeys": [
+          "protocol:arbitrum-canonical-messaging",
+          "contract:arbitrum:0x09e9222e96e7b4ae2a407b98d48e330053351eee"
+        ],
+        "observedAt": "2026-07-20",
         "sources": [
           {
-            "label": "Curve crvUSD docs",
-            "url": "https://resources.curve.finance/"
+            "label": "Arbitrum crvUSD token on Arbiscan (l2Gateway() probed 2026-07-20)",
+            "url": "https://arbiscan.io/address/0x498bf2b1e120fed3ad3d42ea2165e9b73f99c1e5"
           },
           {
             "label": "L2BEAT Arbitrum Canonical",
             "url": "https://l2beat.com/interop/protocols/arbitrum"
           },
           {
-            "label": "L2BEAT ZKsync Era",
-            "url": "https://l2beat.com/interop/protocols/zksync-era"
+            "label": "Curve crvUSD docs",
+            "url": "https://resources.curve.finance/"
           }
         ]
       },
@@ -1042,27 +1049,34 @@
         "destinationChain": "base",
         "canonicalChain": "ethereum",
         "contractAddress": "0x417ac0e078398c154edfadd9ef675d30be60af93",
-        "protocol": "Canonical rollup bridge",
+        "protocol": "Base OP Stack Bridge",
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
         "riskTier": "canonical-rollup-bridge",
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: bridge()/l2Bridge() of the Base crvUSD token return 0x4200000000000000000000000000000000000010, the Base L2StandardBridge, the mint authority for this canonically bridged representation; l1Token() returns the Ethereum crvUSD 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "controllerChain": "base",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:base-canonical-messaging",
+          "contract:base:0x4200000000000000000000000000000000000010"
+        ],
+        "observedAt": "2026-07-20",
         "sources": [
+          {
+            "label": "Base crvUSD token on Basescan (bridge() probed 2026-07-20)",
+            "url": "https://basescan.org/address/0x417ac0e078398c154edfadd9ef675d30be60af93"
+          },
+          {
+            "label": "L2BEAT Base Canonical",
+            "url": "https://l2beat.com/interop/protocols/base"
+          },
           {
             "label": "Curve crvUSD docs",
             "url": "https://resources.curve.finance/"
-          },
-          {
-            "label": "L2BEAT Arbitrum Canonical",
-            "url": "https://l2beat.com/interop/protocols/arbitrum"
-          },
-          {
-            "label": "L2BEAT ZKsync Era",
-            "url": "https://l2beat.com/interop/protocols/zksync-era"
           }
         ]
       },
@@ -1078,14 +1092,14 @@
         "riskTier": "external-validated-network",
         "semantics": "lock-mint",
         "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "gnosis",
         "controllerAddress": "0xf6A78083ca3e2a662D6dd1703c939c8aCE2e268d",
         "failureDomainKeys": [
           "protocol:gnosis-omnibridge",
           "contract:gnosis:0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d"
         ],
-        "reviewDisposition": "reviewed",
-        "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-17",
         "observedBlock": 47243970,
         "sources": [
@@ -1111,14 +1125,14 @@
         "riskTier": "external-lock-mint",
         "semantics": "lock-mint",
         "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "polygon",
         "controllerAddress": "0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa",
         "failureDomainKeys": [
           "protocol:polygon-pos-bridge",
           "contract:polygon:0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa"
         ],
-        "reviewDisposition": "reviewed",
-        "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-17",
         "observedBlock": 90373405,
         "sources": [
@@ -1144,6 +1158,8 @@
         "riskTier": "external-lock-mint",
         "semantics": "burn-mint",
         "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "bsc",
         "controllerAddress": "0x0a92fd5271db1c41564bd01ef6b1a75fc1db4d4f",
         "failureDomainKeys": [
@@ -1151,8 +1167,6 @@
           "contract:bsc:0x0a92fd5271db1c41564bd01ef6b1a75fc1db4d4f",
           "contract:bsc:0xc417e91098402dd4f677782a2ec204c429ce513a"
         ],
-        "reviewDisposition": "reviewed",
-        "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-17",
         "observedBlock": 110457044,
         "sources": [
@@ -1172,27 +1186,34 @@
         "destinationChain": "optimism",
         "canonicalChain": "ethereum",
         "contractAddress": "0xc52d7f23a2e460248db6ee192cb23dd12bddcbf6",
-        "protocol": "Canonical rollup bridge",
+        "protocol": "Optimism OP Stack Bridge",
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
         "riskTier": "canonical-rollup-bridge",
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: bridge()/l2Bridge() of the OP Mainnet crvUSD token return 0x4200000000000000000000000000000000000010, the OP Mainnet L2StandardBridge, the mint authority for this canonically bridged representation; l1Token()/remoteToken() return the Ethereum crvUSD 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "controllerChain": "optimism",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:optimism-canonical-messaging",
+          "contract:optimism:0x4200000000000000000000000000000000000010"
+        ],
+        "observedAt": "2026-07-20",
         "sources": [
+          {
+            "label": "OP Mainnet crvUSD token on Optimistic Etherscan (bridge() probed 2026-07-20)",
+            "url": "https://optimistic.etherscan.io/address/0xc52d7f23a2e460248db6ee192cb23dd12bddcbf6"
+          },
+          {
+            "label": "L2BEAT OP Mainnet Canonical",
+            "url": "https://l2beat.com/interop/protocols/optimism"
+          },
           {
             "label": "Curve crvUSD docs",
             "url": "https://resources.curve.finance/"
-          },
-          {
-            "label": "L2BEAT Arbitrum Canonical",
-            "url": "https://l2beat.com/interop/protocols/arbitrum"
-          },
-          {
-            "label": "L2BEAT ZKsync Era",
-            "url": "https://l2beat.com/interop/protocols/zksync-era"
           }
         ]
       },
@@ -1208,14 +1229,14 @@
         "riskTier": "canonical-rollup-bridge",
         "semantics": "lock-mint",
         "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "taiko",
         "controllerAddress": "0x1670000000000000000000000000000000000002",
         "failureDomainKeys": [
           "protocol:taiko-erc20-vault",
           "contract:taiko:0x1670000000000000000000000000000000000002"
         ],
-        "reviewDisposition": "reviewed",
-        "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-17",
         "observedBlock": 8842344,
         "sources": [
@@ -1241,14 +1262,14 @@
         "riskTier": "canonical-rollup-bridge",
         "semantics": "lock-mint",
         "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "fraxtal",
         "controllerAddress": "0x4200000000000000000000000000000000000010",
         "failureDomainKeys": [
           "protocol:fraxtal-op-stack-bridge",
           "contract:fraxtal:0x4200000000000000000000000000000000000010"
         ],
-        "reviewDisposition": "reviewed",
-        "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-17",
         "observedBlock": 38727179,
         "sources": [
@@ -1268,27 +1289,34 @@
         "destinationChain": "zksync",
         "canonicalChain": "ethereum",
         "contractAddress": "0x43cd37cc4b9ec54833c8ac362dd55e58bfd62b86",
-        "protocol": "Canonical rollup bridge",
+        "protocol": "zkSync Era Canonical Shared Bridge",
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
         "riskTier": "canonical-rollup-bridge",
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: l2Bridge() of the zkSync Era crvUSD token returns 0x11f943b2c77b743ab90f4a0ae7d5a4e7fca3e102, the zkSync Era L2 shared bridge, the mint authority for this canonically bridged representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "controllerChain": "zksync",
+        "controllerAddress": "0x11f943b2c77b743ab90f4a0ae7d5a4e7fca3e102",
+        "failureDomainKeys": [
+          "protocol:zksync-canonical-messaging",
+          "contract:zksync:0x11f943b2c77b743ab90f4a0ae7d5a4e7fca3e102"
+        ],
+        "observedAt": "2026-07-20",
         "sources": [
           {
-            "label": "Curve crvUSD docs",
-            "url": "https://resources.curve.finance/"
-          },
-          {
-            "label": "L2BEAT Arbitrum Canonical",
-            "url": "https://l2beat.com/interop/protocols/arbitrum"
+            "label": "zkSync Era crvUSD token on Era explorer (l2Bridge() probed 2026-07-20)",
+            "url": "https://explorer.zksync.io/address/0x43cd37cc4b9ec54833c8ac362dd55e58bfd62b86"
           },
           {
             "label": "L2BEAT ZKsync Era",
             "url": "https://l2beat.com/interop/protocols/zksync-era"
+          },
+          {
+            "label": "Curve crvUSD docs",
+            "url": "https://resources.curve.finance/"
           }
         ]
       },
@@ -1304,14 +1332,14 @@
         "riskTier": "external-validated-network",
         "semantics": "lock-mint",
         "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "sonic",
         "controllerAddress": "0x9Ef7629F9B930168b76283AdD7120777b3c895b3",
         "failureDomainKeys": [
           "protocol:sonic-gateway",
           "contract:sonic:0x9ef7629f9b930168b76283add7120777b3c895b3"
         ],
-        "reviewDisposition": "reviewed",
-        "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-17",
         "observedBlock": 76070717,
         "sources": [
@@ -1338,7 +1366,12 @@
       "blacklistable": true,
       "assetClass": "cryptoasset",
       "issuerOrObligor": "BitGo (WBTC) and Coinbase (cbBTC) custodied Bitcoin wrappers",
-      "riskFactors": ["custody", "counterparty", "market", "liquidity"],
+      "riskFactors": [
+        "custody",
+        "counterparty",
+        "market",
+        "liquidity"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
@@ -1347,7 +1380,9 @@
       "risk": "very-low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Ethereum native asset (no issuer or custodian layer)",
-      "riskFactors": ["market"],
+      "riskFactors": [
+        "market"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
@@ -1356,7 +1391,12 @@
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Threshold Network tBTC bridge and signer set",
-      "riskFactors": ["custody", "counterparty", "market", "smart-contract"],
+      "riskFactors": [
+        "custody",
+        "counterparty",
+        "market",
+        "smart-contract"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
@@ -1365,7 +1405,11 @@
       "risk": "low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Lido (wstETH), Frax (sfrxETH), and Ether.fi (weETH) liquid staking issuers",
-      "riskFactors": ["market", "smart-contract", "liquidity"],
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity"
+      ],
       "liquidityHorizon": "immediate"
     }
   ],

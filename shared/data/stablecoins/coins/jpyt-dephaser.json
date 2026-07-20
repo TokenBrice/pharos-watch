@@ -296,11 +296,11 @@
   "chainTier": "stage1-l2",
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
-    "tier": "canonical-rollup-bridge",
-    "summary": "JPYT is tracked on OP Stack chains and the candidate evidence points to OP Mainnet canonical routing. No separate issuer bridge route was resolved, so the route is reviewed as canonical rollup bridge exposure.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "tier": "issuer-native-burn-mint",
+    "summary": "JPYT is minted natively on each OP Stack chain by DePhaser's per-chain DepositManager contracts (sole MINTER_ROLE holders) against stablecoin deposits routed into Aave; the reviewed mint profile supersedes the earlier canonical-bridge guess.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "l2beat",
@@ -326,32 +326,46 @@
       {
         "id": "optimism:0xc47da4cb96ce65a96844a01bfae509f9d5454534",
         "destinationChain": "optimism",
+        "canonicalChain": "optimism",
         "contractAddress": "0xc47da4cb96ce65a96844a01bfae509f9d5454534",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "DePhaser issuer-native JPYT (DepositManager mint)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native JPYT issuance on optimism: MINTER_ROLE (sole member) is held by the DePhaser DepositManager 0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9 (verified on-chain 2026-07-20), which mints JPYT against USDT deposits routed into Aave; no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "JPYT on optimism explorer (MINTER_ROLE probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+          }
+        ]
       },
       {
         "id": "base:0xc47da4cb96ce65a96844a01bfae509f9d5454534",
         "destinationChain": "base",
+        "canonicalChain": "base",
         "contractAddress": "0xc47da4cb96ce65a96844a01bfae509f9d5454534",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "DePhaser issuer-native JPYT (DepositManager mint)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native JPYT issuance on base: MINTER_ROLE (sole member) is held by the DePhaser DepositManager 0x0eab9d66adb8527cd7c0e7e7c1782580431ec276 (verified on-chain 2026-07-20), which mints JPYT against USDC deposits routed into Aave; no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "JPYT on base explorer (MINTER_ROLE probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+          }
+        ]
       }
     ]
   },

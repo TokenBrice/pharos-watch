@@ -21,7 +21,7 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "srUSDe is an ERC-4626 senior-risk wrapper over USDe; wrapper minting is deposit/share accounting while durable USDe mint authority is inherited from reviewed Ethena signed-order controls.",
     "inheritedFrom": "usde-ethena",
     "controls": [
@@ -44,7 +44,9 @@
             "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
           }
         ],
-        "evidence": "Ethereum RPC `asset()` returned USDe 0x4c9EDD5852cd905f086C759E8383e09bff1E68B3; parent USDe has reviewed mintAuthority."
+        "evidence": "Ethereum RPC asset() returned USDe 0x4c9EDD5852cd905f086C759E8383e09bff1E68B3; parent USDe has reviewed mintAuthority. Re-verified 2026-07-20 at block 25570877: EIP-1967 impl 0xe894055ca1c73648927e225f3ca38ed48e30210b, admin ProxyAdmin 0x30a17d6bcbdbf1579d6fbba453acf776d01fbb50, whose owner() is TimelockController 0xb2a3cf69c97afd4de7882e5fee120e4efc77b706 (getMinDelay() = 172800 s). The wrapper only does deposit/share accounting; it does not mint base USDe.",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25570877
       }
     ],
     "review": {
@@ -52,14 +54,24 @@
         {
           "label": "srUSDe token",
           "url": "https://etherscan.io/address/0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003#readContract"
+        },
+        {
+          "label": "srUSDe ProxyAdmin",
+          "url": "https://etherscan.io/address/0x30a17d6bcbdbf1579d6fbba453acf776d01fbb50"
+        },
+        {
+          "label": "Strata TimelockController",
+          "url": "https://etherscan.io/address/0xb2a3cf69c97afd4de7882e5fee120e4efc77b706"
+        },
+        {
+          "label": "Strata 3-of-4 proposer Safe",
+          "url": "https://etherscan.io/address/0xa27ca9292268ee0f0258b749f1d5740c9bb68b50"
         }
       ],
-      "evidence": "At Ethereum block 25295172, EIP-1967 admin slot for 0x3d7d6fdf returns 0x30a17d6bcbdbf1579d6fbba453acf776d01fbb50 (ProxyAdmin contract). ProxyAdmin.owner() = 0xb2a3cf69c97afd4de7882e5fee120e4efc77b706 (StrataMasterChef per Blockscout). StrataMasterChef hasRole(DEFAULT_ADMIN_ROLE, self)=true but its governance chain (proposers/executors/human admin) could not be resolved: getRoleMember enumeration reverts and no RoleGranted logs found. Wrapper can be upgraded but upgrade authority is unconfirmed.",
-      "reviewer": "SONG-1 mint-control evidence review",
-      "reviewedAt": "2026-07-14",
-      "unresolvedQuestions": [
-        "Resolve StrataMasterChef (0xb2a3cf69c97afd4de7882e5fee120e4efc77b706) governance: who are the PROPOSER_ROLE/EXECUTOR_ROLE holders or human admin of this AccessControl contract that controls the srUSDe proxy upgrade path?"
-      ]
+      "evidence": "Re-verified 2026-07-20 at Ethereum block 25570877: the srUSDe wrapper 0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003 is a transparent proxy (EIP-1967 impl 0xe894055ca1c73648927e225f3ca38ed48e30210b, admin ProxyAdmin 0x30a17d6bcbdbf1579d6fbba453acf776d01fbb50); ProxyAdmin.owner() returned 0xb2a3cf69c97afd4de7882e5fee120e4efc77b706, a TimelockController-style contract (6726 bytes; getMinDelay() = 172800 seconds; getRoleMember enumeration reverts). RoleGranted event history from deployment block 23049699 to 25570823 (zero RoleRevoked events) plus a confirming hasRole() read resolve the full governance chain: PROPOSER_ROLE is held solely by Safe 0xa27ca9292268ee0f0258b749f1d5740c9bb68b50 (171-byte Safe proxy, getThreshold() = 3, getOwners() = 0x791fb9322132e7bd7a84d233371aa8c21aad5a510, 0x296400d87be5cfb63c5025904cd006ebb23d15d5, 0xd796e125af489cffb4a766df4ded9272e458249c, 0x206cff3df3c6af6f03eeb86fba2c3dfa420b4ac7 \u2014 a 3-of-4 Strata Safe); CANCELLER_ROLE is held by the same Safe plus the 23-byte contract 0x277d26a45add5775f21256159f089769892cea5b; EXECUTOR_ROLE was granted to the zero address (permissionless execution after the two-day delay); DEFAULT_ADMIN_ROLE is held only by the timelock itself. The previously unresolved upgrade-governance question is therefore resolved: wrapper upgrades require a 2-day timelock proposed by the 3-of-4 Strata Safe. Wrapper minting is deposit/share accounting; durable USDe mint authority is inherited from the reviewed Ethena controls.",
+      "reviewer": "SONG-1 mint-control evidence review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable"
     }
   },
   "variantOf": "usde-ethena",

@@ -225,9 +225,18 @@
     "reviewer": "SONG-5 Safety Score V9 mechanism review",
     "rationale": "Noble documents USDN as a representation of M0's M token locked through the M0 Portal, with M0's Treasury-backed and rebasing design determining the underlying value. The direct USDN reserve relationship is therefore the M token, while the current individual Treasury allocations, fund claim terms, duration, NAV methodology, and loss-recovery design remain M0-level facts not disclosed by Noble's USDN documentation.",
     "sources": [
-      {"label": "Noble USDN overview", "url": "https://docs.noble.xyz/learn/usdn/overview/"},
-      {"label": "Noble USDN architecture", "url": "https://docs.noble.xyz/usdn/architecture/"},
-      {"label": "Noble Dollar collateral disclosure", "url": "https://dollar.noble.xyz/how-noble-dollar-works"}
+      {
+        "label": "Noble USDN overview",
+        "url": "https://docs.noble.xyz/learn/usdn/overview/"
+      },
+      {
+        "label": "Noble USDN architecture",
+        "url": "https://docs.noble.xyz/usdn/architecture/"
+      },
+      {
+        "label": "Noble Dollar collateral disclosure",
+        "url": "https://dollar.noble.xyz/how-noble-dollar-works"
+      }
     ]
   },
   "llamaId": "282",
@@ -244,8 +253,8 @@
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "Noble documents USDN issuance through M0 Portal infrastructure backed by Wormhole NTT. The route locks M on Ethereum and transmits value to Noble, so it is reviewed as an external lock/mint route.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
     "confidence": "verified",
     "protocols": [
       {
@@ -281,6 +290,45 @@
         "label": "Wormhole NTT",
         "url": "https://wormhole.com/products/native-token-transfers"
       }
+    ],
+    "routes": [
+      {
+        "id": "noble:uusdn",
+        "sourceChain": "ethereum",
+        "destinationChain": "noble",
+        "canonicalChain": "noble",
+        "contractAddress": "uusdn",
+        "protocol": "M0 Portal (Wormhole NTT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "USDN on Noble is issued through the M0 Portal on Ethereum (0x83Ae82Bd4054e815fB7B189C39D9CE670369ea16): base-M is managed on Ethereum by the immutable MinterGateway and value moves to Noble over Wormhole NTT (mint-authority review, Ethereum block 25531314; portal owner = 2-of-2 Safe 0x7176665e336e8692e9b265aB6290934C93F99cCf). uusdn supply on Noble reads 3,257,952,868,363 uusdn (~$3.26M) via Noble LCD 2026-07-20.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x83Ae82Bd4054e815fB7B189C39D9CE670369ea16",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "contract:ethereum:0x83ae82bd4054e815fb7b189c39d9ce670369ea16"
+        ],
+        "sources": [
+          {
+            "label": "M0 M Portal docs",
+            "url": "https://docs.m0.org/home/technical-documentations/m-portal/underlying/"
+          },
+          {
+            "label": "Noble LCD uusdn supply (2026-07-20)",
+            "url": "https://noble-api.polkachu.com/cosmos/bank/v1beta1/supply/by_denom?denom=uusdn"
+          },
+          {
+            "label": "Wormhole NTT",
+            "url": "https://wormhole.com/products/native-token-transfers"
+          }
+        ]
+      }
     ]
   },
   "links": [
@@ -303,7 +351,7 @@
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "USDN is a rebasing yield-bearing stablecoin that accrues T-bill yield directly to holder balances every 30 seconds via M0's rebase mechanism. The GENIUS Act defines a payment stablecoin as one the issuer is obligated to redeem at a fixed monetary value; USDN balances grow over time rather than redeeming at a fixed amount. The Act also explicitly prohibits payment stablecoin issuers from paying any yield to holders — USDN's entire design is yield distribution. These structural features place USDN outside the GENIUS payment stablecoin definition."
+      "summary": "USDN is a rebasing yield-bearing stablecoin that accrues T-bill yield directly to holder balances every 30 seconds via M0's rebase mechanism. The GENIUS Act defines a payment stablecoin as one the issuer is obligated to redeem at a fixed monetary value; USDN balances grow over time rather than redeeming at a fixed amount. The Act also explicitly prohibits payment stablecoin issuers from paying any yield to holders \u2014 USDN's entire design is yield distribution. These structural features place USDN outside the GENIUS payment stablecoin definition."
     },
     "authorizationStatus": "not-applicable",
     "issuerPathway": "not-applicable",
@@ -325,25 +373,25 @@
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "GENIUS Act text S.1582 – payment stablecoin definition and yield prohibition",
+        "label": "GENIUS Act text S.1582 \u2013 payment stablecoin definition and yield prohibition",
         "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
         "sourceKind": "statute",
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "Noble USDN – yield-bearing rebasing design",
+        "label": "Noble USDN \u2013 yield-bearing rebasing design",
         "url": "https://noble.xyz/usdn",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "Noble blog – introducing USDN",
+        "label": "Noble blog \u2013 introducing USDN",
         "url": "https://noble.xyz/blog/introducing-usdn",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "M0 dashboard – reserve transparency",
+        "label": "M0 dashboard \u2013 reserve transparency",
         "url": "https://dashboard.m0.org/",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-06-07"

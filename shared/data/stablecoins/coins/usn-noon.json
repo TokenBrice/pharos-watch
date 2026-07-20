@@ -174,8 +174,8 @@
     "controls": [
       {
         "chain": "ethereum",
-      "address": "0xB91b361ebE4022Bb62dF0651bDD09b21209ac058",
-      "label": "USN MinterHandlerV2",
+        "address": "0xB91b361ebE4022Bb62dF0651bDD09b21209ac058",
+        "label": "USN MinterHandlerV2",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
@@ -189,7 +189,7 @@
           "unsupportedReason": "This control covers primary issuer minting on Ethereum only. LayerZero and Hyperlane destination-mint messaging and peer authority remains separately unresolved under bridgeRouteRisk."
         },
         "observedAt": "2026-07-14",
-      "observedBlock": 25530462,
+        "observedBlock": 25530462,
         "sources": [
           {
             "label": "MinterHandlerV2 implementation",
@@ -283,8 +283,8 @@
       },
       {
         "chain": "ethereum",
-      "address": "0xE5e412C212B4FBbF550A94e7BD5e83dB0B315A7F",
-      "label": "USN Ethereum upgrade timelock",
+        "address": "0xE5e412C212B4FBbF550A94e7BD5e83dB0B315A7F",
+        "label": "USN Ethereum upgrade timelock",
         "role": "proxy-admin",
         "authorityType": "timelock",
         "directMintAbility": "upgrade-only",
@@ -292,7 +292,7 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-14",
-      "observedBlock": 25531363,
+        "observedBlock": 25531363,
         "failureDomainKeys": [
           "safe:ethereum:0x1ea169ecccf7714e7ba04900e1a3357cca77327f"
         ],
@@ -305,16 +305,16 @@
             "label": "Noon upgrade timelock source",
             "url": "https://sourcify.dev/server/v2/contract/1/0xe5e412c212b4fbbf550a94e7bd5e83db0b315a7f?fields=sources,abi,metadata"
           },
-        {
-          "label": "USN ProxyAdmin on Etherscan",
-          "url": "https://etherscan.io/address/0x55f39512cb43111a13e8440ee3e3602e72628239#code"
-        },
-        {
-          "label": "Ethereum PublicNode RPC",
-          "url": "https://ethereum-rpc.publicnode.com"
-        }
-      ],
-      "evidence": "At Ethereum block 25531363, the USN proxy implementation slot was 0x6bdc8104...8397 and the canonical EIP-1967 admin slot 0xb5312768...d6103 returned ProxyAdmin 0x55f39512...8239. The OpenZeppelin v5 transparent-proxy runtime independently embeds the same immutable ProxyAdmin address. ProxyAdmin.owner() returned this verified timelock; delay() returned 172800 seconds and owner() returned the Noon 3-of-6 admin Safe. Verified source requires the owner to schedule an exact upgrade and wait for the delay before execution."
+          {
+            "label": "USN ProxyAdmin on Etherscan",
+            "url": "https://etherscan.io/address/0x55f39512cb43111a13e8440ee3e3602e72628239#code"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25531363, the USN proxy implementation slot was 0x6bdc8104...8397 and the canonical EIP-1967 admin slot 0xb5312768...d6103 returned ProxyAdmin 0x55f39512...8239. The OpenZeppelin v5 transparent-proxy runtime independently embeds the same immutable ProxyAdmin address. ProxyAdmin.owner() returned this verified timelock; delay() returned 172800 seconds and owner() returned the Noon 3-of-6 admin Safe. Verified source requires the owner to schedule an exact upgrade and wait for the delay before execution."
       }
     ],
     "review": {

@@ -242,9 +242,9 @@
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25295201: Yamato proxy (0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257) is an ERC1967Proxy (UUPS) pointing to YamatoV4 impl (0x0bfa59f9fbe9565c240cd64311c86e90e59a4838); proxy admin EIP-1967 slot = 0x0 (UUPS). governance() returns 0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec (GnosisSafeProxy, 4 owners, threshold 2, no modules). CJPY token (0x1cfa5641c01406ab8ac350ded7d735ec41298372): EIP-1967 proxy admin slot = 0x0, owner() reverts — immutable non-upgradeable token.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25295201: Yamato proxy (0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257) is an ERC1967Proxy (UUPS) pointing to YamatoV4 impl (0x0bfa59f9fbe9565c240cd64311c86e90e59a4838); proxy admin EIP-1967 slot = 0x0 (UUPS). governance() returns 0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec (GnosisSafeProxy, 4 owners, threshold 2, no modules). CJPY token (0x1cfa5641c01406ab8ac350ded7d735ec41298372): EIP-1967 proxy admin slot = 0x0, owner() reverts — immutable non-upgradeable token. Follow-up 2026-07-20: the Yamato pledge contract 0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257 exposes MCR()=130 and feePool() but no aggregate supply cap or debt ceiling getter; CJPY minting is bounded only by per-vault ETH collateral at the MCR, so the economic cap semantics are unbounded.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Yamato docs",
@@ -259,7 +259,8 @@
           "url": "https://etherscan.io/address/0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec"
         }
       ]
-    }
+    },
+    "economicCapSemantics": "unbounded"
   },
   "deploymentModel": "single-chain",
   "custodyModel": "onchain",
@@ -284,14 +285,31 @@
     "reviewedAt": "2026-07-14",
     "reviewer": "SONG Safety Score V9 reserve review",
     "confidence": "verified",
-    "sources": [{ "label": "Yamato documentation", "url": "https://docs.yamato.fi/v/en" }, { "label": "Yamato Ethereum contract", "url": "https://etherscan.io/address/0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257" }],
+    "sources": [
+      {
+        "label": "Yamato documentation",
+        "url": "https://docs.yamato.fi/v/en"
+      },
+      {
+        "label": "Yamato Ethereum contract",
+        "url": "https://etherscan.io/address/0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257"
+      }
+    ],
     "rationale": "Yamato documents CJPY as minted against ETH pledges with a 130% minimum collateral ratio. The tracked reserve envelope is therefore the sole ETH collateral category; live position weights change onchain and are not represented as a static allocation.",
     "compositionBasis": "Yamato ETH-CDP collateral design",
     "compositionAsOf": "2026-07-15",
     "scope": "full-composition",
     "knownUnknownExposure": "No reserve exposure outside ETH pledges is documented; current individual pledge positions are dynamic.",
     "knownUnknownExposurePct": 0,
-    "nonLinkDispositions": [{ "reserveIndex": 0, "reserveName": "ETH", "pct": 100, "disposition": "untracked-exogenous-asset", "rationale": "Native ETH collateral is an external asset rather than a tracked stablecoin dependency." }]
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "ETH",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Native ETH collateral is an external asset rather than a tracked stablecoin dependency."
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [

@@ -68,12 +68,11 @@
           "url": "https://developers.circle.com/stablecoins/what-is-usdc"
         }
       ],
-      "evidence": "eEARN is tracked as a USDC strategy-vault variant with 100% USDC wrapper reserves in Pharos metadata. No separate base-supply mint authority is modeled for the wrapper; base USDC mint authority is inherited from Circle.",
-      "reviewer": "Codex mint-authority upgrade",
-      "reviewedAt": "2026-06-18",
-      "unresolvedQuestions": [
-        "Upgrade/admin controls for the eEARN vault contract were not independently re-read on-chain in this review; this profile only closes inherited base-mint coverage."
-      ]
+      "evidence": "eEARN is tracked as a USDC strategy-vault variant with 100% USDC wrapper reserves in Pharos metadata. No separate base-supply mint authority is modeled for the wrapper; base USDC mint authority is inherited from Circle. 2026-07-20 dc-1 pass: re-read the eEARN vault 0x9be9294722f8aad37b11a9792be2c782182cafa2 on-chain — owner() returns 0x12917e06b55995e7a5d73681ce491774c73b7c6a (admin/upgrade authority) and the EIP-1967 implementation is 0xab222201c5bd8a18dc6b340ba78a709589e01781. Upgrade/admin controls are now independently re-read, closing the prior open question.",
+      "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+      "reviewedAt": "2026-07-20",
+      "unresolvedQuestions": [],
+      "disposition": "scoreable"
     }
   },
   "variantOf": "usdc-circle",
@@ -134,7 +133,13 @@
       "depType": "wrapper",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Ember Earn vault and Circle USDC",
-      "riskFactors": ["smart-contract", "liquidity", "counterparty", "custody", "concentration"],
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],

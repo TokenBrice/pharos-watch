@@ -491,61 +491,94 @@
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "XUSD is issued by StraitsX across Ethereum, BNB Chain, and Solana. No public third-party bridge route was resolved from issuer evidence, so reviewed risk is issuer-native multichain mint/redeem exposure.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "summary": "XUSD is issuer-minted natively by StraitsX on all three tracked networks: Ethereum and BNB Chain use the Circle-style MasterMinter pattern with chain-local 3-of-5 owner and master-minter Safes, and the Solana mint/freeze authority is the reviewed 3-of-10 SPL multisig. No third-party bridge carries the XUSD claim; cross-chain movement is issuer-native burn/mint through StraitsX rails.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "StraitsX XUSD",
         "url": "https://www.straitsx.com/xusd"
+      },
+      {
+        "label": "Ethereum XUSD token",
+        "url": "https://etherscan.io/address/0xc08e7e23c235073c6807c2efe7021304cb7c2815"
+      },
+      {
+        "label": "BNB Chain XUSD token",
+        "url": "https://bscscan.com/address/0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9"
+      },
+      {
+        "label": "Solana XUSD mint",
+        "url": "https://explorer.solana.com/address/4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z"
       }
     ],
     "routes": [
       {
         "id": "ethereum:0xc08e7e23c235073c6807c2efe7021304cb7c2815",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xc08e7e23c235073c6807c2efe7021304cb7c2815",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "StraitsX native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "owner()=0x9bd41d6CAA1Ad2bE20Ea48C5f4Be3C180522F964 and masterMinter()=0x53Cb1e2579DA18e6132dCfb00FD75A0BE0F7C5AB read at Ethereum block 25570747 on 2026-07-20 (both are the reviewed 3-of-5 Safes in the mint-authority profile); EIP-1967 impl/admin slots zero. XUSD is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ethereum XUSD token",
+            "url": "https://etherscan.io/address/0xc08e7e23c235073c6807c2efe7021304cb7c2815"
+          }
+        ]
       },
       {
         "id": "bsc:0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9",
         "destinationChain": "bsc",
+        "canonicalChain": "bsc",
         "contractAddress": "0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "StraitsX native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "owner()=0x7942337923d89D27e801B6DC05274fA9417968F5 and masterMinter()=0x31b964870f90d25837afC995239273F72931e7A3 read through the legacy ZeppelinOS proxy at BNB Chain block 111005985 on 2026-07-20 (both reviewed 3-of-5 Safes in the mint-authority profile). XUSD is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "BNB Chain XUSD token",
+            "url": "https://bscscan.com/address/0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9"
+          }
+        ]
       },
       {
         "id": "solana:4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z",
         "destinationChain": "solana",
+        "canonicalChain": "solana",
         "contractAddress": "4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "StraitsX native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Solana slot 434009438 on 2026-07-20, getAccountInfo(jsonParsed) showed mintAuthority and freezeAuthority both 5YCHrWs6t6W1DbXLpGvu1VK53K8Y28hxips6fWeDk3dj, the reviewed 3-of-10 SPL Token multisig in the mint-authority profile. XUSD is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Solana XUSD mint",
+            "url": "https://explorer.solana.com/address/4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z"
+          }
+        ]
       }
     ]
   },

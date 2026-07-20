@@ -133,10 +133,10 @@
   ],
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
-    "tier": "external-lock-mint",
-    "summary": "savUSD is an avUSD variant whose supported cross-chain deployments use Chainlink CCIP Burn & Mint pools as the primary route, with LayerZero OFT/OFT-adapter infrastructure for Movement and Avalanche. Because CCIP and LayerZero are third-party messaging bridges, Pharos keeps the route scored as external lock/mint exposure.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "tier": "external-validated-network",
+    "summary": "savUSD is an avUSD variant whose supported cross-chain deployments use Chainlink CCIP Burn & Mint pools as the primary route, with LayerZero OFT/OFT-adapter infrastructure for Movement and Avalanche. Because CCIP and LayerZero are third-party messaging bridges, Pharos keeps the route scored as external validated-network exposure.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
     "confidence": "verified",
     "protocols": [
       {
@@ -177,152 +177,325 @@
       {
         "id": "avalanche:0x06d47f3fb376649c3a9dafe069b3d6e35572219e",
         "destinationChain": "avalanche",
+        "canonicalChain": "avalanche",
         "contractAddress": "0x06d47f3fb376649c3a9dafe069b3d6e35572219e",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Avant native Staked avUSD vault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: the canonical Staked avUSD ERC-4626 vault (asset() = avUSD 0x24dE8771bC5DdB3362Db529Fc3358F2df3A0E346) minting shares against deposits; a CCIP Lock-and-Release pool 0x8FcC42c414E29e8e3dBFa1628CF45E8ed80C999D and a LayerZero OFT adapter 0x3524609C4D8111d45aFC912bf1e1270Cd5A1bd85 exist for cross-chain movement but do not mint this canonical supply. Native vault issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "savUSD vault on Snowscan",
+            "url": "https://snowscan.xyz/address/0x06d47F3fb376649c3A9Dafe069B3D6E35572219E"
+          },
+          {
+            "label": "Avant contract addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          }
+        ]
       },
       {
         "id": "ethereum:0xb8d89678e75a973e74698c976716308abb8a46a4",
+        "sourceChain": "avalanche",
         "destinationChain": "ethereum",
+        "canonicalChain": "avalanche",
         "contractAddress": "0xb8d89678e75a973e74698c976716308abb8a46a4",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: the CCIP BurnMintTokenPool 0x6d3B65eB14ad3546ab4Aa32cf8645a3610a9737b (typeAndVersion 'BurnMintTokenPool 1.5.1') returns getToken() = this savUSD deployment and is the burn/mint controller for the representation, per the Avant contract-address directory.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x6d3B65eB14ad3546ab4Aa32cf8645a3610a9737b",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:ethereum:0x6d3b65eb14ad3546ab4aa32cf8645a3610a9737b"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "savUSD token on Etherscan",
+            "url": "https://etherscan.io/address/0xb8d89678e75a973e74698c976716308abb8a46a4"
+          },
+          {
+            "label": "Avant contract addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          }
+        ]
       },
       {
         "id": "linea:0x5c247948fd58bb02b6c4678d9940f5e6b9af1127",
+        "sourceChain": "avalanche",
         "destinationChain": "linea",
+        "canonicalChain": "avalanche",
         "contractAddress": "0x5c247948fd58bb02b6c4678d9940f5e6b9af1127",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: the CCIP BurnMintTokenPool 0xDd10449dEAF27fc4937DDA64d0b5Af819b79EE63 (typeAndVersion 'BurnMintTokenPool 1.5.1') returns getToken() = this savUSD deployment and is the burn/mint controller for the representation, per the Avant contract-address directory.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "linea",
+        "controllerAddress": "0xDd10449dEAF27fc4937DDA64d0b5Af819b79EE63",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:linea:0xdd10449deaf27fc4937dda64d0b5af819b79ee63"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "savUSD token on Lineascan",
+            "url": "https://lineascan.build/address/0x5c247948fd58bb02b6c4678d9940f5e6b9af1127"
+          },
+          {
+            "label": "Avant contract addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          }
+        ]
       },
       {
         "id": "plasma:0xa29420057f3e3b9512d4786df135da1674bd74d4",
+        "sourceChain": "avalanche",
         "destinationChain": "plasma",
+        "canonicalChain": "avalanche",
         "contractAddress": "0xa29420057f3e3b9512d4786df135da1674bd74d4",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: the CCIP BurnMintTokenPool 0xFCCfA86d9AEdD2fF8dF60600110d6D1649679Fef (typeAndVersion 'BurnMintTokenPool 1.5.1') returns getToken() = this savUSD deployment and is the burn/mint controller for the representation, per the Avant contract-address directory.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "plasma",
+        "controllerAddress": "0xFCCfA86d9AEdD2fF8dF60600110d6D1649679Fef",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:plasma:0xfccfa86d9aedd2ff8df60600110d6d1649679fef"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "savUSD token on Plasmascan",
+            "url": "https://plasmascan.to/address/0xa29420057f3e3b9512d4786df135da1674bd74d4"
+          },
+          {
+            "label": "Avant contract addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          }
+        ]
       },
       {
         "id": "berachain:0xa744fe3688291ac3a4a7ec917678783ad9946a1e",
+        "sourceChain": "avalanche",
         "destinationChain": "berachain",
+        "canonicalChain": "avalanche",
         "contractAddress": "0xa744fe3688291ac3a4a7ec917678783ad9946a1e",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: the CCIP BurnMintTokenPool 0x59E2a16B388999D0d258e52623aC97F8841c37d2 (typeAndVersion 'BurnMintTokenPool 1.5.1') returns getToken() = this savUSD deployment and is the burn/mint controller for the representation, per the Avant contract-address directory.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "berachain",
+        "controllerAddress": "0x59E2a16B388999D0d258e52623aC97F8841c37d2",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:berachain:0x59e2a16b388999d0d258e52623ac97f8841c37d2"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "savUSD token on Berascan",
+            "url": "https://berascan.com/address/0xa744fe3688291ac3a4a7ec917678783ad9946a1e"
+          },
+          {
+            "label": "Avant contract addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          }
+        ]
       },
       {
         "id": "bsc:0x14063733875204b35d20d5fc52c7b5569ad00335",
+        "sourceChain": "avalanche",
         "destinationChain": "bsc",
+        "canonicalChain": "avalanche",
         "contractAddress": "0x14063733875204b35d20d5fc52c7b5569ad00335",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: the CCIP BurnMintTokenPool 0x8e4eC56B2E74bD48557F327Ea35F6f08b7E8a4bd (typeAndVersion 'BurnMintTokenPool 1.5.1') returns getToken() = this savUSD deployment and is the burn/mint controller for the representation, per the Avant contract-address directory.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "bsc",
+        "controllerAddress": "0x8e4eC56B2E74bD48557F327Ea35F6f08b7E8a4bd",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:bsc:0x8e4ec56b2e74bd48557f327ea35f6f08b7e8a4bd"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "savUSD token on BscScan",
+            "url": "https://bscscan.com/address/0x14063733875204b35d20d5fc52c7b5569ad00335"
+          },
+          {
+            "label": "Avant contract addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          }
+        ]
       },
       {
         "id": "monad:0x9648db94f1e6b19e7d755585542981f97dc806c6",
+        "sourceChain": "avalanche",
         "destinationChain": "monad",
+        "canonicalChain": "avalanche",
         "contractAddress": "0x9648db94f1e6b19e7d755585542981f97dc806c6",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: the CCIP BurnMintTokenPool 0xc5caac64dd93b6e2b369d52610fdae069e568d3e (typeAndVersion 'BurnMintTokenPool 1.5.1') returns getToken() = this savUSD deployment and is the burn/mint controller for the representation, per the Avant contract-address directory.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "monad",
+        "controllerAddress": "0xc5caac64dd93b6e2b369d52610fdae069e568d3e",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:monad:0xc5caac64dd93b6e2b369d52610fdae069e568d3e"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "savUSD token on Monadexplorer",
+            "url": "https://monadexplorer.com/address/0x9648db94f1e6b19e7d755585542981f97dc806c6"
+          },
+          {
+            "label": "Avant contract addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          }
+        ]
       },
       {
         "id": "katana:0xb9827268ebcc4ea7b105cfc787a92c612629a3f1",
+        "sourceChain": "avalanche",
         "destinationChain": "katana",
+        "canonicalChain": "avalanche",
         "contractAddress": "0xb9827268ebcc4ea7b105cfc787a92c612629a3f1",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: the CCIP BurnMintTokenPool 0x8d2145dB5Da67B262aEb451D16b07B1a958124eC (typeAndVersion 'BurnMintTokenPool 1.5.1') returns getToken() = this savUSD deployment and is the burn/mint controller for the representation, per the Avant contract-address directory.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "katana",
+        "controllerAddress": "0x8d2145dB5Da67B262aEb451D16b07B1a958124eC",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:katana:0x8d2145db5da67b262aeb451d16b07b1a958124ec"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "savUSD token on Katanascan",
+            "url": "https://katanascan.com/address/0xb9827268ebcc4ea7b105cfc787a92c612629a3f1"
+          },
+          {
+            "label": "Avant contract addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          }
+        ]
       },
       {
         "id": "megaeth:0x68fe7f83ba331e32d9fa3def98a5538176635339",
+        "sourceChain": "avalanche",
         "destinationChain": "megaeth",
+        "canonicalChain": "avalanche",
         "contractAddress": "0x68fe7f83ba331e32d9fa3def98a5538176635339",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: the CCIP BurnMintTokenPool 0xe2df6143948257a91945555523efc60ff15aaf1f (typeAndVersion 'BurnMintTokenPool 1.5.1') returns getToken() = this savUSD deployment and is the burn/mint controller for the representation, per the Avant contract-address directory.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "megaeth",
+        "controllerAddress": "0xe2df6143948257a91945555523efc60ff15aaf1f",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:megaeth:0xe2df6143948257a91945555523efc60ff15aaf1f"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "savUSD token on MegaETH explorer",
+            "url": "https://megaeth-testnet-explorer.alternatefuturesdk.com/address/0x68fe7f83ba331e32d9fa3def98a5538176635339"
+          },
+          {
+            "label": "Avant contract addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          }
+        ]
       },
       {
         "id": "sei:0xd84a49df125f6744018518117fe59a86d39eae75",
+        "sourceChain": "avalanche",
         "destinationChain": "sei",
+        "canonicalChain": "avalanche",
         "contractAddress": "0xd84a49df125f6744018518117fe59a86d39eae75",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: the CCIP BurnMintTokenPool 0x25fa35c9672ea3eF762704AC4f77bC2f9D4D3598 (typeAndVersion 'BurnMintTokenPool 1.5.1') returns getToken() = this savUSD deployment and is the burn/mint controller for the representation, per the Avant contract-address directory.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "sei",
+        "controllerAddress": "0x25fa35c9672ea3eF762704AC4f77bC2f9D4D3598",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:sei:0x25fa35c9672ea3ef762704ac4f77bc2f9d4d3598"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "savUSD token on Seitrace",
+            "url": "https://seitrace.com/address/0xd84a49df125f6744018518117fe59a86d39eae75"
+          },
+          {
+            "label": "Avant contract addresses",
+            "url": "https://docs.avantprotocol.com/security/contract-addresses"
+          }
+        ]
       }
     ]
   },

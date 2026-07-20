@@ -144,14 +144,41 @@
   "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "ZARm has one tracked Celo deployment and reviewed Mento docs describe obtaining Mento stables on Celo. No durable cross-chain route was verified for this asset, so it is triaged as single-chain/native.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "ZARm has one tracked Celo deployment and reviewed Mento docs describe obtaining Mento stables on Celo. No durable cross-chain route was verified for this asset, so it is triaged as single-chain/native. 2026-07-20 cohort dc-1 pass: added the reviewed native home-chain route row.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
     "confidence": "verified",
     "sources": [
       {
         "label": "Mento docs",
         "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      }
+    ],
+    "routes": [
+      {
+        "id": "celo:0x4c35853a3b4e647fd266f4de678dcc8fec410bf6",
+        "destinationChain": "celo",
+        "contractAddress": "0x4c35853a3b4e647fd266f4de678dcc8fec410bf6",
+        "protocol": "Mento ZARm (native issuance on Celo)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Mento",
+            "url": "https://www.mento.org/"
+          },
+          {
+            "label": "ZARm on Celoscan",
+            "url": "https://celoscan.io/address/0x4c35853a3b4e647fd266f4de678dcc8fec410bf6"
+          }
+        ],
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Mento South African Rand', symbol ZARm; owner() = 0x890db8a597940165901372dd7db61c9f246e2147 (Mento governance) — native issuance on Celo (the asset's home chain)."
       }
     ]
   },

@@ -110,6 +110,11 @@
       "chain": "linea",
       "address": "0xdd3b8084af79b9bae3d1b668c0de08ccc2c9429a",
       "decimals": 18
+    },
+    {
+      "chain": "berachain",
+      "address": "0x5B82028cfc477C4E7ddA7FF33d59A23FA7Be002a",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {
@@ -259,10 +264,10 @@
   },
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
-    "tier": "external-lock-mint",
-    "summary": "Abracadabra documents MIM Beaming as LayerZero OFT-powered omnichain transfers. Because the route uses a third-party OFT/messaging stack for cross-chain accounting, Pharos scores MIM as external-lock-mint rather than issuer-native settlement.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "tier": "issuer-native-burn-mint",
+    "summary": "Abracadabra documents MIM Beaming as LayerZero OFT-powered omnichain transfers, but on-chain reads on 2026-07-20 confirm the twelve long-standing MIM deployments are plain owner-gated tokens whose owners are Abracadabra team Safes (signer sets shared with the Ethereum 5/11 Safe), i.e. issuer-native burn-mint per chain; only the newer Berachain deployment is a LayerZero OFT representation.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
     "confidence": "verified",
     "protocols": [
       {
@@ -290,197 +295,361 @@
       {
         "id": "ethereum:0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Abracadabra issuer-native MIM",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: canonical MIM token; owner() = the Abracadabra 5/11 Safe 0x5f0dEE98360d8200b20812E174d139A1a633edd2 (mint authority for cauldron issuance per the reviewed mintAuthority). Issuer-native deployment; no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MIM token on Etherscan",
+            "url": "https://etherscan.io/address/0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3"
+          },
+          {
+            "label": "Abracadabra MIM documentation",
+            "url": "https://docs.abracadabra.money/"
+          }
+        ]
       },
       {
         "id": "arbitrum:0xfea7a6a0b346362bf88a9e4a88416b77a57d6c2a",
         "destinationChain": "arbitrum",
         "contractAddress": "0xfea7a6a0b346362bf88a9e4a88416b77a57d6c2a",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Abracadabra issuer-native MIM",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: owner() = Abracadabra team Safe 0xf46bb6dda9709c49efb918201d97f6474eac5aea (Safe proxy bytecode, threshold read live; signer set substantially shared with the Ethereum 5/11 Safe). The token is not an OFT (endpoint() reverts); mint is owner-gated by the issuer multisig, so the deployment is issuer-native burn-mint rather than a third-party bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MIM token on Arbiscan",
+            "url": "https://arbiscan.io/address/0xfea7a6a0b346362bf88a9e4a88416b77a57d6c2a"
+          },
+          {
+            "label": "Abracadabra MIM documentation",
+            "url": "https://docs.abracadabra.money/"
+          }
+        ]
       },
       {
         "id": "avalanche:0x130966628846bfd36ff31a822705796e8cb8c18d",
         "destinationChain": "avalanche",
         "contractAddress": "0x130966628846bfd36ff31a822705796e8cb8c18d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Abracadabra issuer-native MIM",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: owner() = Abracadabra team Safe 0xae64a325027c3c14cf6abc7818aa3b9c07f5c799 (Safe proxy bytecode, threshold read live; signer set substantially shared with the Ethereum 5/11 Safe). The token is not an OFT (endpoint() reverts); mint is owner-gated by the issuer multisig, so the deployment is issuer-native burn-mint rather than a third-party bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MIM token on Snowscan",
+            "url": "https://snowscan.xyz/address/0x130966628846bfd36ff31a822705796e8cb8c18d"
+          },
+          {
+            "label": "Abracadabra MIM documentation",
+            "url": "https://docs.abracadabra.money/"
+          }
+        ]
       },
       {
         "id": "fantom:0x82f0b8b456c1a451378467398982d4834b6829c1",
         "destinationChain": "fantom",
         "contractAddress": "0x82f0b8b456c1a451378467398982d4834b6829c1",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Abracadabra issuer-native MIM",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: owner() = Abracadabra team Safe 0xb4ad8b57bd6963912c80fcbb6baea99988543c1c (Safe proxy bytecode, threshold read live; signer set substantially shared with the Ethereum 5/11 Safe). The token is not an OFT (endpoint() reverts); mint is owner-gated by the issuer multisig, so the deployment is issuer-native burn-mint rather than a third-party bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MIM token on FtmScan",
+            "url": "https://ftmscan.com/address/0x82f0b8b456c1a451378467398982d4834b6829c1"
+          },
+          {
+            "label": "Abracadabra MIM documentation",
+            "url": "https://docs.abracadabra.money/"
+          }
+        ]
       },
       {
         "id": "bsc:0xfe19f0b51438fd612f6fd59c1dbb3ea319f433ba",
         "destinationChain": "bsc",
         "contractAddress": "0xfe19f0b51438fd612f6fd59c1dbb3ea319f433ba",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Abracadabra issuer-native MIM",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: owner() = Abracadabra team Safe 0x9d9bc38bf4a128530ea45a7d27d0ccb9c2ebfaf6 (Safe proxy bytecode, threshold read live; signer set substantially shared with the Ethereum 5/11 Safe). The token is not an OFT (endpoint() reverts); mint is owner-gated by the issuer multisig, so the deployment is issuer-native burn-mint rather than a third-party bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MIM token on BscScan",
+            "url": "https://bscscan.com/address/0xfe19f0b51438fd612f6fd59c1dbb3ea319f433ba"
+          },
+          {
+            "label": "Abracadabra MIM documentation",
+            "url": "https://docs.abracadabra.money/"
+          }
+        ]
       },
       {
         "id": "optimism:0xb153fb3d196a8eb25522705560ac152eeec57901",
         "destinationChain": "optimism",
         "contractAddress": "0xb153fb3d196a8eb25522705560ac152eeec57901",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Abracadabra issuer-native MIM",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: owner() = Abracadabra team Safe 0x4217aa01360846a849d2a89809d450d10248b513 (Safe proxy bytecode, threshold read live; signer set substantially shared with the Ethereum 5/11 Safe). The token is not an OFT (endpoint() reverts); mint is owner-gated by the issuer multisig, so the deployment is issuer-native burn-mint rather than a third-party bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MIM token on Optimistic Etherscan",
+            "url": "https://optimistic.etherscan.io/address/0xb153fb3d196a8eb25522705560ac152eeec57901"
+          },
+          {
+            "label": "Abracadabra MIM documentation",
+            "url": "https://docs.abracadabra.money/"
+          }
+        ]
       },
       {
         "id": "polygon:0x49a0400587a7f65072c87c4910449fdcc5c47242",
         "destinationChain": "polygon",
         "contractAddress": "0x49a0400587a7f65072c87c4910449fdcc5c47242",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Abracadabra issuer-native MIM",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: owner() = Abracadabra team Safe 0x7d847c4a0151fc6e79c6042d8f5b811753f4f66e (Safe proxy bytecode, threshold read live; signer set substantially shared with the Ethereum 5/11 Safe). The token is not an OFT (endpoint() reverts); mint is owner-gated by the issuer multisig, so the deployment is issuer-native burn-mint rather than a third-party bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MIM token on Polygonscan",
+            "url": "https://polygonscan.com/address/0x49a0400587a7f65072c87c4910449fdcc5c47242"
+          },
+          {
+            "label": "Abracadabra MIM documentation",
+            "url": "https://docs.abracadabra.money/"
+          }
+        ]
       },
       {
         "id": "kava:0x471ee749ba270eb4c1165b5ad95e614947f6fceb",
         "destinationChain": "kava",
         "contractAddress": "0x471ee749ba270eb4c1165b5ad95e614947f6fceb",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Abracadabra issuer-native MIM",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: owner() = Abracadabra team Safe 0x1261894f79e6cf21bf7e586af7905ec173c8805b (Safe proxy bytecode, threshold read live; signer set substantially shared with the Ethereum 5/11 Safe). The token is not an OFT (endpoint() reverts); mint is owner-gated by the issuer multisig, so the deployment is issuer-native burn-mint rather than a third-party bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MIM token on Kava explorer",
+            "url": "https://kavascan.com/address/0x471ee749ba270eb4c1165b5ad95e614947f6fceb"
+          },
+          {
+            "label": "Abracadabra MIM documentation",
+            "url": "https://docs.abracadabra.money/"
+          }
+        ]
       },
       {
         "id": "blast:0x76da31d7c9cbeae102aff34d3398bc450c8374c1",
         "destinationChain": "blast",
         "contractAddress": "0x76da31d7c9cbeae102aff34d3398bc450c8374c1",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Abracadabra issuer-native MIM",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: owner() = Abracadabra team Safe 0xfed8589d09650db3d30a568b1e194882549d78cf (Safe proxy bytecode, threshold read live; signer set substantially shared with the Ethereum 5/11 Safe). The token is not an OFT (endpoint() reverts); mint is owner-gated by the issuer multisig, so the deployment is issuer-native burn-mint rather than a third-party bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MIM token on Blastscan",
+            "url": "https://blastscan.io/address/0x76da31d7c9cbeae102aff34d3398bc450c8374c1"
+          },
+          {
+            "label": "Abracadabra MIM documentation",
+            "url": "https://docs.abracadabra.money/"
+          }
+        ]
       },
       {
         "id": "moonriver:0x0cae51e1032e8461f4806e26332c030e34de3adb",
         "destinationChain": "moonriver",
         "contractAddress": "0x0cae51e1032e8461f4806e26332c030e34de3adb",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Abracadabra issuer-native MIM",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: owner() = Abracadabra team Safe 0xfc88aa661c44b4ede197644ba971764ac59afa62 (Safe proxy bytecode, threshold read live; signer set substantially shared with the Ethereum 5/11 Safe). The token is not an OFT (endpoint() reverts); mint is owner-gated by the issuer multisig, so the deployment is issuer-native burn-mint rather than a third-party bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MIM token on Moonscan",
+            "url": "https://moonriver.moonscan.io/address/0x0cae51e1032e8461f4806e26332c030e34de3adb"
+          },
+          {
+            "label": "Abracadabra MIM documentation",
+            "url": "https://docs.abracadabra.money/"
+          }
+        ]
       },
       {
         "id": "nibiru:0xfcfc58685101e2914cbcf7551b432500db84eaa8",
         "destinationChain": "nibiru",
         "contractAddress": "0xfcfc58685101e2914cbcf7551b432500db84eaa8",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Abracadabra issuer-native MIM",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: owner() = Abracadabra team Safe 0x282df9f8a9b1f23aea9050a4fdeb5eee29c2f540 (Safe proxy bytecode, threshold read live; signer set substantially shared with the Ethereum 5/11 Safe). The token is not an OFT (endpoint() reverts); mint is owner-gated by the issuer multisig, so the deployment is issuer-native burn-mint rather than a third-party bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MIM token on Nibiru explorer",
+            "url": "https://nibiscan.io/address/0xfcfc58685101e2914cbcf7551b432500db84eaa8"
+          },
+          {
+            "label": "Abracadabra MIM documentation",
+            "url": "https://docs.abracadabra.money/"
+          }
+        ]
       },
       {
         "id": "base:0x4a3a6dd60a34bb2aba60d73b4c88315e9ceb6a3d",
         "destinationChain": "base",
         "contractAddress": "0x4a3a6dd60a34bb2aba60d73b4c88315e9ceb6a3d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Abracadabra issuer-native MIM",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: owner() = Abracadabra team Safe 0xf657de126f9d7666b5ffe4756ccd9eb393d86a92 (Safe proxy bytecode, threshold read live; signer set substantially shared with the Ethereum 5/11 Safe). The token is not an OFT (endpoint() reverts); mint is owner-gated by the issuer multisig, so the deployment is issuer-native burn-mint rather than a third-party bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MIM token on Basescan",
+            "url": "https://basescan.org/address/0x4a3a6dd60a34bb2aba60d73b4c88315e9ceb6a3d"
+          },
+          {
+            "label": "Abracadabra MIM documentation",
+            "url": "https://docs.abracadabra.money/"
+          }
+        ]
       },
       {
         "id": "linea:0xdd3b8084af79b9bae3d1b668c0de08ccc2c9429a",
         "destinationChain": "linea",
         "contractAddress": "0xdd3b8084af79b9bae3d1b668c0de08ccc2c9429a",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Abracadabra issuer-native MIM",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: owner() = Abracadabra team Safe 0x1c063276cf810957cf0665903fad20d008f4b404 (Safe proxy bytecode, threshold read live; signer set substantially shared with the Ethereum 5/11 Safe). The token is not an OFT (endpoint() reverts); mint is owner-gated by the issuer multisig, so the deployment is issuer-native burn-mint rather than a third-party bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MIM token on Lineascan",
+            "url": "https://lineascan.build/address/0xdd3b8084af79b9bae3d1b668c0de08ccc2c9429a"
+          },
+          {
+            "label": "Abracadabra MIM documentation",
+            "url": "https://docs.abracadabra.money/"
+          }
+        ]
+      },
+      {
+        "id": "berachain:0x5B82028cfc477C4E7ddA7FF33d59A23FA7Be002a",
+        "sourceChain": "ethereum",
+        "destinationChain": "berachain",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x5B82028cfc477C4E7ddA7FF33d59A23FA7Be002a",
+        "protocol": "LayerZero OFT (MIM Beaming)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: this Berachain MIM is a LayerZero OFT (endpoint() = LZ endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, EIP-1967 proxy with implementation 0x2dd74a091e50b305cf177146ad2cefc5e42be757 and admin 0xe59b2b20bd72af8a74c1874408ab7dd8201aae31, delegate owner 0xa4ef0376a91872b9c5d53d10410bdf36e6cf4e5e). Mint authority is the OFT contract itself, executing mints only on verified LayerZero messages.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "berachain",
+        "controllerAddress": "0x5B82028cfc477C4E7ddA7FF33d59A23FA7Be002a",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:berachain:0x5b82028cfc477c4e7dda7ff33d59a23fa7be002a"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "MIM token on Berascan",
+            "url": "https://berascan.com/address/0x5B82028cfc477C4E7ddA7FF33d59A23FA7Be002a"
+          },
+          {
+            "label": "Abracadabra MIM Beaming docs",
+            "url": "https://docs.abracadabra.money/"
+          }
+        ]
       }
     ]
   },

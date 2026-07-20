@@ -86,11 +86,11 @@
       "sourcesChecked": [
         "OCC GENIUS Act rulemaking bulletin and public releases (bulletin-2026-3.html)",
         "Metallicus Metal Dollar product page (metallicus.com/metal-dollar)",
-        "Metal Dollar site (metaldollar.com) — GENIUS Act article noted, no authorization found",
-        "Metallicus newsroom (metallicus.com/news) — no PPSI or authorization announcement",
+        "Metal Dollar site (metaldollar.com) \u2014 GENIUS Act article noted, no authorization found",
+        "Metallicus newsroom (metallicus.com/news) \u2014 no PPSI or authorization announcement",
         "XPR Network Metal Dollar help article",
-        "Metallicus Q2 2025 quarterly report CDN search — no XMD-specific GENIUS filing mentioned",
-        "Web search: Metallicus GENIUS Act PPSI license 2025–2026 — no results linking Metallicus to PPSI application",
+        "Metallicus Q2 2025 quarterly report CDN search \u2014 no XMD-specific GENIUS filing mentioned",
+        "Web search: Metallicus GENIUS Act PPSI license 2025\u20132026 \u2014 no results linking Metallicus to PPSI application",
         "OCC Bulletin 2026-3 GENIUS proposed rule",
         "OCC Bulletin 2026-24 GENIUS reporting proposal",
         "OCC digital asset licensing applications tracker",
@@ -134,31 +134,75 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
-    "summary": "XMD is minted/redeemed 1:1 by users depositing whitelisted reserve stablecoins (USDC/PYUSD/XPAX) into Metallicus's smart-contract treasury on XPR Network; Metal DAO (MTL) governs which stablecoins enter the basket and their weights, so the mint is user-funded but the eligible-collateral set is governance-controlled.",
+    "confidence": "verified",
+    "summary": "XMD is minted/redeemed 1:1 by users depositing whitelisted reserve stablecoins into the xmd.treasury smart contract on XPR Network (Antelope). On-chain reads on 2026-07-20 via the public XPR Network API resolved the full authority chain: the token contract xmd.token names xmd.treasury as issuer, and both contracts' owner permission resolves to swapscold, a 2-of-4 Antelope account multisig of Metallicus operator accounts. Basket composition is governed on-chain by the xmd.treasury settoken/removetoken/setglobals actions under that same authority; no separate MTL token-holder governor contract appears in the permission chain.",
     "controls": [
       {
         "label": "Metal DAO (MTL) basket governance",
         "role": "governor",
-        "authorityType": "dao-governor",
+        "authorityType": "multisig",
         "directMintAbility": "parameter-only",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "Metal DAO (MTL governance token) votes on which stablecoins are eligible for the XMD reserve basket and their weightings; it does not mint XMD directly but bounds the whitelist of reserve assets against which users mint/redeem 1:1."
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "On-chain reads 2026-07-20 via the XPR Network Antelope API (head block ~393650362, chain_id 384da888...): the xmd.treasury contract ABI exposes settoken/removetoken/setglobals, and its tokens table lists the whitelisted basket (MPD 2%, XPAX 15%, XUSDC 60%, XPYUSD 15% maxTreasuryPercent; isPaused = 0 in xmdglobals). Executable authority over these basket parameters resolves through the contract's owner permission to account swapscold, whose owner permission is threshold 2 over four Metallicus operator accounts (metalcfo, swapsledger2, swapsledger3, swapsledger4, weight 1 each) \u2014 a 2-of-4 multisig. No MTL token-holder governor contract appears in the xmd.treasury permission chain; Metal DAO voting operates at most as an off-chain signaling layer above this executable authority.",
+        "chain": "xpr-network",
+        "address": "swapscold",
+        "threshold": 2,
+        "signerCount": 4,
+        "observedAt": "2026-07-20",
+        "failureDomainKeys": [
+          "xpr-network:swapscold"
+        ],
+        "sources": [
+          {
+            "label": "XPR Network explorer - xmd.treasury",
+            "url": "https://explorer.xprnetwork.org/account/xmd.treasury"
+          },
+          {
+            "label": "XPR Network public API (get_account)",
+            "url": "https://proton.eosusa.io/v1/chain/get_account"
+          },
+          {
+            "label": "What is Metal Dollar (XMD)?",
+            "url": "https://help.xprnetwork.org/hc/en-us/articles/26897441891735-What-is-Metal-Dollar-XMD"
+          }
+        ]
       },
       {
         "label": "XMD treasury mint/redeem contract",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "evidence": "The smart-contract-managed treasury mints XMD when users deposit basket stablecoins (USDC/PYUSD/XPAX) and burns/redeems on the reverse; supply tracks user deposits 1:1 rather than discretionary issuer minting."
+        "canRaiseCap": false,
+        "evidence": "On-chain reads 2026-07-20 via the XPR Network Antelope API: the xmd.token stat table names xmd.treasury as the XMD issuer with supply 2,552,733.883527 XMD and max_supply 0 (no hard cap); xmd.treasury last_code_update 2023-03-25. The contract mints XMD against user deposits of whitelisted basket stablecoins (tokens table: MPD, XPAX, XUSDC, XPYUSD, each mint/redeem-enabled with composition caps) and burns on redemption; active permission is the contract's own eosio.code, owner permission is swapscold (2-of-4 Metallicus multisig). Supply tracks user deposits 1:1 rather than discretionary issuer minting.",
+        "chain": "xpr-network",
+        "address": "xmd.treasury",
+        "capDescription": "XMD mint is bounded by user deposits of whitelisted basket stablecoins and the per-asset maxTreasuryPercent composition caps in the xmd.treasury tokens table (MPD 2%, XPAX 15%, XUSDC 60%, XPYUSD 15%); the contract cannot change those caps itself \u2014 only its swapscold owner can via settoken.",
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-20",
+        "failureDomainKeys": [
+          "xpr-network:xmd.treasury"
+        ],
+        "sources": [
+          {
+            "label": "XPR Network explorer - xmd.treasury",
+            "url": "https://explorer.xprnetwork.org/account/xmd.treasury"
+          },
+          {
+            "label": "XPR Network explorer - xmd.token",
+            "url": "https://explorer.xprnetwork.org/account/xmd.token"
+          },
+          {
+            "label": "How do I mint Metal Dollar (XMD)?",
+            "url": "https://help.xprnetwork.org/hc/en-us/articles/11560121183383-How-do-I-mint-Metal-Dollar-XMD"
+          }
+        ]
       }
     ],
     "review": {
-      "evidence": "Metallicus/XPR Network docs and coverage describe XMD as a reserve-backed stablecoin index treasury: users mint/redeem 1:1 against a basket of fiat-backed stablecoins (USDC, PYUSD, and XPAX), while Metal DAO (MTL) governs basket composition and weights. This is a user-collateralized mint bounded by a governance-controlled collateral whitelist. XMD runs on non-EVM XPR Network, so the on-chain admin/owner of the treasury was not independently read.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "Metallicus/XPR Network docs and coverage describe XMD as a reserve-backed stablecoin index treasury: users mint/redeem 1:1 against a basket of fiat-backed stablecoins (USDC, PYUSD, XPAX, MPD). The previously blocking gap \u2014 no readable XPR Network RPC \u2014 is resolved: the public Antelope API (proton.eosusa.io, chain_id 384da888112027f0321850a169f737c33e53b388aad48b5adace4bab97f437e0) was read on 2026-07-20 at head block ~393650362. Findings: (1) xmd.token stat table names issuer xmd.treasury, supply 2,552,733.883527 XMD, max_supply 0; (2) xmd.treasury tokens table lists the whitelist (MPD 2%, XPAX 15%, XUSDC 60%, XPYUSD 15% maxTreasuryPercent, mintFee/redemptionFee 0, isPaused 0) and its ABI exposes only settoken/removetoken/setglobals; (3) both xmd.token and xmd.treasury resolve their owner permission to swapscold, threshold 2 over metalcfo, swapsledger2, swapsledger3, swapsledger4 \u2014 a 2-of-4 Metallicus operator multisig; (4) no MTL token-holder governor contract exists in the executable permission chain. All mint-critical authorities are now enumerated on-chain; no unilateral Metallicus mint path beyond the 2-of-4 multisig was found.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "What is Metal Dollar (XMD)?",
@@ -167,11 +211,21 @@
         {
           "label": "How do I mint Metal Dollar (XMD)?",
           "url": "https://help.xprnetwork.org/hc/en-us/articles/11560121183383-How-do-I-mint-Metal-Dollar-XMD"
+        },
+        {
+          "label": "XPR Network explorer - xmd.treasury",
+          "url": "https://explorer.xprnetwork.org/account/xmd.treasury"
+        },
+        {
+          "label": "XPR Network explorer - xmd.token",
+          "url": "https://explorer.xprnetwork.org/account/xmd.token"
+        },
+        {
+          "label": "XPR Network explorer - swapscold",
+          "url": "https://explorer.xprnetwork.org/account/swapscold"
         }
       ],
-      "unresolvedQuestions": [
-        "XPR Network is not EVM-compatible and lacks a supported public RPC or Blockscout instance; the XMD treasury contract admin/owner and any Metallicus unilateral mint authority cannot be read via standard keyless tooling. Resolution requires XPR Network-native API access or direct issuer disclosure."
-      ]
+      "disposition": "scoreable"
     }
   },
   "mechanismArchetype": "fiat-cash",

@@ -150,8 +150,8 @@
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "USDon is an Ondo Global Markets asset, and Ondo documents a LayerZero-based token bridge for Global Markets assets across Ethereum, BNB Chain, Solana, and HyperEVM. Pharos scores this as external lock/mint/OFT-style route exposure.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
     "confidence": "verified",
     "protocols": [
       {
@@ -183,47 +183,68 @@
       {
         "id": "ethereum:0xace8e719899f6e91831b18ae746c9a965c2119f1",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xace8e719899f6e91831b18ae746c9a965c2119f1",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ondo issuer-native USDon",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "native USDon on Ethereum: TransparentUpgradeableProxy with the reviewed MINTER_ROLE set (GMTokenManager 0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c, Ondo 3/6 Safe 0x7607c08928bdbab77f88872b49667dcb877524db; verified on-chain 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDon on ethereum explorer (probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xace8e719899f6e91831b18ae746c9a965c2119f1"
+          }
+        ]
       },
       {
         "id": "bsc:0x1f8955e640cbd9abc3c3bb408c9e2e1f5f20dfe6",
         "destinationChain": "bsc",
+        "canonicalChain": "bsc",
         "contractAddress": "0x1f8955e640cbd9abc3c3bb408c9e2e1f5f20dfe6",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ondo issuer-native USDon",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "native USDon on BSC: proxy with Ondo's chain-local admin 0x005793c2c4c966a0d261d60ffcba4269fa72bdc2 (verified on-chain 2026-07-20; no bridge endpoint surface).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDon on bsc explorer (probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0x1f8955e640cbd9abc3c3bb408c9e2e1f5f20dfe6"
+          }
+        ]
       },
       {
         "id": "solana:ZPFtoCe7WWqG4N3ZFRccS8T9SMBeHsd1Vmgv2i7ondo",
         "destinationChain": "solana",
+        "canonicalChain": "solana",
         "contractAddress": "ZPFtoCe7WWqG4N3ZFRccS8T9SMBeHsd1Vmgv2i7ondo",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ondo issuer-native USDon",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "native USDon on Solana: Token-2022 mint whose authority 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD is a program-derived address of Ondo's own Solana program (verified on-chain 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDon on solana explorer (probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=ZPFtoCe7WWqG4N3ZFRccS8T9SMBeHsd1Vmgv2i7ondo"
+          }
+        ]
       }
     ]
   },
@@ -250,7 +271,8 @@
             "label": "USDon token on Etherscan",
             "url": "https://etherscan.io/address/0xace8e719899f6e91831b18ae746c9a965c2119f1"
           }
-        ]
+        ],
+        "address": "0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c"
       },
       {
         "label": "Ondo Safe 3-of-6 (Ethereum MINTER_ROLE[1])",
@@ -285,7 +307,8 @@
             "label": "USDon Ondo Safe on Etherscan",
             "url": "https://etherscan.io/address/0x7607c08928bdbab77f88872b49667dcb877524db"
           }
-        ]
+        ],
+        "address": "0x7607c08928bdbab77f88872b49667dcb877524db"
       },
       {
         "label": "TimelockController ProxyAdmin owner (Ethereum)",
@@ -305,15 +328,16 @@
             "label": "USDon TimelockController on Etherscan",
             "url": "https://etherscan.io/address/0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1"
           }
-        ]
+        ],
+        "address": "0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1"
       }
     ],
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
       "evidence": "At Ethereum block 25295047 and BSC block 103630432 (2026-06-11): USDon ETH proxy (0xace8…) has EIP-1967 ProxyAdmin=0x5244… owned by TimelockController 0x3715… (2h delay). Token MINTER_ROLE has 2 holders: GMTokenManager (0x2c15…) and 3-of-6 Ondo Safe (0x7607…, no modules). DEFAULT_ADMIN = Timelock; Timelock PROPOSER = 4-of-7 Safe, EXECUTOR = 1-of-8 Safe + EOA. BSC structurally equivalent: MINTER_ROLE[0]=GMTokenManager(0x91f8…), MINTER_ROLE[1]=contract, DEFAULT_ADMIN=0x8860… (contract). Impl (USDon) confirmed on Blockscout. Regulation S restricts U.S.-person minting; no permissionless mint path. USDon is issued by Ondo Global Markets (BVI) Limited; Ondo's Trust & Transparency page scopes its only third-party feed (Ankura Trust) to tokenized-stock holdings, not USDon's brokerage cash, and no dated independent report of USDon's specific cash reserve was found, so reconciliation is unknown. Ondo's own disclaimer states the issuer and tokens are not registered or licensed by the BVI FSC, SEC, CFTC or any financial regulator, so supervision is none.",
-      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
-      "reviewedAt": "2026-07-16",
+      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Ondo GM trust and transparency",

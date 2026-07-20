@@ -61,9 +61,9 @@
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "JPYC has official deployments across Ethereum, Polygon, Avalanche, and Kaia. Reviewed issuer sources show regulated issuer-controlled issuance; no independent public bridge route was resolved, so route risk is issuer-native multichain mint/redeem.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "JPYC website",
@@ -82,62 +82,103 @@
       {
         "id": "ethereum:0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "JPYC issuer-native (JPYC Inc)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: identical 811-byte EIP-1967 proxy (implementation 0xafac17fc3936a29ca2d2787ced3c5d1c52007d2e) owned by the issuer Safe 0x8E4CddC4712646ea5222B4f2E959AceceFe763c9, matching the reviewed mintAuthority; canonical issuer-native deployment, no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "JPYC token on Etherscan",
+            "url": "https://etherscan.io/address/0xe7c3d8c9a439fede00d2600032d5db0be71c3c29"
+          },
+          {
+            "label": "JPYC website",
+            "url": "https://jpyc.co.jp/"
+          }
+        ]
       },
       {
         "id": "polygon:0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
         "destinationChain": "polygon",
         "contractAddress": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "JPYC issuer-native (JPYC Inc)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: identical 811-byte EIP-1967 proxy (implementation 0xafac17fc3936a29ca2d2787ced3c5d1c52007d2e) at the same CREATE2 address owned by the issuer Safe 0x8E4CddC4712646ea5222B4f2E959AceceFe763c9; issuer-native deployment, not a bridge representation, so no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "JPYC token on Polygonscan",
+            "url": "https://polygonscan.com/address/0xe7c3d8c9a439fede00d2600032d5db0be71c3c29"
+          },
+          {
+            "label": "JPYC website",
+            "url": "https://jpyc.co.jp/"
+          }
+        ]
       },
       {
         "id": "avalanche:0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
         "destinationChain": "avalanche",
         "contractAddress": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "JPYC issuer-native (JPYC Inc)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: identical 811-byte EIP-1967 proxy (implementation 0xafac17fc3936a29ca2d2787ced3c5d1c52007d2e) at the same CREATE2 address owned by the issuer Safe 0x8E4CddC4712646ea5222B4f2E959AceceFe763c9; issuer-native deployment, not a bridge representation, so no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "JPYC token on Snowscan",
+            "url": "https://snowscan.xyz/address/0xe7c3d8c9a439fede00d2600032d5db0be71c3c29"
+          },
+          {
+            "label": "JPYC website",
+            "url": "https://jpyc.co.jp/"
+          }
+        ]
       },
       {
         "id": "klaytn:0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
         "destinationChain": "klaytn",
         "contractAddress": "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "JPYC issuer-native (JPYC Inc)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: identical 811-byte EIP-1967 proxy (implementation 0xafac17fc3936a29ca2d2787ced3c5d1c52007d2e) at the same CREATE2 address owned by the issuer Safe 0x8E4CddC4712646ea5222B4f2E959AceceFe763c9; issuer-native deployment on Kaia, not a bridge representation, so no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "JPYC token on Kaiascan",
+            "url": "https://kaiascan.io/address/0xe7c3d8c9a439fede00d2600032d5db0be71c3c29"
+          },
+          {
+            "label": "JPYC website",
+            "url": "https://jpyc.co.jp/"
+          }
+        ]
       }
     ]
   },

@@ -162,7 +162,7 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "capDescription": "Base M issuance inherited by wM depends on TTG-approved minters, validator attestations, mint-delay review, and collateral/debt checks.",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "unknown",
         "sources": [
           {
@@ -172,9 +172,17 @@
           {
             "label": "M0 minter gateway docs",
             "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          },
+          {
+            "label": "M0 MinterGateway (ttgRegistrar/minterRate reads 2026-07-20)",
+            "url": "https://etherscan.io/address/0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e"
+          },
+          {
+            "label": "M0 docs",
+            "url": "https://docs.m0.org/"
           }
         ],
-        "evidence": "Inherited from reviewed m-m0 mintAuthority."
+        "evidence": "Inherited from reviewed m-m0 mintAuthority. 2026-07-20 (Kimi P2 dc-2): the MinterGateway (0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e) exposes ttgRegistrar() = 0x119fbeedd4f4f4298fb59b720d5654442b81ae2c and minterRate() = 333 bps (both read 2026-07-20); minter caps/rates are set and can be raised by M0 TTG governance, so the cap is raiseable rather than fixed."
       },
       {
         "chain": "solana",
@@ -214,8 +222,8 @@
         }
       ],
       "evidence": "Wrapper surface verified at Ethereum block 25295240: EIP-1967 minimal proxy, no admin slot. migrationAdmin confirmed as 2/2 Safe (v1.3.0, no modules); migration also requires TTG Registrar to have wm_migrator_v1 key populated (governance-gated). vault() and totalSupply() confirmed functional. Base M mint authority reviewed under m-m0.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+      "reviewedAt": "2026-07-20"
     }
   },
   "collateralQuality": "rwa",
@@ -224,9 +232,9 @@
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-lock-mint",
-    "summary": "M0 documents an Ethereum hub and spoke portal architecture for bridging M and wM, where hub-side tokens are locked and spoke-side representations are minted or burned by M0 portal contracts. Because the route is protocol-operated rather than a generic external bridge, wM is scored as issuer-native-lock-mint.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "wM is Ethereum-native (M0 WrappedM) and reaches Arbitrum, Base, and Solana through M0's own Wormhole-NTT Portal (hub lock/release, spoke mint/burn) and Plume through the Hyperlane-based M0 Portal Lite — all issuer-operated routes with the portal contracts verified on-chain 2026-07-20.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
     "confidence": "verified",
     "protocols": [
       {
@@ -253,76 +261,154 @@
         "id": "ethereum:0x437cc33344a0b27a429f795ff6b469c72698b291",
         "destinationChain": "ethereum",
         "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 WrappedM",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical home deployment: wM on Ethereum is M0's WrappedM (wraps $M 1:1 via M0's own wrapper under a Migratable upgrade admin; mint-authority review 2026-06-11).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "wM Ethereum token",
+            "url": "https://etherscan.io/address/0x437cc33344a0b27a429f795ff6b469c72698b291"
+          },
+          {
+            "label": "M0 platform addresses (Portal deployments)",
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x437cc33344a0b27a429f795ff6b469c72698b291",
         "destinationChain": "arbitrum",
         "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 Portal (Wormhole NTT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "wM reaches arbitrum through M0's own Portal — a Wormhole-NTT-derived hub-and-spoke bridge (hub lock/release on Ethereum, spoke mint/burn); the arbitrum wM token is an M0 clone of the shared WrappedM implementation 0x813b926b1d096e117721bd1eb017fba122302da0 (eth_getCode 2026-07-20), and the M0 Spoke Portal 0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd (M0 platform addresses doc; code verified 2026-07-20) holds the mint authority on this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd",
+        "failureDomainKeys": [
+          "protocol:m0-portal-ntt",
+          "contract:arbitrum:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "sources": [
+          {
+            "label": "M0 platform addresses (Portal deployments)",
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
+          },
+          {
+            "label": "M0 Spoke Portal on arbitrum (code verified 2026-07-20)",
+            "url": "https://arbiscan.io/address/0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd"
+          }
+        ]
       },
       {
         "id": "plume:0x437cc33344a0b27a429f795ff6b469c72698b291",
         "destinationChain": "plume",
         "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 Portal Lite (Hyperlane)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "wM reaches Plume through M0 Portal Lite, the Hyperlane-based flavor of M0's own hub-and-spoke bridge; the Plume wM token is an M0 clone of the shared WrappedM implementation 0x813b926b1d096e117721bd1eb017fba122302da0 (eth_getCode 2026-07-20), and the M0 Portal Lite Spoke Portal 0x36f586A30502AE3afb555b8aA4dCc05d233c2ecE (M0 platform addresses doc; code verified 2026-07-20) holds the mint authority on this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "controllerChain": "plume",
+        "controllerAddress": "0x36f586A30502AE3afb555b8aA4dCc05d233c2ecE",
+        "failureDomainKeys": [
+          "protocol:m0-portal-lite-hyperlane",
+          "contract:plume:0x36f586a30502ae3afb555b8aa4dcc05d233c2ece"
+        ],
+        "sources": [
+          {
+            "label": "M0 platform addresses (Portal deployments)",
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
+          },
+          {
+            "label": "M0 Portal Lite Spoke Portal on Plume (code verified 2026-07-20)",
+            "url": "https://explorer.plume.org/address/0x36f586A30502AE3afb555b8aA4dCc05d233c2ecE"
+          }
+        ]
       },
       {
         "id": "base:0x437cc33344a0b27a429f795ff6b469c72698b291",
         "destinationChain": "base",
         "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 Portal (Wormhole NTT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "wM reaches base through M0's own Portal — a Wormhole-NTT-derived hub-and-spoke bridge (hub lock/release on Ethereum, spoke mint/burn); the base wM token is an M0 clone of the shared WrappedM implementation 0x813b926b1d096e117721bd1eb017fba122302da0 (eth_getCode 2026-07-20), and the M0 Spoke Portal 0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd (M0 platform addresses doc; code verified 2026-07-20) holds the mint authority on this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "controllerChain": "base",
+        "controllerAddress": "0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd",
+        "failureDomainKeys": [
+          "protocol:m0-portal-ntt",
+          "contract:base:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "sources": [
+          {
+            "label": "M0 platform addresses (Portal deployments)",
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
+          },
+          {
+            "label": "M0 Spoke Portal on base (code verified 2026-07-20)",
+            "url": "https://basescan.org/address/0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd"
+          }
+        ]
       },
       {
         "id": "solana:mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp",
         "destinationChain": "solana",
         "contractAddress": "mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "M0 Portal (Wormhole NTT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "wM on Solana is the Token-2022 $wM extension mint documented in M0's Solana technical documentation; bridging runs through M0's own Portal program mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY — the Wormhole-NTT-fork gateway that validates VAAs and mints $wM on Solana (program ID per M0 docs, 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "controllerChain": "solana",
+        "controllerAddress": "mzp1q2j5Hr1QuLC3KFBCAUz5aUckT6qyuZKZ3WJnMmY",
+        "failureDomainKeys": [
+          "protocol:m0-portal-ntt",
+          "program:solana:mzp1q2j5hr1qulc3kfbcauz5auckt6qyuzkz3wjnmmy"
+        ],
+        "sources": [
+          {
+            "label": "M0 on Solana — technical documentation (Portal program mzp1q2j5...)",
+            "url": "https://docs.m0.org/raw/protocol/solana.md"
+          },
+          {
+            "label": "wM Solana mint",
+            "url": "https://solscan.io/token/mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp"
+          }
+        ]
       }
     ]
   },

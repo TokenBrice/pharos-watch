@@ -34,9 +34,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Noon documents Hyperlane interoperability for USN and sUSN. USN uses burn/mint, while sUSN uses lock-mint and mint-unlock with an Ethereum lock address, so the staked token route is reviewed as external lock/mint.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "Noon documents Hyperlane interoperability for USN and sUSN. sUSN is native on Ethereum; its zkSync, Sophon, and Starknet deployments are Noon-operated Hyperlane warp tokens that mint only on message delivery against sUSN locked on Ethereum (lock-mint), with owner and mailbox reads verified on-chain.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
     "confidence": "verified",
     "protocols": [
       {
@@ -64,61 +64,125 @@
         "id": "ethereum:0xe24a3dc889621612422a64e6388927901608b91d",
         "destinationChain": "ethereum",
         "contractAddress": "0xe24a3dc889621612422a64e6388927901608b91d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Noon native issuance (sUSN wrapper)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "sUSN is native on Ethereum: the ERC-4626 wrapper mints only against deposited USN (reviewed mint-authority profile).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Noon interoperability docs",
+            "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
+          },
+          {
+            "label": "Hyperlane docs",
+            "url": "https://docs.hyperlane.xyz/"
+          }
+        ]
       },
       {
         "id": "zksync:0xb6a09d426861c63722aa0b333a9ce5d5a9b04c4f",
+        "sourceChain": "ethereum",
         "destinationChain": "zksync",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xb6a09d426861c63722aa0b333a9ce5d5a9b04c4f",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Noon Hyperlane warp route (sUSN lock-mint)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "zksync",
+        "controllerAddress": "0xb6a09d426861c63722aa0b333a9ce5d5a9b04c4f",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "HypERC20 warp token: owner()=0x15d91eb2c3188bb85881d2e09b5025f3fcc4a263 (contract) and mailbox()=0x6bd0a2214797bc81e0b006f7b74d6221bcd8cb6e (Hyperlane zkSync mailbox) read on zkSync Era at 2026-07-20; mint executes only on Hyperlane message delivery against sUSN locked on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Noon interoperability docs",
+            "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
+          },
+          {
+            "label": "Hyperlane docs",
+            "url": "https://docs.hyperlane.xyz/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:hyperlane-warp-route",
+          "contract:zksync:0xb6a09d426861c63722aa0b333a9ce5d5a9b04c4f"
+        ]
       },
       {
         "id": "sophon:0xb87dbe27db932bacaaa96478443b6519d52c5004",
+        "sourceChain": "ethereum",
         "destinationChain": "sophon",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xb87dbe27db932bacaaa96478443b6519d52c5004",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Noon Hyperlane warp route (sUSN lock-mint)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "sophon",
+        "controllerAddress": "0xb87dbe27db932bacaaa96478443b6519d52c5004",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "HypERC20 warp token: owner()=0x553d36879016ce22977a622804eee76dc0dc88e0 (contract) and mailbox()=0x9bbdf86b272d224323136e15594fdce487f40ce7 (Hyperlane Sophon mailbox) read on Sophon at 2026-07-20; mint executes only on Hyperlane message delivery against sUSN locked on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Noon interoperability docs",
+            "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
+          },
+          {
+            "label": "Hyperlane docs",
+            "url": "https://docs.hyperlane.xyz/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:hyperlane-warp-route",
+          "contract:sophon:0xb87dbe27db932bacaaa96478443b6519d52c5004"
+        ]
       },
       {
         "id": "starknet:0x02411565ef1a14decfbe83d2e987cced918cd752508a3d9c55deb67148d14d17",
+        "sourceChain": "ethereum",
         "destinationChain": "starknet",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x02411565ef1a14decfbe83d2e987cced918cd752508a3d9c55deb67148d14d17",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Noon Hyperlane warp route (sUSN lock-mint)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "controllerChain": "starknet",
+        "controllerAddress": "0x02411565ef1a14decfbe83d2e987cced918cd752508a3d9c55deb67148d14d17",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "starknet_call at 2026-07-20: symbol()=sUSN, owner()=0x25beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072, mailbox()=0x5520a179658bd81e19d4e41abce2bc397bab5af302dadea70d8918c3cbdcea8 (Hyperlane Starknet mailbox); mint executes only on Hyperlane message delivery against sUSN locked on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Noon interoperability docs",
+            "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/interoperability"
+          },
+          {
+            "label": "Hyperlane docs",
+            "url": "https://docs.hyperlane.xyz/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:hyperlane-warp-route",
+          "contract:starknet:0x02411565ef1a14decfbe83d2e987cced918cd752508a3d9c55deb67148d14d17"
+        ]
       }
     ]
   },

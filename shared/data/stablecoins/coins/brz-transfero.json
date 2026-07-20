@@ -115,7 +115,7 @@
         "0x478e84519f99811be4f9e3960f7489781501542d"
       ],
       "canChangeMintLogic": true,
-      "controlRef": "BRZ Ethereum owner — 2-of-3 Gnosis Safe",
+      "controlRef": "BRZ Ethereum owner \u2014 2-of-3 Gnosis Safe",
       "observedAt": "2026-06-11",
       "observedBlock": 25294823,
       "sources": [
@@ -127,7 +127,7 @@
     },
     "controls": [
       {
-        "label": "BRZ Ethereum owner — 2-of-3 Gnosis Safe",
+        "label": "BRZ Ethereum owner \u2014 2-of-3 Gnosis Safe",
         "role": "direct-minter",
         "authorityType": "safe",
         "address": "0xaf24edebf7fdaed86d839be018647ba6279b9d7a",
@@ -222,9 +222,9 @@
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "BRZ is an issuer-managed multichain real-backed token. No third-party route control was resolved from issuer docs; reviewed evidence supports issuer mint/redeem operations across supported chains rather than wrapped bridge supply.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Transfero BRZ page",
@@ -239,137 +239,200 @@
       {
         "id": "ethereum:0x01d33fd36ec67c6ada32cf36b31e88ee190b1839",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x01d33fd36ec67c6ada32cf36b31e88ee190b1839",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Transfero native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native BRZ: 2,227-byte EIP-1967 proxy, owner() = Transfero 2-of-3 Safe 0xaf24edebf7fdaed86d839be018647ba6279b9d7a (mint-authority review). DefiLlama records every BRZ chain as issued (native).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Transfero",
+            "url": "https://transfero.com/"
+          }
+        ]
       },
       {
         "id": "polygon:0x4ed141110f6eeeaba9a1df36d8c26f684d2475dc",
         "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x4ed141110f6eeeaba9a1df36d8c26f684d2475dc",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Transfero native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native BRZ on Polygon: owner() = Transfero 2-of-3 Safe 0x4516065cf9583179af5384c8d894d42eb5005d79 (getOwners/getThreshold read 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Transfero",
+            "url": "https://transfero.com/"
+          }
+        ]
       },
       {
         "id": "bsc:0x71be881e9c5d4465b3fff61e89c6f3651e69b5bb",
         "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x71be881e9c5d4465b3fff61e89c6f3651e69b5bb",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Transfero native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native BRZ on BSC (legacy 4-decimal deployment): owner() = Transfero issuer EOA 0x01455c3b57e40223352a53c9897643273ad78a57 (mint-authority review).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Transfero",
+            "url": "https://transfero.com/"
+          }
+        ]
       },
       {
         "id": "gnosis:0x0a06c8354a6cc1a07549a38701eac205942e3ac6",
         "destinationChain": "gnosis",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x0a06c8354a6cc1a07549a38701eac205942e3ac6",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Transfero native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native BRZ on Gnosis: owner() = Transfero 2-of-3 Safe 0xde263e98f6f5572740a0d8e8686a49ad0a199114 (getOwners/getThreshold read 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Transfero",
+            "url": "https://transfero.com/"
+          }
+        ]
       },
       {
         "id": "base:0xe9185ee218cae427af7b9764a011bb89fea761b4",
         "destinationChain": "base",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xe9185ee218cae427af7b9764a011bb89fea761b4",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Transfero native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native BRZ on Base: owner() = Transfero 2-of-3 Safe 0x7c7377a1849a018d28d5a83be4b5e8d1cc9c3d8d (getOwners/getThreshold read 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Transfero",
+            "url": "https://transfero.com/"
+          }
+        ]
       },
       {
         "id": "optimism:0xe9185ee218cae427af7b9764a011bb89fea761b4",
         "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xe9185ee218cae427af7b9764a011bb89fea761b4",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Transfero native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native BRZ on Optimism: owner() = the same Transfero 2-of-3 Safe 0x7c7377a1849a018d28d5a83be4b5e8d1cc9c3d8d as Base (read 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Transfero",
+            "url": "https://transfero.com/"
+          }
+        ]
       },
       {
         "id": "arbitrum:0xa8940698fda5a07abaef4a5ccdf2f1bb525b47a2",
         "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xa8940698fda5a07abaef4a5ccdf2f1bb525b47a2",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Transfero native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native BRZ on Arbitrum: owner() = Transfero 2-of-3 Safe 0xe9e529591cae6b645ad5363e062bfee02388a224 (getOwners/getThreshold read 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Transfero",
+            "url": "https://transfero.com/"
+          }
+        ]
       },
       {
         "id": "avalanche:0x491a4eb4f1fc3bff8e1d2fc856a6a46663ad556f",
         "destinationChain": "avalanche",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x491a4eb4f1fc3bff8e1d2fc856a6a46663ad556f",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Transfero native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native BRZ on Avalanche (legacy 4-decimal deployment, 15,502-byte code, read 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Transfero",
+            "url": "https://transfero.com/"
+          }
+        ]
       },
       {
         "id": "solana:FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD",
         "destinationChain": "solana",
+        "canonicalChain": "ethereum",
         "contractAddress": "FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Transfero native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native BRZ on Solana: mint authority is the Transfero issuer wallet ACvei6oQMQSP2GqGnTmPrrcfgwPWEcVkoospHtdYhk7D (mint-authority review).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Transfero",
+            "url": "https://transfero.com/"
+          }
+        ]
       }
     ]
   },

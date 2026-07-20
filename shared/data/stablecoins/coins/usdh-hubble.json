@@ -76,11 +76,72 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "Hubble Protocol overcollateralized Solana crypto vaults (SOL, mSOL, BTC, ETH and other whitelisted assets)",
+      "name": "Solana crypto collateral in Hubble CDP vaults (SOL, mSOL, BTC, ETH and other whitelisted assets; mix undisclosed)",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Hubble Protocol vault contracts on Solana",
+      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
+      "liquidityHorizon": "immediate"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Hubble Protocol documentation",
+        "url": "https://docs.hubbleprotocol.io"
+      },
+      {
+        "label": "Hubble Protocol",
+        "url": "https://hubbleprotocol.io"
+      }
+    ],
+    "rationale": "Hubble documents USDH as minted against overcollateralized multi-asset Solana vaults (SOL, mSOL, BTC, ETH and other whitelisted tokens) at a minimum 150% collateral ratio, but publishes no current aggregate collateral breakdown; the reserve is retained as one bounded crypto-collateral basket.",
+    "compositionBasis": "Hubble's documented whitelisted vault collateral envelope; current constituent weights undisclosed",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current collateral weights by asset, vault count, and stability-pool buffer are not published in a dated aggregate.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Solana crypto collateral in Hubble CDP vaults (SOL, mSOL, BTC, ETH and other whitelisted assets; mix undisclosed)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The documented collateral envelope spans multiple assets but no current supply-weighted split is published."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Hubble Protocol CDP vault contracts (Solana, non-custodial)",
+        "role": "other",
+        "jurisdiction": "Solana"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Hubble Protocol documentation",
+        "url": "https://docs.hubbleprotocol.io"
+      },
+      {
+        "label": "Hubble Protocol",
+        "url": "https://hubbleprotocol.io"
+      }
+    ],
+    "uncertainty": "Collateral sits in non-custodial on-chain vault contracts rather than with a conventional custodian; legal segregation, bankruptcy remoteness, and rehypothecation terms do not apply, and the operative risks are contract integrity and oracle/liquidation behavior.",
+    "knownUnknownExposurePct": 100
+  },
   "notices": [
     {
       "type": "info",
@@ -100,15 +161,9 @@
     "summary": "USDH mint authority is a PDA of the Hubble Protocol program. The live program remains upgradeable through Hubble DAO SPL Governance: three of seven current council votes can meet the 40% approval threshold, early vote tipping is enabled, and the instruction hold-up is zero.",
     "upgradeability": {
       "model": "custom",
-      "proxyAddresses": [
-        "HubbLeXBb7qyLHt3x7gvYaRrxQmmgExb7fCJgDqFuB6T"
-      ],
-      "implementationAddresses": [
-        "DDkP2VqXhiAnWVJWBR29tfCkztttQaFccv4iYTS6sfQJ"
-      ],
-      "adminAddresses": [
-        "vX3gFkePCptwTmJAcMypCq9trzrtarVf9PmT3AEke1v"
-      ],
+      "proxyAddresses": ["HubbLeXBb7qyLHt3x7gvYaRrxQmmgExb7fCJgDqFuB6T"],
+      "implementationAddresses": ["DDkP2VqXhiAnWVJWBR29tfCkztttQaFccv4iYTS6sfQJ"],
+      "adminAddresses": ["vX3gFkePCptwTmJAcMypCq9trzrtarVf9PmT3AEke1v"],
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "Hubble program upgrade governance",

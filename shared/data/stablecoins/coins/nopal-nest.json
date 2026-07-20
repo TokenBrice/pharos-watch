@@ -69,9 +69,9 @@
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "nOPAL is listed across issuer-controlled deployments and Nest docs do not expose a separate public bridge topology. The reviewed route is issuer-native multichain issuance with probable confidence pending more explicit chain-route documentation.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Nest docs",
@@ -86,47 +86,68 @@
       {
         "id": "ethereum:0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Nest native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native nOPAL (7,935-byte code, same address on all chains): owner() = 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a \u2014 a 5,450-byte Nest vault owner contract on every chain (read 2026-07-20). Nest issues nOPAL natively per chain under the vault owner Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (3-of-6, mint-authority review).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Nest Protocol",
+            "url": "https://nest.credit/"
+          }
+        ]
       },
       {
         "id": "plume:0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
         "destinationChain": "plume",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Nest native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native nOPAL (7,935-byte code, same address on all chains): owner() = 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a \u2014 a 5,450-byte Nest vault owner contract on every chain (read 2026-07-20). Nest issues nOPAL natively per chain under the vault owner Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (3-of-6, mint-authority review).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Nest Protocol",
+            "url": "https://nest.credit/"
+          }
+        ]
       },
       {
         "id": "bsc:0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
         "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x119dd7daff816f29d7ee47596ae5e4bdc4299165",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Nest native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native nOPAL (7,935-byte code, same address on all chains): owner() = 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a \u2014 a 5,450-byte Nest vault owner contract on every chain (read 2026-07-20). Nest issues nOPAL natively per chain under the vault owner Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (3-of-6, mint-authority review).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Nest Protocol",
+            "url": "https://nest.credit/"
+          }
+        ]
       }
     ]
   },
@@ -140,7 +161,13 @@
       "risk": "high",
       "assetClass": "private-credit",
       "issuerOrObligor": "BlackOpal LiquidStone II FIDC (Brazilian credit-card receivables) via Nest vault",
-      "riskFactors": ["credit", "liquidity", "legal", "custody", "concentration"],
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "legal",
+        "custody",
+        "concentration"
+      ],
       "liquidityHorizon": "seven-days"
     },
     {
@@ -152,7 +179,12 @@
       "blacklistable": true,
       "assetClass": "stablecoin",
       "issuerOrObligor": "Tether Operations Limited",
-      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
@@ -162,7 +194,13 @@
       "coinId": "ntbill-nest",
       "assetClass": "tokenized-security",
       "issuerOrObligor": "Nest Treasury Vault (short-term U.S. Treasury exposure)",
-      "riskFactors": ["duration", "custody", "counterparty", "liquidity", "smart-contract"],
+      "riskFactors": [
+        "duration",
+        "custody",
+        "counterparty",
+        "liquidity",
+        "smart-contract"
+      ],
       "liquidityHorizon": "one-day"
     },
     {
@@ -174,7 +212,12 @@
       "blacklistable": true,
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle Internet Financial, Inc.",
-      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
@@ -186,7 +229,12 @@
       "blacklistable": true,
       "assetClass": "stablecoin",
       "issuerOrObligor": "Plume pUSD issuer and its reserve custodians",
-      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
       "liquidityHorizon": "immediate"
     }
   ],
@@ -299,7 +347,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "nOPAL Teller and Manager are both owned by the same 3-of-6 Gnosis Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (Safe v1.3.0, no modules, no guard) — same Safe as nBASIS. owner() confirmed for both contracts at Ethereum block 25295023.",
+    "summary": "nOPAL Teller and Manager are both owned by the same 3-of-6 Gnosis Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (Safe v1.3.0, no modules, no guard) \u2014 same Safe as nBASIS. owner() confirmed for both contracts at Ethereum block 25295023.",
     "controls": [
       {
         "label": "Nest BlackOpal LiquidStone II Vault Teller (issuance/redemption)",

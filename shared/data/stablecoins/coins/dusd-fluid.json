@@ -74,14 +74,42 @@
   "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "Fluid DUSD is tracked only on Arbitrum in Pharos, and no separate bridge route is documented for the reviewed metadata row. The route is treated as single-chain/native.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "Fluid DUSD supply is confined to its canonical Arbitrum deployment; the single reviewed route is native issuance. No bridge route carries the claim.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
     "confidence": "verified",
     "sources": [
       {
         "label": "Fluid DUSD",
         "url": "https://fluid.ch/dusd/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "arbitrum:0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709",
+        "protocol": "Fluid DUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Fluid DUSD is issued only on Arbitrum; the entire captured supply is the canonical Arbitrum deployment (0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709, a transparent proxy administered per the verified 2026-07-15 mint-authority review). No bridge route carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Fluid DUSD token (Arbiscan)",
+            "url": "https://arbiscan.io/address/0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709"
+          },
+          {
+            "label": "Fluid docs",
+            "url": "https://docs.fluid.instadapp.io/"
+          }
+        ]
       }
     ]
   },
@@ -120,9 +148,15 @@
     "summary": "DUSD's verified Arbitrum implementation permits only OffchainTreasuryOracle to call mint. That oracle needs an ORACLE_UPDATER_ROLE caller and a current off-chain signer attestation, while the token enforces a mutable off-chain treasury-balance ceiling. Three token DEFAULT_ADMIN_ROLE holders, the oracle administrator, and the transparent-proxy admin can alter the mint path or mint logic.",
     "upgradeability": {
       "model": "transparent-proxy",
-      "proxyAddresses": ["0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709"],
-      "implementationAddresses": ["0xe825f4f14b93a329fbae230ef6b222f26cca4028"],
-      "adminAddresses": ["0xdeab81c9ff7528de932890058579c0c2341f7223"],
+      "proxyAddresses": [
+        "0xf0b5ceefc89684889e5f7e0a7775bd100fcd3709"
+      ],
+      "implementationAddresses": [
+        "0xe825f4f14b93a329fbae230ef6b222f26cca4028"
+      ],
+      "adminAddresses": [
+        "0xdeab81c9ff7528de932890058579c0c2341f7223"
+      ],
       "canChangeMintLogic": true,
       "controlRef": "DUSD transparent proxy admin",
       "observedAt": "2026-07-15",

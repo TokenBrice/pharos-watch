@@ -106,8 +106,8 @@
   "bridgeRouteRisk": {
     "tier": "liquidity-or-intent-route",
     "summary": "sdUSD is a staked wrapper around dTRINITY dUSD with deployments on Ethereum and Fraxtal. L2BEAT candidate data points to Across-style route liquidity for this family, and no issuer-native bridge-control document was verified, so the wrapper is conservatively scored as a liquidity/intent route.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "probable",
     "protocols": [
       {
@@ -135,31 +135,57 @@
         "id": "ethereum:0x7cb20517776636ed76b68edb3d99dcce356abf02",
         "destinationChain": "ethereum",
         "contractAddress": "0x7cb20517776636ed76b68edb3d99dcce356abf02",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "dTRINITY dSTAKE vault (native sdUSD)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on ethereum at block 25570988: sdUSD token 0x7cb20517776636ed76b68edb3d99dcce356abf02 (symbol sdUSD, EIP-1967 upgradeable) is the dSTAKE ERC-4626 vault whose asset() = 0x07fff99e1664d9b116fbc158c0e99785f81ca236 (local dUSD, symbol verified). sdUSD is staked dUSD minted by depositing the local dUSD into the vault \u2014 no bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "fraxtal",
+        "canonicalChain": "fraxtal",
+        "observedBlock": 25570988,
+        "sources": [
+          {
+            "label": "sdUSD on ethereum explorer (asset() verified 2026-07-20)",
+            "url": "https://etherscan.io/address/0x7cb20517776636ed76b68edb3d99dcce356abf02"
+          },
+          {
+            "label": "dTRINITY docs",
+            "url": "https://docs.dtrinity.com/"
+          }
+        ]
       },
       {
         "id": "fraxtal:0x58acc2600835211dcb5847c5fa422791fd492409",
         "destinationChain": "fraxtal",
         "contractAddress": "0x58acc2600835211dcb5847c5fa422791fd492409",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "dTRINITY dSTAKE vault (native sdUSD)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on fraxtal at block 38852196: sdUSD token 0x58acc2600835211dcb5847c5fa422791fd492409 (symbol sdUSD, EIP-1967 upgradeable) is the dSTAKE ERC-4626 vault whose asset() = 0x788d96f655735f52c676a133f4dfc53cec614d4a (local dUSD, symbol verified). sdUSD is staked dUSD minted by depositing the local dUSD into the vault \u2014 no bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "fraxtal",
+        "canonicalChain": "fraxtal",
+        "observedBlock": 38852196,
+        "sources": [
+          {
+            "label": "sdUSD on fraxtal explorer (asset() verified 2026-07-20)",
+            "url": "https://fraxscan.com/address/0x58acc2600835211dcb5847c5fa422791fd492409"
+          },
+          {
+            "label": "dTRINITY docs",
+            "url": "https://docs.dtrinity.com/"
+          }
+        ]
       }
     ]
   },
@@ -208,7 +234,7 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "inheritedFrom": "dusd-dtrinity",
-    "summary": "sdUSD (dSTAKE vault) is upgradeable via ProxyAdmin owned by a 24-hour TimelockController, whose proposer/executor/canceller is a single 3-of-5 Safe multisig (0xe83c188...). Shares are minted only by staking dUSD — no privileged mint surface. Fraxtal deployment admin not separately verified.",
+    "summary": "sdUSD (dSTAKE vault) is upgradeable via ProxyAdmin owned by a 24-hour TimelockController, whose proposer/executor/canceller is a single 3-of-5 Safe multisig (0xe83c188...). Shares are minted only by staking dUSD \u2014 no privileged mint surface. Fraxtal deployment admin not separately verified.",
     "controls": [
       {
         "label": "dSTAKE sdUSD vault (EIP-1967 upgradeable proxy, Ethereum)",
@@ -261,7 +287,7 @@
           "url": "https://etherscan.io/address/0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b"
         }
       ],
-      "evidence": "At Ethereum block 25295192: sdUSD Ethereum proxy upgrade path confirmed as ProxyAdmin → 24-hour TimelockController → 3-of-5 Safe. No privileged mint on the wrapper; receipts minted only by dUSD deposit into dSTAKE. Fraxtal deployment (0x58acc260...) not verified independently — separate admin chain presumed but unconfirmed.",
+      "evidence": "At Ethereum block 25295192: sdUSD Ethereum proxy upgrade path confirmed as ProxyAdmin \u2192 24-hour TimelockController \u2192 3-of-5 Safe. No privileged mint on the wrapper; receipts minted only by dUSD deposit into dSTAKE. Fraxtal deployment (0x58acc260...) not verified independently \u2014 separate admin chain presumed but unconfirmed.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-06-11"
     }

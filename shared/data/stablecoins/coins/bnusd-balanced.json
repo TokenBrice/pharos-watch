@@ -81,6 +81,11 @@
       "chain": "injective",
       "address": "factory/inj14ejqjyq8um4p3xfqj74yld5waqljf88f9eneuk/inj1qspaxnztkkzahvp6scq6xfpgafejmj2td83r9j",
       "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0xdccd213951d8214fbaca720728474e2cef9d247b",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {
@@ -246,10 +251,10 @@
   "chainTier": "mature-alt-l1",
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
-    "tier": "liquidity-or-intent-route",
-    "summary": "Balanced markets bnUSD as usable across many chains and describes cross-chain connectivity through xCall/IBC-style messaging. Because holder movement is part of a cross-chain DeFi liquidity system rather than issuer redemption-only rails, the route is reviewed as liquidity-route risk.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "tier": "external-validated-network",
+    "summary": "bnUSD is minted on ICON (canonical SCORE cx88fd7df7ddff82f7cc735c871dc519838cb235bb, ~99% of supply) and every tracked off-ICON deployment is a burn-mint representation settled through Balanced's own xCall messaging: on Base, Avalanche, Arbitrum, BSC, and the newly verified Optimism deployment (0xdccd213951d8214fbaca720728474e2cef9d247b) only the chain's xCall contract can invoke handleCallMessage to mint, per the verified BalancedDollar source; on Injective the CW20 bnUSD minter is the cw_xcall contract. Token UUPS ownership and xCallManager ownership sit with the Balanced ops EOA 0x9920c455 (EVM) / inj106a2du (Injective). All rows re-verified on-chain 2026-07-20. DefiLlama's ICON/Archway/Havah raw chain labels (~98.9% of supply) have no Pharos chain mapping and remain an accepted unmatched-label pool routed to the policy maintainer.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
     "confidence": "verified",
     "protocols": [
       {
@@ -257,7 +262,8 @@
         "name": "Balanced xCall",
         "url": "https://blog.balanced.network/archway-connection/",
         "bridgeTypes": [
-          "crossChainMessaging"
+          "crossChainMessaging",
+          "burnAndMint"
         ]
       }
     ],
@@ -269,83 +275,214 @@
       {
         "label": "Balanced xCall connection article",
         "url": "https://blog.balanced.network/archway-connection/"
+      },
+      {
+        "label": "BalancedDollar verified implementation (Base)",
+        "url": "https://basescan.org/address/0x806D35736C4D7a144dB8fdB14CBa9633c4284eE6#code"
+      },
+      {
+        "label": "Injective LCD",
+        "url": "https://lcd.injective.network"
       }
     ],
     "routes": [
       {
         "id": "base:0x78b7cd9308287deb724527d8703c889e2d6c3708",
+        "sourceChain": "icon",
         "destinationChain": "base",
+        "canonicalChain": "icon",
         "contractAddress": "0x78b7cd9308287deb724527d8703c889e2d6c3708",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Balanced xCall (ICON-hub burn-mint)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (base block 48861818): EIP-1967 proxy (implementation 0x806d35736c4d7a144db8fdb14cba9633c4284ee6, verified BalancedDollar source on the Base deployment) whose iconBnUSD() returns 0x1.icon/cx88fd7df7ddff82f7cc735c871dc519838cb235bb (the canonical ICON bnUSD SCORE). Minting exists only in handleCallMessage, callable exclusively by the chain's xCall contract 0x7fdde482956770d148e055f9d2893f84a1b6b00b (msg.sender check in verified source), with message verification configured by xCallManager 0xbcbd42ab3c9d219b9c992cc984dd2a77afd95ef3; crossTransfer() burns local supply, so cross-chain movement is burn-mint settlement of the ICON-issued bnUSD. Token owner() (UUPS upgrade authority) and xCallManager owner are the Balanced ops EOA 0x9920c45570dc76acb48b215308b7d3791e3518ce (eth_getCode = 0x on every tracked EVM chain).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "base",
+        "controllerAddress": "0x7fdde482956770d148e055f9d2893f84a1b6b00b",
+        "failureDomainKeys": [
+          "protocol:xcall",
+          "contract:base:0x7fdde482956770d148e055f9d2893f84a1b6b00b"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "bnUSD base token (xCall/xCallManager/owner reads, 2026-07-20)",
+            "url": "https://basescan.org/address/0x78b7cd9308287deb724527d8703c889e2d6c3708"
+          },
+          {
+            "label": "BalancedDollar verified implementation (Base)",
+            "url": "https://basescan.org/address/0x806D35736C4D7a144dB8fdB14CBa9633c4284eE6#code"
+          }
+        ]
       },
       {
         "id": "avalanche:0xdbdd50997361522495ecfe57ebb6850da0e4c699",
+        "sourceChain": "icon",
         "destinationChain": "avalanche",
+        "canonicalChain": "icon",
         "contractAddress": "0xdbdd50997361522495ecfe57ebb6850da0e4c699",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Balanced xCall (ICON-hub burn-mint)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (avalanche block 90753281): EIP-1967 proxy (implementation 0xcb1657b8e8f1909dfafa8dea4a07f94d860eb42f, verified BalancedDollar source on the Base deployment) whose iconBnUSD() returns 0x1.icon/cx88fd7df7ddff82f7cc735c871dc519838cb235bb (the canonical ICON bnUSD SCORE). Minting exists only in handleCallMessage, callable exclusively by the chain's xCall contract 0xfc83a3f252090b26f92f91dfb9dc3eb710adaf1b (msg.sender check in verified source), with message verification configured by xCallManager 0xdccd213951d8214fbaca720728474e2cef9d247b; crossTransfer() burns local supply, so cross-chain movement is burn-mint settlement of the ICON-issued bnUSD. Token owner() (UUPS upgrade authority) and xCallManager owner are the Balanced ops EOA 0x9920c45570dc76acb48b215308b7d3791e3518ce (eth_getCode = 0x on every tracked EVM chain).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xfc83a3f252090b26f92f91dfb9dc3eb710adaf1b",
+        "failureDomainKeys": [
+          "protocol:xcall",
+          "contract:avalanche:0xfc83a3f252090b26f92f91dfb9dc3eb710adaf1b"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "bnUSD avalanche token (xCall/xCallManager/owner reads, 2026-07-20)",
+            "url": "https://snowscan.xyz/address/0xdbdd50997361522495ecfe57ebb6850da0e4c699"
+          },
+          {
+            "label": "BalancedDollar verified implementation (Base)",
+            "url": "https://basescan.org/address/0x806D35736C4D7a144dB8fdB14CBa9633c4284eE6#code"
+          }
+        ]
       },
       {
         "id": "arbitrum:0xa67f4b09eed22f8201ee0637cbe9d654e63f946e",
+        "sourceChain": "icon",
         "destinationChain": "arbitrum",
+        "canonicalChain": "icon",
         "contractAddress": "0xa67f4b09eed22f8201ee0637cbe9d654e63f946e",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Balanced xCall (ICON-hub burn-mint)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (arbitrum block 485687639): EIP-1967 proxy (implementation 0x806d35736c4d7a144db8fdb14cba9633c4284ee6, verified BalancedDollar source on the Base deployment) whose iconBnUSD() returns 0x1.icon/cx88fd7df7ddff82f7cc735c871dc519838cb235bb (the canonical ICON bnUSD SCORE). Minting exists only in handleCallMessage, callable exclusively by the chain's xCall contract 0xfc83a3f252090b26f92f91dfb9dc3eb710adaf1b (msg.sender check in verified source), with message verification configured by xCallManager 0xdccd213951d8214fbaca720728474e2cef9d247b; crossTransfer() burns local supply, so cross-chain movement is burn-mint settlement of the ICON-issued bnUSD. Token owner() (UUPS upgrade authority) and xCallManager owner are the Balanced ops EOA 0x9920c45570dc76acb48b215308b7d3791e3518ce (eth_getCode = 0x on every tracked EVM chain).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xfc83a3f252090b26f92f91dfb9dc3eb710adaf1b",
+        "failureDomainKeys": [
+          "protocol:xcall",
+          "contract:arbitrum:0xfc83a3f252090b26f92f91dfb9dc3eb710adaf1b"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "bnUSD arbitrum token (xCall/xCallManager/owner reads, 2026-07-20)",
+            "url": "https://arbiscan.io/address/0xa67f4b09eed22f8201ee0637cbe9d654e63f946e"
+          },
+          {
+            "label": "BalancedDollar verified implementation (Base)",
+            "url": "https://basescan.org/address/0x806D35736C4D7a144dB8fdB14CBa9633c4284eE6#code"
+          }
+        ]
       },
       {
         "id": "bsc:0xc65132325bd4fcf2ec5f3a9375487163b6999206",
+        "sourceChain": "icon",
         "destinationChain": "bsc",
+        "canonicalChain": "icon",
         "contractAddress": "0xc65132325bd4fcf2ec5f3a9375487163b6999206",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Balanced xCall (ICON-hub burn-mint)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (bsc block 111007777): EIP-1967 proxy (implementation 0x247ab4ec68e85708556a7a10823166ffac30e67b, verified BalancedDollar source on the Base deployment) whose iconBnUSD() returns 0x1.icon/cx88fd7df7ddff82f7cc735c871dc519838cb235bb (the canonical ICON bnUSD SCORE). Minting exists only in handleCallMessage, callable exclusively by the chain's xCall contract 0xfc83a3f252090b26f92f91dfb9dc3eb710adaf1b (msg.sender check in verified source), with message verification configured by xCallManager 0x8b3873e46b3923c15b7aaf1f4774585a908de226; crossTransfer() burns local supply, so cross-chain movement is burn-mint settlement of the ICON-issued bnUSD. Token owner() (UUPS upgrade authority) and xCallManager owner are the Balanced ops EOA 0x9920c45570dc76acb48b215308b7d3791e3518ce (eth_getCode = 0x on every tracked EVM chain).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "bsc",
+        "controllerAddress": "0xfc83a3f252090b26f92f91dfb9dc3eb710adaf1b",
+        "failureDomainKeys": [
+          "protocol:xcall",
+          "contract:bsc:0xfc83a3f252090b26f92f91dfb9dc3eb710adaf1b"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "bnUSD bsc token (xCall/xCallManager/owner reads, 2026-07-20)",
+            "url": "https://bscscan.com/address/0xc65132325bd4fcf2ec5f3a9375487163b6999206"
+          },
+          {
+            "label": "BalancedDollar verified implementation (Base)",
+            "url": "https://basescan.org/address/0x806D35736C4D7a144dB8fdB14CBa9633c4284eE6#code"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0xdccd213951d8214fbaca720728474e2cef9d247b",
+        "sourceChain": "icon",
+        "destinationChain": "optimism",
+        "canonicalChain": "icon",
+        "contractAddress": "0xdccd213951d8214fbaca720728474e2cef9d247b",
+        "protocol": "Balanced xCall (ICON-hub burn-mint)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (optimism block 154457596): EIP-1967 proxy (implementation 0x806d35736c4d7a144db8fdb14cba9633c4284ee6, verified BalancedDollar source on the Base deployment) whose iconBnUSD() returns 0x1.icon/cx88fd7df7ddff82f7cc735c871dc519838cb235bb (the canonical ICON bnUSD SCORE). Minting exists only in handleCallMessage, callable exclusively by the chain's xCall contract 0xfc83a3f252090b26f92f91dfb9dc3eb710adaf1b (msg.sender check in verified source), with message verification configured by xCallManager 0x4c6c68e8f5206ee4a1690c808cff5c3fd35b512f; crossTransfer() burns local supply, so cross-chain movement is burn-mint settlement of the ICON-issued bnUSD. Token owner() (UUPS upgrade authority) and xCallManager owner are the Balanced ops EOA 0x9920c45570dc76acb48b215308b7d3791e3518ce (eth_getCode = 0x on every tracked EVM chain). Deployment newly verified for this review: 170-byte EIP-1967 proxy to the same BalancedDollar implementation as Base/Arbitrum, name()/symbol() = Balanced Dollar/bnUSD, 18 decimals, totalSupply ~0.96 bnUSD (matches DefiLlama's ~$1 OP Mainnet reading).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "optimism",
+        "controllerAddress": "0xfc83a3f252090b26f92f91dfb9dc3eb710adaf1b",
+        "failureDomainKeys": [
+          "protocol:xcall",
+          "contract:optimism:0xfc83a3f252090b26f92f91dfb9dc3eb710adaf1b"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "bnUSD optimism token (xCall/xCallManager/owner reads, 2026-07-20)",
+            "url": "https://optimistic.etherscan.io/address/0xdccd213951d8214fbaca720728474e2cef9d247b"
+          },
+          {
+            "label": "BalancedDollar verified implementation (Base)",
+            "url": "https://basescan.org/address/0x806D35736C4D7a144dB8fdB14CBa9633c4284eE6#code"
+          }
+        ]
       },
       {
         "id": "injective:factory/inj14ejqjyq8um4p3xfqj74yld5waqljf88f9eneuk/inj1qspaxnztkkzahvp6scq6xfpgafejmj2td83r9j",
+        "sourceChain": "icon",
         "destinationChain": "injective",
+        "canonicalChain": "icon",
         "contractAddress": "factory/inj14ejqjyq8um4p3xfqj74yld5waqljf88f9eneuk/inj1qspaxnztkkzahvp6scq6xfpgafejmj2td83r9j",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Balanced xCall (ICON-hub burn-mint)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified via Injective LCD (lcd.injective.network) 2026-07-20: the factory denom is the bank-side of the Injective CW20 Adapter (creator inj14ejqjyq8um4p3xfqj74yld5waqljf88f9eneuk, code_id 8, label 'Injective CW20 Adapter') wrapping the CW20 token inj1qspaxnztkkzahvp6scq6xfpgafejmj2td83r9j (code_id 1186, label 'Balanced Dollar'; token_info: bnUSD, 18 decimals, total_supply 93.96). The CW20 minter query returns inj177fx40l0g3jqmtmmuyl2zhrjvhr3knvthlr0ul with no cap \u2014 a contract labeled 'cw_xcall' (code_id 1164), i.e. the same xCall burn-mint architecture as the EVM deployments: only the Injective xCall contract can mint. Contract admin is Balanced ops account inj106a2du88j03xs8hry5gjd8nj79rkfkdaxgh4r9.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "injective",
+        "controllerAddress": "inj177fx40l0g3jqmtmmuyl2zhrjvhr3knvthlr0ul",
+        "failureDomainKeys": [
+          "protocol:xcall",
+          "contract:injective:inj177fx40l0g3jqmtmmuyl2zhrjvhr3knvthlr0ul"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Injective LCD - bnUSD CW20 contract info",
+            "url": "https://lcd.injective.network/cosmwasm/wasm/v1/contract/inj1qspaxnztkkzahvp6scq6xfpgafejmj2td83r9j"
+          },
+          {
+            "label": "Injective LCD - cw_xcall minter contract info",
+            "url": "https://lcd.injective.network/cosmwasm/wasm/v1/contract/inj177fx40l0g3jqmtmmuyl2zhrjvhr3knvthlr0ul"
+          }
+        ]
       }
     ]
   },
@@ -356,7 +493,7 @@
     {
       "type": "info",
       "title": "Primary issuance lives on ICON, not yet a Pharos-supported chain",
-      "message": "bnUSD is minted on ICON (canonical contract cx88fd7df7ddff82f7cc735c871dc519838cb235bb) where ~95% of supply currently sits. Balanced uses its xCall infrastructure to extend the same supply to other chains, so the EVM/Injective contracts tracked here represent cross-chain wraps of the ICON-issued supply. Additional active deployments on Archway and Havah (also not Pharos-supported), and on Optimism, are visible in DefiLlama but excluded from contracts[] until those chains are wired into Pharos."
+      "message": "bnUSD is minted on ICON (canonical contract cx88fd7df7ddff82f7cc735c871dc519838cb235bb) where ~95% of supply currently sits. Balanced uses its xCall infrastructure to extend the same supply to other chains, so the EVM/Injective contracts tracked here represent cross-chain burn-mint representations of the ICON-issued supply. Additional active deployments on Archway and Havah (also not Pharos-supported) are visible in DefiLlama but excluded from contracts[] until those chains are wired into Pharos; the Optimism deployment was verified and added 2026-07-20."
     },
     {
       "type": "info",
@@ -371,7 +508,12 @@
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "ICON network staked-ICX positions in Balanced Loans contracts",
-      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
@@ -381,7 +523,13 @@
       "blacklistable": true,
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Balanced cross-chain Hub and Stability Fund positions across bridged-asset issuers",
-      "riskFactors": ["market", "liquidity", "smart-contract", "counterparty", "concentration"],
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "counterparty",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],

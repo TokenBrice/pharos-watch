@@ -141,7 +141,7 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "evidence": "Solana mint HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L: mintAuthority = DyJseFwtoCnQWR333miA4PAv57aB5bCTxCwY6iK8kxNG; freezeAuthority = same. The authority account is owned by the System Program (EOA-equivalent on Solana — no on-chain multisig structure). Cannot be independently verified as a multisig; treated as issuer-backend EOA-equivalent.",
+        "evidence": "Solana mint HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L: mintAuthority = DyJseFwtoCnQWR333miA4PAv57aB5bCTxCwY6iK8kxNG; freezeAuthority = same. The authority account is owned by the System Program (EOA-equivalent on Solana \u2014 no on-chain multisig structure). Cannot be independently verified as a multisig; treated as issuer-backend EOA-equivalent.",
         "sources": [
           {
             "label": "Solana Explorer eUSD mint",
@@ -153,7 +153,7 @@
     "reconciliation": "unknown",
     "supervision": "prudential",
     "review": {
-      "evidence": "Verified at Ethereum block 25295081. eUSD on Ethereum/Base is a BeaconProxy (Stablecoin contract impl); beacon 0xe7a6d045 owned by Safe 1.4.1 (7/2, no modules/guard). MINTER_ROLE + DEFAULT_ADMIN held by Safe 1.4.1 (6/3, no modules/guard); previous EOA minter revoked block 25197170. Solana mintAuthority DyJseFw… is a System Program account (non-multisig EOA-equivalent). EVM controls fully confirmed on-chain; Solana remains issuer-backend with non-multisig authority. Telcoin Digital Asset Bank holds Nebraska Digital Asset Depository Institution Charter No. 001 granted by the Nebraska Department of Banking and Finance on 2025-11-12 (a granted state bank charter, not a pending application), so the issuer is prudentially supervised. But no dated independent third-party reserve attestation for eUSD was found: Telcoin states monthly reports will be published, and the eUSD bank page names no auditor and notes deposits are not FDIC-insured, so reconciliation is unknown, which caps eUSD at critical despite the charter.",
+      "evidence": "Verified at Ethereum block 25295081. eUSD on Ethereum/Base is a BeaconProxy (Stablecoin contract impl); beacon 0xe7a6d045 owned by Safe 1.4.1 (7/2, no modules/guard). MINTER_ROLE + DEFAULT_ADMIN held by Safe 1.4.1 (6/3, no modules/guard); previous EOA minter revoked block 25197170. Solana mintAuthority DyJseFw\u2026 is a System Program account (non-multisig EOA-equivalent). EVM controls fully confirmed on-chain; Solana remains issuer-backend with non-multisig authority. Telcoin Digital Asset Bank holds Nebraska Digital Asset Depository Institution Charter No. 001 granted by the Nebraska Department of Banking and Finance on 2025-11-12 (a granted state bank charter, not a pending application), so the issuer is prudentially supervised. But no dated independent third-party reserve attestation for eUSD was found: Telcoin states monthly reports will be published, and the eUSD bank page names no auditor and notes deposits are not FDIC-insured, so reconciliation is unknown, which caps eUSD at critical despite the charter.",
       "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
       "reviewedAt": "2026-07-16",
       "sources": [
@@ -180,8 +180,8 @@
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Telcoin describes eUSD as bank-issued Digital Cash connected directly to on-chain balances, with public launch materials identifying native issuance on public chains. Because reviewed evidence points to issuer-native bank mint/redeem rails rather than a third-party bridge wrapper, eUSD is scored as issuer-native-burn-mint.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "probable",
     "sources": [
       {
@@ -198,61 +198,112 @@
         "id": "ethereum:0x14913815bcfde78baead2111f463d038ac9c2949",
         "destinationChain": "ethereum",
         "contractAddress": "0x14913815bcfde78baead2111f463d038ac9c2949",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Telcoin native eUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on ethereum at block 25570988: eUSD token 0x14913815bcfde78baead2111f463d038ac9c2949 is Telcoin's BeaconProxy Stablecoin deployment (symbol eUSD). The verified mint-authority review confirms MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by Telcoin's Gnosis Safe 1.4.1 (3-of-6) and beacon upgrades by a separate Safe (2-of-7). Bank-issued natively on this chain; no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 25570988,
+        "sources": [
+          {
+            "label": "eUSD on ethereum explorer (verified 2026-07-20)",
+            "url": "https://etherscan.io/address/0x14913815bcfde78baead2111f463d038ac9c2949"
+          },
+          {
+            "label": "Telcoin Digital Cash",
+            "url": "https://www.telco.in/digital-cash"
+          }
+        ]
       },
       {
         "id": "base:0x14913815bcfde78baead2111f463d038ac9c2949",
         "destinationChain": "base",
         "contractAddress": "0x14913815bcfde78baead2111f463d038ac9c2949",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Telcoin native eUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on base at block 48862878: eUSD token 0x14913815bcfde78baead2111f463d038ac9c2949 is Telcoin's BeaconProxy Stablecoin deployment (symbol eUSD). The verified mint-authority review confirms MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by Telcoin's Gnosis Safe 1.4.1 (3-of-6) and beacon upgrades by a separate Safe (2-of-7). Bank-issued natively on this chain; no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 48862878,
+        "sources": [
+          {
+            "label": "eUSD on base explorer (verified 2026-07-20)",
+            "url": "https://basescan.org/address/0x14913815bcfde78baead2111f463d038ac9c2949"
+          },
+          {
+            "label": "Telcoin Digital Cash",
+            "url": "https://www.telco.in/digital-cash"
+          }
+        ]
       },
       {
         "id": "polygon:0x14913815bcfde78baead2111f463d038ac9c2949",
         "destinationChain": "polygon",
         "contractAddress": "0x14913815bcfde78baead2111f463d038ac9c2949",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Telcoin native eUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on polygon at block 90540072: eUSD token 0x14913815bcfde78baead2111f463d038ac9c2949 is Telcoin's BeaconProxy Stablecoin deployment (symbol eUSD). The verified mint-authority review confirms MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by Telcoin's Gnosis Safe 1.4.1 (3-of-6) and beacon upgrades by a separate Safe (2-of-7). Bank-issued natively on this chain; no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 90540072,
+        "sources": [
+          {
+            "label": "eUSD on polygon explorer (verified 2026-07-20)",
+            "url": "https://polygonscan.com/address/0x14913815bcfde78baead2111f463d038ac9c2949"
+          },
+          {
+            "label": "Telcoin Digital Cash",
+            "url": "https://www.telco.in/digital-cash"
+          }
+        ]
       },
       {
         "id": "solana:HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L",
         "destinationChain": "solana",
         "contractAddress": "HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Telcoin native eUSD (Solana SPL)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Solana mainnet 2026-07-20 (getAccountInfo jsonParsed): eUSD SPL mint HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L, 6 decimals, mintAuthority = freezeAuthority = DyJseFwtoCnQWR333miA4PAv57aB5bCTxCwY6iK8kxNG (System Program-owned account \u2014 no on-chain multisig), matching the mint-authority review. Issuer-minted natively on Solana.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "eUSD mint on Solscan (verified 2026-07-20)",
+            "url": "https://solscan.io/token/HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L"
+          },
+          {
+            "label": "Telcoin Digital Cash",
+            "url": "https://www.telco.in/digital-cash"
+          }
+        ]
       }
     ]
   },
@@ -286,7 +337,14 @@
       "risk": "very-low",
       "assetClass": "other",
       "issuerOrObligor": "Telcoin Digital Asset Bank and undisclosed reserve counterparties",
-      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "legal", "concentration"],
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody",
+        "legal",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],

@@ -196,8 +196,8 @@
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Frax documents cross-chain frxUSD mint/redeem flows and supported routes; sfrxUSD is a frxUSD variant, so its bridge-route exposure is inherited from Frax-operated cross-chain mint/redeem infrastructure.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "verified",
     "sources": [
       {
@@ -214,121 +214,283 @@
         "id": "ethereum:0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
         "destinationChain": "ethereum",
         "contractAddress": "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Frax (FraxNet)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical sfrxUSD on Ethereum at 0xcf62f905562626cfcdd2261162a51fd02fc9c5b6 (symbol()='sfrxUSD', no LayerZero endpoint surface, verified 2026-07-20 at block 25570935): the native sfrxUSD ERC-4626 vault over frxUSD per Frax documentation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "canonicalChain": "ethereum",
+        "observedBlock": 25570935,
+        "sources": [
+          {
+            "label": "Frax frxUSD/sfrxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "sfrxUSD on Etherscan",
+            "url": "https://etherscan.io/address/0xcf62f905562626cfcdd2261162a51fd02fc9c5b6"
+          }
+        ]
       },
       {
         "id": "fraxtal:0xfc00000000000000000000000000000000000008",
         "destinationChain": "fraxtal",
         "contractAddress": "0xfc00000000000000000000000000000000000008",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Frax (Fraxtal home chain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Fraxtal-native sfrxUSD at the Frax system address 0xfc00000000000000000000000000000000000008 (symbol()='sfrxUSD', no LayerZero endpoint surface, verified 2026-07-20 at block 38851869); Fraxtal is the Frax home chain whose lockbox backs the FraxZero OFT representations on other chains.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "canonicalChain": "fraxtal",
+        "observedBlock": 38851869,
+        "sources": [
+          {
+            "label": "Frax frxUSD/sfrxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "sfrxUSD on Fraxscan",
+            "url": "https://fraxscan.com/address/0xfc00000000000000000000000000000000000008"
+          }
+        ]
       },
       {
         "id": "sei:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
         "destinationChain": "sei",
         "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20 (block 221019260): the sfrxUSD token reports symbol()='sfrxUSD' and endpoint() = the LayerZero EndpointV2, so this deployment is the FraxZero sfrxUSD OFT and the OFT contract itself is the mint/burn authority for the representation on this chain (same construction as the reviewed frxUSD FraxZero rows in frxusd-frax.json).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "fraxtal",
+        "canonicalChain": "fraxtal",
+        "controllerChain": "sei",
+        "controllerAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:sei:0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+        ],
+        "observedBlock": 221019260,
+        "sources": [
+          {
+            "label": "Frax frxUSD/sfrxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "sfrxUSD OFT on sei explorer (verified 2026-07-20)",
+            "url": "https://seitrace.com/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+          }
+        ]
       },
       {
         "id": "mode:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
         "destinationChain": "mode",
         "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20 (block 42173431): the sfrxUSD token reports symbol()='sfrxUSD' and endpoint() = the LayerZero EndpointV2, so this deployment is the FraxZero sfrxUSD OFT and the OFT contract itself is the mint/burn authority for the representation on this chain (same construction as the reviewed frxUSD FraxZero rows in frxusd-frax.json).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "fraxtal",
+        "canonicalChain": "fraxtal",
+        "controllerChain": "mode",
+        "controllerAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:mode:0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+        ],
+        "observedBlock": 42173431,
+        "sources": [
+          {
+            "label": "Frax frxUSD/sfrxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "sfrxUSD OFT on mode explorer (verified 2026-07-20)",
+            "url": "https://modescan.io/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+          }
+        ]
       },
       {
         "id": "xlayer:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
         "destinationChain": "xlayer",
         "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20 (block 65745411): the sfrxUSD token reports symbol()='sfrxUSD' and endpoint() = the LayerZero EndpointV2, so this deployment is the FraxZero sfrxUSD OFT and the OFT contract itself is the mint/burn authority for the representation on this chain (same construction as the reviewed frxUSD FraxZero rows in frxusd-frax.json).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "fraxtal",
+        "canonicalChain": "fraxtal",
+        "controllerChain": "xlayer",
+        "controllerAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:xlayer:0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+        ],
+        "observedBlock": 65745411,
+        "sources": [
+          {
+            "label": "Frax frxUSD/sfrxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "sfrxUSD OFT on xlayer explorer (verified 2026-07-20)",
+            "url": "https://www.oklink.com/xlayer/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+          }
+        ]
       },
       {
         "id": "katana:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
         "destinationChain": "katana",
         "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20 (block 37771633): the sfrxUSD token reports symbol()='sfrxUSD' and endpoint() = the LayerZero EndpointV2, so this deployment is the FraxZero sfrxUSD OFT and the OFT contract itself is the mint/burn authority for the representation on this chain (same construction as the reviewed frxUSD FraxZero rows in frxusd-frax.json).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "fraxtal",
+        "canonicalChain": "fraxtal",
+        "controllerChain": "katana",
+        "controllerAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:katana:0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+        ],
+        "observedBlock": 37771633,
+        "sources": [
+          {
+            "label": "Frax frxUSD/sfrxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "sfrxUSD OFT on katana explorer (verified 2026-07-20)",
+            "url": "https://katanascan.com/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+          }
+        ]
       },
       {
         "id": "sonic:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
         "destinationChain": "sonic",
         "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20 (block 76214043): the sfrxUSD token reports symbol()='sfrxUSD' and endpoint() = the LayerZero EndpointV2, so this deployment is the FraxZero sfrxUSD OFT and the OFT contract itself is the mint/burn authority for the representation on this chain (same construction as the reviewed frxUSD FraxZero rows in frxusd-frax.json).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "fraxtal",
+        "canonicalChain": "fraxtal",
+        "controllerChain": "sonic",
+        "controllerAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:sonic:0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+        ],
+        "observedBlock": 76214043,
+        "sources": [
+          {
+            "label": "Frax frxUSD/sfrxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "sfrxUSD OFT on sonic explorer (verified 2026-07-20)",
+            "url": "https://sonicscan.org/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
         "destinationChain": "arbitrum",
         "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20 (block 485693472): the sfrxUSD token reports symbol()='sfrxUSD' and endpoint() = the LayerZero EndpointV2, so this deployment is the FraxZero sfrxUSD OFT and the OFT contract itself is the mint/burn authority for the representation on this chain (same construction as the reviewed frxUSD FraxZero rows in frxusd-frax.json).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "fraxtal",
+        "canonicalChain": "fraxtal",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:arbitrum:0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+        ],
+        "observedBlock": 485693472,
+        "sources": [
+          {
+            "label": "Frax frxUSD/sfrxUSD contract addresses",
+            "url": "https://docs.frax.com/frxusd/frxusd-contracts"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "sfrxUSD OFT on arbitrum explorer (verified 2026-07-20)",
+            "url": "https://arbiscan.io/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+          }
+        ]
       }
     ]
   },

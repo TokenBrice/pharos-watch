@@ -454,7 +454,40 @@
     {
       "name": "XDC and Fathom collateral-pool positions",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Fathom Protocol collateral pools (predominantly XDC)",
+      "riskFactors": ["market", "smart-contract", "liquidity", "concentration"],
+      "liquidityHorizon": "unknown"
     }
-  ]
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Fathom Protocol whitepaper - FXD over-collateralization",
+        "url": "https://docs.fathom.fi/whitepaper/version-1.0"
+      },
+      {
+        "label": "Fathom FXD stablecoin documentation",
+        "url": "https://docs.fathom.fi/fxd-stablecoin"
+      }
+    ],
+    "rationale": "Fathom's documentation describes FXD as a CDP-minted dollar overcollateralized by XDC locked in protocol collateral pools (133.33% launch ratio, governance-set), with liquidations and a StableSwap Module supporting the peg. Neither the whitepaper nor the stablecoin docs publish a current pool-level collateral breakdown or RWA allocation, so the envelope is retained as one aggregate collateral-pool slice rather than inventing a split.",
+    "compositionBasis": "Fathom Protocol documentation on FXD over-collateralization; current collateral-pool composition not published",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The aggregate slice identifies the CDP collateral envelope, but current per-pool asset composition (XDC versus any additional collateral or RWA positions), pool balances, and liquidation-buffer levels are not published in the reviewed sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "XDC and Fathom collateral-pool positions",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The protocol documents XDC overcollateralization in aggregate but publishes no current per-asset pool composition that would support defensible constituent slices."
+      }
+    ]
+  }
 }

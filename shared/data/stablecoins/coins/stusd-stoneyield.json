@@ -137,9 +137,9 @@
       }
     ],
     "review": {
-      "evidence": "At BSC block 103632643: hasRole(MINTER_ROLE, wrapper 0xb4d3c1bb…) = true; hasRole(DEFAULT_ADMIN_ROLE, 0x9ab82f8e…) = true. wrapper() returns 0xb4d3c1bb… confirming the on-chain wrapper address. 0x9ab82f8e… is a 23-byte EIP-7702 EOA (delegation designator, not a Safe). MAX_SUPPLY() = 1B tokens (immutable constant). StoneYield docs confirm deposit mint path and admin rewardMint/pause/adminUnlock/sweepUSDC; base USDC mint authority is inherited from Circle because stUSD is tracked as a USDC strategy wrapper.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At BSC block 103632643: hasRole(MINTER_ROLE, wrapper 0xb4d3c1bb…) = true; hasRole(DEFAULT_ADMIN_ROLE, 0x9ab82f8e…) = true. wrapper() returns 0xb4d3c1bb… confirming the on-chain wrapper address. 0x9ab82f8e… is a 23-byte EIP-7702 EOA (delegation designator, not a Safe). MAX_SUPPLY() = 1B tokens (immutable constant). StoneYield docs confirm deposit mint path and admin rewardMint/pause/adminUnlock/sweepUSDC; base USDC mint authority is inherited from Circle because stUSD is tracked as a USDC strategy wrapper. 2026-07-20 dc-1 pass: the wrapper's stUSD issuance is deposit-issued (issueFromWrapper) with canRaiseCap=false and no separate cap-raise authority, so the reviewed economic mint cap is bounded.",
+      "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "StoneYield contract design docs",
@@ -149,8 +149,11 @@
           "label": "stUSD contract (BscScan)",
           "url": "https://bscscan.com/address/0x806dd21af6de051fb811760a5768d04a99160eb9"
         }
-      ]
-    }
+      ],
+      "disposition": "scoreable",
+      "unresolvedQuestions": []
+    },
+    "economicCapSemantics": "bounded"
   },
   "notices": [
     {

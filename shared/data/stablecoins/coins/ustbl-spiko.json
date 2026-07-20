@@ -98,7 +98,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "USTBL's Ethereum, Polygon, Base, and Etherlink deployments use the same verified Token implementation and PermissionManager authority. Arbitrum is a UUPS proxy with a distinct implementation and authority contract whose permission configuration is not yet verified; Starknet and Stellar remain unverified.",
+    "summary": "USTBL is issuer-minted natively by Spiko on Ethereum, Polygon, Base, Etherlink, Arbitrum, Starknet, and Stellar. EVM deployments gate minting behind Spiko's PermissionManager (authority() verified per chain); the Arbitrum proxy resolves to the same PermissionManager implementation as Ethereum. Starknet name/owner verified; Stellar production addresses verified against Spiko's stellar-contracts repository.",
     "controls": [
       {
         "chain": "ethereum",
@@ -147,7 +147,16 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "sources": [{"label":"Polygon mainnet RPC","url":"https://polygon-bor-rpc.publicnode.com"},{"label":"Sourcify Spiko Token source","url":"https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"}],
+        "sources": [
+          {
+            "label": "Polygon mainnet RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          },
+          {
+            "label": "Sourcify Spiko Token source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+          }
+        ],
         "evidence": "Observed 2026-07-14: name() and symbol() return Spiko US T-Bills Money Market Fund / USTBL; EIP-1967 implementation = 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74 and authority() = PermissionManager 0x344278aff344d6fb960705dc18a4912221608472, matching Ethereum."
       },
       {
@@ -159,7 +168,16 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "sources": [{"label":"Base mainnet RPC","url":"https://mainnet.base.org"},{"label":"Sourcify Spiko Token source","url":"https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"}],
+        "sources": [
+          {
+            "label": "Base mainnet RPC",
+            "url": "https://mainnet.base.org"
+          },
+          {
+            "label": "Sourcify Spiko Token source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+          }
+        ],
         "evidence": "Observed 2026-07-14: name() and symbol() return Spiko US T-Bills Money Market Fund / USTBL; EIP-1967 implementation = 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74 and authority() = PermissionManager 0x344278aff344d6fb960705dc18a4912221608472, matching Ethereum."
       },
       {
@@ -171,20 +189,49 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "sources": [{"label":"Etherlink mainnet RPC","url":"https://node.mainnet.etherlink.com"},{"label":"Sourcify Spiko Token source","url":"https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"}],
+        "sources": [
+          {
+            "label": "Etherlink mainnet RPC",
+            "url": "https://node.mainnet.etherlink.com"
+          },
+          {
+            "label": "Sourcify Spiko Token source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
+          }
+        ],
         "evidence": "Observed 2026-07-14: name() and symbol() return Spiko US T-Bills Money Market Fund / USTBL; EIP-1967 implementation = 0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74 and authority() = PermissionManager 0x344278aff344d6fb960705dc18a4912221608472, matching Ethereum."
       },
       {
         "chain": "arbitrum",
         "address": "0x021289588cd81dc1ac87ea91e91607eef68303f5",
-        "label": "USTBL Arbitrum token authority",
+        "label": "USTBL Arbitrum restricted mint/burn",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "USTBL on Arbiscan (verified 2026-07-20)",
+            "url": "https://arbiscan.io/address/0x021289588cd81dc1ac87ea91e91607eef68303f5"
+          }
+        ],
+        "evidence": "Verified on Arbitrum at block 485687744: authority() of the USTBL token returns the Spiko PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a, an EIP-1967 proxy whose implementation is the same PermissionManager code as the Ethereum deployment 0x344278aff344d6fb960705dc18a4912221608472. Minting is gated by the PermissionManager, as on the other EVM chains."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xa925c217e4c1c82ee721ebd496d3863d5c2d829a",
+        "label": "Spiko PermissionManager authority contract (Arbitrum)",
         "role": "minter-admin",
         "authorityType": "contract",
-        "directMintAbility": "unknown",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "sources": [{"label":"Arbitrum mainnet RPC","url":"https://arb1.arbitrum.io/rpc"}],
-        "evidence": "Observed 2026-07-14: name() and symbol() return Spiko US T-Bills Money Market Fund / USTBL. The 708-byte token proxy resolves to implementation 0xa0769f7a8fc65e47de93797b4e21c073c117fc80 and authority() = 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a; the authority permission configuration requires separate review."
+        "directMintAbility": "can-authorize",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Spiko PermissionManager (Arbitrum) on Arbiscan",
+            "url": "https://arbiscan.io/address/0xa925c217e4c1c82ee721ebd496d3863d5c2d829a"
+          }
+        ],
+        "evidence": "Verified on Arbitrum 2026-07-20: EIP-1967 proxy whose implementation matches the Ethereum PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (itself a proxy to implementation 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e, the Blockscout-verified Spiko PermissionManager source)."
       }
     ],
     "review": {
@@ -200,14 +247,15 @@
         {
           "label": "Blockscout PermissionManager source",
           "url": "https://eth.blockscout.com/address/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+        },
+        {
+          "label": "Spiko stellar-contracts production addresses",
+          "url": "https://github.com/spiko-tech/stellar-contracts/blob/main/address/production.json"
         }
       ],
-      "evidence": "Ethereum, Polygon, Base, and Etherlink USTBL token proxies resolve to the same verified Token.sol implementation and PermissionManager authority. Arbitrum resolves to a distinct implementation and authority contract; its permission configuration was not reviewed. Starknet and Stellar remain unverified. USTBL is multi-chain with native issuance on each chain, not bridged.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "Review Arbitrum authority contract 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a and implementation 0xa0769f7a8fc65e47de93797b4e21c073c117fc80; verify Starknet and Stellar token authority."
-      ]
+      "evidence": "Ethereum, Polygon, Base, and Etherlink USTBL token proxies resolve to the same verified Token implementation and PermissionManager authority 0x344278aff344d6fb960705dc18a4912221608472 (authority() verified per chain 2026-07-20). Arbitrum token authority() = 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a, an EIP-1967 proxy to the same PermissionManager implementation as Ethereum (verified 2026-07-20, block 485687744). Starknet token reports name()='Spiko US T-Bills Money Market Fund' and owner()=0x7bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d via starknet_call (2026-07-20). Stellar USTBL = Soroban contract CARUUX2FZNPH6DGJOEUFSIUQWYHNL5AVDV7PMVSHWL7OBYIBFC76F4TO per Spiko's stellar-contracts address/production.json (stellar.expert contract record, created 2025-10-01). USTBL is multi-chain with native issuance on each chain, not bridged.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+      "reviewedAt": "2026-07-20"
     }
   },
   "chainTier": "ethereum",
@@ -215,15 +263,18 @@
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "USTBL is one of Spiko's tokenized fund shares deployed across multiple chains. Spiko announced Chainlink CCIP as its interoperability standard for compliance-aware cross-chain transfers, so Pharos scores the route as external validated-network exposure.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "verified",
     "protocols": [
       {
         "source": "docs",
         "name": "Chainlink CCIP",
         "url": "https://docs.chain.link/ccip",
-        "bridgeTypes": ["messagePassing", "burnAndMint"]
+        "bridgeTypes": [
+          "messagePassing",
+          "burnAndMint"
+        ]
       }
     ],
     "sources": [
@@ -245,106 +296,195 @@
         "id": "arbitrum:0x021289588cd81dc1ac87ea91e91607eef68303f5",
         "destinationChain": "arbitrum",
         "contractAddress": "0x021289588cd81dc1ac87ea91e91607eef68303f5",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko USTBL (issuer-native multichain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on arbitrum at block 485687744: USTBL token 0x021289588cd81dc1ac87ea91e91607eef68303f5 (symbol USTBL) exposes authority() = Spiko PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a; USTBL is issuer-minted natively on this chain by Spiko, not via a third-party bridge. The Arbitrum authority contract is itself an EIP-1967 proxy whose implementation is the same PermissionManager code as the Ethereum deployment (verified 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 485687744,
+        "sources": [
+          {
+            "label": "Spiko USTBL",
+            "url": "https://www.spiko.io/spiko-treasury-bills-dollar"
+          },
+          {
+            "label": "USTBL on arbitrum explorer (verified 2026-07-20)",
+            "url": "https://arbiscan.io/address/0x021289588cd81dc1ac87ea91e91607eef68303f5"
+          }
+        ]
       },
       {
         "id": "ethereum:0xe4880249745eac5f1ed9d8f7df844792d560e750",
         "destinationChain": "ethereum",
         "contractAddress": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko USTBL (issuer-native multichain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on ethereum at block 25570816: USTBL token 0xe4880249745eac5f1ed9d8f7df844792d560e750 (symbol USTBL) exposes authority() = Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472; USTBL is issuer-minted natively on this chain by Spiko, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 25570816,
+        "sources": [
+          {
+            "label": "Spiko USTBL",
+            "url": "https://www.spiko.io/spiko-treasury-bills-dollar"
+          },
+          {
+            "label": "USTBL on ethereum explorer (verified 2026-07-20)",
+            "url": "https://etherscan.io/address/0xe4880249745eac5f1ed9d8f7df844792d560e750"
+          }
+        ]
       },
       {
         "id": "polygon:0xe4880249745eac5f1ed9d8f7df844792d560e750",
         "destinationChain": "polygon",
         "contractAddress": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko USTBL (issuer-native multichain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on polygon at block 90538678: USTBL token 0xe4880249745eac5f1ed9d8f7df844792d560e750 (symbol USTBL) exposes authority() = Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472; USTBL is issuer-minted natively on this chain by Spiko, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 90538678,
+        "sources": [
+          {
+            "label": "Spiko USTBL",
+            "url": "https://www.spiko.io/spiko-treasury-bills-dollar"
+          },
+          {
+            "label": "USTBL on polygon explorer (verified 2026-07-20)",
+            "url": "https://polygonscan.com/address/0xe4880249745eac5f1ed9d8f7df844792d560e750"
+          }
+        ]
       },
       {
         "id": "base:0xe4880249745eac5f1ed9d8f7df844792d560e750",
         "destinationChain": "base",
         "contractAddress": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko USTBL (issuer-native multichain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on base at block 48861834: USTBL token 0xe4880249745eac5f1ed9d8f7df844792d560e750 (symbol USTBL) exposes authority() = Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472; USTBL is issuer-minted natively on this chain by Spiko, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 48861834,
+        "sources": [
+          {
+            "label": "Spiko USTBL",
+            "url": "https://www.spiko.io/spiko-treasury-bills-dollar"
+          },
+          {
+            "label": "USTBL on base explorer (verified 2026-07-20)",
+            "url": "https://basescan.org/address/0xe4880249745eac5f1ed9d8f7df844792d560e750"
+          }
+        ]
       },
       {
         "id": "etherlink:0xe4880249745eac5f1ed9d8f7df844792d560e750",
         "destinationChain": "etherlink",
         "contractAddress": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko USTBL (issuer-native multichain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on etherlink at block 48759315: USTBL token 0xe4880249745eac5f1ed9d8f7df844792d560e750 (symbol USTBL) exposes authority() = Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472; USTBL is issuer-minted natively on this chain by Spiko, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 48759315,
+        "sources": [
+          {
+            "label": "Spiko USTBL",
+            "url": "https://www.spiko.io/spiko-treasury-bills-dollar"
+          },
+          {
+            "label": "USTBL on etherlink explorer (verified 2026-07-20)",
+            "url": "https://explorer.etherlink.com/address/0xe4880249745eac5f1ed9d8f7df844792d560e750"
+          }
+        ]
       },
       {
         "id": "stellar:USTBL-CARUUX2FZNPH6DGJOEUFSIUQWYHNL5AVDV7PMVSHWL7OBYIBFC76F4TO",
         "destinationChain": "stellar",
         "contractAddress": "USTBL-CARUUX2FZNPH6DGJOEUFSIUQWYHNL5AVDV7PMVSHWL7OBYIBFC76F4TO",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko USTBL (issuer-native multichain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Spiko's stellar-contracts repository (spiko-tech/stellar-contracts, address/production.json) lists USTBL at Soroban contract CARUUX2FZNPH6DGJOEUFSIUQWYHNL5AVDV7PMVSHWL7OBYIBFC76F4TO with the Spiko PermissionManager at CBGHLRSX5D5YMBPNK4ZGMUTJUHFIT7YGXGJURM5LFNZ7B6WNSXLGS26M. Contract existence verified via stellar.expert (created 2025-10-01, matching Spiko's October 2025 Stellar launch).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "Spiko stellar-contracts production addresses",
+            "url": "https://github.com/spiko-tech/stellar-contracts/blob/main/address/production.json"
+          },
+          {
+            "label": "USTBL contract on stellar.expert (verified 2026-07-20)",
+            "url": "https://stellar.expert/explorer/public/contract/CARUUX2FZNPH6DGJOEUFSIUQWYHNL5AVDV7PMVSHWL7OBYIBFC76F4TO"
+          }
+        ]
       },
       {
         "id": "starknet:0x020ff2f6021ada9edbceaf31b96f9f67b746662a6e6b2bc9d30c0d3e290a71f6",
         "destinationChain": "starknet",
         "contractAddress": "0x020ff2f6021ada9edbceaf31b96f9f67b746662a6e6b2bc9d30c0d3e290a71f6",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Spiko USTBL (issuer-native multichain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Starknet 2026-07-20 (starknet_call): token 0x020ff2f6021ada9edbceaf31b96f9f67b746662a6e6b2bc9d30c0d3e290a71f6 reports name()='Spiko US T-Bills Money Market Fund', symbol()='USTBL', decimals()=5, and owner() = 0x7bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d. Spiko's native Starknet deployment; the owner account's internal signer set is not enumerable via the public RPC.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "Spiko USTBL",
+            "url": "https://www.spiko.io/spiko-treasury-bills-dollar"
+          },
+          {
+            "label": "USTBL on Starknet Voyager (verified 2026-07-20)",
+            "url": "https://voyager.online/contract/0x020ff2f6021ada9edbceaf31b96f9f67b746662a6e6b2bc9d30c0d3e290a71f6"
+          }
+        ]
       }
     ]
   },
@@ -358,7 +498,13 @@
       "risk": "low",
       "assetClass": "fund-share",
       "issuerOrObligor": "Spiko US T-Bills Money Market Fund",
-      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "smart-contract"],
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
       "liquidityHorizon": "one-day",
       "maturityDaysMax": 180
     }

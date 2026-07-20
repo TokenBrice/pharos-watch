@@ -183,7 +183,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "manual-review",
-    "summary": "BtcUSD on Base is an ERC20_Bridged (Vyper) contract whose canonical issuance lives on the Bifrost network. The Base bridge token has 2 owners: a contract (0x26fce52a..., not a Safe) and an EOA (0xf98e8601...). The native BtcUSD CDP on Bifrost cannot be verified: no publicly accessible keyless EVM-compatible RPC exists for the Bifrost chain.",
+    "summary": "BtcUSD on Base is an ERC20_Bridged (Vyper) contract whose canonical issuance lives on the Bifrost network. The Base bridge token has 2 owners: a contract (0x26fce52a..., not a Safe) and an EOA (0xf98e8601...). The native BtcUSD token on Bifrost is a non-proxy mint/burn contract owned by EOA 0xa4247099...; the CDP vault system contracts are publicly undocumented, so the owner EOA is the observable native mint authority.",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -220,13 +220,18 @@
     },
     "controls": [
       {
-        "label": "BTCfi CDP vault on Bifrost (collateral mint — unverifiable)",
+        "chain": "bifrost",
+        "address": "0xa4247099c1462f9d9121a1809d001c1a6cc70dd5",
+        "label": "BtcUSD Bifrost token owner EOA",
         "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "cap-limited",
-        "capDescription": "Mint bounded by the per-vault overcollateralization ratio against BTC-variant collateral, with liquidation below the minimum ratio.",
-        "canRaiseCap": "unknown",
-        "evidence": "Native BtcUSD is minted on the Bifrost chain via Liquity-v1-style CDP vaults; chain state is not accessible via keyless EVM RPC from this environment."
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-20",
+        "sources": [
+          {"label": "BtcUSD Bifrost token on Bifrost explorer", "url": "https://explorer.mainnet.bifrostnetwork.com/address/0x6906ccda405926fc3f04240187dd4fad5df6d555"}
+        ],
+        "evidence": "2026-07-20 via the Bifrost public EVM RPC (public-01.mainnet.bifrostnetwork.com/bifrost, now reachable): the native BtcUSD token 0x6906ccda405926fc3f04240187dd4fad5df6d555 is a 13.9KB non-proxy contract carrying mint()/burn() selectors whose owner() returns this EOA (no contract code). BTCfi's Liquity-v1-style CDP vault system contracts are not publicly documented and the token source is unverified, so the observable mint authority on Bifrost is this owner EOA; no separate vault contract could be identified or bounded."
       },
       {
         "chain": "base",
@@ -272,13 +277,13 @@
           {"label": "BtcUSD Base proxy admin contract", "url": "https://basescan.org/address/0x55506bcc5fa9b2e702848aa110b5a6987a735060#code"},
           {"label": "BtcUSD Base token", "url": "https://base.blockscout.com/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"}
         ],
-        "evidence": "At Base block 48621895, the EIP-1967 admin slot of the BtcUSD bridge proxy returned this deployed contract and the implementation slot returned 0x6e9070b8. The admin contract is not source-verified, so its owner, delay, and signer policy remain unknown."
+        "evidence": "At Base block 48621895, the EIP-1967 admin slot of the BtcUSD bridge proxy returned this deployed contract and the implementation slot returned 0x6e9070b8. 2026-07-20 follow-up: the admin is a 10.25KB contract whose slot-0 owner reads as EOA 0xf9d5bd4013c955175185e406b407d5cee90b0001 (no contract code), so the upgrade authority chain resolves to that EOA; the admin contract itself remains source-unverified, so its delay and signer policy are unknown."
       }
     ],
     "review": {
-      "evidence": "At Base block 48621895: BtcUSD (0xe4b20925...) is a TransparentUpgradeableProxy with EIP-1967 admin 0x55506bcc5fa9b2e702848aa110b5a6987a735060 and implementation 0x6e9070b8a8dbbc6cad6b6d029a5c6f6a653b74a9. get_owners() returned 0x26fce52a (contract) and 0xf98e8601 (EOA), both direct bridge-token mint owners. The proxy-admin contract is unverified, and the canonical Bifrost CDP issuance path remains unverifiable without accessible chain state.",
-      "reviewer": "Codex CTRL batch 17",
-      "reviewedAt": "2026-07-14",
+      "evidence": "At Base block 48621895: BtcUSD (0xe4b20925...) is a TransparentUpgradeableProxy with EIP-1967 admin 0x55506bcc5fa9b2e702848aa110b5a6987a735060 and implementation 0x6e9070b8a8dbbc6cad6b6d029a5c6f6a653b74a9. get_owners() returned 0x26fce52a (contract) and 0xf98e8601 (EOA), both direct bridge-token mint owners. 2026-07-20 follow-up resolved both prior open questions: the Bifrost public EVM RPC (public-01.mainnet.bifrostnetwork.com/bifrost) is reachable, and the native BtcUSD token 0x6906ccda405926fc3f04240187dd4fad5df6d555 reads as a non-proxy mint/burn contract owned by EOA 0xa4247099c1462f9d9121a1809d001c1a6cc70dd5 (the CDP vault system contracts remain publicly undocumented and unverified, so the owner EOA is the observable mint authority); and the Base proxy admin's slot-0 owner reads as EOA 0xf9d5bd4013c955175185e406b407d5cee90b0001, resolving its ownership chain.",
+      "reviewer": "Codex CTRL batch 17; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "BTCfi docs",
@@ -287,19 +292,20 @@
         {
           "label": "BtcUSD Base token on Blockscout",
           "url": "https://base.blockscout.com/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
+        },
+        {
+          "label": "Bifrost public EVM RPC",
+          "url": "https://public-01.mainnet.bifrostnetwork.com/bifrost"
         }
-      ],
-      "unresolvedQuestions": [
-        "Bifrost chain has no accessible keyless EVM RPC; cannot verify the native BtcUSD CDP vault admin or whether ownership is renounced on Bifrost. Additionally, the Base bridge token proxy admin (0x55506bcc...) is unverified and its ownership chain is not confirmed (slot-0 interpretation unclear)."
       ]
     }
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "BtcUSD/BTCFi relies on Bifrost cross-chain technology for collateral movement across networks. Bifrost bridge documentation describes a cross-chain bridge service rather than a native issuer-only route, so Pharos scores this as external validated-network exposure.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "docs",
@@ -324,35 +330,65 @@
     "routes": [
       {
         "id": "base:0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4",
+        "sourceChain": "bifrost",
         "destinationChain": "base",
+        "canonicalChain": "bifrost",
         "contractAddress": "0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Bifrost bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: this Base ERC20_Bridged proxy is the Bifrost bridge representation of native Bifrost BtcUSD; get_owners() returns bridge mint owners 0x26fce52a077b4f1dbd7c920b6f23a1d9d18dddbe (contract) and 0xf98e8601a1eef3bce943f9b002e83db8a0951aa5 (EOA). The bridge controller for the representation is the owner contract; the proxy admin 0x55506bcc5fa9b2e702848aa110b5a6987a735060 is owned by EOA 0xf9d5bd4013c955175185e406b407d5cee90b0001.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "base",
+        "controllerAddress": "0x26fce52a077b4f1dbd7c920b6f23a1d9d18dddbe",
+        "failureDomainKeys": [
+          "protocol:bifrost-bridge",
+          "contract:base:0x26fce52a077b4f1dbd7c920b6f23a1d9d18dddbe"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "BtcUSD Base token on Blockscout",
+            "url": "https://base.blockscout.com/address/0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4"
+          },
+          {
+            "label": "Bifrost bridge guide",
+            "url": "https://docs.bifrostnetwork.com/bifrost-network/bridge/bridge-guide"
+          }
+        ]
       },
       {
         "id": "bifrost:0x6906ccda405926fc3f04240187dd4fad5df6d555",
         "destinationChain": "bifrost",
+        "canonicalChain": "bifrost",
         "contractAddress": "0x6906ccda405926fc3f04240187dd4fad5df6d555",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "BTCfi native CDP issuance (Bifrost)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20 via the Bifrost public EVM RPC: this is the native BTCfi BtcUSD token (non-proxy, mint/burn selectors present, owner() = EOA 0xa4247099c1462f9d9121a1809d001c1a6cc70dd5) on the canonical CDP issuance chain; no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "BtcUSD Bifrost token on Bifrost explorer",
+            "url": "https://explorer.mainnet.bifrostnetwork.com/address/0x6906ccda405926fc3f04240187dd4fad5df6d555"
+          },
+          {
+            "label": "BTCFi website",
+            "url": "https://www.btcfi.one/"
+          }
+        ]
       }
     ]
+
   },
   "chainTier": "unproven",
   "collateralQuality": "alt-lst-bridged-or-mixed",

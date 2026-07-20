@@ -51,10 +51,10 @@
     ]
   },
   "bridgeRouteRisk": {
-    "tier": "single-chain-or-native",
-    "summary": "dTRINITY documents dUSD as chain-isolated, with separate native deployments and reserves by network; it explicitly says same-name dUSD tokens are not fungible across chains. The route is therefore reviewed as native per-chain issuance rather than a bridge route.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "tier": "issuer-native-burn-mint",
+    "summary": "dTRINITY is chain-isolated by design: dUSD on Ethereum, Sonic, Katana, and Fraxtal are separately-issued non-fungible deployments, each administered by dTRINITY's own governance (1-day timelocked 3-of-5 Safes on Ethereum/Katana/Fraxtal; direct 3-of-5 Safe on Sonic). No third-party bridge controls dUSD minting anywhere.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
     "confidence": "verified",
     "sources": [
       {
@@ -71,61 +71,117 @@
         "id": "ethereum:0x07fff99e1664d9b116fbc158c0e99785f81ca236",
         "destinationChain": "ethereum",
         "contractAddress": "0x07fff99e1664d9b116fbc158c0e99785f81ca236",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "dTRINITY dUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: dTRINITY is chain-isolated by design ('dTRINITY intentionally sacrifices cross-chain fungibility'); the Ethereum dUSD is administered by the 1-day TimelockController 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b (DEFAULT_ADMIN_ROLE verified 2026-07-20) behind the 3-of-5 Timelocked Governance Safe 0xE83c188a7BE46B90715C757A06cF917175f30262, with minting through the AMO Manager 0x29532F74A9302e0a1E9f7d015FE355FFdE6e6880 (MINTER_ROLE verified).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "dTRINITY docs — contract addresses",
+            "url": "https://docs.dtrinity.org/security/addresses"
+          },
+          {
+            "label": "dTRINITY docs — network support (chain-isolated architecture)",
+            "url": "https://docs.dtrinity.org/key-concepts/network-support"
+          },
+          {
+            "label": "dUSD ethereum token",
+            "url": "https://etherscan.io/address/0x07fff99e1664d9b116fbc158c0e99785f81ca236"
+          }
+        ]
       },
       {
         "id": "fraxtal:0x788d96f655735f52c676a133f4dfc53cec614d4a",
         "destinationChain": "fraxtal",
         "contractAddress": "0x788d96f655735f52c676a133f4dfc53cec614d4a",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "dTRINITY dUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment (chain-isolated architecture): the Fraxtal dUSD proxy is administered by the Fraxtal 1-day TimelockController 0x0bafada2a5824864720873ee40cd960b36445212 behind the Fraxtal 3-of-5 Governance Safe 0xfC2f89F9982BE98A9672CEFc3Ea6dBBdd88bc8e9 (role reads 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "dTRINITY docs — contract addresses",
+            "url": "https://docs.dtrinity.org/security/addresses"
+          },
+          {
+            "label": "dTRINITY docs — network support (chain-isolated architecture)",
+            "url": "https://docs.dtrinity.org/key-concepts/network-support"
+          },
+          {
+            "label": "dUSD fraxtal token",
+            "url": "https://fraxscan.com/address/0x788d96f655735f52c676a133f4dfc53cec614d4a"
+          }
+        ]
       },
       {
         "id": "katana:0xca52d08737e6af8763a2bf6034b3b03868f24dda",
         "destinationChain": "katana",
         "contractAddress": "0xca52d08737e6af8763a2bf6034b3b03868f24dda",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "dTRINITY dUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment (chain-isolated architecture): the Katana dUSD proxy is administered by the 1-day TimelockController at the same address as Ethereum 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b behind the 3-of-5 Governance Safe (role reads 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "dTRINITY docs — contract addresses",
+            "url": "https://docs.dtrinity.org/security/addresses"
+          },
+          {
+            "label": "dTRINITY docs — network support (chain-isolated architecture)",
+            "url": "https://docs.dtrinity.org/key-concepts/network-support"
+          },
+          {
+            "label": "dUSD katana token",
+            "url": "https://katanascan.com/address/0xca52d08737e6af8763a2bf6034b3b03868f24dda"
+          }
+        ]
       },
       {
         "id": "sonic:0x53a6abb52b2f968fa80df6a894e4f1b1020da975",
         "destinationChain": "sonic",
         "contractAddress": "0x53a6abb52b2f968fa80df6a894e4f1b1020da975",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "dTRINITY dUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment (chain-isolated architecture): the Sonic dUSD proxy is administered directly by the 3-of-5 Governance Safe 0xE83c188a7BE46B90715C757A06cF917175f30262 with no timelock (role reads 2026-07-20) — a weaker control than the other chains, and the deployment is absent from dTRINITY's docs registry (flagged).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "dTRINITY docs — contract addresses",
+            "url": "https://docs.dtrinity.org/security/addresses"
+          },
+          {
+            "label": "dTRINITY docs — network support (chain-isolated architecture)",
+            "url": "https://docs.dtrinity.org/key-concepts/network-support"
+          },
+          {
+            "label": "dUSD sonic token",
+            "url": "https://sonicscan.org/address/0x53a6abb52b2f968fa80df6a894e4f1b1020da975"
+          }
+        ]
       }
     ]
   },
@@ -268,32 +324,133 @@
   "mintAuthority": {
     "mintPath": "amo-or-custodian-hybrid",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "dUSD is minted 1:1 against whitelisted reserve stablecoins, while dTRINITY's Algorithmic Market Operations programmatically pre-mint dUSD into Curve pools to defend the peg; pre-TGE contributor governance controls the reserve whitelist, AMO/SMO operations, and can pause minting.",
+    "confidence": "verified",
+    "summary": "dUSD minting on Ethereum runs through the AMO Manager and one additional undocumented minter contract under a 1-day timelocked 3-of-5 Governance Safe; a separate 5-of-5 Emergency Safe holds pause only. Deployments are chain-isolated; Sonic is administered by the Governance Safe directly without a timelock.",
     "controls": [
       {
-        "label": "AMO/SMO peg operations controller",
-        "role": "other",
+        "chain": "ethereum",
+        "address": "0x29532F74A9302e0a1E9f7d015FE355FFdE6e6880",
+        "label": "dTRINITY AMO Manager (peg operations controller)",
+        "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "Algorithmic Market Operations pre-mint dUSD into designated Curve liquidity pools to support the peg, and Stability Market Operations buy back and burn dUSD at a discount; the AMO can create dUSD supply programmatically into pools rather than only against deposited collateral."
+        "sources": [
+          {
+            "label": "dTRINITY docs — contract addresses",
+            "url": "https://docs.dtrinity.org/security/addresses"
+          },
+          {
+            "label": "dUSD token (MINTER_ROLE hasRole read 2026-07-20)",
+            "url": "https://etherscan.io/address/0x07fff99e1664d9b116fbc158c0e99785f81ca236"
+          }
+        ],
+        "evidence": "The docs-registry AMO Manager holds MINTER_ROLE on the Ethereum dUSD token (hasRole = true, re-verified 2026-07-20; RoleGranted event at block 23987067). It mints dUSD directly for algorithmic market operations against the Collateral Vault 0x84c58066a4408454b7380f168c95F571419253f4. Note: dTRINITY's registry documents an AMO only — no separate 'SMO' controller exists."
       },
       {
-        "label": "dTRINITY contributor governance (pre-TGE)",
-        "role": "governor",
-        "authorityType": "multisig",
-        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "address": "0xf84cc8217713a53fc3e3eb2d62d2af33a084ff85",
+        "label": "dTRINITY second MINTER_ROLE holder (undocumented in registry)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "Pre-decentralization, dTRINITY contributors administer the protocol: they set the whitelisted reserve assets that gate permissionless minting, run AMO/SMO, and can temporarily or permanently suspend minting; TGE/decentralization is planned for H2 2026."
+        "sources": [
+          {
+            "label": "dUSD token (MINTER_ROLE hasRole read 2026-07-20)",
+            "url": "https://etherscan.io/address/0x07fff99e1664d9b116fbc158c0e99785f81ca236"
+          },
+          {
+            "label": "Second minter contract",
+            "url": "https://etherscan.io/address/0xf84cc8217713a53fc3e3eb2d62d2af33a084ff85"
+          }
+        ],
+        "evidence": "A second contract (5,738 bytes of code) holds MINTER_ROLE on the Ethereum dUSD token (hasRole = true, re-verified 2026-07-20; granted by event at block 23983666). It is not listed in dTRINITY's docs contract registry (flagged); its function is otherwise unidentified, but its mint capability is live and identical in kind to the AMO Manager's."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xE83c188a7BE46B90715C757A06cF917175f30262",
+        "label": "dTRINITY Timelocked Governance 3-of-5 Safe (1-day TimelockController)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 86400,
+        "safe": {
+          "owners": [
+            "0x4b58ff1aae6add7465a5584ebcaeb876ec8f21fd",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x64dbdd2aad00383defc305398f18a019161558cb",
+            "0xdc672ba6e55b71b39fa5423d42b88e7adf9d24a4",
+            "0x09e0c8376940abe845a89b7304147a95c72644f59"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 25571702,
+          "observedAt": "2026-07-20",
+          "source": "onchain"
+        },
+        "failureDomainKeys": [
+          "safe:ethereum:0xe83c188a7be46b90715c757a06cf917175f30262"
+        ],
+        "sources": [
+          {
+            "label": "dUSD TimelockController (getMinDelay = 86400, read 2026-07-20)",
+            "url": "https://etherscan.io/address/0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b"
+          },
+          {
+            "label": "Governance Safe (3-of-5 owners read 2026-07-20)",
+            "url": "https://etherscan.io/address/0xE83c188a7BE46B90715C757A06cF917175f30262"
+          }
+        ],
+        "evidence": "dUSD DEFAULT_ADMIN_ROLE is held by the OZ v5 TimelockController 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b (getMinDelay() = 86,400 s; hasRole verified 2026-07-20) whose sole proposer and executor is this 3-of-5 Safe (owners read on-chain). Through the timelock the Safe can grant/revoke MINTER_ROLE and administer the dUSD proxy-admin chain. On Sonic the same Safe holds DEFAULT_ADMIN directly with no timelock (flagged)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x04401537CA997a43EBCFEc8194c7e88c7ee79804",
+        "label": "dTRINITY Emergency Governance 5-of-5 Safe (PAUSER_ROLE)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 5,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x64dbdd2aad00383defc305398f18a019161558cb",
+            "0xdc672ba6e55b71b39fa5423d42b88e7adf9d24a4",
+            "0x09e0c8376940abe845a89b7304147a95c72644f59",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x4b58ff1aae6add7465a5584ebcaeb876ec8f21fd"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 25571702,
+          "observedAt": "2026-07-20",
+          "source": "onchain"
+        },
+        "failureDomainKeys": [
+          "safe:ethereum:0x04401537ca997a43ebccfec8194c7e88c7ee79804"
+        ],
+        "sources": [
+          {
+            "label": "Emergency Governance Safe (PAUSER_ROLE hasRole read 2026-07-20)",
+            "url": "https://etherscan.io/address/0x04401537CA997a43EBCFEc8194c7e88c7ee79804"
+          }
+        ],
+        "evidence": "This 5-of-5 Safe (owners read on-chain 2026-07-20) holds PAUSER_ROLE on the Ethereum dUSD token (granted at block 25112809; hasRole re-verified 2026-07-20) — emergency pause only, no mint or admin capability."
       }
     ],
     "review": {
-      "evidence": "ETH block 25295164: dUSD is a TransparentUpgradeableProxy; ProxyAdmin (0xbe90db...) owner is an OZ TimelockController (0x18cb0e...) with 24h delay and no active proposers (0 RoleGranted events, all hasRole checks returned false). Upgrade path is effectively locked. Sonic: proxy admin owner is a 2/3 multisig (0xE83C18..., 3 owners, threshold 2 via getThreshold). AMO/SMO contract addresses not resolvable from known contract addresses — contributor mint admin identity on ETH remains unconfirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "ETH block 25295164: dUSD is a TransparentUpgradeableProxy; ProxyAdmin (0xbe90db...) owner is an OZ TimelockController (0x18cb0e...) with 24h delay and no active proposers (0 RoleGranted events, all hasRole checks returned false). Upgrade path is effectively locked. Sonic: proxy admin owner is a 2/3 multisig (0xE83C18..., 3 owners, threshold 2 via getThreshold). AMO/SMO contract addresses not resolvable from known contract addresses — contributor mint admin identity on ETH remains unconfirmed. 2026-07-20 (Kimi P2 dc-2): AMO Manager 0x29532F74A9302e0a1E9f7d015FE355FFdE6e6880 (docs registry) and a second, registry-undocumented minter 0xf84cc8217713a53fc3e3eb2d62d2af33a084ff85 both hold MINTER_ROLE on the Ethereum dUSD token (hasRole reads). DEFAULT_ADMIN_ROLE sits with the 1-day TimelockController 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b behind the 3-of-5 Governance Safe 0xE83c188a7BE46B90715C757A06cF917175f30262 (owners read). Emergency pause rests with the 5-of-5 Safe 0x04401537CA997a43EBCFEc8194c7e88c7ee79804. dTRINITY is chain-isolated by design; Sonic uses a direct Safe admin with no timelock and is absent from the docs registry.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "dUSD Stablecoin docs",
@@ -304,9 +461,7 @@
           "url": "https://etherscan.io/address/0x07fff99e1664d9b116fbc158c0e99785f81ca236"
         }
       ],
-      "unresolvedQuestions": [
-        "AMO/SMO and dUSD issuer contract addresses on Ethereum unknown — cannot confirm which multisig controls mint whitelist and AMO operations. Resolve contract addresses from dTRINITY docs or on-chain deployment to identify the mint admin."
-      ]
+      "disposition": "scoreable"
     }
   },
   "launchDate": "2024-12-18",

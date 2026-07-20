@@ -143,9 +143,9 @@
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "USD.AI lists sUSDai OAdapter contracts on Arbitrum and states USDai and sUSDai are available as LayerZero OFTs on other EVM chains. The staked wrapper therefore inherits a third-party OFT route and is scored as external-lock-mint.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "sUSDai is native on Arbitrum (ERC-4626 vault). Ethereum, Base, and Plasma deployments are satellite OTokens minted by USD.AI's own LayerZero OAdapter under BRIDGE_ADMIN_ROLE (owner is the reviewed 3-of-3 Safe).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
     "confidence": "verified",
     "protocols": [
       {
@@ -172,63 +172,111 @@
     "routes": [
       {
         "id": "ethereum:0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
+        "sourceChain": "arbitrum",
         "destinationChain": "ethereum",
+        "canonicalChain": "arbitrum",
         "contractAddress": "0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USD.AI LayerZero OAdapter (OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xffb20098fd7b8e84762eea4609f299d101427f24",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Satellite sUSDai OToken on ethereum: BRIDGE_ADMIN_ROLE mint authority is the same-address OAdapter 0xffb20098fd7b8e84762eea4609f299d101427f24 (live contract on ethereum, owner() = 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F Safe, verified at 2026-07-20); mint executes on LayerZero message delivery.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USD.AI Docs",
+            "url": "https://docs.usd.ai/"
+          }
+        ],
+        "failureDomainKeys": [
+          "layerzero:oft:susdai-usd-ai",
+          "contract:ethereum:0xffb20098fd7b8e84762eea4609f299d101427f24"
+        ]
       },
       {
         "id": "arbitrum:0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
         "destinationChain": "arbitrum",
         "contractAddress": "0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USD.AI native deposit-mint vault (sUSDai ERC-4626)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "sUSDai on Arbitrum is the native ERC-4626 deposit-mint vault (asset() = USDai, verified in the mint-authority review).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USD.AI Docs",
+            "url": "https://docs.usd.ai/"
+          }
+        ]
       },
       {
         "id": "base:0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
+        "sourceChain": "arbitrum",
         "destinationChain": "base",
+        "canonicalChain": "arbitrum",
         "contractAddress": "0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USD.AI LayerZero OAdapter (OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "base",
+        "controllerAddress": "0xffb20098fd7b8e84762eea4609f299d101427f24",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Satellite sUSDai OToken on base: BRIDGE_ADMIN_ROLE mint authority is the same-address OAdapter 0xffb20098fd7b8e84762eea4609f299d101427f24 (live contract on base, owner() = 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F Safe, verified at 2026-07-20); mint executes on LayerZero message delivery.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USD.AI Docs",
+            "url": "https://docs.usd.ai/"
+          }
+        ],
+        "failureDomainKeys": [
+          "layerzero:oft:susdai-usd-ai",
+          "contract:base:0xffb20098fd7b8e84762eea4609f299d101427f24"
+        ]
       },
       {
         "id": "plasma:0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
+        "sourceChain": "arbitrum",
         "destinationChain": "plasma",
+        "canonicalChain": "arbitrum",
         "contractAddress": "0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USD.AI LayerZero OAdapter (OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "plasma",
+        "controllerAddress": "0xffb20098fd7b8e84762eea4609f299d101427f24",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Satellite sUSDai OToken on plasma: BRIDGE_ADMIN_ROLE mint authority is the same-address OAdapter 0xffb20098fd7b8e84762eea4609f299d101427f24 (live contract on plasma, owner() = 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F Safe, verified at 2026-07-20); mint executes on LayerZero message delivery.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USD.AI Docs",
+            "url": "https://docs.usd.ai/"
+          }
+        ],
+        "failureDomainKeys": [
+          "layerzero:oft:susdai-usd-ai",
+          "contract:plasma:0xffb20098fd7b8e84762eea4609f299d101427f24"
+        ]
       }
     ]
   },
@@ -243,7 +291,11 @@
       "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Paxos (PYUSD issuer) held in USD.AI reserve contracts",
-      "riskFactors": ["counterparty", "custody", "smart-contract"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
@@ -252,7 +304,13 @@
       "risk": "high",
       "assetClass": "private-credit",
       "issuerOrObligor": "USD.AI borrower SPVs financing NVIDIA GPU compute (27 loan positions per issuer proof-of-reserves API)",
-      "riskFactors": ["credit", "liquidity", "market", "concentration", "legal"],
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "market",
+        "concentration",
+        "legal"
+      ],
       "liquidityHorizon": "over-seven-days"
     }
   ],

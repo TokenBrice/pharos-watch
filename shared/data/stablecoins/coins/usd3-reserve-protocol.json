@@ -70,9 +70,9 @@
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-lock-mint",
-    "summary": "USD3 is deployed on Ethereum and Base with no source-verified third-party bridge path resolved. The reviewed profile treats it as protocol/issuer-controlled multichain issuance and not a liquidity bridge.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "USD3 is deployed on Ethereum and Base with no source-verified third-party bridge path resolved. The reviewed profile treats it as protocol/issuer-controlled multichain issuance and not a liquidity bridge. 2026-07-20 cohort dc-1 pass: Ethereum row confirmed native USD3; the Base row address could not be verified on-chain (see reviewNote).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
     "confidence": "manual-review",
     "sources": [
       {
@@ -89,16 +89,26 @@
         "id": "ethereum:0x0d86883faf4ffd7aeb116390af37746f45b6f378",
         "destinationChain": "ethereum",
         "contractAddress": "0x0d86883faf4ffd7aeb116390af37746f45b6f378",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USD3 (Reserve Protocol native issuance on Ethereum)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Web 3 Dollar', symbol USD3, 18 decimals — Reserve Protocol issuer-native deployment on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USD3 on Etherscan",
+            "url": "https://etherscan.io/address/0x0d86883faf4ffd7aeb116390af37746f45b6f378"
+          },
+          {
+            "label": "Reserve Protocol",
+            "url": "https://reserve.org/"
+          }
+        ]
       },
       {
         "id": "base:0xefb97aaf77993922ac4be4da8fbc9a2425322677",
@@ -111,7 +121,7 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "Still unresolved after the 2026-07-20 dc-1 pass: name()/symbol() reads at 0xefb97aaf77993922ac4be4da8fbc9a2425322677 on Base return empty via public RPCs (two attempts), so the deployment identity and controller could not be verified on-chain. Needs issuer/explorer confirmation of the Base USD3 address before review can complete.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-06-13"
       }
@@ -134,7 +144,11 @@
       "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Sky Protocol; underlying reserve allocation is not separately disclosed by Reserve DTF API",
-      "riskFactors": ["counterparty", "liquidity", "smart-contract"],
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "smart-contract"
+      ],
       "liquidityHorizon": "unknown"
     },
     {
@@ -146,7 +160,11 @@
       "blacklistable": true,
       "assetClass": "protocol-position",
       "issuerOrObligor": "Aave and Circle; underlying reserve allocation is not separately disclosed by Reserve DTF API",
-      "riskFactors": ["counterparty", "liquidity", "smart-contract"],
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "smart-contract"
+      ],
       "liquidityHorizon": "unknown"
     },
     {
@@ -158,7 +176,11 @@
       "blacklistable": true,
       "assetClass": "protocol-position",
       "issuerOrObligor": "Compound and Circle; underlying reserve allocation is not separately disclosed by Reserve DTF API",
-      "riskFactors": ["counterparty", "liquidity", "smart-contract"],
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "smart-contract"
+      ],
       "liquidityHorizon": "unknown"
     },
     {
@@ -170,7 +192,11 @@
       "blacklistable": true,
       "assetClass": "protocol-position",
       "issuerOrObligor": "Steakhouse and Circle; underlying reserve allocation is not separately disclosed by Reserve DTF API",
-      "riskFactors": ["counterparty", "liquidity", "smart-contract"],
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "smart-contract"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],

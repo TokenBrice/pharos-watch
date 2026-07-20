@@ -325,6 +325,66 @@
       "chain": "hyperliquid",
       "address": "0x25faedc3f054130dbb4e4203aca63567",
       "decimals": 8
+    },
+    {
+      "chain": "gnosis",
+      "address": "0x4ECaBa5870353805a9F068101A40E0f32ed605C6",
+      "decimals": 6
+    },
+    {
+      "chain": "pulsechain",
+      "address": "0x0Cb6F5a34ad42ec934882A05265A7d5F59b51A2f",
+      "decimals": 6
+    },
+    {
+      "chain": "moonriver",
+      "address": "0xB44a9B6905aF7c801311e8F4E76932ee959c663C",
+      "decimals": 6
+    },
+    {
+      "chain": "xdc",
+      "address": "0xD4B5f10D61916Bd6E0860144a91Ac658dE8a1437",
+      "decimals": 6
+    },
+    {
+      "chain": "taiko",
+      "address": "0x2DEF195713CF4a606B49D07E520e22C17899a736",
+      "decimals": 6
+    },
+    {
+      "chain": "flow",
+      "address": "0x674843C06FF83502ddb4D37c2E09C01cdA38cbc8",
+      "decimals": 6
+    },
+    {
+      "chain": "sei",
+      "address": "0x9151434b16b9763660705744891fa906f660ecc5",
+      "decimals": 6
+    },
+    {
+      "chain": "linea",
+      "address": "0xA219439258ca9da29E9Cc4cE5596924745e12B93",
+      "decimals": 6
+    },
+    {
+      "chain": "zksync",
+      "address": "0x493257fD37EDB34451f62EDf8D2a0C418852bA4C",
+      "decimals": 6
+    },
+    {
+      "chain": "mode",
+      "address": "0xf0F161fDA2712DB8b566946122a5af183995e2eD",
+      "decimals": 6
+    },
+    {
+      "chain": "manta",
+      "address": "0xf417F5A458eC102B90352F697D6e2Ac3A3d2851f",
+      "decimals": 6
+    },
+    {
+      "chain": "boba",
+      "address": "0x5DE1677344D3Cb0D7D465c10b72A8f60699C062d",
+      "decimals": 6
     }
   ],
   "tradedContracts": [
@@ -465,7 +525,11 @@
           "risk": "very-low",
           "assetClass": "treasury-bill",
           "issuerOrObligor": "United States Treasury",
-          "riskFactors": ["duration", "liquidity", "custody"],
+          "riskFactors": [
+            "duration",
+            "liquidity",
+            "custody"
+          ],
           "liquidityHorizon": "one-day"
         },
         {
@@ -474,7 +538,11 @@
           "risk": "very-low",
           "assetClass": "repo",
           "issuerOrObligor": "Undisclosed reverse-repo counterparties",
-          "riskFactors": ["counterparty", "liquidity", "custody"],
+          "riskFactors": [
+            "counterparty",
+            "liquidity",
+            "custody"
+          ],
           "liquidityHorizon": "one-day",
           "maturityDaysMax": 1
         },
@@ -484,7 +552,12 @@
           "risk": "very-low",
           "assetClass": "repo",
           "issuerOrObligor": "Undisclosed reverse-repo counterparties",
-          "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
+          "riskFactors": [
+            "counterparty",
+            "duration",
+            "liquidity",
+            "custody"
+          ],
           "liquidityHorizon": "unknown"
         },
         {
@@ -493,7 +566,10 @@
           "risk": "very-low",
           "assetClass": "bank-deposit",
           "issuerOrObligor": "Undisclosed banking counterparties",
-          "riskFactors": ["counterparty", "custody"],
+          "riskFactors": [
+            "counterparty",
+            "custody"
+          ],
           "liquidityHorizon": "immediate"
         },
         {
@@ -502,7 +578,11 @@
           "risk": "medium",
           "assetClass": "other",
           "issuerOrObligor": "Physical gold inventory",
-          "riskFactors": ["market", "custody", "liquidity"],
+          "riskFactors": [
+            "market",
+            "custody",
+            "liquidity"
+          ],
           "liquidityHorizon": "seven-days"
         },
         {
@@ -511,7 +591,11 @@
           "risk": "medium",
           "assetClass": "cryptoasset",
           "issuerOrObligor": "Tether-controlled on-chain wallets",
-          "riskFactors": ["market", "custody", "liquidity"],
+          "riskFactors": [
+            "market",
+            "custody",
+            "liquidity"
+          ],
           "liquidityHorizon": "seven-days"
         },
         {
@@ -520,7 +604,12 @@
           "risk": "high",
           "assetClass": "other",
           "issuerOrObligor": "Undisclosed public-equity issuers",
-          "riskFactors": ["market", "liquidity", "concentration", "custody"],
+          "riskFactors": [
+            "market",
+            "liquidity",
+            "concentration",
+            "custody"
+          ],
           "liquidityHorizon": "unknown"
         },
         {
@@ -529,7 +618,12 @@
           "risk": "high",
           "assetClass": "other",
           "issuerOrObligor": "Undisclosed",
-          "riskFactors": ["credit", "market", "liquidity", "custody"],
+          "riskFactors": [
+            "credit",
+            "market",
+            "liquidity",
+            "custody"
+          ],
           "liquidityHorizon": "unknown"
         },
         {
@@ -538,7 +632,12 @@
           "risk": "high",
           "assetClass": "private-credit",
           "issuerOrObligor": "Undisclosed third-party borrowers",
-          "riskFactors": ["credit", "liquidity", "counterparty", "concentration"],
+          "riskFactors": [
+            "credit",
+            "liquidity",
+            "counterparty",
+            "concentration"
+          ],
           "liquidityHorizon": "over-seven-days"
         }
       ]
@@ -547,9 +646,9 @@
   "launchDate": "2014-10-06",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "USDT has issuer-native deployments on Tether-supported protocols and third-party representations on other networks. This review confirms only the contracts listed in Tether's supported-protocol registry as native issuance; USDT0 and every other unverified route remain conservatively unresolved at deployment level.",
-    "reviewedAt": "2026-07-16",
-    "reviewer": "Codex bridge route review",
+    "summary": "USDT has issuer-native deployments on Tether-supported protocols and third-party representations on other networks. This review confirms only the contracts listed in Tether's supported-protocol registry as native issuance; USDT0 and every other unverified route remain conservatively unresolved at deployment level. 2026-07-20 cohort dc-1 pass: resolved the flagged non-native route controls with on-chain reads (token identity + controller/owner); see per-row reviewNote evidence.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
     "confidence": "verified",
     "protocols": [
       {
@@ -642,46 +741,108 @@
         "id": "arbitrum:0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9",
         "destinationChain": "arbitrum",
         "contractAddress": "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USDT0 (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name/symbol 'USD₮0' (6 decimals); USDT0 is Tether's locked-USDT-backed cross-chain representation issued by Everdawn Labs as a LayerZero OFT (USDT locked on Ethereum, minted on destination). The OFT token contract itself executes mint on verified LayerZero messages; owner() = 0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8 (USDT0 operational delegate).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:arbitrum:0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9"
+        ],
+        "sources": [
+          {
+            "label": "USDT0 docs",
+            "url": "https://docs.usdt0.to/"
+          },
+          {
+            "label": "USDT0 site",
+            "url": "https://usdt0.to/"
+          },
+          {
+            "label": "USDT0 token on arbitrum explorer",
+            "url": "https://arbiscan.io/address/0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9"
+          }
+        ]
       },
       {
         "id": "optimism:0x94b008aa00579c1307b0ef2c499ad98a8ce58e58",
         "destinationChain": "optimism",
         "contractAddress": "0x94b008aa00579c1307b0ef2c499ad98a8ce58e58",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Optimism canonical bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Tether USD', symbol USDT, 6 decimals; l2Bridge() returns 0x4200000000000000000000000000000000000010 (OP-stack L2StandardBridge), so the mint authority is the Optimism canonical bridge; L1-side escrow is the Optimism L1StandardBridge 0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1 on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x99C9fc46f92E8a1c0deC1b1747d010903E884bE1",
+        "failureDomainKeys": [
+          "protocol:optimism-canonical-bridge",
+          "contract:ethereum:0x99c9fc46f92e8a1c0dec1b1747d010903e884be1"
+        ],
+        "sources": [
+          {
+            "label": "Optimism L1 contract addresses",
+            "url": "https://docs.optimism.io/chain/addresses"
+          },
+          {
+            "label": "USDT on Optimism explorer",
+            "url": "https://optimistic.etherscan.io/address/0x94b008aa00579c1307b0ef2c499ad98a8ce58e58"
+          }
+        ]
       },
       {
         "id": "polygon:0xc2132d05d31c914a87c6611c10748aeb04b58e8f",
         "destinationChain": "polygon",
         "contractAddress": "0xc2132d05d31c914a87c6611c10748aeb04b58e8f",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USDT0 (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name/symbol 'USDT0' (6 decimals); USDT0 is Tether's locked-USDT-backed cross-chain representation issued by Everdawn Labs as a LayerZero OFT (USDT locked on Ethereum, minted on destination). The OFT token contract itself executes mint on verified LayerZero messages; owner() = not exposed (no owner() function) (USDT0 operational delegate).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "polygon",
+        "controllerAddress": "0xc2132d05d31c914a87c6611c10748aeb04b58e8f",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:polygon:0xc2132d05d31c914a87c6611c10748aeb04b58e8f"
+        ],
+        "sources": [
+          {
+            "label": "USDT0 docs",
+            "url": "https://docs.usdt0.to/"
+          },
+          {
+            "label": "USDT0 site",
+            "url": "https://usdt0.to/"
+          },
+          {
+            "label": "USDT0 token on polygon explorer",
+            "url": "https://polygonscan.com/address/0xc2132d05d31c914a87c6611c10748aeb04b58e8f"
+          }
+        ]
       },
       {
         "id": "avalanche:0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7",
@@ -711,16 +872,34 @@
         "id": "bsc:0x55d398326f99059ff775485246999027b3197955",
         "destinationChain": "bsc",
         "contractAddress": "0x55d398326f99059ff775485246999027b3197955",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Binance-Peg BSC-USD (Binance bridge)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Tether USD', symbol USDT, 18 decimals (Binance-Peg BSC-USD); owner() = 0xf68a4b64162906eff0ff6ae34e2bb1cd42fef62d (Binance-Peg token owner — mint/burn authority for this representation, controlled by Binance).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "bsc",
+        "controllerAddress": "0xf68a4b64162906eff0ff6ae34e2bb1cd42fef62d",
+        "failureDomainKeys": [
+          "protocol:binance-peg",
+          "contract:bsc:0xf68a4b64162906eff0ff6ae34e2bb1cd42fef62d"
+        ],
+        "sources": [
+          {
+            "label": "Binance-Peg BSC-USD on BscScan",
+            "url": "https://bscscan.com/address/0x55d398326f99059ff775485246999027b3197955"
+          },
+          {
+            "label": "Binance pegged tokens documentation",
+            "url": "https://www.binance.com/en/collateral-btokens"
+          }
+        ]
       },
       {
         "id": "celo:0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e",
@@ -901,9 +1080,9 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "Still unresolved after the 2026-07-20 dc-1 pass: Sui deployment; TreasuryCap owner not re-verified from public chain reads in this pass.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20"
       },
       {
         "id": "polkadot:1984",
@@ -964,159 +1143,351 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "Still unresolved after the 2026-07-20 dc-1 pass: Injective Peggy representation (Cosmos-side); controller not re-verified from public chain reads in this pass.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20"
       },
       {
         "id": "scroll:0xf55bec9cafdbe8730f096aa55dad6d22d44099df",
         "destinationChain": "scroll",
         "contractAddress": "0xf55bec9cafdbe8730f096aa55dad6d22d44099df",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Scroll canonical bridge (L1 USDT gateway)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Tether USD', symbol USDT, 6 decimals; gateway() returns 0xe2b4795039517653c5ae8c2a9bfdd783b48f447a (Scroll L2 USDT gateway); the L1-side mint/escrow controller is the Scroll L1USDTGateway 0xf1AF3b23DE0A5Ca3CAb7261cb0061C0D779A5c7B on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xf1AF3b23DE0A5Ca3CAb7261cb0061C0D779A5c7B",
+        "failureDomainKeys": [
+          "protocol:scroll-canonical-bridge",
+          "contract:ethereum:0xf1af3b23de0a5ca3cab7261cb0061c0d779a5c7b"
+        ],
+        "sources": [
+          {
+            "label": "Scroll contracts (L1 gateways)",
+            "url": "https://docs.scroll.io/en/developers/scroll-contracts/"
+          },
+          {
+            "label": "USDT on Scrollscan",
+            "url": "https://scrollscan.com/address/0xf55bec9cafdbe8730f096aa55dad6d22d44099df"
+          }
+        ]
       },
       {
         "id": "fantom:0x049d68029688eabf473097a2fc38ef61633a3c7a",
         "destinationChain": "fantom",
         "contractAddress": "0x049d68029688eabf473097a2fc38ef61633a3c7a",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Multichain fUSDT (legacy, post-exploit frozen)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads symbol fUSDT (Multichain 'Frapped USDT'); owner() = 0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe (legacy Multichain MPC admin contract). Multichain collapsed in 2023; this controller is identified but effectively unmaintained — treat the representation as frozen-legacy.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "fantom",
+        "controllerAddress": "0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe",
+        "failureDomainKeys": [
+          "protocol:multichain-legacy",
+          "contract:fantom:0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe"
+        ],
+        "sources": [
+          {
+            "label": "fUSDT on FtmScan",
+            "url": "https://ftmscan.com/address/0x049d68029688eabf473097a2fc38ef61633a3c7a"
+          }
+        ]
       },
       {
         "id": "mantle:0x779ded0c9e1022225f8e0630b35a9b54be713736",
         "destinationChain": "mantle",
         "contractAddress": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USDT0 (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name/symbol 'USDT0' (6 decimals); USDT0 is Tether's locked-USDT-backed cross-chain representation issued by Everdawn Labs as a LayerZero OFT (USDT locked on Ethereum, minted on destination). The OFT token contract itself executes mint on verified LayerZero messages; owner() = 0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8 (USDT0 operational delegate).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "mantle",
+        "controllerAddress": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:mantle:0x779ded0c9e1022225f8e0630b35a9b54be713736"
+        ],
+        "sources": [
+          {
+            "label": "USDT0 docs",
+            "url": "https://docs.usdt0.to/"
+          },
+          {
+            "label": "USDT0 site",
+            "url": "https://usdt0.to/"
+          },
+          {
+            "label": "USDT0 token on mantle explorer",
+            "url": "https://explorer.mantle.xyz/address/0x779ded0c9e1022225f8e0630b35a9b54be713736"
+          }
+        ]
       },
       {
         "id": "ink:0x0200c29006150606b650577bbe7b6248f58470c1",
         "destinationChain": "ink",
         "contractAddress": "0x0200c29006150606b650577bbe7b6248f58470c1",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USDT0 (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name/symbol 'USD₮0' (6 decimals); USDT0 is Tether's locked-USDT-backed cross-chain representation issued by Everdawn Labs as a LayerZero OFT (USDT locked on Ethereum, minted on destination). The OFT token contract itself executes mint on verified LayerZero messages; owner() = 0xc95de55ce5e93f788a1faab2a9c9503f51a5dae2 (USDT0 operational delegate).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "ink",
+        "controllerAddress": "0x0200c29006150606b650577bbe7b6248f58470c1",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:ink:0x0200c29006150606b650577bbe7b6248f58470c1"
+        ],
+        "sources": [
+          {
+            "label": "USDT0 docs",
+            "url": "https://docs.usdt0.to/"
+          },
+          {
+            "label": "USDT0 site",
+            "url": "https://usdt0.to/"
+          }
+        ]
       },
       {
         "id": "berachain:0x779ded0c9e1022225f8e0630b35a9b54be713736",
         "destinationChain": "berachain",
         "contractAddress": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USDT0 (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name/symbol 'USD₮0' (6 decimals); USDT0 is Tether's locked-USDT-backed cross-chain representation issued by Everdawn Labs as a LayerZero OFT (USDT locked on Ethereum, minted on destination). The OFT token contract itself executes mint on verified LayerZero messages; owner() = 0x425d1d17c33bdc0615ea18d1b18cca7e14beeb58 (USDT0 operational delegate).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "berachain",
+        "controllerAddress": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:berachain:0x779ded0c9e1022225f8e0630b35a9b54be713736"
+        ],
+        "sources": [
+          {
+            "label": "USDT0 docs",
+            "url": "https://docs.usdt0.to/"
+          },
+          {
+            "label": "USDT0 site",
+            "url": "https://usdt0.to/"
+          },
+          {
+            "label": "USDT0 token on berachain explorer",
+            "url": "https://berascan.com/address/0x779ded0c9e1022225f8e0630b35a9b54be713736"
+          }
+        ]
       },
       {
         "id": "unichain:0x9151434b16b9763660705744891fa906f660ecc5",
         "destinationChain": "unichain",
         "contractAddress": "0x9151434b16b9763660705744891fa906f660ecc5",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USDT0 (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name/symbol 'USD₮0' (6 decimals); USDT0 is Tether's locked-USDT-backed cross-chain representation issued by Everdawn Labs as a LayerZero OFT (USDT locked on Ethereum, minted on destination). The OFT token contract itself executes mint on verified LayerZero messages; owner() = 0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8 (USDT0 operational delegate).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "unichain",
+        "controllerAddress": "0x9151434b16b9763660705744891fa906f660ecc5",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:unichain:0x9151434b16b9763660705744891fa906f660ecc5"
+        ],
+        "sources": [
+          {
+            "label": "USDT0 docs",
+            "url": "https://docs.usdt0.to/"
+          },
+          {
+            "label": "USDT0 site",
+            "url": "https://usdt0.to/"
+          },
+          {
+            "label": "USDT0 token on unichain explorer",
+            "url": "https://uniscan.xyz/address/0x9151434b16b9763660705744891fa906f660ecc5"
+          }
+        ]
       },
       {
         "id": "hyperevm:0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
         "destinationChain": "hyperevm",
         "contractAddress": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USDT0 (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name/symbol 'USD₮0' (6 decimals); USDT0 is Tether's locked-USDT-backed cross-chain representation issued by Everdawn Labs as a LayerZero OFT (USDT locked on Ethereum, minted on destination). The OFT token contract itself executes mint on verified LayerZero messages; owner() = 0xb64a89ad247a2d691a728bb6822a85eedd7fc541 (USDT0 operational delegate).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:hyperevm:0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb"
+        ],
+        "sources": [
+          {
+            "label": "USDT0 docs",
+            "url": "https://docs.usdt0.to/"
+          },
+          {
+            "label": "USDT0 site",
+            "url": "https://usdt0.to/"
+          }
+        ]
       },
       {
         "id": "monad:0xe7cd86e13ac4309349f30b3435a9d337750fc82d",
         "destinationChain": "monad",
         "contractAddress": "0xe7cd86e13ac4309349f30b3435a9d337750fc82d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USDT0 (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name/symbol 'USDT0' (6 decimals); USDT0 is Tether's locked-USDT-backed cross-chain representation issued by Everdawn Labs as a LayerZero OFT (USDT locked on Ethereum, minted on destination). The OFT token contract itself executes mint on verified LayerZero messages; owner() = 0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8 (USDT0 operational delegate).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "monad",
+        "controllerAddress": "0xe7cd86e13ac4309349f30b3435a9d337750fc82d",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:monad:0xe7cd86e13ac4309349f30b3435a9d337750fc82d"
+        ],
+        "sources": [
+          {
+            "label": "USDT0 docs",
+            "url": "https://docs.usdt0.to/"
+          },
+          {
+            "label": "USDT0 site",
+            "url": "https://usdt0.to/"
+          }
+        ]
       },
       {
         "id": "xlayer:0x779ded0c9e1022225f8e0630b35a9b54be713736",
         "destinationChain": "xlayer",
         "contractAddress": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USDT0 (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name/symbol 'USD₮0' (6 decimals); USDT0 is Tether's locked-USDT-backed cross-chain representation issued by Everdawn Labs as a LayerZero OFT (USDT locked on Ethereum, minted on destination). The OFT token contract itself executes mint on verified LayerZero messages; owner() = 0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8 (USDT0 operational delegate).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "xlayer",
+        "controllerAddress": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:xlayer:0x779ded0c9e1022225f8e0630b35a9b54be713736"
+        ],
+        "sources": [
+          {
+            "label": "USDT0 docs",
+            "url": "https://docs.usdt0.to/"
+          },
+          {
+            "label": "USDT0 site",
+            "url": "https://usdt0.to/"
+          }
+        ]
       },
       {
         "id": "flare:0xe7cd86e13ac4309349f30b3435a9d337750fc82d",
         "destinationChain": "flare",
         "contractAddress": "0xe7cd86e13ac4309349f30b3435a9d337750fc82d",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USDT0 (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name/symbol 'USD₮0' (6 decimals); USDT0 is Tether's locked-USDT-backed cross-chain representation issued by Everdawn Labs as a LayerZero OFT (USDT locked on Ethereum, minted on destination). The OFT token contract itself executes mint on verified LayerZero messages; owner() = 0x6ae078461f35c3cc216a71029f71ee7bc4d9a10b (USDT0 operational delegate).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "flare",
+        "controllerAddress": "0xe7cd86e13ac4309349f30b3435a9d337750fc82d",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:flare:0xe7cd86e13ac4309349f30b3435a9d337750fc82d"
+        ],
+        "sources": [
+          {
+            "label": "USDT0 docs",
+            "url": "https://docs.usdt0.to/"
+          },
+          {
+            "label": "USDT0 site",
+            "url": "https://usdt0.to/"
+          },
+          {
+            "label": "USDT0 token on flare explorer",
+            "url": "https://flare-explorer.flare.network/address/0xe7cd86e13ac4309349f30b3435a9d337750fc82d"
+          }
+        ]
       },
       {
         "id": "corn:0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
@@ -1129,39 +1500,75 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "Still unresolved after the 2026-07-20 dc-1 pass: address matches the verified USDT0 (LayerZero OFT) deployment used on Plasma/MegaETH/HyperEVM, but Corn public RPCs did not answer name()/owner() reads (three endpoints tried), so on-chain identity could not be confirmed.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20"
       },
       {
         "id": "megaeth:0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
         "destinationChain": "megaeth",
         "contractAddress": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USDT0 (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name/symbol 'USDT0' (6 decimals); USDT0 is Tether's locked-USDT-backed cross-chain representation issued by Everdawn Labs as a LayerZero OFT (USDT locked on Ethereum, minted on destination). The OFT token contract itself executes mint on verified LayerZero messages; owner() = 0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8 (USDT0 operational delegate).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "megaeth",
+        "controllerAddress": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:megaeth:0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb"
+        ],
+        "sources": [
+          {
+            "label": "USDT0 docs",
+            "url": "https://docs.usdt0.to/"
+          },
+          {
+            "label": "USDT0 site",
+            "url": "https://usdt0.to/"
+          }
+        ]
       },
       {
         "id": "plasma:0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
         "destinationChain": "plasma",
         "contractAddress": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USDT0 (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name/symbol 'USDT0' (6 decimals); USDT0 is Tether's locked-USDT-backed cross-chain representation issued by Everdawn Labs as a LayerZero OFT (USDT locked on Ethereum, minted on destination). The OFT token contract itself executes mint on verified LayerZero messages; owner() = 0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8 (USDT0 operational delegate).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "plasma",
+        "controllerAddress": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:plasma:0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb"
+        ],
+        "sources": [
+          {
+            "label": "USDT0 docs",
+            "url": "https://docs.usdt0.to/"
+          },
+          {
+            "label": "USDT0 site",
+            "url": "https://usdt0.to/"
+          }
+        ]
       },
       {
         "id": "katana:0x2dca96907fde857dd3d816880a0df407eeb2d2f2",
@@ -1174,24 +1581,42 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "Still unresolved after the 2026-07-20 dc-1 pass: token verified on-chain as 'Vault Bridge USDT' (vbUSDT, 6 decimals, EIP-1967 admin 0xf54e837b578def7b1564ea2b9ea07ce94dd19407), but the Katana Vault Bridge mint authority could not be confirmed — the token does not expose an enumerable MINTER_ROLE and no bridge/minter address read succeeded.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20"
       },
       {
         "id": "stable:0x779ded0c9e1022225f8e0630b35a9b54be713736",
         "destinationChain": "stable",
         "contractAddress": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USDT0 (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name/symbol 'USDT0' (6 decimals); USDT0 is Tether's locked-USDT-backed cross-chain representation issued by Everdawn Labs as a LayerZero OFT (USDT locked on Ethereum, minted on destination). The OFT token contract itself executes mint on verified LayerZero messages; owner() = 0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8 (USDT0 operational delegate).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "stable",
+        "controllerAddress": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:stable:0x779ded0c9e1022225f8e0630b35a9b54be713736"
+        ],
+        "sources": [
+          {
+            "label": "USDT0 docs",
+            "url": "https://docs.usdt0.to/"
+          },
+          {
+            "label": "USDT0 site",
+            "url": "https://usdt0.to/"
+          }
+        ]
       },
       {
         "id": "hyperliquid:0x25faedc3f054130dbb4e4203aca63567",
@@ -1204,9 +1629,389 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "Still unresolved after the 2026-07-20 dc-1 pass: HyperCore spot representation (non-EVM asset id); mint/bridge authority not re-verified from public chain reads in this pass.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20"
+      },
+      {
+        "id": "gnosis:0x4ecaba5870353805a9f068101a40e0f32ed605c6",
+        "sourceChain": "ethereum",
+        "destinationChain": "gnosis",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x4ECaBa5870353805a9F068101A40E0f32ed605C6",
+        "protocol": "Gnosis OmniBridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Tether USD on xDai', symbol USDT, 6 decimals; owner() returns the OmniBridge home mediator 0xf6A78083ca3e2a662D6dd1703c939c8aCE2e268d — the mint authority for this OmniBridge-minted representation (same mediator convention as the reviewed USDC.e Gnosis row).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "gnosis",
+        "controllerAddress": "0xf6A78083ca3e2a662D6dd1703c939c8aCE2e268d",
+        "failureDomainKeys": [
+          "protocol:gnosis-omnibridge",
+          "contract:gnosis:0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Gnosis OmniBridge documentation",
+            "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/omnibridge"
+          },
+          {
+            "label": "USDT on Gnosisscan",
+            "url": "https://gnosisscan.io/address/0x4ECaBa5870353805a9F068101A40E0f32ed605C6"
+          }
+        ]
+      },
+      {
+        "id": "pulsechain:0x0cb6f5a34ad42ec934882a05265a7d5f59b51a2f",
+        "sourceChain": "ethereum",
+        "destinationChain": "pulsechain",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x0Cb6F5a34ad42ec934882A05265A7d5F59b51A2f",
+        "protocol": "PulseChain bridge (Ethereum-side lockup)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Tether USD from Ethereum', symbol USDT, 6 decimals; owner() = 0x4fd0aaa7506f3d9cb8274bdb946ec42a1b8751ef (PulseChain bridge mint controller).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "pulsechain",
+        "controllerAddress": "0x4fd0aaa7506f3d9cb8274bdb946ec42a1b8751ef",
+        "failureDomainKeys": [
+          "protocol:pulsechain-bridge",
+          "contract:pulsechain:0x4fd0aaa7506f3d9cb8274bdb946ec42a1b8751ef"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDT from Ethereum on PulseChain scan",
+            "url": "https://scan.pulsechain.com/address/0x0Cb6F5a34ad42ec934882A05265A7d5F59b51A2f"
+          }
+        ]
+      },
+      {
+        "id": "moonriver:0xb44a9b6905af7c801311e8f4e76932ee959c663c",
+        "sourceChain": "ethereum",
+        "destinationChain": "moonriver",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xB44a9B6905aF7c801311e8F4E76932ee959c663C",
+        "protocol": "Multichain USDT (legacy, post-exploit frozen)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Tether USD', symbol USDT, 6 decimals; owner() = 0x10c6b61dbf44a083aec3780acf769c77be747e23 (legacy Multichain MPC admin). Multichain collapsed in 2023 — controller identified but effectively unmaintained.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "moonriver",
+        "controllerAddress": "0x10c6b61dbf44a083aec3780acf769c77be747e23",
+        "failureDomainKeys": [
+          "protocol:multichain-legacy",
+          "contract:moonriver:0x10c6b61dbf44a083aec3780acf769c77be747e23"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDT on Moonriver Moonscan",
+            "url": "https://moonriver.moonscan.io/address/0xB44a9B6905aF7c801311e8F4E76932ee959c663C"
+          }
+        ]
+      },
+      {
+        "id": "xdc:0xd4b5f10d61916bd6e0860144a91ac658dE8a1437",
+        "sourceChain": "ethereum",
+        "destinationChain": "xdc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xD4B5f10D61916Bd6E0860144a91Ac658dE8a1437",
+        "protocol": "XDC bridge xUSDT (USDT@xinfin)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'USDT@xinfin', symbol xUSDT, 6 decimals; owner() = 0xc928c8e48647c8b0ce550c2352087b1cf5c6111e (XDC bridge mint controller for xUSDT).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "xdc",
+        "controllerAddress": "0xc928c8e48647c8b0ce550c2352087b1cf5c6111e",
+        "failureDomainKeys": [
+          "protocol:xdc-bridge",
+          "contract:xdc:0xc928c8e48647c8b0ce550c2352087b1cf5c6111e"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "xUSDT on XDCScan",
+            "url": "https://xdcscan.com/address/0xD4B5f10D61916Bd6E0860144a91Ac658dE8a1437"
+          }
+        ]
+      },
+      {
+        "id": "taiko:0x2def195713cf4a606b49d07e520e22c17899a736",
+        "sourceChain": "ethereum",
+        "destinationChain": "taiko",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x2DEF195713CF4a606B49D07E520e22C17899a736",
+        "protocol": "Taiko canonical bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Tether USD', symbol USDT, 6 decimals; owner() = 0xfa06e15b8b4c5bf3fc5d9cfd083d45c53cbe8c7c (Taiko L2 bridge controller for the canonical ERC20Vault-bridged token).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "taiko",
+        "controllerAddress": "0xfa06e15b8b4c5bf3fc5d9cfd083d45c53cbe8c7c",
+        "failureDomainKeys": [
+          "protocol:taiko-canonical-bridge",
+          "contract:taiko:0xfa06e15b8b4c5bf3fc5d9cfd083d45c53cbe8c7c"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDT on Taikoscan",
+            "url": "https://taikoscan.io/address/0x2DEF195713CF4a606B49D07E520e22C17899a736"
+          }
+        ]
+      },
+      {
+        "id": "flow:0x674843c06ff83502ddb4d37c2e09c01cda38cbc8",
+        "sourceChain": "ethereum",
+        "destinationChain": "flow",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x674843C06FF83502ddb4D37c2E09C01cdA38cbc8",
+        "protocol": "Stargate stgUSDT (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Bridged stgUSDT', symbol USDT, 6 decimals; owner() = 0xaf5191b0de278c7286d6c7cc6ab6bb8a73ba2cd6 (Stargate-controlled owner for this LayerZero-bridged USDT).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "flow",
+        "controllerAddress": "0xaf5191b0de278c7286d6c7cc6ab6bb8a73ba2cd6",
+        "failureDomainKeys": [
+          "protocol:stargate",
+          "contract:flow:0xaf5191b0de278c7286d6c7cc6ab6bb8a73ba2cd6"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "stgUSDT on Flow EVM explorer",
+            "url": "https://evm.flowscan.io/address/0x674843C06FF83502ddb4D37c2E09C01cdA38cbc8"
+          }
+        ]
+      },
+      {
+        "id": "sei:0x9151434b16b9763660705744891fa906f660ecc5",
+        "sourceChain": "ethereum",
+        "destinationChain": "sei",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x9151434b16b9763660705744891fa906f660ecc5",
+        "protocol": "USDT0 (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name/symbol 'USD₮0' (6 decimals); USDT0 is Tether's locked-USDT-backed cross-chain representation issued by Everdawn Labs as a LayerZero OFT (USDT locked on Ethereum, minted on destination). The OFT token contract itself executes mint on verified LayerZero messages; owner() = 0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8 (same operational delegate as the other reviewed USDT0 rows) (USDT0 operational delegate).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "sei",
+        "controllerAddress": "0x9151434b16b9763660705744891fa906f660ecc5",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:sei:0x9151434b16b9763660705744891fa906f660ecc5"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDT0 docs",
+            "url": "https://docs.usdt0.to/"
+          },
+          {
+            "label": "USDT0 site",
+            "url": "https://usdt0.to/"
+          },
+          {
+            "label": "USDT0 on Sei explorer",
+            "url": "https://seitrace.com/address/0x9151434b16b9763660705744891fa906f660ecc5"
+          }
+        ]
+      },
+      {
+        "id": "linea:0xa219439258ca9da29e9cc4ce5596924745e12b93",
+        "sourceChain": "ethereum",
+        "destinationChain": "linea",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xA219439258ca9da29E9Cc4cE5596924745e12B93",
+        "protocol": "Linea canonical bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Token identity verified on-chain 2026-07-20 (name 'Tether USD', symbol USDT, 6 decimals; EIP-1967 admin 0xa11ba93afbd6d18e26fefdb2c6311da6c9b370d6). Mint authority is the Linea canonical L2 TokenBridge 0x353012dc4a9A6cF55c941bADC267f82004A8ceB9 (Linea docs).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "linea",
+        "controllerAddress": "0x353012dc4a9A6cF55c941bADC267f82004A8ceB9",
+        "failureDomainKeys": [
+          "protocol:linea-canonical-bridge",
+          "contract:linea:0x353012dc4a9a6cf55c941badc267f82004a8ceb9"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Linea canonical bridge documentation",
+            "url": "https://docs.linea.build/"
+          },
+          {
+            "label": "USDT on Lineascan",
+            "url": "https://lineascan.build/address/0xA219439258ca9da29E9Cc4cE5596924745e12B93"
+          }
+        ]
+      },
+      {
+        "id": "zksync:0x493257fd37edb34451f62edf8d2a0c418852ba4c",
+        "sourceChain": "ethereum",
+        "destinationChain": "zksync",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x493257fD37EDB34451f62EDf8D2a0C418852bA4C",
+        "protocol": "zkSync Era canonical bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Token identity verified on-chain 2026-07-20 (name 'Tether USD', symbol USDT, 6 decimals). Mint authority is the zkSync Era L2SharedBridge 0x11f943b2c77b743AB90f4A0Ae7d5A4e7FCA3E102 (zkSync Era docs).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "zksync",
+        "controllerAddress": "0x11f943b2c77b743AB90f4A0Ae7d5A4e7FCA3E102",
+        "failureDomainKeys": [
+          "protocol:zksync-canonical-bridge",
+          "contract:zksync:0x11f943b2c77b743ab90f4a0ae7d5a4e7fca3e102"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "zkSync Era bridge documentation",
+            "url": "https://docs.zksync.io/"
+          },
+          {
+            "label": "USDT on zkSync Era explorer",
+            "url": "https://era.zksync.network/address/0x493257fD37EDB34451f62EDf8D2a0C418852bA4C"
+          }
+        ]
+      },
+      {
+        "id": "mode:0xf0f161fda2712db8b566946122a5af183995e2ed",
+        "sourceChain": "ethereum",
+        "destinationChain": "mode",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xf0F161fDA2712DB8b566946122a5af183995e2eD",
+        "protocol": "Mode canonical bridge (OP-stack)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Token identity verified on-chain 2026-07-20 (name 'Tether USD', symbol USDT, 6 decimals). OP-stack canonical L2StandardERC20 representation; L1-side escrow/mint controller is the Mode L1StandardBridge 0x735aDBbE72226BD52e818E7181953f42E3b0FF21 on Ethereum (chain docs).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x735aDBbE72226BD52e818E7181953f42E3b0FF21",
+        "failureDomainKeys": [
+          "protocol:mode-canonical-bridge",
+          "contract:ethereum:0x735adbbe72226bd52e818e7181953f42e3b0ff21"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Mode bridge documentation",
+            "url": "https://docs.mode.network/"
+          },
+          {
+            "label": "USDT on mode explorer",
+            "url": "https://explorer.mode.network/address/0xf0F161fDA2712DB8b566946122a5af183995e2eD"
+          }
+        ]
+      },
+      {
+        "id": "manta:0xf417f5a458ec102b90352f697d6e2ac3a3d2851f",
+        "sourceChain": "ethereum",
+        "destinationChain": "manta",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xf417F5A458eC102B90352F697D6e2Ac3A3d2851f",
+        "protocol": "Manta canonical bridge (OP-stack)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Token identity verified on-chain 2026-07-20 (name 'Tether USD', symbol USDT, 6 decimals). OP-stack canonical L2StandardERC20 representation; L1-side escrow/mint controller is the Manta L1StandardBridge 0x3B95bC951EE0d553ba487327278cAc44f29715E5 on Ethereum (chain docs).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x3B95bC951EE0d553ba487327278cAc44f29715E5",
+        "failureDomainKeys": [
+          "protocol:manta-canonical-bridge",
+          "contract:ethereum:0x3b95bc951ee0d553ba487327278cac44f29715e5"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Manta bridge documentation",
+            "url": "https://docs.manta.network/"
+          },
+          {
+            "label": "USDT on manta explorer",
+            "url": "https://pacific-explorer.manta.network/address/0xf417F5A458eC102B90352F697D6e2Ac3A3d2851f"
+          }
+        ]
+      },
+      {
+        "id": "boba:0x5de1677344d3cb0d7d465c10b72a8f60699c062d",
+        "sourceChain": "ethereum",
+        "destinationChain": "boba",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x5DE1677344D3Cb0D7D465c10b72A8f60699C062d",
+        "protocol": "Boba canonical bridge (OP-stack)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Token identity verified on-chain 2026-07-20 (name 'Tether USD', symbol USDT, 6 decimals). OP-stack canonical L2StandardERC20 representation; L1-side escrow/mint controller is the Boba L1StandardBridge 0xdc1664458d2f0B6090bEa60A8793A4E66c71F7c0 on Ethereum (chain docs).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xdc1664458d2f0B6090bEa60A8793A4E66c71F7c0",
+        "failureDomainKeys": [
+          "protocol:boba-canonical-bridge",
+          "contract:ethereum:0xdc1664458d2f0b6090bea60a8793a4e66c71f7c0"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Boba bridge documentation",
+            "url": "https://docs.boba.network/"
+          },
+          {
+            "label": "USDT on boba explorer",
+            "url": "https://bobascan.com/address/0x5DE1677344D3Cb0D7D465c10b72A8f60699C062d"
+          }
+        ]
       }
     ]
   }

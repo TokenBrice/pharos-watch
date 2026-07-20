@@ -45,9 +45,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "Societe Generale-FORGE publishes EURCV as an issuer-managed EMT across Ethereum, XRPL, Stellar, and Solana. No external bridge route is documented, so the reviewed route is regulated issuer-native issuance on supported chains.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "Societe Generale-FORGE publishes EURCV as an issuer-managed EMT across Ethereum, XRPL, Stellar, and Solana. No external bridge route is documented, so the reviewed route is regulated issuer-native issuance on supported chains. 2026-07-20 cohort dc-1 pass: Ethereum row confirmed native EURCV; non-EVM rows remain unresolved (not re-verified in this pass).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
     "confidence": "probable",
     "sources": [
       {
@@ -60,16 +60,26 @@
         "id": "ethereum:0x5f7827fdeb7c20b443265fc2f40845b715385ff2",
         "destinationChain": "ethereum",
         "contractAddress": "0x5f7827fdeb7c20b443265fc2f40845b715385ff2",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "EUR CoinVertible (SG Forge native issuance on Ethereum)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'EUR CoinVertible', symbol EURCV, 18 decimals — SG Forge issuer-native deployment on Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "SG Forge",
+            "url": "https://www.sgforge.com/"
+          },
+          {
+            "label": "EURCV on Etherscan",
+            "url": "https://etherscan.io/address/0x5f7827fdeb7c20b443265fc2f40845b715385ff2"
+          }
+        ]
       },
       {
         "id": "xrpl:4555524356000000000000000000000000000000.rUNaS5sqRuxZz6V7rBGhoSaZiVYA3ut4UL",
@@ -82,7 +92,7 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "Unresolved in the 2026-07-20 dc-1 pass: non-EVM deployment; controller/mint authority not re-verified from public chain reads in this pass.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-06-13"
       },
@@ -97,7 +107,7 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "Unresolved in the 2026-07-20 dc-1 pass: non-EVM deployment; controller/mint authority not re-verified from public chain reads in this pass.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-06-13"
       },
@@ -112,7 +122,7 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "Unresolved in the 2026-07-20 dc-1 pass: non-EVM deployment; controller/mint authority not re-verified from public chain reads in this pass.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-06-13"
       }
@@ -288,7 +298,12 @@
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Societe Generale S.A.",
-      "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
       "liquidityHorizon": "immediate"
     }
   ],

@@ -1268,61 +1268,69 @@
   "chainTier": "unproven",
   "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
-    "tier": "external-validated-network",
-    "summary": "USDXL spans HyperEVM and Hyperliquid, and L2BEAT describes the Hyperliquid bridge as a canonical USDC bridge validated by a permissioned validator set. Pharos reviews the route as external validated-network exposure.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
-    "protocols": [
-      {
-        "source": "l2beat",
-        "name": "Hyperliquid bridge",
-        "url": "https://l2beat.com/interop/protocols/hyperliquid",
-        "bridgeTypes": [
-          "validatedBridge"
-        ]
-      }
-    ],
+    "tier": "issuer-native-burn-mint",
+    "summary": "USDXL is minted natively on HyperEVM through HypurrFi's CDP facilitators, and the Hyperliquid row is the USDXL HyperCore spot token deployed by the same Last team (deployer is an owner of the HyperEVM 2/2 proxy-admin Safe). Cross-chain movement between HyperEVM and HyperCore uses the platform-native Core/EVM system-address link operated by the issuer; the L2BEAT-reviewed Hyperliquid USDC deposit bridge does not carry USDXL, so reviewed risk is issuer-native burn/mint.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Last website",
         "url": "https://www.last.net/"
       },
       {
-        "label": "L2BEAT Hyperliquid bridge",
-        "url": "https://l2beat.com/interop/protocols/hyperliquid"
+        "label": "USDXL token proxy on HyperEVM Blockscout",
+        "url": "https://hyperliquid.blockscout.com/address/0xca79db4b49f608ef54a5cb813fbed3a6387bc645"
+      },
+      {
+        "label": "HypurrFi USDXL docs",
+        "url": "https://docs.hypurrfi.com/products/usdxl"
       }
     ],
     "routes": [
       {
         "id": "hyperevm:0xca79db4b49f608ef54a5cb813fbed3a6387bc645",
         "destinationChain": "hyperevm",
+        "canonicalChain": "hyperevm",
         "contractAddress": "0xca79db4b49f608ef54a5cb813fbed3a6387bc645",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "HypurrFi CDP native issuance (HyperEVM)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Home chain: USDXL is minted natively by HypurrFi CDP facilitators (GHO-style, role set frozen; see mint-authority profile). Re-verified at HyperEVM block 40928582 on 2026-07-20: transparent proxy, EIP-1967 impl 0xce23355599cdbe5dca05186c5d9d5b37d959b27f, admin Safe 0xf050623d497be7ea6653fd205a537d10300b4c6e with getThreshold()=2 and getOwners()=[0x67a6d918c3adfc36b047a8684491481114f6b3a6, 0xae04ce2f38377b3cc7273231cfafcbe1ca831545], name()='Last USD'. No bridge minter on this chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDXL token proxy on HyperEVM Blockscout",
+            "url": "https://hyperliquid.blockscout.com/address/0xca79db4b49f608ef54a5cb813fbed3a6387bc645"
+          }
+        ]
       },
       {
         "id": "hyperliquid:0xf448c3cad413cdf0feb1746d7b057967",
         "destinationChain": "hyperliquid",
+        "canonicalChain": "hyperevm",
         "contractAddress": "0xf448c3cad413cdf0feb1746d7b057967",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Last HyperCore native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "HyperCore native spot asset read via api.hyperliquid.xyz/info tokenDetails on 2026-07-20: name 'USDXL', deployer 0x67a6d918c3adfc36b047a8684491481114f6b3a6 (an owner of the HyperEVM 2/2 proxy-admin Safe re-verified at HyperEVM block 40928582), deployTime 2025-03-22, genesis balance held by system address 0x20000000000000000000000000000000000000ef. The same Last team controls both sides; movement between HyperEVM and HyperCore uses the platform-native Core/EVM link, not the L2BEAT-reviewed Hyperliquid USDC deposit bridge and no third-party bridge minter.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Hyperliquid info API (tokenDetails)",
+            "url": "https://api.hyperliquid.xyz/info"
+          }
+        ]
       }
     ]
   },

@@ -254,9 +254,24 @@
           "url": "https://solscan.io/token/usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX"
         }
       ],
-      "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable non-proxy. At Solana slot 425799131: USDK mintAuthority C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7 confirmed off-curve PDA of extaykYu5AQcDm3qZAbiDN3yp6skqn6Nssj7veUUGZw (seeds=[\"mint_authority\"], nonce=255); extension program upgrade authority=9QpF8a9T... (shared EOA across all M0 Solana programs). Null uninitialized account is expected for PDAs; off-curve check proves it cannot be a free keypair.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable non-proxy. At Solana slot 425799131: USDK mintAuthority C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7 confirmed off-curve PDA of extaykYu5AQcDm3qZAbiDN3yp6skqn6Nssj7veUUGZw (seeds=[\"mint_authority\"], nonce=255); extension program upgrade authority=9QpF8a9T... (shared EOA across all M0 Solana programs). Null uninitialized account is expected for PDAs; off-curve check proves it cannot be a free keypair. Upgradeability: USDK is an SPL Token-2022 mint on Solana (mint account usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX). SPL mint state is not a deployable proxy: the mint logic is fixed by the Token-2022 program (non-upgradeable), and the mint authority is the M0 Portal PDA (off-curve, seeds [\"mint_authority\"]) verified at slot 425799131 — there is no upgrade authority that can change mint logic.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+      "reviewedAt": "2026-07-20"
+    },
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Solana Token-2022 program",
+          "url": "https://spl.solana.com/token-2022"
+        },
+        {
+          "label": "USDK mint account",
+          "url": "https://solscan.io/token/usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX"
+        }
+      ]
     }
   },
   "collateralQuality": "rwa",

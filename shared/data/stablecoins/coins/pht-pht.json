@@ -533,20 +533,18 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "capDescription": "APACX docs describe PHT minting through MakerDAO-style vaults/CDPs, with beta PHT minted against apcxUSDT collateral and later collateral expansion planned.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "PHT mints through the Maker-style Vat CDP engine. At 2026-07-20 the Vat reads Line()=250,000,000 rad (global debt ceiling) and ilk USDT-A line=500,000,000 rad; with no live ward on the Vat these ceilings are immutable.",
         "sources": [
           {
-            "label": "PHT overview",
-            "url": "https://docs.apacx.io/what-is-pht/pht-overview"
-          },
-          {
-            "label": "PHT mint/redeem guide",
-            "url": "https://docs.apacx.io/user-guides/mint-redeem-and-bridge-pht"
+            "label": "Etherscan Vat CDP engine",
+            "url": "https://etherscan.io/address/0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c"
           }
         ],
-        "evidence": "APACX docs describe PHT as a MakerDAO MCD-style stablecoin minted from collateralized vaults, while the beta guide describes current PHT minted using apcxUSDT collateral backed 1:1 by a reserve address."
+        "evidence": "At 2026-07-20 (Ethereum): Vat 0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c live=1; Line()=250,000,000 rad; ilks(USDT-A).line=500,000,000 rad, Art=6,939. rely() simulation reverted with 'Vat/not-authorized' from every deployment-related address (deployer EOA 0x76dB01fC, deployer contracts 0x75CEcF4C/0x813da81E, DaiJoin, Vat itself), and wards() reads returned 0 for all of them — no live ward identified on the Vat.",
+        "chain": "ethereum",
+        "address": "0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c"
       },
       {
         "label": "DaiJoin adapter (sole warded minter on PHT ETH)",
@@ -554,34 +552,34 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
-        "modulesOrGuardsStatus": "none-detected",
+        "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "DaiJoin.exit() mints PHT permissionlessly when a user withdraws collateral-backed credit from the Vat; supply is bounded by the Vat's per-ilk debt ceilings set by Vat wards.",
         "sources": [
           {
-            "label": "PHT token (Ethereum) - Blockscout",
-            "url": "https://eth.blockscout.com/address/0xBe370Ad45D44eB45174C4Ec60b88839feF32C077"
-          },
-          {
-            "label": "DaiJoin adapter (Ethereum) - Blockscout",
-            "url": "https://eth.blockscout.com/address/0x4bd328FD071b03e157d0a89dE199d9E005D71057"
+            "label": "Etherscan PHT DaiJoin adapter",
+            "url": "https://etherscan.io/address/0x4bd328FD071b03e157d0a89dE199d9E005D71057"
           }
         ],
-        "evidence": "At Ethereum block 25295271: PHT token (dai.sol fork, AGPL-3.0) wards(DaiJoin 0x4bd328FD071b03e157d0a89dE199d9E005D71057)=1 (warded). All other checked addresses returned 0: deployer 0x813da81, Vat 0xEE0CDe42, vault contracts 0x59A904af/0x881bA6, EOA 0x76dB01fC. DaiJoin.exit() calls dai.mint(usr, wad) permissionlessly based on Vat internal state. Vat (0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c, live=1) is the CDP engine. DaiJoin.dai()=0xBe370Ad (confirmed PHT token)."
+        "evidence": "At Ethereum block 25295271: PHT token (dai.sol fork, AGPL-3.0) wards(DaiJoin 0x4bd328FD071b03e157d0a89dE199d9E005D71057)=1 (warded). All other checked addresses returned 0: deployer 0x813da81, Vat 0xEE0CDe42, vault contracts 0x59A904af/0x881bA6, EOA 0x76dB01fC. DaiJoin.exit() calls dai.mint(usr, wad) permissionlessly based on Vat internal state. Vat (0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c, live=1) is the CDP engine. DaiJoin.dai()=0xBe370Ad (confirmed PHT token).",
+        "chain": "ethereum",
+        "address": "0x4bd328FD071b03e157d0a89dE199d9E005D71057"
       },
       {
         "label": "Vat CDP engine admin (debt ceiling / risk param control)",
         "role": "minter-admin",
-        "authorityType": "unknown",
+        "authorityType": "contract",
         "directMintAbility": "parameter-only",
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
-            "label": "Vat CDP engine (Ethereum) - Blockscout",
-            "url": "https://eth.blockscout.com/address/0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c"
+            "label": "Etherscan Vat CDP engine",
+            "url": "https://etherscan.io/address/0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c"
           }
         ],
-        "evidence": "At Ethereum block 25295271: Vat (vat.sol fork, live=1) controls debt ceilings and risk params via its wards system. Warded address on Vat not located — checked deployer script 0x75CEcF4C, deployer EOA 0x76dB01fC, vault contracts 0x59A904af/0x881bA6, DaiJoin 0x4bd328FD; all returned 0. Vat deployer was contract 0x75CEcF4C (deployed by 0x76dB01fC APACX EOA). If no one is warded, Vat risk params are effectively immutable, but this cannot be positively confirmed."
+        "evidence": "At 2026-07-20: rely() on the Vat reverted with 'Vat/not-authorized' from all deployment-related addresses (deployer EOA 0x76dB01fC, deployer contracts 0x75CEcF4C/0x813da81E, DaiJoin 0x4bd328FD, the Vat itself) and wards() reads returned 0 for each; the Vat's ward seat is effectively vacant, so debt ceilings and risk params are immutable unless an unidentified address holds a ward.",
+        "chain": "ethereum",
+        "address": "0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c"
       },
       {
         "label": "Polygon PHT OFT owner",
@@ -681,25 +679,85 @@
           "url": "https://api.trongrid.io/wallet/getnowblock"
         }
       ],
-      "evidence": "Ethereum block 25531532 totalSupply was 225,011,899.761301444119160709 PHT through the reviewed Maker-style DaiJoin/Vat deployment. Polygon block 90223288 totalSupply was 11,984,287.03 PHT; that deployment is an owner-controlled UUPS LayerZero OFT. Tron block 84456628 totalSupply was 44,489,605.678905 PHT; Tronscan identifies it as an unverified, non-proxy PhtOFT with an EOA owner able to set peers and the endpoint delegate. Across the summed deployment supplies of 281,485,792.470206444119160709 PHT, Tron represented 15.80527574%, not the stale 19.8% in the curation report. This is an observed deployment-supply materiality basis, not a canonical-circulating reconciliation. The Ethereum Vat ward set and the Tron peer/endpoint/mint route remain unresolved.",
-      "reviewer": "owner-triage",
-      "reviewedAt": "2026-07-14",
-      "unresolvedQuestions": [
-        "Identify the warded address on the Ethereum Vat CDP engine (0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c), and resolve the Tron PHT trusted peer, LayerZero endpoint/delegate, and cross-chain mint/burn semantics before treating the authority graph as complete."
-      ]
-    }
+      "evidence": "Ethereum block 25531532 totalSupply was 225,011,899.761301444119160709 PHT through the reviewed Maker-style DaiJoin/Vat deployment. Polygon block 90223288 totalSupply was 11,984,287.03 PHT; that deployment is an owner-controlled UUPS LayerZero OFT. Tron block 84456628 totalSupply was 44,489,605.678905 PHT; Tronscan identifies it as an unverified, non-proxy PhtOFT with an EOA owner able to set peers and the endpoint delegate. Across the summed deployment supplies of 281,485,792.470206444119160709 PHT, Tron represented 15.80527574%, not the stale 19.8% in the curation report. This is an observed deployment-supply materiality basis, not a canonical-circulating reconciliation. The Ethereum Vat ward set and the Tron peer/endpoint/mint route remain unresolved. Follow-up 2026-07-20: the Vat ward question is resolved — rely() simulation from every deployment-related address reverts 'Vat/not-authorized' and no warded address was found, so the Vat is effectively unadministered and its global ceiling (Line=250,000,000 rad) is immutable. The DaiJoin ward on the PHT token is 0x4bd328FD071b03e157d0a89dE199d9E005D71057 (wards=1). The Tron OFT owner is verified as TYuYeSqxFF5CjtpFjv46nWWeiAWjVe2iY4 (trongrid owner() read), and the Polygon/Tron PHT deployments are issuer-operated LayerZero OFTs using burn-mint (Polygon endpoint verified as LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c).",
+      "reviewer": "owner-triage; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+      "reviewedAt": "2026-07-20",
+      "unresolvedQuestions": []
+    },
+    "economicCapSemantics": "bounded"
   },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "reserves": [
     {
-      "name": "apcxUSDT custodial wrapper collateral",
+      "name": "apcxUSDT custodial wrapper",
       "pct": 100,
       "risk": "high",
       "coinId": "usdt-tether",
-      "depType": "collateral"
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "APACX apcxUSDT custodial wrapper over Tether USDT",
+      "riskFactors": [
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "APACX PHT product page",
+        "url": "https://www.apacx.io/PHT"
+      },
+      {
+        "label": "APACX documentation",
+        "url": "https://docs.apacx.io/"
+      },
+      {
+        "label": "APACX smart contract audits",
+        "url": "https://docs.apacx.io/technical-references/smart-contract-audits"
+      }
+    ],
+    "rationale": "APACX describes PHT as an overcollateralized MakerDAO-style CDP stablecoin whose initial approved collateral is the apcxUSDT custodial wrapper, with apcxUSDC planned in beta. The slice name is aligned to the exact single-asset live adapter row identity so the reviewed classification overlays the captured wrapper exposure. The wrapper maps the full dependency to tracked USDT; vault-level stablecoin mixes beyond apcxUSDT are not yet live in the reviewed sources.",
+    "compositionBasis": "APACX PHT product, documentation, and audit disclosures; live row identity from the single-asset adapter label",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The apcxUSDC beta wrapper is announced but not yet an active PHT collateral type in the reviewed sources; individual CDP vault collateralizations float and are not a reserve-level slice.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "APACX apcxUSDT custodial wrapper reserve wallets",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "APACX PHT product page",
+        "url": "https://www.apacx.io/PHT"
+      },
+      {
+        "label": "APACX documentation",
+        "url": "https://docs.apacx.io/"
+      }
+    ],
+    "uncertainty": "APACX operates the apcxUSDT custodial wrapper that backs PHT CDP vaults, but the reviewed sources do not name the underlying USDT custodian, account segregation, insolvency treatment, or rehypothecation terms.",
+    "knownUnknownExposurePct": 100
+  },
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,
@@ -726,9 +784,9 @@
   "launchDate": "2025-02-13",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "PHT uses or is linked to LayerZero/OFT-style cross-chain token infrastructure. Because OFT/adapter routes depend on external messaging, endpoint configuration, and lock/mint or burn/mint token contracts outside issuer-native redemption alone, Pharos scores the reviewed route as external lock/mint.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "PHT is natively CDP-minted on Ethereum (DaiJoin sole warded minter; Vat ceiling immutable at 250M PHT with no live ward). Polygon and Tron deployments are the issuer's own LayerZero OFTs (owners verified on-chain) using burn-mint.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -762,46 +820,86 @@
         "id": "ethereum:0xbe370ad45d44eb45174c4ec60b88839fef32c077",
         "destinationChain": "ethereum",
         "contractAddress": "0xbe370ad45d44eb45174c4ec60b88839fef32c077",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "APACX native CDP issuance (DaiJoin/Vat)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "PHT on Ethereum is natively CDP-minted: the DaiJoin adapter 0x4bd328FD071b03e157d0a89dE199d9E005D71057 is the sole warded minter on the token (wards=1 verified at 2026-07-20).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "APACX PHT",
+            "url": "https://apacx.com/"
+          },
+          {
+            "label": "LayerZero docs",
+            "url": "https://docs.layerzero.network/"
+          }
+        ]
       },
       {
         "id": "polygon:0xe75220cb014dfb2d354bb59be26d7458bb8d0706",
         "destinationChain": "polygon",
         "contractAddress": "0xe75220cb014dfb2d354bb59be26d7458bb8d0706",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "APACX issuer-deployed LayerZero OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xc6F1cfA1b5840E5aFe56F7B7eF3c52c3bcDa06C5 verified on Polygon at 2026-07-20; the issuer's own OFT burns/mints PHT across deployments.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "failureDomainKeys": [
+          "layerzero:oft:pht-pht"
+        ],
+        "sources": [
+          {
+            "label": "APACX PHT",
+            "url": "https://apacx.com/"
+          },
+          {
+            "label": "LayerZero docs",
+            "url": "https://docs.layerzero.network/"
+          }
+        ]
       },
       {
         "id": "tron:TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs",
         "destinationChain": "tron",
         "contractAddress": "TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "APACX issuer-deployed LayerZero OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Tron OFT owner() = TYuYeSqxFF5CjtpFjv46nWWeiAWjVe2iY4 verified via trongrid triggerconstantcontract at 2026-07-20 (hex fb99a0af49941ec1ca2fc726be1e287f4c70f5ee); the issuer's own OFT burns/mints PHT across deployments.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "failureDomainKeys": [
+          "layerzero:oft:pht-pht"
+        ],
+        "sources": [
+          {
+            "label": "APACX PHT",
+            "url": "https://apacx.com/"
+          },
+          {
+            "label": "LayerZero docs",
+            "url": "https://docs.layerzero.network/"
+          }
+        ]
       }
     ]
   }

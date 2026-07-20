@@ -70,8 +70,8 @@
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "Ondo Global Markets assets use the Ondo Bridge, which documents LayerZero OFT architecture for GM assets in addition to USDY. Because IAUon is an Ondo GM asset and route accounting depends on that external OFT stack, it is scored as external-lock-mint.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
     "confidence": "verified",
     "protocols": [
       {
@@ -99,62 +99,104 @@
       {
         "id": "ethereum:0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ondo Global Markets native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native IAUon: MINTER_ROLE enumeration (read 2026-07-20) shows the Ondo GMTokenManager 0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c (12,828-byte issuance contract) plus the chain's OndoOFT as the two mint authorities. Ondo Global Markets issues natively on this chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ondo Global Markets",
+            "url": "https://ondo.finance/"
+          }
+        ]
       },
       {
         "id": "bsc:0xcb2a0f46f67dc4c58a316f1c008edef5c2311795",
         "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xcb2a0f46f67dc4c58a316f1c008edef5c2311795",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ondo Global Markets native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native IAUon: MINTER_ROLE enumeration (read 2026-07-20) shows the Ondo GMTokenManager 0x91f8aff3738825e8eb16fc6f6b1a7a4647bdb299 (12,828-byte issuance contract) plus the chain's OndoOFT as the two mint authorities. Ondo Global Markets issues natively on this chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ondo Global Markets",
+            "url": "https://ondo.finance/"
+          }
+        ]
       },
       {
         "id": "solana:M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo",
+        "sourceChain": "ethereum",
         "destinationChain": "solana",
+        "canonicalChain": "ethereum",
         "contractAddress": "M77ZvkZ8zW5udRbuJCbuwSwavRa7bGAZYMTwru8ondo",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "OndoOFT on Solana (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "IAUon on Solana shares the Ondo program mint authority PDA 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD (no SOL account exists at the address \u2014 a program-derived mint authority, read 2026-07-20 via Solana RPC); freeze authority 51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK is Ondo's. DefiLlama attributes Solana IAUon supply to Ondo's cross-chain deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "solana",
+        "controllerAddress": "9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:solana:9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD"
+        ],
+        "sources": [
+          {
+            "label": "Ondo Global Markets",
+            "url": "https://ondo.finance/"
+          }
+        ]
       },
       {
         "id": "hyperevm:0x83b01ac9e2d1632a70dd1c813c5b8edf29cd707f",
+        "sourceChain": "ethereum",
         "destinationChain": "hyperevm",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x83b01ac9e2d1632a70dd1c813c5b8edf29cd707f",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "OndoOFT (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "IAUon on HyperEVM is minted solely by the OndoOFT contract 0xce61f9246755cc399fd7f37d6b3478590b75aace (sole MINTER_ROLE member, read 2026-07-20): a 6,152-byte LayerZero OApp with endpoint() = HyperEVM LZ V2 endpoint 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9 and token() = this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0xce61f9246755cc399fd7f37d6b3478590b75aace",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:hyperevm:0xce61f9246755cc399fd7f37d6b3478590b75aace"
+        ],
+        "sources": [
+          {
+            "label": "Ondo Global Markets",
+            "url": "https://ondo.finance/"
+          }
+        ]
       }
     ]
   },
@@ -181,12 +223,22 @@
     {
       "name": "iShares Gold Trust (IAU) economic exposure via Ondo Global Markets collateral accounts",
       "pct": 100,
-      "risk": "low"
+      "risk": "low",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "BlackRock (iShares Gold Trust, IAU) via Ondo Global Markets",
+      "riskFactors": [
+        "custody",
+        "counterparty",
+        "market",
+        "liquidity",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure)",
     "confidence": "probable",
     "sources": [
       {
@@ -202,7 +254,7 @@
         "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
       }
     ],
-    "rationale": "Ondo identifies IAUon as economic exposure to iShares Gold Trust through Ondo Global Markets. The reviewed product and risk materials do not publish a dated, reconciled current share inventory, collateral-account allocation, or custody breakdown, so the reserve remains an explicitly bounded aggregate exposure.",
+    "rationale": "Ondo identifies IAUon as economic exposure to iShares Gold Trust through Ondo Global Markets. The exposure identity and its failure domains (BlackRock's IAU fund held via Ondo GM collateral accounts) are explicit in the product documentation, but the reviewed materials do not publish a dated, reconciled current share inventory, collateral-account allocation, or custody breakdown, so the reserve remains an explicitly bounded aggregate exposure.",
     "compositionBasis": "Ondo IAUon product disclosure and Global Markets documentation",
     "scope": "full-composition",
     "knownUnknownExposure": "Current IAU share inventory, collateral-account balances, custody arrangements, and independent reserve reconciliation are not disclosed in the reviewed sources.",
@@ -213,9 +265,35 @@
         "reserveName": "iShares Gold Trust (IAU) economic exposure via Ondo Global Markets collateral accounts",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "The direct economic exposure is identified, but the current reserve slice and its failure-domain details cannot be independently reconciled from the reviewed public materials."
+        "rationale": "The direct economic exposure and its failure-domain identity are disclosed, but the current holdings inventory and custody allocation cannot be independently reconciled from the reviewed public materials."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Ondo Global Markets collateral accounts (custodian undisclosed in reviewed sources)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Ondo Global Markets overview",
+        "url": "https://docs.ondo.finance/ondo-global-markets/overview"
+      },
+      {
+        "label": "Ondo Global Markets important notes",
+        "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
+      }
+    ],
+    "uncertainty": "Ondo states that GM token collateral is held through Global Markets accounts, but the reviewed sources do not name the custodian or broker-dealer, account segregation, insolvency treatment, rehypothecation terms, or provider shares for the IAU position.",
+    "knownUnknownExposurePct": 100
   },
   "notices": [
     {
@@ -228,10 +306,10 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "IAUon on Ethereum uses AccessControl: MINTER_ROLE held by GMTokenManager (subscription/redemption engine) and OndoOFT (LayerZero bridge for cross-chain minting). DEFAULT_ADMIN is a TimelockController with no PROPOSER_ROLE members — effectively locking admin changes. BSC follows the same pattern with a separate GMTokenManager and OndoOFT.",
+    "summary": "IAUon on Ethereum uses AccessControl: MINTER_ROLE held by GMTokenManager (subscription/redemption engine) and OndoOFT (LayerZero bridge for cross-chain minting). DEFAULT_ADMIN is a TimelockController with no PROPOSER_ROLE members \u2014 effectively locking admin changes. BSC follows the same pattern with a separate GMTokenManager and OndoOFT.",
     "controls": [
       {
-        "label": "GMTokenManager (Ethereum) — primary minter",
+        "label": "GMTokenManager (Ethereum) \u2014 primary minter",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
@@ -249,7 +327,7 @@
         ]
       },
       {
-        "label": "OndoOFT (Ethereum) — LayerZero cross-chain minter",
+        "label": "OndoOFT (Ethereum) \u2014 LayerZero cross-chain minter",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
@@ -263,7 +341,7 @@
         ]
       },
       {
-        "label": "IAUon Ethereum DEFAULT_ADMIN TimelockController (no proposers — effectively locked)",
+        "label": "IAUon Ethereum DEFAULT_ADMIN TimelockController (no proposers \u2014 effectively locked)",
         "role": "minter-admin",
         "authorityType": "issuer-backend",
         "directMintAbility": "can-authorize",
@@ -280,7 +358,7 @@
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "At Ethereum block 25295025: IAUon (AccessControl ERC20, non-upgradeable). MINTER_ROLE count=2: GMTokenManager (0x2c158b...) + OndoOFT (0x8ffe0d...). DEFAULT_ADMIN = TimelockController (0x3715b2..., 2h delay, 0 proposers — locked). BSC: DEFAULT_ADMIN = 0x8860bbfc... (contract), MINTER_ROLE count=2 (0x91f8aff... GMTokenManager, 0xeb8ceb... OndoOFT). No proxy admin on any deployment. Economic-control evidence reviewed 2026-07-15: Ankura Trust Company receives read-only account access and independently reconciles Ondo Global Markets assets and liabilities on a daily NAV cadence. The underlying IAU registration does not prudentially supervise the BVI token issuer or IAUon product.",
+      "evidence": "At Ethereum block 25295025: IAUon (AccessControl ERC20, non-upgradeable). MINTER_ROLE count=2: GMTokenManager (0x2c158b...) + OndoOFT (0x8ffe0d...). DEFAULT_ADMIN = TimelockController (0x3715b2..., 2h delay, 0 proposers \u2014 locked). BSC: DEFAULT_ADMIN = 0x8860bbfc... (contract), MINTER_ROLE count=2 (0x91f8aff... GMTokenManager, 0xeb8ceb... OndoOFT). No proxy admin on any deployment. Economic-control evidence reviewed 2026-07-15: Ankura Trust Company receives read-only account access and independently reconciles Ondo Global Markets assets and liabilities on a daily NAV cadence. The underlying IAU registration does not prudentially supervise the BVI token issuer or IAUon product.",
       "reviewer": "Claude Phase 0c continuation",
       "reviewedAt": "2026-07-15",
       "disposition": "scoreable",

@@ -80,12 +80,18 @@
     "summary": "AxCNH is issued by AnchorX Ltd against offshore-CNH reserves. The Ethereum and Conflux FiatTokenV2 deployments each use a 3-of-4 MultiSigWallet as masterMinter and an independently identified owner and proxy-admin path; masterMinters can configure bounded operational minters, owners can replace the masterMinter, and proxy-admin multisigs can replace mint logic. A historical Ethereum operational minter has zero remaining allowance.",
     "upgradeability": {
       "model": "transparent-proxy",
-      "proxyAddresses": ["0x2925ac3be7d585874b88ea51ed50add376ad8239", "0x70bfd7f7eadf9b9827541272589a6b2bb760ae2e"],
+      "proxyAddresses": [
+        "0x2925ac3be7d585874b88ea51ed50add376ad8239",
+        "0x70bfd7f7eadf9b9827541272589a6b2bb760ae2e"
+      ],
       "implementationAddresses": [
         "0xe9ac1d1e50db4082310815d2dad1c3ffdbc9c835",
         "0x47a18acde0dacfea8fddb776d2b1dd3567ce2138"
       ],
-      "adminAddresses": ["0xe1c2b27082e89d889f3c5cf55ce91a7933001a54", "0xea4ab98ba1f1885b87592e38bf868a2a952ff1f0"],
+      "adminAddresses": [
+        "0xe1c2b27082e89d889f3c5cf55ce91a7933001a54",
+        "0xea4ab98ba1f1885b87592e38bf868a2a952ff1f0"
+      ],
       "canChangeMintLogic": true,
       "controlRef": "AxCNH Ethereum proxy-admin multisig",
       "observedAt": "2026-07-15",
@@ -332,14 +338,16 @@
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "AxCNH is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "issuer",
         "name": "AxCNH issuer-operated multichain issuance",
-        "bridgeTypes": ["issuer-native-mint-redeem"]
+        "bridgeTypes": [
+          "issuer-native-mint-redeem"
+        ]
       }
     ],
     "sources": [
@@ -352,32 +360,46 @@
       {
         "id": "conflux:0x70bfd7f7eadf9b9827541272589a6b2bb760ae2e",
         "destinationChain": "conflux",
+        "canonicalChain": "conflux",
         "contractAddress": "0x70bfd7f7eadf9b9827541272589a6b2bb760ae2e",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "AnchorX issuer-native AxCNH",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native AxCNH issuance on conflux: owner() = 0xf80b9c06a601351612b3324d8cd0f57cf7952e1b and masterMinter() = 0x8b26530b369f7eb499597bbde00ed8a4a77d74d0 (AnchorX's Conflux authorities, verified on-chain 2026-07-20); no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "AxCNH on conflux explorer (owner()/masterMinter() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0x70bfd7f7eadf9b9827541272589a6b2bb760ae2e"
+          }
+        ]
       },
       {
         "id": "ethereum:0x2925ac3be7d585874b88ea51ed50add376ad8239",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x2925ac3be7d585874b88ea51ed50add376ad8239",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "AnchorX issuer-native AxCNH",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native AxCNH issuance on ethereum: owner() = 0xf9f304225756edfe9a05d7ea235b0b181380edd5 and masterMinter() = 0x5246b59a9e9473e680ea52ecda4a8dcff3fbfc97 (AnchorX's Ethereum authorities, verified on-chain 2026-07-20); no bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "AxCNH on ethereum explorer (owner()/masterMinter() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0x2925ac3be7d585874b88ea51ed50add376ad8239"
+          }
+        ]
       }
     ]
   }

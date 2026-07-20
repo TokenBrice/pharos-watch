@@ -295,9 +295,71 @@
     {
       "name": "Kava CDP collateral and protocol liquidity",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Kava Mint CDP vault depositors and the Kava protocol (legacy mixed crypto collateral)",
+      "riskFactors": [
+        "market",
+        "credit",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Kava Mint documentation",
+        "url": "https://help.app.kava.io/article/15-what-is-kava-mint"
+      },
+      {
+        "label": "Kava",
+        "url": "https://www.kava.io/"
+      }
+    ],
+    "rationale": "USDX survives as a legacy Kava Mint CDP debt token that trades persistently below its one-dollar target. Kava's current public surfaces no longer publish a collateral inventory for the legacy Mint module, and the legacy CDP REST parameters endpoint returns Not Implemented, so no current constituent weights can be authored. The single aggregate envelope is retained with explicit v9 classification rather than invented constituent weights.",
+    "compositionBasis": "Kava Mint CDP design documentation; no current collateral inventory published (legacy CDP parameter API decommissioned)",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The current collateral composition, vault-level balances, and protocol liquidity backing the legacy USDX debt token are not disclosed by a current primary source.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Kava CDP collateral and protocol liquidity",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "Kava Mint's design documentation establishes the CDP collateral model, but no current source identifies the remaining collateral assets or reconciles them to USDX supply."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Kava Mint on-chain CDP vault contracts",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Kava Mint documentation",
+        "url": "https://help.app.kava.io/article/15-what-is-kava-mint"
+      }
+    ],
+    "uncertainty": "USDX collateral sits in on-chain Kava Mint CDP vaults rather than with a legal custodian. No current source establishes account segregation, insolvency treatment, rehypothecation terms, or the remaining vault-level asset allocation.",
+    "knownUnknownExposurePct": 100
+  },
   "notices": [
     {
       "type": "warning",

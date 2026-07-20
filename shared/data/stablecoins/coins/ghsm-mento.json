@@ -154,13 +154,42 @@
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "GHSm has one tracked Celo deployment and reviewed Mento docs describe obtaining Mento stables on Celo. No durable cross-chain route was verified for this asset, so it is triaged as single-chain/native.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "verified",
     "sources": [
       {
         "label": "Mento docs",
         "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      }
+    ],
+    "routes": [
+      {
+        "id": "celo:0xfaea5f3404bba20d3cc2f8c4b0a888f55a3c7313",
+        "destinationChain": "celo",
+        "canonicalChain": "celo",
+        "contractAddress": "0xfaea5f3404bba20d3cc2f8c4b0a888f55a3c7313",
+        "protocol": "Mento native cGHS",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Celo at block 72618310: token 0xfaea5f3404bba20d3cc2f8c4b0a888f55a3c7313 reports symbol GHSm, name 'Mento Ghanaian Cedi', 18 decimals (Celo blockscout identifies it as 'Celo Ghanian Cedi' / cGHS). owner() = 0x890db8a597940165901372dd7db61c9f246e2147, a TransparentUpgradeableProxy to a TimelockController (0x3eFAD8F997F705675924470Ec84677DB68c5A2d0) \u2014 Mento governance. Native Mento issuance on Celo; no cross-chain route.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 72618310,
+        "sources": [
+          {
+            "label": "Mento docs",
+            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          },
+          {
+            "label": "cGHS on Celo blockscout (verified 2026-07-20)",
+            "url": "https://explorer.celo.org/mainnet/address/0xfaea5f3404bba20d3cc2f8c4b0a888f55a3c7313"
+          }
+        ]
       }
     ]
   },
@@ -169,13 +198,171 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "USDm (Mento Dollar) CDP collateral",
-      "pct": 100,
+      "name": "AUSD (Agora Dollar)",
+      "pct": 27.2,
       "risk": "low",
-      "coinId": "cusd-celo",
-      "depType": "collateral"
+      "coinId": "ausd-agora",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Agora (AUSD issuer)",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "sUSDS (Sky savings USDS)",
+      "pct": 24.4,
+      "risk": "low",
+      "coinId": "susds-sky",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky Ecosystem (sUSDS savings vault)",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "CELO",
+      "pct": 17.8,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Celo network native asset held by Mento Reserve governance",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDT",
+      "pct": 12.3,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether (USDT issuer)",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "EURC (Circle euro stablecoin)",
+      "pct": 12.0,
+      "risk": "low",
+      "coinId": "eurc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle (EURC issuer)",
+      "riskFactors": [
+        "counterparty",
+        "custody"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDC",
+      "pct": 3.9,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle (USDC issuer)",
+      "riskFactors": [
+        "counterparty",
+        "custody"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "stETH (Lido staked ETH)",
+      "pct": 2.4,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Lido (stETH liquid staking issuer)",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
     }
   ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento Reserve dashboard",
+        "url": "https://reserve.mento.org/"
+      },
+      {
+        "label": "Mento reserve analytics API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
+      {
+        "label": "Pinned Mento stablecoin backing config",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+      }
+    ],
+    "rationale": "The prior aggregate USDm wrapper slice could not classify the live Mento adapter rows, leaving the CELO and stETH reserve exposures unstructured. The envelope is restated on the adapter's exact constituent identities and 2026-07-20 captured weights from the issuer-run reserve analytics API; each stablecoin constituent links to its tracked asset, and CELO and stETH now carry explicit classification and failure-domain identity. The live adapter refreshes weights at runtime.",
+    "compositionBasis": "Mento reserve analytics API constituent identities and weights captured 2026-07-20; GHSm is reserve-backed via the shared Mento Reserve per Mento's backing registry",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Every constituent of the shared Mento Reserve captured by the live adapter is identified and either linked to a tracked stablecoin or explicitly classified. Constituent weights drift and are refreshed by the live adapter.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 2,
+        "reserveName": "CELO",
+        "pct": 17.8,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "CELO is the Celo network native asset held as external reserve collateral, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "stETH (Lido staked ETH)",
+        "pct": 2.4,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "stETH is external liquid-staking collateral, not a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Mento Reserve smart contract (Celo)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Mento Reserve dashboard",
+        "url": "https://reserve.mento.org/"
+      },
+      {
+        "label": "Mento protocol documentation",
+        "url": "https://docs.mento.org/"
+      }
+    ],
+    "uncertainty": "Reserve assets are held in the on-chain Mento Reserve contract under Mento governance rather than with a legal custodian, so legal segregation, insolvency treatment, and reuse restrictions are not established by the reviewed sources; constituent-level custody (e.g. Circle, Tether, Lido) sits with each issuer.",
+    "knownUnknownExposurePct": 100
+  },
   "liveReservesConfig": {
     "adapter": "mento",
     "version": 1,

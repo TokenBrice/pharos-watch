@@ -22,8 +22,14 @@
     "reviewer": "SONG-5 Safety Score V9 mechanism review",
     "rationale": "Maple documents syrupUSDT as an ERC-4626 receipt for USDT deployed into segregated, overcollateralized institutional lending and supporting strategies. The product is a private-credit lending-vault wrapper, but the current closed archetype set does not express an inherited stablecoin vault with borrower-credit exposure without incorrectly treating it as direct fiat issuance. Current loan/strategy weights, report scope, claim terms, custody continuity, and reconciliation are not published in the reviewed primary sources.",
     "sources": [
-      {"label": "Maple syrupUSDC and syrupUSDT lender documentation", "url": "https://docs.maple.finance/syrupusdc-for-lenders/introduction"},
-      {"label": "Maple Proof of Reserves announcement", "url": "https://maple.finance/insights/introducing-proof-of-reserves"}
+      {
+        "label": "Maple syrupUSDC and syrupUSDT lender documentation",
+        "url": "https://docs.maple.finance/syrupusdc-for-lenders/introduction"
+      },
+      {
+        "label": "Maple Proof of Reserves announcement",
+        "url": "https://maple.finance/insights/introducing-proof-of-reserves"
+      }
     ]
   },
   "detailProvider": "coingecko",

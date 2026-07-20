@@ -881,10 +881,10 @@
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "VNXAU is an issuer-managed multichain gold token. Reviewed issuer/product sources show multichain issuance and transferability but no independent bridge protocol, so route risk is issuer-native multichain issuance.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "summary": "VNXAU is a VNX-issued multichain gold token with seven independently mintable native deployments. All seven were verified on-chain 2026-07-20: the four EVM deployments are VNXDGR proxies owned by VNX's chain-local VNXManager/role-0 EOAs, the Solana SPL mint authority is VNX's issuer keypair, the Tezos FA2 contract is owned by VNX's tz1 account, and the Stellar asset is issued by VNX's own account. No independent bridge protocol carries the claim, so route risk is issuer-native multichain issuance.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "VNX Gold",
@@ -899,107 +899,156 @@
       {
         "id": "ethereum:0x6d57b2e05f26c26b549231c866bdd39779e4a488",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x6d57b2e05f26c26b549231c866bdd39779e4a488",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "VNX issuer-native VNXAU",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "VNXAU on ethereum explorer (probed 2026-07-20)",
+            "url": "https://eth.blockscout.com/address/0x6d57b2e05f26c26b549231c866bdd39779e4a488"
+          }
+        ],
+        "reviewNote": "Native VNXAU issuance on ethereum (home chain): the VNXDGR proxy resolves to implementation 0x1c17d67706423735b8bbf5b234d63b872bd584c4 with owner() = 0xcdb3867935247049e87c38ea270edd305d84c9ae (VNXManager, issuer role-0 RBAC) at block 25571159 (verified on-chain 2026-07-20); no bridge representation."
       },
       {
         "id": "polygon:0xc8bb8eda94931ca2f20ef43ea7dbd58e68400400",
         "destinationChain": "polygon",
+        "canonicalChain": "polygon",
         "contractAddress": "0xc8bb8eda94931ca2f20ef43ea7dbd58e68400400",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "VNX issuer-native VNXAU",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "VNXAU on polygon explorer (probed 2026-07-20)",
+            "url": "https://polygonscan.com/address/0xc8bb8eda94931ca2f20ef43ea7dbd58e68400400"
+          }
+        ],
+        "reviewNote": "Native VNXAU issuance on polygon: the VNXDGR proxy resolves to implementation 0x5f85aaab5294541fff808d16c026aec31d5b3f87 with owner() = 0xbbe070a5f848b532fd4c9ceee77f66867fb70172 (Polygon VNXManager) at block 90541440 (verified on-chain 2026-07-20); no bridge representation."
       },
       {
         "id": "base:0xac3fe22294beaed9d1fd752323a6d06d12ff3098",
         "destinationChain": "base",
+        "canonicalChain": "base",
         "contractAddress": "0xac3fe22294beaed9d1fd752323a6d06d12ff3098",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "VNX issuer-native VNXAU",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "VNXAU on base explorer (probed 2026-07-20)",
+            "url": "https://base.blockscout.com/address/0xac3fe22294beaed9d1fd752323a6d06d12ff3098"
+          }
+        ],
+        "reviewNote": "Native VNXAU issuance on base: the VNXDGR proxy resolves to implementation 0x709616610224dd12542bf7e862c00d0beb4a66c5 with owner() = 0xd63052e09af164cef57695d3b96043ea848b051f (issuer role-0 EOA, token owner) at block 48863905 (verified on-chain 2026-07-20); no bridge representation."
       },
       {
         "id": "etherlink:0x93f5475da60143c50e8be3fed10c143b0cf8b9e9",
         "destinationChain": "etherlink",
+        "canonicalChain": "etherlink",
         "contractAddress": "0x93f5475da60143c50e8be3fed10c143b0cf8b9e9",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "VNX issuer-native VNXAU",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "VNXAU on etherlink explorer (probed 2026-07-20)",
+            "url": "https://explorer.etherlink.com/address/0x93f5475da60143c50e8be3fed10c143b0cf8b9e9"
+          }
+        ],
+        "reviewNote": "Native VNXAU issuance on etherlink: the VNXDGR proxy resolves to implementation 0x83b787f31c15a3428ea10b0ef4dae59b40e18f12 with owner() = 0x21f5727b19051a0a483f05ce3c379202daa559c1 (issuer role-0 EOA, token owner) at block 48764966 (verified on-chain 2026-07-20); no bridge representation."
       },
       {
         "id": "stellar:VNXAU-GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3",
         "destinationChain": "stellar",
+        "canonicalChain": "stellar",
         "contractAddress": "VNXAU-GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "VNX issuer-native VNXAU",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "VNXAU issuer on Stellar Horizon (probed 2026-07-20)",
+            "url": "https://horizon.stellar.org/accounts/GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3"
+          }
+        ],
+        "reviewNote": "Native VNXAU issuance on stellar: the classic VNXAU asset's issuer account GCKIYYQVIFBIFDRN7BNDNHL3UZSFHT5NHDAISG2N3MWCZY3WNXL3LXN3 carries low/medium/high thresholds 0 and a sole weight-1 master signer (Horizon-verified 2026-07-20) — VNX's own issuer account; no bridge representation."
       },
       {
         "id": "solana:9TPL8droGJ7jThsq4momaoz6uhTcvX2SeMqipoPmNa8R",
         "destinationChain": "solana",
+        "canonicalChain": "solana",
         "contractAddress": "9TPL8droGJ7jThsq4momaoz6uhTcvX2SeMqipoPmNa8R",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "VNX issuer-native VNXAU",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "VNXAU on solana explorer (probed 2026-07-20)",
+            "url": "https://explorer.solana.com/address/9TPL8droGJ7jThsq4momaoz6uhTcvX2SeMqipoPmNa8R"
+          }
+        ],
+        "reviewNote": "Native VNXAU issuance on solana: the SPL mint's mint and freeze authority is the issuer keypair 51b5UJs8hyyDunrZMWL6ACDXY8FQc1hLLA3M54UksxaY (a plain funded signer account, not a bridge program) (getAccountInfo jsonParsed-verified 2026-07-20); no bridge representation."
       },
       {
         "id": "tezos:KT1LSH97386CURN9FgRNqdQJoHaHY6e1vxUv",
         "destinationChain": "tezos",
+        "canonicalChain": "tezos",
         "contractAddress": "KT1LSH97386CURN9FgRNqdQJoHaHY6e1vxUv",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "VNX issuer-native VNXAU",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "VNXAU on TzKT (storage probed 2026-07-20)",
+            "url": "https://tzkt.io/KT1LSH97386CURN9FgRNqdQJoHaHY6e1vxUv"
+          }
+        ],
+        "reviewNote": "Native VNXAU issuance on tezos: the FA2 asset contract KT1LSH97386CURN9FgRNqdQJoHaHY6e1vxUv is owned by VNX's tz1Rk3U91orsqw15gD4a2LyWLvGq5Exadsm3; its RBAC contract KT1KL1zq1BG4UHSagHDqXDhRuNtYnCY6u3qd has role-0 bearers tz1Rk3U91orsqw15gD4a2LyWLvGq5Exadsm3 and tz1cHbzZQwRiThsmCjSPodiv9SWoHEtnciWH (TzKT storage-verified 2026-07-20); no bridge representation."
       }
     ]
   },

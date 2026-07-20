@@ -137,12 +137,10 @@
           "url": "https://etherscan.io/address/0x3c89cd1884e7bef73ca3ef08d2ef6ec338fd8e49"
         }
       ],
-      "evidence": "At Ethereum block 25295183: EUR0 proxy admin chain = ProxyAdmin (0xd0faE00123...) → 8/15 Usual Safe (0x68BFFB0f..., 15 owners read via getOwners()). RegistryAccess (0x65771978...) controls EUR0_MINT role; its owner is a separate 8/15 Usual Safe (0xE89e6931...) with the same 15 signers. EUR0_MINT role holder(s) cannot be enumerated (RegistryAccess uses non-enumerable AccessControl; no RoleGranted events emitted post-deployment).",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "unresolvedQuestions": [
-        "EUR0_MINT role holder(s) on RegistryAccess (0x65771978ff9238162a41c77384c9f55c1ec9e9ab) cannot be enumerated without scanning constructor arguments or off-chain indexing — the direct minter contract address is unknown, blocking full verification."
-      ]
+      "evidence": "At Ethereum block 25295183: EUR0 proxy admin chain = ProxyAdmin (0xd0faE00123...) → 8/15 Usual Safe (0x68BFFB0f..., 15 owners read via getOwners()). RegistryAccess (0x65771978...) controls EUR0_MINT role; its owner is a separate 8/15 Usual Safe (0xE89e6931...) with the same 15 signers. EUR0_MINT role holder(s) cannot be enumerated (RegistryAccess uses non-enumerable AccessControl; no RoleGranted events emitted post-deployment). Follow-up 2026-07-20: the EUR0_MINT role holders are now enumerated — a full-history RoleGranted scan on RegistryAccess 0x65771978ff9238162a41c77384c9f55c1ec9e9ab shows EUR0_MINT (0x6500bcee...) granted to RevenueDistributionModule 0x78331cC94BbF86293bDa80cA10463812b1E73179 and DaoCollateral 0xB9677b45BffBE3d586D2ae2cbcd1775577b166d1 (both Usual protocol contracts, blockscout-verified proxies), with zero RoleRevoked events; hasRole() confirms both still hold the role.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+      "reviewedAt": "2026-07-20",
+      "unresolvedQuestions": []
     },
     "upgradeability": {
       "model": "transparent-proxy",

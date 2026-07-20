@@ -148,8 +148,8 @@
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "USDKG has no cross-chain bridge: it is a standalone Tether-style token issued and burned natively on each chain by the issuer (Gold Dollar / OJSC Virtual Asset Issuer) via issue()/redeem() functions, with separate, non-identical contract addresses on Ethereum (0xe820...45e3) and Tron (TXZo12...nwEG). Supply on each chain is independently issuer-minted against gold reserves with no cross-chain dependency, so the route is single-chain-or-native rather than opaque.",
-    "reviewedAt": "2026-06-21",
-    "reviewer": "Pharos bridge-route re-verification",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
     "confidence": "verified",
     "sources": [
       {
@@ -178,31 +178,52 @@
         "id": "tron:TXZo12qvnEVKvU2zbfuQeMXKusWyxonwEG",
         "destinationChain": "tron",
         "contractAddress": "TXZo12qvnEVKvU2zbfuQeMXKusWyxonwEG",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USDKG issuer-native (Gold Dollar)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "TronGrid constant call on 2026-07-20 confirms name() = USDKG and owner() = TEmt2RaL2w6x51Lkx75hsDpBv63aPYA8jd, the verified 3-of-7 issuer multisig; USDKG is issued natively per chain via owner-gated issue()/redeem() with no bridge in scope (ConsenSys Diligence audit). No bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDKG Tron token on TronScan",
+            "url": "https://tronscan.org/#/token20/TXZo12qvnEVKvU2zbfuQeMXKusWyxonwEG"
+          },
+          {
+            "label": "ConsenSys Diligence — USDKG smart contract audit",
+            "url": "https://diligence.consensys.io/audits/2025/01/usdkg/"
+          }
+        ]
       },
       {
         "id": "ethereum:0xe820c06321e60d36257c666643fa5436643445e3",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xe820c06321e60d36257c666643fa5436643445e3",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "USDKG issuer-native (Gold Dollar)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "owner() read on-chain 2026-07-20 returns the 3-of-7 issuer Safe 0xcf355ad32abf378f067fa93a28d96a767feb7377 (getOwners() = 7, getThreshold() = 3); USDKG is issued natively per chain via owner-gated issue()/redeem() with no bridge in scope (ConsenSys Diligence audit). No bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDKG Ethereum token on Etherscan",
+            "url": "https://etherscan.io/address/0xe820c06321e60d36257c666643fa5436643445e3"
+          },
+          {
+            "label": "ConsenSys Diligence — USDKG smart contract audit",
+            "url": "https://diligence.consensys.io/audits/2025/01/usdkg/"
+          }
+        ]
       }
     ]
   },
@@ -233,9 +254,7 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": true,
-        "failureDomainKeys": [
-          "issuer:gold-dollar"
-        ],
+        "failureDomainKeys": ["issuer:gold-dollar"],
         "observedAt": "2026-07-14",
         "evidence": "Gold Dollar operates the centralized 1:1 mint/redeem for USDKG against custodied physical gold, with KYC/AML required for all redemptions; no permissionless or user-collateralized mint route exists.",
         "sources": [
@@ -251,11 +270,12 @@
         "authorityType": "multisig",
         "directMintAbility": "can-authorize",
         "chain": "ethereum",
+        "address": "0xcf355ad32abf378f067fa93a28d96a767feb7377",
         "canRaiseCap": true,
         "threshold": 3,
         "signerCount": 7,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-07-20",
         "observedBlock": 25530817,
         "evidence": "At Ethereum block 25530817, owner() on USDKG token 0xe820...45e3 returned 0xcF355a...7377. getOwners() returned seven owners and getThreshold() returned 3. The verified token and multisig bytecode expose no upgrade or module path; issue() and redeem() are owner-gated.",
         "sources": [
@@ -303,8 +323,8 @@
     "supervision": "none",
     "review": {
       "evidence": "Gold Dollar is the sole issuer of USDKG and operates native owner-gated issue/redeem contracts on Ethereum and Tron. Current reads resolve separate 3-of-7 multisigs on both deployments. Verified bytecode and storage show direct immutable contracts rather than proxy deployments. The only public reserve audit for USDKG is a single Kreston Global ISRS 4400 agreed-upon-procedures gold review valued at 2025-11-28; despite a claimed quarterly cadence no newer report was found as of 2026-07, making the sole reconciliation stale and agreed-upon-procedures lighter than an attestation opinion, so reconciliation is not credibly established. The Kyrgyz oversight regimes checked are AML/VASP-only and the nominal regulator (Ministry of Finance) also owns the issuing state entity, so there is no arms-length prudential supervisor and supervision is none.",
-      "reviewer": "Codex V9 control curation; Claude SOL-V mint-tier mop-up",
-      "reviewedAt": "2026-07-16",
+      "reviewer": "Codex V9 control curation; Claude SOL-V mint-tier mop-up; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "USDKG transparency",
@@ -373,6 +393,33 @@
         "rationale": "Physical gold is an exogenous commodity reserve rather than a tracked stablecoin dependency."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "LLC Virelint Group (reserve custodian; gold stored in sealed boxes at an unnamed bank)",
+        "role": "custodian",
+        "jurisdiction": "Kyrgyzstan"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "USDKG transparency and Q4 2025 reserve report index",
+        "url": "https://www.usdkg.com/transparency"
+      },
+      {
+        "label": "USDKG Kreston gold-audit summary (2025-12-08)",
+        "url": "https://www.usdkg.com/blog/usdkgs-gold-audit-a-new-standard-for-stablecoins"
+      }
+    ],
+    "uncertainty": "Kreston's quarterly engagement and USDKG's transparency page verify roughly 376 kg of LBMA Good Delivery gold held in sealed boxes at an unnamed bank under LLC Virelint Group's custody; the depository bank, bankruptcy remoteness, and any reuse permissions are not disclosed.",
+    "knownUnknownExposurePct": 100
   },
   "launchDate": "2025-12-01"
 }

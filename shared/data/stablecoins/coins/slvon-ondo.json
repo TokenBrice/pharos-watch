@@ -146,7 +146,7 @@
         ]
       },
       {
-        "label": "OndoOFT (MINTER_ROLE[1] — bridge)",
+        "label": "OndoOFT (MINTER_ROLE[1] \u2014 bridge)",
         "role": "direct-minter",
         "authorityType": "contract",
         "address": "0xf9deffd6164d2b6714f3344cfc35c4f766fa9d6e",
@@ -309,8 +309,8 @@
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "SLVon is an Ondo Global Markets token, and Ondo documents its token bridge as a LayerZero-based bridge for Global Markets assets, including bridging to HyperEVM. Pharos scores this as external lock/mint/OFT-style route exposure.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
     "confidence": "verified",
     "protocols": [
       {
@@ -342,62 +342,104 @@
       {
         "id": "ethereum:0xf3e4872e6a4cf365888d93b6146a2baa7348f1a4",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xf3e4872e6a4cf365888d93b6146a2baa7348f1a4",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ondo Global Markets native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native SLVon: MINTER_ROLE enumeration (read 2026-07-20) shows the Ondo GMTokenManager 0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c (12,828-byte issuance contract) plus the chain's OndoOFT as the two mint authorities. Ondo Global Markets issues natively on this chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ondo Global Markets",
+            "url": "https://ondo.finance/"
+          }
+        ]
       },
       {
         "id": "bsc:0x8b872732b07be325a8803cdb480d9d20b6f8d11b",
         "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x8b872732b07be325a8803cdb480d9d20b6f8d11b",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Ondo Global Markets native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native SLVon: MINTER_ROLE enumeration (read 2026-07-20) shows the Ondo GMTokenManager 0x91f8aff3738825e8eb16fc6f6b1a7a4647bdb299 (12,828-byte issuance contract) plus the chain's OndoOFT as the two mint authorities. Ondo Global Markets issues natively on this chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ondo Global Markets",
+            "url": "https://ondo.finance/"
+          }
+        ]
       },
       {
         "id": "solana:iy11ytbSGcUnrjE6Lfv78TFqxKyUESfku1FugS9ondo",
+        "sourceChain": "ethereum",
         "destinationChain": "solana",
+        "canonicalChain": "ethereum",
         "contractAddress": "iy11ytbSGcUnrjE6Lfv78TFqxKyUESfku1FugS9ondo",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "OndoOFT on Solana (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "SLVon on Solana shares the Ondo program mint authority PDA 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD (no SOL account exists at the address \u2014 a program-derived mint authority, read 2026-07-20 via Solana RPC); freeze authority 51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK is Ondo's. DefiLlama attributes Solana SLVon supply to Ondo's cross-chain deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "solana",
+        "controllerAddress": "9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:solana:9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD"
+        ],
+        "sources": [
+          {
+            "label": "Ondo Global Markets",
+            "url": "https://ondo.finance/"
+          }
+        ]
       },
       {
         "id": "hyperevm:0xd53d98d13d93c817011645442c2e4d46e499b460",
+        "sourceChain": "ethereum",
         "destinationChain": "hyperevm",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xd53d98d13d93c817011645442c2e4d46e499b460",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "OndoOFT (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "SLVon on HyperEVM is minted solely by the OndoOFT contract 0x7b97e37f7ec5271ef24eb2a3c5bd1fcf308c2a85 (sole MINTER_ROLE member, read 2026-07-20): a 6,152-byte LayerZero OApp with endpoint() = HyperEVM LZ V2 endpoint 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9 and token() = this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x7b97e37f7ec5271ef24eb2a3c5bd1fcf308c2a85",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:hyperevm:0x7b97e37f7ec5271ef24eb2a3c5bd1fcf308c2a85"
+        ],
+        "sources": [
+          {
+            "label": "Ondo Global Markets",
+            "url": "https://ondo.finance/"
+          }
+        ]
       }
     ]
   },
@@ -424,12 +466,22 @@
     {
       "name": "iShares Silver Trust (SLV) economic exposure via Ondo Global Markets collateral accounts",
       "pct": 100,
-      "risk": "low"
+      "risk": "low",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "Ondo Global Markets (BVI) Limited; iShares Silver Trust (BlackRock) shares held at US-registered custodial broker-dealers",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "custody",
+        "legal",
+        "liquidity"
+      ],
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-5 Safety Score V9 reserve review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
     "confidence": "probable",
     "sources": [
       {
@@ -441,20 +493,48 @@
         "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
       }
     ],
-    "rationale": "Ondo identifies SLVon as economic exposure to the iShares Silver Trust held through Global Markets collateral accounts, but does not publish a current underlying inventory or custody allocation for the full token supply.",
+    "rationale": "Ondo documents SLVon as fully backed by iShares Silver Trust ETF shares plus cash in transit, with Ankura Trust Company providing daily third-party verification of holdings; the reserve is therefore the SLV ETF exposure itself, held through Ondo Global Markets collateral accounts. Custodian identities and the cash-buffer share are not published, which is recorded as a custody known-unknown rather than a composition gap.",
     "compositionBasis": "Ondo Global Markets product and trust disclosures",
-    "scope": "selected-slices",
-    "knownUnknownExposure": "The complete current SLV exposure, collateral account allocation, and custody-provider split are undisclosed.",
-    "knownUnknownExposurePct": 100,
+    "scope": "full-composition",
+    "knownUnknownExposure": "No reserve asset is unclassified; custodial broker-dealer identities and the cash-in-transit share are undisclosed (tracked in the custody profile).",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "iShares Silver Trust (SLV) economic exposure via Ondo Global Markets collateral accounts",
         "pct": 100,
-        "disposition": "insufficient-evidence",
-        "rationale": "Product disclosures identify the economic exposure but do not provide the current structured collateral and custody inventory."
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "iShares Silver Trust ETF shares are exogenous securities backing rather than a tracked stablecoin dependency."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "US-registered custodial broker-dealer(s) holding the underlying SLV shares (undisclosed)",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Ankura Trust Company (independent verification and security agent)",
+        "role": "other",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Ondo Global Markets trust and transparency",
+        "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+      }
+    ],
+    "uncertainty": "Ondo documents a bankruptcy-remote SPV with segregated assets, daily Ankura verification, and a first-priority security interest over the collateral, with holdings at one or more US-registered custodial broker-dealers; the broker-dealer identities, per-custodian split, cash-in-transit buffer, and any reuse terms are not published.",
+    "knownUnknownExposurePct": 100
   },
   "notices": [
     {

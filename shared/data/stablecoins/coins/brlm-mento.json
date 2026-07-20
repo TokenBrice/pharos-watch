@@ -83,9 +83,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "BRLm is documented as a Mento stable on Celo and the editable registry has only a Celo deployment. The row was reviewed as native/single-chain for bridge-route scoring.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "BRLm is documented as a Mento stable on Celo and the editable registry has only a Celo deployment. The row was reviewed as native/single-chain for bridge-route scoring. 2026-07-20 cohort dc-1 pass: added the reviewed native home-chain route row.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
     "confidence": "verified",
     "protocols": [
       {
@@ -103,6 +103,33 @@
       {
         "label": "Mento website",
         "url": "https://www.mento.org/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "celo:0xe8537a3d056da446677b9e9d6c5db704eaab4787",
+        "destinationChain": "celo",
+        "contractAddress": "0xe8537a3d056da446677b9e9d6c5db704eaab4787",
+        "protocol": "Mento BRLm (native issuance on Celo)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Mento",
+            "url": "https://www.mento.org/"
+          },
+          {
+            "label": "BRLm on Celoscan",
+            "url": "https://celoscan.io/address/0xe8537a3d056da446677b9e9d6c5db704eaab4787"
+          }
+        ],
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Mento Brazilian Real', symbol BRLm; owner() = 0x890db8a597940165901372dd7db61c9f246e2147 (Mento governance) — native issuance on Celo (the asset's home chain)."
       }
     ]
   },
@@ -356,7 +383,11 @@
       "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Agora (AUSD issuer)",
-      "riskFactors": ["counterparty", "custody", "smart-contract"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
@@ -367,7 +398,10 @@
       "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Sky Ecosystem (sUSDS savings vault)",
-      "riskFactors": ["counterparty", "smart-contract"],
+      "riskFactors": [
+        "counterparty",
+        "smart-contract"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
@@ -376,7 +410,11 @@
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Celo network native asset held by Mento Reserve governance",
-      "riskFactors": ["market", "liquidity", "concentration"],
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "concentration"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
@@ -387,7 +425,11 @@
       "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Tether (USDT issuer)",
-      "riskFactors": ["counterparty", "custody", "concentration"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
@@ -398,7 +440,10 @@
       "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle (EURC issuer)",
-      "riskFactors": ["counterparty", "custody"],
+      "riskFactors": [
+        "counterparty",
+        "custody"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
@@ -409,7 +454,10 @@
       "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle (USDC issuer)",
-      "riskFactors": ["counterparty", "custody"],
+      "riskFactors": [
+        "counterparty",
+        "custody"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
@@ -418,7 +466,11 @@
       "risk": "low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Lido (stETH liquid staking issuer)",
-      "riskFactors": ["market", "smart-contract", "liquidity"],
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity"
+      ],
       "liquidityHorizon": "immediate"
     }
   ],
@@ -513,7 +565,10 @@
         "pools": [
           {
             "selfTokenAddress": "0xe8537a3d056DA446677B9E9d6c5dB704EaAb4787",
-            "counterAsset": { "address": "0x765De816845861e75A25fCA122bb6898B8B1282a", "label": "USDm" }
+            "counterAsset": {
+              "address": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+              "label": "USDm"
+            }
           }
         ],
         "sourceUrls": [

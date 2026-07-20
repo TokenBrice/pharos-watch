@@ -146,9 +146,9 @@
           "url": "https://www.lorenzo-protocol.xyz/"
         }
       ],
-      "evidence": "Local variant metadata ties sUSD1+ to reviewed USD1 authority; the child wrapper creates strategy shares, not base USD1 supply.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "Local variant metadata ties sUSD1+ to reviewed USD1 authority; the child wrapper creates strategy shares, not base USD1 supply. Follow-up probes 2026-07-20: the BSC UUPS proxy 0x4f2760b32720f013e900dc92f65480137391199b still resolves to impl 0xaafe784a51f119d38e57717fd8a00f844bd86f13 (48,824 bytes, unverified); owner()/getOwner()/admin()/DEFAULT_ADMIN_ROLE() all revert through the proxy; storage slot 0 holds 0x507ec48ef26919a205a9f3b8aaf69532e20c0987, itself a UUPS proxy (impl 0x6e0f4dc0d748e4917b418357d989b2023b8b7a20) whose owner getters also revert. The upgrade authority therefore remains genuinely unestablished from public reads; the unresolved question stands until Lorenzo discloses the admin or the impl source is verified.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+      "reviewedAt": "2026-07-20",
       "unresolvedQuestions": [
         "BSC UUPS proxy at 0x4f2760b32720f013e900dc92f65480137391199b has impl 0xaafe784a51f119d38e57717fd8a00f844bd86f13 with OZ5 owner slot=0x0 and no accessible owner()/DEFAULT_ADMIN_ROLE. BSCScan/Blockscout return no verified source for the impl (48824 bytes). Cannot confirm who controls _authorizeUpgrade. Need Lorenzo team disclosure or impl source verification to promote."
       ]
@@ -185,7 +185,15 @@
       "depType": "wrapper",
       "assetClass": "fund-share",
       "issuerOrObligor": "Lorenzo Protocol USD1+ OTF vault and its undisclosed strategy execution team; settlement asset USD1 issued by BitGo for World Liberty Financial",
-      "riskFactors": ["counterparty", "custody", "smart-contract", "market", "basis", "liquidity", "legal"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "market",
+        "basis",
+        "liquidity",
+        "legal"
+      ],
       "liquidityHorizon": "over-seven-days"
     }
   ],
@@ -194,8 +202,14 @@
     "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
     "confidence": "probable",
     "sources": [
-      { "label": "Lorenzo documentation", "url": "https://lorenzo-protocol.gitbook.io/docs" },
-      { "label": "Lorenzo USD1+ OTF guide (issuer publication)", "url": "https://lorenzo-protocol.ghost.io/your-quick-guide-to-joining-the-lorenzo-usd1-otf-testnet/" }
+      {
+        "label": "Lorenzo documentation",
+        "url": "https://lorenzo-protocol.gitbook.io/docs"
+      },
+      {
+        "label": "Lorenzo USD1+ OTF guide (issuer publication)",
+        "url": "https://lorenzo-protocol.ghost.io/your-quick-guide-to-joining-the-lorenzo-usd1-otf-testnet/"
+      }
     ],
     "rationale": "Re-verified 2026-07-20 via Lorenzo's own USD1+ OTF guide: USD1+ is the first On-chain Traded Fund on Lorenzo's Financial Abstraction Layer on BNB Chain, aggregating RWA, CeFi quant-trading, and DeFi returns with all yield settled in USD1; sUSD1+ is the staked receipt minted against USD1 deposits at unit NAV, subject to a 7-day minimum hold and a biweekly withdrawal-settlement cycle back into USD1. The wrapper dependency on tracked USD1 (usd1-world-liberty-financial, depType wrapper) is therefore confirmed, but Lorenzo publishes no strategy-level weights or portfolio breakdown, so scope stays dependency-relationships rather than full-composition. Risk stays high: a delta-neutral sleeve alone would tier medium, but the managed strategy runs through undisclosed off-chain CeFi execution with unverified wrapper upgrade authority, so the riskier tier is kept.",
     "compositionBasis": "Lorenzo USD1+ OTF issuer guide and protocol documentation fetched 2026-07-20",

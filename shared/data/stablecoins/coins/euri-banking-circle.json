@@ -231,9 +231,9 @@
   "launchDate": "2024-08-26",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "EURI is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "summary": "EURI is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified. 2026-07-20 cohort dc-1 pass: Ethereum and BSC rows both confirmed issuer-native EURI deployments (matches the verified mint-authority review: same EOA owner and same proxy-admin on both chains).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
     "confidence": "verified",
     "protocols": [
       {
@@ -259,31 +259,43 @@
         "id": "ethereum:0x9d1a7a3191102e9f900faa10540837ba84dcbae7",
         "destinationChain": "ethereum",
         "contractAddress": "0x9d1a7a3191102e9f900faa10540837ba84dcbae7",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "EURI (Banking Circle issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'EURITE', symbol EURI, 18 decimals on ethereum; uniform address, uniform owner() 0xfca77c0891578e371ee9ff34d6f653d8ec3d9e9d and uniform EIP-1967 admin 0xe0c6d43e59ef5c56339214e1ddc9f869805d82ec on both Ethereum and BSC — issuer-native Banking Circle deployment, consistent with the verified mint-authority review.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "EURI on Etherscan",
+            "url": "https://etherscan.io/address/0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
+          }
+        ]
       },
       {
         "id": "bsc:0x9d1a7a3191102e9f900faa10540837ba84dcbae7",
         "destinationChain": "bsc",
         "contractAddress": "0x9d1a7a3191102e9f900faa10540837ba84dcbae7",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "EURI (Banking Circle issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'EURITE', symbol EURI, 18 decimals on bsc; uniform address, uniform owner() 0xfca77c0891578e371ee9ff34d6f653d8ec3d9e9d and uniform EIP-1967 admin 0xe0c6d43e59ef5c56339214e1ddc9f869805d82ec on both Ethereum and BSC — issuer-native Banking Circle deployment, consistent with the verified mint-authority review.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "EURI on Etherscan",
+            "url": "https://etherscan.io/address/0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
+          }
+        ]
       }
     ]
   }

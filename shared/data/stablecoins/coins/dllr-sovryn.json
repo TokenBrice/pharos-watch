@@ -109,7 +109,7 @@
         "address": "0x5f777270259e32f79589fe82269db6209f7b7582",
         "capDescription": "Mints DLLR 1:1 only against deposited accepted bAssets (ZUSD, DOC); supply is bounded by deposited underlying stablecoins, not a fresh CDP.",
         "canRaiseCap": false,
-        "evidence": "At Rootstock block 8935202, owner() on MassetManager proxy 0x5f777270 returned Timelock 0x967c84b731679e36a344002b8e3ce50620a7f69f. EIP-1967 proxy admin slot returned ProxyAdmin 0x466e023ddd08b53385b4763b883ab63820c123df, whose owner() also returned the same Timelock. The Timelock's delay (storage slot 2) = 0x2a300 = 172800 seconds (48 hours). The Timelock's admin() = GovernorAlpha 0x6496df39d000478a7a7352c01e0e713835051ccd, whose timelock() = Timelock 0x967c84. This confirms a full DAO governance chain: SOV-token GovernorAlpha → 48-hour Timelock → MassetManager.",
+        "evidence": "At Rootstock block 8935202, owner() on MassetManager proxy 0x5f777270 returned Timelock 0x967c84b731679e36a344002b8e3ce50620a7f69f. EIP-1967 proxy admin slot returned ProxyAdmin 0x466e023ddd08b53385b4763b883ab63820c123df, whose owner() also returned the same Timelock. The Timelock's delay (storage slot 2) = 0x2a300 = 172800 seconds (48 hours). The Timelock's admin() = GovernorAlpha 0x6496df39d000478a7a7352c01e0e713835051ccd, whose timelock() = Timelock 0x967c84. This confirms a full DAO governance chain: SOV-token GovernorAlpha \u2192 48-hour Timelock \u2192 MassetManager.",
         "sources": [
           {
             "label": "Rootstock explorer: Mynt MassetManager",
@@ -122,7 +122,7 @@
         "role": "governor",
         "authorityType": "dao-governor",
         "directMintAbility": "can-authorize",
-        "canRaiseCap": false,
+        "canRaiseCap": true,
         "chain": "rootstock",
         "address": "0x6496df39d000478a7a7352c01e0e713835051ccd",
         "evidence": "GovernorAlpha 0x6496df controls the 48-hour Timelock 0x967c84 that owns the MassetManager and its ProxyAdmin. GovernorAlpha.timelock() returns 0x967c84. SOV stakers vote to authorize changes via GovernorAlpha proposals queued through the Timelock.",
@@ -131,13 +131,14 @@
             "label": "Rootstock explorer: Sovryn Timelock",
             "url": "https://rootstock.blockscout.com/address/0x967c84b731679e36a344002b8e3ce50620a7f69f"
           }
-        ]
+        ],
+        "capDescription": "Sovryn GovernorAlpha (behind a 48-hour Timelock) administers the Mynt basket: it can add accepted bAssets and adjust basket parameters, which raises DLLR mint capacity beyond the current deposit-bounded cap."
       }
     ],
     "review": {
       "evidence": "At Rootstock block 8935202: MassetManager proxy 0x5f777270 owner() = Timelock 0x967c84b7; EIP-1967 proxy-admin 0x466e023d owner() = same Timelock. Timelock delay slot = 0x2a300 (48 h). Timelock admin() = GovernorAlpha 0x6496df39; GovernorAlpha timelock() = 0x967c84b7 (confirmed circular, correct). Full DAO governance chain verified on-chain.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Sovryn wiki: Sovryn Dollar",
@@ -166,7 +167,11 @@
       "risk": "medium",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Sovryn Zero protocol",
-      "riskFactors": ["market", "smart-contract", "liquidity"],
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity"
+      ],
       "liquidityHorizon": "unknown"
     },
     {
@@ -177,7 +182,11 @@
       "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Money on Chain protocol",
-      "riskFactors": ["market", "smart-contract", "liquidity"],
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
@@ -185,14 +194,25 @@
     "reviewedAt": "2026-07-14",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "probable",
-    "sources": [{"label": "Sovryn Mynt and DLLR documentation", "url": "https://build.sovryn.com/builder-portal/smart-contracts/mynt"}],
+    "sources": [
+      {
+        "label": "Sovryn Mynt and DLLR documentation",
+        "url": "https://build.sovryn.com/builder-portal/smart-contracts/mynt"
+      }
+    ],
     "rationale": "Sovryn documents DLLR as a 1:1 Mynt basket whose currently supported bAssets are ZUSD and DOC, both BTC-backed. The issuer documentation does not publish a current basket balance or an API for the live ZUSD/DOC allocation.",
     "compositionBasis": "Sovryn Mynt supported-bAsset documentation and captured live balance labels",
     "scope": "full-composition",
     "knownUnknownExposure": "No issuer-published current balance or allocation proves the live ZUSD/DOC split emitted by the reserve producer.",
     "knownUnknownExposurePct": 99.998,
     "nonLinkDispositions": [
-      {"reserveIndex": 0, "reserveName": "Sovryn Zero ZUSD", "pct": 99.998, "disposition": "basket-needs-split", "rationale": "Issuer confirms ZUSD is supported but does not publish the current basket balance."}
+      {
+        "reserveIndex": 0,
+        "reserveName": "Sovryn Zero ZUSD",
+        "pct": 99.998,
+        "disposition": "basket-needs-split",
+        "rationale": "Issuer confirms ZUSD is supported but does not publish the current basket balance."
+      }
     ]
   },
   "liveReservesConfig": {
@@ -240,5 +260,51 @@
       ]
     }
   },
-  "launchDate": "2023-03-16"
+  "launchDate": "2023-03-16",
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "DLLR exists only on Rootstock; Sovryn's Mynt aggregator mints DLLR 1:1 against accepted bAsset stablecoins on Rootstock. No cross-chain route.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "DLLR on Rootstock explorer (verified 2026-07-20)",
+        "url": "https://explorer.rootstock.io/address/0xc1411567d2670e24d9c4daaa7cda95686e1250aa"
+      },
+      {
+        "label": "Sovryn docs",
+        "url": "https://wiki.sovryn.com/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "rootstock:0xc1411567d2670e24d9c4daaa7cda95686e1250aa",
+        "destinationChain": "rootstock",
+        "canonicalChain": "rootstock",
+        "contractAddress": "0xc1411567d2670e24d9c4daaa7cda95686e1250aa",
+        "protocol": "Sovryn Mynt native DLLR",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Rootstock at block 9071400: DLLR token 0xc1411567d2670e24d9c4daaa7cda95686e1250aa (symbol DLLR). Minting runs through the Mynt MassetManager 1:1 bAsset aggregator per the verified mint-authority review; Sovryn GovernorAlpha (48h Timelock) administers the basket. Native single-chain deployment; no bridge mints this token.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 9071400,
+        "sources": [
+          {
+            "label": "DLLR on Rootstock explorer (verified 2026-07-20)",
+            "url": "https://explorer.rootstock.io/address/0xc1411567d2670e24d9c4daaa7cda95686e1250aa"
+          },
+          {
+            "label": "Sovryn docs",
+            "url": "https://wiki.sovryn.com/"
+          }
+        ]
+      }
+    ]
+  }
 }

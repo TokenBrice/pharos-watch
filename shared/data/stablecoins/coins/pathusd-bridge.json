@@ -234,9 +234,9 @@
       }
     ],
     "review": {
-      "evidence": "Live RPC and a traced pathUSD issuance resolved the prior claim that Tempo had no usable public RPC or explorer: the active issuer proxy and its current ISSUER_ROLE membership are directly observable. At block 30043787, pathUSD was unpaused, had transfer policy 2, and had a 100,000,000 supply cap. Tempo's TIP-20 implementation exposes hasRole(address, bytes32) but no role-member enumeration; the current DEFAULT_ADMIN_ROLE and policy-role holder set therefore remains unavailable without issuer disclosure. The issuer proxy uses an EIP-1967 implementation slot, but owner(), admin(), and upgrade introspection calls did not resolve its upgrade controller, so its mint-logic mutability is recorded as unknown.",
-      "reviewer": "Codex Safety Score V9 access review",
-      "reviewedAt": "2026-07-15",
+      "evidence": "Live RPC and a traced pathUSD issuance resolved the prior claim that Tempo had no usable public RPC or explorer: the active issuer proxy and its current ISSUER_ROLE membership are directly observable. At block 30043787, pathUSD was unpaused, had transfer policy 2, and had a 100,000,000 supply cap. Tempo's TIP-20 implementation exposes hasRole(address, bytes32) but no role-member enumeration; the current DEFAULT_ADMIN_ROLE and policy-role holder set therefore remains unavailable without issuer disclosure. The issuer proxy uses an EIP-1967 implementation slot, but owner(), admin(), and upgrade introspection calls did not resolve its upgrade controller, so its mint-logic mutability is recorded as unknown. 2026-07-20 dc-1 pass: the active TIP-20 issuer proxy mints cap-limited with canRaiseCap=false and no separate cap-raise authority on Tempo, so the reviewed economic mint cap is bounded.",
+      "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+      "reviewedAt": "2026-07-20",
       "disposition": "scoreable",
       "sources": [
         {
@@ -255,8 +255,10 @@
           "label": "Tempo public RPC",
           "url": "https://rpc.tempo.xyz"
         }
-      ]
-    }
+      ],
+      "unresolvedQuestions": []
+    },
+    "economicCapSemantics": "bounded"
   },
   "launchDate": "2026-03-18"
 }

@@ -68,7 +68,7 @@
         "sourceKind": "issuer-disclosure"
       },
       {
-        "label": "RWA.xyz pUSD asset page — lists Nest (Marshall Islands DAO LLC, LEI 254900BB9T1QYAT04892) as issuer; eligible investors: Non-U.S. Investor",
+        "label": "RWA.xyz pUSD asset page \u2014 lists Nest (Marshall Islands DAO LLC, LEI 254900BB9T1QYAT04892) as issuer; eligible investors: Non-U.S. Investor",
         "url": "https://app.rwa.xyz/assets/pUSD",
         "sourceKind": "issuer-disclosure"
       }
@@ -118,8 +118,8 @@
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "pUSD is documented as Plume's stablecoin and current materials describe direct mint/redeem and ecosystem use rather than a separate third-party bridge route. Pharos treats the route as native to its supported deployments.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
     "confidence": "probable",
     "sources": [
       {
@@ -137,30 +137,48 @@
         "destinationChain": "ethereum",
         "contractAddress": "0xdddd73f5df1f0dc31373357beac77545dc5a6f3f",
         "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on ethereum at block 25570987: pUSD token 0xdddd73f5df1f0dc31373357beac77545dc5a6f3f (symbol pUSD) owner() = BoringVault Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (getThreshold/getOwners = 3-of-6, the Plume/Nucleus vault owner Safe per the verified mint-authority review); no bridge endpoint surface. Plume's native stablecoin deployment administered by the issuer vault Safe on this chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "plume",
+        "canonicalChain": "plume",
+        "observedBlock": 25570987,
+        "sources": [
+          {
+            "label": "PUSD on ethereum explorer (verified 2026-07-20)",
+            "url": "https://etherscan.io/address/0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
+          }
+        ]
       },
       {
         "id": "plume:0xdddd73f5df1f0dc31373357beac77545dc5a6f3f",
         "destinationChain": "plume",
         "contractAddress": "0xdddd73f5df1f0dc31373357beac77545dc5a6f3f",
         "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on plume at block 82174949: pUSD token 0xdddd73f5df1f0dc31373357beac77545dc5a6f3f (symbol pUSD) owner() = BoringVault Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (getThreshold/getOwners = 3-of-6, the Plume/Nucleus vault owner Safe per the verified mint-authority review); no bridge endpoint surface. Plume's native stablecoin deployment administered by the issuer vault Safe on this chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "plume",
+        "canonicalChain": "plume",
+        "observedBlock": 82174949,
+        "sources": [
+          {
+            "label": "PUSD on plume explorer (verified 2026-07-20)",
+            "url": "https://explorer.plume.org/address/0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
+          }
+        ]
       }
     ]
   },
@@ -191,7 +209,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "pUSD is a Nucleus BoringVault (non-upgradeable) on both Ethereum and Plume; owner()=3-of-6 Plume Safe (0xa08a…) on both chains; a RolesAuthority (0x97bc…, same Safe as owner) gates enter(). Teller at 0x41bdb4 (Plume) is the OFAC-gated deposit gateway confirmed by live mint transactions.",
+    "summary": "pUSD is a Nucleus BoringVault (non-upgradeable) on both Ethereum and Plume; owner()=3-of-6 Plume Safe (0xa08a\u2026) on both chains; a RolesAuthority (0x97bc\u2026, same Safe as owner) gates enter(). Teller at 0x41bdb4 (Plume) is the OFAC-gated deposit gateway confirmed by live mint transactions.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
@@ -277,7 +295,7 @@
         "failureDomainKeys": [
           "plume:0x41bdb4aa4a63a5b2efc531858d3118392b1a1c3d"
         ],
-        "evidence": "At Plume block 74171811 (2026-06-11), live mint transactions (e.g. 0xcf58692fa0f5…) showed callers invoking 0x41bdb4aa4a63a5b2efc531858d3118392b1a1c3d (Teller, 2304 bytes) which in turn triggered Transfer-from-zero on the BoringVault. The Teller is the OFAC-gated predicate proxy deposit gateway; RolesAuthority owned by same 3-of-6 Safe controls which addresses can call enter().",
+        "evidence": "At Plume block 74171811 (2026-06-11), live mint transactions (e.g. 0xcf58692fa0f5\u2026) showed callers invoking 0x41bdb4aa4a63a5b2efc531858d3118392b1a1c3d (Teller, 2304 bytes) which in turn triggered Transfer-from-zero on the BoringVault. The Teller is the OFAC-gated predicate proxy deposit gateway; RolesAuthority owned by same 3-of-6 Safe controls which addresses can call enter().",
         "sources": [
           {
             "label": "pUSD Teller on Plume Explorer",
@@ -291,7 +309,7 @@
       }
     ],
     "review": {
-      "evidence": "At Ethereum block 25531116 and Plume block 81049017 (2026-07-14), the pUSD BoringVault at 0xdddd… has zero EIP-1967 implementation, admin, and beacon slots on both tracked deployments, confirming an immutable mint-critical vault. owner() remains the 3-of-6 GnosisSafeL2 at 0xa08a… with no enabled modules; authority() remains RolesAuthority 0x97bc…, owned by the same Safe. The Plume Teller at 0x41bdb4aa remains the deposit gateway and is the only reviewed direct mint route.",
+      "evidence": "At Ethereum block 25531116 and Plume block 81049017 (2026-07-14), the pUSD BoringVault at 0xdddd\u2026 has zero EIP-1967 implementation, admin, and beacon slots on both tracked deployments, confirming an immutable mint-critical vault. owner() remains the 3-of-6 GnosisSafeL2 at 0xa08a\u2026 with no enabled modules; authority() remains RolesAuthority 0x97bc\u2026, owned by the same Safe. The Plume Teller at 0x41bdb4aa remains the deposit gateway and is the only reviewed direct mint route.",
       "reviewer": "Codex CTRL curation",
       "reviewedAt": "2026-07-14",
       "sources": [

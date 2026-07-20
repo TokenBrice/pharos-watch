@@ -97,13 +97,23 @@
       "chain": "solana",
       "address": "2zMqyX4AYCk6mgy5UZ2S7zUaLxwERhK5WjqDzkPPbSpW",
       "decimals": 9
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x27f6c8289550fce67f6b50bed1f519966afe5287",
+      "decimals": 18
+    },
+    {
+      "chain": "gnosis",
+      "address": "0x1F34490F8e8E776FFc547b39B864364035Eaf44F",
+      "decimals": 18
     }
   ],
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "tGBP uses LayerZero OFT-style multichain token infrastructure rather than issuer-native issuance alone. The reviewed StableTokenV1OFT route depends on external LayerZero messaging and OFT contracts across the supported chains.",
-    "reviewedAt": "2026-06-30",
-    "reviewer": "Codex static correction review",
+    "summary": "tGBP uses the issuer-deployed StableTokenV1OFT on seven EVM chains (LayerZero EndpointV2 and owner verified on-chain) and a native Solana mint administered by the reviewed SPL multisig.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex static correction review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
     "confidence": "probable",
     "protocols": [
       {
@@ -136,91 +146,236 @@
         "id": "ethereum:0x27f6c8289550fce67f6b50bed1f519966afe5287",
         "destinationChain": "ethereum",
         "contractAddress": "0x27f6c8289550fce67f6b50bed1f519966afe5287",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Tokenised StableTokenV1OFT (issuer-deployed LayerZero OFT)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 verified on ethereum at 2026-07-20; the issuer's own OFT burns/mints tGBP across deployments.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-30"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Tokenised GBP",
+            "url": "https://tokenised.com/"
+          },
+          {
+            "label": "LayerZero docs",
+            "url": "https://docs.layerzero.network/"
+          }
+        ],
+        "failureDomainKeys": [
+          "layerzero:oft:tgbp-tokenised"
+        ],
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum"
       },
       {
         "id": "base:0x27f6c8289550fce67f6b50bed1f519966afe5287",
         "destinationChain": "base",
         "contractAddress": "0x27f6c8289550fce67f6b50bed1f519966afe5287",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Tokenised StableTokenV1OFT (issuer-deployed LayerZero OFT)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 verified on base at 2026-07-20; the issuer's own OFT burns/mints tGBP across deployments.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-30"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Tokenised GBP",
+            "url": "https://tokenised.com/"
+          },
+          {
+            "label": "LayerZero docs",
+            "url": "https://docs.layerzero.network/"
+          }
+        ],
+        "failureDomainKeys": [
+          "layerzero:oft:tgbp-tokenised"
+        ],
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum"
       },
       {
         "id": "bsc:0x27f6c8289550fce67f6b50bed1f519966afe5287",
         "destinationChain": "bsc",
         "contractAddress": "0x27f6c8289550fce67f6b50bed1f519966afe5287",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Tokenised StableTokenV1OFT (issuer-deployed LayerZero OFT)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 verified on bsc at 2026-07-20; the issuer's own OFT burns/mints tGBP across deployments.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-30"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Tokenised GBP",
+            "url": "https://tokenised.com/"
+          },
+          {
+            "label": "LayerZero docs",
+            "url": "https://docs.layerzero.network/"
+          }
+        ],
+        "failureDomainKeys": [
+          "layerzero:oft:tgbp-tokenised"
+        ],
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum"
       },
       {
         "id": "polygon:0x27f6c8289550fce67f6b50bed1f519966afe5287",
         "destinationChain": "polygon",
         "contractAddress": "0x27f6c8289550fce67f6b50bed1f519966afe5287",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Tokenised StableTokenV1OFT (issuer-deployed LayerZero OFT)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 verified on polygon at 2026-07-20; the issuer's own OFT burns/mints tGBP across deployments.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-30"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Tokenised GBP",
+            "url": "https://tokenised.com/"
+          },
+          {
+            "label": "LayerZero docs",
+            "url": "https://docs.layerzero.network/"
+          }
+        ],
+        "failureDomainKeys": [
+          "layerzero:oft:tgbp-tokenised"
+        ],
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum"
       },
       {
         "id": "avalanche:0x27f6c8289550fce67f6b50bed1f519966afe5287",
         "destinationChain": "avalanche",
         "contractAddress": "0x27f6c8289550fce67f6b50bed1f519966afe5287",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Tokenised StableTokenV1OFT (issuer-deployed LayerZero OFT)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 verified on avalanche at 2026-07-20; the issuer's own OFT burns/mints tGBP across deployments.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-30"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Tokenised GBP",
+            "url": "https://tokenised.com/"
+          },
+          {
+            "label": "LayerZero docs",
+            "url": "https://docs.layerzero.network/"
+          }
+        ],
+        "failureDomainKeys": [
+          "layerzero:oft:tgbp-tokenised"
+        ],
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum"
       },
       {
         "id": "solana:2zMqyX4AYCk6mgy5UZ2S7zUaLxwERhK5WjqDzkPPbSpW",
         "destinationChain": "solana",
         "contractAddress": "2zMqyX4AYCk6mgy5UZ2S7zUaLxwERhK5WjqDzkPPbSpW",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Tokenised native Solana issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Solana tGBP mint authority = 1-of-2 SPL multisig 3NsEdxXZX6QXNtZT2prWQF2c8VFznc9zK1A2BjzAMyjs (getAccountInfo verified at 2026-07-20), matching the reviewed mint-authority control.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-30"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Tokenised GBP",
+            "url": "https://tokenised.com/"
+          },
+          {
+            "label": "LayerZero docs",
+            "url": "https://docs.layerzero.network/"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+        "sourceChain": "ethereum",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x27f6c8289550fce67f6b50bed1f519966afe5287",
+        "protocol": "Tokenised StableTokenV1OFT (issuer-deployed LayerZero OFT)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "failureDomainKeys": [
+          "layerzero:oft:tgbp-tokenised"
+        ],
+        "reviewDisposition": "reviewed",
+        "reviewNote": "endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 verified on arbitrum at 2026-07-20; the issuer's own OFT burns/mints tGBP across deployments.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Tokenised GBP",
+            "url": "https://tokenised.com/"
+          },
+          {
+            "label": "LayerZero docs",
+            "url": "https://docs.layerzero.network/"
+          }
+        ]
+      },
+      {
+        "id": "gnosis:0x1F34490F8e8E776FFc547b39B864364035Eaf44F",
+        "sourceChain": "ethereum",
+        "destinationChain": "gnosis",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x1F34490F8e8E776FFc547b39B864364035Eaf44F",
+        "protocol": "Tokenised StableTokenV1OFT (issuer-deployed LayerZero OFT)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "failureDomainKeys": [
+          "layerzero:oft:tgbp-tokenised"
+        ],
+        "reviewDisposition": "reviewed",
+        "reviewNote": "endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 verified on gnosis at 2026-07-20; the issuer's own OFT burns/mints tGBP across deployments.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Tokenised GBP",
+            "url": "https://tokenised.com/"
+          },
+          {
+            "label": "LayerZero docs",
+            "url": "https://docs.layerzero.network/"
+          }
+        ]
       }
     ]
   },

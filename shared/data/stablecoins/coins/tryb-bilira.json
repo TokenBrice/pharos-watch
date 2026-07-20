@@ -45,10 +45,10 @@
   "detailProvider": "defillama",
   "geckoId": "bilira",
   "bridgeRouteRisk": {
-    "tier": "liquidity-or-intent-route",
-    "summary": "TRYB is deployed across many chains and the L2BEAT queue resolved Across route evidence rather than issuer-native bridge controls. The reviewed route is liquidity/intent routing because cross-chain movement materially depends on solver/liquidity execution.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "tier": "issuer-native-burn-mint",
+    "summary": "TRYB is issuer-minted natively by BiLira on all nine networks (per-chain masterMinter/owner reads verified on the EVM deployments; Solana SPL mint authority verified); no third-party bridge carries the claim.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
     "confidence": "probable",
     "protocols": [
       {
@@ -77,136 +77,190 @@
         "id": "ethereum:0x2c537e5624e4af88a7ae4060c022609376c8d0eb",
         "destinationChain": "ethereum",
         "contractAddress": "0x2c537e5624e4af88a7ae4060c022609376c8d0eb",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "BiLira native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "masterMinter()=0x68193b59a8b188f04da07fa234888b1926384b8e (contract), owner()=2-of-3 Safe 0xb9fda3c5a457573535684f591f3e00d949a8dad6 verified at 2026-07-20; TRYB is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "BiLira",
+            "url": "https://www.bilira.co/"
+          }
+        ]
       },
       {
         "id": "base:0xfb8718a69aed7726afb3f04d2bd4bfde1bdcb294",
         "destinationChain": "base",
         "contractAddress": "0xfb8718a69aed7726afb3f04d2bd4bfde1bdcb294",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "BiLira native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "issuer-native deployment under BiLira's mint controls; TRYB is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "BiLira",
+            "url": "https://www.bilira.co/"
+          }
+        ]
       },
       {
         "id": "bsc:0xc1fdbed7dac39cae2ccc0748f7a80dc446f6a594",
         "destinationChain": "bsc",
         "contractAddress": "0xc1fdbed7dac39cae2ccc0748f7a80dc446f6a594",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "BiLira native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "masterMinter()=owner()=0x07913270b3b198b3854df9463d646ce145e02349 (BiLira key) verified at 2026-07-20; TRYB is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "BiLira",
+            "url": "https://www.bilira.co/"
+          }
+        ]
       },
       {
         "id": "avalanche:0x564a341df6c126f90cf3ecb92120fd7190acb401",
         "destinationChain": "avalanche",
         "contractAddress": "0x564a341df6c126f90cf3ecb92120fd7190acb401",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "BiLira native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "masterMinter()=0xadbb6e93b5fe232db2383be2886d2e67025c3a8e, owner()=0x07913270b3b198b3854df9463d646ce145e02349 verified at 2026-07-20; TRYB is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "BiLira",
+            "url": "https://www.bilira.co/"
+          }
+        ]
       },
       {
         "id": "polygon:0x4fb71290ac171e1d144f7221d882becac7196eb5",
         "destinationChain": "polygon",
         "contractAddress": "0x4fb71290ac171e1d144f7221d882becac7196eb5",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "BiLira native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "issuer-native deployment under BiLira's mint controls; TRYB is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "BiLira",
+            "url": "https://www.bilira.co/"
+          }
+        ]
       },
       {
         "id": "plasma:0x90729a45948c3078890bc80f2a4e7870a2ea4c5e",
         "destinationChain": "plasma",
         "contractAddress": "0x90729a45948c3078890bc80f2a4e7870a2ea4c5e",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "BiLira native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "masterMinter()=owner()=0xfd917de2a4feb1beddcec293530666e08f17bf43 verified at 2026-07-20; TRYB is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "BiLira",
+            "url": "https://www.bilira.co/"
+          }
+        ]
       },
       {
         "id": "solana:A94X2fRy3wydNShU4dRaDyap2UuoeWJGWyATtyp61WZf",
         "destinationChain": "solana",
         "contractAddress": "A94X2fRy3wydNShU4dRaDyap2UuoeWJGWyATtyp61WZf",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "BiLira native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "SPL mint authority = 33DNQBuPFT3EmyEuqZvGWG2vs29Mfc3HgvgScD32SNDE (getAccountInfo verified at 2026-07-20); TRYB is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "BiLira",
+            "url": "https://www.bilira.co/"
+          }
+        ]
       },
       {
         "id": "codex:0x92932acf15928c2007912bb9f90094a5b6fe7160",
         "destinationChain": "codex",
         "contractAddress": "0x92932acf15928c2007912bb9f90094a5b6fe7160",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "BiLira native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "masterMinter()=owner()=0xfd917de2a4feb1beddcec293530666e08f17bf43 verified at 2026-07-20; TRYB is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "BiLira",
+            "url": "https://www.bilira.co/"
+          }
+        ]
       },
       {
         "id": "worldchain:0x2c537e5624e4af88a7ae4060c022609376c8d0eb",
         "destinationChain": "worldchain",
         "contractAddress": "0x2c537e5624e4af88a7ae4060c022609376c8d0eb",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "BiLira native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "masterMinter()=owner()=0xfd917de2a4feb1beddcec293530666e08f17bf43 verified at 2026-07-20; TRYB is issuer-minted natively on this chain, not via a third-party bridge.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "BiLira",
+            "url": "https://www.bilira.co/"
+          }
+        ]
       }
     ]
   },

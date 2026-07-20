@@ -345,10 +345,10 @@
   "launchDate": "2018-09-09",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "GUSD is issuer-native on Ethereum, but the tracked NEAR deployment resolves to a factory.bridge.near account, indicating a bridged representation rather than Gemini-native issuance on NEAR. The weakest reviewed route is therefore external lock/mint.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "summary": "GUSD is Ethereum-native (Gemini issuance); its NEAR deployment is a Rainbow Bridge lock-mint representation custodied by the Rainbow ERC20 locker on Ethereum.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "explorer",
@@ -374,31 +374,58 @@
         "id": "ethereum:0x056fd409e1d7a124bd7017459dfea2f387b6d5cd",
         "destinationChain": "ethereum",
         "contractAddress": "0x056fd409e1d7a124bd7017459dfea2f387b6d5cd",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Gemini dollar (GUSD)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical home deployment: GUSD is issued by Gemini on Ethereum (verified mint-authority review 2026-07-15: limited-printer EOA plus 2-of-3 issuance/upgrade custodians).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "GUSD Ethereum token",
+            "url": "https://etherscan.io/address/0x056fd409e1d7a124bd7017459dfea2f387b6d5cd"
+          },
+          {
+            "label": "Gemini dollar",
+            "url": "https://www.gemini.com/dollar"
+          }
+        ]
       },
       {
         "id": "near:056fd409e1d7a124bd7017459dfea2f387b6d5cd.factory.bridge.near",
         "destinationChain": "near",
         "contractAddress": "056fd409e1d7a124bd7017459dfea2f387b6d5cd.factory.bridge.near",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Rainbow Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Rainbow Bridge representation: the NEAR-side token 056fd409e1d7a124bd7017459dfea2f387b6d5cd.factory.bridge.near is issued by the Rainbow factory, with the underlying GUSD locked in the Rainbow ERC20 locker 0x23ddd3e3692d1861ed57ede224608875809e127f on Ethereum (same locker contract documented for the USDC Aurora route).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x23ddd3e3692d1861ed57ede224608875809e127f",
+        "failureDomainKeys": [
+          "protocol:rainbow-bridge",
+          "contract:ethereum:0x23ddd3e3692d1861ed57ede224608875809e127f"
+        ],
+        "sources": [
+          {
+            "label": "NEAR omni-bridge contract addresses (Rainbow ERC20 locker)",
+            "url": "https://github.com/Near-One/omni-bridge#contract-addresses"
+          },
+          {
+            "label": "NEAR blocks — GUSD factory token",
+            "url": "https://nearblocks.io/token/056fd409e1d7a124bd7017459dfea2f387b6d5cd.factory.bridge.near"
+          }
+        ]
       }
     ]
   }

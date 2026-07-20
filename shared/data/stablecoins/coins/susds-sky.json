@@ -204,6 +204,29 @@
           }
         ],
         "evidence": "Inherited from reviewed `usds-sky` mintAuthority."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+        "label": "Inherited Sky Pause Proxy governance executor",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Sky governance executes through the Pause Proxy after the current 2-day Pause delay and can change system modules, parameters, and USDS authorizations.",
+        "sources": [
+          {
+            "label": "Sky Chainlog",
+            "url": "https://chainlog.sky.money/api/mainnet/active.json"
+          },
+          {
+            "label": "Sky docs",
+            "url": "https://docs.sky.money/"
+          }
+        ],
+        "evidence": "Inherited from reviewed usds-sky mintAuthority: the Sky Pause Proxy is the governance executor authorized to raise the USDS_JOIN debt ceiling that bounds the inherited USDS mint path underlying sUSDS shares."
       }
     ],
     "review": {
@@ -218,17 +241,17 @@
         }
       ],
       "evidence": "sUSDS is a savings wrapper over reviewed USDS. Vault share minting is separate from base USDS issuance. At Ethereum block 25295174: EIP-1967 admin slot = 0x0 (no external proxy admin), impl slot = 0x4e7991e5 (UUPS), wards(MakerDAO PauseProxy)=1. Upgrade authority is Sky governance via the wards mechanism. Wrapper has no privileged mint surface.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+      "reviewedAt": "2026-07-20"
     }
   },
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "sUSDS is the ERC-4626 savings wrapper for USDS and its multichain route is tied to Sky/Spark cross-chain liquidity plus Sky's Wormhole NTT expansion. Because NTT/OFT-style routes introduce an external messaging and token framework, Pharos scores the wrapper as external lock/mint exposure.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "docs",
@@ -266,62 +289,131 @@
       {
         "id": "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Sky",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "sUSDS is the ERC-4626 savings wrapper natively issued on Ethereum by the Sky Savings USDS vault (variantOf usds-sky); shares mint against deposited USDS, no bridge representation. Same native convention as the reviewed usds-sky ethereum row.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Sky sUSDS token docs",
+            "url": "https://developers.sky.money/protocol/tokens/susds/"
+          },
+          {
+            "label": "sUSDS vault on Etherscan",
+            "url": "https://etherscan.io/address/0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+          }
+        ]
       },
       {
         "id": "base:0x5875eee11cf8398102fdad704c9e96607675467a",
+        "sourceChain": "ethereum",
         "destinationChain": "base",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x5875eee11cf8398102fdad704c9e96607675467a",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "SkyLink OP Token Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: wards(0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7) = 1 on the Base sUSDS token, so the SkyLink OP Token Bridge (same controller as the reviewed usds-sky Base row) is the mint authority for this representation; Sky governance relay holds admin.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "base",
+        "controllerAddress": "0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7",
+        "failureDomainKeys": [
+          "protocol:base-canonical-messaging",
+          "contract:base:0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "SkyLink Base bridge guide",
+            "url": "https://developers.skyeco.com/guides/skylink/base-eth-native-bridge/"
+          },
+          {
+            "label": "Sky governance Base bridge initialization (USDS and sUSDS)",
+            "url": "https://vote.makerdao.com/executive/template-executive-vote-base-network-skylink-bridge-initialization-for-usds-and-susds-star-allocation-system-initialization-for-spark-add-new-validators-to-medianizer-october-31-2024"
+          },
+          {
+            "label": "sUSDS token on Basescan (wards probed 2026-07-20)",
+            "url": "https://basescan.org/address/0x5875eee11cf8398102fdad704c9e96607675467a"
+          }
+        ]
       },
       {
         "id": "optimism:0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0",
+        "sourceChain": "ethereum",
         "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "SkyLink OP Token Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: wards(0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6) = 1 on the OP Mainnet sUSDS token, so the SkyLink OP Token Bridge (same controller as the reviewed usds-sky OP Mainnet row) is the mint authority for this representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "optimism",
+        "controllerAddress": "0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6",
+        "failureDomainKeys": [
+          "protocol:optimism-canonical-messaging",
+          "contract:optimism:0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "SkyLink OP Token Bridge repository",
+            "url": "https://github.com/sky-ecosystem/op-token-bridge"
+          },
+          {
+            "label": "sUSDS token on OP Mainnet explorer (wards probed 2026-07-20)",
+            "url": "https://optimistic.etherscan.io/address/0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0"
+          }
+        ]
       },
       {
         "id": "arbitrum:0xddb46999f8891663a8f2828d25298f70416d7610",
+        "sourceChain": "ethereum",
         "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xddb46999f8891663a8f2828d25298f70416d7610",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "SkyLink Arbitrum Token Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: Rely event log of the Arbitrum sUSDS token includes 0x13f7f24ca959359a4d710d32c715d4bce273c793, the SkyLink Arbitrum Token Bridge (same controller as the reviewed usds-sky Arbitrum row), making it the mint authority for this representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x13f7f24ca959359a4d710d32c715d4bce273c793",
+        "failureDomainKeys": [
+          "protocol:arbitrum-canonical-messaging",
+          "contract:arbitrum:0x13f7f24ca959359a4d710d32c715d4bce273c793"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "SkyLink Arbitrum Token Bridge repository",
+            "url": "https://github.com/sky-ecosystem/arbitrum-token-bridge"
+          },
+          {
+            "label": "sUSDS token on Arbiscan (Rely wards probed 2026-07-20)",
+            "url": "https://arbiscan.io/address/0xddb46999f8891663a8f2828d25298f70416d7610"
+          }
+        ]
       }
     ]
   },

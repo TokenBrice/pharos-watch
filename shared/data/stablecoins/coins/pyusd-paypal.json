@@ -114,7 +114,7 @@
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC NR-2025-125 (Dec 12, 2025) – conditional trust-charter approval, not a PPSI approval",
+        "OCC NR-2025-125 (Dec 12, 2025) \u2013 conditional trust-charter approval, not a PPSI approval",
         "OCC GENIUS Act rulemaking bulletin and public releases (Bulletin 2026-3)",
         "Paxos OCC national trust charter conversion press release (Dec 12, 2025)",
         "Paxos PYUSD transparency and terms",
@@ -127,7 +127,7 @@
         "FDIC GENIUS Act NPRM",
         "NCUA PPSI application and standards proposals"
       ],
-      "summary": "Paxos received OCC conditional trust-charter approval Dec 2025, but no PPSI approval exists – the GENIUS Act PPSI application framework remains in proposed-rules rulemaking as of June 7, 2026.",
+      "summary": "Paxos received OCC conditional trust-charter approval Dec 2025, but no PPSI approval exists \u2013 the GENIUS Act PPSI application framework remains in proposed-rules rulemaking as of June 7, 2026.",
       "reviewer": "Pharos compliance research",
       "reviewedAt": "2026-06-18"
     },
@@ -139,7 +139,7 @@
     "tokenType": "EMT",
     "references": [
       {
-        "label": "Kraken EEA stablecoin restrictions – PYUSD explicitly listed",
+        "label": "Kraken EEA stablecoin restrictions \u2013 PYUSD explicitly listed",
         "url": "https://support.kraken.com/articles/stablecoin-offerings-for-eea-clients"
       },
       {
@@ -147,7 +147,7 @@
         "url": "https://help.coinbase.com/en/coinbase/other-topics/other/mica-restricted-stablecoins"
       },
       {
-        "label": "ESMA interim MiCA register (issuers of EMTs) – no PYUSD/Paxos row found",
+        "label": "ESMA interim MiCA register (issuers of EMTs) \u2013 no PYUSD/Paxos row found",
         "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
       }
     ]
@@ -176,6 +176,71 @@
     {
       "chain": "flow",
       "address": "0x99af3eea856556646c98c8b9b2548fe815240750",
+      "decimals": 6
+    },
+    {
+      "chain": "polygon",
+      "address": "0x99af3eea856556646c98c8b9b2548fe815240750",
+      "decimals": 6
+    },
+    {
+      "chain": "sei",
+      "address": "0x142cdc44890978b506e745bb3bd11607b7f7faef",
+      "decimals": 6
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x142cdc44890978b506e745bb3bd11607b7f7faef",
+      "decimals": 6
+    },
+    {
+      "chain": "abstract",
+      "address": "0x142cdc44890978b506e745bb3bd11607b7f7faef",
+      "decimals": 6
+    },
+    {
+      "chain": "plume",
+      "address": "0x142cdc44890978b506e745bb3bd11607b7f7faef",
+      "decimals": 6
+    },
+    {
+      "chain": "ink",
+      "address": "0x142cdc44890978b506e745bb3bd11607b7f7faef",
+      "decimals": 6
+    },
+    {
+      "chain": "codex",
+      "address": "0x99af3eea856556646c98c8b9b2548fe815240750",
+      "decimals": 6
+    },
+    {
+      "chain": "stable",
+      "address": "0x99af3eea856556646c98c8b9b2548fe815240750",
+      "decimals": 6
+    },
+    {
+      "chain": "fraxtal",
+      "address": "0x99af3eea856556646c98c8b9b2548fe815240750",
+      "decimals": 6
+    },
+    {
+      "chain": "optimism",
+      "address": "0xa0c9b923f4551f1ec1a49665943160b18704ce06",
+      "decimals": 6
+    },
+    {
+      "chain": "berachain",
+      "address": "0x688e72142674041f8f6af4c808a4045ca1d6ac82",
+      "decimals": 6
+    },
+    {
+      "chain": "tron",
+      "address": "TKkvjWuAYrNQkbo3onBDhCU77WtNPByD5a",
+      "decimals": 6
+    },
+    {
+      "chain": "cardano",
+      "address": "25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff9355059555344",
       "decimals": 6
     }
   ],
@@ -352,10 +417,10 @@
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "PYUSD has issuer-backed native deployments on core chains and newer multichain expansion through LayerZero. Because the extended route surface includes external interoperability validation, Pharos scores the multichain route as external validated network risk.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "summary": "PYUSD has issuer-backed native deployments on Ethereum, Solana, Arbitrum, and Stellar; all other EVM/Tron expansion is the PYUSD0 omnichain representation minted by Stargate Hydra (LayerZero) adapters that hold supply-controller rights on each PaxosTokenV2 deployment. Because the extended route surface includes external interoperability validation, Pharos scores the multichain route as external validated network risk.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "l2beat",
@@ -420,17 +485,28 @@
       {
         "id": "arbitrum:0x46850ad61c2b7d64d08c9c754f45254596696984",
         "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x46850ad61c2b7d64d08c9c754f45254596696984",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Paxos / PayPal",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain reads 2026-07-20: name 'PayPal USD', symbol 'PYUSD', 6 decimals, totalSupply $250.0M, owner() 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b \u2014 the same owner EOA as the canonical Ethereum PYUSD deployment. DefiLlama records Arbitrum supply as natively minted ($250.0M minted, zero bridged), matching the 2025-07-17 PayPal announcement of native PYUSD issuance on Arbitrum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Arbiscan PYUSD token",
+            "url": "https://arbiscan.io/token/0x46850ad61c2b7d64d08c9c754f45254596696984"
+          },
+          {
+            "label": "PayPal PYUSD on Arbitrum",
+            "url": "https://newsroom.paypal-corp.com/2025-07-17-PayPal-USD-Expands-to-Arbitrum-Bringing-Layer-2-Efficiency-to-Multi-Chain-Development-Stack"
+          }
+        ]
       },
       {
         "id": "solana:2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo",
@@ -498,18 +574,511 @@
       },
       {
         "id": "flow:0x99af3eea856556646c98c8b9b2548fe815240750",
+        "sourceChain": "ethereum",
         "destinationChain": "flow",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x99af3eea856556646c98c8b9b2548fe815240750",
-        "protocol": "unresolved route",
+        "protocol": "Stargate Hydra PYUSD0 (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "PYUSD0 (PaxosTokenV2 UUPS proxy, impl 0x3cec21673b372cb0ab7fa79668ab6c5f93bfd056 with verified source on Flowscan). totalSupply $70.34M matches the DefiLlama Flow capture. Token supplyControl 0x6f607843520585a9aced70e262a36f49b398a8c8 lists a single supplyController 0x26d27d5af2f6f1c14f40013c8619d97aaf015509 \u2014 a LayerZero adapter exposing endpoint() 0xcb566e3b6934fa77258d68ea18e931fa75e1aaaa (Flow LZ V2 endpoint), read 2026-07-20. PayPal and LayerZero launched PYUSD0 via Stargate Hydra on 2025-09-18.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "controllerChain": "flow",
+        "controllerAddress": "0x26d27d5af2f6f1c14f40013c8619d97aaf015509",
+        "failureDomainKeys": [
+          "protocol:stargate-hydra-pyusd0",
+          "contract:flow:0x26d27d5af2f6f1c14f40013c8619d97aaf015509"
+        ],
+        "sources": [
+          {
+            "label": "Flowscan PYUSD0 token",
+            "url": "https://evm.flowscan.io/token/0x99af3eea856556646c98c8b9b2548fe815240750"
+          },
+          {
+            "label": "The Block: PayPal's PYUSD expands to Tron, Avalanche, Sei and other blockchains via LayerZero",
+            "url": "https://www.theblock.co/post/371321/paypal-pyusd-stablecoin-expands-blockchains-layerzero"
+          },
+          {
+            "label": "DefiLlama paypal-usd layerzeroConfig (per-chain PYUSD0 contracts)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/paypal-usd/layerzeroConfig.ts"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0x99af3eea856556646c98c8b9b2548fe815240750",
+        "sourceChain": "ethereum",
+        "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x99af3eea856556646c98c8b9b2548fe815240750",
+        "protocol": "Stargate Hydra PYUSD0 (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Name reads 'PayPal USD' (symbol PYUSD) but DefiLlama attributes the full $10.1M Polygon supply to the layerzero bridge and the token is the PaxosTokenV2-based PYUSD0 deployment (impl 0xd5d13b5b6c2caac5e8ea1485cec6f690dbfab69b). supplyControl 0x6f607843520585a9aced70e262a36f49b398a8c8 lists three supplyControllers: the LayerZero adapter 0x2292e82e7a53b1d055a64e4bdec4e9f91318d377 (endpoint() = canonical LZ V2 0x1a44076050125825900e736c501f859c50fe728c) plus two code-less Paxos operational EOAs 0x2fb074fa59c9294c71246825c1c9a0c7782d41a4 and 0xf845a0a05cbd91ac15c3e59d126de5dfbc2aabb7 (issuer mint pipeline, owner 0x3af3e85f\u2026024b), read 2026-07-20.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "controllerChain": "polygon",
+        "controllerAddress": "0x2292e82e7a53b1d055a64e4bdec4e9f91318d377",
+        "failureDomainKeys": [
+          "protocol:stargate-hydra-pyusd0",
+          "contract:polygon:0x2292e82e7a53b1d055a64e4bdec4e9f91318d377"
+        ],
+        "sources": [
+          {
+            "label": "Polygonscan PayPal USD token",
+            "url": "https://polygonscan.com/token/0x99af3eea856556646c98c8b9b2548fe815240750"
+          },
+          {
+            "label": "The Block: PayPal's PYUSD expands to Tron, Avalanche, Sei and other blockchains via LayerZero",
+            "url": "https://www.theblock.co/post/371321/paypal-pyusd-stablecoin-expands-blockchains-layerzero"
+          },
+          {
+            "label": "DefiLlama paypal-usd layerzeroConfig (per-chain PYUSD0 contracts)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/paypal-usd/layerzeroConfig.ts"
+          }
+        ]
+      },
+      {
+        "id": "sei:0x142cdc44890978b506e745bb3bd11607b7f7faef",
+        "sourceChain": "ethereum",
+        "destinationChain": "sei",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x142cdc44890978b506e745bb3bd11607b7f7faef",
+        "protocol": "Stargate Hydra PYUSD0 (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "PYUSD0 totalSupply $3.05M matches the DefiLlama Sei capture. Adapter endpoint() = canonical LZ V2 0x1a44076050125825900e736c501f859c50fe728c. Token supplyControl 0xd4704b3f25b929a3d1f4b1721955e049719feb60 lists a single supplyController 0x3cd2b89c49d130c08f1d683225b2e5deb63ff876 \u2014 a LayerZero adapter, read 2026-07-20.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "controllerChain": "sei",
+        "controllerAddress": "0x3cd2b89c49d130c08f1d683225b2e5deb63ff876",
+        "failureDomainKeys": [
+          "protocol:stargate-hydra-pyusd0",
+          "contract:sei:0x3cd2b89c49d130c08f1d683225b2e5deb63ff876"
+        ],
+        "sources": [
+          {
+            "label": "Seitrace PYUSD0 token",
+            "url": "https://seitrace.com/token/0x142cdc44890978b506e745bb3bd11607b7f7faef"
+          },
+          {
+            "label": "The Block: PayPal's PYUSD expands to Tron, Avalanche, Sei and other blockchains via LayerZero",
+            "url": "https://www.theblock.co/post/371321/paypal-pyusd-stablecoin-expands-blockchains-layerzero"
+          },
+          {
+            "label": "DefiLlama paypal-usd layerzeroConfig (per-chain PYUSD0 contracts)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/paypal-usd/layerzeroConfig.ts"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0x142cdc44890978b506e745bb3bd11607b7f7faef",
+        "sourceChain": "ethereum",
+        "destinationChain": "avalanche",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x142cdc44890978b506e745bb3bd11607b7f7faef",
+        "protocol": "Stargate Hydra PYUSD0 (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "PYUSD0 totalSupply $52.1k matches the DefiLlama Avalanche capture. Adapter endpoint() = canonical LZ V2 0x1a44076050125825900e736c501f859c50fe728c and its token() returns this PYUSD0 deployment, read 2026-07-20. Token supplyControl 0xd4704b3f25b929a3d1f4b1721955e049719feb60 lists a single supplyController 0x3cd2b89c49d130c08f1d683225b2e5deb63ff876 \u2014 a LayerZero adapter, read 2026-07-20.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "controllerChain": "avalanche",
+        "controllerAddress": "0x3cd2b89c49d130c08f1d683225b2e5deb63ff876",
+        "failureDomainKeys": [
+          "protocol:stargate-hydra-pyusd0",
+          "contract:avalanche:0x3cd2b89c49d130c08f1d683225b2e5deb63ff876"
+        ],
+        "sources": [
+          {
+            "label": "Snowtrace PYUSD0 token",
+            "url": "https://snowtrace.io/token/0x142cdc44890978b506e745bb3bd11607b7f7faef"
+          },
+          {
+            "label": "The Block: PayPal's PYUSD expands to Tron, Avalanche, Sei and other blockchains via LayerZero",
+            "url": "https://www.theblock.co/post/371321/paypal-pyusd-stablecoin-expands-blockchains-layerzero"
+          },
+          {
+            "label": "DefiLlama paypal-usd layerzeroConfig (per-chain PYUSD0 contracts)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/paypal-usd/layerzeroConfig.ts"
+          }
+        ]
+      },
+      {
+        "id": "abstract:0x142cdc44890978b506e745bb3bd11607b7f7faef",
+        "sourceChain": "ethereum",
+        "destinationChain": "abstract",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x142cdc44890978b506e745bb3bd11607b7f7faef",
+        "protocol": "Stargate Hydra PYUSD0 (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "PYUSD0 totalSupply $1.14 matches the DefiLlama Abstract capture. Adapter endpoint() = Abstract LZ V2 endpoint 0x5c6cff4b7c49805f8295ff73c204ac83f3bc4ae7. Token supplyControl 0xd4704b3f25b929a3d1f4b1721955e049719feb60 lists a single supplyController 0x3cd2b89c49d130c08f1d683225b2e5deb63ff876 \u2014 a LayerZero adapter, read 2026-07-20.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "controllerChain": "abstract",
+        "controllerAddress": "0x3cd2b89c49d130c08f1d683225b2e5deb63ff876",
+        "failureDomainKeys": [
+          "protocol:stargate-hydra-pyusd0",
+          "contract:abstract:0x3cd2b89c49d130c08f1d683225b2e5deb63ff876"
+        ],
+        "sources": [
+          {
+            "label": "Abscan PYUSD0 token",
+            "url": "https://abscan.org/token/0x142cdc44890978b506e745bb3bd11607b7f7faef"
+          },
+          {
+            "label": "The Block: PayPal's PYUSD expands to Tron, Avalanche, Sei and other blockchains via LayerZero",
+            "url": "https://www.theblock.co/post/371321/paypal-pyusd-stablecoin-expands-blockchains-layerzero"
+          },
+          {
+            "label": "DefiLlama paypal-usd layerzeroConfig (per-chain PYUSD0 contracts)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/paypal-usd/layerzeroConfig.ts"
+          }
+        ]
+      },
+      {
+        "id": "plume:0x142cdc44890978b506e745bb3bd11607b7f7faef",
+        "sourceChain": "ethereum",
+        "destinationChain": "plume",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x142cdc44890978b506e745bb3bd11607b7f7faef",
+        "protocol": "Stargate Hydra PYUSD0 (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "PYUSD0 totalSupply $1.24; DefiLlama's Plume capture ($5.13) also counts a $3.89 dust 'Pay USD' OFT 0xe9e8330a71912f03e54e7d93795acd9a56f070aa (a separate PayUSD-labelled token in DefiLlama's layerzeroConfig). Adapter endpoint() = Plume LZ V2 endpoint 0xc1b15d3b262beec0e3565c11c9e0f6134bdacb36. Token supplyControl 0xd4704b3f25b929a3d1f4b1721955e049719feb60 lists a single supplyController 0x3cd2b89c49d130c08f1d683225b2e5deb63ff876 \u2014 a LayerZero adapter, read 2026-07-20.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "controllerChain": "plume",
+        "controllerAddress": "0x3cd2b89c49d130c08f1d683225b2e5deb63ff876",
+        "failureDomainKeys": [
+          "protocol:stargate-hydra-pyusd0",
+          "contract:plume:0x3cd2b89c49d130c08f1d683225b2e5deb63ff876"
+        ],
+        "sources": [
+          {
+            "label": "Plume explorer PYUSD0 token",
+            "url": "https://explorer.plume.org/token/0x142cdc44890978b506e745bb3bd11607b7f7faef"
+          },
+          {
+            "label": "The Block: PayPal's PYUSD expands to Tron, Avalanche, Sei and other blockchains via LayerZero",
+            "url": "https://www.theblock.co/post/371321/paypal-pyusd-stablecoin-expands-blockchains-layerzero"
+          },
+          {
+            "label": "DefiLlama paypal-usd layerzeroConfig (per-chain PYUSD0 contracts)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/paypal-usd/layerzeroConfig.ts"
+          }
+        ]
+      },
+      {
+        "id": "ink:0x142cdc44890978b506e745bb3bd11607b7f7faef",
+        "sourceChain": "ethereum",
+        "destinationChain": "ink",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x142cdc44890978b506e745bb3bd11607b7f7faef",
+        "protocol": "Stargate Hydra PYUSD0 (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Name reads 'PayPal USD' (symbol PYUSD, impl 0x866fd6af34bc7c9fb77eedd90bcfe9eed1088591); CoinGecko and DefiLlama both track this Ink deployment as PYUSD/PYUSD0 and DefiLlama attributes Ink supply to the layerzero bridge. supplyControl 0xd4704b3f25b929a3d1f4b1721955e049719feb60 lists three supplyControllers: the LayerZero adapter 0x2201c64071ebb4da0eac122d8877c7af24bf8d7e (endpoint() = Ink LZ V2 endpoint 0xca29f3a6f966cb2fc0de625f8f325c0c46dbe958) plus two code-less Paxos operational EOAs 0x2fb074fa59c9294c71246825c1c9a0c7782d41a4 and 0xf845a0a05cbd91ac15c3e59d126de5dfbc2aabb7, read 2026-07-20.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "controllerChain": "ink",
+        "controllerAddress": "0x2201c64071ebb4da0eac122d8877c7af24bf8d7e",
+        "failureDomainKeys": [
+          "protocol:stargate-hydra-pyusd0",
+          "contract:ink:0x2201c64071ebb4da0eac122d8877c7af24bf8d7e"
+        ],
+        "sources": [
+          {
+            "label": "Ink explorer PayPal USD token",
+            "url": "https://explorer.inkonchain.com/token/0x142cdc44890978b506e745bb3bd11607b7f7faef"
+          },
+          {
+            "label": "The Block: PayPal's PYUSD expands to Tron, Avalanche, Sei and other blockchains via LayerZero",
+            "url": "https://www.theblock.co/post/371321/paypal-pyusd-stablecoin-expands-blockchains-layerzero"
+          },
+          {
+            "label": "DefiLlama paypal-usd layerzeroConfig (per-chain PYUSD0 contracts)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/paypal-usd/layerzeroConfig.ts"
+          }
+        ]
+      },
+      {
+        "id": "codex:0x99af3eea856556646c98c8b9b2548fe815240750",
+        "sourceChain": "ethereum",
+        "destinationChain": "codex",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x99af3eea856556646c98c8b9b2548fe815240750",
+        "protocol": "Stargate Hydra PYUSD0 (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "PYUSD0 (same PaxosTokenV2 impl 0x3cec21673b372cb0ab7fa79668ab6c5f93bfd056 as Flow), totalSupply $2.15 matches the DefiLlama Codex capture. supplyControl 0x6f607843520585a9aced70e262a36f49b398a8c8 lists a single supplyController 0x26d27d5af2f6f1c14f40013c8619d97aaf015509 with endpoint() = Codex LZ V2 endpoint 0xcb566e3b6934fa77258d68ea18e931fa75e1aaaa, read 2026-07-20.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "controllerChain": "codex",
+        "controllerAddress": "0x26d27d5af2f6f1c14f40013c8619d97aaf015509",
+        "failureDomainKeys": [
+          "protocol:stargate-hydra-pyusd0",
+          "contract:codex:0x26d27d5af2f6f1c14f40013c8619d97aaf015509"
+        ],
+        "sources": [
+          {
+            "label": "Codex explorer PYUSD0 token",
+            "url": "https://explorer.codex.xyz/token/0x99af3eea856556646c98c8b9b2548fe815240750"
+          },
+          {
+            "label": "The Block: PayPal's PYUSD expands to Tron, Avalanche, Sei and other blockchains via LayerZero",
+            "url": "https://www.theblock.co/post/371321/paypal-pyusd-stablecoin-expands-blockchains-layerzero"
+          },
+          {
+            "label": "DefiLlama paypal-usd layerzeroConfig (per-chain PYUSD0 contracts)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/paypal-usd/layerzeroConfig.ts"
+          }
+        ]
+      },
+      {
+        "id": "stable:0x99af3eea856556646c98c8b9b2548fe815240750",
+        "sourceChain": "ethereum",
+        "destinationChain": "stable",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x99af3eea856556646c98c8b9b2548fe815240750",
+        "protocol": "Stargate Hydra PYUSD0 (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "PYUSD0 (same PaxosTokenV2 impl 0x3cec21673b372cb0ab7fa79668ab6c5f93bfd056 as Flow), totalSupply $1.10 matches the DefiLlama Stable capture. supplyControl 0x6f607843520585a9aced70e262a36f49b398a8c8 lists a single supplyController 0x26d27d5af2f6f1c14f40013c8619d97aaf015509 with endpoint() = Stable LZ V2 endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, read 2026-07-20.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "controllerChain": "stable",
+        "controllerAddress": "0x26d27d5af2f6f1c14f40013c8619d97aaf015509",
+        "failureDomainKeys": [
+          "protocol:stargate-hydra-pyusd0",
+          "contract:stable:0x26d27d5af2f6f1c14f40013c8619d97aaf015509"
+        ],
+        "sources": [
+          {
+            "label": "Stablescan PYUSD0 token",
+            "url": "https://stablescan.xyz/token/0x99af3eea856556646c98c8b9b2548fe815240750"
+          },
+          {
+            "label": "The Block: PayPal's PYUSD expands to Tron, Avalanche, Sei and other blockchains via LayerZero",
+            "url": "https://www.theblock.co/post/371321/paypal-pyusd-stablecoin-expands-blockchains-layerzero"
+          },
+          {
+            "label": "DefiLlama paypal-usd layerzeroConfig (per-chain PYUSD0 contracts)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/paypal-usd/layerzeroConfig.ts"
+          }
+        ]
+      },
+      {
+        "id": "fraxtal:0x99af3eea856556646c98c8b9b2548fe815240750",
+        "sourceChain": "ethereum",
+        "destinationChain": "fraxtal",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x99af3eea856556646c98c8b9b2548fe815240750",
+        "protocol": "Stargate Hydra PYUSD0 (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "PYUSD0 (same PaxosTokenV2 impl 0x3cec21673b372cb0ab7fa79668ab6c5f93bfd056 as Flow), totalSupply $0.10 matches the DefiLlama Fraxtal capture. supplyControl 0x6f607843520585a9aced70e262a36f49b398a8c8 lists a single supplyController 0x26d27d5af2f6f1c14f40013c8619d97aaf015509 with endpoint() = canonical LZ V2 0x1a44076050125825900e736c501f859c50fe728c, read 2026-07-20.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "controllerChain": "fraxtal",
+        "controllerAddress": "0x26d27d5af2f6f1c14f40013c8619d97aaf015509",
+        "failureDomainKeys": [
+          "protocol:stargate-hydra-pyusd0",
+          "contract:fraxtal:0x26d27d5af2f6f1c14f40013c8619d97aaf015509"
+        ],
+        "sources": [
+          {
+            "label": "Fraxscan PYUSD0 token",
+            "url": "https://fraxscan.com/token/0x99af3eea856556646c98c8b9b2548fe815240750"
+          },
+          {
+            "label": "The Block: PayPal's PYUSD expands to Tron, Avalanche, Sei and other blockchains via LayerZero",
+            "url": "https://www.theblock.co/post/371321/paypal-pyusd-stablecoin-expands-blockchains-layerzero"
+          },
+          {
+            "label": "DefiLlama paypal-usd layerzeroConfig (per-chain PYUSD0 contracts)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/paypal-usd/layerzeroConfig.ts"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0xa0c9b923f4551f1ec1a49665943160b18704ce06",
+        "sourceChain": "ethereum",
+        "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xa0c9b923f4551f1ec1a49665943160b18704ce06",
+        "protocol": "Stargate Hydra PYUSD0 (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "PYUSD0 totalSupply $0.004 (4,000 raw units, dust) matches the DefiLlama OP Mainnet capture. supplyControl 0xe132095138e63197c83fc3a3755c3dc7d48d8dcf lists a single supplyController 0x4edc2460b0891955e2d11ee3103cd705a6d6288a with endpoint() = canonical LZ V2 0x1a44076050125825900e736c501f859c50fe728c, read 2026-07-20.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "controllerChain": "optimism",
+        "controllerAddress": "0x4edc2460b0891955e2d11ee3103cd705a6d6288a",
+        "failureDomainKeys": [
+          "protocol:stargate-hydra-pyusd0",
+          "contract:optimism:0x4edc2460b0891955e2d11ee3103cd705a6d6288a"
+        ],
+        "sources": [
+          {
+            "label": "Optimistic Etherscan PYUSD0 token",
+            "url": "https://optimistic.etherscan.io/token/0xa0c9b923f4551f1ec1a49665943160b18704ce06"
+          },
+          {
+            "label": "The Block: PayPal's PYUSD expands to Tron, Avalanche, Sei and other blockchains via LayerZero",
+            "url": "https://www.theblock.co/post/371321/paypal-pyusd-stablecoin-expands-blockchains-layerzero"
+          },
+          {
+            "label": "DefiLlama paypal-usd layerzeroConfig (per-chain PYUSD0 contracts)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/paypal-usd/layerzeroConfig.ts"
+          }
+        ]
+      },
+      {
+        "id": "berachain:0x688e72142674041f8f6af4c808a4045ca1d6ac82",
+        "sourceChain": "ethereum",
+        "destinationChain": "berachain",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x688e72142674041f8f6af4c808a4045ca1d6ac82",
+        "protocol": "LayerZero NativeOFT BYUSD (PYUSD0)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Berachain PYUSD supply is the BYUSD NativeOFT (name/symbol 'BYUSD', 6 decimals, totalSupply $172.3k matching the DefiLlama Berachain capture). The token contract itself is the OFT: endpoint() = Berachain LZ V2 endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, and OFT owner 0xbdce6f69836ac5c2b83af8ab9ef3019cd5c45e8a is a 3-of-6 Safe proxy (6 owners read 2026-07-20). DefiLlama lists this address as the PYUSD0 deployment on Bera.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "controllerChain": "berachain",
+        "controllerAddress": "0x688e72142674041f8f6af4c808a4045ca1d6ac82",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:berachain:0x688e72142674041f8f6af4c808a4045ca1d6ac82"
+        ],
+        "sources": [
+          {
+            "label": "Berascan BYUSD token",
+            "url": "https://berascan.com/token/0x688e72142674041f8f6af4c808a4045ca1d6ac82"
+          },
+          {
+            "label": "The Block: PayPal's PYUSD expands to Tron, Avalanche, Sei and other blockchains via LayerZero",
+            "url": "https://www.theblock.co/post/371321/paypal-pyusd-stablecoin-expands-blockchains-layerzero"
+          },
+          {
+            "label": "DefiLlama paypal-usd layerzeroConfig (per-chain PYUSD0 contracts)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/paypal-usd/layerzeroConfig.ts"
+          }
+        ]
+      },
+      {
+        "id": "tron:TKkvjWuAYrNQkbo3onBDhCU77WtNPByD5a",
+        "sourceChain": "ethereum",
+        "destinationChain": "tron",
+        "canonicalChain": "ethereum",
+        "contractAddress": "TKkvjWuAYrNQkbo3onBDhCU77WtNPByD5a",
+        "protocol": "Stargate Hydra PYUSD0 (LayerZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "PYUSD0 TRC20 (6 decimals, totalSupply $23.01 matching the DefiLlama Tron capture), verified via TronGrid triggerconstantcontract 2026-07-20. Token supplyControl 0x428b84e9871784566524e5508c902c02fa42fbb0 lists a single supplyController whose raw 20-byte value maps to Tron contract TA652PxzLaESnb4nx7dwvk9Yq94BgYVSkd \u2014 endpoint() reads the Tron LayerZero V2 endpoint and owner() equals the token owner TCD8vSybucUFsTif9VLx8bTsGQr6cfjSLf.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "controllerChain": "tron",
+        "controllerAddress": "TA652PxzLaESnb4nx7dwvk9Yq94BgYVSkd",
+        "failureDomainKeys": [
+          "protocol:stargate-hydra-pyusd0",
+          "contract:tron:TA652PxzLaESnb4nx7dwvk9Yq94BgYVSkd"
+        ],
+        "sources": [
+          {
+            "label": "Tronscan PYUSD0 token",
+            "url": "https://tronscan.org/#/token20/TKkvjWuAYrNQkbo3onBDhCU77WtNPByD5a"
+          },
+          {
+            "label": "The Block: PayPal's PYUSD expands to Tron, Avalanche, Sei and other blockchains via LayerZero",
+            "url": "https://www.theblock.co/post/371321/paypal-pyusd-stablecoin-expands-blockchains-layerzero"
+          },
+          {
+            "label": "DefiLlama paypal-usd layerzeroConfig (per-chain PYUSD0 contracts)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/paypal-usd/layerzeroConfig.ts"
+          }
+        ]
+      },
+      {
+        "id": "cardano:25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff9355059555344",
+        "sourceChain": "ethereum",
+        "destinationChain": "cardano",
+        "canonicalChain": "ethereum",
+        "contractAddress": "25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff9355059555344",
+        "protocol": "Wanchain wanPYUSD (authority unresolved)",
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "DefiLlama's paypal-usd adapter counts Cardano supply ($199 dust) from the Cardano native asset 25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff9355059555344 with bridge tag 'wan' (Wanchain). Wanchain's Cardano route is controlled by its off-chain Storeman node group, which has no single readable on-chain controller contract; without Cardano tooling to enumerate the mint authority honestly this route stays unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "DefiLlama paypal-usd layerzeroConfig (per-chain PYUSD0 contracts)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/paypal-usd/layerzeroConfig.ts"
+          },
+          {
+            "label": "DefiLlama paypal-usd adapter (cardano wan entry)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/paypal-usd/index.ts"
+          }
+        ]
       }
     ]
   },

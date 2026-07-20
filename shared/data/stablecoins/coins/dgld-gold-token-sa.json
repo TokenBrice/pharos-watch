@@ -27,9 +27,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "As of June 30 2026, DGLD closed the Ethereum-Base bridge path and redeployed Base as an independently gold-backed native issuance. Cross-chain exposure is issuer-managed multichain mint/redeem rather than a live canonical rollup bridge supply path.",
-    "reviewedAt": "2026-07-09",
-    "reviewer": "Codex static metadata correction review",
+    "summary": "Gold Token SA issues DGLD natively on Ethereum and Base; per-chain token proxies are administered by the issuer's own EOAs (mint-authority review 2026-07-16). No third-party bridge carries the representation.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex static metadata correction review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
     "confidence": "verified",
     "sources": [
       {
@@ -46,31 +46,51 @@
         "id": "ethereum:0xa9299c296d7830a99414d1e5546f5171fa01e9c8",
         "destinationChain": "ethereum",
         "contractAddress": "0xa9299c296d7830a99414d1e5546f5171fa01e9c8",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Gold Token SA DGLD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the ethereum DGLD token is a transparent proxy whose EIP-1967 admin and MINTER_ROLE/DEFAULT_ADMIN_ROLE resolve to Gold Token SA issuer EOAs (mint-authority review 2026-07-16, verified). No third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-09"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "DGLD ethereum token",
+            "url": "https://etherscan.io/address/0xa9299c296d7830a99414d1e5546f5171fa01e9c8"
+          },
+          {
+            "label": "DGLD website",
+            "url": "https://dgld.ch/"
+          }
+        ]
       },
       {
         "id": "base:0xe908475f8beb7a138b0dc6eb5a05cb27068ffb9a",
         "destinationChain": "base",
         "contractAddress": "0xe908475f8beb7a138b0dc6eb5a05cb27068ffb9a",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Gold Token SA DGLD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the base DGLD token is a transparent proxy whose EIP-1967 admin and MINTER_ROLE/DEFAULT_ADMIN_ROLE resolve to Gold Token SA issuer EOAs (mint-authority review 2026-07-16, verified). No third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-09"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "DGLD base token",
+            "url": "https://basescan.org/address/0xe908475f8beb7a138b0dc6eb5a05cb27068ffb9a"
+          },
+          {
+            "label": "DGLD website",
+            "url": "https://dgld.ch/"
+          }
+        ]
       }
     ]
   },

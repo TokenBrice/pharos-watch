@@ -264,10 +264,10 @@
   "launchDate": "2020-09-18",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "Origin docs describe mainnet OUSD holders receiving yield without bridging or cross-chain action, and Pharos has no source-verified active bridge route for the secondary checked deployment. The row is reviewed as no material bridge route.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "summary": "OUSD supply is confined to its canonical Ethereum deployment; the single reviewed route is native issuance by the Origin Protocol vault. No bridge route carries the claim.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Origin Dollar docs",
@@ -276,6 +276,34 @@
       {
         "label": "Origin Dollar repository",
         "url": "https://github.com/OriginProtocol/origin-dollar"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
+        "protocol": "Origin Protocol OUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "OUSD is issued only on Ethereum mainnet by the Origin Protocol OUSD vault; the entire captured supply is the canonical Ethereum deployment (0x2a8e1e676ec238d8a992307b495b45b3feaa5e86). No bridge route carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "OUSD token (Etherscan)",
+            "url": "https://etherscan.io/address/0x2a8e1e676ec238d8a992307b495b45b3feaa5e86"
+          },
+          {
+            "label": "OUSD docs",
+            "url": "https://docs.ousd.com/"
+          }
+        ]
       }
     ]
   },

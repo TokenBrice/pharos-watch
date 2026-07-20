@@ -144,6 +144,41 @@
     "knownUnknownExposure": "The issuer's live transparency API identifies both backing assets and their aggregate quantities; its listed-custodian sum is $0.001 below totalBacking, an endpoint reconciliation difference rather than an unlinked reserve slice.",
     "knownUnknownExposurePct": 0
   },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Anchorage Digital (Sui custody wallets)",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Coinbase (Prime and Ethereum custody wallets)",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Ethena Whitelabel mint/redeem wallet (Sui)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Ethena Whitelabel transparency API",
+        "url": "https://whitelabel.ethena.fi/api/transparency"
+      },
+      {
+        "label": "Ethena Whitelabel transparency",
+        "url": "https://whitelabel.ethena.fi/transparency"
+      }
+    ],
+    "uncertainty": "The issuer's live transparency API names the suiUSDe backing custodians and wallets: Anchorage 2 and 3 (Sui USDC), Coinbase 1 (Coinbase Prime USDC), Coinbase 2 (Ethereum USDe and USDC), and a Sui mint/redeem wallet. At the 2026-07-20 capture the API reported $13,114,642.84 backing ($12,157,307.86 USDe and $957,334.98 USDC, a 100.14% ratio), but it does not publish legal segregation, insolvency treatment, rehypothecation terms, or target provider shares for this partner deployment."
+  },
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",

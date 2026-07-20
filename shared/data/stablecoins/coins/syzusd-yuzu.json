@@ -120,8 +120,8 @@
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "syzUSD moves cross-chain between Plasma and Monad via a LayerZero OVault. Yuzu's own audited contracts (ovault/ProtoOVaultComposer and PSMOVaultComposer) inherit LayerZero's VaultComposerSync and wire an asset+share OFT mesh, with the share token (syzUSD) explicitly required to be an OFTAdapter lockbox (approvalRequired()==true) on the hub chain (most likely Plasma) and a standard OFT on spokes. Because the durable supply path for shares runs through a third-party (LayerZero) OFTAdapter lockbox control surface, this is an external lock/mint route rather than opaque. (Named DVN set and a live LayerZeroScan trace were not pinned, and the on-chain hub identity was not confirmed at the explorer/deploy-config level, but the lockbox/adapter requirement is code-enforced in the issuer's audited composer.)",
-    "reviewedAt": "2026-06-21",
-    "reviewer": "Pharos bridge-route re-verification",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
     "confidence": "verified",
     "protocols": [
       {
@@ -171,31 +171,51 @@
         "id": "plasma:0xc8a8df9b210243c55d31c73090f06787ad0a1bf6",
         "destinationChain": "plasma",
         "contractAddress": "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Yuzu syzUSD ERC-4626 vault (native wrapper)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: transparent-proxy ERC-4626 'Staked Yuzu USD' vault (implementation 0xa3982582016375a0b25cb7d572379d3d49e5e9c8, ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0 whose owner is the 4/5 Safe 0xa2a9700407934e913c840556b3d29f19cf6f203d) minting shares natively against yzUSD deposits (asset() = 0x6695c0f8706c5ace3bdf8995073179cca47926dc). The vault owner() EOA 0xceaff57fbcd0e8f095c5c1125dd09b93fc5bbf82 is operational-only. Native wrapper issuance; no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "syzUSD vault on Plasmascan",
+            "url": "https://plasmascan.to/address/0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
+          },
+          {
+            "label": "Yuzu documentation",
+            "url": "https://docs.yuzu.money/"
+          }
+        ]
       },
       {
         "id": "monad:0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
         "destinationChain": "monad",
         "contractAddress": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Yuzu syzUSD ERC-4626 vault (native wrapper)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: transparent-proxy ERC-4626 'Staked Yuzu USD' vault (implementation 0xe536b80e7f859e72ad095d769da1da45b7312d53, ProxyAdmin 0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331 whose owner is 0xd32ab76a165f1a716986ba8c58344e3df4397f5e) minting shares natively against yzUSD deposits; vault owner() EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae (no code) is operational-only. Native wrapper issuance; no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-21"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "syzUSD vault on Monadexplorer",
+            "url": "https://monadexplorer.com/address/0x484be0540ad49f351eaa04eeb35df0f937d4e73f"
+          },
+          {
+            "label": "Yuzu documentation",
+            "url": "https://docs.yuzu.money/"
+          }
+        ]
       }
     ]
   },
@@ -304,9 +324,9 @@
       }
     ],
     "review": {
-      "evidence": "syzUSD (variantOf yzusd-yuzu, variantKind strategy-vault) is an ERC-4626 staked wrapper over yzUSD on Plasma and Monad. It inherits yzUSD's permissioned-minter mint path and concentrated-admin posture; the wrapper only mints/burns shares against yzUSD deposits.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "syzUSD (variantOf yzusd-yuzu, variantKind strategy-vault) is an ERC-4626 staked wrapper over yzUSD on Plasma and Monad. It inherits yzUSD's permissioned-minter mint path and concentrated-admin posture; the wrapper only mints/burns shares against yzUSD deposits. 2026-07-20 follow-up resolved the open EOA-role question: on Plasma, vault owner() = EOA 0xceaff57fbcd0e8f095c5c1125dd09b93fc5bbf82 while the ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0 is owned by the separate 4/5 Safe 0xa2a9700407934e913c840556b3d29f19cf6f203d; on Monad, vault owner() = EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae (no code) while the ProxyAdmin 0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331 is owned by 0xd32ab76a165f1a716986ba8c58344e3df4397f5e. The owner() EOAs are operational-only vault admins distinct from the upgrade admins; no MPC/HSM attestation for either EOA was found, so they are recorded honestly as EOAs.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+      "reviewedAt": "2026-07-20",
       "sourceFreeRationale": "Classified as the staked variant of yzusd-yuzu per coin metadata and Yuzu docs; posture mirrored from the parent yzUSD mintAuthority. The vault's own admin was not independently resolved on-chain.",
       "sources": [
         {
@@ -317,9 +337,6 @@
           "label": "Yuzu yzUSD docs",
           "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
         }
-      ],
-      "unresolvedQuestions": [
-        "Plasma deployment 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6: transparent proxy confirmed (admin slot = ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0; ProxyAdmin owner = 4/5 Safe 0xa2a9700407934e913c840556b3d29f19cf6f203d, Safe masterCopy=0x29fcb43, no modules). HOWEVER vault owner() = EOA 0xceaff57fbcd0e8f095c5c1125dd09b93fc5bbf82 (code=0x). Per brief, an EOA owner is verifiable as authorityType:eoa — but this is a wrapper with a separate upgrade admin (the 4/5 Safe). Promote when the EOA role is clarified (operational vs upgrade) or if the project confirms EOA is an MPC/HSM wallet."
       ]
     }
   }

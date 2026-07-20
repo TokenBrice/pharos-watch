@@ -66,12 +66,22 @@
     {
       "name": "Locked GLD NFTs representing physical gold bars in Swiss vaults",
       "pct": 100,
-      "risk": "low"
+      "risk": "low",
+      "assetClass": "other",
+      "issuerOrObligor": "Gold DAO GLD NFT swap canister over physical gold bars held in Swiss vaults",
+      "riskFactors": [
+        "custody",
+        "market",
+        "liquidity",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG Safety Score V9 reserve review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
     "confidence": "probable",
     "sources": [
       {
@@ -81,10 +91,15 @@
       {
         "label": "Gold DAO GLDT",
         "url": "https://gldt.org/"
+      },
+      {
+        "label": "Gold DAO",
+        "url": "https://www.gold-dao.org/"
       }
     ],
-    "rationale": "Gold DAO describes GLDT as the gold-backed token issued through the GLD NFT swap route. The reviewed composition therefore retains one aggregate 100% locked-gold-NFT category; bar-level weights, serial numbers, and current custody allocation are not publicly reconciled.",
+    "rationale": "Gold DAO describes GLDT as the gold-backed token issued through the GLD NFT swap route at 100 GLDT per gram of locked GLD NFT, with the underlying gold bars produced and stored in Switzerland and the vault audited on a recurring cycle. The reviewed composition therefore retains one aggregate 100% locked-gold-NFT category; bar-level weights, serial numbers, and current custody allocation are not publicly reconciled.",
     "compositionBasis": "Gold DAO GLDT documentation and current swap/ledger control review",
+    "compositionAsOf": "2026-07-20",
     "scope": "full-composition",
     "knownUnknownExposure": "The backing class is identified as locked GLD NFTs representing physical gold, but current bar inventory, serial-level allocation, and custody-provider shares are not disclosed in the reviewed sources.",
     "knownUnknownExposurePct": 0,
@@ -98,10 +113,40 @@
       }
     ]
   },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed Swiss vault operator holding the gold bars underlying GLD NFTs",
+        "role": "custodian",
+        "jurisdiction": "Switzerland"
+      },
+      {
+        "name": "Gold DAO GLD NFT swap canister (Internet Computer)",
+        "role": "other"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Gold DAO GLDT",
+        "url": "https://gldt.org/"
+      },
+      {
+        "label": "Gold DAO",
+        "url": "https://www.gold-dao.org/"
+      }
+    ],
+    "uncertainty": "GLD NFTs map to specific physical gold bars with serial-level certificates stored in Swiss vaults, supporting bar-level segregation, and the issuer describes recurring independent vault audits (KPMG per the proof-of-reserves entry). The current primary pages do not name the vault operator, insolvency treatment, or rehypothecation terms."
+  },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "manual-review",
+    "confidence": "verified",
     "summary": "GLDT is minted by the Gold DAO swap canister on the Internet Computer when users lock GLD NFTs at 100 GLDT per gram; the swap canister holds the GLDT ledger minting rights and is governed/upgradeable by the Gold DAO SNS.",
     "controls": [
       {
@@ -109,10 +154,33 @@
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "capDescription": "The GLDT swap canister holds minting rights on the GLDT ledger and mints only when GLD NFTs are locked (100 GLDT per gram); reverse swaps burn GLDT and release NFTs, so supply is collateral-bounded by locked gold NFTs.",
-        "evidence": "Gold DAO docs state the GLDT swap canister has minting rights to the GLDT ledger and mints new GLDT when GLD NFTs are locked at a fixed 100 GLDT per gram ratio."
+        "evidence": "The GLDT ICRC-1 ledger's icrc1 minting account is 6f6ua-hqaaa-aaaar-qairq-cai (ICRC API read 2026-07-20), which the GoldDAO/gold-dao canister_ids.json maps to the gldt_swap canister; the IC API shows its sole controller is the Gold DAO SNS root tw2vt-hqaaa-aaaaq-aab6a-cai. The swap canister mints GLDT only when GLD NFT gold certificates are locked (1/100 g per GLDT), so minting is bounded by gold deposits and cannot be raised administratively.",
+        "chain": "icp",
+        "address": "6f6ua-hqaaa-aaaar-qairq-cai",
+        "failureDomainKeys": [
+          "icp:6f6ua-hqaaa-aaaar-qairq-cai"
+        ],
+        "sources": [
+          {
+            "label": "ICRC API — GLDT ledger minting account (read 2026-07-20)",
+            "url": "https://icrc-api.internetcomputer.org/api/v1/ledgers/6c7su-kiaaa-aaaar-qaira-cai"
+          },
+          {
+            "label": "IC API — swap canister controllers (read 2026-07-20)",
+            "url": "https://ic-api.internetcomputer.org/api/v3/canisters/6f6ua-hqaaa-aaaar-qairq-cai"
+          },
+          {
+            "label": "GoldDAO/gold-dao repository — canister_ids.json",
+            "url": "https://github.com/GoldDAO/gold-dao"
+          },
+          {
+            "label": "Gold DAO whitepaper — GLDT swap",
+            "url": "https://docs.gold-dao.org/v/gold-dao-whitepaper/the-ecosystem/products/gold-token-gldt"
+          }
+        ]
       },
       {
         "chain": "icp",
@@ -142,9 +210,9 @@
       }
     ],
     "review": {
-      "evidence": "Gold DAO documentation describes GLDT minting via an SNS-controlled swap canister against locked GLD NFTs. Current Internet Computer API state confirms the GLDT ledger is controlled by Gold DAO Root and closes the Root/Governance controller loop. The public key-canister directory still does not identify the swap-canister principal that holds ledger minting rights.",
-      "reviewer": "SOL-7 blocker challenge batch 02",
-      "reviewedAt": "2026-07-14",
+      "evidence": "Gold DAO documentation describes GLDT minting via an SNS-controlled swap canister against locked GLD NFTs. Current Internet Computer API state confirms the GLDT ledger is controlled by Gold DAO Root and closes the Root/Governance controller loop. The public key-canister directory still does not identify the swap-canister principal that holds ledger minting rights. 2026-07-20 (Kimi P2 dc-2): the GLDT ledger minting account is the GLDT swap canister 6f6ua-hqaaa-aaaar-qairq-cai (ICRC API), controlled solely by the Gold DAO SNS root tw2vt-hqaaa-aaaaq-aab6a-cai (IC API) — the previously open swap-canister principal question is closed. Minting is bounded by locked GLD NFT gold deposits.",
+      "reviewer": "SOL-7 blocker challenge batch 02; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "Gold DAO key canisters",
@@ -158,9 +226,6 @@
           "label": "Internet Computer API — Gold DAO Root",
           "url": "https://ic-api.internetcomputer.org/api/v3/canisters/tw2vt-hqaaa-aaaaq-aab6a-cai"
         }
-      ],
-      "unresolvedQuestions": [
-        "The live SNS controller state is now confirmed, but Gold DAO's public key-canister directory and the Internet Computer canister API do not identify the GLDT swap-canister principal that holds ledger minting rights. EVM bridge contracts on Ethereum, Base, and Arbitrum are bridged representations, not the native issuer."
       ]
     },
     "upgradeability": {
@@ -186,7 +251,8 @@
           "url": "https://ic-api.internetcomputer.org/api/v3/canisters/tw2vt-hqaaa-aaaaq-aab6a-cai"
         }
       ]
-    }
+    },
+    "economicCapSemantics": "bounded"
   },
   "launchDate": "2024-10-30"
 }

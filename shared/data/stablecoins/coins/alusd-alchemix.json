@@ -156,7 +156,10 @@
             "label": "AlchemistV2 on Etherscan",
             "url": "https://etherscan.io/address/0x5C6374a2ac4EBC38DeA0Fc1F8716e5Ea1AdD94dd"
           }
-        ]
+        ],
+        "chain": "ethereum",
+        "address": "0x5C6374a2ac4EBC38DeA0Fc1F8716e5Ea1AdD94dd",
+        "observedAt": "2026-07-20"
       },
       {
         "label": "Alchemix MultiSigWalletWithTimeLock (ADMIN_ROLE)",
@@ -173,7 +176,10 @@
             "label": "MultiSigWalletWithTimeLock on Etherscan",
             "url": "https://etherscan.io/address/0x8392f6669292fa56123f71949b52d883ae57e225"
           }
-        ]
+        ],
+        "chain": "ethereum",
+        "address": "0x8392f6669292fa56123f71949b52d883ae57e225",
+        "observedAt": "2026-07-20"
       },
       {
         "label": "Alchemix Gnosis Safe (ADMIN_ROLE + ProxyAdmin owner)",
@@ -208,13 +214,16 @@
             "label": "Alchemix Safe on Etherscan",
             "url": "https://etherscan.io/address/0x9e2b6378ee8ad2a4a95fe481d63caba8fb0ebbf9"
           }
-        ]
+        ],
+        "chain": "ethereum",
+        "address": "0x9e2b6378ee8ad2a4a95fe481d63caba8fb0ebbf9",
+        "observedAt": "2026-07-20"
       }
     ],
     "review": {
       "evidence": "At Ethereum block 25295217: AlToken (alUSD, 0xbc6da0fe...) ADMIN_ROLE (0xdf8b4c52...) has 2 members: MultiSigWalletWithTimeLock (0x8392f6..., 4/7 EOA owners, 10-min timelock) and Gnosis Safe 1.3.0 (0x9e2b6378..., 3/7 EOA owners, no modules, no guard). The Safe also owns ProxyAdmin (0xe0fc5cb7...) which controls the AlchemistV2 CDP proxy upgrade path. All owners confirmed EOA via eth_getCode. No centralized direct-mint path; AlchemistV2 is the only CDP minter.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "AlToken (alUSD) on Etherscan",
@@ -260,8 +269,8 @@
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "Alchemix documents alAsset L2 bridging through Everclear xERC20 plus lockbox contracts; mainnet alUSD can be locked and L2 xalUSD minted, with Everclear as the whitelisted bridge path.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
     "confidence": "verified",
     "protocols": [
       {
@@ -284,77 +293,166 @@
       {
         "id": "ethereum:0xbc6da0fe9ad5f3b0d58160288917aa56653660e9",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xbc6da0fe9ad5f3b0d58160288917aa56653660e9",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Alchemix native issuance (AlchemistV2 CDP)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical alUSD (8,579-byte token, no proxy or LayerZero endpoint) minted by AlchemistV2 on Ethereum mainnet; the L2 xalUSD representations are minted against mainnet alUSD locked in the Everclear xERC20 lockbox.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "alUSD on Etherscan",
+            "url": "https://etherscan.io/token/0xbc6da0fe9ad5f3b0d58160288917aa56653660e9"
+          },
+          {
+            "label": "Alchemix on L2 docs (Everclear xERC20 + lockbox)",
+            "url": "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemix-on-l2"
+          }
+        ]
       },
       {
         "id": "arbitrum:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a",
+        "sourceChain": "ethereum",
         "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Alchemix xERC20 via LayerZero (CrossChainCanonicalAlchemicTokenV2)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "ARB-xalUSD is the CrossChainCanonicalAlchemicTokenV2 UUPS proxy (impl 0x37704b70cba0ffd12eb039274ff46992544a1f16, verified source). BridgeLimitsSet events show three whitelisted minters, all with active xBridges() caps on 2026-07-20: the LayerZero OApp bridge 0xd64ab29cc101e421ee3f4b0eaa721925395ddc05 (1M cap, endpoint() = canonical LZ V2, token() = this xalUSD, owner = Alchemix Arbitrum 3-of-7 Safe 0x7e108711771dfdb10743f016d46d75a9379ca043), plus legacy bridges 0xee9dec2712cce65174b561151701bf54b99c24c8 (500k cap) and 0x19bede3d7addf500ec6777384dd48a5715836c85 (100k cap).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xd64ab29cc101e421ee3f4b0eaa721925395ddc05",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:arbitrum:0xd64ab29cc101e421ee3f4b0eaa721925395ddc05"
+        ],
+        "sources": [
+          {
+            "label": "arbitrum explorer xalUSD token",
+            "url": "https://arbiscan.io/token/0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
+          },
+          {
+            "label": "Alchemix on L2 docs (Everclear xERC20 + lockbox)",
+            "url": "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemix-on-l2"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
       },
       {
         "id": "optimism:0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a",
+        "sourceChain": "ethereum",
         "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Alchemix xERC20 via LayerZero (CrossChainCanonicalAlchemicTokenV2)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "OP-xalUSD is the CrossChainCanonicalAlchemicTokenV2 UUPS proxy (impl 0x29ef9f2fa6f636eafe74e5fba057c7949a37ffa6). Its xBridges() registry has exactly one whitelisted minter: 0xd64ab29cc101e421ee3f4b0eaa721925395ddc05 with a 1M mint/burn cap \u2014 an 11,213-byte LayerZero OApp bridge (endpoint() = canonical LZ V2 0x1a44076050125825900e736c501f859c50fe728c, token() = this xalUSD) whose owner() is the Alchemix Optimism 3-of-7 Safe 0xc224bf25dcc99236f00843c7d8c4194abe8aa94a. This matches Alchemix's May 2026 migration of alUSD/alETH bridging to a v3-compatible LayerZero bridge. xBridges() reads 2026-07-20.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "optimism",
+        "controllerAddress": "0xd64ab29cc101e421ee3f4b0eaa721925395ddc05",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:optimism:0xd64ab29cc101e421ee3f4b0eaa721925395ddc05"
+        ],
+        "sources": [
+          {
+            "label": "optimism explorer xalUSD token",
+            "url": "https://optimistic.etherscan.io/token/0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a"
+          },
+          {
+            "label": "Alchemix on L2 docs (Everclear xERC20 + lockbox)",
+            "url": "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemix-on-l2"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
       },
       {
         "id": "fantom:0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e",
+        "sourceChain": "ethereum",
         "destinationChain": "fantom",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e",
-        "protocol": "unresolved route",
+        "protocol": "Multichain-era alUSD (authority unresolved)",
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "reviewNote": "Fantom alUSD (impl 0x211c74db951c161c5a379363716ebdca5125ef59, totalSupply $170.5k) grants minter role 0xdf8b4c520ffe\u2026ec42 to the Alchemix 3-of-7 Safe 0x6b291cf19370a14bbb4491b01091e1e29335e605 AND to the code-less EOA 0x13c716188c38ce27b9b2b672a59543cf1170eabe (RoleGranted block 36896627, hasRole still true 2026-07-20) \u2014 the Multichain-era MPC minter whose keys and liveness cannot be established after Multichain's 2023 collapse. The route model cannot honestly encode this EOA as a contract controller, so it stays unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Fantom alUSD token",
+            "url": "https://ftmscan.com/token/0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e"
+          },
+          {
+            "label": "Alchemix on L2 docs (Everclear xERC20 + lockbox)",
+            "url": "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemix-on-l2"
+          }
+        ]
       },
       {
         "id": "metis:0x303241e2b3b4aed0bb0f8623e7442368fed8faf3",
+        "sourceChain": "ethereum",
         "destinationChain": "metis",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x303241e2b3b4aed0bb0f8623e7442368fed8faf3",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Alchemix xERC20 via LayerZero (CrossChainCanonicalAlchemicTokenV2)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Metis alUSD is the CrossChainCanonicalAlchemicTokenV2 UUPS proxy (impl 0xd153b36c474cd6662a2e4194e70084e84aeccf76). BridgeLimitsSet events show two whitelisted minters with active xBridges() caps on 2026-07-20: the LayerZero OApp bridge 0x1d60ec09d68147e511b490ff07c794b3f9ded5a9 (5k cap, endpoint() = canonical LZ V2, owner = Alchemix Metis 2-of-8 Safe 0x0f5c3a8b62ff7639895bb9737c5befb711c4f7f4) plus legacy bridge 0x6b142227a277ce62808e0df93202483547ec0188 (500k cap).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "metis",
+        "controllerAddress": "0x1d60ec09d68147e511b490ff07c794b3f9ded5a9",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:metis:0x1d60ec09d68147e511b490ff07c794b3f9ded5a9"
+        ],
+        "sources": [
+          {
+            "label": "metis explorer xalUSD token",
+            "url": "https://andromeda-explorer.metis.io/token/0x303241e2b3b4aed0bb0f8623e7442368fed8faf3"
+          },
+          {
+            "label": "Alchemix on L2 docs (Everclear xERC20 + lockbox)",
+            "url": "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemix-on-l2"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          }
+        ]
       }
     ]
   },
@@ -367,7 +465,11 @@
       "coinId": "dai-makerdao",
       "assetClass": "stablecoin",
       "issuerOrObligor": "MakerDAO/Sky (DAI) via Alchemix-registered Yearn and Aave yield strategies",
-      "riskFactors": ["counterparty", "smart-contract", "liquidity"],
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
@@ -377,7 +479,11 @@
       "coinId": "usdc-circle",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle (USDC) via Alchemix-registered Yearn and Aave yield strategies",
-      "riskFactors": ["counterparty", "smart-contract", "liquidity"],
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
@@ -387,7 +493,11 @@
       "coinId": "usdt-tether",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Tether (USDT) via Alchemix-registered Yearn and Aave yield strategies",
-      "riskFactors": ["counterparty", "smart-contract", "liquidity"],
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
@@ -397,7 +507,11 @@
       "coinId": "frax-frax",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Frax (FRAX) via Alchemix-registered yield strategies",
-      "riskFactors": ["counterparty", "smart-contract", "liquidity"],
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity"
+      ],
       "liquidityHorizon": "immediate"
     }
   ],

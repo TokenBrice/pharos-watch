@@ -305,11 +305,11 @@
   },
   "launchDate": "2022-11-01",
   "bridgeRouteRisk": {
-    "tier": "liquidity-or-intent-route",
-    "summary": "USDGLO has reviewed cross-chain route evidence through Across, an intent/liquidity framework rather than issuer-native settlement. The route is scored as liquidity/intent because execution and available bridge liquidity are material to cross-chain movement.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "tier": "issuer-native-burn-mint",
+    "summary": "USDGLO has reviewed cross-chain route evidence through Across, an intent/liquidity framework rather than issuer-native settlement, but on-chain reads on 2026-07-20 confirm all seven deployments are issuer-native (identical GloDollarV3 CREATE2 proxies on six EVM chains and a native Stellar asset); the tokens themselves are minted by the Brale issuer backend, not by the Across route.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "l2beat",
@@ -340,107 +340,178 @@
       {
         "id": "ethereum:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Glo issuer-native USDGLO (GloDollarV3)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: identical GloDollarV3 ERC1967 UUPS proxy (implementation 0x693b51c1ce5c6e98d71c26ed2c6b3764d8db9cf8) at the same CREATE2 address; the reviewed mintAuthority documents all roles consolidated into the Brale issuer backend, which issues 1:1. Issuer-native deployment; no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDGLO token on Etherscan",
+            "url": "https://etherscan.io/address/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"
+          },
+          {
+            "label": "Glo Dollar documentation",
+            "url": "https://docs.glodollar.org/"
+          }
+        ]
       },
       {
         "id": "celo:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
         "destinationChain": "celo",
         "contractAddress": "0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Glo issuer-native USDGLO (GloDollarV3)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: identical GloDollarV3 ERC1967 UUPS proxy (implementation 0x693b51c1ce5c6e98d71c26ed2c6b3764d8db9cf8) at the same CREATE2 address; the reviewed mintAuthority documents all roles consolidated into the Brale issuer backend, which issues 1:1. Issuer-native deployment; no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDGLO token on Celoscan",
+            "url": "https://celoscan.io/address/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"
+          },
+          {
+            "label": "Glo Dollar documentation",
+            "url": "https://docs.glodollar.org/"
+          }
+        ]
       },
       {
         "id": "optimism:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
         "destinationChain": "optimism",
         "contractAddress": "0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Glo issuer-native USDGLO (GloDollarV3)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: identical GloDollarV3 ERC1967 UUPS proxy (implementation 0x693b51c1ce5c6e98d71c26ed2c6b3764d8db9cf8) at the same CREATE2 address; the reviewed mintAuthority documents all roles consolidated into the Brale issuer backend, which issues 1:1. Issuer-native deployment; no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDGLO token on Optimistic Etherscan",
+            "url": "https://optimistic.etherscan.io/address/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"
+          },
+          {
+            "label": "Glo Dollar documentation",
+            "url": "https://docs.glodollar.org/"
+          }
+        ]
       },
       {
         "id": "base:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
         "destinationChain": "base",
         "contractAddress": "0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Glo issuer-native USDGLO (GloDollarV3)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: identical GloDollarV3 ERC1967 UUPS proxy (implementation 0x693b51c1ce5c6e98d71c26ed2c6b3764d8db9cf8) at the same CREATE2 address; the reviewed mintAuthority documents all roles consolidated into the Brale issuer backend, which issues 1:1. Issuer-native deployment; no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDGLO token on Basescan",
+            "url": "https://basescan.org/address/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"
+          },
+          {
+            "label": "Glo Dollar documentation",
+            "url": "https://docs.glodollar.org/"
+          }
+        ]
       },
       {
         "id": "polygon:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
         "destinationChain": "polygon",
         "contractAddress": "0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Glo issuer-native USDGLO (GloDollarV3)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: identical GloDollarV3 ERC1967 UUPS proxy (implementation 0x693b51c1ce5c6e98d71c26ed2c6b3764d8db9cf8) at the same CREATE2 address; the reviewed mintAuthority documents all roles consolidated into the Brale issuer backend, which issues 1:1. Issuer-native deployment; no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDGLO token on Polygonscan",
+            "url": "https://polygonscan.com/address/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"
+          },
+          {
+            "label": "Glo Dollar documentation",
+            "url": "https://docs.glodollar.org/"
+          }
+        ]
       },
       {
         "id": "arbitrum:0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
         "destinationChain": "arbitrum",
         "contractAddress": "0x4f604735c1cf31399c6e711d5962b2b3e0225ad3",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Glo issuer-native USDGLO (GloDollarV3)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: identical GloDollarV3 ERC1967 UUPS proxy (implementation 0x693b51c1ce5c6e98d71c26ed2c6b3764d8db9cf8) at the same CREATE2 address; the reviewed mintAuthority documents all roles consolidated into the Brale issuer backend, which issues 1:1. Issuer-native deployment; no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDGLO token on Arbiscan",
+            "url": "https://arbiscan.io/address/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"
+          },
+          {
+            "label": "Glo Dollar documentation",
+            "url": "https://docs.glodollar.org/"
+          }
+        ]
       },
       {
         "id": "stellar:USDGLO-GBBS25EGYQPGEZCGCFBKG4OAGFXU6DSOQBGTHELLJT3HZXZJ34HWS6XV",
         "destinationChain": "stellar",
         "contractAddress": "USDGLO-GBBS25EGYQPGEZCGCFBKG4OAGFXU6DSOQBGTHELLJT3HZXZJ34HWS6XV",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Glo issuer-native USDGLO (Stellar)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Stellar Horizon reads 2026-07-20: USDGLO is a native Stellar asset issued by account GBBS25EGYQPGEZCGCFBKG4OAGFXU6DSOQBGTHELLJT3HZXZJ34HWS6XV (~27k issued, clawback-enabled). Issuer-native Stellar issuance; no bridge control carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDGLO asset on Stellar Expert",
+            "url": "https://stellar.expert/explorer/public/asset/USDGLO-GBBS25EGYQPGEZCGCFBKG4OAGFXU6DSOQBGTHELLJT3HZXZJ34HWS6XV"
+          },
+          {
+            "label": "Glo Dollar documentation",
+            "url": "https://docs.glodollar.org/"
+          }
+        ]
       }
     ]
   }

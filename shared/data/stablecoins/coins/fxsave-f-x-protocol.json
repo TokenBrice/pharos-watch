@@ -222,13 +222,16 @@
         "directMintAbility": "none",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
-        "evidence": "Underlying fxUSD supply is minted CDP-style against overcollateralized wstETH/WBTC positions with governance-tuned risk parameters (user-collateralized-governed, partially-bounded-admin); fxSAVE holds fxUSD and inherits that base mint authority."
+        "evidence": "Underlying fxUSD supply is minted CDP-style against overcollateralized wstETH/WBTC positions with governance-tuned risk parameters (user-collateralized-governed, partially-bounded-admin); fxSAVE holds fxUSD and inherits that base mint authority. 2026-07-20 (Kimi P2 dc-2): the inherited control surface is the upstream fxUSD mint system itself; recorded asset:fxusd-f-x-protocol as the explicit failure domain so the control identity resolves (no separate contract/EOA administers fxSAVE minting — shares mint only through the vault deposit flow).",
+        "failureDomainKeys": [
+          "asset:fxusd-f-x-protocol"
+        ]
       }
     ],
     "review": {
       "evidence": "fxSAVE (variantOf fxusd-f-x-protocol, variantKind strategy-vault) is a yield-bearing vault receipt. At Ethereum block 25295182: asset() confirmed (fxUSD Stability Pool); upgrade admin chain confirmed as ProxyAdmin(0x9b54b7) owned by AladdinDAO TimelockController(0x68863f, 3-day delay, getMinDelay()=259200). No privileged share-minting outside deposit flows.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+      "reviewedAt": "2026-07-20",
       "sources": [
         {
           "label": "f(x) Protocol docs",

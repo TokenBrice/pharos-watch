@@ -166,7 +166,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "ACRDX is a permissioned NAV-accreting fund share issued by Anemoy via Centrifuge rails; primary subscriptions and redemptions are KYC-gated at fund NAV. On Ethereum, the Centrifuge ShareToken is warded by a Root contract (0x7ed4...368f), a Spoke contract (0xec35...25ab), and a BalanceSheet (0x12a1...43e); the Root is governed by a Centrifuge ProtocolGuardian (0xceb7...35c6) backed by a 4/9 Safe multisig (0x9711...7d225). On Plume and Monad, the same Spoke is the sole ward (Root not deployed separately on those chains — consistent with Centrifuge cross-chain architecture).",
+    "summary": "ACRDX is a permissioned NAV-accreting fund share issued by Anemoy via Centrifuge rails; primary subscriptions and redemptions are KYC-gated at fund NAV. On Ethereum, the Centrifuge ShareToken is warded by a Root contract (0x7ed4...368f), a Spoke contract (0xec35...25ab), and a BalanceSheet (0x12a1...43e); the Root is governed by a Centrifuge ProtocolGuardian (0xceb7...35c6) backed by a 4/9 Safe multisig (0x9711...7d225). On Plume and Monad, the same Spoke is the sole ward (Root not deployed separately on those chains \u2014 consistent with Centrifuge cross-chain architecture).",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
@@ -203,13 +203,13 @@
         ]
       },
       {
-        "label": "ACRDX Centrifuge Spoke ward (direct mint path — Ethereum, Plume, Monad)",
+        "label": "ACRDX Centrifuge Spoke ward (direct mint path \u2014 Ethereum, Plume, Monad)",
         "role": "direct-minter",
         "authorityType": "contract",
         "address": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
         "directMintAbility": "direct",
         "canRaiseCap": false,
-        "evidence": "At Ethereum block 25295029, wards(0xec3582...) on the ACRDX ShareToken (0x9477...4a74f) returned 1. At Plume block 74211635, wards(0xec3582...) on the Plume ShareToken (0x9477...4a74f) returned 1. At Monad block 80740709, wards(0xec3582...) on the Monad ShareToken (0x2fabf1...3245) returned 1 and eth_getCode confirmed the Spoke is deployed there. Blockscout identifies this as the Centrifuge Spoke contract — the on-chain contract that calls mint()/burn() for cross-chain subscriptions/redemptions.",
+        "evidence": "At Ethereum block 25295029, wards(0xec3582...) on the ACRDX ShareToken (0x9477...4a74f) returned 1. At Plume block 74211635, wards(0xec3582...) on the Plume ShareToken (0x9477...4a74f) returned 1. At Monad block 80740709, wards(0xec3582...) on the Monad ShareToken (0x2fabf1...3245) returned 1 and eth_getCode confirmed the Spoke is deployed there. Blockscout identifies this as the Centrifuge Spoke contract \u2014 the on-chain contract that calls mint()/burn() for cross-chain subscriptions/redemptions.",
         "sources": [
           {
             "label": "Ethereum Blockscout ACRDX ShareToken",
@@ -228,7 +228,7 @@
         "address": "0x7ed48c31f2fdc40d37407cbabf0870b2b688368f",
         "directMintAbility": "none",
         "canRaiseCap": true,
-        "evidence": "At Ethereum block 25295029, wards(0x7ed48c31...) on the ACRDX ShareToken returned 1. At Plume block 74211635, wards(0x7ed48c31...) on the Plume ShareToken also returned 1. Blockscout identifies this as the Centrifuge Root contract. Root controls the rely/deny of all wards on the token. Note: Root ward returns 0 on Monad (0x2fabf1...3245) — Monad deployment uses Spoke-only ward architecture; the Spoke itself is the sole warded contract there.",
+        "evidence": "At Ethereum block 25295029, wards(0x7ed48c31...) on the ACRDX ShareToken returned 1. At Plume block 74211635, wards(0x7ed48c31...) on the Plume ShareToken also returned 1. Blockscout identifies this as the Centrifuge Root contract. Root controls the rely/deny of all wards on the token. Note: Root ward returns 0 on Monad (0x2fabf1...3245) \u2014 Monad deployment uses Spoke-only ward architecture; the Spoke itself is the sole warded contract there.",
         "sources": [
           {
             "label": "Ethereum Blockscout Centrifuge Root",
@@ -314,9 +314,9 @@
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "ACRDX cross-chain movement uses Centrifuge cross-chain architecture over Wormhole messaging, so Pharos scores durable route exposure as an external validated network rather than Across liquidity/intent routing.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "confidence": "verified",
     "protocols": [
       {
         "source": "docs",
@@ -342,62 +342,111 @@
       {
         "id": "ethereum:0x9477724bb54ad5417de8baff29e59df3fb4da74f",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x9477724bb54ad5417de8baff29e59df3fb4da74f",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Centrifuge hub issuance (Anemoy)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native ACRDX share token on Ethereum (7,501-byte code): the Centrifuge Spoke contract 0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab holds wards() = 1 on the token (read 2026-07-20) and mints under the Ethereum hub (Root ward 0x7ed48c31f2fdc40d37407cbabf0870b2b688368f, ProtocolGuardian Safe).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Etherscan ACRDX token",
+            "url": "https://etherscan.io/token/0x9477724bb54ad5417de8baff29e59df3fb4da74f"
+          }
+        ]
       },
       {
         "id": "plume:0x9477724bb54ad5417de8baff29e59df3fb4da74f",
+        "sourceChain": "ethereum",
         "destinationChain": "plume",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x9477724bb54ad5417de8baff29e59df3fb4da74f",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Centrifuge V3 spoke messaging",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "ACRDX on plume is minted by the same Centrifuge Spoke contract 0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab (17,675-byte code on every chain): wards() = 1 on the plume token (read 2026-07-20). The Spoke mints under Centrifuge hub cross-chain messaging from Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "plume",
+        "controllerAddress": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "contract:plume:0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
+        ],
+        "sources": [
+          {
+            "label": "Anemoy",
+            "url": "https://anemoy.com/"
+          }
+        ]
       },
       {
         "id": "monad:0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245",
+        "sourceChain": "ethereum",
         "destinationChain": "monad",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Centrifuge V3 spoke messaging",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "ACRDX on monad is minted by the same Centrifuge Spoke contract 0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab (17,675-byte code on every chain): wards() = 1 on the monad token (read 2026-07-20). The Spoke mints under Centrifuge hub cross-chain messaging from Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "monad",
+        "controllerAddress": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "contract:monad:0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
+        ],
+        "sources": [
+          {
+            "label": "Anemoy",
+            "url": "https://anemoy.com/"
+          }
+        ]
       },
       {
         "id": "base:0x9477724bb54ad5417de8baff29e59df3fb4da74f",
+        "sourceChain": "ethereum",
         "destinationChain": "base",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x9477724bb54ad5417de8baff29e59df3fb4da74f",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "protocol": "Centrifuge V3 spoke messaging",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "ACRDX on base is minted by the same Centrifuge Spoke contract 0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab (17,675-byte code on every chain): wards() = 1 on the base token (read 2026-07-20). The Spoke mints under Centrifuge hub cross-chain messaging from Ethereum.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13"
+        "observedAt": "2026-07-20",
+        "controllerChain": "base",
+        "controllerAddress": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "contract:base:0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
+        ],
+        "sources": [
+          {
+            "label": "Anemoy",
+            "url": "https://anemoy.com/"
+          }
+        ]
       }
     ]
   }
