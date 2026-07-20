@@ -56,7 +56,7 @@ describe("Safety Score v9 shock-coverage measurement registry", () => {
       expect(measurement.blockers).toEqual(journal.completeness.blockers);
       expect(measurement.exactReplayPassed).toBe(true);
       expect(measurement.replayVerification).toMatchObject({
-        attestedAt: "2026-07-17",
+        attestedAt: "2026-07-20",
         mode: "offline-byte-identical",
         callsConsumed: journal.calls.length,
         codePinsConsumed: journal.codePins.length,
