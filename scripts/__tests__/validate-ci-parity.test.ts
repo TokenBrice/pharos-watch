@@ -133,6 +133,7 @@ describe("validate-ci parity", () => {
       ".github/workflows/og-refresh.yml",
       ".github/workflows/pages-release.yml",
       ".github/workflows/safe-browsing-monitor.yml",
+      ".github/workflows/shock-coverage-refresh.yml",
       ".github/workflows/telegram-load.yml",
       ".github/workflows/validate-ci.yml",
     ];
