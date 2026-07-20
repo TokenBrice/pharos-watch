@@ -335,6 +335,7 @@ export function computeCalibrationBaseInputGenerationId(input) {
 
   const scoreBearingFactsSha256 = domainDigest("report-cards.base-input.score-bearing-facts.v1", {
     pegDataById: fixedInput.pegDataById,
+    navPriceById: fixedInput.navPriceById ?? {},
     activeDepegPeakBpsById: fixedInput.activeDepegPeakBpsById,
     dexLiqMap: fixedInput.dexLiqMap,
     redemptionBackstopMap: fixedInput.redemptionBackstopMap,
