@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { HomeAltClient } from "@/components/home-alt-client";
+import { HomeBlogBanner } from "@/components/home-blog-banner";
 import { HomepageBootstrapScript } from "@/components/homepage-bootstrap-script";
 import { HomeAltHero } from "@/components/home-alt-hero";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -95,6 +96,7 @@ export default function HomePage() {
           ]),
         }}
       />
+      <HomeBlogBanner />
       <HomeAltHero snapshot={heroSnapshot} />
       <HomeAltClient />
     </div>
