@@ -174,6 +174,32 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       "XAGm redemption value follows Matrixdock's published silver-per-token mechanics, so Pharos treats the route as documented but not a fixed-fee public commodity exit",
     ],
   },
+  "ggbr-goldfish-gold": {
+    ...commodityIssuerBase,
+    ...documentedBoundSupplyFull("2026-07-21"),
+    routeStatus: "open",
+    costModel: documentedVariableFee(
+      "Goldfish lists no protocol redemption fee; physical-delivery shipping and insurance fees may apply",
+    ),
+    docs: [
+      sourceRef("Goldfish redemption dashboard", "https://app.goldfishgold.com/redemption", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("Goldfish support and redemption FAQ", "https://goldfishgold.com/support", [
+        "route",
+        "capacity",
+        "access",
+      ]),
+      sourceRef("Goldfish whitepaper", "https://goldfishgold.com/whitepaper", ["route", "capacity"]),
+    ],
+    notes: [
+      "Modeled route is KYC-gated physical-gold redemption through the issuer dashboard; Goldfish lists vault storage or physical delivery and 5-7 business-day processing.",
+    ],
+  },
   "euroe-membrane": {
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
