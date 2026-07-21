@@ -32,7 +32,7 @@ export const BLOG_POSTS: readonly BlogPost[] = [
     slug: "pharos-at-six-months",
     title: "Pharos at Six Months: The Lighthouse Is Lit",
     description:
-      "Six months of Pharos: from a personal itch to open, on-chain depeg early-warning infrastructure — what shipped, what broke, and the road to sustainability.",
+      "Six months of Pharos: from a personal itch to open, on-chain depeg early-warning infrastructure. What shipped, what broke, and the road to sustainability.",
     datePublished: "2026-07-21",
     source: "pharos-at-six-months.md",
     coverImage: "/blog/pharos-at-six-months-cover.png",
