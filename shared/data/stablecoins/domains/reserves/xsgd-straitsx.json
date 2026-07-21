@@ -12,8 +12,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "OpenAI Codex backing review; OpenAI Codex class-level normalization",
     "confidence": "probable",
     "sources": [
       {
@@ -25,18 +25,18 @@
         "url": "https://www.straitsx.com/legal/risk-warnings-regulatory-notices-disclosures"
       }
     ],
-    "rationale": "StraitsX states that XSGD is fully backed at all times by reserve assets in segregated trust accounts at named or otherwise MAS-permitted financial institutions. The issuer does not publish current provider-level weights or a current asset-class split, so the full reserve is represented as one evidenced aggregate bank-account basket rather than preserving an unsupported provider allocation.",
+    "rationale": "StraitsX states that XSGD is fully backed at all times by SGD reserve assets in segregated trust accounts at named or otherwise MAS-permitted financial institutions. The full bank-deposit reserve class is identified; the issuer does not publish current provider-level weights, so no unsupported institution allocation is recorded.",
     "compositionBasis": "Current StraitsX reserve policy and attestation index; provider-level allocation undisclosed",
     "scope": "full-composition",
-    "knownUnknownExposure": "The issuer identifies the permitted reserve institutions and trust-account structure but does not publish the current provider allocation, account terms, or liquidity profile.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "No direct reserve category is unidentified. The issuer does not publish the current provider allocation, account terms, or liquidity profile.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "SGD reserve assets in permitted financial-institution trust accounts",
         "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "Current provider-level reserve weights are not disclosed by StraitsX."
+      "disposition": "untracked-exogenous-asset",
+      "rationale": "SGD bank deposits are external fiat reserve assets rather than a tracked stablecoin dependency; provider weights remain a custody detail."
       }
     ]
   },

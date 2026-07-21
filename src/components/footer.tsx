@@ -13,6 +13,7 @@ const PILL_CLASS =
 // 15-link nav, RSS feed list, and category browse were retired with the redesign
 // (owner: "match Figma exactly", 2026-06-27) — restore from git if reinstating.
 const FOOTER_NAV: ReadonlyArray<{ href: string; label: string }> = [
+  { href: "/blog/", label: "Blog" },
   { href: "/changelog/", label: "Changelog" },
   { href: "/methodology/", label: "Methodology" },
   { href: "/api/", label: "API" },

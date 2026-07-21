@@ -86,6 +86,41 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "wiTRY is Brix's yield-bearing staking wrapper over iTRY. The wiTRY wrapper owner and the underlying iTRY token owner are both Gnosis Safe v1.3.0 L2 multisigs (3-of-5 threshold, no modules, no guard) sharing the same 5 signers, confirming issuer-controlled mint authority.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0xb492b4afd9658093694cf9452d5c272e8230f3b0"
+      ],
+      "implementationAddresses": [
+        "0x0679eaa2443e5fea70eea7ac9508fd357406fdad"
+      ],
+      "adminAddresses": [
+        "0xbdb430adf64ff1c8201c10221ddb846fa62613b6"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "iTRY underlying token owner (Brix Safe 3/5)",
+      "observedAt": "2026-07-21",
+      "observedBlock": 25580037,
+      "sources": [
+        {
+          "label": "Brix iTRY product and wrapper disclosure",
+          "url": "https://brix.money/itry"
+        },
+        {
+          "label": "iTRY Ethereum proxy",
+          "url": "https://etherscan.io/address/0xb492b4afd9658093694cf9452d5c272e8230f3b0#code"
+        },
+        {
+          "label": "wiTRY Ethereum wrapper",
+          "url": "https://etherscan.io/address/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "wiTRY staking wrapper owner (Brix Safe 3/5)",

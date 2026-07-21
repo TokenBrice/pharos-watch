@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "OpenEden TBILL tokens (tokenized U.S. T-bills)",
-      "pct": 79.7,
+      "pct": 79.57,
       "risk": "very-low",
       "coinId": "tbill-openeden",
       "assetClass": "tokenized-security",
@@ -13,7 +13,7 @@
     },
     {
       "name": "BlackRock BUIDL (tokenized money market fund)",
-      "pct": 9.7,
+      "pct": 9.23,
       "risk": "low",
       "coinId": "buidl-blackrock",
       "assetClass": "fund-share",
@@ -23,7 +23,7 @@
     },
     {
       "name": "Ripple USD (RLUSD) cash-equivalent buffer",
-      "pct": 7.7,
+      "pct": 8.1,
       "risk": "low",
       "coinId": "rlusd-ripple",
       "depType": "collateral",
@@ -34,7 +34,7 @@
     },
     {
       "name": "VanEck VBILL (tokenized U.S. T-bill fund)",
-      "pct": 2.8,
+      "pct": 2.92,
       "risk": "low",
       "coinId": "vbill-vaneck",
       "assetClass": "tokenized-security",
@@ -44,7 +44,7 @@
     },
     {
       "name": "USDC redemption buffer",
-      "pct": 0.1,
+      "pct": 0.18,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -55,8 +55,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex dependency review",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "OpenAI Codex V9 curation",
     "confidence": "verified",
     "sources": [
       {
@@ -68,9 +68,9 @@
         "url": "https://docs.openeden.com/usdo/usdo-token/reserve-assets"
       }
     ],
-    "rationale": "The issuer reserve API reports current USD values for TBILL, BUIDL, RLUSD, VBILL, and USDC. The displayed weights are the official adapter's one-decimal normalization of those values; zero-balance USYC, BENJI, and pending-USDC fields do not create slices.",
+    "rationale": "OpenEden's issuer-operated reserve API snapshot at 2026-07-21T08:00:18.477Z reported $29,271,334.97 in reserve assets against $29,010,929.31 USDO. The API's USD-valued constituent amounts produce the rounded full-composition weights recorded here: OpenEden TBILL 79.57%, BUIDL 9.23%, RLUSD 8.10%, VBILL 2.92%, and USDC 0.18%. Zero-balance USYC, BENJI, and pending-USDC fields do not create slices.",
     "compositionBasis": "OpenEden issuer reserve API asset values normalized by total reserve assets",
-    "compositionAsOf": "2026-07-14",
+    "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
     "knownUnknownExposure": "All positive reserve components reported by the issuer API are identified.",
     "knownUnknownExposurePct": 0

@@ -236,10 +236,26 @@
         "evidence": "At Rootstock block 8935202: EIP-1967 proxy admin of masset manager = 0x37a706; getOwners() returned 5 signers; required() returned 2. This 2-of-5 multisig controls upgrades to the masset manager implementation."
       }
     ],
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": ["0x1440d19436beeaf8517896bffb957a88ec95a00f"],
+      "implementationAddresses": ["0x92d7ad53b2d824277d22877d5299c2af479da322"],
+      "adminAddresses": ["0x37a706259f5201c03f6cb556a960f30f86842d01"],
+      "canChangeMintLogic": true,
+      "controlRef": "BabelFish proxy admin multisig (2-of-5 Gnosis Safe, 0x37a706)",
+      "observedAt": "2026-07-21",
+      "observedBlock": 9075576,
+      "sources": [
+        {
+          "label": "Rootstock explorer: XUSD masset manager",
+          "url": "https://rootstock.blockscout.com/address/0x1440d19436beeaf8517896bffb957a88ec95a00f"
+        }
+      ]
+    },
     "review": {
-      "evidence": "At Rootstock block 8935202: XUSD token owner() = masset manager proxy 0x1440d194; masset manager EIP-1967 proxy admin = Gnosis multisig 0x37a706 (2-of-5); masset manager owner() = Gnosis multisig 0xbd687d (3-of-5). Both multisigs enumerated via getOwners()/required() on-chain. Mint path confirmed as user-driven 1:1 aggregator. Full control chain verified.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Rootstock block 8935202: XUSD token owner() = masset manager proxy 0x1440d194; masset manager EIP-1967 proxy admin = Gnosis multisig 0x37a706 (2-of-5); masset manager owner() = Gnosis multisig 0xbd687d (3-of-5). Both multisigs enumerated via getOwners()/required() on-chain. Mint path confirmed as user-driven 1:1 aggregator. Full control chain verified. Upgrade-authority follow-up (2026-07-21): re-read at Rootstock block 9075576 confirms the masset manager's EIP-1967 implementation slot resolves to 0x92d7ad53b2d824277d22877d5299c2af479da322 (31,859-byte deployed contract) and the admin slot still resolves to the 2-of-5 Safe 0x37a706259f5201c03f6cb556a960f30f86842d01, whose getOwners() returned the same five signers already on file — this multisig, not any single key, is the sole path that can change XUSD's mint-critical masset-manager logic, and no timelock was found on the proxy admin path.",
+      "reviewer": "Claude Phase 0c continuation; Claude Safety Score V9 curation lane (upgrade-authority resolution, 2026-07-21)",
+      "reviewedAt": "2026-07-21",
       "sources": [
         {
           "label": "Sovryn XUSD overview",

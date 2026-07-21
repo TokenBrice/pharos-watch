@@ -14,6 +14,23 @@
   "collateral": "BTC spot holdings paired with equal short BTC perpetual futures positions on centralized exchanges, creating a delta-neutral synthetic dollar position; BTC margin reserves custodied off-exchange via Copper (Clearloop) and Ceffu (MirrorX) institutional settlement providers, with monthly custodian attestations of assets, liabilities and reserve coverage",
   "pegMechanism": "Delta-neutral hedging: BTC spot long + equal BTC short perpetual futures neutralize directional exposure; mint and redeem via KYC-gated Hermetica app; DIA oracle provides reserve-backed fair value pricing on Stacks",
   "mechanismArchetype": "synthetic-delta-neutral",
+  "implementationLaunchDate": "2024-09-19",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex V9 curation",
+    "rationale": "Stacks transaction 0x6294eebb5e5560d8293268e2c28d3e9533d890007d8a573be80beb8b0db9ad49 deployed the exact tracked usdh-token-v1 contract at block 166,579 on September 19, 2024. Hermetica's official USDh documentation describes the matched BTC spot-long and perpetual-short backing strategy, supporting the synthetic-delta-neutral archetype.",
+    "sources": [
+      {
+        "label": "Stacks USDh contract deployment",
+        "url": "https://explorer.hiro.so/txid/0x6294eebb5e5560d8293268e2c28d3e9533d890007d8a573be80beb8b0db9ad49?chain=mainnet"
+      },
+      {
+        "label": "Hermetica USDh documentation",
+        "url": "https://docs.hermetica.fi/usdh"
+      }
+    ]
+  },
   "llamaId": "242",
   "detailProvider": "defillama",
   "geckoId": "hermetica-usdh",

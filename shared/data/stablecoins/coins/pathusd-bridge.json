@@ -180,9 +180,9 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "At Tempo block 30043787, the observed pathUSD issuance proxy 0x8354d80eea9978faa04c3b36771c1e8b9c3e9058 held ISSUER_ROLE and could mint within the current 100 million pathUSD supply cap. TIP-20 DEFAULT_ADMIN_ROLE can grant or revoke issuer roles and change the cap or transfer policy; its holders and the issuer proxy's upgrade controller are not enumerable through the public TIP-20 interface.",
+    "summary": "At Tempo block 31007249, the observed pathUSD issuance proxy 0x8354d80eea9978faa04c3b36771c1e8b9c3e9058 remained a UUPS proxy whose authorization controller is not exposed through the public interface. At the earlier issuance review block 30043787, this proxy held ISSUER_ROLE and could mint within the current 100 million pathUSD supply cap; TIP-20 DEFAULT_ADMIN_ROLE can grant or revoke issuer roles and change the cap or transfer policy.",
     "upgradeability": {
-      "model": "unknown",
+      "model": "uups",
       "proxyAddresses": [
         "0x8354d80eea9978faa04c3b36771c1e8b9c3e9058"
       ],
@@ -190,8 +190,8 @@
         "0x271c4d8616ed81c2cc006446c61f25219b182f8a"
       ],
       "canChangeMintLogic": "unknown",
-      "observedAt": "2026-07-15",
-      "observedBlock": 30043787,
+      "observedAt": "2026-07-21",
+      "observedBlock": 31007249,
       "sources": [
         {
           "label": "Tempo public RPC",
@@ -200,6 +200,10 @@
         {
           "label": "Tempo pathUSD token",
           "url": "https://explore.tempo.xyz/token/0x20c0000000000000000000000000000000000000"
+        },
+        {
+          "label": "Tempo source repository",
+          "url": "https://github.com/tempoxyz/tempo"
         }
       ]
     },
@@ -234,7 +238,7 @@
       }
     ],
     "review": {
-      "evidence": "Live RPC and a traced pathUSD issuance resolved the prior claim that Tempo had no usable public RPC or explorer: the active issuer proxy and its current ISSUER_ROLE membership are directly observable. At block 30043787, pathUSD was unpaused, had transfer policy 2, and had a 100,000,000 supply cap. Tempo's TIP-20 implementation exposes hasRole(address, bytes32) but no role-member enumeration; the current DEFAULT_ADMIN_ROLE and policy-role holder set therefore remains unavailable without issuer disclosure. The issuer proxy uses an EIP-1967 implementation slot, but owner(), admin(), and upgrade introspection calls did not resolve its upgrade controller, so its mint-logic mutability is recorded as unknown. 2026-07-20 dc-1 pass: the active TIP-20 issuer proxy mints cap-limited with canRaiseCap=false and no separate cap-raise authority on Tempo, so the reviewed economic mint cap is bounded.",
+      "evidence": "Live RPC and a traced pathUSD issuance resolved the prior claim that Tempo had no usable public RPC or explorer: the active issuer proxy and its current ISSUER_ROLE membership are directly observable. At block 30043787, pathUSD was unpaused, had transfer policy 2, and had a 100,000,000 supply cap. Tempo's TIP-20 implementation exposes hasRole(address, bytes32) but no role-member enumeration; the current DEFAULT_ADMIN_ROLE and policy-role holder set therefore remains unavailable without issuer disclosure. At Tempo block 31007249 (2026-07-21 08:44:18 UTC), the issuer proxy's EIP-1967 implementation slot still resolved to 0x271c4d8616ed81c2cc006446c61f25219b182f8a, the admin slot was zero, and both proxy and implementation exposed UPGRADE_INTERFACE_VERSION() = 5.0.0 while the implementation's proxiableUUID() returned the EIP-1967 implementation slot. This verifies the UUPS model, but owner(), admin(), AccessManager, and role-introspection calls do not expose the _authorizeUpgrade controller and no verified issuer-proxy source was located. Whether a reachable authority can change mint logic therefore remains irreducible rather than guessed. 2026-07-20 dc-1 pass: the active TIP-20 issuer proxy mints cap-limited with canRaiseCap=false and no separate cap-raise authority on Tempo, so the reviewed economic mint cap is bounded.",
       "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
       "reviewedAt": "2026-07-20",
       "disposition": "scoreable",

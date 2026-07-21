@@ -228,6 +228,47 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "ZARP exposes AccessControl MINTER_ROLE minting. Enumerated via RoleGranted/RoleRevoked events and confirmed via hasRole: MINTER_ROLE = 0x37b1af (EOA), DEFAULT_ADMIN = 0xf50064 (EOA), UPGRADER_ROLE currently held by no one (all grants revoked). Consistent across Ethereum, Base, Polygon. Solana mintAuthority = system-owned wallet (EOA-equivalent), same address on the current Solana mint.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xb755506531786c8ac63b756bab1ac387bacb0c04",
+        "0xb755506531786c8ac63b756bab1ac387bacb0c04",
+        "0xb755506531786c8ac63b756bab1ac387bacb0c04"
+      ],
+      "implementationAddresses": [
+        "0xe6695c23592e84ef37de8b31f24a020af82030e4"
+      ],
+      "adminAddresses": [
+        "0xf50064312857ee94f378bc79675297a82e4f61bf"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "ZARP DEFAULT_ADMIN (Ethereum/Base/Polygon)",
+      "observedAt": "2026-07-21",
+      "observedBlock": 25580037,
+      "sources": [
+        {
+          "label": "Sourcify ZARP implementation source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xe6695c23592e84ef37de8b31f24a020af82030e4/sources/contracts/Zarp.sol"
+        },
+        {
+          "label": "ZARP Ethereum proxy",
+          "url": "https://etherscan.io/address/0xb755506531786c8ac63b756bab1ac387bacb0c04#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Base PublicNode RPC",
+          "url": "https://base-rpc.publicnode.com"
+        },
+        {
+          "label": "Polygon PublicNode RPC",
+          "url": "https://polygon-bor-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",

@@ -41,12 +41,20 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "apxUSD's cash bucket aggregates USDC and short-duration U.S. Treasury Bills, so no single coinId is representative.",
   ],
   [
-    "bnusd-balanced::Cross-chain Hub and Stability Fund collateral (BTC, ETH, BNB, AVAX, INJ, USDC, USDT and other bridged assets)::USDC",
-    "Balanced reports this as one mixed Hub/Stability Fund collateral bucket, so a single USDC coinId would overstate the reserve dependency.",
+    "bnusd-balanced::Balanced v2 crypto-loan collateral and USDC/USDT Stability Fund basket::USDC",
+    "The complete current backing categories are identified, but Balanced does not publish current constituent balances or weights.",
   ],
   [
-    "bnusd-balanced::Cross-chain Hub and Stability Fund collateral (BTC, ETH, BNB, AVAX, INJ, USDC, USDT and other bridged assets)::USDT",
-    "Balanced reports this as one mixed Hub/Stability Fund collateral bucket, so a single USDT coinId would overstate the reserve dependency.",
+    "bnusd-balanced::Balanced v2 crypto-loan collateral and USDC/USDT Stability Fund basket::USDT",
+    "The complete current backing categories are identified, but Balanced does not publish current constituent balances or weights.",
+  ],
+  [
+    "uty-xsy::USDC deposits swept to custodial managed backing::USDC",
+    "The reviewed sources establish the USDC mint and redemption envelope but not the current assets or positions held after the custodial sweep.",
+  ],
+  [
+    "usdh-hubble::Hubble CDP vault collateral and USDC Peg Stability Module basket::USDC",
+    "The documented backing spans multiple vault collateral assets and PSM USDC, but no current supply-weighted split is published.",
   ],
   [
     "ist-agoric::Parity Stability Module stablecoin reserves (IBC USDC/USDT/DAI)::USDC",
@@ -141,10 +149,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "USG's static reserve slice is an aggregate productive-collateral bucket; USDC is one paired LP route rather than a separately weighted reserve slice.",
   ],
   [
-    "silk-shade-protocol::Stablecoin redemption pools (USDC, other stables)::USDC",
-    "SILK reports a mixed stablecoin redemption pool without stable-level weights, so no single tracked stablecoin coinId is representative.",
-  ],
-  [
     "vndc-jade-labs::Issuer-disclosed VNDC 2.0 USDT/USDC collateral pools::USDC",
     "VNDC reports this as a mixed issuer-disclosed USDT/USDC collateral pool without stablecoin-level weights, so no single tracked coinId is representative.",
   ],
@@ -191,10 +195,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
     "euro3-3a-dao::Whitelisted 3A Vault collateral (USDC.e, DAI, WETH/ETH, USDT, WBTC, wstETH and other approved assets; mix undisclosed)::DAI",
     "3A reports an unweighted multi-asset vault collateral set, so no single tracked stablecoin coinId is representative.",
-  ],
-  [
-    "onyc-onre::Unallocated ONyc Pool stablecoin collateral and treasury (USDC and USDG)::USDC",
-    "OnRe reports this as one unallocated USDC/USDG and treasury bucket without current constituent weights, so no single coinId is representative.",
   ],
 ]);
 

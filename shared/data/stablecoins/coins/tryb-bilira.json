@@ -421,8 +421,63 @@
             "url": "https://etherscan.io/address/0x2c537e5624e4af88a7ae4060c022609376c8d0eb"
           }
         ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xfa161fce6c543647cb5ce86d1ee7fa303eb951c4",
+        "label": "TRYB legacy proxy upgrade admin (2-of-3 multisig)",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-21",
+        "observedBlock": 25580032,
+        "evidence": "At Ethereum block 25580032, the FiatTokenProxy legacy admin slot resolves to 0xfa161fce6c543647cb5ce86d1ee7fa303eb951c4. Its verified MultiSigWalletWithDailyLimit contract reports required() = 2 and getOwners() = three addresses. The proxy implementation slot resolves to FiatTokenV2 at 0x5f88d1a517b670a14ded5d0cf8b3d37e554d977b.",
+        "sources": [
+          {
+            "label": "TRYB FiatTokenProxy verified source",
+            "url": "https://eth.blockscout.com/address/0x2c537e5624e4af88a7ae4060c022609376c8d0eb?tab=contract"
+          },
+          {
+            "label": "TRYB proxy-admin multisig verified source",
+            "url": "https://eth.blockscout.com/address/0xfa161fce6c543647cb5ce86d1ee7fa303eb951c4?tab=contract"
+          },
+          {
+            "label": "Ethereum public RPC used for legacy proxy-slot and multisig reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
       }
     ],
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x2c537e5624e4af88a7ae4060c022609376c8d0eb"
+      ],
+      "implementationAddresses": [
+        "0x5f88d1a517b670a14ded5d0cf8b3d37e554d977b"
+      ],
+      "adminAddresses": [
+        "0xfa161fce6c543647cb5ce86d1ee7fa303eb951c4"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "TRYB legacy proxy upgrade admin (2-of-3 multisig)",
+      "observedAt": "2026-07-21",
+      "observedBlock": 25580032,
+      "sources": [
+        {
+          "label": "TRYB FiatTokenProxy verified source",
+          "url": "https://eth.blockscout.com/address/0x2c537e5624e4af88a7ae4060c022609376c8d0eb?tab=contract"
+        },
+        {
+          "label": "Ethereum public RPC used for legacy proxy-slot reads",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {

@@ -19,6 +19,8 @@ import { TAGS, summarizeViolations } from "./axe-shared";
  * waivers and the violation summary live in `axe-shared.ts`.
  */
 const ROUTES: ReadonlyArray<{ path: string; tier: string }> = [
+  { path: "/", tier: "homepage" },
+  { path: "/blog", tier: "editorial" },
   { path: "/about", tier: "discovery" },
   { path: "/depeg", tier: "analytics" },
   { path: "/screener", tier: "power-user" },

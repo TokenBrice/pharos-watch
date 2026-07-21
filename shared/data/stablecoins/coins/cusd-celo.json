@@ -118,6 +118,32 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "USDm minting on Celo routes through Mento reserve/Broker rails, with token owner resolving to a 4/6 Mento Safe. Monad deployment confirmed: same Safe address (0x5809...Ba458) is the owner, 4-of-7 on Monad (one additional signer). NEAR deployment is a bridge token controlled by EOA a11bd.near (plain wallet account, no staking lock).",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x765de816845861e75a25fca122bb6898b8b1282a"
+      ],
+      "implementationAddresses": [
+        "0x815795c30d0758a297b08cd4e0643620c974c318"
+      ],
+      "adminAddresses": [
+        "0x58099b74f4acd642da77b4b7966b4138ec5ba458"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Mento USDm token owner Safe (Celo + Monad)",
+      "observedAt": "2026-07-21",
+      "observedBlock": 72722357,
+      "sources": [
+        {
+          "label": "Celo forno RPC",
+          "url": "https://forno.celo.org"
+        },
+        {
+          "label": "Celo explorer cUSD token",
+          "url": "https://celoscan.io/token/0x765de816845861e75a25fca122bb6898b8b1282a"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "celo",
@@ -198,7 +224,7 @@
           "url": "https://celoscan.io/address/0x765de816845861e75a25fca122bb6898b8b1282a#readContract"
         }
       ],
-      "evidence": "At Celo block 69286148, Safe API (celo chain) confirmed 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 has threshold 4, 6 owners, no modules, zero guard, fallbackHandler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99, masterCopy 0x29fcB43b46531BcA003ddC8FCB67FFE91900C762 (Safe L2 v1.4.1). isMinter(Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD) = true. Monad confirmed at block 80,612,848: same Safe address is owner, threshold 4, 7 signers (including one additional signer not on Celo). NEAR: parent account a11bd.near is a plain EOA (no contract, ~11.69 NEAR, no lock) controlling the bridge subaccount cusd.token.a11bd.near; no owner view method exposed. USDm (Mento Dollar) reserve backing is published only on Mento's own reserve dashboard (self-verification, no independent third-party attestor), so reconciliation is unknown, and no financial regulator supervises the Mento protocol, so supervision is none. Unlike the Mento FX variants whose token owner is the 48-hour Mento Timelock, the USDm Celo token owner re-read on 2026-07-16 is the 4-of-6 Mento Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 with no execution delay, and the NEAR deployment is minted by a plain EOA (a11bd.near); the mint admin is therefore self-controlled with no independent delay, so the encoding-derived unbounded cap is not superseded and no raiseable escape is earned.",
+      "evidence": "At Celo block 69286148, Safe API (celo chain) confirmed 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 has threshold 4, 6 owners, no modules, zero guard, fallbackHandler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99, masterCopy 0x29fcB43b46531BcA003ddC8FCB67FFE91900C762 (Safe L2 v1.4.1). isMinter(Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD) = true. Monad confirmed at block 80,612,848: same Safe address is owner, threshold 4, 7 signers (including one additional signer not on Celo). NEAR: parent account a11bd.near is a plain EOA (no contract, ~11.69 NEAR, no lock) controlling the bridge subaccount cusd.token.a11bd.near; no owner view method exposed. USDm (Mento Dollar) reserve backing is published only on Mento's own reserve dashboard (self-verification, no independent third-party attestor), so reconciliation is unknown, and no financial regulator supervises the Mento protocol, so supervision is none. Unlike the Mento FX variants whose token owner is the 48-hour Mento Timelock, the USDm Celo token owner re-read on 2026-07-16 is the 4-of-6 Mento Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 with no execution delay, and the NEAR deployment is minted by a plain EOA (a11bd.near); the mint admin is therefore self-controlled with no independent delay, so the encoding-derived unbounded cap is not superseded and no raiseable escape is earned. 2026-07-21 gap-fill pass: resolved the upgrade-authority structural gap directly on-chain via forno.celo.org at Celo block 72722357. USDm/cUSD on Celo is not a standard EIP-1967 transparent/UUPS proxy — both the canonical minus-1 implementation slot and the raw (un-decremented) 'eip1967.proxy.implementation' hash slot read zero. The deployed bytecode instead implements Celo's own Proxy.sol pattern, which exposes explicit getters; calling _getImplementation() (selector 0x42404e07) returned implementation 0x815795c30d0758a297b08cd4e0643620c974c318, and _getOwner() (selector 0xf7e6af80) returned 0x58099b74f4acd642da77b4b7966b4138ec5ba458 — the same 4-of-6 Mento Safe already established as the mint/Broker administrator. The Safe can therefore both authorize Broker minters and replace the token implementation outright, with no separate timelock on the upgrade path.",
       "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
       "reviewedAt": "2026-07-16"
     }
@@ -692,5 +718,5 @@
       }
     ]
   },
-  "implementationLaunchDate": "2026-H1"
+  "implementationLaunchDate": "2026-03-04"
 }

@@ -115,69 +115,17 @@
   },
   "reserves": [
     {
-      "name": "Physical gold holdings",
-      "pct": 20,
-      "risk": "low",
+      "name": "ISC target multi-asset reserve envelope (current allocation undisclosed)",
+      "pct": 100,
+      "risk": "high",
       "assetClass": "other",
-      "issuerOrObligor": "Undisclosed gold bullion or gold-vehicle providers",
+      "issuerOrObligor": "Undisclosed ISC reserve managers, custodians, and asset providers",
       "riskFactors": [
         "market",
-        "custody",
-        "liquidity",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Investment-grade bonds",
-      "pct": 20,
-      "risk": "low",
-      "assetClass": "public-credit",
-      "issuerOrObligor": "Undisclosed global investment-grade bond issuers",
-      "riskFactors": [
-        "credit",
-        "duration",
-        "liquidity",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Short-term Treasury bills",
-      "pct": 20,
-      "risk": "very-low",
-      "assetClass": "treasury-bill",
-      "issuerOrObligor": "Undisclosed sovereign short-term Treasury issuers",
-      "riskFactors": [
-        "credit",
-        "duration",
-        "liquidity",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Global equity exposure",
-      "pct": 20,
-      "risk": "medium",
-      "assetClass": "other",
-      "issuerOrObligor": "Undisclosed global equity index vehicles",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Cash reserves",
-      "pct": 20,
-      "risk": "very-low",
-      "assetClass": "cash",
-      "issuerOrObligor": "Undisclosed cash deposit institutions",
-      "riskFactors": [
         "credit",
         "custody",
+        "liquidity",
+        "duration",
         "concentration"
       ],
       "liquidityHorizon": "unknown"
@@ -197,46 +145,18 @@
         "url": "https://dashboard.isc.money/"
       }
     ],
-    "rationale": "ISC's whitepaper specifies an initial target allocation of 20% each to global equity, gold, global bonds, short-term Treasuries, and cash. It directs readers to the dashboard for the current allocation, but the reviewed dashboard requires JavaScript and did not expose a dated, verifiable allocation snapshot. The static rows therefore represent the issuer's initial target, not a verified current reserve composition. The gold slice is classified low rather than very-low because the gold vehicle (allocated bars versus fund or tokenized exposure) is not identified in the reviewed sources.",
-    "compositionBasis": "ISC whitepaper initial target percentage allocation",
+    "rationale": "ISC's whitepaper specifies an initial target allocation of 20% each to global equity, gold, global bonds, short-term Treasuries, and cash, but directs readers to a dashboard for the current allocation. The reviewed dashboard did not expose a dated, verifiable holdings snapshot. Because the initial target is not evidence of current holdings, the prior five equal-weight rows have been replaced by one 100% unresolved multi-asset envelope.",
+    "compositionBasis": "ISC whitepaper target asset families; current allocation unavailable",
     "scope": "full-composition",
     "knownUnknownExposure": "The current reserve allocation, holdings, custody providers, valuation date, liability reconciliation, and implementation launch date are not established by the reviewed primary sources.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Physical gold holdings",
-        "pct": 20,
+        "reserveName": "ISC target multi-asset reserve envelope (current allocation undisclosed)",
+        "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "This is an initial target allocation, not a current holding disclosure."
-      },
-      {
-        "reserveIndex": 1,
-        "reserveName": "Investment-grade bonds",
-        "pct": 20,
-        "disposition": "insufficient-evidence",
-        "rationale": "This is an initial target allocation, not a current holding disclosure."
-      },
-      {
-        "reserveIndex": 2,
-        "reserveName": "Short-term Treasury bills",
-        "pct": 20,
-        "disposition": "insufficient-evidence",
-        "rationale": "This is an initial target allocation, not a current holding disclosure."
-      },
-      {
-        "reserveIndex": 3,
-        "reserveName": "Global equity exposure",
-        "pct": 20,
-        "disposition": "insufficient-evidence",
-        "rationale": "This is an initial target allocation, not a current holding disclosure."
-      },
-      {
-        "reserveIndex": 4,
-        "reserveName": "Cash reserves",
-        "pct": 20,
-        "disposition": "insufficient-evidence",
-        "rationale": "This is an initial target allocation, not a current holding disclosure."
+        "rationale": "The issuer publishes target asset families but no verifiable current holdings or allocation."
       }
     ]
   },

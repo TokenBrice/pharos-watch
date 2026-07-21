@@ -60,6 +60,34 @@
     "confidence": "verified",
     "summary": "xDAI inherits the upstream USDS issuance path, while Gnosis native-balance minting is separately gated by the xDAI bridge's 4-of-7 validator quorum and daily limits. Distinct 8-of-15 Safes govern the Ethereum and Gnosis bridge proxies, validator sets, limits, and upgrades.",
     "inheritedFrom": "usds-sky",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016",
+        "0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6"
+      ],
+      "adminAddresses": [
+        "0x42F38ec5A75acCEc50054671233dfAC9C0E7A3F6",
+        "0x7a48Dac683DA91e4faa5aB13D91AB5fd170875bd"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Gnosis xDAI bridge Gnosis governance Safe",
+      "observedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "Gnosis bridge management docs",
+          "url": "https://docs.gnosischain.com/bridges/management/"
+        },
+        {
+          "label": "Gnosis xDAI Home Bridge",
+          "url": "https://gnosis.blockscout.com/address/0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6"
+        },
+        {
+          "label": "Ethereum xDAI Foreign Bridge",
+          "url": "https://etherscan.io/address/0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016#readProxyContract"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "gnosis",

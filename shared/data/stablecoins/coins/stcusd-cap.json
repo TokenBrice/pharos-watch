@@ -107,9 +107,8 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-14",
-        "observedBlock": 25573280,
         "observedAt": "2026-07-20",
+        "observedBlock": 25573280,
         "sources": [
           {
             "label": "stcUSD token (Etherscan)",
@@ -177,6 +176,29 @@
           }
         ],
         "evidence": "At Ethereum block 25531350, StakedCap's external AccessControl at 0x7731129a10d51e18cde607c5c115f26503d2c683 assigned DEFAULT_ADMIN_ROLE to TimelockController 0xd8236031d8279d82e615af2bfab5fc0127a329ab. The timelock retained its self-administered DEFAULT_ADMIN_ROLE and had a minimum delay of 86400 seconds. Safe 0xb8FC49402dF3ee4f8587268FB89fda4d621a8793 held PROPOSER_ROLE, EXECUTOR_ROLE, and CANCELLER_ROLE; it was 3-of-5 with the listed owners, no enabled modules, and a zero guard. The Safe can therefore authorize wrapper implementation changes after the one-day delay."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+        "label": "Inherited Cap cUSD collateralized mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "stcUSD inherits cUSD supply from Cap's collateralized vault, where user minting requires a supported reserve asset and remains subject to governance-controlled deposit caps.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530492,
+        "failureDomainKeys": [
+          "asset:cusd-cap"
+        ],
+        "sources": [
+          {
+            "label": "Ethereum cUSD proxy and verified CapToken implementation",
+            "url": "https://eth.blockscout.com/address/0xcccc62962d17b8914c62d74ffb843d73b2a3cccc"
+          }
+        ],
+        "evidence": "The separately reviewed cUSD parent establishes this collateralized mint path at Ethereum block 25530492. stcUSD asset() resolves to that cUSD deployment, so base-asset issuance is inherited rather than administered by an undisclosed stcUSD minter."
       }
     ],
     "review": {

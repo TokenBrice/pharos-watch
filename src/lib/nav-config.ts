@@ -15,6 +15,7 @@ import {
   ArrowLeftRight,
   ArrowUpDown,
   Newspaper,
+  PenLine,
   Rocket,
   Send,
   Wallet,
@@ -127,6 +128,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/coverage/", label: "Coverage", icon: TableProperties, description: "Truth surface for what each route can show per coin" },
       { href: "/about/", label: "About", icon: Info, description: "Scope, data sources, and why Pharos exists" },
       { href: "/funding/", label: "Funding", icon: Heart, description: "Running costs, supporter ledger, and public sustainability path" },
+      { href: "/blog/", label: "Blog", icon: PenLine, description: "Product updates and the story of Pharos" },
     ],
   },
 ];

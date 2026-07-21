@@ -15,6 +15,23 @@
   "collateral": "USDC collateral supporting LeverUp's liquidity-layer stablecoin (lvUSD) for perpetuals and margin trading; MON collateral backs the separate LVMON token.",
   "pegMechanism": "Synthetic stablecoin used inside LeverUp's Monad liquidity layer, with mint, burn, and redemption mechanics tied to the protocol's collateral and trading engine",
   "mechanismArchetype": "algorithmic",
+  "implementationLaunchDate": "2025-10-28",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex V9 curation",
+    "rationale": "Monad transaction 0x6752e0a90a52ad24ba2037d9e3b38e5050cf4d7ba45a4b384177fce2fc64b7cb created the exact tracked lvUSD contract at block 31,946,424 on October 28, 2025. LeverUp's documentation describes automatic USDC-backed minting with protocol-managed TWAP, auction, and redemption controls, supporting the existing algorithmic archetype.",
+    "sources": [
+      {
+        "label": "Monad lvUSD creation transaction",
+        "url": "https://monadscan.com/tx/0x6752e0a90a52ad24ba2037d9e3b38e5050cf4d7ba45a4b384177fce2fc64b7cb"
+      },
+      {
+        "label": "LeverUp lvUSD documentation",
+        "url": "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin"
+      }
+    ]
+  },
   "oracleRisk": {
     "tier": "oracleless-or-internal",
     "summary": "LeverUp describes lvUSD as a USDC-backed liquidity-layer token stabilized through protocol-internal TWAP anchoring, LV auctions, and redemption quotas rather than an external liquidation oracle.",
@@ -150,6 +167,33 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "lvUSD is minted inside LeverUp's VMMV trading engine on Monad when traders open lvUSD positions against USDC collateral; mint is gated by 'only issuer' resolving to a 3/5 GnosisSafe (0xf9bd99...) with no modules. Token is not upgradeable.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x135951057cfccca7e8ef87ee41318d670f723f68"
+      ],
+      "implementationAddresses": [
+        "0x1d4bcd07f4779e25b4d2f58dfaf91614b932e7ba"
+      ],
+      "adminAddresses": [
+        "0xf9bd99a8e5be72adf687b304ed0e0234e0ebccba"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "LeverUp protocol admin multisig",
+      "observedAt": "2026-07-21",
+      "observedBlock": 89173536,
+      "sources": [
+        {
+          "label": "Monad public RPC",
+          "url": "https://rpc.monad.xyz"
+        },
+        {
+          "label": "Monad lvUSD contract",
+          "url": "https://monadexplorer.com/address/0xfd44b35139ae53fff7d8f2a9869c503d987f00d1"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "monad",

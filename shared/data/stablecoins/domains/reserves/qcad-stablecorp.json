@@ -12,8 +12,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex Safety Score V9 reserve batch 7",
     "confidence": "verified",
     "sources": [
       {
@@ -25,9 +25,9 @@
         "url": "https://www.osc.ca/en/securities-law/orders-rulings-decisions/qcad-digital-trust"
       }
     ],
-    "rationale": "Stablecorp's live balances API reported CAD 1,451,000 of total fiat reserves against CAD 1,451,000 QCAD supply when reviewed. The regulatory order permits Canadian currency, short-term Canadian government debt, regulated CAD money-market funds, and other approved assets. The current allocation within that eligible basket is not published.",
+    "rationale": "Stablecorp's live balances API reported CAD 1,651,920.55 of total fiat reserves against CAD 1,651,920.55 QCAD supply on 2026-07-21. The regulatory order permits Canadian currency, short-term Canadian government debt, regulated CAD money-market funds, and other approved assets. The current allocation within that eligible basket is not published.",
     "compositionBasis": "Stablecorp live total-reserves disclosure and the regulatory order's eligible-asset envelope",
-    "compositionAsOf": "2026-07-14",
+    "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
     "knownUnknownExposure": "The full eligible reserve envelope is disclosed, but the current mix among cash, short-term Canadian government debt, money-market funds, and any approved assets is not published.",
     "knownUnknownExposurePct": 100,

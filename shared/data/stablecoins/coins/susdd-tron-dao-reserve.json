@@ -135,6 +135,26 @@
     "confidence": "verified",
     "summary": "sUSDD is an immutable DSR-style savings wrapper (SavingsUsdd, forked from DAI Foundation) over USDD. The contract has no owner, no admin, no proxy — all parameters are immutable (pot, usddJoin set at constructor). Shares are minted/burned only by deposit/withdrawal of USDD. Base USDD mint authority is inherited from reviewed usdd-tron-dao-reserve.",
     "inheritedFrom": "usdd-tron-dao-reserve",
+    "upgradeability": {
+      "model": "immutable",
+      "implementationAddresses": [
+        "0xc5d6a7b61d18afa11435a889557b068bb9f29930",
+        "0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-20",
+      "observedBlock": 25295198,
+      "sources": [
+        {
+          "label": "Ethereum SavingsUsdd source",
+          "url": "https://eth.blockscout.com/address/0xc5d6a7b61d18afa11435a889557b068bb9f29930"
+        },
+        {
+          "label": "BNB Chain SavingsUsdd contract",
+          "url": "https://bscscan.com/address/0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d#code"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",

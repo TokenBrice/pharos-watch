@@ -20,6 +20,7 @@ import costsData from "@shared/data/funding/costs.json";
 import donationsData from "@shared/data/funding/donations.json";
 import type { CostsFile, DonationsFile } from "@shared/lib/funding/types";
 import { changelogs } from "@/data/changelogs";
+import { BLOG_POSTS } from "@/data/blog";
 import {
   COLLIDING_DEPEG_EVENT_SLUGS,
   DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
@@ -159,6 +160,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const referencePageSpecs = [
     ["/changelog/", "weekly", 0.5, changelogLastModified],
+    ["/blog/", "weekly", 0.6],
     ["/about/", "monthly", 0.5],
     ["/about/api/", "monthly", 0.5],
     ["/about/bluechip/", "monthly", 0.5],
@@ -269,6 +271,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })),
   ];
 
+  // /blog/ hub lives in referencePageSpecs above; these are the post detail
+  // pages. Per-post lastmod comes from the git-derived sitemap-dates entry
+  // (see addBlogDates in generate-sitemap-dates.ts), floored to build time.
+  const blogPages: MetadataRoute.Sitemap = BLOG_POSTS.map((post) => ({
+    url: `${SITE_URL}/blog/${post.slug}/`,
+    lastModified: lastEdited(`/blog/${post.slug}/`),
+    changeFrequency: "monthly" as const,
+    priority: 0.5,
+  }));
+
   const comparisonPages: MetadataRoute.Sitemap = STATIC_COMPARISON_PAGES.map((page) => ({
     url: `${SITE_URL}${page.href}`,
     lastModified: comparisonLastModified(page),
@@ -308,6 +320,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...taxonomyPages,
     ...learnMechanismPages,
     ...learnCaseStudyPages,
+    ...blogPages,
     ...comparisonPages,
     ...digestPages,
     ...depegEventPages,

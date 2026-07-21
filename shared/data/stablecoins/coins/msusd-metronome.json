@@ -1112,6 +1112,33 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "msUSD is minted in Metronome Synth by depositing crypto collateral (75-85% CF); upgrade authority over the token proxy is controlled by a 3-of-5 Gnosis Safe (no modules, no timelock).",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa"
+      ],
+      "implementationAddresses": [
+        "0xd8a7ceccecbeded9f5350f4ca8faf55ab92f3390"
+      ],
+      "adminAddresses": [
+        "0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc",
+        "0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Metronome DAO multisig (3-of-5 Gnosis Safe)",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25290617,
+      "sources": [
+        {
+          "label": "msUSD token on Etherscan",
+          "url": "https://etherscan.io/address/0xab5eb14c09d416f0ac63661e57edb7aecdb9befa"
+        },
+        {
+          "label": "Metronome DAO multisig on Etherscan",
+          "url": "https://etherscan.io/address/0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",

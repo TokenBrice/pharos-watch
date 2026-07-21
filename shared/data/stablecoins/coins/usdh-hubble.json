@@ -2,7 +2,7 @@
   "id": "usdh-hubble",
   "name": "Hubble USDH",
   "symbol": "USDH",
-  "oneLiner": "USDH is Hubble Protocol's decentralized CDP stablecoin on Solana, minted against SOL, mSOL, BTC, ETH and other whitelisted assets at 150% min collateral ratio.",
+  "oneLiner": "USDH is Hubble Protocol's decentralized Solana stablecoin backed by overcollateralized CDP vaults and USDC held through its Peg Stability Module.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -11,9 +11,26 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Overcollateralized basket of Solana-native crypto assets (SOL, mSOL, BTC, ETH, and other Hubble-whitelisted tokens) deposited into Hubble Protocol CDP vaults at a minimum 150% collateralization ratio",
-  "pegMechanism": "Borrowers mint USDH against overcollateralized Solana crypto vaults and repay or are liquidated under Hubble's CDP rules; Stability Pool absorbs liquidations and distributes collateral to depositors",
+  "collateral": "Overcollateralized Hubble CDP vault collateral plus USDC deposited through the Peg Stability Module; current weights are not published",
+  "pegMechanism": "Borrowers mint USDH against overcollateralized Solana vaults, while the Peg Stability Module supports zero-slippage USDH/USDC conversion and holds deposited USDC as direct backing",
   "mechanismArchetype": "cdp",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex V9 curation",
+    "rationale": "Hubble's official documentation identifies the January 2022 launch and describes USDH issuance through collateralized borrowing positions, the USDH liquidation vault, and peg-stability operations, supporting the CDP classification and launch month.",
+    "sources": [
+      {
+        "label": "Hubble official documentation - Why Use Hubble?",
+        "url": "https://docs.hubbleprotocol.io/why-use-hubble"
+      },
+      {
+        "label": "Hubble technical resources",
+        "url": "https://docs.hubbleprotocol.io/resources/technical-resources"
+      }
+    ]
+  },
+  "implementationLaunchDate": "2022-01",
   "llamaId": "65",
   "detailProvider": "defillama",
   "geckoId": "usdh",
@@ -92,18 +109,19 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "Solana crypto collateral in Hubble CDP vaults (SOL, mSOL, BTC, ETH and other whitelisted assets; mix undisclosed)",
+      "name": "Hubble CDP vault collateral and USDC Peg Stability Module basket",
       "pct": 100,
       "risk": "high",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Hubble Protocol vault contracts on Solana",
-      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
+      "blacklistable": true,
+      "assetClass": "other",
+      "issuerOrObligor": "Hubble Protocol vault and Peg Stability Module contracts, vault collateral issuers, and Circle",
+      "riskFactors": ["market", "liquidity", "smart-contract", "counterparty", "concentration"],
       "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex Safety Score V9 reserve batch 7",
     "confidence": "manual-review",
     "sources": [
       {
@@ -111,30 +129,31 @@
         "url": "https://docs.hubbleprotocol.io"
       },
       {
-        "label": "Hubble Protocol",
-        "url": "https://hubbleprotocol.io"
+        "label": "Hubble Peg Stability Module documentation",
+        "url": "https://docs.hubbleprotocol.io/faq/usdh-peg-stability/peg-stability-module"
       }
     ],
-    "rationale": "Hubble documents USDH as minted against overcollateralized multi-asset Solana vaults (SOL, mSOL, BTC, ETH and other whitelisted tokens) at a minimum 150% collateral ratio, but publishes no current aggregate collateral breakdown; the reserve is retained as one bounded crypto-collateral basket.",
-    "compositionBasis": "Hubble's documented whitelisted vault collateral envelope; current constituent weights undisclosed",
-    "compositionAsOf": "2026-07-20",
+    "rationale": "Hubble documents USDH issuance against overcollateralized multi-asset Solana vaults and a Peg Stability Module that swaps USDC directly for USDH, leaving USDH backed by the deposited USDC. No current aggregate split across vault collateral and PSM USDC is published, so both issuance paths are represented as one complete unsplit basket.",
+    "compositionBasis": "Hubble CDP documentation and documented USDH/USDC Peg Stability Module backing path",
+    "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current collateral weights by asset, vault count, and stability-pool buffer are not published in a dated aggregate.",
+    "knownUnknownExposure": "Current weights across vault collateral assets and USDC held by the Peg Stability Module are not published in a dated aggregate.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Solana crypto collateral in Hubble CDP vaults (SOL, mSOL, BTC, ETH and other whitelisted assets; mix undisclosed)",
+        "reserveName": "Hubble CDP vault collateral and USDC Peg Stability Module basket",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "The documented collateral envelope spans multiple assets but no current supply-weighted split is published."
+        "rationale": "The documented backing spans multiple vault collateral assets and PSM USDC, but no current supply-weighted split is published.",
+        "candidateCoinIds": ["usdc-circle"]
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Hubble Protocol CDP vault contracts (Solana, non-custodial)",
+        "name": "Hubble Protocol CDP vault and Peg Stability Module contracts (Solana)",
         "role": "other",
         "jurisdiction": "Solana"
       }
@@ -155,7 +174,7 @@
         "url": "https://hubbleprotocol.io"
       }
     ],
-    "uncertainty": "Collateral sits in non-custodial on-chain vault contracts rather than with a conventional custodian; legal segregation, bankruptcy remoteness, and rehypothecation terms do not apply, and the operative risks are contract integrity and oracle/liquidation behavior.",
+    "uncertainty": "Backing sits in on-chain CDP vault and Peg Stability Module contracts rather than with a conventional custodian. Current constituent weights, the PSM USDC balance, and upstream USDC custody exposure are not published as one aggregate.",
     "knownUnknownExposurePct": 100
   },
   "notices": [

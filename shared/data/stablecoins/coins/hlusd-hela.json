@@ -15,6 +15,23 @@
   "collateral": "Off-chain USDC reserves held with a licensed financial institution in Australia, backing HLUSD redeemable 1:1 for the U.S. dollar",
   "pegMechanism": "Fiat-collateralized 1:1 USD peg: HLUSD is minted against off-chain USDC reserves and redeemable at 1 HLUSD = 1 USD, with issuance and redemption controlled by HeLa's on-chain role-based mint/burn governance (MintProposer/MintVoter quorum and Admin). HLUSD also serves as HeLa Chain's native gas token. Pricing and market-cap coverage are sourced from CoinGecko because the native HeLa chain is not modeled in Pharos.",
   "mechanismArchetype": "fiat-cash",
+  "implementationLaunchDate": "2024-05-07",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex V9 curation",
+    "rationale": "HeLa's official May 7, 2024 mainnet launch notice identifies HLUSD as the network's native stablecoin in live use. HeLa's HLUSD documentation describes 1:1 backing by custodial USDC and redemption at the dollar, supporting the fiat-cash archetype for this implementation.",
+    "sources": [
+      {
+        "label": "HeLa mainnet launch notice",
+        "url": "https://helalabs.com/blog/hela-mainnet-is-now-live/"
+      },
+      {
+        "label": "HeLa HLUSD backing documentation",
+        "url": "https://docs.helalabs.com/hlusd/editor"
+      }
+    ]
+  },
   "geckoId": "hela-usd",
   "links": [
     {

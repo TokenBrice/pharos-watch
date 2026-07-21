@@ -2,37 +2,41 @@
   "id": "tgbp-tokenised",
   "reserves": [
     {
-      "name": "GBP cash and short-term UK gilts",
+      "name": "GBP bank deposits, money market funds, and UK Treasuries",
       "pct": 100,
       "risk": "very-low",
       "assetClass": "other",
-      "issuerOrObligor": "BCP Technologies Ltd reserve accounts at regulated UK banking partners; UK government gilt exposure",
+      "issuerOrObligor": "BCP Technologies Ltd reserve accounts and eligible GBP-denominated liquid assets",
       "riskFactors": ["counterparty", "duration", "liquidity", "custody", "concentration"],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "OpenAI Codex reserve composition audit",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Tokenised GBP issuer site",
-        "url": "https://www.tokenisedgbp.com/"
+        "label": "Tokenised GBP issuer site and terms (site bundle dated 2026-07-14)",
+        "url": "https://www.tokenisedgbp.com/terms"
+      },
+      {
+        "label": "Andersen tGBP agreed-upon procedures report - June 30, 2026",
+        "url": "https://hypzwtzgiiobtwtrskfq.supabase.co/storage/v1/object/public/Website%20Files/Independent%20Accounts%20Report%20-%20BCP%20Technologies%20Ltd%20-%20%2030%20June%202026.pdf"
       }
     ],
-    "rationale": "BCP Technologies states that every tGBP is backed one-for-one by cash and short-term UK gilts. No current asset-class weights are published, so the composition is represented as one aggregate basket without inventing a cash/gilt split.",
-    "compositionBasis": "Current Tokenised GBP issuer disclosure; asset-class weights undisclosed",
+    "rationale": "BCP Technologies' current terms identify bank deposits, money market funds, and UK Treasuries as eligible liquid reserve assets. Andersen's June 30, 2026 agreed-upon procedures report establishes aggregate reserve sufficiency but does not identify asset classes or weights, so the reserve remains one aggregate basket without inventing a split.",
+    "compositionBasis": "Current Tokenised GBP terms and June 30, 2026 Andersen reserve-sufficiency procedures; asset-class weights undisclosed",
     "scope": "full-composition",
-    "knownUnknownExposure": "The issuer discloses the complete eligible reserve basket but not the current allocation between GBP cash and short-term UK gilts.",
+    "knownUnknownExposure": "The issuer identifies the eligible reserve envelope but does not publish the current allocation among bank deposits, money market funds, and UK Treasuries.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "GBP cash and short-term UK gilts",
+        "reserveName": "GBP bank deposits, money market funds, and UK Treasuries",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "The issuer does not publish the current cash/gilt weights."
+        "rationale": "The issuer and Andersen report do not publish the current deposit, money-market-fund, and Treasury weights."
       }
     ]
   },

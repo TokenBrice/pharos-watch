@@ -4,6 +4,7 @@ import { matchesGlob } from "node:path";
 export const SITEMAP_COMMIT_DERIVED_SOURCE_PATHS = [
   "shared/data/stablecoins/coins/**",
   "src/app/**",
+  "src/data/blog/**",
   "src/components/stablecoin-detail/static-seo-content.tsx",
   "src/lib/page-metadata.ts",
   "src/lib/stablecoin-detail-json-ld.ts",

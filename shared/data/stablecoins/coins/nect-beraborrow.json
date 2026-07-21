@@ -563,6 +563,22 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-21",
+      "observedBlock": 23804340,
+      "sources": [
+        {
+          "label": "NECT token on Berascan (EIP-1967 slots re-verified 2026-07-21)",
+          "url": "https://berascan.com/address/0x1ce0a25d13ce4d52071ae7e02cf1f6606f4c79d3"
+        },
+        {
+          "label": "Beraborrow contract addresses",
+          "url": "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses"
+        }
+      ]
+    },
     "summary": "NECT is a Liquity v2-style overcollateralized stablecoin on Berachain, minted from collateral-vault (Den) branches such as iBGT, WBERA, BTC/ETH variants, and Kodiak Island LPs. Beraborrow retains admin/governance control over collateral branch onboarding (some collateral is permissioned); renouncement is not confirmed.",
     "controls": [
       {

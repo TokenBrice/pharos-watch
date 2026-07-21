@@ -67,6 +67,35 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "WCLP is an issuer-managed Ripio wFIAT token. All chains use the same contract address with identical role holders: EOA 0x466c02e2 (DEFAULT_ADMIN + MINTER), Safe 0x2b839174 (4/7, DEFAULT_ADMIN), and two AccessControl minter-router contracts whose own admins are the same EOA and Safe.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "0x61d450a098b6a7f69fc4b98ce68198fe59768651"
+      ],
+      "implementationAddresses": ["0x8898786f1e1e9ed77def940a2ecb7cf07af8d6ba"],
+      "adminAddresses": ["0x466c02e2cc67b81a696af5afdb61605c41fe247b"],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Ripio shared WCLP admin and MINTER_ROLE holder (EOA)",
+      "observedAt": "2026-07-21",
+      "observedBlock": 25580089,
+      "sources": [
+        {
+          "label": "WCLP Ethereum proxy",
+          "url": "https://etherscan.io/address/0x61d450a098b6a7f69fc4b98ce68198fe59768651#code"
+        },
+        {
+          "label": "WCLP LatamStable implementation",
+          "url": "https://etherscan.io/address/0x8898786f1e1e9ed77def940a2ecb7cf07af8d6ba#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "multichain",

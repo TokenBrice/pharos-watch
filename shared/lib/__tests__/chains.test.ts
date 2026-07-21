@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  CG_CHAIN_MAP,
   CHAIN_META,
   getActiveChainIds,
   getChainResilienceTier,
@@ -74,8 +75,8 @@ describe("resolveChainId", () => {
       explorerUrl: "https://www.pharosscan.xyz",
       evmChainId: 1672,
       type: "evm",
-      providers: { coingecko: "pharos" },
     });
+    expect(CG_CHAIN_MAP.pharos).toBeUndefined();
     expect(resolveChainId("pharos")).toBe("pharos");
     expect(resolveChainId("Pharos")).toBe("pharos");
   });
@@ -99,6 +100,19 @@ describe("getChainResilienceTier", () => {
 });
 
 describe("tracked contract chain coverage", () => {
+  it("tracks the verified Reservoir deployments on Pharos", () => {
+    expect(TRACKED_META_BY_ID.get("rusd-reservoir")?.contracts).toContainEqual({
+      chain: "pharos",
+      address: "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+      decimals: 18,
+    });
+    expect(TRACKED_META_BY_ID.get("wsrusd-reservoir")?.contracts).toContainEqual({
+      chain: "pharos",
+      address: "0x4809010926aec940b550d34a46a52739f996d75d",
+      decimals: 18,
+    });
+  });
+
   it("keeps every tracked contract chain resolvable through the canonical chain registry", () => {
     const issues = Array.from(TRACKED_META_BY_ID.values()).flatMap((stablecoin) => (
       stablecoin.contracts?.flatMap((contract, contractIndex) => (

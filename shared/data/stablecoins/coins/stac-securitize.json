@@ -340,31 +340,35 @@
     "uncertainty": "The fund documentation names BNY as custodian and BNY Investments as sub-advisor for the BVI private fund holding the CLO portfolio, a structure that holds fund assets apart from Securitize's own balance sheet. Account-level segregation terms, rehypothecation restrictions, and custody of any interim cash balances are not publicly reproduced."
   },
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG Safety Score V9 reserve review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "OpenAI Codex V9 curation pass",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Securitize BNY CLO Fund offering page",
         "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund"
       },
       {
+        "label": "Securitize STAC launch disclosure",
+        "url": "https://investors.securitize.io/news/news-details/2025/Securitize-Launches-Tokenized-AAA-CLO-Fund-with-Services-Provided-by-BNY-Bringing-Institutional-Structured-Credit-Onchain-10-29-2025/default.aspx"
+      },
+      {
         "label": "Chronicle STAC proof of asset",
         "url": "https://chroniclelabs.org/dashboard/proofofasset/securitize-stac"
       }
     ],
-    "rationale": "Securitize identifies STAC as a tokenized AAA CLO fund share, and Chronicle publishes the proof-of-asset surface. The static envelope is one AAA-CLO portfolio category; current issuer/tranche weights are not publicly reproduced.",
+    "rationale": "Securitize identifies STAC as a tokenized AAA CLO fund share investing substantially all assets in U.S. dollar-denominated AAA-rated CLO tranches, and Chronicle publishes the proof-of-asset surface. The reviewed public issuer and attestor surfaces do not publish a current holdings schedule, issuer/tranche weights, or any residual cash allocation, so the static envelope is retained without fabricating constituent weights.",
     "compositionBasis": "Securitize fund mandate and proof-of-asset disclosure",
     "scope": "full-composition",
-    "knownUnknownExposure": "The sole disclosed portfolio category is AAA CLO exposure; current tranche and issuer weights are not published.",
-    "knownUnknownExposurePct": 0,
+    "knownUnknownExposure": "The sole disclosed portfolio category is AAA CLO exposure; current tranche, issuer, maturity, and residual-cash weights are not published.",
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "AAA CLO fund portfolio",
         "pct": 100,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "The CLO portfolio is an external fund exposure rather than a tracked stablecoin dependency."
+        "disposition": "basket-needs-split",
+        "rationale": "The issuer identifies the AAA CLO strategy but does not publish current constituent or residual-cash weights."
       }
     ]
   },

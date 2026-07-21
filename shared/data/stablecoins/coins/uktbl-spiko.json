@@ -297,6 +297,31 @@
           }
         ],
         "evidence": "At Ethereum block 25573477, Safe reads returned VERSION() = 1.4.1, eight owners, and threshold 3; existing PermissionManager review records no enabled modules or guard. Group 0 can administer PermissionManager permissions and its UUPS upgrade authorization, so it can authorize minters and replace mint-critical authority logic."
+      },
+      {
+        "chain": "starknet",
+        "address": "0x7bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d",
+        "label": "UKTBL Starknet token owner (Argent Multisig, 3-of-5)",
+        "role": "minter-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-21",
+        "observedBlock": 12113111,
+        "sources": [
+          {
+            "label": "Starknet Lava public RPC",
+            "url": "https://rpc.starknet.lava.build"
+          },
+          {
+            "label": "UKTBL on Starknet explorer",
+            "url": "https://starkscan.co/contract/0x0153d6e0462080bb2842109e9b64f589ef5aa06bb32b26bbdb894aca92674395"
+          }
+        ],
+        "evidence": "At Starknet block 12113111, owner() on the UKTBL token (0x0153d6e0...74395) re-confirmed the admin contract 0x7bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d. starknet_getClass on that admin contract's class hash (0x6e150953b26271a740bf2b6e9bca17cc52c68d765f761295de51ceb8526ee72) shows it implements argent::multisig::interface::IArgentMultisig; get_threshold() returned 3 and get_signers() returned 5 signer felts (0x3167aa34..., 0x4ae1bfde..., 0x3e02f370..., 0x147ecc4a..., 0x53b475eb...). The UKTBL token's own ABI additionally exposes top-level mint/burn/pause/unpause/redeem functions plus set_permission_manager_contract_address and set_redemption_contract_address, mirroring the Ethereum Token+PermissionManager split, but no public getter exposes the currently-set permission-manager address, so the Starknet mint-authorization path below the 3-of-5 owner multisig is not independently enumerated."
       }
     ],
     "economicCapSemantics": "unknown",
@@ -349,14 +374,23 @@
         {
           "label": "Ethereum PublicNode RPC",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Starknet Lava public RPC",
+          "url": "https://rpc.starknet.lava.build"
+        },
+        {
+          "label": "Stellar Expert contract API",
+          "url": "https://api.stellar.expert/explorer/public/contract/CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR"
         }
       ],
-      "evidence": "Ethereum contract and RPC evidence identifies the UUPS PermissionManager as UKTBL's authority path. At block 25573477, its group-0 Safe is 3-of-8; the PermissionManager implementation slot is 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e and the external proxy-admin slot is zero. Existing role evidence establishes group 2 operator contracts that can call UKTBL mint on Ethereum. The reviewed Spiko fund record is an AMF-regulated UCITS short-term VNAV money-market fund with quarterly PwC audit evidence, supporting periodic reconciliation and prudential supervision. The chain-local authority contract is identified for several EVM deployments, but terminal minter and upgrade control chains are not complete for every non-Ethereum deployment.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
+      "evidence": "Ethereum contract and RPC evidence identifies the UUPS PermissionManager as UKTBL's authority path. At block 25573477, its group-0 Safe is 3-of-8; the PermissionManager implementation slot is 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e and the external proxy-admin slot is zero. Existing role evidence establishes group 2 operator contracts that can call UKTBL mint on Ethereum. The reviewed Spiko fund record is an AMF-regulated UCITS short-term VNAV money-market fund with quarterly PwC audit evidence, supporting periodic reconciliation and prudential supervision. 2026-07-21 gap-fill pass narrowed the non-Ethereum gap: Starknet owner() re-confirmed at block 12113111, and its class hash resolves to an argent::multisig::interface::IArgentMultisig implementation; get_threshold()=3 and get_signers() returned exactly 5 signer keys, so the Starknet UKTBL owner is a 3-of-5 Argent Multisig (added to controls). The Starknet token's own ABI exposes mint/burn/pause and a settable permission-manager address mirroring the Ethereum Token+PermissionManager split, but no public getter surfaces the currently configured permission-manager contract, so operator-level (non-owner) minters on Starknet remain unenumerated. Stellar was independently checked via the Stellar Expert contract API and Horizon: the Soroban UKTBL contract (CDT3KU6...4FR) was deployed 2025-10-01 by account GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H, a plain single-signature Stellar account (one ed25519 signer, weight 1, zero thresholds) rather than a multisig; however, Soroban contracts commonly set a separate runtime 'admin' address at initialize() that can differ from the deploying account, and no public API (Stellar Expert operations/history endpoints returned 404; Soroban storage requires ledger-entry XDR decoding not available in this session) exposed that runtime admin key, so the Stellar terminal admin identity remains unresolved.",
+      "reviewer": "P2 mint-free cohort; Claude 2026-07-21 gap-fill pass",
+      "reviewedAt": "2026-07-21",
       "disposition": "unresolved",
       "unresolvedQuestions": [
-        "Enumerate terminal minter, administrator, and mint-logic upgrade controls for the Starknet and Stellar deployments, and reconcile the group memberships and UUPS authorization path for every non-Ethereum PermissionManager."
+        "Identify the Soroban runtime admin (initialize-time admin address, which may differ from the deploying account) for the Stellar UKTBL contract CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR.",
+        "Enumerate the Starknet permission-manager contract address and its operator/group membership below the confirmed 3-of-5 Argent Multisig owner."
       ]
     }
   },

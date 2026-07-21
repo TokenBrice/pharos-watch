@@ -18,9 +18,9 @@
   "pegMechanism": "hbUSDT is a yield-bearing vault token over USDT strategy exposure; holders exit through Hyperbeat vault liquidity into USDT, while ultimate fiat par exit remains Tether's issuer route",
   "mechanismArchetypeReview": {
     "disposition": "unresolved",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-5 Safety Score V9 mechanism review",
-    "rationale": "Hyperbeat documentation and Accountable transparency identify a dynamic yield strategy, but do not provide the complete current assurance, custody continuity, valuation, and reconciliation inputs needed to resolve the mechanism archetype and risk review.",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex V9 curation",
+    "rationale": "Hyperbeat documentation and Accountable transparency identify a dynamic yield strategy, but do not provide the complete inputs needed to assign a direct wrapper archetype. The tracked hbUSDT proxy was created in HyperEVM block 3270801 on 2025-05-02, which establishes its implementation boundary without overriding the inherited parent classification.",
     "sources": [
       {
         "label": "Hyperbeat USDT vault documentation",
@@ -29,9 +29,14 @@
       {
         "label": "Accountable Hyperbeat transparency",
         "url": "https://accountable.hyperbeat.org/"
+      },
+      {
+        "label": "hbUSDT HyperEVM contract creation transaction",
+        "url": "https://hyperevmscan.io/tx/0x99ea9968412a0da6ff7ec8d18a77da4a914981f8125382f61a0829cdac84c1ca"
       }
     ]
   },
+  "implementationLaunchDate": "2025-05-02",
   "detailProvider": "coingecko",
   "geckoId": "hyperbeat-usdt",
   "proofOfReserves": {

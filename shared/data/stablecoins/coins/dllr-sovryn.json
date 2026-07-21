@@ -99,6 +99,33 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "DLLR is minted 1:1 by the Mynt MassetManager aggregator when users deposit accepted BTC-backed CDP stablecoins (ZUSD from Sovryn Zero, DOC from Money On Chain) as bAssets; it is an aggregator over already-overcollateralized stables, governed by Sovryn DAO via a 48-hour Timelock (0x967c84) controlled by GovernorAlpha (0x6496df) which sets the accepted bAsset basket.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x5f777270259e32f79589fe82269db6209f7b7582"
+      ],
+      "implementationAddresses": [
+        "0x15e34a753854be868b6c99333964ae655c2bab4f"
+      ],
+      "adminAddresses": [
+        "0x466e023ddd08b53385b4763b883ab63820c123df"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "Sovryn GovernorAlpha + 48h Timelock (basket governance)",
+      "observedAt": "2026-07-21",
+      "observedBlock": 9075549,
+      "sources": [
+        {
+          "label": "Rootstock explorer: Mynt MassetManager",
+          "url": "https://rootstock.blockscout.com/address/0x5f777270259e32f79589fe82269db6209f7b7582"
+        },
+        {
+          "label": "Rootstock public RPC",
+          "url": "https://public-node.rsk.co"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Mynt MassetManager (1:1 aggregator mint)",

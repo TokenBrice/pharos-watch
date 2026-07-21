@@ -14,6 +14,23 @@
   "collateral": "Overcollateralized by diversified on-chain DeFi yield strategies (leveraged loops, Pendle liquidity, Euler lending markets) deployed on Plasma chain; backed by >$1 in on-chain assets per yzUSD",
   "pegMechanism": "Eligible investors (accredited/institutional, KYC/AML required) mint/redeem at 1:1 with USDT0; peg maintained by overcollateralization and risk tranching via yzPP junior tranche absorbing first losses",
   "mechanismArchetype": "cdp",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex V9 curation",
+    "rationale": "Yuzu documents yzUSD as an overcollateralized senior pool tranche with USDT0 minting and yzPP first-loss protection. The tracked yzUSD proxy was created in Plasma block 3172399 on 2025-10-10, establishing the implementation boundary for the reviewed mechanism.",
+    "sources": [
+      {
+        "label": "Yuzu Money documentation",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money"
+      },
+      {
+        "label": "yzUSD Plasma contract creation transaction",
+        "url": "https://plasmascan.to/tx/0x53b57e597db63f938d8e6f0ac85ab4510120f6793db8eb4c9af0efc7a80f9ca9"
+      }
+    ]
+  },
+  "implementationLaunchDate": "2025-10-10",
   "llamaId": "344",
   "detailProvider": "defillama",
   "geckoId": "yuzu-usd",

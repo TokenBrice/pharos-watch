@@ -1417,8 +1417,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex dependency review",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex Safety Score V9 reserve batch 7",
     "confidence": "verified",
     "sources": [
       {
@@ -1434,9 +1434,9 @@
         "url": "https://eth.blockscout.com/address/0x1bd08b43d1579881cfad0a35aeea5b547dbe4c91"
       }
     ],
-    "rationale": "Alto documents that only mint markets create DUSD; borrow markets redistribute lender-supplied DUSD and therefore are not backing sources. The July 14 issuer API reports current DUSD debt for each active mint market and identifies frxUSD as the USM backing token. Normalizing those mint debts with the USM's 822,997.840132 frxUSD balance read at Ethereum block 25530496 yields 90.4% frxUSD, 5.9% ETH/LST collateral, 3.6% sUSDe, and 0.1% syrupUSDC after one-decimal rounding.",
+    "rationale": "Alto documents that only mint markets create DUSD; borrow markets redistribute lender-supplied DUSD and are not backing sources. The 2026-07-21 issuer API reports active mint-market DUSD debt of 32,735.51647 against sUSDe, 3,903.60575 against WETH, 885.53777 against syrupUSDC, 633.58275 against rETH, and 49,500.86509 against wstETH. Combining those debts with the USM's 822,997.840132 frxUSD balance at Ethereum block 25580115 still rounds to 90.4% frxUSD, 5.9% ETH/LST collateral, 3.6% sUSDe, and 0.1% syrupUSDC.",
     "compositionBasis": "Current issuer API mint-market DUSD debt combined with the on-chain USM underlying balance",
-    "compositionAsOf": "2026-07-14",
+    "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
     "knownUnknownExposure": "All active DUSD issuance paths and their direct backing assets are identified.",
     "knownUnknownExposurePct": 0,

@@ -97,8 +97,8 @@
   "governanceQuality": "regulated-entity",
   "reserves": [
     {
-      "name": "Apollo diversified credit strategy",
-      "pct": 95,
+      "name": "Apollo Diversified Credit Fund strategy envelope",
+      "pct": 100,
       "risk": "high",
       "assetClass": "private-credit",
       "issuerOrObligor": "Apollo Global Management credit strategies through Anemoy Tokenized Apollo Diversified Credit Fund",
@@ -111,25 +111,11 @@
         "concentration"
       ],
       "liquidityHorizon": "over-seven-days"
-    },
-    {
-      "name": "Cash and liquidity buffer",
-      "pct": 5,
-      "risk": "low",
-      "assetClass": "cash",
-      "issuerOrObligor": "Anemoy Tokenized Apollo Diversified Credit Fund reserve and liquidity accounts",
-      "riskFactors": [
-        "custody",
-        "liquidity",
-        "counterparty",
-        "concentration"
-      ],
-      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex Safety Score V9 reserve review",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "OpenAI Codex V9 curation pass",
     "confidence": "manual-review",
     "sources": [
       {
@@ -145,11 +131,20 @@
         "url": "https://docs.centrifuge.io/"
       }
     ],
-    "rationale": "Anemoy and Chronicle identify ACRDX as a tokenized Apollo diversified private-credit fund share with a proof-of-asset feed. The current source envelope retains the existing 95% Apollo strategy and 5% cash or liquidity buffer; the reviewed public disclosures do not publish current bank-level cash allocation or a full independent reserve schedule.",
+    "rationale": "Anemoy identifies ACRDX as a feeder fund providing exposure to the Apollo Diversified Credit Fund across corporate direct lending, asset-backed lending, performing credit, and dislocated credit, while Chronicle verifies the tokenized fund through Proof of Asset. Neither source publishes a current portfolio schedule or a cash percentage. The previous 95% credit / 5% cash split was unsupported and has been removed; the complete fund is represented as one 100% strategy envelope without fabricating constituent weights.",
     "compositionBasis": "Anemoy ACRDX product and Chronicle proof-of-asset disclosures",
     "scope": "full-composition",
-    "knownUnknownExposure": "The two reserve categories are identified, but current fund sleeve, bank-level cash allocation, custody segregation, and recovery terms are not disclosed in the reviewed public sources.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "Current credit-sleeve, obligor, sector, geography, maturity, and cash weights are not disclosed in the reviewed public sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Apollo Diversified Credit Fund strategy envelope",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The issuer identifies the underlying credit strategy but does not publish current constituent or cash weights."
+      }
+    ]
   },
   "yieldConfig": {
     "yieldSource": "Anemoy Apollo Diversified Credit Fund NAV",

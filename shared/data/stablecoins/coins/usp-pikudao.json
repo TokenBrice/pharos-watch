@@ -294,51 +294,18 @@
   "custodyModel": "institutional-unregulated",
   "reserves": [
     {
-      "name": "BMMF Turkey FX arbitrage (Balsa Technologies, delta-neutral TRY/USD)",
-      "pct": 50,
+      "name": "Piku reserve-strategy envelope",
+      "pct": 100,
       "risk": "very-high",
       "assetClass": "other",
-      "issuerOrObligor": "Balsa Technologies (BMMF strategy operator) and Turkish crypto-market counterparties",
-      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity", "legal", "concentration"],
+      "issuerOrObligor": "PikuDAO, Balsa Technologies, and third-party DeFi strategy counterparties",
+      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity", "legal", "concentration", "smart-contract"],
       "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "DeFi protocols (Giza, Almanak, USD.AI, Ethena, Aave, Cap)",
-      "pct": 40,
-      "risk": "high",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Giza, Almanak, USD.AI, Ethena, Aave, and Cap protocol positions",
-      "riskFactors": ["smart-contract", "counterparty", "market", "liquidity", "concentration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Cash stablecoins (USDC buffer)",
-      "pct": 5,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral",
-      "blacklistable": true,
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle (USDC)",
-      "riskFactors": ["counterparty", "liquidity", "custody"],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "Cash stablecoins (USDT buffer)",
-      "pct": 5,
-      "risk": "low",
-      "coinId": "usdt-tether",
-      "depType": "collateral",
-      "blacklistable": true,
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Tether (USDT)",
-      "riskFactors": ["counterparty", "liquidity", "custody"],
-      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-1 (lead usde-ethena)",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "OpenAI Codex V9 curation pass",
     "confidence": "unknown",
     "sources": [
       {
@@ -350,25 +317,19 @@
         "url": "https://www.stablewatch.io/research/piku-yield-optimized-stablecoin"
       }
     ],
-    "rationale": "Piku's own documentation describes the backing model (BMMF Turkey FX arbitrage, DeFi yield allocations, RWA, and cash stablecoin buffers) but publishes no dated allocation, attestation, or reserve dashboard. The 50/40/5/5 category weights are retained as an unaudited approximation consistent with third-party Stablewatch research (October 2025: ~50% BMMF arbitrage, ~50% across six DeFi protocols); they are not issuer-attested and are treated as bounded-unknown exposure.",
-    "compositionBasis": "Issuer strategy-category documentation crossed with secondary research; no issuer-published weights or attestation",
+    "rationale": "Piku's documentation describes BMMF Turkey FX arbitrage, DeFi yield allocations, RWA, and cash-stablecoin buffers, but publishes no dated allocation, attestation, reserve dashboard, or reproducible holdings inventory. The previous 50/40/5/5 split depended on secondary research and was not issuer-attested, so it has been removed and the complete backing is represented as one source-supported strategy envelope.",
+    "compositionBasis": "Issuer strategy-category documentation; no issuer-published weights, holdings snapshot, or attestation",
+    "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 50% BMMF off-chain arbitrage leg has no published operator statements, venue, or custody detail, and the 40% DeFi allocation has no published per-protocol weights; only the 10% cash stablecoin buffer is identity-resolved.",
-    "knownUnknownExposurePct": 90,
+    "knownUnknownExposure": "Current strategy weights, off-chain positions and venues, DeFi protocol weights, RWA holdings, stablecoin-buffer weights, and custody balances are not published in a dated primary-source snapshot.",
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "BMMF Turkey FX arbitrage (Balsa Technologies, delta-neutral TRY/USD)",
-        "pct": 50,
-        "disposition": "insufficient-evidence",
-        "rationale": "Off-chain delta-neutral strategy run by a single named operator with no published attestations, venues, or position detail."
-      },
-      {
-        "reserveIndex": 1,
-        "reserveName": "DeFi protocols (Giza, Almanak, USD.AI, Ethena, Aave, Cap)",
-        "pct": 40,
+        "reserveName": "Piku reserve-strategy envelope",
+        "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "Issuer materials name the protocol set but publish no per-protocol weights, so the slice cannot be linked to a single tracked asset.",
+        "rationale": "Issuer materials describe the strategy categories but publish no current component weights, so the aggregate cannot be split or dependency-linked without fabrication.",
         "candidateCoinIds": ["usde-ethena", "usdai-usd-ai", "stcusd-cap"]
       }
     ]

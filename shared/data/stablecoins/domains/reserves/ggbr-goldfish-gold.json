@@ -18,27 +18,36 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "OpenAI Codex reserve composition audit",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Goldfish Gold official website",
-        "url": "https://goldfishgold.com/"
+        "label": "Goldfish collateral model and designated collateral wallet",
+        "url": "https://goldfishgold.com/collateral"
+      },
+      {
+        "label": "ION.au balance in the designated Goldfish collateral wallet",
+        "url": "https://etherscan.io/token/0xd051c326c9aef673428e6f01eb65d2c52de95d30?a=0x2F371Ba19F89874689a91bA322194F9967Cb640D"
+      },
+      {
+        "label": "GGBR Ethereum supply",
+        "url": "https://etherscan.io/token/0x7e2ac793f3E692f388e66c7DC28F739d13B0B71A"
       }
     ],
-    "rationale": "Goldfish states that each GGBR represents 1/1000 troy ounce of in-situ gold and is backed beyond 100% by audited surplus gold reserves through ION.au securities. The issuer site does not provide a dated independent reserve report or current security and custody weights.",
-    "compositionBasis": "Goldfish product and reserve-backing disclosures",
+    "rationale": "Goldfish identifies ION.au as GGBR's direct reserve instrument and designates Ethereum wallet 0x2F371Ba19F89874689a91bA322194F9967Cb640D as the collateral wallet. At Ethereum block 25579996 on 2026-07-21, that wallet held 25,000 ION.au while GGBR total supply was 25,000,000, exactly one ION.au per 1,000 GGBR and consistent with the disclosed direct-backing ratio.",
+    "compositionBasis": "Official Goldfish collateral model reconciled to exact Ethereum balances at block 25579996",
+    "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The site does not publish a dated reserve report, current ION.au security inventory, gold-bar allocation, or custody shares.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "The direct reserve instrument and its on-chain quantity are resolved. ION.au's underlying in-situ gold claims, legal enforceability, and off-chain custody remain upstream instrument-quality risks rather than an unidentified GGBR reserve slice.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "In-situ gold-reserve-backed ION.au securities",
         "pct": 100,
-        "disposition": "insufficient-evidence",
-        "rationale": "The issuer describes the backing model but provides no dated independent evidence supporting the current security and gold reserve composition."
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "ION.au is an untracked tokenized security; its exact current balance in Goldfish's designated collateral wallet is independently readable on Ethereum."
       }
     ]
   },

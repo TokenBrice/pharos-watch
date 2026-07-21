@@ -148,6 +148,45 @@
         ]
       }
     ],
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x4cce605ed955295432958d8951d0b176c10720d5",
+        "0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65"
+      ],
+      "implementationAddresses": [
+        "0xc6114a25f69c8115b1778c1c301efa9bd7154e72",
+        "0x3c9ead9ac7732b76beac828ea4ab92d8b758383b"
+      ],
+      "adminAddresses": [
+        "0x0ac6d3de693072bc9a3e46ea2ac3bb554619598b",
+        "0x840b18b93e44ded7d616a0f61aff8562f2548743",
+        "0x0bc67421c729b8cd22a725e40d1c4f5ca3d32f9f",
+        "0x31c9cf32b2e33e1a5561c1dcf3889f574f2977fa"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "AUDD Ethereum proxy admin",
+      "observedAt": "2026-07-21",
+      "observedBlock": 25580034,
+      "sources": [
+        {
+          "label": "Ethereum Blockscout AUDD proxy",
+          "url": "https://eth.blockscout.com/address/0x4cce605ed955295432958d8951d0b176c10720d5"
+        },
+        {
+          "label": "Base Blockscout AUDD proxy",
+          "url": "https://base.blockscout.com/address/0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65"
+        },
+        {
+          "label": "Ethereum public RPC used for EIP-1967 slot reads",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Base public RPC used for EIP-1967 slot reads",
+          "url": "https://base-rpc.publicnode.com"
+        }
+      ]
+    },
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {

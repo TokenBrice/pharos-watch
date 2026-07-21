@@ -16,6 +16,23 @@
   "collateral": "Kava CDP collateral and protocol liquidity backing the legacy USDX debt token",
   "pegMechanism": "Kava Mint overcollateralized debt positions issue USDX against crypto collateral, with liquidations and protocol parameters intended to defend the peg",
   "mechanismArchetype": "cdp",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex V9 curation",
+    "rationale": "Kava's tagged kava-3 release identifies the first software release containing the complete CDP system, and its versioned migration instructions set the replacement chain genesis to 2020-06-10T14:00:00Z. These primary sources establish the USDX CDP implementation boundary.",
+    "sources": [
+      {
+        "label": "Kava kava-3 v0.8.0 release",
+        "url": "https://github.com/Kava-Labs/kava/releases/tag/v0.8.0"
+      },
+      {
+        "label": "Kava-3 versioned migration instructions",
+        "url": "https://github.com/Kava-Labs/kava/blob/v0.8.0/contrib/kava-3/migration.md"
+      }
+    ]
+  },
+  "implementationLaunchDate": "2020-06-10",
   "geckoId": "usdx",
   "cmcSlug": "usdx-kava",
   "protocolSlug": "kava-mint",

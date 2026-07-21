@@ -45,6 +45,11 @@
       "chain": "arbitrum",
       "address": "0x2ad62eb9744c720364f6ac856360a43e8a2229b5",
       "decimals": 18
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x69f6d4d4813f8e2e618dae7572e04b6d5329e207",
+      "decimals": 18
     }
   ],
   "mintAuthority": {

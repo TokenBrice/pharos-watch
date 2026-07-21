@@ -2,7 +2,7 @@
   "id": "bnusd-balanced",
   "name": "Balanced Dollar",
   "symbol": "BNUSD",
-  "oneLiner": "bnUSD is Balanced's decentralized dollar stablecoin on ICON, minted from overcollateralized CDPs against sICX and bridged cross-chain via xCall.",
+  "oneLiner": "bnUSD is Balanced's cross-chain decentralized dollar backed by crypto loan collateral and USDC or USDT held in its Stability Fund.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -11,8 +11,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Overcollateralized loans on ICON against sICX (staked ICX), with cross-chain Hub collateral support for assets bridged in via Balanced's xCall infrastructure",
-  "pegMechanism": "CDP-style mint: users borrow bnUSD against eligible collateral on the ICON Hub through the Balanced Loans contract, paying a 0.2% origination fee and a 2% annualised interest charge; loans must remain above the protocol's collateral ratio or are eligible for liquidation. The same bnUSD supply circulates wrapper-free across connected chains via xCall, so cross-chain balances net back to the canonical ICON issuance.",
+  "collateral": "Balanced v2 money-market loan collateral across supported chains plus USDC and USDT deposited into the Stability Fund; current constituent weights are not published",
+  "pegMechanism": "Users borrow bnUSD against eligible crypto collateral through Balanced's cross-chain money market, while the Stability Fund mints or burns bnUSD 1:1 against USDC and USDT to support the peg",
   "mechanismArchetype": "cdp",
   "llamaId": "204",
   "detailProvider": "defillama",
@@ -523,26 +523,12 @@
   ],
   "reserves": [
     {
-      "name": "sICX (staked ICX) collateral on ICON",
-      "pct": 90,
-      "risk": "high",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "ICON network staked-ICX positions in Balanced Loans contracts",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "smart-contract",
-        "concentration"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "Cross-chain Hub and Stability Fund collateral (BTC, ETH, BNB, AVAX, INJ, USDC, USDT and other bridged assets)",
-      "pct": 10,
+      "name": "Balanced v2 crypto-loan collateral and USDC/USDT Stability Fund basket",
+      "pct": 100,
       "risk": "high",
       "blacklistable": true,
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Balanced cross-chain Hub and Stability Fund positions across bridged-asset issuers",
+      "assetClass": "other",
+      "issuerOrObligor": "Balanced v2 money-market contracts, supported collateral issuers, Circle, and Tether",
       "riskFactors": [
         "market",
         "liquidity",
@@ -554,8 +540,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-1 Safety Score V9 reserve review",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex Safety Score V9 reserve batch 7",
     "confidence": "manual-review",
     "sources": [
       {
@@ -567,32 +553,27 @@
         "url": "https://balanced.network/stablecoin/"
       }
     ],
-    "rationale": "The catalog's 90/10 rows describe the historical ICON v1 collateral envelope, but Balanced's current documentation says v1 is no longer supported after the April 2026 v2 launch. No current v2 reserve inventory is published in the reviewed sources, so both historical rows remain explicitly unresolved rather than being presented as active composition.",
-    "compositionBasis": "Balanced current v1 transition documentation and historical catalog reserve envelope",
+    "rationale": "Balanced's current v2 stablecoin page lists the supported crypto collateral types and states that its Stability Fund holds deposited USDC and USDT while minting bnUSD. It does not publish current debt or reserve weights by constituent. The former 90/10 rows described the unsupported v1 system and are replaced by one current v2 backing envelope rather than retained as a false allocation.",
+    "compositionBasis": "Balanced v2 supported-collateral inventory and USDC/USDT Stability Fund design",
+    "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The tracked v1 reserve weights are not current evidence after the v2 launch, and no active v2 bnUSD reserve inventory was found in the reviewed public sources.",
+    "knownUnknownExposure": "Current constituent weights across v2 loan collateral and the USDC/USDT Stability Fund are not published.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "sICX (staked ICX) collateral on ICON",
-        "pct": 90,
-        "disposition": "insufficient-evidence",
-        "rationale": "The historical v1 row is not treated as a current reserve allocation after the documented v2 transition."
-      },
-      {
-        "reserveIndex": 1,
-        "reserveName": "Cross-chain Hub and Stability Fund collateral (BTC, ETH, BNB, AVAX, INJ, USDC, USDT and other bridged assets)",
-        "pct": 10,
-        "disposition": "insufficient-evidence",
-        "rationale": "The historical v1 row is not treated as a current reserve allocation after the documented v2 transition."
+        "reserveName": "Balanced v2 crypto-loan collateral and USDC/USDT Stability Fund basket",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The complete current backing categories are identified, but Balanced does not publish current constituent balances or weights.",
+        "candidateCoinIds": ["usdc-circle", "usdt-tether"]
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Balanced Loans and Stability Fund contracts (ICON and cross-chain Hub)",
+        "name": "Balanced v2 money-market and Stability Fund contracts",
         "role": "other"
       }
     ],
@@ -612,7 +593,7 @@
         "url": "https://balanced.network/stablecoin/"
       }
     ],
-    "uncertainty": "bnUSD collateral sits in Balanced's on-chain loan and Stability Fund contracts rather than with a legal custodian. Following the documented April 2026 v2 transition, the current v2 contract custody structure is not established in the reviewed sources; bridged collateral constituents additionally carry their own bridge and issuer custody layers.",
+    "uncertainty": "bnUSD backing sits in Balanced's on-chain v2 money-market and Stability Fund contracts rather than with a legal custodian. Current constituent weights and contract-level provider shares are not published; bridged collateral and USDC/USDT also carry upstream issuer and bridge custody layers.",
     "knownUnknownExposurePct": 100
   },
   "launchDate": "2021-04-25"

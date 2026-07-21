@@ -281,6 +281,38 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "OUSG minting runs through the OUSG_InstantManager (MINTER_ROLE holder) and is governed by a 4-of-7 Ondo Safe (DEFAULT_ADMIN and MINTER_ROLE on the token). The InstantManager's own admin is a separate 3-of-5 Ondo Safe.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92"
+      ],
+      "implementationAddresses": [
+        "0x1ceb44b6e515abf009e0ccb6ddafd723886cf3ff"
+      ],
+      "adminAddresses": [
+        "0xba80aa44cc25e85cc30359150dfb1c7d041cf6d5",
+        "0xAEd4caF2E535D964165B4392342F71bac77e8367"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Ondo 4-of-7 Safe (OUSG token DEFAULT_ADMIN and MINTER_ROLE[1])",
+      "observedAt": "2026-07-21",
+      "observedBlock": 25579746,
+      "sources": [
+        {
+          "label": "Ondo smart contract addresses",
+          "url": "https://docs.ondo.finance/addresses"
+        },
+        {
+          "label": "OUSG token proxy",
+          "url": "https://etherscan.io/address/0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92#readProxyContract"
+        },
+        {
+          "label": "OUSG ProxyAdmin",
+          "url": "https://etherscan.io/address/0xba80aa44cc25e85cc30359150dfb1c7d041cf6d5#readContract"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",

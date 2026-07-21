@@ -195,6 +195,28 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "ctUSD is an M0-backed extension on Citrea; extension wrapping routes through M0 extension infrastructure while base M issuance remains on the Ethereum MinterGateway.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xB6807116b3B1B321a390594e31ECD6e0076f6278"
+      ],
+      "implementationAddresses": [
+        "0xd87c75a92db19fe334fe7812890f893449ff1bda"
+      ],
+      "adminAddresses": [
+        "0x0f38d8a5583f9316084e9c40737244870c565924"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "M0 SwapFacility extension router",
+      "observedAt": "2026-06-11",
+      "observedBlock": 8546189,
+      "sources": [
+        {
+          "label": "M0 SwapFacility docs",
+          "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",

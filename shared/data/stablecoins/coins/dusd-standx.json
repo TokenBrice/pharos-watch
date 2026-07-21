@@ -177,56 +177,34 @@
   "custodyModel": "cex",
   "reserves": [
     {
-      "name": "Spot crypto (BTC/ETH/SOL/BNB, delta-hedged via perp shorts)",
-      "pct": 50,
+      "name": "Market-neutral spot collateral, perpetual hedges, and stability reserve",
+      "pct": 100,
       "risk": "high",
       "assetClass": "hedged-crypto",
-      "issuerOrObligor": "StandX delta-neutral strategy collateral held via Ceffu and exchange custody",
+      "issuerOrObligor": "StandX protocol, custodians, and undisclosed centralized-exchange counterparties",
       "riskFactors": [
         "market",
         "basis",
         "counterparty",
         "custody",
-        "liquidity"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Perpetual short futures positions (CEX via Ceffu custody)",
-      "pct": 45,
-      "risk": "high",
-      "assetClass": "hedged-crypto",
-      "issuerOrObligor": "Centralized exchange perpetual futures counterparties via Ceffu custody",
-      "riskFactors": [
-        "basis",
-        "counterparty",
         "liquidity",
-        "market"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Stability reserve fund (stablecoins, multisig)",
-      "pct": 5,
-      "risk": "medium",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "StandX stability reserve fund under multisig control",
-      "riskFactors": [
-        "counterparty",
-        "custody",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
-    "confidence": "verified",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "OpenAI Codex reserve curation",
+    "confidence": "manual-review",
     "sources": [
       {
         "label": "StandX DUSD architecture",
         "url": "https://docs.standx.com/docs/dusd-solutions"
+      },
+      {
+        "label": "StandX DUSD minting",
+        "url": "https://docs.standx.com/docs/dusd-solutions/minting-dusd"
       },
       {
         "label": "StandX risks and hedging system",
@@ -237,33 +215,19 @@
         "url": "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd"
       }
     ],
-    "rationale": "The official StandX sources describe the three reserve categories retained in this envelope (delta-hedged spot collateral, CEX perpetual short hedges, and a stability reserve fund), but they do not publish a dated current balance-sheet or custody allocation that verifies the 50/45/5 weights. The categories are retained for context with explicit v9 classification; no constituent percentages or dependency edges are inferred beyond the documented boundary, and the weights remain unverified.",
-    "compositionBasis": "Existing curated category fallback cross-checked against StandX architecture, hedging, and redemption documentation on 2026-07-20",
-    "compositionAsOf": "2026-07-20",
+    "rationale": "The official StandX sources document USDT/USDC mint inputs, conversion into spot assets, matching perpetual short positions, and a stability reserve, but do not publish a dated balance sheet, current asset or venue inventory, or weights for those components. The prior 50/45/5 allocation was therefore removed and replaced by the narrowest source-supported aggregate envelope.",
+    "compositionBasis": "StandX architecture, hedging, and redemption documentation reviewed on 2026-07-21; component weights are undisclosed",
+    "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
     "knownUnknownExposure": "Current reserve weights, exact spot constituents, exchange counterparties, and the Stability Reserve Fund composition are not disclosed in the reviewed primary sources.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Spot crypto (BTC/ETH/SOL/BNB, delta-hedged via perp shorts)",
-        "pct": 50,
+        "reserveName": "Market-neutral spot collateral, perpetual hedges, and stability reserve",
+        "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
-      },
-      {
-        "reserveIndex": 1,
-        "reserveName": "Perpetual short futures positions (CEX via Ceffu custody)",
-        "pct": 45,
-        "disposition": "insufficient-evidence",
-        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
-      },
-      {
-        "reserveIndex": 2,
-        "reserveName": "Stability reserve fund (stablecoins, multisig)",
-        "pct": 5,
-        "disposition": "insufficient-evidence",
-        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+        "rationale": "The reviewed primary sources document the reserve mechanism but do not publish current component weights or venue allocations, so the aggregate cannot be split or linked without fabrication."
       }
     ]
   },

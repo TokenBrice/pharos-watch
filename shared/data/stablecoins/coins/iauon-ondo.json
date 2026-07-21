@@ -237,8 +237,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure)",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure); OpenAI Codex class-level normalization",
     "confidence": "probable",
     "sources": [
       {
@@ -254,18 +254,18 @@
         "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
       }
     ],
-    "rationale": "Ondo identifies IAUon as economic exposure to iShares Gold Trust through Ondo Global Markets. The exposure identity and its failure domains (BlackRock's IAU fund held via Ondo GM collateral accounts) are explicit in the product documentation, but the reviewed materials do not publish a dated, reconciled current share inventory, collateral-account allocation, or custody breakdown, so the reserve remains an explicitly bounded aggregate exposure.",
+    "rationale": "Ondo identifies IAUon as 100% economic exposure to iShares Gold Trust through Ondo Global Markets, so the immediate reserve instrument and its failure domain are fully identified. The reviewed materials do not publish a dated share inventory, collateral-account allocation, or custody breakdown; those remain assurance and custody uncertainties rather than unidentified direct reserve composition.",
     "compositionBasis": "Ondo IAUon product disclosure and Global Markets documentation",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current IAU share inventory, collateral-account balances, custody arrangements, and independent reserve reconciliation are not disclosed in the reviewed sources.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "No direct reserve category is unidentified. Current IAU share inventory, collateral-account balances, custody arrangements, and independent reserve reconciliation are not disclosed in the reviewed sources.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "iShares Gold Trust (IAU) economic exposure via Ondo Global Markets collateral accounts",
         "pct": 100,
-        "disposition": "insufficient-evidence",
-        "rationale": "The direct economic exposure and its failure-domain identity are disclosed, but the current holdings inventory and custody allocation cannot be independently reconciled from the reviewed public materials."
+      "disposition": "untracked-exogenous-asset",
+      "rationale": "The direct reserve is a BlackRock iShares fund exposure rather than a tracked stablecoin dependency; holdings reconciliation and custody allocation remain separate assurance uncertainties."
       }
     ]
   },
@@ -355,6 +355,26 @@
         ]
       }
     ],
+    "upgradeability": {
+      "model": "immutable",
+      "implementationAddresses": [
+        "0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf",
+        "0xcb2a0f46f67dc4c58a316f1c008edef5c2311795"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-15",
+      "observedBlock": 25295025,
+      "sources": [
+        {
+          "label": "IAUon Ethereum token",
+          "url": "https://etherscan.io/address/0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf#code"
+        },
+        {
+          "label": "IAUon BSC token",
+          "url": "https://bscscan.com/address/0xcb2a0f46f67dc4c58a316f1c008edef5c2311795#code"
+        }
+      ]
+    },
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {

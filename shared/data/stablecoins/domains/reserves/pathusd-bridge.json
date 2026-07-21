@@ -11,8 +11,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "OpenAI Codex V9 curation",
     "confidence": "probable",
     "sources": [
       {
@@ -22,10 +22,15 @@
       {
         "label": "Bridge issuance reserve configuration",
         "url": "https://apidocs.bridge.xyz/platform/issuance/reserves"
+      },
+      {
+        "label": "Tempo pathUSD documentation",
+        "url": "https://docs.tempo.xyz/protocol/exchange/pathUSD"
       }
     ],
-    "rationale": "Bridge states that its custom stablecoins are backed one-for-one by a portfolio of short-dated U.S. Treasuries, overnight Treasury repos, money market funds, and cash. Custom allocations are configurable and pathUSD's current allocation is not public, so the reserve remains one aggregate basket.",
+    "rationale": "Tempo identifies pathUSD as issued by Bridge and backed one-for-one by USD-denominated reserves. Bridge states that its custom stablecoins use configurable portfolios of short-dated U.S. Treasuries, overnight Treasury repos, money market funds, and cash. Neither source publishes pathUSD's current allocation, so the reserve remains one aggregate basket without invented weights.",
     "compositionBasis": "Bridge custom-stablecoin reserve policy; pathUSD allocation undisclosed",
+    "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
     "knownUnknownExposure": "The eligible Bridge reserve portfolio is known, but pathUSD's current asset-class allocation is not publicly disclosed.",
     "knownUnknownExposurePct": 100,

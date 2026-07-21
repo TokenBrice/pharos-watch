@@ -225,6 +225,27 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "MXNe is issued by Brale across Base (BraleToken ERC1967 proxy), Solana (SPL mint), and Stellar (issuer account); on each chain a single issuer-controlled EOA/keypair holds all mint and admin rights.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": ["0x269cae7dc59803e5c596c95756faeebb6030e0af"],
+      "implementationAddresses": ["0x2a6c613bd6288b1f7e1c02393f1cf92444eadee5"],
+      "adminAddresses": ["0xb180f98037a63a3dca66b6b4ddbf250265b65110"],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Brale MINTER_ROLE EOA — Base",
+      "observedAt": "2026-07-21",
+      "observedBlock": 48917714,
+      "sources": [
+        {
+          "label": "MXNe Base BraleToken proxy",
+          "url": "https://base.blockscout.com/address/0x269cae7dc59803e5c596c95756faeebb6030e0af"
+        },
+        {
+          "label": "Base PublicNode RPC",
+          "url": "https://base-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Brale MINTER_ROLE EOA — Base",

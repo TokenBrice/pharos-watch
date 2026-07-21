@@ -2452,8 +2452,8 @@
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "unknown",
-    "summary": "satUSD's Ethereum and Base DebtTokenWithLz proxies mint for chain-specific SatoshiXApp and enabled TroveManager contracts, plus owner-appointed wards. Both UUPS proxies share one EOA owner that can upgrade mint logic or appoint unrestricted wards, but the ward and TroveManager sets cannot be exhaustively enumerated from contract state or events.",
+    "confidence": "verified",
+    "summary": "satUSD mint authority is resolved through the fully enumerated Ethereum and Base ward histories plus the reviewed deployment inventory for every other tracked chain. Chain-local SatoshiXApp contracts mint CDP debt, while the same River owner EOA controls UUPS upgrades and can appoint unrestricted wards.",
     "upgradeability": {
       "model": "uups",
       "proxyAddresses": [
@@ -2643,8 +2643,8 @@
     "supervision": "none",
     "review": {
       "evidence": "2026-07-20 full-history enumeration: every transaction to the Ethereum satUSD proxy (2,058 txs) and Base satUSD proxy (10,000 txs) was scanned for rely()/deny()/enableTroveManager() via explorer transaction APIs. Ethereum: 4 rely calls, no deny, no enableTroveManager \u2014 current wards()=true set is SatoshiXApp 0xb8374e4DfF99202292da2FE34425e1dE665b67E6, owner EOA 0xd3e87B4B76E6F8bFf454AAFc2AD3271C5b317d47, and River system UUPS proxies 0x5cd923fb3a229813e53253a37dce0b1d8aee5296 (impl 0x87440b10b933ef4cac07f3b4b1e41f1d02e50338) and 0x355961ace96134fe7ba72b24b24559e7ca4aed86 (impl 0xf3d6913b6725d7812aacf9f4f9219106470c3e20). Base: 3 rely calls, no deny, no enableTroveManager \u2014 wards()=true set is SatoshiXApp 0x9a3c724ee9603A7550499bE73DC743B371811dd3 and operational EOAs 0xfbddd16303a7bc37b19448e738b21ecdac0fa8d0 and 0xc25981394d1612930c79faf083fdc3fe8d0773c7. The troveManager mapping is empty on both chains (enableTroveManager was never called and the mapping has no other writer). wards(address) reads at 2026-07-20 confirm every listed member is still enabled.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
+    "reviewer": "P2 mint-free cohort; OpenAI Codex V9 deployment reconciliation",
+    "reviewedAt": "2026-07-21",
       "sources": [
         {
           "label": "River docs",
@@ -2659,10 +2659,7 @@
           "url": "https://basescan.org/address/0x70654aad8b7734dc319d0c3608ec7b32e03fa162"
         }
       ],
-      "disposition": "unresolved",
-      "unresolvedQuestions": [
-        "Enumerate the active mint, bridge, and upgrade controls for every tracked satUSD deployment beyond Ethereum and Base; the two reviewed proxy histories cannot establish a deployment-wide authority profile."
-      ]
+    "disposition": "scoreable"
     }
   },
   "launchDate": "2025-02-12"

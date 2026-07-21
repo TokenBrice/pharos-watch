@@ -12,8 +12,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "OpenAI Codex V9 curation",
     "confidence": "probable",
     "sources": [
       {
@@ -25,8 +25,9 @@
         "url": "https://www.hextrust.com/resources-collection/hex-trusts-usdx-launches-with-clearpool-on-flare-network"
       }
     ],
-    "rationale": "HT Digital Assets states that USDX is fully backed by U.S. Treasuries, cash, and cash equivalents, while Hex Trust describes the reserves as primarily one-to-three-month Treasury bills. No current category weights are published, so the prior 80/20 allocation is replaced with one aggregate basket.",
+    "rationale": "HT Digital Assets states that USDX is fully backed by U.S. Treasuries, cash, and cash equivalents, while Hex Trust describes the reserves as primarily one-to-three-month Treasury bills. On 2026-07-21 the issuer page's reserve panel remained an 'Updating Reserves in USD' placeholder and linked no current attestation or category weights, so the prior 80/20 allocation remains replaced by one aggregate basket.",
     "compositionBasis": "Current issuer reserve disclosure; asset-class weights undisclosed",
+    "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
     "knownUnknownExposure": "The full Treasury/cash-equivalent reserve envelope is disclosed, but its current asset-class allocation is not public.",
     "knownUnknownExposurePct": 100,

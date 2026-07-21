@@ -240,14 +240,19 @@
     "yieldType": "nav-appreciation"
   },
   "mechanismArchetype": "rwa-credit-fund",
+  "implementationLaunchDate": "2025-05-19",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-13",
-    "reviewer": "Codex mechanism review",
-    "rationale": "vCRED is presented as a managed credit token backed by credit and crypto collateral, placing it in the credit-fund mechanism family.",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex V9 curation",
+    "rationale": "Hemi transaction 0x8fb15ea8eb517f7503e73ddf4c3e7d28facb54d8cbac30ee64c3566314030be2 created the exact tracked vCRED contract at block 1,813,663 on May 19, 2025. vCRED presents the token as a managed credit and crypto-collateral vault asset, supporting the rwa-credit-fund archetype.",
     "sources": [
       {
-        "label": "vCred site",
+        "label": "Hemi vCRED creation transaction",
+        "url": "https://explorer.hemi.xyz/tx/0x8fb15ea8eb517f7503e73ddf4c3e7d28facb54d8cbac30ee64c3566314030be2"
+      },
+      {
+        "label": "vCRED official site",
         "url": "https://vcred.trade/"
       }
     ]

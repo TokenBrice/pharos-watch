@@ -14,6 +14,23 @@
   "collateral": "Over-collateralized by LUA staked at the protocol floor price, plus a diversified stablecoin reserve of USDT and USDC held as protocol-owned liquidity (including Lumi's Curve pool)",
   "pegMechanism": "Lumi's AMO (Algorithmic Market Operations) Protocol mints or redeems LUAUSD to rebalance its Curve pool toward the dollar, with the stablecoin reserve and rising LUA floor price as backing; it is not a hard 1:1 redeemable fiat stablecoin and has traded persistently below $1",
   "mechanismArchetype": "algorithmic",
+  "implementationLaunchDate": "2023-10-21",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex V9 curation",
+    "rationale": "Arbitrum transaction 0x1df6a4f6cee15595a47854a9bff80994ed56dd846d29f9e65a0507e03fa64345 created the exact tracked LUAUSD contract at block 142,590,753 on October 21, 2023. Lumi's official documentation describes LUA staking, its protocol floor price, and LUAUSD minting, supporting the existing algorithmic archetype.",
+    "sources": [
+      {
+        "label": "Arbitrum LUAUSD creation transaction",
+        "url": "https://arbitrum.blockscout.com/tx/0x1df6a4f6cee15595a47854a9bff80994ed56dd846d29f9e65a0507e03fa64345"
+      },
+      {
+        "label": "Lumi staking and stablecoin documentation",
+        "url": "https://lumi-finance.gitbook.io/docs/legacy/staking-and-stablecoin"
+      }
+    ]
+  },
   "oracleRisk": {
     "tier": "oracleless-or-internal",
     "summary": "LUAUSD is minted by users staking LUA against Lumi's internal floor-price mechanism; the reviewed material does not establish the position-level collateral checks or liquidation path.",
@@ -102,6 +119,37 @@
     "authorityPosture": "bounded-admin",
     "confidence": "verified",
     "summary": "LUAUSD mint is onlyOwner. The token's owner is an ERC1967Proxy (0xb422502…) whose own owner is a 3-of-5 Gnosis Safe L2 v1.3.0 (0x7e502e2…) on Arbitrum with no modules and no guard.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xb422502156118aa49eff0d4da26fdedccb186049"
+      ],
+      "implementationAddresses": [
+        "0x6da67ac33e87bb801536ea65aa5e6e6d8bf223e0"
+      ],
+      "adminAddresses": [
+        "0x7e502e2cf358d9191eb5ae437b7e6d1e674e7498"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Lumi Finance mint governance Safe (3-of-5)",
+      "observedAt": "2026-07-21",
+      "observedBlock": 486132451,
+      "sources": [
+        {
+          "label": "LUAUSD UtilityToken",
+          "url": "https://arbiscan.io/address/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c#code"
+        },
+        {
+          "label": "LUAUSD owner-controller proxy",
+          "url": "https://arbiscan.io/address/0xb422502156118aa49eff0d4da26fdedccb186049#code"
+        },
+        {
+          "label": "Arbitrum PublicNode RPC",
+          "url": "https://arbitrum-one-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Lumi Finance mint governance Safe (3-of-5)",

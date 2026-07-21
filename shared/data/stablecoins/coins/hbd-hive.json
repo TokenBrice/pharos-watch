@@ -185,6 +185,23 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "HBD is created at the Hive protocol layer through a HIVE<->HBD conversion mechanism; supply expands when HIVE is converted to HBD, bounded by a debt-ratio cap (printing halts at 20% of virtual supply; haircut kicks in at 30%) and the witness consensus set tunes these parameters. Confirmed from live chain state: hbd_start_percent=2000, hbd_stop_percent=2000, HIVE_HBD_HARD_LIMIT=3000, current hbd_print_rate=0 (printing halted at ~53% debt ratio).",
+    "upgradeability": {
+      "model": "custom",
+      "canChangeMintLogic": true,
+      "controlRef": "Hive witness consensus set (parameter governance)",
+      "observedAt": "2026-07-21",
+      "observedBlock": 108322983,
+      "sources": [
+        {
+          "label": "Hive protocol configuration source",
+          "url": "https://github.com/openhive-network/hive/blob/develop/libraries/protocol/include/hive/protocol/config.hpp"
+        },
+        {
+          "label": "Hive blockchain API",
+          "url": "https://api.hive.blog"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Hive conversion mechanism (protocol-level mint/burn)",
@@ -215,7 +232,7 @@
       }
     ],
     "review": {
-      "evidence": "Hive blockchain API (database_api.get_config and get_dynamic_global_properties) confirmed live consensus parameters: hbd_start_percent=2000 (HBD printing halted at 20% of virtual_supply), hbd_stop_percent=2000 (printing resumes below 20%), HIVE_HBD_HARD_LIMIT=3000 (30% debt ratio triggers haircut on HIVE→HBD conversions). Current state: hbd_print_rate=0 (printing fully halted; current HBD supply ~32.9M at ~53% of virtual_supply ~1.24B HIVE). HBD interest rate is 1200 (12% APR), set by witness consensus. These are all witness-tunable soft-fork parameters.",
+      "evidence": "Hive blockchain API (database_api.get_config and get_dynamic_global_properties) confirmed live consensus parameters: hbd_start_percent=2000 (HBD printing halted at 20% of virtual_supply), hbd_stop_percent=2000 (printing resumes below 20%), HIVE_HBD_HARD_LIMIT=3000 (30% debt ratio triggers haircut on HIVE→HBD conversions). Current state: hbd_print_rate=0 (printing fully halted; current HBD supply ~32.9M at ~53% of virtual_supply ~1.24B HIVE). HBD interest rate is 1200 (12% APR), set by witness consensus. These are all witness-tunable soft-fork parameters. Upgrade review at Hive block 108322983 (2026-07-21 08:46:21 UTC) confirmed there is no token proxy or contract administrator: HBD mint logic is base-layer consensus code, and changes require Hive's witness-approved hard-fork path. The profile therefore uses the custom model and links mutability to the reviewed witness consensus control.",
       "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
       "reviewedAt": "2026-07-20",
       "sources": [
@@ -230,6 +247,10 @@
         {
           "label": "Hive blockchain API — get_config and get_dynamic_global_properties",
           "url": "https://api.hive.blog"
+        },
+        {
+          "label": "Hive protocol configuration source",
+          "url": "https://github.com/openhive-network/hive/blob/develop/libraries/protocol/include/hive/protocol/config.hpp"
         }
       ]
     }

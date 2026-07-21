@@ -242,13 +242,24 @@
         "evidence": "At Ethereum block 25573280, the fxSAVE EIP-1967 admin was ProxyAdmin 0x9b54b7703551d9d0ced177a78367560a8b2edda4; ProxyAdmin.owner() returned this TimelockController, whose getMinDelay() returned 259200 seconds. It can replace the vault implementation only after the three-day delay."
       },
       {
+        "chain": "ethereum",
+        "address": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
         "label": "Inherited fxUSD CDP mint path",
-        "role": "other",
+        "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "none",
-        "canRaiseCap": "unknown",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "Underlying fxUSD supply is minted CDP-style against overcollateralized wstETH/WBTC positions with governance-tuned risk parameters (user-collateralized-governed, partially-bounded-admin); fxSAVE holds fxUSD and inherits that base mint authority. 2026-07-20 (Kimi P2 dc-2): the inherited control surface is the upstream fxUSD mint system itself; recorded asset:fxusd-f-x-protocol as the explicit failure domain so the control identity resolves (no separate contract/EOA administers fxSAVE minting — shares mint only through the vault deposit flow).",
+        "capDescription": "Underlying fxUSD is minted only against overcollateralized wstETH/WBTC CDP positions inside f(x) Protocol; fxSAVE cannot create base fxUSD outside that parent path.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25294712,
+        "sources": [
+          {
+            "label": "fxUSD token on Etherscan",
+            "url": "https://etherscan.io/address/0x085780639cc2cacd35e474e71f4d000e2405d8f6"
+          }
+        ],
+        "evidence": "The separately reviewed fxUSD parent establishes this collateralized CDP mint path at Ethereum block 25294712. fxSAVE holds the fxUSD Stability Pool receipt and inherits that base-asset authority; it has no separate off-protocol issuer minter.",
         "failureDomainKeys": [
           "asset:fxusd-f-x-protocol"
         ]

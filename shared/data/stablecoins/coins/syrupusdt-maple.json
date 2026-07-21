@@ -198,6 +198,25 @@
     "confidence": "verified",
     "inheritedFrom": "usdt-tether",
     "summary": "syrupUSDT is Maple's ERC-4626 strategy-vault receipt for USDT lent to institutional borrowers; shares are minted against USDT deposits and do not create base USDT supply, so its mint authority is inherited from USDT (usdt-tether). The vault token is an immutable non-proxy contract with no upgrade path.",
+    "upgradeability": {
+      "model": "immutable",
+      "implementationAddresses": [
+        "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-21",
+      "observedBlock": 25579746,
+      "sources": [
+        {
+          "label": "Maple syrupUSDT contract",
+          "url": "https://etherscan.io/address/0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d#code"
+        },
+        {
+          "label": "Maple Finance",
+          "url": "https://maple.finance/"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
