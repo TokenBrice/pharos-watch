@@ -85,7 +85,7 @@ function navPriceConfidence(
   return "unknown";
 }
 
-function buildNavPriceById(
+export function buildNavPriceById(
   peggedAssets: readonly StablecoinData[],
   clockSec: number,
 ): NonNullable<ReportCardsFixedInput["navPriceById"]> {
@@ -94,15 +94,12 @@ function buildNavPriceById(
     if (!ACTIVE_META_BY_ID.get(asset.id)?.flags.navToken) continue;
     if (typeof asset.price !== "number" || !Number.isFinite(asset.price) || asset.price <= 0) continue;
     if (!asset.priceSource || asset.priceSource === "missing") continue;
-    const observedAtSec = asset.priceObservedAt ?? asset.priceUpdatedAt ?? asset.priceSyncedAt;
-    if (
-      typeof observedAtSec !== "number" ||
-      !Number.isFinite(observedAtSec) ||
-      observedAtSec < 0 ||
-      observedAtSec > clockSec
-    ) {
-      continue;
-    }
+    const rawObservedAtSec = asset.priceObservedAt ?? asset.priceUpdatedAt ?? asset.priceSyncedAt;
+    if (typeof rawObservedAtSec !== "number" || !Number.isFinite(rawObservedAtSec)) continue;
+    // NavPriceObservationSchema requires integer Unix seconds; floor sub-second
+    // provider precision rather than dropping the observation.
+    const observedAtSec = Math.floor(rawObservedAtSec);
+    if (observedAtSec < 0 || observedAtSec > clockSec) continue;
     entries.push([
       asset.id,
       {
