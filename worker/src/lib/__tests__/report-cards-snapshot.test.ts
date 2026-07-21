@@ -3,6 +3,7 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeAsset, makeReportCardsDb } from "../../test-helpers/__shared/fixtures";
 import { handleReportCards } from "../../api/report-cards";
 import {
+  buildNavPriceById,
   buildReportCardsSnapshot,
   ReportCardsSnapshotUnavailableError,
   resolveExactRedemptionPublicationGeneration,
@@ -284,6 +285,52 @@ describe("buildReportCardsSnapshot", () => {
         methodologyVersion: "4.08",
       }),
     ).toThrow("producer methodology");
+  });
+
+  it("skips NAV price observations with fractional timestamps", () => {
+    const navPriceById = buildNavPriceById(
+      [
+        makeAsset({
+          id: "thbill-theo",
+          symbol: "thBILL",
+          price: 1.01,
+          priceSource: "defillama",
+          priceObservedAt: nowSec - 10.5,
+          priceUpdatedAt: nowSec - 20,
+          priceSyncedAt: nowSec - 30,
+        }),
+        makeAsset({
+          id: "usdt-tether",
+          symbol: "USDT",
+          priceObservedAt: nowSec - 10.5,
+        }),
+      ],
+      nowSec,
+    );
+
+    expect(navPriceById).toEqual({});
+  });
+
+  it("includes NAV price observations with integer timestamps", () => {
+    const navPriceById = buildNavPriceById(
+      [
+        makeAsset({
+          id: "thbill-theo",
+          symbol: "thBILL",
+          price: 1.01,
+          priceSource: "defillama",
+          priceObservedAt: nowSec - 10,
+        }),
+      ],
+      nowSec,
+    );
+
+    expect(navPriceById["thbill-theo"]).toMatchObject({
+      priceUsd: 1.01,
+      sourceId: "defillama",
+      observedAtSec: nowSec - 10,
+      confidence: "high",
+    });
   });
 
   it("throws when stablecoins cache is missing", async () => {

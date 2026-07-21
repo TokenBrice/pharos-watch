@@ -85,7 +85,7 @@ function navPriceConfidence(
   return "unknown";
 }
 
-function buildNavPriceById(
+export function buildNavPriceById(
   peggedAssets: readonly StablecoinData[],
   clockSec: number,
 ): NonNullable<ReportCardsFixedInput["navPriceById"]> {
@@ -98,6 +98,7 @@ function buildNavPriceById(
     if (
       typeof observedAtSec !== "number" ||
       !Number.isFinite(observedAtSec) ||
+      !Number.isInteger(observedAtSec) ||
       observedAtSec < 0 ||
       observedAtSec > clockSec
     ) {
