@@ -397,7 +397,9 @@ evaluation-build digest
 `fbf6d7d72cb681718fb9f5d52adcdf8df4c22a75d03fbb8b69c6d0e06c29b9ea`
 (reshape-v2 batch, 2026-07-22: F-gate predicate split D1, wrapper same-obligor
 dependency dedup D2, TUSD pin release D8, rateable floor re-derivation D6 —
-prior identity `6917d1f6d1ffef6ca4972fbf4c52a472c40587322b9b9ace063809384cf440a5`)
+prior identity `bba4fe1461967763895f0bc2fe0fe56af3c37334ce969141…` from the
+2026-07-21 reshape PR #618; the earlier `6917d1f6…` pin here predated #618 and
+was never re-pinned, an omission this entry closes)
 (the batch-6 identity was evaluation-build digest
 `55d7838d57ca7f5ec172527c9c1908f853e4e927609f5038d30b81282d4a5425`,
 candidate
