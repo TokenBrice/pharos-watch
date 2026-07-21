@@ -6,6 +6,7 @@ import {
   type V9ExtensionRegistryMeta,
 } from "../safety-score-v9-extension";
 import { deriveSafetyScoreV9PegScore } from "../safety-score-v9-fact-set";
+import { resolveV9MintControlGroupSeverity } from "@shared/lib/safety-score-v9/evaluate-set";
 
 const CLOCK_SEC = Date.UTC(2026, 6, 17) / 1_000;
 const WINDOW_SEC = Math.ceil(3 * 365.25 * 86_400);
@@ -172,6 +173,75 @@ describe("Phase 1 D2 issuer identity adapter", () => {
     expect(resolveSafetyScoreV9AssetIssuerKey("missing-asset", byId)).toBeNull();
     expect(resolveSafetyScoreV9AssetIssuerKey("a-one", byId)).toBeNull();
     expect(resolveSafetyScoreV9AssetIssuerKey("d0-zero", byId)).toBeNull();
+  });
+});
+
+describe("Phase 1 D2 curated issuer-identity alias (MakerDAO / Sky)", () => {
+  // Sky is the rebranded MakerDAO, governed by the same PauseProxy. DAI declares
+  // "MakerDAO / Sky Protocol governance"; USDS/sUSDS declare "Sky Protocol
+  // governance". Without the curated alias these normalize to different keys
+  // ("makerdao" vs "sky"), so the PauseProxy same-issuer group fails closed.
+  const skyById = new Map<string, V9ExtensionRegistryMeta>([
+    ["dai-makerdao", mintMeta("dai-makerdao", {
+      genius: { issuerEntity: "MakerDAO / Sky Protocol governance" } as V9ExtensionRegistryMeta["genius"],
+    })],
+    ["usds-sky", mintMeta("usds-sky", {
+      genius: { issuerEntity: "Sky Protocol governance" } as V9ExtensionRegistryMeta["genius"],
+    })],
+    // No genius entity: the issuer key resolves by walking variantOf to usds-sky.
+    ["susds-sky", mintMeta("susds-sky", { variantOf: "usds-sky" })],
+  ]);
+
+  it("canonicalizes DAI, USDS, and sUSDS to a single issuer key", () => {
+    const dai = resolveSafetyScoreV9AssetIssuerKey("dai-makerdao", skyById);
+    const usds = resolveSafetyScoreV9AssetIssuerKey("usds-sky", skyById);
+    const susds = resolveSafetyScoreV9AssetIssuerKey("susds-sky", skyById);
+    expect(dai).toBe("makerdao");
+    expect(usds).toBe("makerdao");
+    expect(susds).toBe("makerdao");
+    expect(new Set([dai, usds, susds]).size).toBe(1);
+  });
+
+  it("grades the shared PauseProxy mint-control group as diagnostic (low)", () => {
+    const members = ["dai-makerdao", "usds-sky", "susds-sky"].map((assetId) => ({
+      assetId,
+      pathKey: "mint-control:ethereum:0xbe8e3e3618f7474f8cb1d074a26affef007e98fb",
+      assetIssuerKey: resolveSafetyScoreV9AssetIssuerKey(assetId, skyById),
+    }));
+    expect(
+      resolveV9MintControlGroupSeverity({
+        controllerIssuerKey: members[0]!.assetIssuerKey,
+        members,
+      }),
+    ).toBe("low");
+  });
+
+  it("does NOT merge an unrelated issuer that only shares a leading token", () => {
+    // "Sky Mavis" (Ronin/Axie) normalizes to first token "sky" but its full
+    // phrase is not the aliased "sky protocol governance"; exact-phrase matching
+    // keeps it distinct from the MakerDAO / Sky identity.
+    const byId = new Map<string, V9ExtensionRegistryMeta>([
+      ["skygold-mavis", mintMeta("skygold-mavis", {
+        genius: { issuerEntity: "Sky Mavis" } as V9ExtensionRegistryMeta["genius"],
+      })],
+      ["usds-sky", mintMeta("usds-sky", {
+        genius: { issuerEntity: "Sky Protocol governance" } as V9ExtensionRegistryMeta["genius"],
+      })],
+    ]);
+    const unrelated = resolveSafetyScoreV9AssetIssuerKey("skygold-mavis", byId);
+    expect(unrelated).toBe("sky");
+    expect(unrelated).not.toBe(resolveSafetyScoreV9AssetIssuerKey("usds-sky", byId));
+
+    // A cross-issuer group therefore stays fail-closed (high).
+    expect(
+      resolveV9MintControlGroupSeverity({
+        controllerIssuerKey: "makerdao",
+        members: [
+          { assetId: "usds-sky", pathKey: "mint-control:x", assetIssuerKey: "makerdao" },
+          { assetId: "skygold-mavis", pathKey: "mint-control:x", assetIssuerKey: unrelated },
+        ],
+      }),
+    ).toBe("high");
   });
 });
 

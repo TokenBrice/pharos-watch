@@ -27,8 +27,18 @@ import {
 } from "./safety-score-v9-shadow";
 
 export const SAFETY_SCORE_V9_SHADOW_CACHE_KEYS = {
+  // The qualifying-selection envelope/diff: the earliest in-window run selected
+  // for the day. Canonical/public V9 reads and the activation floors depend on
+  // these staying pinned to the selected run, so they only change when the
+  // day's selected run changes.
   envelope: "report-cards:v9-shadow",
   diff: "report-cards:v9-shadow:diff",
+  // The latest successful run's envelope/diff, refreshed on every intra-day run
+  // (including pinned refreshes). This is a display-only slot for the operator
+  // admin surface; it never feeds the qualifying selection or the activation
+  // accounting.
+  latestEnvelope: "report-cards:v9-shadow:latest",
+  latestDiff: "report-cards:v9-shadow:latest:diff",
 } as const;
 
 export const SAFETY_SCORE_V9_REPLAY_ARTIFACT_MAX_UNCOMPRESSED_BYTES = 12 * 1_024 * 1_024;
@@ -779,12 +789,48 @@ function validateSuccessfulState(input: {
   }
 }
 
+/**
+ * Consistency check for the display-only latest envelope/diff pair. Unlike
+ * {@link validateSuccessfulState} it is NOT bound to the day's selected run:
+ * an intra-day refresh writes the latest run here while the selected run stays
+ * pinned. It only proves the pair is internally coherent (the diff describes
+ * the envelope's candidate) so a mismatched pair can never be stored.
+ */
+function validateLatestDisplayState(input: {
+  envelope: SafetyScoreV9ShadowEnvelope;
+  diff: SafetyScoreV9DiffReport;
+}): void {
+  const candidate = input.envelope.candidate;
+  const identity = input.diff.v9Identity;
+  if (
+    identity.candidateId !== candidate.candidateId ||
+    identity.policyVersion !== candidate.policyVersion ||
+    identity.publicationGenerationId !== candidate.publicationGenerationId ||
+    identity.baseInputGenerationId !== candidate.baseInputGenerationId ||
+    identity.factSetDigest !== candidate.factSetDigest ||
+    identity.policyId !== candidate.policy.id ||
+    identity.policyDigest !== candidate.policy.semanticDigest ||
+    identity.evaluationBuildDigest !== candidate.evaluationBuildDigest ||
+    identity.resultDigest !== candidate.resultDigest
+  ) {
+    throw new Error("Safety Score v9 latest display diff identity does not match its envelope");
+  }
+}
+
 export interface PersistSafetyScoreV9ShadowStateInput {
   artifacts?: readonly SafetyScoreV9StoredReplayArtifact[];
   localArtifactBundle?: SafetyScoreV9LocalArtifactBundle;
   daily: SafetyScoreV9ShadowDaily;
   envelope?: SafetyScoreV9ShadowEnvelope;
   diff?: SafetyScoreV9DiffReport;
+  /**
+   * The most recent successful run's envelope/diff for the admin display slot.
+   * Written on every success (including pinned refreshes) and independent of
+   * the selected {@link envelope}/{@link diff}. On a new selection the runner
+   * passes the same pair for both.
+   */
+  latestEnvelope?: SafetyScoreV9ShadowEnvelope;
+  latestDiff?: SafetyScoreV9DiffReport;
   signal?: AbortSignal;
 }
 
@@ -827,6 +873,19 @@ export async function persistSafetyScoreV9ShadowState(
     if (stableJsonStringifyV1(existing.selectedRun) !== stableJsonStringifyV1(daily.selectedRun)) {
       throw new Error("A re-selected Safety Score v9 daily run must persist its latest envelope and diff");
     }
+  }
+  const hasDisplayLatest = input.latestEnvelope !== undefined || input.latestDiff !== undefined;
+  let latestEnvelopeJson: string | null = null;
+  let latestDiffJson: string | null = null;
+  if (hasDisplayLatest) {
+    if (input.latestEnvelope === undefined || input.latestDiff === undefined) {
+      throw new Error("Safety Score v9 latest display envelope and diff must be persisted together");
+    }
+    const latestEnvelope = SafetyScoreV9ShadowEnvelopeSchema.parse(input.latestEnvelope);
+    const latestDiff = SafetyScoreV9DiffReportSchema.parse(input.latestDiff);
+    validateLatestDisplayState({ envelope: latestEnvelope, diff: latestDiff });
+    latestEnvelopeJson = await serializeSafetyScoreV9ShadowEnvelopeCacheValue(latestEnvelope, input.signal);
+    latestDiffJson = await serializeSafetyScoreV9DiffReportCacheValue(latestDiff, input.signal);
   }
   if (localBundle === null) {
     for (const artifact of artifacts) {
@@ -1014,17 +1073,29 @@ export async function persistSafetyScoreV9ShadowState(
         dailyJson,
       ),
   );
+  const cacheWrites: Array<[key: string, value: string]> = [];
   if (envelopeJson !== null && diffJson !== null) {
+    cacheWrites.push(
+      [SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.envelope, envelopeJson],
+      [SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.diff, diffJson],
+    );
+  }
+  if (latestEnvelopeJson !== null && latestDiffJson !== null) {
+    cacheWrites.push(
+      [SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.latestEnvelope, latestEnvelopeJson],
+      [SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.latestDiff, latestDiffJson],
+    );
+  }
+  if (cacheWrites.length > 0) {
     const cacheStatement = db.prepare(
       `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
        ON CONFLICT(key) DO UPDATE SET
          value = CASE WHEN cache.updated_at <= excluded.updated_at THEN excluded.value ELSE NULL END,
          updated_at = excluded.updated_at`,
     );
-    statements.push(
-      cacheStatement.bind(SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.envelope, envelopeJson, daily.updatedAtSec),
-      cacheStatement.bind(SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.diff, diffJson, daily.updatedAtSec),
-    );
+    for (const [key, value] of cacheWrites) {
+      statements.push(cacheStatement.bind(key, value, daily.updatedAtSec));
+    }
   }
   await executeAtomicBatch(db, statements, { signal: input.signal });
   throwIfAborted(input.signal);
@@ -1066,6 +1137,36 @@ export async function loadLatestSafetyScoreV9DiffReport(
   return loadCanonicalCacheValue(
     db,
     SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.diff,
+    parseSafetyScoreV9DiffReportCacheValue,
+    signal,
+  );
+}
+
+/**
+ * The display-only envelope of the most recent successful run, refreshed on
+ * every intra-day run. It follows the current deployed identity for the admin
+ * surface and is deliberately separate from the pinned qualifying selection
+ * read by {@link loadLatestSafetyScoreV9ShadowEnvelope}.
+ */
+export async function loadDisplaySafetyScoreV9ShadowEnvelope(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<SafetyScoreV9ShadowEnvelope | null> {
+  return loadCanonicalCacheValue(
+    db,
+    SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.latestEnvelope,
+    parseSafetyScoreV9ShadowEnvelopeCacheValue,
+    signal,
+  );
+}
+
+export async function loadDisplaySafetyScoreV9DiffReport(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<SafetyScoreV9DiffReport | null> {
+  return loadCanonicalCacheValue(
+    db,
+    SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.latestDiff,
     parseSafetyScoreV9DiffReportCacheValue,
     signal,
   );

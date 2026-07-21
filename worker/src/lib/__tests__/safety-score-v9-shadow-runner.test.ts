@@ -388,6 +388,9 @@ describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_
     expect(latencyFloor).toMatchObject({ status: "pass", observed: 310 });
     const firstDaily = firstPersisted.daily;
     expect(firstDaily.selectedRun.selectedAtSec).toBe(inWindowClockSec + 10);
+    // The new selection also seeds the display slot with the same run.
+    expect(firstPersisted.latestEnvelope).toEqual(firstPersisted.envelope);
+    expect(firstPersisted.latestDiff).toEqual(firstPersisted.diff);
 
     // A later same-day refresh keeps the in-window selection and updates only
     // the daily metadata; the retained latest envelope/diff stay bound to the
@@ -413,6 +416,17 @@ describe("Safety Score V9 shadow runner", { timeout: V9_EVALUATION_TEST_TIMEOUT_
     expect(persistedRefresh.daily.selectedRun).toEqual(firstDaily.selectedRun);
     expect(persistedRefresh.daily.attemptCounts).toEqual({ successful: 2, failed: 0 });
     expect(persistedRefresh.daily.updatedAtSec).toBe(refreshClockSec + 10);
+    // The admin display follows this latest run even though the qualifying
+    // selection is pinned: the display pair describes the refreshed generation,
+    // which is distinct from the pinned selected run.
+    expect(persistedRefresh.latestEnvelope).toBeDefined();
+    expect(persistedRefresh.latestDiff).toBeDefined();
+    expect(persistedRefresh.latestDiff.v9Identity.publicationGenerationId).toBe(
+      persistedRefresh.latestEnvelope.candidate.publicationGenerationId,
+    );
+    expect(persistedRefresh.latestEnvelope.candidate.publicationGenerationId).not.toBe(
+      firstDaily.selectedRun.identity.publicationGenerationId,
+    );
 
     // The refresh throttle measures from the latest success, not the pinned
     // selection: a call minutes after the pinned refresh still skips.

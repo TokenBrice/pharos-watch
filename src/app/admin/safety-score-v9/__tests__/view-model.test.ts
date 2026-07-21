@@ -23,6 +23,34 @@ describe("Safety Score V9 admin view model", () => {
     );
   });
 
+  it("follows the latest run for the header identity and histogram while floors stay on the qualifying selection", () => {
+    const response = makeSafetyScoreV9AdminAvailableResponse();
+    response.latestEnvelope.candidate.candidateId = "v9-candidate-2";
+    response.latestEnvelope.candidate.publicationGenerationId = "v9-generation-2";
+    response.latestEnvelope.candidate.cards[0]!.grade = "A";
+
+    const model = buildSafetyScoreV9WorkspaceModel(response);
+
+    // The header follows the latest successful run (the live identity).
+    expect(model.displayIsLatest).toBe(true);
+    expect(model.displayCandidate.candidateId).toBe("v9-candidate-2");
+    expect(model.displayCandidate.publicationGenerationId).toBe("v9-generation-2");
+    expect(model.displayGradeCounts).toEqual([
+      { grade: "A", count: 1 },
+      { grade: "NR", count: 1 },
+    ]);
+
+    // The qualifying selection, current day, histogram source, and floors are
+    // unchanged — they still describe the pinned earliest-in-window run.
+    expect(model.candidate.publicationGenerationId).toBe("v9-generation-1");
+    expect(model.currentDay?.selectedRun?.identity.publicationGenerationId).toBe("v9-generation-1");
+    expect(model.gradeCounts).toEqual([
+      { grade: "A+", count: 1 },
+      { grade: "NR", count: 1 },
+    ]);
+    expect(model.failedCoverageFloors.map((floor) => floor.id)).toEqual(["rated-coverage"]);
+  });
+
   it("filters asset rows by grade, review requirement, ID, and reason code", () => {
     const rows = buildSafetyScoreV9WorkspaceModel(makeSafetyScoreV9AdminAvailableResponse()).assetRows;
 
