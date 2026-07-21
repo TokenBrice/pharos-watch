@@ -35,6 +35,9 @@ export const BLOG_POSTS: readonly BlogPost[] = [
       "Six months of Pharos: from a personal itch to open, on-chain depeg early-warning infrastructure — what shipped, what broke, and the road to sustainability.",
     datePublished: "2026-07-21",
     source: "pharos-at-six-months.md",
+    coverImage: "/blog/pharos-at-six-months-cover.png",
+    coverAlt:
+      "The Pharos lighthouse, lit, casting a bright beam across the words “The Lighthouse Is Lit” beneath the label “Six Months of Pharos”.",
   },
 ];
 
