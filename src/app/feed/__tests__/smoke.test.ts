@@ -66,6 +66,7 @@ describe("feed routes smoke", () => {
   // so this smoke gets a generous timeout.
   it("advertised .xml feed routes emit RSS content", { timeout: 30_000 }, async () => {
     const routes = [
+      await import("../blog.xml/route"),
       await import("../digest.xml/route"),
       await import("../depeg.xml/route"),
       await import("../methodology.xml/route"),
@@ -80,6 +81,17 @@ describe("feed routes smoke", () => {
       expect(xml).toContain("<atom:link");
       expect(xml).toContain(".xml");
     }
+  });
+
+  it("blog route emits valid RSS XML", async () => {
+    const mod = await import("../blog/route");
+    const res = await mod.GET();
+    const xml = await res.text();
+    expect(res.headers.get("Content-Type")).toContain("application/rss+xml");
+    expect(xml).toContain("<?xml");
+    expect(xml).toContain("<title>Pharos Blog</title>");
+    expect(xml).toContain("<atom:link");
+    expect(xml).toContain("pharos:blog:");
   });
 
   it("digest route emits valid RSS XML", async () => {
