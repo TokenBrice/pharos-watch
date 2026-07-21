@@ -266,7 +266,7 @@ describe("Safety Score v9 economic control", () => {
     ]);
   });
 
-  it("emits a traceable structural failure for an unbounded or compromised mint path", () => {
+  it("emits a traceable high structural failure for an unbounded mint path with no active incident", () => {
     const mintControl = control("mint:hot-wallet", "mint", {
       authority: { authorityKey: "authority:issuer", model: "eoa", threshold: null },
       capSemantics: { kind: "unbounded", bound: null },
@@ -279,11 +279,14 @@ describe("Safety Score v9 economic control", () => {
       }),
     );
 
+    // MINT-SOFTEN 2026-07-21: an unbounded mint with no active compromise
+    // incident stays a heavy control-pillar penalty (posture score 25) but takes
+    // the high rung, not the critical composite floor.
     expect(result).toMatchObject({ score: 25, state: "rated", reasons: [] });
     expect(result.structuralFailures).toContainEqual(
       expect.objectContaining({
         kind: "centralized-mint",
-        severity: "critical",
+        severity: "high",
         binding: true,
         controlKeys: [mintControl.controlKey],
         failureDomains: [{ kind: "mint-control", key: mintControl.controlKey }],
@@ -365,6 +368,60 @@ describe("Safety Score v9 economic control", () => {
       posture: "unbounded-or-compromised",
       score: 25,
     });
+  });
+
+  it("treats a prudentially-supervised unbounded mint as reconciled without a reconciliation cadence", () => {
+    const mintControl = control("mint:regulated-issuer", "mint", {
+      authority: { authorityKey: "authority:issuer", model: "issuer-backend", threshold: null },
+      capSemantics: { kind: "unbounded", bound: null },
+      claimImpairment: "unbounded",
+    });
+    const reviewFor = (
+      supervision: V9MintSupervision,
+      controls: readonly V9DeploymentControlFactV2[],
+    ): V9MintMechanismReview => ({
+      status: requiredKnown("mint"),
+      controlKey: controls[0]!.controlKey,
+      reconciliation: "not-applicable",
+      supervision,
+      upgrade: { state: "immutable", controlKey: null },
+    });
+    const mintComponent = (result: ReturnType<typeof evaluateV9EconomicControl>) =>
+      result.components.find((component) => component.kind === "mint");
+    const centralizedMint = (result: ReturnType<typeof evaluateV9EconomicControl>) =>
+      result.structuralFailures.find((failure) => failure.kind === "centralized-mint");
+
+    // Prudential supervision by a named regulator moves an unbounded mint to
+    // unbounded-reconciled and drops the critical cap even when the
+    // reserve-reconciliation cadence is not-applicable. Without a cadence the
+    // elevated prudential-reconciled grade is not applied, so the mint still
+    // scores at the conservative unbounded-reconciled quality (55).
+    const prudential = evaluateV9EconomicControl(
+      args({ facts: facts([mintControl]), mint: reviewFor("prudential", [mintControl]) }),
+    );
+    expect(mintComponent(prudential)).toMatchObject({ posture: "unbounded-reconciled", score: 55 });
+    expect(centralizedMint(prudential)).toBeUndefined();
+
+    // The same not-applicable-reconciliation unbounded mint without prudential
+    // supervision stays unbounded-or-compromised (posture score 25) but, absent
+    // an active incident, takes the high rung rather than the critical floor
+    // (MINT-SOFTEN 2026-07-21).
+    const unsupervised = evaluateV9EconomicControl(
+      args({ facts: facts([mintControl]), mint: reviewFor("none", [mintControl]) }),
+    );
+    expect(mintComponent(unsupervised)).toMatchObject({ posture: "unbounded-or-compromised", score: 25 });
+    expect(centralizedMint(unsupervised)).toMatchObject({ severity: "high" });
+
+    // An active mint incident stays critical even with prudential supervision,
+    // because the compromise check precedes the reconciled gate.
+    const compromised = evaluateV9EconomicControl(
+      args({
+        facts: facts([{ ...mintControl, incidentState: "active" }]),
+        mint: reviewFor("prudential", [mintControl]),
+      }),
+    );
+    expect(mintComponent(compromised)).toMatchObject({ posture: "unbounded-or-compromised", score: 25 });
+    expect(centralizedMint(compromised)).toMatchObject({ severity: "critical" });
   });
 
   it("bounds a stale material control with a non-critical reason instead of failing closed", () => {
@@ -467,6 +524,37 @@ describe("Safety Score v9 economic control", () => {
     expect(canonical.structuralFailures).toContainEqual(
       expect.objectContaining({ kind: "material-bridge", binding: true }),
     );
+  });
+
+  it("share-bands a binding external-lock-mint material bridge by supply share", () => {
+    const evaluateBridge = (materialSupplyShare: number | null, tier = "external-lock-mint") => {
+      const bridgeControl = control("bridge:lock-mint", "bridge", {
+        scope: "deployment",
+        economicLossScope: "deployment",
+        materialSupplyShare,
+      });
+      const result = evaluateV9EconomicControl(
+        args({
+          facts: facts([bridgeControl]),
+          bridge: {
+            status: requiredKnown("bridge"),
+            routes: [{ controlKey: bridgeControl.controlKey, tier: tier as "external-lock-mint" | "opaque-or-unknown" }],
+          },
+        }),
+      );
+      return result.structuralFailures.find((failure) => failure.kind === "material-bridge");
+    };
+
+    // Just-material exposure (deployment-material floor up to <25%) is recoverable,
+    // so it takes the moderate rung, mirroring the common-mode critical-dependency
+    // twin's share banding rather than the former flat high.
+    expect(evaluateBridge(0.15)).toMatchObject({ binding: true, severity: "moderate" });
+    // Dominant exposure stays high.
+    expect(evaluateBridge(0.3)).toMatchObject({ binding: true, severity: "high" });
+    // An unattributed share fails closed to high.
+    expect(evaluateBridge(null)).toMatchObject({ binding: true, severity: "high" });
+    // Opaque topology stays critical regardless of share.
+    expect(evaluateBridge(0.15, "opaque-or-unknown")).toMatchObject({ binding: true, severity: "critical" });
   });
 
   it("keeps unresolved access-only and below-threshold deployment controls nonbinding under a known aggregate", () => {
