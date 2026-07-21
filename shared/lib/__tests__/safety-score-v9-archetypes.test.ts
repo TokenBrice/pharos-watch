@@ -18,6 +18,12 @@ const strongFact = (id: string): V9MechanismFactV1 => ({
   failureDomains: [{ kind: "reserve-issuer", key: id }],
 });
 
+const weakObservedFact = (id: string): V9MechanismFactV1 => ({
+  status: knownStatus(id),
+  quality: "weak",
+  failureDomains: [{ kind: "reserve-issuer", key: id }],
+});
+
 const reserveExposure = (key: string): V9ReserveExposureFactV2 => ({
   exposureKey: key,
   classificationKey: `class:${key}`,
@@ -289,5 +295,68 @@ describe("Safety Score v9 archetype backing adapters", () => {
     );
     expect(result.rateability).toBe("rateable");
     expect(result.score).not.toBeNull();
+  });
+});
+
+describe("Safety Score v9 CDP collateralization bands (Lever 4)", () => {
+  const cdpBase = reviews[2] as Extract<V9MechanismRiskReview, { archetype: "cdp" }>;
+  const collateralizationReason = (result: ReturnType<typeof evaluateV9Backing>) =>
+    result.structuralReasons.find((reason) => reason.pathKey === "mechanism:collateralization-parameters");
+
+  it("lifts a solvent-but-thin CDP (ratio ~1.03, no bad debt) off the critical F floor", () => {
+    const result = evaluateV9Backing(asset(), { ...cdpBase, collateralizationRatio: 1.03 }, V9_CANDIDATE_POLICY_V1);
+    expect(collateralizationReason(result)).toMatchObject({ kind: "unsafe-backing", severity: "high", ceiling: 59 });
+    expect(result.structuralReasons.some((reason) => reason.severity === "critical")).toBe(false);
+    expect(result.pillarCeiling).toBe(59);
+  });
+
+  it("keeps a moderate rung in [1.05, 1.10) so there is no critical->nothing cliff", () => {
+    const result = evaluateV9Backing(asset(), { ...cdpBase, collateralizationRatio: 1.07 }, V9_CANDIDATE_POLICY_V1);
+    expect(collateralizationReason(result)).toMatchObject({ severity: "moderate", ceiling: 74 });
+  });
+
+  it("never fires the CR signal for a 1:1 aggregator / PSM (metric applicability not-applicable)", () => {
+    const psm = V9MechanismRiskReviewSchema.parse({
+      ...cdpBase,
+      collateralizationRatio: null,
+      liquidationCapacityRatio: null,
+      metricApplicability: {
+        collateralizationRatio: {
+          state: "not-applicable",
+          rationale: "No per-token collateral vault exists; 1:1 aggregator.",
+          evidenceRefIds: ["evidence:cr-na"],
+        },
+        liquidationCapacityRatio: {
+          state: "not-applicable",
+          rationale: "No committed debt-offset liquidation pool exists.",
+          evidenceRefIds: ["evidence:liquidation-na"],
+        },
+      },
+    });
+    if (psm.archetype !== "cdp") throw new Error("unexpected archetype");
+    const result = evaluateV9Backing(asset(), psm, V9_CANDIDATE_POLICY_V1);
+    expect(collateralizationReason(result)).toBeUndefined();
+  });
+
+  it("still floors a genuinely undercollateralized CDP (<1.00) to critical", () => {
+    const result = evaluateV9Backing(asset(), { ...cdpBase, collateralizationRatio: 0.95 }, V9_CANDIDATE_POLICY_V1);
+    expect(collateralizationReason(result)).toMatchObject({
+      kind: "unsafe-backing",
+      severity: "critical",
+      ceiling: 39,
+    });
+    expect(result.pillarCeiling).toBe(39);
+  });
+
+  it("escalates a thin CDP with observed material bad debt to critical via the CR predicate only", () => {
+    const result = evaluateV9Backing(
+      asset(),
+      { ...cdpBase, collateralizationRatio: 1.03, shutdownAndBadDebt: weakObservedFact("shutdown") },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(collateralizationReason(result)).toMatchObject({ severity: "critical", ceiling: 39 });
+    // `weak` bad-debt quality must NOT trip the untouched shutdown-and-bad-debt component
+    // (that structural component only fires on `failed`) — the critical comes from the CR gate.
+    expect(result.structuralReasons.some((reason) => reason.pathKey === "mechanism:shutdown-and-bad-debt")).toBe(false);
   });
 });

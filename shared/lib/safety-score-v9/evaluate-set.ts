@@ -42,6 +42,7 @@ import {
   type V9ExitStressRequest,
 } from "./exit";
 import { isV9UncanonicalizedChainPoolRoute, parseCompiledV9FactSetV2 } from "./facts";
+import { decimalSnap } from "./formula";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
 import {
   scoreV9EvaluatedAsset,
@@ -911,6 +912,48 @@ function resolveInheritedStablecoinBacking(
   };
 }
 
+/** The three wrapper-strategy parent-cap tiers, keyed to `formula.wrapperStrategyCap`. */
+export type V9WrapperStrategyTier = "pure" | "staked" | "vault";
+
+/**
+ * Wrapper-strategy classification for the parent cap. A yield/vault wrapper must
+ * rate meaningfully below its required parent, tiered by the wrapper's form:
+ *  - `strategy-vault` (a third-party aggregator such as a Yearn/Gauntlet/Steakhouse
+ *    vault) → "vault" (the largest haircut): it layers third-party strategy,
+ *    smart-contract and liquidity risk over an issuer it does not control.
+ *  - `savings-passthrough` / `risk-absorption` (the protocol's OWN native savings
+ *    or staking token, e.g. sDAI, sUSDe, scrvUSD) → "staked" (a smaller haircut):
+ *    a thinner, same-protocol layer.
+ * The registry `variantKind` — threaded onto the compiled facts — is the only
+ * signal that separates a third-party vault from a native savings token (issuer
+ * key, variantOf and inheritedFrom all collapse to the parent for both). When
+ * `variantKind` is absent we fall back to the backing-inheritance tier ("pure" for
+ * a 1:1 holding); an unmapped form or a bare serial-wrapper parent takes the
+ * conservative "vault" haircut. A serial parent with no wrapper edge (a collateral
+ * basket or a "mechanism" serial claim) returns undefined — no discount.
+ */
+export function resolveV9WrapperStrategyTier(
+  asset: V9AssetFactsV2,
+  resolved: V9ResolvedDependencyInputs,
+  inheritedStablecoinBacking: V9InheritedStablecoinBacking | undefined,
+): V9WrapperStrategyTier | undefined {
+  if (asset.variantKind === "strategy-vault") return "vault";
+  if (asset.variantKind === "savings-passthrough" || asset.variantKind === "risk-absorption") return "staked";
+  // Fallback to the backing-inheritance tier only when no wrapper form is declared.
+  if (asset.variantKind == null && inheritedStablecoinBacking !== undefined) {
+    return inheritedStablecoinBacking.tier === "pure" ? "pure" : "vault";
+  }
+  if (resolved.serial.length === 0) return undefined;
+  const serialUpstreamIds = new Set(resolved.serial.map((dependency) => dependency.upstreamAssetId));
+  const hasWrapperSerialEdge = asset.dependencies.edges.some(
+    (edge) =>
+      edge.pathKind === "serial-dependency" &&
+      edge.dependencyType === "wrapper" &&
+      serialUpstreamIds.has(edge.upstreamAssetId),
+  );
+  return hasWrapperSerialEdge ? "vault" : undefined;
+}
+
 function dependencyReasons(
   asset: V9AssetFactsV2,
   inputs: V9ResolvedDependencyInputs,
@@ -995,15 +1038,25 @@ function pegInput(asset: V9AssetFactsV2, envelope: V9ValidatedPolicyEnvelope): V
 function parentInput(
   inputs: V9ResolvedDependencyInputs,
   evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
+  wrapperTier: V9WrapperStrategyTier | undefined,
+  envelope: V9ValidatedPolicyEnvelope,
 ): V9ProductionScoreInput["parent"] {
   const required = inputs.serial.length > 0 || inputs.cycleBlocked;
   const availableScores = inputs.serial.flatMap((dependency) =>
     dependency.blocked || dependency.score === null ? [] : [dependency.score],
   );
-  const score =
+  const rawScore =
     !required || inputs.cycleBlocked || availableScores.length !== inputs.serial.length
       ? null
       : Math.min(...availableScores);
+  // A rated yield/vault wrapper must land meaningfully below its required parent,
+  // not at the parent's grade. Discount the parent cap by the tiered
+  // wrapper-strategy haircut (pure < staked < vault); assets with no recognized
+  // wrapper form keep the un-discounted parent cap.
+  const score =
+    rawScore !== null && wrapperTier !== undefined
+      ? Math.max(0, decimalSnap(rawScore - envelope.policy.semantic.formula.wrapperStrategyCap[wrapperTier]))
+      : rawScore;
   const propagatedReasons = inputs.serial.flatMap((dependency) => {
     const upstream = evaluatedById.get(dependency.upstreamAssetId);
     return upstream?.trace.nrReasons ?? [];
@@ -1074,6 +1127,8 @@ export function evaluateV9FactSet(
       asset.archetype === "cdp"
         ? selectV9CdpLiquidationCapacity(asset.assetId, cdpReview, asset.cdpStressCoverage, envelope, factSet.asOfSec)
         : undefined;
+    const inheritedStablecoinBacking = resolveInheritedStablecoinBacking(asset, resolved, evaluatedById);
+    const wrapperStrategyTier = resolveV9WrapperStrategyTier(asset, resolved, inheritedStablecoinBacking);
     const backingAsset = {
       assetId: asset.assetId,
       reserveStatus: asset.reserveStatus,
@@ -1090,10 +1145,7 @@ export function evaluateV9FactSet(
       ...(liquidationCapacitySelection === undefined
         ? {}
         : { cdpLiquidationCapacitySelection: liquidationCapacitySelection }),
-      ...(() => {
-        const inheritedStablecoinBacking = resolveInheritedStablecoinBacking(asset, resolved, evaluatedById);
-        return inheritedStablecoinBacking === undefined ? {} : { inheritedStablecoinBacking };
-      })(),
+      ...(inheritedStablecoinBacking === undefined ? {} : { inheritedStablecoinBacking }),
     };
     const backing =
       asset.mechanismRiskReview.review === null
@@ -1132,7 +1184,7 @@ export function evaluateV9FactSet(
       pillars,
       peg: pegInput(asset, envelope),
       trackRecordMonths: conservativeTrackRecordMonths(asset.implementation.launchedAtSec, factSet.asOfSec),
-      parent: parentInput(resolved, evaluatedById),
+      parent: parentInput(resolved, evaluatedById, wrapperStrategyTier, envelope),
       dependencyReasons: dependencyReasons(asset, resolved, dependencyPlan, envelope),
       dependencyStructuralSignals: commonSignals.get(assetId) ?? [],
       methodologyReasons,

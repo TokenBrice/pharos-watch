@@ -123,6 +123,15 @@ export function scoreV9EvaluatedAsset(
     ...PILLAR_KEYS.flatMap((pillar) => input.pillars[pillar].structuralSignals),
     ...input.dependencyStructuralSignals,
   ];
+  // Thread the per-pillar `limited` count so the scorer can widen the withhold
+  // (Lever 1): only the rolled-up worst evidence level is otherwise visible.
+  const limitedPillarCount = PILLAR_KEYS.filter(
+    (pillar) => input.pillars[pillar].evidenceLevel === "limited",
+  ).length;
+  // The withhold only fires when the BACKING pillar itself is unverifiable:
+  // a strong-backing asset is assessable (we know it is backed) even if exit
+  // and control are limited, so it must be scored, never withheld to NR.
+  const backingLimited = input.pillars.backing.evidenceLevel === "limited";
   const trace = scoreV9Input(
     {
       assetId: input.assetId,
@@ -143,6 +152,8 @@ export function scoreV9EvaluatedAsset(
     },
     envelope,
     input.parent.propagatedReasons,
+    limitedPillarCount,
+    backingLimited,
   );
   return {
     ...trace,

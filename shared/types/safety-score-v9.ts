@@ -665,6 +665,15 @@ const V9FormulaPolicySchema = z
     capTiePriority: z.array(V9CapSourceSchema),
     scoreDecimals: z.number().int().min(0).max(6),
     rounding: z.object({ uncapped: z.literal("nearest"), capped: z.literal("floor") }).strict(),
+    // Wrapper-strategy parent cap: points shaved off a required parent's cap so a
+    // yield/vault wrapper rates meaningfully below its underlying, tiered by the
+    // wrapper's form. `pure` = a 1:1 pass-through; `staked` = a native savings /
+    // passive-staking layer (the protocol's own token); `vault` = a third-party
+    // strategy/aggregator vault. Strict object: only the three validated tiers are
+    // accepted, which is all the resolved pure|staked|vault index ever reads.
+    wrapperStrategyCap: z
+      .object({ pure: ScoreSchema, staked: ScoreSchema, vault: ScoreSchema })
+      .strict(),
   })
   .strict();
 
@@ -807,6 +816,16 @@ const V9BackingPolicySchema = z
         cdp: z
           .object({
             minimumCollateralizationRatio: z.number().finite().nonnegative(),
+            collateralizationBands: z
+              .object({
+                moderateFloor: z.number().finite().nonnegative(),
+                solvencyFloor: z.number().finite().nonnegative(),
+                moderateSeverity: V9SeveritySchema,
+                highSeverity: V9SeveritySchema,
+                criticalSeverity: V9SeveritySchema,
+              })
+              .strict(),
+            badDebtMaterialityQuality: z.enum(["strong", "adequate", "limited", "weak", "failed"]),
             instantaneousCollateralShock: z.number().finite().positive().max(1),
             minimumLiquidationCapacityRatio: z.number().finite().nonnegative(),
             stressMeasurementFreshness: z
@@ -996,6 +1015,12 @@ const V9ExitPolicySchema = z
         unknown: z.number().finite().min(0).max(1),
       })
       .strict(),
+    // Credit ceiling for a `documented-terms` redemption route: a reviewed T&C
+    // promise is the weakest scoreable evidence kind, so its scored contribution
+    // is capped below the credit a live-reserve / on-chain-verifiable route can
+    // reach. Applied as a min on top of the settlement haircut and reliability
+    // gates; stronger evidence kinds are uncapped.
+    documentedTermsCreditCeiling: ScoreSchema,
   })
   .strict();
 
@@ -1181,6 +1206,17 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
       ctx,
       ["semantic", "formula", "capTiePriority"],
       "Cap tie priority must contain every cap source exactly once",
+    );
+  }
+
+  if (
+    formula.wrapperStrategyCap.pure > formula.wrapperStrategyCap.staked ||
+    formula.wrapperStrategyCap.staked > formula.wrapperStrategyCap.vault
+  ) {
+    addPolicyIssue(
+      ctx,
+      ["semantic", "formula", "wrapperStrategyCap"],
+      "Wrapper-strategy discounts must be monotonic: pure <= staked <= vault",
     );
   }
 

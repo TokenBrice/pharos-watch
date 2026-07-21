@@ -1113,4 +1113,87 @@ describe("Safety Score v9 economic control", () => {
 
     expect(JSON.stringify(left)).toBe(JSON.stringify(right));
   });
+
+  describe("Lever 5: credits verified static control facts vs the 45 default", () => {
+    // A bridge control whose authority identity is fully reviewed but whose
+    // exposure share is unknown raises runtime-bridge-materiality-unavailable
+    // (control.ts main loop) and, absent a bridge component, authorizes the
+    // bounded bridge fallback. Its supply keeps a non-reviewed dust row so the
+    // reviewed-inventory guard does not raise missing-bridge-route-rows.
+    const materialityGappedBridgeFacts = (
+      overrides: Partial<V9DeploymentControlFactV2> = {},
+    ): V9EconomicControlAssetFacts => {
+      const bridgeControl = control("bridge:materiality-gap", "bridge", {
+        scope: "deployment",
+        economicLossScope: "deployment",
+        materialSupplyShare: null,
+        ...overrides,
+      });
+      return {
+        ...facts([bridgeControl]),
+        supply: {
+          status: requiredKnown("supply"),
+          selectedBridgeRoutes: [
+            { deploymentRouteKey: "peripheral:dust", supplyUsd: 0, supplyShare: 0, reviewState: "unmatched" },
+          ],
+          selectedRouteSupplyShare: 1,
+          unknownRouteSupplyShare: 0,
+          unreviewedRouteSupplyShare: 0,
+        },
+      };
+    };
+    const knownBridge: V9BridgeControlReview = { status: requiredKnown("bridge"), routes: [] };
+
+    it("grades a verified-authority bridge-materiality gap ABOVE the 45 default", () => {
+      // Default authority is a timelocked 2/3 multisig -> partially-bounded-admin (70).
+      const result = evaluateV9EconomicControl(
+        args({ facts: materialityGappedBridgeFacts(), bridge: knownBridge }),
+      );
+
+      expect(result.reasons.map((reason) => reason.code)).toContain("runtime-bridge-materiality-unavailable");
+      const bridgeFallback = result.components.find((component) => component.componentKey === "bridge:unverified");
+      expect(bridgeFallback).toMatchObject({ binding: true, score: 70 });
+      expect(bridgeFallback?.score).toBeGreaterThan(V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality);
+      expect(bridgeFallback?.controlKeys).toEqual(["bridge:materiality-gap"]);
+      // Pillar grades on the real facts (70), not the flat 45 default.
+      expect(result.score).toBe(70);
+    });
+
+    it("grades a weak verified-authority bridge-materiality gap BELOW the 45 default", () => {
+      // A single externally-owned key with no timelock is a weak verified posture.
+      const result = evaluateV9EconomicControl(
+        args({
+          facts: materialityGappedBridgeFacts({
+            authority: { authorityKey: "authority:eoa", model: "eoa", threshold: null },
+            delaySec: null,
+          }),
+          bridge: knownBridge,
+        }),
+      );
+
+      const bridgeFallback = result.components.find((component) => component.componentKey === "bridge:unverified");
+      expect(bridgeFallback).toMatchObject({ binding: true, score: 25 });
+      expect(bridgeFallback?.score).toBeLessThan(V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality);
+      expect(result.score).toBe(25);
+    });
+
+    it("keeps the flat 45 default when the gapped control authority is NOT verified", () => {
+      // Same bridge-materiality shape, but the control row is bounded-unknown
+      // (unverified authority) -> genuinely unknown posture, no lift, no drop.
+      const result = evaluateV9EconomicControl(
+        args({
+          facts: materialityGappedBridgeFacts({ status: boundedUnknown("control.unverified-materiality") }),
+          bridge: knownBridge,
+        }),
+      );
+
+      const bridgeFallback = result.components.find((component) => component.componentKey === "bridge:unverified");
+      expect(bridgeFallback).toMatchObject({
+        binding: true,
+        score: V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality,
+        controlKeys: [],
+      });
+      expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.control.boundedUnknownQuality);
+    });
+  });
 });

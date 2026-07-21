@@ -117,6 +117,11 @@
       "rounding": {
         "uncapped": "nearest",
         "capped": "floor"
+      },
+      "wrapperStrategyCap": {
+        "pure": 3,
+        "staked": 5,
+        "vault": 10
       }
     },
     "evidence": {
@@ -377,6 +382,14 @@
         },
         "cdp": {
           "minimumCollateralizationRatio": 1.1,
+          "collateralizationBands": {
+            "moderateFloor": 1.05,
+            "solvencyFloor": 1.0,
+            "moderateSeverity": "moderate",
+            "highSeverity": "high",
+            "criticalSeverity": "critical"
+          },
+          "badDebtMaterialityQuality": "weak",
           "instantaneousCollateralShock": 0.5,
           "minimumLiquidationCapacityRatio": 0.5,
           "stressMeasurementFreshness": {
@@ -767,7 +780,8 @@
         "unknown": 0.85
       },
       "boundedUnknownScore": 35,
-      "boundedCostScore": 50
+      "boundedCostScore": 50,
+      "documentedTermsCreditCeiling": 80
     },
     "control": {
       "mintPostureQuality": {
@@ -2059,7 +2073,7 @@
       "defaultTreatment": "ceiling",
       "releaseSeverity": "review-required",
       "publicLabel": "No comparable route is supported",
-      "auditClassification": "unsupported-design",
+      "auditClassification": "missing-data",
       "ceilingRule": {
         "source": "named-ceiling",
         "key": "exit-unverified"

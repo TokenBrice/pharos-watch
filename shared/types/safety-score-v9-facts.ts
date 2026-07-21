@@ -12,6 +12,7 @@ import {
   type V9FailureDomainRef,
   type V9ObservationState,
 } from "./safety-score-v9-fact-primitives";
+import { VARIANT_KIND_VALUES } from "./core";
 import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
 
 export const V9ResolvedMechanismArchetypeSchema = z.union([
@@ -19,6 +20,15 @@ export const V9ResolvedMechanismArchetypeSchema = z.union([
   z.literal("unresolved"),
 ]);
 export type V9ResolvedMechanismArchetype = z.infer<typeof V9ResolvedMechanismArchetypeSchema>;
+
+/**
+ * The wrapper form of a variant asset (from registry meta), threaded onto the
+ * compiled facts so the scorer can tier the wrapper-strategy parent cap:
+ * `strategy-vault` is a third-party aggregator, `savings-passthrough` /
+ * `risk-absorption` are the protocol's own native savings/staking layer. Absent
+ * for non-variant assets.
+ */
+export const V9VariantKindSchema = z.enum(VARIANT_KIND_VALUES).nullable().optional();
 
 export { V9FactStatusV2Schema };
 export type { V9FactApplicability, V9FactStatusV2, V9FailureDomainKind, V9FailureDomainRef, V9ObservationState };
@@ -1076,6 +1086,7 @@ const V9AssetFactsV2Schema = z
     assetId: CanonicalTextSchema,
     assetIssuerKey: CanonicalTextSchema.nullable().optional(),
     archetype: V9ResolvedMechanismArchetypeSchema,
+    variantKind: V9VariantKindSchema,
     evidence: canonicalArrayBy(V9EvidenceReferenceV2Schema, (reference) => reference.evidenceId),
     gaps: canonicalArrayBy(V9FactGapV2Schema, (gap) => gap.gapId),
     implementation: V9ImplementationFactV2Schema,

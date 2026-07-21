@@ -238,6 +238,19 @@ function settlementDelayMultiplier(
 }
 
 /**
+ * The non-atomic redemption families eligible for discounted exit credit. Atomic
+ * same-notional DEX/redemption keeps its top tier through the ordinary scoring
+ * path; these are the reviewed issuer-, protocol-, and eventual-redemption
+ * channels that used to floor to the bounded-unknown score regardless of how
+ * redeemable the asset actually is.
+ */
+const CREDITABLE_NON_ATOMIC_REDEMPTION_FAMILIES: readonly V9ExitEvaluationRoute["routeFamily"][] = [
+  "issuer-redemption",
+  "protocol-redemption",
+  "eventual-redemption",
+];
+
+/**
  * A documented, reliable, non-atomic redemption that earns discounted exit
  * credit rather than the atomic-only near-zero it used to score.
  *
@@ -248,25 +261,24 @@ function settlementDelayMultiplier(
  * scaled down by settlement speed through the existing settlement component and
  * settlement-delay multiplier; the atomic same-notional path keeps its top tier.
  *
- * The reliability gate is load-bearing. Credit is confined to the
- * `eventual-redemption` family, which only the reviewed full-supply derivation
- * emits and only after hard-gating on resolved status, an open route, and
- * documented terms. Native issuer/protocol observations that merely fail the
- * atomic-only score gate are deliberately NOT credited here: their
- * `scoreEligible === false` can encode impairment, a closed route, or an
- * unresolved output, and re-crediting them would reintroduce exactly the
- * failure the gate exists to prevent. The remaining checks keep an impaired or
- * opaque route out: an unresolved or non-known observation, an unresolved
- * output, diagnostic coverage, missing failure domains, or non-documented
- * evidence all leave the route excluded. Zero-clearing (e.g. unbounded-cost)
- * routes are dropped downstream so they cannot stand in for a viable exit.
+ * The reliability gate is load-bearing. Credit is confined to the reviewed
+ * issuer-, protocol-, and eventual-redemption families and admitted only after
+ * hard-gating on a known observation, a resolved output, non-diagnostic
+ * coverage, at least one enumerated failure domain, and a documented,
+ * live-reserve, or on-chain redemption evidence kind. This gate decides only
+ * *eligibility* for the discounted credit; whether the route actually clears
+ * notional is settled downstream by its measured capacity curve. An impaired,
+ * frozen, or discretionary route does not survive as a viable exit because a
+ * redemption that cannot clear reports a zero (or immaterial) capacity curve, so
+ * the zero-capacity floor drops it exactly as before this relaxation — the pin
+ * safety here is that data invariant, not the family membership.
  */
 function isCreditableNonAtomicRedemption(
   route: V9ExitEvaluationRoute,
   envelope: V9ValidatedPolicyEnvelope,
 ): boolean {
   if (route.lane !== "redemption") return false;
-  if (route.routeFamily !== "eventual-redemption") return false;
+  if (!CREDITABLE_NON_ATOMIC_REDEMPTION_FAMILIES.includes(route.routeFamily)) return false;
   if (route.observationState !== "known") return false;
   if (route.outputResolved !== true) return false;
   if (route.coverageClass === "diagnostic") return false;
@@ -286,7 +298,7 @@ function routeExclusionReason(route: V9ExitEvaluationRoute, envelope: V9Validate
   if ((!route.scoreEligible || route.coverageClass === "diagnostic") && !creditableNonAtomic) {
     return "unsupported-same-notional-route";
   }
-  if (route.routeFamily === "eventual-redemption" && !creditableNonAtomic) {
+  if (CREDITABLE_NON_ATOMIC_REDEMPTION_FAMILIES.includes(route.routeFamily) && !creditableNonAtomic) {
     return "unsupported-same-notional-route";
   }
   const scoreable =
@@ -499,6 +511,17 @@ function evaluateRoute(
   if (routeCap !== null && score > routeCap) {
     score = routeCap;
     capsApplied.push(`route-family:${route.routeScoreCap}`);
+  }
+  // A `documented-terms` redemption is a reviewed T&C promise — the weakest
+  // scoreable evidence kind — not an on-chain-enforced or reserve-verified exit.
+  // It is capped below the credit a live-reserve / on-chain route can reach so a
+  // paper promise cannot read as a contract-verifiable exit. The cap stacks as a
+  // min on top of the settlement haircut and every reliability gate; a route
+  // already scoring below the ceiling (a typical same-day EMI) is untouched, and
+  // stronger evidence kinds are never capped here.
+  if (route.evidenceKind === "documented-terms" && score > policy.documentedTermsCreditCeiling) {
+    score = policy.documentedTermsCreditCeiling;
+    capsApplied.push("evidence-kind:documented-terms");
   }
   return {
     routeKey: route.routeKey,

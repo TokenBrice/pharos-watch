@@ -384,6 +384,74 @@ function controlFallbackKind(control: V9DeploymentControlFactV2): "mint" | "orac
   return null;
 }
 
+type V9ControlPolicy = V9ValidatedPolicyEnvelope["policy"]["semantic"]["control"];
+
+/**
+ * A control row whose authority identity is fully reviewed: it is required-known,
+ * its authority model is resolved, and its cap / claim / loss semantics are
+ * enumerated. Such a row can carry a residual gap (unknown exposure share, an
+ * unresolved mechanism-review) while its *authority* posture is verified.
+ */
+function isStaticallyVerifiedControl(control: V9DeploymentControlFactV2): boolean {
+  return (
+    isKnownRequired(control.status) &&
+    control.authority !== null &&
+    control.authority.model !== "unknown" &&
+    control.capSemantics.kind !== "unknown" &&
+    control.claimImpairment !== "unknown" &&
+    control.economicLossScope !== "unknown"
+  );
+}
+
+/**
+ * LEVER 5 (2026-07-21): grade a verified control row on its own authority facts
+ * instead of the bounded-unknown default. Derives strictly from the passed row
+ * (wards / Safe threshold / timelock / authority.model), never from asset-generic
+ * facts, and grades UP or DOWN relative to the 45 default: a live compromise or an
+ * economically unbounded control grades below it, a hardened governed/multisig
+ * path above it. issuer-backend and unknown authority stay at the neutral default.
+ */
+function gradeVerifiedControlAuthority(control: V9DeploymentControlFactV2, controlPolicy: V9ControlPolicy): number {
+  const quality = controlPolicy.mintPostureQuality;
+  const authority = control.authority;
+  if (authority === null || authority.model === "unknown") return controlPolicy.boundedUnknownQuality;
+
+  // A live compromise or an economically unbounded control is weak regardless of
+  // who holds the key: grade it below the neutral default, never above.
+  if (
+    control.incidentState === "active" ||
+    control.capSemantics.kind === "unbounded" ||
+    control.claimImpairment === "unbounded"
+  ) {
+    return quality["unbounded-or-compromised"];
+  }
+
+  const timelocked = control.delaySec !== null && control.delaySec > 0;
+  switch (authority.model) {
+    case "none":
+      // No live authority path (renounced / immutable) is the strongest posture.
+      return quality["none-resolved"];
+    case "contract":
+      return quality["bounded-admin"];
+    case "governance":
+      return timelocked ? quality["bounded-admin"] : quality["partially-bounded-admin"];
+    case "multisig": {
+      const quorum = authority.threshold;
+      const strongQuorum = quorum !== null && quorum.required >= 2 && quorum.required * 2 > quorum.total;
+      return strongQuorum && timelocked ? quality["partially-bounded-admin"] : quality["concentrated-admin"];
+    }
+    case "issuer-backend":
+      // A centralized backend key with a bounded claim is neither a lift nor a
+      // clear danger on static facts alone: hold at the neutral default.
+      return controlPolicy.boundedUnknownQuality;
+    case "eoa":
+      // A single externally-owned key is a weak control posture: grade below 45.
+      return quality["unbounded-or-compromised"];
+    default:
+      return controlPolicy.boundedUnknownQuality;
+  }
+}
+
 /**
  * Canonically joins normalized asset facts to the explicit review extension.
  * The extension is mandatory: callers must not infer reconciliation or tiers.
@@ -942,20 +1010,47 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     if (components.some((component) => component.kind === fallback.kind)) continue;
     // Aggregate inventory reasons are section-neutral. A control-specific
     // reason may authorize only the section that control can represent.
-    const hasBindingGap = [...reasons.values()].some((reason) => {
-      if (reason.path === fallback.kind || reason.path.startsWith(`${fallback.kind}:`)) return true;
-      if (reason.controlKey === null) return false;
-      const reasonControl = controlsByKey.get(reason.controlKey);
-      return reasonControl !== undefined && controlFallbackKind(reasonControl) === fallback.kind;
-    });
+    const verifiedGapControlKeys = new Set<string>();
+    let hasBindingGap = false;
+    let hasUnverifiedGap = false;
+    for (const reason of reasons.values()) {
+      const sectionMatch = reason.path === fallback.kind || reason.path.startsWith(`${fallback.kind}:`);
+      const reasonControl = reason.controlKey === null ? undefined : controlsByKey.get(reason.controlKey);
+      const controlMatch = reasonControl !== undefined && controlFallbackKind(reasonControl) === fallback.kind;
+      if (!sectionMatch && !controlMatch) continue;
+      hasBindingGap = true;
+      // LEVER 5 (2026-07-21): a gap raised by a statically-verified control row
+      // (its authority is reviewed; only an adjacent fact such as exposure share
+      // or the mechanism review is missing) can be graded on that same row. A
+      // section-level gap, or one behind an unverified row, is a genuine unknown
+      // and holds the neutral default — this keeps assets whose control facts are
+      // NOT verified pinned at the bounded-unknown quality.
+      if (reasonControl !== undefined && isStaticallyVerifiedControl(reasonControl)) {
+        verifiedGapControlKeys.add(reasonControl.controlKey);
+      } else {
+        hasUnverifiedGap = true;
+      }
+    }
     if (!hasBindingGap) continue;
+    // Grade on the verified rows' own authority only when every authorizing gap
+    // was raised by such a row (condition i: same-row, not asset-generic). The
+    // grade may land above OR below the 45 default (condition ii).
+    const gradeable = !hasUnverifiedGap && verifiedGapControlKeys.size > 0;
+    const gradedControlKeys = uniqueSorted([...verifiedGapControlKeys]);
+    const score = gradeable
+      ? Math.min(
+          ...gradedControlKeys.map((controlKey) =>
+            gradeVerifiedControlAuthority(controlsByKey.get(controlKey)!, policy.control),
+          ),
+        )
+      : policy.control.boundedUnknownQuality;
     components.push({
       componentKey: fallback.componentKey,
       kind: fallback.kind,
       posture: fallback.posture,
-      score: policy.control.boundedUnknownQuality,
+      score,
       binding: true,
-      controlKeys: [],
+      controlKeys: gradeable ? gradedControlKeys : [],
       failureDomains: [],
     });
   }

@@ -66,6 +66,7 @@ export type V9ExtensionRegistryMeta = Pick<
   StablecoinMeta,
   | "id"
   | "variantOf"
+  | "variantKind"
   | "archetypeOverride"
   | "mechanismArchetype"
   | "implementationLaunchDate"
@@ -1754,6 +1755,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         assetId,
         assetIssuerKey,
         archetype,
+        variantKind: meta.variantKind ?? null,
         launchedAtSec: conservativeDateEndSec(meta.implementationLaunchDate ?? meta.launchDate, clockSec),
         mechanismRiskReview,
         dependencies: {

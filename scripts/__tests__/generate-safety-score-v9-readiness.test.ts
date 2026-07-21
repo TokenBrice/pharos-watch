@@ -468,9 +468,9 @@ describe("v9 readiness audit helpers", () => {
     const audit = buildManualInputAudit(compiled, V9_CANDIDATE_POLICY_V1);
     expect(audit.total).toBe(3);
     expect(audit.byClass).toEqual({
-      "missing-data": 1,
+      "missing-data": 2,
       "unresolved-methodology": 1,
-      "unsupported-design": 1,
+      "unsupported-design": 0,
     });
     expect(audit.byCriticality).toEqual({ critical: 0, noncritical: 3 });
     expect(audit.items.map((item) => item.code)).toEqual([
