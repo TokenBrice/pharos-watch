@@ -2,37 +2,42 @@
   "id": "axcnh-anchorx",
   "reserves": [
     {
-      "name": "Offshore-yuan high-quality liquid reserve assets",
+      "name": "CNH cash held at regulated financial institutions",
       "pct": 100,
       "risk": "very-low",
-      "assetClass": "other",
+      "assetClass": "bank-deposit",
       "issuerOrObligor": "Undisclosed regulated financial institutions",
-      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "concentration"],
-      "liquidityHorizon": "unknown"
+      "riskFactors": ["counterparty", "liquidity", "custody", "legal", "concentration"],
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "OpenAI Codex V9 NR-recovery review",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "AnchorX AxCNH reserve disclosure",
-        "url": "https://anchorx.org/"
+        "label": "Kreston AxCNH Agreed-Upon Procedures Report - May 2026",
+        "url": "https://anchorx-my.sharepoint.com/:b:/g/personal/sophiepu_anchorx_org/IQBFtWH9omnjQJjvKMhV9wp1AR2X5H5ZgPjMxgMIDc6QZeI?e=eyMBgf"
+      },
+      {
+        "label": "AnchorX transparency page",
+        "url": "https://anchorx.org/transparency"
       }
     ],
-    "rationale": "AnchorX states that AxCNH is fully backed by high-quality liquid reserve assets safeguarded in segregated custody accounts at regulated financial institutions. The issuer does not disclose the current asset classes, instruments, institutions, or allocation weights, so the reserve is represented as one aggregate basket.",
-    "compositionBasis": "Current AnchorX issuer reserve disclosure; internal composition undisclosed",
+    "rationale": "Kreston performed ISRS 4400 agreed-upon procedures for May 31, 2026 and verified CNH 39,198,348 of cash held at regulated financial institutions against 39,128,445 AxCNH in circulation. Kreston reviewed financial-institution records, shadowed issuer staff generating the bank records, confirmed the reserve account was in the issuer's name, and reconciled the Conflux and Ethereum supply to issuer records.",
+    "compositionBasis": "Kreston AxCNH agreed-upon procedures report as of May 31, 2026",
+    "compositionAsOf": "2026-05-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The full backing, currency denomination, high-quality-liquid-asset policy, and regulated custody are disclosed, but current asset classes, instruments, providers, and weights are not public.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "The report identifies the complete reserve as CNH cash at regulated financial institutions; the institution names, deposit terms, and account-level allocation are not publicly disclosed.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Offshore-yuan high-quality liquid reserve assets",
+        "reserveName": "CNH cash held at regulated financial institutions",
         "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "AnchorX does not publish current asset-class or provider weights."
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "CNH cash held at financial institutions is an external reserve asset rather than a tracked stablecoin dependency."
       }
     ]
   },
@@ -40,21 +45,22 @@
     "providers": [
       {
         "name": "Undisclosed regulated financial institutions",
-        "role": "custodian"
+        "role": "bank",
+        "sharePct": 100
       }
     ],
     "segregation": "segregated",
-    "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "prohibited",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "OpenAI Codex V9 NR-recovery review",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "AnchorX AxCNH reserve and custody disclosure",
-        "url": "https://anchorx.org/"
+        "label": "Kreston AxCNH Agreed-Upon Procedures Report - May 2026",
+        "url": "https://anchorx-my.sharepoint.com/:b:/g/personal/sophiepu_anchorx_org/IQBFtWH9omnjQJjvKMhV9wp1AR2X5H5ZgPjMxgMIDc6QZeI?e=eyMBgf"
       }
     ],
-    "uncertainty": "AnchorX states that reserves use segregated custody accounts at regulated financial institutions but does not name the institutions, disclose provider shares, establish bankruptcy-remoteness, or state rehypothecation terms."
+    "uncertainty": "Kreston verified that the reserve account was in AnchorX Global Limited's name and recorded the company's confirmation that funds were free from other claims, unrestricted for redemptions, and prohibited from other uses. The financial institutions are unnamed and the report does not establish statutory bankruptcy remoteness or disclose deposit terms."
   }
 }

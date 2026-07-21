@@ -18,12 +18,13 @@
   "geckoId": "stablecorp-qcad",
   "llamaId": "424",
   "proofOfReserves": {
-    "type": "real-time",
-    "url": "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json",
-    "provider": "Stablecorp balances API",
-    "attestorTier": "self",
-    "cadence": "real-time",
-    "attestorJurisdiction": "Canada"
+    "type": "independent-audit",
+    "url": "https://stablecorp.ca/transparency",
+    "provider": "Kingston Ross Pasnak LLP",
+    "attestorTier": "regional",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Canada",
+    "attestorLicense": "Canadian chartered professional accounting firm"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

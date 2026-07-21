@@ -23,10 +23,14 @@
       {
         "label": "QCAD Digital Trust regulatory order",
         "url": "https://www.osc.ca/en/securities-law/orders-rulings-decisions/qcad-digital-trust"
+      },
+      {
+        "label": "Stablecorp QCAD transparency and monthly attestations",
+        "url": "https://stablecorp.ca/transparency"
       }
     ],
-    "rationale": "Stablecorp's live balances API reported CAD 1,651,920.55 of total fiat reserves against CAD 1,651,920.55 QCAD supply on 2026-07-21. The regulatory order permits Canadian currency, short-term Canadian government debt, regulated CAD money-market funds, and other approved assets. The current allocation within that eligible basket is not published.",
-    "compositionBasis": "Stablecorp live total-reserves disclosure and the regulatory order's eligible-asset envelope",
+    "rationale": "Stablecorp's live balances API reported CAD 1,651,920.55 of total fiat reserves against CAD 1,651,920.55 QCAD supply on 2026-07-21. Stablecorp's transparency page links monthly independent QCAD attestations, including May 2026, and the regulatory order permits Canadian currency, short-term Canadian government debt, regulated CAD money-market funds, and other approved assets. Neither the live feed nor the reviewed public attestation index publishes the current allocation within that eligible basket.",
+    "compositionBasis": "Stablecorp live total-reserves disclosure, monthly attestation index, and the regulatory order's eligible-asset envelope",
     "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
     "knownUnknownExposure": "The full eligible reserve envelope is disclosed, but the current mix among cash, short-term Canadian government debt, money-market funds, and any approved assets is not published.",
@@ -44,7 +48,7 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Canadian custodian (not publicly named)",
+        "name": "VersaBank",
         "role": "custodian",
         "jurisdiction": "Canada"
       }
@@ -63,9 +67,13 @@
       {
         "label": "QCAD Digital Trust regulatory order",
         "url": "https://www.osc.ca/en/securities-law/orders-rulings-decisions/qcad-digital-trust"
+      },
+      {
+        "label": "QCAD Digital Trust prospectus amendment naming VersaBank",
+        "url": "https://www.newsfilecorp.com/release/291667/QCAD-Digital-Trust-Announces-Filing-of-Prospectus-Amendment-Accessible-through-SEDAR"
       }
     ],
-    "uncertainty": "The regulatory order requires a Canadian custodian, trust-designated segregation, exclusion from issuer-creditor claims, and no encumbrance. The custodian identity, provider allocation, and current asset mix are not published.",
+    "uncertainty": "The regulatory order requires a Canadian custodian, trust-designated segregation, exclusion from issuer-creditor claims, and no encumbrance. QCAD Digital Trust's issuer release identifies VersaBank as the current replacement custodian. Stablecorp separately announced a future phased transition to TD, but no reviewed source establishes that transition as complete; current asset mix and any provider allocation remain unpublished.",
     "knownUnknownExposurePct": 100
   }
 }

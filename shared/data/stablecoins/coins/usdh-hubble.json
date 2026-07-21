@@ -6,12 +6,12 @@
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
-    "governance": "decentralized",
+    "governance": "centralized-dependent",
     "yieldBearing": false,
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Overcollateralized Hubble CDP vault collateral plus USDC deposited through the Peg Stability Module; current weights are not published",
+  "collateral": "94.4468% USDC deposited through the Peg Stability Module and 5.5532% Hubble CDP-backed issuance at the latest pinned read; the CDP collateral-asset weights remain incomplete",
   "pegMechanism": "Borrowers mint USDH against overcollateralized Solana vaults, while the Peg Stability Module supports zero-slippage USDH/USDC conversion and holds deposited USDC as direct backing",
   "mechanismArchetype": "cdp",
   "mechanismArchetypeReview": {
@@ -109,44 +109,62 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "Hubble CDP vault collateral and USDC Peg Stability Module basket",
-      "pct": 100,
-      "risk": "high",
+      "name": "USDC in Hubble Peg Stability Module",
+      "pct": 94.4468,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
       "blacklistable": true,
-      "assetClass": "other",
-      "issuerOrObligor": "Hubble Protocol vault and Peg Stability Module contracts, vault collateral issuers, and Circle",
-      "riskFactors": ["market", "liquidity", "smart-contract", "counterparty", "concentration"],
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial / USDC held by the Hubble Peg Stability Module",
+      "riskFactors": ["counterparty", "custody", "legal", "smart-contract", "liquidity", "concentration"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Hubble CDP vault collateral basket",
+      "pct": 5.5532,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Hubble borrower vaults and supported Solana collateral issuers",
+      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
       "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
     "reviewedAt": "2026-07-21",
-    "reviewer": "Codex Safety Score V9 reserve batch 7",
-    "confidence": "manual-review",
+    "reviewer": "Codex Safety Score V9 NR-recovery wave 3",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Hubble Protocol documentation",
-        "url": "https://docs.hubbleprotocol.io"
+        "label": "Hubble technical resources and proof-of-reserve vaults",
+        "url": "https://docs.hubbleprotocol.io/resources/technical-resources"
       },
       {
         "label": "Hubble Peg Stability Module documentation",
         "url": "https://docs.hubbleprotocol.io/faq/usdh-peg-stability/peg-stability-module"
+      },
+      {
+        "label": "Hubble official SDK source",
+        "url": "https://github.com/hubbleprotocol/hubble-common"
+      },
+      {
+        "label": "Solana mainnet RPC",
+        "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-    "rationale": "Hubble documents USDH issuance against overcollateralized multi-asset Solana vaults and a Peg Stability Module that swaps USDC directly for USDH, leaving USDH backed by the deposited USDC. No current aggregate split across vault collateral and PSM USDC is published, so both issuance paths are represented as one complete unsplit basket.",
-    "compositionBasis": "Hubble CDP documentation and documented USDH/USDC Peg Stability Module backing path",
+    "rationale": "A finalized Solana read through Hubble's official SDK at slot 434386680 returned 1,069,376.821209 USDC both deposited and minted through the PSM, plus 62,876.204453 USDH borrowed across the three configured borrowing markets. Those issuance-path liabilities reconcile to circulating supply within 0.0041% and normalize to 94.4468% PSM USDC and 5.5532% CDP-backed USDH. The material PSM slice is therefore exact; current constituent weights inside the sub-material CDP branch remain unsplit.",
+    "compositionBasis": "Finalized Hubble SDK state for PSM minted USDH and all configured borrowing-market debt at Solana slot 434386680",
     "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current weights across vault collateral assets and USDC held by the Peg Stability Module are not published in a dated aggregate.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "The 5.5532% CDP-backed issuance branch is verified in aggregate, but its current collateral-asset value weights are not fully reproducible because retired collateral slots remain in market state without current public token labels or usable prices.",
+    "knownUnknownExposurePct": 5.5532,
     "nonLinkDispositions": [
       {
-        "reserveIndex": 0,
-        "reserveName": "Hubble CDP vault collateral and USDC Peg Stability Module basket",
-        "pct": 100,
+        "reserveIndex": 1,
+        "reserveName": "Hubble CDP vault collateral basket",
+        "pct": 5.5532,
         "disposition": "basket-needs-split",
-        "rationale": "The documented backing spans multiple vault collateral assets and PSM USDC, but no current supply-weighted split is published.",
-        "candidateCoinIds": ["usdc-circle"]
+        "rationale": "Borrowing-market debt is exact, but the complete current value split across active and retired collateral slots cannot be reproduced without false precision. This bounded branch remains explicitly unsplit."
       }
     ]
   },

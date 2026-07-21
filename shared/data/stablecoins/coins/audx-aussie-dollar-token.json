@@ -217,17 +217,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "Australia",
     "latestReport": {
-      "periodEnd": "2026-04-30",
-      "publishedAt": "2026-05-14",
+      "periodEnd": "2026-05-31",
+      "publishedAt": "2026-06-09",
       "assuranceMethod": "review",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "OpenAI Codex V9 NR-recovery review",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Aura Partners AUDX Limited Assurance Report - April 2026",
-          "url": "https://www.audxtoken.com/_files/ugd/539754_d3b6f8c78ec04b63b1df788050e271d9.pdf"
+          "label": "Aura Partners AUDX Limited Assurance Report - May 2026",
+          "url": "https://www.audxtoken.com/_files/ugd/539754_4d37414d003148f582f99d625f903ef6.pdf"
         }
       ]
     }

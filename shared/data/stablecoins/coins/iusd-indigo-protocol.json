@@ -36,31 +36,172 @@
   "geckoId": "indigo-protocol-iusd",
   "protocolSlug": "indigo-protocol",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Public docs reviewed for Indigo iUSD do not identify the collateral oracle setup or failure handling.",
+    "tier": "single-source-or-laggy",
+    "summary": "Indigo V3 uses separate pull-based Pyth Lazer inverse-price feeds for the live ADA- and NIGHT-backed iUSD CDP branches. Signed prices are pushed through configured Cardano Pyth validators; no alternate oracle provider or fallback behavior is documented.",
+    "branchModel": "multi-branch",
     "branchApplicability": {
-      "disposition": "unresolved",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex Safety Score V9 small-1-free oracle review",
-      "rationale": "Indigo documents iUSD prices as oracle-derived and used for liquidation, redemption, and interest settlement, but the reviewed public material does not establish the complete live collateral-feed inventory, feed failure behavior, liquidation parameters, backstop, or shutdown branches for the current Cardano deployment.",
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-21",
+      "reviewer": "Codex Safety Score V9 recovery review",
+      "rationale": "Indigo V3 assigns each iAsset/collateral pair its own oracle and collateral parameters. The live Indigo analytics indexer reports 189 ADA-backed and six NIGHT-backed iUSD CDPs, and the official mainnet configuration identifies distinct Pyth inverse feeds and validator references for both pairs.",
       "sources": [
         {
-          "label": "Indigo iAssets documentation",
-          "url": "https://docs.indigoprotocol.io/readme/iassets"
+          "label": "Indigo Protocol V3 documentation",
+          "url": "https://docs.indigoprotocol.io/readme/indigo-protocol-v3.md"
         },
         {
-          "label": "Indigo Protocol documentation",
-          "url": "https://docs.indigoprotocol.io/"
+          "label": "Indigo V3 mainnet system parameters",
+          "url": "https://config.indigoprotocol.io/mainnet/mainnet-system-params-v3.json"
+        },
+        {
+          "label": "Indigo analytics CDP index",
+          "url": "https://analytics.indigoprotocol.io/api/cdps"
         }
       ]
     },
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
-    "confidence": "limited",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex Safety Score V9 recovery review",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Indigo iUSD docs",
-        "url": "https://docs.indigoprotocol.io/"
+        "label": "Indigo Protocol V3 documentation",
+        "url": "https://docs.indigoprotocol.io/readme/indigo-protocol-v3.md"
+      },
+      {
+        "label": "Indigo liquidation documentation",
+        "url": "https://docs.indigoprotocol.io/readme/liquidations.md"
+      },
+      {
+        "label": "Indigo V3 mainnet system parameters",
+        "url": "https://config.indigoprotocol.io/mainnet/mainnet-system-params-v3.json"
+      },
+      {
+        "label": "Indigo oracle MCP implementation",
+        "url": "https://github.com/IndigoProtocol/indigo-mcp/blob/main/src/tools/oracle-tools.ts"
+      },
+      {
+        "label": "Indigo live asset prices",
+        "url": "https://analytics.indigoprotocol.io/api/asset-prices"
+      }
+    ],
+    "branches": [
+      {
+        "id": "iusd-ada",
+        "label": "ADA-backed iUSD CDPs",
+        "tier": "single-source-or-laggy",
+        "summary": "The live ADA/iUSD branch uses Pyth Lazer inverse feed 16 through Indigo's configured Cardano Pyth validator; the indexer reported 189 positions at the review snapshot.",
+        "collateralAssets": [
+          "ADA"
+        ],
+        "chains": [
+          "cardano"
+        ],
+        "feeds": [
+          {
+            "provider": "Pyth Lazer",
+            "path": "Signed Pyth message -> inverse feed 16 (iUSD per ADA pair) -> Cardano Pyth feed validator 4cb907af98c1ed5ee9f251691a0ec909f2a26b583ed271f2a88a55cb -> Indigo CDP validation",
+            "address": "4cb907af98c1ed5ee9f251691a0ec909f2a26b583ed271f2a88a55cb",
+            "chain": "cardano",
+            "observedAt": "2026-07-21",
+            "failureDomainKeys": [
+              "oracle:pyth-lazer:feed-16",
+              "contract:cardano:4cb907af98c1ed5ee9f251691a0ec909f2a26b583ed271f2a88a55cb"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The reviewed configuration and MCP implementation identify Pyth Lazer as the branch provider but do not document an alternate provider, cached-price fallback, or the exact onchain behavior when an update is missing or expired.",
+        "observedAt": "2026-07-21",
+        "collateralParameters": [
+          {
+            "asset": "ADA",
+            "note": "Indigo V3 requires pair-specific liquidation, maintenance, and redemption ratios. The public analytics snapshot identifies the active ADA branch but does not expose the current numeric ratios, which remain an explicit parameter-level unknown."
+          }
+        ],
+        "liquidationMechanism": "Indigo liquidations use a two-step freeze and liquidation flow. When an ADA-backed iUSD CDP breaches its branch ratio, the iUSD Stability Pool burns deposited iUSD against the debt and distributes seized ADA collateral to depositors.",
+        "backstop": "The iUSD Stability Pool is the documented liquidation backstop and is observable through Indigo's public stability-pool indexer. No separate recapitalization layer was established from the reviewed primary sources.",
+        "shutdownOrBadDebtBehavior": "The reviewed public documentation does not establish the exact stale-or-missing-price behavior, a global shutdown path, or a residual-debt cure if the iUSD Stability Pool cannot absorb a liquidation.",
+        "failureDomainKeys": [
+          "oracle:pyth-lazer:feed-16",
+          "protocol:indigo-protocol",
+          "backstop:indigo:iusd-stability-pool"
+        ],
+        "sources": [
+          {
+            "label": "Indigo Protocol V3 documentation",
+            "url": "https://docs.indigoprotocol.io/readme/indigo-protocol-v3.md"
+          },
+          {
+            "label": "Indigo liquidation documentation",
+            "url": "https://docs.indigoprotocol.io/readme/liquidations.md"
+          },
+          {
+            "label": "Indigo V3 mainnet system parameters",
+            "url": "https://config.indigoprotocol.io/mainnet/mainnet-system-params-v3.json"
+          },
+          {
+            "label": "Indigo live asset prices",
+            "url": "https://analytics.indigoprotocol.io/api/asset-prices"
+          }
+        ]
+      },
+      {
+        "id": "iusd-night",
+        "label": "NIGHT-backed iUSD CDPs",
+        "tier": "single-source-or-laggy",
+        "summary": "The live NIGHT/iUSD branch uses Pyth Lazer inverse feed 2970 through its own configured Cardano Pyth validator; the indexer reported six positions at the review snapshot.",
+        "collateralAssets": [
+          "NIGHT"
+        ],
+        "chains": [
+          "cardano"
+        ],
+        "feeds": [
+          {
+            "provider": "Pyth Lazer",
+            "path": "Signed Pyth message -> inverse feed 2970 (iUSD per NIGHT pair) -> Cardano Pyth feed validator 1d4c0f85dcbcc230f1550f30574206c5b9bddff47b7b135edb12de69 -> Indigo CDP validation",
+            "address": "1d4c0f85dcbcc230f1550f30574206c5b9bddff47b7b135edb12de69",
+            "chain": "cardano",
+            "observedAt": "2026-07-21",
+            "failureDomainKeys": [
+              "oracle:pyth-lazer:feed-2970",
+              "contract:cardano:1d4c0f85dcbcc230f1550f30574206c5b9bddff47b7b135edb12de69"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The reviewed configuration and MCP implementation identify Pyth Lazer as the branch provider but do not document an alternate provider, cached-price fallback, or the exact onchain behavior when an update is missing or expired.",
+        "observedAt": "2026-07-21",
+        "collateralParameters": [
+          {
+            "asset": "NIGHT",
+            "note": "Indigo V3 requires pair-specific liquidation, maintenance, and redemption ratios. The public analytics snapshot identifies the active NIGHT branch but does not expose the current numeric ratios, which remain an explicit parameter-level unknown."
+          }
+        ],
+        "liquidationMechanism": "Indigo liquidations use a two-step freeze and liquidation flow. When a NIGHT-backed iUSD CDP breaches its branch ratio, the iUSD Stability Pool burns deposited iUSD against the debt and distributes seized NIGHT collateral to depositors.",
+        "backstop": "The iUSD Stability Pool is the documented liquidation backstop and is observable through Indigo's public stability-pool indexer. No separate recapitalization layer was established from the reviewed primary sources.",
+        "shutdownOrBadDebtBehavior": "The reviewed public documentation does not establish the exact stale-or-missing-price behavior, a global shutdown path, or a residual-debt cure if the iUSD Stability Pool cannot absorb a liquidation.",
+        "failureDomainKeys": [
+          "oracle:pyth-lazer:feed-2970",
+          "protocol:indigo-protocol",
+          "backstop:indigo:iusd-stability-pool"
+        ],
+        "sources": [
+          {
+            "label": "Indigo Protocol V3 documentation",
+            "url": "https://docs.indigoprotocol.io/readme/indigo-protocol-v3.md"
+          },
+          {
+            "label": "Indigo liquidation documentation",
+            "url": "https://docs.indigoprotocol.io/readme/liquidations.md"
+          },
+          {
+            "label": "Indigo V3 mainnet system parameters",
+            "url": "https://config.indigoprotocol.io/mainnet/mainnet-system-params-v3.json"
+          },
+          {
+            "label": "Indigo live asset prices",
+            "url": "https://analytics.indigoprotocol.io/api/asset-prices"
+          }
+        ]
       }
     ]
   },
@@ -123,47 +264,99 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "Indigo V3 CDP collateral and iUSD peg-stability-module basket",
-      "pct": 100,
+      "name": "ADA-backed Indigo V3 iUSD CDP debt",
+      "pct": 99.64,
       "risk": "high",
       "assetClass": "cryptoasset",
-      "issuerOrObligor": "Cardano ADA, whitelisted Cardano native-token issuers, approved stablecoin issuers, and Indigo Protocol",
+      "issuerOrObligor": "Cardano ADA and Indigo Protocol",
       "riskFactors": [
         "market",
         "liquidity",
         "smart-contract",
         "concentration"
       ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "NIGHT-backed Indigo V3 iUSD CDP debt",
+      "pct": 0.25,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "NIGHT token and Indigo Protocol",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Unreconciled non-CDP iUSD issuance",
+      "pct": 0.11,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Indigo Protocol PSM, accrued interest, or other non-CDP path",
+      "riskFactors": [
+        "smart-contract",
+        "counterparty"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
     "reviewedAt": "2026-07-21",
-    "reviewer": "Codex Safety Score V9 reserve batch 7",
-    "confidence": "probable",
+    "reviewer": "Codex Safety Score V9 recovery review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Indigo Protocol V3 documentation",
         "url": "https://docs.indigoprotocol.io/readme/indigo-protocol-v3.md"
       },
       {
-        "label": "Koios iUSD minting policy",
-        "url": "https://api.koios.rest/api/v1/plutus_script_list?script_hash=eq.f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b69880"
+        "label": "Indigo analytics CDP index",
+        "url": "https://analytics.indigoprotocol.io/api/cdps"
+      },
+      {
+        "label": "Indigo live asset prices",
+        "url": "https://analytics.indigoprotocol.io/api/asset-prices"
+      },
+      {
+        "label": "Koios iUSD asset supply",
+        "url": "https://api.koios.rest/api/v1/asset_info?_asset_policy=f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b69880&_asset_name=69555344"
+      },
+      {
+        "label": "Indigo V3 mainnet system parameters",
+        "url": "https://config.indigoprotocol.io/mainnet/mainnet-system-params-v3.json"
       }
     ],
-    "rationale": "Indigo V3 permits each iAsset to use multiple collateral types, including ADA and DAO-whitelisted Cardano native tokens, and documents governed iUSD peg-stability-module pairs with approved stablecoins. The public primary sources do not publish a dated aggregate split across CDP collateral types and PSM balances, so the reserve is represented as one complete but unsplit envelope rather than as ADA-only backing.",
-    "compositionBasis": "Indigo V3 multi-collateral CDP and peg-stability-module architecture",
+    "rationale": "In a coordinated 2026-07-21 live fetch, Indigo's public indexer reported 189 ADA-backed iUSD CDPs with 1,290,925.193112 iUSD debt and six NIGHT-backed CDPs with 3,269.173323 iUSD debt. Koios reported 1,295,611.271196 iUSD outstanding, so indexed CDP debt reconciles 99.8906% of supply: 99.6383% ADA debt and 0.2523% NIGHT debt, rounded here to 99.64% and 0.25%. The endpoints do not expose a shared historical snapshot slot, so the remaining 1,416.904761 iUSD, or 0.1094%, is preserved as an explicit non-CDP unknown rather than attributed to a PSM without proof. Using contemporaneous branch prices, indexed collateral was approximately USD 2.504m against USD 1.294m CDP debt, or 193.45%.",
+    "compositionBasis": "Outstanding iUSD supply attributed by live indexed CDP debt, with collateral values derived from branch-specific Indigo oracle prices",
     "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current weights across ADA, whitelisted Cardano native-token collateral, and iUSD peg-stability-module stablecoins are not published as one reproducible snapshot.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "The 1,416.904761 iUSD difference between total policy supply and indexed CDP debt may reflect a peg-stability module, accrued interest, or another non-CDP issuance path; no reviewed public endpoint splits that 0.1094% remainder.",
+    "knownUnknownExposurePct": 0.11,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Indigo V3 CDP collateral and iUSD peg-stability-module basket",
-        "pct": 100,
+        "reserveName": "ADA-backed Indigo V3 iUSD CDP debt",
+        "pct": 99.64,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "ADA is the external Cardano collateral asset rather than a Pharos-tracked stablecoin reserve dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "NIGHT-backed Indigo V3 iUSD CDP debt",
+        "pct": 0.25,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "NIGHT is the external Cardano collateral asset rather than a Pharos-tracked stablecoin reserve dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Unreconciled non-CDP iUSD issuance",
+        "pct": 0.11,
         "disposition": "basket-needs-split",
-        "rationale": "The reviewed primary sources identify the permitted collateral and PSM architecture but do not publish current constituent balances or weights, so the basket cannot be split or linked without false precision."
+        "rationale": "The public supply and CDP endpoints establish the exact remainder but do not identify whether it is PSM inventory, accrued interest, or another non-CDP path, so no constituent link is asserted."
       }
     ]
   },

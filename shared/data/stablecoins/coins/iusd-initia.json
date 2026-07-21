@@ -101,8 +101,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex Safety Score V9 NR-recovery wave 3",
     "confidence": "verified",
     "sources": [
       {
@@ -122,11 +122,11 @@
         "url": "https://layerzero.network/blog/agora-and-layerzero-bring-ausd-to-5-blockchains"
       }
     ],
-    "rationale": "Initia's official iusd-vault and AUSD0 OFT resources show that iUSD is minted 1:1 only after the local AUSD0 representation is delivered and deposited. The direct reserve dependency is therefore the existing 100% Agora AUSD slice. Agora's reserve report is reviewed on the upstream AUSD record; this wrapper has no separate reserve report.",
-    "compositionBasis": "Official Initia vault/OFT relationship and documented 1:1 AUSD dependency",
+    "rationale": "Initia's official iusd-vault and AUSD0 OFT resources show that iUSD is minted 1:1 only after the local AUSD0 representation is delivered and deposited. This establishes the complete direct wrapper reserve as 100% Agora AUSD0/AUSD with no unidentified direct asset. Agora's own underlying reserve composition remains a separately tracked upstream dependency and is not misrepresented as an unknown slice of the iUSD wrapper.",
+    "compositionBasis": "Complete direct wrapper composition from the official Initia vault/OFT relationship and documented 1:1 AUSD dependency",
     "compositionAsOf": "2026-07-14",
-    "scope": "dependency-relationships",
-    "knownUnknownExposure": "No unidentified direct stablecoin dependency remains in the iUSD wrapper path. The underlying AUSD composition and its 3.66% unidentified stablecoin sub-slice remain reviewed on the upstream AUSD asset.",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unidentified direct reserve asset remains in the iUSD wrapper. Look-through risks and composition of Agora AUSD remain reviewed and propagated through the tracked upstream AUSD dependency.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

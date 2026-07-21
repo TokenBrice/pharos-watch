@@ -12,17 +12,26 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "OpenAI Codex V9 NR-recovery review",
     "confidence": "verified",
     "sources": [
       {
         "label": "Backed bC3M product disclosure",
         "url": "https://assets.backed.fi/products/bc3m"
+      },
+      {
+        "label": "Backed public assetReserves GraphQL feed - C3M.MI",
+        "url": "https://api.backed.fi/graphql"
+      },
+      {
+        "label": "Backed proof-of-reserves methodology",
+        "url": "https://docs.backed.fi/backed-ecosystem/proof-of-reserves"
       }
     ],
-    "rationale": "Backed identifies bC3M as a tracker certificate whose sole underlying is the Amundi C3M UCITS ETF, which tracks 0-6 month Eurozone government bills. The reserve is recorded as one fund-share position without estimating the ETF's sovereign or maturity-level holdings.",
-    "compositionBasis": "Backed bC3M product and underlying disclosure",
+    "rationale": "Backed identifies bC3M as a tracker certificate whose sole underlying is the Amundi C3M UCITS ETF, which tracks 0-6 month Eurozone government bills. Backed's public assetReserves feed reported the C3M.MI reserve and total bC3M circulation with Chainlink as provider on July 21, 2026; Backed states that The Network Firm reads custody-account balances and Chainlink publishes the proof daily or after a material deviation. The reserve is recorded as one fund-share position without estimating the ETF's changing sovereign holdings.",
+    "compositionBasis": "Backed bC3M product disclosure and Chainlink/The Network Firm reserve proof",
+    "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
     "knownUnknownExposure": "The certificate's underlying fund is fully identified; the ETF's changing security-level portfolio and Backed custodian allocations are outside this single-underlying composition.",
     "knownUnknownExposurePct": 0,

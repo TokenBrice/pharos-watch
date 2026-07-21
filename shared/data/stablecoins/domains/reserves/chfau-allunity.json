@@ -2,21 +2,24 @@
   "id": "chfau-allunity",
   "reserves": [
     {
-      "name": "CHF bank deposits (CRR credit institutions, EU)",
+      "name": "CHF cash and eligible low-risk CHF HQLA reserve basket",
       "pct": 100,
       "risk": "very-low",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "Undisclosed CRR credit institutions in the European Union",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed CRR credit institutions and eligible CHF HQLA issuers",
       "riskFactors": [
         "counterparty",
         "custody",
+        "duration",
+        "liquidity",
+        "legal",
         "concentration"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-07-21",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
     "sources": [
@@ -27,20 +30,24 @@
       {
         "label": "AllUnity trust center",
         "url": "https://allunity.com/trust-center"
+      },
+      {
+        "label": "AllUnity CHFAU whitepaper v1.2",
+        "url": "https://framerusercontent.com/assets/lfHzRwNo9LAdtDuKhicsDSTFM2g.pdf"
       }
     ],
-    "rationale": "AllUnity describes CHFAU as fully backed 1:1 by CHF reserves held at CRR credit institutions in the European Union and segregated from its operational funds. Its trust center says a reserve audit report is coming soon, so no institution-level allocation can be substantiated.",
-    "compositionBasis": "AllUnity issuer reserve and trust-center disclosures",
+    "rationale": "AllUnity describes CHFAU as fully backed 1:1 through separate CHF reserve accounts at CRR credit institutions. The current whitepaper permits significant cash holdings plus eligible low-risk CHF HQLAs and documents statutory insolvency protections, but neither current category weights nor an independent reserve report are public, so the complete reserve remains one unsplit basket.",
+    "compositionBasis": "AllUnity whitepaper reserve envelope and trust-center disclosure; current cash/HQLA allocation unpublished",
     "scope": "full-composition",
-    "knownUnknownExposure": "The reserve institutions, account shares, and a dated independent reserve report are not public.",
-    "knownUnknownExposurePct": 0,
+    "knownUnknownExposure": "The current split between CHF cash and eligible HQLAs, the reserve institutions and instruments, provider shares, and a dated independent reserve report are not public.",
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "CHF bank deposits (CRR credit institutions, EU)",
+        "reserveName": "CHF cash and eligible low-risk CHF HQLA reserve basket",
         "pct": 100,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "Swiss-franc bank deposits are external reserve backing rather than a tracked stablecoin dependency."
+        "disposition": "basket-needs-split",
+        "rationale": "The whitepaper permits both CHF cash and eligible HQLAs, but no current allocation or instrument-level schedule is public."
       }
     ]
   },
@@ -53,9 +60,9 @@
       }
     ],
     "segregation": "segregated",
-    "bankruptcyRemoteness": "unknown",
+    "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-07-21",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
     "sources": [
@@ -66,9 +73,13 @@
       {
         "label": "AllUnity trust center",
         "url": "https://allunity.com/trust-center"
+      },
+      {
+        "label": "AllUnity CHFAU whitepaper v1.2",
+        "url": "https://framerusercontent.com/assets/lfHzRwNo9LAdtDuKhicsDSTFM2g.pdf"
       }
     ],
-    "uncertainty": "AllUnity states that reserves are segregated from operational funds but does not identify the banks, disclose provider shares, establish bankruptcy remoteness in the cited materials, or publish rehypothecation terms.",
+    "uncertainty": "The whitepaper states that reserve assets are kept separately and excluded from the issuer's insolvency estate under German law, but AllUnity does not identify the banks, disclose provider shares, or publish rehypothecation terms.",
     "knownUnknownExposurePct": 100
   }
 }

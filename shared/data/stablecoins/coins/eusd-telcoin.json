@@ -370,11 +370,11 @@
   },
   "reserves": [
     {
-      "name": "Cash and high-quality dollar reserve assets",
+      "name": "U.S. dollar deposits, U.S. Treasury or federal agency obligations, and other NFIA-permitted assets",
       "pct": 100,
       "risk": "very-low",
       "assetClass": "other",
-      "issuerOrObligor": "Telcoin Digital Asset Bank and undisclosed reserve counterparties",
+      "issuerOrObligor": "United States government and undisclosed FDIC-insured reserve banks",
       "riskFactors": [
         "counterparty",
         "duration",
@@ -387,9 +387,9 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve); OpenAI Codex NR-recovery review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Telcoin Digital Asset Bank",
@@ -406,21 +406,25 @@
       {
         "label": "Telcoin Digital Asset Bank terms",
         "url": "https://bank.telco.in/terms-of-use"
+      },
+      {
+        "label": "Telcoin Digital Asset Bank customer agreement",
+        "url": "https://bank.telco.in/customer-agreement"
       }
     ],
-    "rationale": "Re-verified 2026-07-20: Telcoin describes eUSD as a bank-issued Digital Dollar connected to traditional banking and payments infrastructure under Nebraska Digital Asset Depository Charter No. 001. The bank.telco.in and bank.telco.in/eUSD pages fetched today publish the statutory risk disclosure (not FDIC-insured, not government-guaranteed) but still name no reserve asset classes, weights, reserve institutions, or auditor, and no monthly attestation report has appeared since the 2026-07-14 review. The existing 100% aggregate reserve envelope is retained without fabricated subcategories; confidence stays probable on issuer-primary disclosure of the envelope only.",
-    "compositionBasis": "Telcoin Digital Asset Bank and Digital Cash issuer disclosures for eUSD",
-    "compositionAsOf": "2026-07-20",
+    "rationale": "Telcoin Digital Asset Bank's customer agreement defines eUSD reserves as U.S. dollars at FDIC-insured institutions, highly liquid U.S. Treasury securities or federal agency obligations, and other assets permitted by the Nebraska Financial Innovation Act. It also requires reserve assets to equal or exceed outstanding eUSD. The agreement does not publish current category weights, institution names, balances, or an independent reserve report, so the aggregate 100% envelope remains unsplit.",
+    "compositionBasis": "Telcoin Digital Asset Bank customer agreement and eUSD issuer disclosures",
+    "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The full 100% reserve envelope lacks current category weights, named reserve institutions, and assurance evidence. Telcoin states that monthly attestations will be published, but no eUSD report was located in the reviewed sources.",
+    "knownUnknownExposure": "The legally permitted reserve categories are identified, but the full 100% envelope lacks current category weights, named reserve institutions, balances, and independent assurance evidence.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Cash and high-quality dollar reserve assets",
+        "reserveName": "U.S. dollar deposits, U.S. Treasury or federal agency obligations, and other NFIA-permitted assets",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "The issuer describes the reserve envelope but does not publish current eUSD-specific composition or assurance evidence."
+        "rationale": "The customer agreement defines the permitted reserve envelope but the issuer does not publish current eUSD-specific weights or independent assurance evidence."
       }
     ]
   },
@@ -432,8 +436,8 @@
         "jurisdiction": "United States"
       },
       {
-        "name": "Undisclosed eUSD reserve counterparties",
-        "role": "custodian",
+        "name": "One or more undisclosed FDIC-insured reserve banks",
+        "role": "bank",
         "jurisdiction": "United States"
       },
       {
@@ -442,12 +446,12 @@
         "jurisdiction": "Onchain protocol"
       }
     ],
-    "segregation": "unknown",
-    "bankruptcyRemoteness": "unknown",
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve); OpenAI Codex NR-recovery review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Telcoin Digital Asset Bank",
@@ -456,9 +460,13 @@
       {
         "label": "Telcoin Digital Asset Bank terms",
         "url": "https://bank.telco.in/terms-of-use"
+      },
+      {
+        "label": "Telcoin Digital Asset Bank customer agreement",
+        "url": "https://bank.telco.in/customer-agreement"
       }
     ],
-    "uncertainty": "Re-checked 2026-07-20: the reviewed sources identify Telcoin's bank-issued framework but do not identify the eUSD reserve accounts, counterparties, legal segregation, bankruptcy treatment, or rehypothecation terms. The profile remains unknown until eUSD-specific reporting is published."
+    "uncertainty": "The customer agreement requires segregated reserve accounts at one or more FDIC-insured banks, separate from Telcoin Digital Asset Bank's operating funds and unavailable for its general debts; it gives eUSD holders priority redemption claims subject to applicable law. It does not name the banks, establish statutory bankruptcy remoteness, disclose provider shares, or address reserve-asset reuse."
   },
   "liveReservesConfig": {
     "adapter": "curated-validated",
