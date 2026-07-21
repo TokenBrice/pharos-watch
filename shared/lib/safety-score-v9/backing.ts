@@ -39,6 +39,29 @@ export interface V9ResolvedUpstreamExposure {
   readonly failureRootAssetIds?: readonly string[];
 }
 
+/**
+ * A wrapper whose entire reserve is a single tracked, rated stablecoin (or other
+ * rated tracked asset) inherits that parent's backing quality. The wrapper's
+ * reserve IS the parent asset, so the parent's backing pillar — which already
+ * prices the parent's own reserve quality, custody and internal concentration —
+ * is the accurate backing signal, far more so than the fail-closed
+ * bounded-unknown floor a missing live/attested composition otherwise gets.
+ */
+export interface V9InheritedStablecoinBacking {
+  readonly parentAssetId: string;
+  /** The parent's raw backing pillar score (pre composite caps). */
+  readonly parentBackingScore: number;
+  /** Mapped weight of the single collateral/wrapper edge (≈1). */
+  readonly weight: number;
+  /**
+   * "pure": a 1:1 holding wrapper (mint/redeem against the parent) — a thin
+   * contract layer. "wrapped": an ERC-4626 vault / staked / lending / bridged
+   * variant — a materially larger contract + share-accounting layer.
+   */
+  readonly tier: "pure" | "wrapped";
+  readonly failureDomains: readonly V9FailureDomainRef[];
+}
+
 export interface V9BackingAssetInput {
   readonly assetId: string;
   readonly reserveStatus: V9AssetFactsV2["reserveStatus"];
@@ -47,7 +70,26 @@ export interface V9BackingAssetInput {
   readonly resolvedUpstreamExposures: readonly V9ResolvedUpstreamExposure[];
   readonly seriallyResolvedUpstreamAssetIds?: readonly string[];
   readonly cdpLiquidationCapacitySelection?: V9CdpLiquidationCapacitySelection;
+  readonly inheritedStablecoinBacking?: V9InheritedStablecoinBacking;
 }
+
+/**
+ * Points shaved off the parent's backing pillar when a stablecoin-collateralized
+ * wrapper inherits it. The discount prices ONLY the added wrapper layer, never
+ * the parent's own risk (that already lives in the parent's grade — e.g. sUSDe's
+ * basis-trade risk is in USDe's backing, so sUSDe must not be double-penalized):
+ *  - pure (~5pt): a 1:1 holding wrapper adds only a thin mint/redeem contract
+ *    layer, most of whose failure surface is already scored in the control
+ *    pillar; a small backing haircut acknowledges the layer without double count.
+ *  - wrapped (~12pt): an ERC-4626 vault / staked / lending / bridged variant adds
+ *    a materially larger smart-contract + share-accounting (and often
+ *    withdrawal-queue / bridge) layer over the parent, warranting a larger — but
+ *    still bounded — haircut off the parent's backing pillar.
+ */
+export const V9_WRAPPER_BACKING_INHERITANCE_DISCOUNT = { pure: 5, wrapped: 12 } as const;
+
+/** Minimum mapped single-parent weight for a wrapper to qualify as ~100% backed. */
+export const V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT = 0.99;
 
 export interface V9CdpLiquidationCapacitySelection {
   readonly selectedPath: "stress-measurement" | "legacyLCR";
@@ -343,6 +385,75 @@ interface ReserveEvaluation {
   readonly rateability: "rateable" | "NR";
 }
 
+/**
+ * Reserve evaluation for a stablecoin-collateralized wrapper: the whole reserve
+ * is one tracked, rated parent, so the reserve score is the parent's backing
+ * pillar minus the tiered wrapper discount. Concentration is intentionally NOT
+ * re-penalized — the parent's backing pillar already prices its own internal
+ * diversification, so a fresh single-asset concentration hit would double-count.
+ * Returns null (defer to the generic path) when the discounted quality does not
+ * exceed the bounded-unknown floor: a weak parent is no evidence to credit above
+ * the fail-closed baseline.
+ */
+function inheritedStablecoinReserveEvaluation(
+  asset: V9BackingAssetInput,
+  inherited: V9InheritedStablecoinBacking,
+  policy: V9BackingEvaluationPolicy,
+): ReserveEvaluation | null {
+  const backing = backingPolicy(policy);
+  const discount = V9_WRAPPER_BACKING_INHERITANCE_DISCOUNT[inherited.tier];
+  const weight = Math.max(0, Math.min(1, inherited.weight));
+  const inheritedQuality = clampScore(inherited.parentBackingScore - discount);
+  // Any sub-1 residual stays at the fail-closed bounded-unknown quality.
+  const score = clampScore(decimalSnap(inheritedQuality * weight + backing.boundedUnknownQuality * (1 - weight)));
+  if (score <= backing.boundedUnknownQuality + SCORE_EPSILON) return null;
+  const evidenceRefIds = uniqueSorted(asset.reserveStatus.evidenceRefIds);
+  const failureDomains = canonicalDomains(inherited.failureDomains);
+  const componentKey = `reserve:inherited-backing:${inherited.parentAssetId}`;
+  return {
+    score,
+    contributions: [
+      {
+        componentKey,
+        source: "reserve-exposure",
+        score,
+        normalizedWeight: 1,
+        weightedScore: score,
+        observationState: "bounded-unknown",
+        provenance: null,
+        evidenceRefIds,
+        failureDomains,
+        upstreamAssetId: inherited.parentAssetId,
+      },
+      {
+        componentKey: "reserve:concentration",
+        source: "reserve-concentration",
+        score,
+        normalizedWeight: backing.reserve.concentrationWeight,
+        weightedScore: score * backing.reserve.concentrationWeight,
+        observationState: "bounded-unknown",
+        provenance: null,
+        evidenceRefIds,
+        failureDomains,
+        upstreamAssetId: null,
+      },
+    ],
+    structuralReasons: [],
+    // A collateral-exposure ceiling reason keeps the pillar evidence bounded
+    // ("limited"): the backing is inferred from the parent, not directly
+    // observed from a live/attested composition.
+    unresolved: [
+      {
+        code: "partial-reserve-review",
+        pathKey: componentKey,
+        gapIds: [],
+        treatment: resolveV9ReasonPolicy(policy, "partial-reserve-review").reason.defaultTreatment,
+      },
+    ],
+    rateability: "rateable",
+  };
+}
+
 export function evaluateV9ReserveExposures(
   asset: V9BackingAssetInput,
   policy: V9BackingEvaluationPolicy,
@@ -351,6 +462,16 @@ export function evaluateV9ReserveExposures(
   if (asset.reserveStatus.applicability.state === "not-applicable") {
     return { score: null, contributions: [], structuralReasons: [], unresolved: [], rateability: "rateable" };
   }
+  // A ~100% single-parent wrapper inherits its parent's backing quality instead
+  // of the fail-closed bounded-unknown floor a missing live/attested composition
+  // otherwise gets. Only applied when the inherited (discounted) quality beats
+  // that floor: a weak parent yields no positive evidence to credit above it, so
+  // the wrapper falls through to the existing bounded path byte-identically.
+  const inheritedReserve =
+    asset.inheritedStablecoinBacking !== undefined
+      ? inheritedStablecoinReserveEvaluation(asset, asset.inheritedStablecoinBacking, policy)
+      : null;
+  if (inheritedReserve !== null) return inheritedReserve;
   if (asset.reserveStatus.applicability.state === "unresolved") {
     const unresolved = policyGapReasons(
       asset,

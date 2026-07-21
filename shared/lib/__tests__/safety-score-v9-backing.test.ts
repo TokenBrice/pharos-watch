@@ -350,3 +350,90 @@ describe("Safety Score v9 backing exposure primitives", () => {
     expect(result.unresolved).toContainEqual(expect.objectContaining({ code: "critical-unresolved", treatment: "NR" }));
   });
 });
+
+describe("Safety Score v9 wrapper backing inheritance", () => {
+  const backing = V9_CANDIDATE_POLICY_V1.policy.semantic.backing;
+  const missingReserveAsset = (
+    inherited: NonNullable<V9BackingAssetInput["inheritedStablecoinBacking"]>,
+  ): V9BackingAssetInput => ({
+    assetId: "wrapper",
+    reserveStatus: {
+      applicability: { state: "required", policyRuleId: "v9.backing.reserve-composition", rationale: null, gapId: null },
+      observationState: "missing",
+      evidenceRefIds: [],
+      gapIds: ["wrapper:gap:reserve-composition"],
+    },
+    reserveExposures: [],
+    gaps: [],
+    resolvedUpstreamExposures: [],
+    inheritedStablecoinBacking: inherited,
+  });
+
+  it("inherits a pure 1:1 parent's backing pillar minus the pure discount", () => {
+    const result = evaluateV9ReserveExposures(
+      missingReserveAsset({
+        parentAssetId: "parent",
+        parentBackingScore: 75,
+        weight: 1,
+        tier: "pure",
+        failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(result.score).toBeCloseTo(70, 6); // 75 - pure(5)
+    expect(result.rateability).toBe("rateable");
+    expect(result.contributions).toContainEqual(
+      expect.objectContaining({ componentKey: "reserve:inherited-backing:parent", upstreamAssetId: "parent" }),
+    );
+    expect(result.unresolved).toEqual([
+      expect.objectContaining({ code: "partial-reserve-review", treatment: "ceiling" }),
+    ]);
+  });
+
+  it("applies the larger wrapped discount for a staked/vault layer", () => {
+    const result = evaluateV9ReserveExposures(
+      missingReserveAsset({
+        parentAssetId: "parent",
+        parentBackingScore: 75,
+        weight: 1,
+        tier: "wrapped",
+        failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(result.score).toBeCloseTo(63, 6); // 75 - wrapped(12)
+  });
+
+  it("keeps sub-1 residual at the bounded-unknown quality", () => {
+    const result = evaluateV9ReserveExposures(
+      missingReserveAsset({
+        parentAssetId: "parent",
+        parentBackingScore: 90,
+        weight: 0.99,
+        tier: "pure",
+        failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+    // (90 - 5) * 0.99 + boundedUnknown * 0.01
+    expect(result.score).toBeCloseTo(85 * 0.99 + backing.boundedUnknownQuality * 0.01, 6);
+  });
+
+  it("defers to the fail-closed bounded path when a weak parent cannot beat the floor", () => {
+    const inherited = {
+      parentAssetId: "parent",
+      parentBackingScore: 40,
+      weight: 1,
+      tier: "wrapped" as const, // 40 - 12 = 28 <= boundedUnknown floor (35)
+      failureDomains: [{ kind: "reserve-issuer" as const, key: "asset:parent" }],
+    };
+    const withInheritance = evaluateV9ReserveExposures(missingReserveAsset(inherited), V9_CANDIDATE_POLICY_V1);
+    expect(withInheritance.score).toBeCloseTo(backing.boundedUnknownQuality, 6);
+    expect(withInheritance.contributions).toContainEqual(
+      expect.objectContaining({ componentKey: "reserve:unclassified-residual" }),
+    );
+    expect(withInheritance.unresolved).not.toContainEqual(
+      expect.objectContaining({ code: "partial-reserve-review" }),
+    );
+  });
+});
