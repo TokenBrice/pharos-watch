@@ -70,6 +70,16 @@ jobs:
       - name: Assert both targets produced a fresh scoring measurement
         run: node scripts/ci/check-shock-coverage-freshness.mjs
 
+      # A refresh must pass the shock-coupled Vitest suites the PR gate runs.
+      # Fail here rather than opening a refresh PR that cannot clear its checks.
+      - name: Run shock-coupled test suites against the refreshed artifacts
+        run: |
+          npm exec vitest -- \
+            scripts/maintenance/__tests__/generate-safety-score-v9-shock-coverage-registry.test.ts \
+            worker/src/lib/__tests__/safety-score-v9-extension-shock.test.ts \
+            worker/src/lib/__tests__/safety-score-v9-fact-set.test.ts \
+            --run
+
       - name: Detect journal diff
         id: diff
         run: |

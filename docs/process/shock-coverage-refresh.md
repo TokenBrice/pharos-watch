@@ -22,6 +22,7 @@ Worst-case gap between runs is 48h, which leaves ~24h of slack against the 72h b
 | Regenerate registry       | `generate-safety-score-v9-shock-coverage-registry.ts`                       | Journal/registry projection is inconsistent              |
 | Verify self-consistency   | both generators with `--check`                                              | A generated artifact is stale after its own run          |
 | Assert scoring freshness  | `scripts/ci/check-shock-coverage-freshness.mjs`                             | A target is missing, incomplete, unattested, or too old  |
+| Run shock-coupled tests   | `vitest` over the registry, extension-shock, and fact-set suites            | The refreshed data would fail the PR gate — the PR would be unmergeable |
 
 Each stage is a separate step, so a partial refresh (for example V1 succeeding and V2 failing) fails the job **before** any branch, commit, or PR is created. Nothing unverified reaches the registry.
 
@@ -30,6 +31,8 @@ Each stage is a separate step, so a partial refresh (for example V1 succeeding a
 `shared/lib/safety-score-v9/archetypes/cdp.ts` rejects any measurement where `exactReplayPassed` is false or `replayVerification` is null, with reason `stress-measurement-exact-replay-not-passed`. A journal committed without a matching attestation therefore scores exactly as if it were missing.
 
 `generate-safety-score-v9-shock-coverage-attestations.ts` replays every journal whose sha256 does not already carry a passing attestation, and reuses cached entries otherwise. Any divergence throws without writing. Re-running it with `--check` verifies the attestations file is current.
+
+Each attestation entry carries its own `attestedAt` — the date that journal was actually byte-replayed. Cached entries keep their original date on later runs, and the registry projects the per-entry date, so a refresh only adds rows for newly attested journals and never rewrites historical `replayVerification` metadata. The file-level `attestedAt` only records the latest replay run.
 
 ## Merge path
 

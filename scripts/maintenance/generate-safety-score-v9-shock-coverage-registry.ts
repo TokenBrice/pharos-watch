@@ -77,6 +77,7 @@ const ReplayAttestationsSchema = z
         .object({
           journalPath: z.string().min(1),
           journalSha256: z.string().regex(/^[0-9a-f]{64}$/),
+          attestedAt: z.string().date(),
           exactReplayPassed: z.boolean(),
           callsConsumed: z.number().int().nonnegative(),
           codePinsConsumed: z.number().int().nonnegative(),
@@ -191,7 +192,9 @@ export function projectShockCoverageJournal(
       exactReplayPassed && replayAttestation && replayAttestations
         ? {
             attestationPath: SHOCK_COVERAGE_REPLAY_ATTESTATIONS_PATH,
-            attestedAt: replayAttestations.attestedAt,
+            // Per-entry date: cached attestations keep the date they were
+            // actually replayed, so a refresh never rewrites historical rows.
+            attestedAt: replayAttestation.attestedAt,
             toolPath: replayAttestations.replayTool.path,
             toolVersion: replayAttestations.replayTool.version,
             mode: replayAttestations.replayTool.mode,

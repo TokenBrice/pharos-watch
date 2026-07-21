@@ -28,6 +28,7 @@ Options:
 interface Attestation {
   journalPath: string;
   journalSha256: string;
+  attestedAt: string;
   exactReplayPassed: boolean;
   callsConsumed: number;
   codePinsConsumed: number;
@@ -35,10 +36,25 @@ interface Attestation {
 
 function loadPassingAttestations(path: string): Map<string, Attestation> {
   if (!existsSync(path)) return new Map();
-  const parsed = JSON.parse(readFileSync(path, "utf8")) as { attestations?: Attestation[] };
+  const parsed = JSON.parse(readFileSync(path, "utf8")) as {
+    attestedAt?: string;
+    attestations?: (Omit<Attestation, "attestedAt"> & { attestedAt?: string })[];
+  };
   const byKey = new Map<string, Attestation>();
   for (const attestation of parsed.attestations ?? []) {
-    if (attestation.exactReplayPassed) byKey.set(`${attestation.journalPath}@${attestation.journalSha256}`, attestation);
+    if (!attestation.exactReplayPassed) continue;
+    // Entries written before per-journal dates existed inherit the file-level
+    // run date they were attested under.
+    const attestedAt = attestation.attestedAt ?? parsed.attestedAt;
+    if (!attestedAt) continue;
+    byKey.set(`${attestation.journalPath}@${attestation.journalSha256}`, {
+      journalPath: attestation.journalPath,
+      journalSha256: attestation.journalSha256,
+      attestedAt,
+      exactReplayPassed: attestation.exactReplayPassed,
+      callsConsumed: attestation.callsConsumed,
+      codePinsConsumed: attestation.codePinsConsumed,
+    });
   }
   return byKey;
 }
@@ -69,6 +85,7 @@ void runCliEntrypoint(
     const outPath = resolve(REPO_ROOT, SHOCK_COVERAGE_REPLAY_ATTESTATIONS_PATH);
     const cached = loadPassingAttestations(outPath);
     const attestations: Attestation[] = [];
+    const runDate = new Date().toISOString().slice(0, 10);
     let replayed = 0;
 
     for (const absolutePath of collectShockCoverageJournalPaths(REPO_ROOT)) {
@@ -88,6 +105,7 @@ void runCliEntrypoint(
       attestations.push({
         journalPath,
         journalSha256,
+        attestedAt: runDate,
         exactReplayPassed: true,
         callsConsumed: journal.calls.length,
         codePinsConsumed: journal.codePins.length,
@@ -99,9 +117,10 @@ void runCliEntrypoint(
     const previous = existsSync(outPath) ? readFileSync(outPath, "utf8") : null;
     const previousAttestedAt =
       previous === null ? null : ((JSON.parse(previous) as { attestedAt?: string }).attestedAt ?? null);
-    // Hold attestedAt steady when nothing was replayed so the artifact does not
-    // churn on every scheduled run.
-    const attestedAt = replayed === 0 && previousAttestedAt ? previousAttestedAt : new Date().toISOString().slice(0, 10);
+    // Hold the file-level attestedAt steady when nothing was replayed so the
+    // artifact does not churn on every scheduled run. Per-entry attestedAt is
+    // the load-bearing date; this field only records the latest replay run.
+    const attestedAt = replayed === 0 && previousAttestedAt ? previousAttestedAt : runDate;
 
     const contents = `${JSON.stringify(
       {

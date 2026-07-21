@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { ShockCoverageEvidenceV1Schema } from "../../lib/mechanism-measurement/shock-schema";
 import {
   SHOCK_COVERAGE_REGISTRY_PATH,
+  SHOCK_COVERAGE_REPLAY_ATTESTATIONS_PATH,
   buildShockCoverageMeasurementRegistry,
   collectShockCoverageJournalPaths,
   renderShockCoverageMeasurementRegistry,
@@ -20,6 +21,12 @@ describe("Safety Score v9 shock-coverage measurement registry", () => {
     const registry = buildShockCoverageMeasurementRegistry(REPO_ROOT);
     const rendered = renderShockCoverageMeasurementRegistry(registry);
     const committed = readFileSync(resolve(REPO_ROOT, SHOCK_COVERAGE_REGISTRY_PATH), "utf8");
+    const committedAttestations = JSON.parse(
+      readFileSync(resolve(REPO_ROOT, SHOCK_COVERAGE_REPLAY_ATTESTATIONS_PATH), "utf8"),
+    ) as { attestations: { journalPath: string; journalSha256: string; attestedAt: string }[] };
+    const attestationByKey = new Map(
+      committedAttestations.attestations.map((entry) => [`${entry.journalPath}@${entry.journalSha256}`, entry]),
+    );
 
     expect(committed).toBe(rendered);
     expect(registry.measurements).toHaveLength(journalPaths.length);
@@ -55,8 +62,11 @@ describe("Safety Score v9 shock-coverage measurement registry", () => {
       expect(measurement.complete).toBe(journal.completeness.complete);
       expect(measurement.blockers).toEqual(journal.completeness.blockers);
       expect(measurement.exactReplayPassed).toBe(true);
+      const attestation = attestationByKey.get(`${measurement.journalPath}@${measurement.journalSha256}`);
+      if (!attestation) throw new Error(`Missing committed attestation for ${measurement.journalPath}`);
+      expect(attestation.attestedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(measurement.replayVerification).toMatchObject({
-        attestedAt: "2026-07-20",
+        attestedAt: attestation.attestedAt,
         mode: "offline-byte-identical",
         callsConsumed: journal.calls.length,
         codePinsConsumed: journal.codePins.length,
