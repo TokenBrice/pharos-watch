@@ -32,7 +32,12 @@ const CanonicalReasonCodeArraySchema = canonicalArrayBy(V9ReasonCodeSchema, (val
 
 /** Locked V9-9 release floors. A release decision cannot weaken these at runtime. */
 export const V9_RELEASE_COVERAGE_FLOORS = {
-  minimumRateableAssets: 305,
+  // Re-derived 2026-07-22 (owner ruling, reshape-v2 D6): the original 305 was
+  // calibrated against the pre-withhold engine. New floor = stacked-CF rateable
+  // count 281 minus a 10-asset drift buffer; NR-insufficient withholds never
+  // count toward it. The number is published in the release notes and the
+  // readiness doc; a rated-count regression below it still blocks release.
+  minimumRateableAssets: 271,
   minimumRateableWeightBps: 9_900,
   topCutoffPosition: 25,
   minimumArchetypeRateableAssets: 3,

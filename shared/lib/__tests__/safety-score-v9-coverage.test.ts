@@ -372,7 +372,7 @@ describe("Safety Score v9 release coverage", () => {
 
     expect(report.decision).toBe("no-go");
     expect(report.blockers.map((blocker) => blocker.code)).toContain("policy-digest-mismatch");
-    expect(report.floors.minimumRateableAssets).toBe(305);
+    expect(report.floors.minimumRateableAssets).toBe(271);
   });
 
   it("rejects schema-valid score and route projections that retain scorer identities", () => {
