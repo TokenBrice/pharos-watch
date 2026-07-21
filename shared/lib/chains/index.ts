@@ -45,7 +45,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   hyperliquid:      { name: "Hyperliquid L1", explorerUrl: "https://app.hyperliquid.xyz/explorer", evmChainId: null,  type: "other", logoPath: "/chains/hyperliquid-l1.png" },
   megaeth:   { name: "MegaETH",   explorerUrl: "https://mega.etherscan.io",         evmChainId: 4326,  type: "evm",  logoPath: "/chains/megaeth.png", darkInvert: true, providers: { dexscreener: "megaeth", geckoTerminal: "megaeth", birdeye: "megaeth" } },
   monad:     { name: "Monad",     explorerUrl: "https://explorer.monad.xyz",       evmChainId: 143,   type: "evm",  logoPath: "/chains/monad.png",     providers: { dexscreener: "monad", geckoTerminal: "monad", moralis: "monad", birdeye: "monad" } },
-  pharos:    { name: "Pharos Network", explorerUrl: "https://www.pharosscan.xyz",  evmChainId: 1672,  type: "evm",  logoPath: "/chains/pharos.png",    providers: { coingecko: "pharos" } },
+  pharos:    { name: "Pharos Network", explorerUrl: "https://www.pharosscan.xyz",  evmChainId: 1672,  type: "evm",  logoPath: "/chains/pharos.png"    },
   tempo:     { name: "Tempo",     explorerUrl: "https://explorer.tempo.xyz",       evmChainId: 4217,  type: "evm",  logoPath: "/chains/tempo.svg"     },
   xdc:       { name: "XDC Network",explorerUrl: "https://xdcscan.io",             evmChainId: 50,    type: "evm",  logoPath: "/chains/xdc.png"       },
   redbelly:  { name: "Redbelly Network",explorerUrl: "https://redbelly.routescan.io", evmChainId: 151, type: "evm", logoPath: "/chains/redbelly.svg", providers: { coingecko: "redbelly-network" } },
