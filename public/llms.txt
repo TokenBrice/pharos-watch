@@ -258,7 +258,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Aegis Staked YUSD (sYUSD)](https://pharos.watch/stablecoin/syusd-aegis/): centralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Liquity BOLD (BOLD)](https://pharos.watch/stablecoin/bold-liquity/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [sBOLD by K3 Capital (sBOLD)](https://pharos.watch/stablecoin/sbold-k3-capital/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [Yearn BOLD (yBOLD)](https://pharos.watch/stablecoin/ybold-yearn/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Yearn BOLD (yBOLD)](https://pharos.watch/stablecoin/ybold-yearn/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Hylo HYUSD (HYUSD)](https://pharos.watch/stablecoin/hyusd-hylo/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Liquity USD (LUSD)](https://pharos.watch/stablecoin/lusd-liquity/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [fxUSD (fxUSD)](https://pharos.watch/stablecoin/fxusd-f-x-protocol/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
@@ -489,5 +489,5 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Fluid DigitalDollar (DUSD)](https://pharos.watch/stablecoin/dusd-fluid/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Balanced Dollar (BNUSD)](https://pharos.watch/stablecoin/bnusd-balanced/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Movement USDCx (USDCx)](https://pharos.watch/stablecoin/usdcx-movement/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
-- [Hubble USDH (USDH)](https://pharos.watch/stablecoin/usdh-hubble/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Hubble USDH (USDH)](https://pharos.watch/stablecoin/usdh-hubble/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [zkUSD Dollar (zkUSD)](https://pharos.watch/stablecoin/zkusd-goal3/): centralized stablecoin collateralized by crypto assets pegged to US Dollar.
