@@ -8,4 +8,4 @@
  * requests do not serialize and hash the full catalog at runtime.
  */
 export const REPORT_CARDS_REGISTRY_FINGERPRINT =
-  "6cb6875e28c2c1e697e06bbcbe4c6a5ea4c5fce850ff7cc0b990bcb57b006f6a";
+  "bc2d6c567212ac35636ac4b149bbd731cbaa5b9ce8d15eed2e31c37ba80d30e7";
