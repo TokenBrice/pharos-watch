@@ -247,7 +247,7 @@ describe("Safety Score v9 CDP shock-coverage selection", () => {
   });
 
   it("keeps the current-CR critical signal unchanged when stress coverage passes", () => {
-    const criticalReview = review({ collateralizationRatio: 1.099, liquidationCapacityRatio: 0.1 });
+    const criticalReview = review({ collateralizationRatio: 0.99, liquidationCapacityRatio: 0.1 });
     const selection = selectV9CdpLiquidationCapacity(
       "test-cdp",
       criticalReview,

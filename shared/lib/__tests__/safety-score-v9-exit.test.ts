@@ -216,15 +216,20 @@ describe("evaluateV9Exit", () => {
     // The exact shape that scored 35.61 before the floor: capacity carries 25%
     // of the ladder, so access/settlement/execution/output plus a
     // boundedCostScore awarded *because* the cost is undisclosed used to carry
-    // a route that provably clears $0 at the stress cost.
+    // a route that provably clears $0 at the stress cost. A DEX route exercises
+    // this general zero-capacity floor without being intercepted by the
+    // non-atomic redemption credit gate (a documented issuer/protocol redemption
+    // with zero capacity is now excluded upstream instead — see Lever 3 below).
     const zeroCapacity = route({
-      routeKey: "redemption:undisclosed-cost",
+      routeKey: "dex:undisclosed-cost",
+      lane: "dex",
+      routeFamily: "dex-amm",
+      evidenceKind: "measured-executable-depth",
       access: "issuer-api",
       holderEligibility: "verified-customer",
       settlement: "same-day",
       settlementDelaySec: 86_400,
       modelConfidence: "medium",
-      evidenceKind: "documented-terms",
       capacityCurve: [
         {
           requestedNotionalUsd: 1_000_000,
@@ -238,7 +243,7 @@ describe("evaluateV9Exit", () => {
       ],
     });
     const result = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [zeroCapacity] }, V9_CANDIDATE_POLICY_V1);
-    const trace = result.routes.find((entry) => entry.routeKey === "redemption:undisclosed-cost");
+    const trace = result.routes.find((entry) => entry.routeKey === "dex:undisclosed-cost");
     expect(trace?.included).toBe(true);
     expect(trace?.capacityPoint?.executableUsd).toBe(0);
     // The non-capacity ladder is untouched — the floor, not a component change,
@@ -539,14 +544,130 @@ describe("reliable non-atomic redemption credit", () => {
     expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
   });
 
-  it("does not credit a native non-eventual redemption family that failed the score gate", () => {
-    // Native issuer/protocol observations carry scoreEligible=false for
-    // reliability reasons (impairment, closed route); only the derived
-    // eventual-redemption family is admitted to the relaxed credit.
+});
+
+// Lever 3 (V9 scoring reshape): the exit pillar now credits documented,
+// reliable issuer- and protocol-redemption channels — not only the derived
+// eventual-redemption family — while every reliability gate and the
+// all-zero-capacity floor stay in force. Impaired/frozen routes are excluded by
+// reporting zero capacity, so relaxing the family gate cannot lift them.
+describe("Lever 3 issuer/protocol redemption credit", () => {
+  const floor = V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore;
+
+  function documentedRedemption(overrides: Partial<V9ExitEvaluationRoute> = {}): V9ExitEvaluationRoute {
+    return route({
+      routeKey: "redemption:issuer-documented",
+      routeFamily: "issuer-redemption",
+      // A native issuer observation fails the atomic-only score gate; credit now
+      // comes from the reliability gate, not scoreEligible.
+      scoreEligible: false,
+      coverageClass: "exact-lower-bound",
+      evidenceKind: "documented-terms",
+      access: "issuer-api",
+      holderEligibility: "any-holder",
+      execution: "rules-based-nav",
+      outputQuality: "stable-single",
+      settlement: "same-day",
+      settlementDelaySec: 86_400, // T+1 → 0.9 settlement-delay multiplier
+      capacityCurve: [
+        { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 1_000_000, completionRatio: 1, executionCostBps: 10 },
+        { requestedNotionalUsd: 10_000_000, maxCostBps: 200, executableUsd: 10_000_000, completionRatio: 1, executionCostBps: 10 },
+      ],
+      failureDomains: ["redemption-rail:issuer"],
+      physicalResourceKeys: ["rail:issuer"],
+      ...overrides,
+    });
+  }
+
+  it("credits a documented, nonzero-capacity issuer redemption well above the bounded floor", () => {
+    const result = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [documentedRedemption()] }, V9_CANDIDATE_POLICY_V1);
+    expect(result.primaryRouteKey).toBe("redemption:issuer-documented");
+    // Previously floored to 35 by the eventual-only family gate; now scored on
+    // its evidence with only the T+1 settlement haircut.
+    expect(result.score!).toBeGreaterThan(floor);
+    expect(result.score!).toBeGreaterThan(55);
+  });
+
+  it("credits a documented, nonzero-capacity protocol redemption above the bounded floor", () => {
     const result = evaluateV9Exit(
-      { circulatingUsd: 20_000_000, routes: [redemptionRoute({ routeFamily: "issuer-redemption" })] },
+      {
+        circulatingUsd: 20_000_000,
+        routes: [
+          documentedRedemption({
+            routeKey: "redemption:protocol-documented",
+            routeFamily: "protocol-redemption",
+            failureDomains: ["redemption-rail:protocol"],
+            physicalResourceKeys: ["rail:protocol"],
+          }),
+        ],
+      },
       V9_CANDIDATE_POLICY_V1,
     );
-    expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(result.primaryRouteKey).toBe("redemption:protocol-documented");
+    expect(result.score!).toBeGreaterThan(floor);
+  });
+
+  it("applies the settlement haircut: a 7-day issuer redemption scores strictly below a same-day one", () => {
+    const sameDay = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [documentedRedemption()] }, V9_CANDIDATE_POLICY_V1);
+    const sevenDay = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, routes: [documentedRedemption({ settlement: "days", settlementDelaySec: 604_800 })] },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(sevenDay.score!).toBeLessThan(sameDay.score!);
+    expect(sevenDay.score!).toBeGreaterThan(floor);
+  });
+
+  it("caps a strong documented-terms route at the credit ceiling while a stronger evidence kind is uncapped", () => {
+    const ceiling = V9_CANDIDATE_POLICY_V1.policy.semantic.exit.documentedTermsCreditCeiling;
+    // A strong composite (permissionless, immediate, deterministic, par, fast)
+    // would score ~92 uncapped — above the ceiling for both evidence kinds.
+    const strong = (evidenceKind: string, extra: Partial<V9ExitEvaluationRoute> = {}) =>
+      documentedRedemption({
+        evidenceKind,
+        access: "permissionless-onchain",
+        holderEligibility: "any-holder",
+        execution: "deterministic-onchain",
+        settlement: "immediate",
+        settlementDelaySec: 300,
+        ...extra,
+      });
+    const paper = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, routes: [strong("documented-terms")] },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const onchain = evaluateV9Exit(
+      {
+        circulatingUsd: 20_000_000,
+        routes: [strong("onchain-contract-state", { routeKey: "redemption:onchain-strong", scoreEligible: true })],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const paperTrace = paper.routes.find((entry) => entry.routeKey === "redemption:issuer-documented");
+    // Paper promise capped exactly at the ceiling; the on-chain-verifiable route
+    // keeps its full credit above it.
+    expect(paperTrace?.score).toBe(ceiling);
+    expect(paperTrace?.capsApplied).toContain("evidence-kind:documented-terms");
+    expect(onchain.score!).toBeGreaterThan(ceiling);
+    // A typical same-day documented EMI scores below the ceiling and stays
+    // untouched — the ceiling trims only the strongest paper-promise routes.
+    const sameDay = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [documentedRedemption()] }, V9_CANDIDATE_POLICY_V1);
+    expect(sameDay.score!).toBeLessThan(ceiling);
+    const sameDayTrace = sameDay.routes.find((entry) => entry.routeKey === "redemption:issuer-documented");
+    expect(sameDayTrace?.capsApplied).not.toContain("evidence-kind:documented-terms");
+  });
+
+  it("keeps a zero-capacity issuer redemption floored — the pin-safe data invariant, not the family gate", () => {
+    // TUSD / u-united-stables pass every reliability gate but report an
+    // all-zero-capacity curve (frozen/impaired), so they must stay excluded even
+    // now that the issuer family is admitted.
+    const zeroCapacity = documentedRedemption({
+      capacityCurve: [
+        { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 0, completionRatio: 0, executionCostBps: 200 },
+      ],
+    });
+    const result = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [zeroCapacity] }, V9_CANDIDATE_POLICY_V1);
+    expect(result.score).toBe(floor);
+    expect(result.primaryRouteKey).toBeNull();
+    expect(result.reasons).toContain("unsupported-same-notional-route");
   });
 });

@@ -784,7 +784,7 @@ export const GOLDEN_SCENARIOS: Scenario[] = [
       allowedGrades: ["F", "D"],
       minScore: 28,
       maxScore: 42,
-      expectedBindingCapKind: null,
+      expectedBindingCapKind: "evidence-floor:d",
       expectedRated: true,
     },
   },

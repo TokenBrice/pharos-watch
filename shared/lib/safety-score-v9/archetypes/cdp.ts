@@ -7,12 +7,45 @@ import {
   type V9BackingStructuralReason,
   type V9CdpLiquidationCapacitySelection,
 } from "../backing";
-import type { V9CdpMechanismRiskReview, V9CdpStressCoverageFact } from "../../../types/safety-score-v9-backing";
+import type {
+  V9CdpMechanismRiskReview,
+  V9CdpStressCoverageFact,
+  V9MechanismFactV1,
+  V9MechanismQualityLevel,
+} from "../../../types/safety-score-v9-backing";
 
 export type { V9CdpMechanismRiskReview } from "../../../types/safety-score-v9-backing";
 
 const COVERAGE_SCALE = 1_000_000_000_000n;
 const MAX_RECONCILIATION_TOLERANCE_PPM = 1_000;
+
+const V9_MECHANISM_QUALITY_ORDER: readonly V9MechanismQualityLevel[] = [
+  "strong",
+  "adequate",
+  "limited",
+  "weak",
+  "failed",
+];
+
+/**
+ * Observed bad debt is material only when the shutdown-and-bad-debt mechanism was
+ * actually observed (`known`) and its quality is at or worse than the policy-pinned
+ * materiality floor. A missing/unknown fact is an evidence gap, never a danger signal —
+ * so a thin-but-solvent measurement without observed bad debt does not escalate to
+ * `critical`. This never mutates the shutdown-and-bad-debt firing path; it only reads it.
+ */
+function hasMaterialObservedBadDebt(
+  shutdownAndBadDebt: V9MechanismFactV1,
+  materialityQuality: V9MechanismQualityLevel,
+): boolean {
+  if (shutdownAndBadDebt.status.observationState !== "known" || shutdownAndBadDebt.quality === null) {
+    return false;
+  }
+  return (
+    V9_MECHANISM_QUALITY_ORDER.indexOf(shutdownAndBadDebt.quality) >=
+    V9_MECHANISM_QUALITY_ORDER.indexOf(materialityQuality)
+  );
+}
 
 function coverageRatioMatches(liquidatableDebt: string, offsetDebt: string, ratio: number): boolean {
   const liquidatable = BigInt(liquidatableDebt);
@@ -139,18 +172,40 @@ export function evaluateV9CdpBacking(
   const liquidationCapacity =
     asset.cdpLiquidationCapacitySelection ??
     selectV9CdpLiquidationCapacity(asset.assetId, review, undefined, policy, 0);
+  const cdpPolicy = backing.structural.cdp;
+  // (i) PSM / 1:1-aggregator short-circuit: an evidenced not-applicable collateralization
+  // metric means there is no per-token vault to under-collateralize, so no CR signal fires.
+  // Keyed off the applicability STATE only (never a ratio epsilon) — the `measured` guard
+  // below already excludes `not-applicable`, whose ratio is null by schema.
   if (
     review.metricApplicability.collateralizationRatio.state === "measured" &&
     review.collateralizationRatio !== null &&
-    review.collateralizationRatio < backing.structural.cdp.minimumCollateralizationRatio
+    review.collateralizationRatio < cdpPolicy.minimumCollateralizationRatio
   ) {
+    // (ii) Proportional bands with a `moderate` rung (no critical->nothing cliff) and
+    // (iii) a bad-debt gate: `critical` fires only on genuine insolvency (ratio below the
+    // policy solvency floor) OR observed material bad debt, so a solvent-but-thin CDP no
+    // longer floors to F.
+    const ratio = review.collateralizationRatio;
+    const bands = cdpPolicy.collateralizationBands;
+    const severity =
+      ratio < bands.solvencyFloor ||
+      hasMaterialObservedBadDebt(review.shutdownAndBadDebt, cdpPolicy.badDebtMaterialityQuality)
+        ? bands.criticalSeverity
+        : ratio < bands.moderateFloor
+          ? bands.highSeverity
+          : bands.moderateSeverity;
     structuralReasons.push(
-      createV9BackingStructuralReason(policy, backing.structural.cdp.collateralizationSignal, {
-        pathKey: "mechanism:collateralization-parameters",
-        materialShare: null,
-        evidenceRefIds: review.collateralizationParameters.status.evidenceRefIds,
-        failureDomains: review.collateralizationParameters.failureDomains,
-      }),
+      createV9BackingStructuralReason(
+        policy,
+        { kind: cdpPolicy.collateralizationSignal.kind, severity },
+        {
+          pathKey: "mechanism:collateralization-parameters",
+          materialShare: null,
+          evidenceRefIds: review.collateralizationParameters.status.evidenceRefIds,
+          failureDomains: review.collateralizationParameters.failureDomains,
+        },
+      ),
     );
   }
   if (

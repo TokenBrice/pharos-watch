@@ -545,7 +545,7 @@ describe("Safety Score V9 distribution gates D1-D6", () => {
       driver: "bindingAdverseCap",
       asset: { caps: [{ kind: "signal:centralized-mint:critical", limit: 39, binding: true }] },
     },
-    { driver: "unsupportedExitDesign", asset: { reasonCodes: ["unsupported-same-notional-route"] } },
+    { driver: "unsupportedExitDesign", asset: { reasonCodes: ["no-viable-exit-path"] } },
   ])("D3 attributes an F held by $driver to a measured adverse fact", ({ driver, asset }) => {
     const adverse = { id: "adverse", grade: "F", supplyUsd: 10, ...asset } as DistributionAssetOptions;
     const drivers = measuredAdverseFDrivers(distributionReplay([adverse]).pipeline.candidate.cards[0]);
