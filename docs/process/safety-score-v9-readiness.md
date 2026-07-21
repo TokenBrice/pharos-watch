@@ -392,9 +392,9 @@ ignored research workspace's anchor-coherence plan):
    routes).
 
 The final candidate identity of the chain is policy digest
-`8134bb456778eb9b19c2e013124f4db14dcb924f67ddb4d92ea54bb3995d873a` and
+`8f5af0e2b75ac1bb3f1dd161de915eb4182477a75254fe4721350a9b790298fd` and
 evaluation-build digest
-`33a72c6e5f0855a559d74bac630b3b48be218db65bd6b3d42d698f794c9bad1c`
+`30510e66291d50647eff97cb7582e362f65ae8b741c0d492745ddec4083ad9a8`
 (the batch-6 identity was evaluation-build digest
 `55d7838d57ca7f5ec172527c9c1908f853e4e927609f5038d30b81282d4a5425`,
 candidate
