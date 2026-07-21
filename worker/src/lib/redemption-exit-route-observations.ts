@@ -237,9 +237,17 @@ export function buildRedemptionExitRouteObservation(
  * observation carries only what the row's own reviewed model states: capacity
  * bounded by the documented full-supply basis, documented-terms evidence at
  * the review timestamp, and a cost bound only when the documented fee model is
- * a fixed bps fee. Atomic settlement projects onto the same-notional request;
- * every other settlement model is published as diagnostic
- * `eventual-redemption` evidence (never score-eligible).
+ * a fixed bps fee. Atomic settlement projects onto the same-notional request as
+ * a `protocol`/`issuer-redemption` route; every slower settlement model is
+ * published as `eventual-redemption` evidence that is never fact-level
+ * score-eligible (the schema forbids a score-eligible eventual/null-SLA route).
+ *
+ * The exit pillar now credits these `eventual-redemption` rows above zero at
+ * evaluation time, discounted by settlement speed, precisely because this
+ * derivation only emits after hard-gating on `resolved` status, an `open`
+ * route, documented terms, and a documented full-supply basis. That guard is
+ * the reliability contract the exit-eval credit depends on: an impaired,
+ * closed, or undocumented row returns null here and earns no credit downstream.
  *
  * Works purely from the published entry so the runtime producer and the V9
  * shadow extension derive byte-identical observations from the same row.
@@ -271,8 +279,10 @@ export function deriveSupplyModelExitRouteObservation(
   const reviewTimestamp = reviewedAtSec(entry.docs?.reviewedAt);
   if (reviewTimestamp === null) return null;
 
-  // Only "atomic" satisfies the 300s same-notional horizon; "immediate" is
-  // bounded at an hour and stays diagnostic alongside slower models.
+  // Only "atomic" satisfies the 300s same-notional horizon and projects onto a
+  // top-tier redemption family; every slower model is carried as reliable
+  // `eventual-redemption` evidence (settlementHorizonSec below encodes its
+  // speed) that the exit pillar credits at a settlement-discounted rate.
   const routeFamily: ExitRouteObservation["routeFamily"] =
     entry.settlementModel === "atomic"
       ? entry.routeFamily === "offchain-issuer"

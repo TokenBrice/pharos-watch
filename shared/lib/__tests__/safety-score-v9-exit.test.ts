@@ -411,4 +411,142 @@ describe("evaluateV9Exit", () => {
       outputValueRetention: 1,
     });
   });
+
+  it("falls back to the reviewed settlement horizon when the SLA is null", () => {
+    // The `days`/`queued` models publish a null settlement SLA; the delay the
+    // settlement multiplier prices must fall back to the reviewed horizon rather
+    // than reading as instantaneous.
+    const daysRoute = {
+      routeKey: "redemption:generation:days",
+      routeId: "days",
+      lane: "redemption" as const,
+      sourceGenerationId: "generation",
+      routeFamily: "eventual-redemption" as const,
+      holderAccess: "retail-open" as const,
+      executionModel: "deterministic" as const,
+      executionCertainty: "bounded" as const,
+      modelConfidence: "high" as const,
+      observationConfidence: "medium" as const,
+      evidenceKind: "documented-terms" as const,
+      coverageClass: "exact-lower-bound" as const,
+      settlementModel: "bounded-delay" as const,
+      settlementSlaSec: null,
+      settlementEvidenceRefIds: ["settlement"],
+      physicalResourceKeys: ["rail:issuer"],
+      status: {
+        applicability: { state: "required" as const, policyRuleId: "route-required", rationale: null, gapId: null },
+        observationState: "known" as const,
+        evidenceRefIds: ["route"],
+        gapIds: [],
+      },
+      scoreEligible: false,
+      request: { requestedNotionalUsd: 1_000_000, maxCostBps: 200, settlementHorizonSec: 1_209_600 },
+      capacityCurve: [
+        { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 1_000_000, completionRatio: 1, executionCostBps: 10 },
+      ],
+      output: {
+        status: {
+          applicability: { state: "required" as const, policyRuleId: "output-required", rationale: null, gapId: null },
+          observationState: "known" as const,
+          evidenceRefIds: ["valuation"],
+          gapIds: [],
+        },
+        kind: "fiat" as const,
+        assetKeys: ["USD"],
+        basketWeights: [],
+        valuation: {
+          basis: "reviewed-par" as const,
+          referenceAssetKey: "USD",
+          unitValueUsd: 1,
+          expectedUnitValueUsd: 1,
+          valueRetentionRatio: 1,
+          sourceId: "valuation-source",
+          sourceGenerationId: "valuation-generation",
+          observedAtSec: 1,
+          asOfSec: 1,
+          confidence: "high" as const,
+          freshness: { state: "current" as const, ageSec: 0, maxAgeSec: 1 },
+          evidenceRefIds: ["valuation"],
+        },
+      },
+      failureDomains: [{ kind: "redemption-rail" as const, key: "issuer" }],
+    };
+    expect(projectV9ExitEvaluationRoute(daysRoute).settlementDelaySec).toBe(1_209_600);
+  });
+});
+
+describe("reliable non-atomic redemption credit", () => {
+  function redemptionRoute(overrides: Partial<V9ExitEvaluationRoute> = {}): V9ExitEvaluationRoute {
+    return route({
+      routeKey: "redemption:eventual",
+      routeFamily: "eventual-redemption",
+      scoreEligible: false,
+      coverageClass: "exact-lower-bound",
+      evidenceKind: "documented-terms",
+      access: "issuer-api",
+      holderEligibility: "any-holder",
+      execution: "rules-based-nav",
+      outputQuality: "stable-single",
+      settlement: "same-day",
+      settlementDelaySec: 86_400,
+      capacityCurve: [
+        { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 1_000_000, completionRatio: 1, executionCostBps: 10 },
+        { requestedNotionalUsd: 10_000_000, maxCostBps: 200, executableUsd: 10_000_000, completionRatio: 1, executionCostBps: 10 },
+      ],
+      failureDomains: ["redemption-rail:issuer"],
+      physicalResourceKeys: ["rail:issuer"],
+      ...overrides,
+    });
+  }
+
+  it("credits a documented, reliable, non-atomic redemption above zero", () => {
+    const result = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [redemptionRoute()] }, V9_CANDIDATE_POLICY_V1);
+    // Above the bounded-unknown floor but below an atomic same-notional path.
+    expect(result.score).toBeGreaterThan(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    const atomic = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, routes: [redemptionRoute({ settlement: "atomic", settlementDelaySec: 300, routeFamily: "issuer-redemption", scoreEligible: true })] },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(result.score).toBeLessThan(atomic.score!);
+  });
+
+  it("scores a slower settlement tier strictly below a same-day tier", () => {
+    const sameDay = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [redemptionRoute()] }, V9_CANDIDATE_POLICY_V1);
+    const days = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, routes: [redemptionRoute({ settlement: "days", settlementDelaySec: 1_209_600 })] },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(days.score!).toBeLessThan(sameDay.score!);
+    expect(days.score!).toBeGreaterThan(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+  });
+
+  it("keeps a zero-clearing (unbounded-cost) documented redemption excluded at the bounded floor", () => {
+    const zeroCost = redemptionRoute({
+      capacityCurve: [
+        { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 0, completionRatio: 0, executionCostBps: 200 },
+      ],
+    });
+    const result = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [zeroCost] }, V9_CANDIDATE_POLICY_V1);
+    expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(result.reasons).toContain("unsupported-same-notional-route");
+  });
+
+  it("keeps an unresolved-output documented redemption excluded", () => {
+    const result = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, routes: [redemptionRoute({ outputResolved: false })] },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+  });
+
+  it("does not credit a native non-eventual redemption family that failed the score gate", () => {
+    // Native issuer/protocol observations carry scoreEligible=false for
+    // reliability reasons (impairment, closed route); only the derived
+    // eventual-redemption family is admitted to the relaxed credit.
+    const result = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, routes: [redemptionRoute({ routeFamily: "issuer-redemption" })] },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+  });
 });
