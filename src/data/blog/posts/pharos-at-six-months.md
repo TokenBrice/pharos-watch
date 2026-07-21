@@ -10,7 +10,9 @@ It didn't stay a side project for long. The turning point, one of *the* defining
 
 Here's what makes Pharos different: we don't skim the surface, we monitor the chain itself, at a depth that unlocks features that simply didn't exist before. Live reserve composition: watch a stablecoin's backing move in real time. Redemption backstop analysis: know what actually stands behind your exit. Mint authority tracking: know who holds the keys to the printer. Nobody was doing this. Now it's just... on Pharos, free, refreshing around the clock.
 
-And then there's the depeg arsenal, the beating heart of Pharos. When a depeg hits, Pharos alerts you as it's unfolding. Since we shipped the Depeg Duration Resolver (DDR), Pharos goes further and forecasts how long a depeg will last and how critical it will get. The Safety Score, meanwhile, has quietly proven itself as an early detection system: the stablecoins it scored low kept turning out to be exactly the ones that later broke. And the Depeg Early Warning System (DEWS) closes the loop, watching raw on-chain signals (minting volume, swap flows, and more) to catch trouble hours before it becomes a headline.
+And then there's the depeg arsenal, the beating heart of Pharos. When a depeg hits, Pharos alerts you as it's unfolding. Since we shipped the Depeg Duration Resolver (DDR), Pharos goes further and forecasts how long a depeg will last, how critical it will get, and whether it will make it back to peg at all. Across the forecasts it has scored so far, that recovery call has been right 89.1% of the time. The Safety Score, meanwhile, has quietly proven itself as an early detection system: the stablecoins it scored low kept turning out to be exactly the ones that later broke. And the Depeg Early Warning System (DEWS) closes the loop, watching raw on-chain signals (minting volume, swap flows, and more) to catch trouble hours before it becomes a headline.
+
+![The Depeg Duration Resolver showing ten live depeg forecasts alongside a track record of 89.1% recovery-call accuracy across 46 scored events.](/blog/ddr-track-record.png "The DDR in action: live duration and recovery forecasts, backed by a running 89.1% recovery-call accuracy.")
 
 Detection, alert, forecast: the full loop, running in the open, for everyone.
 
@@ -18,7 +20,7 @@ The DeFi crowd noticed, fast. Several, if not most, of the major depeg events of
 
 ## A new coat of paint, and a seat at the table
 
-Two more milestones to celebrate. In June, Pharos got a complete redesign with the help of a professional designer, Kajmak Studio. The depth was always there; now the surface finally does it justice.
+Two more milestones to celebrate. In June, Pharos got a complete redesign with the help of a professional designer, [Kajmak Studio](https://www.kajmak.studio/). The depth was always there; now the surface finally does it justice.
 
 And just last weekend, we took our biggest swing yet: Pharos has [applied to become a service provider for the Curve Finance DAO](https://gov.curve.finance/t/pharos-watch-proposal-for-scope-1-crvusd-mint-markets-risk/11117), covering crvUSD mint markets risk. A six-month-old project standing up in front of one of DeFi's most storied DAOs and saying "we can carry this." That's how far this ship has sailed already.
 
@@ -26,7 +28,7 @@ And just last weekend, we took our biggest swing yet: Pharos has [applied to bec
 
 Now for the part that gets us out of bed in the morning: what's next.
 
-The mission, agreed with Ike, is for Pharos to reach break-even by the end of the year, so that Pharos is sustainable and can keep delivering its infrastructure, and the immense amount of data it computes, for free to all, under a full open-source license, forever. Thanks to roughly $4,000 in donations received since inception, we're already well on the way, and genuinely moved that people put their money behind this before we ever asked twice.
+The mission, agreed with Ike, is for Pharos to reach break-even by the end of the year, so that Pharos is sustainable and can keep delivering its infrastructure, and the immense amount of data it computes, for free to all, under a full open-source license, forever. Thanks to roughly [$4,000 in donations](/funding/) received since inception, we're already well on the way, and genuinely moved that people put their money behind this before we ever asked twice.
 
 The path from here runs through revenue that fits the mission rather than fighting it: risk service-providing for DAOs, built on Pharos infrastructure; high-frequency API keys for those who need the firehose; customized integrations of Pharos data for DeFi projects. Every step on that path brings the next one closer: more revenue means more hands on deck, a bigger team, and a brighter beam.
 

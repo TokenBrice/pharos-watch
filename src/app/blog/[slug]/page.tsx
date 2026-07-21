@@ -39,6 +39,28 @@ const mdxComponents = {
       </a>
     );
   },
+  // Inline article images: ![alt](/blog/x.png "optional caption"). Plain <img>
+  // (static export = images.unoptimized, no-img-element off); a title becomes a
+  // caption. react-markdown wraps a lone image in <p>, so use block <span>s
+  // (valid inside <p>, unlike <figure>). Lazy-loaded (article images below fold).
+  img: ({ src, alt, title }: React.ComponentProps<"img">) => {
+    if (typeof src !== "string") return null;
+    const image = (
+      <img
+        src={src}
+        alt={alt ?? ""}
+        loading="lazy"
+        className="block w-full rounded-xl border border-border/50"
+      />
+    );
+    if (!title) return image;
+    return (
+      <span className="block space-y-2">
+        {image}
+        <span className="block text-center font-sans text-xs text-muted-foreground">{title}</span>
+      </span>
+    );
+  },
 };
 
 function formatPublishedDate(iso: string): string {
