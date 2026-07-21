@@ -29,8 +29,8 @@ describe("bridge-route coverage audit", () => {
   it("reports honest complete and unresolved registry coverage", () => {
     const audit = buildBridgeRouteCoverageAudit(ACTIVE_STABLECOINS, "2026-07-13T00:00:00.000Z");
     expect(audit.summary).toMatchObject({
-      applicableMultiDeploymentCoins: 207,
-      reviewedProfiles: 207,
+      applicableMultiDeploymentCoins: 208,
+      reviewedProfiles: 208,
       missingProfiles: 0,
       incompleteRouteProfiles: 0,
       invalidEvidenceProfiles: 0,

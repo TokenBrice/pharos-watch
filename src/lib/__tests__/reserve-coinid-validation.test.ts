@@ -53,10 +53,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "The reviewed sources establish the USDC mint and redemption envelope but not the current assets or positions held after the custodial sweep.",
   ],
   [
-    "usdh-hubble::Hubble CDP vault collateral and USDC Peg Stability Module basket::USDC",
-    "The documented backing spans multiple vault collateral assets and PSM USDC, but no current supply-weighted split is published.",
-  ],
-  [
     "ist-agoric::Parity Stability Module stablecoin reserves (IBC USDC/USDT/DAI)::USDC",
     "IST's PSM bucket aggregates multiple IBC stablecoins, so no single tracked stablecoin coinId is representative.",
   ],
