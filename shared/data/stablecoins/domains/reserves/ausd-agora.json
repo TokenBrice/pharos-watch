@@ -29,7 +29,7 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "Cash at regulated financial institutions",
+      "name": "Cash at regulated financial institutions and Agora Reserve Fund cash",
       "pct": 3.89,
       "risk": "very-low",
       "assetClass": "bank-deposit",
@@ -57,8 +57,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex SOL-ULTRA Cohort A reserve research",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex SOL-ULTRA Cohort A reserve research; SOL-KEYSTONE arithmetic correction",
     "confidence": "verified",
     "sources": [
       {
@@ -70,7 +70,7 @@
         "url": "https://docs.agora.finance/developer/transparency"
       }
     ],
-    "rationale": "Grant Thornton's May 31 report lists $41,638,712 of U.S. Treasury securities, $79,954,061 of U.S. Treasury repurchase agreements, $5,111,541 of cash at regulated financial institutions, and $4,813,320 of stablecoins held in segregated wallets, totaling $131,518,300. The normalized weights are 31.66%, 60.79%, 3.89%, and 3.66%. The CUSIP table's latest Treasury maturity is July 30, 2026, 60 days after the report date. The report does not disclose repo term, counterparties, or stablecoin issuers.",
+    "rationale": "Grant Thornton's May 31 report lists $41,638,712 of U.S. Treasury securities, $79,954,061 of U.S. Treasury repurchase agreements, $5,111,541 of direct cash at regulated financial institutions plus $666 of cash held in the Agora Reserve Fund ($5,112,207 combined), and $4,813,320 of stablecoins held in segregated wallets, totaling $131,518,300. The normalized weights are 31.66%, 60.79%, 3.89%, and 3.66%. The CUSIP table's latest Treasury maturity is July 30, 2026, 60 days after the report date. The report does not disclose repo term, counterparties, or stablecoin issuers.",
     "compositionBasis": "Grant Thornton examination of AUSD reserve assets as of May 31, 2026",
     "compositionAsOf": "2026-05-31",
     "scope": "full-composition",

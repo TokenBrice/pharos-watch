@@ -257,8 +257,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex SOL-KEYSTONE reserve research",
     "confidence": "verified",
     "sources": [
       {
@@ -276,9 +276,17 @@
       {
         "label": "DOC token on Rootstock (Blockscout)",
         "url": "https://rootstock.blockscout.com/token/0xE700691Da7b9851F2F35f8b8182C69C53ccad9DB"
+      },
+      {
+        "label": "Rootstock Blockscout - pinned block 9,068,512",
+        "url": "https://rootstock.blockscout.com/block/9068512"
+      },
+      {
+        "label": "Rootstock public RPC",
+        "url": "https://public-node.rsk.co"
       }
     ],
-    "rationale": "DOC is backed solely by rBTC locked in the Money on Chain protocol contract, with BPRO absorbing BTC/USD volatility by design; there is no fiat, T-bill, or stablecoin component. On-chain state at Rootstock block 9,068,512 (2026-07-19) shows the MoC contract (0xf773B590aF754D597770937Fa8ea7AbDf2668370, an AdminUpgradeabilityProxy) holding about 290.91 rBTC against a DOC supply of 3,088,802.53 — roughly 6x coverage at that day's prices — so the reserve is a single fully on-chain-verifiable asset class.",
+    "rationale": "DOC is backed solely by rBTC locked in the Money on Chain protocol contract, with BPRO absorbing BTC/USD volatility by design; there is no fiat, T-bill, or stablecoin component. At Rootstock block 9,068,512 (hash 0xd4c3b95e23e8e4e7d39b2ebb4d327fbce4d06b0ed6f1611b561f42356f875f3a; 2026-07-19 09:18:15 UTC), eth_getBalance for MoC proxy 0xf773B590aF754D597770937Fa8ea7AbDf2668370 returned 290.913108561438332853 rBTC, while an eth_call of totalSupply() on DOC 0xE700691Da7b9851F2F35f8b8182C69C53ccad9DB returned 3,088,802.534983508089427806 DOC. These pinned reads confirm the single fully on-chain-verifiable reserve asset class without relying on the degraded statistics API.",
     "compositionBasis": "Money on Chain protocol design (single-asset rBTC collateral) confirmed against Rootstock contract and token state",
     "compositionAsOf": "2026-07-19",
     "scope": "full-composition",

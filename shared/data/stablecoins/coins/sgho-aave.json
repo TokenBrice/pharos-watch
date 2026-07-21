@@ -40,6 +40,10 @@
             "url": "https://aave.com/help/gho-stablecoin/facilitators"
           },
           {
+            "label": "Aave sGHO documentation",
+            "url": "https://aave.com/docs/ecosystem/gho/sgho"
+          },
+          {
             "label": "sGHO token",
             "url": "https://etherscan.io/address/0xe1753f2e00940cc31213dd92013cf019dfe4ca1d#readContract"
           }
@@ -61,8 +65,8 @@
         "observedBlock": 25573280,
         "sources": [
           {
-            "label": "Aave address book",
-            "url": "https://github.com/aave-dao/aave-address-book"
+            "label": "Aave GovernanceV3 Ethereum address book (pinned)",
+            "url": "https://github.com/aave-dao/aave-address-book/blob/4ee7b505d40760f48bcfdc4edd5fe3d532ec88d2/src/GovernanceV3Ethereum.sol#L55-L56"
           },
           {
             "label": "sGHO ProxyAdmin",
@@ -98,8 +102,8 @@
           "url": "https://etherscan.io/address/0xc15700631020eba02317964550365b95a9a28adb"
         },
         {
-          "label": "Aave address book",
-          "url": "https://github.com/aave-dao/aave-address-book"
+          "label": "Aave GovernanceV3 Ethereum address book (pinned)",
+          "url": "https://github.com/aave-dao/aave-address-book/blob/4ee7b505d40760f48bcfdc4edd5fe3d532ec88d2/src/GovernanceV3Ethereum.sol#L55-L56"
         }
       ]
     },
@@ -111,6 +115,10 @@
         {
           "label": "Aave GHO facilitators",
           "url": "https://aave.com/help/gho-stablecoin/facilitators"
+        },
+        {
+          "label": "Aave sGHO documentation",
+          "url": "https://aave.com/docs/ecosystem/gho/sgho"
         },
         {
           "label": "sGHO token",

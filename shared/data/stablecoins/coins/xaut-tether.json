@@ -82,6 +82,11 @@
       "decimals": 6
     },
     {
+      "chain": "bsc",
+      "address": "0x21caef8a43163eea865baee23b9c2e327696a3bf",
+      "decimals": 6
+    },
+    {
       "chain": "ton",
       "address": "EQA1R_LuQCLHlMgOo1S4G7Y7W1cd0FrAkbA10Zq7rddKxi9k",
       "decimals": 6
@@ -90,6 +95,11 @@
       "chain": "hyperevm",
       "address": "0xf4d9235269a96aadafc9adae454a0618ebe37949",
       "decimals": 6
+    },
+    {
+      "chain": "hyperliquid",
+      "address": "0xfd61ec89811ba3cf2ae12d0ed8ef1afd",
+      "decimals": 8
     },
     {
       "chain": "polygon",
@@ -117,6 +127,11 @@
       "decimals": 6
     },
     {
+      "chain": "conflux",
+      "address": "0xacc6efbe554397b741baadecf0120780b858f5f4",
+      "decimals": 6
+    },
+    {
       "chain": "solana",
       "address": "AymATz4TCL9sWNEEV9Kvyz45CHVhDZ6kUgjTJPzLpU9P",
       "decimals": 6
@@ -124,6 +139,11 @@
     {
       "chain": "monad",
       "address": "0x01bff41798a0bcf287b996046ca68b395dbc1071",
+      "decimals": 6
+    },
+    {
+      "chain": "stable",
+      "address": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
       "decimals": 6
     }
   ],
@@ -266,9 +286,9 @@
   "launchDate": "2020-01-23",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "XAUT is issuer-native on Ethereum, but the reviewed route set includes XAUt0, which locks XAUt in an Ethereum OFT adapter and mints equivalent XAUt0 on destination chains. Pharos scores the weakest durable route as external lock/mint because it depends on LayerZero/OFT lockbox infrastructure.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "summary": "XAUT is issuer-native on Ethereum, while XAUt0 locks XAUt in the Ethereum OFT adapter and mints equivalent representations across 14 destinations. At the near-synchronous 2026-07-21 snapshot, the adapter held 29,714.544713 of 707,747.089000 XAUT (4.198469365%). Destination supplies reconciled to 29,714.438956 XAUt0 (4.198454422%), leaving an explicit 0.105757 XAUT timing/reconciliation residual (0.000014943%). Pharos scores the weakest durable route as external lock/mint because it depends on LayerZero/OFT lockbox infrastructure.",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex bridge route and materiality review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
     "confidence": "verified",
     "protocols": [
       {
@@ -292,6 +312,14 @@
         "url": "https://docs.usdt0.to/"
       },
       {
+        "label": "Official XAUt0 deployment registry",
+        "url": "https://docs.usdt0.to/api/deployments"
+      },
+      {
+        "label": "USDT0 / XAUt0 lock-and-mint design",
+        "url": "https://docs.usdt0.to/overview/how-it-works"
+      },
+      {
         "label": "USDT0 site",
         "url": "https://usdt0.to/"
       },
@@ -313,9 +341,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: canonical XAUt transparent proxy (implementation 0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566, admin 0x856fcc085290ac1e40392442211e6a333afb873e) with owner() = 0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828; the reviewed mintAuthority documents the issuer 3/6 multisig and onlyOwner mint/redeem. Canonical issuer-native deployment; the XAUt0 omnichain adapter locks this token. No bridge control carries the claim.",
+        "reviewNote": "On-chain 2026-07-20: canonical XAUt transparent proxy (implementation 0x4c0d2c74a8d26f1e4f5653021c521f5471f9e566, admin 0x856fcc085290ac1e40392442211e6a333afb873e) with owner() = 0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828; the reviewed mintAuthority documents the issuer 3/6 multisig and onlyOwner mint/redeem. Canonical issuer-native deployment; the XAUt0 omnichain adapter locks this token. No bridge control carries the claim. At Ethereum block 25583977 on 2026-07-21, eth_call totalSupply() returned 707,747.089000 XAUT and balanceOf() for the official OFT adapter 0xb9c2321bb7d0db468f570d10a424d1cc8efd696c returned 29,714.544713 XAUT (4.198469365%). The economically free Ethereum balance is therefore 678,032.544287 XAUT (95.801530635%). The destination total is 0.105757 XAUT below the adapter balance and remains an explicit timing/reconciliation residual.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-21",
+        "observedBlock": 25583977,
         "sources": [
           {
             "label": "XAUt token on Etherscan",
@@ -340,7 +369,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: XAUt0 (2227-byte EIP-1967 proxy, not an OFT — no endpoint() and no LayerZero endpoint baked into the implementation) with owner() = a 3-of-N team Safe 0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8 that gates minting; XAUt0 is the omnichain wrapped version of XAUt backed by XAUt locked in the Ethereum adapter, minted by the Tether/Everdawn operator multisig.",
+        "reviewNote": "On-chain 2026-07-20: XAUt0 (2227-byte EIP-1967 proxy, not an OFT — no endpoint() and no LayerZero endpoint baked into the implementation) with owner() = a 3-of-N team Safe 0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8 that gates minting; XAUt0 is the omnichain wrapped version of XAUt backed by XAUt locked in the Ethereum adapter, minted by the Tether/Everdawn operator multisig. At Arbitrum block 486321936 on 2026-07-21, eth_call totalSupply() returned 167.465807 XAUt0, equal to 0.023661815% of the 707,747.089000 XAUT canonical Ethereum supply.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "arbitrum",
         "controllerAddress": "0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8",
@@ -348,7 +377,8 @@
           "protocol:xaut0-omnichain",
           "contract:arbitrum:0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-21",
+        "observedBlock": 486321936,
         "sources": [
           {
             "label": "XAUt0 token on Arbiscan",
@@ -373,7 +403,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "TON API reads 2026-07-20 (tonapi.io): jetton 'Tether Gold XAUt0' with admin 0:024e04d3582c1609a4d20c9498de29c92f448a27f97f9b88f618d50f5728c7bd, the Tether/Everdawn operator admin that gates minting of the omnichain wrapped XAUt representation on TON.",
+        "reviewNote": "TON API reads 2026-07-20 (tonapi.io): jetton 'Tether Gold XAUt0' with admin 0:024e04d3582c1609a4d20c9498de29c92f448a27f97f9b88f618d50f5728c7bd, the Tether/Everdawn operator admin that gates minting of the omnichain wrapped XAUt representation on TON. At TON masterchain block 81195974 on 2026-07-21, the jetton supply was 4,788.190688 XAUt0, equal to 0.676539793% of the 707,747.089000 XAUT canonical Ethereum supply.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "ton",
         "controllerAddress": "0:024e04d3582c1609a4d20c9498de29c92f448a27f97f9b88f618d50f5728c7bd",
@@ -381,7 +411,8 @@
           "protocol:xaut0-omnichain",
           "contract:ton:0:024e04d3582c1609a4d20c9498de29c92f448a27f97f9b88f618d50f5728c7bd"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-21",
+        "observedBlock": 81195974,
         "sources": [
           {
             "label": "XAUt0 jetton on TONAPI",
@@ -406,7 +437,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: XAUt0 (2227-byte EIP-1967 proxy, not an OFT — no endpoint() and no LayerZero endpoint baked into the implementation) with owner() = a 3-of-N team Safe 0xb64a89ad247a2d691a728bb6822a85eedd7fc541 that gates minting; XAUt0 is the omnichain wrapped version of XAUt backed by XAUt locked in the Ethereum adapter, minted by the Tether/Everdawn operator multisig.",
+        "reviewNote": "On-chain 2026-07-20: XAUt0 (2227-byte EIP-1967 proxy, not an OFT — no endpoint() and no LayerZero endpoint baked into the implementation) with owner() = a 3-of-N team Safe 0xb64a89ad247a2d691a728bb6822a85eedd7fc541 that gates minting; XAUt0 is the omnichain wrapped version of XAUt backed by XAUt locked in the Ethereum adapter, minted by the Tether/Everdawn operator multisig. At HyperEVM block 41089320 on 2026-07-21, eth_call totalSupply() returned 3,579.246323 XAUt0 and balanceOf(0x2000000000000000000000000000000000000129), the official linked HyperCore system address for token index 297, returned 3,341.461557. The remaining 237.784766 XAUt0 is attributed to HyperEVM, equal to 0.033597421% of the 707,747.089000 XAUT canonical Ethereum supply; the system-address balance is attributed separately to HyperCore.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "hyperevm",
         "controllerAddress": "0xb64a89ad247a2d691a728bb6822a85eedd7fc541",
@@ -414,7 +445,8 @@
           "protocol:xaut0-omnichain",
           "contract:hyperevm:0xb64a89ad247a2d691a728bb6822a85eedd7fc541"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-21",
+        "observedBlock": 41089320,
         "sources": [
           {
             "label": "XAUt0 token on Hyperevmscan",
@@ -439,7 +471,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: XAUt0 (2227-byte EIP-1967 proxy, not an OFT — no endpoint() and no LayerZero endpoint baked into the implementation) with owner() = a 3-of-N team Safe 0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8 that gates minting; XAUt0 is the omnichain wrapped version of XAUt backed by XAUt locked in the Ethereum adapter, minted by the Tether/Everdawn operator multisig.",
+        "reviewNote": "On-chain 2026-07-20: XAUt0 (2227-byte EIP-1967 proxy, not an OFT — no endpoint() and no LayerZero endpoint baked into the implementation) with owner() = a 3-of-N team Safe 0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8 that gates minting; XAUt0 is the omnichain wrapped version of XAUt backed by XAUt locked in the Ethereum adapter, minted by the Tether/Everdawn operator multisig. At Polygon block 90644383 on 2026-07-21, eth_call totalSupply() returned 3.221079 XAUt0, equal to 0.000455117% of the 707,747.089000 XAUT canonical Ethereum supply.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "polygon",
         "controllerAddress": "0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8",
@@ -447,7 +479,8 @@
           "protocol:xaut0-omnichain",
           "contract:polygon:0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-21",
+        "observedBlock": 90644383,
         "sources": [
           {
             "label": "XAUt0 token on Polygonscan",
@@ -472,7 +505,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: XAUt0 (2227-byte EIP-1967 proxy, not an OFT — no endpoint() and no LayerZero endpoint baked into the implementation) with owner() = a 3-of-N team Safe 0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8 that gates minting; XAUt0 is the omnichain wrapped version of XAUt backed by XAUt locked in the Ethereum adapter, minted by the Tether/Everdawn operator multisig.",
+        "reviewNote": "On-chain 2026-07-20: XAUt0 (2227-byte EIP-1967 proxy, not an OFT — no endpoint() and no LayerZero endpoint baked into the implementation) with owner() = a 3-of-N team Safe 0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8 that gates minting; XAUt0 is the omnichain wrapped version of XAUt backed by XAUt locked in the Ethereum adapter, minted by the Tether/Everdawn operator multisig. At Plasma block 27731218 on 2026-07-21, eth_call totalSupply() returned 1,415.707714 XAUt0, equal to 0.200030171% of the 707,747.089000 XAUT canonical Ethereum supply.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "plasma",
         "controllerAddress": "0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8",
@@ -480,7 +513,8 @@
           "protocol:xaut0-omnichain",
           "contract:plasma:0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-21",
+        "observedBlock": 27731218,
         "sources": [
           {
             "label": "XAUt0 token on Plasmascan",
@@ -505,7 +539,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: XAUt0 (2227-byte EIP-1967 proxy, not an OFT — no endpoint() and no LayerZero endpoint baked into the implementation) with owner() = a 3-of-N team Safe 0xc95de55ce5e93f788a1faab2a9c9503f51a5dae2 that gates minting; XAUt0 is the omnichain wrapped version of XAUt backed by XAUt locked in the Ethereum adapter, minted by the Tether/Everdawn operator multisig.",
+        "reviewNote": "On-chain 2026-07-20: XAUt0 (2227-byte EIP-1967 proxy, not an OFT — no endpoint() and no LayerZero endpoint baked into the implementation) with owner() = a 3-of-N team Safe 0xc95de55ce5e93f788a1faab2a9c9503f51a5dae2 that gates minting; XAUt0 is the omnichain wrapped version of XAUt backed by XAUt locked in the Ethereum adapter, minted by the Tether/Everdawn operator multisig. At Ink block 51173158 on 2026-07-21, eth_call totalSupply() returned 3.076456 XAUt0, equal to 0.000434683% of the 707,747.089000 XAUT canonical Ethereum supply.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "ink",
         "controllerAddress": "0xc95de55ce5e93f788a1faab2a9c9503f51a5dae2",
@@ -513,7 +547,8 @@
           "protocol:xaut0-omnichain",
           "contract:ink:0xc95de55ce5e93f788a1faab2a9c9503f51a5dae2"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-21",
+        "observedBlock": 51173158,
         "sources": [
           {
             "label": "XAUt0 token on Ink explorer",
@@ -538,7 +573,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: XAUt0 (2227-byte EIP-1967 proxy, not an OFT — no endpoint() and no LayerZero endpoint baked into the implementation) with owner() = a 3-of-N team Safe 0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8 that gates minting; XAUt0 is the omnichain wrapped version of XAUt backed by XAUt locked in the Ethereum adapter, minted by the Tether/Everdawn operator multisig.",
+        "reviewNote": "On-chain 2026-07-20: XAUt0 (2227-byte EIP-1967 proxy, not an OFT — no endpoint() and no LayerZero endpoint baked into the implementation) with owner() = a 3-of-N team Safe 0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8 that gates minting; XAUt0 is the omnichain wrapped version of XAUt backed by XAUt locked in the Ethereum adapter, minted by the Tether/Everdawn operator multisig. At Avalanche block 90908211 on 2026-07-21, eth_call totalSupply() returned 450.638644 XAUt0, equal to 0.063672271% of the 707,747.089000 XAUT canonical Ethereum supply.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "avalanche",
         "controllerAddress": "0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8",
@@ -546,7 +581,8 @@
           "protocol:xaut0-omnichain",
           "contract:avalanche:0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-21",
+        "observedBlock": 90908211,
         "sources": [
           {
             "label": "XAUt0 token on Snowscan",
@@ -571,7 +607,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: XAUt0 (2227-byte EIP-1967 proxy, not an OFT — no endpoint() and no LayerZero endpoint baked into the implementation) with owner() = a 3-of-N team Safe 0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8 that gates minting; XAUt0 is the omnichain wrapped version of XAUt backed by XAUt locked in the Ethereum adapter, minted by the Tether/Everdawn operator multisig.",
+        "reviewNote": "On-chain 2026-07-20: XAUt0 (2227-byte EIP-1967 proxy, not an OFT — no endpoint() and no LayerZero endpoint baked into the implementation) with owner() = a 3-of-N team Safe 0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8 that gates minting; XAUt0 is the omnichain wrapped version of XAUt backed by XAUt locked in the Ethereum adapter, minted by the Tether/Everdawn operator multisig. At Celo block 72770812 on 2026-07-21, eth_call totalSupply() returned 95.714900 XAUt0, equal to 0.013523885% of the 707,747.089000 XAUT canonical Ethereum supply.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "celo",
         "controllerAddress": "0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8",
@@ -579,7 +615,8 @@
           "protocol:xaut0-omnichain",
           "contract:celo:0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-21",
+        "observedBlock": 72770812,
         "sources": [
           {
             "label": "XAUt0 token on Celoscan",
@@ -604,7 +641,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Solana mainnet RPC reads 2026-07-20: the XAUt0 mint has mintAuthority and freezeAuthority 9FJsE8HkoJgxbbydk2R1Gc3hUruNJWwXR6AKYZWWY7Sy, the Tether/Everdawn operator keypair that gates minting of the omnichain wrapped XAUt representation on Solana.",
+        "reviewNote": "Solana mainnet RPC reads 2026-07-20: the XAUt0 mint has mintAuthority and freezeAuthority 9FJsE8HkoJgxbbydk2R1Gc3hUruNJWwXR6AKYZWWY7Sy, the Tether/Everdawn operator keypair that gates minting of the omnichain wrapped XAUt representation on Solana. At slot 434386051 on 2026-07-21, getTokenSupply returned 2,803.964527 XAUt0, equal to 0.396181711% of the 707,747.089000 XAUT canonical Ethereum supply.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "solana",
         "controllerAddress": "9FJsE8HkoJgxbbydk2R1Gc3hUruNJWwXR6AKYZWWY7Sy",
@@ -612,7 +649,8 @@
           "protocol:xaut0-omnichain",
           "contract:solana:9FJsE8HkoJgxbbydk2R1Gc3hUruNJWwXR6AKYZWWY7Sy"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-21",
+        "observedBlock": 434386051,
         "sources": [
           {
             "label": "XAUt0 mint on Solscan",
@@ -637,7 +675,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: XAUt0 (2227-byte EIP-1967 proxy, not an OFT — no endpoint() and no LayerZero endpoint baked into the implementation) with owner() = a 3-of-N team Safe 0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8 that gates minting; XAUt0 is the omnichain wrapped version of XAUt backed by XAUt locked in the Ethereum adapter, minted by the Tether/Everdawn operator multisig.",
+        "reviewNote": "On-chain 2026-07-20: XAUt0 (2227-byte EIP-1967 proxy, not an OFT — no endpoint() and no LayerZero endpoint baked into the implementation) with owner() = a 3-of-N team Safe 0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8 that gates minting; XAUt0 is the omnichain wrapped version of XAUt backed by XAUt locked in the Ethereum adapter, minted by the Tether/Everdawn operator multisig. At Monad block 89293205 on 2026-07-21, eth_call totalSupply() returned 3,571.982389 XAUt0, equal to 0.504697574% of the 707,747.089000 XAUT canonical Ethereum supply.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "monad",
         "controllerAddress": "0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8",
@@ -645,7 +683,8 @@
           "protocol:xaut0-omnichain",
           "contract:monad:0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-21",
+        "observedBlock": 89293205,
         "sources": [
           {
             "label": "XAUt0 token on Monadexplorer",
@@ -654,6 +693,159 @@
           {
             "label": "Tether Gold",
             "url": "https://gold.tether.to/"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x21caef8a43163eea865baee23b9c2e327696a3bf",
+        "sourceChain": "ethereum",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x21caef8a43163eea865baee23b9c2e327696a3bf",
+        "protocol": "XAUt0 omnichain (LayerZero OFT lock-mint)",
+        "issuanceModel": "wrapped-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The official XAUt0 registry identifies the BNB Chain token and OFT. At BSC block 111359969 on 2026-07-21, eth_call totalSupply() returned 12,811.100422 XAUt0, equal to 1.810124071% of the 707,747.089000 XAUT canonical Ethereum supply. A follow-up owner() read at block 111360354 returned the same Tether/Everdawn operator Safe used by the reviewed XAUt0 routes.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "bsc",
+        "controllerAddress": "0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8",
+        "failureDomainKeys": [
+          "protocol:xaut0-omnichain",
+          "contract:bsc:0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8"
+        ],
+        "observedAt": "2026-07-21",
+        "observedBlock": 111359969,
+        "sources": [
+          {
+            "label": "Official XAUt0 deployment registry",
+            "url": "https://docs.usdt0.to/api/deployments"
+          },
+          {
+            "label": "XAUt0 token on BscScan",
+            "url": "https://bscscan.com/address/0x21caef8a43163eea865baee23b9c2e327696a3bf"
+          },
+          {
+            "label": "Pinned BSC block 111359969",
+            "url": "https://bscscan.com/block/111359969"
+          }
+        ]
+      },
+      {
+        "id": "conflux:0xacc6efbe554397b741baadecf0120780b858f5f4",
+        "sourceChain": "ethereum",
+        "destinationChain": "conflux",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xacc6efbe554397b741baadecf0120780b858f5f4",
+        "protocol": "XAUt0 omnichain (LayerZero OFT lock-mint)",
+        "issuanceModel": "wrapped-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The official XAUt0 registry identifies the Conflux eSpace token and OFT. At Conflux eSpace block 152600112 on 2026-07-21, eth_call totalSupply() returned 24.118685 XAUt0, equal to 0.003407811% of the 707,747.089000 XAUT canonical Ethereum supply. A follow-up owner() read at block 152600257 returned operator address 0x789498616f3bb9f8df52288a9311247028872105.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "conflux",
+        "controllerAddress": "0x789498616f3bb9f8df52288a9311247028872105",
+        "failureDomainKeys": [
+          "protocol:xaut0-omnichain",
+          "contract:conflux:0x789498616f3bb9f8df52288a9311247028872105"
+        ],
+        "observedAt": "2026-07-21",
+        "observedBlock": 152600112,
+        "sources": [
+          {
+            "label": "Official XAUt0 deployment registry",
+            "url": "https://docs.usdt0.to/api/deployments"
+          },
+          {
+            "label": "XAUt0 token on ConfluxScan",
+            "url": "https://evm.confluxscan.org/address/0xacc6efbe554397b741baadecf0120780b858f5f4"
+          },
+          {
+            "label": "Pinned Conflux eSpace block 152600112",
+            "url": "https://evm.confluxscan.org/block/152600112"
+          }
+        ]
+      },
+      {
+        "id": "hyperliquid:0xfd61ec89811ba3cf2ae12d0ed8ef1afd",
+        "sourceChain": "hyperevm",
+        "destinationChain": "hyperliquid",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xfd61ec89811ba3cf2ae12d0ed8ef1afd",
+        "protocol": "XAUt0 on HyperCore (HyperEVM-linked spot asset)",
+        "issuanceModel": "wrapped-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The official registry and Hyperliquid spotMeta identify XAUt0 token ID 0xfd61ec89811ba3cf2ae12d0ed8ef1afd (index 297, 8 decimals) as linked to the reviewed HyperEVM XAUt0 token and its Tether/Everdawn owner Safe. At HyperEVM block 41089320, balanceOf(0x2000000000000000000000000000000000000129), the official system address derived from token index 0x129, returned 3,341.461557 XAUt0. This is 0.472126500% of the 707,747.089000 XAUT canonical Ethereum supply and is subtracted from HyperEVM totalSupply rather than counted twice.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0xb64a89ad247a2d691a728bb6822a85eedd7fc541",
+        "failureDomainKeys": [
+          "protocol:xaut0-omnichain",
+          "protocol:hypercore-evm-link",
+          "contract:hyperevm:0xb64a89ad247a2d691a728bb6822a85eedd7fc541"
+        ],
+        "observedAt": "2026-07-21",
+        "observedBlock": 41089320,
+        "sources": [
+          {
+            "label": "Official XAUt0 deployment registry",
+            "url": "https://docs.usdt0.to/api/deployments"
+          },
+          {
+            "label": "Hyperliquid info API",
+            "url": "https://api.hyperliquid.xyz/info"
+          },
+          {
+            "label": "HyperCore to HyperEVM transfer mechanics",
+            "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm/hypercore-less-than-greater-than-hyperevm-transfers"
+          }
+        ]
+      },
+      {
+        "id": "stable:0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+        "sourceChain": "ethereum",
+        "destinationChain": "stable",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+        "protocol": "XAUt0 omnichain (LayerZero OFT lock-mint)",
+        "issuanceModel": "wrapped-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The official XAUt0 registry identifies the Stable token and OFT. At Stable block 32623152 on 2026-07-21, eth_call totalSupply() returned 0.011322 XAUt0, equal to 0.000001600% of the 707,747.089000 XAUT canonical Ethereum supply; owner() returned the same Tether/Everdawn operator Safe used by the reviewed XAUt0 routes.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "stable",
+        "controllerAddress": "0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8",
+        "failureDomainKeys": [
+          "protocol:xaut0-omnichain",
+          "contract:stable:0x4dff9b5b0143e642a3f63a5bcf2d1c328e600bf8"
+        ],
+        "observedAt": "2026-07-21",
+        "observedBlock": 32623152,
+        "sources": [
+          {
+            "label": "Official XAUt0 deployment registry",
+            "url": "https://docs.usdt0.to/api/deployments"
+          },
+          {
+            "label": "XAUt0 token on StableScan",
+            "url": "https://stablescan.xyz/address/0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb"
+          },
+          {
+            "label": "Pinned Stable block 32623152",
+            "url": "https://stablescan.xyz/block/32623152"
           }
         ]
       }

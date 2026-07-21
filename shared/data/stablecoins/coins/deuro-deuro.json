@@ -58,9 +58,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
-    "summary": "dEURO documents immutable Ethereum mainnet protocol contracts, while the tracked deployments extend to Polygon, Arbitrum, Optimism, and Base. No external bridge protocol was resolved, so the reviewed route is treated as canonical rollup/base-layer bridging rather than a separate third-party lockbox.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "summary": "dEURO is natively issued by immutable Ethereum mainnet protocol contracts and extends to Polygon through the PoS bridge and to Arbitrum, OP Mainnet, and Base through their canonical token bridges. A near-synchronous 2026-07-21 totalSupply snapshot attributes 25,029.932946905598786731 dEURO, or 1.5679951192% of canonical Ethereum supply, to the four bridge representations.",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex bridge route and materiality review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
     "confidence": "verified",
     "protocols": [
       {
@@ -109,9 +109,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Native dEURO on Ethereum: immutable token (no EIP-1967 admin, owner() reverts), minted by approved Frankencoin-style minting modules per the reviewed mintAuthority.",
+        "reviewNote": "Native dEURO on Ethereum: immutable token (no EIP-1967 admin, owner() reverts), minted by approved Frankencoin-style minting modules per the reviewed mintAuthority. At Ethereum block 25583986, eth_call totalSupply() returned 1,596,301.712897812134110907 dEURO. Subtracting the near-synchronous Polygon, Arbitrum, OP Mainnet, and Base representation supplies leaves 1,571,271.779950906535324176 dEURO economically resident on Ethereum (98.4320048807%).",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-21",
+        "observedBlock": 25583986,
         "sources": [
           {
             "label": "dEURO token on Etherscan",
@@ -120,6 +121,10 @@
           {
             "label": "dEURO docs",
             "url": "https://docs.deuro.com/"
+          },
+          {
+            "label": "Pinned Ethereum block 25583986",
+            "url": "https://etherscan.io/block/25583986"
           }
         ]
       },
@@ -136,7 +141,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: hasRole(DEPOSITOR_ROLE, 0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa) = true on the DecentralizedEURO(PoS) child token, so the Polygon PoS ChildChainManager is the mint authority for this representation.",
+        "reviewNote": "Controller verified on-chain 2026-07-20: hasRole(DEPOSITOR_ROLE, 0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa) = true on the DecentralizedEURO(PoS) child token, so the Polygon PoS ChildChainManager is the mint authority for this representation. At Polygon block 90644451, eth_call totalSupply() returned 19,616.618741270895590385 dEURO, equal to 1.2288791387% of the canonical Ethereum supply measured seven seconds earlier.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "polygon",
         "controllerAddress": "0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa",
@@ -144,7 +149,8 @@
           "protocol:polygon-pos-bridge",
           "contract:polygon:0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-21",
+        "observedBlock": 90644451,
         "sources": [
           {
             "label": "dEURO(PoS) child token on Polygonscan (DEPOSITOR_ROLE probed 2026-07-20)",
@@ -153,6 +159,10 @@
           {
             "label": "Polygon PoS state-transfer documentation",
             "url": "https://docs.polygon.technology/pos/how-to/bridging/l1-l2-communication/state-transfer"
+          },
+          {
+            "label": "Pinned Polygon block 90644451",
+            "url": "https://polygonscan.com/block/90644451"
           }
         ]
       },
@@ -169,7 +179,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: l2Gateway() of the Arbitrum dEURO token returns 0x09e9222e96e7b4ae2a407b98d48e330053351eee, the Arbitrum One L2 ERC20 gateway, the mint authority for this canonically bridged representation.",
+        "reviewNote": "Controller verified on-chain 2026-07-20: l2Gateway() of the Arbitrum dEURO token returns 0x09e9222e96e7b4ae2a407b98d48e330053351eee, the Arbitrum One L2 ERC20 gateway, the mint authority for this canonically bridged representation. At Arbitrum block 486322344, eth_call totalSupply() returned 3,838.470704634703196346 dEURO, equal to 0.2404602258% of the canonical Ethereum supply measured seven seconds earlier.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "arbitrum",
         "controllerAddress": "0x09e9222e96e7b4ae2a407b98d48e330053351eee",
@@ -177,7 +187,8 @@
           "protocol:arbitrum-canonical-messaging",
           "contract:arbitrum:0x09e9222e96e7b4ae2a407b98d48e330053351eee"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-21",
+        "observedBlock": 486322344,
         "sources": [
           {
             "label": "dEURO on Arbiscan (l2Gateway() probed 2026-07-20)",
@@ -186,6 +197,10 @@
           {
             "label": "L2BEAT Arbitrum Canonical",
             "url": "https://l2beat.com/interop/protocols/arbitrum"
+          },
+          {
+            "label": "Pinned Arbitrum block 486322344",
+            "url": "https://arbiscan.io/block/486322344"
           }
         ]
       },
@@ -202,7 +217,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: bridge()/l2Bridge() of the OP Mainnet dEURO token return 0x4200000000000000000000000000000000000010, the L2StandardBridge, the mint authority for this canonically bridged representation; l1Token()/remoteToken() return the Ethereum dEURO 0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea.",
+        "reviewNote": "Controller verified on-chain 2026-07-20: bridge()/l2Bridge() of the OP Mainnet dEURO token return 0x4200000000000000000000000000000000000010, the L2StandardBridge, the mint authority for this canonically bridged representation; l1Token()/remoteToken() return the Ethereum dEURO 0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea. At OP Mainnet block 154536448, eth_call totalSupply() returned 107.193501 dEURO, equal to 0.0067151153% of the canonical Ethereum supply measured six seconds earlier.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "optimism",
         "controllerAddress": "0x4200000000000000000000000000000000000010",
@@ -210,7 +225,8 @@
           "protocol:optimism-canonical-messaging",
           "contract:optimism:0x4200000000000000000000000000000000000010"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-21",
+        "observedBlock": 154536448,
         "sources": [
           {
             "label": "dEURO on optimism explorer (bridge() probed 2026-07-20)",
@@ -219,6 +235,10 @@
           {
             "label": "L2BEAT canonical rollup bridge",
             "url": "https://l2beat.com/interop"
+          },
+          {
+            "label": "Pinned OP Mainnet block 154536448",
+            "url": "https://optimistic.etherscan.io/block/154536448"
           }
         ]
       },
@@ -235,7 +255,7 @@
         "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: bridge()/l2Bridge() of the Base dEURO token return 0x4200000000000000000000000000000000000010, the L2StandardBridge, the mint authority for this canonically bridged representation; l1Token()/remoteToken() return the Ethereum dEURO 0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea.",
+        "reviewNote": "Controller verified on-chain 2026-07-20: bridge()/l2Bridge() of the Base dEURO token return 0x4200000000000000000000000000000000000010, the L2StandardBridge, the mint authority for this canonically bridged representation; l1Token()/remoteToken() return the Ethereum dEURO 0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea. At Base block 48941163, eth_call totalSupply() returned 1,467.65 dEURO, equal to 0.0919406393% of the canonical Ethereum supply measured six seconds earlier.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "base",
         "controllerAddress": "0x4200000000000000000000000000000000000010",
@@ -243,7 +263,8 @@
           "protocol:base-canonical-messaging",
           "contract:base:0x4200000000000000000000000000000000000010"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-21",
+        "observedBlock": 48941163,
         "sources": [
           {
             "label": "dEURO on base explorer (bridge() probed 2026-07-20)",
@@ -252,6 +273,10 @@
           {
             "label": "L2BEAT canonical rollup bridge",
             "url": "https://l2beat.com/interop"
+          },
+          {
+            "label": "Pinned Base block 48941163",
+            "url": "https://basescan.org/block/48941163"
           }
         ]
       }

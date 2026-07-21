@@ -312,9 +312,9 @@
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "USDG is Paxos-issued and Paxos's official USDG mainnet documentation lists native deployments on Ethereum, Solana, Ink, X Layer, Arbitrum, and Robinhood Chain, each with a Paxos-operated SupplyControl contract. USDG on Hyperliquid is USDG0, the omnichain representation issued by Paxos Labs over LayerZero OFT, not a native Paxos deployment. Native routes are reviewed as issuer-native multichain issuance/redemption; the Hyperliquid USDG0 route is reviewed as an issuer-affiliated LayerZero OFT representation.",
-    "reviewedAt": "2026-07-19",
-    "reviewer": "Codex bridge route review; Kimi rescue lane 1c (2026-07-19)",
+    "summary": "USDG is Paxos-issued and Paxos's official USDG mainnet documentation lists native deployments on Ethereum, Solana, Ink, X Layer, Arbitrum, and Robinhood Chain, each with a Paxos-operated SupplyControl contract. USDG on Hyperliquid is USDG0, the omnichain representation issued by Paxos Labs over LayerZero OFT, not a native Paxos deployment. Native routes are reviewed as issuer-native multichain issuance/redemption; the Hyperliquid USDG0 route is reviewed as an issuer-affiliated LayerZero OFT representation. Pinned totalSupply reads on 2026-07-21 sum to 3,244,471,126.287402 USDG across Paxos's six official native deployments. X Layer holds 1,852,539,363.075967 USDG, or 57.09834642% of that native supply, so the chain:xlayer common-mode exposure is measured and remains above the 10% materiality threshold. USDG0 is excluded from this denominator because it is a representation rather than additional Paxos-native issuance.",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex bridge route review; Kimi rescue lane 1c (2026-07-19); SOL-KEYSTONE supply attribution (2026-07-21)",
     "confidence": "verified",
     "sources": [
       {
@@ -346,8 +346,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned totalSupply() at Ethereum block 25583961 on 2026-07-21 returned 461,280,212.930273 USDG, 14.21742388% of the summed 3,244,471,126.287402 USDG native deployment supply.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-16",
+        "observedAt": "2026-07-21",
+        "observedBlock": 25583961,
         "sources": [
           {
             "label": "Global Dollar USDG deployments and USDG0 distinction",
@@ -356,6 +358,10 @@
           {
             "label": "Paxos USDG contract specification",
             "url": "https://github.com/paxosglobal/usdg-contract"
+          },
+          {
+            "label": "USDG Ethereum token supply",
+            "url": "https://etherscan.io/token/0xe343167631d89b6ffc58b88d6b7fb0228795491d"
           }
         ]
       },
@@ -370,8 +376,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned totalSupply() at Arbitrum block 486321156 on 2026-07-21 returned 601,207.022675 USDG, 0.01853020% of summed native deployment supply.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-19",
+        "observedAt": "2026-07-21",
+        "observedBlock": 486321156,
         "sources": [
           {
             "label": "Paxos USDG main network deployments (Arbitrum token and SupplyControl)",
@@ -380,6 +388,10 @@
           {
             "label": "Paxos USDG contract specification",
             "url": "https://github.com/paxosglobal/usdg-contract"
+          },
+          {
+            "label": "USDG Arbitrum token supply",
+            "url": "https://arbiscan.io/token/0x004b506865409877c9fa29bfb1eba929984b9bbc"
           }
         ]
       },
@@ -394,8 +406,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned getTokenSupply at Solana slot 434385633 on 2026-07-21 returned 609,403,834.527242 USDG, 18.78284043% of summed native deployment supply.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-16",
+        "observedAt": "2026-07-21",
+        "observedBlock": 434385633,
         "sources": [
           {
             "label": "Global Dollar USDG deployments and USDG0 distinction",
@@ -404,6 +418,10 @@
           {
             "label": "Paxos USDG contract specification",
             "url": "https://github.com/paxosglobal/usdg-contract"
+          },
+          {
+            "label": "USDG Solana mint supply",
+            "url": "https://solscan.io/token/2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH"
           }
         ]
       },
@@ -418,8 +436,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned totalSupply() at Ink block 51172962 on 2026-07-21 returned 38,834,344.083334 USDG, 1.19693911% of summed native deployment supply.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-16",
+        "observedAt": "2026-07-21",
+        "observedBlock": 51172962,
         "sources": [
           {
             "label": "Global Dollar USDG deployments and USDG0 distinction",
@@ -428,6 +448,10 @@
           {
             "label": "Paxos USDG contract specification",
             "url": "https://github.com/paxosglobal/usdg-contract"
+          },
+          {
+            "label": "USDG Ink token supply",
+            "url": "https://explorer.inkonchain.com/token/0xe343167631d89b6ffc58b88d6b7fb0228795491d"
           }
         ]
       },
@@ -442,8 +466,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned totalSupply() at X Layer block 65902340 on 2026-07-21 returned 1,852,539,363.075967 USDG, 57.09834642% of the summed 3,244,471,126.287402 USDG native deployment supply. The denominator sums the six Paxos-listed native deployments and excludes the separately reviewed USDG0 representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-16",
+        "observedAt": "2026-07-21",
+        "observedBlock": 65902340,
         "sources": [
           {
             "label": "Global Dollar USDG deployments and USDG0 distinction",
@@ -452,6 +478,10 @@
           {
             "label": "Paxos USDG contract specification",
             "url": "https://github.com/paxosglobal/usdg-contract"
+          },
+          {
+            "label": "USDG X Layer token supply",
+            "url": "https://www.oklink.com/xlayer/token/0x4ae46a509f6b1d9056937ba4500cb143933d2dc8"
           }
         ]
       },
@@ -466,8 +496,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned totalSupply() at Robinhood Chain block 15908433 on 2026-07-21 returned 281,812,164.647911 USDG, 8.68591994% of summed native deployment supply.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-19",
+        "observedAt": "2026-07-21",
+        "observedBlock": 15908433,
         "sources": [
           {
             "label": "Paxos USDG main network deployments (Robinhood Chain token and SupplyControl)",
@@ -480,6 +512,10 @@
           {
             "label": "Global Dollar USDG deployments and USDG0 distinction",
             "url": "https://globaldollar.com/build-with-usdg"
+          },
+          {
+            "label": "USDG Robinhood Chain token supply",
+            "url": "https://robinhoodchain.blockscout.com/token/0x5fc5360d0400a0fd4f2af552add042d716f1d168"
           }
         ]
       },

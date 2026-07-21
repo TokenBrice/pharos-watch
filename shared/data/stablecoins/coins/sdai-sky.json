@@ -212,9 +212,9 @@
   "deploymentModel": "canonical-bridge",
   "bridgeRouteRisk": {
     "tier": "canonical-rollup-bridge",
-    "summary": "Ethereum sDAI is the native ERC-4626 savings vault. The Base and OP Mainnet contracts are immutable OptimismMintableERC20 representations whose BRIDGE is the chain-local L2StandardBridge and whose REMOTE_TOKEN is Ethereum sDAI, so both routes use the canonical OP Stack lock/mint bridge rather than a Sky PSM or third-party bridge.",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex bridge route review",
+    "summary": "Ethereum sDAI is the native ERC-4626 savings vault. The Base and OP Mainnet contracts are immutable OptimismMintableERC20 representations whose BRIDGE is the chain-local L2StandardBridge and whose REMOTE_TOKEN is Ethereum sDAI, so both routes use the canonical OP Stack lock/mint bridge rather than a Sky PSM or third-party bridge. A near-synchronous 2026-07-21 totalSupply snapshot attributes 144,534.700637683482349953 sDAI, or 0.0984226812% of canonical Ethereum supply, to the two bridge representations.",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex bridge route and materiality review",
     "confidence": "verified",
     "protocols": [
       {
@@ -252,9 +252,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
+        "reviewNote": "At Ethereum block 25583987, eth_call totalSupply() returned 146,851,009.192451258859672279 sDAI. Subtracting the near-synchronous Base and OP Mainnet representation supplies leaves 146,706,474.491813575377322326 sDAI economically resident on Ethereum (99.9015773187%); the two bridge routes account for the remaining 0.0984226812%.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
-        "observedBlock": 25530298,
+        "observedAt": "2026-07-21",
+        "observedBlock": 25583987,
         "sources": [
           {
             "label": "Spark sDAI token docs",
@@ -263,6 +264,10 @@
           {
             "label": "Ethereum sDAI contract",
             "url": "https://etherscan.io/address/0x83f20f44975d03b1b09e64809b757c47f942beea#readContract"
+          },
+          {
+            "label": "Pinned Ethereum block 25583987",
+            "url": "https://etherscan.io/block/25583987"
           }
         ]
       },
@@ -285,9 +290,10 @@
           "contract:base:0x4200000000000000000000000000000000000010"
         ],
         "reviewDisposition": "reviewed",
+        "reviewNote": "At Base block 48941170, eth_call totalSupply() returned 138.573287971168342500 sDAI, equal to 0.0000943631% of the 146,851,009.192451258859672279 sDAI canonical Ethereum supply measured eight seconds earlier.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
-        "observedBlock": 48617859,
+        "observedAt": "2026-07-21",
+        "observedBlock": 48941170,
         "sources": [
           {
             "label": "Base sDAI contract",
@@ -296,6 +302,10 @@
           {
             "label": "Base Standard Bridge docs",
             "url": "https://docs.base.org/base-chain/specs/protocol/bridging/bridges"
+          },
+          {
+            "label": "Pinned Base block 48941170",
+            "url": "https://basescan.org/block/48941170"
           }
         ]
       },
@@ -318,9 +328,10 @@
           "contract:optimism:0x4200000000000000000000000000000000000010"
         ],
         "reviewDisposition": "reviewed",
+        "reviewNote": "At OP Mainnet block 154536455, eth_call totalSupply() returned 144,396.127349712314007453 sDAI, equal to 0.0983283180% of the 146,851,009.192451258859672279 sDAI canonical Ethereum supply measured eight seconds earlier.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
-        "observedBlock": 154213143,
+        "observedAt": "2026-07-21",
+        "observedBlock": 154536455,
         "sources": [
           {
             "label": "OP Mainnet sDAI contract",
@@ -329,6 +340,10 @@
           {
             "label": "Optimism Standard Bridge docs",
             "url": "https://docs.optimism.io/app-developers/guides/bridging/standard-bridge"
+          },
+          {
+            "label": "Pinned OP Mainnet block 154536455",
+            "url": "https://optimistic.etherscan.io/block/154536455"
           }
         ]
       }
