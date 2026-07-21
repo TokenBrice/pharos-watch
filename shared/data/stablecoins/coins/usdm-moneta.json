@@ -14,18 +14,19 @@
   "collateral": "USD bank deposits and money market funds managed by Fidelity and Western Asset Management (Moneta/USA issuance) and Sparebanken Norge / Amundi USD MM fund (NBX/EEA issuance), held in segregated reserve accounts",
   "pegMechanism": "Direct 1:1 redemption through Moneta (USA) or NBX (EEA); KYC required; Charli3 oracle verifies reserve backing on-chain before each mint on Cardano",
   "mechanismArchetype": "fiat-cash",
+  "implementationLaunchDate": "2024-03-16",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-5 Safety Score V9 mechanism review",
-    "rationale": "Moneta and NBX disclosures support the fiat-cash classification, but do not provide a complete current deployment-wide account of claim, custody, reconciliation, recovery, and administrative control semantics; those gaps remain unresolved.",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex V9 curation",
+    "rationale": "Moneta's official fundamentals notice states that USDM went live on Cardano mainnet for institutional partners on March 16, 2024 and identifies the policy ID that matches the tracked asset. Its direct 1:1 fiat-reserve issuance and redemption design supports the fiat-cash archetype.",
     "sources": [
       {
-        "label": "moneta.global",
-        "url": "https://moneta.global/"
+        "label": "Moneta USDM fundamentals and mainnet launch",
+        "url": "https://moneta.global/blog/usdm-core-fundamentals/"
       },
       {
-        "label": "moneta.global",
+        "label": "Moneta USDM Lite Paper",
         "url": "https://moneta.global/USDM%20Lite%20Paper.pdf"
       }
     ]

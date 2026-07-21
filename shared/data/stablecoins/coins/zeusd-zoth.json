@@ -385,12 +385,25 @@
     "reconciliation": "unknown",
     "supervision": "unknown",
     "upgradeability": {
-      "model": "unknown",
-      "canChangeMintLogic": "unknown",
+      "model": "uups",
+      "proxyAddresses": [
+        "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761"
+      ],
+      "implementationAddresses": [
+        "0xc80a5a2658fd44e76b0940773bd3c2c2cd9454de"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "ZeUSD token owner/admin EOA",
+      "observedAt": "2026-07-21",
+      "observedBlock": 25579960,
       "sources": [
         {
-          "label": "ZeUSD implementation",
+          "label": "ZeUSD implementation (verified source; _authorizeUpgrade is onlyRole(DEFAULT_ADMIN_ROLE))",
           "url": "https://sourcify.dev/server/v2/contract/1/0xc80a5a2658fd44e76b0940773bd3c2c2cd9454de?fields=sources"
+        },
+        {
+          "label": "ZeUSD token on Etherscan (EIP-1967 implementation/admin slot reads)",
+          "url": "https://etherscan.io/address/0x7dc9748da8e762e569f9269f48f69a1a9f8ea761"
         },
         {
           "label": "ZeUSD router implementation",
@@ -413,14 +426,14 @@
           "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x7dc9748da8e762e569f9269f48f69a1a9f8ea761&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
         }
       ],
-      "evidence": "Direct reads and Sourcify source identify a router-only token mint path plus an EOA token owner/admin that can set the router. The reviewed primary sources do not enumerate the router's active administration, its terminal upgrade authority, or current control parity across all tracked deployments. Zoth's current reserve review also records no public assets-and-liabilities reconciliation or verified prudential-supervision record for this token.",
+      "evidence": "Direct reads and Sourcify source identify a router-only token mint path plus an EOA token owner/admin that can set the router. The reviewed primary sources do not enumerate the router's active administration or current control parity across all tracked deployments. Zoth's current reserve review also records no public assets-and-liabilities reconciliation or verified prudential-supervision record for this token. Upgrade-authority check (2026-07-21): at Ethereum block 25579960, the ZeUSD token's EIP-1967 implementation slot resolves to 0xc80a5a2658fd44e76b0940773bd3c2c2cd9454de and its admin slot is zero (no separate ProxyAdmin), confirming a UUPS pattern; the pinned verified implementation source shows _authorizeUpgrade is gated onlyRole(DEFAULT_ADMIN_ROLE), the same role already confirmed held by the token owner/admin EOA 0x3604582f56565d7060D73829FfB9EBD579218Dca. The canonical Ethereum token's upgrade authority is therefore resolved; the router's own access-control administration and upgrade-authority parity across the manta/metis/avalanche OFT deployments remain unresolved.",
       "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
       "disposition": "unresolved",
       "unresolvedQuestions": [
         "Router admin role grants include additional addresses in logs; final row should review the router's own access-control implementation and current active admin set.",
         "No multisig setup was verified for the token owner/admin EOA.",
-        "Reconcile the current token and router upgrade path for every tracked ZeUSD deployment; the reviewed implementation source alone does not establish the terminal authority."
+        "The Ethereum canonical token's UUPS upgrade authority (DEFAULT_ADMIN_ROLE) is now resolved on-chain (2026-07-21); the router's own access-control administration and upgrade-authority parity across the manta/metis/avalanche OFT deployments remain open."
       ]
     }
   },

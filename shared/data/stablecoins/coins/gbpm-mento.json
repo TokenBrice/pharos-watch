@@ -26,21 +26,21 @@
   },
   "oracleRisk": {
     "tier": "redundant-with-failover",
-    "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them.",
-    "branchModel": "single-path",
+    "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them. The GBPm Celo CDP branch (Liquity v2 fork) has been reviewed on-chain: USDm-collateralized troves liquidate below a 110% MCR with a 135% system CCR and a 110% shutdown SCR.",
+    "branchModel": "multi-branch",
     "branchApplicability": {
-      "disposition": "unresolved",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "OpenAI Codex Safety Score V9 oracle review",
-      "rationale": "The current Mento documentation identifies shared SortedOracles, OracleAdapter, and BreakerBox infrastructure, but the reviewed public sources do not establish the complete production GBPm liquidation and failure-handling branch for both tracked deployments.",
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-21",
+      "reviewer": "Claude V9 evidence-gap curation",
+      "rationale": "GBPm's material issuance path is the Celo USDm-collateralized CDP (Liquity v2 fork); its oracle and liquidation parameters were confirmed on-chain via the SystemParamsProxyGBPm contract. Monad's GBPm deployment is a separate issuer-native mirrored mint (already reviewed under mintAuthority/bridgeRouteRisk) with no independent collateral-liquidation branch of its own, so only the Celo CDP branch is inventoried here.",
       "sources": [
         {
           "label": "Mento V3 smart contracts docs",
           "url": "https://docs.mento.org/mento-v3/build/smart-contracts"
         },
         {
-          "label": "Mento BreakerBox docs",
-          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+          "label": "Mento CDP deep-dive",
+          "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp"
         },
         {
           "label": "Mento deployment addresses",
@@ -48,8 +48,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex Safety Score V9 oracle review",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "OpenAI Codex Safety Score V9 oracle review; Claude V9 evidence-gap curation",
     "confidence": "verified",
     "sources": [
       {
@@ -59,6 +59,65 @@
       {
         "label": "Mento BreakerBox docs",
         "url": "https://docs.mento.org/mento-v3/build/smart-contracts/breakerbox"
+      }
+    ],
+    "branches": [
+      {
+        "id": "gbpm-usdm-cdp",
+        "label": "GBPm/USDm CDP (Liquity v2 fork, Celo)",
+        "tier": "redundant-with-failover",
+        "summary": "GBPm's Celo CDP branch prices GBP/USD via Mento's FXPriceFeed -> OracleAdapter -> SortedOracles path and liquidates USDm-collateralized troves below a 110% MCR, with a 135% system CCR and a 110% SCR shutdown threshold enforced by a dedicated SystemParams contract.",
+        "collateralAssets": ["USDm"],
+        "chains": ["celo"],
+        "feeds": [
+          {
+            "provider": "Mento SortedOracles via OracleAdapter",
+            "path": "SortedOracles GBP/USD rate feed -> Mento OracleAdapter.getFXRateIfValid -> GBPm FXPriceFeed -> TroveManager collateral ratio",
+            "address": "0xBBB144A67f4403112b4C895Cc85d5EE4F90013DE",
+            "chain": "celo",
+            "observedAt": "2026-07-21",
+            "observedBlock": 72722909,
+            "failureDomainKeys": ["mento-sortedoracles", "celo"]
+          }
+        ],
+        "fallbackBehavior": "GBPm's FXPriceFeed (0xBBB144A67f4403112b4C895Cc85d5EE4F90013DE) reads oracleAdapter.getFXRateIfValid(rateFeedID) during normal operation; per Mento's CDP documentation it falls back to a cached lastValidPrice during emergency shutdown or CDP-market-closed windows (BreakerBox-gated weekends/holidays), with no alternate third-party oracle provider.",
+        "observedAt": "2026-07-21",
+        "observedBlock": 72722909,
+        "collateralParameters": [
+          {
+            "asset": "USDm",
+            "minimumCollateralRatioPct": 110,
+            "shutdownCollateralRatioPct": 110,
+            "note": "On-chain SystemParamsProxyGBPm (0x70536e44d1D9238BA8E35Ffe63Bb388a63F0DE51) returned MCR=1.1e18 (110%), CCR=1.35e18 (135% critical/system ratio), and SCR=1.1e18 (110% shutdown ratio) at Celo block 72722909."
+          }
+        ],
+        "liquidationMechanism": "Troves below the 110% MCR are liquidated: the StabilityPoolGBPm offsets debt first (5% liquidation penalty to SP depositors, per SystemParams.LIQUIDATION_PENALTY_SP), with any shortfall redistributed to remaining troves at a 10% penalty (LIQUIDATION_PENALTY_REDISTRIBUTION). TroveManager reported 4 open trove IDs and shutdownTime=0 (not shut down) at Celo block 72722909.",
+        "liquidationDelaySec": 0,
+        "backstop": "StabilityPoolGBPm (0x06346c0fAB682dBde9f245D2D84677592E8aaa15) holds GBPm deposits; depositors absorb liquidated debt and receive the corresponding USDm collateral at the 5% Stability Pool penalty rate before any redistribution to remaining troves.",
+        "shutdownOrBadDebtBehavior": "If the branch's total collateral ratio falls below the 110% SCR, redemptions are blocked (TroveManager requires TCR >= SCR and shutdownTime == 0 to permit redemption) and the branch can enter shutdown, during which FXPriceFeed serves its cached lastValidPrice instead of a live oracle read. Redistribution among remaining troves is the bad-debt backstop for any shortfall the Stability Pool cannot absorb.",
+        "failureDomainKeys": ["mento-sortedoracles", "mento-cdp-systemparams", "celo"],
+        "sources": [
+          {
+            "label": "Mento CDP deep-dive",
+            "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp"
+          },
+          {
+            "label": "Mento deployment addresses",
+            "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+          },
+          {
+            "label": "GBPm TroveManager on Celoscan",
+            "url": "https://celoscan.io/address/0xb38aEf2bF4e34B997330D626EBCd7629De3885C9"
+          },
+          {
+            "label": "SystemParamsProxyGBPm on Celoscan",
+            "url": "https://celoscan.io/address/0x70536e44d1D9238BA8E35Ffe63Bb388a63F0DE51"
+          },
+          {
+            "label": "StabilityPoolGBPm on Celoscan",
+            "url": "https://celoscan.io/address/0x06346c0fAB682dBde9f245D2D84677592E8aaa15"
+          }
+        ]
       }
     ]
   },
@@ -114,6 +173,31 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "GBPm is a legacy StableTokenV3 (cGBP) whose mint() is authorized via the Celo Registry Broker (0x777A...). The token owner and proxy admin both resolve to the 4/6 Mento Safe (0x58099...). Signercount corrected from 7 to 6 (one signer rotated out, confirmed via Safe API).",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xccf663b1ff11028f0b19058d0f7b674004a40746",
+        "0x39bb4e0a204412bb98e821d25e7d955e69d40fd1"
+      ],
+      "adminAddresses": [
+        "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+        "0x7f017a0a94e4fe5afe688064afd76b25d4dac8ea"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Mento Safe — GBPm token owner and proxy admin",
+      "observedAt": "2026-07-20",
+      "observedBlock": 69287341,
+      "sources": [
+        {
+          "label": "GBPm Celo token deployment",
+          "url": "https://celo.blockscout.com/address/0xccf663b1ff11028f0b19058d0f7b674004a40746?tab=contract"
+        },
+        {
+          "label": "GBPm Monad token deployment",
+          "url": "https://monad.blockscout.com/address/0x39bb4e0a204412bb98e821d25e7d955e69d40fd1?tab=contract"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "celo",
@@ -171,6 +255,23 @@
           }
         ],
         "evidence": "At Celo block 69287341, owner() on GBPm returned 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458; EIP-1967 proxy admin slot returned the same Safe address. Safe API (celo chain) confirmed threshold 4, 6 owners (drift from prior 7-owner data — one signer rotated out), no modules, zero guard, fallbackHandler 0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99."
+      },
+      {
+        "chain": "monad",
+        "address": "0x7f017a0a94e4fe5afe688064afd76b25d4dac8ea",
+        "label": "Monad GBPm ProxyAdmin (owned by the same Mento Safe)",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "GBPm Monad token deployment",
+            "url": "https://monadexplorer.com/address/0x39bb4e0a204412bb98e821d25e7d955e69d40fd1"
+          }
+        ],
+        "evidence": "The reviewed bridgeRouteRisk on-chain check (2026-07-20) established that GBPm on Monad is a transparent proxy (implementation 0x6a8ff60a89f3f359fa16f45076d6dd1712b5e62e) fronted by ProxyAdmin 0x7f017a0a94e4fe5afe688064afd76b25d4dac8ea, whose owner() is the same 4-of-6 Mento Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 already resolved for Celo — an issuer-operated deployment, not a third-party bridge admin."
       }
     ],
     "review": {
@@ -184,9 +285,9 @@
           "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
         }
       ],
-      "evidence": "At Celo block 69287341: owner() = Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 (confirmed); EIP-1967 proxy admin slot = same Safe; Safe API: threshold 4, 6 owners (corrected from stale 7), no modules, zero guard. Mint authorization: deprecated_broker_storage_slot__() = 0x777A... (Mento Broker); Celo Registry keccak('Broker') lookup = 0x777A... confirming live Broker is the authorized minter. All mint-capable surfaces resolved.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Celo block 69287341: owner() = Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 (confirmed); EIP-1967 proxy admin slot = same Safe; Safe API: threshold 4, 6 owners (corrected from stale 7), no modules, zero guard. Mint authorization: deprecated_broker_storage_slot__() = 0x777A... (Mento Broker); Celo Registry keccak('Broker') lookup = 0x777A... confirming live Broker is the authorized minter. All mint-capable surfaces resolved. Follow-up 2026-07-21: the upgrade posture is formalized as a transparent-proxy `upgradeability` record — Celo's EIP-1967 admin slot is the Mento Safe directly, while Monad fronts the same token behind ProxyAdmin 0x7f017a0a94e4fe5afe688064afd76b25d4dac8ea, itself owned by the identical Safe (per the reviewed bridgeRouteRisk on-chain check). Both deployments' code-upgrade authority resolve to the one 4-of-6 Mento Safe.",
+      "reviewer": "Claude Phase 0c continuation; Claude V9 evidence-gap curation",
+      "reviewedAt": "2026-07-21"
     }
   },
   "chainTier": "established-alt-l1",

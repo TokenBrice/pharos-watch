@@ -80,6 +80,45 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "VBILL is a Securitize-administered fund token; its Ethereum implementation exposes issueTokens surfaces gated by owner(). Owner confirmed as EOA 0x59c1eA...76Ee at block 25295081; eth_getCode returns empty (EOA). Issuer-context EOA is expected for enterprise MPC/HSM custody.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x2255718832bc9fd3be1caf75084f4803da14ff01",
+        "0x7f4546ef315efc65336187fe3765ea779ac90183",
+        "0x14d72634328c4d03bba184a48081df65f1911279"
+      ],
+      "implementationAddresses": [
+        "0xaf88485377cca5e690e7dcb1ba81370f0b575156",
+        "0xc7579a9a4801a805b66742e5bd56a1581705fe0d",
+        "0xcd01d1c5c78ad428cd01913d4664c20ed1e61923"
+      ],
+      "adminAddresses": [
+        "0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "VBILL token owner EOA",
+      "observedAt": "2026-07-21",
+      "observedBlock": 25579746,
+      "sources": [
+        {
+          "label": "VBILL UUPS implementation source",
+          "url": "https://eth.blockscout.com/address/0xaf88485377cca5e690e7dcb1ba81370f0b575156"
+        },
+        {
+          "label": "Ethereum VBILL token",
+          "url": "https://etherscan.io/address/0x2255718832bc9fd3be1caf75084f4803da14ff01#readProxyContract"
+        },
+        {
+          "label": "Avalanche VBILL token",
+          "url": "https://snowscan.xyz/address/0x7f4546ef315efc65336187fe3765ea779ac90183"
+        },
+        {
+          "label": "BNB Chain VBILL token",
+          "url": "https://bscscan.com/address/0x14d72634328c4d03bba184a48081df65f1911279"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",

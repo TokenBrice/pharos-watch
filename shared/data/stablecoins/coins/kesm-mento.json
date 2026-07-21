@@ -128,6 +128,27 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": ["0x456a3d042c0dbd3db53d5489e98dfb038553b0d0"],
+      "implementationAddresses": ["0x434563b0604be100f04b7ae485bcafe3c9d8850e"],
+      "adminAddresses": ["0x890db8a597940165901372dd7db61c9f246e2147"],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "Mento Timelock (KESm token owner)",
+      "observedAt": "2026-07-21",
+      "observedBlock": 72722632,
+      "sources": [
+        {
+          "label": "KESm token custom-proxy introspection (_getImplementation/_getOwner)",
+          "url": "https://celoscan.io/address/0x456a3d042c0dbd3db53d5489e98dfb038553b0d0"
+        },
+        {
+          "label": "Mento V3 deployments",
+          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+        }
+      ]
+    },
     "summary": "KESm is minted CDP-style on Celo via immutable BorrowerOperations; the token owner is the Mento Timelock (2-day delay) whose sole proposer is the veMENTO DAO Governor.",
     "controls": [
       {

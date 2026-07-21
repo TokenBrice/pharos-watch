@@ -327,6 +327,25 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "DEURO is minted permissionlessly by users opening overcollateralized, oracle-free positions in Frankencoin-style minting modules. The DecentralizedEURO contract (0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea) is immutable (no proxy, no owner). New minting modules require a challengeable application period; nDEPS (Equity) holders at 0xc71104001a3ccda1bef1177d765831bd1bfe8ee6 can veto proposals.",
+    "upgradeability": {
+      "model": "immutable",
+      "implementationAddresses": [
+        "0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-21",
+      "observedBlock": 25579955,
+      "sources": [
+        {
+          "label": "dEURO token on Etherscan",
+          "url": "https://etherscan.io/address/0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Frankencoin-style minting module (collateral mint)",

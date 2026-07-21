@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "OpenAI Codex backing review; OpenAI Codex class-level normalization",
     "confidence": "probable",
     "sources": [
       {
@@ -31,19 +31,19 @@
         "url": "https://rupiahtoken.com/"
       }
     ],
-    "rationale": "The January 31, 2026 independent accountant AUP report reconciles Rp94,232,212,766 of bank collateral to the total issued Rupiah Token amount and reports a 1:1 ratio. The procedures compared bank statements and time-deposit certificates, but the report does not publish the bank-level or account-type allocation.",
+    "rationale": "The January 31, 2026 independent accountant AUP report reconciles Rp94,232,212,766 of bank collateral to the total issued Rupiah Token amount and reports a 1:1 ratio. The complete direct reserve class is IDR bank deposits, including time deposits; the report does not publish bank-level or account-type allocations.",
     "compositionBasis": "Independent accountant agreed-upon procedures over Rupiah Token bank collateral as of January 31, 2026",
     "compositionAsOf": "2026-01-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The aggregate bank collateral is evidenced, but the bank identities, account balances, time-deposit share, maturity terms, and legal custody safeguards are undisclosed.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "No direct reserve category is unidentified. Bank identities, account balances, the time-deposit share, maturity terms, and legal custody safeguards are undisclosed.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "IDR bank accounts and time deposits",
         "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The AUP confirms aggregate bank collateral but does not disclose the split among bank accounts, time deposits, or providers."
+      "disposition": "untracked-exogenous-asset",
+      "rationale": "IDR bank deposits are external fiat reserve assets rather than a tracked stablecoin dependency; provider and maturity details remain custody and liquidity uncertainties."
       }
     ]
   },

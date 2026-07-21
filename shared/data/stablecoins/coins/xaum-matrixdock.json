@@ -112,6 +112,32 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "XAUm MToken minting is operator- or receipt-NFT-controlled and budget-limited by reserve/mint-budget accounting; the owner can change the operator. Ethereum and Sui State controls confirmed: owner EOA and operator verified on both chains.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x2103e845c5e135493bb6c2a4f0b8651956ea8682"
+      ],
+      "implementationAddresses": [
+        "0x3194e478b6d3ebee969470295f271727b62adf7b"
+      ],
+      "adminAddresses": [
+        "0xb573c94260582f0715FC477928B04A2708dd36D7"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Matrixdock token owner",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25295020,
+      "sources": [
+        {
+          "label": "Matrixdock MToken implementation source (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x3194e478b6d3ebee969470295f271727b62adf7b?tab=contract"
+        },
+        {
+          "label": "XAUm Ethereum token",
+          "url": "https://etherscan.io/address/0x2103e845c5e135493bb6c2a4f0b8651956ea8682"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",

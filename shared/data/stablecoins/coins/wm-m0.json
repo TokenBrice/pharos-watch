@@ -113,6 +113,33 @@
     "confidence": "verified",
     "summary": "wM is an EIP-1967 minimal proxy (no admin slot, no UUPS) over WrappedMToken — wrap/unwrap is pure M-backed accounting with no privileged mint path. The contract's Migratable mechanism allows implementation changes, but only when a TTG-registered migrator key exists AND is called by migrationAdmin (a 2/2 Safe, v1.3.0, no modules). Base M issuance is inherited from reviewed m-m0 MinterGateway controls.",
     "inheritedFrom": "m-m0",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x437cc33344a0B27A429f795ff6B469C72698B291"
+      ],
+      "implementationAddresses": [
+        "0x813b926b1d096e117721bd1eb017fba122302da0"
+      ],
+      "adminAddresses": [
+        "0x431169728d75bd02f4053435b87d15c8d1fb2c72",
+        "0x119fbeedd4f4f4298fb59b720d5654442b81ae2c"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "WrappedMToken EIP-1967 proxy (Migratable)",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25295240,
+      "sources": [
+        {
+          "label": "WrappedMToken source (Blockscout ETH)",
+          "url": "https://eth.blockscout.com/address/0x813b926b1d096e117721bd1eb017fba122302da0"
+        },
+        {
+          "label": "M0 Migratable GitHub",
+          "url": "https://github.com/m0-foundation/wrapped-m-token/blob/main/src/Migratable.sol"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",

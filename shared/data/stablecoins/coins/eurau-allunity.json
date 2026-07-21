@@ -122,7 +122,54 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "EURAU is controlled by two AllUnity EOAs across all five EVM chains (ETH, ARB, OP, Base, Polygon): EOA minter 0xd443f046 holds MINTER_ROLE and EOA 0xddaca43e holds DEFAULT_ADMIN_ROLE; roles confirmed via hasRole on every chain. UUPS proxy with no ProxyAdmin on all chains. Solana, Stellar, and Tempo are issuer-backend lanes not confirmable from chain state but corroborated by the confirmed issuer-controlled minter model.",
+    "summary": "EURAU is controlled by two AllUnity EOAs across all six EVM chains (ETH, ARB, OP, Base, Polygon, BSC): EOA minter 0xd443f046 holds MINTER_ROLE and EOA 0xddaca43e holds DEFAULT_ADMIN_ROLE; roles confirmed via hasRole on every chain. UUPS proxy with no ProxyAdmin on all chains. Solana, Stellar, and Tempo are issuer-backend lanes not confirmable from chain state but corroborated by the confirmed issuer-controlled minter model.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
+      ],
+      "implementationAddresses": [
+        "0x56c19aea2192ff0ac5f6b252776480db601a1482"
+      ],
+      "adminAddresses": [
+        "0xddaca43e3ae3a1485880a835edbf8924ab142b5f"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "EURAU EOA DEFAULT_ADMIN_ROLE (all EVM chains)",
+      "observedAt": "2026-07-21",
+      "observedBlock": 25580320,
+      "sources": [
+        {
+          "label": "Ethereum EURAU proxy at block 25580320",
+          "url": "https://eth.blockscout.com/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
+        },
+        {
+          "label": "Arbitrum EURAU proxy at block 486145773",
+          "url": "https://arbiscan.io/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
+        },
+        {
+          "label": "Optimism EURAU proxy at block 154514391",
+          "url": "https://optimistic.etherscan.io/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
+        },
+        {
+          "label": "Base EURAU proxy at block 48919106",
+          "url": "https://basescan.org/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
+        },
+        {
+          "label": "Polygon EURAU proxy at block 90615043",
+          "url": "https://polygonscan.com/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
+        },
+        {
+          "label": "BNB Chain EURAU proxy at block 111262337",
+          "url": "https://bscscan.com/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
+        },
+        {
+          "label": "Sourcify EURAU implementation",
+          "url": "https://repo.sourcify.dev/1/0x56c19aea2192ff0ac5f6b252776480db601a1482"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",
@@ -143,7 +190,7 @@
             "url": "https://sourcify.dev/server/v2/contract/1/0x56c19aea2192ff0ac5f6b252776480db601a1482?fields=abi"
           }
         ],
-        "evidence": "hasRole(MINTER_ROLE, 0xd443f046...) = true at: Ethereum block 25295047; Arbitrum block 472428391; Optimism block 152797825; Base block 47202543; Polygon block 88326299. eth_getCode on Ethereum = no bytecode (EOA). Same AllUnity backend EOA across all EVM chains."
+        "evidence": "hasRole(MINTER_ROLE, 0xd443f046...) = true at: Ethereum block 25580320; Arbitrum block 486145773; Optimism block 154514391; Base block 48919106; Polygon block 90615043; BNB Chain block 111262337. eth_getCode on Ethereum = no bytecode (EOA). Same AllUnity backend EOA across all six EVM chains."
       },
       {
         "chain": "ethereum",
@@ -160,7 +207,7 @@
             "url": "https://etherscan.io/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
           }
         ],
-        "evidence": "hasRole(DEFAULT_ADMIN_ROLE, 0xddaca43e...) = true at: Ethereum block 25295047; Arbitrum block 472428391; Optimism block 152797825; Base block 47202543; Polygon block 88326299. eth_getCode on Ethereum = no bytecode (EOA). UUPS proxy, no separate ProxyAdmin on any chain. Impl = 0x56c19aea2192ff0ac5f6b252776480db601a1482."
+        "evidence": "hasRole(DEFAULT_ADMIN_ROLE, 0xddaca43e...) = true at: Ethereum block 25580320; Arbitrum block 486145773; Optimism block 154514391; Base block 48919106; Polygon block 90615043; BNB Chain block 111262337. eth_getCode on Ethereum = no bytecode (EOA). The verified UUPS implementation authorizes upgrades through DEFAULT_ADMIN_ROLE with no separate ProxyAdmin or timelock. Impl = 0x56c19aea2192ff0ac5f6b252776480db601a1482."
       }
     ],
     "reconciliation": "unknown",
@@ -188,6 +235,18 @@
           "url": "https://basescan.org/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
         },
         {
+          "label": "EURAU Optimism contract",
+          "url": "https://optimistic.etherscan.io/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
+        },
+        {
+          "label": "EURAU Polygon contract",
+          "url": "https://polygonscan.com/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
+        },
+        {
+          "label": "EURAU BNB Chain contract",
+          "url": "https://bscscan.com/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
+        },
+        {
           "label": "AllUnity Trust Center",
           "url": "https://allunity.com/trust-center"
         },
@@ -200,9 +259,9 @@
           "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
         }
       ],
-      "evidence": "All five EVM chains (ETH/ARB/OP/Base/Polygon) share contract address 0x4933a85b5b5466fbaf179f72d3de273c287ec2c2. hasRole confirmed for both EOA minter (MINTER_ROLE) and EOA admin (DEFAULT_ADMIN_ROLE) at the most recent block on each chain. UUPS proxy, no ProxyAdmin on any chain. Solana (9pCWprxbZMW2rYSMhPTeoyLMV2sN2WJqshdT7DQVt6hS), Stellar, and Tempo are issuer-backend lanes; on-chain confirmable surface is fully verified. Mint-tier review (2026-07-15): No independent attestor, cadence, or dated reserve report is public; AllUnity's Trust Center still says the reserve audit report is coming soon as of 2026-07-15. The ESMA MiCA register and BaFin authorization match AllUnity GmbH as the EMI and EURAU EMT issuer, so prudential supervision is present but independent reconciliation remains unknown.",
+      "evidence": "All six EVM chains (ETH/ARB/OP/Base/Polygon/BSC) share contract address 0x4933a85b5b5466fbaf179f72d3de273c287ec2c2. On 2026-07-21, hasRole confirmed both EOA minter (MINTER_ROLE) and EOA admin (DEFAULT_ADMIN_ROLE), and EIP-1967 reads returned implementation 0x56c19aea2192ff0ac5f6b252776480db601a1482, at Ethereum block 25580320, Arbitrum block 486145773, Optimism block 154514391, Base block 48919106, Polygon block 90615043, and BNB Chain block 111262337. The verified implementation is UUPS and _authorizeUpgrade is gated directly by DEFAULT_ADMIN_ROLE, with no ProxyAdmin or timelock. Solana (9pCWprxbZMW2rYSMhPTeoyLMV2sN2WJqshdT7DQVt6hS), Stellar, and Tempo are issuer-backend lanes; their controller identities remain unresolved separately. Reserve review: no independent attestor, cadence, or dated reserve report is public; AllUnity's Trust Center still says the reserve audit report is coming soon as of 2026-07-21. The ESMA MiCA register and BaFin authorization match AllUnity GmbH as the EMI and EURAU EMT issuer, so prudential supervision is present but independent reconciliation remains unknown.",
       "reviewer": "Codex SOL-V mint-tier research",
-      "reviewedAt": "2026-07-15"
+      "reviewedAt": "2026-07-21"
     }
   },
   "deploymentModel": "third-party-bridge",

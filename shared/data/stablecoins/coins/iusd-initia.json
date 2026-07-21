@@ -14,6 +14,23 @@
   "collateral": "1:1 reserve in Agora AUSD bridged to Initia via LayerZero; AUSD itself is backed by short-dated U.S. Treasury bills, overnight reverse repos, and cash held in a bankruptcy-remote Delaware Statutory Trust managed by VanEck and custodied by State Street",
   "pegMechanism": "iUSD is a single-chain wrapper of bridged Agora AUSD on Initia. Each iUSD is minted against an equal amount of AUSD locked at the Initia LayerZero bridge endpoint; reserve yield from the underlying AUSD is redirected by Initia into ecosystem incentives (Echelon lending, liquidity programs, Cabal vaults) rather than to holders. Holder redemption ultimately depends on the AUSD bridge and Agora's direct USD redemption.",
   "mechanismArchetype": "fiat-cash",
+  "implementationLaunchDate": "2026-01-19",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex V9 curation",
+    "rationale": "Initia transaction B56AAED7EA34A4F8455FB26961BCB3EDF2493AB8E08F99058BEC21995C4E1FB9 emitted Object::CreateEvent and CoinCreatedEvent for the exact tracked iUSD metadata object at block 12,373,542 on January 19, 2026. The official vault resources establish a 1:1 AUSD-backed wrapper, so the inherited fiat-cash archetype is retained.",
+    "sources": [
+      {
+        "label": "Initia iUSD creation transaction",
+        "url": "https://scan.initia.xyz/interwoven-1/txs/B56AAED7EA34A4F8455FB26961BCB3EDF2493AB8E08F99058BEC21995C4E1FB9"
+      },
+      {
+        "label": "Initia iusd-vault resources",
+        "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/resources"
+      }
+    ]
+  },
   "llamaId": "388",
   "detailProvider": "defillama",
   "geckoId": "iusd-2",

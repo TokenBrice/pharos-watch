@@ -67,6 +67,8 @@
     "summary": "eUSD is issued by Telcoin Digital Asset Bank under a Nebraska Digital Asset Depository charter. The token is a BeaconProxy (Stablecoin contract); MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by a Gnosis Safe 1.4.1 (6/3 multisig, no modules/guard); beacon upgrades controlled by a separate Safe 1.4.1 (7/2).",
     "controls": [
       {
+        "chain": "ethereum",
+        "address": "0x9c745cdf09cd2627290ae2db6421da451d1c8c1b",
         "label": "Telcoin eUSD MINTER_ROLE + DEFAULT_ADMIN Safe (6/3)",
         "role": "direct-minter",
         "authorityType": "safe",
@@ -75,6 +77,8 @@
         "threshold": 3,
         "signerCount": 6,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-15",
+        "observedBlock": 25295081,
         "safe": {
           "owners": [
             "0xdce4ef7679e8a81eee8c71917b21ebbcef45b5ba",
@@ -101,6 +105,8 @@
         ]
       },
       {
+        "chain": "ethereum",
+        "address": "0x238fb46093128f4d8d6d21cbfd448455478d9b87",
         "label": "Beacon upgrade admin Safe (7/2)",
         "role": "proxy-admin",
         "authorityType": "safe",
@@ -109,6 +115,8 @@
         "threshold": 2,
         "signerCount": 7,
         "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-15",
+        "observedBlock": 25295003,
         "safe": {
           "owners": [
             "0x774e8870e8a2ecef2dc65427ce983d424a03d1aa",
@@ -136,11 +144,14 @@
         ]
       },
       {
+        "chain": "solana",
+        "address": "DyJseFwtoCnQWR333miA4PAv57aB5bCTxCwY6iK8kxNG",
         "label": "Solana SPL mint authority",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
+        "observedAt": "2026-07-16",
         "evidence": "Solana mint HQMYCZTDq9g3oZejDRUeQsFtLKgyfvBpD3yHaTnain3L: mintAuthority = DyJseFwtoCnQWR333miA4PAv57aB5bCTxCwY6iK8kxNG; freezeAuthority = same. The authority account is owned by the System Program (EOA-equivalent on Solana \u2014 no on-chain multisig structure). Cannot be independently verified as a multisig; treated as issuer-backend EOA-equivalent.",
         "sources": [
           {
@@ -150,6 +161,33 @@
         ]
       }
     ],
+    "upgradeability": {
+      "model": "beacon",
+      "proxyAddresses": [
+        "0x14913815bcfde78baead2111f463d038ac9c2949"
+      ],
+      "implementationAddresses": [
+        "0x7b28d7ba50280cc3b7649866843e49d554af3580"
+      ],
+      "adminAddresses": [
+        "0xe7a6d045ddd40087e027139351fdd9abc557f236",
+        "0x238fb46093128f4d8d6d21cbfd448455478d9b87"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Beacon upgrade admin Safe (7/2)",
+      "observedAt": "2026-07-15",
+      "observedBlock": 25295003,
+      "sources": [
+        {
+          "label": "eUSD Ethereum BeaconProxy",
+          "url": "https://etherscan.io/address/0x14913815bcfde78baead2111f463d038ac9c2949#code"
+        },
+        {
+          "label": "eUSD UpgradeableBeacon",
+          "url": "https://etherscan.io/address/0xe7a6d045ddd40087e027139351fdd9abc557f236#code"
+        }
+      ]
+    },
     "reconciliation": "unknown",
     "supervision": "prudential",
     "review": {

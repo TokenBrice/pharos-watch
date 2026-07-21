@@ -865,6 +865,35 @@
         }
       }
     ],
+    "upgradeability": {
+      "model": "immutable",
+      "implementationAddresses": [
+        "0xa3fa99a148fa48d14ed51d610c367c61876997f1",
+        "0x8d6cebd76f18e1558d4db88138e2defb3909fad6",
+        "0x3f56e0c36d275367b8c502090edf38289b3dea0d"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-21",
+      "observedBlock": 90612698,
+      "sources": [
+        {
+          "label": "Polygon MAI token",
+          "url": "https://polygonscan.com/address/0xa3fa99a148fa48d14ed51d610c367c61876997f1#code"
+        },
+        {
+          "label": "Ethereum MAI token",
+          "url": "https://etherscan.io/address/0x8d6cebd76f18e1558d4db88138e2defb3909fad6#code"
+        },
+        {
+          "label": "Arbitrum MAI token",
+          "url": "https://arbiscan.io/address/0x3f56e0c36d275367b8c502090edf38289b3dea0d#code"
+        },
+        {
+          "label": "Polygon public RPC used for EIP-1967 slot reads",
+          "url": "https://polygon-bor-rpc.publicnode.com"
+        }
+      ]
+    },
     "review": {
       "evidence": "Polygon (block 88326121): 3/5 Safe owner, no modules. Ethereum (block 25361903): 4/6 Safe owner, no modules. Arbitrum (block 471552027): 2/4 Safe owner, no modules. All three chains use GnosisProxy multisigs with overlapping signers. masterMinter()/MINTER_ROLE both revert — owner-only mint pattern. Other minor chains (Optimism, Base, Avalanche, BSC, etc.) use the same Ownable pattern but their admins are note-only per brief scope; primary covered chains verified. 2026-07-20 cur-8 extension (Polygon block 90573828): the vault/minter surface was resolved from on-chain reads. MAI token debtCeiling() = 206,000,000e18 under token-owner Safe 0x3feacf90 against a totalSupply() of 305,129,005.936e18, so the binding limits are the per-vault ceilings; collateral vaults are separate cap-limited contracts (camWMATIC and WETH sampled) whose owner() chain terminates in Gnosis Safe 0x1d8a6b7941ef1349c1b5e378783cd56b001ecfbc (v1.3.0, 3-of-4, no modules, zero guard), directly or via administration contract 0x257ff75bef85ca0c1517168ef27efc69e5c7016f. No mint entry point can raise its own ceiling, so cap raising is a separate multisig control. Three of the vault-admin signers also sign the Polygon token-owner Safe.",
       "reviewer": "Claude Phase 0c continuation + cur-8 vault-surface resolution",

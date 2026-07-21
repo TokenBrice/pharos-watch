@@ -326,6 +326,9 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "issuer:aussie-dollar-token:tau-pty-ltd"
+        ],
         "evidence": "Issuer-managed mint/redeem: TAU Pty Ltd creates AUDX supply against custodied AUD reserves targeting 1 AUDX = 1 AUD; no permissionless or user-collateralized mint route is described."
       },
       {

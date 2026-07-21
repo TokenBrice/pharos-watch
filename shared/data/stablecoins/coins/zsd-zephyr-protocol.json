@@ -14,6 +14,23 @@
   "collateral": "ZEPH base-coin collateral held by the Zephyr Protocol reserve; the protocol targets overcollateralization before allowing new ZSD minting",
   "pegMechanism": "Users mint or redeem ZSD against ZEPH through Zephyr's Djed-inspired reserve mechanism, with oracle pricing and reserve-ratio constraints maintaining the dollar target",
   "mechanismArchetype": "cdp",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex V9 curation",
+    "rationale": "Zephyr's v1.0.0 mainnet release activated the Djed-inspired stablecoin functions at block 89300. Zephyr's public scanner records that block at 2023-10-01T09:27:07Z, establishing the current ZSD mechanism's implementation date.",
+    "sources": [
+      {
+        "label": "Zephyr Protocol v1.0.0 mainnet release",
+        "url": "https://github.com/ZephyrProtocol/zephyr/releases/tag/v1.0.0"
+      },
+      {
+        "label": "Zephyr scanner block 89300",
+        "url": "https://zephyrprotocol.com/api/v1/stats?scale=block&from=89300&to=89300&fields=block_timestamp,zsd_circ,zrs_circ"
+      }
+    ]
+  },
+  "implementationLaunchDate": "2023-10-01",
   "detailProvider": "coingecko",
   "geckoId": "zephyr-protocol-stable-dollar",
   "protocolSlug": "zephyr-protocol",

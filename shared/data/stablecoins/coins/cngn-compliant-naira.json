@@ -113,6 +113,39 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "cNGN is issued by the Africa Stablecoin Consortium. On EVM chains the token owners are Gnosis Safe 2/2 multisigs of the same two consortium signers (re-verified on all four chains 2026-07-20; Polygon Safe 0xce6720dd9076aa67053abb27ecbd613a5867d1ba enumerated for the first time). The Base contract additionally has an EOA-owned ProxyAdmin enabling upgrades. On Solana the Token-2022 mint authority is a PDA of the issuer's issuance program 9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28 (operational authority EOA 88ifu36R...; program upgradeable by EOA 8Ng3h97W...), with freeze/delegate held by an SPL 2-of-2 multisig.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x46c85152bfe9f96829aa94755d9f915f9b10ef5f",
+        "9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28"
+      ],
+      "implementationAddresses": [
+        "0x941360b66ccb94012e85225639476b43999c6cf3"
+      ],
+      "adminAddresses": [
+        "0xdd3446ce5aa397fd957460ba03e4538caeeff22e",
+        "8Ng3h97WUFx1QoQFadVTUTC2YKDdr4h1xGNETqsqvYZx"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "cNGN deployment-wide immediate upgrade authorities",
+      "observedAt": "2026-07-21",
+      "observedBlock": 48863611,
+      "sources": [
+        {
+          "label": "cNGN contract addresses",
+          "url": "https://docs.cngn.co/integrations/contract-addresses"
+        },
+        {
+          "label": "cNGN Base proxy",
+          "url": "https://basescan.org/address/0x46c85152bfe9f96829aa94755d9f915f9b10ef5f"
+        },
+        {
+          "label": "cNGN Solana issuance program",
+          "url": "https://solscan.io/account/9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Africa Stablecoin Consortium issuance backend (multi-party authorized)",
@@ -120,6 +153,9 @@
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "issuer:africa-stablecoin-consortium"
+        ],
         "evidence": "Mint requests require treasury verification of the naira deposit plus approval by authorized consortium staff before tokens are created; burn occurs on redemption. Supply is fully issuer/consortium-controlled."
       },
       {
@@ -216,6 +252,31 @@
         "chain": "solana",
         "address": "9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28",
         "observedAt": "2026-07-20"
+      },
+      {
+        "label": "cNGN deployment-wide immediate upgrade authorities",
+        "role": "proxy-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "eoa:base:0xdd3446ce5aa397fd957460ba03e4538caeeff22e",
+          "eoa:solana:8ng3h97wufx1qoqfadvtutc2ykddr4h1xgnetqsqvyzx"
+        ],
+        "observedAt": "2026-07-21",
+        "observedBlock": 48863611,
+        "sources": [
+          {
+            "label": "cNGN Base proxy",
+            "url": "https://basescan.org/address/0x46c85152bfe9f96829aa94755d9f915f9b10ef5f"
+          },
+          {
+            "label": "cNGN Solana issuance program",
+            "url": "https://solscan.io/account/9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28"
+          }
+        ],
+        "evidence": "This umbrella record exists because the upgradeability schema accepts one controlRef; it does not represent a shared controller. At Base block 48863611, cNGN proxy 0x46c85152bfe9f96829aa94755d9f915f9b10ef5f resolved to implementation 0x941360b66ccb94012e85225639476b43999c6cf3 and ProxyAdmin 0x639e6756f129b3bb67961488e10dad3a3380af83, whose owner was EOA 0xdd3446ce5aa397fd957460ba03e4538caeeff22e. At finalized Solana slot 434276320, issuance program 9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28 resolved to ProgramData BqJQj1J5a89WxEPf5TM8ppV5fbCKZFMGVGJNefB9Copb with upgrade authority EOA 8Ng3h97WUFx1QoQFadVTUTC2YKDdr4h1xGNETqsqvYZx. Both paths can change mint-critical logic without a contract-enforced delay."
       }
     ],
     "reconciliation": "unknown",

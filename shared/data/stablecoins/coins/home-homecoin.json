@@ -159,6 +159,38 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "HOME token (0xb8919522331c59f5c16bdfaa6a121a6e03a91f62) is an EIP-1967 proxy. The ProxyAdmin (0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f) is owned by a 5-signer legacy Gnosis MultiSigWallet (0xa42f6fb68607048dde54fcd53d2195cc8ca5f486, threshold 3-of-5). Minting occurs only through Bacon Protocol Pan contracts when borrowers draw lien-backed loans. BACON governance controls Pan additions.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xb8919522331c59f5c16bdfaa6a121a6e03a91f62"
+      ],
+      "implementationAddresses": [
+        "0x366049d336e73cfaf39c6a933780ca4c96ea084c"
+      ],
+      "adminAddresses": [
+        "0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f",
+        "0xa42f6fb68607048dde54fcd53d2195cc8ca5f486"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "HomeCoin ProxyAdmin owner (legacy Gnosis MultiSigWallet)",
+      "observedAt": "2026-07-21",
+      "observedBlock": 25580037,
+      "sources": [
+        {
+          "label": "HOME Ethereum proxy",
+          "url": "https://etherscan.io/address/0xb8919522331c59f5c16bdfaa6a121a6e03a91f62#code"
+        },
+        {
+          "label": "HOME ProxyAdmin",
+          "url": "https://etherscan.io/address/0x5729890f78c07bc2d1c09345001f6c1f0c9d7d6f#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",

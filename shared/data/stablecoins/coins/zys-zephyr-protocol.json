@@ -17,6 +17,23 @@
   "collateral": "ZSD held in the Zephyr Protocol yield reserve; each ZYS share represents a claim on the protocol's ZSD yield reserve balance",
   "pegMechanism": "ZYS is a NAV-style yield-share token rather than a flat one-dollar stablecoin. Its share price moves against ZSD as protocol yield accrues into the ZSD yield reserve.",
   "mechanismArchetype": "cdp",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex V9 curation",
+    "rationale": "Zephyr's v2.0.0 release introduced the yield reserve and ZYS at hardfork block 360000. Zephyr's public scanner timestamps that activation block at 2024-10-13T11:39:13Z, establishing the wrapper implementation date.",
+    "sources": [
+      {
+        "label": "Zephyr Protocol v2.0.0 ZSD Yield release",
+        "url": "https://github.com/ZephyrProtocol/zephyr/releases/tag/v2.0.0"
+      },
+      {
+        "label": "Zephyr scanner block 360000",
+        "url": "https://zephyrprotocol.com/api/v1/stats?scale=block&from=360000&to=360000&fields=block_timestamp,zys_circ"
+      }
+    ]
+  },
+  "implementationLaunchDate": "2024-10-13",
   "detailProvider": "coingecko",
   "protocolSlug": "zephyr-protocol",
   "proofOfReserves": {

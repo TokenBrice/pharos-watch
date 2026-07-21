@@ -197,7 +197,7 @@
   "reserves": [
     {
       "name": "Superstate USCC cash-and-carry fund",
-      "pct": 79.6368,
+      "pct": 73.6263,
       "risk": "low",
       "assetClass": "fund-share",
       "issuerOrObligor": "Superstate USCC fund and CME futures counterparties",
@@ -213,8 +213,22 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "name": "Pending Superstate USCC subscription",
+      "pct": 4.761,
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "Nest Basis Vault and Superstate USCC subscription process",
+      "riskFactors": [
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
       "name": "Superstate USTB Treasury Fund",
-      "pct": 18.9772,
+      "pct": 18.5388,
       "risk": "low",
       "coinId": "ustb-superstate",
       "depType": "collateral",
@@ -233,7 +247,7 @@
     },
     {
       "name": "Liquid USDC balances",
-      "pct": 1.0463,
+      "pct": 2.8162,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -249,7 +263,7 @@
     },
     {
       "name": "pUSD liquid balance",
-      "pct": 0.3396,
+      "pct": 0.2576,
       "risk": "high",
       "coinId": "pusd-plume",
       "depType": "collateral",
@@ -282,8 +296,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex dependency review",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "OpenAI Codex reserve curation",
     "confidence": "verified",
     "sources": [
       {
@@ -295,19 +309,26 @@
         "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/last-price-update"
       }
     ],
-    "rationale": "The official positions API reported $23,354,538.89 of USCC, $5,565,328.70 of USTB, $306,841.67 of USDC, $99,601.11 of pUSD, and $21.35 of USDT-family balances. Normalizing every positive active position through the repository adapter's grouping logic produces the exact four-decimal fallback composition; pending transactions are outside that adapter's active-position scope.",
-    "compositionBasis": "Positive Nest Basis Vault API position values grouped with the nest-vault-positions adapter semantics",
-    "compositionAsOf": "2026-07-13",
+    "rationale": "At the 2026-07-21T05:01:59Z price update, the official positions API reported $27,836,112.60 of active USCC, a $1,800,000.00 pending USCC subscription, $7,009,022.69 of USTB, $1,064,732.01 of USDC-family balances, $97,382.80 of pUSD, and $21.35 of USDT-family balances. The resulting $37,807,271.46 total is within $11.88 of the official $37,807,259.58 NAV. The pending subscription is itemized separately because the live adapter intentionally excludes pending transactions.",
+    "compositionBasis": "All active Nest Basis Vault API position values plus the separately disclosed pending USCC subscription, reconciled to the official NAV",
+    "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "Every positive active API position is identified. USCC remains an identified exogenous fund share rather than a tracked stablecoin dependency.",
+    "knownUnknownExposure": "Every active API position and the pending USCC subscription are identified. USCC remains an identified exogenous fund share rather than a tracked stablecoin dependency.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Superstate USCC cash-and-carry fund",
-        "pct": 79.6368,
+        "pct": 73.6263,
         "disposition": "untracked-exogenous-asset",
         "rationale": "USCC is an identified Superstate cash-and-carry fund share with no active tracked stablecoin record."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Pending Superstate USCC subscription",
+        "pct": 4.761,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The Nest API identifies a pending USCC subscription but does not expose a tracked stablecoin dependency for the in-transit position."
       }
     ]
   },
@@ -346,7 +367,27 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "nBASIS Teller and Manager are both owned by the same 3-of-6 Gnosis Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (Safe v1.3.0, no modules, no guard). owner() confirmed for both contracts at Ethereum block 25295023.",
+    "summary": "nBASIS Teller and Manager are both owned by the same 3-of-6 Gnosis Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (Safe v1.3.0, no modules, no guard). The nBASIS BoringVault token is directly deployed and non-upgradeable on Ethereum, Plume, and Plasma.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-21",
+      "observedBlock": 25580348,
+      "sources": [
+        {
+          "label": "Ethereum nBASIS BoringVault source and ABI",
+          "url": "https://eth.blockscout.com/address/0x11113ff3a60c2450f4b22515cb760417259ee94b?tab=contract"
+        },
+        {
+          "label": "Plume nBASIS contract at block 82434036",
+          "url": "https://explorer.plume.org/address/0x11113ff3a60c2450f4b22515cb760417259ee94b"
+        },
+        {
+          "label": "Plasma nBASIS contract at block 27687550",
+          "url": "https://plasma-explorer.com/address/0x11113ff3a60c2450f4b22515cb760417259ee94b"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Nest Basis Vault Teller (issuance/redemption)",
@@ -422,9 +463,9 @@
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "Both nBASIS Teller (0xAD60d4...) and Manager (0x17767f...) return owner() = 0xa08a0dc... at Ethereum block 25295023. That address is a 3-of-6 Gnosis Safe v1.3.0 confirmed via getOwners(), getThreshold(), modules(), guard storage slot, and masterCopy slot. No modules, no guard. All reads performed on-chain via publicnode ETH RPC. Evidence challenge completed 2026-07-15: Nest publishes issuer-operated hourly NAV and live vault composition, with the latest public vault-data snapshot dated 2026-07-08, but no recurring independent reconciliation of nBASIS supply to portfolio assets was found. Nest DAO LLC is a Marshall Islands DAO LLC, not a prudentially supervised fund issuer.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-07-15",
+      "evidence": "Both nBASIS Teller (0xAD60d4...) and Manager (0x17767f...) return owner() = 0xa08a0dc... at Ethereum block 25295023. That address is a 3-of-6 Gnosis Safe v1.3.0 confirmed via getOwners(), getThreshold(), modules(), guard storage slot, and masterCopy slot. No modules, no guard. Upgrade follow-up on 2026-07-21: the nBASIS token at 0x11113ff3a60c2450f4b22515cb760417259ee94b is a directly deployed BoringVault contract, not a proxy. The EIP-1967 implementation, admin, and beacon slots were all zero on Ethereum block 25580348, Plume block 82434036, and Plasma block 27687550. The Ethereum bytecode-derived verified source/ABI has no upgradeTo or upgradeToAndCall entry point; administrative ownership and authority can change permissions and vault parameters but cannot replace the deployed mint-critical bytecode. Nest publishes issuer-operated hourly NAV and live vault composition, but no recurring independent reconciliation of nBASIS supply to portfolio assets was found. Nest DAO LLC is a Marshall Islands DAO LLC, not a prudentially supervised fund issuer.",
+      "reviewer": "Claude Phase 0c continuation; OpenAI Codex upgrade-authority curation",
+      "reviewedAt": "2026-07-21",
       "disposition": "scoreable",
       "sources": [
         {

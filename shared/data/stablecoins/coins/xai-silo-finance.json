@@ -19,13 +19,17 @@
   "mechanismArchetype": "cdp",
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "Silo's published v1 oracle documentation describes a configurable per-asset price-provider repository, but reviewed primary and on-chain sources do not map the tracked XAI credit-line collateral set to a current price provider, fallback, or liquidation configuration.",
+    "summary": "SiloDAO's 2024 deprecation plan called for XAI credit lines to be retracted and the mint module disabled. Historical v1 oracle documentation describes a configurable per-asset price-provider repository, but there is no current production XAI branch to review and the legacy branch cannot be reconstructed completely from public evidence.",
     "branchApplicability": {
       "disposition": "unresolved",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-21",
       "reviewer": "Codex Prompt 6b oracle review",
-      "rationale": "The official PriceProvidersRepository documentation establishes that Silo routes each supported asset to a configured provider, but it does not identify any XAI-specific silo or asset mapping. The verified XAI token contract does not reveal the legacy credit-line market set, feed wiring, fallback, liquidation timing, backstop, or shutdown and bad-debt handling; a complete branch inventory remains unproven.",
+      "rationale": "SiloDAO's January 2024 deprecation plan explicitly called for XAI credit lines and direct deposits to be retracted, the credit lines burned, and the XAI module deprecated so no more XAI could be minted. The official historical PriceProvidersRepository documentation establishes that Silo v1 routed supported assets to configured providers, but it does not identify the complete former XAI-specific silo or asset mapping. The verified XAI token contract also cannot reveal the retired branch's feed wiring, fallback, liquidation timing, backstop, or shutdown and bad-debt handling. A current configuration therefore does not exist, and a complete historical branch inventory is not recoverable from the reviewed public evidence.",
       "sources": [
+        {
+          "label": "SiloDAO plan to deprecate XAI",
+          "url": "https://gov.silo.finance/t/a-plan-to-deprecate-xai-stablecoin/443"
+        },
         {
           "label": "Silo PriceProvidersRepository documentation",
           "url": "https://devdocs.silo.finance/smart-contracts-overview/oracle/priceprovidersrepository"
@@ -36,10 +40,14 @@
         }
       ]
     },
-    "reviewedAt": "2026-07-20",
+    "reviewedAt": "2026-07-21",
     "reviewer": "Codex Prompt 6b oracle review",
     "confidence": "limited",
     "sources": [
+      {
+        "label": "SiloDAO plan to deprecate XAI",
+        "url": "https://gov.silo.finance/t/a-plan-to-deprecate-xai-stablecoin/443"
+      },
       {
         "label": "Silo PriceProvidersRepository documentation",
         "url": "https://devdocs.silo.finance/smart-contracts-overview/oracle/priceprovidersrepository"
@@ -226,28 +234,18 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "USDC Silo credit-line collateral",
-      "pct": 89.45,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle and Silo isolated credit lines",
-      "riskFactors": ["counterparty", "liquidity", "smart-contract"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "ETH Silo credit-line collateral",
-      "pct": 10.55,
-      "risk": "very-low",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Ethereum and Silo isolated credit lines",
-      "riskFactors": ["market", "liquidity", "smart-contract"],
+      "name": "Legacy XAI Silo credit-line collateral",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Silo V1 isolated lending markets and their collateral depositors",
+      "riskFactors": ["market", "counterparty", "liquidity", "smart-contract", "concentration"],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "OpenAI Codex V9 curation pass",
     "confidence": "manual-review",
     "sources": [
       {
@@ -261,21 +259,25 @@
       {
         "label": "XAI verified Ethereum contract",
         "url": "https://etherscan.io/address/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac#code"
+      },
+      {
+        "label": "SiloDAO XAI deprecation plan",
+        "url": "https://gov.silo.finance/t/a-plan-to-deprecate-xai-stablecoin/443"
       }
     ],
-    "rationale": "Re-checked 2026-07-20 whether Silo publishes enough to upgrade scope: current Silo documentation covers the V3 isolated-market design and does not publish a dated, reproducible aggregate collateral snapshot for legacy XAI credit lines, and XAI has been under a SiloDAO-approved deprecation and wind-down since 2024, so no issuer reserve reporting exists for it. Scope remains selected-slices at manual-review confidence: the USDC 89.45% and ETH 10.55% weights are carried from the 2026-07-14 bounded review as a static record, not re-derived today.",
-    "compositionBasis": "Static XAI collateral categories reconciled against Silo's isolated-market design; no issuer snapshot exists",
-    "compositionAsOf": "2026-07-14",
-    "scope": "selected-slices",
-    "knownUnknownExposure": "The current aggregate collateral mix, market-level balances, and liquidation liquidity are not published in a reproducible issuer snapshot.",
-    "knownUnknownExposurePct": 10.55,
+    "rationale": "Silo documentation describes the isolated-market mechanism but does not publish a dated, reproducible aggregate collateral snapshot for legacy XAI credit lines. SiloDAO approved XAI's deprecation and wind-down in 2024, and no current issuer reserve report exists. The previous 89.45% USDC / 10.55% ETH split was a stale carried snapshot and has been removed; residual backing is represented as one legacy credit-line envelope.",
+    "compositionBasis": "Silo isolated-market documentation and the SiloDAO deprecation record; no current issuer snapshot exists",
+    "compositionAsOf": "2026-07-21",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current per-market collateral balances, collateral identities and weights, residual XAI debt, liquidation liquidity, and wind-down recoveries are not published in a reproducible current snapshot.",
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
-        "reserveIndex": 1,
-        "reserveName": "ETH Silo credit-line collateral",
-        "pct": 10.55,
-        "disposition": "insufficient-evidence",
-        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+        "reserveIndex": 0,
+        "reserveName": "Legacy XAI Silo credit-line collateral",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The deprecated protocol publishes no current market-level collateral snapshot, so the aggregate cannot be split or linked without fabrication."
       }
     ]
   },

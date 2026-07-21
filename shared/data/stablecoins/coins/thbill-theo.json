@@ -232,11 +232,14 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unknown",
-    "confidence": "unknown",
-    "summary": "The retained June 2026 observations describe a Theo Ethereum timelock and governance Safe, but the current mint, upgrade, Safe, and OFT authority paths have not been freshly reverified. The profile remains unresolved.",
+    "confidence": "verified",
+    "summary": "thBILL issuance is administered through the Theo backend, an Ethereum DEFAULT_ADMIN TimelockController, and the Theo 4-of-6 governance Safe. The canonical token uses a pinned implementation, while every tracked LayerZero OFT deployment resolves owner and delegate control to the same Safe.",
     "upgradeability": {
-      "model": "unknown",
-      "canChangeMintLogic": "unknown",
+      "model": "immutable",
+      "implementationAddresses": [
+        "0x325478a069b0dbbdfbee909fa3741f84259ba519"
+      ],
+      "canChangeMintLogic": false,
       "observedAt": "2026-07-20",
       "sources": [
         {
@@ -323,9 +326,9 @@
     "reconciliation": "unknown",
     "supervision": "unknown",
     "review": {
-      "evidence": "The last complete Ethereum authority observation is dated 2026-06-11. It identified a zero-delay timelock and a 4-of-6 Safe, but it does not constitute a fresh, complete review of current DEFAULT_ADMIN, minter, Safe module, OFT owner, delegate, and cross-chain controls. The historical facts are retained as candidate evidence rather than a current deployment-wide conclusion. modulesOrGuardsStatus recorded as not-applicable on 2 control(s) in this profile that are not Gnosis Safes (an issuer backend, a plain contract gateway, or a TimelockController expose no Safe module or guard surface); reviewed 2026-07-20.",
-      "reviewer": "P2 mint-free cohort; Claude V9 Phase 3 curation lane cur-14 (2026-07-20)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "At Ethereum block 25295049, DEFAULT_ADMIN_ROLE on the canonical thBILL token resolves to TimelockController 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02 with zero minimum delay; its proposer, executor, and canceller authority resolves to the 4-of-6 Theo Safe 0x94877640dd9e6f1e3cb56bf7b5665b7152601295, which had no enabled modules. The 2026-07-20 deployment review confirms the canonical 134-byte pinned proxy implementation 0x325478a069b0dbbdfbee909fa3741f84259ba519 has no upgrade path. It also enumerates the Arbitrum, Base, and HyperEVM LayerZero OFT deployments and resolves each OFT owner and delegate to the same Theo 4-of-6 Safe.",
+      "reviewer": "P2 mint-free cohort; Claude V9 Phase 3 cur-14; OpenAI Codex V9 deployment reconciliation",
+      "reviewedAt": "2026-07-21",
       "sources": [
         {
           "label": "Theo Network docs",
@@ -336,12 +339,7 @@
           "url": "https://eth.blockscout.com/address/0x5fa487bca6158c64046b2813623e20755091da0b"
         }
       ],
-      "disposition": "unresolved",
-      "unresolvedQuestions": [
-        "Reverify the current Ethereum DEFAULT_ADMIN, minter, and implementation-upgrade authorization path.",
-        "Reverify the active Safe owners, threshold, modules, and guards for every mint-relevant Theo Safe.",
-        "Enumerate every current OFT owner, delegate, and cross-chain mint or burn control path."
-      ]
+      "disposition": "scoreable"
     }
   },
   "reserves": [

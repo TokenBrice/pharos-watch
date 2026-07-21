@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": true
   },
-  "collateral": "Crypto assets via ShadeLend overcollateralized vaults (ATOM, SCRT, stablecoins like USDC, SHD governance token) plus stablecoin redemption pools; targets 100-150% system-wide collateralization ratio",
+  "collateral": "DAO-whitelisted assets locked in overcollateralized ShadeLend vaults; current collateral identities, balances, and weights are private on Secret Network",
   "pegMechanism": "NAV tracks a governance-set basket of global currencies and commodities (currently USD ~33.5%, EUR ~22.9%, Gold ~18.7%, JPY ~11.1%, CAD ~7.5%, BTC ~6.3%) priced via Band Protocol feeds, with weights selected on GDP, monetary-policy health and growth and adjustable through SILK Assembly peg migrations; stability maintained via overcollateralized ShadeLend minting, bounded conversion minting, redemption pools, collateral redemptions/liquidations, and ShadeDAO bonds",
   "mechanismArchetype": "cdp",
   "llamaId": "113",
@@ -107,37 +107,19 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "Overcollateralized vault collateral (ATOM, SCRT, stablecoins)",
-      "pct": 70,
-      "risk": "medium",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "ShadeLend vault collateral depositors (ATOM, SCRT, stablecoins) on Secret Network",
-      "riskFactors": ["market", "liquidity", "smart-contract", "custody", "concentration"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Stablecoin redemption pools (USDC, other stables)",
-      "pct": 20,
-      "risk": "low",
+      "name": "DAO-whitelisted ShadeLend vault collateral basket (current identities and weights private)",
+      "pct": 100,
+      "risk": "high",
       "blacklistable": true,
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle (USDC) and other stablecoin issuers held in Shade redemption pools",
-      "riskFactors": ["counterparty", "custody", "liquidity", "legal"],
-      "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "SHD governance token (bounded minting backing)",
-      "pct": 10,
-      "risk": "very-high",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Shade Protocol (SHD governance token)",
-      "riskFactors": ["market", "liquidity", "concentration", "smart-contract"],
+      "assetClass": "other",
+      "issuerOrObligor": "ShadeLend vault depositors and issuers of DAO-whitelisted collateral assets",
+      "riskFactors": ["market", "liquidity", "smart-contract", "counterparty", "concentration"],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex Safety Score V9 reserve batch 7",
     "confidence": "manual-review",
     "sources": [
       {
@@ -161,41 +143,27 @@
         "url": "https://app.shadeprotocol.io"
       }
     ],
-    "rationale": "Re-fetched the Shade SILK documentation on 2026-07-20: the docs describe the mechanism categories (overcollateralized ShadeLend vaults at 120-150%+ collateralization, stability pool, collateral redemptions, bonds) but publish no current collateral-token weights, redemption-pool balances, or SHD exposure, and Secret Network privacy prevents independent on-chain reconciliation. The 70/20/10 split is therefore retained as a curation envelope over documented categories, not an issuer-published allocation, and the confidence is set to manual-review accordingly. The SHD slice is re-tiered from high to very-high: SHD is the protocol's own governance token, the taxonomy maps governance-token backing to very-high, and self-referential backing is the reflexive failure mode the tier exists for.",
-    "compositionBasis": "Shade Protocol documentation of SILK backing categories (fetched 2026-07-20); no published weights; 70/20/10 curation envelope retained",
+    "rationale": "Shade documents SILK issuance against overcollateralized, DAO-whitelisted ShadeLend vault collateral, but Secret Network privacy prevents a current constituent reconciliation. The Stability Pool is a pool of SILK deposits used to repay liquidated debt, not a separate reserve asset, and collateral redemptions return collateral from at-risk vaults. The reviewed primary sources do not support the former 70/20/10 allocation or a fixed 10% SHD backing slice, so those false-precision rows are replaced by one complete unsplit vault-collateral basket.",
+    "compositionBasis": "Shade documentation of overcollateralized vault backing, Stability Pool liquidations, and collateral redemptions; current private collateral mix undisclosed",
+    "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current collateral-token weights, redemption-pool balances, and independent reserve reconciliation are not available in the reviewed sources (90% of the envelope unresolved); the SHD slice is a known but untracked self-referential asset.",
-    "knownUnknownExposurePct": 90,
+    "knownUnknownExposure": "Current collateral identities, balances, and weights cannot be reconciled from the reviewed public sources or private Secret Network state.",
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Overcollateralized vault collateral (ATOM, SCRT, stablecoins)",
-        "pct": 70,
-        "disposition": "insufficient-evidence",
-        "rationale": "The broad vault bucket is documented, but current token weights and failure domains are not published.",
+        "reserveName": "DAO-whitelisted ShadeLend vault collateral basket (current identities and weights private)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The protocol documents whitelisted vault collateral but does not publish the current constituent inventory or weights.",
         "candidateCoinIds": ["usdc-circle"]
-      },
-      {
-        "reserveIndex": 1,
-        "reserveName": "Stablecoin redemption pools (USDC, other stables)",
-        "pct": 20,
-        "disposition": "insufficient-evidence",
-        "rationale": "The redemption-pool category is documented, but current pool composition and balances are not published.",
-        "candidateCoinIds": ["usdc-circle"]
-      },
-      {
-        "reserveIndex": 2,
-        "reserveName": "SHD governance token (bounded minting backing)",
-        "pct": 10,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "SHD is Shade Protocol's own governance token, not a tracked stablecoin dependency; its self-referential backing is an untracked exogenous risk."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Shade Protocol contracts (ShadeLend vaults, stability pool, redemption pools) on Secret Network - self-custodied, no third-party custodian",
+        "name": "ShadeLend vault contracts on Secret Network - self-custodied, no third-party custodian",
         "role": "other",
         "sharePct": 100,
         "jurisdiction": "Secret Network (onchain)"
@@ -221,7 +189,7 @@
         "url": "https://github.com/securesecrets/shade"
       }
     ],
-    "uncertainty": "SILK backing sits in Shade Protocol contracts on Secret Network (ShadeLend vaults, stability pool, redemption pools) with no third-party or legal custodian, so there is no bankruptcy-remoteness structure by construction. Secret Network's privacy model prevents reading current vault balances, pool compositions, or admin key configurations from chain state, so segregation of pool types and any reuse of collateral cannot be verified; the docs describe collateral as locked until liquidation or repayment but publish no explicit rehypothecation terms. ShadeDAO assembly multisigs (thresholds and signers unverifiable remotely) govern risk parameters and the permissioned SILK minter used by bond and arbitrage modules."
+    "uncertainty": "SILK backing sits in ShadeLend vault contracts on Secret Network with no third-party or legal custodian, so there is no bankruptcy-remoteness structure by construction. Secret Network's privacy model prevents reading current vault balances, collateral composition, or admin key configurations from public state; the docs describe collateral as locked until liquidation or repayment but publish no explicit rehypothecation terms."
   },
   "yieldConfig": {
     "yieldSource": "SILK basket index appreciation",

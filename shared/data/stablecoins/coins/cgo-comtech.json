@@ -14,6 +14,23 @@
   "collateral": "Physical gold (999.9 fineness, 24-carat) stored in insured, segregated vaults with Transguard (Emirates Group) in the UAE; each bar registered on DMCC Tradeflow with unique ID and refiner certificates; 1 CGO = 1 gram of gold",
   "pegMechanism": "Direct redemption for physical gold coins via the ComTech Gold app; minimum physical delivery is 10 grams (in 1-gram multiples); gold movements endorsed and approved by DMCC",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex V9 curation",
+    "rationale": "ComTech documents direct issuance and redemption against vaulted physical gold. XDC transaction 0x52bd12282730d81ef04f2d842c34a716d8782c6dde7de11c64582c544f4043db created the tracked CGO contract at block 44335366 on 2022-04-27, establishing the implementation boundary.",
+    "sources": [
+      {
+        "label": "ComTech Gold website",
+        "url": "https://www.comtechgold.com/"
+      },
+      {
+        "label": "CGO XDC contract creation transaction",
+        "url": "https://xdcscan.com/tx/0x52bd12282730d81ef04f2d842c34a716d8782c6dde7de11c64582c544f4043db"
+      }
+    ]
+  },
+  "implementationLaunchDate": "2022-04-27",
   "commodityOunces": 0.03215072258749015,
   "detailProvider": "commodity",
   "geckoId": "comtech-gold",

@@ -116,6 +116,22 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "USDU BSC token is owned by a Gnosis Safe 3-of-5 (all EOA signers, no modules, v1.4.1) that can call mint(); the Solana Token-2022 mint has its mintAuthority set to the mint address itself — a self-referential pattern that prevents standard key-based verification.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-15",
+      "observedBlock": 103620388,
+      "sources": [
+        {
+          "label": "BscScan contract",
+          "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
+        },
+        {
+          "label": "USDU Solana mint",
+          "url": "https://solscan.io/token/9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "USDU BSC owner — Gnosis Safe 3-of-5",

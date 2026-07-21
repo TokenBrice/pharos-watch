@@ -333,8 +333,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "unknown",
-    "summary": "EUTBL Ethereum and Base mint/burn route through Spiko's UUPS PermissionManager, whose group-0 Safe (3-of-8) can authorize minters and replace PermissionManager logic without a contract-enforced delay; the group-1 minter Safe is 1-of-6. Starknet mint and upgrade authority is an Argent 3-of-5 multisig. Stellar mint authorization and contract ownership sit on a single-key Stellar account. The Polygon, Etherlink and Arbitrum PermissionManager group holders are not enumerable from public getters and remain unidentified, and Arbitrum carries the large majority of EUTBL supply.",
+    "confidence": "verified",
+    "summary": "EUTBL mint and burn are permission-gated on every deployment. Chain-local PermissionManager ADMIN Safes resolve the EVM authority paths, including the material Arbitrum deployment; Starknet uses an Argent 3-of-5 multisig, while Stellar token and PermissionManager ownership terminate at one single-key account.",
     "controls": [
       {
         "chain": "ethereum",
@@ -518,6 +518,118 @@
           }
         ],
         "evidence": "Stellar ledger 63567047 Soroban RPC reads of contract-instance storage. EUTBL token contract CBGV2QFQBBGEQRUKUMCPO3SZOHDDYO6SCP5CH6TW7EALKVHCXTMWDDOF (wasm f48f10d9c7d35fc7783b5e27578bf0e764e3a30ff26a3bd7d8e57758c17a9ea8) stores METADATA {decimals 5, symbol EUTBL}, PERM = CBGHLRSX5D5YMBPNK4ZGMUTJUHFIT7YGXGJURM5LFNZ7B6WNSXLGS26M, REDEMP = CAVZK26ERVGKGXLQGEOKPAQGIZS2YKN4BSXOYDMUY365EV66ZNSFEDBS and Owner = GBYIQXBK...PR3H. The Stellar PermissionManager contract's own Admin entry is the same GBYIQXBK...PR3H account, and the redemption contract stores the same Owner. Horizon reports that account with a single ed25519 signer of weight 1 and low/med/high thresholds all 0, i.e. one key can act alone; it is also the deployer recorded for the token contract. There is no Stellar multisig, no additional signer and no clawback flag, so the Stellar terminal administrator is a single-key surface."
+      },
+      {
+        "chain": "polygon",
+        "address": "0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9",
+        "label": "Spiko EUTBL PermissionManager ADMIN Safe (Polygon)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "observedAt": "2026-07-21",
+          "observedBlock": 90611309,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-21",
+        "observedBlock": 90611309,
+        "sources": [
+          {
+            "label": "EUTBL Polygon token and PermissionManager",
+            "url": "https://polygonscan.com/address/0xa0769f7a8fc65e47de93797b4e21c073c117fc80"
+          }
+        ],
+        "evidence": "At Polygon block 90611309, PermissionManager group 0 resolves to this sole 3-of-6 Safe with no enabled modules. The EUTBL mint requirement is mask 0x05 and the token and PermissionManager upgrade requirement is mask 0x01, so this ADMIN Safe can authorize minting and replace mint-critical logic."
+      },
+      {
+        "chain": "base",
+        "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "label": "Spiko EUTBL PermissionManager ADMIN Safe (Base)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "observedAt": "2026-07-21",
+          "observedBlock": 48916313,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-21",
+        "observedBlock": 48916313,
+        "sources": [
+          {
+            "label": "EUTBL Base token and PermissionManager",
+            "url": "https://basescan.org/address/0xa0769f7a8fc65e47de93797b4e21c073c117fc80"
+          }
+        ],
+        "evidence": "At Base block 48916313, PermissionManager group 0 resolves to this sole 3-of-6 Safe with no enabled modules. The chain-local ADMIN group controls mint authorization and UUPS upgrades."
+      },
+      {
+        "chain": "etherlink",
+        "address": "0x09991fbf6b16741f6fde3b1c16e8e4d95a5e5538",
+        "label": "Spiko EUTBL PermissionManager ADMIN Safe (Etherlink)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "observedAt": "2026-07-21",
+          "observedBlock": 48811809,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-21",
+        "observedBlock": 48811809,
+        "sources": [
+          {
+            "label": "EUTBL Etherlink token and PermissionManager",
+            "url": "https://explorer.etherlink.com/address/0xa0769f7a8fc65e47de93797b4e21c073c117fc80"
+          }
+        ],
+        "evidence": "At Etherlink block 48811809, PermissionManager group 0 resolves to this sole 3-of-6 Safe with no enabled modules. The EUTBL mint requirement is mask 0x05 and upgrade requirement is mask 0x01."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e",
+        "label": "Spiko EUTBL PermissionManager ADMIN Safe (Arbitrum)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "observedAt": "2026-07-21",
+          "observedBlock": 485896631,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-21",
+        "observedBlock": 485896631,
+        "sources": [
+          {
+            "label": "Arbitrum PermissionManager",
+            "url": "https://arbitrum.blockscout.com/address/0xa925c217e4c1c82ee721ebd496d3863d5c2d829a"
+          }
+        ],
+        "evidence": "At Arbitrum block 485896631, PermissionManager group 0 resolves to this sole Safe; getOwners() returned six owners, getThreshold() returned 3, and getModulesPaginated returned no modules. The mint requirement is mask 0x05 and both token and PermissionManager upgrades require mask 0x01."
       }
     ],
     "economicCapSemantics": "unknown",
@@ -580,13 +692,10 @@
           "url": "https://mainnet.sorobanrpc.com"
         }
       ],
-      "evidence": "Ethereum contract and RPC evidence identifies the UUPS PermissionManager as EUTBL's authority path. At block 25573477 its group-0 Safe remains 3-of-8; the PermissionManager implementation slot is 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e and the external proxy-admin slot is zero. The reviewed Spiko fund record is an AMF-regulated UCITS short-term VNAV money-market fund with quarterly PwC audit evidence, supporting periodic reconciliation and prudential supervision. Stellar and Starknet mint, terminal administration, and upgrade controls remain unenumerated, so asset-wide economic-cap semantics cannot be established. 2026-07-20 cur-8 extension: Starknet and Stellar control surfaces are now enumerated on-chain. Starknet block 12085300 — token owner and PermissionManager DEFAULT_ADMIN_ROLE/MINTER_ROLE holder is ArgentMultisig 0x07bc8bbd...5ca9d at threshold 3 of 5 signers. Stellar ledger 63567047 — the Soroban token Owner, its PermissionManager Admin and the redemption contract Owner are all the single-signer account GBYIQXBK...PR3H (one ed25519 signer, weight 1, thresholds 0/0/0). Cross-chain EVM authority pointers were re-read at Ethereum 25575130, Polygon 90573448, Base 48887911, Arbitrum 485896167 and Etherlink 48791704: Ethereum, Polygon, Base and Etherlink tokens all point at PermissionManager proxy 0x344278aff344d6fb960705dc18a4912221608472 while Arbitrum points at a separate proxy 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a; every EIP-1967 admin slot is zero and decimals are 5 everywhere. getGroups() confirms the reviewed Ethereum Safes 0x4eaa52b6 (group 0) and 0xa4f97076 (group 1) also hold those groups on Base, but on Polygon and Etherlink those addresses have no code and hold no group, and on Arbitrum they hold no group either, so those three chains have different, unidentified group holders. The PermissionManager exposes only getGroups/getRequirements/getGroupAdmins and no membership enumerator, so identifying them requires a full GroupAdded/GroupRemoved log replay that public range-limited RPCs did not permit in this pass. Arbitrum held 340,486,782.61692 of roughly 428.8M EUTBL at these blocks, so the unidentified holders are the majority-supply surface.",
-      "reviewer": "P2 mint-free cohort + cur-8 Starknet/Stellar control enumeration",
-      "reviewedAt": "2026-07-20",
-      "disposition": "unresolved",
-      "unresolvedQuestions": [
-        "Identify the current Polygon, Etherlink and Arbitrum Spiko PermissionManager group-0 (admin/upgrade) and group-1 (minter) holders. The Ethereum and Base holders are the reviewed Safes 0x4eaa52b6280593a8820c45ce38f974290ae52cea and 0xa4f97076721c78b050c2cd6a1bf7b442d801fb4a, but getGroups() shows those addresses hold no group on Polygon, Etherlink or Arbitrum, and the contract exposes no membership enumerator. Arbitrum is roughly 79% of EUTBL supply, so this is a material surface."
-      ]
+      "evidence": "The EUTBL authority surface is resolved across the tracked deployments. Ethereum and Base use PermissionManager 0x344278aff344d6fb960705dc18a4912221608472; Polygon and Etherlink use the same chain-local address; Arbitrum uses 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a. Fixed-block getGroups/getRequirements reads identify the sole ADMIN members as chain-local Safes: Polygon 0xa4196f06... (3-of-6, block 90611309), Base 0x4eaa52b6... (3-of-6, block 48916313), Etherlink 0x09991fbf... (3-of-6, block 48811809), and Arbitrum 0x7843225b... (3-of-6, block 485896631); no enabled Safe modules were found. The mint requirement is mask 0x05 and the token and PermissionManager upgrade requirement is mask 0x01. Starknet block 12085300 resolves token and PermissionManager authority to a 3-of-5 Argent multisig, while Stellar ledger 63567047 resolves token and PermissionManager ownership to one single-key account. The reviewed AMF-regulated UCITS fund and quarterly PwC audit support periodic reconciliation and prudential supervision.",
+      "reviewer": "P2 mint-free cohort; cur-8 Starknet/Stellar enumeration; OpenAI Codex V9 EVM completion",
+      "reviewedAt": "2026-07-21",
+      "disposition": "scoreable"
     }
   },
   "chainTier": "ethereum",

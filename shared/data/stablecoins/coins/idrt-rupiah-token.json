@@ -311,6 +311,31 @@
         "observedAt": "2026-07-20"
       }
     ],
+    "upgradeability": {
+      "model": "immutable",
+      "implementationAddresses": [
+        "0x998ffe1e43facffb941dc337dd0468d52ba5b48a",
+        "0x66207e39bb77e6b99aab56795c7c340c08520d83",
+        "0x554cd6bdd03214b10aafa3e0d4d42de0c5d2937b"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-20",
+      "observedBlock": 25571083,
+      "sources": [
+        {
+          "label": "IDRT Ethereum token",
+          "url": "https://etherscan.io/address/0x998ffe1e43facffb941dc337dd0468d52ba5b48a#code"
+        },
+        {
+          "label": "IDRT BSC token",
+          "url": "https://bscscan.com/address/0x66207e39bb77e6b99aab56795c7c340c08520d83#code"
+        },
+        {
+          "label": "IDRT Polygon token",
+          "url": "https://polygonscan.com/address/0x554cd6bdd03214b10aafa3e0d4d42de0c5d2937b#code"
+        }
+      ]
+    },
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {

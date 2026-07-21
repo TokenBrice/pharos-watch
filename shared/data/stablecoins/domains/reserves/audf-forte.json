@@ -2,64 +2,65 @@
   "id": "audf-forte",
   "reserves": [
     {
-      "name": "Australian-dollar reserves at regulated financial institutions",
+      "name": "AUD cash in the AUDF reserve bank account",
       "pct": 100,
       "risk": "very-low",
       "assetClass": "bank-deposit",
-      "issuerOrObligor": "Undisclosed regulated financial institutions",
+      "issuerOrObligor": "Undisclosed Australian bank",
       "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-07-21",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Forte AUD reserve and transparency disclosure",
-        "url": "https://www.forteaud.com/transparency"
+        "label": "MVAB Assurance AUDF Reserves Report - December 2025",
+        "url": "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/698d1450eb30d445cd88c7c4/1770853456188/AUDF%2B-%2BReserves%2BReport%2B%28December%2B2025%29.pdf"
       },
       {
         "label": "Forte AUD product site",
         "url": "https://www.forteaud.com/"
       }
     ],
-    "rationale": "Forte states that each AUDF corresponds one-for-one to Australian-dollar reserves held with regulated financial institutions. The current public transparency page does not expose institution-level weights or a cash-versus-cash-equivalent breakdown, so the reserve is retained as one aggregate bank-account basket.",
-    "compositionBasis": "Current Forte AUD reserve disclosure; provider-level allocation undisclosed",
+    "rationale": "MVAB Assurance audited Forte Securities Australia's AUDF reserve bank account as a single AUD cash balance of AUD 4,132,465.51 against AUD 4,125,000 of issued AUDF at 31 December 2025. The report establishes a complete 100% bank-deposit composition; it does not name the bank or disclose account-level terms.",
+    "compositionBasis": "MVAB independent audit of the AUDF reserve bank-account cash balance",
+    "compositionAsOf": "2025-12-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The reserve currency and regulated-institution placement are disclosed, but current institutions, provider shares, account terms, and any cash-equivalent allocation are not public.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "The complete reserve asset class is identified as an AUD bank-account cash balance. The bank identity, provider concentration, and account terms remain undisclosed custody details.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Australian-dollar reserves at regulated financial institutions",
+        "reserveName": "AUD cash in the AUDF reserve bank account",
         "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "Forte does not publish current institution-level or instrument-level reserve weights."
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The audited AUD bank-account cash balance is an external reserve asset rather than a tracked stablecoin dependency."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Undisclosed regulated financial institutions",
+        "name": "Undisclosed Australian bank",
         "role": "bank",
         "jurisdiction": "Australia"
       }
     ],
-    "segregation": "unknown",
+    "segregation": "segregated",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-07-21",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Forte AUD reserve and transparency disclosure",
-        "url": "https://www.forteaud.com/transparency"
+        "label": "MVAB Assurance AUDF Reserves Report - December 2025",
+        "url": "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/698d1450eb30d445cd88c7c4/1770853456188/AUDF%2B-%2BReserves%2BReport%2B%28December%2B2025%29.pdf"
       }
     ],
-    "uncertainty": "The issuer describes regulated financial-institution custody but does not identify the institutions, disclose shares, or establish segregation, bankruptcy-remoteness, or rehypothecation terms on the reviewed current page."
+    "uncertainty": "The audited report identifies one segregated, unencumbered AUDF reserve bank account but does not name the bank, establish statutory bankruptcy remoteness, or state whether the cash may be rehypothecated."
   }
 }

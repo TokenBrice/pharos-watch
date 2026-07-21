@@ -151,6 +151,34 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "eMXN is issued by Telcoin under a Nebraska Digital Asset Depository charter on Polygon; the token is a TransparentUpgradeableProxy whose proxy admin and MINTER_ROLE/DEFAULT_ADMIN_ROLE are all held by Gnosis Safe multisigs with no modules or guards.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": ["0x68727e573d21a49c767c3c86a92d9f24bd933c99"],
+      "implementationAddresses": ["0x486b5d5760e8e98df2c9fc24f09b2d76893aa1de"],
+      "adminAddresses": [
+        "0x3964801c5eeb37da8604e1cfaa996704200bd998",
+        "0x6eaa439f204bfe1a4ca8a0b186a9930ca80d76a2"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "TransparentUpgradeableProxy admin Safe (6/3)",
+      "observedAt": "2026-07-21",
+      "observedBlock": 90613186,
+      "sources": [
+        {
+          "label": "eMXN Polygon proxy",
+          "url": "https://polygonscan.com/address/0x68727e573d21a49c767c3c86a92d9f24bd933c99#code"
+        },
+        {
+          "label": "eMXN ProxyAdmin",
+          "url": "https://polygonscan.com/address/0x3964801c5eeb37da8604e1cfaa996704200bd998#code"
+        },
+        {
+          "label": "Polygon PublicNode RPC",
+          "url": "https://polygon-bor-rpc.publicnode.com"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Telcoin MINTER_ROLE Safe (primary, 6/3)",

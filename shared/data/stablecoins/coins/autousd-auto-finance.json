@@ -146,7 +146,7 @@
         "label": "Auto Finance autoUSD ProxyAdmin owner Safe",
         "role": "proxy-admin",
         "authorityType": "safe",
-        "directMintAbility": "upgrade-only",
+        "directMintAbility": "can-authorize",
         "threshold": 6,
         "signerCount": 11,
         "canRaiseCap": true,
@@ -196,7 +196,7 @@
         ],
       "observedAt": "2026-07-20",
       "observedBlock": 25573280,
-      "evidence": "At Ethereum block 25539960, ProxyAdmin 0x84a317... getProxyImplementation(autoUSD) returned 0xfb2ebded..., getProxyAdmin(autoUSD) returned itself, and owner() returned this Safe. The Safe returned 11 owners, threshold 6, version 1.3.0, and no enabled modules. Its Safe Transaction Service record reported zero guard and module guard, fallback handler 0xf48f..., and master copy 0xd9db.... A fixed-block follow-up at Ethereum block 25573280 reconfirmed owner() = this Safe, getOwners() = the listed 11 EOAs, getThreshold() = 6, and getModulesPaginated() = []. An eth_call to ProxyAdmin.upgrade(autoUSD, currentImplementation) from the Safe address succeeded."
+      "evidence": "At Ethereum block 25539960, ProxyAdmin 0x84a317... getProxyImplementation(autoUSD) returned 0xfb2ebded..., getProxyAdmin(autoUSD) returned itself, and owner() returned this Safe. The Safe returned 11 owners, threshold 6, version 1.3.0, and no enabled modules. Its Safe Transaction Service record reported zero guard and module guard, fallback handler 0xf48f..., and master copy 0xd9db.... A fixed-block follow-up at Ethereum block 25573280 reconfirmed owner() = this Safe, getOwners() = the listed 11 EOAs, getThreshold() = 6, and getModulesPaginated() = []. An eth_call to ProxyAdmin.upgrade(autoUSD, currentImplementation) from the Safe address succeeded. 2026-07-21 mint-authority classification note: the deployed implementation has no on-chain MINTER_ROLE/grant mechanism (confirmed reverting), so this Safe's only mint-adjacent capability is that its unrestricted proxy-upgrade power can introduce or change mint logic at will; recorded here as can-authorize rather than a distinct on-chain role grant."
       }
     ],
     "review": {

@@ -560,35 +560,25 @@
   "governanceQuality": "regulated-entity",
   "reserves": [
     {
-      "name": "Senior secured private-credit loans",
-      "pct": 95,
+      "name": "Hamilton Lane SCOPE fund exposure",
+      "pct": 100,
       "risk": "high",
-      "assetClass": "private-credit",
-      "issuerOrObligor": "Hamilton Lane Senior Credit Opportunities Fund (SCOPE) underlying private borrowers",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Hamilton Lane Senior Credit Opportunities Fund (SCOPE) and its underlying private-credit borrowers",
       "riskFactors": [
         "credit",
         "liquidity",
         "market",
+        "custody",
+        "counterparty",
         "concentration"
       ],
       "liquidityHorizon": "over-seven-days"
-    },
-    {
-      "name": "Cash and liquidity buffer",
-      "pct": 5,
-      "risk": "low",
-      "assetClass": "cash",
-      "issuerOrObligor": "Hamilton Lane SCOPE fund liquidity accounts",
-      "riskFactors": [
-        "counterparty",
-        "custody"
-      ],
-      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "OpenAI Codex V9 curation pass",
     "confidence": "manual-review",
     "sources": [
       {
@@ -600,26 +590,19 @@
         "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize"
       }
     ],
-    "rationale": "HLSCOPE is a tokenized feeder into Hamilton Lane's SCOPE senior credit opportunities fund, which targets floating-rate senior secured loans to private borrowers. The 95/5 split between senior secured loans and the cash liquidity buffer follows SCOPE's documented strategy of remaining predominantly invested with a liquidity sleeve; neither publisher discloses a current position-level holdings file, so the loan bucket is one aggregate classified exposure rather than invented obligor weights.",
+    "rationale": "HLSCOPE is a tokenized feeder into Hamilton Lane's SCOPE senior credit opportunities fund, which targets floating-rate senior secured loans to private borrowers. Neither Securitize nor Hamilton Lane publishes a current holdings schedule or funded-versus-cash allocation. The previous 95/5 credit/cash approximation has therefore been removed and the complete fund exposure is represented as one source-supported envelope.",
     "compositionBasis": "Securitize and Hamilton Lane SCOPE fund strategy disclosures; position-level holdings are undisclosed",
-    "compositionAsOf": "2026-07-20",
+    "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The underlying loan portfolio's obligors, sector weights, and current funded-versus-cash allocation are not published at position level; the 95/5 split is an approximation of the documented predominantly-invested strategy, not a reported allocation.",
-    "knownUnknownExposurePct": 95,
+    "knownUnknownExposure": "The underlying loan portfolio's obligors, sector weights, maturities, and current funded-versus-cash allocation are not published in the reviewed public sources.",
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Senior secured private-credit loans",
-        "pct": 95,
-        "disposition": "insufficient-evidence",
-        "rationale": "SCOPE's private-credit positions are not published at position level, so the bucket cannot be split into reviewed obligor exposures."
-      },
-      {
-        "reserveIndex": 1,
-        "reserveName": "Cash and liquidity buffer",
-        "pct": 5,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "Fund-level cash is an external reserve asset rather than a tracked stablecoin dependency."
+        "reserveName": "Hamilton Lane SCOPE fund exposure",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The issuer identifies the SCOPE strategy but does not publish current loan-level or cash weights, so the envelope cannot be split without fabrication."
       }
     ]
   },

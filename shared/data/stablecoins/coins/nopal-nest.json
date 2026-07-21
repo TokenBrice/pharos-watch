@@ -348,6 +348,22 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "nOPAL Teller and Manager are both owned by the same 3-of-6 Gnosis Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (Safe v1.3.0, no modules, no guard) \u2014 same Safe as nBASIS. owner() confirmed for both contracts at Ethereum block 25295023.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-06-11",
+      "observedBlock": 25295023,
+      "sources": [
+        {
+          "label": "nOPAL BoringVault verified source (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x119dd7daff816f29d7ee47596ae5e4bdc4299165?tab=contract"
+        },
+        {
+          "label": "Nest smart contracts",
+          "url": "https://docs.nest.credit/developers/smart-contracts"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Nest BlackOpal LiquidStone II Vault Teller (issuance/redemption)",

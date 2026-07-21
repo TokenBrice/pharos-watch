@@ -14,6 +14,23 @@
   "collateral": "Overcollateralized by DOT, ETH, vDOT, WBTC, tBTC, USDT, USDC, and giga-token variants (GIGADOT, GIGAETH) on the Hydration appchain; built on Aave v3-forked code",
   "pegMechanism": "Overcollateralized CDP with automated partial liquidations per block; peg stabilized by the HOLLAR Stability Module (HSM), which enables direct stablecoin swaps near $1 and deploys received stablecoins into yield strategies",
   "mechanismArchetype": "cdp",
+  "implementationLaunchDate": "2025-09-22",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex V9 curation",
+    "rationale": "Hydration referendum 182 scheduled and executed the HOLLAR launch at Hydration block 9,333,143 on September 22, 2025 for asset 222 and the tracked EVM representation 0x531a654d1696ed52e7275a8cede955e82620f99a. Hydration's product documentation establishes the overcollateralized borrow, liquidation, and HSM design, supporting the CDP archetype.",
+    "sources": [
+      {
+        "label": "Hydration referendum 182",
+        "url": "https://hydration.subsquare.io/referenda/182"
+      },
+      {
+        "label": "Hydration HOLLAR documentation",
+        "url": "https://docs.hydration.net/products/hollar/"
+      }
+    ]
+  },
   "llamaId": "312",
   "detailProvider": "defillama",
   "geckoId": "hydrated-dollar",
@@ -161,109 +178,25 @@
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "reserves": [
     {
-      "name": "DOT",
-      "pct": 40,
+      "name": "Hydration borrow-market and HOLLAR Stability Module collateral basket",
+      "pct": 100,
       "risk": "high",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Polkadot network (bridged into Hydration)",
+      "assetClass": "other",
+      "issuerOrObligor": "Hydration borrowers and HOLLAR Stability Module liquidity providers",
       "riskFactors": [
         "market",
         "liquidity",
         "smart-contract",
-        "concentration"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "ETH",
-      "pct": 15,
-      "risk": "very-low",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Ethereum protocol (bridged into Hydration)",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "smart-contract"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "vDOT (liquid staked DOT)",
-      "pct": 15,
-      "risk": "high",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Bifrost (vDOT liquid staking on Polkadot)",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "smart-contract",
-        "custody"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "WBTC / tBTC",
-      "pct": 10,
-      "risk": "medium",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "BitGo (WBTC) and Threshold Network (tBTC), bridged into Hydration",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "custody",
-        "counterparty",
-        "smart-contract"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "USDT (stablecoins)",
-      "pct": 7.5,
-      "risk": "low",
-      "coinId": "usdt-tether",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Tether Holdings",
-      "riskFactors": [
-        "credit",
         "counterparty",
         "custody",
-        "liquidity"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "USDC (stablecoins)",
-      "pct": 7.5,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle Internet Financial",
-      "riskFactors": [
-        "credit",
-        "counterparty",
-        "custody",
-        "liquidity"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "GIGADOT / GIGAETH",
-      "pct": 5,
-      "risk": "very-high",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Hydration GigaStrategy protocol LP positions",
-      "riskFactors": [
-        "market",
-        "liquidity",
-        "smart-contract",
         "concentration"
       ],
       "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "OpenAI Codex curation pass",
     "confidence": "manual-review",
     "sources": [
       {
@@ -275,47 +208,18 @@
         "url": "https://app.hydration.net/borrow/markets"
       }
     ],
-    "rationale": "Hydration documents HOLLAR as minted against DOT, ETH, vDOT, USDT, USDC, tBTC, and WBTC collateral through its GHO-style borrow markets, with giga-token variants also accepted. The retained per-asset split is the prior curation wave's approximation of the borrow-market collateral mix, because Hydration publishes no dated official aggregate breakdown. Each collateral asset is classified; the weights themselves are approximate.",
-    "compositionBasis": "Hydration's documented HOLLAR collateral set with approximate borrow-market weights; no dated official aggregate allocation is published",
-    "compositionAsOf": "2026-07-20",
+    "rationale": "Hydration documents HOLLAR as minted through its GHO-style borrow markets and supported by the HOLLAR Stability Module. The documented collateral set includes DOT, ETH, vDOT, USDT, USDC, tBTC, WBTC, and giga-token variants, but Hydration publishes no dated aggregate collateral allocation. The reserve is therefore represented as one evidenced mixed basket instead of retaining unsupported per-asset percentages.",
+    "compositionBasis": "Hydration's documented HOLLAR collateral set; current per-asset and HSM-versus-borrow-market weights are unpublished",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current per-asset collateral weights, the share held via the HOLLAR Stability Module versus borrow positions, and per-asset utilization are not published as a dated aggregate; non-stablecoin slice weights (85% of the basket) are approximations.",
-    "knownUnknownExposurePct": 85,
+    "knownUnknownExposure": "Current per-asset collateral weights, the share held via the HOLLAR Stability Module versus borrow positions, and per-asset utilization are not published as a dated aggregate.",
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "DOT",
-        "pct": 40,
-        "disposition": "insufficient-evidence",
-        "rationale": "Slice weight is an approximation; Hydration publishes no dated aggregate collateral breakdown for this asset."
-      },
-      {
-        "reserveIndex": 1,
-        "reserveName": "ETH",
-        "pct": 15,
-        "disposition": "insufficient-evidence",
-        "rationale": "Slice weight is an approximation; Hydration publishes no dated aggregate collateral breakdown for this asset."
-      },
-      {
-        "reserveIndex": 2,
-        "reserveName": "vDOT (liquid staked DOT)",
-        "pct": 15,
-        "disposition": "insufficient-evidence",
-        "rationale": "Slice weight is an approximation; Hydration publishes no dated aggregate collateral breakdown for this asset."
-      },
-      {
-        "reserveIndex": 3,
-        "reserveName": "WBTC / tBTC",
-        "pct": 10,
-        "disposition": "insufficient-evidence",
-        "rationale": "Slice weight is an approximation; Hydration publishes no dated aggregate collateral breakdown for this asset."
-      },
-      {
-        "reserveIndex": 6,
-        "reserveName": "GIGADOT / GIGAETH",
-        "pct": 5,
-        "disposition": "insufficient-evidence",
-        "rationale": "Slice weight is an approximation; Hydration publishes no dated aggregate collateral breakdown for this asset."
+        "reserveName": "Hydration borrow-market and HOLLAR Stability Module collateral basket",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The eligible collateral universe is documented, but Hydration publishes no current constituent or venue-level allocation."
       }
     ]
   },

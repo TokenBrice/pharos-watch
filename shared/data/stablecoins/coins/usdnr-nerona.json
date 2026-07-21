@@ -182,8 +182,68 @@
           }
         ],
         "evidence": "At Ethereum block 25295161: EIP-1967 impl slot=0x45bf08d042a8958f01f8e8319b791e4584550da8 (TransparentUpgradeableProxy). ProxyAdmin=0x0f38d8a5583f9316084e9c40737244870c565924; ProxyAdmin owner=TimelockController 0x23ca665c8a73292fc7ac2cc4493d2ce883bba468 (3-day minDelay). Fluent deployment: no M0 official deployment address found for Fluent; Fluent chain not covered by this control."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x9ffe615c92635e5b36de004dd78a94c51aa04256",
+        "label": "USDnr token ProxyAdmin",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "capDescription": "Controls the EIP-1967 admin slot of the USDnr token proxy itself; can replace the JMIExtension implementation that defines USDnr's wrap/unwrap and freeze logic.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "Ethereum USDnr proxy",
+            "url": "https://eth.blockscout.com/address/0xd48e565561416de59da1050ed70b8d75e8ef28f9?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC fixed-block role reads",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25579998: USDnr proxy 0xd48e565561416de59da1050ed70b8d75e8ef28f9 EIP-1967 admin slot resolves to this ProxyAdmin contract, matching the impl-slot read (0x1028a0e146d2915c509c8e019e0e5c66d3d22ae0) already reviewed under blacklistabilityReview."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xc07f0b4556e0cc1bfd8a076a98d43e79acd3cd33",
+        "label": "USDnr ProxyAdmin owner (EOA)",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "capDescription": "Sole owner of the USDnr token's ProxyAdmin; can push a new implementation with no on-chain timelock, module, or multisig — a single compromised key could rewrite USDnr's mint, wrap, or freeze logic.",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "USDnr ProxyAdmin owner read",
+            "url": "https://eth.blockscout.com/address/0x9ffe615c92635e5b36de004dd78a94c51aa04256?tab=read_write_contract"
+          }
+        ],
+        "evidence": "At Ethereum block 25579998, owner() on ProxyAdmin 0x9ffe615c92635e5b36de004dd78a94c51aa04256 returns 0xc07F0b4556E0cc1bFd8A076a98d43E79ACD3Cd33; eth_getCode for that address returns 0x, confirming an externally-owned account with no multisig or timelock wrapper."
       }
     ],
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": ["0xd48e565561416de59da1050ed70b8d75e8ef28f9"],
+      "implementationAddresses": ["0x1028a0e146d2915c509c8e019e0e5c66d3d22ae0"],
+      "adminAddresses": ["0x9ffe615c92635e5b36de004dd78a94c51aa04256"],
+      "canChangeMintLogic": true,
+      "controlRef": "USDnr ProxyAdmin owner (EOA)",
+      "observedAt": "2026-07-21",
+      "observedBlock": 25579998,
+      "sources": [
+        {
+          "label": "Ethereum USDnr proxy",
+          "url": "https://eth.blockscout.com/address/0xd48e565561416de59da1050ed70b8d75e8ef28f9?tab=contract"
+        },
+        {
+          "label": "USDnr ProxyAdmin owner read",
+          "url": "https://eth.blockscout.com/address/0x9ffe615c92635e5b36de004dd78a94c51aa04256?tab=read_write_contract"
+        }
+      ]
+    },
     "review": {
       "sources": [
         {
@@ -203,9 +263,9 @@
           "url": "https://eth.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
         }
       ],
-      "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable (IsProxy=false, EIP-1967 slots zero). SwapFacility confirmed TransparentUpgradeableProxy; ProxyAdmin=0x0f38d8a5... → TimelockController 0x23ca665c... (3-day minDelay); proposer is Gnosis Safe 3/5. Fluent chain has no known M0 SwapFacility deployment; Ethereum controls cover base M issuance. Same governance as verified musd-metamask.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable (IsProxy=false, EIP-1967 slots zero). SwapFacility confirmed TransparentUpgradeableProxy; ProxyAdmin=0x0f38d8a5... → TimelockController 0x23ca665c... (3-day minDelay); proposer is Gnosis Safe 3/5. Fluent chain has no known M0 SwapFacility deployment; Ethereum controls cover base M issuance. Same governance as verified musd-metamask. Upgrade-authority follow-up (2026-07-21): the USDnr token's own EIP-1967 proxy (0xd48e565561416de59da1050ed70b8d75e8ef28f9) resolves to ProxyAdmin 0x9ffe615c92635e5b36de004dd78a94c51aa04256, whose owner() is a single externally-owned account (0xc07F0b4556E0cc1bFd8A076a98d43E79ACD3Cd33, empty bytecode) with no timelock or multisig — unlike the SwapFacility's 3-day TimelockController, the USDnr wrapper's own implementation can be replaced immediately by one key.",
+      "reviewer": "Claude Phase 0c continuation; Claude Safety Score V9 curation lane (upgrade-authority resolution, 2026-07-21)",
+      "reviewedAt": "2026-07-21"
     }
   },
   "collateralQuality": "rwa",

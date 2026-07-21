@@ -101,8 +101,8 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "DOC is natively a Rootstock rBTC-collateralized CDP stablecoin; its Arbitrum deployment (0x2ad62eb9...) is a self-deployed LayerZero V2 OFT representation (contract name \"MyOFT\", canonical LZ endpoint 0x1a44076050125825900e736c501f859c50fE728c, ~37K DOC max supply). Money On Chain's own announcement (moneyonchain.com/doc-arbitrum) states DOC moves between Rootstock and Arbitrum via Stargate/LayerZero — a generic-OFT lock/mint route with a third-party (LayerZero) control surface, not the Arbitrum canonical bridge and not a Stargate canonical Hydra pool asset. This refutes the L2BEAT \"Arbitrum Canonical\" seed. Unresolved on 2026-07-20: the exact chain-supply capture carries an additional Ethereum-labelled DOC row that no reviewed route matches. Money On Chain's own DOC-on-Arbitrum announcement (moneyonchain.com/doc-arbitrum) enumerates only Rootstock issuance and the Arbitrum OFT representation and omits any Ethereum mainnet deployment, and no issuer page documents one, so no Ethereum route or contract is authored here; the row is treated as a supply-provider chain-label artifact for the CHAIN_SUPPLY owner to reconcile rather than an unreviewed bridge deployment.",
-    "reviewedAt": "2026-07-20",
+    "summary": "DOC is natively a Rootstock rBTC-collateralized CDP stablecoin. Its Arbitrum deployment (0x2ad62eb9...) is a self-deployed LayerZero V2 OFT representation documented by Money On Chain. Its low-supply Ethereum deployment is the legacy RSK Token Bridge eDOC SideToken (0x69f6d4d4...): at Ethereum block 25580192, the verified Bridge mapped original Rootstock token 0xe700691d... to eDOC in both directions. eDOC's sole minter was that Bridge proxy; upgrades and bridge ownership terminated at a 2-of-3 MultiSigWallet, while mint claims required the bridge's 2-of-5 Federation. Both peripheral deployments are external lock/mint routes rather than canonical rollup bridges.",
+    "reviewedAt": "2026-07-21",
     "reviewer": "Pharos bridge route review",
     "confidence": "verified",
     "protocols": [
@@ -129,6 +129,17 @@
         "note": "Verified contract 'MyOFT' on LZ endpoint 0x1a44076050125825900e736c501f859c50fE728c; owner-controlled peers/delegates, cross-chain mint/burn. Arbitrum supply is a minted OFT representation."
       },
       {
+        "source": "explorer",
+        "name": "RSK Token Bridge — Ethereum eDOC SideToken and controller stack",
+        "slug": "rsk-token-bridge-edoc",
+        "url": "https://eth.blockscout.com/address/0x69f6d4d4813f8e2e618dae7572e04b6d5329e207",
+        "bridgeTypes": [
+          "external-lock-mint",
+          "federated-bridge"
+        ],
+        "note": "Verified eDOC SideToken code assigns its sole minter to the RSK Bridge proxy. Fixed-block originalTokens(eDOC) and mappedTokens(Rootstock DOC) reads establish the canonical asset mapping; controller reads resolve a 2-of-3 admin multisig and a 2-of-5 claim federation."
+      },
+      {
         "source": "docs",
         "name": "Stargate Hydra docs (Pool-to-OFT lock/mint)",
         "slug": "stargate-hydra",
@@ -148,6 +159,14 @@
       {
         "label": "Arbiscan — Arbitrum DOC token (LayerZero V2 OFT 'MyOFT', endpoint 0x1a44076050...)",
         "url": "https://arbiscan.io/token/0x2ad62eb9744c720364f6ac856360a43e8a2229b5"
+      },
+      {
+        "label": "DefiLlama DOC adapter — Ethereum eDOC contract mapping",
+        "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/doc/index.ts"
+      },
+      {
+        "label": "Blockscout — verified Ethereum eDOC SideToken",
+        "url": "https://eth.blockscout.com/address/0x69f6d4d4813f8e2e618dae7572e04b6d5329e207"
       },
       {
         "label": "Rootstock — LayerZero integration (rBTC/RIF via OFT; Stargate Hydra)",
@@ -211,6 +230,49 @@
           {
             "label": "Arbiscan DOC token",
             "url": "https://arbiscan.io/token/0x2ad62eb9744c720364f6ac856360a43e8a2229b5"
+          }
+        ]
+      },
+      {
+        "id": "ethereum:0x69f6d4d4813f8e2e618dae7572e04b6d5329e207",
+        "sourceChain": "rootstock",
+        "destinationChain": "ethereum",
+        "canonicalChain": "rootstock",
+        "contractAddress": "0x69f6d4d4813f8e2e618dae7572e04b6d5329e207",
+        "protocol": "RSK Token Bridge (legacy eDOC SideToken)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Ethereum block 25580192, the verified Bridge's originalTokens(eDOC) returned Rootstock DOC 0xe700691d and mappedTokens(Rootstock DOC) returned eDOC, establishing the asset mapping on-chain. eDOC minter() returned Bridge proxy 0x12ed6935. The proxy implementation was 0x9f29f9bd and ProxyAdmin was 0xe4d35191; both ProxyAdmin.owner() and Bridge.owner() returned MultiSigWallet 0x040007b1 with required=2 and three owners. Bridge.getFederation() returned proxy 0x5e29c223, whose verified implementation required two votes from five enumerated members.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x040007b1804ad78a97f541bebed377dcb60e4138",
+        "failureDomainKeys": [
+          "protocol:rsk-token-bridge",
+          "multisig:ethereum:0x040007b1804ad78a97f541bebed377dcb60e4138",
+          "federation:ethereum:0x5e29c223d99648c88610519f96e85e627b3abe17"
+        ],
+        "observedAt": "2026-07-21",
+        "observedBlock": 25580192,
+        "sources": [
+          {
+            "label": "DefiLlama DOC adapter (eDOC mapping)",
+            "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/doc/index.ts"
+          },
+          {
+            "label": "Blockscout eDOC SideToken and verified minter code",
+            "url": "https://eth.blockscout.com/address/0x69f6d4d4813f8e2e618dae7572e04b6d5329e207"
+          },
+          {
+            "label": "Blockscout RSK Bridge proxy",
+            "url": "https://eth.blockscout.com/address/0x12ed69359919fc775bc2674860e8fe2d2b6a7b5d"
+          },
+          {
+            "label": "Blockscout bridge admin MultiSigWallet",
+            "url": "https://eth.blockscout.com/address/0x040007b1804ad78a97f541bebed377dcb60e4138"
           }
         ]
       }

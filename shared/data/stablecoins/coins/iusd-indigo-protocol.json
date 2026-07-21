@@ -13,14 +13,14 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "ADA-only collateral in overcollateralized Indigo Protocol CDP vaults; deposited ADA continues earning Cardano staking rewards via CDP Liquid Staking",
-  "pegMechanism": "Overcollateralized ADA-backed CDP synthetic dollar that tracks the median oracle price of USDC, USDT, and TUSD (fault-tolerant triple-peg). Solvency is maintained by per-iAsset Stability Pools that absorb liquidations of undercollateralized CDPs (Stability Providers paid in ADA collateral plus INDY), plus V2 redemptions (RMR hard peg) and a DAO-set variable interest rate (soft peg). Collateral parameters and MCR are governed by the INDY DAO",
+  "collateral": "Overcollateralized Indigo Protocol CDP vaults using ADA or DAO-whitelisted Cardano native tokens, plus stablecoins deposited through governed iUSD peg-stability modules",
+  "pegMechanism": "Overcollateralized multi-collateral CDP synthetic dollar with per-iAsset Stability Pools, collateral redemptions, DAO-set interest and collateral parameters, and governed peg-stability modules that can mint or redeem iUSD against approved stablecoins",
   "mechanismArchetype": "cdp",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-6 V9 mechanism review",
-    "rationale": "Indigo documents iUSD as an overcollateralized Cardano CDP whose debt is minted against ADA collateral; the Koios policy record anchors the current Cardano implementation boundary used for the implementation date.",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex Safety Score V9 reserve batch 7",
+    "rationale": "Indigo V3 documents iAssets as overcollateralized Cardano CDPs that may use ADA or DAO-whitelisted Cardano native tokens, with additional governed peg-stability modules for approved stablecoin pairs. The Koios policy record anchors the Cardano implementation boundary used for the implementation date.",
     "sources": [
       {
         "label": "Indigo Protocol documentation",
@@ -123,11 +123,11 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "Indigo overcollateralized Cardano vaults",
+      "name": "Indigo V3 CDP collateral and iUSD peg-stability-module basket",
       "pct": 100,
       "risk": "high",
       "assetClass": "cryptoasset",
-      "issuerOrObligor": "Cardano ADA and Indigo Protocol CDP system",
+      "issuerOrObligor": "Cardano ADA, whitelisted Cardano native-token issuers, approved stablecoin issuers, and Indigo Protocol",
       "riskFactors": [
         "market",
         "liquidity",
@@ -138,32 +138,32 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-6 V9 reserve review",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex Safety Score V9 reserve batch 7",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Indigo Protocol CDP documentation",
-        "url": "https://docs.indigoprotocol.io/"
+        "label": "Indigo Protocol V3 documentation",
+        "url": "https://docs.indigoprotocol.io/readme/indigo-protocol-v3.md"
       },
       {
         "label": "Koios iUSD minting policy",
         "url": "https://api.koios.rest/api/v1/plutus_script_list?script_hash=eq.f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b69880"
       }
     ],
-    "rationale": "Indigo documents iUSD as an ADA-backed overcollateralized CDP asset, and the Koios policy record identifies the Cardano minting script. The public sources establish the collateral category but do not publish a dated aggregate ADA balance, vault distribution, or liquidation-liquidity reconciliation; the 100% envelope therefore remains an explicit category-level review with unknown current exposure details.",
-    "compositionBasis": "Indigo iUSD CDP collateral model and Cardano minting-policy review",
-    "compositionAsOf": "2026-07-14",
-    "scope": "selected-slices",
-    "knownUnknownExposure": "Aggregate ADA collateral, vault distribution, and Stability Pool coverage are not available as one reproducible public snapshot.",
+    "rationale": "Indigo V3 permits each iAsset to use multiple collateral types, including ADA and DAO-whitelisted Cardano native tokens, and documents governed iUSD peg-stability-module pairs with approved stablecoins. The public primary sources do not publish a dated aggregate split across CDP collateral types and PSM balances, so the reserve is represented as one complete but unsplit envelope rather than as ADA-only backing.",
+    "compositionBasis": "Indigo V3 multi-collateral CDP and peg-stability-module architecture",
+    "compositionAsOf": "2026-07-21",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current weights across ADA, whitelisted Cardano native-token collateral, and iUSD peg-stability-module stablecoins are not published as one reproducible snapshot.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Indigo overcollateralized Cardano vaults",
+        "reserveName": "Indigo V3 CDP collateral and iUSD peg-stability-module basket",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
+        "rationale": "The reviewed primary sources identify the permitted collateral and PSM architecture but do not publish current constituent balances or weights, so the basket cannot be split or linked without false precision."
       }
     ]
   },

@@ -2,7 +2,7 @@
   "id": "myrc-blox",
   "name": "MYRC",
   "symbol": "MYRC",
-  "oneLiner": "MYRC is Blox's Malaysian ringgit stablecoin backed 1:1 by MYR at Maybank under UTMB trustee, eKYC-gated to Malaysian residents; issuer unlicensed by BNM.",
+  "oneLiner": "MYRC is Blox's ringgit stablecoin backed 1:1 by MYR-denominated reserves at Malaysian financial institutions and gated to verified Malaysian residents.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "MYR",
@@ -11,14 +11,14 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "Malaysian Ringgit cash deposits held in a ring-fenced bank account at Maybank (Malayan Banking Berhad) under the custody and trustee services of Universal Trustee (Malaysia) Bhd (UTMB)",
+  "collateral": "Malaysian ringgit-denominated reserve assets held at Malaysian financial institutions; current asset classes, institutions, and weights are not publicly disclosed",
   "pegMechanism": "1:1 mint and redemption against Malaysian Ringgit via Malaysian banking rails (FPX). Eligibility requires Malaysian eKYC (MyKad) and a linked Malaysian bank account; mint authority on each chain is restricted to a Blox-controlled key.",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
     "reviewedAt": "2026-07-15",
     "reviewer": "SONG-5 Safety Score V9 mechanism review",
-    "rationale": "BLOX describes MYRC as a 1:1 Malaysian Ringgit stablecoin minted and redeemed through domestic banking rails, with ring-fenced Maybank deposits under UTMB trustee custody. This supports the fiat-cash classification. The reviewed product, transparency, and whitepaper materials do not expose a dated reserve-balance report, account-level legal terms, independent assurance, or a full liability reconciliation.",
+    "rationale": "BLOX describes MYRC as a 1:1 Malaysian Ringgit stablecoin minted and redeemed through domestic banking rails and backed by ringgit-denominated reserve assets held at Malaysian financial institutions. The reviewed product, transparency, and whitepaper materials do not identify the current asset classes or institutions and do not support the prior Maybank and UTMB attribution.",
     "sources": [
       {"label": "BLOX MYRC transparency", "url": "https://www.blox.my/myrc/transparency"},
       {"label": "MYRC whitepaper", "url": "https://cdn.blox.my/misc/MYRC-Whitepaper.pdf"},
@@ -226,19 +226,19 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "MYR cash deposits at Maybank (UTMB trustee)",
+      "name": "MYR-denominated reserve assets at undisclosed Malaysian financial institutions",
       "pct": 100,
-      "risk": "low",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "Malayan Banking Berhad (Maybank), with Universal Trustee (Malaysia) Bhd as trustee",
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "Blox Blockchain Sdn Bhd and undisclosed Malaysian financial institutions",
       "riskFactors": ["counterparty", "liquidity", "custody", "concentration", "legal"],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex Safety Score V9 reserve batch 7",
+    "confidence": "manual-review",
     "sources": [
       {
         "label": "BLOX MYRC transparency",
@@ -253,36 +253,36 @@
         "url": "https://www.blox.my"
       }
     ],
-    "rationale": "BLOX describes MYRC as a 1:1 Malaysian Ringgit stablecoin and the existing source metadata identifies MYR cash deposits at Maybank under Universal Trustee (Malaysia) Bhd. The reviewed transparency page confirms the 1:1 reserve policy and redemption claim but does not expose a current report document or balance-period detail, so the existing single bank-deposit slice is preserved without adding unsupported subcategories.",
-    "compositionBasis": "BLOX MYRC product and transparency disclosures for the Maybank/UTMB reserve envelope",
+    "rationale": "BLOX's current transparency disclosure says MYRC is backed by an equivalent value of ringgit-denominated reserve assets and that cash is held at Malaysian financial institutions. The whitepaper describes a MYR reserve managed by BLOX. Neither source identifies Maybank or Universal Trustee, publishes a current asset-class split, or supports treating the reserve as 100% bank deposits, so the unsupported provider attribution is removed and the reserve remains one unsplit known-unknown envelope.",
+    "compositionBasis": "BLOX transparency and whitepaper disclosure of MYR-denominated reserve assets",
+    "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The reserve class and named bank/trustee are identified. Current account balances, reserve-period detail, and account-level legal terms are not exposed on the reviewed public page.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "Current reserve asset classes, financial institutions, provider shares, balances, and legal segregation terms are not disclosed in the reviewed primary sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "MYR-denominated reserve assets at undisclosed Malaysian financial institutions",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The issuer discloses only a MYR-denominated reserve-asset envelope, without current asset classes, institutions, or weights."
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Malayan Banking Berhad (Maybank)",
+        "name": "Undisclosed Malaysian financial institutions",
         "role": "bank",
-        "jurisdiction": "Malaysia"
-      },
-      {
-        "name": "Universal Trustee (Malaysia) Bhd",
-        "role": "custodian",
-        "jurisdiction": "Malaysia"
-      },
-      {
-        "name": "Blox Blockchain Sdn Bhd",
-        "role": "other",
         "jurisdiction": "Malaysia"
       }
     ],
-    "segregation": "segregated",
-    "bankruptcyRemoteness": "contractual-only",
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex Safety Score V9 reserve batch 7",
+    "confidence": "manual-review",
     "sources": [
       {
         "label": "BLOX MYRC transparency",
@@ -293,7 +293,8 @@
         "url": "https://cdn.blox.my/misc/MYRC-Whitepaper.pdf"
       }
     ],
-    "uncertainty": "The existing MYRC collateral description identifies a ring-fenced Maybank account under UTMB custody and trustee services. The retrieved transparency page does not provide account-level legal documents, statutory bankruptcy treatment, or rehypothecation terms, so remoteness is recorded as contractual-only and reuse remains unknown."
+    "uncertainty": "BLOX says cash is held at Malaysian financial institutions but does not identify the institutions or establish current provider shares, segregation, bankruptcy remoteness, or rehypothecation restrictions.",
+    "knownUnknownExposurePct": 100
   },
   "notices": [
     {
@@ -304,7 +305,7 @@
     {
       "type": "info",
       "title": "Small float, single-jurisdiction",
-      "message": "Total circulating supply is approximately MYR 5.3M (~USD 1.3M) and reserves are concentrated in a single Malaysian bank (Maybank) under a single Malaysian trustee."
+      "message": "MYRC has a small circulating float and its reserve disclosures identify only Malaysian financial institutions, without naming providers or publishing provider concentration."
     }
   ],
   "mintAuthority": {

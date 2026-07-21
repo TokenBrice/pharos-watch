@@ -444,8 +444,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex Safety Score V9 backing review",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex Safety Score V9 reserve batch 7",
     "confidence": "verified",
     "sources": [
       {
@@ -457,9 +457,9 @@
         "url": "https://loon.finance/"
       }
     ],
-    "rationale": "Loon's current transparency page states that every CADC is backed 1:1 by Canadian dollars at ATB Financial, with 100% cash deposits in segregated accounts and no exposure to commercial paper or investment instruments. The reserve slice is narrowed from an unsupported cash-and-securities aggregate to the disclosed cash deposit category.",
-    "compositionBasis": "Loon transparency page and current monthly attestation history",
-    "compositionAsOf": "2026-05-31",
+    "rationale": "Loon's current transparency page states that every CADC is backed 1:1 by Canadian dollars at ATB Financial, with 100% cash deposits in segregated accounts and no exposure to commercial paper or investment instruments. The page lists a June 2026 monthly bank attestation, so the single disclosed cash-deposit slice remains the complete reserve composition.",
+    "compositionBasis": "Loon transparency page and listed June 2026 monthly bank attestation",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The reserve asset class and ATB Financial custody are disclosed; the transparency page does not disclose account-level balances or provider shares beyond the single named bank.",
     "knownUnknownExposurePct": 0,

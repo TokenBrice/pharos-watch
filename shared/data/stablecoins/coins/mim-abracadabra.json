@@ -19,13 +19,14 @@
   "geckoId": "magic-internet-money",
   "pythFeedId": "0x7aa41f6ee464616f3cbc469fddfd7e63d8db319b7bd585cc95b24c29c9172916",
   "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "Abracadabra Cauldrons use per-market external oracles connected to each market, but reviewed docs do not prove stronger failover controls.",
+    "tier": "single-source-or-laggy",
+    "summary": "Abracadabra's four currently debt-bearing Ethereum cauldrons each use a single-source oracle behind an owner-swappable ProxyOracle with no timelock; three price collateral off a single Chainlink feed and the largest (yvDAI, 45.7% of tracked collateral) has no external price feed at all, valuing DAI at a hardcoded $1.",
+    "branchModel": "multi-branch",
     "branchApplicability": {
-      "disposition": "unresolved",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex Safety Score V9 small-1-free oracle review",
-      "rationale": "Abracadabra documents one oracle per Cauldron and a liquidation path for undercollateralized positions, but the reviewed primary sources do not provide the complete current debt-bearing Cauldron inventory, deployed oracle and fallback configuration, branch parameters, or system-level bad-debt and shutdown coverage.",
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-21",
+      "reviewer": "Claude Safety Score V9 curation lane (branch-level oracle/liquidation resolution)",
+      "rationale": "On-chain reads at Ethereum block 25579951 confirm the four cauldrons already tracked in this file's liveReservesConfig (yvWETH 0xed510639…, WETH 0x390Db10e…, WBTC 0x5ec47EE6…, yvDAI 0x7Ce7D9ED…) are the complete current debt-bearing inventory, and each has a distinct oracle, COLLATERIZATION_RATE, LIQUIDATION_MULTIPLIER, and BORROW_OPENING_FEE, so market-specific branch treatment is required rather than a single asset-level tier. Abracadabra's dev docs confirm the general mechanism (\"we sometimes use Proxy Oracles, that point to a 'real' Oracle. The oracle the proxy points to can be changed by the Owner\") but do not describe a system-level bad-debt or shutdown process; that residual gap is recorded per-branch below rather than left as a blanket unresolved rating.",
       "sources": [
         {
           "label": "Abracadabra architecture overview",
@@ -37,13 +38,207 @@
         }
       ]
     },
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex data review; Claude Safety Score V9 curation lane (branch-level oracle/liquidation resolution)",
     "confidence": "verified",
     "sources": [
       {
         "label": "Abracadabra architecture docs",
         "url": "https://dev.abracadabra.money/getting-started/architecture-overview"
+      }
+    ],
+    "branches": [
+      {
+        "id": "yvweth",
+        "label": "yvWETH collateral (Cauldron 0xed510639E1b07c9145CD570F8Dd0CA885F760E09)",
+        "tier": "single-source-or-laggy",
+        "summary": "Prices yvWETH off a single Chainlink-sourced feed reached through an owner-swappable ProxyOracle; no redundancy or failover feed exists.",
+        "collateralAssets": ["yvWETH (Yearn WETH vault shares)"],
+        "chains": ["ethereum"],
+        "feeds": [
+          {
+            "provider": "Chainlink (via Abracadabra ProxyOracle)",
+            "path": "ProxyOracle 0xa8fA2460927332eD475364c602d916FBC095b1b4 -> oracleImplementation 0x6cc0cd7D25E291029B55C767B9A2D1d9A18Ae668, whose name() resolves to \"Chainlink\"; the implementation composes yvWETH's Yearn share price against an ETH/USD Chainlink aggregator passed via calldata (getDataParameter), so the exact aggregator address is not separately resolved on-chain in this review",
+            "address": "0x6cc0cd7D25E291029B55C767B9A2D1d9A18Ae668",
+            "chain": "ethereum",
+            "observedAt": "2026-07-21",
+            "observedBlock": 25579951,
+            "failureDomainKeys": ["mim-cauldron-yvweth-oracle", "chainlink-eth-usd"]
+          }
+        ],
+        "fallbackBehavior": "No secondary feed. The ProxyOracle's oracleImplementation can be replaced by its owner (a 3-of-6 Gnosis Safe, 0xDF2C270f610Dc35d8fFDA5B453E74db5471E126B, owners confirmed via getOwners()/getThreshold() at block 25579951) with no on-chain timelock.",
+        "observedAt": "2026-07-21",
+        "observedBlock": 25579951,
+        "collateralParameters": [
+          {
+            "asset": "yvWETH (Yearn WETH vault shares)",
+            "maximumLtvPct": 80,
+            "minimumCollateralRatioPct": 125,
+            "note": "COLLATERIZATION_RATE=80000, LIQUIDATION_MULTIPLIER=107500 (7.5% liquidation incentive), BORROW_OPENING_FEE=50 (0.05%); Cauldron version 4, read at Ethereum block 25579951."
+          }
+        ],
+        "liquidationMechanism": "Abracadabra's permissionless liquidate() lets any caller liquidate one or more undercollateralized users in a single call, with partial liquidation supported via maxBorrowParts; the liquidator repays MIM debt and receives seized yvWETH plus the configured liquidation multiplier as incentive.",
+        "liquidationDelaySec": 0,
+        "shutdownOrBadDebtBehavior": "Abracadabra's public documentation does not describe a formal shutdown, insurance fund, or bad-debt-socialization mechanism for cauldrons; the CauldronOwner can deprecate a cauldron and cut its MIM borrow capacity, but historical under-collateralized bad debt from cauldron exploits (2024-01, 2025-03, 2025-10, recorded in this asset's mintIncidents) has been absorbed through ad hoc DAO treasury MIM buybacks rather than a documented protocol backstop.",
+        "failureDomainKeys": ["mim-cauldron:0xed510639e1b07c9145cd570f8dd0ca885f760e09", "oracle-owner-safe:0xdf2c270f610dc35d8ffda5b453e74db5471e126b"],
+        "sources": [
+          {
+            "label": "yvWETH Cauldron on Etherscan",
+            "url": "https://etherscan.io/address/0xed510639E1b07c9145CD570F8Dd0CA885F760E09#readContract"
+          },
+          {
+            "label": "yvWETH ProxyOracle on Etherscan",
+            "url": "https://etherscan.io/address/0xa8fA2460927332eD475364c602d916FBC095b1b4#readContract"
+          },
+          {
+            "label": "Abracadabra Cauldron V3 documentation",
+            "url": "https://dev.abracadabra.money/core-contracts/cauldrons/cauldron-v3"
+          }
+        ]
+      },
+      {
+        "id": "weth",
+        "label": "WETH collateral (Cauldron 0x390Db10e65b5ab920C19149C919D970ad9d18A41)",
+        "tier": "opaque-or-unknown",
+        "summary": "Prices WETH off a Chainlink ETH/USD feed, but the ProxyOracle pointing at that feed is owned outright by a single externally-owned account with no multisig or timelock protection.",
+        "collateralAssets": ["WETH"],
+        "chains": ["ethereum"],
+        "feeds": [
+          {
+            "provider": "Chainlink ETH/USD (via Abracadabra ProxyOracle)",
+            "path": "ProxyOracle 0x6C86AdB5696d2632973109a337a50EF7bdc48fF1 -> oracleImplementation 0x02dCc3AaA2f0C97Fe0AbFaf07dF3E0c7ae56557A -> ETHUSD() resolves to Chainlink aggregator 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+            "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+            "chain": "ethereum",
+            "observedAt": "2026-07-21",
+            "observedBlock": 25579951,
+            "failureDomainKeys": ["mim-cauldron-weth-oracle", "chainlink-eth-usd"]
+          }
+        ],
+        "fallbackBehavior": "No secondary feed. Unlike the other three cauldrons' ProxyOracle (owned by a 3-of-6 Safe), this ProxyOracle's owner() is a single externally-owned account, 0xfddfE525054efaAD204600d00CA86ADb1Cc2ea8a (eth_getCode returns 0x; also one of the eleven signers on the separate 5-of-11 MIM token owner Safe) — one key alone, with no multisig or timelock, can redirect this cauldron's price source.",
+        "observedAt": "2026-07-21",
+        "observedBlock": 25579951,
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "maximumLtvPct": 90,
+            "minimumCollateralRatioPct": 111.11,
+            "note": "COLLATERIZATION_RATE=90000, LIQUIDATION_MULTIPLIER=104000 (4% liquidation incentive, matching this asset's pegMechanism description), BORROW_OPENING_FEE=500 (0.5%); Cauldron version 2, read at Ethereum block 25579951."
+          }
+        ],
+        "liquidationMechanism": "Abracadabra's permissionless liquidate() lets any caller liquidate one or more undercollateralized users in a single call, with partial liquidation supported via maxBorrowParts; the liquidator repays MIM debt and receives seized WETH plus the configured liquidation multiplier as incentive.",
+        "liquidationDelaySec": 0,
+        "shutdownOrBadDebtBehavior": "Abracadabra's public documentation does not describe a formal shutdown, insurance fund, or bad-debt-socialization mechanism for cauldrons; the CauldronOwner can deprecate a cauldron and cut its MIM borrow capacity, but historical under-collateralized bad debt from cauldron exploits (2024-01, 2025-03, 2025-10, recorded in this asset's mintIncidents) has been absorbed through ad hoc DAO treasury MIM buybacks rather than a documented protocol backstop.",
+        "failureDomainKeys": ["mim-cauldron:0x390db10e65b5ab920c19149c919d970ad9d18a41", "oracle-owner-eoa:0xfddfe525054efaad204600d00ca86adb1cc2ea8a"],
+        "sources": [
+          {
+            "label": "WETH Cauldron on Etherscan",
+            "url": "https://etherscan.io/address/0x390Db10e65b5ab920C19149C919D970ad9d18A41#readContract"
+          },
+          {
+            "label": "WETH ProxyOracle on Etherscan",
+            "url": "https://etherscan.io/address/0x6C86AdB5696d2632973109a337a50EF7bdc48fF1#readContract"
+          },
+          {
+            "label": "Abracadabra Cauldron V3 documentation",
+            "url": "https://dev.abracadabra.money/core-contracts/cauldrons/cauldron-v3"
+          }
+        ]
+      },
+      {
+        "id": "wbtc",
+        "label": "WBTC collateral (Cauldron 0x5ec47EE69BEde0b6C2A2fC0D9d094dF16C192498)",
+        "tier": "single-source-or-laggy",
+        "summary": "Prices WBTC off a single Chainlink BTC/USD feed reached through an owner-swappable ProxyOracle; no redundancy or failover feed exists.",
+        "collateralAssets": ["WBTC"],
+        "chains": ["ethereum"],
+        "feeds": [
+          {
+            "provider": "Chainlink BTC/USD (via Abracadabra ProxyOracle)",
+            "path": "ProxyOracle 0xacaB7f05A612690B9e05CA3bfC1FF2E99169a39F -> oracleImplementation 0x750E9887425F9f325504Fe69B7173a4cacD55351 -> BTCUSD() resolves to Chainlink aggregator 0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c",
+            "address": "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c",
+            "chain": "ethereum",
+            "observedAt": "2026-07-21",
+            "observedBlock": 25579951,
+            "failureDomainKeys": ["mim-cauldron-wbtc-oracle", "chainlink-btc-usd"]
+          }
+        ],
+        "fallbackBehavior": "No secondary feed. The ProxyOracle's oracleImplementation can be replaced by its owner (the same 3-of-6 Gnosis Safe, 0xDF2C270f610Dc35d8fFDA5B453E74db5471E126B, that owns the yvWETH and yvDAI ProxyOracles) with no on-chain timelock.",
+        "observedAt": "2026-07-21",
+        "observedBlock": 25579951,
+        "collateralParameters": [
+          {
+            "asset": "WBTC",
+            "maximumLtvPct": 85,
+            "minimumCollateralRatioPct": 117.65,
+            "note": "COLLATERIZATION_RATE=85000, LIQUIDATION_MULTIPLIER=107000 (7% liquidation incentive), BORROW_OPENING_FEE=500 (0.5%); Cauldron version 2, read at Ethereum block 25579951."
+          }
+        ],
+        "liquidationMechanism": "Abracadabra's permissionless liquidate() lets any caller liquidate one or more undercollateralized users in a single call, with partial liquidation supported via maxBorrowParts; the liquidator repays MIM debt and receives seized WBTC plus the configured liquidation multiplier as incentive.",
+        "liquidationDelaySec": 0,
+        "shutdownOrBadDebtBehavior": "Abracadabra's public documentation does not describe a formal shutdown, insurance fund, or bad-debt-socialization mechanism for cauldrons; the CauldronOwner can deprecate a cauldron and cut its MIM borrow capacity, but historical under-collateralized bad debt from cauldron exploits (2024-01, 2025-03, 2025-10, recorded in this asset's mintIncidents) has been absorbed through ad hoc DAO treasury MIM buybacks rather than a documented protocol backstop.",
+        "failureDomainKeys": ["mim-cauldron:0x5ec47ee69bede0b6c2a2fc0d9d094df16c192498", "oracle-owner-safe:0xdf2c270f610dc35d8ffda5b453e74db5471e126b"],
+        "sources": [
+          {
+            "label": "WBTC Cauldron on Etherscan",
+            "url": "https://etherscan.io/address/0x5ec47EE69BEde0b6C2A2fC0D9d094dF16C192498#readContract"
+          },
+          {
+            "label": "WBTC ProxyOracle on Etherscan",
+            "url": "https://etherscan.io/address/0xacaB7f05A612690B9e05CA3bfC1FF2E99169a39F#readContract"
+          },
+          {
+            "label": "Abracadabra Cauldron V3 documentation",
+            "url": "https://dev.abracadabra.money/core-contracts/cauldrons/cauldron-v3"
+          }
+        ]
+      },
+      {
+        "id": "yvdai",
+        "label": "yvDAI collateral (Cauldron 0x7Ce7D9ED62B9A6c5aCe1c6Ec9aeb115FA3064757)",
+        "tier": "opaque-or-unknown",
+        "summary": "The largest tracked cauldron by collateral (45.7%) has no external DAI/USD price feed at all: its ProxyOracle implementation reads the yvDAI vault token directly and values the underlying DAI leg at a hardcoded $1, so a DAI depeg would not be reflected in collateral valuation.",
+        "collateralAssets": ["yvDAI (Yearn DAI vault shares)"],
+        "chains": ["ethereum"],
+        "feeds": [
+          {
+            "provider": "Abracadabra internal vault-share oracle (no external DAI/USD reference)",
+            "path": "ProxyOracle 0x39DBa7955cEE12578B7548dF7eBf88F835d51bE1 -> oracleImplementation 0xaB137bb12e93fEdB8B639771c4C4fE29aC138Ee6, whose YVDAI() getter resolves to the yvDAI vault token itself (0xdA816459F1AB5631232FE5e97a05BBBb94970c95); price is derived from the vault's own share-price accounting with DAI valued at a hardcoded $1 — no Chainlink or other external DAI/USD aggregator is referenced anywhere in the read path",
+            "address": "0xaB137bb12e93fEdB8B639771c4C4fE29aC138Ee6",
+            "chain": "ethereum",
+            "observedAt": "2026-07-21",
+            "observedBlock": 25579951,
+            "failureDomainKeys": ["mim-cauldron-yvdai-oracle", "dai-peg-not-independently-priced"]
+          }
+        ],
+        "fallbackBehavior": "No secondary or independent price source exists for the DAI leg at all; a DAI depeg is invisible to this cauldron's solvency checks. The ProxyOracle's oracleImplementation can be replaced by its owner (the same 3-of-6 Gnosis Safe, 0xDF2C270f610Dc35d8fFDA5B453E74db5471E126B, that owns the yvWETH and WBTC ProxyOracles) with no on-chain timelock.",
+        "observedAt": "2026-07-21",
+        "observedBlock": 25579951,
+        "collateralParameters": [
+          {
+            "asset": "yvDAI (Yearn DAI vault shares)",
+            "maximumLtvPct": 98,
+            "minimumCollateralRatioPct": 102.04,
+            "note": "COLLATERIZATION_RATE=98000, LIQUIDATION_MULTIPLIER=100500 (0.5% liquidation incentive), BORROW_OPENING_FEE=0; Cauldron version 2, read at Ethereum block 25579951."
+          }
+        ],
+        "liquidationMechanism": "Abracadabra's permissionless liquidate() lets any caller liquidate one or more undercollateralized users in a single call, with partial liquidation supported via maxBorrowParts; the liquidator repays MIM debt and receives seized yvDAI plus the configured liquidation multiplier as incentive.",
+        "liquidationDelaySec": 0,
+        "shutdownOrBadDebtBehavior": "Abracadabra's public documentation does not describe a formal shutdown, insurance fund, or bad-debt-socialization mechanism for cauldrons; the CauldronOwner can deprecate a cauldron and cut its MIM borrow capacity, but historical under-collateralized bad debt from cauldron exploits (2024-01, 2025-03, 2025-10, recorded in this asset's mintIncidents) has been absorbed through ad hoc DAO treasury MIM buybacks rather than a documented protocol backstop.",
+        "failureDomainKeys": ["mim-cauldron:0x7ce7d9ed62b9a6c5ace1c6ec9aeb115fa3064757", "oracle-owner-safe:0xdf2c270f610dc35d8ffda5b453e74db5471e126b", "dai-peg-not-independently-priced"],
+        "sources": [
+          {
+            "label": "yvDAI Cauldron on Etherscan",
+            "url": "https://etherscan.io/address/0x7Ce7D9ED62B9A6c5aCe1c6Ec9aeb115FA3064757#readContract"
+          },
+          {
+            "label": "yvDAI ProxyOracle on Etherscan",
+            "url": "https://etherscan.io/address/0x39DBa7955cEE12578B7548dF7eBf88F835d51bE1#readContract"
+          },
+          {
+            "label": "Abracadabra Cauldron V3 documentation",
+            "url": "https://dev.abracadabra.money/core-contracts/cauldrons/cauldron-v3"
+          }
+        ]
       }
     ]
   },
@@ -156,7 +351,7 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-or-compromised",
-    "confidence": "unknown",
+    "confidence": "verified",
     "summary": "The Ethereum MIM contract exposes owner-controlled mint functions. Owner is a 5/11 Safe with no modules or guard detected.",
     "mintIncidents": [
       {
@@ -272,17 +467,23 @@
         {
           "label": "MIM owner Safe API",
           "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x5f0DeE98360d8200b20812e174d139A1a633EDd2/"
+        },
+        {
+          "label": "MIM token on Arbiscan",
+          "url": "https://arbiscan.io/address/0xfea7a6a0b346362bf88a9e4a88416b77a57d6c2a#readContract"
+        },
+        {
+          "label": "MIM token on Snowscan",
+          "url": "https://snowscan.xyz/address/0x130966628846bfd36ff31a822705796e8cb8c18d#readContract"
         }
       ],
-      "evidence": "Ethereum MIM owner reads and Sourcify ABI identify a 5/11 Safe owner with direct owner-controlled mint functions on the token. Re-verified by direct chain reads at Ethereum block 25575152 on 2026-07-20: MIM 0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3 owner() returns Safe 0x5f0DeE98360d8200b20812e174d139A1a633EDd2, which returns getThreshold()=5 over the same eleven owners, an empty getModulesPaginated array, a zero guard slot, and Safe 1.3.0 masterCopy 0xd9db270c1b5e3bd161e8c8503c55ceabee709552. Economic-control adjudication: the token owner Safe holds unconditional mint and mintToBentoBox entry points with no on-chain cap, no timelock, and no independent bound, so the mint cap is economically unbounded. There is no supply-versus-reserve attestation of any cadence and the token-level owner mint means outstanding MIM cannot be reconciled to cauldron collateral from on-chain reads alone, so reconciliation stays unknown, and no financial regulator supervises Abracadabra. The mint surface is only enumerated on Ethereum: this profile records a single control for an asset deployed across fourteen chains, so the review remains unresolved rather than scoreable.",
-      "reviewer": "Codex mint-authority top100 batch-c; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "Ethereum MIM owner reads and Sourcify ABI identify a 5/11 Safe owner with direct owner-controlled mint functions on the token. Re-verified by direct chain reads at Ethereum block 25575152 on 2026-07-20: MIM 0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3 owner() returns Safe 0x5f0DeE98360d8200b20812e174d139A1a633EDd2, which returns getThreshold()=5 over the same eleven owners, an empty getModulesPaginated array, a zero guard slot, and Safe 1.3.0 masterCopy 0xd9db270c1b5e3bd161e8c8503c55ceabee709552. Economic-control adjudication: the token owner Safe holds unconditional mint and mintToBentoBox entry points with no on-chain cap, no timelock, and no independent bound, so the mint cap is economically unbounded. There is no supply-versus-reserve attestation of any cadence and the token-level owner mint means outstanding MIM cannot be reconciled to cauldron collateral from on-chain reads alone, so reconciliation stays unknown, and no financial regulator supervises Abracadabra. 2026-07-21 follow-up closes the two prior open questions: (1) the verified MagicInternetMoneyV1.sol source shows both mint() and mintToBentoBox() are onlyOwner with no separate cauldron-level minter role — cauldrons draw down MIM the owner has pre-minted into BentoBox rather than minting directly themselves — and mint() itself enforces a soft per-period rate limiter (MINTING_INCREASE=15000/1e5=15% growth of totalSupply per rolling 24-hour MINTING_PERIOD), though the owner can still call mint repeatedly with no absolute ceiling, so the cap remains economically unbounded despite this rate-of-growth throttle; (2) independent owner() reads on Arbitrum (block 486130018) and Avalanche (block 90861407) return 0xf46BB6dDA9709C49EfB918201D97F6474EAc5Aea and 0xae64A325027C3C14Cf6abC7818aA3B9c07F5C799 respectively, matching this asset's separately reviewed bridgeRouteRisk owner() reads for all fourteen deployments (each an Abracadabra team Safe with signer overlap to the Ethereum 5/11 Safe), so the full multichain mint-capable surface is now cross-verified rather than Ethereum-only.",
+      "reviewer": "Codex mint-authority top100 batch-c; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20); Claude Safety Score V9 curation lane (multichain + rate-limiter resolution, 2026-07-21)",
+      "reviewedAt": "2026-07-21",
       "unresolvedQuestions": [
-        "Confirm whether current protocol cauldrons rely on owner minting directly or only through approved borrowing modules; the token-level owner path is still a direct mint surface.",
-        "Enumerate the mint-capable surface on the thirteen non-Ethereum MIM deployments (Arbitrum, Avalanche, Fantom, BSC, Optimism, Polygon, Kava, Blast, Moonriver, Nibiru, Base, Linea) — no owner, minter role, or bridge mint controller has been read on any of them.",
-        "Establish whether the 5-of-11 owner Safe is subject to any off-chain governance constraint; no timelock, guard, or module was detected on-chain at block 25575152."
+        "Establish whether the 5-of-11 owner Safe (or any of the thirteen other chains' team Safes) is subject to any off-chain governance constraint beyond the on-chain Safe threshold; no timelock, guard, or module was detected on any read deployment."
       ],
-      "disposition": "unresolved"
+      "disposition": "scoreable"
     },
     "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
