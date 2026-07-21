@@ -213,6 +213,22 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "DOLA minting is controlled by the token operator, a Compound Timelock (48h delay) administered by a Compound GovernorBravo using INV governance token. All DOLA supply changes require an on-chain INV vote followed by a 48-hour timelock execution delay.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-20",
+      "observedBlock": 25576670,
+      "sources": [
+        {
+          "label": "DOLA Ethereum contract",
+          "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
+        },
+        {
+          "label": "Inverse Finance DOLA deployment ABI",
+          "url": "https://raw.githubusercontent.com/InverseFinance/anchor/master/deployments/mainnet/Dola.json"
+        }
+      ]
+    },
     "mintIncidents": [
       {
         "date": "2022-04-02",

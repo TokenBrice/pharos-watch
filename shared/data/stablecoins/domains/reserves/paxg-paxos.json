@@ -14,12 +14,12 @@
         "market",
         "concentration"
       ],
-      "liquidityHorizon": "over-seven-days"
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex SOL-ULTRA Cohort A reserve research",
     "confidence": "verified",
     "sources": [
       {
@@ -29,14 +29,10 @@
       {
         "label": "Paxos PAXG transparency reports",
         "url": "https://www.paxos.com/paxg-transparency"
-      },
-      {
-        "label": "Paxos PAXG documentation",
-        "url": "https://docs.paxos.com/guides/stablecoin/paxg"
       }
     ],
-    "rationale": "Paxos states that each PAXG represents one fine troy ounce of allocated LBMA Good Delivery gold held in London vaults and publishes monthly independent attestations. The reviewed product and transparency materials support a complete physical-gold reserve category without a separate asset-type split.",
-    "compositionBasis": "Paxos PAXG product, custody, and monthly-attestation disclosures",
+    "rationale": "Paxos states that each PAXG represents one fine troy ounce of physical gold held in LBMA vaults in London, with ownership of the underlying allocated gold under Paxos custody. Paxos also publishes monthly KPMG examination reports. These issuer disclosures support a complete 100% allocated-physical-gold reserve category without a separate asset-type split.",
+    "compositionBasis": "Paxos PAX Gold product disclosure and monthly KPMG attestation index",
     "scope": "full-composition",
     "knownUnknownExposure": "The reserve asset is identified and independently attested, but the reviewed public pages do not provide a provider-level allocation of the gold across vault accounts.",
     "knownUnknownExposurePct": 0,

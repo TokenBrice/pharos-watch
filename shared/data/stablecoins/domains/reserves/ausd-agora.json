@@ -16,18 +16,17 @@
       "maturityDaysMax": 60
     },
     {
-      "name": "Overnight Reverse Repurchase Agreements",
+      "name": "U.S. Treasury Repurchase Agreements",
       "pct": 60.79,
       "risk": "very-low",
       "assetClass": "repo",
-      "issuerOrObligor": "Undisclosed repo counterparties; U.S. Treasury collateral",
+      "issuerOrObligor": "Undisclosed repo counterparties",
       "riskFactors": [
         "counterparty",
         "liquidity",
         "custody"
       ],
-      "liquidityHorizon": "one-day",
-      "maturityDaysMax": 1
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Cash at regulated financial institutions",
@@ -58,8 +57,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex SOL-ULTRA Cohort A reserve research",
     "confidence": "verified",
     "sources": [
       {
@@ -71,11 +70,11 @@
         "url": "https://docs.agora.finance/developer/transparency"
       }
     ],
-    "rationale": "Grant Thornton's May 31 report lists $41,638,712 of U.S. Treasury securities, $79,954,061 of U.S. Treasury repurchase agreements, $5,111,541 of cash at regulated financial institutions, and $4,813,320 of stablecoins held in segregated wallets, totaling $131,518,300. The normalized weights are 31.66%, 60.79%, 3.89%, and 3.66%.",
+    "rationale": "Grant Thornton's May 31 report lists $41,638,712 of U.S. Treasury securities, $79,954,061 of U.S. Treasury repurchase agreements, $5,111,541 of cash at regulated financial institutions, and $4,813,320 of stablecoins held in segregated wallets, totaling $131,518,300. The normalized weights are 31.66%, 60.79%, 3.89%, and 3.66%. The CUSIP table's latest Treasury maturity is July 30, 2026, 60 days after the report date. The report does not disclose repo term, counterparties, or stablecoin issuers.",
     "compositionBasis": "Grant Thornton examination of AUSD reserve assets as of May 31, 2026",
     "compositionAsOf": "2026-05-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The report does not name the repo counterparties or stablecoin issuers; the 3.66% stablecoin slice cannot be split further from the cited primary source.",
+    "knownUnknownExposure": "The report does not name the repo counterparties or term, nor the stablecoin issuers; the 3.66% stablecoin slice cannot be split further from the cited primary source.",
     "knownUnknownExposurePct": 3.66,
     "nonLinkDispositions": [
       {
