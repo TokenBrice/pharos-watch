@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { BluechipHeaderBadge } from "@/components/bluechip-header-badge";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE } from "@/components/stablecoin-detail/constants";
 import {
   BACKING_LABELS,
   GOVERNANCE_LABELS,
@@ -358,7 +359,11 @@ export function HeroMobileIdentity({
     <div className="min-w-0 flex-1">
       <div className="flex items-start gap-3">
         <div className="shrink-0 pt-10">
-          <StablecoinLogo src={logoSrc} name={coin.name} size={48} />
+          <StablecoinLogo
+            src={logoSrc}
+            name={coin.name}
+            size={STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE}
+          />
         </div>
         <div className="min-w-0 flex-1">
           <h2

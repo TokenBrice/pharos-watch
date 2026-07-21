@@ -1,6 +1,7 @@
 "use client";
 
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE } from "@/components/stablecoin-detail/constants";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
@@ -24,7 +25,7 @@ export function StablecoinDetailLoadingShell({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 space-y-3">
             <div className="flex items-start gap-3">
-              <StablecoinLogo src={logoSrc} name={coin.name} size={56} />
+              <StablecoinLogo src={logoSrc} name={coin.name} size={STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE} />
               <div className="min-w-0 space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-2xl font-extrabold tracking-tighter text-foreground">{coin.name}</h2>

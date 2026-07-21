@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { ShareButton } from "@/components/share-button";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE } from "@/components/stablecoin-detail/constants";
 import { THREAT_BAND_COLORS } from "@shared/lib/classification";
 import type { HeroCardViewModel, HeroTertiaryMetricViewModel } from "@/lib/stablecoin-detail-view-model";
 import type { HeroDewsDisplay } from "@/lib/stablecoin-detail-hero-metrics";
@@ -94,13 +95,13 @@ export function HeroDesktopIdentityToolbar({
   return (
     <div className="hidden items-start justify-between gap-5 lg:flex">
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <StablecoinLogo src={logoSrc} name={coin.name} size={20} />
-          <span className="font-mono text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        <div className="flex min-w-0 items-center gap-3">
+          <StablecoinLogo src={logoSrc} name={coin.name} size={STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE} />
+          <span className="shrink-0 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             {coin.symbol}
           </span>
+          <h2 className="pharos-page-title min-w-0 truncate text-2xl leading-none tracking-normal">{coin.name}</h2>
         </div>
-        <h2 className="pharos-page-title mt-2 text-2xl leading-none tracking-normal">{coin.name}</h2>
         {coin.oneLiner ? (
           <p className="mt-2 max-w-none text-sm leading-relaxed text-muted-foreground">{coin.oneLiner}</p>
         ) : null}
