@@ -632,6 +632,7 @@ const V9FormulaPolicySchema = z
       })
       .strict(),
     compensabilityHeadroom: ScoreSchema,
+    controlCompensabilityHeadroom: ScoreSchema,
     pegExponent: z.number().finite().min(0).max(1),
     pegHistoryWindowSec: z.number().int().positive(),
     pegQuietHistoryFloor: ScoreSchema,

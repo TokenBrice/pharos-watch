@@ -26,7 +26,7 @@ describe("Safety Score v9 methodology policy", () => {
     expect(V9_CANDIDATE_POLICY_V1.policy.lifecycle).toBe("candidate");
     expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBeNull();
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "8134bb456778eb9b19c2e013124f4db14dcb924f67ddb4d92ea54bb3995d873a",
+      "8f5af0e2b75ac1bb3f1dd161de915eb4182477a75254fe4721350a9b790298fd",
     );
     const cdpPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp;
     expect(cdpPolicy.instantaneousCollateralShock).toBe(0.5);
@@ -264,5 +264,18 @@ describe("Safety Score v9 methodology policy", () => {
     expect(() => assertV9ReasonCodesRegistered(forgedPolicy, [])).toThrow(/loadV9MethodologyPolicy/);
     expect(() => normalizeV9UnresolvedFacts(forgedPolicy, [])).toThrow(/loadV9MethodologyPolicy/);
     expect(() => assertV9UnresolvedFactsMatchPolicy(forgedPolicy, [])).toThrow(/loadV9MethodologyPolicy/);
+  });
+
+  it("keeps the control-compensability headroom under the centralized-mint high ceiling", () => {
+    // A control-25 unbounded-mint asset can be lifted only up to control + the
+    // control-compensability headroom (25 + 30 = 55). That must never exceed the
+    // centralized-mint high signal ceiling (59), so the reconciled-unbounded-mint
+    // archetype is pinned at C and can never be lifted to C+/B by the headroom.
+    // This makes the "C, not C+" boundary a policy invariant, not a coincidence.
+    const formula = V9_CANDIDATE_POLICY_V1.policy.semantic.formula;
+    const centralizedMintHigh =
+      V9_CANDIDATE_POLICY_V1.policy.semantic.structural.signalLimits["centralized-mint"].high;
+    expect(centralizedMintHigh).not.toBeNull();
+    expect(25 + formula.controlCompensabilityHeadroom).toBeLessThanOrEqual(centralizedMintHigh!);
   });
 });

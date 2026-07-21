@@ -11,6 +11,7 @@
         "control": 0.25
       },
       "compensabilityHeadroom": 20,
+      "controlCompensabilityHeadroom": 30,
       "pegExponent": 0.4,
       "pegHistoryWindowSec": 94672800,
       "pegQuietHistoryFloor": 97,
