@@ -24,7 +24,7 @@ Our extensive dataset along with the paired worker infrastructure maintaining it
 And then there's **the depeg arsenal**: the beating heart of Pharos. When a depeg hits, Pharos alerts you as it's unfolding. Since we shipped the **Depeg Duration Resolver (DDR)**, Pharos goes further and forecasts how long a depeg will last and how critical it will get. The **Safety Score**, meanwhile, has quietly proven itself as an early detection system: the stablecoins it scored low kept turning out to be exactly the ones that later broke. And the **Depeg Early Warning System (DEWS)** closes the loop, watching raw on-chain signals such as minting volume, swap flows, and more, to catch trouble hours before it becomes a headline.
 
 
-![The Depeg Duration Resolver showing ten live depeg forecasts alongside a track record of 89.1% recovery-call accuracy across 46 scored events.](/blog/ddr-track-record.png "The DDR in action: live duration and recovery forecasts, backed by a running 89.1% recovery-call accuracy.")
+![The Depeg Duration Resolver showing ten live depeg forecasts alongside a track record of 89.1% recovery-call accuracy across 46 scored events.](/blog/ddr-track-record.png "The DDR in action: live duration and recovery forecasts, backed by a running and verifiable 89.1% recovery-call accuracy.")
 
 Detection, alert, forecast: the full loop is covered, and Pharos is a pioneer in each of these lanes. Where else have you found an engine able to anticipate the duration and the criticality of a stablecoin depeg, with almost 90% accuracy?
 
