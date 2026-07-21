@@ -4,6 +4,7 @@ import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { CASE_STUDY_LIST } from "../../src/app/learn/case-studies/content";
+import { BLOG_POSTS } from "../../src/data/blog";
 import {
   enforceCommittedArtifactSources,
   SITEMAP_COMMIT_DERIVED_SOURCE_PATHS,
@@ -14,6 +15,7 @@ const REPO_ROOT = join(__dirname, "../..");
 const APP_DIR = join(__dirname, "../../src/app");
 const STABLECOIN_COINS_DIR = join(__dirname, "../../shared/data/stablecoins/coins");
 const CASE_STUDY_CONTENT_DIR = join(__dirname, "../../src/app/learn/case-studies/content");
+const BLOG_POSTS_DIR = join(__dirname, "../../src/data/blog/posts");
 const OUTPUT = join(__dirname, "../../src/generated/sitemap-dates.json");
 const OUTPUT_TYPES = join(__dirname, "../../src/generated/sitemap-dates.json.d.ts");
 const CHECK_MODE = process.argv.includes("--check");
@@ -41,10 +43,16 @@ const CASE_STUDY_DETAIL_SHARED_SOURCES = [
   join(__dirname, "../../src/app/learn/case-studies/case-study-timeline.tsx"),
   join(__dirname, "../../src/app/learn/case-studies/content/types.ts"),
 ];
+const BLOG_DETAIL_SHARED_SOURCES = [
+  join(__dirname, "../../src/app/blog/[slug]/page.tsx"),
+  join(__dirname, "../../src/data/blog/index.ts"),
+  join(__dirname, "../../src/lib/page-metadata.ts"),
+];
 
 const GIT_LOG_MARKER = "--PHAROS-SITEMAP-COMMIT--";
 const GIT_DATE_SCAN_PATHS = [
   "src/app",
+  "src/data/blog",
   "src/components/stablecoin-detail/static-seo-content.tsx",
   "src/lib/page-metadata.ts",
   "src/lib/stablecoin-detail-json-ld.ts",
@@ -174,10 +182,20 @@ function addCaseStudyDates(dates: Record<string, string>): void {
   );
 }
 
+function addBlogDates(dates: Record<string, string>): void {
+  const sharedLastModified = latestIso(...BLOG_DETAIL_SHARED_SOURCES.map(getLastModified));
+
+  for (const post of BLOG_POSTS) {
+    const contentPath = join(BLOG_POSTS_DIR, post.source);
+    dates[`/blog/${post.slug}/`] = latestIso(getLastModified(contentPath), sharedLastModified);
+  }
+}
+
 const dates: Record<string, string> = {};
 walkPages(APP_DIR, "/", dates);
 addStablecoinDetailDates(dates);
 addCaseStudyDates(dates);
+addBlogDates(dates);
 
 // The mechanism explainer hub date must move when any archetype content
 // module under the cluster changes — per-archetype Article JSON-LD sources

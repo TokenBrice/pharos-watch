@@ -83,6 +83,7 @@ describe("nav-config", () => {
       { href: "/coverage/", label: "Coverage" },
       { href: "/about/", label: "About" },
       { href: "/funding/", label: "Funding" },
+      { href: "/blog/", label: "Blog" },
     ]);
 
     expect(referenceGroup?.items.some((item) => item.href.startsWith("/learn/"))).toBe(false);
