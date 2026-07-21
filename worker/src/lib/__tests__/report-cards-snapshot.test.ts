@@ -3,6 +3,7 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeAsset, makeReportCardsDb } from "../../test-helpers/__shared/fixtures";
 import { handleReportCards } from "../../api/report-cards";
 import {
+  buildNavPriceById,
   buildReportCardsSnapshot,
   ReportCardsSnapshotUnavailableError,
   resolveExactRedemptionPublicationGeneration,
@@ -284,6 +285,79 @@ describe("buildReportCardsSnapshot", () => {
         methodologyVersion: "4.08",
       }),
     ).toThrow("producer methodology");
+  });
+
+  it("floors fractional NAV price timestamps to integer seconds", () => {
+    const navPriceById = buildNavPriceById(
+      [
+        makeAsset({
+          id: "thbill-theo",
+          symbol: "thBILL",
+          price: 1.01,
+          priceSource: "defillama",
+          priceObservedAt: nowSec - 10.5,
+        }),
+      ],
+      nowSec,
+    );
+
+    expect(navPriceById["thbill-theo"]).toMatchObject({
+      priceUsd: 1.01,
+      sourceId: "defillama",
+      observedAtSec: nowSec - 11,
+      confidence: "high",
+    });
+  });
+
+  it("includes NAV price observations with integer timestamps unchanged", () => {
+    const navPriceById = buildNavPriceById(
+      [
+        makeAsset({
+          id: "thbill-theo",
+          symbol: "thBILL",
+          price: 1.01,
+          priceSource: "defillama",
+          priceObservedAt: nowSec - 10,
+        }),
+      ],
+      nowSec,
+    );
+
+    expect(navPriceById["thbill-theo"]).toMatchObject({
+      priceUsd: 1.01,
+      sourceId: "defillama",
+      observedAtSec: nowSec - 10,
+      confidence: "high",
+    });
+  });
+
+  it("tolerates sub-second future clock skew by flooring onto the clock bound", () => {
+    const navPriceById = buildNavPriceById(
+      [
+        makeAsset({
+          id: "thbill-theo",
+          symbol: "thBILL",
+          priceObservedAt: nowSec + 0.5,
+        }),
+      ],
+      nowSec,
+    );
+
+    expect(navPriceById["thbill-theo"]?.observedAtSec).toBe(nowSec);
+  });
+
+  it("drops NAV price observations with invalid or future timestamps and non-NAV assets", () => {
+    const navPriceById = buildNavPriceById(
+      [
+        makeAsset({ id: "thbill-theo", symbol: "thBILL", priceObservedAt: Number.NaN }),
+        makeAsset({ id: "susds-sky", symbol: "sUSDS", priceObservedAt: nowSec + 10 }),
+        makeAsset({ id: "sdai-sky", symbol: "sDAI", priceObservedAt: -5 }),
+        makeAsset({ id: "usdt-tether", symbol: "USDT", priceObservedAt: nowSec - 10 }),
+      ],
+      nowSec,
+    );
+
+    expect(navPriceById).toEqual({});
   });
 
   it("throws when stablecoins cache is missing", async () => {
