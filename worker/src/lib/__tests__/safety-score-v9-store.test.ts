@@ -25,6 +25,8 @@ import {
   buildSafetyScoreV9ReplayArtifact,
   getSafetyScoreV9LocalArtifactBundleArtifacts,
   getSafetyScoreV9LocalArtifactBundleReferences,
+  loadDisplaySafetyScoreV9DiffReport,
+  loadDisplaySafetyScoreV9ShadowEnvelope,
   loadLatestSafetyScoreV9DiffReport,
   loadLatestSafetyScoreV9ShadowEnvelope,
   loadSafetyScoreV9ReplayArtifact,
@@ -767,7 +769,9 @@ describe("Safety Score v9 shadow state persistence", () => {
     await expect(loadSafetyScoreV9ShadowHistory(db)).resolves.toEqual([pinnedDaily]);
     expect(
       sqlite
-        .prepare("SELECT successful_attempt_count, failed_attempt_count, selected_run_at_sec FROM safety_score_v9_shadow_daily")
+        .prepare(
+          "SELECT successful_attempt_count, failed_attempt_count, selected_run_at_sec FROM safety_score_v9_shadow_daily",
+        )
         .get(),
     ).toEqual({
       successful_attempt_count: 2,
@@ -779,6 +783,70 @@ describe("Safety Score v9 shadow state persistence", () => {
     await expect(persistSafetyScoreV9ShadowState(db, { daily: late.daily })).rejects.toThrow(
       "must persist its latest envelope and diff",
     );
+  });
+
+  it("advances the display-latest cache on a pinned refresh while the qualifying selection stays pinned", async () => {
+    const latencyFloor: SafetyScoreV9CoverageFloor = {
+      id: "scheduled-start-latency",
+      status: "pass",
+      observed: 300,
+      required: "<= 3600 seconds after the scheduled daily selection point",
+      detail: "The daily shadow attempt began inside the preregistered start window",
+    };
+    const { db } = createTestDatabase();
+    const original = await successfulState(false, candidate(), [latencyFloor]);
+    // The day's first (selected) run writes both the qualifying selection and
+    // the display slot to the same run.
+    await persistSafetyScoreV9ShadowState(db, {
+      ...original,
+      latestEnvelope: original.envelope,
+      latestDiff: original.diff,
+    });
+    await expect(loadDisplaySafetyScoreV9ShadowEnvelope(db)).resolves.toEqual(original.envelope);
+    await expect(loadLatestSafetyScoreV9ShadowEnvelope(db)).resolves.toEqual(original.envelope);
+
+    const lateCandidate = {
+      ...candidate(),
+      candidateId: "candidate-v9-store-display-latest",
+      policyVersion: "candidate-v9-store-display-latest",
+      publicationGenerationId: "v9-shadow:display-latest-generation",
+      resultDigest: digest("8"),
+    };
+    const late = await successfulState(false, lateCandidate, [{ ...latencyFloor, status: "fail", observed: 7_200 }]);
+    const pinnedDaily = buildSafetyScoreV9ShadowDailySuccess({
+      utcDay: original.daily.utcDay,
+      selectedAtSec: SCHEDULED_FOR_SEC + 3 * 60 * 60,
+      updatedAtSec: SCHEDULED_FOR_SEC + 3 * 60 * 60 + 1,
+      previous: original.daily,
+      envelope: late.envelope,
+      diff: late.diff,
+    });
+    expect(pinnedDaily.selectedRun).toEqual(original.daily.selectedRun);
+
+    await expect(
+      persistSafetyScoreV9ShadowState(db, {
+        daily: pinnedDaily,
+        latestEnvelope: late.envelope,
+        latestDiff: late.diff,
+      }),
+    ).resolves.toBeUndefined();
+
+    // The display slot follows the latest run, while the qualifying selection,
+    // its canonical envelope/diff, and the daily selected run stay pinned.
+    await expect(loadDisplaySafetyScoreV9ShadowEnvelope(db)).resolves.toEqual(late.envelope);
+    await expect(loadDisplaySafetyScoreV9DiffReport(db)).resolves.toEqual(late.diff);
+    await expect(loadLatestSafetyScoreV9ShadowEnvelope(db)).resolves.toEqual(original.envelope);
+    await expect(loadLatestSafetyScoreV9DiffReport(db)).resolves.toEqual(original.diff);
+    await expect(loadSafetyScoreV9ShadowHistory(db)).resolves.toEqual([pinnedDaily]);
+
+    // A display pair whose diff does not describe its envelope fails closed.
+    await expect(
+      persistSafetyScoreV9ShadowState(db, {
+        daily: pinnedDaily,
+        latestEnvelope: late.envelope,
+        latestDiff: original.diff,
+      }),
+    ).rejects.toThrow("latest display diff identity does not match its envelope");
   });
 
   it("rolls back selected artifacts, daily state, and envelope when the atomic latest write fails", async () => {

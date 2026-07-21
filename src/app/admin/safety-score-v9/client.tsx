@@ -715,10 +715,20 @@ function CandidateWorkspace({
           />
         </dl>
 
+        <div className="mt-4 flex flex-col gap-1 border-t border-border/70 pt-3 sm:flex-row sm:items-baseline sm:justify-between">
+          <p className="text-xs font-semibold text-foreground">Latest shadow run · live identity</p>
+          <p className="text-xs text-muted-foreground">
+            Published {formatSafetyScoreV9Timestamp(model.displayCandidate.publishedAtSec)}
+            {model.displayIsLatest
+              ? " · the qualifying selection and coverage floors below reflect an earlier run"
+              : ""}
+          </p>
+        </div>
+
         <div className="flex flex-col gap-2 border-b border-border/70 py-3 sm:flex-row sm:items-center">
           <span className="shrink-0 text-xs font-medium text-muted-foreground">Grade distribution</span>
           <div className="flex flex-wrap gap-2">
-            {model.gradeCounts.map(({ grade: value, count }) => (
+            {model.displayGradeCounts.map(({ grade: value, count }) => (
               <span key={value} className="inline-flex items-center gap-1.5">
                 <SafetyGradeBadge grade={value} showScore={false} size="xs" />
                 <span className="pharos-numeric text-xs text-muted-foreground">{count}</span>
@@ -728,17 +738,20 @@ function CandidateWorkspace({
         </div>
 
         <dl className="mt-4 grid gap-x-6 border-y border-border/60 sm:grid-cols-2 lg:grid-cols-4">
-          <IdentityValue label="Candidate ID" value={model.candidate.candidateId} />
+          <IdentityValue label="Candidate ID" value={model.displayCandidate.candidateId} />
           <IdentityValue
             label="Policy"
-            value={`${model.candidate.policyVersion} · ${model.candidate.policy.semanticDigest}`}
+            value={`${model.displayCandidate.policyVersion} · ${model.displayCandidate.policy.semanticDigest}`}
           />
-          <IdentityValue label="Publication generation" value={model.candidate.publicationGenerationId} />
-          <IdentityValue label="Evaluation build" value={model.candidate.evaluationBuildDigest} />
-          <IdentityValue label="Base input" value={model.candidate.baseInputGenerationId} />
-          <IdentityValue label="Fact set" value={model.candidate.factSetDigest} />
-          <IdentityValue label="Published" value={formatSafetyScoreV9Timestamp(model.candidate.publishedAtSec)} />
-          <IdentityValue label="Evidence as of" value={formatSafetyScoreV9Timestamp(model.candidate.asOfSec)} />
+          <IdentityValue label="Publication generation" value={model.displayCandidate.publicationGenerationId} />
+          <IdentityValue label="Evaluation build" value={model.displayCandidate.evaluationBuildDigest} />
+          <IdentityValue label="Base input" value={model.displayCandidate.baseInputGenerationId} />
+          <IdentityValue label="Fact set" value={model.displayCandidate.factSetDigest} />
+          <IdentityValue
+            label="Published"
+            value={formatSafetyScoreV9Timestamp(model.displayCandidate.publishedAtSec)}
+          />
+          <IdentityValue label="Evidence as of" value={formatSafetyScoreV9Timestamp(model.displayCandidate.asOfSec)} />
         </dl>
       </section>
 

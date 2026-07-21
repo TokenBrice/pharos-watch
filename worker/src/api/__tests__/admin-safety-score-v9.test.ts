@@ -26,6 +26,10 @@ import {
   persistSafetyScoreV9ShadowState,
   type SafetyScoreV9StoredReplayArtifact,
 } from "../../lib/safety-score-v9-store";
+import {
+  serializeSafetyScoreV9DiffReportCacheValue,
+  serializeSafetyScoreV9ShadowEnvelopeCacheValue,
+} from "../../lib/safety-score-v9-cache-codec";
 import { handleAdminSafetyScoreV9, handleAdminSafetyScoreV9MovementReview } from "../admin-safety-score-v9";
 
 const migrationPath = resolve(
@@ -208,6 +212,80 @@ describe("admin Safety Score v9 candidate", () => {
         body.envelope.consumerThresholdRegistryDigest,
       );
       expect(body.history[0]?.selectedRun?.archiveSelectionReasons).toEqual(["first"]);
+    }
+    sqlite.close();
+  });
+
+  it("surfaces the latest run in the display slot while the selection stays pinned", async () => {
+    const { sqlite, db } = createTestDatabase();
+    await persistAvailableState(db);
+
+    // Before any intra-day refresh lands, the display slot falls back to the
+    // selected (qualifying) pair.
+    const fallback = await handleAdminSafetyScoreV9({ db, request: request(), trustedAdmin: true });
+    const fallbackBody = SafetyScoreV9AdminResponseSchema.parse(await fallback.json());
+    expect(fallbackBody.status).toBe("available");
+    if (fallbackBody.status === "available") {
+      expect(fallbackBody.latestEnvelope.candidate.publicationGenerationId).toBe("v9-shadow:admin-test");
+      expect(fallbackBody.latestDiff.v9Identity.publicationGenerationId).toBe("v9-shadow:admin-test");
+    }
+
+    // A later same-day run refreshes only the display slot.
+    const lateCandidate = {
+      ...candidate(),
+      candidateId: "candidate-v9-admin-late",
+      policyVersion: "candidate-v9-admin-late",
+      publicationGenerationId: "v9-shadow:admin-late",
+      resultDigest: digest("8"),
+    };
+    const lateEnvelope = buildSafetyScoreV9ShadowEnvelope({
+      candidate: lateCandidate,
+      expectedActiveIds: [],
+      compilerFactSchemaDigest: digest("f"),
+      producerCapabilityDigest: digest("1"),
+      coverageFloors: [],
+      replayArtifacts: [],
+    });
+    const lateV8: SafetyScoreV8ComparableSnapshot = {
+      model: "v8",
+      publicationGenerationId: "v8:admin-test",
+      baseInputGenerationId,
+      methodologyVersion: "v8.17",
+      evaluationBuildDigest: digest("2"),
+      cards: [],
+    };
+    const lateDiff = buildSafetyScoreV9DiffReport({
+      generatedAtSec: scheduledForSec + 3 * 60 * 60,
+      expectedActiveIds: [],
+      v8: lateV8,
+      v9: lateEnvelope,
+      topCutoffIds: new Set(),
+      downstreamThresholds: [],
+      supplyUsdById: {},
+    });
+    const insertCache = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+    insertCache.run(
+      SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.latestEnvelope,
+      await serializeSafetyScoreV9ShadowEnvelopeCacheValue(lateEnvelope),
+      scheduledForSec + 3 * 60 * 60,
+    );
+    insertCache.run(
+      SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.latestDiff,
+      await serializeSafetyScoreV9DiffReportCacheValue(lateDiff),
+      scheduledForSec + 3 * 60 * 60,
+    );
+
+    const response = await handleAdminSafetyScoreV9({ db, request: request(), trustedAdmin: true });
+    const body = SafetyScoreV9AdminResponseSchema.parse(await response.json());
+    expect(body.status).toBe("available");
+    if (body.status === "available") {
+      // The display follows the latest run.
+      expect(body.latestEnvelope.candidate.publicationGenerationId).toBe("v9-shadow:admin-late");
+      expect(body.latestDiff.v9Identity.publicationGenerationId).toBe("v9-shadow:admin-late");
+      // The qualifying selection and its retained history stay pinned.
+      expect(body.envelope.candidate.publicationGenerationId).toBe("v9-shadow:admin-test");
+      expect(body.diff.v9Identity.publicationGenerationId).toBe("v9-shadow:admin-test");
+      expect(body.history[0]?.selectedRun?.identity.publicationGenerationId).toBe("v9-shadow:admin-test");
     }
     sqlite.close();
   });

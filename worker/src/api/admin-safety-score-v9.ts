@@ -18,6 +18,8 @@ import {
   type AdminRouteContext,
 } from "../lib/route-wrappers";
 import {
+  loadDisplaySafetyScoreV9DiffReport,
+  loadDisplaySafetyScoreV9ShadowEnvelope,
   loadLatestSafetyScoreV9DiffReport,
   loadLatestSafetyScoreV9ShadowEnvelope,
   loadSafetyScoreV9ShadowHistory,
@@ -70,6 +72,17 @@ export const handleAdminSafetyScoreV9 = makeAdminRoute<AdminRouteContext>(
       if (diff === null) return unavailable("shadow-diff-unavailable");
       if (!candidateAndDiffMatch(envelope, diff)) return unavailable("shadow-generation-mismatch");
 
+      // Display-only latest run (refreshed every ~3h). The selected envelope/diff
+      // above stay pinned to the qualifying selection; the latest pair reflects
+      // the currently deployed identity. Fall back to the selected pair before
+      // the first post-deploy refresh has landed or if the pair is incoherent.
+      let latestEnvelope = await loadDisplaySafetyScoreV9ShadowEnvelope(db, request.signal);
+      let latestDiff = await loadDisplaySafetyScoreV9DiffReport(db, request.signal);
+      if (latestEnvelope === null || latestDiff === null || !candidateAndDiffMatch(latestEnvelope, latestDiff)) {
+        latestEnvelope = envelope;
+        latestDiff = diff;
+      }
+
       const history = await loadSafetyScoreV9ShadowHistory(db, { signal: request.signal });
       if (history.length === 0) return unavailable("shadow-history-unavailable");
       const movementReviews = await loadSafetyScoreV9MovementReviews(
@@ -84,6 +97,8 @@ export const handleAdminSafetyScoreV9 = makeAdminRoute<AdminRouteContext>(
           status: "available",
           envelope,
           diff,
+          latestEnvelope,
+          latestDiff,
           movementReviews,
           history,
         }),
@@ -94,10 +109,7 @@ export const handleAdminSafetyScoreV9 = makeAdminRoute<AdminRouteContext>(
   },
 );
 
-async function handleAdminSafetyScoreV9MovementReviewTrusted({
-  db,
-  request,
-}: AdminRouteContext): Promise<Response> {
+async function handleAdminSafetyScoreV9MovementReviewTrusted({ db, request }: AdminRouteContext): Promise<Response> {
   if (!isWellFormedIdempotencyKey(request.headers.get("Idempotency-Key"))) {
     return adminErrorResponse(400, "A valid Idempotency-Key header between 8 and 128 characters is required");
   }

@@ -12,11 +12,18 @@ export interface SafetyScoreV9AssetRow {
 }
 
 export interface SafetyScoreV9WorkspaceModel {
+  /** The pinned qualifying selection: drives floors, blockers, asset rows, and reviews. */
   candidate: SafetyScoreV9Response;
+  /** The most recent successful run: the currently deployed identity shown in the header. */
+  displayCandidate: SafetyScoreV9Response;
+  /** Whether the displayed latest run differs from the pinned qualifying selection. */
+  displayIsLatest: boolean;
   currentDay: ShadowDay | null;
   blockers: string[];
   failedCoverageFloors: AvailableResponse["envelope"]["coverage"]["coverageFloors"];
   gradeCounts: Array<{ grade: V9Grade; count: number }>;
+  /** Grade distribution of the latest run, shown in the header histogram. */
+  displayGradeCounts: Array<{ grade: V9Grade; count: number }>;
   assetRows: SafetyScoreV9AssetRow[];
   reviewRows: DiffCard[];
   pendingReviewCount: number;
@@ -87,6 +94,15 @@ export function buildSafetyScoreV9WorkspaceModel(response: AvailableResponse): S
     count: candidate.cards.filter((card) => card.grade === grade).length,
   })).filter(({ count }) => count > 0);
 
+  // The header follows the latest successful run so the operator sees the
+  // currently deployed identity. It is deliberately independent of the pinned
+  // qualifying selection that drives the floors, blockers, and review queue.
+  const displayCandidate = response.latestEnvelope.candidate;
+  const displayGradeCounts = GRADE_ORDER.map((grade) => ({
+    grade,
+    count: displayCandidate.cards.filter((card) => card.grade === grade).length,
+  })).filter(({ count }) => count > 0);
+
   const diffById = new Map(resolvedDiffCards.map((card) => [card.id, card] as const));
   const assetRows = candidate.cards
     .map((card) => ({ card, diff: diffById.get(card.id) ?? null }))
@@ -109,10 +125,13 @@ export function buildSafetyScoreV9WorkspaceModel(response: AvailableResponse): S
 
   return {
     candidate,
+    displayCandidate,
+    displayIsLatest: displayCandidate.publicationGenerationId !== candidate.publicationGenerationId,
     currentDay,
     blockers: [...blockerSet].sort(compareText),
     failedCoverageFloors,
     gradeCounts,
+    displayGradeCounts,
     assetRows,
     reviewRows,
     pendingReviewCount,

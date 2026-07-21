@@ -411,8 +411,7 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
     // the throttle must measure from the LATEST success (derived from the
     // daily row), not from the pinned selection. A run younger than the
     // refresh interval still skips to bound compute and writes.
-    const lastSuccessfulAtSec =
-      previous === null ? null : safetyScoreV9ShadowLastSuccessfulAttemptAtSec(previous);
+    const lastSuccessfulAtSec = previous === null ? null : safetyScoreV9ShadowLastSuccessfulAttemptAtSec(previous);
     if (
       lastSuccessfulAtSec !== null &&
       fixedInput.clockSec - lastSuccessfulAtSec < SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC
@@ -575,7 +574,15 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
         );
       }
       stage = "shadow-write";
-      await persistSafetyScoreV9ShadowState(input.db, { daily, signal: shadowSignal });
+      // The pinned refresh keeps the day's selected run and its qualifying
+      // envelope/diff, but the admin display follows this latest run so the
+      // operator sees the currently deployed identity's output.
+      await persistSafetyScoreV9ShadowState(input.db, {
+        daily,
+        latestEnvelope: envelope,
+        latestDiff: diff,
+        signal: shadowSignal,
+      });
       return {
         status: "published",
         attemptId: currentAttemptId,
@@ -682,12 +689,17 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
     }
     const pendingReviewCount = diff.summary.pendingReviewCount;
     stage = "shadow-write";
+    // A newly selected run is by definition the day's latest run, so the admin
+    // display slot mirrors the same envelope/diff being retained as the
+    // qualifying selection.
     await persistSafetyScoreV9ShadowState(input.db, {
       artifacts: localArtifactBundle === undefined ? [] : undefined,
       localArtifactBundle,
       daily,
       envelope,
       diff,
+      latestEnvelope: envelope,
+      latestDiff: diff,
       signal: shadowSignal,
     });
     return {
