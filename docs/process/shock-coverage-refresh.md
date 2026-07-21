@@ -10,7 +10,7 @@ Until now the measurement was produced by hand. The [Shock Coverage Refresh](../
 
 `.github/workflows/shock-coverage-refresh.yml` runs at **03:41 UTC every other day** (`41 3 */2 * *`), plus `workflow_dispatch` for a manual refresh.
 
-Worst-case gap between runs is 48h, which leaves ~24h of slack against the 72h bound — enough to absorb one failed run, not two. The freshness clock runs on the **pinned block timestamp**, not on merge time, so review latency spends the same budget as scheduler latency.
+Worst-case gap between runs is 48h, which leaves ~24h of slack against the 72h bound — enough to absorb one failed run, not two. The freshness clock runs on the **pinned block timestamp**, not on merge time, so merge latency spends the same budget as scheduler latency; auto-merge (see [Merge path](#merge-path)) keeps that spend bounded by the required checks.
 
 ## What the workflow does
 
@@ -35,7 +35,7 @@ Each stage is a separate step, so a partial refresh (for example V1 succeeding a
 
 `main` is a protected branch with `enforce_admins: true` and force-pushes disabled, so the workflow **cannot** push measurements directly. It pushes to `automated/shock-coverage-refresh` and opens (or force-updates) a pull request against `main`, matching the [OG Refresh](../../.github/workflows/og-refresh.yml) pattern.
 
-Repository auto-merge is disabled, so **the PR requires a human merge**. This is the one manual step the automation does not remove. Merge it promptly: an unmerged refresh PR does not bank the freshness refresh.
+The workflow **arms auto-merge** on the PR it opens (`gh pr merge --squash --auto`; repository auto-merge is enabled) per the owner ruling of 2026-07-20. The merge queues behind the required checks — branch protection is not bypassed — and does not wait for a human review, because a refresh parked on review can still cross the 72h bound and drop LUSD to `unsafe-backing:high`. The trust boundary is the measurement itself: journals must replay byte-identically offline or the job fails before a PR exists (see above). Note that replay proves determinism, not RPC truthfulness; accepting public-RPC measurements without human review is a deliberate freshness-over-review trade (ruling reaffirmed 2026-07-21 by rejecting PR #611, which proposed removing auto-merge).
 
 ### Token
 
