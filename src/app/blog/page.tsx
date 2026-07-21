@@ -11,7 +11,7 @@ const BLOG_DESCRIPTION =
   "Product updates and the story of Pharos — what shipped, what's next, and why we build stablecoin risk tooling in the open.";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Blog - Pharos",
+  title: "Stablecoin Research & Product Updates",
   description: BLOG_DESCRIPTION,
   canonical: "/blog/",
   ogImage: "/og-blog.png",

@@ -8,8 +8,12 @@ import { BLOG_POSTS, BLOG_POST_BY_SLUG, LATEST_BLOG_POST } from "../index";
 
 const POSTS_DIR = join(process.cwd(), "src/data/blog/posts");
 const PUBLIC_DIR = join(process.cwd(), "public");
-const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const KEBAB_CHARS = /^[a-z0-9-]+$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function isKebabCase(value: string): boolean {
+  return KEBAB_CHARS.test(value) && !value.startsWith("-") && !value.endsWith("-") && !value.includes("--");
+}
 
 describe("blog registry", () => {
   it("has at least one post", () => {
@@ -20,7 +24,7 @@ describe("blog registry", () => {
     const slugs = BLOG_POSTS.map((post) => post.slug);
     expect(new Set(slugs).size).toBe(slugs.length);
     for (const slug of slugs) {
-      expect(slug, `slug "${slug}" must be kebab-case`).toMatch(KEBAB);
+      expect(isKebabCase(slug), `slug "${slug}" must be kebab-case`).toBe(true);
     }
   });
 

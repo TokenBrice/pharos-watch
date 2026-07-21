@@ -7,11 +7,12 @@ import { LATEST_BLOG_POST } from "@/data/blog";
 // the window — no client JS, no CSP inline-script, no layout shift. Chrome
 // only: sans, muted, never frost-blue; the editorial serif is blog-body only.
 const FRESH_DAYS = 14;
+const STATIC_EXPORT_TIME_MS = Date.now();
 
 export function HomeBlogBanner() {
   const post = LATEST_BLOG_POST;
   const publishedMs = new Date(`${post.datePublished}T00:00:00Z`).getTime();
-  const ageDays = (Date.now() - publishedMs) / 86_400_000;
+  const ageDays = (STATIC_EXPORT_TIME_MS - publishedMs) / 86_400_000;
   if (!Number.isFinite(ageDays) || ageDays > FRESH_DAYS) return null;
 
   return (
