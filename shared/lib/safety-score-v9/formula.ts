@@ -68,6 +68,11 @@ const WITHHOLD_BAND_MAX_SCORE = 55;
 // Measured peg-history danger floor: a measured peg multiplier below this is a
 // danger signal (matches the calibration runner's MEASURED_PEG_MULTIPLIER_FLOOR).
 const DANGER_PEG_MULTIPLIER_FLOOR = 0.9;
+// F-gate peg floor (owner ruling 2026-07-21, reshape-v2 D1): a measured peg
+// multiplier in [0.8, 0.9) reads as degraded (D-range), not failing (F).
+// Deliberately DECOUPLED from the frozen D3 attribution predicate (0.90),
+// which is not a tunable knob and is untouched by this constant.
+const F_GATE_PEG_MULTIPLIER_FLOOR = 0.8;
 // Cap sources that do not hold an F on the merits: a binding cap from any of
 // these is an evidence/compensability/track-record ceiling, not adverse.
 const NON_ADVERSE_CAP_SOURCES = new Set<V9CapSource>(["bounded-compensability", "evidence", "track-record"]);
@@ -237,10 +242,23 @@ function v9PillarBoundedUnknownFloor(pillar: V9QualityPillar, policy: V9Validate
 function anyPillarBelowFloor(
   pillars: V9ScoringInput["pillars"],
   policy: V9ValidatedPolicyEnvelope,
+  gate: V9DangerGate = "withhold",
 ): boolean {
   return V9_QUALITY_PILLARS.some((pillar) => {
     const score = pillars[pillar];
-    return score !== null && score < v9PillarBoundedUnknownFloor(pillar, policy);
+    if (score === null) return false;
+    // F-gate control threshold (owner rulings 2026-07-21, D1+D5): control 25 is
+    // the ladder's DEFINED measured minimum (`unbounded-or-compromised`), not a
+    // below-plausible reading — a verified-adverse mint is a D-range fact
+    // priced in-pillar, so only a control score below the measured scale reads
+    // as danger for the F-vs-D decision. The withhold gate keeps the
+    // bounded-unknown floor (45): a measured-adverse control must stay rated,
+    // never NR. Backing/exit floors (35) are identical under both gates.
+    if (gate === "f-gate" && pillar === "control") {
+      const postureFloor = Math.min(...Object.values(policy.policy.semantic.control.mintPostureQuality));
+      return score < postureFloor;
+    }
+    return score < v9PillarBoundedUnknownFloor(pillar, policy);
   });
 }
 
@@ -255,14 +273,33 @@ export interface V9DangerSignalInput {
 }
 
 /**
+ * The two reshape gates read danger through different lenses (owner ruling
+ * 2026-07-21, reshape-v2 D1):
+ * - "withhold" (Lever 1 blocker): the FULL predicate — any measured adverse
+ *   fact (incl. centralized-mint >= high, peg multiplier < 0.9) keeps an asset
+ *   rated instead of NR-withheld.
+ * - "f-gate" (Lever 2): the NARROW predicate — F is reserved for hard danger.
+ *   Centralized-mint counts at critical only (a concentrated-but-verified mint
+ *   is already priced at control 25 + the high@59 cap; re-branding the D-range
+ *   blend as F double-counts it), and the peg floor drops to 0.8.
+ */
+export type V9DangerGate = "withhold" | "f-gate";
+
+/**
  * Shared danger predicate for the reshape gates (Levers 1 & 2). TRUE when a
  * would-be low/F score is held by a measured adverse fact rather than by an
  * evidence gap: it is the union of the calibration runner's
  * `measuredAdverseFDrivers`, fired `signal:*:critical` caps (presence, not
- * bindingness), and centralized-mint at >= high severity. Withholding (L1) and
- * the danger-gate floor (L2) both defer to it so F stays danger-only.
+ * bindingness), and gate-dependent centralized-mint / measured-peg clauses
+ * (see `V9DangerGate`). Withholding (L1) and the danger-gate floor (L2) defer
+ * to their respective gates so F stays danger-only without ever withholding a
+ * measured-adverse asset.
  */
-export function hasV9DangerSignal(input: V9DangerSignalInput, policy: V9ValidatedPolicyEnvelope): boolean {
+export function hasV9DangerSignal(
+  input: V9DangerSignalInput,
+  policy: V9ValidatedPolicyEnvelope,
+  gate: V9DangerGate = "withhold",
+): boolean {
   assertV9ValidatedPolicyEnvelope(policy);
   // (1) A fired signal:*:critical structural cap — presence, not bindingness.
   const firedCriticalSignal = resolveV9StructuralCaps(input.structuralSignals, policy).some(
@@ -272,15 +309,17 @@ export function hasV9DangerSignal(input: V9DangerSignalInput, policy: V9Validate
   const activeDepeg = input.activeDepegBps !== null && input.activeDepegBps > 0;
   // (3) A required, rated parent imposes a parent cap.
   const parentCap = input.parentRequired && input.parentScore !== null;
-  // (4) Centralized mint at high or critical severity.
+  // (4) Centralized mint: critical always; high only for the withhold gate.
   const centralizedMint = input.structuralSignals.some(
-    (signal) => signal.kind === "centralized-mint" && (signal.severity === "high" || signal.severity === "critical"),
+    (signal) =>
+      signal.kind === "centralized-mint" &&
+      (signal.severity === "critical" || (gate === "withhold" && signal.severity === "high")),
   );
-  // (5) Measured peg history below the danger floor.
-  const measuredPeg =
-    typeof input.pegMultiplier === "number" && input.pegMultiplier < DANGER_PEG_MULTIPLIER_FLOOR;
+  // (5) Measured peg history below the gate's danger floor.
+  const pegFloor = gate === "f-gate" ? F_GATE_PEG_MULTIPLIER_FLOOR : DANGER_PEG_MULTIPLIER_FLOOR;
+  const measuredPeg = typeof input.pegMultiplier === "number" && input.pegMultiplier < pegFloor;
   // (6) Any pillar strictly below its bounded-unknown floor.
-  const subFloorPillar = anyPillarBelowFloor(input.pillars, policy);
+  const subFloorPillar = anyPillarBelowFloor(input.pillars, policy, gate);
   // (7) A registry-classified unsupported-design reason.
   const unsupportedDesign = input.unresolvedCodes.some(
     (code) => resolveV9ReasonPolicy(policy, code).reason.auditClassification === "unsupported-design",
@@ -530,21 +569,20 @@ function scoreV9InputWithCaps(
         ? floorTo(rawFinal, formula.scoreDecimals)
         : roundTo(rawFinal, formula.scoreDecimals);
 
-  // Reshape gates (Levers 1 & 2) share one danger predicate so F stays
-  // danger-only: withhold on the genuinely-unassessable, floor the rest of the
-  // evidence-gap composites to D.
-  const dangerPresent = hasV9DangerSignal(
-    {
-      pillars: input.pillars,
-      structuralSignals: input.structuralSignals,
-      pegMultiplier: pegMultiplierRaw,
-      activeDepegBps: input.activeDepegBps,
-      parentRequired: input.parentRequired,
-      parentScore: input.parentScore,
-      unresolvedCodes: input.unresolved.map((fact) => fact.code),
-    },
-    policy,
-  );
+  // Reshape gates (Levers 1 & 2) read danger through per-gate lenses (D1):
+  // the withhold gate keeps the full predicate (measured-adverse is never
+  // NR-withheld), the F-gate narrows to hard danger (F stays danger-only).
+  const dangerSignalInput = {
+    pillars: input.pillars,
+    structuralSignals: input.structuralSignals,
+    pegMultiplier: pegMultiplierRaw,
+    activeDepegBps: input.activeDepegBps,
+    parentRequired: input.parentRequired,
+    parentScore: input.parentScore,
+    unresolvedCodes: input.unresolved.map((fact) => fact.code),
+  };
+  const withholdDangerPresent = hasV9DangerSignal(dangerSignalInput, policy, "withhold");
+  const fGateDangerPresent = hasV9DangerSignal(dangerSignalInput, policy, "f-gate");
 
   const effectiveNrReasons = [...nrReasons];
   let finalScore = baseFinalScore;
@@ -561,7 +599,7 @@ function scoreV9InputWithCaps(
     finalScore !== null &&
     limitedPillarCount >= 2 &&
     backingLimited &&
-    !dangerPresent &&
+    !withholdDangerPresent &&
     finalScore < WITHHOLD_BAND_MAX_SCORE
   ) {
     effectiveNrReasons.push({
@@ -580,8 +618,8 @@ function scoreV9InputWithCaps(
     finalScore !== null &&
     dFloorScore !== null &&
     gradeForScore(finalScore, policy) === "F" &&
-    !dangerPresent &&
-    !anyPillarBelowFloor(input.pillars, policy) &&
+    !fGateDangerPresent &&
+    !anyPillarBelowFloor(input.pillars, policy, "f-gate") &&
     (finalBindingCap === null || NON_ADVERSE_CAP_SOURCES.has(finalBindingCap.source))
   ) {
     const floorRow: V9CapTrace = {

@@ -789,11 +789,29 @@ function commonModeSignalsByAsset(
         members,
       });
     })();
+    // Reshape-v2 D2 (owner ruling 2026-07-21): a mint/upgrade-control domain
+    // that IS a member's own serial-claim parent asset is definitional for
+    // that child — the parent/wrapper cap already prices the inheritance, so
+    // the shared-controller signal defers to it (diagnostic) for children of
+    // that asset. Non-child members keep the group severity.
+    const controlAssetDomainId =
+      (group.failureDomain.kind === "mint-control" || group.failureDomain.kind === "upgrade-control") &&
+      group.failureDomain.key.startsWith("asset:")
+        ? group.failureDomain.key.slice("asset:".length)
+        : null;
     for (const assetId of assetIds) {
-      const severity =
-        mintControlSeverity ?? commonModeSignalSeverity(group.failureDomain, contextFor(assetId), materiality);
-      const qualifier =
-        mintControlSeverity === "low"
+      const parentControlled =
+        controlAssetDomainId !== null &&
+        plan.serialPaths.some(
+          (path) =>
+            path.assetId === assetId && path.role === "serial-claim" && path.upstreamAssetId === controlAssetDomainId,
+        );
+      const severity = parentControlled
+        ? "low"
+        : (mintControlSeverity ?? commonModeSignalSeverity(group.failureDomain, contextFor(assetId), materiality));
+      const qualifier = parentControlled
+        ? "own required parent's controller, priced by the parent cap, diagnostic only"
+        : mintControlSeverity === "low"
           ? "same-issuer controller, diagnostic only"
           : commonModeReasonQualifier(group.failureDomain.kind, severity);
       const signal: V9StructuralSignal = {
