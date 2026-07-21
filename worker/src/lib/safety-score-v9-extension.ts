@@ -168,13 +168,30 @@ const ISSUER_ENTITY_STOPWORDS = new Set([
   "as",
 ]);
 
+// Curated issuer-identity aliases. Some issuers publish the SAME legal or
+// governance identity under different display strings; without an explicit
+// mapping their normalized issuer keys diverge, so a same-issuer control group
+// (an issuer's own controller shared across its own products) fails closed.
+// Each entry maps a fully-normalized issuer-entity phrase to one canonical
+// issuer key. This is MINIMAL and NAMED — the only entry is the
+// MakerDAO <-> Sky Protocol governance identity: Sky is the rebranded MakerDAO,
+// governed by the same PauseProxy, described as "MakerDAO / Sky Protocol
+// governance" (DAI) and "Sky Protocol governance" (USDS/sUSDS). Matching is
+// exact on the normalized phrase (no fuzzy matching), so unrelated issuers that
+// merely share a leading token are never merged.
+const CANONICAL_ISSUER_KEY_BY_NORMALIZED_ENTITY = new Map<string, string>([
+  ["makerdao sky protocol governance", "makerdao"],
+  ["sky protocol governance", "makerdao"],
+]);
+
 function normalizedIssuerEntity(value: string): string | null {
   const tokens = value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .split(" ")
     .filter((token) => token.length > 0 && !ISSUER_ENTITY_STOPWORDS.has(token));
-  return tokens[0] ?? null;
+  if (tokens.length === 0) return null;
+  return CANONICAL_ISSUER_KEY_BY_NORMALIZED_ENTITY.get(tokens.join(" ")) ?? tokens[0]!;
 }
 
 function rawIssuerKey(assetId: string, meta: V9ExtensionRegistryMeta): string | null {
