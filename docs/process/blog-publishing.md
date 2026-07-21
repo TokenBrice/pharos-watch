@@ -30,6 +30,11 @@ notes). Keep posts editorial: what shipped, what's next, and why.
    - `slug`: kebab-case, no date prefix (URL is `/blog/<slug>/`).
    - `title`, `description` (≤160 chars — meta + hub blurb + RSS), `datePublished`
      (`YYYY-MM-DD`, the day it goes live), `source` (the `.md` filename).
+   - **Cover image (optional):** drop the file in `public/blog/` and set
+     `coverImage: "/blog/<slug>-cover.png"` + `coverAlt`. Author it **1200×630**
+     — it renders atop the post and the hub card in a `1200/630` frame and
+     doubles as the post's social/OG card (falling back to the shared
+     `og-blog.png` when absent). The registry test verifies the file exists.
 3. **Test** the registry, feed, and sitemap:
    ```bash
    npx vitest run src/data/blog src/app/feed src/app/__tests__/sitemap-frozen.test.ts

@@ -17,6 +17,14 @@ export interface BlogPost {
   datePublished: string;
   /** Filename within posts/. */
   source: string;
+  /**
+   * Optional cover image, an absolute path under public/ (e.g.
+   * "/blog/my-post-cover.png"). Renders atop the post and the hub card, and
+   * doubles as the social/OG card. Author 1200×630 for a clean OG crop.
+   */
+  coverImage?: string;
+  /** Alt text for the cover image. Required when coverImage is set. */
+  coverAlt?: string;
 }
 
 export const BLOG_POSTS: readonly BlogPost[] = [

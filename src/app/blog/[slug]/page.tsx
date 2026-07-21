@@ -6,7 +6,6 @@ import type { Metadata } from "next";
 import type React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
 import ReactMarkdown from "react-markdown";
@@ -64,7 +63,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     title: `${post.title} | Pharos Blog`,
     description: post.description,
     canonical: `/blog/${slug}/`,
-    ogImage: OG_BLOG,
+    ogImage: post.coverImage ?? OG_BLOG,
   });
 }
 
@@ -76,6 +75,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const source = fs.readFileSync(path.join(POSTS_DIR, post.source), "utf-8");
   const canonical = `${SITE_URL}/blog/${slug}/`;
   const dateModified = (sitemapDates as Record<string, string>)[`/blog/${slug}/`] ?? post.datePublished;
+  const socialImage = post.coverImage ?? OG_BLOG;
 
   return (
     <FeaturePageShell
@@ -108,16 +108,25 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             dateModified: dateModified.length === 10 ? `${dateModified}T00:00:00Z` : dateModified,
             author: { "@id": `${SITE_URL}#organization` },
             publisher: { "@id": `${SITE_URL}#organization` },
-            image: `${SITE_URL}${OG_BLOG}`,
+            image: `${SITE_URL}${socialImage}`,
             mainEntityOfPage: canonical,
           }),
         }}
       />
+      {post.coverImage ? (
+        // Plain <img>: static export runs with images.unoptimized and
+        // @next/next/no-img-element off. 1200×630 covers fit this frame cleanly.
+        <img
+          src={post.coverImage}
+          alt={post.coverAlt ?? ""}
+          className="aspect-[1200/630] w-full rounded-xl border border-border/50 object-cover"
+        />
+      ) : null}
       <article className="space-y-5 font-serif text-[1.05rem] leading-8 text-foreground/90 [&_h2]:pt-5 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-foreground [&_h3]:pt-3 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-foreground [&_p]:leading-8 [&_strong]:font-semibold [&_strong]:text-foreground [&_em]:italic [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:text-foreground/80">
         <ReactMarkdown
           components={mdxComponents}
           remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeSlug, [rehypeAutolinkHeadings, { behavior: "wrap" }]]}
+          rehypePlugins={[rehypeSlug]}
         >
           {source}
         </ReactMarkdown>

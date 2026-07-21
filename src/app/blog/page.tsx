@@ -63,16 +63,27 @@ export default function BlogHubPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: blogJsonLd }} />
       <ol className="space-y-8">
         {BLOG_POSTS.map((post) => (
-          <li key={post.slug} className="space-y-1.5">
-            <p className="pharos-meta">
-              <time dateTime={post.datePublished}>{formatPublishedDate(post.datePublished)}</time>
-            </p>
-            <h2 className="font-serif text-2xl font-semibold leading-tight tracking-tight">
-              <Link href={`/blog/${post.slug}/`} className="text-foreground hover:text-foreground/80">
-                {post.title}
+          <li key={post.slug} className="space-y-2.5">
+            {post.coverImage ? (
+              <Link href={`/blog/${post.slug}/`} className="block" aria-label={post.title}>
+                <img
+                  src={post.coverImage}
+                  alt={post.coverAlt ?? ""}
+                  className="aspect-[1200/630] w-full rounded-xl border border-border/50 object-cover transition-opacity hover:opacity-90"
+                />
               </Link>
-            </h2>
-            <p className="text-sm leading-7 text-muted-foreground">{post.description}</p>
+            ) : null}
+            <div className="space-y-1.5">
+              <p className="pharos-meta">
+                <time dateTime={post.datePublished}>{formatPublishedDate(post.datePublished)}</time>
+              </p>
+              <h2 className="font-serif text-2xl font-semibold leading-tight tracking-tight">
+                <Link href={`/blog/${post.slug}/`} className="text-foreground hover:text-foreground/80">
+                  {post.title}
+                </Link>
+              </h2>
+              <p className="text-sm leading-7 text-muted-foreground">{post.description}</p>
+            </div>
           </li>
         ))}
       </ol>

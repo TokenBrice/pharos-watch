@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { BLOG_POSTS, BLOG_POST_BY_SLUG, LATEST_BLOG_POST } from "../index";
 
 const POSTS_DIR = join(process.cwd(), "src/data/blog/posts");
+const PUBLIC_DIR = join(process.cwd(), "public");
 const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -42,6 +43,16 @@ describe("blog registry", () => {
       expect(post.description.length, `${post.slug} description too long`).toBeLessThanOrEqual(160);
       expect(post.datePublished, `${post.slug} date must be YYYY-MM-DD`).toMatch(ISO_DATE);
       expect(Number.isNaN(new Date(`${post.datePublished}T00:00:00Z`).getTime())).toBe(false);
+    }
+  });
+
+  it("has a valid, existing cover image when one is set", () => {
+    for (const post of BLOG_POSTS) {
+      if (post.coverImage === undefined) continue;
+      expect(post.coverImage, `${post.slug} coverImage must be an absolute /public path`).toMatch(/^\//);
+      expect(post.coverAlt?.trim(), `${post.slug} coverImage requires coverAlt`).toBeTruthy();
+      const coverPath = join(PUBLIC_DIR, post.coverImage);
+      expect(existsSync(coverPath), `${post.slug} cover missing: public${post.coverImage}`).toBe(true);
     }
   });
 
