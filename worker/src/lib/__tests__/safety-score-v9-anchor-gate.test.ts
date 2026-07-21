@@ -135,13 +135,13 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
 
   it("fails a max-score adverse pin above its bound", () => {
     const report = evaluateSafetyScoreV9AnchorGate({
-      cards: withScore(passingCards(), "usdd-tron-dao-reserve", 40),
+      cards: withScore(passingCards(), "u-united-stables", 33),
     });
     expect(report.decision).toBe("no-go");
-    const entry = verdict(report, "adverse:usdd-tron-dao-reserve");
+    const entry = verdict(report, "adverse:u-united-stables");
     expect(entry.status).toBe("fail");
     expect(entry.code).toBe("adverse-above-bound");
-    expect(entry.required).toBe("score ≤ 39");
+    expect(entry.required).toBe("score ≤ 32");
   });
 
   it("fails a max-grade adverse pin once the score leaves the grade band", () => {

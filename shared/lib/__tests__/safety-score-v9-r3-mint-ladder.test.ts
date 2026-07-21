@@ -21,7 +21,10 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
  *   prudential supervision + reconciled   -> NO centralized-mint cap
  *                                            (risk priced in the control pillar, R4)
  *   attestation-only + reconciled         -> cap 83 (permits USDT A-, not A; R1)
- *   opaque / unreconciled / compromised   -> critical@39 (unchanged)
+ *   opaque / unreconciled (no incident)   -> high@59 (MINT-SOFTEN 2026-07-21:
+ *                                            heavy control-pillar penalty, not a
+ *                                            critical composite floor)
+ *   active mint compromise                -> critical@39 (unchanged)
  *   supervision none/unknown + reconciled -> high@59 (fail-closed, unchanged)
  *
  * ACTIVE describes pin the rungs R3 keeps (they must pass before AND after the
@@ -145,13 +148,19 @@ function centralizedMintSeverity(
 const SUPERVISIONS: readonly V9MintSupervision[] = ["prudential", "attestation-only", "none", "unknown"];
 
 describe("R3 kept rungs — active fail-closed baseline (must hold pre- and post-Stage-B)", () => {
-  it("keeps opaque/unreconciled unbounded mints critical for every supervision class", () => {
+  it("drops opaque/unreconciled unbounded mints to the high rung when there is no active incident", () => {
+    // RULED 2026-07-21 (MINT-SOFTEN, supersedes the critical rung of the
+    // 2026-07-20 R3 baseline for the no-incident case): an unbounded mint with no
+    // active compromise incident is a heavy control-pillar penalty (posture still
+    // scores 25) but no longer hard-caps the composite at the critical floor; it
+    // takes the high rung so the asset lands on its pillar blend. Prudential
+    // supervision still clears the cap entirely; only an active incident (below)
+    // stays critical.
     for (const reconciliation of ["not-applicable", "unknown"] as const) {
-      for (const supervision of SUPERVISIONS) {
-        expect(centralizedMintSeverity(supervision, reconciliation), `${supervision}/${reconciliation}`).toBe(
-          "critical",
-        );
+      for (const supervision of ["attestation-only", "none", "unknown"] as const) {
+        expect(centralizedMintSeverity(supervision, reconciliation), `${supervision}/${reconciliation}`).toBe("high");
       }
+      expect(centralizedMintSeverity("prudential", reconciliation), `prudential/${reconciliation}`).toBeNull();
     }
   });
 

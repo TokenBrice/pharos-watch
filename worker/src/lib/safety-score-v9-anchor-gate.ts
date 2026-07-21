@@ -143,9 +143,13 @@ export const SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1 = {
     },
   ],
   adverse: [
-    { kind: "max-score", id: "usdd-tron-dao-reserve", maxScore: 39, label: "USDD adverse pin" },
+    // USDD and USDAI adverse pins (both ≤39) SUPERSEDED by owner ruling 2026-07-21.
+    // Both are well-backed but centralized-mint assets that V8 grades at C/C+;
+    // the mint-soften + control-compensability changes let them land on their
+    // honest pillar blend (USDD 55/C, USDAI 52/C-) instead of the hard 39 cap.
+    // The owner released both pins ("USDD is 55/C in V8", "USDAI 62/C+ fitting");
+    // they are no longer must-stay-low assets. U/EURS/MIM/TUSD remain pinned.
     { kind: "max-score", id: "u-united-stables", maxScore: 32, label: "U adverse pin" },
-    { kind: "max-score", id: "usdai-usd-ai", maxScore: 39, label: "USDAI adverse pin" },
     { kind: "max-grade", id: "eurs-stasis", maxGrade: "F", label: "EURS adverse pin" },
     { kind: "max-grade", id: "mim-abracadabra", maxGrade: "F", label: "MIM adverse pin" },
     { kind: "max-grade", id: "tusd-trueusd", maxGrade: "C-", label: "TUSD adverse pin" },

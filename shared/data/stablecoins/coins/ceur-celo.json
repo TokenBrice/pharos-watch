@@ -129,6 +129,36 @@
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
     "summary": "EURm minting on Celo routes through the Mento Broker contract (confirmed isMinter), while token ownership resolves to a 4/6 Mento Safe; identical structure to verified GBPm.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73"
+      ],
+      "implementationAddresses": [
+        "0x815795c30d0758a297b08cd4e0643620c974c318"
+      ],
+      "adminAddresses": [
+        "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Mento EURm token owner Safe",
+      "observedAt": "2026-07-20",
+      "observedBlock": 72682852,
+      "sources": [
+        {
+          "label": "Celo EURm proxy",
+          "url": "https://celoscan.io/address/0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73#code"
+        },
+        {
+          "label": "Mento StableTokenEURProxy source",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-core/main/contracts/tokens/StableTokenEURProxy.sol"
+        },
+        {
+          "label": "Celo Proxy implementation source",
+          "url": "https://raw.githubusercontent.com/celo-org/celo-monorepo/master/packages/protocol/contracts/common/Proxy.sol"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "celo",

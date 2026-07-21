@@ -19,8 +19,10 @@ import { evaluateV9AccessPosture, type V9AccessPostureResult } from "./access-po
 import {
   createUnavailableV9BackingResult,
   isV9MaterialShare,
+  V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT,
   type V9BackingResult,
   type V9CdpLiquidationCapacitySelection,
+  type V9InheritedStablecoinBacking,
   type V9ResolvedUpstreamExposure,
 } from "./backing";
 import { evaluateV9Backing } from "./archetypes";
@@ -870,6 +872,45 @@ function resolvedBackingExposures(
   });
 }
 
+/**
+ * A wrapper whose exact reserve envelope carries no scored exposures but whose
+ * whole backing is a single ~100% tracked, rated parent (a reviewed curated
+ * collateral holding, or a declared variant/staked layer) inherits that parent's
+ * backing pillar. This threads the parent's backing score to backing, which
+ * applies the tiered wrapper discount and the bounded-unknown floor. Partial or
+ * multi-asset baskets, manual-only dependency guesses, and any envelope with a
+ * live/attested exposure keep the generic reserve path.
+ */
+function resolveInheritedStablecoinBacking(
+  asset: V9AssetFactsV2,
+  resolved: V9ResolvedDependencyInputs,
+  evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
+): V9InheritedStablecoinBacking | undefined {
+  if (asset.reserveExposures.length > 0) return undefined;
+  if (asset.reserveStatus.applicability.state === "not-applicable") return undefined;
+  if (resolved.cycleBlocked) return undefined;
+  // A reviewed curated composition or a declared variant — never a manual-only
+  // dependency guess or an unmapped live envelope.
+  if (asset.dependencies.source !== "variant" && asset.dependencies.baseSource !== "curated-reserve") {
+    return undefined;
+  }
+  if (resolved.serial.length + resolved.basket.length !== 1) return undefined;
+  const wrapped = resolved.serial.length === 1;
+  const upstreamAssetId = wrapped ? resolved.serial[0].upstreamAssetId : resolved.basket[0].upstreamAssetId;
+  const weight = wrapped ? 1 : resolved.basket[0].weight;
+  if (wrapped && resolved.serial[0].blocked) return undefined;
+  if (weight < V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT) return undefined;
+  const parent = evaluatedById.get(upstreamAssetId);
+  if (!parent || parent.trace.finalScore === null || parent.backing.score === null) return undefined;
+  return {
+    parentAssetId: upstreamAssetId,
+    parentBackingScore: parent.backing.score,
+    weight: Math.min(1, weight),
+    tier: wrapped ? "wrapped" : "pure",
+    failureDomains: [{ kind: "reserve-issuer", key: `asset:${upstreamAssetId}` }],
+  };
+}
+
 function dependencyReasons(
   asset: V9AssetFactsV2,
   inputs: V9ResolvedDependencyInputs,
@@ -1049,6 +1090,10 @@ export function evaluateV9FactSet(
       ...(liquidationCapacitySelection === undefined
         ? {}
         : { cdpLiquidationCapacitySelection: liquidationCapacitySelection }),
+      ...(() => {
+        const inheritedStablecoinBacking = resolveInheritedStablecoinBacking(asset, resolved, evaluatedById);
+        return inheritedStablecoinBacking === undefined ? {} : { inheritedStablecoinBacking };
+      })(),
     };
     const backing =
       asset.mechanismRiskReview.review === null

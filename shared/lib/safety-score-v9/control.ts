@@ -279,6 +279,23 @@ function bridgeSharesReconcile(left: number, right: number): boolean {
   return Math.abs(left - right) <= 0.000001;
 }
 
+// External-lock-mint bridge routes are share-banded to match the common-mode
+// critical-dependency twin (proportionalCommonModeSeverity in evaluate-set.ts),
+// which already grades an asset's *shared* bridge exposure by supply share. A
+// route that mints against an external lock and holds a just-material fraction
+// (deployment-material floor up to this threshold) of supply risks only that
+// recoverable fraction if compromised, so it takes the moderate rung; a dominant
+// (>= threshold) or unattributed (null) share stays high. Opaque topology stays
+// critical. This threshold is above the deployment-material binding floor so a
+// binding material-bridge lands in the moderate band until exposure is dominant.
+const MATERIAL_BRIDGE_HIGH_SHARE_THRESHOLD = 0.25;
+
+function materialBridgeSeverity(tier: V9BridgeTier, materialSupplyShare: number | null): V9Severity {
+  if (tier === "opaque-or-unknown") return "critical";
+  if (materialSupplyShare === null) return "high";
+  return materialSupplyShare >= MATERIAL_BRIDGE_HIGH_SHARE_THRESHOLD ? "high" : "moderate";
+}
+
 function hasCompleteSubthresholdUnresolvedBridgeJoins(
   facts: V9EconomicControlAssetFacts,
   controls: readonly V9DeploymentControlFactV2[],
@@ -590,7 +607,13 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         // Economically unbounded minting that is reconciled against reserves is
         // a distinct, higher-quality posture than an unreconciled one; only the
         // latter (and any compromise, handled above) stays unbounded-or-compromised.
-        const reconciled = mint.reconciliation === "continuous" || mint.reconciliation === "periodic";
+        // Prudential supervision by a named financial regulator is itself evidence
+        // that issuance is constrained by the supervisory regime, so it qualifies
+        // as reconciled even when reserve-reconciliation cadence is not-applicable.
+        const reconciled =
+          mint.reconciliation === "continuous" ||
+          mint.reconciliation === "periodic" ||
+          mint.supervision === "prudential";
         return reconciled ? "unbounded-reconciled" : "unbounded-or-compromised";
       }
       if (mintControl.claimImpairment === "none") return "none-resolved";
@@ -629,12 +652,17 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     if (posture === "unbounded-reconciled" || posture === "unbounded-or-compromised") {
       // R3 keeps reconciled mint risk inside the control pillar for prudential
       // issuers, emits a diagnostic low signal for attestation-only issuers,
-      // and fails closed for absent/unknown supervision. Compromise and
-      // unreconciled minting remain critical.
+      // and fails closed for absent/unknown supervision. Only an active mint
+      // compromise stays critical; an unbounded/unreconciled mint with no active
+      // incident is a heavy control-pillar penalty (posture already scores 25)
+      // but takes the high rung so its composite reflects its pillar blend rather
+      // than being hard-capped at the critical floor.
       const prudentiallySupervised = posture === "unbounded-reconciled" && mint.supervision === "prudential";
       const severity: V9Severity | null =
         posture === "unbounded-or-compromised"
-          ? "critical"
+          ? compromised
+            ? "critical"
+            : "high"
           : prudentiallySupervised
             ? null
             : mint.supervision === "attestation-only"
@@ -863,7 +891,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       if (route.tier === "external-lock-mint" || route.tier === "opaque-or-unknown") {
         addStructuralFailure({
           kind: binding ? "material-bridge" : "peripheral-bridge",
-          severity: route.tier === "opaque-or-unknown" ? "critical" : "high",
+          severity: materialBridgeSeverity(route.tier, control.materialSupplyShare),
           binding,
           reason: `Bridge control topology is ${route.tier}.`,
           materialSharePct: control.materialSupplyShare === null ? null : control.materialSupplyShare * 100,

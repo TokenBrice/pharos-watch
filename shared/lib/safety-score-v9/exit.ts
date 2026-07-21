@@ -237,6 +237,43 @@ function settlementDelayMultiplier(
   return bands.find((band) => band.maxSec === null || delaySec <= band.maxSec)?.multiplier ?? 0;
 }
 
+/**
+ * A documented, reliable, non-atomic redemption that earns discounted exit
+ * credit rather than the atomic-only near-zero it used to score.
+ *
+ * The exit pillar historically scored anything but an atomic same-notional
+ * DEX/redemption at near-zero, capping every well-backed T+1 redeemer and
+ * regulated RWA fund at C/D/F regardless of how redeemable it actually is. The
+ * ruled fix credits a redemption above zero when it is reviewed and reliable,
+ * scaled down by settlement speed through the existing settlement component and
+ * settlement-delay multiplier; the atomic same-notional path keeps its top tier.
+ *
+ * The reliability gate is load-bearing. Credit is confined to the
+ * `eventual-redemption` family, which only the reviewed full-supply derivation
+ * emits and only after hard-gating on resolved status, an open route, and
+ * documented terms. Native issuer/protocol observations that merely fail the
+ * atomic-only score gate are deliberately NOT credited here: their
+ * `scoreEligible === false` can encode impairment, a closed route, or an
+ * unresolved output, and re-crediting them would reintroduce exactly the
+ * failure the gate exists to prevent. The remaining checks keep an impaired or
+ * opaque route out: an unresolved or non-known observation, an unresolved
+ * output, diagnostic coverage, missing failure domains, or non-documented
+ * evidence all leave the route excluded. Zero-clearing (e.g. unbounded-cost)
+ * routes are dropped downstream so they cannot stand in for a viable exit.
+ */
+function isCreditableNonAtomicRedemption(
+  route: V9ExitEvaluationRoute,
+  envelope: V9ValidatedPolicyEnvelope,
+): boolean {
+  if (route.lane !== "redemption") return false;
+  if (route.routeFamily !== "eventual-redemption") return false;
+  if (route.observationState !== "known") return false;
+  if (route.outputResolved !== true) return false;
+  if (route.coverageClass === "diagnostic") return false;
+  if (route.failureDomains.length === 0) return false;
+  return envelope.policy.semantic.exit.scoreableEvidenceKinds.redemption.includes(route.evidenceKind);
+}
+
 function routeExclusionReason(route: V9ExitEvaluationRoute, envelope: V9ValidatedPolicyEnvelope): V9ReasonCode | null {
   if (route.applicability === "not-applicable") return null;
   if (route.applicability === "unresolved") return "missing-same-notional-route";
@@ -245,8 +282,13 @@ function routeExclusionReason(route: V9ExitEvaluationRoute, envelope: V9Validate
     return "missing-runtime-route-evidence";
   }
   if (route.observationState !== "known") return "unsupported-same-notional-route";
-  if (!route.scoreEligible || route.coverageClass === "diagnostic") return "unsupported-same-notional-route";
-  if (route.routeFamily === "eventual-redemption") return "unsupported-same-notional-route";
+  const creditableNonAtomic = isCreditableNonAtomicRedemption(route, envelope);
+  if ((!route.scoreEligible || route.coverageClass === "diagnostic") && !creditableNonAtomic) {
+    return "unsupported-same-notional-route";
+  }
+  if (route.routeFamily === "eventual-redemption" && !creditableNonAtomic) {
+    return "unsupported-same-notional-route";
+  }
   const scoreable =
     route.lane === "dex"
       ? envelope.policy.semantic.exit.scoreableEvidenceKinds.dex
@@ -376,6 +418,29 @@ function evaluateRoute(
   const { capacityPoint, valuedExecutableUsd } = resolvedCapacity;
   const policy = envelope.policy.semantic.exit;
   const completionRatio = valuedExecutableUsd / request.requestedNotionalUsd;
+  // A relaxed non-atomic redemption earns exit credit only when it clears
+  // material notional at the stress request. A documented route whose cost is
+  // unbounded — or that otherwise clears nothing meaningful — is not a reliable
+  // exit and must not stand in for a viable path: it stays excluded so the
+  // bounded-exit floor and its diagnostic reason hold exactly as before this
+  // recalibration. This never touches an atomic/DEX route, which reaches here
+  // only through the scoreEligible gate and keeps its existing zero-capacity
+  // floor behavior below.
+  if (
+    isCreditableNonAtomicRedemption(route, envelope) &&
+    (valuedExecutableUsd === 0 || completionRatio < materialCompletionRatio(policy))
+  ) {
+    return {
+      routeKey: route.routeKey,
+      score: null,
+      included: false,
+      exclusionReason: "unsupported-same-notional-route",
+      capacityPoint: null,
+      components: null,
+      confidenceFactor: null,
+      capsApplied: [],
+    };
+  }
   const coverageScore = interpolateScore(completionRatio, policy.coverageRatioBreakpoints);
   const absoluteScore = interpolateScore(valuedExecutableUsd, policy.absoluteCapacityBreakpoints);
   const delayMultiplier = settlementDelayMultiplier(route.settlementDelaySec, policy.settlementDelayBands);
@@ -536,7 +601,14 @@ export function projectV9ExitEvaluationRoute(route: V9ExitRouteFactV2): V9ExitEv
     modelConfidence: route.modelConfidence,
     ...access,
     settlement: mapSettlement(route),
-    settlementDelaySec: route.settlementSlaSec ?? 0,
+    // A reviewed settlement SLA is the delay the settlement-delay multiplier
+    // prices. When the review layer publishes no explicit SLA (the `days` and
+    // `queued` models carry a null SLA), fall back to the route's reviewed
+    // settlement horizon so a slower non-atomic redemption is discounted by its
+    // real settlement speed rather than treated as instantaneous. Atomic and
+    // DEX routes carry an explicit `0` SLA (not null), so this fallback never
+    // fires for them and their multiplier stays 1.0.
+    settlementDelaySec: route.settlementSlaSec ?? route.request?.settlementHorizonSec ?? 0,
     execution: mapExecution(route),
     outputQuality: mapOutputQuality(route),
     outputResolved: route.output.status.observationState === "known" && route.output.valuation !== null,

@@ -329,10 +329,24 @@ function scoreV9InputWithCaps(
   const capCandidates: Omit<V9CapTrace, "binding">[] = [];
   capCandidates.push(...reasonCeilings);
   if (weakestPillar) {
+    // Triple-count fix, not a "conditional risk" discount. A centralized or
+    // unbounded mint is a control fact that the score already prices twice: (1)
+    // directly in the control pillar score, and (2) in the centralized-mint
+    // structural signal ladder (high@59 / critical@39). Applying the flat +20
+    // compensability cap to a control-weakest composite priced it a THIRD time —
+    // re-cutting the same fact that both the pillar and the signal ladder had
+    // already absorbed. The larger control-specific headroom removes that third
+    // count so the composite reflects the honest pillar blend; the signal ladder
+    // still binds for genuinely-worse cases. Backing/exit-weakest assets keep the
+    // base headroom, where the compensability cap duplicates no structural signal.
+    const headroom =
+      weakestPillar.pillar === "control"
+        ? formula.controlCompensabilityHeadroom
+        : formula.compensabilityHeadroom;
     capCandidates.push({
       source: "bounded-compensability",
       kind: "bounded-compensability",
-      limit: decimalSnap(clampScore(weakestPillar.score + formula.compensabilityHeadroom)),
+      limit: decimalSnap(clampScore(weakestPillar.score + headroom)),
       reason: `${weakestPillar.pillar} is the weakest pillar; compensation is bounded.`,
     });
   }

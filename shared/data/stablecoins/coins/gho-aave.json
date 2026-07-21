@@ -413,9 +413,9 @@
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "GHO cross-chain expansion uses Chainlink CCIP pools, with Ethereum lock/release and destination burn/mint pools listed in Chainlink directory data. The route is external validated-network infrastructure governed by Aave/CCIP controls.",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex bridge route review",
+    "summary": "GHO is natively issued on Ethereum by Aave facilitators; its cross-chain destination deployments are minted via Chainlink CCIP burn/mint pools, with the Ethereum CCIP pool acting as lock/release for supply in transit. The CCIP common-mode failure domain applies to the bridged destination routes (~2% of supply); the natively held Ethereum supply is not CCIP-dependent. The route is external validated-network infrastructure governed by Aave/CCIP controls.",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex AB-CURATION bridge re-review (native-route common-mode attribution)",
     "confidence": "verified",
     "protocols": [
       {
@@ -455,16 +455,10 @@
         "riskTier": "single-chain-or-native",
         "semantics": "native-mint",
         "scope": "canonical",
-        "reviewNote": "Canonical GHO is natively issued on Ethereum; its Chainlink CCIP pool locks and releases GHO when supply moves to or returns from burn/mint destination deployments.",
-        "controllerChain": "ethereum",
-        "controllerAddress": "0x06179f7C1be40863405f374E7f5F8806c728660A",
-        "failureDomainKeys": [
-          "protocol:chainlink-ccip",
-          "contract:ethereum:0x06179f7c1be40863405f374e7f5f8806c728660a"
-        ],
+        "reviewNote": "Canonical GHO is natively issued on Ethereum by Aave GHO facilitators (native-mint); the natively held Ethereum supply does not depend on Chainlink CCIP. The Ethereum CCIP lock/release pool only governs GHO that is actively moving to or from burn/mint destination deployments, so the CCIP common-mode domain is attributed to the cross-chain destination routes rather than to the native home supply.",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-07-21",
         "sources": [
           {
             "label": "Chainlink GHO CCIP directory",
