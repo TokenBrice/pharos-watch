@@ -4,7 +4,7 @@
   "detailProvider": "defillama",
   "name": "Mento West African CFA Franc",
   "symbol": "XOFm",
-  "oneLiner": "XOFm is Mento's West African CFA Franc stablecoin, minted CDP-style against USDm collateral and oracle-priced through Mento's stability mechanism.",
+  "oneLiner": "XOFm is Mento's West African CFA Franc stablecoin on Celo, issued through the reserve-backed Mento Broker and priced by an oracle-governed FX swap path.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "XOF",
@@ -13,9 +13,61 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Mento CDP debt backed by USDm collateral, with XOFm minted through Mento's Liquity v2-style CDP system and priced through Mento oracle routes",
-  "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint XOFm against USDm collateral, while repayment, redemption, oracle-priced swaps, circuit breakers, and Mento governance parameters support the XOF peg",
-  "mechanismArchetype": "cdp",
+  "collateral": "Shared Mento Reserve: Mento's current backing configuration classifies XOFm as reserve-backed rather than CDP-backed. Its backing is the protocol's diversified, dynamically managed reserve, not USDm locked in an XOFm-specific trove.",
+  "pegMechanism": "XOFm is issued through Mento v2's USDm/XOFm Broker and BiPoolManager exchange. A USDm-to-XOFm swap burns incoming USDm and mints outgoing XOFm; the reverse burns XOFm and mints USDm. The virtual pool prices swaps from the XOF/USD oracle feed and applies spread, trading-limit, report-count, freshness, and BreakerBox checks.",
+  "mechanismArchetypeReview": {
+    "disposition": "unresolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-MENTO wave6",
+    "rationale": "Primary issuer evidence resolves XOFm as a reserve-backed legacy Broker stable with no borrower CDP. Pharos's closed archetype enum has no protocol-reserve-backed FX category: fiat-cash is custodial off-chain cash issuance, algorithmic is reflexive or unbacked, and cdp requires borrower vaults. The false cdp value is removed rather than replaced with a materially inaccurate label.",
+    "sources": [
+      {
+        "label": "Pinned Mento stablecoin backing config",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "Pinned Mento Broker source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol"
+      }
+    ]
+  },
+  "liveReservesConfig": {
+    "adapter": "mento",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "scoring": {
+      "maxSourceAgeSec": 4000000
+    },
+    "breakerScope": "mento-reserve-xofm",
+    "display": {
+      "url": "https://reserve.mento.org/",
+      "label": "Mento Reserve"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      }
+    },
+    "params": {
+      "redemption": {
+        "kind": "broker-pool",
+        "pools": [
+          {
+            "selfTokenAddress": "0x73f93dcc49cb8a239e2032663e9475dd5ef29a08",
+            "counterAsset": {
+              "address": "0x765De816845861e75A25fCA122bb6898B8B1282a",
+              "label": "USDm"
+            }
+          }
+        ],
+        "sourceUrls": [
+          "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol",
+          "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/BiPoolManager.sol"
+        ]
+      }
+    }
+  },
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://reserve.mento.org/",
@@ -155,9 +207,8 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Mento stable assets on Celo",
@@ -188,10 +239,10 @@
         "url": "https://reserve.mento.org/"
       }
     ],
-    "sourceFreeRationale": "Explicit possible: the verified Celo XOFm proxy owner can replace token logic through a timelocked governance path, while the current implementation exposes ordinary transfers and no active holder blacklist, freeze, or pause function.",
-    "evidence": "At Celo block 72180456, the sole tracked XOFm proxy 0x73f93dcc49cb8a239e2032663e9475dd5ef29a08 resolved to verified StableTokenV2 implementation 0x434563b0604be100f04b7ae485bcafe3c9d8850e and proxy owner 0x890DB8A597940165901372Dd7DB61C9f246e2147. The verified proxy source makes _setImplementation owner-only; the owner resolves to a verified TimelockController proxy with a 172800-second delay. The active implementation's verified ABI/source exposes standard transfer and transferFrom, and zero-value RPC simulations of both succeeded at that block; it has no direct pause, freeze, or blacklist function. This establishes a possible governance-controlled future holder-transfer restriction, not an active blacklist. USDm collateral exposure remains separately represented in reserves; the Mento reserve dashboard does not prove a token-level XOFm freeze.",
-    "reviewer": "Codex Wave 8 curation",
-    "reviewedAt": "2026-07-15"
+    "sourceFreeRationale": "The current holder-facing XOFm token has no direct blacklist, freeze, pause, seizure, arbitrary-account burn, or transfer-hook restriction. Timelocked proxy upgrade authority is recorded in mint-authority evidence but is not itself a currently executable holder-freeze surface. This direct conclusion does not suppress reserve-derived upstream exposure.",
+    "evidence": "At Celo block 72180456, the sole tracked XOFm proxy 0x73f93dcc49cb8a239e2032663e9475dd5ef29a08 resolved to verified StableTokenV2 implementation 0x434563B0604BE100F04B7Ae485BcafE3c9D8850E and proxy owner 0x890DB8A597940165901372Dd7DB61C9f246e2147. The owner resolves to a TimelockController with a 172800-second delay. The verified active implementation exposes ordinary transfer and transferFrom, permissioned minting, and self-burn only; it has no direct pause, freeze, blacklist, seizure, arbitrary-holder burn, or transfer-hook function. The token-level direct freeze posture is therefore No as of this review. The Mento Reserve's USDT, EURC, and USDC-family collateral remains separately represented and can still produce computed upstream exposure.",
+    "reviewer": "GPT SOL-MENTO wave6",
+    "reviewedAt": "2026-07-22"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
@@ -200,81 +251,196 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "USDm (Mento Dollar) CDP collateral",
-      "pct": 100,
+      "name": "AUSD (Agora Dollar; Ethereum and Monad)",
+      "pct": 26.7201077302,
       "risk": "low",
-      "coinId": "cusd-celo",
+      "coinId": "ausd-agora",
       "depType": "collateral",
       "assetClass": "stablecoin",
+      "issuerOrObligor": "Agora (AUSD issuer)",
       "riskFactors": [
         "counterparty",
-        "smart-contract",
-        "liquidity",
-        "custody"
+        "custody",
+        "smart-contract"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "sUSDS (Sky savings USDS)",
+      "pct": 24.9058785069,
+      "risk": "low",
+      "coinId": "susds-sky",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky Ecosystem (sUSDS savings vault)",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "CELO",
+      "pct": 19.173806259,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Celo network native asset held by Mento Reserve governance",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDT family (Ethereum/Celo USDT and Monad USDT0)",
+      "pct": 11.6128170806,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether and the USDT0 bridge system",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "EURC family (Ethereum EURC and Celo axlEUROC)",
+      "pct": 11.9428885615,
+      "risk": "low",
+      "coinId": "eurc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle and the Axelar bridge system",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDC family (Ethereum/Celo/Monad USDC and Celo axlUSDC)",
+      "pct": 3.052055248,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle and the Axelar bridge system",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "stETH (Lido staked ETH)",
+      "pct": 2.5917558555,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Lido (stETH liquid staking issuer)",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "WETH residual on Celo",
+      "pct": 0.0006907583,
+      "risk": "very-low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Wrapped Ether on Celo",
+      "riskFactors": [
+        "market",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure)",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-MENTO wave6",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Mento V3 CDP documentation",
-        "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp"
+        "label": "Mento Reserve analytics API (live read 2026-07-22)",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
       },
       {
-        "label": "Mento V3 stablecoin acquisition documentation",
-        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        "label": "Mento Reserve documentation",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
       },
       {
-        "label": "Mento Reserve dashboard",
-        "url": "https://reserve.mento.org/"
+        "label": "Pinned Mento stablecoin backing config",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
       }
     ],
-    "rationale": "Mento documents every V3 FX CDP instance as an independent Liquity-style system that uses USDm as its sole collateral asset, so XOFm's reserve-derived dependency is exactly 100% Mento Dollar. The live Mento reserve analytics API exposes no active XOFm CDP troves as of 2026-07-20, so the collateralization level cannot be independently observed; the documented single-collateral path is retained with the structured classification now explicit.",
-    "compositionBasis": "Documented single-collateral Mento V3 FX CDP architecture",
-    "compositionAsOf": "2026-07-20",
+    "rationale": "The issuer-run reserve API was re-read on 2026-07-22 and reported $18,764,230.724245563 of collateral. The backing configuration identifies XOFm as reserve-backed and the Broker source establishes its USDm/XOFm mint/burn exchange path. The reviewed grouping combines the same stablecoin family across chains and retains every positive category: AUSD, sUSDS, CELO, USDT/USDT0, EURC/axlEUROC, USDC/axlUSDC, stETH, and the WETH residual.",
+    "compositionBasis": "Issuer-run Mento Reserve API values grouped by stablecoin family; XOFm is reserve-backed under Mento's pinned backing configuration",
+    "compositionAsOf": "2026-07-22",
     "scope": "full-composition",
-    "knownUnknownExposure": "No unidentified direct stablecoin dependency remains in the documented USDm-only CDP path; USDm's reserve look-through is reviewed on the upstream asset.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "Every positive reserve API category is either linked to its tracked stablecoin family or explicitly dispositioned as an exogenous cryptoasset.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 2,
+        "reserveName": "CELO",
+        "pct": 19.173806259,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "CELO is the Celo network native asset held as external reserve collateral, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "stETH (Lido staked ETH)",
+        "pct": 2.5917558555,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "stETH is external liquid-staking collateral, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 7,
+        "reserveName": "WETH residual on Celo",
+        "pct": 0.0006907583,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "WETH is an identified wrapped cryptoasset residual, not a tracked stablecoin dependency."
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Mento CDP and stable-token contracts (Celo)",
+        "name": "Mento Reserve safes and protocol contracts",
+        "role": "other"
+      },
+      {
+        "name": "Mento governance-approved strategies and operational accounts",
         "role": "other"
       }
     ],
-    "segregation": "unknown",
+    "segregation": "mixed",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure)",
+    "rehypothecation": "conditional",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-MENTO wave6",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Mento Reserve dashboard",
-        "url": "https://reserve.mento.org/"
+        "label": "Mento Reserve analytics API (live read 2026-07-22)",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
       },
       {
-        "label": "Mento protocol documentation",
-        "url": "https://docs.mento.org/"
+        "label": "Mento Reserve documentation",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
       }
     ],
-    "uncertainty": "USDm collateral is held in Mento's on-chain CDP contracts under Mento governance rather than with a legal custodian, so legal segregation, insolvency treatment, and reuse restrictions are not established by the reviewed sources; upstream USDm reserve custody sits with the Mento Reserve contract and each basket issuer.",
+    "uncertainty": "Mento documents reserve safes, liquidity contracts, operational accounts, and approved strategies, but their live shares are mutable. Public materials do not establish legal segregation, insolvency treatment, or strategy-specific reuse limits, so no static provider allocation is inferred.",
     "knownUnknownExposurePct": 100
   },
-  "notices": [
-    {
-      "type": "info",
-      "title": "Live CDP reserve sync pending",
-      "message": "XOFm follows Mento's CDP-backed stablecoin model, but Pharos does not yet publish XOFm-specific live CDP reserve rows. Curated reserves use the documented USDm collateral path meanwhile."
-    }
-  ],
-  "infrastructures": [
-    "liquity-v2"
-  ],
   "launchDate": "2023-08-17"
 }

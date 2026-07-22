@@ -88,7 +88,7 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Mento COPm documentation",
@@ -101,11 +101,20 @@
       {
         "label": "COPm Celo deployment",
         "url": "https://explorer.celo.org/mainnet/address/0x8a567e2ae79ca692bd748ab832081c45de4041ea"
+      },
+      {
+        "label": "Mento StableTokenV2 source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV2.sol"
+      },
+      {
+        "label": "Pinned Mento stablecoin backing config",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
       }
     ],
-    "evidence": "BLOCKED: COPm is a Mento CDP asset whose reserve path includes the upstream USDm reserve, including tracked freezable stablecoins. The official deployment registry and Celo explorer identify the current COPm deployment, but the public source set does not establish a complete holder-control inventory for the token and every upstream reserve route. Inherited exposure is retained and no direct no-freeze conclusion is asserted.",
-    "reviewer": "SONG-5 Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "sourceFreeRationale": "The current holder-facing COPm token has no direct blacklist, freeze, pause, seizure, arbitrary-account burn, or transfer-hook restriction. Timelocked proxy upgrade authority is recorded in mint-authority evidence but is not itself a currently executable holder-freeze surface. This direct conclusion does not suppress reserve-derived upstream exposure.",
+    "evidence": "COPm's sole tracked Celo deployment is a Mento StableTokenV2/Broker asset. The pinned backing configuration identifies COPm as reserve-backed rather than a borrower CDP. StableTokenV2 exposes ordinary transfer and transferFrom, permissioned minting, and self-burn only; it has no direct blacklist, freeze, pause, seizure, arbitrary-holder burn, or transfer hook. The direct token-level freeze posture is therefore No as of this review. The shared Mento Reserve's USDT, EURC, and USDC-family collateral remains separately represented and can still produce computed upstream exposure.",
+    "reviewer": "GPT SOL-MENTO wave6",
+    "reviewedAt": "2026-07-22"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

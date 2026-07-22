@@ -168,9 +168,9 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Mento CHFm on Celo documentation",
@@ -201,9 +201,10 @@
         "url": "https://reserve.mento.org/"
       }
     ],
-    "evidence": "On 2026-07-15, the verified CHFm StableTokenV3 implementation exposed owner-gated setBurner(address,bool), whose enabled burner can burn(address account,uint256 value) from an arbitrary holder balance, and owner-gated setOperator(address,bool), whose enabled operator can sendToPool(sender,pool,amount) from an arbitrary holder balance. At Celo block 72170200, owner() and the custom proxy owner resolved to the existing 4-of-6 Mento Safe; observed burner and operator contracts used constrained protocol paths, but the Safe can immediately add another burner or operator. The token ABI has no named blacklist, freeze, or pause function. Current Mento terms endpoints and archive discovery did not establish separate transfer restrictions, so the direct owner-mediated holder-intervention surface is classified Possible rather than an immediate blacklist.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "sourceFreeRationale": "Explicit true: the current Celo CHFm owner can authorize a burner that directly burns an arbitrary holder balance. This direct freeze/blacklist-equivalent capability is distinct from the transfer-review lane and does not suppress upstream USDm exposure.",
+    "evidence": "At Celo block 72170200, the verified CHFm StableTokenV3 implementation exposed owner-gated setBurner(address,bool), whose enabled burner can call burn(address account,uint256 value) against an arbitrary holder balance, and owner-gated setOperator(address,bool), whose enabled operator can sendToPool(sender,pool,amount) from an arbitrary holder. Both owner() and the custom proxy owner resolved to the 4-of-6 Mento Safe. The observed burner/operator contracts use constrained protocol paths, but the owner can authorize another burner or operator. This establishes a current direct individual-holder intervention capability even though the ABI has no named blacklist, freeze, or pause function.",
+    "reviewer": "GPT SOL-MENTO wave6",
+    "reviewedAt": "2026-07-22"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
