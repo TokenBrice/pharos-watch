@@ -226,6 +226,13 @@ af54646449278a67f151c798373fa06c466cebd4:shared/data/safety-score-v9/transfer-re
 af54646449278a67f151c798373fa06c466cebd4:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:543
 af54646449278a67f151c798373fa06c466cebd4:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:567
 af54646449278a67f151c798373fa06c466cebd4:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:640
+# SOL-TRANSFER wave-6 public ledger object and contract identifiers, not credentials.
+3ac98ddd56c91b9930c5440d8dab770e105a3b5e:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:2235
+3ac98ddd56c91b9930c5440d8dab770e105a3b5e:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:3918
+3ac98ddd56c91b9930c5440d8dab770e105a3b5e:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:4118
+3ac98ddd56c91b9930c5440d8dab770e105a3b5e:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:4199
+3ac98ddd56c91b9930c5440d8dab770e105a3b5e:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:4231
+3ac98ddd56c91b9930c5440d8dab770e105a3b5e:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:4267
 # Midas Final-Terms PDFs (SOL-FEES wave-5 sources): GitBook CDN file URLs embed
 # public access tokens; these are public-document links, not credentials.
 6dbbaea96aa22a5126f59482c95c46372a9e9617:shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit.ts:generic-api-key:54

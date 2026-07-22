@@ -35,6 +35,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/measure-cdp-mechanism-metrics.ts"),
     strict("scripts/maintenance/measure-cdp-shock-coverage.ts"),
     strict("scripts/maintenance/measure-cdp-shock-historical-outcomes.ts"),
+    strict("scripts/maintenance/measure-protocol-api-mechanism-metrics.ts"),
     strict("scripts/maintenance/migrate-stablecoin-sidecar.ts"),
     strict("scripts/maintenance/purge-cloudflare-zone-cache.mjs"),
     strict("scripts/maintenance/register-telegram.ts"),

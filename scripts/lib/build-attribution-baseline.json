@@ -3,12 +3,12 @@
   "groups": [
     {
       "key": "(unclassified)",
-      "totalBytes": 2749628,
+      "totalBytes": 2735316,
       "chunkCount": 138
     },
     {
       "key": "stablecoin-client-registry",
-      "totalBytes": 826327,
+      "totalBytes": 884563,
       "chunkCount": 1
     },
     {
@@ -28,7 +28,7 @@
     },
     {
       "key": "error-boundary",
-      "totalBytes": 112423,
+      "totalBytes": 121275,
       "chunkCount": 4
     },
     {
