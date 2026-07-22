@@ -191,7 +191,7 @@
         "id": "stxrp",
         "label": "stXRP Trove branch",
         "tier": "single-source-or-laggy",
-        "summary": "The branch uses a custom stXRP/USD FTSOv2 feed through the shared connector, with no enforced heartbeat, second provider, or cached fallback.",
+        "summary": "At finalized Flare block 65612597 the live branch had 67 troves, 161,945.545914390263203096 CDP of debt, and shutdownTime zero; it used one custom stXRP/USD FTSOv2 feed through the shared connector with no enforced heartbeat, second provider, or cached fallback.",
         "collateralAssets": ["stXRP"],
         "chains": ["flare"],
         "feeds": [
@@ -213,8 +213,8 @@
           }
         ],
         "fallbackBehavior": "PriceFeedFtsoV2Connector resolves FTSOv2 through the hard-coded FlareContractRegistry, calls the single configured custom feed, discards its timestamp, and enforces no maximum age. Successful reads return oracleFailureDetected=false. Registry or FTSO failure reverts before a boolean is returned, so branch shutdown is not activated; there is no cache or alternate source. The EOA owner can replace the feed ID immediately, but this is admin reconfiguration rather than automatic failover.",
-        "observedAt": "2026-07-14",
-        "observedBlock": 65066600,
+        "observedAt": "2026-07-22",
+        "observedBlock": 65612597,
         "collateralParameters": [
           {
             "asset": "stXRP",
@@ -237,6 +237,10 @@
           "flare"
         ],
         "sources": [
+          {
+            "label": "Finalized Flare block 65612597",
+            "url": "https://flare-explorer.flare.network/block/65612597"
+          },
           {
             "label": "Verified stXRP PriceFeed",
             "url": "https://flare-explorer.flare.network/address/0x030Cfe7bed11e0CBa106b4c5ffF8edAe793653A7?tab=contract"

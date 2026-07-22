@@ -9,7 +9,10 @@ import { runWithOverloadRetry } from "../../lib/cron-lease";
 
 export const DEX_MEASURED_TARGET_SURFACE = "dex-measured-execution-targets";
 export const DEX_MEASURED_QUOTE_SURFACE = "dex-measured-execution-quotes";
-const GENERATION_RETENTION_SEC = 7 * 24 * 60 * 60;
+/** Superseded/failed generations are operator forensics only; nothing reads them after supersession. */
+const GENERATION_RETENTION_SEC = 3 * 24 * 60 * 60;
+/** Bound each prune pass so a retention shortening drains gradually instead of one oversized D1 delete in the cron tail. */
+const GENERATION_PRUNE_MAX_PER_RUN = 16;
 
 interface SurfaceGenerationRow {
   generation_id: string;
@@ -34,7 +37,6 @@ interface QuoteRow {
   status: "measured" | "failed";
   failure_reason: string | null;
   quote_profile_json: string | null;
-  raw_quote_payload_json: string | null;
 }
 
 export interface DexMeasuredQuoteOutcome {
@@ -42,6 +44,7 @@ export interface DexMeasuredQuoteOutcome {
   status: "measured" | "failed";
   failureReason?: string;
   profile?: DexMeasuredExecutionProfile;
+  /** Persisted only for failed outcomes; measured rows carry their evidence in the profile's quoteProof. */
   rawPayload?: unknown;
 }
 
@@ -62,7 +65,6 @@ export interface LoadedDexMeasuredQuoteEvidence {
       status: "measured" | "failed";
       failureReason: string | null;
       profile: DexMeasuredExecutionProfile | null;
-      rawPayload: unknown;
     }
   >;
 }
@@ -371,7 +373,9 @@ export async function publishDexMeasuredQuoteGeneration(input: {
         profile?.quotedAt ?? null,
         profile?.blockNumber ?? null,
         profile ? JSON.stringify(profile) : null,
-        outcome.rawPayload == null ? null : JSON.stringify(outcome.rawPayload),
+        // Raw producer envelopes duplicate the measured profile's quoteProof; persist them
+        // only for failed outcomes, where they are the sole structured failure evidence.
+        outcome.status === "failed" && outcome.rawPayload != null ? JSON.stringify(outcome.rawPayload) : null,
       ] as const;
     });
     await batchExecute(
@@ -423,7 +427,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
       db
         .prepare(
           `SELECT generation_id, target_generation_id, target_id, status, failure_reason,
-            quote_profile_json, raw_quote_payload_json
+            quote_profile_json
      FROM dex_measured_execution_quotes
      WHERE generation_id = ?
      ORDER BY stablecoin_id, target_id`,
@@ -504,7 +508,6 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
       status: row.status,
       failureReason: row.failure_reason,
       profile,
-      rawPayload: row.raw_quote_payload_json ? JSON.parse(row.raw_quote_payload_json) : null,
     });
   }
   return {
@@ -530,19 +533,21 @@ export async function pruneDexMeasuredExecutionGenerations(
        WHERE generation_id IN (
          SELECT generation_id FROM surface_publication_generations
          WHERE surface = ? AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
+         ORDER BY started_at ASC LIMIT ?
        )`,
         )
-        .bind(DEX_MEASURED_QUOTE_SURFACE, cutoff),
+        .bind(DEX_MEASURED_QUOTE_SURFACE, cutoff, GENERATION_PRUNE_MAX_PER_RUN),
       db
         .prepare(
           `DELETE FROM dex_measured_execution_targets
        WHERE generation_id IN (
          SELECT generation_id FROM surface_publication_generations
          WHERE surface = ? AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
+         ORDER BY started_at ASC LIMIT ?
        )
        AND generation_id NOT IN (SELECT DISTINCT target_generation_id FROM dex_measured_execution_quotes)`,
         )
-        .bind(DEX_MEASURED_TARGET_SURFACE, cutoff),
+        .bind(DEX_MEASURED_TARGET_SURFACE, cutoff, GENERATION_PRUNE_MAX_PER_RUN),
       db
         .prepare(
           `DELETE FROM surface_publication_generations
@@ -551,6 +556,10 @@ export async function pruneDexMeasuredExecutionGenerations(
          SELECT 1 FROM dex_measured_execution_quotes q
          WHERE q.generation_id = surface_publication_generations.generation_id
             OR q.target_generation_id = surface_publication_generations.generation_id
+       )
+       AND NOT EXISTS (
+         SELECT 1 FROM dex_measured_execution_targets t
+         WHERE t.generation_id = surface_publication_generations.generation_id
        )`,
         )
         .bind(DEX_MEASURED_TARGET_SURFACE, DEX_MEASURED_QUOTE_SURFACE, cutoff),

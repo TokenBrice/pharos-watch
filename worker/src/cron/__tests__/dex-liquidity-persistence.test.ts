@@ -17,6 +17,7 @@ import {
   buildDexLiquidityPublicationGenerationId,
   DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE,
   persistScores,
+  pruneOldDexLiquidityGenerations,
   writeHistoricalSnapshots,
 } from "../dex-liquidity/persistence";
 import type { FullScoreResult } from "../dex-liquidity/types";
@@ -788,5 +789,36 @@ describe("dex-liquidity persistence", () => {
     expect(batchExecute).not.toHaveBeenCalled();
     expect(executeAtomicBatch).not.toHaveBeenCalled();
     expect(warnSpy).toHaveBeenCalledWith("[dex-liquidity] Daily snapshot failed:", expect.any(Error));
+  });
+});
+
+describe("dex liquidity generation prune", () => {
+  it("deletes only unreferenced generations past the 3-day horizon in bounded oldest-first batches", async () => {
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (...binds: unknown[]) => ({ sql, binds }),
+      }),
+    } as unknown as D1Database;
+
+    const nowSec = 1_700_000_000;
+    await pruneOldDexLiquidityGenerations(db, nowSec);
+
+    const lastCall = vi.mocked(batchExecute).mock.lastCall;
+    expect(lastCall).toBeDefined();
+    const stmts = lastCall?.[1] as unknown as Array<{ sql: string; binds: unknown[] }>;
+    expect(stmts).toHaveLength(2);
+    const cutoff = nowSec - 3 * 86_400;
+    const [runRows, ledger] = stmts;
+
+    expect(runRows.sql).toContain("DELETE FROM dex_liquidity_run_rows");
+    expect(runRows.sql).toContain("SELECT publication_generation_id");
+    expect(runRows.sql).toContain("ORDER BY started_at ASC LIMIT ?");
+    expect(runRows.binds).toEqual([cutoff, 16]);
+
+    expect(ledger.sql).toContain("DELETE FROM dex_liquidity_publication_generations");
+    expect(ledger.sql).toContain("SELECT publication_generation_id");
+    expect(ledger.sql).toContain("NOT EXISTS");
+    expect(ledger.sql).toContain("SELECT 1 FROM dex_liquidity_run_rows r");
+    expect(ledger.binds).toEqual([cutoff]);
   });
 });

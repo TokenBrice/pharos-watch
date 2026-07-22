@@ -2,7 +2,7 @@
   "id": "usdpt-western-union",
   "name": "US Dollar Payment Token",
   "symbol": "USDPT",
-  "oneLiner": "USDPT is Western Union's Solana dollar stablecoin issued by Anchorage Digital Bank with U.S. Bank as reserve custodian for B2B agent settlement.",
+  "oneLiner": "USDPT is Western Union's Solana dollar stablecoin issued by Anchorage Digital Bank and backed by cash deposits and a Treasury money market fund.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -11,22 +11,22 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "U.S. dollar reserves held for USDPT, including bank deposits, U.S. Treasury bills, and similar cash equivalents",
+  "collateral": "Cash deposits at FDIC-insured institutions and shares of BlackRock's Select Treasury Based Liquidity Fund (TFFXX)",
   "pegMechanism": "Issuer-managed 1:1 redemption for U.S. dollars; Anchorage Digital Bank N.A. issues USDPT, with each token matched by an equal amount of U.S. dollar reserves",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-5 Safety Score V9 mechanism review",
-    "rationale": "Western Union and Anchorage disclosures support the fiat-cash classification, but do not disclose current reserve assurance, custody allocation, reconciliation, or recovery terms for the deployment-wide issuance and redemption system; that risk boundary remains unresolved.",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
+    "rationale": "Western Union identifies USDPT as redeemable 1:1 for U.S. dollars, and Anchorage's May 2026 reserve report provides a Deloitte reasonable-assurance examination of both assets and redeemable-token liabilities. That evidence resolves the fiat-cash mechanism classification. The reviewed public material does not disclose operative holder eligibility, fees, settlement timing, or executable capacity, so no scored exit route or exitMechanism claim is added.",
     "sources": [
       {
-        "label": "westernunion.com",
-        "url": "https://www.westernunion.com/us/en/press-release/2025/western-union-to-launch-usdpt-stablecoin.html"
+        "label": "Western Union USDPT redemption disclosure",
+        "url": "https://www.westernunion.com/global/en/digital-assets-stablecoin.html"
       },
       {
-        "label": "anchorage.com",
-        "url": "https://www.anchorage.com/updates/anchorage-digital-bank-to-issue-western-unions-usdpt-stablecoin"
+        "label": "Deloitte USDPT reserve examination for May 2026",
+        "url": "https://learn.anchorage.com/05.31.26_USDPT_Stablecoin_Attestation_Report_signed.pdf"
       }
     ]
   },
@@ -62,8 +62,8 @@
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://www.westernunion.com/global/en/digital-assets-stablecoin.html",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": false,
-    "notes": "Anchorage Digital Bank, N.A. is the OCC-chartered national trust bank issuing USDPT for Western Union. ADB explicitly states it expects to become a PPSI once the GENIUS Act becomes effective (Jan 18, 2027 at the latest). The issuerPathway is federal-qualified-nonbank because ADB holds an OCC national trust charter but is uninsured (no FDIC insurance required), placing it outside the IDI-subsidiary category and instead on the federal nonbank/OCC pathway. A 2022 OCC consent order for BSA/AML deficiencies was fully terminated by the OCC in August 2025; no active enforcement action exists as of the review date. No PPSI approval or application has been filed; the PPSI application framework remains in proposed rulemaking.",
+    "monthlyAttestationPresent": true,
+    "notes": "Anchorage Digital Bank, N.A. is the OCC-chartered national trust bank issuing USDPT for Western Union. Anchorage now publishes USDPT reserve holdings monthly and links Deloitte's May 2026 examination. ADB explicitly states it expects to become a PPSI once the GENIUS Act becomes effective (Jan 18, 2027 at the latest). The issuerPathway is federal-qualified-nonbank because ADB holds an OCC national trust charter but is uninsured (no FDIC insurance required), placing it outside the IDI-subsidiary category and instead on the federal nonbank/OCC pathway. A 2022 OCC consent order for BSA/AML deficiencies was fully terminated by the OCC in August 2025; no active enforcement action exists as of the review date. No PPSI approval or application has been filed; the PPSI application framework remains in proposed rulemaking.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -99,6 +99,11 @@
         "label": "Western Union USDPT announcement",
         "url": "https://ir.westernunion.com/news/archived-press-releases/press-release-details/2025/Western-Union-Announces-USDPT-Stablecoin-on-Solana-and-Digital-Asset-Network/default.aspx",
         "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Anchorage Digital USDPT monthly reserve attestations",
+        "url": "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital",
+        "sourceKind": "issuer-disclosure"
       }
     ],
     "negativeEvidenceReview": {
@@ -121,10 +126,37 @@
       "reviewer": "Pharos compliance research",
       "reviewedAt": "2026-06-18"
     },
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewer": "Pharos compliance research; OpenAI Codex SOL-UPGRADE disclosure update",
+    "reviewedAt": "2026-07-22"
   },
   "geckoId": "usdpt-western-union",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital",
+    "provider": "Deloitte & Touche LLP",
+    "attestorTier": "big4",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States",
+    "latestReport": {
+      "periodEnd": "2026-05-31",
+      "publishedAt": "2026-06-26",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Deloitte USDPT reserve examination for May 2026",
+          "url": "https://learn.anchorage.com/05.31.26_USDPT_Stablecoin_Attestation_Report_signed.pdf"
+        },
+        {
+          "label": "Anchorage Digital USDPT reserve-attestation index",
+          "url": "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital"
+        }
+      ]
+    }
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
@@ -276,80 +308,95 @@
   },
   "reserves": [
     {
-      "name": "U.S. dollar cash and cash-equivalent reserves held for USDPT (allocation undisclosed)",
-      "pct": 100,
+      "name": "Demand deposits at FDIC-insured depository institutions",
+      "pct": 9.3718693586,
       "risk": "very-low",
-      "assetClass": "cash",
-      "issuerOrObligor": "Anchorage Digital Bank, N.A. (issuer; reserves custodied at U.S. Bank)",
-      "riskFactors": ["credit", "counterparty", "custody", "concentration", "legal"],
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "FDIC-insured depository institutions",
+      "riskFactors": ["credit", "counterparty", "custody", "legal"],
       "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "BlackRock Select Treasury Based Liquidity Fund (TFFXX; CUSIP 09248U874)",
+      "pct": 90.6281306414,
+      "risk": "low",
+      "assetClass": "money-market-fund",
+      "issuerOrObligor": "BlackRock and United States Treasury",
+      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty"],
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
-    "confidence": "manual-review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Western Union USDPT product page",
-        "url": "https://www.westernunion.com/global/en/digital-assets-stablecoin.html"
+        "label": "Deloitte USDPT reserve examination for May 2026",
+        "url": "https://learn.anchorage.com/05.31.26_USDPT_Stablecoin_Attestation_Report_signed.pdf"
       },
       {
-        "label": "Anchorage Digital USDPT launch announcement",
-        "url": "https://www.anchorage.com/insights/anchorage-digital-western-union-partner-launch-usdpt-federally-regulated-stablecoin-solana"
+        "label": "Anchorage Digital USDPT reserve-attestation index",
+        "url": "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital"
+      },
+      {
+        "label": "BlackRock Select Treasury Based Liquidity Fund",
+        "url": "https://www.blackrock.com/cash/en-us/products/282772/fed-trust-%28institutional%29-fund"
       }
     ],
-    "rationale": "Western Union states USDPT is redeemable 1:1 for U.S. dollars, and issuer Anchorage Digital Bank confirms federally regulated issuance, custody, settlement, and treasury management for the token launched on Solana on May 4, 2026. Neither party publishes an attestation or a reserve allocation across cash, bank deposits, Treasury bills, or other cash equivalents, so the reserve is recorded as one bounded U.S.-dollar basket.",
-    "compositionBasis": "Issuer and distribution-partner launch statements of full U.S. dollar backing; no attested reserve breakdown is published",
-    "compositionAsOf": "2026-05-04",
+    "rationale": "Deloitte's reasonable-assurance examination reports 1,500,372 redeemable USDPT, $1,603,106 of reserves, and a $102,734 surplus at 2026-05-31, with no nonredeemable tokens or timing differences. Its exact reserve schedule reports $150,241 of demand deposits and $1,452,865 in money market fund CUSIP 09248U874; the percentages are normalized from those two amounts. BlackRock identifies that CUSIP as TFFXX, a Treasury-based liquidity fund.",
+    "compositionBasis": "Deloitte assets-and-liabilities examination, with the reported money market fund CUSIP resolved against BlackRock's official fund page",
+    "compositionAsOf": "2026-05-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The allocation across cash, bank deposits, Treasury bills, and other cash equivalents, plus any sub-custodian split, is undisclosed; no third-party attestation has been published for USDPT.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "All positive reserve categories and values in the examination are identified. The report does not name the depository institutions, but that provider-level omission does not leave an unidentified reserve slice.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "U.S. dollar cash and cash-equivalent reserves held for USDPT (allocation undisclosed)",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "Launch statements confirm full U.S. dollar backing but do not disclose the split between cash deposits, Treasury bills, and other cash-equivalent reserve assets."
+        "reserveName": "Demand deposits at FDIC-insured depository institutions",
+        "pct": 9.3718693586,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The examination identifies the deposit category and exact value; the depository institutions are not tracked stablecoin dependencies."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "BlackRock Select Treasury Based Liquidity Fund (TFFXX; CUSIP 09248U874)",
+        "pct": 90.6281306414,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "TFFXX is an identified regulated money market fund rather than another tracked stablecoin."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "U.S. Bank (reserve custodian for Anchorage's stablecoin issuance platform)",
-        "role": "custodian",
+        "name": "FDIC-insured depository institutions (not named in the May 2026 report)",
+        "role": "bank",
         "jurisdiction": "United States"
       },
       {
-        "name": "Anchorage Digital Bank, N.A. (issuer; issuance, custody, settlement and treasury platform)",
+        "name": "Custodian or subcustodian for TFFXX fund shares (not disclosed)",
         "role": "custodian",
-        "jurisdiction": "United States"
-      },
-      {
-        "name": "Fireblocks (wallet and settlement infrastructure)",
-        "role": "other",
         "jurisdiction": "United States"
       }
     ],
-    "segregation": "unknown",
+    "segregation": "segregated",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
-    "confidence": "manual-review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
+    "confidence": "probable",
     "sources": [
       {
-        "label": "Western Union USDPT product page",
-        "url": "https://www.westernunion.com/global/en/digital-assets-stablecoin.html"
+        "label": "Deloitte USDPT reserve examination for May 2026",
+        "url": "https://learn.anchorage.com/05.31.26_USDPT_Stablecoin_Attestation_Report_signed.pdf"
       },
       {
-        "label": "Anchorage Digital USDPT launch announcement",
-        "url": "https://www.anchorage.com/insights/anchorage-digital-western-union-partner-launch-usdpt-federally-regulated-stablecoin-solana"
+        "label": "BlackRock Select Treasury Based Liquidity Fund",
+        "url": "https://www.blackrock.com/cash/en-us/products/282772/fed-trust-%28institutional%29-fund"
       }
     ],
-    "uncertainty": "American Banker reported in October 2025 that Anchorage Digital Bank hired U.S. Bank as custodian for its stablecoin platform reserves; Anchorage's launch note confirms issuance, custody, settlement, and treasury management under one federally regulated platform, and launch coverage identifies Fireblocks for wallet and settlement infrastructure. Segregation terms, bankruptcy remoteness, rehypothecation permissions, and the split between the two custodians are not disclosed.",
+    "uncertainty": "Deloitte states that the assets were unencumbered and held in segregated fiduciary accounts for USDPT holders at the examination date, but does not name the depository institutions or the custodian/subcustodian of TFFXX shares. The point-in-time unencumbered finding does not establish a contractual prohibition on reuse or bankruptcy-remoteness terms.",
     "knownUnknownExposurePct": 100
   },
   "milestones": [
@@ -376,8 +423,8 @@
     {
       "date": "2026-03-24",
       "type": "milestone",
-      "title": "CEO speaks at Digital Asset Summit NYC; U.S. Bank confirmed as reserve custodian",
-      "description": "McGranahan outlines float-revenue model, community bank onboarding vision, and dollar-denominated holdings for inflationary regions; confirms U.S. Bank as custodian via Anchorage Digital.",
+      "title": "CEO discusses USDPT reserve-custody plans",
+      "description": "American Banker reported before launch that Western Union identified U.S. Bank as a custody partner through Anchorage Digital. Deloitte's later May 2026 examination does not name the current depository institutions or fund-share custodian.",
       "sourceUrl": "https://www.americanbanker.com/payments/news/western-union-has-big-plans-for-stablecoins"
     },
     {

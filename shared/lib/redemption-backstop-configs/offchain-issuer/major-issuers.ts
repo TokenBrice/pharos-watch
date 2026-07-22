@@ -485,9 +485,12 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "ylds-figure": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: documentedVariableFee(
-      "Fixed $1.00 face-amount certificate; 1:1 mint/redeem through Figure Certificate Company; registered security",
-    ),
+    costModel: {
+      ...documentedVariableFee(
+        "FCC does not charge holders of Figure Transferable Certificates any fees or expenses in connection with the issuance or surrender of Figure Transferable Certificates.",
+      ),
+      feeBpsMax: 0,
+    },
     docs: [
       sourceRef("Figure YLDS overview", "https://www.figuremarkets.com/c/learn/ylds", [
         "route",
@@ -502,6 +505,11 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
         "access",
         "settlement",
       ]),
+      sourceRef(
+        "Figure Certificate Company prospectus",
+        "https://www.sec.gov/Archives/edgar/data/1974395/000149315226018903/form497.htm",
+        ["fees"],
+      ),
     ],
   },
   "usdtb-ethena": {

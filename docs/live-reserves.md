@@ -235,7 +235,7 @@ Latest successful live snapshot per live-enabled coin.
 
 ### `reserve_composition_history`
 
-Append-only history of successful live snapshots. Every successful upsert also inserts a history row carrying the same slices, metadata, warnings, and adapter classification fields as the latest-snapshot table. Non-null attempt IDs are unique per coin and history inserts are idempotent, so a retried D1 write cannot duplicate rows for the same attempt. The 4-hourly reserve cron prunes rows older than 90 days.
+Append-only history of successful live snapshots. Every successful upsert also inserts a history row carrying the same slices, metadata, warnings, and adapter classification fields as the latest-snapshot table. Non-null attempt IDs are unique per coin and history inserts are idempotent, so a retried D1 write cannot duplicate rows for the same attempt. The 4-hourly reserve cron prunes rows older than 30 days, but always preserves frozen-coin rows and any row whose attempt is still referenced by `reserve_composition` or `reserve_sync_state` (so long-suspended feeds keep their gap-check and recovery-fencing closure).
 
 ### `reserve_sync_state`
 
@@ -257,7 +257,7 @@ Per-coin operational state for the most recent attempt.
 
 ### `reserve_sync_attempt_history`
 
-Append-only history of all reserve-sync attempts, including `ok`, `degraded`, `error`, and `skipped` outcomes with their warnings, error message, and attempt-scoped metadata. Non-null attempt IDs are unique per coin and inserts are idempotent. The 4-hourly reserve cron prunes rows older than 90 days.
+Append-only history of all reserve-sync attempts, including `ok`, `degraded`, `error`, and `skipped` outcomes with their warnings, error message, and attempt-scoped metadata. Non-null attempt IDs are unique per coin and inserts are idempotent. The 4-hourly reserve cron prunes rows older than 30 days with the same frozen-coin and referenced-attempt preservation as the composition history.
 
 Freshness and consistency rules now live across the `worker/src/lib/live-reserves-store*.ts` helper family, with `worker/src/lib/live-reserves-store.ts` kept as the public facade:
 

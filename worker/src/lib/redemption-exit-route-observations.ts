@@ -289,9 +289,20 @@ export function deriveSupplyModelExitRouteObservation(
         ? "issuer-redemption"
         : "protocol-redemption"
       : "eventual-redemption";
-  // A documented fixed-bps fee is the only cost bound the published row
-  // defensibly states; formula/variable/undisclosed fees stay unbounded.
-  const feeBoundBps = entry.feeModelKind === "fixed-bps" && entry.feeBps != null ? entry.feeBps : null;
+  // A defensible cost bound is a documented fixed-bps fee on the published row,
+  // or (T1, owner ruling 2026-07-22 R3/R4) a reviewed documented ceiling
+  // (`feeBpsMax`) on the same static config that already supplies this route's
+  // output composition — both producer and shadow read the identical registry,
+  // so derivations stay byte-identical. Formula and undisclosed fees remain
+  // unbounded and earn no capacity: a ceiling exists only where a primary
+  // source states one.
+  const staticConfig = getRedemptionBackstopConfig(entry.stablecoinId);
+  const feeBoundBps =
+    entry.feeModelKind === "fixed-bps" && entry.feeBps != null
+      ? entry.feeBps
+      : entry.feeModelKind === "documented-variable" && staticConfig?.costModel.feeBpsMax != null
+        ? staticConfig.costModel.feeBpsMax
+        : null;
   const withinCost = feeBoundBps != null && feeBoundBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps;
   const requests = [...new Set([...REDEMPTION_CAPACITY_CURVE_REQUESTS_USD, modeledExitSizeUsd])]
     .filter((request) => request <= Math.max(modeledExitSizeUsd, eventualUsd))

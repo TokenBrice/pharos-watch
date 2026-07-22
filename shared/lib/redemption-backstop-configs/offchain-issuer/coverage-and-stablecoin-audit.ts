@@ -38,14 +38,44 @@ const MIDAS_LYT_VAULTS: readonly [id: string, ticker: string, productUrl: string
   ["mapollo-midas", "mAPOLLO", "https://midas.app/mapollo"],
 ];
 
+const MIDAS_LYT_FEE_DISCLOSURES: Partial<
+  Record<string, { statement: string; feeBpsMax: number; label: string; url: string }>
+> = {
+  "mf-one-midas": {
+    statement: "Standard Redemption: This is a fee-free exit option.",
+    feeBpsMax: 0,
+    label: "Midas Open Liquidity Architecture",
+    url: "https://docs.midas.app/liquidity-and-composability/open-liquidity-architecture",
+  },
+  "mhyper-midas": {
+    statement: "Tokenholder Fee 0.50 percent redemption fee and 10 percent interest fee",
+    feeBpsMax: 50,
+    label: "Midas mHYPER Final Terms",
+    url: "https://2732961456-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FsPjk0ggBxEJCCnVFFkDR%2Fuploads%2FuaPpattzf6RCr3YzNnLn%2FMidas_Final_Terms_mHYPER_2025.pdf?alt=media&token=c77039e7-684f-4a2f-b178-2f0af1ac8c9b",
+  },
+  "mmev-midas": {
+    statement: "Tokenholder Fee 0.50 percent redemption fee and 10 percent interest fee",
+    feeBpsMax: 50,
+    label: "Midas mMEV Final Terms",
+    url: "https://2732961456-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FsPjk0ggBxEJCCnVFFkDR%2Fuploads%2FEoSLAqc1ZoCEV1LBkiup%2FMidas_Final_Terms_mMEV_Update_2025.pdf?alt=media&token=d58efef6-7d01-4889-9af7-3c86f1a9e932",
+  },
+};
+
 const MIDAS_LYT_CONFIGS: Record<string, RedemptionBackstopConfig> = Object.fromEntries(
   MIDAS_LYT_VAULTS.map(([id, ticker, productUrl]) => {
     const config = cloneRedemptionBackstopConfig(midasLytBase);
-    config.costModel = undisclosedReviewedFee(
-      `Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed ${ticker} redemption fee`,
-    );
+    const feeDisclosure = MIDAS_LYT_FEE_DISCLOSURES[id];
+    config.costModel = feeDisclosure
+      ? {
+          ...documentedVariableFee(feeDisclosure.statement),
+          feeBpsMax: feeDisclosure.feeBpsMax,
+        }
+      : undisclosedReviewedFee(
+          `Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed ${ticker} redemption fee`,
+        );
     config.docs = [
       sourceRef(`Midas ${ticker}`, productUrl, ["route", "capacity", "fees", "access", "settlement"]),
+      ...(feeDisclosure ? [sourceRef(feeDisclosure.label, feeDisclosure.url, ["fees"])] : []),
       ...config.docs!,
     ];
     config.notes = [
@@ -90,8 +120,43 @@ const spikoProspectus = () =>
     "settlement",
   ]);
 
-/** Eight Spiko funds share the same issuer-API NAV-redemption base, the ticker-templated
- *  cost note, and the SICAV prospectus ref; EUR funds reference the instant-redemption API
+const SPIKO_FEE_DISCLOSURES: Record<string, { statement: string; url: string }> = {
+  "eutbl-spiko": {
+    statement: "There are no exit costs for this Product. EUR 0",
+    url: "https://cdn.spiko.finance/legal_docs/EN/KID_EUTBL_EN.pdf",
+  },
+  "eursafo-spiko": {
+    statement: "No exit cost applies to this Product. 0 EUR",
+    url: "https://cdn.spiko.finance/legal_docs/EN/KID_eurSAFO_EN.pdf",
+  },
+  "ustbl-spiko": {
+    statement: "There are no exit costs for this Product. USD 0",
+    url: "https://cdn.spiko.finance/legal_docs/EN/KID_USTBL_EN.pdf",
+  },
+  "safo-spiko-usd": {
+    statement: "No exit costs apply to this Product. USD 0",
+    url: "https://cdn.spiko.finance/legal_docs/EN/KID_SAFO_EN.pdf",
+  },
+  "gbpsafo-spiko": {
+    statement: "No exit costs apply to this Product. GBP 0",
+    url: "https://cdn.spiko.finance/legal_docs/EN/KID_gbpSAFO_EN.pdf",
+  },
+  "uktbl-spiko": {
+    statement: "There are no exit costs applicable to this Product. GBP 0",
+    url: "https://cdn.spiko.finance/legal_docs/EN/KID_UKTBL_EN.pdf",
+  },
+  "eurspkcc-spiko": {
+    statement: "There are no exit costs for this Product. EUR 0",
+    url: "https://cdn.spiko.finance/legal_docs/EN/KID_eurSPKCC_EN.pdf",
+  },
+  "spkcc-spiko": {
+    statement: "There are no exit costs for this Product. USD 0",
+    url: "https://cdn.spiko.finance/legal_docs/EN/KID_SPKCC_EN.pdf",
+  },
+};
+
+/** Eight Spiko funds share the same issuer-API NAV-redemption base, product KID fee
+ *  disclosure, and SICAV prospectus ref; EUR funds reference the instant-redemption API
  *  while USD/GBP funds reference the standard redemption API. Each fund appends its own
  *  product-page ref (some have none) and keeps its bespoke modeling note. */
 const SPIKO_FUNDS: readonly [
@@ -166,6 +231,7 @@ const SPIKO_FUNDS: readonly [
 const SPIKO_FUND_CONFIGS: Record<string, RedemptionBackstopConfig> = Object.fromEntries(
   SPIKO_FUNDS.map(([id, ticker, currency, productRef, note]): [string, RedemptionBackstopConfig] => {
     const baseDocs = currency === "eur" ? spikoEurBaseDocs() : spikoBaseDocs();
+    const feeDisclosure = SPIKO_FEE_DISCLOSURES[id];
     return [
       id,
       {
@@ -173,10 +239,16 @@ const SPIKO_FUND_CONFIGS: Record<string, RedemptionBackstopConfig> = Object.from
         ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
         settlementModel: "days",
         outputAssetType: "nav",
-        costModel: undisclosedReviewedFee(
-          `Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed ${ticker} redemption fee`,
-        ),
-        docs: [...baseDocs, ...(productRef ? [productRef] : []), spikoProspectus()],
+        costModel: {
+          ...documentedVariableFee(feeDisclosure.statement),
+          feeBpsMax: 0,
+        },
+        docs: [
+          ...baseDocs,
+          ...(productRef ? [productRef] : []),
+          sourceRef(`Spiko ${ticker} KID`, feeDisclosure.url, ["fees"]),
+          spikoProspectus(),
+        ],
         notes: [note],
       },
     ];
@@ -201,7 +273,12 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     reviewedAt: REVIEWED_MAJOR_ISSUER_REDEMPTION_AT,
-    costModel: documentedVariableFee("0.10% with a $1,000 minimum"),
+    costModel: {
+      ...documentedVariableFee("0.10% with a $1,000 minimum"),
+      // T1: the issuer fee page states the redemption fee outright — 0.10%
+      // (greater of that or $1,000) — a citable documented ceiling.
+      feeBpsMax: 10,
+    },
     docs: [
       sourceRef("Tether Transparency", "https://tether.to/en/transparency", ["capacity"]),
       sourceRef("Tether legal terms", "https://tether.to/en/legal/", ["route", "capacity", "access"]),
@@ -316,9 +393,10 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     settlementModel: "days",
     outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed mRe7YIELD redemption fee",
-    ),
+    costModel: {
+      ...documentedVariableFee("Tokenholder Fee 0.50 percent redemption fee and 10 percent interest fee"),
+      feeBpsMax: 50,
+    },
     docs: [
       sourceRef("Midas mRe7YIELD", "https://docs.midas.app/tokens/mre7yield", [
         "route",
@@ -331,6 +409,11 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         "route",
         "access",
       ]),
+      sourceRef(
+        "Midas mRe7YIELD Final Terms",
+        "https://2732961456-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FsPjk0ggBxEJCCnVFFkDR%2Fuploads%2FYUqswmPoBMklqxjG6bwA%2FMidas_Final_Terms_mRE7YIELD_Update_2025.pdf?alt=media&token=d7c79079-7ed2-43a3-9eea-98250f51244a",
+        ["fees"],
+      ),
     ],
     notes: [
       "mRe7YIELD is a NAV-accreting strategy token, so the route is modeled as issuer/platform NAV redemption rather than same-day stablecoin par liquidity.",
@@ -414,9 +497,12 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     outputAssetType: "nav",
-    costModel: undisclosedReviewedFee(
-      "Centrifuge materials describe whitelisted pool investment and redemption flows; public materials reviewed do not publish one fixed JTRSY redemption fee",
-    ),
+    costModel: {
+      ...documentedVariableFee(
+        "Standard redemptions are free, for instant redemptions, please see the section about the Anemoy Liquidity Network (ALN).",
+      ),
+      feeBpsMax: 0,
+    },
     docs: [
       sourceRef("Centrifuge JTRSY pool", "https://centrifuge.io/pools/jtrsy", [
         "route",
@@ -430,6 +516,11 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
         "access",
         "settlement",
       ]),
+      sourceRef(
+        "Centrifuge JTRSY STEP II application",
+        "https://forum.arbitrum.foundation/t/centrifuge-janus-henderson-anemoy-treasury-fund-jtrsy-step-ii-application/23496",
+        ["fees"],
+      ),
     ],
     notes: [
       "Modeled as whitelisted Professional Investor redemption through the Centrifuge issuer rail; async vault processing can delay settlement.",

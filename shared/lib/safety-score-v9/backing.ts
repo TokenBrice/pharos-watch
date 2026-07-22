@@ -71,6 +71,8 @@ export interface V9BackingAssetInput {
   readonly seriallyResolvedUpstreamAssetIds?: readonly string[];
   readonly cdpLiquidationCapacitySelection?: V9CdpLiquidationCapacitySelection;
   readonly inheritedStablecoinBacking?: V9InheritedStablecoinBacking;
+  /** Conservative measured months since launch; absent → no seasoning credit. */
+  readonly trackRecordMonths?: number;
 }
 
 /**
@@ -518,6 +520,7 @@ export function evaluateV9ReserveExposures(
   }
 
   const contributions: V9BackingContribution[] = [];
+  const sovereignExemptComponentKeys = new Set<string>();
   const unresolved: V9BackingUnresolvedReason[] = [];
   const structuralReasons: V9BackingStructuralReason[] = [];
   if (asset.reserveStatus.observationState === "stale" || asset.reserveStatus.observationState === "bounded-unknown") {
@@ -618,6 +621,18 @@ export function evaluateV9ReserveExposures(
       );
     }
     const failureDomains = canonicalDomains([...exposure.failureDomains, ...(upstream?.failureDomains ?? [])]);
+    // Reshape-v3 T4b (owner ruling 2026-07-22, R1): sovereign debt classes are
+    // exempt from the reserve-ISSUER concentration measure. Concentration
+    // prices counterparty/default clustering; the sovereign whose paper the
+    // class ladder already prices (treasury-bill 96, government-security 92)
+    // is not a clustered counterparty in that sense. Custodian domains and
+    // every non-sovereign class remain fully counted.
+    if (
+      exposure.assetClass !== null &&
+      (backing.reserve.sovereignConcentrationExemptClasses as readonly string[]).includes(exposure.assetClass)
+    ) {
+      sovereignExemptComponentKeys.add(pathKey);
+    }
     contributions.push({
       componentKey: pathKey,
       source: "reserve-exposure",
@@ -713,6 +728,9 @@ export function evaluateV9ReserveExposures(
   for (const contribution of contributions.filter((entry) => entry.source === "reserve-exposure")) {
     for (const domain of contribution.failureDomains) {
       if (domain.kind !== "reserve-issuer" && domain.kind !== "reserve-custodian") continue;
+      // T4b: sovereign-class rows do not feed ISSUER concentration (see above);
+      // their custodian domains still count.
+      if (domain.kind === "reserve-issuer" && sovereignExemptComponentKeys.has(contribution.componentKey)) continue;
       const key = domainKey(domain);
       const group = domainGroups.get(key) ?? { domain, share: 0, exposures: [], evidence: [] };
       group.share += contribution.normalizedWeight;
@@ -852,10 +870,23 @@ function evaluateV9ArchetypeBackingInternal(
             )),
       );
     }
-    const score =
+    const tierScore =
       component.fact.quality === null
         ? backing.boundedUnknownQuality
         : backing.componentQuality[component.fact.quality];
+    // T5 seasoned-issuer credit (owner ruling 2026-07-22, R2), assurance half:
+    // a sustained attestation cadence proven over the credit window earns the
+    // policy's points on the assurance-and-reconciliation component when its
+    // measured quality is already adequate-or-better, capped at the strong
+    // tier — seasoning can close the adequate->strong gap, never exceed the
+    // evidence ceiling.
+    const score =
+      component.componentKey === "assurance-and-reconciliation" &&
+      (component.fact.quality === "strong" || component.fact.quality === "adequate") &&
+      input.asset.trackRecordMonths !== undefined &&
+      input.asset.trackRecordMonths >= backing.assuranceSeasonedCredit.minMonths
+        ? Math.min(tierScore + backing.assuranceSeasonedCredit.points, backing.componentQuality.strong)
+        : tierScore;
     const baseWeight = archetypePolicy.componentWeights[component.componentKey];
     const normalizedWithinMechanism =
       applicableComponentPolicyWeight > 0 ? baseWeight / applicableComponentPolicyWeight : 0;

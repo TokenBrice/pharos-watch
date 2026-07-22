@@ -140,6 +140,8 @@ export interface EvaluateV9EconomicControlArgs {
   mint: V9MintMechanismReview;
   oracle: V9OracleControlReview;
   bridge: V9BridgeControlReview;
+  /** See {@link V9EconomicControlReviewExtension.trackRecordMonths}. */
+  trackRecordMonths?: number;
 }
 
 export type V9EconomicControlAssetSource = V9EconomicControlAssetFacts;
@@ -150,6 +152,11 @@ export interface V9EconomicControlReviewExtension {
   mint: V9MintMechanismReview;
   oracle: V9OracleControlReview;
   bridge: V9BridgeControlReview;
+  /**
+   * Conservative measured track record (months since launch, floor). Absent →
+   * no seasoning credit (unit callers, unknown launch dates fail conservative).
+   */
+  trackRecordMonths?: number;
 }
 
 export interface V9ControlComponent {
@@ -487,6 +494,7 @@ export function projectV9EconomicControlEvaluation(
       ...review.mint,
       upgrade: { ...review.mint.upgrade },
     },
+    ...(review.trackRecordMonths !== undefined ? { trackRecordMonths: review.trackRecordMonths } : {}),
     oracle: {
       ...review.oracle,
       branches: [...review.oracle.branches].sort(
@@ -700,7 +708,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     ]);
     const mintBinding = mintControl === null ? true : bindingByMateriality(mintControl, materialShareThreshold);
     const mintReconciled = mint.reconciliation === "continuous" || mint.reconciliation === "periodic";
-    const mintPostureScore =
+    const gradedPostureScore =
       (posture === "concentrated-admin" || posture === "unbounded-reconciled") && mintReconciled
         ? mint.supervision === "prudential"
           ? policy.control.mintPostureGrading.prudentialReconciled
@@ -708,6 +716,33 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
             ? policy.control.mintPostureGrading.attestationOnlyReconciled
             : policy.control.mintPostureQuality[posture]
         : policy.control.mintPostureQuality[posture];
+    // T5 seasoned-issuer credit (owner ruling 2026-07-22, R2): a reconciled,
+    // non-adverse measured posture with >= seasonedCreditMinMonths of track
+    // record earns seasonedCreditPoints, capped at the next rung of the merged
+    // posture/grading ladder — longevity can close the gap to the next rung
+    // but never leapfrog it. Adverse/unknown postures (incl. every pin) are
+    // structurally ineligible, and absent trackRecordMonths fails conservative.
+    const mintPostureScore = (() => {
+      const grading = policy.control.mintPostureGrading;
+      if (
+        grading.seasonedCreditPoints <= 0 ||
+        args.trackRecordMonths === undefined ||
+        args.trackRecordMonths < grading.seasonedCreditMinMonths ||
+        !mintReconciled ||
+        posture === "unknown" ||
+        posture === "unbounded-or-compromised"
+      ) {
+        return gradedPostureScore;
+      }
+      const ladder = [
+        ...Object.values(policy.control.mintPostureQuality),
+        grading.prudentialReconciled,
+        grading.attestationOnlyReconciled,
+      ].sort((left, right) => left - right);
+      const nextRung = ladder.find((value) => value > gradedPostureScore);
+      const ceiling = nextRung === undefined ? gradedPostureScore : nextRung;
+      return Math.min(gradedPostureScore + grading.seasonedCreditPoints, ceiling);
+    })();
     components.push({
       componentKey: "mint",
       kind: "mint",

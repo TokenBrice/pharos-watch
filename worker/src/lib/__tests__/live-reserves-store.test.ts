@@ -934,6 +934,56 @@ describe("live-reserves-store", () => {
     expect(history[0]?.binds[history[0].binds.length - 1]).toBe(5000);
     expect(history[1]?.binds[0]).toBe(9_000);
     expect(history[1]?.binds[history[1].binds.length - 1]).toBe(5000);
+    // Rows referenced by the current attempt closure must survive the age cutoff.
+    for (const entry of history) {
+      expect(entry.sql).toContain("NOT EXISTS");
+      expect(entry.sql).toContain("FROM reserve_composition c");
+      expect(entry.sql).toContain("FROM reserve_sync_state s");
+    }
+  });
+
+  it("preserves history rows referenced by the current attempt closure past the age cutoff", async () => {
+    const { DatabaseSync } = await import("node:sqlite");
+    const { createSqliteD1 } = await import("../../test-helpers/sqlite-d1");
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec(`
+        CREATE TABLE reserve_composition (stablecoin_id TEXT PRIMARY KEY, attempt_id TEXT, fetched_at INTEGER);
+        CREATE TABLE reserve_sync_state (
+          stablecoin_id TEXT PRIMARY KEY,
+          last_attempt_id TEXT, last_success_attempt_id TEXT, pending_attempt_id TEXT
+        );
+        CREATE TABLE reserve_composition_history (stablecoin_id TEXT, attempt_id TEXT, fetched_at INTEGER);
+        CREATE TABLE reserve_sync_attempt_history (stablecoin_id TEXT, attempt_id TEXT, attempted_at INTEGER);
+      `);
+      // Suspended feed: current composition attempt is far older than the cutoff.
+      sqlite.exec(`
+        INSERT INTO reserve_composition VALUES ('usdo-openeden', 'attempt-old-current', 1000);
+        INSERT INTO reserve_sync_state VALUES ('usdo-openeden', 'attempt-old-current', 'attempt-old-current', NULL);
+        INSERT INTO reserve_composition_history VALUES
+          ('usdo-openeden', 'attempt-old-current', 1000),
+          ('usdo-openeden', 'attempt-old-unreferenced', 900);
+        INSERT INTO reserve_sync_attempt_history VALUES
+          ('usdo-openeden', 'attempt-old-current', 1000),
+          ('usdo-openeden', 'attempt-old-unreferenced', 900),
+          ('usdo-openeden', 'attempt-recent', 9_500);
+      `);
+
+      const result = await pruneLiveReserveHistory(createSqliteD1(sqlite), 10_000, 1_000);
+
+      expect(result.compositionHistoryDeleted).toBe(1);
+      expect(result.attemptHistoryDeleted).toBe(1);
+      const compositionLeft = sqlite
+        .prepare("SELECT attempt_id FROM reserve_composition_history ORDER BY attempt_id")
+        .all() as Array<{ attempt_id: string }>;
+      expect(compositionLeft.map((row) => row.attempt_id)).toEqual(["attempt-old-current"]);
+      const attemptsLeft = sqlite
+        .prepare("SELECT attempt_id FROM reserve_sync_attempt_history ORDER BY attempt_id")
+        .all() as Array<{ attempt_id: string }>;
+      expect(attemptsLeft.map((row) => row.attempt_id)).toEqual(["attempt-old-current", "attempt-recent"]);
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("paginates large prunes into multiple capped DELETE statements", async () => {

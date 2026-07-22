@@ -257,12 +257,16 @@
     "backing": {
       "componentQuality": {
         "strong": 95,
-        "adequate": 80,
+        "adequate": 87,
         "limited": 60,
         "weak": 35,
         "failed": 10
       },
       "boundedUnknownQuality": 35,
+      "assuranceSeasonedCredit": {
+        "points": 3,
+        "minMonths": 60
+      },
       "reserve": {
         "assetClassQuality": {
           "cash": 98,
@@ -324,6 +328,7 @@
         },
         "issuerAttestedConfidenceMultiplier": 0.8,
         "concentrationWeight": 0.15,
+        "sovereignConcentrationExemptClasses": ["treasury-bill", "government-security"],
         "concentrationBands": [
           {
             "minShareInclusive": 0,
@@ -795,7 +800,9 @@
       },
       "mintPostureGrading": {
         "prudentialReconciled": 80,
-        "attestationOnlyReconciled": 70
+        "attestationOnlyReconciled": 70,
+        "seasonedCreditPoints": 5,
+        "seasonedCreditMinMonths": 60
       },
       "oracleTierQuality": {
         "oracleless-or-internal": 95,

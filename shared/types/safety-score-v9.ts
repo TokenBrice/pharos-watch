@@ -727,6 +727,17 @@ const V9BackingPolicySchema = z
       })
       .strict(),
     boundedUnknownQuality: ScoreSchema,
+    // T5 (owner ruling 2026-07-22, R2), assurance half: sustained attestation
+    // cadence proven over the credit window earns the points on the
+    // assurance-and-reconciliation component when its measured quality is
+    // already adequate-or-better, capped at the strong tier.
+    assuranceSeasonedCredit: z
+      .object({
+        points: z.number().finite().min(0).max(5).default(0),
+        minMonths: z.number().int().positive().default(60),
+      })
+      .strict()
+      .default({ points: 0, minMonths: 60 }),
     reserve: z
       .object({
         assetClassQuality: z
@@ -791,6 +802,10 @@ const V9BackingPolicySchema = z
         concentrationBands: z
           .array(z.object({ minShareInclusive: z.number().finite().min(0).max(1), score: ScoreSchema }).strict())
           .min(1),
+        // T4b (owner ruling 2026-07-22, R1): sovereign debt classes exempt from
+        // the reserve-ISSUER concentration measure — the class ladder already
+        // prices the sovereign; concentration prices counterparty clustering.
+        sovereignConcentrationExemptClasses: z.array(z.enum(["treasury-bill", "government-security"])).default([]),
       })
       .strict(),
     structural: z
@@ -882,6 +897,12 @@ const V9ControlPolicySchema = z
       .object({
         prudentialReconciled: ScoreSchema,
         attestationOnlyReconciled: ScoreSchema,
+        // T5 (owner ruling 2026-07-22, R2): measured longevity finally credits.
+        // A reconciled, non-adverse mint posture with >= seasonedCreditMinMonths
+        // of incident-free track record earns seasonedCreditPoints, capped below
+        // the next posture rung so a credit can never relabel the posture class.
+        seasonedCreditPoints: z.number().finite().min(0).max(5).default(0),
+        seasonedCreditMinMonths: z.number().int().positive().default(60),
       })
       .strict(),
     oracleTierQuality: z

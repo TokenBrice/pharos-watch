@@ -2,39 +2,93 @@
   "id": "xdai-gnosis",
   "reserves": [
     {
-      "name": "USDS backing through Gnosis bridge infrastructure",
-      "pct": 100,
+      "name": "sUSDS held by the Ethereum xDAI Foreign Bridge",
+      "pct": 99.03,
+      "risk": "low",
+      "coinId": "susds-sky",
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sky Savings USDS ERC-4626 vault and USDS",
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Liquid USDS held by the Ethereum xDAI Foreign Bridge",
+      "pct": 0.97,
       "risk": "low",
       "coinId": "usds-sky",
       "depType": "wrapper",
       "assetClass": "stablecoin",
-      "issuerOrObligor": "Sky Ecosystem USDS held through Gnosis bridge infrastructure",
+      "issuerOrObligor": "Sky Ecosystem USDS held by the canonical xDAI bridge",
       "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "OpenAI Codex Safety Score V9 backing review",
     "confidence": "verified",
-    "sources": [{"label": "Gnosis Chain token documentation", "url": "https://docs.gnosischain.com/about/tokens/"}],
-    "rationale": "Gnosis documents that the USDS migration on the xDAI bridge is complete and identifies xDAI as the stable token used for payments and fees on Gnosis Chain. The established bridge-backed reserve relationship is USDS.",
-    "compositionBasis": "Gnosis Chain issuer documentation for the completed USDS xDAI bridge migration",
-    "compositionAsOf": "2026-07-14",
+    "sources": [
+      {
+        "label": "Gnosis xDAI bridge documentation",
+        "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+      },
+      {
+        "label": "Gnosis xDAI bridge USDS migration specification at commit 52afd25",
+        "url": "https://github.com/gnosischain/tokenbridge-contracts/blob/52afd25b05f1afa3347f2f18595748b2149df6aa/USDSMigration.md"
+      },
+      {
+        "label": "Sky sUSDS documentation",
+        "url": "https://developers.skyeco.com/protocol/tokens/susds/"
+      },
+      {
+        "label": "Ethereum block 25584913",
+        "url": "https://etherscan.io/block/25584913"
+      },
+      {
+        "label": "Gnosis block 47325357",
+        "url": "https://gnosis.blockscout.com/block/47325357"
+      }
+    ],
+    "rationale": "Gnosis documents that the completed migration replaced DAI and sDAI with USDS and sUSDS as xDAI bridge collateral. Timestamp-aligned reads at Ethereum block 25584913 (2026-07-22T01:13:47Z) and Gnosis block 47325357 (2026-07-22T01:13:50Z) reconcile the two sides. The Foreign Bridge held 705,559.039085990130672328 liquid USDS and 64,994,123.730852270706889290 sUSDS shares redeemable for 71,738,483.035424911185310499 USDS; only 0.052688189469517749 legacy DAI and zero sDAI remained. On Gnosis, BlockRewardAuRa mintedTotallyByBridge(Home Bridge) was 1,327,754,383.519273030164275956 xDAI and Home Bridge totalBurntCoins was 1,255,997,803.184027289689191742, leaving 71,756,580.335245740475084214 bridge-minted xDAI outstanding. Direct USDS plus the bridge's recorded 71,729,444.626685023633523932 USDS sUSDS principal and DAI dust total 72,435,003.718459203233714009, exceeding that liability by 678,423.383213462758629795 (100.95% principal coverage); max-withdrawable fair value is 72,444,042.127199090785500576. The fair-value composition normalizes to 99.03% sUSDS and 0.97% liquid USDS; legacy DAI is immaterial dust, not a reserve slice.",
+    "compositionBasis": "Timestamp-aligned Ethereum bridge escrow balances and sUSDS max-withdraw/principal reads reconciled to Gnosis bridge mint-minus-burn accounting",
+    "compositionAsOf": "2026-07-22",
     "scope": "full-composition",
-    "knownUnknownExposure": "No direct reserve asset remains unidentified in the documented USDS bridge model.",
+    "knownUnknownExposure": "No material reserve constituent remains unidentified; 0.052688189469517749 legacy DAI remains as quantified dust after the completed migration.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
-    "providers": [{"name": "Gnosis Chain xDAI bridge contracts", "role": "other"}],
+    "providers": [
+      {
+        "name": "Gnosis Chain xDAI bridge contracts",
+        "role": "other"
+      },
+      {
+        "name": "Sky Savings USDS ERC-4626 vault",
+        "role": "other"
+      }
+    ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "probable",
-    "sources": [{"label": "Gnosis Chain token documentation", "url": "https://docs.gnosischain.com/about/tokens/"}],
-    "uncertainty": "The reviewed documentation confirms the USDS bridge migration but does not establish contract-level custody segregation, legal insolvency treatment, or rehypothecation terms.",
-    "knownUnknownExposurePct": 100
+    "reviewedAt": "2026-07-22",
+    "reviewer": "OpenAI Codex Safety Score V9 backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Gnosis xDAI bridge documentation",
+        "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+      },
+      {
+        "label": "Gnosis xDAI bridge SavingsDaiConnector at commit 52afd25",
+        "url": "https://github.com/gnosischain/tokenbridge-contracts/blob/52afd25b05f1afa3347f2f18595748b2149df6aa/contracts/upgradeable_contracts/erc20_to_native/SavingsDaiConnector.sol"
+      },
+      {
+        "label": "Ethereum block 25584913",
+        "url": "https://etherscan.io/block/25584913"
+      }
+    ],
+    "uncertainty": "Pinned contract reads establish the bridge escrow, invested principal, accrued sUSDS value, and mint-minus-burn liability. They do not establish legal insolvency treatment for assets held by the bridge or governance-controlled upgrade paths.",
+    "knownUnknownExposurePct": 0
   }
 }

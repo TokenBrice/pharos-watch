@@ -1180,6 +1180,7 @@ export function evaluateV9FactSet(
         ? {}
         : { cdpLiquidationCapacitySelection: liquidationCapacitySelection }),
       ...(inheritedStablecoinBacking === undefined ? {} : { inheritedStablecoinBacking }),
+      trackRecordMonths: conservativeTrackRecordMonths(asset.implementation.launchedAtSec, factSet.asOfSec),
     };
     const backing =
       asset.mechanismRiskReview.review === null
@@ -1188,7 +1189,11 @@ export function evaluateV9FactSet(
     const exit = evaluateV9ExitAssetFacts(asset, envelope);
     const control = evaluateV9EconomicControlAssetFacts(
       asset,
-      { assetId: asset.assetId, ...asset.economicControlReview },
+      {
+        assetId: asset.assetId,
+        trackRecordMonths: conservativeTrackRecordMonths(asset.implementation.launchedAtSec, factSet.asOfSec),
+        ...asset.economicControlReview,
+      },
       envelope,
     );
     const access = evaluateV9AccessPosture({

@@ -307,7 +307,23 @@ async function deleteHistoryInBatches(
       ? `AND stablecoin_id NOT IN (${frozenIdsList.map(() => "?").join(",")})`
       : "";
   // SAFETY: table and column are TypeScript string literal union types; every call site passes a hardcoded allowlisted literal, not user input.
-  const sql = `DELETE FROM ${table} WHERE ${column} < ? ${frozenClause} LIMIT ?`;
+  // The status/admin gap checks and recovery fencing join history rows on the current
+  // attempt_id regardless of age, so rows referenced by reserve_composition or
+  // reserve_sync_state must survive the age cutoff (e.g. long-suspended feeds).
+  const sql = `DELETE FROM ${table} WHERE rowid IN (
+    SELECT t.rowid FROM ${table} t
+     WHERE t.${column} < ? ${frozenClause}
+       AND NOT EXISTS (
+         SELECT 1 FROM reserve_composition c
+          WHERE c.stablecoin_id = t.stablecoin_id AND c.attempt_id = t.attempt_id
+       )
+       AND NOT EXISTS (
+         SELECT 1 FROM reserve_sync_state s
+          WHERE s.stablecoin_id = t.stablecoin_id
+            AND t.attempt_id IN (s.last_attempt_id, s.last_success_attempt_id, s.pending_attempt_id)
+       )
+     LIMIT ?
+  )`;
   let totalDeleted = 0;
   // Loop until a batch deletes fewer rows than the budget, which implies the
   // table is drained. Keeps each DELETE inside D1's 30s per-statement limit.

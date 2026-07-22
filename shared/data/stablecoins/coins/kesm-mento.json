@@ -4,7 +4,7 @@
   "detailProvider": "defillama",
   "name": "Mento Kenyan Shilling",
   "symbol": "KESm",
-  "oneLiner": "KESm is Mento's Kenyan shilling stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",
+  "oneLiner": "KESm is Mento's reserve-backed Kenyan shilling stablecoin on Celo, issued and retired through the oracle-priced USDm/KESm Broker pool.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "OTHER",
@@ -13,9 +13,24 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
-  "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing KESm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the KESm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg.",
-  "mechanismArchetype": "cdp",
+  "collateral": "Shared Mento Reserve: Mento's pinned analytics configuration classifies KESm as reserve-backed rather than CDP-backed. Its backing is the protocol's diversified, dynamically managed reserve, not USDm locked in a KESm-specific borrower trove.",
+  "pegMechanism": "KESm is issued through Mento v2's USDm/KESm Broker and BiPoolManager exchange. A USDm-to-KESm swap burns incoming USDm and mints outgoing KESm; the reverse burns KESm and mints USDm. The virtual pool prices swaps from the KES/USD SortedOracles feed and applies spread, trading-limit, report-count, freshness, and BreakerBox checks.",
+  "mechanismArchetypeReview": {
+    "disposition": "unresolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
+    "rationale": "Primary evidence resolves KESm as a reserve-backed legacy Broker stable with no borrower CDP. Pharos's current closed archetype enum has no protocol-reserve-backed FX category: fiat-cash is custodial off-chain cash issuance, algorithmic is reflexive or unbacked, and cdp requires borrower vaults. The false cdp value is removed rather than replaced with another materially inaccurate label.",
+    "sources": [
+      {
+        "label": "Pinned Mento stablecoin backing config",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "Pinned Mento Broker source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol"
+      }
+    ]
+  },
   "geckoId": "celo-kenyan-shilling",
   "proofOfReserves": {
     "type": "real-time",
@@ -25,56 +40,56 @@
     "cadence": "real-time"
   },
   "oracleRisk": {
-    "tier": "standard-external",
-    "summary": "Mento documents non-USDm/EURm FX stables as USDm-collateralized CDP assets; KESm's complete production oracle and liquidation branch remains unverified.",
+    "tier": "single-source-or-laggy",
+    "summary": "KESm's live Celo USDm/KESm Broker exchange uses one SortedOracles reporter with a 360-second report-expiry window and minimumReports set to one; BreakerBox gates swaps, but no second feed or automatic failover path is configured.",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "unresolved",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "OpenAI Codex Safety Score V9 oracle review",
-      "rationale": "The current Mento documentation identifies the USDm-collateralized CDP and shared oracle/circuit-breaker infrastructure, but the reviewed public sources do not establish the complete production KESm liquidation and failure-handling branch.",
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-22",
+      "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
+      "rationale": "At finalized Celo block 72780426 (2026-07-22T00:46:24Z), KESm broker() returned the Mento Broker and its sole exchange provider exposed exchange 0x89de88b8eb790de26f4649f543cb6893d93635c728ac857f0926e842fb0d298b pairing USDm with KESm. The pool used reference feed 0xbAcEE37d31b9f022Ef5d232B9fD53F05a531c169, a 360-second reset/expiry window, minimumReports 1, and one active SortedOracles reporter. The pinned backing config classifies KESm as reserve-backed, the pinned deployment registry has no KESm borrower branch, and the live reserve API listed debt-bearing troves only for GBPm, JPYm, and CHFm. KESm therefore has a Broker conversion-oracle path rather than borrower-specific oracle and liquidation branches to enumerate.",
       "sources": [
         {
-          "label": "Mento CDP architecture",
-          "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp"
+          "label": "Finalized Celo block 72780426",
+          "url": "https://celo.blockscout.com/block/72780426"
         },
         {
-          "label": "Mento FPMM oracles and circuit breakers",
-          "url": "https://docs.mento.org/mento-v3/dive-deeper/fpmm/oracles-and-circuit-breakers"
+          "label": "Mento BiPoolManager verified contract",
+          "url": "https://celo.blockscout.com/address/0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901?tab=contract"
         },
         {
-          "label": "KESm Celo token",
-          "url": "https://celo.blockscout.com/address/0x456a3d042c0dbd3db53d5489e98dfb038553b0d0"
+          "label": "Mento reserve analytics API",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        },
+        {
+          "label": "Pinned Mento stablecoin backing config",
+          "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+        },
+        {
+          "label": "Pinned Mento Celo deployment registry",
+          "url": "https://github.com/mento-protocol/deployments-v2/blob/7b02f6a61c1eb646742c74b516f827b2c305acf1/packages/contracts/contracts.json"
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SOL-3 adversarial verification",
-    "confidence": "limited",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Mento CDP architecture",
-        "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp"
+        "label": "Finalized Celo block 72780426",
+        "url": "https://celo.blockscout.com/block/72780426"
       },
       {
-        "label": "Mento Reserve backing-model split",
-        "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
+        "label": "KESm token proxy and verified StableTokenV2 implementation",
+        "url": "https://celo.blockscout.com/address/0x456a3d042c0dbd3db53d5489e98dfb038553b0d0?tab=contract"
       },
       {
-        "label": "Mento stable token contracts",
-        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken"
+        "label": "Mento BiPoolManager verified contract",
+        "url": "https://celo.blockscout.com/address/0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901?tab=contract"
       },
       {
-        "label": "Mento deployment addresses",
-        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
-      },
-      {
-        "label": "Mento FPMM oracles and circuit breakers",
-        "url": "https://docs.mento.org/mento-v3/dive-deeper/fpmm/oracles-and-circuit-breakers"
-      },
-      {
-        "label": "KESm Celo token",
-        "url": "https://celo.blockscout.com/address/0x456a3d042c0dbd3db53d5489e98dfb038553b0d0"
+        "label": "Pinned Mento BiPoolManager source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/BiPoolManager.sol"
       },
       {
         "label": "Mento reserve analytics API",
@@ -125,97 +140,172 @@
     "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
-    "mintPath": "user-collateralized-governed",
+    "mintPath": "permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
+    "summary": "Operational KESm issuance runs through the Mento Broker, which burns the incoming Mento stable token and mints the outgoing token during USDm/KESm swaps. StableTokenV2 also authorizes the Celo ValidatorsProxy, but its current implementation only mints registry USDm for EpochManager; its Celo-Governance-owned proxy is therefore a latent upgrade-controlled KESm mint surface. exchange() is zero, and the two-day Mento Timelock can change token authorization slots and upgrade the KESm token and Broker.",
     "upgradeability": {
       "model": "transparent-proxy",
-      "proxyAddresses": ["0x456a3d042c0dbd3db53d5489e98dfb038553b0d0"],
-      "implementationAddresses": ["0x434563b0604be100f04b7ae485bcafe3c9d8850e"],
-      "adminAddresses": ["0x890db8a597940165901372dd7db61c9f246e2147"],
+      "proxyAddresses": [
+        "0x456a3d042c0dbd3db53d5489e98dfb038553b0d0",
+        "0x777a8255ca72412f0d706dc03c9d1987306b4cad"
+      ],
+      "implementationAddresses": [
+        "0x434563b0604be100f04b7ae485bcafe3c9d8850e",
+        "0x1b78f6acd05e7bcb00f74863bfd8a7c264143e37"
+      ],
+      "adminAddresses": [
+        "0x890db8a597940165901372dd7db61c9f246e2147"
+      ],
       "canChangeMintLogic": true,
       "delaySec": 172800,
-      "controlRef": "Mento Timelock (KESm token owner)",
-      "observedAt": "2026-07-21",
-      "observedBlock": 72722632,
+      "controlRef": "Mento Timelock - KESm token and Broker administrator",
+      "observedAt": "2026-07-22",
+      "observedBlock": 72780426,
       "sources": [
         {
-          "label": "KESm token custom-proxy introspection (_getImplementation/_getOwner)",
-          "url": "https://celoscan.io/address/0x456a3d042c0dbd3db53d5489e98dfb038553b0d0"
+          "label": "Finalized Celo block 72780426",
+          "url": "https://celo.blockscout.com/block/72780426"
         },
         {
-          "label": "Mento V3 deployments",
-          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+          "label": "KESm token proxy and verified StableTokenV2 implementation",
+          "url": "https://celo.blockscout.com/address/0x456a3d042c0dbd3db53d5489e98dfb038553b0d0?tab=contract"
+        },
+        {
+          "label": "Mento Broker proxy and verified implementation",
+          "url": "https://celo.blockscout.com/address/0x777a8255ca72412f0d706dc03c9d1987306b4cad?tab=contract"
         }
       ]
     },
-    "summary": "KESm is minted CDP-style on Celo via immutable BorrowerOperations; the token owner is the Mento Timelock (2-day delay) whose sole proposer is the veMENTO DAO Governor.",
     "controls": [
       {
         "chain": "celo",
-        "address": "0x8ec9A81871F816F1EF007a82293703057A943B8A",
-        "label": "Mento BorrowerOperations (immutable CDP minter)",
+        "address": "0x777A8255cA72412f0d706dc03C9D1987306B4CaD",
+        "label": "Mento Broker - operational KESm swap minter",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "KESm mints only against USDm CDP collateral; BorrowerOperations has no owner() and no EIP-1967 proxy slot — immutable.",
+        "observedAt": "2026-07-22",
+        "observedBlock": 72780426,
         "sources": [
           {
-            "label": "Mento V3 deployments",
-            "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+            "label": "Pinned Mento Broker source",
+            "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol"
+          },
+          {
+            "label": "Pinned Mento BiPoolManager source",
+            "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/BiPoolManager.sol"
           }
         ],
-        "evidence": "At Celo block 69291577, BorrowerOperations 0x8ec9A81871F816F1EF007a82293703057A943B8A: 46358-byte code, owner() empty, EIP-1967 impl and admin slots zero — immutable, no upgrade path."
+        "evidence": "At finalized Celo block 72780426, broker() on KESm returned this Broker. Broker swaps call transferIn to burn the incoming Mento stable and transferOut to mint the outgoing stable only through registered exchanges subject to exchange and trading-limit checks."
       },
       {
         "chain": "celo",
         "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
-        "label": "Mento Timelock (KESm token owner)",
-        "role": "timelock",
+        "label": "Mento Timelock - KESm token and Broker administrator",
+        "role": "minter-admin",
         "authorityType": "timelock",
         "directMintAbility": "can-authorize",
         "timelockDelaySec": 172800,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-22",
+        "observedBlock": 72780426,
         "sources": [
           {
-            "label": "Mento V3 deployments",
-            "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+            "label": "Pinned StableTokenV2 source",
+            "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV2.sol"
+          },
+          {
+            "label": "Finalized Celo block 72780426",
+            "url": "https://celo.blockscout.com/block/72780426"
           }
         ],
-        "evidence": "At Celo block 69291577, KESm owner() = 0x890DB8A597940165901372Dd7DB61C9f246e2147; getMinDelay() = 172800; hasRole(PROPOSER_ROLE, MentoGovernor 0x47036...) = true; hasRole(EXECUTOR_ROLE, 0x0) = true (open executor)."
+        "evidence": "At finalized Celo block 72780426, KESm owner(), token proxy owner, and Broker proxy owner returned this Timelock; getMinDelay() returned 172800 seconds. StableTokenV2 ownership can change broker, validators, and exchange authorization slots, while the proxy role can replace token and Broker mint-critical logic."
+      },
+      {
+        "chain": "celo",
+        "address": "0xaEb865bCa93DdC8F47b8e29F40C5399cE34d0C58",
+        "label": "Celo ValidatorsProxy - authorized KESm minter slot",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-22",
+        "observedBlock": 72780426,
+        "sources": [
+          {
+            "label": "Pinned StableTokenV2 source",
+            "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV2.sol"
+          },
+          {
+            "label": "Celo ValidatorsProxy verified source",
+            "url": "https://celo.blockscout.com/address/0xaEb865bCa93DdC8F47b8e29F40C5399cE34d0C58?tab=contract"
+          }
+        ],
+        "evidence": "At finalized Celo block 72780426, validators() on KESm returned this proxy and StableTokenV2 admitted it through onlyMinter. The current Validators implementation can mint only Registry USDm to EpochManager and has no generic or KESm-targeting call, so the slot is authorized but cannot currently issue KESm."
+      },
+      {
+        "chain": "celo",
+        "address": "0xD533Ca259b330c7A88f74E000a3FaEa2d63B7972",
+        "label": "Celo GovernanceProxy - Validators proxy upgrade owner",
+        "role": "proxy-admin",
+        "authorityType": "dao-governor",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-22",
+        "observedBlock": 72780426,
+        "sources": [
+          {
+            "label": "Celo ValidatorsProxy verified source",
+            "url": "https://celo.blockscout.com/address/0xaEb865bCa93DdC8F47b8e29F40C5399cE34d0C58?tab=contract"
+          }
+        ],
+        "evidence": "At finalized Celo block 72780426, ValidatorsProxy _getOwner() returned this GovernanceProxy and _getImplementation() returned 0x13B0B89F3242f815C1FC6C9CF56e1Ab5aEA4dC58. Governance can change the authorized proxy's implementation, creating a latent KESm mint path, but has no current direct KESm call."
       }
     ],
+    "economicCapSemantics": "raiseable",
     "review": {
-      "evidence": "At Celo block 69291577: KESm owner() = Mento Timelock 0x890DB...; getMinDelay() = 172800s; MentoGovernor is sole PROPOSER; BorrowerOperations confirmed immutable. All addressable mint surfaces confirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
       "sources": [
         {
-          "label": "Mento V3 stablecoin docs",
-          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          "label": "Finalized Celo block 72780426",
+          "url": "https://celo.blockscout.com/block/72780426"
         },
         {
-          "label": "Mento V3 deployments",
-          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+          "label": "Pinned StableTokenV2 source",
+          "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV2.sol"
+        },
+        {
+          "label": "Pinned Mento Broker source",
+          "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol"
         }
-      ]
+      ],
+      "evidence": "At finalized Celo block 72780426, KESm broker(), owner(), validators(), and exchange() returned the Mento Broker, two-day Mento Timelock, Celo ValidatorsProxy, and zero address respectively. Proxy introspection resolved the current token and Broker implementations and administrators. The Broker is the live swap mint/burn path; the current Validators implementation can only mint Registry USDm, while its Celo-Governance-owned proxy remains a latent upgrade-controlled authorization surface.",
+      "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
+      "reviewedAt": "2026-07-22",
+      "disposition": "scoreable"
     }
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "KESm supply is confined to its canonical Celo deployment; the single reviewed route is native Mento CDP issuance. No bridge route carries the claim.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "summary": "KESm supply is confined to its canonical Celo deployment; the single reviewed route is native Mento Broker issuance against the shared Mento Reserve. No bridge route carries the claim.",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
     "confidence": "verified",
     "sources": [
       {
         "label": "Mento docs",
         "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "Finalized Celo block 72780426",
+        "url": "https://celo.blockscout.com/block/72780426"
       }
     ],
     "routes": [
@@ -231,9 +321,9 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Mento KESm is issued only on Celo through the immutable Mento BorrowerOperations CDP path (mint-authority review 2026-06-11); the entire captured supply is the canonical Celo deployment. No bridge route carries the claim.",
+        "reviewNote": "At finalized Celo block 72780426, KESm broker() returned the Mento Broker and the tracked token's 21,291,895.334248545419330280-unit supply was native to Celo. Pinned issuer configuration classifies KESm as reserve-backed and the deployment registry contains no KESm borrower branch. No bridge route carries the claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-22",
         "sources": [
           {
             "label": "KESm token (Celoscan)",
@@ -242,6 +332,10 @@
           {
             "label": "Mento docs",
             "url": "https://docs.mento.org/"
+          },
+          {
+            "label": "Finalized Celo block 72780426",
+            "url": "https://celo.blockscout.com/block/72780426"
           }
         ]
       }
@@ -368,7 +462,7 @@
         "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
       }
     ],
-    "rationale": "The prior single USDm-CDP dependency slice could not classify the live mento adapter rows: KESm's adapter runs in broker-pool mode without a cdpStablecoin parameter, so its captured reserve composition is the shared Mento Reserve basket (identical in shape to BRLm and ZARm), leaving the CELO and stETH exposures unstructured. The envelope is restated on the adapter's exact constituent identities and 2026-07-20 captured weights from the issuer-run reserve analytics API; each stablecoin constituent links to its tracked asset, and CELO and stETH now carry explicit classification and failure-domain identity. The live adapter refreshes weights at runtime, and the direct USDm mint collateral remains documented in the collateral and pegMechanism fields.",
+    "rationale": "The prior single USDm-CDP dependency slice could not classify the live Mento adapter rows. Pinned issuer configuration resolves KESm as reserve-backed, and its adapter runs in broker-pool mode without a cdpStablecoin parameter, so the captured composition is the shared Mento Reserve basket. The envelope is restated on the adapter's exact constituent identities and 2026-07-20 captured weights from the issuer-run reserve analytics API; each stablecoin constituent links to its tracked asset, and CELO and stETH carry explicit classification and failure-domain identity. The live adapter refreshes weights at runtime.",
     "compositionBasis": "Mento reserve analytics API constituent identities and weights captured 2026-07-20; KESm is reserve-backed per Mento's backing registry",
     "compositionAsOf": "2026-07-20",
     "scope": "full-composition",
@@ -448,7 +542,8 @@
           }
         ],
         "sourceUrls": [
-          "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"
+          "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol",
+          "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/BiPoolManager.sol"
         ]
       }
     }
@@ -459,9 +554,6 @@
       "title": "Peg grouped as Other",
       "message": "KES is not yet a first-class Pharos peg-currency enum, so KESm is grouped under OTHER while the DefiLlama price and circulating-supply path admits the asset at runtime."
     }
-  ],
-  "infrastructures": [
-    "liquity-v2"
   ],
   "launchDate": "2024-05-30"
 }

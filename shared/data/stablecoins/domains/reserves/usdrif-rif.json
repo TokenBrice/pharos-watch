@@ -2,41 +2,61 @@
   "id": "usdrif-rif",
   "reserves": [
     {
-      "name": "RIF and DOC collateral in RIF On Chain V3 buckets",
-      "pct": 100,
+      "name": "RIF collateral in the RIF On Chain V3 RIF bucket",
+      "pct": 99.9996988184,
       "risk": "high",
-      "assetClass": "other",
-      "issuerOrObligor": "RIF On Chain protocol",
-      "riskFactors": ["market", "smart-contract", "liquidity"],
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "RIF token market",
+      "riskFactors": ["market", "smart-contract", "liquidity", "concentration"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "DOC collateral in the RIF On Chain V3 DOC bucket",
+      "pct": 0.0003011816,
+      "risk": "high",
+      "coinId": "doc-money-on-chain",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Money on Chain DOC protocol",
+      "riskFactors": ["market", "smart-contract", "liquidity", "counterparty"],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "RIF On Chain V3 multi-collateral announcement",
-        "url": "https://rif.technology/content-hub/rif-on-chain-v3-multi-collateral-support-coming-21-may-2026/"
+        "label": "RIF On Chain V3 deployment repository at commit 64734b2",
+        "url": "https://github.com/money-on-chain/stable-protocol-roc-v2/tree/64734b2599fd89658d62c15eda805acec7c9e054"
       },
       {
-        "label": "RIF On Chain main concepts",
-        "url": "https://docs.moneyonchain.com/rdoc-contract/rif-on-chain-platform/main-concepts"
+        "label": "Rootstock block 9077990",
+        "url": "https://rootstock.blockscout.com/block/9077990"
+      },
+      {
+        "label": "Rootstock explorer: RIF collateral bucket",
+        "url": "https://rootstock.blockscout.com/address/0xA27024Ed70035E46dba712609fc2Afa1c97aA36A"
+      },
+      {
+        "label": "Rootstock explorer: DOC collateral bucket",
+        "url": "https://rootstock.blockscout.com/address/0x697535055Aa7AfD2C280523C7B062b1F05284661"
       }
     ],
-    "rationale": "RIF On Chain's May 2026 V3 announcement states that RIF and DOC each have a collateral bucket and both contribute to one fungible USDRIF supply. The protocol documentation confirms the RIF bucket's collateralized USDRIF model. Neither source publishes a current value or percentage for either bucket, so the reserve composition cannot be split into RIF and DOC slices.",
-    "compositionBasis": "Issuer V3 collateral architecture disclosure",
-    "scope": "selected-slices",
-    "knownUnknownExposure": "Current RIF and DOC collateral values and weights are not publicly disclosed in the reviewed sources.",
-    "knownUnknownExposurePct": 100,
+    "rationale": "Pinned reads at Rootstock block 9077990 (2026-07-22T01:16:43Z) identify the official V3 bucket contracts and fully value both positive collateral balances. The RIF bucket reported 308,770,106.853842843323055890 RIF and an on-chain RIF/USD price of 0.072568951680133500, or $22,407,122.96454618. The DOC bucket reported 67.486329105 DOC at an on-chain $1.00 price, or $67.486329105. Normalizing the $22,407,190.450875285 total produces the recorded 99.9996988184% RIF and 0.0003011816% DOC weights.",
+    "compositionBasis": "Official V3 deployment identities and pinned bucket nACcb balances normalized by each bucket's on-chain USDRIF collateral price at Rootstock block 9077990",
+    "compositionAsOf": "2026-07-22",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Both positive V3 collateral buckets and their current on-chain values are identified; no material reserve category remains unclassified.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "RIF and DOC collateral in RIF On Chain V3 buckets",
-        "pct": 100,
-        "disposition": "insufficient-evidence",
-        "rationale": "The two collateral buckets are verified, but no dated public allocation supports a percentage split."
+        "reserveName": "RIF collateral in the RIF On Chain V3 RIF bucket",
+        "pct": 99.9996988184,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "RIF is an identified cryptoasset collateral token rather than a tracked stablecoin dependency."
       }
     ]
   }

@@ -11,7 +11,10 @@ import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 import { toErrorMessage } from "../../lib/error-utils";
 
 const DEX_AGGREGATE_PRESERVE_IDS = new Set(["__global__"]);
-const DEX_LIQUIDITY_GENERATION_RETENTION_SEC = 7 * DAY_SECONDS;
+/** Completed run generations are operator forensics only once no public row references them. */
+const DEX_LIQUIDITY_GENERATION_RETENTION_SEC = 3 * DAY_SECONDS;
+/** Bound each prune pass so a retention shortening drains gradually instead of one oversized D1 delete in the cron tail. */
+const DEX_LIQUIDITY_PRUNE_MAX_GENERATIONS_PER_RUN = 16;
 const DEX_LIQUIDITY_HISTORY_RETENTION_SEC = 365 * DAY_SECONDS;
 /** Keep large bound JSON payloads from accumulating across a full generation. */
 export const DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE = 25;
@@ -425,7 +428,7 @@ async function publishDexLiquidityGeneration(
   return currentRows;
 }
 
-async function pruneOldDexLiquidityGenerations(db: D1Database, nowSec: number, signal?: AbortSignal): Promise<void> {
+export async function pruneOldDexLiquidityGenerations(db: D1Database, nowSec: number, signal?: AbortSignal): Promise<void> {
   const cutoff = nowSec - DEX_LIQUIDITY_GENERATION_RETENTION_SEC;
   await batchExecute(
     db,
@@ -442,9 +445,10 @@ async function pruneOldDexLiquidityGenerations(db: D1Database, nowSec: number, s
                FROM dex_liquidity
                WHERE publication_generation_id IS NOT NULL
              )
+           ORDER BY started_at ASC LIMIT ?
          )`,
         )
-        .bind(cutoff),
+        .bind(cutoff, DEX_LIQUIDITY_PRUNE_MAX_GENERATIONS_PER_RUN),
       db
         .prepare(
           `DELETE FROM dex_liquidity_publication_generations
@@ -453,6 +457,10 @@ async function pruneOldDexLiquidityGenerations(db: D1Database, nowSec: number, s
              SELECT publication_generation_id
              FROM dex_liquidity
              WHERE publication_generation_id IS NOT NULL
+           )
+           AND NOT EXISTS (
+             SELECT 1 FROM dex_liquidity_run_rows r
+             WHERE r.generation_id = dex_liquidity_publication_generations.generation_id
            )`,
         )
         .bind(cutoff),

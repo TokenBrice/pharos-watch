@@ -150,14 +150,18 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "europ-schuman": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: undisclosedReviewedFee(
-      "Direct 1:1 redemption through Schuman Financial; public fee schedule not disclosed",
-    ),
+    costModel: {
+      ...documentedVariableFee(
+        "EURØP tokens can be redeemed and exchanged for the underlying legal tender currency at any time, as described in the Right to Redemption above, without fees.",
+      ),
+      feeBpsMax: 0,
+    },
     docs: [
       sourceRef("EUROP white paper", "https://schuman.io/wp-content/uploads/2025/02/EUROP-White-Paper_1.3.pdf", [
         "route",
         "capacity",
       ]),
+      sourceRef("EUROP white paper v1.7", "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf", ["fees"]),
       sourceRef("Schuman reserve audits", "https://schuman.io/reserve-audits/", ["capacity"]),
     ],
   },
@@ -177,9 +181,10 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "cash-phantom": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    costModel: undisclosedReviewedFee(
-      "CASH is minted 1:1 from USD deposits via Bridge and redeemed into USD or supported stablecoins; public issuer fee schedule not disclosed",
-    ),
+    costModel: {
+      ...documentedVariableFee("Swap from Cash account into other stablecoins on Solana (USDT, USDG, PYUSD): 0.85%"),
+      feeBpsMax: 85,
+    },
     docs: [
       sourceRef("CASH overview", "https://www.usecash.xyz/", ["route", "capacity"]),
       sourceRef("Bridge issuance FAQ", "https://apidocs.bridge.xyz/platform/issuance/faq", [
@@ -187,6 +192,7 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
         "capacity",
         "fees",
       ]),
+      sourceRef("Phantom Cash fees", "https://help.phantom.com/hc/en-us/articles/44800531617939-Cash-fees", ["fees"]),
     ],
   },
   "sbc-brale": {
@@ -286,11 +292,19 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ...reviewedDirectRedemptionSupplyFull,
     capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "documented-bound", basis: "hot-buffer" },
     settlementModel: "days",
-    costModel: undisclosedReviewedFee("Bank wire redemption at NAV-based price; public fee schedule not disclosed"),
+    costModel: {
+      ...documentedVariableFee("You will also be charged a redemption fee of 20bps on any redemptions."),
+      feeBpsMax: 20,
+    },
     reviewedAt: "2026-05-17",
     docs: [
       sourceRef("Ondo USDY", "https://ondo.finance/usdy", ["route", "capacity"]),
       sourceRef("Ondo docs", "https://docs.ondo.finance/", ["route", "capacity"]),
+      sourceRef(
+        "Ondo USDY STEP application",
+        "https://forum.arbitrum.foundation/t/ondo-finance-usdy-llc-step-application/23593",
+        ["fees"],
+      ),
     ],
     notes: [
       "Tracked USDY metadata records a 5% bank-demand-deposit slice; Pharos uses that reserve slice as the documented hot-buffer lower bound and does not promote the unvalidated 8% proposal.",

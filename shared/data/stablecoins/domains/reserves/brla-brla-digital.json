@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "BRL cash and cash equivalents",
-      "pct": 62.05,
+      "pct": 71.98,
       "risk": "very-low",
       "assetClass": "cash",
       "issuerOrObligor": "Named Brazilian banks, payment institutions, and brokerages",
@@ -12,28 +12,28 @@
     },
     {
       "name": "Overnight repurchase agreements collateralized by Brazilian corporate debentures",
-      "pct": 37.95,
+      "pct": 28.02,
       "risk": "low",
       "assetClass": "repo",
-      "issuerOrObligor": "Banco BTG Pactual and XP Investimentos; diversified corporate debentures as collateral",
+      "issuerOrObligor": "XP Investimentos; diversified corporate debentures as collateral",
       "riskFactors": ["credit", "counterparty", "liquidity", "custody", "market"],
       "liquidityHorizon": "one-day",
       "maturityDaysMax": 1
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "owner-triage",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "OpenAI Codex Safety Score V9 backing review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "UHY BRLA Transparency Report - May 31, 2026",
-        "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a"
+        "label": "UHY BRLA Transparency Report - June 30, 2026",
+        "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a#3a47f28f0ae48040bbdafe358baa09b3"
       }
     ],
-    "rationale": "UHY's reasonable-assurance report as of May 31, 2026 reports BRL 93,207,027.30 of cash or cash equivalents and BRL 57,000,684.75 of overnight repurchase agreements, for BRL 150,207,712.05 of reserve assets. Those amounts normalize to 62.05% and 37.95%. The repos are collateralized by diversified Brazilian corporate debentures and provide next-business-day liquidity.",
-    "compositionBasis": "UHY reasonable-assurance examination of Avenia's BRLA Transparency Report as of May 31, 2026",
-    "compositionAsOf": "2026-05-31",
+    "rationale": "UHY's NBC TO 3000 / ISAE 3000 reasonable-assurance report as of June 30, 2026 reports BRL 118,152,752.26 of cash or cash equivalents and BRL 46,000,000.00 of overnight repurchase agreements, for BRL 164,152,752.26 of reserve assets against BRL 155,072,436.15 of BRLA in circulation. Those reserve amounts normalize to 71.98% and 28.02%, and provide 105.86% coverage. The report itemizes cash across Stark Bank, Woovi, BTG Pactual, Itau Unibanco, and XP Investimentos; all repos are held with XP, collateralized by diversified Brazilian corporate debentures, and provide next-business-day liquidity.",
+    "compositionBasis": "UHY reasonable-assurance examination of Avenia's BRLA Transparency Report as of June 30, 2026",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The report identifies every reserve category and names the cash and repo institutions. It does not identify each corporate debenture issuer or disclose reserve-account legal safeguards.",
     "knownUnknownExposurePct": 0,
@@ -41,14 +41,14 @@
       {
         "reserveIndex": 0,
         "reserveName": "BRL cash and cash equivalents",
-        "pct": 62.05,
+        "pct": 71.98,
         "disposition": "untracked-exogenous-asset",
         "rationale": "BRL cash and cash-equivalent balances are exogenous reserve assets rather than tracked stablecoins."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Overnight repurchase agreements collateralized by Brazilian corporate debentures",
-        "pct": 37.95,
+        "pct": 28.02,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The overnight repo claims and their corporate-debenture collateral are exogenous reserve assets rather than tracked stablecoins."
       }
@@ -85,13 +85,13 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "owner-triage",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "OpenAI Codex Safety Score V9 backing review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "UHY BRLA Transparency Report - May 31, 2026",
-        "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a"
+        "label": "UHY BRLA Transparency Report - June 30, 2026",
+        "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a#3a47f28f0ae48040bbdafe358baa09b3"
       }
     ],
     "uncertainty": "The report names every institution and reports category-level and institution-level balances, but it does not establish account segregation, bankruptcy remoteness, rehypothecation limits, or custody-provider legal roles."

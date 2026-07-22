@@ -392,11 +392,13 @@ ignored research workspace's anchor-coherence plan):
    routes).
 
 The final candidate identity of the chain is policy digest
-`8f5af0e2b75ac1bb3f1dd161de915eb4182477a75254fe4721350a9b790298fd` and
+`76bb98ce18a7f798a2953fb3fce86c36b4809994cfbcb4310d0a7b9e4d3037d1` and
 evaluation-build digest
-`545b3ba887123969111e5b80ea684d0d72c9fbc83706dcabed2a11d46e5e72d5`
-(reshape-v2 batch, 2026-07-22: F-gate predicate split D1, wrapper same-obligor
-dependency dedup D2, TUSD pin release D8, rateable floor re-derivation D6 —
+`fa2eb030ec07e265100ede8ae8374d2dee21f712a443b67f1989dbd29143f16f`
+(reshape-v3 batch, 2026-07-22: backing-scale re-anchor T4 + seasoned-issuer credit T5
++ documented-fee exit ceiling T1, on top of the reshape-v2 batch [F-gate split D1,
+parent-controlled dedup D2, TUSD pin release D8, floor re-derivation D6] — prior pair
+policy `91770d4e…` / build `545b3ba8…`;
 prior identity `bba4fe1461967763895f0bc2fe0fe56af3c37334ce969141…` from the
 2026-07-21 reshape PR #618; the earlier `6917d1f6…` pin here predated #618 and
 was never re-pinned, an omission this entry closes)
