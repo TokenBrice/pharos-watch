@@ -103,7 +103,7 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "CADm Celo proxy and verified StableTokenV2 implementation",

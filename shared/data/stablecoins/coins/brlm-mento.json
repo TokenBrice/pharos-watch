@@ -155,7 +155,7 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Mento BRLm Celo availability documentation",

@@ -96,7 +96,7 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Mento Celo mainnet deployment inventory",

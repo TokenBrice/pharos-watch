@@ -119,7 +119,7 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Mento V3 stablecoin documentation",
